@@ -1,0 +1,153 @@
+# Dependencies
+node_modules/
+apps/*/node_modules/
+packages/*/node_modules/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+.out/
+.next/
+.nuxt/
+.output/
+.nitro/
+.cache/
+coverage/
+.storybook/
+.vscode-test/
+
+# Generated files
+**/generated/
+*.generated.*
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Secrets
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+*.der
+*.cer
+*.pkcs12
+*.pkcs8
+id_rsa
+id_dsa
+*.priv
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Runtime data
+data/
+*.sqlite
+*.db
+*.sqlite3
+*.db3
+
+# System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+*.sublime-*
+
+# Optional REPL history
+.node_repl_history
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Optional npm cache directory
+.npm
+
+# Optional nyc test coverage
+.nyc_output
+
+# Optional cypress coverage
+coverage/
+
+# Optional debug log from npm
+debug.log
+
+# Optional pnpm debug log
+pnpm-debug.log
+
+# Optional local configuration files
+.local-*
+
+# Optional lock files if not using npm (keep package-lock.json)
+yarn.lock
+pnpm-lock.yaml
+
+# macOS
+*.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Temporary files
+*.tmp
+*.temp
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains IDEs
+.idea/*
+!.idea/codeStyles/
+!.idea/codeStyles.xml
+!.idea/inspectionProfiles/
+!.idea/inspectionProfiles/Project_Default.xml
+*.iml
+
+# Nuxt specific (already in apps/web/.gitignore but added for completeness)
+.nuxt/
+.output/
+.nitro/
+.cache/
+.data/
