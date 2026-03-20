@@ -52,7 +52,6 @@ export class ChronosEngine {
 
       // 计算当前单位的进位
       let currentVal: bigint;
-      const ratio = BigInt(nextUnit.ratio);
 
       if (nextUnit.irregular_ratios) {
         // 处理不规则进位 (如: 月份天数不等)
@@ -78,6 +77,7 @@ export class ChronosEngine {
         currentVal = BigInt(subVal);
       } else {
         // 普通固定进位
+        const ratio = BigInt(nextUnit.ratio);
         currentVal = remaining % ratio;
         remaining /= ratio;
       }

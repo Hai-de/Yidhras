@@ -6,7 +6,24 @@ import path from 'path';
 import { ChronosEngine } from '../clock/engine.js';
 import { ValueDynamicsManager } from '../dynamics/manager.js';
 import { NarrativeResolver } from '../narrative/resolver.js';
+import { notifications } from '../utils/notifications.js';
 import { WorldPack, WorldPackLoader } from '../world/loader.js';
+
+const parseTickToBigInt = (
+  value: string | number | undefined,
+  fieldName: string
+): bigint | undefined => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  try {
+    return BigInt(value);
+  } catch {
+    notifications.push('warning', `世界包字段 ${fieldName} 无法解析为 BigInt，已忽略该配置`, 'PACK_TIME_PARSE_WARN');
+    return undefined;
+  }
+};
 
 export class SimulationManager {
   public prisma: PrismaClient;
@@ -16,6 +33,7 @@ export class SimulationManager {
   public dynamics!: ValueDynamicsManager;
   
   private activePack?: WorldPack;
+  private stepTicks: bigint = 1n;
 
   constructor() {
     // 降级到 v6.2.1 后，使用标准初始化
@@ -31,7 +49,22 @@ export class SimulationManager {
     const pack = this.loader.loadPack(packFolderName);
     this.activePack = pack;
 
-    this.clock = new ChronosEngine(pack.time_systems || []);
+    const configuredInitialTick = parseTickToBigInt(pack.simulation_time?.initial_tick, 'simulation_time.initial_tick');
+    const initialTick = configuredInitialTick ?? 0n;
+    const minTick = parseTickToBigInt(pack.simulation_time?.min_tick, 'simulation_time.min_tick');
+    const maxTick = parseTickToBigInt(pack.simulation_time?.max_tick, 'simulation_time.max_tick');
+    const configuredStepTicks = parseTickToBigInt(pack.simulation_time?.step_ticks, 'simulation_time.step_ticks');
+
+    if (configuredStepTicks !== undefined && configuredStepTicks > 0n) {
+      this.stepTicks = configuredStepTicks;
+    } else {
+      this.stepTicks = 1n;
+      if (configuredStepTicks !== undefined) {
+        notifications.push('warning', '世界包字段 simulation_time.step_ticks 必须大于 0，已回退为 1', 'PACK_STEP_TICK_INVALID');
+      }
+    }
+
+    this.clock = new ChronosEngine(pack.time_systems || [], initialTick);
     this.resolver = new NarrativeResolver(pack.variables || {});
     this.dynamics = new ValueDynamicsManager();
 
@@ -43,11 +76,31 @@ export class SimulationManager {
       this.clock = new ChronosEngine(pack.time_systems || [], lastEvent.tick);
     }
 
+    const currentTick = this.clock.getTicks();
+    if (minTick !== undefined && currentTick < minTick) {
+      notifications.push(
+        'warning',
+        `当前模拟时间 ${currentTick.toString()} 低于世界包最小时间 ${minTick.toString()}`,
+        'SIM_TICK_BELOW_MIN'
+      );
+    }
+    if (maxTick !== undefined && currentTick > maxTick) {
+      notifications.push(
+        'warning',
+        `当前模拟时间 ${currentTick.toString()} 超出世界包最大时间 ${maxTick.toString()}`,
+        'SIM_TICK_ABOVE_MAX'
+      );
+    }
+
     console.log(`[SimulationManager] Initialized with pack: ${pack.metadata.name}`);
   }
 
   public getActivePack() {
     return this.activePack;
+  }
+
+  public getStepTicks() {
+    return this.stepTicks;
   }
 
   /**

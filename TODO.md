@@ -28,6 +28,7 @@ Status: Partially Implemented / 部分已实现
 - [ ] Harden API error boundaries and standardize error payloads.
 - [ ] Add resilient startup checks (world-pack and database readiness).
 - [ ] Add end-to-end smoke scripts for startup and key endpoints.
+- [ ] Time stepping polish: introduce a unified runtime speed policy (config load once at init + optional dynamic override path), avoid scattered tick-rate reads when future variable speed modes are added.
 
 ## M2 - Core Simulation Features / 核心模拟功能
 

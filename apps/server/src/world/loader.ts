@@ -7,6 +7,13 @@ import { VariablePool } from '../narrative/types.js';
 
 type WorldPackExtra = Record<string, unknown>;
 
+export interface SimulationTimeConfig {
+  min_tick?: string | number;
+  max_tick?: string | number;
+  initial_tick?: string | number;
+  step_ticks?: string | number;
+}
+
 export interface WorldPack {
   metadata: {
     id: string;
@@ -17,6 +24,7 @@ export interface WorldPack {
   variables?: VariablePool;
   prompts?: Record<string, string>;
   time_systems?: CalendarConfig[];
+  simulation_time?: SimulationTimeConfig;
   // 允许任意扩展字段 (如: dynamics_config, item_definitions)
   [key: string]: unknown;
 }

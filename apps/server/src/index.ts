@@ -12,11 +12,42 @@ const getErrorMessage = (err: unknown): string => {
   return String(err);
 };
 
+class ApiError extends Error {
+  public status: number;
+  public code: string;
+  public details?: unknown;
+
+  constructor(status: number, code: string, message: string, details?: unknown) {
+    super(message);
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+}
+
+const createRequestId = (): string => {
+  return `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const asyncHandler = (
+  handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
+) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    void handler(req, res, next).catch(next);
+  };
+};
+
 const app = express();
 const port = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+  const requestId = createRequestId();
+  res.locals.requestId = requestId;
+  res.setHeader('X-Request-Id', requestId);
+  next();
+});
 
 // 模拟循环控制变量
 let timer: NodeJS.Timeout | null = null;
@@ -50,14 +81,20 @@ app.get('/api/status', (req, res) => {
 // --- 2. Chronos Layer (Time) ---
 
 app.get('/api/clock', (req, res) => {
+  res.json({
+    absolute_ticks: sim.clock.getTicks().toString(),
+    calendars: []
+  });
+});
+
+app.get('/api/clock/formatted', (req, res, next) => {
   try {
     res.json({
       absolute_ticks: sim.clock.getTicks().toString(),
       calendars: sim.clock.getAllTimes()
     });
   } catch (err: unknown) {
-    notifications.push('error', `读取时钟失败: ${getErrorMessage(err)}`, 'CLOCK_READ_ERR');
-    res.status(500).json({ error: 'Clock internal error' });
+    next(new ApiError(500, 'CLOCK_FORMAT_ERR', `读取格式化时钟失败: ${getErrorMessage(err)}`));
   }
 });
 
@@ -72,13 +109,15 @@ app.post('/api/clock/control', (req, res) => {
     notifications.push('info', '模拟已恢复');
     res.json({ success: true, status: 'running' });
   } else {
-    res.status(400).json({ error: 'Invalid action' });
+    throw new ApiError(400, 'CLOCK_ACTION_INVALID', 'Invalid action', {
+      allowed_actions: ['pause', 'resume']
+    });
   }
 });
 
 // --- 3. L1: Social Layer ---
 
-app.get('/api/social/feed', async (req, res) => {
+app.get('/api/social/feed', asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit as string) || 20;
   const posts = await sim.prisma.post.findMany({
     take: limit,
@@ -86,94 +125,105 @@ app.get('/api/social/feed', async (req, res) => {
     include: { author: true }
   });
   res.json(posts);
-});
+}));
 
-app.post('/api/social/post', async (req, res) => {
+app.post('/api/social/post', asyncHandler(async (req, res) => {
   const { author_id, content } = req.body;
-  try {
-    const post = await sim.prisma.post.create({
-      data: {
-        author_id,
-        content,
-        created_at: sim.clock.getTicks()
-      }
-    });
-    res.json(post);
-  } catch (err: unknown) {
-    notifications.push('error', `发布动态失败: ${getErrorMessage(err)}`, 'POST_CREATE_ERR');
-    res.status(500).json({ error: 'Post creation failed' });
-  }
-});
+
+  const post = await sim.prisma.post.create({
+    data: {
+      author_id,
+      content,
+      created_at: sim.clock.getTicks()
+    }
+  });
+  res.json(post);
+}));
 
 // --- 4. L2: Relational Layer ---
 
-app.get('/api/relational/graph', async (req, res) => {
+app.get('/api/relational/graph', asyncHandler(async (req, res) => {
   const graph = await sim.getGraphData();
   res.json(graph);
-});
+}));
 
-app.get('/api/relational/circles', async (req, res) => {
+app.get('/api/relational/circles', asyncHandler(async (req, res) => {
   const circles = await sim.prisma.circle.findMany({
     include: { members: true }
   });
   res.json(circles);
-});
+}));
 
 // --- 5. L3: Narrative Layer ---
 
-app.get('/api/narrative/timeline', async (req, res) => {
+app.get('/api/narrative/timeline', asyncHandler(async (req, res) => {
   const events = await sim.prisma.event.findMany({
     orderBy: { tick: 'desc' }
   });
   res.json(events);
-});
+}));
 
 // --- 6. Agent Context ---
 
-app.get('/api/agent/:id/context', async (req, res) => {
+app.get('/api/agent/:id/context', asyncHandler(async (req, res) => {
   const agentId = req.params.id;
-  try {
-    const agent = await sim.prisma.agent.findUnique({
-      where: { id: agentId },
-      include: { circle_memberships: { include: { circle: true } } }
-    });
+  const agent = await sim.prisma.agent.findUnique({
+    where: { id: agentId },
+    include: { circle_memberships: { include: { circle: true } } }
+  });
 
-    if (!agent) return res.status(404).json({ error: 'Agent not found' });
-
-    // 构造权限上下文
-    const permission: PermissionContext = {
-      agent_id: agent.id,
-      circles: new Set(agent.circle_memberships.map(m => m.circle_id)),
-      global_level: Math.max(...agent.circle_memberships.map(m => m.circle.level), 0)
-    };
-
-    // 解析当前世界变量 (基于权限)
-    const pack = sim.getActivePack();
-    const resolvedVariables = sim.resolver.resolve(
-      JSON.stringify(pack?.variables || {}),
-      {},
-      permission
-    );
-
-    res.json({
-      identity: agent,
-      variables: JSON.parse(resolvedVariables)
-    });
-  } catch (err: unknown) {
-    notifications.push('warning', `解析 Agent 上下文失败: ${getErrorMessage(err)}`, 'AGENT_CONTEXT_ERR');
-    res.status(500).json({ error: 'Internal resolver error' });
+  if (!agent) {
+    throw new ApiError(404, 'AGENT_NOT_FOUND', 'Agent not found', { agent_id: agentId });
   }
-});
+
+  // 构造权限上下文
+  const permission: PermissionContext = {
+    agent_id: agent.id,
+    circles: new Set(agent.circle_memberships.map(m => m.circle_id)),
+    global_level: Math.max(...agent.circle_memberships.map(m => m.circle.level), 0)
+  };
+
+  // 解析当前世界变量 (基于权限)
+  const pack = sim.getActivePack();
+  const resolvedVariables = sim.resolver.resolve(
+    JSON.stringify(pack?.variables || {}),
+    {},
+    permission
+  );
+
+  res.json({
+    identity: agent,
+    variables: JSON.parse(resolvedVariables)
+  });
+}));
 
 // --- Error Middleware ---
 
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
-  console.error('[Global Error Middleware]', err);
+  const requestId = typeof res.locals.requestId === 'string' ? res.locals.requestId : 'req_unknown';
+  const isApiError = err instanceof ApiError;
+  const status = isApiError ? err.status : 500;
+  const code = isApiError ? err.code : 'API_INTERNAL_ERROR';
   const message = getErrorMessage(err);
-  notifications.push('error', `API 异常: ${message || '未知错误'}`, 'API_CRASH');
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message
+  const details = isApiError ? err.details : undefined;
+
+  if (status >= 500) {
+    console.error(`[Global Error Middleware] [${requestId}]`, err);
+    notifications.push('error', `API 异常(${code}): ${message}`, code);
+  } else {
+    console.warn(`[API Warning] [${requestId}] ${code}: ${message}`);
+    notifications.push('warning', `API 请求异常(${code}): ${message}`, code);
+  }
+
+  res.status(status).json({
+    success: false,
+    error: {
+      code,
+      message,
+      request_id: requestId,
+      timestamp: Date.now(),
+      ...(details === undefined ? {} : { details })
+    }
   });
 });
 
@@ -184,7 +234,7 @@ const startSimulation = () => {
   timer = setInterval(async () => {
     if (!isPaused) {
       try {
-        await sim.step(1n);
+        await sim.step(sim.getStepTicks());
       } catch (err: unknown) {
         notifications.push(
           'error',
