@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// --- L1 & L2: Agent & Identity ---
+
+model Agent {
+  id              String   @id @default(uuid())
+  name            String
+  type            String   // "active", "noise", "system"
+  
+  // Value Dynamics
+  snr             Float    @default(0.5) // 信噪比 (0.0 - 1.0)
+  is_pinned       Boolean  @default(false)
+  
+  // Relations
+  posts           Post[]
+  relationships_from Relationship[] @relation("FromNode")
+  relationships_to   Relationship[] @relation("ToNode")
+  
+  // Atmosphere Nodes (Sockpuppets)
+  atmosphere_nodes AtmosphereNode[]
+  
+  // Circles (Permissions)
+  circle_memberships CircleMember[]
+
+  created_at      BigInt
+  updated_at      BigInt
+}
+
+model AtmosphereNode {
+  id              String   @id @default(uuid())
+  name            String
+  owner_id        String
+  owner           Agent    @relation(fields: [owner_id], references: [id])
+  
+  expires_at      BigInt?  // 自动回收时间
+  created_at      BigInt
+}
+
+// --- Permission System ---
+
+model Circle {
+  id          String         @id @default(uuid())
+  name        String
+  level       Int            // AccessLevel Enum (0-3)
+  description String?
+  
+  members     CircleMember[]
+}
+
+model CircleMember {
+  agent_id    String
+  circle_id   String
+  agent       Agent    @relation(fields: [agent_id], references: [id])
+  circle      Circle   @relation(fields: [circle_id], references: [id])
+
+  @@id([agent_id, circle_id])
+}
+
+// --- L2: Relationship Graph ---
+
+model Relationship {
+  id          String   @id @default(uuid())
+  from_id     String
+  to_id       String
+  type        String   // "friend", "enemy", "command", "transfer"
+  weight      Float    @default(1.0)
+  
+  from        Agent    @relation("FromNode", fields: [from_id], references: [id])
+  to          Agent    @relation("ToNode", fields: [to_id], references: [id])
+
+  created_at  BigInt
+}
+
+// --- L1: Social Layer ---
+
+model Post {
+  id          String   @id @default(uuid())
+  author_id   String
+  content     String
+  
+  // L4 Transmission Props
+  noise_level Float    @default(0.0)
+  is_encrypted Boolean @default(false)
+  
+  author      Agent    @relation(fields: [author_id], references: [id])
+  
+  created_at  BigInt
+}
+
+// --- L3: Narrative Layer ---
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  tick        BigInt   // 发生时的绝对时间
+  type        String   // "history", "interaction", "system"
+  
+  // 影响范围 (JSON)
+  impact_data String?  // 存储 JSON: { "snr_delta": ..., "affected_nodes": [] }
+}
+
+model WorldVariable {
+  key         String   @id
+  value       String
+  updated_at  BigInt
+}

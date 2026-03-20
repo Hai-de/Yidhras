@@ -1,0 +1,19 @@
+{
+  "singleQuote": true,
+  "trailingComma": "none",
+  "printWidth": 100,
+  "overrides": [
+    {
+      "files": ["apps/server/**/*.{ts,js,mjs,cjs}"],
+      "options": {
+        "semi": true
+      }
+    },
+    {
+      "files": ["apps/web/**/*.{ts,js,vue,mjs,cjs}"],
+      "options": {
+        "semi": false
+      }
+    }
+  ]
+}

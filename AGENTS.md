@@ -1,0 +1,190 @@
+# AGENTS.md
+
+Repository guidance for coding agents working in `Yidhras`.
+This file is intentionally specific to the current repo layout and conventions.
+
+## 1) Workspace Overview
+
+- Monorepo-like layout with two Node.js apps:
+- `apps/server`: TypeScript + Express + Prisma + SQLite backend.
+- `apps/web`: Nuxt 4 + Vue 3 + Pinia frontend.
+- Shared domain/data docs at repo root: `README.md`, `ARCH.md`, `API.md`, `LOGIC.md`.
+- World-pack data under `data/world_packs` and loaded by server runtime.
+
+## 2) Rule Files Check (Cursor/Copilot)
+
+- No `.cursorrules` file found.
+- No `.cursor/rules/` directory found.
+- No `.github/copilot-instructions.md` file found.
+- If any of these are added later, treat them as high-priority constraints.
+
+## 3) Tooling and Runtime Baseline
+
+- Node.js 18+ expected (Nuxt 4 and modern TS/ESM usage).
+- Package manager: `npm` (lockfiles are `package-lock.json` in each app).
+- Backend uses Prisma with SQLite (`apps/server/prisma/schema.prisma`).
+- Server TypeScript config is strict (`"strict": true`).
+- Module system in server is `NodeNext` ESM; runtime imports include `.js` extensions.
+
+## 4) Install Commands
+
+- Install backend deps:
+- `npm install --prefix apps/server`
+- Install frontend deps:
+- `npm install --prefix apps/web`
+- Optional full setup from root:
+- `npm install --prefix apps/server && npm install --prefix apps/web`
+
+## 5) Build / Dev / Start Commands
+
+- Backend dev server (watch mode):
+- `npm run dev --prefix apps/server`
+- Backend build:
+- `npm run build --prefix apps/server`
+- Backend production start (after build):
+- `npm run start --prefix apps/server`
+- Frontend dev server:
+- `npm run dev --prefix apps/web`
+- Frontend build:
+- `npm run build --prefix apps/web`
+- Frontend preview (built app):
+- `npm run preview --prefix apps/web`
+
+## 5.1) Quality Commands (Lint / Typecheck)
+
+- Backend lint:
+- `npm run lint --prefix apps/server`
+- Backend typecheck:
+- `npm run typecheck --prefix apps/server`
+- Frontend lint:
+- `npm run lint --prefix apps/web`
+- Frontend typecheck:
+- `npm run typecheck --prefix apps/web`
+- `lint:fix` is intentionally not provided in this stage.
+
+## 6) Lint / Format Status
+
+- ESLint is enabled in both apps:
+- `apps/server/.eslintrc.cjs`
+- `apps/web/.eslintrc.cjs`
+- Prettier is enabled at repo root:
+- `.prettierrc.json`
+- Current strategy is safety-first baseline (warnings allowed, practical over zero-warning).
+- Current strategy is safety-first with selected rule hardening (practical over style maximalism).
+- Ignored paths are explicitly configured, including:
+- `**/node_modules/**`, `**/dist/**`, `**/.nuxt/**`, `**/.output/**`, `**/coverage/**`.
+- Existing lint debt should be tracked in `记录.md`, not silently fixed in broad sweeps.
+- Hardened-as-error rules include:
+- `@typescript-eslint/no-explicit-any`
+- `@typescript-eslint/no-unused-vars`
+- `simple-import-sort/imports`
+- `simple-import-sort/exports`
+- `prefer-const` (server)
+- `no-case-declarations` (server)
+
+## 7) Test Commands (Current State)
+
+- No formal test runner (Jest/Vitest) is configured yet.
+- Existing "test" files in `apps/server/src/**/test*.ts` are executable TS scripts.
+- Run all current test scripts manually with `tsx` (from `apps/server`):
+- `npx tsx src/clock/test.ts`
+- `npx tsx src/narrative/test.ts`
+- `npx tsx src/permission/test.ts`
+- `npx tsx src/dynamics/test.ts`
+- `npx tsx src/dynamics/test_pluggable.ts`
+- `npx tsx src/world/test.ts`
+
+## 8) Single-Test Execution (Important)
+
+- Since there is no centralized test framework, "single test" means running one script file.
+- Preferred pattern (from repo root):
+- `npm --prefix apps/server exec tsx src/clock/test.ts`
+- Equivalent pattern (inside `apps/server`):
+- `npx tsx src/clock/test.ts`
+- For any new test file, keep the same approach:
+- `npm --prefix apps/server exec tsx <path-to-test-file>.ts`
+
+## 9) Database and Prisma Commands
+
+- Generate Prisma client:
+- `npm --prefix apps/server exec prisma generate`
+- Create/apply local migration:
+- `npm --prefix apps/server exec prisma migrate dev --name <migration_name>`
+- Schema is in `apps/server/prisma/schema.prisma`.
+- DB URL comes from `apps/server/.env` (`DATABASE_URL`).
+- Never commit secrets from `.env`.
+
+## 10) Architecture-Aware Coding Notes
+
+- API surface is implemented in `apps/server/src/index.ts` and mirrors `API.md`.
+- Simulation entrypoint is `SimulationManager` in `apps/server/src/core/simulation.ts`.
+- World-pack loading is file-driven via YAML in `apps/server/src/world/loader.ts`.
+- Narrative templating and permission gating are in `apps/server/src/narrative/resolver.ts`.
+- Frontend state uses Pinia stores in `apps/web/stores/*.ts`.
+- L2 graph visualization is Cytoscape in `apps/web/components/L2Graph.vue`.
+
+## 11) Code Style: General
+
+- Prefer TypeScript for all new backend/frontend logic.
+- Match local style first; avoid repo-wide reformatting.
+- Keep functions small and intent-revealing.
+- Avoid dead abstractions; follow existing structure.
+- Prefer explicit data contracts for API I/O.
+
+## 12) Code Style: Imports and Modules
+
+- Server (NodeNext ESM): use relative imports with `.js` extension in TS source.
+- Example pattern: `import { X } from './module.js';`
+- Keep imports grouped: external packages first, local modules second.
+- Prefer named imports unless there is a clear default-export convention.
+- Remove unused imports as part of each change.
+
+## 13) Code Style: Formatting and Syntax
+
+- In `apps/server`: semicolons are standard; keep them.
+- In `apps/web` Vue/Pinia files: semicolons are often omitted; follow local file style.
+- Prefer single quotes in TS/JS unless file already uses another style.
+- Preserve existing whitespace rhythm; do not churn formatting-only diffs.
+- Keep comments only when they clarify non-obvious behavior.
+
+## 14) Code Style: Types and Data Modeling
+
+- Respect strict TypeScript in server; avoid `any` unless unavoidable.
+- If `any` is unavoidable, add an inline comment explaining why and planned refinement.
+- Prefer interfaces/types for structured payloads and store state.
+- Use narrow unions for finite state (`'idle' | 'running' | ...`) as in stores.
+- For BigInt fields crossing API boundaries, serialize as strings over JSON.
+- Validate assumptions when converting string -> BigInt on the client.
+
+## 15) Code Style: Naming
+
+- `camelCase` for variables/functions, `PascalCase` for classes/types/components.
+- Keep API field names consistent with existing payloads (snake_case appears in API responses).
+- Keep domain naming aligned with docs: L1/L2/L3/L4, Chronos, Narrative, World Pack.
+- Use descriptive names over short abbreviations unless domain-standard (`snr`, `id`).
+
+## 16) Error Handling and Logging
+
+- Wrap risky API handlers with `try/catch` and return stable error responses.
+- Push operational errors into notifications queue when relevant.
+- Avoid exposing sensitive internals in HTTP responses.
+- Keep server logs actionable and scoped (include subsystem context).
+- Fail closed for permission-gated or missing-variable resolver paths.
+
+## 17) Change Discipline for Agents
+
+- Make focused, minimal diffs that solve the requested task.
+- Do not rewrite unrelated files or rename broadly without need.
+- Update docs when behavior or commands change.
+- If adding scripts (lint/test), also update this file and `README.md`.
+- Prefer validating changed paths locally (build or targeted script run) before handoff.
+
+## 18) Quick Command Cheat Sheet
+
+- Start both services (Linux/macOS): `./start-dev.sh`
+- Start both services (Windows): `start-dev.bat`
+- Backend build: `npm run build --prefix apps/server`
+- Frontend build: `npm run build --prefix apps/web`
+- Backend lint: `npm run lint --prefix apps/server`
+- Frontend lint: `npm run lint --prefix apps/web`
+- Run one backend test script: `npm --prefix apps/server exec tsx src/clock/test.ts`

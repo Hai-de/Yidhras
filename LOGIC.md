@@ -1,0 +1,109 @@
+# Yidhras Logic / 业务逻辑说明
+
+Version: v0.2.0-draft
+Last Updated / 最后更新: 2026-03-20
+
+本文件偏向业务规则表达，不绑定未来可能变化的算法细节。
+This file focuses on business rules rather than unstable low-level algorithm details.
+
+## 1) Core Behavior Loop / 核心行为闭环
+
+### Currently Implemented / 当前已实现
+
+- Agent context can be queried through backend API.
+- Narrative variables are resolved with permission-aware filtering.
+- Social post creation and retrieval are available through API.
+- Simulation tick advances continuously with pause/resume controls.
+
+### Planned / 规划中
+
+- Full perception-decision-action loop for autonomous agents.
+- Action planning tied to role prompts and world state.
+- Delayed dispatch behavior aligned with transmission-layer constraints.
+
+## 2) Information Boundary / 信息边界规则
+
+### Currently Implemented / 当前已实现
+
+- Variables can carry access metadata (`min_level`, optional `circle_id`).
+- Resolver returns safe placeholders for restricted or missing values.
+- Agent context API computes circle-based permission context.
+
+### Planned / 规划中
+
+- Broader policy coverage across all L1/L2/L3 data reads.
+- Unified authorization checks for future agent action APIs.
+
+## 3) Time and Narrative Consistency / 时间与叙事一致性
+
+### Currently Implemented / 当前已实现
+
+- Absolute time is represented by `BigInt` ticks.
+- Multiple calendar displays can be derived from one absolute timeline.
+- API serializes tick values as strings for frontend compatibility.
+
+### Planned / 规划中
+
+- More explicit timeline impact tracking per action/event.
+- Clearer reconciliation rules when actions compete at similar ticks.
+
+## 4) Node Value Dynamics / 节点价值动态
+
+### Currently Implemented / 当前已实现
+
+- Node value (SNR) supports increase/decrease updates.
+- Pinned nodes can resist depreciation according to current manager logic.
+- Dynamics algorithms are pluggable by reason type.
+
+### Planned / 规划中
+
+- Tie value changes to broader narrative and social outcomes.
+- Add balancing strategy for native noise and high-authority nodes.
+
+## 5) Notification and Fault Feedback / 通知与故障反馈
+
+### Currently Implemented / 当前已实现
+
+- Backend has a system notification queue.
+- API endpoints support fetch and clear notification operations.
+- Runtime errors push structured notifications with level and code.
+
+### Planned / 规划中
+
+- Frontend global notification panel fully wired to backend queue.
+- Stronger categorization for operational vs business-level alerts.
+
+## 6) Layer Coupling Rules / 层级联动规则
+
+### Business Intention / 业务意图
+
+- L1 signals should influence L2 relation weight over time.
+- L2 relation shifts should affect L1 visibility and influence.
+- L3 narrative events should alter what actions are feasible next.
+- L4 transmission limits should shape action timing and reach.
+
+### Current State / 当前状态
+
+- Partially represented in data structures and API surfaces.
+- Full cross-layer enforcement is still under phased implementation.
+
+## 7) Agent System Scope / Agent 系统边界
+
+### Planned Core Modules / 规划模块
+
+- Identity Layer: active node and atmosphere node binding/lifecycle.
+- Inference Interface: policy injection and stable prompt channels.
+- Memory Core: short-term context plus long-term memory retrieval.
+- Action Dispatcher: convert decisions into delayed executable actions.
+
+### Current Delivery Principle / 当前交付原则
+
+- Prioritize stable interfaces before deep behavior expansion.
+- Keep logic contracts explicit in docs to support agentic coding tools.
+
+## 8) Product Rules for Contributors / 贡献者规则
+
+- Mark business statements as `Currently Implemented` or `Planned`.
+- Avoid presenting speculative behavior as already available.
+- Keep logic docs synced with API and architecture docs.
+- Put implementation debt and lint debt into dedicated tracking files.
