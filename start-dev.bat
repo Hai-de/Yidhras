@@ -1,6 +1,9 @@
 @echo off
 echo Starting Yidhras Development Services...
 
+REM 启动前：统一准备后端运行前置条件（数据库迁移 + world pack 模板）
+npm run prepare:runtime --prefix apps/server
+
 REM 启动后端
 cd apps\server
 start /B npm run dev

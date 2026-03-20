@@ -1,5 +1,7 @@
 import cors from 'cors';
 import express, { NextFunction, Request, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 
 import { sim } from './core/simulation.js';
 import { PermissionContext } from './permission/types.js';
@@ -10,6 +12,24 @@ const getErrorMessage = (err: unknown): string => {
     return err.message;
   }
   return String(err);
+};
+
+const toJsonSafe = (value: unknown): unknown => {
+  if (typeof value === 'bigint') {
+    return value.toString();
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(item => toJsonSafe(item));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, toJsonSafe(item)])
+    );
+  }
+
+  return value;
 };
 
 class ApiError extends Error {
@@ -40,6 +60,104 @@ const asyncHandler = (
 const app = express();
 const port = process.env.PORT || 3001;
 
+type HealthLevel = 'ok' | 'degraded' | 'fail';
+
+interface StartupHealth {
+  level: HealthLevel;
+  checks: {
+    db: boolean;
+    world_pack_dir: boolean;
+    world_pack_available: boolean;
+  };
+  available_world_packs: string[];
+  errors: string[];
+}
+
+const resolveWorldPacksDir = (): string => {
+  const candidates = [
+    path.resolve(process.cwd(), 'data/world_packs'),
+    path.resolve(process.cwd(), '../../data/world_packs'),
+    path.resolve(process.cwd(), '../data/world_packs')
+  ];
+
+  const existing = candidates.find(candidate => fs.existsSync(candidate));
+  return existing ?? candidates[0];
+};
+
+const worldPacksDir = resolveWorldPacksDir();
+const preferredWorldPack = 'cyber_noir';
+
+const startupHealth: StartupHealth = {
+  level: 'fail',
+  checks: {
+    db: false,
+    world_pack_dir: false,
+    world_pack_available: false
+  },
+  available_world_packs: [],
+  errors: []
+};
+
+let runtimeReady = false;
+
+const hasPackConfig = (packDir: string): boolean => {
+  const candidates = ['config.yaml', 'config.yml', 'pack.yaml', 'pack.yml'];
+  return candidates.some(file => fs.existsSync(path.join(packDir, file)));
+};
+
+const detectAvailableWorldPacks = (): string[] => {
+  if (!fs.existsSync(worldPacksDir)) {
+    return [];
+  }
+
+  const entries = fs.readdirSync(worldPacksDir, { withFileTypes: true });
+  return entries
+    .filter(entry => entry.isDirectory())
+    .filter(entry => hasPackConfig(path.join(worldPacksDir, entry.name)))
+    .map(entry => entry.name);
+};
+
+const runStartupPreflight = async (): Promise<void> => {
+  startupHealth.errors = [];
+  startupHealth.checks.world_pack_dir = fs.existsSync(worldPacksDir);
+  startupHealth.available_world_packs = detectAvailableWorldPacks();
+  startupHealth.checks.world_pack_available = startupHealth.available_world_packs.length > 0;
+
+  try {
+    await sim.prisma.$queryRawUnsafe('SELECT 1');
+    startupHealth.checks.db = true;
+  } catch (err: unknown) {
+    startupHealth.checks.db = false;
+    startupHealth.errors.push(`database check failed: ${getErrorMessage(err)}`);
+  }
+
+  if (!startupHealth.checks.world_pack_dir) {
+    startupHealth.errors.push(`world pack directory missing: ${worldPacksDir}`);
+  }
+  if (!startupHealth.checks.world_pack_available) {
+    startupHealth.errors.push('no available world pack found');
+  }
+
+  if (!startupHealth.checks.db) {
+    startupHealth.level = 'fail';
+  } else if (!startupHealth.checks.world_pack_dir || !startupHealth.checks.world_pack_available) {
+    startupHealth.level = 'degraded';
+  } else {
+    startupHealth.level = 'ok';
+  }
+};
+
+const assertRuntimeReady = (feature: string): void => {
+  if (runtimeReady) {
+    return;
+  }
+
+  throw new ApiError(503, 'WORLD_PACK_NOT_READY', `World pack not ready for ${feature}`, {
+    startup_level: startupHealth.level,
+    available_world_packs: startupHealth.available_world_packs
+  });
+};
+
 app.use(cors());
 app.use(express.json());
 app.use((req, res, next) => {
@@ -69,18 +187,34 @@ app.get('/api/status', (req, res) => {
   const pack = sim.getActivePack();
   res.json({
     status: isPaused ? 'paused' : 'running',
+    runtime_ready: runtimeReady,
+    health_level: startupHealth.level,
     world_pack: pack ? {
       id: pack.metadata.id,
       name: pack.metadata.name,
       version: pack.metadata.version
     } : null,
-    has_error: notifications.getMessages().some(m => m.level === 'error')
+    has_error: notifications.getMessages().some(m => m.level === 'error'),
+    startup_errors: startupHealth.errors
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  const statusCode = startupHealth.level === 'fail' ? 503 : 200;
+  res.status(statusCode).json({
+    success: startupHealth.level !== 'fail',
+    level: startupHealth.level,
+    runtime_ready: runtimeReady,
+    checks: startupHealth.checks,
+    available_world_packs: startupHealth.available_world_packs,
+    errors: startupHealth.errors
   });
 });
 
 // --- 2. Chronos Layer (Time) ---
 
 app.get('/api/clock', (req, res) => {
+  assertRuntimeReady('clock read');
   res.json({
     absolute_ticks: sim.clock.getTicks().toString(),
     calendars: []
@@ -88,10 +222,11 @@ app.get('/api/clock', (req, res) => {
 });
 
 app.get('/api/clock/formatted', (req, res, next) => {
+  assertRuntimeReady('clock formatted read');
   try {
     res.json({
       absolute_ticks: sim.clock.getTicks().toString(),
-      calendars: sim.clock.getAllTimes()
+      calendars: toJsonSafe(sim.clock.getAllTimes())
     });
   } catch (err: unknown) {
     next(new ApiError(500, 'CLOCK_FORMAT_ERR', `读取格式化时钟失败: ${getErrorMessage(err)}`));
@@ -99,6 +234,7 @@ app.get('/api/clock/formatted', (req, res, next) => {
 });
 
 app.post('/api/clock/control', (req, res) => {
+  assertRuntimeReady('clock control');
   const { action } = req.body;
   if (action === 'pause') {
     isPaused = true;
@@ -118,6 +254,7 @@ app.post('/api/clock/control', (req, res) => {
 // --- 3. L1: Social Layer ---
 
 app.get('/api/social/feed', asyncHandler(async (req, res) => {
+  assertRuntimeReady('social feed');
   const limit = parseInt(req.query.limit as string) || 20;
   const posts = await sim.prisma.post.findMany({
     take: limit,
@@ -128,6 +265,7 @@ app.get('/api/social/feed', asyncHandler(async (req, res) => {
 }));
 
 app.post('/api/social/post', asyncHandler(async (req, res) => {
+  assertRuntimeReady('social post');
   const { author_id, content } = req.body;
 
   const post = await sim.prisma.post.create({
@@ -143,11 +281,13 @@ app.post('/api/social/post', asyncHandler(async (req, res) => {
 // --- 4. L2: Relational Layer ---
 
 app.get('/api/relational/graph', asyncHandler(async (req, res) => {
+  assertRuntimeReady('relational graph');
   const graph = await sim.getGraphData();
   res.json(graph);
 }));
 
 app.get('/api/relational/circles', asyncHandler(async (req, res) => {
+  assertRuntimeReady('relational circles');
   const circles = await sim.prisma.circle.findMany({
     include: { members: true }
   });
@@ -157,6 +297,7 @@ app.get('/api/relational/circles', asyncHandler(async (req, res) => {
 // --- 5. L3: Narrative Layer ---
 
 app.get('/api/narrative/timeline', asyncHandler(async (req, res) => {
+  assertRuntimeReady('narrative timeline');
   const events = await sim.prisma.event.findMany({
     orderBy: { tick: 'desc' }
   });
@@ -166,6 +307,7 @@ app.get('/api/narrative/timeline', asyncHandler(async (req, res) => {
 // --- 6. Agent Context ---
 
 app.get('/api/agent/:id/context', asyncHandler(async (req, res) => {
+  assertRuntimeReady('agent context');
   const agentId = req.params.id;
   const agent = await sim.prisma.agent.findUnique({
     where: { id: agentId },
@@ -230,6 +372,10 @@ app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
 // --- Start Loop & Server ---
 
 const startSimulation = () => {
+  if (!runtimeReady) {
+    return;
+  }
+
   if (timer) clearInterval(timer);
   timer = setInterval(async () => {
     if (!isPaused) {
@@ -248,17 +394,35 @@ const startSimulation = () => {
 };
 
 const start = async () => {
+  await runStartupPreflight();
+
   try {
-    await sim.init('cyber_noir');
-    notifications.push('info', 'Yidhras 系统初始化成功', 'SYS_INIT_OK');
-    startSimulation();
-    app.listen(port, () => {
-      console.log(`[Yidhras Server] API full implementation running at http://localhost:${port}`);
-    });
+    if (startupHealth.level === 'fail') {
+      runtimeReady = false;
+      notifications.push('error', `系统启动健康检查失败: ${startupHealth.errors.join('; ')}`, 'SYS_PRECHECK_FAIL');
+    } else if (!startupHealth.checks.world_pack_available) {
+      runtimeReady = false;
+      notifications.push('warning', '世界包为空，系统以降级模式启动。请先导入 world pack。', 'WORLD_PACK_EMPTY');
+    } else {
+      const selectedPack = startupHealth.available_world_packs.includes(preferredWorldPack)
+        ? preferredWorldPack
+        : startupHealth.available_world_packs[0];
+      await sim.init(selectedPack);
+      runtimeReady = true;
+      notifications.push('info', `Yidhras 系统初始化成功 (pack=${selectedPack})`, 'SYS_INIT_OK');
+      startSimulation();
+    }
   } catch (err: unknown) {
+    runtimeReady = false;
+    startupHealth.level = 'degraded';
+    startupHealth.errors.push(`simulation init failed: ${getErrorMessage(err)}`);
     console.error('[Yidhras Server] Init Error:', err);
-    notifications.push('error', `系统初始化失败: ${getErrorMessage(err)}`, 'SYS_INIT_FAIL');
+    notifications.push('error', `系统初始化失败，已降级运行: ${getErrorMessage(err)}`, 'SYS_INIT_FAIL');
   }
+
+  app.listen(port, () => {
+    console.log(`[Yidhras Server] API full implementation running at http://localhost:${port}`);
+  });
 };
 
 start();

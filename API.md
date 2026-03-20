@@ -19,8 +19,11 @@
 
 ## 1. 基础信息 (System)
 - **GET `/api/status`**
-    - 说明: 获取系统运行状态、当前加载的 World Pack 元数据。
-    - 返回: `{ status: "running"|"paused", world_pack: { id, name, version }, has_error: boolean }`
+    - 说明: 获取系统运行状态、健康级别、当前加载的 World Pack 元数据。
+    - 返回: `{ status: "running"|"paused", runtime_ready: boolean, health_level: "ok"|"degraded"|"fail", world_pack: { id, name, version }|null, has_error: boolean, startup_errors: string[] }`
+- **GET `/api/health`**
+    - 说明: 启动与运行健康检查结果（可用于脚本/容器探针）。
+    - 返回: `{ success: boolean, level: "ok"|"degraded"|"fail", runtime_ready: boolean, checks: { db, world_pack_dir, world_pack_available }, available_world_packs: string[], errors: string[] }`
 
 ## 2. 虚拟时间轴 (Chronos Layer)
 - **GET `/api/clock`**
@@ -29,6 +32,7 @@
 - **GET `/api/clock/formatted`**
     - 说明: 获取包含历法格式化结果的时钟数据（用于调试/高级显示）。
     - 返回: `{ absolute_ticks: string, calendars: CalendarFormatted[] }`
+    - 运行时未就绪: 返回 `503` + `WORLD_PACK_NOT_READY`（统一与其他受 world-pack 约束接口行为一致）。
 - **POST `/api/clock/control`**
     - 说明: 控制模拟时钟。
     - 参数: `{ action: "pause" | "resume" }`
@@ -65,8 +69,12 @@
 - `SIM_STEP_ERR`: 模拟步进异常（通常涉及 BigInt 或 undefined 参数）。
 - `API_INTERNAL_ERROR`: 全局中间件捕获的未归类内部异常。
 - `CLOCK_FORMAT_ERR`: 历法格式化异常（`/api/clock/formatted`）。
+  - 仅用于运行时已就绪但格式化过程发生内部异常的场景。
 - `CLOCK_ACTION_INVALID`: 时钟控制参数非法（非 `pause|resume`）。
 - `AGENT_NOT_FOUND`: 请求的 Agent 不存在。
+- `WORLD_PACK_NOT_READY`: 世界包未就绪，当前接口不可用（常见于空 world-pack 降级启动）。
+- `SYS_PRECHECK_FAIL`: 启动前健康检查失败（例如数据库不可用）。
+- `WORLD_PACK_EMPTY`: 启动时 world-pack 为空，系统进入降级模式等待导入。
 
 ---
-*更新时间: 2026-03-20*
+*更新时间: 2026-03-21*

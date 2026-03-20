@@ -7,6 +7,9 @@ NC='\033[0m' # No Color
 
 echo -e "${YELLOW}Starting Yidhras Development Services...${NC}"
 
+# 启动前：统一准备后端运行前置条件（数据库迁移 + world pack 模板）
+npm run prepare:runtime --prefix apps/server
+
 # 启动后端服务
 cd apps/server
 npm run dev &

@@ -14,7 +14,7 @@ Status: In Progress / 进行中
 
 ## M1 - Runtime Stability / 运行稳定性
 
-Status: Partially Implemented / 部分已实现
+Status: In Progress / 进行中
 
 ### Currently Implemented / 当前已实现
 
@@ -22,12 +22,14 @@ Status: Partially Implemented / 部分已实现
 - [x] Narrative resolver with nested variable resolution and permission filtering.
 - [x] Value dynamics manager with pinning and pluggable algorithm support.
 - [x] Basic global notification queue and API endpoints.
+- [x] Unified API error envelope with request-id tracing in middleware.
+- [x] Resilient startup preflight checks (`/api/health`, `/api/status`) with degraded mode support.
+- [x] End-to-end smoke scripts for startup and key endpoints, integrated into CI.
+- [x] Centralized startup preparation command (`prepare:runtime`) reused by dev scripts and CI.
+- [x] Runtime-not-ready API consistency aligned (`503` + `WORLD_PACK_NOT_READY`) for world-pack-gated endpoints.
 
 ### Planned / 规划中
 
-- [ ] Harden API error boundaries and standardize error payloads.
-- [ ] Add resilient startup checks (world-pack and database readiness).
-- [ ] Add end-to-end smoke scripts for startup and key endpoints.
 - [ ] Time stepping polish: introduce a unified runtime speed policy (config load once at init + optional dynamic override path), avoid scattered tick-rate reads when future variable speed modes are added.
 
 ## M2 - Core Simulation Features / 核心模拟功能
@@ -69,4 +71,4 @@ Status: Planned / 规划中
 - Mark each section with `Currently Implemented` or `Planned` where relevant.
 - Put lint debt and warnings only in `记录.md`.
 
-Last Updated / 最后更新: 2026-03-20
+Last Updated / 最后更新: 2026-03-21

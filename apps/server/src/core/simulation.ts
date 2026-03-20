@@ -1,6 +1,7 @@
 import 'dotenv/config';
 
 import { PrismaClient } from '@prisma/client';
+import fs from 'fs';
 import path from 'path';
 
 import { ChronosEngine } from '../clock/engine.js';
@@ -25,6 +26,17 @@ const parseTickToBigInt = (
   }
 };
 
+const resolveWorldPacksDir = (): string => {
+  const candidates = [
+    path.resolve(process.cwd(), 'data/world_packs'),
+    path.resolve(process.cwd(), '../../data/world_packs'),
+    path.resolve(process.cwd(), '../data/world_packs')
+  ];
+
+  const existing = candidates.find(candidate => fs.existsSync(candidate));
+  return existing ?? candidates[0];
+};
+
 export class SimulationManager {
   public prisma: PrismaClient;
   public loader: WorldPackLoader;
@@ -34,11 +46,17 @@ export class SimulationManager {
   
   private activePack?: WorldPack;
   private stepTicks: bigint = 1n;
+  private readonly packsDir: string;
 
   constructor() {
+    this.packsDir = resolveWorldPacksDir();
+
     // 降级到 v6.2.1 后，使用标准初始化
     this.prisma = new PrismaClient();
-    this.loader = new WorldPackLoader(path.resolve('../../data/world_packs'));
+    this.loader = new WorldPackLoader(this.packsDir);
+    this.clock = new ChronosEngine([], 0n);
+    this.resolver = new NarrativeResolver({});
+    this.dynamics = new ValueDynamicsManager();
   }
 
   /**

@@ -1,0 +1,37 @@
+name: Server Smoke Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: file:./prisma/dev.db
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/server/package-lock.json
+
+      - name: Install server dependencies
+        run: npm ci --prefix apps/server
+
+      - name: Prepare runtime prerequisites
+        run: npm run prepare:runtime --prefix apps/server
+
+      - name: Startup smoke test
+        run: npm run smoke:startup --prefix apps/server
+
+      - name: Key endpoints smoke test
+        run: npm run smoke:endpoints --prefix apps/server
