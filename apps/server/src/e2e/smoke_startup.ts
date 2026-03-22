@@ -30,6 +30,14 @@ interface StatusWorldPack {
 interface StatusPayload {
   status: 'running' | 'paused';
   runtime_ready: boolean;
+  runtime_speed: {
+    mode: 'fixed';
+    source: 'default' | 'world_pack' | 'override';
+    configured_step_ticks: string | null;
+    override_step_ticks: string | null;
+    override_since: number | null;
+    effective_step_ticks: string;
+  };
   health_level: 'ok' | 'degraded' | 'fail';
   world_pack: StatusWorldPack | null;
   has_error: boolean;
@@ -89,6 +97,17 @@ const asStatusPayload = (value: unknown): StatusPayload => {
     'status.health_level must be ok|degraded|fail'
   );
   assert(Array.isArray(value.startup_errors), 'status.startup_errors must be array');
+  assert(isRecord(value.runtime_speed), 'status.runtime_speed must be object');
+  assert(value.runtime_speed.mode === 'fixed', 'runtime_speed.mode must be fixed');
+  assert(
+    typeof value.runtime_speed.source === 'string' && ['default', 'world_pack', 'override'].includes(value.runtime_speed.source),
+    'runtime_speed.source must be default|world_pack|override'
+  );
+  assert(typeof value.runtime_speed.effective_step_ticks === 'string', 'runtime_speed.effective_step_ticks must be string');
+  assert(
+    value.runtime_speed.override_since === null || typeof value.runtime_speed.override_since === 'number',
+    'runtime_speed.override_since must be number|null'
+  );
 
   const rawWorldPack = value.world_pack;
   let worldPack: StatusWorldPack | null = null;
@@ -107,6 +126,17 @@ const asStatusPayload = (value: unknown): StatusPayload => {
   return {
     status: value.status as StatusPayload['status'],
     runtime_ready: value.runtime_ready === true,
+    runtime_speed: {
+      mode: 'fixed',
+      source: value.runtime_speed.source as StatusPayload['runtime_speed']['source'],
+      configured_step_ticks:
+        typeof value.runtime_speed.configured_step_ticks === 'string' ? value.runtime_speed.configured_step_ticks : null,
+      override_step_ticks:
+        typeof value.runtime_speed.override_step_ticks === 'string' ? value.runtime_speed.override_step_ticks : null,
+      override_since:
+        typeof value.runtime_speed.override_since === 'number' ? value.runtime_speed.override_since : null,
+      effective_step_ticks: value.runtime_speed.effective_step_ticks
+    },
     health_level: value.health_level as StatusPayload['health_level'],
     world_pack: worldPack,
     has_error: value.has_error === true,
@@ -144,6 +174,8 @@ const main = async () => {
     if (health.level === 'ok') {
       assert(status.runtime_ready === true, 'runtime should be ready when level=ok');
       assert(status.world_pack !== null, 'world pack should be present when level=ok');
+      assert(status.runtime_speed.source === 'world_pack', 'runtime speed source should be world_pack when level=ok');
+      assert(status.runtime_speed.effective_step_ticks !== '0', 'runtime speed effective ticks should not be 0');
     }
 
     console.log('[smoke_startup] PASS');

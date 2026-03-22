@@ -1,10 +1,15 @@
+import { Prisma } from '@prisma/client';
 import cors from 'cors';
 import express, { NextFunction, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 
 import { sim } from './core/simulation.js';
+import { identityInjector, IdentityRequest } from './identity/middleware.js';
+import { IdentityPolicyService } from './identity/service.js';
+import { IdentityBindingRole, IdentityBindingStatus } from './identity/types.js';
 import { PermissionContext } from './permission/types.js';
+import { ApiError } from './utils/api_error.js';
 import { notifications } from './utils/notifications.js';
 
 const getErrorMessage = (err: unknown): string => {
@@ -32,19 +37,6 @@ const toJsonSafe = (value: unknown): unknown => {
   return value;
 };
 
-class ApiError extends Error {
-  public status: number;
-  public code: string;
-  public details?: unknown;
-
-  constructor(status: number, code: string, message: string, details?: unknown) {
-    super(message);
-    this.status = status;
-    this.code = code;
-    this.details = details;
-  }
-}
-
 const createRequestId = (): string => {
   return `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 };
@@ -55,6 +47,42 @@ const asyncHandler = (
   return (req: Request, res: Response, next: NextFunction) => {
     void handler(req, res, next).catch(next);
   };
+};
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+};
+
+const validatePolicyConditions = (conditions: unknown): Record<string, unknown> => {
+  if (conditions === undefined || conditions === null) {
+    return {};
+  }
+
+  if (!isPlainObject(conditions)) {
+    throw new ApiError(400, 'POLICY_CONDITIONS_INVALID', 'conditions must be an object');
+  }
+
+  const isScalarValue = (candidate: unknown): candidate is string | number | boolean | null => {
+    return (
+      typeof candidate === 'string' ||
+      typeof candidate === 'number' ||
+      typeof candidate === 'boolean' ||
+      candidate === null
+    );
+  };
+
+  for (const [key, value] of Object.entries(conditions)) {
+    if (key.trim().length === 0) {
+      throw new ApiError(400, 'POLICY_CONDITIONS_INVALID', 'conditions key must not be empty');
+    }
+    const isScalar = isScalarValue(value);
+    const isScalarArray = Array.isArray(value) && value.every(isScalarValue);
+    if (!isScalar && !isScalarArray) {
+      throw new ApiError(400, 'POLICY_CONDITIONS_INVALID', 'conditions value must be scalar or scalar[]');
+    }
+  }
+
+  return conditions;
 };
 
 const app = express();
@@ -158,8 +186,108 @@ const assertRuntimeReady = (feature: string): void => {
   });
 };
 
+const parsePositiveStepTicks = (value: unknown): bigint => {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || !Number.isSafeInteger(value)) {
+      throw new ApiError(400, 'RUNTIME_SPEED_INVALID', 'step_ticks must be a safe integer');
+    }
+    const parsed = BigInt(value);
+    if (parsed <= 0n) {
+      throw new ApiError(400, 'RUNTIME_SPEED_INVALID', 'step_ticks must be greater than 0');
+    }
+    return parsed;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      throw new ApiError(400, 'RUNTIME_SPEED_INVALID', 'step_ticks must not be empty');
+    }
+    try {
+      const parsed = BigInt(trimmed);
+      if (parsed <= 0n) {
+        throw new ApiError(400, 'RUNTIME_SPEED_INVALID', 'step_ticks must be greater than 0');
+      }
+      return parsed;
+    } catch (err) {
+      if (err instanceof ApiError) {
+        throw err;
+      }
+      throw new ApiError(400, 'RUNTIME_SPEED_INVALID', 'step_ticks must be a valid integer string');
+    }
+  }
+
+  throw new ApiError(400, 'RUNTIME_SPEED_INVALID', 'step_ticks must be a number or string');
+};
+
+const parseOptionalTick = (value: unknown, fieldName: string): bigint | null => {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value === 'bigint') {
+    if (value <= 0n) {
+      throw new ApiError(400, 'IDENTITY_BINDING_INVALID', `${fieldName} must be greater than 0`);
+    }
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value) || !Number.isSafeInteger(value)) {
+      throw new ApiError(400, 'IDENTITY_BINDING_INVALID', `${fieldName} must be a safe integer`);
+    }
+    const parsed = BigInt(value);
+    if (parsed <= 0n) {
+      throw new ApiError(400, 'IDENTITY_BINDING_INVALID', `${fieldName} must be greater than 0`);
+    }
+    return parsed;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      throw new ApiError(400, 'IDENTITY_BINDING_INVALID', `${fieldName} must not be empty`);
+    }
+    try {
+      const parsed = BigInt(trimmed);
+      if (parsed <= 0n) {
+        throw new ApiError(400, 'IDENTITY_BINDING_INVALID', `${fieldName} must be greater than 0`);
+      }
+      return parsed;
+    } catch (err) {
+      if (err instanceof ApiError) {
+        throw err;
+      }
+      throw new ApiError(400, 'IDENTITY_BINDING_INVALID', `${fieldName} must be a valid integer string`);
+    }
+  }
+
+  throw new ApiError(400, 'IDENTITY_BINDING_INVALID', `${fieldName} must be a number or string`);
+};
+
+const bindingRoles: IdentityBindingRole[] = ['active', 'atmosphere'];
+const bindingStatuses: IdentityBindingStatus[] = ['active', 'inactive', 'expired'];
+
+const expireIdentityBindings = async (): Promise<void> => {
+  const now = sim.clock.getTicks();
+  await sim.prisma.identityNodeBinding.updateMany({
+    where: {
+      AND: [
+        { expires_at: { not: null } },
+        { expires_at: { lte: now } },
+        { status: { not: 'expired' } }
+      ]
+    },
+    data: {
+      status: 'expired',
+      updated_at: now
+    }
+  });
+};
+
 app.use(cors());
 app.use(express.json());
+app.use(identityInjector());
 app.use((req, res, next) => {
   const requestId = createRequestId();
   res.locals.requestId = requestId;
@@ -188,6 +316,7 @@ app.get('/api/status', (req, res) => {
   res.json({
     status: isPaused ? 'paused' : 'running',
     runtime_ready: runtimeReady,
+    runtime_speed: sim.getRuntimeSpeedSnapshot(),
     health_level: startupHealth.level,
     world_pack: pack ? {
       id: pack.metadata.id,
@@ -208,6 +337,35 @@ app.get('/api/health', (req, res) => {
     checks: startupHealth.checks,
     available_world_packs: startupHealth.available_world_packs,
     errors: startupHealth.errors
+  });
+});
+
+app.post('/api/runtime/speed', (req, res) => {
+  assertRuntimeReady('runtime speed control');
+  const { action, step_ticks } = req.body as { action?: unknown; step_ticks?: unknown };
+
+  if (action === 'override') {
+    const parsed = parsePositiveStepTicks(step_ticks);
+    sim.setRuntimeSpeedOverride(parsed);
+    notifications.push('info', `运行时步进已覆盖为 ${parsed.toString()}`, 'RUNTIME_SPEED_OVERRIDE', {
+      step_ticks: parsed.toString(),
+      override_since: sim.getRuntimeSpeedSnapshot().override_since
+    });
+    res.json({ success: true, runtime_speed: sim.getRuntimeSpeedSnapshot() });
+    return;
+  }
+
+  if (action === 'clear') {
+    sim.clearRuntimeSpeedOverride();
+    notifications.push('info', '运行时步进覆盖已清除', 'RUNTIME_SPEED_OVERRIDE_CLEAR', {
+      override_since: null
+    });
+    res.json({ success: true, runtime_speed: sim.getRuntimeSpeedSnapshot() });
+    return;
+  }
+
+  throw new ApiError(400, 'RUNTIME_SPEED_ACTION_INVALID', 'Invalid action', {
+    allowed_actions: ['override', 'clear']
   });
 });
 
@@ -253,24 +411,59 @@ app.post('/api/clock/control', (req, res) => {
 
 // --- 3. L1: Social Layer ---
 
-app.get('/api/social/feed', asyncHandler(async (req, res) => {
+app.get('/api/social/feed', asyncHandler(async (req: IdentityRequest, res) => {
   assertRuntimeReady('social feed');
+  if (!req.identity) {
+    throw new ApiError(401, 'IDENTITY_REQUIRED', 'Identity is required');
+  }
+  const identity = req.identity;
   const limit = parseInt(req.query.limit as string) || 20;
   const posts = await sim.prisma.post.findMany({
     take: limit,
     orderBy: { created_at: 'desc' },
     include: { author: true }
   });
-  res.json(posts);
+  const policyService = new IdentityPolicyService(sim.prisma);
+  const filtered = await Promise.all(
+    posts.map(async post => {
+      return policyService.filterReadableFields(
+        {
+          identity,
+          resource: 'social_post',
+          action: 'read'
+        },
+        post as unknown as Record<string, unknown>
+      );
+    })
+  );
+  res.json(filtered);
 }));
 
-app.post('/api/social/post', asyncHandler(async (req, res) => {
+app.post('/api/social/post', asyncHandler(async (req: IdentityRequest, res) => {
   assertRuntimeReady('social post');
-  const { author_id, content } = req.body;
+  const { content } = req.body as { content?: string };
+
+  if (!req.identity) {
+    throw new ApiError(401, 'IDENTITY_REQUIRED', 'Identity is required');
+  }
+
+  if (typeof content !== 'string' || content.trim().length === 0) {
+    throw new ApiError(400, 'SOCIAL_POST_INVALID', 'content is required');
+  }
+
+  const policyService = new IdentityPolicyService(sim.prisma);
+  await policyService.assertWriteAllowed(
+    {
+      identity: req.identity,
+      resource: 'social_post',
+      action: 'write'
+    },
+    { content }
+  );
 
   const post = await sim.prisma.post.create({
     data: {
-      author_id,
+      author_id: req.identity.id,
       content,
       created_at: sim.clock.getTicks()
     }
@@ -292,6 +485,27 @@ app.get('/api/relational/circles', asyncHandler(async (req, res) => {
     include: { members: true }
   });
   res.json(circles);
+}));
+
+app.get('/api/atmosphere/nodes', asyncHandler(async (req, res) => {
+  assertRuntimeReady('atmosphere nodes');
+  const ownerId = typeof req.query.owner_id === 'string' ? req.query.owner_id.trim() : '';
+  const includeExpired = req.query.include_expired === 'true';
+  const now = sim.clock.getTicks();
+
+  const nodes = await sim.prisma.atmosphereNode.findMany({
+    where: {
+      ...(ownerId.length === 0 ? {} : { owner_id: ownerId }),
+      ...(includeExpired ? {} : {
+        OR: [
+          { expires_at: null },
+          { expires_at: { gt: now } }
+        ]
+      })
+    },
+    orderBy: { created_at: 'desc' }
+  });
+  res.json(nodes);
 }));
 
 // --- 5. L3: Narrative Layer ---
@@ -339,6 +553,328 @@ app.get('/api/agent/:id/context', asyncHandler(async (req, res) => {
   });
 }));
 
+// --- 7. Identity & Policy ---
+
+app.post('/api/identity/register', asyncHandler(async (req: IdentityRequest, res) => {
+  const { id, type, name, claims, metadata } = req.body as {
+    id?: string;
+    type?: string;
+    name?: string;
+    claims?: unknown;
+    metadata?: unknown;
+  };
+
+  if (!id || !type) {
+    throw new ApiError(400, 'IDENTITY_INVALID', 'id and type are required');
+  }
+
+  const now = sim.clock.getTicks();
+  const identity = await sim.prisma.identity.create({
+    data: {
+      id,
+      type,
+      name,
+      provider: 'm2',
+      status: 'active',
+      claims: claims ?? undefined,
+      metadata: metadata ?? undefined,
+      created_at: now,
+      updated_at: now
+    }
+  });
+
+  res.json(identity);
+}));
+
+app.post('/api/identity/bind', asyncHandler(async (req: IdentityRequest, res) => {
+  const { identity_id, agent_id, atmosphere_node_id, role, status, expires_at } = req.body as {
+    identity_id?: string;
+    agent_id?: string;
+    atmosphere_node_id?: string;
+    role?: string;
+    status?: string;
+    expires_at?: unknown;
+  };
+
+  if (!identity_id) {
+    throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'identity_id is required');
+  }
+
+  if (!role || !bindingRoles.includes(role as IdentityBindingRole)) {
+    throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'role must be active or atmosphere');
+  }
+
+  const hasAgent = typeof agent_id === 'string' && agent_id.trim().length > 0;
+  const hasAtmosphere = typeof atmosphere_node_id === 'string' && atmosphere_node_id.trim().length > 0;
+
+  if (hasAgent === hasAtmosphere) {
+    throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'Provide exactly one of agent_id or atmosphere_node_id');
+  }
+
+  const normalizedStatus = (status ?? 'active') as string;
+  if (!bindingStatuses.includes(normalizedStatus as IdentityBindingStatus)) {
+    throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'status must be active, inactive, or expired');
+  }
+
+  if (normalizedStatus === 'active') {
+    const existingActive = await sim.prisma.identityNodeBinding.findFirst({
+      where: {
+        identity_id,
+        role: role as IdentityBindingRole,
+        status: 'active'
+      }
+    });
+    if (existingActive) {
+      throw new ApiError(409, 'IDENTITY_BINDING_CONFLICT', 'Active binding already exists', {
+        identity_id,
+        role,
+        binding_id: existingActive.id
+      });
+    }
+  }
+
+  const expiresAt = parseOptionalTick(expires_at, 'expires_at');
+
+  const now = sim.clock.getTicks();
+  const binding = await sim.prisma.identityNodeBinding.create({
+    data: {
+      identity_id,
+      agent_id: hasAgent ? agent_id : null,
+      atmosphere_node_id: hasAtmosphere ? atmosphere_node_id : null,
+      role: role as IdentityBindingRole,
+      status: normalizedStatus as IdentityBindingStatus,
+      expires_at: expiresAt ?? undefined,
+      created_at: now,
+      updated_at: now
+    }
+  });
+
+  res.json(binding);
+}));
+
+app.post('/api/identity/bindings/query', asyncHandler(async (req: IdentityRequest, res) => {
+  const { identity_id, role, status, include_expired, agent_id, atmosphere_node_id } = req.body as {
+    identity_id?: string;
+    role?: string;
+    status?: string;
+    include_expired?: boolean;
+    agent_id?: string;
+    atmosphere_node_id?: string;
+  };
+
+  if (!identity_id) {
+    throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'identity_id is required');
+  }
+
+  const hasAgentFilter = typeof agent_id === 'string' && agent_id.trim().length > 0;
+  const hasAtmosphereFilter = typeof atmosphere_node_id === 'string' && atmosphere_node_id.trim().length > 0;
+  if (hasAgentFilter && hasAtmosphereFilter) {
+    throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'Provide only one of agent_id or atmosphere_node_id');
+  }
+
+  const where: {
+    identity_id: string;
+    role?: IdentityBindingRole;
+    status?: IdentityBindingStatus | { not: 'expired' };
+    agent_id?: string;
+    atmosphere_node_id?: string;
+  } = {
+    identity_id
+  };
+
+  if (role) {
+    if (!bindingRoles.includes(role as IdentityBindingRole)) {
+      throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'role must be active or atmosphere');
+    }
+    where.role = role as IdentityBindingRole;
+  }
+
+  if (status) {
+    if (!bindingStatuses.includes(status as IdentityBindingStatus)) {
+      throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'status must be active, inactive, or expired');
+    }
+    where.status = status as IdentityBindingStatus;
+  } else if (!include_expired) {
+    where.status = { not: 'expired' };
+  }
+
+  if (hasAgentFilter) {
+    where.agent_id = agent_id;
+  }
+  if (hasAtmosphereFilter) {
+    where.atmosphere_node_id = atmosphere_node_id;
+  }
+
+  const bindings = await sim.prisma.identityNodeBinding.findMany({
+    where,
+    orderBy: { created_at: 'desc' }
+  });
+
+  res.json(bindings);
+}));
+
+app.post('/api/identity/bindings/unbind', asyncHandler(async (req: IdentityRequest, res) => {
+  const { binding_id, status } = req.body as {
+    binding_id?: string;
+    status?: string;
+  };
+
+  if (!binding_id) {
+    throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'binding_id is required');
+  }
+
+  const existing = await sim.prisma.identityNodeBinding.findUnique({
+    where: { id: binding_id }
+  });
+  if (!existing) {
+    throw new ApiError(404, 'IDENTITY_BINDING_NOT_FOUND', 'Binding not found', { binding_id });
+  }
+
+
+  if (status && !bindingStatuses.includes(status as IdentityBindingStatus)) {
+    throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'status must be active, inactive, or expired');
+  }
+
+  const now = sim.clock.getTicks();
+  const binding = await sim.prisma.identityNodeBinding.update({
+    where: { id: binding_id },
+    data: {
+      status: (status ?? 'inactive') as IdentityBindingStatus,
+      updated_at: now
+    }
+  });
+
+  res.json(binding);
+}));
+
+app.post('/api/identity/bindings/expire', asyncHandler(async (req: IdentityRequest, res) => {
+  const { binding_id } = req.body as {
+    binding_id?: string;
+  };
+
+  if (!binding_id) {
+    throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'binding_id is required');
+  }
+
+
+  const existing = await sim.prisma.identityNodeBinding.findUnique({
+    where: { id: binding_id }
+  });
+  if (!existing) {
+    throw new ApiError(404, 'IDENTITY_BINDING_NOT_FOUND', 'Binding not found', { binding_id });
+  }
+
+  const now = sim.clock.getTicks();
+  const binding = await sim.prisma.identityNodeBinding.update({
+    where: { id: binding_id },
+    data: {
+      status: 'expired',
+      expires_at: now,
+      updated_at: now
+    }
+  });
+
+  res.json(binding);
+}));
+
+app.post('/api/policy', asyncHandler(async (req: IdentityRequest, res) => {
+  const {
+    effect,
+    subject_id,
+    subject_type,
+    resource,
+    action,
+    field,
+    conditions,
+    priority
+  } = req.body as {
+    effect?: string;
+    subject_id?: string;
+    subject_type?: string;
+    resource?: string;
+    action?: string;
+    field?: string;
+    conditions?: unknown;
+    priority?: number;
+  };
+
+  if (!effect || !resource || !action || !field) {
+    throw new ApiError(400, 'POLICY_INVALID', 'effect, resource, action, field are required');
+  }
+
+  if (effect !== 'allow' && effect !== 'deny') {
+    throw new ApiError(400, 'POLICY_INVALID', 'effect must be allow or deny');
+  }
+
+  const validatedConditions = validatePolicyConditions(conditions);
+
+  const now = sim.clock.getTicks();
+  const policy = await sim.prisma.policy.create({
+    data: {
+      effect,
+      subject_id: subject_id ?? null,
+      subject_type: subject_type ?? null,
+      resource,
+      action,
+      field,
+      conditions:
+        Object.keys(validatedConditions).length > 0
+          ? (validatedConditions as Prisma.InputJsonValue)
+          : undefined,
+      priority: priority ?? 0,
+      created_at: now,
+      updated_at: now
+    }
+  });
+
+  res.json(policy);
+}));
+
+app.post('/api/policy/evaluate', asyncHandler(async (req: IdentityRequest, res) => {
+  const { resource, action, fields, attributes } = req.body as {
+    resource?: string;
+    action?: string;
+    fields?: string[];
+    attributes?: Record<string, unknown>;
+  };
+
+  if (!resource || !action || !fields) {
+    throw new ApiError(400, 'POLICY_EVAL_INVALID', 'resource, action, fields are required');
+  }
+
+  if (!req.identity) {
+    throw new ApiError(401, 'IDENTITY_REQUIRED', 'Identity is required');
+  }
+
+  const service = new IdentityPolicyService(sim.prisma);
+  const result = await service.evaluateFields(
+    {
+      identity: req.identity,
+      resource,
+      action,
+      attributes
+    },
+    fields
+  );
+
+  const details = await service.explainFieldDecisions(
+    {
+      identity: req.identity,
+      resource,
+      action,
+      attributes
+    },
+    fields
+  );
+
+  res.json({
+    allowed_fields: Array.from(result.allowedFields),
+    denied_fields: Array.from(result.deniedFields),
+    has_wildcard_allow: result.hasWildcardAllow,
+    details
+  });
+}));
+
 // --- Error Middleware ---
 
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
@@ -380,6 +916,7 @@ const startSimulation = () => {
   timer = setInterval(async () => {
     if (!isPaused) {
       try {
+        await expireIdentityBindings();
         await sim.step(sim.getStepTicks());
       } catch (err: unknown) {
         notifications.push(

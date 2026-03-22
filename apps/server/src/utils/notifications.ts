@@ -6,6 +6,7 @@ export interface SystemMessage {
   content: string;
   timestamp: number;
   code?: string;
+  details?: Record<string, unknown>;
 }
 
 class NotificationManager {
@@ -15,13 +16,19 @@ class NotificationManager {
   /**
    * 推送一条系统消息
    */
-  public push(level: NotificationLevel, content: string, code?: string): SystemMessage {
+  public push(
+    level: NotificationLevel,
+    content: string,
+    code?: string,
+    details?: Record<string, unknown>
+  ): SystemMessage {
     const msg: SystemMessage = {
       id: Math.random().toString(36).substring(2, 9),
       level,
       content,
       timestamp: Date.now(),
-      code
+      code,
+      ...(details === undefined ? {} : { details })
     };
 
     this.messages.unshift(msg);

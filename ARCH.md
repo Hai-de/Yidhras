@@ -1,7 +1,7 @@
 # Yidhras Architecture / 架构文档
 
 Version: v0.4.0-draft
-Last Updated / 最后更新: 2026-03-20
+Last Updated / 最后更新: 2026-03-22
 
 ## 1) Project Positioning / 项目定位
 
@@ -47,6 +47,8 @@ The current implementation focuses on a practical baseline: clock simulation, wo
 - `apps/server/src/index.ts` is the HTTP entrypoint.
 - It wires system, clock, social, relational, narrative, and agent-context APIs.
 - A global error middleware captures operational exceptions and pushes system notifications.
+- Identity & policy APIs support field-level evaluation with explicit rule explanation for debugging (`/api/policy/evaluate`).
+- Identity lifecycle APIs include bind/query/unbind/expire flow and atmosphere-node listing endpoint.
 
 ### 4.2 Simulation Core / 模拟核心
 
@@ -57,6 +59,7 @@ The current implementation focuses on a practical baseline: clock simulation, wo
   - value dynamics manager,
   - Prisma access.
 - Runtime step loop currently advances ticks and leaves deeper agent decision flow as future work.
+- Runtime step loop also performs binding expiry scan (`expires_at`) before advancing simulation ticks.
 
 ### 4.3 Time System / 时间系统
 
@@ -74,7 +77,9 @@ The current implementation focuses on a practical baseline: clock simulation, wo
 
 - Prisma schema: `apps/server/prisma/schema.prisma`.
 - Database provider: SQLite via `DATABASE_URL`.
-- Current models cover agents, circles, memberships, relationships, posts, events, and world variables.
+- Current models cover agents, circles, memberships, relationships, posts, events, world variables,
+  and identity/policy entities.
+- Identity bindings connect identities to active/atmosphere nodes with lifecycle status and expiry.
 
 ## 5) Frontend Architecture / 前端架构
 
@@ -102,9 +107,10 @@ To avoid ambiguity for agentic contributors:
 为避免后续 agent 误解，明确以下边界：
 
 - **Currently Implemented / 当前已实现:**
-  - API baseline, simulation bootstrap, clock resolver dynamics modules, graph visualization.
+  - API baseline, simulation bootstrap, clock/resolver/dynamics modules, graph visualization.
+  - Identity policy strategy baseline: deny-first ordering, wildcard field matching, and conditions-ready evaluation.
 - **Planned / 规划中:**
-  - full agent inference pipeline, memory core, robust L4 dispatcher, richer frontend plugin system.
+  - full agent inference pipeline, memory core, lifecycle policy expansion, robust L4 dispatcher, richer frontend plugin system.
 
 ## 9) Non-Goals for This Draft / 本版非目标
 

@@ -125,6 +125,28 @@ const main = async () => {
 
       assert(timelineRes.status === 200, 'GET /api/narrative/timeline should return 200 when runtime ready');
       assertArray(timelineRes.body, '/api/narrative/timeline');
+
+      const overrideRes = await requestJson(server.baseUrl, '/api/runtime/speed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'override', step_ticks: '2' })
+      });
+      assert(overrideRes.status === 200, 'POST /api/runtime/speed override should return 200');
+      assert(isRecord(overrideRes.body), 'runtime speed override response should be object');
+      assert(overrideRes.body.success === true, 'runtime speed override success should be true');
+      assert(isRecord(overrideRes.body.runtime_speed), 'runtime speed override payload should include runtime_speed');
+      assert(typeof overrideRes.body.runtime_speed.override_since === 'number', 'runtime speed override should include override_since');
+
+      const overrideClearRes = await requestJson(server.baseUrl, '/api/runtime/speed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'clear' })
+      });
+      assert(overrideClearRes.status === 200, 'POST /api/runtime/speed clear should return 200');
+      assert(isRecord(overrideClearRes.body), 'runtime speed clear response should be object');
+      assert(overrideClearRes.body.success === true, 'runtime speed clear success should be true');
+      assert(isRecord(overrideClearRes.body.runtime_speed), 'runtime speed clear payload should include runtime_speed');
+      assert(overrideClearRes.body.runtime_speed.override_since === null, 'runtime speed clear should reset override_since');
     } else {
       assert(feedRes.status === 503, 'GET /api/social/feed should return 503 when runtime not ready');
       assert(graphRes.status === 503, 'GET /api/relational/graph should return 503 when runtime not ready');

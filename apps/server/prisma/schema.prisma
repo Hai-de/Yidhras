@@ -25,6 +25,8 @@ model Agent {
   posts           Post[]
   relationships_from Relationship[] @relation("FromNode")
   relationships_to   Relationship[] @relation("ToNode")
+
+  identity_bindings IdentityNodeBinding[]
   
   // Atmosphere Nodes (Sockpuppets)
   atmosphere_nodes AtmosphereNode[]
@@ -41,6 +43,8 @@ model AtmosphereNode {
   name            String
   owner_id        String
   owner           Agent    @relation(fields: [owner_id], references: [id])
+
+  identity_bindings IdentityNodeBinding[]
   
   expires_at      BigInt?  // 自动回收时间
   created_at      BigInt
@@ -114,4 +118,62 @@ model WorldVariable {
   key         String   @id
   value       String
   updated_at  BigInt
+}
+
+// --- Identity Layer ---
+
+model Identity {
+  id         String  @id @default(uuid())
+  type       String
+  name       String?
+  provider   String  @default("m2")
+  status     String  @default("active")
+  claims     Json?
+  metadata   Json?
+  created_at BigInt
+  updated_at BigInt
+
+  policies   Policy[]
+  bindings   IdentityNodeBinding[]
+}
+
+model IdentityNodeBinding {
+  id                  String   @id @default(uuid())
+  identity_id         String
+  agent_id            String?
+  atmosphere_node_id  String?
+  role                String
+  status              String   @default("active")
+  expires_at          BigInt?
+  created_at          BigInt
+  updated_at          BigInt
+
+  identity        Identity       @relation(fields: [identity_id], references: [id])
+  agent           Agent?         @relation(fields: [agent_id], references: [id])
+  atmosphere_node AtmosphereNode? @relation(fields: [atmosphere_node_id], references: [id])
+
+  @@index([identity_id])
+  @@index([agent_id])
+  @@index([atmosphere_node_id])
+  @@index([role, status])
+}
+
+model Policy {
+  id            String   @id @default(uuid())
+  effect        String
+  subject_id    String?
+  subject_type  String?
+  resource      String
+  action        String
+  field         String
+  conditions    Json?
+  priority      Int      @default(0)
+  created_at    BigInt
+  updated_at    BigInt
+
+  subject       Identity? @relation(fields: [subject_id], references: [id])
+
+  @@index([resource, action])
+  @@index([subject_id])
+  @@index([subject_type])
 }

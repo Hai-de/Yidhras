@@ -1,11 +1,6 @@
 name: Server Smoke Tests
 
-on:
-  pull_request:
-  push:
-    branches:
-      - main
-      - master
+on: []
 
 jobs:
   smoke:

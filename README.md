@@ -20,8 +20,8 @@
 npm install --prefix apps/server
 npm install --prefix apps/web
 
-# 统一准备后端运行前置条件（数据库迁移 + world pack 模板）
-npm run prepare:runtime --prefix apps/server
+    # 统一准备后端运行前置条件（数据库迁移 + world pack 模板 + 身份策略初始化）
+    npm run prepare:runtime --prefix apps/server
 ```
 
 ### 3. 运行项目
@@ -43,6 +43,7 @@ chmod +x start-dev.sh
 - **Web:** `npm run dev` (位于 apps/web)
 - **Runtime Prepare:** `npm run prepare:runtime --prefix apps/server`
 - **World Pack Bootstrap:** `npm run init:world-pack --prefix apps/server`
+- **Seed Identity & Policy:** `npm run seed:identity --prefix apps/server`
 
 ## 冒烟测试（启动流程与关键端点）
 - **启动流程冒烟:** `npm run smoke:startup --prefix apps/server`
@@ -54,3 +55,14 @@ chmod +x start-dev.sh
 - **运行前置条件（硬性）:** 启动服务前需完成数据库迁移和 world pack 初始化，统一通过 `npm run prepare:runtime --prefix apps/server` 执行。
 - **降级启动策略（硬性）:** 首次拉取项目内容可能为空，`health_level=degraded` 且 `runtime_ready=false` 视为允许启动，不作为冒烟测试失败条件。
 - **关键端点一致性（硬性）:** 依赖 world-pack 的接口在运行时未就绪时统一返回 `503` + `WORLD_PACK_NOT_READY` 错误包络。
+- **统一速度策略（硬性）:** 运行时速度按 `override > world_pack.simulation_time.step_ticks > default(1)` 解析，`/api/status` 通过 `runtime_speed` 字段暴露当前生效值。
+
+## 运行时速度覆盖（调试）
+- 覆盖速度：
+  - `POST /api/runtime/speed` body: `{ "action": "override", "step_ticks": "2" }`
+- 清除覆盖：
+  - `POST /api/runtime/speed` body: `{ "action": "clear" }`
+- 覆盖时间：
+  - `/api/status.runtime_speed.override_since` 返回覆盖生效时间戳（毫秒），清除覆盖时为 `null`。
+- 系统通知：
+  - `/api/system/notifications` 中 `details` 字段会包含 `step_ticks` 与 `override_since`（覆盖），或清除时 `override_since: null`。

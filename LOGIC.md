@@ -1,7 +1,7 @@
 # Yidhras Logic / 业务逻辑说明
 
 Version: v0.2.0-draft
-Last Updated / 最后更新: 2026-03-20
+Last Updated / 最后更新: 2026-03-22
 
 本文件偏向业务规则表达，不绑定未来可能变化的算法细节。
 This file focuses on business rules rather than unstable low-level algorithm details.
@@ -33,6 +33,21 @@ This file focuses on business rules rather than unstable low-level algorithm det
 
 - Broader policy coverage across all L1/L2/L3 data reads.
 - Unified authorization checks for future agent action APIs.
+
+### Identity Binding Lifecycle / 身份绑定生命周期（当前已实现）
+
+- Identity can bind to active/atmosphere nodes with explicit role and status fields.
+- Bindings support manual unbind (inactive) and explicit expiration (expired + expires_at).
+- Runtime loop auto-expires bindings when `expires_at` is reached.
+- Active-binding uniqueness guard: same `identity_id + role` cannot have duplicate `active` bindings.
+- Binding query supports optional node-target filters (`agent_id` or `atmosphere_node_id`).
+
+### Identity Policy Baseline / 身份策略基线（已实现）
+
+- Field-level policy evaluation follows deny-first ordering (`deny > allow`) with priority tie-break.
+- Field wildcard matching supports `*`, exact path, and `prefix.*`.
+- Policy conditions support claims/attributes merged context for condition-aware matching.
+- Policy evaluate API can return per-field rule explanation for debugging and observability.
 
 ## 3) Time and Narrative Consistency / 时间与叙事一致性
 

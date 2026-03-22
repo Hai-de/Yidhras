@@ -9,6 +9,7 @@ import { ValueDynamicsManager } from '../dynamics/manager.js';
 import { NarrativeResolver } from '../narrative/resolver.js';
 import { notifications } from '../utils/notifications.js';
 import { WorldPack, WorldPackLoader } from '../world/loader.js';
+import { RuntimeSpeedPolicy, RuntimeSpeedSnapshot } from './runtime_speed.js';
 
 const parseTickToBigInt = (
   value: string | number | undefined,
@@ -45,7 +46,7 @@ export class SimulationManager {
   public dynamics!: ValueDynamicsManager;
   
   private activePack?: WorldPack;
-  private stepTicks: bigint = 1n;
+  private runtimeSpeed: RuntimeSpeedPolicy;
   private readonly packsDir: string;
 
   constructor() {
@@ -57,6 +58,7 @@ export class SimulationManager {
     this.clock = new ChronosEngine([], 0n);
     this.resolver = new NarrativeResolver({});
     this.dynamics = new ValueDynamicsManager();
+    this.runtimeSpeed = new RuntimeSpeedPolicy(1n);
   }
 
   /**
@@ -74,9 +76,9 @@ export class SimulationManager {
     const configuredStepTicks = parseTickToBigInt(pack.simulation_time?.step_ticks, 'simulation_time.step_ticks');
 
     if (configuredStepTicks !== undefined && configuredStepTicks > 0n) {
-      this.stepTicks = configuredStepTicks;
+      this.runtimeSpeed.setConfiguredStepTicks(configuredStepTicks);
     } else {
-      this.stepTicks = 1n;
+      this.runtimeSpeed.setConfiguredStepTicks(null);
       if (configuredStepTicks !== undefined) {
         notifications.push('warning', '世界包字段 simulation_time.step_ticks 必须大于 0，已回退为 1', 'PACK_STEP_TICK_INVALID');
       }
@@ -118,7 +120,19 @@ export class SimulationManager {
   }
 
   public getStepTicks() {
-    return this.stepTicks;
+    return this.runtimeSpeed.getEffectiveStepTicks();
+  }
+
+  public getRuntimeSpeedSnapshot(): RuntimeSpeedSnapshot {
+    return this.runtimeSpeed.getSnapshot();
+  }
+
+  public setRuntimeSpeedOverride(stepTicks: bigint): void {
+    this.runtimeSpeed.setOverrideStepTicks(stepTicks);
+  }
+
+  public clearRuntimeSpeedOverride(): void {
+    this.runtimeSpeed.clearOverride();
   }
 
   /**
