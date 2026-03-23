@@ -25,6 +25,7 @@ This file is intentionally specific to the current repo layout and conventions.
 - Backend uses Prisma with SQLite (`apps/server/prisma/schema.prisma`).
 - Server TypeScript config is strict (`"strict": true`).
 - Module system in server is `NodeNext` ESM; runtime imports include `.js` extensions.
+- M0 engineering baseline is completed; future server work should assume lint/typecheck cleanliness is already a hard expectation rather than an open milestone.
 
 ## 4) Install Commands
 
@@ -69,7 +70,6 @@ This file is intentionally specific to the current repo layout and conventions.
 - `apps/web/.eslintrc.cjs`
 - Prettier is enabled at repo root:
 - `.prettierrc.json`
-- Current strategy is safety-first baseline (warnings allowed, practical over zero-warning).
 - Current strategy is safety-first with selected rule hardening (practical over style maximalism).
 - Ignored paths are explicitly configured, including:
 - `**/node_modules/**`, `**/dist/**`, `**/.nuxt/**`, `**/.output/**`, `**/coverage/**`.
@@ -116,12 +116,41 @@ This file is intentionally specific to the current repo layout and conventions.
 
 ## 10) Architecture-Aware Coding Notes
 
-- API surface is implemented in `apps/server/src/index.ts` and mirrors `API.md`.
+- Server entry starts in `apps/server/src/index.ts`, but Express assembly is now split across:
+  - `apps/server/src/app/create_app.ts`
+  - `apps/server/src/app/routes/*.ts`
+  - `apps/server/src/app/services/*.ts`
+  - `apps/server/src/app/http/*.ts`
+  - `apps/server/src/app/middleware/*.ts`
+  - `apps/server/src/app/runtime/*.ts`
+- `apps/server/src/index.ts` should remain a composition root for startup, runtime bootstrap, and route assembly rather than growing back into an all-in-one route file.
 - Simulation entrypoint is `SimulationManager` in `apps/server/src/core/simulation.ts`.
 - World-pack loading is file-driven via YAML in `apps/server/src/world/loader.ts`.
 - Narrative templating and permission gating are in `apps/server/src/narrative/resolver.ts`.
 - Frontend state uses Pinia stores in `apps/web/stores/*.ts`.
 - L2 graph visualization is Cytoscape in `apps/web/components/L2Graph.vue`.
+- Keep the stable request tracing path intact: `requestIdMiddleware()` sets `X-Request-Id` and keeps `res.locals.requestId` aligned with the unified error envelope.
+- Keep runtime gating centralized through `AppContext.assertRuntimeReady(feature)` so world-pack-dependent endpoints continue to return `503/WORLD_PACK_NOT_READY` with stable details.
+- Inference integration is intentionally reserved at `apps/server/src/app/routes/inference.ts` and `apps/server/src/inference/service.ts`; do not bypass these locations with ad-hoc route-level prompt logic.
+
+### 10.1) Current Strategic Direction for Agents / 当前 Agent 工程方向
+
+- The official route is now **Phase B → Phase D**, not a disposable prototype path.
+- Phase B means building a **D-ready inference service layer**:
+  - unified service entry
+  - context builder
+  - prompt builder
+  - provider abstraction
+  - normalized decision contract
+  - trace metadata
+  - pluggable sink
+- Phase D means introducing **persisted workflow complexity** explicitly:
+  - `InferenceTrace`
+  - `ActionIntent`
+  - `DecisionJob` or equivalent runtime workflow state
+  - idempotency / retry / audit / replay
+- When implementing inference-related code, do **not** collapse decision generation and action execution into one opaque function.
+- API handlers should remain thin shells; domain assembly belongs in service modules.
 
 ## 11) Code Style: General
 
@@ -155,6 +184,8 @@ This file is intentionally specific to the current repo layout and conventions.
 - Use narrow unions for finite state (`'idle' | 'running' | ...`) as in stores.
 - For BigInt fields crossing API boundaries, serialize as strings over JSON.
 - Validate assumptions when converting string -> BigInt on the client.
+- For inference/workflow code, define domain contracts before writing route payload types.
+- Prefer explicit intermediate models such as `DecisionResult` / `ActionIntentDraft` over untyped freeform JSON.
 
 ## 15) Code Style: Naming
 
@@ -170,6 +201,7 @@ This file is intentionally specific to the current repo layout and conventions.
 - Avoid exposing sensitive internals in HTTP responses.
 - Keep server logs actionable and scoped (include subsystem context).
 - Fail closed for permission-gated or missing-variable resolver paths.
+- Future inference/workflow failures should remain distinguishable by stage (provider / normalization / persistence / dispatch).
 
 ## 17) Change Discipline for Agents
 
@@ -178,6 +210,8 @@ This file is intentionally specific to the current repo layout and conventions.
 - Update docs when behavior or commands change.
 - If adding scripts (lint/test), also update this file and `README.md`.
 - Prefer validating changed paths locally (build or targeted script run) before handoff.
+- If introducing Phase B inference modules, ensure they are D-ready by design rather than temporary glue code.
+- If introducing Phase D persistence, update `ARCH.md`, `API.md`, `LOGIC.md`, `TODO.md`, and `记录.md` together.
 
 ## 18) Quick Command Cheat Sheet
 

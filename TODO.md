@@ -5,12 +5,12 @@ This file tracks milestone priorities, not lint debt details.
 
 ## M0 - Engineering Baseline / 工程基线 (Highest Priority)
 
-Status: In Progress / 进行中
+Status: Completed / 已完成
 
 - [x] Add repo-level ESLint + Prettier baseline for `apps/server` and `apps/web`.
 - [x] Add scripts: `lint` and `typecheck` in both app package manifests.
 - [x] Run lint/typecheck, record current warnings in `记录.md`.
-- [ ] Mark temporary exceptions and cleanup window before feature sprint.
+- [x] Mark temporary exceptions and cleanup window before feature sprint.
 
 ## M1 - Runtime Stability / 运行稳定性
 
@@ -44,9 +44,11 @@ Status: In Progress / 进行中
 ### Planned / 规划中
 
 - [x] Identity Layer: active node and atmosphere node lifecycle policies (baseline delivered: bind/query/unbind/expire APIs, uniqueness guard for active binding, runtime auto-expire, seed with atmosphere node).
-- [ ] Inference Interface: strategy injection and hardcoded prompt channel.
-- [ ] Memory Core: short-term context + long-term storage contract.
-- [ ] Action Dispatcher: map decisions to world actions with delay modeling.
+- [x] Formalize official delivery route: move from temporary B exploration to explicit B→D transition plan.
+- [ ] Inference Interface Phase B (D-ready): unified inference service, context/prompt builder, strategy injection, hardcoded prompt channel, preview/run APIs, normalized decision contract, and trace metadata with pluggable sink.
+- [ ] Workflow Persistence Phase D: introduce persisted `InferenceTrace` / `ActionIntent` / `DecisionJob`-style workflow with idempotency, retry, audit, replay, and runtime state transitions.
+- [ ] Memory Core: short-term context adapter + long-term retrieval/storage contract built on top of stable trace/decision schema.
+- [ ] Action Dispatcher: consume `ActionIntent` and map decisions to delayed world actions with L4 transmission constraints.
 
 ## M3 - Frontend Capability / 前端能力完善
 
@@ -71,4 +73,4 @@ Status: Planned / 规划中
 - Mark each section with `Currently Implemented` or `Planned` where relevant.
 - Put lint debt and warnings only in `记录.md`.
 
-Last Updated / 最后更新: 2026-03-22
+Last Updated / 最后更新: 2026-03-23

@@ -1,4 +1,6 @@
-# Yidhras API 接口规范 (v0.1.4)
+# Yidhras API 接口规范 (v0.1.5)
+
+> Implementation note (2026-03-23): the backend API is now assembled through `apps/server/src/app/create_app.ts`, grouped route modules under `apps/server/src/app/routes/*.ts`, and thin route-to-service delegation into `apps/server/src/app/services/*.ts`. This refactor keeps the external HTTP contract stable; the structures below remain the behavioral source of truth.
 
 ## 0. 系统通知与鲁棒性 (System Notifications)
 - **GET `/api/system/notifications`**
@@ -129,7 +131,39 @@
       - 命中规则时 `reason` 形如 `allow:<rule_id>` 或 `deny:<rule_id>`
       - 当无匹配规则时，按默认拒绝（`reason = default_deny`）
 
-## 7. 错误代码参考 (Error Codes)
+## 8. Agent 推理与工作流规划接口（Planned, Not Yet Implemented）
+
+> 以下接口为正式路线规划占位，当前版本仅用于冻结契约方向，**尚未在服务端实现**。
+>
+> Current reserved integration slots: `apps/server/src/app/routes/inference.ts` and `apps/server/src/inference/service.ts`.
+
+### 8.1 Phase B: D-ready Inference Service
+- **POST `/api/inference/preview`**
+    - 说明: 预览推理上下文与 prompt 结构化结果。
+    - 规划输入: `{ agent_id?: string, identity_id?: string, strategy?: string, attributes?: Record<string, unknown> }`
+    - 规划返回: `{ inference_id, actor_ref, strategy, provider, tick, prompt: { system_prompt, role_prompt, world_prompt, context_prompt, output_contract_prompt, combined_prompt }, metadata: { world_pack_id, binding_ref?, prompt_version? } }`
+- **POST `/api/inference/run`**
+    - 说明: 手动触发一次推理并返回标准化决策结果（调试/验证用途）。
+    - 规划输入: `{ agent_id?: string, identity_id?: string, strategy?: string, attributes?: Record<string, unknown> }`
+    - 规划返回: `{ inference_id, actor_ref, strategy, provider, tick, decision: { action_type, target_ref, payload, delay_hint_ticks, confidence?, reasoning?, meta? }, trace_metadata: { world_pack_id, binding_ref?, prompt_version? } }`
+
+### 8.2 Phase D: Persisted Workflow
+- **目标方向（规划中）**
+    - 将推理结果持久化为正式工作流对象，而不是仅做临时同步返回。
+    - 候选对象包括：`InferenceTrace`、`ActionIntent`、`DecisionJob`。
+- **预期能力（规划中）**
+    - 幂等（idempotency）
+    - 重试（retry）
+    - 审计（audit）
+    - 回放（replay）
+    - 决策与执行分离（decision ≠ execution）
+- **候选接口方向（规划中）**
+    - `POST /api/inference/jobs`
+    - `GET /api/inference/traces/:id`
+    - `GET /api/action-intents/:id`
+    - `POST /api/action-intents/:id/dispatch`
+
+## 9. 错误代码参考 (Error Codes)
 - `SYS_INIT_FAIL`: 系统初始化（数据库、世界包）失败。
 - `SIM_STEP_ERR`: 模拟步进异常（通常涉及 BigInt 或 undefined 参数）。
 - `API_INTERNAL_ERROR`: 全局中间件捕获的未归类内部异常。
@@ -153,6 +187,12 @@
 - `WORLD_PACK_NOT_READY`: 世界包未就绪，当前接口不可用（常见于空 world-pack 降级启动）。
 - `SYS_PRECHECK_FAIL`: 启动前健康检查失败（例如数据库不可用）。
 - `WORLD_PACK_EMPTY`: 启动时 world-pack 为空，系统进入降级模式等待导入。
+- `INFERENCE_INPUT_INVALID`: （规划预留）推理输入参数非法。
+- `INFERENCE_PROVIDER_FAIL`: （规划预留）推理 provider 失败。
+- `INFERENCE_NORMALIZATION_FAIL`: （规划预留）推理结果归一化失败。
+- `INFERENCE_TRACE_PERSIST_FAIL`: （规划预留）推理 trace 持久化失败。
+- `ACTION_INTENT_INVALID`: （规划预留）动作意图不合法。
+- `ACTION_DISPATCH_FAIL`: （规划预留）动作调度失败。
 
 ---
-*更新时间: 2026-03-22*
+*更新时间: 2026-03-23*

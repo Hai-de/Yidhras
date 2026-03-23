@@ -1,7 +1,7 @@
 # Yidhras Logic / 业务逻辑说明
 
-Version: v0.2.0-draft
-Last Updated / 最后更新: 2026-03-22
+Version: v0.3.0-draft
+Last Updated / 最后更新: 2026-03-23
 
 本文件偏向业务规则表达，不绑定未来可能变化的算法细节。
 This file focuses on business rules rather than unstable low-level algorithm details.
@@ -20,6 +20,9 @@ This file focuses on business rules rather than unstable low-level algorithm det
 - Full perception-decision-action loop for autonomous agents.
 - Action planning tied to role prompts and world state.
 - Delayed dispatch behavior aligned with transmission-layer constraints.
+- The formal delivery route is now split into:
+  - **Phase B:** stabilize inference contracts and prompt/context composition.
+  - **Phase D:** persist decisions/intents as workflow state before execution.
 
 ## 2) Information Boundary / 信息边界规则
 
@@ -33,6 +36,7 @@ This file focuses on business rules rather than unstable low-level algorithm det
 
 - Broader policy coverage across all L1/L2/L3 data reads.
 - Unified authorization checks for future agent action APIs.
+- Inference context assembly should reuse identity/binding/policy results rather than bypassing them with separate hidden rules.
 
 ### Identity Binding Lifecycle / 身份绑定生命周期（当前已实现）
 
@@ -61,6 +65,7 @@ This file focuses on business rules rather than unstable low-level algorithm det
 
 - More explicit timeline impact tracking per action/event.
 - Clearer reconciliation rules when actions compete at similar ticks.
+- In Phase D, persisted `ActionIntent`-style objects should make timeline insertion and delayed execution auditable.
 
 ## 4) Node Value Dynamics / 节点价值动态
 
@@ -87,6 +92,11 @@ This file focuses on business rules rather than unstable low-level algorithm det
 
 - Frontend global notification panel fully wired to backend queue.
 - Stronger categorization for operational vs business-level alerts.
+- Inference and workflow failures should eventually distinguish between:
+  - provider failure
+  - normalization failure
+  - persistence failure
+  - dispatch failure
 
 ## 6) Layer Coupling Rules / 层级联动规则
 
@@ -107,14 +117,17 @@ This file focuses on business rules rather than unstable low-level algorithm det
 ### Planned Core Modules / 规划模块
 
 - Identity Layer: active node and atmosphere node binding/lifecycle.
-- Inference Interface: policy injection and stable prompt channels.
+- Inference Interface: policy injection, stable prompt channels, normalized decision schema, and trace metadata.
+- Workflow Persistence: persisted traces/intents/jobs with idempotency, retry, and replay support.
 - Memory Core: short-term context plus long-term memory retrieval.
-- Action Dispatcher: convert decisions into delayed executable actions.
+- Action Dispatcher: convert persisted decisions/intents into delayed executable actions.
 
 ### Current Delivery Principle / 当前交付原则
 
 - Prioritize stable interfaces before deep behavior expansion.
 - Keep logic contracts explicit in docs to support agentic coding tools.
+- Treat Phase B as a D-ready service layer rather than a throwaway prototype.
+- Treat Phase D as the point where inference enters formal software engineering complexity (state, audit, retry, replay) instead of remaining a temporary synchronous call.
 
 ## 8) Product Rules for Contributors / 贡献者规则
 
@@ -122,3 +135,8 @@ This file focuses on business rules rather than unstable low-level algorithm det
 - Avoid presenting speculative behavior as already available.
 - Keep logic docs synced with API and architecture docs.
 - Put implementation debt and lint debt into dedicated tracking files.
+- When adding inference-related rules, explicitly state whether they belong to:
+  - prompt construction,
+  - decision normalization,
+  - workflow persistence,
+  - action dispatch.
