@@ -148,7 +148,7 @@ export const buildPromptFragments = (context: InferenceContext): PromptFragment[
     .join('\n');
 
   const systemPrompt = [
-    'You are the Yidhras Phase B inference service.',
+    'You are the Yidhras inference service operating on the current workflow baseline.',
     'Generate a stable, normalized decision for the current actor.',
     `Selected strategy: ${context.strategy}`
   ].join('\n');

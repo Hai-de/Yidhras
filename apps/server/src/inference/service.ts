@@ -34,7 +34,7 @@ import type {
 } from './types.js';
 
 export interface InferenceService {
-  readonly phase: 'phase_b';
+  readonly phase: 'workflow_baseline';
   readonly ready: true;
   previewInference(input: InferenceRequestInput): Promise<InferencePreviewResult>;
   runInference(input: InferenceRequestInput): Promise<InferenceRunResult>;
@@ -370,7 +370,7 @@ export const createInferenceService = ({
   traceSink = createNoopInferenceTraceSink()
 }: CreateInferenceServiceOptions): InferenceService => {
   const service: InferenceService = {
-    phase: 'phase_b',
+    phase: 'workflow_baseline',
     ready: true,
     async previewInference(input) {
       const inferenceContext = await buildInferenceContext(context, input);

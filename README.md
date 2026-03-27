@@ -98,27 +98,32 @@
 
 ## 正式路线规划（B→D）
 
-### Phase B（当前阶段，D-ready 服务层）
+### Phase B（已完成基线，D-ready 服务层）
 目标：先建立稳定的推理服务边界，而不是堆积一次性调试逻辑。
 
-计划内容：
-- 统一 `InferenceService` 入口，禁止在路由层和 runtime 中重复拼装推理逻辑。
-- 建立 `InferenceContext`、`PromptBundle`、`DecisionResult`、`ActionIntentDraft` 等领域契约。
-- 提供策略注入能力（如 `mock` / `rule_based` / future provider）。
-- 提供硬编码 prompt 通道，并与 world-pack `prompts` 片段结合。
-- 提供 `preview/run` 调试 API，用于验证 prompt 和标准化决策结果。
-- 预留 trace metadata（如 `inference_id`、`actor_ref`、`tick`、`provider`、`world_pack_id`）。
-- 预留可插拔 sink，使未来可从 no-op/日志实现平滑升级到 Prisma 持久化实现。
+当前已落地：
+- 已统一 `InferenceService` 入口，路由层与 runtime 不再重复拼装推理逻辑。
+- 已建立 `InferenceContext`、`PromptBundle`、`DecisionResult`、`ActionIntentDraft` 等领域契约。
+- 已提供策略注入能力（当前内置 `mock` / `rule_based`，后续仍可扩展 provider）。
+- prompt 已采用结构化片段构建，并与 world-pack `prompts` 片段结合。
+- `preview/run` 调试 API 已可用，用于验证 prompt 和标准化决策结果。
+- trace metadata 与可插拔 sink 已落地，当前默认实现已升级为 Prisma 持久化。
 
-### Phase D（后续阶段，正式持久化工作流）
+### Phase D（最小工作流已落地，正在扩展）
 目标：正面拥抱软件工程复杂度，把推理和动作纳入可追踪、可重试、可审计的工作流。
 
-计划内容：
-- 引入持久化工作流对象，如 `InferenceTrace`、`ActionIntent`、`DecisionJob`。
-- 实现幂等、重试、失败状态、审计记录和 replay 能力。
-- 将“推理结果”与“动作执行”彻底分离，形成可观测状态流转。
-- 让 runtime loop 基于正式工作流而不是临时同步调用推进 Agent 行为。
-- 为 Memory Core 与 Action Dispatcher 提供稳定上游输入。
+当前已落地：
+- 已引入持久化工作流对象：`InferenceTrace`、`ActionIntent`、`DecisionJob`。
+- 已具备最小幂等、重试、失败状态、审计读取与 stored-trace reuse 基线。
+- 已将“推理结果”与“动作执行”分离，并通过工作流快照暴露状态流转。
+- runtime loop 已基于正式工作流消费 `pending/running` jobs，并派发可执行 `ActionIntent`。
+- 已为 Memory Core 与 Action Dispatcher 提供稳定上游输入。
+
+仍在推进：
+- richer replay orchestration / audit tooling
+- broader world-action mapping（当前 dispatcher 仅完整消费 `post_message`）
+- durable scheduling / job locking / multi-worker safety
+- long-term memory 与更强的 summarization / trimming 策略
 
 ### 设计原则（当前即生效）
 - 推理与执行分离：Inference 不直接等价于 Action 执行。

@@ -136,7 +136,7 @@ This file is intentionally specific to the current repo layout and conventions.
 ### 10.1) Current Strategic Direction for Agents / 当前 Agent 工程方向
 
 - The official route is now **Phase B → Phase D**, not a disposable prototype path.
-- Phase B means building a **D-ready inference service layer**:
+- Phase B is already delivered as a **D-ready inference service layer**:
   - unified service entry
   - context builder
   - prompt builder
@@ -144,11 +144,12 @@ This file is intentionally specific to the current repo layout and conventions.
   - normalized decision contract
   - trace metadata
   - pluggable sink
-- Phase D means introducing **persisted workflow complexity** explicitly:
+- Phase D is already partially delivered as the minimal **persisted workflow complexity** baseline:
   - `InferenceTrace`
   - `ActionIntent`
   - `DecisionJob` or equivalent runtime workflow state
   - idempotency / retry / audit / replay
+- Treat the remaining work as expansion of the current Phase D baseline, not as a future-from-scratch rewrite.
 - When implementing inference-related code, do **not** collapse decision generation and action execution into one opaque function.
 - API handlers should remain thin shells; domain assembly belongs in service modules.
 

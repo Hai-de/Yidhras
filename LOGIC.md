@@ -1,7 +1,7 @@
 # Yidhras Logic / 业务逻辑说明
 
 Version: v0.3.1-draft
-Last Updated / 最后更新: 2026-03-27
+Last Updated / 最后更新: 2026-03-28
 
 本文件偏向业务规则表达，不绑定未来可能变化的算法细节。
 This file focuses on business rules rather than unstable low-level algorithm details.
@@ -40,9 +40,9 @@ This file focuses on business rules rather than unstable low-level algorithm det
 - Full perception-decision-action loop for autonomous agents.
 - Action planning tied to role prompts and world state.
 - Richer delayed dispatch behavior aligned with fuller transmission-layer constraints beyond the current minimal scheduling/drop baseline.
-- The formal delivery route is now split into:
-  - **Phase B:** stabilize inference contracts and prompt/context composition.
-  - **Phase D:** persist decisions/intents as workflow state before execution.
+- The formal delivery route is now layered as:
+  - **Phase B baseline:** inference contracts and prompt/context composition are already stabilized enough to act as the service boundary.
+  - **Phase D baseline:** persisted decision/intent/job workflow is already active, but richer replay/orchestration and broader world-action consumption are still in progress.
 
 ## 2) Information Boundary / 信息边界规则
 
@@ -98,7 +98,7 @@ This file focuses on business rules rather than unstable low-level algorithm det
 
 - More explicit timeline impact tracking per action/event.
 - Clearer reconciliation rules when actions compete at similar ticks.
-- In Phase D, persisted `ActionIntent`-style objects should make richer timeline insertion and delayed execution auditable beyond the current first-pass `post_message` path.
+- On top of the current Phase D baseline, persisted `ActionIntent`-style objects should eventually support richer timeline insertion and delayed execution beyond the current first-pass `post_message` path.
 
 ## 4) Node Value Dynamics / 节点价值动态
 
@@ -159,7 +159,7 @@ This file focuses on business rules rather than unstable low-level algorithm det
 - Keep logic contracts explicit in docs to support agentic coding tools.
 - Treat Phase B as a D-ready service layer rather than a throwaway prototype.
 - Treat Phase D as the point where inference enters formal software engineering complexity (state, audit, retry, replay) instead of remaining a temporary synchronous call.
-- Keep `ActionIntentDraft` as an internal compatibility artifact until a concrete workflow or dispatcher consumer exists.
+- Keep `ActionIntentDraft` as an internal compatibility artifact; persisted workflow and dispatcher now consume the persisted `ActionIntent`, while HTTP still does not expose the draft directly.
 - Current Phase D baseline should be treated as persistence-first, not dispatcher-complete.
 - Current idempotency support now includes aggregate workflow replay semantics and stored-trace result reuse, but is still not full replay orchestration.
 - Current retry support is manual API-driven retry, not background scheduling.

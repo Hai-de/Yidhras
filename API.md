@@ -1,6 +1,6 @@
 # Yidhras API 接口规范 (v0.1.8)
 
-> Implementation note (2026-03-27): the backend API is now assembled through `apps/server/src/app/create_app.ts`, grouped route modules under `apps/server/src/app/routes/*.ts`, and thin route-to-service delegation into `apps/server/src/app/services/*.ts`. The inference debug endpoints are implemented through `apps/server/src/app/routes/inference.ts` and `apps/server/src/inference/service.ts`, and the current minimal Phase D baseline is active through Prisma-backed workflow storage, loop-driven decision execution, and first-pass action dispatch.
+> Implementation note (2026-03-28): the backend API is now assembled through `apps/server/src/app/create_app.ts`, grouped route modules under `apps/server/src/app/routes/*.ts`, and thin route-to-service delegation into `apps/server/src/app/services/*.ts`. The inference debug endpoints are implemented through `apps/server/src/app/routes/inference.ts` and `apps/server/src/inference/service.ts`, and the current minimal Phase D baseline is active through Prisma-backed workflow storage, loop-driven decision execution, and first-pass action dispatch.
 
 ## 0. 系统通知与鲁棒性 (System Notifications)
 - **GET `/api/system/notifications`**
@@ -52,13 +52,13 @@
 
 ## 3. 社交层 (L1: Social Layer)
 - **GET `/api/social/feed`**
-    - 说明: 获取公共舆论场信息流。
+    - 说明: 获取公共舆论场信息流；返回结果会经过当前 identity 上下文的字段可读性过滤。
     - 参数: `?limit=20`
-    - 返回: `Post[]` (含作者、内容、发布时间)
+    - 返回: 权限过滤后的 `Post[]`
 - **POST `/api/social/post`**
-    - 说明: 以特定 Agent 身份发布动态。
+    - 说明: 以当前 identity 上下文发布动态。
     - 参数: `{ content: string }`
-    - 备注: `author_id` 由身份上下文注入并在服务端写入。
+    - 备注: `author_id` 由当前 identity 上下文注入并在服务端写入。
 
 ## 4. 关系层 (L2: Relational Layer)
 - **GET `/api/relational/graph`**
@@ -286,4 +286,4 @@
 - `ACTION_DISPATCH_FAIL`: 动作调度失败。
 
 ---
-*更新时间: 2026-03-27*
+*更新时间: 2026-03-28*

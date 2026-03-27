@@ -232,7 +232,7 @@ const main = async () => {
           agent_id: 'agent-001',
           strategy: 'mock',
           attributes: {
-            mock_content: 'Phase B preview smoke content'
+            mock_content: 'Inference preview smoke content'
           }
         })
       });
