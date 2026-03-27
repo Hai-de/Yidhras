@@ -2,6 +2,7 @@ import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { IdentityRequest } from '../../identity/middleware.js';
 import type { AppContext } from '../context.js';
+import { toJsonSafe } from '../http/json.js';
 import { createSocialPost, listSocialFeed } from '../services/social.js';
 
 export interface SocialRouteDependencies {
@@ -24,7 +25,7 @@ export const registerSocialRoutes = (
       const limit = Number.parseInt(typeof req.query.limit === 'string' ? req.query.limit : '', 10) || 20;
       const feed = await listSocialFeed(context, identityRequest.identity, limit);
 
-      res.json(feed);
+      res.json(toJsonSafe(feed));
     })
   );
 
@@ -37,7 +38,7 @@ export const registerSocialRoutes = (
 
       const post = await createSocialPost(context, identityRequest.identity, content);
 
-      res.json(post);
+      res.json(toJsonSafe(post));
     })
   );
 };

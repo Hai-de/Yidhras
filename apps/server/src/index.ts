@@ -24,7 +24,8 @@ import {
   selectStartupWorldPack
 } from './app/runtime/startup.js';
 import { sim } from './core/simulation.js';
-import { createPlaceholderInferenceService } from './inference/service.js';
+import { createInferenceService } from './inference/service.js';
+import { createPrismaInferenceTraceSink } from './inference/sinks/prisma.js';
 import { ApiError } from './utils/api_error.js';
 import { notifications } from './utils/notifications.js';
 
@@ -32,7 +33,6 @@ const port = process.env.PORT || 3001;
 const worldPacksDir = resolveWorldPacksDir();
 const preferredWorldPack = 'cyber_noir';
 const startupHealth = createStartupHealth();
-const inferenceService = createPlaceholderInferenceService();
 
 let runtimeReady = false;
 let timer: NodeJS.Timeout | null = null;
@@ -59,8 +59,15 @@ const appContext: AppContext = {
   assertRuntimeReady
 };
 
+const inferenceService = createInferenceService({
+  context: appContext,
+  traceSink: createPrismaInferenceTraceSink(appContext)
+});
+
 const registerRoutes: RouteRegistrar = (application, context) => {
-  registerInferenceRoutes(application, context);
+  registerInferenceRoutes(application, context, inferenceService, {
+    asyncHandler
+  });
   registerSystemRoutes(application, context);
   registerClockRoutes(application, context, {
     parsePositiveStepTicks,
@@ -116,6 +123,7 @@ const startSimulation = (): void => {
 
   timer = startSimulationLoop({
     context: appContext,
+    inferenceService,
     onStepError: handleSimulationStepError
   });
 };
@@ -156,7 +164,7 @@ const start = async (): Promise<void> => {
 
   app.listen(port, () => {
     console.log(`[Yidhras Server] API full implementation running at http://localhost:${port}`);
-    console.log(`[Yidhras Server] Inference module reserved (phase=${inferenceService.phase}, ready=${String(inferenceService.ready)})`);
+    console.log(`[Yidhras Server] Inference module ready (phase=${inferenceService.phase}, ready=${String(inferenceService.ready)})`);
   });
 };
 

@@ -1,6 +1,6 @@
-# Yidhras API 接口规范 (v0.1.5)
+# Yidhras API 接口规范 (v0.1.8)
 
-> Implementation note (2026-03-23): the backend API is now assembled through `apps/server/src/app/create_app.ts`, grouped route modules under `apps/server/src/app/routes/*.ts`, and thin route-to-service delegation into `apps/server/src/app/services/*.ts`. This refactor keeps the external HTTP contract stable; the structures below remain the behavioral source of truth.
+> Implementation note (2026-03-27): the backend API is now assembled through `apps/server/src/app/create_app.ts`, grouped route modules under `apps/server/src/app/routes/*.ts`, and thin route-to-service delegation into `apps/server/src/app/services/*.ts`. The inference debug endpoints are implemented through `apps/server/src/app/routes/inference.ts` and `apps/server/src/inference/service.ts`, and the current minimal Phase D baseline is active through Prisma-backed workflow storage, loop-driven decision execution, and first-pass action dispatch.
 
 ## 0. 系统通知与鲁棒性 (System Notifications)
 - **GET `/api/system/notifications`**
@@ -131,35 +131,121 @@
       - 命中规则时 `reason` 形如 `allow:<rule_id>` 或 `deny:<rule_id>`
       - 当无匹配规则时，按默认拒绝（`reason = default_deny`）
 
-## 8. Agent 推理与工作流规划接口（Planned, Not Yet Implemented）
+## 8. Agent 推理接口（Phase B 已实现）与最小工作流（Phase D 已落地）
 
-> 以下接口为正式路线规划占位，当前版本仅用于冻结契约方向，**尚未在服务端实现**。
->
-> Current reserved integration slots: `apps/server/src/app/routes/inference.ts` and `apps/server/src/inference/service.ts`.
-
-### 8.1 Phase B: D-ready Inference Service
+### 8.1 Phase B: Inference Debug Endpoints (Implemented)
 - **POST `/api/inference/preview`**
-    - 说明: 预览推理上下文与 prompt 结构化结果。
-    - 规划输入: `{ agent_id?: string, identity_id?: string, strategy?: string, attributes?: Record<string, unknown> }`
-    - 规划返回: `{ inference_id, actor_ref, strategy, provider, tick, prompt: { system_prompt, role_prompt, world_prompt, context_prompt, output_contract_prompt, combined_prompt }, metadata: { world_pack_id, binding_ref?, prompt_version? } }`
+    - 说明: 预览推理上下文与结构化 prompt 结果。
+    - 输入: `{ agent_id?: string, identity_id?: string, strategy?: "mock"|"rule_based", attributes?: Record<string, unknown>, idempotency_key?: string }`
+    - 成功返回: `{ success: true, data: { inference_id, actor_ref, strategy, provider, tick, prompt: { system_prompt, role_prompt, world_prompt, context_prompt, output_contract_prompt, combined_prompt, metadata }, metadata: { world_pack_id, binding_ref?, prompt_version? } } }`
+    - 约束:
+      - 至少提供 `agent_id` 或 `identity_id`。
+      - 若同时提供两者，必须解析为同一有效 actor，否则返回 `400 INFERENCE_INPUT_INVALID`。
+      - 运行时未就绪时返回 `503 WORLD_PACK_NOT_READY`，并保留稳定 `details`。
 - **POST `/api/inference/run`**
-    - 说明: 手动触发一次推理并返回标准化决策结果（调试/验证用途）。
-    - 规划输入: `{ agent_id?: string, identity_id?: string, strategy?: string, attributes?: Record<string, unknown> }`
-    - 规划返回: `{ inference_id, actor_ref, strategy, provider, tick, decision: { action_type, target_ref, payload, delay_hint_ticks, confidence?, reasoning?, meta? }, trace_metadata: { world_pack_id, binding_ref?, prompt_version? } }`
+    - 说明: 手动触发一次推理并返回标准化 decision。
+    - 输入: `{ agent_id?: string, identity_id?: string, strategy?: "mock"|"rule_based", attributes?: Record<string, unknown>, idempotency_key?: string }`
+    - 成功返回: `{ success: true, data: { inference_id, actor_ref, strategy, provider, tick, decision: { action_type, target_ref, payload, confidence?, delay_hint_ticks?, reasoning?, meta? }, trace_metadata: { inference_id, world_pack_id, binding_ref?, prompt_version?, tick, strategy, provider } } }`
+    - 当前说明:
+      - `tick` / `delay_hint_ticks` 等 tick-like 字段通过 HTTP 统一使用字符串。
+      - `run` 是立即执行型调试入口；与 `POST /api/inference/jobs` 的正式入队语义不同，不会先返回一个待 loop 消费的 `pending` job。
+      - `ActionIntentDraft` 当前仅作为服务层内部兼容对象定义，尚未在 HTTP 响应中公开。
+      - 当前实现会在服务层内部将标准化 decision 映射为持久化的 `ActionIntent` / `DecisionJob` 记录。
+      - 当前 `prompt.metadata` 还会附带 `processing_trace`，用于说明 prompt pipeline 中经过了哪些 processor。
+      - 当前 `context_snapshot` 会保留 `memory_context`、`memory_selection` 与 `prompt_processing_trace`，便于后续审计与调试。
 
-### 8.2 Phase D: Persisted Workflow
+- **POST `/api/inference/jobs`**
+    - 说明: 按正式工作流入口提交一次推理任务，要求提供 `idempotency_key`。
+    - 输入: `{ agent_id?: string, identity_id?: string, strategy?: "mock"|"rule_based", attributes?: Record<string, unknown>, idempotency_key: string }`
+    - 成功返回: `{ success: true, data: { replayed, inference_id, job: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, last_error, idempotency_key, created_at, updated_at, completed_at }, result, result_source, workflow_snapshot } }`
+    - 当前语义:
+      - 首次提交同一个 `idempotency_key` 时，创建 `pending` job 并返回 `replayed=false`。
+      - 再次提交相同 `idempotency_key` 时，返回已存在记录并返回 `replayed=true`。
+      - 首次入队时 `result = null` 且 `result_source = not_available`；同时返回当前 `workflow_snapshot`。
+      - 当任务尚未真正执行前，`workflow_snapshot.records.trace` 可能仍为 `null`，且 `inference_id` 可能表现为 `pending_<idempotency_key>` 占位值。
+      - 当重复提交命中已存在 trace 时，`result_source = stored_trace`，表示当前 `result` 来自历史持久化 trace，而不是本次重新执行。
+- **POST `/api/inference/jobs/:id/retry`**
+    - 说明: 重试一个已失败的 `DecisionJob`。
+    - 约束:
+      - 仅允许 `status=failed` 的任务重试。
+      - 若 `attempt_count >= max_attempts`，返回重试耗尽错误。
+    - 成功返回: `{ success: true, data: { replayed: false, inference_id, job, result, result_source: "fresh_run", workflow_snapshot } }`
+- **GET `/api/inference/jobs/:id`**
+    - 说明: 查询单个决策任务状态。
+    - 成功返回: `{ success: true, data: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, request_input?, last_error, last_error_code?, last_error_stage?, idempotency_key, started_at?, next_retry_at?, created_at, updated_at, completed_at } }`
+
+### 8.2 Phase D: Persisted Workflow & Execution (Minimal Baseline Implemented)
+- **GET `/api/inference/traces/:id`**
+    - 说明: 查询指定 `InferenceTrace` 持久化记录。
+    - 成功返回: `{ success: true, data: { id, kind, strategy, provider, actor_ref, input, context_snapshot, prompt_bundle, trace_metadata, decision?, created_at, updated_at } }`
+- **GET `/api/inference/traces/:id/intent`**
+    - 说明: 查询指定推理记录关联的 `ActionIntent`。
+    - 成功返回: `{ success: true, data: { id, source_inference_id, intent_type, actor_ref, target_ref, payload, scheduled_after_ticks, scheduled_for_tick, transmission_delay_ticks?, transmission_policy, transmission_drop_chance, drop_reason?, dispatch_error_code?, dispatch_error_message?, status, dispatch_started_at?, dispatched_at?, created_at, updated_at } }`
+- **GET `/api/inference/traces/:id/job`**
+    - 说明: 查询指定推理记录关联的 `DecisionJob`。
+    - 成功返回: `{ success: true, data: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, request_input?, last_error, last_error_code?, last_error_stage?, idempotency_key?, started_at?, next_retry_at?, created_at, updated_at, completed_at } }`
+- **GET `/api/inference/traces/:id/workflow`**
+    - 说明: 查询指定推理记录的聚合工作流快照。
+    - 成功返回: `{ success: true, data: { records: { trace, job, intent }, derived: { decision_stage, dispatch_stage, workflow_state, failure_stage, failure_code, failure_reason, outcome_summary } } }`
+- **GET `/api/inference/jobs/:id/workflow`**
+    - 说明: 查询指定决策任务的聚合工作流快照。
+    - 成功返回: 与 `/api/inference/traces/:id/workflow` 相同的 `WorkflowSnapshot` 结构。
+- **当前最小持久化语义**
+    - `preview` 会持久化 `InferenceTrace`。
+    - `run` 会持久化 `InferenceTrace`，并生成关联的 `ActionIntent` 与 `DecisionJob`。
+    - `jobs` 会使用 `idempotency_key` 做去重复用。
+    - 当前 `DecisionJob.status` 允许的最小状态集合为：`pending | running | completed | failed`。
+    - 当前 runner 会在 loop 中消费 `pending/running` 任务。
+    - `DecisionJob` 当前带有最小调度字段：`request_input`, `started_at`, `next_retry_at`, `last_error_code`, `last_error_stage`。
+    - 当前实现以 loop 驱动执行完成后记为 `completed`；该状态仅表示 decision generation 完成，不等同于 world-side dispatch 完成。
+    - retry 路径会重新进入 `pending -> running -> completed|failed` 状态更新。
+    - `ActionIntent.status` 当前最小状态集合为：`pending | dispatching | completed | failed | dropped`。
+    - loop 中的 dispatcher 当前只消费：
+      - `intent_type = post_message`
+      - `status = pending`
+      - `scheduled_for_tick <= current_tick`（或为空）
+    - 最小 L4 元数据当前包括：
+      - `transmission_delay_ticks`
+      - `transmission_policy`
+      - `transmission_drop_chance`
+      - `drop_reason`
+    - `transmission_policy` 现在可由运行时上下文自动推导，也可由 attributes 显式覆盖。
+    - 当前自动推导会参考：
+      - social post write capability
+      - actor role
+      - agent SNR
+    - dispatch 成功后会真正写入 social post；当策略判定阻断或概率丢弃时会进入 `dropped`。
+    - `dropped` 被视为传输/策略层主动丢弃，不等同于 `failed`。
+    - `workflow_snapshot.derived` 当前会显式区分：
+      - `decision_stage`
+      - `dispatch_stage`
+      - `workflow_state`
+      - `failure_stage` / `failure_code` / `failure_reason`
+      - `outcome_summary`
+    - `InferenceTrace.context_snapshot` 当前还会记录：
+      - `memory_context`
+      - `memory_selection`
+      - `prompt_processing_trace`
+    - `prompt_bundle.metadata` 当前还会记录：
+      - `processing_trace.processor_names`
+      - `processing_trace.fragment_count_before`
+      - `processing_trace.fragment_count_after`
+      - `processing_trace.steps[]`
+    - 当前默认 prompt processor 顺序为：
+      - `memory-injector`
+      - `policy-filter`
+      - `memory-summary`
+      - `token-budget-trimmer`
+    - `processing_trace` 当前还可暴露：
+      - `summary_compaction`
+      - `policy_filtering`
+      - `token_budget_trimming`
+
 - **目标方向（规划中）**
-    - 将推理结果持久化为正式工作流对象，而不是仅做临时同步返回。
-    - 候选对象包括：`InferenceTrace`、`ActionIntent`、`DecisionJob`。
-- **预期能力（规划中）**
-    - 幂等（idempotency）
-    - 重试（retry）
-    - 审计（audit）
-    - 回放（replay）
-    - 决策与执行分离（decision ≠ execution）
+    - richer audit / replay tooling
+    - durable scheduling、job locking 与 multi-worker safety
+    - 扩展更广泛的 decision ≠ execution 工作流与 world-action mapping（超出当前 `post_message` 路径）
 - **候选接口方向（规划中）**
-    - `POST /api/inference/jobs`
-    - `GET /api/inference/traces/:id`
     - `GET /api/action-intents/:id`
     - `POST /api/action-intents/:id/dispatch`
 
@@ -187,12 +273,17 @@
 - `WORLD_PACK_NOT_READY`: 世界包未就绪，当前接口不可用（常见于空 world-pack 降级启动）。
 - `SYS_PRECHECK_FAIL`: 启动前健康检查失败（例如数据库不可用）。
 - `WORLD_PACK_EMPTY`: 启动时 world-pack 为空，系统进入降级模式等待导入。
-- `INFERENCE_INPUT_INVALID`: （规划预留）推理输入参数非法。
-- `INFERENCE_PROVIDER_FAIL`: （规划预留）推理 provider 失败。
-- `INFERENCE_NORMALIZATION_FAIL`: （规划预留）推理结果归一化失败。
-- `INFERENCE_TRACE_PERSIST_FAIL`: （规划预留）推理 trace 持久化失败。
-- `ACTION_INTENT_INVALID`: （规划预留）动作意图不合法。
-- `ACTION_DISPATCH_FAIL`: （规划预留）动作调度失败。
+- `INFERENCE_INPUT_INVALID`: 推理输入参数非法。
+- `INFERENCE_PROVIDER_FAIL`: 推理 provider 失败。
+- `INFERENCE_NORMALIZATION_FAIL`: 推理结果归一化失败。
+- `INFERENCE_TRACE_PERSIST_FAIL`: 推理 trace / workflow 持久化失败。
+- `INFERENCE_TRACE_NOT_FOUND`: 推理 trace 不存在。
+- `ACTION_INTENT_NOT_FOUND`: 动作意图不存在。
+- `DECISION_JOB_NOT_FOUND`: 决策任务不存在。
+- `INFERENCE_INPUT_INVALID`: 当 `/api/inference/jobs` 缺少 `idempotency_key` 时同样返回该错误码。
+- `DECISION_JOB_RETRY_INVALID`: 非 failed 任务不允许重试。
+- `DECISION_JOB_RETRY_EXHAUSTED`: 任务已达到最大重试次数。
+- `ACTION_DISPATCH_FAIL`: 动作调度失败。
 
 ---
-*更新时间: 2026-03-23*
+*更新时间: 2026-03-27*

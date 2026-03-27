@@ -1,0 +1,315 @@
+import type { IdentityContext } from '../identity/types.js';
+import type { MemoryContextPack } from '../memory/types.js';
+import type { VariablePool } from '../narrative/types.js';
+import type { PromptFragment } from './prompt_fragments.js';
+
+export type InferenceStrategy = 'mock' | 'rule_based';
+export type InferenceActorRole = 'active' | 'atmosphere';
+
+/**
+ * DecisionJob.status only describes the decision-generation workflow stage.
+ * It does not imply that the resulting ActionIntent has already been dispatched.
+ */
+export type InferenceJobStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+/**
+ * ActionIntent.status only describes world-side execution / dispatch outcome.
+ */
+export type InferenceActionIntentStatus = 'pending' | 'dispatching' | 'completed' | 'failed' | 'dropped';
+
+export interface InferenceRequestInput {
+  agent_id?: string;
+  identity_id?: string;
+  strategy?: string;
+  attributes?: Record<string, unknown>;
+  idempotency_key?: string;
+}
+
+export interface InferenceJobSnapshot {
+  id: string;
+  source_inference_id: string;
+  action_intent_id: string | null;
+  job_type: string;
+  status: InferenceJobStatus;
+  attempt_count: number;
+  max_attempts: number;
+  last_error: string | null;
+  idempotency_key: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+export type InferenceJobResultSource = 'not_available' | 'stored_trace' | 'fresh_run';
+
+export interface InferenceJobSubmitResult {
+  replayed: boolean;
+  inference_id: string;
+  job: InferenceJobSnapshot;
+  result: InferenceRunResult | null;
+  result_source: InferenceJobResultSource;
+  workflow_snapshot: WorkflowSnapshot;
+}
+
+export interface InferenceJobRetryResult {
+  replayed: boolean;
+  inference_id: string;
+  job: InferenceJobSnapshot;
+  result: InferenceRunResult | null;
+  result_source: InferenceJobResultSource;
+  workflow_snapshot: WorkflowSnapshot;
+}
+
+export interface InferenceBindingRef {
+  binding_id: string;
+  role: InferenceActorRole;
+  status: string;
+  agent_id: string | null;
+  atmosphere_node_id: string | null;
+}
+
+export interface InferenceActorRef {
+  identity_id: string;
+  identity_type: IdentityContext['type'];
+  role: InferenceActorRole;
+  agent_id: string | null;
+  atmosphere_node_id: string | null;
+}
+
+export interface InferenceAgentSnapshot {
+  id: string;
+  name: string;
+  type: string;
+  snr: number;
+  is_pinned: boolean;
+}
+
+export interface InferencePolicySummary {
+  social_post_read_allowed: boolean;
+  social_post_readable_fields: string[];
+  social_post_write_allowed: boolean;
+  social_post_writable_fields: string[];
+}
+
+export interface InferenceTransmissionProfile {
+  policy: 'reliable' | 'best_effort' | 'fragile' | 'blocked';
+  drop_reason: 'policy_blocked' | 'probabilistic_drop' | 'low_signal_quality' | 'visibility_denied' | null;
+  delay_ticks: string;
+  drop_chance: number;
+  derived_from: string[];
+}
+
+export interface InferenceWorldPackRef {
+  id: string;
+  name: string;
+  version: string;
+}
+
+export interface InferenceContext {
+  inference_id: string;
+  actor_ref: InferenceActorRef;
+  actor_display_name: string;
+  identity: IdentityContext;
+  binding_ref: InferenceBindingRef | null;
+  resolved_agent_id: string | null;
+  agent_snapshot: InferenceAgentSnapshot | null;
+  tick: bigint;
+  strategy: InferenceStrategy;
+  attributes: Record<string, unknown>;
+  world_pack: InferenceWorldPackRef;
+  world_prompts: Record<string, string>;
+  visible_variables: VariablePool;
+  policy_summary: InferencePolicySummary;
+  transmission_profile: InferenceTransmissionProfile;
+  memory_context: MemoryContextPack;
+}
+
+export interface PromptProcessingTrace {
+  processor_names: string[];
+  fragment_count_before: number;
+  fragment_count_after: number;
+  steps?: Array<{
+    processor_name: string;
+    fragment_count_before: number;
+    fragment_count_after: number;
+    added_fragment_ids?: string[];
+    removed_fragment_ids?: string[];
+    notes?: Record<string, unknown>;
+  }>;
+  fragments: Array<{
+    id: string;
+    slot: PromptFragment['slot'];
+    source: string;
+    priority: number;
+    metadata?: Record<string, unknown>;
+  }>;
+  summary_compaction?: {
+    summarized_fragment_ids: string[];
+    summary_fragment_id: string;
+  } | null;
+  policy_filtering?: {
+    filtered_fragment_ids: string[];
+    reasons: Record<string, string>;
+  } | null;
+  token_budget_trimming?: {
+    budget: number;
+    used: number;
+    trimmed_fragment_ids: string[];
+  } | null;
+}
+
+export interface PromptBundleMetadata {
+  prompt_version: string | null;
+  source_prompt_keys: string[];
+  processing_trace?: PromptProcessingTrace;
+}
+
+export interface PromptBundle {
+  system_prompt: string;
+  role_prompt: string;
+  world_prompt: string;
+  context_prompt: string;
+  output_contract_prompt: string;
+  combined_prompt: string;
+  metadata: PromptBundleMetadata;
+}
+
+export interface ProviderDecisionRaw {
+  action_type?: unknown;
+  target_ref?: unknown;
+  payload?: unknown;
+  confidence?: unknown;
+  delay_hint_ticks?: unknown;
+  reasoning?: unknown;
+  meta?: unknown;
+}
+
+export interface DecisionResult {
+  action_type: string;
+  target_ref: Record<string, unknown> | null;
+  payload: Record<string, unknown>;
+  confidence?: number;
+  delay_hint_ticks?: string;
+  reasoning?: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface ActionIntentDraft {
+  intent_type: string;
+  actor_ref: InferenceActorRef;
+  target_ref: Record<string, unknown> | null;
+  payload: Record<string, unknown>;
+  scheduled_after_ticks: string | null;
+  transmission_delay_ticks: string | null;
+  transmission_policy: 'reliable' | 'best_effort' | 'fragile' | 'blocked';
+  transmission_drop_chance: number;
+  drop_reason: string | null;
+  source_inference_id: string;
+}
+
+export interface InferencePreviewMetadata {
+  world_pack_id: string;
+  binding_ref: InferenceBindingRef | null;
+  prompt_version: string | null;
+}
+
+export interface TraceMetadata extends InferencePreviewMetadata {
+  inference_id: string;
+  tick: string;
+  strategy: InferenceStrategy;
+  provider: string;
+}
+
+export interface InferencePreviewResult {
+  inference_id: string;
+  actor_ref: InferenceActorRef;
+  strategy: InferenceStrategy;
+  provider: string;
+  tick: string;
+  prompt: PromptBundle;
+  metadata: InferencePreviewMetadata;
+}
+
+export interface InferenceRunResult {
+  inference_id: string;
+  actor_ref: InferenceActorRef;
+  strategy: InferenceStrategy;
+  provider: string;
+  tick: string;
+  decision: DecisionResult;
+  trace_metadata: TraceMetadata;
+}
+
+export interface WorkflowDecisionJobSnapshot extends InferenceJobSnapshot {
+  request_input: Record<string, unknown> | null;
+  started_at: string | null;
+  next_retry_at: string | null;
+  last_error_code: WorkflowFailureCode | null;
+  last_error_stage: Exclude<WorkflowFailureStage, 'none' | 'dispatch'> | 'unknown' | null;
+}
+
+export interface InferenceTraceRecordSnapshot {
+  id: string;
+  kind: string;
+  strategy: string;
+  provider: string;
+  actor_ref: Record<string, unknown>;
+  input: Record<string, unknown>;
+  context_snapshot: Record<string, unknown>;
+  prompt_bundle: Record<string, unknown>;
+  trace_metadata: Record<string, unknown>;
+  decision: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InferenceActionIntentSnapshot {
+  id: string;
+  source_inference_id: string;
+  intent_type: string;
+  actor_ref: Record<string, unknown>;
+  target_ref: Record<string, unknown> | null;
+  payload: Record<string, unknown>;
+  scheduled_after_ticks: string | null;
+  scheduled_for_tick: string | null;
+  status: InferenceActionIntentStatus;
+  dispatch_started_at: string | null;
+  dispatched_at: string | null;
+  transmission_delay_ticks: string | null;
+  transmission_policy: ActionIntentDraft['transmission_policy'];
+  transmission_drop_chance: number;
+  drop_reason: string | null;
+  dispatch_error_code: WorkflowFailureCode | null;
+  dispatch_error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type WorkflowDecisionStage = 'preview_only' | 'queued' | 'running' | 'completed' | 'failed';
+export type WorkflowDispatchStage = 'not_requested' | 'pending' | 'dispatching' | 'completed' | 'failed' | 'dropped';
+export type WorkflowFailureStage = 'none' | 'provider' | 'normalization' | 'persistence' | 'dispatch' | 'unknown';
+export type WorkflowFailureCode = 'INFERENCE_PROVIDER_FAIL' | 'INFERENCE_NORMALIZATION_FAIL' | 'INFERENCE_TRACE_PERSIST_FAIL' | 'ACTION_DISPATCH_FAIL' | 'UNKNOWN_WORKFLOW_FAILURE';
+export type WorkflowState = 'preview_only' | 'decision_pending' | 'decision_running' | 'decision_failed' | 'dispatch_pending' | 'dispatching' | 'workflow_completed' | 'workflow_dropped' | 'workflow_failed';
+export type WorkflowOutcomeKind = 'preview_only' | 'decision_pending' | 'decision_running' | 'decision_failed' | 'dispatch_pending' | 'dispatching' | 'completed' | 'dropped' | 'failed';
+
+export interface WorkflowOutcomeSummary {
+  kind: WorkflowOutcomeKind;
+  message: string;
+}
+
+export interface WorkflowSnapshot {
+  records: {
+    trace: InferenceTraceRecordSnapshot | null;
+    job: WorkflowDecisionJobSnapshot | null;
+    intent: InferenceActionIntentSnapshot | null;
+  };
+  derived: {
+    decision_stage: WorkflowDecisionStage;
+    dispatch_stage: WorkflowDispatchStage;
+    workflow_state: WorkflowState;
+    failure_stage: WorkflowFailureStage;
+    failure_code: WorkflowFailureCode | null;
+    failure_reason: string | null;
+    outcome_summary: WorkflowOutcomeSummary;
+  };
+}

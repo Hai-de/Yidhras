@@ -1,7 +1,7 @@
 # Yidhras Architecture / 架构文档
 
-Version: v0.5.0-draft
-Last Updated / 最后更新: 2026-03-23
+Version: v0.5.2-draft
+Last Updated / 最后更新: 2026-03-27
 
 ## 1) Project Positioning / 项目定位
 
@@ -40,8 +40,8 @@ The next formal engineering route is no longer “temporary feature probing”. 
 
 ### L4 Transmission / 传输层
 
-- **Current / 已实现:** concept represented in docs and action intent, not fully modeled in runtime.
-- **Planned / 规划中:** delay/loss simulation and action dispatch integration.
+- **Current / 已实现:** minimal runtime L4 semantics are now active through `ActionIntent` + dispatcher (`scheduled_for_tick` gating, delay/drop metadata, heuristic transmission policy, and `post_message` materialization).
+- **Planned / 规划中:** richer network/system simulation (probabilistic reach, multi-hop propagation, attenuation/recovery) and broader world-action dispatch coverage.
 
 ## 4) Backend Runtime Architecture / 后端运行架构
 
@@ -58,8 +58,8 @@ The next formal engineering route is no longer “temporary feature probing”. 
   - `agent.ts`
   - `identity.ts`
   - `policy.ts`
-  - `inference.ts` (reserved placeholder)
-- Route handlers are expected to stay thin and delegate app-level orchestration to `apps/server/src/app/services/*.ts`.
+  - `inference.ts`
+- Route handlers are expected to stay thin and delegate app-level orchestration to `apps/server/src/app/services/*.ts` or domain services under `apps/server/src/inference/*.ts`.
 - Shared HTTP helpers are grouped under `apps/server/src/app/http/*.ts`.
 - Shared middleware is grouped under `apps/server/src/app/middleware/*.ts`, including request-id propagation and the unified global error handler.
 - Startup preflight and simulation-loop helpers are grouped under `apps/server/src/app/runtime/*.ts`.
@@ -71,7 +71,7 @@ The next formal engineering route is no longer “temporary feature probing”. 
   - BigInt JSON serialization as strings
 - Identity & policy APIs support field-level evaluation with explicit rule explanation for debugging (`/api/policy/evaluate`).
 - Identity lifecycle APIs include bind/query/unbind/expire flow and atmosphere-node listing endpoint.
-- Inference integration is intentionally reserved through `apps/server/src/app/routes/inference.ts`, `apps/server/src/inference/service.ts`, and the startup wiring in `apps/server/src/index.ts`.
+- Inference integration is now active through `apps/server/src/app/routes/inference.ts`, `apps/server/src/inference/service.ts`, and the startup wiring in `apps/server/src/index.ts`.
 
 ### 4.2 Simulation Core / 模拟核心
 
@@ -81,9 +81,9 @@ The next formal engineering route is no longer “temporary feature probing”. 
   - narrative resolver,
   - value dynamics manager,
   - Prisma access.
-- Runtime step loop currently advances ticks and leaves deeper agent decision flow as future work.
-- Runtime step loop also performs binding expiry scan (`expires_at`) before advancing simulation ticks.
-- The planned integration point for future agent behavior remains the simulation step path, but it should consume a formal inference/action workflow instead of embedding ad-hoc prompt logic directly into the loop.
+- Runtime step loop currently advances ticks, performs binding expiry scan (`expires_at`), runs runnable decision jobs, and dispatches eligible action intents.
+- Deeper autonomous agent perception/planning remains future work.
+- The planned integration point for future agent behavior remains the simulation step path, but it should continue consuming formal inference/action workflow state instead of embedding ad-hoc prompt logic directly into the loop.
 
 ### 4.3 Time System / 时间系统
 
@@ -96,7 +96,7 @@ The next formal engineering route is no longer “temporary feature probing”. 
 - Loaded from folder-based YAML files using `WorldPackLoader`.
 - Supports `config.yaml|yml` and `pack.yaml|yml` discovery.
 - Includes metadata, variable pool, prompt snippets, and time system definitions.
-- `WorldPack.prompts` is the current prompt-fragment carrier and will be reused by the future inference service layer.
+- `WorldPack.prompts` is the current prompt-fragment carrier and is already consumed by the Phase B inference prompt builder.
 
 ### 4.5 Data Layer / 数据层
 
@@ -105,38 +105,97 @@ The next formal engineering route is no longer “temporary feature probing”. 
 - Current models cover agents, circles, memberships, relationships, posts, events, world variables,
   and identity/policy entities.
 - Identity bindings connect identities to active/atmosphere nodes with lifecycle status and expiry.
-- Current gap: there is not yet a persisted inference workflow model such as `InferenceTrace`, `ActionIntent`, or `DecisionJob`.
+- A minimal persisted inference workflow baseline now exists with `InferenceTrace`, `ActionIntent`, and `DecisionJob`.
+- Current delivered workflow additions already include idempotency-key replay, failed-job retry, aggregate workflow reads, loop-driven job execution, and first-pass dispatcher consumption for `post_message`.
+- Current gap: richer replay orchestration beyond aggregate reads/stored-trace reuse, broader dispatcher/runtime consumption beyond the current `post_message` path, and durable job locking/multi-worker scheduler semantics.
 
 ### 4.6 Planned Agent Runtime Route / 规划中的 Agent 运行路线
 
-#### Phase B / 阶段 B（当前规划）
+#### Phase B / 阶段 B（当前稳定基线）
 - Introduce a D-ready inference service layer rather than direct runtime automation.
-- Core planned modules:
+- Current implemented core modules:
   - `InferenceContext` builder
   - `PromptBundle` / prompt builder
   - provider abstraction with strategy injection
   - normalized `DecisionResult`
-  - `ActionIntentDraft`
+  - internal `ActionIntentDraft`
   - trace metadata + pluggable sink
+- Current built-in strategies:
+  - `mock`
+  - `rule_based`
 - API role in this phase:
   - preview prompt composition
   - manually run decision generation
   - validate stable contracts before persistence
+- Current boundary note:
+  - `ActionIntentDraft` is intentionally kept as an internal service-layer artifact for now and is not yet exposed through HTTP payloads.
 
-#### Phase D / 阶段 D（后续规划）
-- Introduce persisted workflow entities and state transitions.
-- Candidate persisted objects:
-  - `InferenceTrace`
-  - `ActionIntent`
-  - `DecisionJob` / equivalent runtime job record
-- Core capabilities:
-  - idempotency
-  - retry handling
-  - audit trail
-  - replay
-  - separation between decision generation and action execution
-- Expected runtime outcome:
-  - simulation loop consumes workflow state rather than directly executing ad-hoc decisions.
+#### Phase D / 阶段 D（已进入最小落地）
+- Minimal delivered baseline:
+  - persisted `InferenceTrace`
+  - persisted `ActionIntent`
+  - persisted `DecisionJob`
+  - Prisma-backed trace sink wired into `apps/server/src/index.ts`
+  - minimal `POST /api/inference/jobs` entry with `idempotency_key` replay
+  - read APIs for trace / intent / job inspection
+  - aggregate workflow read APIs for `trace -> job -> intent` inspection
+  - retry API for failed jobs with bounded attempts
+  - minimal loop-driven decision-job runner under `apps/server/src/app/runtime/job_runner.ts`
+  - minimal action dispatcher runner under `apps/server/src/app/runtime/action_dispatcher_runner.ts`
+- Current state-transition baseline:
+  - `preview` persists trace snapshot only
+  - `run` persists trace, intent, and job in one transaction-like workflow write path
+  - `jobs` now enqueue `pending` work and reuse existing `DecisionJob` when `idempotency_key` matches
+  - loop runner consumes `pending/running` jobs and executes inference asynchronously from the submit request
+  - retry path uses `failed -> running -> completed|failed`
+  - `DecisionJob.status='completed'` still marks inference workflow completion, not full world-side completion
+  - aggregate workflow snapshots now derive:
+    - `decision_stage`
+    - `dispatch_stage`
+    - `workflow_state`
+    - `failure_stage`
+    - `failure_code`
+  - dispatcher consumes eligible `ActionIntent` records and currently materializes `post_message` into L1 social posts
+  - minimal L4 semantics are carried on `ActionIntent` via:
+    - `transmission_delay_ticks`
+    - `transmission_policy`
+    - `transmission_drop_chance`
+    - `drop_reason`
+  - dispatcher may mark an intent as `dropped` without creating a post
+  - dispatcher failures and drops are now separated more explicitly via:
+    - `ActionIntent.dispatch_error_code`
+    - `ActionIntent.dispatch_error_message`
+  - current transmission policy derivation can already consult:
+    - policy capability (`social_post_write_allowed`)
+    - actor role (`active` / `atmosphere`)
+    - agent SNR snapshot
+- Remaining Phase D work:
+  - audit/replay tooling beyond raw record reads
+  - richer replay orchestration beyond current aggregate read + stored-trace reuse
+  - richer simulation loop consumption of persisted workflow state beyond current post-message path
+  - job locking / multi-worker safety / real scheduler semantics
+
+### 4.7 Memory Core v1 (Partially Landed)
+- `apps/server/src/memory/` is now introduced as the initial memory module boundary.
+- Current landed v1 building blocks:
+  - `memory/types.ts`
+  - `short_term_adapter.ts`
+  - `selector.ts`
+  - `service.ts`
+  - noop `long_term_store.ts`
+  - noop `summarizer.ts`
+- `InferenceContext` now includes `memory_context`.
+- Prompt construction is now fragment-friendly through `buildPromptFragments(...)`, `runPromptProcessors(...)`, and `buildPromptBundleFromFragments(...)`.
+- Active prompt processors are now chained in this order:
+  - `memory-injector`
+  - `policy-filter`
+  - `memory-summary`
+  - `token-budget-trimmer`
+- `memory-injector` maps short-term / long-term / summary memory into dedicated prompt fragment slots.
+- `policy-filter` can remove memory fragments before finalize when visibility / policy gate blocks them.
+- `memory-summary` can compact multiple short-term fragments into a summary fragment.
+- `token-budget-trimmer` can drop lower-priority fragments when prompt budget is exceeded.
+- Trace persistence now records `memory_selection` and `prompt_processing_trace` inside `context_snapshot`, and prompt metadata includes `processing_trace`.
 
 ## 5) Frontend Architecture / 前端架构
 
@@ -169,11 +228,14 @@ To avoid ambiguity for agentic contributors:
   - API baseline, simulation bootstrap, clock/resolver/dynamics modules, graph visualization.
   - Identity policy strategy baseline: deny-first ordering, wildcard field matching, and conditions-ready evaluation.
   - Identity binding lifecycle APIs and runtime expiry handling.
+  - Phase B inference debug endpoints with structured prompt/context composition and normalized decision output.
+  - Minimal Phase D persistence baseline: persisted trace/intent/job records, aggregate workflow reads, idempotency replay, failed-job retry, loop-driven execution, and first-pass `post_message` dispatch.
+  - Memory Core v1 baseline: fragment-oriented prompt construction, memory injection/selection observability, and the current processor chain.
+  - Minimal L4 dispatcher semantics: delay/drop/policy baseline for the current `post_message` path.
 - **Planned / 规划中:**
-  - D-ready inference service layer.
-  - Persisted inference/action workflow.
-  - memory core on top of stable trace/decision schema.
-  - robust L4 dispatcher and richer frontend plugin system.
+  - richer replay orchestration and durable scheduler/job-locking semantics.
+  - real long-term memory plus stronger summarization/policy-aware trimming.
+  - broader world-action mapping, richer L4 simulation, and richer frontend plugin system.
 
 ## 9) Non-Goals for This Draft / 本版非目标
 

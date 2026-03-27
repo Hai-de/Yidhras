@@ -9,8 +9,8 @@
 - **L4 Transmission:** 物理传输层 (延时 / 丢包模拟)
 
 ## 当前工程状态
-- M0 工程基线已完成：前后端 lint / typecheck 均已打通并通过。
-- 后端运行时基线稳定：健康检查、统一错误包络、通知队列、world-pack 降级启动、运行时速度策略均已落地。
+- M0 工程基线与 M1 运行时稳定性基线已完成：前后端 lint / typecheck 均已打通并通过，健康检查、统一错误包络、通知队列、world-pack 降级启动、运行时速度策略均已落地。
+- M2 已进入可运行基线阶段：Phase D 最小持久化工作流、loop-driven decision runner、first-pass action dispatcher、最小 L4 传输语义、Memory Core v1 基线均已落地，但 richer replay / broader world-action mapping / long-term memory 仍在推进。
 - 当前正式路线已从“先做临时推理接口”升级为：**直接按可演进到持久化工作流的正式工程路线推进**。
 
 ## Backend Refactor Status (2026-03-23)
@@ -19,12 +19,82 @@
 - Route modules are grouped under `apps/server/src/app/routes/*.ts` and should remain thin HTTP adapters.
 - App-level service boundaries now live in `apps/server/src/app/services/*.ts` for system, runtime control, identity, policy, social, relational, narrative, and agent-context flows.
 - Shared HTTP and runtime infrastructure lives under `apps/server/src/app/http/*.ts`, `apps/server/src/app/middleware/*.ts`, and `apps/server/src/app/runtime/*.ts`.
-- Inference integration is reserved via `apps/server/src/app/routes/inference.ts`, `apps/server/src/inference/service.ts`, and the startup wiring/log in `apps/server/src/index.ts`.
+- Inference integration is now active via `apps/server/src/app/routes/inference.ts`, `apps/server/src/inference/service.ts`, and the startup wiring/log in `apps/server/src/index.ts`.
 - Stable external contracts preserved during the refactor:
   - unified error envelope: `{ success: false, error: { code, message, request_id, timestamp, details? } }`
   - `X-Request-Id` generation/propagation via `requestIdMiddleware()`
   - runtime gating via `assertRuntimeReady(feature)` with `503/WORLD_PACK_NOT_READY`
   - BigInt JSON transport serialized as strings
+
+## Phase B Implementation Status (2026-03-23)
+- `POST /api/inference/preview` and `POST /api/inference/run` are now implemented as thin routes over the app-layer inference service.
+- The current Phase B baseline includes `InferenceContext`, `PromptBundle`, normalized `DecisionResult`, internal `ActionIntentDraft`, trace metadata, and a pluggable trace-sink hook.
+- Current built-in strategies: `mock` and `rule_based`.
+- Actor resolution supports `agent_id`, `identity_id`, or both together, and returns `INFERENCE_INPUT_INVALID` on invalid or conflicting combinations.
+- The HTTP success envelope for inference debug endpoints is `{ success: true, data: ... }`.
+- `ActionIntentDraft` remains an internal service-layer artifact in HTTP payloads and is not directly exposed by the debug endpoints.
+
+## Phase D Minimal Persistence & Execution Status (2026-03-27)
+- Minimal Prisma workflow models are now introduced: `InferenceTrace`, `ActionIntent`, `DecisionJob`.
+- The inference trace sink is now Prisma-backed instead of no-op.
+- `POST /api/inference/preview` persists a trace snapshot for audit/debug use.
+- `POST /api/inference/run` persists:
+  - `InferenceTrace`
+  - `ActionIntent`
+  - `DecisionJob`
+- `POST /api/inference/jobs` now provides a minimal formal workflow submission entry with `idempotency_key` support.
+- Read APIs are now available for persisted workflow inspection:
+  - `GET /api/inference/traces/:id`
+  - `GET /api/inference/traces/:id/intent`
+  - `GET /api/inference/traces/:id/job`
+  - `GET /api/inference/traces/:id/workflow`
+  - `GET /api/inference/jobs/:id`
+  - `GET /api/inference/jobs/:id/workflow`
+- Retry API is now available:
+  - `POST /api/inference/jobs/:id/retry`
+- Decision jobs now persist `request_input`, `started_at`, and `next_retry_at` scheduler fields.
+- The simulation loop now runs a minimal decision-job runner over `pending/running` jobs.
+- `POST /api/inference/jobs` now enqueues `pending` work instead of returning an immediately executed result.
+- `POST /api/inference/run` remains the immediate execution-oriented debug path, while `POST /api/inference/jobs` is the queue-oriented formal workflow entry.
+- A first-pass Action Dispatcher is now wired into the loop.
+- Current dispatcher scope:
+  - consumes `ActionIntent(intent_type=post_message)`
+  - writes to L1 social posts
+  - updates intent status to `dispatching/completed/failed/dropped`
+- Minimal L4 semantics are now attached to `ActionIntent`:
+  - `transmission_delay_ticks`
+  - `transmission_policy`
+  - `transmission_drop_chance`
+- `transmission_policy` is now partially derivable from runtime context instead of being only manually injected.
+- Current derived reasons include:
+  - `policy_blocked`, `visibility_denied`, `low_signal_quality`, `probabilistic_drop`
+- Workflow aggregate snapshots are now available and explicitly separate:
+  - decision stage (`DecisionJob.status`)
+  - dispatch stage (`ActionIntent.status`)
+  - derived `workflow_state` / `failure_stage` / `failure_code` / `failure_reason` / `outcome_summary`
+- Job submit / replay / retry responses now include:
+  - `result_source = not_available | stored_trace | fresh_run`
+  - `workflow_snapshot`
+- Failure persistence is now more structured:
+  - `DecisionJob.last_error_code`
+  - `DecisionJob.last_error_stage`
+  - `ActionIntent.dispatch_error_code`
+  - `ActionIntent.dispatch_error_message`
+- The current jobs baseline supports duplicate-submit replay by `idempotency_key`, bounded failed-job retry, loop-driven execution, workflow aggregate reads, and structured failure-stage observation, but still does not include full replay orchestration or dispatcher-driven world action consumption beyond the current `post_message` path.
+
+## Memory Core v1 Status (2026-03-27)
+- Memory Core v1 baseline is now partially landed in backend:
+  - `InferenceContext` now carries `memory_context`
+  - short-term memory adapter now derives `MemoryEntry[]` from recent trace / job / intent / post / event records
+  - long-term memory store is currently a noop contract implementation
+  - prompt building is now fragment-friendly (`buildPromptFragments` / `buildPromptBundleFromFragments`)
+  - active prompt processors now include:
+    - `memory-injector`
+    - `policy-filter`
+    - `memory-summary`
+    - `token-budget-trimmer`
+  - persisted traces now capture `memory_selection` and `prompt_processing_trace`
+- Current limitation: long-term retrieval is still noop-only, the memory service's long-term store and summarizer contracts remain placeholder/noop, and the current summary compaction lives in prompt processors with heuristic/rule-based behavior; richer policy-aware prompt filtering / trimming strategy tuning are still in progress.
 
 ## 正式路线规划（B→D）
 
@@ -105,6 +175,13 @@ chmod +x start-dev.sh
 - **降级启动策略（硬性）:** 首次拉取项目内容可能为空，`health_level=degraded` 且 `runtime_ready=false` 视为允许启动，不作为冒烟测试失败条件。
 - **关键端点一致性（硬性）:** 依赖 world-pack 的接口在运行时未就绪时统一返回 `503` + `WORLD_PACK_NOT_READY` 错误包络。
 - **统一速度策略（硬性）:** 运行时速度按 `override > world_pack.simulation_time.step_ticks > default(1)` 解析，`/api/status` 通过 `runtime_speed` 字段暴露当前生效值。
+
+## Phase B 推理调试接口
+- **预览 prompt/context:** `POST /api/inference/preview`
+- **运行标准化决策:** `POST /api/inference/run`
+- **当前策略:** `mock`, `rule_based`
+- **当前约束:** 至少提供 `agent_id` 或 `identity_id`；如两者同时提供，必须解析为同一有效 actor。
+- **当前说明:** `ActionIntentDraft` 已在服务层定义，但尚未作为 HTTP 输出公开。
 
 ## 运行时速度覆盖（调试）
 - 覆盖速度：

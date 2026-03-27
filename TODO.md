@@ -14,7 +14,7 @@ Status: Completed / 已完成
 
 ## M1 - Runtime Stability / 运行稳定性
 
-Status: In Progress / 进行中
+Status: Completed / 已完成
 
 ### Currently Implemented / 当前已实现
 
@@ -28,10 +28,10 @@ Status: In Progress / 进行中
 - [x] Centralized startup preparation command (`prepare:runtime`) reused by dev scripts and CI.
 - [x] Runtime-not-ready API consistency aligned (`503` + `WORLD_PACK_NOT_READY`) for world-pack-gated endpoints.
 - [x] Unified runtime speed policy (single source for effective step ticks, loaded at init, observable via `/api/status.runtime_speed`).
+- [x] Time stepping follow-up: add explicit runtime override control path (API/ops) on top of current unified policy when variable speed modes are needed.
+### Notes / 说明
 
-### Planned / 规划中
-
- - [x] Time stepping follow-up: add explicit runtime override control path (API/ops) on top of current unified policy when variable speed modes are needed.
+- No open M1-scoped gaps are currently tracked; future runtime expansion should be captured under M2.
 
 ## M2 - Core Simulation Features / 核心模拟功能
 
@@ -40,15 +40,22 @@ Status: In Progress / 进行中
 ### Currently Implemented / 当前已实现
 
 - [x] Identity Layer: define policy order (deny > allow, priority tie-break), field wildcard rules, and ABAC-ready claims/conditions.
+- [x] Identity Layer: active node and atmosphere node lifecycle policies (baseline delivered: bind/query/unbind/expire APIs, uniqueness guard for active binding, runtime auto-expire, seed with atmosphere node).
+- [x] Formalize official delivery route: move from temporary B exploration to explicit B→D transition plan.
+- [x] Inference Interface Phase B (D-ready): unified inference service, context/prompt builder, strategy injection, hardcoded prompt channel, preview/run APIs, normalized decision contract, trace metadata with pluggable sink, and inference-specific smoke coverage are now delivered as the current stable baseline.
+- [x] Workflow Persistence Phase D (minimal baseline): persisted `InferenceTrace` / `ActionIntent` / `DecisionJob` models, Prisma-backed persistence sink, read APIs for trace/intent/job inspection, and `POST /api/inference/jobs` idempotency replay support.
+
+### In Progress / 进行中
+
+- [~] Workflow Persistence Phase D: minimal persisted `InferenceTrace` / `ActionIntent` / `DecisionJob` baseline, async `pending` job queue + loop runner, aggregate workflow read APIs, `POST /api/inference/jobs` replay semantics with `result_source + workflow_snapshot`, failed-job retry API, and structured failure-stage persistence are now landed; richer replay orchestration and broader runtime state progression remain to be completed.
+- [~] Memory Core: short-term context adapter, noop long-term store contract, fragment-friendly prompt pipeline, chained prompt processors (`memory-injector` / `policy-filter` / `memory-summary` / `token-budget-trimmer`), and trace-side `memory_selection` / `prompt_processing_trace` observability are now landed; richer long-term retrieval/storage and more advanced policy/summarization/trimming strategies remain to be completed.
+- [~] Action Dispatcher: first-pass `post_message` dispatch is now loop-driven and writes to social posts; minimal L4 transmission delay/drop semantics plus heuristic transmission-policy derivation are landed, while broader world-action mapping remains to be completed.
 
 ### Planned / 规划中
 
-- [x] Identity Layer: active node and atmosphere node lifecycle policies (baseline delivered: bind/query/unbind/expire APIs, uniqueness guard for active binding, runtime auto-expire, seed with atmosphere node).
-- [x] Formalize official delivery route: move from temporary B exploration to explicit B→D transition plan.
-- [ ] Inference Interface Phase B (D-ready): unified inference service, context/prompt builder, strategy injection, hardcoded prompt channel, preview/run APIs, normalized decision contract, and trace metadata with pluggable sink.
-- [ ] Workflow Persistence Phase D: introduce persisted `InferenceTrace` / `ActionIntent` / `DecisionJob`-style workflow with idempotency, retry, audit, replay, and runtime state transitions.
-- [ ] Memory Core: short-term context adapter + long-term retrieval/storage contract built on top of stable trace/decision schema.
-- [ ] Action Dispatcher: consume `ActionIntent` and map decisions to delayed world actions with L4 transmission constraints.
+- [ ] Workflow Persistence Phase D: add richer replay orchestration, durable scheduling/locking semantics, and broader runtime workflow progression beyond the current single-process loop baseline.
+- [ ] Memory Core: add real long-term retrieval/storage and stronger summarization/policy-aware trimming strategies on top of the current baseline.
+- [ ] Action Dispatcher / L4: extend beyond current `post_message` delivery with broader world-action mapping and richer transmission/system simulation.
 
 ## M3 - Frontend Capability / 前端能力完善
 
@@ -70,7 +77,7 @@ Status: Planned / 规划中
 ## Milestone Rules / 里程碑规则
 
 - Keep this file milestone-oriented and bilingual.
-- Mark each section with `Currently Implemented` or `Planned` where relevant.
+- Mark each section with `Currently Implemented`, `In Progress`, or `Planned` where relevant.
 - Put lint debt and warnings only in `记录.md`.
 
-Last Updated / 最后更新: 2026-03-23
+Last Updated / 最后更新: 2026-03-27

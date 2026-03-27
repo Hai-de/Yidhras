@@ -1,4 +1,7 @@
+import type { InferenceService } from '../../inference/service.js';
 import type { AppContext } from '../context.js';
+import { runActionDispatcher } from './action_dispatcher_runner.js';
+import { runDecisionJobRunner } from './job_runner.js';
 
 export const expireIdentityBindings = async (context: AppContext): Promise<void> => {
   const now = context.sim.clock.getTicks();
@@ -19,12 +22,14 @@ export const expireIdentityBindings = async (context: AppContext): Promise<void>
 
 export interface StartSimulationLoopOptions {
   context: AppContext;
+  inferenceService: InferenceService;
   intervalMs?: number;
   onStepError(err: unknown): void;
 }
 
 export const startSimulationLoop = ({
   context,
+  inferenceService,
   intervalMs = 1000,
   onStepError
 }: StartSimulationLoopOptions): NodeJS.Timeout => {
@@ -36,6 +41,13 @@ export const startSimulationLoop = ({
     try {
       await expireIdentityBindings(context);
       await context.sim.step(context.sim.getStepTicks());
+      await runDecisionJobRunner({
+        context,
+        inferenceService
+      });
+      await runActionDispatcher({
+        context
+      });
     } catch (err: unknown) {
       onStepError(err);
     }
