@@ -1,7 +1,7 @@
 import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { InferenceService } from '../../inference/service.js';
-import type { InferenceRequestInput } from '../../inference/types.js';
+import type { InferenceJobReplayInput, InferenceRequestInput } from '../../inference/types.js';
 import type { AppContext } from '../context.js';
 import { toJsonSafe } from '../http/json.js';
 import {
@@ -31,6 +31,29 @@ const parseInferenceInput = (body: unknown): InferenceRequestInput => {
     strategy: record.strategy as InferenceRequestInput['strategy'],
     attributes: record.attributes as InferenceRequestInput['attributes'],
     idempotency_key: typeof record.idempotency_key === 'string' ? record.idempotency_key : undefined
+  };
+};
+
+const parseReplayInput = (body: unknown): InferenceJobReplayInput => {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return {};
+  }
+
+  const record = body as Record<string, unknown>;
+  const overrides = record.overrides as Record<string, unknown> | undefined;
+
+  return {
+    reason: typeof record.reason === 'string' ? record.reason : undefined,
+    idempotency_key: typeof record.idempotency_key === 'string' ? record.idempotency_key : undefined,
+    overrides:
+      overrides && typeof overrides === 'object' && !Array.isArray(overrides)
+        ? {
+            strategy: overrides.strategy as NonNullable<InferenceJobReplayInput['overrides']>['strategy'],
+            attributes: overrides.attributes as Record<string, unknown> | undefined,
+            agent_id: typeof overrides.agent_id === 'string' ? overrides.agent_id :undefined,
+            identity_id: typeof overrides.identity_id === 'string' ? overrides.identity_id : undefined
+          }
+        : undefined
   };
 };
 
@@ -87,6 +110,19 @@ export const registerInferenceRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference job retry');
       const result = await inferenceService.retryInferenceJob(req.params.id);
+
+      res.json({
+        success: true,
+        data: result
+      });
+    })
+  );
+
+  app.post(
+    '/api/inference/jobs/:id/replay',
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('inference job replay');
+      const result = await inferenceService.replayInferenceJob(req.params.id, parseReplayInput(req.body));
 
       res.json({
         success: true,

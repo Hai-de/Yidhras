@@ -1,24 +1,41 @@
 import type { InferenceService } from '../../inference/service.js';
 import type { AppContext } from '../context.js';
-import { listRunnableDecisionJobs } from '../services/inference_workflow.js';
+import {
+  claimDecisionJob,
+  DEFAULT_DECISION_JOB_LOCK_TICKS,
+  listRunnableDecisionJobs
+} from '../services/inference_workflow.js';
 
 export interface RunDecisionJobRunnerOptions {
   context: AppContext;
   inferenceService: InferenceService;
+  workerId: string;
   limit?: number;
+  lockTicks?: bigint;
 }
 
 export const runDecisionJobRunner = async ({
   context,
   inferenceService,
-  limit = 5
+  workerId,
+  limit = 5,
+  lockTicks = DEFAULT_DECISION_JOB_LOCK_TICKS
 }: RunDecisionJobRunnerOptions): Promise<number> => {
   const jobs = await listRunnableDecisionJobs(context, limit);
   let executedCount = 0;
 
   for (const job of jobs) {
     try {
-      const result = await inferenceService.executeDecisionJob(job.id);
+      const claimedJob = await claimDecisionJob(context, {
+        job_id: job.id,
+        worker_id: workerId,
+        lock_ticks: lockTicks
+      });
+      if (!claimedJob) {
+        continue;
+      }
+
+      const result = await inferenceService.executeDecisionJob(claimedJob.id, { workerId });
       if (result) {
         executedCount += 1;
       }

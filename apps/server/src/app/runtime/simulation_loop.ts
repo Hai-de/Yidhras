@@ -23,6 +23,8 @@ export const expireIdentityBindings = async (context: AppContext): Promise<void>
 export interface StartSimulationLoopOptions {
   context: AppContext;
   inferenceService: InferenceService;
+  decisionWorkerId: string;
+  actionDispatcherWorkerId: string;
   intervalMs?: number;
   onStepError(err: unknown): void;
 }
@@ -30,6 +32,8 @@ export interface StartSimulationLoopOptions {
 export const startSimulationLoop = ({
   context,
   inferenceService,
+  decisionWorkerId,
+  actionDispatcherWorkerId,
   intervalMs = 1000,
   onStepError
 }: StartSimulationLoopOptions): NodeJS.Timeout => {
@@ -43,10 +47,12 @@ export const startSimulationLoop = ({
       await context.sim.step(context.sim.getStepTicks());
       await runDecisionJobRunner({
         context,
-        inferenceService
+        inferenceService,
+        workerId: decisionWorkerId
       });
       await runActionDispatcher({
-        context
+        context,
+        workerId: actionDispatcherWorkerId
       });
     } catch (err: unknown) {
       onStepError(err);

@@ -37,7 +37,10 @@ export const listSocialFeed = async (
 export const createSocialPost = async (
   context: AppContext,
   identity: IdentityContext | undefined,
-  content?: string
+  content?: string,
+  options?: {
+    source_action_intent_id?: string | null;
+  }
 ) => {
   const resolvedIdentity = requirePolicyIdentity(identity);
   if (typeof content !== 'string' || content.trim().length === 0) {
@@ -57,6 +60,7 @@ export const createSocialPost = async (
   return context.sim.prisma.post.create({
     data: {
       author_id: resolvedIdentity.id,
+      source_action_intent_id: options?.source_action_intent_id ?? null,
       content,
       created_at: context.sim.clock.getTicks()
     }

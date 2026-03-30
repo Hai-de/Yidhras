@@ -1,15 +1,23 @@
 import type { AppContext } from '../app/context.js';
 import { toJsonSafe } from '../app/http/json.js';
 import {
+  assertDecisionJobLockOwnership,
   assertDecisionJobRetryable,
   buildInferenceJobReplayResult,
+  buildInferenceJobReplaySubmitResult,
   buildInferenceJobRetryResult,
   buildInferenceJobSubmitResult,
+  buildReplayRequestInputFromJob,
+  claimDecisionJob,
   createPendingDecisionJob,
+  createReplayDecisionJob,
+  DEFAULT_DECISION_JOB_LOCK_TICKS,
   getDecisionJobById,
   getDecisionJobByIdempotencyKey,
   getDecisionJobRequestInput,
   getWorkflowSnapshotByJobId,
+  normalizeReplayInput,
+  releaseDecisionJobLock,
   updateDecisionJobState
 } from '../app/services/inference_workflow.js';
 import { ApiError } from '../utils/api_error.js';
@@ -23,6 +31,8 @@ import type { InferenceTraceSink } from './trace_sink.js';
 import type {
   ActionIntentDraft,
   DecisionResult,
+  InferenceJobReplayInput,
+  InferenceJobReplaySubmitResult,
   InferenceJobRetryResult,
   InferenceJobSubmitResult,
   InferencePreviewResult,
@@ -39,8 +49,9 @@ export interface InferenceService {
   previewInference(input: InferenceRequestInput): Promise<InferencePreviewResult>;
   runInference(input: InferenceRequestInput): Promise<InferenceRunResult>;
   submitInferenceJob(input: InferenceRequestInput): Promise<InferenceJobSubmitResult>;
+  replayInferenceJob(jobId: string, input?: InferenceJobReplayInput): Promise<InferenceJobReplaySubmitResult>;
   retryInferenceJob(jobId: string): Promise<InferenceJobRetryResult>;
-  executeDecisionJob(jobId: string): Promise<InferenceRunResult | null>;
+  executeDecisionJob(jobId: string, options: { workerId: string }): Promise<InferenceRunResult | null>;
   buildActionIntentDraft(decision: DecisionResult, sourceInferenceId: string, actorRef: InferenceRunResult['actor_ref']): ActionIntentDraft;
 }
 
@@ -241,6 +252,9 @@ const executeRunInternal = async (
         last_error_stage: failure.stage,
         increment_attempt: false,
         next_retry_at: retryExhausted ? null : currentTick + JOB_RETRY_DELAY_TICKS,
+        locked_by: null,
+        locked_at: null,
+        lock_expires_at: null,
         completed_at: null
       });
 
@@ -273,6 +287,9 @@ const executeRunInternal = async (
         last_error_stage: failure.stage,
         increment_attempt: false,
         next_retry_at: retryExhausted ? null : currentTick + JOB_RETRY_DELAY_TICKS,
+        locked_by: null,
+        locked_at: null,
+        lock_expires_at: null,
         completed_at: null
       });
     }
@@ -442,6 +459,57 @@ export const createInferenceService = ({
 
       return buildInferenceJobSubmitResult(pendingJob, null, workflowSnapshot, false);
     },
+    async replayInferenceJob(jobId, input) {
+      const sourceJob = await getDecisionJobById(context, jobId);
+      const replayInput = normalizeReplayInput(input);
+
+      if (
+        typeof replayInput.overrides?.agent_id === 'string' ||
+        typeof replayInput.overrides?.identity_id === 'string'
+      ) {
+        throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'Replay overrides cannot include agent_id or identity_id');
+      }
+
+      const requestInput = buildReplayRequestInputFromJob(sourceJob);
+      const mergedInput: InferenceRequestInput = {
+        ...requestInput,
+        strategy: replayInput.overrides?.strategy ?? requestInput.strategy,
+        attributes: {
+          ...(requestInput.attributes ?? {}),
+          ...(replayInput.overrides?.attributes ?? {})
+        }
+      };
+      const idempotencyKey = replayInput.idempotency_key ?? `replay_${sourceJob.id}_${Date.now()}`;
+
+      const replayOverrideSnapshot =
+        replayInput.overrides && (replayInput.overrides.strategy !== undefined || replayInput.overrides.attributes !== undefined)
+          ? {
+              ...(replayInput.overrides.strategy ? { strategy: replayInput.overrides.strategy } : {}),
+              ...(replayInput.overrides.attributes ? { attributes: replayInput.overrides.attributes } : {})
+            }
+          : null;
+
+      const duplicateReplayJob = await getDecisionJobByIdempotencyKey(context, idempotencyKey);
+      if (duplicateReplayJob) {
+        throw new ApiError(409, 'INFERENCE_INPUT_INVALID', 'Replay idempotency_key already exists', {
+          idempotency_key: idempotencyKey,
+          job_id: duplicateReplayJob.id
+        });
+      }
+
+      const replayJob = await createReplayDecisionJob(context, {
+        source_job: sourceJob,
+        source_trace_id: sourceJob.source_inference_id && !sourceJob.source_inference_id.startsWith('pending_') ? sourceJob.source_inference_id : null,
+        request_input: { ...mergedInput, idempotency_key: idempotencyKey },
+        idempotency_key: idempotencyKey,
+        reason: replayInput.reason ?? 'operator_manual_replay',
+        max_attempts: sourceJob.max_attempts,
+        replay_override_snapshot: replayOverrideSnapshot
+      });
+      const workflowSnapshot = await getWorkflowSnapshotByJobId(context, replayJob.id);
+
+      return buildInferenceJobReplaySubmitResult(replayJob, workflowSnapshot);
+    },
     async retryInferenceJob(jobId) {
       const existingJob = await getDecisionJobById(context, jobId);
       assertDecisionJobRetryable(existingJob);
@@ -453,11 +521,24 @@ export const createInferenceService = ({
   last_error_code: null,
         last_error_stage: null,
         next_retry_at: context.sim.clock.getTicks(),
+        locked_by: null,
+        locked_at: null,
+        lock_expires_at: null,
         completed_at: null
       });
 
-      const resetJob = await getDecisionJobById(context, existingJob.id);
-      const result = await service.executeDecisionJob(resetJob.id);
+      const claimedJob = await claimDecisionJob(context, {
+        job_id: existingJob.id,
+        worker_id: `retry:${existingJob.id}`,
+        lock_ticks: DEFAULT_DECISION_JOB_LOCK_TICKS
+      });
+      if (!claimedJob) {
+        throw new ApiError(409, 'DECISION_JOB_RETRY_INVALID', 'Retry job could not be claimed');
+      }
+
+      const result = await service.executeDecisionJob(claimedJob.id, {
+        workerId: `retry:${existingJob.id}`
+      });
       if (!result) {
         throw new ApiError(500, 'INFERENCE_PROVIDER_FAIL', 'Retry job did not produce a result');
       }
@@ -466,36 +547,39 @@ export const createInferenceService = ({
 
       return buildInferenceJobRetryResult(completedJob, result, workflowSnapshot);
     },
-    async executeDecisionJob(jobId) {
+    async executeDecisionJob(jobId, options) {
       const job = await getDecisionJobById(context, jobId);
-      if (job.status !== 'pending' && job.status !== 'running') {
+      const now = context.sim.clock.getTicks();
+
+      if (job.status !== 'running') {
         return null;
       }
 
-      const now = context.sim.clock.getTicks();
-      if (job.next_retry_at !== null && job.next_retry_at > now) {
+      try {
+        assertDecisionJobLockOwnership(job, options.workerId, now);
+      } catch {
         return null;
       }
 
       const requestInput = getDecisionJobRequestInput(job);
-      await updateDecisionJobState(context, {
-        job_id: job.id,
-        status: 'running',
-        last_error: null,
-        last_error_code: null,
-        last_error_stage: null,
-        started_at: now,
-        next_retry_at: null,
-        increment_attempt: job.status !== 'running',
-        completed_at: null
-      });
-
-      const runningJob = await getDecisionJobById(context, job.id);
-      return executeRunInternal(service, traceSink, context, providers, requestInput, {
-        jobId: runningJob.id,
-        attemptCount: runningJob.attempt_count,
-        maxAttempts: runningJob.max_attempts
-      });
+      try {
+        const result = await executeRunInternal(service, traceSink, context, providers, requestInput, {
+          jobId: job.id,
+          attemptCount: job.attempt_count,
+          maxAttempts: job.max_attempts
+        });
+        await releaseDecisionJobLock(context, {
+          job_id: job.id,
+          worker_id: options.workerId
+        });
+        return result;
+      } catch (err) {
+        await releaseDecisionJobLock(context, {
+          job_id: job.id,
+          worker_id: options.workerId
+        });
+        throw err;
+      }
     },
     buildActionIntentDraft(decision, sourceInferenceId, actorRef) {
       return {

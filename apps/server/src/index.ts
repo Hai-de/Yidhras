@@ -7,6 +7,7 @@ import { parseOptionalTick, parsePositiveStepTicks } from './app/http/runtime.js
 import { validatePolicyConditions } from './app/http/validators.js';
 import { createGlobalErrorMiddleware } from './app/middleware/error_handler.js';
 import { registerAgentRoutes } from './app/routes/agent.js';
+import { registerAuditRoutes } from './app/routes/audit.js';
 import { registerClockRoutes } from './app/routes/clock.js';
 import { registerIdentityRoutes } from './app/routes/identity.js';
 import { registerInferenceRoutes } from './app/routes/inference.js';
@@ -37,6 +38,8 @@ const startupHealth = createStartupHealth();
 let runtimeReady = false;
 let timer: NodeJS.Timeout | null = null;
 let isPaused = false;
+const decisionWorkerId = `decision:${process.pid}:${Date.now()}`;
+const actionDispatcherWorkerId = `dispatcher:${process.pid}:${Date.now()}`;
 
 const assertRuntimeReady = createRuntimeReadyGuard({
   getRuntimeReady: () => runtimeReady,
@@ -86,6 +89,9 @@ const registerRoutes: RouteRegistrar = (application, context) => {
   registerAgentRoutes(application, context, {
     asyncHandler
   });
+  registerAuditRoutes(application, context, {
+    asyncHandler
+  });
   registerIdentityRoutes(application, context, {
     asyncHandler,
     parseOptionalTick
@@ -124,6 +130,8 @@ const startSimulation = (): void => {
   timer = startSimulationLoop({
     context: appContext,
     inferenceService,
+    decisionWorkerId,
+    actionDispatcherWorkerId,
     onStepError: handleSimulationStepError
   });
 };

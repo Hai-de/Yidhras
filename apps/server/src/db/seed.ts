@@ -70,10 +70,10 @@ async function main() {
   // 3. 建立初始关系 (L2)
   await prisma.relationship.createMany({
     data: [
-      { from_id: 'admin-001', to_id: 'admin-002', type: 'colleague', weight: 1.0, created_at: now },
-      { from_id: 'admin-002', to_id: 'admin-001', type: 'colleague', weight: 1.0, created_at: now },
-      { from_id: 'admin-001', to_id: 'agent-001', type: 'monitor', weight: 0.8, created_at: now },
-      { from_id: 'admin-002', to_id: 'agent-002', type: 'monitor', weight: 0.8, created_at: now }
+      { from_id: 'admin-001', to_id: 'admin-002', type: 'colleague', weight: 1.0, created_at: now, updated_at: now },
+      { from_id: 'admin-002', to_id: 'admin-001', type: 'colleague', weight: 1.0, created_at: now, updated_at: now },
+      { from_id: 'admin-001', to_id: 'agent-001', type: 'monitor', weight: 0.8, created_at: now, updated_at: now },
+      { from_id: 'admin-002', to_id: 'agent-002', type: 'monitor', weight: 0.8, created_at: now, updated_at: now }
     ]
   });
 

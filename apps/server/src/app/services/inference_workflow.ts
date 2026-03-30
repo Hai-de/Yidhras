@@ -1,8 +1,10 @@
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 import type {
   InferenceActionIntentSnapshot,
   InferenceActionIntentStatus,
+  InferenceJobReplayInput,
+  InferenceJobReplaySubmitResult,
   InferenceJobResultSource,
   InferenceJobRetryResult,
   InferenceJobSnapshot,
@@ -24,6 +26,13 @@ import { toJsonSafe } from '../http/json.js';
 
 export interface DecisionJobRecord {
   id: string;
+  locked_by: string | null;
+  locked_at: bigint | null;
+  lock_expires_at: bigint | null;
+  replay_of_job_id: string | null;
+  replay_source_trace_id: string | null;
+  replay_reason: string | null;
+  replay_override_snapshot: unknown;
   source_inference_id: string | null;
   action_intent_id: string | null;
   job_type: string;
@@ -82,6 +91,8 @@ interface ActionIntentRecord {
 const RUNNABLE_JOB_STATUSES = ['pending', 'running'] as const;
 const INFERENCE_JOB_STATUSES = ['pending', 'running', 'completed', 'failed'] as const;
 const ACTION_INTENT_STATUSES = ['pending', 'dispatching', 'completed', 'failed', 'dropped'] as const;
+export const DEFAULT_DECISION_JOB_LOCK_TICKS = 5n;
+
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -111,6 +122,28 @@ const ensureNonEmptyId = (value: string | undefined, fieldName: string): string 
 
 const toTickString = (value: bigint | null): string | null => {
   return value === null ? null : value.toString();
+};
+
+const toReplayLineageParentSnapshot = (job: DecisionJobRecord | null) => {
+  if (!job) {
+    return null;
+  }
+
+  return {
+    id: job.id,
+    status: normalizeJobStatus(job.status),
+    created_at: job.created_at.toString(),
+    completed_at: toTickString(job.completed_at)
+  };
+};
+
+const toReplayLineageChildSnapshots = (jobs: DecisionJobRecord[]) => {
+  return jobs.map(job => ({
+    id: job.id,
+    status: normalizeJobStatus(job.status),
+    created_at: job.created_at.toString(),
+    replay_reason: job.replay_reason
+  }));
 };
 
 const normalizeStoredRequestInput = (value: unknown): InferenceRequestInput => {
@@ -156,7 +189,14 @@ export const toWorkflowDecisionJobSnapshot = (job: DecisionJobRecord): WorkflowD
     request_input: isRecord(job.request_input) ? toRecord(toJsonSafe(job.request_input)) : null,
     started_at: toTickString(job.started_at),
     next_retry_at: toTickString(job.next_retry_at),
+    replay_of_job_id: job.replay_of_job_id,
+    replay_source_trace_id: job.replay_source_trace_id,
+    replay_reason: job.replay_reason,
+    replay_override_snapshot: isRecord(job.replay_override_snapshot) ? toRecord(toJsonSafe(job.replay_override_snapshot)) : null,
     last_error_code: (job.last_error_code as WorkflowDecisionJobSnapshot['last_error_code']) ?? null,
+    locked_by: job.locked_by,
+    locked_at: toTickString(job.locked_at),
+    lock_expires_at: toTickString(job.lock_expires_at),
     last_error_stage: (job.last_error_stage as WorkflowDecisionJobSnapshot['last_error_stage']) ?? null
   };
 };
@@ -294,6 +334,8 @@ export const buildWorkflowSnapshot = (input: {
   trace: InferenceTraceRecord | null;
   job: DecisionJobRecord | null;
   intent: ActionIntentRecord | null;
+  replayParentJob?: DecisionJobRecord | null;
+  replayChildJobs?: DecisionJobRecord[];
 }): WorkflowSnapshot => {
   const trace = toInferenceTraceRecordSnapshot(input.trace);
   const job = input.job ? toWorkflowDecisionJobSnapshot(input.job) : null;
@@ -340,6 +382,17 @@ export const buildWorkflowSnapshot = (input: {
       trace,
       job,
       intent
+    },
+    lineage: {
+      replay_of_job_id: input.job?.replay_of_job_id ?? null,
+      replay_source_trace_id: input.job?.replay_source_trace_id ?? null,
+      replay_reason: input.job?.replay_reason ?? null,
+      override_applied: isRecord(input.job?.replay_override_snapshot),
+      override_snapshot: isRecord(input.job?.replay_override_snapshot)
+        ? toRecord(toJsonSafe(input.job?.replay_override_snapshot))
+        : null,
+      parent_job: toReplayLineageParentSnapshot(input.replayParentJob ?? null),
+      child_jobs: toReplayLineageChildSnapshots(input.replayChildJobs ?? [])
     },
     derived: {
       decision_stage: decisionStage,
@@ -501,6 +554,15 @@ export const listRunnableDecisionJobs = async (
       OR: [
         { next_retry_at: null },
         { next_retry_at: { lte: now } }
+      ],
+      AND: [
+        {
+          OR: [
+            { locked_by: null },
+            { lock_expires_at: null },
+            { lock_expires_at: { lte: now } }
+          ]
+        }
       ]
     },
     orderBy: {
@@ -508,6 +570,110 @@ export const listRunnableDecisionJobs = async (
     },
     take: limit
   });
+};
+
+export const claimDecisionJob = async (
+  context: AppContext,
+  input: {
+    job_id: string;
+    worker_id: string;
+    now?: bigint;
+    lock_ticks?: bigint;
+  }
+): Promise<DecisionJobRecord | null> => {
+  const existing = await getDecisionJobById(context, input.job_id);
+  const now = input.now ?? context.sim.clock.getTicks();
+  const lockTicks = input.lock_ticks ?? DEFAULT_DECISION_JOB_LOCK_TICKS;
+
+  if (!RUNNABLE_JOB_STATUSES.includes(existing.status as (typeof RUNNABLE_JOB_STATUSES)[number])) {
+    return null;
+  }
+
+  if (existing.next_retry_at !== null && existing.next_retry_at > now) {
+    return null;
+  }
+
+  const claimable = existing.locked_by === null || existing.lock_expires_at === null || existing.lock_expires_at <= now;
+  if (!claimable) {
+    return null;
+  }
+
+  const shouldIncrementAttempt = existing.status === 'pending';
+  const claimResult = await context.prisma.decisionJob.updateMany({
+    where: {
+      id: existing.id,
+      status: {
+        in: [...RUNNABLE_JOB_STATUSES]
+      },
+      OR: [
+        { next_retry_at: null },
+        { next_retry_at: { lte: now } }
+      ],
+      AND: [
+        {
+          OR: [
+            { locked_by: null },
+            { lock_expires_at: null },
+            { lock_expires_at: { lte: now } }
+          ]
+        }
+      ]
+    },
+    data: {
+      status: 'running',
+      locked_by: input.worker_id,
+      locked_at: now,
+      lock_expires_at: now + lockTicks,
+      started_at: existing.started_at ?? now,
+      updated_at: now,
+      next_retry_at: null,
+      attempt_count: shouldIncrementAttempt ? existing.attempt_count + 1 : existing.attempt_count
+    }
+  });
+
+  if (claimResult.count === 0) {
+    return null;
+  }
+
+  return getDecisionJobById(context, existing.id);
+};
+
+export const releaseDecisionJobLock = async (
+  context: AppContext,
+  input: {
+    job_id: string;
+    worker_id?: string;
+  }
+): Promise<DecisionJobRecord> => {
+  const existing = await getDecisionJobById(context, input.job_id);
+  if (input.worker_id && existing.locked_by !== input.worker_id) {
+    return existing;
+  }
+
+  return context.prisma.decisionJob.update({
+    where: {
+      id: existing.id
+    },
+    data: {
+      locked_by: null,
+      locked_at: null,
+      lock_expires_at: null,
+      updated_at: context.sim.clock.getTicks()
+    }
+  });
+};
+
+export const assertDecisionJobLockOwnership = (
+  job: DecisionJobRecord,
+  workerId: string,
+  now: bigint
+): void => {
+  if (job.status !== 'running' || job.locked_by !== workerId || job.lock_expires_at === null || job.lock_expires_at < now) {
+    throw new ApiError(409, 'DECISION_JOB_NOT_FOUND', 'Decision job lock ownership is invalid', {
+      job_id: job.id,
+      worker_id: workerId
+    });
+  }
 };
 
 export const getDecisionJobByIdempotencyKey = async (
@@ -542,12 +708,58 @@ export const createPendingDecisionJob = async (
       request_input: toJsonSafe(input.request_input) as Prisma.InputJsonValue,
       last_error: null,
       started_at: null,
+      replay_of_job_id: null,
+      replay_source_trace_id: null,
+      replay_reason: null,
+      replay_override_snapshot: Prisma.JsonNull,
+      locked_by: null,
+      locked_at: null,
+      lock_expires_at: null,
       next_retry_at: null,
       created_at: now,
       updated_at: now,
       completed_at: null
     }
   });
+};
+
+export const createReplayDecisionJob = async (
+  context: AppContext,
+  input: {
+    source_job: DecisionJobRecord;
+    source_trace_id: string | null;
+    request_input: InferenceRequestInput;
+    idempotency_key: string;
+    reason?: string | null;
+    max_attempts?: number;
+    replay_override_snapshot?: Record<string, unknown> | null;
+  }
+): Promise<DecisionJobRecord> => {
+  const now = context.sim.clock.getTicks();
+
+  return context.prisma.decisionJob.create({
+    data: {
+      source_inference_id: `pending_${input.idempotency_key}`,
+      replay_of_job_id: input.source_job.id,
+      replay_source_trace_id: input.source_trace_id,
+      replay_reason: input.reason ?? null,
+      replay_override_snapshot: input.replay_override_snapshot
+        ? (toJsonSafe(input.replay_override_snapshot) as Prisma.InputJsonValue)
+        : Prisma.JsonNull,
+      job_type: 'inference_run',
+      status: 'pending',
+      idempotency_key: input.idempotency_key,
+      attempt_count: 0,
+      max_attempts: input.max_attempts ?? input.source_job.max_attempts,
+      request_input: toJsonSafe(input.request_input) as Prisma.InputJsonValue,
+      created_at: now,
+      updated_at: now
+    }
+  });
+};
+
+export const buildReplayRequestInputFromJob = (job: DecisionJobRecord): InferenceRequestInput => {
+  return getDecisionJobRequestInput(job);
 };
 
 export const updateDecisionJobState = async (
@@ -561,6 +773,13 @@ export const updateDecisionJobState = async (
     completed_at?: bigint | null;
     next_retry_at?: bigint | null;
     started_at?: bigint | null;
+    locked_by?: string | null;
+    locked_at?: bigint | null;
+    lock_expires_at?: bigint | null;
+    replay_of_job_id?: string | null;
+    replay_source_trace_id?: string | null;
+    replay_reason?: string | null;
+    replay_override_snapshot?: Prisma.InputJsonValue | typeof Prisma.JsonNull;
     source_inference_id?: string;
     action_intent_id?: string | null;
     increment_attempt?: boolean;
@@ -580,6 +799,14 @@ export const updateDecisionJobState = async (
       last_error_stage: input.last_error_stage ?? null,
       attempt_count: nextAttemptCount,
       started_at: input.started_at === undefined ? existing.started_at : input.started_at,
+      replay_of_job_id: input.replay_of_job_id === undefined ? existing.replay_of_job_id : input.replay_of_job_id,
+      replay_source_trace_id: input.replay_source_trace_id === undefined ? existing.replay_source_trace_id : input.replay_source_trace_id,
+      replay_reason: input.replay_reason === undefined ? existing.replay_reason : input.replay_reason,
+      replay_override_snapshot:
+        input.replay_override_snapshot === undefined ? existing.replay_override_snapshot ?? Prisma.JsonNull : input.replay_override_snapshot,
+      locked_by: input.locked_by === undefined ? existing.locked_by : input.locked_by,
+      locked_at: input.locked_at === undefined ? existing.locked_at : input.locked_at,
+      lock_expires_at: input.lock_expires_at === undefined ? existing.lock_expires_at : input.lock_expires_at,
       next_retry_at: input.next_retry_at === undefined ? existing.next_retry_at : input.next_retry_at,
       source_inference_id: input.source_inference_id ?? existing.source_inference_id,
       action_intent_id: input.action_intent_id === undefined ? existing.action_intent_id : input.action_intent_id,
@@ -661,6 +888,49 @@ export const buildInferenceJobRetryResult = (
   };
 };
 
+export const buildInferenceJobReplaySubmitResult = (
+  job: DecisionJobRecord,
+  workflowSnapshot: WorkflowSnapshot
+): InferenceJobReplaySubmitResult => {
+  return {
+    replayed: false,
+    inference_id: resolveInferenceIdForSubmitResult(workflowSnapshot, job),
+    job: toInferenceJobSnapshot(job),
+    result: null,
+    result_source: 'not_available',
+    workflow_snapshot: workflowSnapshot,
+    replay: {
+      source_job_id: job.replay_of_job_id ?? '',
+      source_trace_id: job.replay_source_trace_id,
+      reason: job.replay_reason,
+      override_applied: isRecord(job.replay_override_snapshot),
+      override_snapshot: isRecord(job.replay_override_snapshot) ? toRecord(toJsonSafe(job.replay_override_snapshot)) : null,
+      parent_job: workflowSnapshot.lineage.parent_job,
+      child_jobs: workflowSnapshot.lineage.child_jobs
+    }
+  };
+};
+
+export const normalizeReplayInput = (input: InferenceJobReplayInput | undefined): InferenceJobReplayInput => {
+  return {
+    reason: typeof input?.reason === 'string' && input.reason.trim().length > 0 ? input.reason.trim() : undefined,
+    idempotency_key:
+      typeof input?.idempotency_key === 'string' && input.idempotency_key.trim().length > 0 ? input.idempotency_key.trim() : undefined,
+    overrides: isRecord(input?.overrides)
+      ? {
+          strategy:
+            input?.overrides?.strategy === 'mock' || input?.overrides?.strategy === 'rule_based'
+              ? input.overrides.strategy
+              : undefined,
+          attributes: isRecord(input?.overrides?.attributes) ? input.overrides.attributes : undefined,
+          agent_id: typeof input?.overrides?.agent_id === 'string' ? input.overrides.agent_id : undefined,
+          identity_id:
+            typeof input?.overrides?.identity_id === 'string' ? input.overrides.identity_id : undefined
+        }
+      : undefined
+  };
+};
+
 export const getWorkflowSnapshotByInferenceId = async (
   context: AppContext,
   inferenceId?: string
@@ -698,7 +968,7 @@ export const getWorkflowSnapshotByJobId = async (
   const id = ensureNonEmptyId(jobId, 'job_id');
   const job = await getDecisionJobById(context, id);
 
-  const [trace, intent] = await Promise.all([
+  const [trace, intent, replayParentJob, replayChildJobs] = await Promise.all([
     job.source_inference_id && !job.source_inference_id.startsWith('pending_')
       ? context.prisma.inferenceTrace.findUnique({
           where: { id: job.source_inference_id }
@@ -708,12 +978,27 @@ export const getWorkflowSnapshotByJobId = async (
       ? context.prisma.actionIntent.findUnique({
           where: { id: job.action_intent_id }
         })
-      : Promise.resolve(null)
+      : Promise.resolve(null),
+    job.replay_of_job_id
+      ? context.prisma.decisionJob.findUnique({
+          where: { id: job.replay_of_job_id }
+        })
+      : Promise.resolve(null),
+    context.prisma.decisionJob.findMany({
+      where: {
+        replay_of_job_id: job.id
+      },
+      orderBy: {
+        created_at: 'asc'
+      }
+    })
   ]);
 
   return buildWorkflowSnapshot({
     trace,
     job,
-    intent
+    intent,
+    replayParentJob,
+    replayChildJobs
   });
 };

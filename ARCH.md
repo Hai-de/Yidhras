@@ -106,8 +106,8 @@ The formal engineering route is no longer “temporary feature probing”. The c
   and identity/policy entities.
 - Identity bindings connect identities to active/atmosphere nodes with lifecycle status and expiry.
 - A minimal persisted inference workflow baseline now exists with `InferenceTrace`, `ActionIntent`, and `DecisionJob`.
-- Current delivered workflow additions already include idempotency-key replay, failed-job retry, aggregate workflow reads, loop-driven job execution, and first-pass dispatcher consumption for `post_message`.
-- Current gap: richer replay orchestration beyond aggregate reads/stored-trace reuse, broader dispatcher/runtime consumption beyond the current `post_message` path, and durable job locking/multi-worker scheduler semantics.
+- Current delivered workflow additions already include idempotency-key replay, failed-job retry, aggregate workflow reads, loop-driven job execution with minimal job locking / claim semantics, first-pass dispatcher consumption for `post_message`, and a replay-lineage baseline for deriving new replay jobs from existing workflow records with controlled `strategy/attributes` overrides plus parent/child lineage reads.
+- Current gap: richer replay orchestration beyond the current job-derived replay baseline with limited overrides, broader dispatcher/runtime consumption beyond the current shipped action set, and more durable multi-worker scheduler semantics beyond the current lightweight locking baseline; `post_message` provenance is now also recorded on `Post.source_action_intent_id`.
 
 ### 4.6 Agent Runtime Route / Agent 运行路线
 
@@ -156,12 +156,30 @@ The formal engineering route is no longer “temporary feature probing”. The c
     - `failure_stage`
     - `failure_code`
   - dispatcher consumes eligible `ActionIntent` records and currently materializes `post_message` into L1 social posts
+  - dispatcher now also supports `adjust_relationship` as the second world-action path with a constrained MVP:
+    - active actor only
+    - target agent only
+    - single-direction edge only
+    - `operation = set`
+  - relationship mutations now write `RelationshipAdjustmentLog` for minimal auditability, and the current backend also provides relationship-log read APIs for audit/debug use
+  - dispatcher now also supports `adjust_snr` as the current third world-action path with a constrained MVP:
+    - active actor only
+    - target agent only
+    - `operation = set`
+    - absolute-value write with `[0,1]` clamp
+  - SNR mutations now write `SNRAdjustmentLog` for minimal auditability, and the current backend also provides SNR-log read APIs for audit/debug use
+  - dispatcher now also supports `trigger_event` as the current third world-action path with a constrained MVP:
+    - append-only event creation
+    - `Event.type = history | interaction | system`
+    - active actor or system actor
+    - current tick only
+
   - minimal L4 semantics are carried on `ActionIntent` via:
     - `transmission_delay_ticks`
     - `transmission_policy`
     - `transmission_drop_chance`
     - `drop_reason`
-  - dispatcher may mark an intent as `dropped` without creating a post
+  - dispatcher now claims `ActionIntent` records with lightweight locking before dispatch and may mark an intent as `dropped` without creating a post
   - dispatcher failures and drops are now separated more explicitly via:
     - `ActionIntent.dispatch_error_code`
     - `ActionIntent.dispatch_error_message`
@@ -169,11 +187,15 @@ The formal engineering route is no longer “temporary feature probing”. The c
     - policy capability (`social_post_write_allowed`)
     - actor role (`active` / `atmosphere`)
     - agent SNR snapshot
+  - backend now also exposes a minimal unified audit feed that merges workflow, post, relationship-adjustment, SNR-adjustment, and event records into one time-ordered read model, with first-pass `from_tick` / `to_tick` / `job_id` / `inference_id` / `agent_id` / `action_intent_id` filters and cursor-based pagination
+  - backend now also exposes a single-entry audit detail read path (`GET /api/audit/entries/:kind/:id`) over the same unified audit model
+  - workflow audit detail now also aggregates direct related records produced by the same `ActionIntent` (posts / relationship adjustments / SNR adjustments / events)
 - Remaining Phase D work:
   - audit/replay tooling beyond raw record reads
+  - richer replay lineage / orchestration beyond the current `DecisionJob -> replay job` baseline with controlled overrides
   - richer replay orchestration beyond current aggregate read + stored-trace reuse
   - richer simulation loop consumption of persisted workflow state beyond current post-message path
-  - job locking / multi-worker safety / real scheduler semantics
+  - stronger job locking / multi-worker safety / real scheduler semantics beyond the current lightweight claim baseline
 
 ### 4.7 Memory Core v1 (Partially Landed)
 - `apps/server/src/memory/` is now introduced as the initial memory module boundary.

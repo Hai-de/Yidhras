@@ -127,7 +127,7 @@ This file focuses on business rules rather than unstable low-level algorithm det
 
 - Frontend global notification panel fully wired to backend queue.
 - Stronger categorization and routing for operational vs business-level alerts in frontend/operator views.
-- Broader alert aggregation/reporting across inference workflow history, not just per-request/per-job snapshots.
+- Broader alert aggregation/reporting across inference workflow history, not just per-request/per-job snapshots; a minimal backend unified audit feed is now available as the current observability baseline.
 
 ## 6) Layer Coupling Rules / 层级联动规则
 
@@ -151,7 +151,7 @@ This file focuses on business rules rather than unstable low-level algorithm det
 - Inference Interface: policy injection, stable prompt channels, normalized decision schema, and trace metadata baseline is landed.
 - Workflow Persistence: persisted traces/intents/jobs baseline is now landed; minimal idempotency replay, failed-job retry, loop-driven async execution, and first-pass intent dispatch are available, while richer audit/replay and state progression remain in progress.
 - Memory Core: short-term context is now partially landed through `memory_context` + prompt fragment injection, while long-term retrieval/storage and richer summarization remain in progress.
-- Action Dispatcher: first-pass delayed executable actions are now landed for `post_message`; broader world-action mapping remains future work.
+- Action Dispatcher: first-pass delayed executable actions are now landed for `post_message`, and dispatcher-produced posts now record `Post.source_action_intent_id` provenance; the current second path `adjust_relationship` is available under a constrained MVP (`active actor`, `target_ref.agent_id`, single-direction edge, `operation=set`, `[0,1]` clamp) with `RelationshipAdjustmentLog` auditability and read API; the current third path `adjust_snr` is available under a constrained MVP (`active actor`, `target_ref.agent_id`, `operation=set`, absolute-value write with `[0,1]` clamp) with `SNRAdjustmentLog` auditability and read API; and the current fourth path `trigger_event` is now available as an append-only event action (`history|interaction|system`, active/system actor, current tick only). Broader world-action mapping remains future work.
 
 ### Current Delivery Principle / 当前交付原则
 
@@ -164,7 +164,7 @@ This file focuses on business rules rather than unstable low-level algorithm det
 - Current idempotency support now includes aggregate workflow replay semantics and stored-trace result reuse, but is still not full replay orchestration.
 - Current retry support is manual API-driven retry, not background scheduling.
 - Current async runner is single-process loop-driven execution, not a durable multi-worker job system.
-- Current dispatcher only handles `post_message`; broader world-action mapping remains future work.
+- Current dispatcher now handles `post_message`, `adjust_relationship`, `adjust_snr`, and `trigger_event`; broader world-action mapping remains future work.
 - Current L4 semantics are intentionally minimal and do not yet model probabilistic reach, multi-hop propagation, or loss recovery.
 - Current L4 policy derivation is heuristic and local; it is not yet a full network/system simulation.
 - Current failure observation now distinguishes:

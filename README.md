@@ -82,6 +82,13 @@
   - `ActionIntent.dispatch_error_message`
 - The current jobs baseline supports duplicate-submit replay by `idempotency_key`, bounded failed-job retry, loop-driven execution, workflow aggregate reads, and structured failure-stage observation, but still does not include full replay orchestration or dispatcher-driven world action consumption beyond the current `post_message` path.
 
+## Current World-Action Coverage (2026-03-30)
+- Dispatcher-supported world actions now include:
+  - `post_message`
+  - `adjust_relationship`
+  - `adjust_snr`
+  - `trigger_event`
+
 ## Memory Core v1 Status (2026-03-27)
 - Memory Core v1 baseline is now partially landed in backend:
   - `InferenceContext` now carries `memory_context`
@@ -121,8 +128,9 @@
 
 仍在推进：
 - richer replay orchestration / audit tooling
+- replay lineage / orchestration 基线已进入实现阶段，当前目标是从已有 job 派生新的 replay workflow
 - broader world-action mapping（当前 dispatcher 仅完整消费 `post_message`）
-- durable scheduling / job locking / multi-worker safety
+- durable scheduling / multi-worker safety（当前已具备最小轻量 job locking / claim baseline）
 - long-term memory 与更强的 summarization / trimming 策略
 
 ### 设计原则（当前即生效）

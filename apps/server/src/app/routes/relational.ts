@@ -1,10 +1,12 @@
 import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { AppContext } from '../context.js';
+import { toJsonSafe } from '../http/json.js';
 import {
   getRelationalGraph,
   listAtmosphereNodes,
-  listRelationalCircles
+  listRelationalCircles,
+  listRelationshipAdjustmentLogs
 } from '../services/relational.js';
 
 export interface RelationalRouteDependencies {
@@ -46,6 +48,21 @@ export const registerRelationalRoutes = (
       });
 
       res.json(nodes);
+    })
+  );
+
+  app.get(
+    '/api/relationships/:from_id/:to_id/:type/logs',
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('relationship adjustment logs');
+      const logs = await listRelationshipAdjustmentLogs(context, {
+        from_id: req.params.from_id,
+        to_id: req.params.to_id,
+        type: req.params.type,
+        limit: typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : undefined
+      });
+
+      res.json(toJsonSafe(logs));
     })
   );
 };

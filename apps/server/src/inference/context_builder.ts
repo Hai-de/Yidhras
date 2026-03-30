@@ -143,6 +143,22 @@ const resolveIdentityOnlyActor = async (context: AppContext, identityId: string)
   );
   const binding = activeBinding ?? atmosphereBinding;
 
+  if (!binding && (identity.id === 'system' || identity.type === 'system')) {
+    return {
+      identity,
+      actorRef: {
+        identity_id: identity.id,
+        identity_type: identity.type,
+        role: 'active',
+        agent_id: null,
+        atmosphere_node_id: null
+      },
+      actorDisplayName: identity.name ?? identity.id,
+      bindingRef: null,
+      resolvedAgentId: null
+    };
+  }
+
   if (!binding) {
     throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'identity_id has no active binding', {
       identity_id: identityId

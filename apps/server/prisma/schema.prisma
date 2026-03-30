@@ -23,6 +23,7 @@ model Agent {
   
   // Relations
   posts           Post[]
+  snr_adjustment_logs SNRAdjustmentLog[]
   relationships_from Relationship[] @relation("FromNode")
   relationships_to   Relationship[] @relation("ToNode")
 
@@ -81,8 +82,51 @@ model Relationship {
   
   from        Agent    @relation("FromNode", fields: [from_id], references: [id])
   to          Agent    @relation("ToNode", fields: [to_id], references: [id])
+  adjustment_logs RelationshipAdjustmentLog[]
 
   created_at  BigInt
+  updated_at  BigInt
+
+  @@unique([from_id, to_id, type])
+}
+
+model RelationshipAdjustmentLog {
+  id               String       @id @default(uuid())
+  action_intent_id String
+  relationship_id  String
+  from_id          String
+  to_id            String
+  type             String
+  operation        String
+  old_weight       Float?
+  new_weight       Float
+  reason           String?
+  created_at       BigInt
+
+  action_intent    ActionIntent @relation(fields: [action_intent_id], references: [id])
+  relationship     Relationship @relation(fields: [relationship_id], references: [id])
+
+  @@index([action_intent_id, created_at])
+  @@index([relationship_id, created_at])
+  @@index([from_id, to_id, type, created_at])
+}
+
+model SNRAdjustmentLog {
+  id               String       @id @default(uuid())
+  action_intent_id String
+  agent_id         String
+  operation        String
+  requested_value  Float
+  baseline_value   Float
+  resolved_value   Float
+  reason           String?
+  created_at       BigInt
+
+  action_intent    ActionIntent @relation(fields: [action_intent_id], references: [id])
+  agent            Agent        @relation(fields: [agent_id], references: [id])
+
+  @@index([action_intent_id, created_at])
+  @@index([agent_id, created_at])
 }
 
 // --- L1: Social Layer ---
@@ -90,6 +134,7 @@ model Relationship {
 model Post {
   id          String   @id @default(uuid())
   author_id   String
+  source_action_intent_id String?
   content     String
   
   // L4 Transmission Props
@@ -97,8 +142,11 @@ model Post {
   is_encrypted Boolean @default(false)
   
   author      Agent    @relation(fields: [author_id], references: [id])
+  source_action_intent ActionIntent? @relation(fields: [source_action_intent_id], references: [id])
   
   created_at  BigInt
+
+  @@index([source_action_intent_id, created_at])
 }
 
 // --- L3: Narrative Layer ---
@@ -112,6 +160,14 @@ model Event {
   
   // 影响范围 (JSON)
   impact_data String?  // 存储 JSON: { "snr_delta": ..., "affected_nodes": [] }
+  source_action_intent_id String?
+  created_at   BigInt
+
+  source_action_intent ActionIntent? @relation(fields: [source_action_intent_id], references: [id])
+
+  @@index([tick])
+  @@index([type, tick])
+  @@index([source_action_intent_id, tick])
 }
 
 model WorldVariable {
@@ -194,6 +250,7 @@ model InferenceTrace {
 
   action_intent    ActionIntent?
   decision_job     DecisionJob?
+  replay_source_jobs DecisionJob[] @relation("DecisionJobReplaySourceTrace")
 
   @@index([kind, created_at])
   @@index([strategy, provider])
@@ -209,6 +266,9 @@ model ActionIntent {
   scheduled_after_ticks BigInt?
   scheduled_for_tick    BigInt?
   status                String         @default("pending")
+  locked_by             String?
+  locked_at             BigInt?
+  lock_expires_at       BigInt?
   dispatch_started_at   BigInt?
   dispatched_at         BigInt?
   transmission_delay_ticks BigInt?
@@ -222,13 +282,21 @@ model ActionIntent {
 
   source_inference      InferenceTrace @relation(fields: [source_inference_id], references: [id])
   decision_job          DecisionJob?
+  relationship_adjustment_logs RelationshipAdjustmentLog[]
+  snr_adjustment_logs   SNRAdjustmentLog[]
+  sourced_posts         Post[]
+  sourced_events        Event[]
 
   @@index([status, created_at])
+  @@index([status, lock_expires_at])
 }
 
 model DecisionJob {
   id                  String          @id @default(uuid())
   source_inference_id String?         @unique
+  replay_of_job_id    String?
+  replay_source_trace_id String?
+  replay_reason       String?
   action_intent_id    String?         @unique
   job_type            String
   status              String
@@ -236,17 +304,26 @@ model DecisionJob {
   attempt_count       Int             @default(1)
   max_attempts        Int             @default(3)
   request_input       Json?
+  replay_override_snapshot Json?
   last_error          String?
   last_error_code     String?
   last_error_stage    String?
   started_at          BigInt?
   next_retry_at       BigInt?
+  locked_by           String?
+  locked_at           BigInt?
+  lock_expires_at     BigInt?
   created_at          BigInt
   updated_at          BigInt
   completed_at        BigInt?
 
   source_inference    InferenceTrace? @relation(fields: [source_inference_id], references: [id])
+  replay_source_trace InferenceTrace? @relation("DecisionJobReplaySourceTrace", fields: [replay_source_trace_id], references: [id])
+  replay_of_job       DecisionJob?    @relation("DecisionJobReplayLineage", fields: [replay_of_job_id], references: [id])
+  replayed_jobs       DecisionJob[]   @relation("DecisionJobReplayLineage")
   action_intent       ActionIntent?   @relation(fields: [action_intent_id], references: [id])
 
   @@index([status, created_at])
+  @@index([status, lock_expires_at])
+  @@index([replay_of_job_id, created_at])
 }

@@ -60,6 +60,44 @@ export interface InferenceJobRetryResult {
   workflow_snapshot: WorkflowSnapshot;
 }
 
+export interface InferenceJobReplayInput {
+  reason?: string;
+  idempotency_key?: string;
+  overrides?: {
+    strategy?: InferenceStrategy;
+    attributes?: Record<string, unknown>;
+    agent_id?: string;
+    identity_id?: string;
+  };
+}
+
+export interface InferenceJobReplayMetadata {
+  source_job_id: string;
+  source_trace_id: string | null;
+  reason: string | null;
+  override_applied: boolean;
+  override_snapshot: {
+    strategy?: InferenceStrategy;
+    attributes?: Record<string, unknown>;
+  } | null;
+  parent_job: {
+    id: string;
+    status: InferenceJobStatus;
+    created_at: string;
+    completed_at: string | null;
+  } | null;
+  child_jobs: Array<{
+    id: string;
+    status: InferenceJobStatus;
+    created_at: string;
+    replay_reason: string | null;
+  }>;
+}
+
+export interface InferenceJobReplaySubmitResult extends InferenceJobSubmitResult {
+  replay: InferenceJobReplayMetadata;
+}
+
 export interface InferenceBindingRef {
   binding_id: string;
   role: InferenceActorRole;
@@ -243,7 +281,14 @@ export interface InferenceRunResult {
 export interface WorkflowDecisionJobSnapshot extends InferenceJobSnapshot {
   request_input: Record<string, unknown> | null;
   started_at: string | null;
+  locked_by: string | null;
+  locked_at: string | null;
+  lock_expires_at: string | null;
   next_retry_at: string | null;
+  replay_of_job_id: string | null;
+  replay_source_trace_id: string | null;
+  replay_reason: string | null;
+  replay_override_snapshot: Record<string, unknown> | null;
   last_error_code: WorkflowFailureCode | null;
   last_error_stage: Exclude<WorkflowFailureStage, 'none' | 'dispatch'> | 'unknown' | null;
 }
@@ -302,6 +347,20 @@ export interface WorkflowSnapshot {
     trace: InferenceTraceRecordSnapshot | null;
     job: WorkflowDecisionJobSnapshot | null;
     intent: InferenceActionIntentSnapshot | null;
+  };
+  lineage: {
+    replay_of_job_id: string | null;
+    replay_source_trace_id: string | null;
+    replay_reason: string | null;
+    override_applied: boolean;
+    override_snapshot: Record<string, unknown> | null;
+    parent_job: {
+      id: string;
+      status: InferenceJobStatus;
+      created_at: string;
+      completed_at: string | null;
+    } | null;
+    child_jobs: Array<{ id: string; status: InferenceJobStatus; created_at: string; replay_reason: string | null }>;
   };
   derived: {
     decision_stage: WorkflowDecisionStage;

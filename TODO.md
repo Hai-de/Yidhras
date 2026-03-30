@@ -47,14 +47,19 @@ Status: In Progress / 进行中
 
 ### In Progress / 进行中
 
-- [~] Workflow Persistence Phase D: minimal persisted `InferenceTrace` / `ActionIntent` / `DecisionJob` baseline, async `pending` job queue + loop runner, aggregate workflow read APIs, `POST /api/inference/jobs` replay semantics with `result_source + workflow_snapshot`, failed-job retry API, and structured failure-stage persistence are now landed; richer replay orchestration and broader runtime state progression remain to be completed.
+- [~] Workflow Persistence Phase D: minimal persisted `InferenceTrace` / `ActionIntent` / `DecisionJob` baseline, async `pending` job queue + loop runner, aggregate workflow read APIs, `POST /api/inference/jobs` replay semantics with `result_source + workflow_snapshot`, failed-job retry API, structured failure-stage persistence, lightweight job locking / claim baseline, and the initial replay lineage / replay-job derivation API are now landed; richer replay orchestration and broader runtime state progression remain to be completed.
 - [~] Memory Core: short-term context adapter, noop long-term store contract, fragment-friendly prompt pipeline, chained prompt processors (`memory-injector` / `policy-filter` / `memory-summary` / `token-budget-trimmer`), and trace-side `memory_selection` / `prompt_processing_trace` observability are now landed; richer long-term retrieval/storage and more advanced policy/summarization/trimming strategies remain to be completed.
-- [~] Action Dispatcher: first-pass `post_message` dispatch is now loop-driven and writes to social posts; minimal L4 transmission delay/drop semantics plus heuristic transmission-policy derivation are landed, while broader world-action mapping remains to be completed.
+- [~] Action Dispatcher: first-pass `post_message` dispatch is now loop-driven and writes to social posts; minimal L4 transmission delay/drop semantics, lightweight ActionIntent locking / claim baseline, heuristic transmission-policy derivation, the constrained `adjust_relationship` MVP, the constrained `adjust_snr` MVP with `SNRAdjustmentLog` auditability/read API, and the append-only `trigger_event` MVP are landed, while broader world-action mapping remains to be completed.
 
 ### Planned / 规划中
 
-- [ ] Workflow Persistence Phase D: add richer replay orchestration, durable scheduling/locking semantics, and broader runtime workflow progression beyond the current single-process loop baseline.
+- [ ] Workflow Persistence Phase D: add richer replay orchestration, more durable scheduling/multi-worker safety semantics, and broader runtime workflow progression beyond the current lightweight locking baseline.
+- [~] Audit / Observability: a minimal unified audit feed across workflow records, social posts, relationship adjustments, SNR adjustments, and narrative events is now landed, with first-pass `from_tick` / `to_tick` / `job_id` / `inference_id` / `agent_id` / `action_intent_id` filters, cursor pagination, `post_message -> Post.source_action_intent_id` provenance, single-entry detail reads, and workflow-scoped related-record aggregation; richer operator views and deeper observability correlations remain to be completed.
+- [ ] Mutation Semantics: introduce a Resolved Intent pattern (`intent + baseline + absolute result`) for future delta-capable world actions.
 - [ ] Memory Core: add real long-term retrieval/storage and stronger summarization/policy-aware trimming strategies on top of the current baseline.
+- [ ] Action Dispatcher / L2: extend beyond `adjust_relationship` + `adjust_snr` with additional constrained world mutation actions and local-variable primitives.
+- [ ] Local Variable Actions: support actor-scoped and relationship-scoped variable mutations that can later affect graph rendering and frontend overlays.
+- [ ] Event Side-Effect Design (Low Priority): keep `Event` append-only; if side effects are needed, express them as standard `ActionIntent`, and defer Event Reactor design until later.
 - [ ] Action Dispatcher / L4: extend beyond current `post_message` delivery with broader world-action mapping and richer transmission/system simulation.
 
 ## M3 - Frontend Capability / 前端能力完善

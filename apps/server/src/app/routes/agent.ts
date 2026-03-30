@@ -1,7 +1,11 @@
 import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { AppContext } from '../context.js';
-import { getAgentContextSnapshot } from '../services/agent.js';
+import { toJsonSafe } from '../http/json.js';
+import {
+  getAgentContextSnapshot,
+  listSnrAdjustmentLogs
+} from '../services/agent.js';
 
 export interface AgentRouteDependencies {
   asyncHandler(
@@ -21,6 +25,19 @@ export const registerAgentRoutes = (
       const snapshot = await getAgentContextSnapshot(context, req.params.id);
 
       res.json(snapshot);
+    })
+  );
+
+  app.get(
+    '/api/agent/:id/snr/logs',
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('agent snr adjustment logs');
+      const logs = await listSnrAdjustmentLogs(context, {
+        agent_id: req.params.id,
+        limit: typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : undefined
+      });
+
+      res.json(toJsonSafe(logs));
     })
   );
 };

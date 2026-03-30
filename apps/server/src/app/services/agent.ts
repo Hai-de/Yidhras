@@ -2,6 +2,14 @@ import { PermissionContext } from '../../permission/types.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 
+export interface ListSnrAdjustmentLogsInput {
+  agent_id?: string;
+  limit?: number;
+}
+
+const DEFAULT_SNR_LOG_LIMIT = 20;
+const MAX_SNR_LOG_LIMIT = 100;
+
 const buildPermissionContext = (agent: {
   id: string;
   circle_memberships: Array<{
@@ -40,4 +48,31 @@ export const getAgentContextSnapshot = async (context: AppContext, agentId: stri
     identity: agent,
     variables: JSON.parse(resolvedVariables)
   };
+};
+
+export const listSnrAdjustmentLogs = async (
+  context: AppContext,
+  input: ListSnrAdjustmentLogsInput
+) => {
+  const agentId = typeof input.agent_id === 'string' ? input.agent_id.trim() : '';
+
+  if (agentId.length === 0) {
+    throw new ApiError(400, 'SNR_LOG_QUERY_INVALID', 'agent_id is required');
+  }
+
+  const requestedLimit =
+    typeof input.limit === 'number' && Number.isFinite(input.limit)
+      ? Math.trunc(input.limit)
+      : DEFAULT_SNR_LOG_LIMIT;
+  const limit = Math.min(MAX_SNR_LOG_LIMIT, Math.max(1, requestedLimit));
+
+  return context.sim.prisma.sNRAdjustmentLog.findMany({
+    where: {
+      agent_id: agentId
+    },
+    orderBy: {
+      created_at: 'desc'
+    },
+    take: limit
+  });
 };

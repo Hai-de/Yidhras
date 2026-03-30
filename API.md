@@ -59,6 +59,7 @@
     - 说明: 以当前 identity 上下文发布动态。
     - 参数: `{ content: string }`
     - 备注: `author_id` 由当前 identity 上下文注入并在服务端写入。
+    - 当前 provenance 说明: dispatcher 产出的 `post_message` 会在 `Post.source_action_intent_id` 上记录来源 `ActionIntent`。
 
 ## 4. 关系层 (L2: Relational Layer)
 - **GET `/api/relational/graph`**
@@ -66,21 +67,49 @@
     - 返回: `{ nodes: Node[], edges: Edge[] }`
 - **GET `/api/relational/circles`**
     - 说明: 获取所有组织/圈子列表。
+- **GET `/api/relationships/:from_id/:to_id/:type/logs`**
+    - 说明: 查询指定单向关系边的调整日志。
+    - 参数: `?limit=20`
+    - 返回: `RelationshipAdjustmentLog[]`
 - **GET `/api/atmosphere/nodes`**
     - 说明: 查询 atmosphere nodes。
     - 参数: `?owner_id=<agent_id>&include_expired=true|false`
     - 默认: `include_expired=false`（仅返回未过期或无过期时间节点）
     - 返回: `AtmosphereNode[]`
 
+## 4.1 审计视图 (Audit / Observability)
+- **GET `/api/audit/feed`**
+    - 说明: 统一查询 workflow / social post / relationship adjustment / SNR adjustment / event 的最小审计时间线。
+    - 参数: `?limit=20&kinds=workflow,post,relationship_adjustment,snr_adjustment,event&from_tick=<tick>&to_tick=<tick>&job_id=<job_id>&inference_id=<inference_id>&agent_id=<agent_id>&action_intent_id=<action_intent_id>&cursor=<opaque_cursor>`
+    - 返回: `{ entries: AuditViewEntry[], summary: { returned, limit, applied_kinds, page_info: { has_next_page, next_cursor }, counts_by_kind, filters: { from_tick, to_tick, job_id, inference_id, agent_id, action_intent_id, cursor } } }`
+    - 当前过滤能力:
+      - `from_tick` / `to_tick`: 按审计项自身 `created_at` 范围过滤
+      - `cursor`: 基于 `{ created_at, kind, id }` 的稳定游标，按时间倒序翻页
+      - `job_id`: 过滤 workflow 审计项中的指定 `DecisionJob`
+      - `inference_id`: 过滤 workflow 审计项中的指定 `InferenceTrace/source_inference_id`
+      - `agent_id`: 过滤 workflow / relationship adjustment / snr adjustment / event / post 中与指定 agent 相关的最小审计项
+      - `action_intent_id`: 过滤与指定 `ActionIntent` 直接关联的 workflow / relationship adjustment / snr adjustment / event 审计项
+      - `post` 当前也支持 `action_intent_id` provenance 检索（基于 `Post.source_action_intent_id`）
+- **GET `/api/audit/entries/:kind/:id`**
+    - 说明: 查询单条 unified audit entry 详情。
+    - `kind` 当前支持: `workflow | post | relationship_adjustment | snr_adjustment | event`
+    - 返回: `AuditViewEntry`
+    - workflow detail 当前还会附带 `data.related_counts` 与 `data.related_records`，聚合同一 `ActionIntent` 直接产出的 posts / events / relationship adjustments / snr adjustments。
+
 ## 5. 叙事层 (L3: Narrative Layer)
 - **GET `/api/narrative/timeline`**
     - 说明: 获取历史事件时间线（按 Tick 倒序）。
+    - 当前说明: `trigger_event` dispatcher path 生成的事件也会出现在该时间线中。
     - 返回: `Event[]`
 
 ## 6. Agent 与 变量 (Identity & Variables)
 - **GET `/api/agent/:id/context`**
     - 说明: 获取特定 Agent 的认知上下文（基于其所属 Circle 权限过滤后的解析变量）。
     - 返回: `{ identity: Agent, variables: ResolvedVariablePool }`
+- **GET `/api/agent/:id/snr/logs`**
+    - 说明: 查询指定 Agent 的 SNR 调整日志。
+    - 参数: `?limit=20`
+    - 返回: `SNRAdjustmentLog[]`
 
 ## 7. 身份与策略 (Identity & Policy)
 - **POST `/api/identity/register`**
@@ -170,9 +199,13 @@
       - 仅允许 `status=failed` 的任务重试。
       - 若 `attempt_count >= max_attempts`，返回重试耗尽错误。
     - 成功返回: `{ success: true, data: { replayed: false, inference_id, job, result, result_source: "fresh_run", workflow_snapshot } }`
+- **POST `/api/inference/jobs/:id/replay`**
+    - 说明: 从已有 `DecisionJob` 派生一个新的 replay job。
+    - 输入: `{ reason?: string, idempotency_key?: string, overrides?: { strategy?: "mock"|"rule_based", attributes?: Record<string, unknown> } }`
+    - 成功返回: `{ success: true, data: { replayed: false, inference_id, job, result: null, result_source: "not_available", workflow_snapshot, replay: { source_job_id, source_trace_id, reason, override_applied, override_snapshot?, parent_job?, child_jobs[] } } }`
 - **GET `/api/inference/jobs/:id`**
     - 说明: 查询单个决策任务状态。
-    - 成功返回: `{ success: true, data: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, request_input?, last_error, last_error_code?, last_error_stage?, idempotency_key, started_at?, next_retry_at?, created_at, updated_at, completed_at } }`
+    - 成功返回: `{ success: true, data: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, request_input?, last_error, last_error_code?, last_error_stage?, idempotency_key, started_at?, next_retry_at?, locked_by?, locked_at?, lock_expires_at?, replay_of_job_id?, replay_source_trace_id?, replay_reason?, replay_override_snapshot?, created_at, updated_at, completed_at } }`
 
 ### 8.2 Phase D: Persisted Workflow & Execution (Minimal Baseline Implemented)
 - **GET `/api/inference/traces/:id`**
@@ -180,7 +213,7 @@
     - 成功返回: `{ success: true, data: { id, kind, strategy, provider, actor_ref, input, context_snapshot, prompt_bundle, trace_metadata, decision?, created_at, updated_at } }`
 - **GET `/api/inference/traces/:id/intent`**
     - 说明: 查询指定推理记录关联的 `ActionIntent`。
-    - 成功返回: `{ success: true, data: { id, source_inference_id, intent_type, actor_ref, target_ref, payload, scheduled_after_ticks, scheduled_for_tick, transmission_delay_ticks?, transmission_policy, transmission_drop_chance, drop_reason?, dispatch_error_code?, dispatch_error_message?, status, dispatch_started_at?, dispatched_at?, created_at, updated_at } }`
+    - 成功返回: `{ success: true, data: { id, source_inference_id, intent_type, actor_ref, target_ref, payload, scheduled_after_ticks, scheduled_for_tick, transmission_delay_ticks?, transmission_policy, transmission_drop_chance, drop_reason?, dispatch_error_code?, dispatch_error_message?, status, locked_by?, locked_at?, lock_expires_at?, dispatch_started_at?, dispatched_at?, created_at, updated_at } }`
 - **GET `/api/inference/traces/:id/job`**
     - 说明: 查询指定推理记录关联的 `DecisionJob`。
     - 成功返回: `{ success: true, data: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, request_input?, last_error, last_error_code?, last_error_stage?, idempotency_key?, started_at?, next_retry_at?, created_at, updated_at, completed_at } }`
@@ -195,12 +228,54 @@
     - `run` 会持久化 `InferenceTrace`，并生成关联的 `ActionIntent` 与 `DecisionJob`。
     - `jobs` 会使用 `idempotency_key` 做去重复用。
     - 当前 `DecisionJob.status` 允许的最小状态集合为：`pending | running | completed | failed`。
-    - 当前 runner 会在 loop 中消费 `pending/running` 任务。
+    - 当前 runner 会在 loop 中消费可 claim 的 `pending/running` 任务，并通过轻量锁避免重复执行。
     - `DecisionJob` 当前带有最小调度字段：`request_input`, `started_at`, `next_retry_at`, `last_error_code`, `last_error_stage`。
+    - `DecisionJob` 当前还带有最小锁字段：`locked_by`, `locked_at`, `lock_expires_at`。
+    - 当 `running` 任务的锁过期后，后续 worker 可重新 claim，以恢复 orphan 任务。
     - 当前实现以 loop 驱动执行完成后记为 `completed`；该状态仅表示 decision generation 完成，不等同于 world-side dispatch 完成。
     - retry 路径会重新进入 `pending -> running -> completed|failed` 状态更新。
+    - job 完成、失败、或 retry reset 为 `pending` 时都会释放轻量锁。
+    - replay API 现在可以从已有 `DecisionJob` 派生新的 pending replay job，而不是只复用历史结果。
+    - replay lineage 当前最小记录在 `DecisionJob` 上：`replay_of_job_id`, `replay_source_trace_id`, `replay_reason`。
+    - replay API 当前已支持受控 overrides：`strategy` / `attributes`。
+    - actor override（`agent_id` / `identity_id`）当前会被显式拒绝，避免 replay 退化为跨 actor resubmit。
+    - `workflow_snapshot` 当前还会暴露 `lineage`，用于观察 replay 来源、override 应用情况、parent job 摘要与 child replay jobs。
     - `ActionIntent.status` 当前最小状态集合为：`pending | dispatching | completed | failed | dropped`。
+    - dispatcher 现在还支持：
+      - `intent_type = adjust_relationship`
+    - `adjust_relationship` 第一版约束：
+      - active actor only
+      - `target_ref.agent_id` only
+      - single-direction edge only
+      - `operation = set` only
+      - `weight` clamp 到 `[0,1]`
+    - dispatcher 现在还支持：
+      - `intent_type = adjust_snr`
+    - `adjust_snr` 第一版约束：
+      - active actor only
+      - `target_ref.agent_id` only
+      - `operation = set` only
+      - `target_snr` clamp 到 `[0,1]`
+    - dispatcher 现在还支持：
+      - `intent_type = trigger_event`
+    - `trigger_event` 第一版约束：
+      - append-only
+      - `Event.type ∈ {history, interaction, system}`
+      - active actor 或 system actor
+      - 不允许自定义 tick
+    - `adjust_relationship` 当前还会写入 `RelationshipAdjustmentLog`，记录：
+      - `action_intent_id`, `relationship_id`, `old_weight`, `new_weight`, `reason`, `created_at`
+    - `adjust_snr` 当前还会写入 `SNRAdjustmentLog`，记录：
+      - `action_intent_id`, `agent_id`, `operation`, `requested_value`, `baseline_value`, `resolved_value`, `reason`, `created_at`
+    - 后端当前已提供 SNR adjustment log read API：
+      - `GET /api/agent/:id/snr/logs`
+    - Action dispatcher 当前已引入轻量锁字段：`locked_by`, `locked_at`, `lock_expires_at`。
+    - dispatcher loop 现在会先 claim `ActionIntent` 再执行派发，避免重复 dispatch。
+    - 当 `dispatching` intent 的锁过期后，后续 worker 可重新 claim，以恢复 orphan dispatch。
     - loop 中的 dispatcher 当前只消费：
+      - `intent_type = adjust_snr`
+      - `intent_type = adjust_relationship`
+      - `intent_type = trigger_event`
       - `intent_type = post_message`
       - `status = pending`
       - `scheduled_for_tick <= current_tick`（或为空）
@@ -284,6 +359,10 @@
 - `DECISION_JOB_RETRY_INVALID`: 非 failed 任务不允许重试。
 - `DECISION_JOB_RETRY_EXHAUSTED`: 任务已达到最大重试次数。
 - `ACTION_DISPATCH_FAIL`: 动作调度失败。
+- `ACTION_SNR_INVALID`: `adjust_snr` actor / target / payload 不合法。
+- `SNR_TARGET_NOT_FOUND`: `adjust_snr` 目标 Agent 不存在。
+- `SNR_LOG_QUERY_INVALID`: SNR 审计日志查询参数非法。
+- `AUDIT_VIEW_QUERY_INVALID`: unified audit feed 查询参数非法。
 
 ---
 *更新时间: 2026-03-28*

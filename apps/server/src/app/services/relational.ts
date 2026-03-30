@@ -1,9 +1,20 @@
+import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 
 export interface ListAtmosphereNodesInput {
   owner_id?: string;
   include_expired?: boolean;
 }
+
+export interface ListRelationshipAdjustmentLogsInput {
+  from_id?: string;
+  to_id?: string;
+  type?: string;
+  limit?: number;
+}
+
+const DEFAULT_RELATIONSHIP_LOG_LIMIT = 20;
+const MAX_RELATIONSHIP_LOG_LIMIT = 100;
 
 export const getRelationalGraph = async (context: AppContext) => {
   return context.sim.getGraphData();
@@ -33,5 +44,35 @@ export const listAtmosphereNodes = async (
           })
     },
     orderBy: { created_at: 'desc' }
+  });
+};
+
+export const listRelationshipAdjustmentLogs = async (
+  context: AppContext,
+  input: ListRelationshipAdjustmentLogsInput
+) => {
+  const fromId = typeof input.from_id === 'string' ? input.from_id.trim() : '';
+  const toId = typeof input.to_id === 'string' ? input.to_id.trim() : '';
+  const relationshipType = typeof input.type === 'string' ? input.type.trim() : '';
+
+  if (fromId.length === 0 || toId.length === 0 || relationshipType.length === 0) {
+    throw new ApiError(400, 'RELATIONSHIP_LOG_QUERY_INVALID', 'from_id, to_id, and type are required');
+  }
+
+  const requestedLimit = typeof input.limit === 'number' && Number.isFinite(input.limit)
+    ? Math.trunc(input.limit)
+    : DEFAULT_RELATIONSHIP_LOG_LIMIT;
+  const limit = Math.min(MAX_RELATIONSHIP_LOG_LIMIT, Math.max(1, requestedLimit));
+
+  return context.sim.prisma.relationshipAdjustmentLog.findMany({
+    where: {
+      from_id: fromId,
+      to_id: toId,
+      type: relationshipType
+    },
+    orderBy: {
+      created_at: 'desc'
+    },
+    take: limit
   });
 };
