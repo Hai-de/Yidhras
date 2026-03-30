@@ -93,6 +93,218 @@ const INFERENCE_JOB_STATUSES = ['pending', 'running', 'completed', 'failed'] as 
 const ACTION_INTENT_STATUSES = ['pending', 'dispatching', 'completed', 'failed', 'dropped'] as const;
 export const DEFAULT_DECISION_JOB_LOCK_TICKS = 5n;
 
+export interface ListInferenceJobsInput {
+  status?: string[];
+  agent_id?: string;
+  identity_id?: string;
+  strategy?: string;
+  job_type?: string;
+  from_tick?: string | number;
+  to_tick?: string | number;
+  from_created_at?: string | number;
+  to_created_at?: string | number;
+  cursor?: string;
+  limit?: number;
+  has_error?: boolean;
+  action_intent_id?: string;
+}
+
+export interface InferenceJobListItem {
+  id: string;
+  source_inference_id: string | null;
+  action_intent_id: string | null;
+  job_type: string;
+  status: InferenceJobStatus;
+  attempt_count: number;
+  max_attempts: number;
+  idempotency_key: string | null;
+  last_error: string | null;
+  last_error_code: string | null;
+  last_error_stage: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  started_at: string | null;
+  next_retry_at: string | null;
+  strategy: string | null;
+  actor_ref: Record<string, unknown> | null;
+  target_ref: Record<string, unknown> | null;
+  request_input: InferenceRequestInput | null;
+  workflow: {
+    intent_type: string | null;
+    intent_status: InferenceActionIntentStatus | null;
+    decision_stage: WorkflowSnapshot['derived']['decision_stage'];
+    dispatch_stage: WorkflowSnapshot['derived']['dispatch_stage'];
+    workflow_state: WorkflowSnapshot['derived']['workflow_state'];
+    failure_stage: WorkflowSnapshot['derived']['failure_stage'];
+    failure_code: WorkflowSnapshot['derived']['failure_code'];
+    failure_reason: WorkflowSnapshot['derived']['failure_reason'];
+    outcome_summary: WorkflowSnapshot['derived']['outcome_summary'];
+  };
+}
+
+export interface InferenceJobsListSnapshot {
+  items: InferenceJobListItem[];
+  page_info: {
+    has_next_page: boolean;
+    next_cursor: string | null;
+  };
+  summary: {
+    returned: number;
+    limit: number;
+    counts_by_status: Record<InferenceJobStatus, number>;
+    filters: {
+      status: InferenceJobStatus[] | null;
+      agent_id: string | null;
+      identity_id: string | null;
+      strategy: string | null;
+      job_type: string | null;
+      from_created_at: string | null;
+      to_created_at: string | null;
+      from_tick: string | null;
+      to_tick: string | null;
+      has_error: boolean | null;
+      action_intent_id: string | null;
+      cursor: string | null;
+    };
+  };
+}
+
+interface InferenceJobsListCursor {
+  created_at: string;
+  id: string;
+}
+
+interface ParsedInferenceJobsFilters {
+  status: InferenceJobStatus[] | null;
+  agent_id: string | null;
+  identity_id: string | null;
+  strategy: string | null;
+  job_type: string | null;
+  from_created_at: bigint | null;
+  to_created_at: bigint | null;
+  cursor: InferenceJobsListCursor | null;
+  limit: number;
+  has_error: boolean | null;
+  action_intent_id: string | null;
+}
+
+const DEFAULT_INFERENCE_JOB_LIST_LIMIT = 20;
+const MAX_INFERENCE_JOB_LIST_LIMIT = 100;
+
+const parseInferenceJobListLimit = (value: number | undefined): number => {
+  const requestedLimit =
+    typeof value === 'number' && Number.isFinite(value)
+      ? Math.trunc(value)
+      : DEFAULT_INFERENCE_JOB_LIST_LIMIT;
+
+  return Math.min(MAX_INFERENCE_JOB_LIST_LIMIT, Math.max(1, requestedLimit));
+};
+
+const parseOptionalFilterId = (value: string | undefined): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const parseOptionalCreatedAtFilter = (value: string | number | undefined, fieldName: string): bigint | null => {
+  if (value === undefined) {
+    return null;
+  }
+
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new ApiError(400, 'INFERENCE_INPUT_INVALID', `${fieldName} must be a non-negative safe integer`);
+    }
+
+    return BigInt(value);
+  }
+
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    throw new ApiError(400, 'INFERENCE_INPUT_INVALID', `${fieldName} must be a non-negative integer string`, {
+      field: fieldName,
+      value
+    });
+  }
+
+  return BigInt(trimmed);
+};
+
+const parseInferenceJobStatuses = (value: string[] | undefined): InferenceJobStatus[] | null => {
+  if (!Array.isArray(value) || value.length === 0) {
+    return null;
+  }
+
+  const normalized = Array.from(
+    new Set(
+      value
+        .map(item => item.trim())
+        .filter(item => item.length > 0)
+    )
+  );
+
+  if (normalized.length === 0) {
+    return null;
+  }
+
+  const invalidStatuses = normalized.filter(item => !(INFERENCE_JOB_STATUSES as readonly string[]).includes(item));
+  if (invalidStatuses.length > 0) {
+    throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'status contains unsupported decision job status', {
+      invalid_statuses: invalidStatuses,
+      allowed_statuses: INFERENCE_JOB_STATUSES
+    });
+  }
+
+  return normalized as InferenceJobStatus[];
+};
+
+const encodeInferenceJobsCursor = (item: Pick<InferenceJobListItem, 'created_at' | 'id'>): string => {
+  return Buffer.from(
+    JSON.stringify({
+      created_at: item.created_at,
+      id: item.id
+    }),
+    'utf8'
+  ).toString('base64url');
+};
+
+const compareInferenceJobsCursorPosition = (left: InferenceJobsListCursor, right: InferenceJobsListCursor): number => {
+  const leftTick = BigInt(left.created_at);
+  const rightTick = BigInt(right.created_at);
+
+  if (leftTick === rightTick) {
+    return right.id.localeCompare(left.id);
+  }
+
+  return leftTick > rightTick ? -1 : 1;
+};
+
+const parseInferenceJobsCursor = (value: string | undefined): InferenceJobsListCursor | null => {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    return null;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as unknown;
+  } catch {
+    throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'cursor is invalid');
+  }
+
+  if (!isRecord(parsed) || typeof parsed.created_at !== 'string' || typeof parsed.id !== 'string' || !/^\d+$/.test(parsed.created_at)) {
+    throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'cursor payload is invalid');
+  }
+
+  return {
+    created_at: parsed.created_at,
+    id: parsed.id
+  };
+};
+
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -534,6 +746,227 @@ export const getDecisionJobById = async (context: AppContext, jobId?: string) =>
   }
 
   return job;
+};
+
+const parseInferenceJobsFilters = (input: ListInferenceJobsInput): ParsedInferenceJobsFilters => {
+  const fromCreatedAt = parseOptionalCreatedAtFilter(input.from_created_at ?? input.from_tick, 'from_created_at');
+  const toCreatedAt = parseOptionalCreatedAtFilter(input.to_created_at ?? input.to_tick, 'to_created_at');
+
+  if (fromCreatedAt !== null && toCreatedAt !== null && fromCreatedAt > toCreatedAt) {
+    throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'from_created_at must be less than or equal to to_created_at', {
+      from_created_at: fromCreatedAt.toString(),
+      to_created_at: toCreatedAt.toString()
+    });
+  }
+
+  return {
+    status: parseInferenceJobStatuses(input.status),
+    agent_id: parseOptionalFilterId(input.agent_id),
+    identity_id: parseOptionalFilterId(input.identity_id),
+    strategy: parseOptionalFilterId(input.strategy),
+    job_type: parseOptionalFilterId(input.job_type),
+    from_created_at: fromCreatedAt,
+    to_created_at: toCreatedAt,
+    cursor: parseInferenceJobsCursor(input.cursor),
+    limit: parseInferenceJobListLimit(input.limit),
+    has_error: typeof input.has_error === 'boolean' ? input.has_error : null,
+    action_intent_id: parseOptionalFilterId(input.action_intent_id)
+  };
+};
+
+const buildInferenceJobsWhere = (filters: ParsedInferenceJobsFilters): Prisma.DecisionJobWhereInput => {
+  return {
+    ...(filters.status ? { status: { in: filters.status } } : {}),
+    ...(filters.job_type ? { job_type: filters.job_type } : {}),
+    ...(filters.action_intent_id ? { action_intent_id: filters.action_intent_id } : {}),
+    ...(filters.has_error === null ? {} : filters.has_error ? { last_error: { not: null } } : { last_error: null }),
+    ...(filters.from_created_at !== null || filters.to_created_at !== null
+      ? {
+          created_at: {
+            ...(filters.from_created_at !== null ? { gte: filters.from_created_at } : {}),
+            ...(filters.to_created_at !== null ? { lte: filters.to_created_at } : {})
+          }
+        }
+      : {})
+  };
+};
+
+const shouldFetchAllInferenceJobs = (filters: ParsedInferenceJobsFilters): boolean => {
+  return filters.agent_id !== null || filters.identity_id !== null || filters.strategy !== null || filters.cursor !== null;
+};
+
+const getSafeRequestInput = (job: DecisionJobRecord): InferenceRequestInput | null => {
+  if (job.request_input === null) {
+    return null;
+  }
+
+  try {
+    return normalizeStoredRequestInput(job.request_input);
+  } catch {
+    return null;
+  }
+};
+
+const resolveInferenceJobActorRef = (
+  workflowSnapshot: WorkflowSnapshot,
+  requestInput: InferenceRequestInput | null
+): Record<string, unknown> | null => {
+  const actorRef = workflowSnapshot.records.intent?.actor_ref ?? workflowSnapshot.records.trace?.actor_ref ?? null;
+  if (actorRef) {
+    return actorRef;
+  }
+
+  const fallback: Record<string, unknown> = {};
+  if (typeof requestInput?.agent_id === 'string') {
+    fallback.agent_id = requestInput.agent_id;
+  }
+  if (typeof requestInput?.identity_id === 'string') {
+    fallback.identity_id = requestInput.identity_id;
+  }
+
+  return Object.keys(fallback).length > 0 ? fallback : null;
+};
+
+const matchesInferenceJobFilters = (
+  filters: ParsedInferenceJobsFilters,
+  workflowSnapshot: WorkflowSnapshot,
+  requestInput: InferenceRequestInput | null
+): boolean => {
+  const actorRef = resolveInferenceJobActorRef(workflowSnapshot, requestInput);
+  const actorAgentId = actorRef && typeof actorRef.agent_id === 'string' ? actorRef.agent_id : requestInput?.agent_id ?? null;
+  const actorIdentityId =
+    actorRef && typeof actorRef.identity_id === 'string' ? actorRef.identity_id : requestInput?.identity_id ?? null;
+  const strategy = workflowSnapshot.records.trace?.strategy ?? requestInput?.strategy ?? null;
+
+  if (filters.agent_id !== null && actorAgentId !== filters.agent_id) {
+    return false;
+  }
+
+  if (filters.identity_id !== null && actorIdentityId !== filters.identity_id) {
+    return false;
+  }
+
+  if (filters.strategy !== null && strategy !== filters.strategy) {
+    return false;
+  }
+
+  return true;
+};
+
+const buildInferenceJobListItem = (
+  job: DecisionJobRecord,
+  workflowSnapshot: WorkflowSnapshot,
+  requestInput: InferenceRequestInput | null
+): InferenceJobListItem => {
+  return {
+    id: job.id,
+    source_inference_id: job.source_inference_id,
+    action_intent_id: job.action_intent_id,
+    job_type: job.job_type,
+    status: normalizeJobStatus(job.status),
+    attempt_count: job.attempt_count,
+    max_attempts: job.max_attempts,
+    idempotency_key: job.idempotency_key,
+    last_error: job.last_error,
+    last_error_code: job.last_error_code,
+    last_error_stage: job.last_error_stage,
+    created_at: job.created_at.toString(),
+    updated_at: job.updated_at.toString(),
+    completed_at: toTickString(job.completed_at),
+    started_at: toTickString(job.started_at),
+    next_retry_at: toTickString(job.next_retry_at),
+    strategy: workflowSnapshot.records.trace?.strategy ?? requestInput?.strategy ?? null,
+    actor_ref: resolveInferenceJobActorRef(workflowSnapshot, requestInput),
+    target_ref: workflowSnapshot.records.intent?.target_ref ?? null,
+    request_input: requestInput ? (toJsonSafe(requestInput) as InferenceRequestInput) : null,
+    workflow: {
+      intent_type: workflowSnapshot.records.intent?.intent_type ?? null,
+      intent_status: workflowSnapshot.records.intent?.status ?? null,
+      decision_stage: workflowSnapshot.derived.decision_stage,
+      dispatch_stage: workflowSnapshot.derived.dispatch_stage,
+      workflow_state: workflowSnapshot.derived.workflow_state,
+      failure_stage: workflowSnapshot.derived.failure_stage,
+      failure_code: workflowSnapshot.derived.failure_code,
+      failure_reason: workflowSnapshot.derived.failure_reason,
+      outcome_summary: workflowSnapshot.derived.outcome_summary
+    }
+  };
+};
+
+const matchesInferenceJobsCursor = (cursor: InferenceJobsListCursor | null, item: InferenceJobListItem): boolean => {
+  if (!cursor) {
+    return true;
+  }
+
+  return compareInferenceJobsCursorPosition({ created_at: item.created_at, id: item.id }, cursor) > 0;
+};
+
+export const listInferenceJobs = async (
+  context: AppContext,
+  input: ListInferenceJobsInput
+): Promise<InferenceJobsListSnapshot> => {
+  const filters = parseInferenceJobsFilters(input);
+  const jobs = await context.prisma.decisionJob.findMany({
+    ...(shouldFetchAllInferenceJobs(filters)
+      ? {}
+      : {
+          take: filters.limit + 1
+        }),
+    where: buildInferenceJobsWhere(filters),
+    orderBy: [{ created_at: 'desc' }, { id: 'desc' }]
+  });
+
+  const filteredItems: InferenceJobListItem[] = [];
+  for (const job of jobs) {
+    const requestInput = getSafeRequestInput(job);
+    const workflowSnapshot = await getWorkflowSnapshotByJobId(context, job.id);
+    if (!matchesInferenceJobFilters(filters, workflowSnapshot, requestInput)) {
+      continue;
+    }
+
+    filteredItems.push(buildInferenceJobListItem(job, workflowSnapshot, requestInput));
+  }
+
+  const cursorFilteredItems = filteredItems.filter(item => matchesInferenceJobsCursor(filters.cursor, item));
+  const hasNextPage = cursorFilteredItems.length > filters.limit;
+  const pageItems = hasNextPage ? cursorFilteredItems.slice(0, filters.limit) : cursorFilteredItems;
+  const countsByStatus: Record<InferenceJobStatus, number> = {
+    pending: 0,
+    running: 0,
+    completed: 0,
+    failed: 0
+  };
+
+  for (const item of pageItems) {
+    countsByStatus[item.status] += 1;
+  }
+
+  return {
+    items: pageItems,
+    page_info: {
+      has_next_page: hasNextPage,
+      next_cursor: hasNextPage ? encodeInferenceJobsCursor(pageItems[pageItems.length - 1]) : null
+    },
+    summary: {
+      returned: pageItems.length,
+      limit: filters.limit,
+      counts_by_status: countsByStatus,
+      filters: {
+        status: filters.status,
+        agent_id: filters.agent_id,
+        identity_id: filters.identity_id,
+        strategy: filters.strategy,
+        job_type: filters.job_type,
+        from_created_at: filters.from_created_at?.toString() ?? null,
+        to_created_at: filters.to_created_at?.toString() ?? null,
+        from_tick: filters.from_created_at?.toString() ?? null,
+        to_tick: filters.to_created_at?.toString() ?? null,
+        has_error: filters.has_error,
+        action_intent_id: filters.action_intent_id,
+        cursor: filters.cursor ? Buffer.from(JSON.stringify(filters.cursor), 'utf8').toString('base64url') : null
+      }
+    }
+  };
 };
 
 export const getDecisionJobRequestInput = (job: DecisionJobRecord): InferenceRequestInput => {

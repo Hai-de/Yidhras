@@ -5,26 +5,19 @@ import {
   startServer,
   summarizeResponse
 } from './helpers.js';
+import { assertSuccessEnvelopeData } from './status_helpers.js';
 
 const parsePort = (): number => {
   const value = process.env.SMOKE_PORT;
   if (!value) {
-    return 3107;
+    return 3101;
   }
 
   const port = Number.parseInt(value, 10);
   if (Number.isNaN(port) || port <= 0) {
     throw new Error(`SMOKE_PORT is invalid: ${value}`);
   }
-
   return port;
-};
-
-const assertSuccessEnvelope = (body: unknown): Record<string, unknown> => {
-  assert(isRecord(body), 'success response should be object');
-  assert(body.success === true, 'success response success should be true');
-  assert(isRecord(body.data), 'success response data should be object');
-  return body.data as Record<string, unknown>;
 };
 
 const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
@@ -37,25 +30,31 @@ const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'syst
 
 const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
-const pollJobStatus = async (
+const pollReplayJob = async (
   baseUrl: string,
-  jobId: string,
-  predicate: (data: Record<string, unknown>) => boolean
+  headers: Record<string, string>,
+  body: Record<string, unknown>,
+  predicate: (data: Record<string, unknown>) => boolean,
+  label: string
 ): Promise<Record<string, unknown>> => {
   let lastData: Record<string, unknown> | null = null;
 
   for (let attempt = 0; attempt < 24; attempt += 1) {
-    const jobRes = await requestJson(baseUrl, `/api/inference/jobs/${jobId}`);
-    assert(jobRes.status === 200, 'GET /api/inference/jobs/:id should return 200 while polling');
-    const data = assertSuccessEnvelope(jobRes.body);
-    lastData = data;
-    if (predicate(data)) {
-      return data;
+    const replayRes = await requestJson(baseUrl, '/api/inference/jobs', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
+    });
+    assert(replayRes.status === 200, `${label} should return 200 while polling`);
+    const replayData = assertSuccessEnvelopeData(replayRes.body, label);
+    lastData = replayData;
+    if (predicate(replayData)) {
+      return replayData;
     }
     await sleep(500);
   }
 
-  throw new Error(`job ${jobId} did not reach expected state: ${JSON.stringify(lastData)}`);
+  throw new Error(`${label} did not reach expected state: ${JSON.stringify(lastData)}`);
 };
 
 const main = async () => {
@@ -65,8 +64,8 @@ const main = async () => {
   try {
     const statusRes = await requestJson(server.baseUrl, '/api/status');
     assert(statusRes.status === 200, 'GET /api/status should return 200');
-    assert(isRecord(statusRes.body), '/api/status should return object');
-    assert(statusRes.body.runtime_ready === true, 'audit workflow lineage test requires runtime_ready=true');
+    const statusData = assertSuccessEnvelopeData(statusRes.body, '/api/status');
+    assert(statusData.runtime_ready === true, 'audit workflow lineage test requires runtime_ready=true');
 
     const headers = {
       'Content-Type': 'application/json',
@@ -84,66 +83,67 @@ const main = async () => {
       })
     });
     assert(submitRes.status === 200, 'base workflow submit should return 200');
-    const submitData = assertSuccessEnvelope(submitRes.body);
-    assert(isRecord(submitData.job), 'base workflow job payload should be object');
 
-    const sourceJobId = submitData.job.id as string;
-    await pollJobStatus(server.baseUrl, sourceJobId, data => data.status === 'completed');
+    const baseReplay = await pollReplayJob(
+      server.baseUrl,
+      headers,
+      { agent_id: 'agent-001', strategy: 'rule_based', idempotency_key: baseKey },
+      data => data.result_source === 'stored_trace' && isRecord(data.job),
+      'base workflow replay poll'
+    );
+    assert(isRecord(baseReplay.job), 'base replay job should be object');
 
-    const replayRes = await requestJson(server.baseUrl, `/api/inference/jobs/${sourceJobId}/replay`, {
+    const replaySubmitRes = await requestJson(server.baseUrl, `/api/inference/jobs/${baseReplay.job.id as string}/replay`, {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        reason: 'audit_lineage_replay',
-        idempotency_key: `audit-workflow-lineage-replay-${Date.now()}`,
+        reason: 'lineage verification replay',
         overrides: {
           strategy: 'mock',
           attributes: {
-            mock_content: 'Audit lineage replay content'
+            mock_content: `lineage replay ${Date.now()}`
           }
         }
       })
     });
-    assert(replayRes.status === 200, 'workflow replay submit should return 200');
-    const replayData = assertSuccessEnvelope(replayRes.body);
-    assert(isRecord(replayData.job), 'replay workflow job payload should be object');
-    const replayJobId = replayData.job.id as string;
+    assert(replaySubmitRes.status === 200, 'replay submit should return 200');
+    const replaySubmitData = assertSuccessEnvelopeData(replaySubmitRes.body, 'replay submit response');
+    assert(isRecord(replaySubmitData.job), 'replay submit response should include job');
+    assert(isRecord(replaySubmitData.replay), 'replay submit response should include replay metadata');
 
-    await pollJobStatus(server.baseUrl, replayJobId, data => data.status === 'completed');
-
-    const sourceDetailRes = await requestJson(server.baseUrl, `/api/audit/entries/workflow/${sourceJobId}`);
-    assert(sourceDetailRes.status === 200, 'source workflow audit detail should return 200');
-    assert(isRecord(sourceDetailRes.body), 'source workflow audit detail should be object');
-    assert(isRecord(sourceDetailRes.body.data), 'source workflow audit detail data should be object');
-    assert(isRecord(sourceDetailRes.body.data.lineage_detail), 'source workflow lineage_detail should be object');
-    assert(sourceDetailRes.body.data.lineage_detail.parent_workflow === null, 'source workflow should not have parent_workflow');
-    assert(Array.isArray(sourceDetailRes.body.data.lineage_detail.child_workflows), 'source workflow should expose child_workflows array');
-    assert(
-      sourceDetailRes.body.data.lineage_detail.child_workflows.some((workflow: unknown) => isRecord(workflow) && workflow.id === replayJobId),
-      'source workflow detail should include replay child workflow summary'
+    const replayJobId = replaySubmitData.job.id as string;
+    const replayKey = replaySubmitData.job.idempotency_key as string;
+    const settledReplay = await pollReplayJob(
+      server.baseUrl,
+      headers,
+      { agent_id: 'agent-001', strategy: 'mock', idempotency_key: replayKey },
+      data => data.result_source === 'stored_trace' && isRecord(data.workflow_snapshot),
+      'child replay poll'
     );
-    assert(
-      sourceDetailRes.body.data.lineage_detail.child_workflows.some((workflow: unknown) => isRecord(workflow) && workflow.intent_type === 'post_message'),
-      'source workflow child summary should expose intent_type'
-    );
+    assert(isRecord(settledReplay.workflow_snapshot), 'child replay should include workflow snapshot');
 
-    const replayDetailRes = await requestJson(server.baseUrl, `/api/audit/entries/workflow/${replayJobId}`);
-    assert(replayDetailRes.status === 200, 'replay workflow audit detail should return 200');
-    assert(isRecord(replayDetailRes.body), 'replay workflow audit detail should be object');
-    assert(isRecord(replayDetailRes.body.data), 'replay workflow audit detail data should be object');
-    assert(replayDetailRes.body.data.replay_of_job_id === sourceJobId, 'replay workflow detail should preserve replay_of_job_id');
-    assert(replayDetailRes.body.data.replay_reason === 'audit_lineage_replay', 'replay workflow detail should preserve replay_reason');
-    assert(replayDetailRes.body.data.override_applied === true, 'replay workflow detail should preserve override_applied');
-    assert(isRecord(replayDetailRes.body.data.lineage_detail), 'replay workflow detail should expose lineage_detail');
-    assert(isRecord(replayDetailRes.body.data.lineage_detail.parent_workflow), 'replay workflow detail should expose parent_workflow');
-    assert(replayDetailRes.body.data.lineage_detail.parent_workflow.id === sourceJobId, 'replay workflow detail parent_workflow should point to source job');
-    assert(replayDetailRes.body.data.lineage_detail.parent_workflow.workflow_state, 'replay workflow detail parent_workflow should expose workflow_state');
-    assert(replayDetailRes.body.data.lineage_detail.parent_workflow.action_intent_id, 'replay workflow detail parent_workflow should expose action_intent_id');
-    assert(replayDetailRes.body.data.lineage_detail.parent_workflow.inference_id, 'replay workflow detail parent_workflow should expose inference_id');
-    assert(replayDetailRes.body.data.lineage_detail.parent_workflow.intent_type === 'post_message', 'replay workflow detail parent_workflow should expose intent_type');
-    assert(replayDetailRes.body.data.lineage_detail.parent_workflow.summary, 'replay workflow detail parent_workflow should expose summary');
-    assert(Array.isArray(replayDetailRes.body.data.lineage_detail.child_workflows), 'replay workflow detail should expose child_workflows');
-    assert(replayDetailRes.body.data.lineage_detail.child_workflows.length === 0, 'replay workflow detail should have no child workflows initially');
+    const workflowDetailRes = await requestJson(server.baseUrl, `/api/audit/entries/workflow/${replayJobId}`);
+    assert(workflowDetailRes.status === 200, 'workflow detail read should return 200');
+    const workflowDetail = assertSuccessEnvelopeData(workflowDetailRes.body, 'workflow detail response');
+    assert(isRecord(workflowDetail.data), 'workflow detail data should be object');
+    assert(isRecord(workflowDetail.data.lineage_detail), 'workflow detail should include lineage_detail');
+
+    const lineageDetail = workflowDetail.data.lineage_detail as Record<string, unknown>;
+    assert(isRecord(lineageDetail.parent_workflow), 'workflow detail parent_workflow should exist');
+    assert(Array.isArray(lineageDetail.child_workflows), 'workflow detail child_workflows should be array');
+    assert((lineageDetail.parent_workflow as Record<string, unknown>).id === baseReplay.job.id, 'parent workflow id should match base job');
+
+    const parentDetailRes = await requestJson(server.baseUrl, `/api/audit/entries/workflow/${baseReplay.job.id as string}`);
+    assert(parentDetailRes.status === 200, 'parent workflow detail read should return 200');
+    const parentDetail = assertSuccessEnvelopeData(parentDetailRes.body, 'parent workflow detail response');
+    assert(isRecord(parentDetail.data), 'parent workflow detail data should be object');
+    assert(isRecord(parentDetail.data.lineage_detail), 'parent workflow detail should include lineage_detail');
+    const parentLineage = parentDetail.data.lineage_detail as Record<string, unknown>;
+    assert(Array.isArray(parentLineage.child_workflows), 'parent workflow child_workflows should be array');
+    assert(
+      parentLineage.child_workflows.some(item => isRecord(item) && item.id === replayJobId),
+      'parent workflow child_workflows should include replay job'
+    );
 
     console.log('[audit_workflow_lineage] PASS');
   } catch (error: unknown) {

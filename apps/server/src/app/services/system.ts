@@ -19,7 +19,7 @@ export interface RuntimeStatusSnapshot {
 }
 
 export interface StartupHealthSnapshot {
-  success: boolean;
+  healthy: boolean;
   level: AppContext['startupHealth']['level'];
   runtime_ready: boolean;
   checks: AppContext['startupHealth']['checks'];
@@ -27,13 +27,17 @@ export interface StartupHealthSnapshot {
   errors: string[];
 }
 
+export interface AcknowledgementSnapshot {
+  acknowledged: true;
+}
+
 export const listSystemNotifications = (context: AppContext): SystemMessage[] => {
   return context.notifications.getMessages();
 };
 
-export const clearSystemNotifications = (context: AppContext): { success: true } => {
+export const clearSystemNotifications = (context: AppContext): AcknowledgementSnapshot => {
   context.notifications.clear();
-  return { success: true };
+  return { acknowledged: true };
 };
 
 export const getRuntimeStatusSnapshot = (context: AppContext): RuntimeStatusSnapshot => {
@@ -64,7 +68,7 @@ export const getStartupHealthSnapshot = (
   return {
     statusCode,
     body: {
-      success: context.startupHealth.level !== 'fail',
+      healthy: context.startupHealth.level !== 'fail',
       level: context.startupHealth.level,
       runtime_ready: context.getRuntimeReady(),
       checks: context.startupHealth.checks,

@@ -1,6 +1,7 @@
 import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { AppContext } from '../context.js';
+import { jsonOk, toJsonSafe } from '../http/json.js';
 import {
   createIdentityBinding,
   expireIdentityBinding,
@@ -40,7 +41,7 @@ export const registerIdentityRoutes = (
         metadata
       });
 
-      res.json(identity);
+      jsonOk(res, toJsonSafe(identity));
     })
   );
 
@@ -64,7 +65,7 @@ export const registerIdentityRoutes = (
         }
       );
 
-      res.json(binding);
+      jsonOk(res, toJsonSafe(binding));
     })
   );
 
@@ -89,7 +90,7 @@ export const registerIdentityRoutes = (
         atmosphere_node_id
       });
 
-      res.json(bindings);
+      jsonOk(res, toJsonSafe(bindings));
     })
   );
 
@@ -106,7 +107,7 @@ export const registerIdentityRoutes = (
         status
       });
 
-      res.json(binding);
+      jsonOk(res, toJsonSafe(binding));
     })
   );
 
@@ -121,7 +122,7 @@ export const registerIdentityRoutes = (
         binding_id
       });
 
-      res.json(binding);
+      jsonOk(res, toJsonSafe(binding));
     })
   );
 };

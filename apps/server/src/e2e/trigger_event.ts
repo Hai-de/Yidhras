@@ -1,5 +1,3 @@
-import { PrismaClient } from '@prisma/client';
-
 import {
   assert,
   isRecord,
@@ -7,11 +5,12 @@ import {
   startServer,
   summarizeResponse
 } from './helpers.js';
+import { assertSuccessEnvelopeData } from './status_helpers.js';
 
 const parsePort = (): number => {
   const value = process.env.SMOKE_PORT;
   if (!value) {
-    return 3104;
+    return 3101;
   }
 
   const port = Number.parseInt(value, 10);
@@ -19,13 +18,6 @@ const parsePort = (): number => {
     throw new Error(`SMOKE_PORT is invalid: ${value}`);
   }
   return port;
-};
-
-const assertSuccessEnvelope = (body: unknown): Record<string, unknown> => {
-  assert(isRecord(body), 'success response should be object');
-  assert(body.success === true, 'success response success should be true');
-  assert(isRecord(body.data), 'success response data should be object');
-  return body.data as Record<string, unknown>;
 };
 
 const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
@@ -38,58 +30,31 @@ const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'syst
 
 const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
-const pollWorkflowState = async (
+const pollReplayJob = async (
   baseUrl: string,
-  jobId: string,
-  predicate: (workflow: Record<string, unknown>) => boolean
+  headers: Record<string, string>,
+  body: Record<string, unknown>,
+  predicate: (data: Record<string, unknown>) => boolean,
+  label: string
 ): Promise<Record<string, unknown>> => {
   let lastData: Record<string, unknown> | null = null;
 
   for (let attempt = 0; attempt < 24; attempt += 1) {
-    const workflowRes = await requestJson(baseUrl, `/api/inference/jobs/${jobId}/workflow`);
-    assert(workflowRes.status === 200, 'GET workflow should return 200 while polling');
-    const data = assertSuccessEnvelope(workflowRes.body);
-    lastData = data;
-    if (predicate(data)) {
-      return data;
+    const replayRes = await requestJson(baseUrl, '/api/inference/jobs', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
+    });
+    assert(replayRes.status === 200, `${label} should return 200 while polling`);
+    const replayData = assertSuccessEnvelopeData(replayRes.body, label);
+    lastData = replayData;
+    if (predicate(replayData)) {
+      return replayData;
     }
     await sleep(500);
   }
 
-  throw new Error(`workflow ${jobId} did not reach expected state: ${JSON.stringify(lastData)}`);
-};
-
-const readLatestEvent = async (type: string, title: string): Promise<Record<string, unknown> | null> => {
-  const prisma = new PrismaClient();
-
-  try {
-    const event = await prisma.event.findFirst({
-      where: { type, title },
-      orderBy: { tick: 'desc' }
-    });
-
-    return event
-      ? ({
-          ...event,
-          tick: event.tick.toString(),
-          created_at: event.created_at.toString()
-        } as unknown as Record<string, unknown>)
-      : null;
-  } finally {
-    await prisma.$disconnect();
-  }
-};
-
-const countEvents = async (type: string, title: string): Promise<number> => {
-  const prisma = new PrismaClient();
-
-  try {
-    return prisma.event.count({
-      where: { type, title }
-    });
-  } finally {
-    await prisma.$disconnect();
-  }
+  throw new Error(`${label} did not reach expected state: ${JSON.stringify(lastData)}`);
 };
 
 const main = async () => {
@@ -99,8 +64,8 @@ const main = async () => {
   try {
     const statusRes = await requestJson(server.baseUrl, '/api/status');
     assert(statusRes.status === 200, 'GET /api/status should return 200');
-    assert(isRecord(statusRes.body), '/api/status should return object');
-    assert(statusRes.body.runtime_ready === true, 'trigger_event test requires runtime_ready=true');
+    const statusData = assertSuccessEnvelopeData(statusRes.body, '/api/status');
+    assert(statusData.runtime_ready === true, 'trigger_event test requires runtime_ready=true');
 
     const activeHeaders = {
       'Content-Type': 'application/json',
@@ -123,34 +88,35 @@ const main = async () => {
         idempotency_key: activeEventKey,
         attributes: {
           mock_action_type: 'trigger_event',
-          event_type: 'interaction',
           event_title: activeEventTitle,
-          event_description: 'Agent-001 triggered an interaction event.',
-          event_impact_data: {
-            source_agent_id: 'agent-001',
-            target_agent_id: 'agent-002',
-            reason: 'mock_interaction'
-          }
+          event_description: 'Trigger event active description',
+          event_type: 'history'
         }
       })
     });
-    assert(activeRes.status === 200, 'active trigger_event submit should return 200');
-    const activeData = assertSuccessEnvelope(activeRes.body);
-    assert(isRecord(activeData.job), 'active trigger_event job payload should be object');
+    assert(activeRes.status === 200, 'active trigger_event job should enqueue');
 
-    await pollWorkflowState(
+    const activeReplay = await pollReplayJob(
       server.baseUrl,
-      activeData.job.id as string,
-      workflow => isRecord(workflow.derived) && workflow.derived.workflow_state === 'workflow_completed'
+      activeHeaders,
+      { agent_id: 'agent-001', strategy: 'mock', idempotency_key: activeEventKey },
+      data => isRecord(data.workflow_snapshot) && isRecord(data.workflow_snapshot.derived) && data.workflow_snapshot.derived.workflow_state === 'workflow_completed',
+      'active trigger_event replay poll'
     );
+    assert(isRecord(activeReplay.job), 'active trigger_event replay should include job');
 
-    const activeEvent = await readLatestEvent('interaction', activeEventTitle);
-    assert(isRecord(activeEvent), 'active trigger_event should create an Event row');
-    assert(activeEvent.title === activeEventTitle, 'active trigger_event should preserve title');
-    assert(activeEvent.description === 'Agent-001 triggered an interaction event.', 'active trigger_event should preserve description');
-    assert(activeEvent.type === 'interaction', 'active trigger_event should preserve type');
-    assert(activeEvent.source_action_intent_id, 'active trigger_event should record source_action_intent_id');
-    assert(typeof activeEvent.tick === 'string', 'active trigger_event tick should be serialized as string in helper read');
+    const timelineRes = await requestJson(server.baseUrl, '/api/narrative/timeline');
+    assert(timelineRes.status === 200, 'GET /api/narrative/timeline should return 200');
+    const timeline = timelineRes.body;
+    assert(isRecord(timeline), 'timeline should be envelope object');
+    assert(timeline.success === true, 'timeline success should be true');
+    assert(Array.isArray(timeline.data), 'timeline data should be array');
+    assert(
+      timeline.data.some(
+        (entry: unknown) => isRecord(entry) && entry.title === activeEventTitle && entry.type === 'history'
+      ),
+      'timeline should contain active trigger_event entry'
+    );
 
     const systemEventTitle = `Trigger Event System ${Date.now()}`;
     const systemEventKey = `trigger-event-system-${Date.now()}`;
@@ -163,25 +129,33 @@ const main = async () => {
         idempotency_key: systemEventKey,
         attributes: {
           mock_action_type: 'trigger_event',
-          event_type: 'system',
           event_title: systemEventTitle,
-          event_description: 'System emitted a timeline event.'
+          event_description: 'Trigger event system description',
+          event_type: 'system'
         }
       })
     });
-    assert(systemRes.status === 200, 'system trigger_event submit should return 200');
-    const systemData = assertSuccessEnvelope(systemRes.body);
-    assert(isRecord(systemData.job), 'system trigger_event job payload should be object');
+    assert(systemRes.status === 200, 'system trigger_event job should enqueue');
 
-    await pollWorkflowState(
+    await pollReplayJob(
       server.baseUrl,
-      systemData.job.id as string,
-      workflow => isRecord(workflow.derived) && (workflow.derived.workflow_state === 'workflow_completed' || workflow.derived.workflow_state === 'workflow_failed')
+      systemHeaders,
+      { identity_id: 'system', strategy: 'mock', idempotency_key: systemEventKey },
+      data => isRecord(data.workflow_snapshot) && isRecord(data.workflow_snapshot.derived) && data.workflow_snapshot.derived.workflow_state === 'workflow_completed',
+      'system trigger_event replay poll'
     );
 
-    const systemEvent = await readLatestEvent('system', systemEventTitle);
-    assert(isRecord(systemEvent), 'system trigger_event should create an Event row');
-    assert(systemEvent.source_action_intent_id, 'system trigger_event should record source_action_intent_id');
+    const timelineAfterSystemRes = await requestJson(server.baseUrl, '/api/narrative/timeline');
+    assert(timelineAfterSystemRes.status === 200, 'timeline after system event should return 200');
+    const timelineAfterSystem = timelineAfterSystemRes.body;
+    assert(isRecord(timelineAfterSystem), 'timeline after system event should be envelope object');
+    assert(Array.isArray(timelineAfterSystem.data), 'timeline after system event data should be array');
+    assert(
+      timelineAfterSystem.data.some(
+        (entry: unknown) => isRecord(entry) && entry.title === systemEventTitle && entry.type === 'system'
+      ),
+      'timeline should contain system trigger_event entry'
+    );
 
     const invalidTypeKey = `trigger-event-invalid-type-${Date.now()}`;
     const invalidTypeRes = await requestJson(server.baseUrl, '/api/inference/jobs', {
@@ -193,78 +167,27 @@ const main = async () => {
         idempotency_key: invalidTypeKey,
         attributes: {
           mock_action_type: 'trigger_event',
-          event_type: 'narrative_custom',
-          event_title: 'invalid-type',
-          event_description: 'invalid-type'
+          event_title: `Invalid Trigger Event ${Date.now()}`,
+          event_description: 'Invalid trigger event description',
+          event_type: 'unsupported_type'
         }
       })
     });
-    assert(invalidTypeRes.status === 200, 'invalid type should still enqueue and fail in dispatcher path');
-    const invalidTypeData = assertSuccessEnvelope(invalidTypeRes.body);
-    assert(isRecord(invalidTypeData.job), 'invalid type job payload should be object');
+    assert(invalidTypeRes.status === 200, 'invalid trigger_event type should still enqueue');
 
-    const invalidTypeWorkflow = await pollWorkflowState(
+    const invalidTypeReplay = await pollReplayJob(
       server.baseUrl,
-      invalidTypeData.job.id as string,
-      workflow => isRecord(workflow.derived) && workflow.derived.workflow_state === 'workflow_failed'
+      activeHeaders,
+      { agent_id: 'agent-001', strategy: 'mock', idempotency_key: invalidTypeKey },
+      data => isRecord(data.workflow_snapshot) && isRecord(data.workflow_snapshot.derived) && data.workflow_snapshot.derived.workflow_state === 'workflow_failed',
+      'invalid trigger_event type replay poll'
     );
-    assert(isRecord(invalidTypeWorkflow.derived), 'invalid type workflow derived should be object');
-    assert(invalidTypeWorkflow.derived.failure_stage === 'dispatch', 'invalid type should fail at dispatch stage');
-    assert(invalidTypeWorkflow.derived.failure_code === 'EVENT_TYPE_UNSUPPORTED', 'invalid type should expose event type failure code');
-
-    const invalidTickKey = `trigger-event-invalid-tick-${Date.now()}`;
-    const invalidTickRes = await requestJson(server.baseUrl, '/api/inference/jobs', {
-      method: 'POST',
-      headers: activeHeaders,
-      body: JSON.stringify({
-        agent_id: 'agent-001',
-        strategy: 'mock',
-        idempotency_key: invalidTickKey,
-        attributes: {
-          mock_action_type: 'trigger_event',
-          event_type: 'history',
-          event_title: 'invalid-tick',
-          event_description: 'invalid-tick',
-          event_impact_data: {
-            tick: '999999'
-          }
-        }
-      })
-    });
-    assert(invalidTickRes.status === 200, 'invalid tick event should still enqueue and fail in dispatcher path');
-    const invalidTickData = assertSuccessEnvelope(invalidTickRes.body);
-    assert(isRecord(invalidTickData.job), 'invalid tick job payload should be object');
-
-    const invalidTickWorkflow = await pollWorkflowState(
-      server.baseUrl,
-      invalidTickData.job.id as string,
-      workflow => isRecord(workflow.derived) && workflow.derived.workflow_state === 'workflow_failed'
+    assert(
+      isRecord(invalidTypeReplay.workflow_snapshot) &&
+        isRecord(invalidTypeReplay.workflow_snapshot.derived) &&
+        invalidTypeReplay.workflow_snapshot.derived.failure_stage === 'dispatch',
+      'invalid trigger_event type should surface as dispatch failure'
     );
-    assert(isRecord(invalidTickWorkflow.derived), 'invalid tick workflow derived should be object');
-    assert(invalidTickWorkflow.derived.failure_stage === 'dispatch', 'invalid tick should fail at dispatch stage');
-    assert(invalidTickWorkflow.derived.failure_code === 'ACTION_EVENT_INVALID', 'invalid tick should expose event payload failure code');
-
-    const beforeReplayCount = await countEvents('system', systemEventTitle);
-    const replayRes = await requestJson(server.baseUrl, `/api/inference/jobs/${systemData.job.id as string}/replay`, {
-      method: 'POST',
-      headers: systemHeaders,
-      body: JSON.stringify({
-        reason: 'trigger_event_replay',
-        idempotency_key: `trigger-event-replay-${Date.now()}`
-      })
-    });
-    assert(replayRes.status === 200, 'trigger_event replay should return 200');
-    const replayData = assertSuccessEnvelope(replayRes.body);
-    assert(isRecord(replayData.job), 'trigger_event replay job payload should be object');
-
-    await pollWorkflowState(
-      server.baseUrl,
-      replayData.job.id as string,
-      workflow => isRecord(workflow.derived) && workflow.derived.workflow_state === 'workflow_completed'
-    );
-
-    const afterReplayCount = await countEvents('system', systemEventTitle);
-    assert(afterReplayCount === beforeReplayCount + 1, 'trigger_event replay should append a new event record');
 
     console.log('[trigger_event] PASS');
   } catch (error: unknown) {

@@ -2,6 +2,7 @@ import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { IdentityRequest } from '../../identity/middleware.js';
 import type { AppContext } from '../context.js';
+import { jsonOk, toJsonSafe } from '../http/json.js';
 import { createPolicy, evaluatePolicy } from '../services/policy.js';
 
 export interface PolicyRouteDependencies {
@@ -56,7 +57,7 @@ export const registerPolicyRoutes = (
         }
       );
 
-      res.json(policy);
+      jsonOk(res, toJsonSafe(policy));
     })
   );
 
@@ -78,7 +79,7 @@ export const registerPolicyRoutes = (
         attributes
       });
 
-      res.json(result);
+      jsonOk(res, toJsonSafe(result));
     })
   );
 };

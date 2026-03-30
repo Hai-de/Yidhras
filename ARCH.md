@@ -1,6 +1,6 @@
 # Yidhras Architecture / 架构文档
 
-Version: v0.5.2-draft
+Version: v0.5.3-draft
 Last Updated / 最后更新: 2026-03-30
 
 ## 1) Project Positioning / 项目定位
@@ -58,6 +58,8 @@ The formal engineering route is no longer “temporary feature probing”. The c
   - `agent.ts`
   - `identity.ts`
   - `policy.ts`
+  - `audit.ts`
+  - `overview.ts`
   - `inference.ts`
 - Route handlers are expected to stay thin and delegate app-level orchestration to `apps/server/src/app/services/*.ts` or domain services under `apps/server/src/inference/*.ts`.
 - Shared HTTP helpers are grouped under `apps/server/src/app/http/*.ts`.
@@ -66,12 +68,18 @@ The formal engineering route is no longer “temporary feature probing”. The c
 - A global error middleware captures operational exceptions and pushes system notifications.
 - Stable transport/runtime guarantees are preserved across the refactor:
   - unified error envelope `{ success: false, error: { code, message, request_id, timestamp, details? } }`
+  - unified success envelope `{ success: true, data, meta? }`
   - `X-Request-Id` generation/propagation via `requestIdMiddleware()`
   - centralized runtime gating via `AppContext.assertRuntimeReady(feature)` returning `503/WORLD_PACK_NOT_READY`
   - BigInt JSON serialization as strings
 - Identity & policy APIs support field-level evaluation with explicit rule explanation for debugging (`/api/policy/evaluate`).
 - Identity lifecycle APIs include bind/query/unbind/expire flow and atmosphere-node listing endpoint.
 - Inference integration is now active through `apps/server/src/app/routes/inference.ts`, `apps/server/src/inference/service.ts`, and the startup wiring in `apps/server/src/index.ts`.
+- Overview screen now has a dedicated backend aggregation route `GET /api/overview/summary`, implemented as a lightweight read model over runtime status + audit/social snapshots.
+- Workflow/operator list views now have a dedicated backend list route `GET /api/inference/jobs`, implemented as a read projection over `DecisionJob + WorkflowSnapshot`.
+- Agent detail/operator details now have a dedicated aggregation route `GET /api/agent/:id/overview`, implemented as a lightweight read model over agent profile + bindings + relationships + audit/workflow/SNR/memory summaries.
+- Social feed now has all three planned advanced-filter batches on `GET /api/social/feed`, covering `author_id/agent_id/circle_id/source_action_intent_id/from_tick/to_tick/keyword/signal_min/signal_max/cursor/limit/sort` without introducing a separate operator-only feed endpoint yet.
+- Graph V2 now has an initial projection route `GET /api/graph/view`, currently shipped as Batch 4 minimal read-only skeleton over `Agent + AtmosphereNode + Relationship + ownership + relay/container projection`, with basic filtering (`kinds/root/depth/include_unresolved/include_inactive/search`) and summary fields.
 
 ### 4.2 Simulation Core / 模拟核心
 
@@ -106,7 +114,7 @@ The formal engineering route is no longer “temporary feature probing”. The c
   and identity/policy entities.
 - Identity bindings connect identities to active/atmosphere nodes with lifecycle status and expiry.
 - A minimal persisted inference workflow baseline now exists with `InferenceTrace`, `ActionIntent`, and `DecisionJob`.
-- Current delivered workflow additions already include idempotency-key replay, failed-job retry, aggregate workflow reads, loop-driven job execution with minimal job locking / claim semantics, first-pass dispatcher consumption for `post_message`, and a replay-lineage baseline for deriving new replay jobs from existing workflow records with controlled `strategy/attributes` overrides plus parent/child lineage reads.
+- Current delivered workflow additions already include idempotency-key replay, failed-job retry, aggregate workflow reads, workflow list projection reads, loop-driven job execution with minimal job locking / claim semantics, first-pass dispatcher consumption for `post_message`, and a replay-lineage baseline for deriving new replay jobs from existing workflow records with controlled `strategy/attributes` overrides plus parent/child lineage reads.
 - Current gap: richer replay orchestration beyond the current job-derived replay baseline with limited overrides, broader dispatcher/runtime consumption beyond the current shipped action set, and more durable multi-worker scheduler semantics beyond the current lightweight locking baseline; `post_message` provenance is now also recorded on `Post.source_action_intent_id`.
 
 ### 4.6 Agent Runtime Route / Agent 运行路线
@@ -137,6 +145,7 @@ The formal engineering route is no longer “temporary feature probing”. The c
   - persisted `DecisionJob`
   - Prisma-backed trace sink wired into `apps/server/src/index.ts`
   - minimal `POST /api/inference/jobs` entry with `idempotency_key` replay
+  - list/read APIs for workflow operator views (`GET /api/inference/jobs`, `/api/inference/jobs/:id`, `/api/inference/jobs/:id/workflow`)
   - read APIs for trace / intent / job inspection
   - aggregate workflow read APIs for `trace -> job -> intent` inspection
   - retry API for failed jobs with bounded attempts
@@ -168,12 +177,11 @@ The formal engineering route is no longer “temporary feature probing”. The c
     - `operation = set`
     - absolute-value write with `[0,1]` clamp
   - SNR mutations now write `SNRAdjustmentLog` for minimal auditability, and the current backend also provides SNR-log read APIs for audit/debug use
-  - dispatcher now also supports `trigger_event` as the current third world-action path with a constrained MVP:
+  - dispatcher now also supports `trigger_event` as the current fourth world-action path with a constrained MVP:
     - append-only event creation
     - `Event.type = history | interaction | system`
     - active actor or system actor
     - current tick only
-
   - minimal L4 semantics are carried on `ActionIntent` via:
     - `transmission_delay_ticks`
     - `transmission_policy`
@@ -227,6 +235,10 @@ The formal engineering route is no longer “temporary feature probing”. The c
 - `components/L2Graph.vue` renders relation graph with Cytoscape.
 - `stores/clock.ts` syncs time from server and handles BigInt string conversion on client side.
 - Frontend UI is still considered non-final; backend contract stability remains higher priority than interface polishing.
+- Backend now explicitly supports frontend/operator integration through:
+  - unified success envelope
+  - workflow list projection
+  - overview aggregation projection
 
 ## 6) Engineering Baseline / 工程基线
 
@@ -252,12 +264,15 @@ To avoid ambiguity for agentic contributors:
   - Identity policy strategy baseline: deny-first ordering, wildcard field matching, and conditions-ready evaluation.
   - Identity binding lifecycle APIs and runtime expiry handling.
   - Phase B inference debug endpoints with structured prompt/context composition and normalized decision output.
-  - Minimal Phase D persistence baseline: persisted trace/intent/job records, aggregate workflow reads, idempotency replay, failed-job retry, loop-driven execution, and first-pass `post_message` dispatch.
+  - Minimal Phase D persistence baseline: persisted trace/intent/job records, workflow list/aggregate workflow reads, idempotency replay, failed-job retry, loop-driven execution, and first-pass `post_message` dispatch.
   - Memory Core v1 baseline: fragment-oriented prompt construction, memory injection/selection observability, and the current processor chain.
   - Minimal L4 dispatcher semantics: delay/drop/policy baseline for the current `post_message` path.
+  - Overview/operator aggregate read models: `GET /api/overview/summary`, `GET /api/inference/jobs`, and `GET /api/agent/:id/overview`.
+  - Unified API success envelope `{ success: true, data, meta? }` for product-facing backend routes.
 - **Planned / 规划中:**
   - richer replay orchestration and durable scheduler/job-locking semantics.
   - real long-term memory plus stronger summarization/policy-aware trimming.
+  - Graph V2 heterogeneous schema, relay/container node projections, and richer frontend operator graph support.
   - broader world-action mapping, richer L4 simulation, and richer frontend plugin system.
 
 ## 9) Non-Goals for This Draft / 本版非目标

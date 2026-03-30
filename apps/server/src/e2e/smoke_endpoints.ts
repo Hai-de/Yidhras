@@ -20,8 +20,10 @@ const parsePort = (): number => {
 };
 
 const assertArray = (value: unknown, label: string): unknown[] => {
-  assert(Array.isArray(value), `${label} should be array`);
-  return value;
+  assert(isRecord(value), `${label} should be envelope object`);
+  assert(value.success === true, `${label} success should be true`);
+  assert(Array.isArray(value.data), `${label}.data should be array`);
+  return value.data as unknown[];
 };
 
 const assertErrorEnvelope = (body: unknown, expectedCode: string) => {
@@ -45,8 +47,11 @@ const assertWorldPackNotReadyEnvelope = (body: unknown) => {
 const assertSuccessEnvelope = (body: unknown): Record<string, unknown> => {
   assert(isRecord(body), 'success response should be object');
   assert(body.success === true, 'success response success should be true');
-  assert(isRecord(body.data), 'success response data should be object');
-  return body.data as Record<string, unknown>;
+  assert('data' in body, 'success response data should exist');
+
+  const data = body.data;
+  assert(data !== null && data !== undefined, 'success response data should not be null or undefined');
+  return data as Record<string, unknown>;
 };
 
 const assertWorkflowSnapshot = (value: unknown, label: string): Record<string, unknown> => {
@@ -115,7 +120,8 @@ const main = async () => {
       healthRes.status === 200 || healthRes.status === 503,
       `unexpected /api/health status: ${healthRes.status}`
     );
-    assert(isRecord(healthRes.body), '/api/health should return object');
+    const healthData = assertSuccessEnvelope(healthRes.body);
+    assert(typeof healthData.healthy === 'boolean', '/api/health data.healthy should be boolean');
 
     const notificationsRes = await requestJson(server.baseUrl, '/api/system/notifications');
     assert(notificationsRes.status === 200, 'GET /api/system/notifications should return 200');
@@ -126,21 +132,22 @@ const main = async () => {
       headers: { 'Content-Type': 'application/json' }
     });
     assert(clearRes.status === 200, 'POST /api/system/notifications/clear should return 200');
-    assert(isRecord(clearRes.body), '/api/system/notifications/clear should return object');
-    assert(clearRes.body.success === true, '/api/system/notifications/clear success should be true');
+    const clearData = assertSuccessEnvelope(clearRes.body);
+    assert(clearData.acknowledged === true, '/api/system/notifications/clear acknowledged should be true');
 
     const statusRes =await requestJson(server.baseUrl, '/api/status');
     assert(statusRes.status === 200, 'GET /api/status should return 200');
-    assert(isRecord(statusRes.body), '/api/status should return object');
+    const statusData = assertSuccessEnvelope(statusRes.body);
+    assert(typeof statusData.runtime_ready === 'boolean', '/api/status data.runtime_ready should be boolean');
 
-    const runtimeReady = statusRes.body.runtime_ready === true;
+    const runtimeReady = statusData.runtime_ready === true;
 
     const clockRes = await requestJson(server.baseUrl, '/api/clock');
     if (runtimeReady) {
       assert(clockRes.status === 200, 'GET /api/clock should return 200 when runtime ready');
-      assert(isRecord(clockRes.body), '/api/clock should return object when runtime ready');
-      assert(typeof clockRes.body.absolute_ticks === 'string', '/api/clock absolute_ticks should be string');
-      assert(Array.isArray(clockRes.body.calendars), '/api/clock calendars should be array');
+      const clockData = assertSuccessEnvelope(clockRes.body);
+      assert(typeof clockData.absolute_ticks === 'string', '/api/clock absolute_ticks should be string');
+      assert(Array.isArray(clockData.calendars), '/api/clock calendars should be array');
     } else {
       assert(clockRes.status === 503, 'GET /api/clock should return 503 when runtime not ready');
       assertWorldPackNotReadyEnvelope(clockRes.body);
@@ -152,9 +159,9 @@ const main = async () => {
         formattedClockRes.status === 200,
         'GET /api/clock/formatted should return 200 when runtime ready'
       );
-      assert(isRecord(formattedClockRes.body), '/api/clock/formatted should return object');
-      assert(typeof formattedClockRes.body.absolute_ticks === 'string', 'formatted clock absolute_ticks should be string');
-      assert(Array.isArray(formattedClockRes.body.calendars), 'formatted clock calendars should be array');
+      const formattedClockData = assertSuccessEnvelope(formattedClockRes.body);
+      assert(typeof formattedClockData.absolute_ticks === 'string', 'formatted clock absolute_ticks should be string');
+      assert(Array.isArray(formattedClockData.calendars), 'formatted clock calendars should be array');
     } else {
       assert(
         formattedClockRes.status === 503,
@@ -176,7 +183,14 @@ const main = async () => {
 
     if (runtimeReady) {
       assert(pauseRes.status === 200, 'pause should return 200 when runtime ready');
+      const pauseData = assertSuccessEnvelope(pauseRes.body);
+      assert(pauseData.acknowledged === true, 'pause acknowledged should be true');
+      assert(pauseData.status === 'paused', 'pause status should be paused');
+
       assert(resumeRes.status === 200, 'resume should return 200 when runtime ready');
+      const resumeData = assertSuccessEnvelope(resumeRes.body);
+      assert(resumeData.acknowledged === true, 'resume acknowledged should be true');
+      assert(resumeData.status === 'running', 'resume status should be running');
     } else {
       assert(pauseRes.status === 503, 'pause should return 503 when runtime not ready');
       assert(resumeRes.status === 503, 'resume should return 503 when runtime not ready');
@@ -191,9 +205,9 @@ const main = async () => {
       assertArray(feedRes.body, '/api/social/feed');
 
       assert(graphRes.status === 200, 'GET /api/relational/graph should return 200 when runtime ready');
-      assert(isRecord(graphRes.body), '/api/relational/graph should return object');
-      assert(Array.isArray(graphRes.body.nodes), 'graph.nodes should be array');
-      assert(Array.isArray(graphRes.body.edges), 'graph.edges should be array');
+      const graphData = assertSuccessEnvelope(graphRes.body);
+      assert(Array.isArray(graphData.nodes), 'graph.nodes should be array');
+      assert(Array.isArray(graphData.edges), 'graph.edges should be array');
 
       assert(timelineRes.status === 200, 'GET /api/narrative/timeline should return 200 when runtime ready');
       assertArray(timelineRes.body, '/api/narrative/timeline');
@@ -204,10 +218,9 @@ const main = async () => {
         body: JSON.stringify({ action: 'override', step_ticks: '2' })
       });
       assert(overrideRes.status === 200, 'POST /api/runtime/speed override should return 200');
-      assert(isRecord(overrideRes.body), 'runtime speed override response should be object');
-      assert(overrideRes.body.success === true, 'runtime speed override success should be true');
-      assert(isRecord(overrideRes.body.runtime_speed), 'runtime speed override payload should include runtime_speed');
-      assert(typeof overrideRes.body.runtime_speed.override_since === 'number', 'runtime speed override should include override_since');
+      const overrideData = assertSuccessEnvelope(overrideRes.body);
+      assert(isRecord(overrideData.runtime_speed), 'runtime speed override payload should include runtime_speed');
+      assert(typeof overrideData.runtime_speed.override_since === 'number', 'runtime speed override should include override_since');
 
       const overrideClearRes = await requestJson(server.baseUrl, '/api/runtime/speed', {
         method: 'POST',
@@ -215,10 +228,9 @@ const main = async () => {
         body: JSON.stringify({ action: 'clear' })
       });
       assert(overrideClearRes.status === 200, 'POST /api/runtime/speed clear should return 200');
-      assert(isRecord(overrideClearRes.body), 'runtime speed clear response should be object');
-      assert(overrideClearRes.body.success === true, 'runtime speed clear success should be true');
-      assert(isRecord(overrideClearRes.body.runtime_speed), 'runtime speed clear payload should include runtime_speed');
-      assert(overrideClearRes.body.runtime_speed.override_since === null, 'runtime speed clear should reset override_since');
+      const overrideClearData = assertSuccessEnvelope(overrideClearRes.body);
+      assert(isRecord(overrideClearData.runtime_speed), 'runtime speed clear payload should include runtime_speed');
+      assert(overrideClearData.runtime_speed.override_since === null, 'runtime speed clear should reset override_since');
 
       const activeIdentityHeaders = {
         'Content-Type': 'application/json',

@@ -1,6 +1,6 @@
 # Yidhras Logic / 业务逻辑说明
 
-Version: v0.3.1-draft
+Version: v0.3.2-draft
 Last Updated / 最后更新: 2026-03-30
 
 本文件偏向业务规则表达，不绑定未来可能变化的算法细节。
@@ -18,12 +18,17 @@ This file focuses on business rules rather than unstable low-level algorithm det
 - Minimal Phase D persistence baseline now stores trace / intent / job records for preview/run flows and exposes read APIs for audit/debug.
 - Minimal formal job submission path now supports `idempotency_key`-based replay for duplicate submissions.
 - Failed jobs can now be retried through an explicit retry API with bounded attempts.
+- Agent aggregate detail read model is now available through `GET /api/agent/:id/overview`.
 - Decision jobs are now enqueued as `pending` work and consumed by a loop-driven runner rather than always completing in the submit request path.
 - A first-pass dispatcher now converts eligible `post_message` intents into real L1 social posts.
 - Minimal L4 transmission semantics now influence dispatch timing and drop behavior for social posts.
 - Transmission policy can now be derived from policy capability, actor role, and agent SNR rather than relying only on manual overrides.
 - Workflow aggregate reads now expose `decision_stage`, `dispatch_stage`, `workflow_state`, `failure_stage`, and `failure_code` for the same persisted chain.
+- Workflow operator list reads now expose paginated job summaries plus derived workflow status via `GET /api/inference/jobs`.
+- Overview/operator aggregation now exposes `runtime + world_time + latest activity + failure/dropped summaries` via `GET /api/overview/summary`.
+- Social feed now supports all three planned advanced-filter batches on `GET /api/social/feed` with `author_id/agent_id/circle_id/source_action_intent_id/from_tick/to_tick/keyword/signal_min/signal_max/cursor/limit/sort`.
 - Duplicate-submit replay now distinguishes between:
+- Graph V2 minimal read-only projection is now available via `GET /api/graph/view` and currently covers `agent + atmosphere + relationship + ownership + relay/container projection`, with basic query filtering and summary aggregation.
   - no decision result yet (`result_source = not_available`)
   - historical stored decision reuse (`result_source = stored_trace`)
   - fresh retry result (`result_source = fresh_run`)
@@ -34,6 +39,7 @@ This file focuses on business rules rather than unstable low-level algorithm det
   - policy-based fragment removal before finalize
   - summary/compaction over high-volume short-term memory
   - token-budget trimming over lower-priority fragments
+- Product-facing backend success responses now follow the unified envelope rule `{ success: true, data, meta? }`.
 
 ### Planned / 规划中
 
@@ -93,6 +99,7 @@ This file focuses on business rules rather than unstable low-level algorithm det
 - A dropped transmission currently halts post materialization and marks the intent as `dropped`.
 - Current derivation can mark an intent as `blocked` / `fragile` / `best_effort` / `reliable` before dispatch.
 - Current derived reasons include `policy_blocked`, `visibility_denied`, `low_signal_quality`, and `probabilistic_drop`.
+- Overview summary now exposes the current runtime tick and serialized calendar snapshot as a stable aggregation read model.
 
 ### Planned / 规划中
 
@@ -122,6 +129,7 @@ This file focuses on business rules rather than unstable low-level algorithm det
 - Runtime errors push structured notifications with level and code.
 - Inference debug endpoints already distinguish input/provider/normalization/runtime-not-ready failure classes through explicit error codes.
 - Workflow snapshots and persisted state now distinguish decision-side (`provider` / `normalization` / `persistence`) failures, dispatch-side failures, and intentional drops.
+- Operator overview now aggregates notifications together with recent failed jobs and dropped intents for first-screen monitoring.
 
 ### Planned / 规划中
 
@@ -149,9 +157,10 @@ This file focuses on business rules rather than unstable low-level algorithm det
 
 - Identity Layer: active node and atmosphere node binding/lifecycle baseline is landed.
 - Inference Interface: policy injection, stable prompt channels, normalized decision schema, and trace metadata baseline is landed.
-- Workflow Persistence: persisted traces/intents/jobs baseline is now landed; minimal idempotency replay, failed-job retry, loop-driven async execution, and first-pass intent dispatch are available, while richer audit/replay and state progression remain in progress.
+- Workflow Persistence: persisted traces/intents/jobs baseline is now landed; minimal idempotency replay, failed-job retry, loop-driven async execution, workflow list reads, and first-pass intent dispatch are available, while richer audit/replay and state progression remain in progress.
+- Workflow Persistence / Operator Read Models: persisted traces/intents/jobs baseline is now landed; minimal idempotency replay, failed-job retry, loop-driven async execution, workflow list reads, agent aggregate detail reads, and first-pass intent dispatch are available, while richer audit/replay and state progression remain in progress.
 - Memory Core: short-term context is now partially landed through `memory_context` + prompt fragment injection, while long-term retrieval/storage and richer summarization remain in progress.
-- Action Dispatcher: first-pass delayed executable actions are now landed for `post_message`, and dispatcher-produced posts now record `Post.source_action_intent_id` provenance; the current second path `adjust_relationship` is available under a constrained MVP (`active actor`, `target_ref.agent_id`, single-direction edge, `operation=set`, `[0,1]` clamp) with `RelationshipAdjustmentLog` auditability and read API; the current third path `adjust_snr` is available under a constrained MVP (`active actor`, `target_ref.agent_id`, `operation=set`, absolute-value write with `[0,1]` clamp) with `SNRAdjustmentLog` auditability and read API; and the current fourth path `trigger_event` is now available as an append-only event action (`history|interaction|system`, active/system actor, current tick only). Broader world-action mapping remains future work.
+- Action Dispatcher: first-pass delayed executable actions are now landed for `post_message`, and dispatcher-produced posts now record `Post.source_action_intent_id` provenance; the current second path `adjust_relationship` is available under a constrained MVP (`active actor`, `target_ref.agent_id`, single-direction edge, `operation=set`, optional `create_if_missing`) with `RelationshipAdjustmentLog` auditability and read API; the current third path `adjust_snr` is available under a constrained MVP (`active actor`, `target_ref.agent_id`, `operation=set`, absolute-value write with `[0,1]` clamp) with `SNRAdjustmentLog` auditability and read API; and the current fourth path `trigger_event` is now available as an append-only event action (`history|interaction|system`, active/system actor, current tick only). Broader world-action mapping remains future work.
 
 ### Current Delivery Principle / 当前交付原则
 
@@ -171,6 +180,9 @@ This file focuses on business rules rather than unstable low-level algorithm det
   - decision-side failure (`provider` / `normalization` / `persistence`)
   - dispatch-side failure (`dispatch`)
   - intentional drop (`dropped`, not equal to `failed`)
+- Current operator/backend contract principle now also includes:
+  - success envelope stability before UI specialization
+  - aggregated read models where the frontend would otherwise need high-fanout request stitching
 
 ## 8) Product Rules for Contributors / 贡献者规则
 

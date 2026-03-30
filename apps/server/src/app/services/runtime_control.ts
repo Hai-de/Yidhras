@@ -1,6 +1,10 @@
 import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
 import type { AppContext } from '../context.js';
 
+export interface RuntimeControlSnapshot {
+  status: 'paused' | 'running';
+}
+
 export const overrideRuntimeSpeed = (context: AppContext, stepTicks: bigint): RuntimeSpeedSnapshot => {
   context.sim.setRuntimeSpeedOverride(stepTicks);
   const snapshot = context.sim.getRuntimeSpeedSnapshot();
@@ -24,14 +28,14 @@ export const clearRuntimeSpeedOverride = (context: AppContext): RuntimeSpeedSnap
   return snapshot;
 };
 
-export const pauseRuntime = (context: AppContext): { success: true; status: 'paused' } => {
+export const pauseRuntime = (context: AppContext): RuntimeControlSnapshot => {
   context.setPaused(true);
   context.notifications.push('info', '模拟已暂停');
-  return { success: true, status: 'paused' };
+  return { status: 'paused' };
 };
 
-export const resumeRuntime = (context: AppContext): { success: true; status: 'running' } => {
+export const resumeRuntime = (context: AppContext): RuntimeControlSnapshot => {
   context.setPaused(false);
   context.notifications.push('info', '模拟已恢复');
-  return { success: true, status: 'running' };
+  return { status: 'running' };
 };

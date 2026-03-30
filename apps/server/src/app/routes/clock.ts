@@ -2,6 +2,7 @@ import type { Express } from 'express';
 
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
+import { jsonOk } from '../http/json.js';
 import {
   clearRuntimeSpeedOverride,
   overrideRuntimeSpeed,
@@ -27,13 +28,17 @@ export const registerClockRoutes = (
     if (action === 'override') {
       const parsed = deps.parsePositiveStepTicks(step_ticks);
       const runtimeSpeed = overrideRuntimeSpeed(context, parsed);
-      res.json({ success: true, runtime_speed: runtimeSpeed });
+      jsonOk(res, {
+        runtime_speed: deps.toJsonSafe(runtimeSpeed)
+      });
       return;
     }
 
     if (action === 'clear') {
       const runtimeSpeed = clearRuntimeSpeedOverride(context);
-      res.json({ success: true, runtime_speed: runtimeSpeed });
+      jsonOk(res, {
+        runtime_speed: deps.toJsonSafe(runtimeSpeed)
+      });
       return;
     }
 
@@ -44,7 +49,7 @@ export const registerClockRoutes = (
 
   app.get('/api/clock', (_req, res) => {
     context.assertRuntimeReady('clock read');
-    res.json({
+    jsonOk(res, {
       absolute_ticks: context.sim.clock.getTicks().toString(),
       calendars: []
     });
@@ -53,7 +58,7 @@ export const registerClockRoutes = (
   app.get('/api/clock/formatted', (_req, res, next) => {
     context.assertRuntimeReady('clock formatted read');
     try {
-      res.json({
+      jsonOk(res, {
         absolute_ticks: context.sim.clock.getTicks().toString(),
         calendars: deps.toJsonSafe(context.sim.clock.getAllTimes())
       });
@@ -67,12 +72,18 @@ export const registerClockRoutes = (
     const { action } = req.body as { action?: unknown };
 
     if (action === 'pause') {
-      res.json(pauseRuntime(context));
+      jsonOk(res, {
+        acknowledged: true,
+        ...pauseRuntime(context)
+      });
       return;
     }
 
     if (action === 'resume') {
-      res.json(resumeRuntime(context));
+      jsonOk(res, {
+        acknowledged: true,
+        ...resumeRuntime(context)
+      });
       return;
     }
 

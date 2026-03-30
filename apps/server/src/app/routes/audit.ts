@@ -1,6 +1,7 @@
 import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { AppContext } from '../context.js';
+import { jsonOk, toJsonSafe } from '../http/json.js';
 import {
   getAuditEntryById,
   listAuditFeed
@@ -55,7 +56,9 @@ export const registerAuditRoutes = (
         cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined
       });
 
-      res.json(snapshot);
+      jsonOk(res, toJsonSafe(snapshot), {
+        pagination: snapshot.summary.page_info
+      });
     })
   );
 
@@ -68,7 +71,7 @@ export const registerAuditRoutes = (
         id: req.params.id
       });
 
-      res.json(entry);
+      jsonOk(res, toJsonSafe(entry));
     })
   );
 };

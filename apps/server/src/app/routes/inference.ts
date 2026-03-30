@@ -3,14 +3,15 @@ import type { Express, NextFunction, Request, Response } from 'express';
 import type { InferenceService } from '../../inference/service.js';
 import type { InferenceJobReplayInput, InferenceRequestInput } from '../../inference/types.js';
 import type { AppContext } from '../context.js';
-import { toJsonSafe } from '../http/json.js';
+import { jsonOk, toJsonSafe } from '../http/json.js';
 import {
   getActionIntentByInferenceId,
   getDecisionJobById,
   getDecisionJobByInferenceId,
   getInferenceTraceById,
   getWorkflowSnapshotByInferenceId,
-  getWorkflowSnapshotByJobId
+  getWorkflowSnapshotByJobId,
+  listInferenceJobs
 } from '../services/inference_workflow.js';
 
 export interface InferenceRouteDependencies {
@@ -50,11 +51,45 @@ const parseReplayInput = (body: unknown): InferenceJobReplayInput => {
         ? {
             strategy: overrides.strategy as NonNullable<InferenceJobReplayInput['overrides']>['strategy'],
             attributes: overrides.attributes as Record<string, unknown> | undefined,
-            agent_id: typeof overrides.agent_id === 'string' ? overrides.agent_id :undefined,
+            agent_id: typeof overrides.agent_id === 'string' ? overrides.agent_id : undefined,
             identity_id: typeof overrides.identity_id === 'string' ? overrides.identity_id : undefined
           }
         : undefined
   };
+};
+
+const parseStatusQuery = (value: unknown): string[] | undefined => {
+  if (Array.isArray(value)) {
+    return value.flatMap(item =>
+      typeof item === 'string'
+        ? item
+            .split(',')
+            .map(part => part.trim())
+            .filter(part => part.length > 0)
+        : []
+    );
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map(part => part.trim())
+      .filter(part => part.length > 0);
+  }
+
+  return undefined;
+};
+
+const parseBooleanQuery = (value: unknown): boolean | undefined => {
+  if (value === 'true') {
+    return true;
+  }
+
+  if (value === 'false') {
+    return false;
+  }
+
+  return undefined;
 };
 
 export const registerInferenceRoutes = (
@@ -70,10 +105,7 @@ export const registerInferenceRoutes = (
       const input = parseInferenceInput(req.body);
       const result = await inferenceService.previewInference(input);
 
-      res.json({
-        success: true,
-        data: result
-      });
+      jsonOk(res, toJsonSafe(result));
     })
   );
 
@@ -84,9 +116,32 @@ export const registerInferenceRoutes = (
       const input = parseInferenceInput(req.body);
       const result = await inferenceService.runInference(input);
 
-      res.json({
-        success: true,
-        data: result
+      jsonOk(res, toJsonSafe(result));
+    })
+  );
+
+  app.get(
+    '/api/inference/jobs',
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('inference jobs list');
+      const snapshot = await listInferenceJobs(context, {
+        status: parseStatusQuery(req.query.status),
+        agent_id: typeof req.query.agent_id === 'string' ? req.query.agent_id : undefined,
+        identity_id: typeof req.query.identity_id === 'string' ? req.query.identity_id : undefined,
+        strategy: typeof req.query.strategy === 'string' ? req.query.strategy : undefined,
+        job_type: typeof req.query.job_type === 'string' ? req.query.job_type : undefined,
+        from_tick: typeof req.query.from_tick === 'string' ? req.query.from_tick : undefined,
+        to_tick: typeof req.query.to_tick === 'string' ? req.query.to_tick : undefined,
+        from_created_at: typeof req.query.from_created_at === 'string' ? req.query.from_created_at : undefined,
+        to_created_at: typeof req.query.to_created_at === 'string' ? req.query.to_created_at : undefined,
+        cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
+        limit: typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : undefined,
+        has_error: parseBooleanQuery(req.query.has_error),
+        action_intent_id: typeof req.query.action_intent_id === 'string' ? req.query.action_intent_id : undefined
+      });
+
+      jsonOk(res, toJsonSafe(snapshot), {
+        pagination: snapshot.page_info
       });
     })
   );
@@ -98,10 +153,7 @@ export const registerInferenceRoutes = (
       const input = parseInferenceInput(req.body);
       const result = await inferenceService.submitInferenceJob(input);
 
-      res.json({
-        success: true,
-        data: result
-      });
+      jsonOk(res, toJsonSafe(result));
     })
   );
 
@@ -111,10 +163,7 @@ export const registerInferenceRoutes = (
       context.assertRuntimeReady('inference job retry');
       const result = await inferenceService.retryInferenceJob(req.params.id);
 
-      res.json({
-        success: true,
-        data: result
-      });
+      jsonOk(res, toJsonSafe(result));
     })
   );
 
@@ -124,10 +173,7 @@ export const registerInferenceRoutes = (
       context.assertRuntimeReady('inference job replay');
       const result = await inferenceService.replayInferenceJob(req.params.id, parseReplayInput(req.body));
 
-      res.json({
-        success: true,
-        data: result
-      });
+      jsonOk(res, toJsonSafe(result));
     })
   );
 
@@ -137,10 +183,7 @@ export const registerInferenceRoutes = (
       context.assertRuntimeReady('inference trace read');
       const trace = await getInferenceTraceById(context, req.params.id);
 
-      res.json({
-        success: true,
-        data: toJsonSafe(trace)
-      });
+      jsonOk(res, toJsonSafe(trace));
     })
   );
 
@@ -150,10 +193,7 @@ export const registerInferenceRoutes = (
       context.assertRuntimeReady('action intent read');
       const intent = await getActionIntentByInferenceId(context, req.params.id);
 
-      res.json({
-        success: true,
-        data: toJsonSafe(intent)
-      });
+      jsonOk(res, toJsonSafe(intent));
     })
   );
 
@@ -163,10 +203,7 @@ export const registerInferenceRoutes = (
       context.assertRuntimeReady('decision job read');
       const job = await getDecisionJobByInferenceId(context, req.params.id);
 
-      res.json({
-        success: true,
-        data: toJsonSafe(job)
-      });
+      jsonOk(res, toJsonSafe(job));
     })
   );
 
@@ -176,10 +213,7 @@ export const registerInferenceRoutes = (
       context.assertRuntimeReady('inference workflow read');
       const workflow = await getWorkflowSnapshotByInferenceId(context, req.params.id);
 
-      res.json({
-        success: true,
-        data: workflow
-      });
+      jsonOk(res, toJsonSafe(workflow));
     })
   );
 
@@ -189,10 +223,7 @@ export const registerInferenceRoutes = (
       context.assertRuntimeReady('decision job read');
       const job = await getDecisionJobById(context, req.params.id);
 
-      res.json({
-        success: true,
-        data: toJsonSafe(job)
-      });
+      jsonOk(res, toJsonSafe(job));
     })
   );
 
@@ -202,10 +233,7 @@ export const registerInferenceRoutes = (
       context.assertRuntimeReady('decision workflow read');
       const workflow = await getWorkflowSnapshotByJobId(context, req.params.id);
 
-      res.json({
-        success: true,
-        data: workflow
-      });
+      jsonOk(res, toJsonSafe(workflow));
     })
   );
 };

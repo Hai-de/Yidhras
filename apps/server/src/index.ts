@@ -9,9 +9,11 @@ import { createGlobalErrorMiddleware } from './app/middleware/error_handler.js';
 import { registerAgentRoutes } from './app/routes/agent.js';
 import { registerAuditRoutes } from './app/routes/audit.js';
 import { registerClockRoutes } from './app/routes/clock.js';
+import { registerGraphRoutes } from './app/routes/graph.js';
 import { registerIdentityRoutes } from './app/routes/identity.js';
 import { registerInferenceRoutes } from './app/routes/inference.js';
 import { registerNarrativeRoutes } from './app/routes/narrative.js';
+import { registerOverviewRoutes } from './app/routes/overview.js';
 import { registerPolicyRoutes } from './app/routes/policy.js';
 import { registerRelationalRoutes } from './app/routes/relational.js';
 import { registerSocialRoutes } from './app/routes/social.js';
@@ -72,6 +74,12 @@ const registerRoutes: RouteRegistrar = (application, context) => {
     asyncHandler
   });
   registerSystemRoutes(application, context);
+  registerOverviewRoutes(application, context, {
+    asyncHandler
+  });
+  registerGraphRoutes(application, context, {
+    asyncHandler
+  });
   registerClockRoutes(application, context, {
     parsePositiveStepTicks,
     toJsonSafe,

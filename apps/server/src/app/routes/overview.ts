@@ -2,25 +2,25 @@ import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
-import { listNarrativeTimeline } from '../services/narrative.js';
+import { getOverviewSummary } from '../services/overview.js';
 
-export interface NarrativeRouteDependencies {
+export interface OverviewRouteDependencies {
   asyncHandler(
     handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
   ): (req: Request, res: Response, next: NextFunction) => void;
 }
 
-export const registerNarrativeRoutes = (
+export const registerOverviewRoutes = (
   app: Express,
   context: AppContext,
-  deps: NarrativeRouteDependencies
+  deps: OverviewRouteDependencies
 ): void => {
   app.get(
-    '/api/narrative/timeline',
+    '/api/overview/summary',
     deps.asyncHandler(async (_req, res) => {
-      context.assertRuntimeReady('narrative timeline');
-      const events = await listNarrativeTimeline(context);
-      jsonOk(res, toJsonSafe(events));
+      context.assertRuntimeReady('overview summary');
+      const summary = await getOverviewSummary(context);
+      jsonOk(res, toJsonSafe(summary));
     })
   );
 };

@@ -122,8 +122,8 @@ export const createMockInferenceProvider = (): InferenceProvider => {
               typeof context.attributes.relationship_type === 'string' ? context.attributes.relationship_type : 'friend',
             operation: typeof context.attributes.relationship_operation === 'string' ? context.attributes.relationship_operation : 'set',
             target_weight:
-              typeof context.attributes.relationship_target_weight === 'number'
-                ? context.attributes.relationship_target_weight
+              typeof context.attributes.relationship_weight === 'number'
+                ? context.attributes.relationship_weight
                 : 0.5,
             create_if_missing: context.attributes.create_if_missing === true,
             reason: typeof context.attributes.relationship_reason === 'string' ? context.attributes.relationship_reason : 'mock_adjust_relationship'

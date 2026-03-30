@@ -1,9 +1,10 @@
 import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { AppContext } from '../context.js';
-import { toJsonSafe } from '../http/json.js';
+import { jsonOk, toJsonSafe } from '../http/json.js';
 import {
   getAgentContextSnapshot,
+  getAgentOverview,
   listSnrAdjustmentLogs
 } from '../services/agent.js';
 
@@ -24,7 +25,19 @@ export const registerAgentRoutes = (
       context.assertRuntimeReady('agent context');
       const snapshot = await getAgentContextSnapshot(context, req.params.id);
 
-      res.json(snapshot);
+      jsonOk(res, toJsonSafe(snapshot));
+    })
+  );
+
+  app.get(
+    '/api/agent/:id/overview',
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('agent overview');
+      const overview = await getAgentOverview(context, req.params.id, {
+        limit: typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : undefined
+      });
+
+      jsonOk(res, toJsonSafe(overview));
     })
   );
 
@@ -37,7 +50,7 @@ export const registerAgentRoutes = (
         limit: typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : undefined
       });
 
-      res.json(toJsonSafe(logs));
+      jsonOk(res, toJsonSafe(logs));
     })
   );
 };

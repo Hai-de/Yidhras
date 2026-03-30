@@ -1,7 +1,7 @@
 import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { AppContext } from '../context.js';
-import { toJsonSafe } from '../http/json.js';
+import { jsonOk, toJsonSafe } from '../http/json.js';
 import {
   getRelationalGraph,
   listAtmosphereNodes,
@@ -25,7 +25,7 @@ export const registerRelationalRoutes = (
     deps.asyncHandler(async (_req, res) => {
       context.assertRuntimeReady('relational graph');
       const graph = await getRelationalGraph(context);
-      res.json(graph);
+      jsonOk(res, toJsonSafe(graph));
     })
   );
 
@@ -34,7 +34,7 @@ export const registerRelationalRoutes = (
     deps.asyncHandler(async (_req, res) => {
       context.assertRuntimeReady('relational circles');
       const circles = await listRelationalCircles(context);
-      res.json(circles);
+      jsonOk(res, toJsonSafe(circles));
     })
   );
 
@@ -47,7 +47,7 @@ export const registerRelationalRoutes = (
         include_expired: req.query.include_expired === 'true'
       });
 
-      res.json(nodes);
+      jsonOk(res, toJsonSafe(nodes));
     })
   );
 
@@ -62,7 +62,7 @@ export const registerRelationalRoutes = (
         limit: typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : undefined
       });
 
-      res.json(toJsonSafe(logs));
+      jsonOk(res, toJsonSafe(logs));
     })
   );
 };
