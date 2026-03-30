@@ -1,7 +1,7 @@
 # Yidhras Logic / 业务逻辑说明
 
 Version: v0.3.1-draft
-Last Updated / 最后更新: 2026-03-28
+Last Updated / 最后更新: 2026-03-30
 
 本文件偏向业务规则表达，不绑定未来可能变化的算法细节。
 This file focuses on business rules rather than unstable low-level algorithm details.

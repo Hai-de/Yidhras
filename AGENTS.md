@@ -86,13 +86,17 @@ This file is intentionally specific to the current repo layout and conventions.
 
 - No formal test runner (Jest/Vitest) is configured yet.
 - Existing "test" files in `apps/server/src/**/test*.ts` are executable TS scripts.
-- Run all current test scripts manually with `tsx` (from `apps/server`):
-- `npx tsx src/clock/test.ts`
-- `npx tsx src/narrative/test.ts`
-- `npx tsx src/permission/test.ts`
-- `npx tsx src/dynamics/test.ts`
-- `npx tsx src/dynamics/test_pluggable.ts`
-- `npx tsx src/world/test.ts`
+- Current backend verification scripts include:
+- `npm run smoke --prefix apps/server`
+- `npm run test:workflow-locking --prefix apps/server`
+- `npm run test:workflow-replay --prefix apps/server`
+- `npm run test:action-intent-locking --prefix apps/server`
+- `npm run test:adjust-relationship --prefix apps/server`
+- `npm run test:adjust-snr --prefix apps/server`
+- `npm run test:trigger-event --prefix apps/server`
+- `npm run test:audit-feed --prefix apps/server`
+- `npm run test:audit-workflow-lineage --prefix apps/server`
+- Legacy executable TS scripts still exist in `apps/server/src/**/test*.ts` and can be run manually with `tsx` when needed.
 
 ## 8) Single-Test Execution (Important)
 
@@ -132,6 +136,7 @@ This file is intentionally specific to the current repo layout and conventions.
 - Keep the stable request tracing path intact: `requestIdMiddleware()` sets `X-Request-Id` and keeps `res.locals.requestId` aligned with the unified error envelope.
 - Keep runtime gating centralized through `AppContext.assertRuntimeReady(feature)` so world-pack-dependent endpoints continue to return `503/WORLD_PACK_NOT_READY` with stable details.
 - Inference integration is intentionally reserved at `apps/server/src/app/routes/inference.ts` and `apps/server/src/inference/service.ts`; do not bypass these locations with ad-hoc route-level prompt logic.
+- Audit / observability integration is now also active through `apps/server/src/app/routes/audit.ts` and `apps/server/src/app/services/audit.ts`; prefer extending the unified audit model instead of adding one-off debug endpoints.
 
 ### 10.1) Current Strategic Direction for Agents / 当前 Agent 工程方向
 
@@ -149,6 +154,11 @@ This file is intentionally specific to the current repo layout and conventions.
   - `ActionIntent`
   - `DecisionJob` or equivalent runtime workflow state
   - idempotency / retry / audit / replay
+- The current shipped world-action set is no longer only `post_message`; it now also includes:
+  - `adjust_relationship`
+  - `adjust_snr`
+  - `trigger_event`
+- Unified audit reads (`/api/audit/feed`, `/api/audit/entries/:kind/:id`) should be treated as part of the current Phase D observability surface.
 - Treat the remaining work as expansion of the current Phase D baseline, not as a future-from-scratch rewrite.
 - When implementing inference-related code, do **not** collapse decision generation and action execution into one opaque function.
 - API handlers should remain thin shells; domain assembly belongs in service modules.

@@ -1,6 +1,7 @@
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import { getWorkflowSnapshotByJobId } from './inference_workflow.js';
+import { buildMutationResolvedResult } from './mutation_resolved.js';
 
 const AUDIT_VIEW_KINDS = [
   'workflow',
@@ -812,10 +813,54 @@ const buildWorkflowAuditEntryBySnapshot = (jobId: string, snapshot: Awaited<Retu
       failure_reason: snapshot.derived.failure_reason,
       outcome_summary: snapshot.derived.outcome_summary,
       replay_of_job_id: snapshot.lineage.replay_of_job_id,
+      replay_source_trace_id: snapshot.lineage.replay_source_trace_id,
       replay_reason: snapshot.lineage.replay_reason,
       override_applied: snapshot.lineage.override_applied,
       override_snapshot: snapshot.lineage.override_snapshot
     }
+  };
+};
+
+const buildWorkflowAuditEntryByJobId = async (
+  context: AppContext,
+  jobId: string
+): Promise<AuditViewEntry> => {
+  return buildWorkflowAuditEntryBySnapshot(jobId, await getWorkflowSnapshotByJobId(context, jobId));
+};
+
+const toWorkflowLineageSummary = (entry: AuditViewEntry): Record<string, unknown> => {
+  return {
+    id: entry.id,
+    created_at: entry.created_at,
+    summary: entry.summary,
+    workflow_state: entry.data.workflow_state ?? null,
+    job_status: entry.data.job_status ?? null,
+    intent_type: entry.data.intent_type ?? null,
+    action_intent_id: entry.refs.action_intent_id ?? null,
+    inference_id: entry.refs.inference_id ?? null,
+    replay_of_job_id: entry.data.replay_of_job_id ?? null,
+    replay_reason: entry.data.replay_reason ?? null,
+    override_applied: entry.data.override_applied ?? null
+  };
+};
+
+const buildWorkflowLineageDetail = async (
+  context: AppContext,
+  snapshot: Awaited<ReturnType<typeof getWorkflowSnapshotByJobId>>
+): Promise<{
+  parent_workflow: Record<string, unknown> | null;
+  child_workflows: Record<string, unknown>[];
+}> => {
+  const parentWorkflow = snapshot.lineage.parent_job
+    ? await buildWorkflowAuditEntryByJobId(context, snapshot.lineage.parent_job.id)
+    : null;
+  const childWorkflows = await Promise.all(
+    snapshot.lineage.child_jobs.map(childJob => buildWorkflowAuditEntryByJobId(context, childJob.id))
+  );
+
+  return {
+    parent_workflow: parentWorkflow ? toWorkflowLineageSummary(parentWorkflow) : null,
+    child_workflows: childWorkflows.map(toWorkflowLineageSummary)
   };
 };
 
@@ -826,11 +871,13 @@ const buildWorkflowAuditDetailEntry = async (
 ): Promise<AuditViewEntry> => {
   const baseEntry = buildWorkflowAuditEntryBySnapshot(jobId, snapshot);
   const relatedRecords = await buildWorkflowRelatedRecords(context, baseEntry.refs.action_intent_id);
+  const lineageDetail = await buildWorkflowLineageDetail(context, snapshot);
 
   return {
     ...baseEntry,
     data: {
       ...baseEntry.data,
+      lineage_detail: lineageDetail,
       related_counts: {
         posts: relatedRecords.posts.length,
         relationship_adjustments: relatedRecords.relationship_adjustments.length,
@@ -891,6 +938,22 @@ export const getAuditEntryById = async (
     if (!log) {
       throw new ApiError(404, 'AUDIT_ENTRY_NOT_FOUND', 'Audit entry not found', { kind, id });
     }
+
+    const resolvedIntent = buildMutationResolvedResult({
+      action_intent_id: log.action_intent_id,
+      operation: log.operation,
+      reason: log.reason,
+      target: {
+        relationship_id: log.relationship_id,
+        from_id: log.from_id,
+        to_id: log.to_id,
+        type: log.type
+      },
+      requested: { weight: log.new_weight },
+      baseline: { weight: log.old_weight },
+      absolute: { weight: log.new_weight }
+    });
+
     return {
       kind,
       id: log.id,
@@ -912,7 +975,8 @@ export const getAuditEntryById = async (
         operation: log.operation,
         old_weight: log.old_weight,
         new_weight: log.new_weight,
-        reason: log.reason
+        reason: log.reason,
+        resolved_intent: resolvedIntent
       }
     };
   }
@@ -928,6 +992,20 @@ export const getAuditEntryById = async (
     if (!log) {
       throw new ApiError(404, 'AUDIT_ENTRY_NOT_FOUND', 'Audit entry not found', { kind, id });
     }
+
+    const resolvedIntent = buildMutationResolvedResult({
+      action_intent_id: log.action_intent_id,
+      operation: log.operation,
+      reason: log.reason,
+      target: {
+        agent_id: log.agent_id,
+        agent_name: log.agent.name
+      },
+      requested: { value: log.requested_value },
+      baseline: { value: log.baseline_value },
+      absolute: { value: log.resolved_value }
+    });
+
     return {
       kind,
       id: log.id,
@@ -946,7 +1024,8 @@ export const getAuditEntryById = async (
         requested_value: log.requested_value,
         baseline_value: log.baseline_value,
         resolved_value: log.resolved_value,
-        reason: log.reason
+        reason: log.reason,
+        resolved_intent: resolvedIntent
       }
     };
   }

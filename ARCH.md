@@ -1,7 +1,7 @@
 # Yidhras Architecture / 架构文档
 
 Version: v0.5.2-draft
-Last Updated / 最后更新: 2026-03-28
+Last Updated / 最后更新: 2026-03-30
 
 ## 1) Project Positioning / 项目定位
 
@@ -190,6 +190,7 @@ The formal engineering route is no longer “temporary feature probing”. The c
   - backend now also exposes a minimal unified audit feed that merges workflow, post, relationship-adjustment, SNR-adjustment, and event records into one time-ordered read model, with first-pass `from_tick` / `to_tick` / `job_id` / `inference_id` / `agent_id` / `action_intent_id` filters and cursor-based pagination
   - backend now also exposes a single-entry audit detail read path (`GET /api/audit/entries/:kind/:id`) over the same unified audit model
   - workflow audit detail now also aggregates direct related records produced by the same `ActionIntent` (posts / relationship adjustments / SNR adjustments / events)
+  - workflow audit detail now also aggregates replay lineage detail, including parent/child workflow summaries enriched with workflow-state / intent / provenance fields for operator-facing views
 - Remaining Phase D work:
   - audit/replay tooling beyond raw record reads
   - richer replay lineage / orchestration beyond the current `DecisionJob -> replay job` baseline with controlled overrides

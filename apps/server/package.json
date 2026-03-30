@@ -18,6 +18,7 @@
     "test:adjust-relationship": "tsx src/e2e/adjust_relationship.ts",
     "test:adjust-snr": "tsx src/e2e/adjust_snr.ts",
     "test:audit-feed": "tsx src/e2e/audit_feed.ts",
+    "test:audit-workflow-lineage": "tsx src/e2e/audit_workflow_lineage.ts",
     "test:trigger-event": "tsx src/e2e/trigger_event.ts",
     "test:workflow-locking": "tsx src/e2e/workflow_locking.ts",
     "test:workflow-replay": "tsx src/e2e/workflow_replay.ts",

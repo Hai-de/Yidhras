@@ -1,6 +1,7 @@
 import { IdentityPolicyService } from '../../identity/service.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
+import { buildMutationResolvedResult } from './mutation_resolved.js';
 import { createSocialPost } from './social.js';
 
 interface ActionIntentRecord {
@@ -302,6 +303,16 @@ const dispatchAdjustSnrIntent = async (context: AppContext, intent: ActionIntent
       });
     }
 
+    const resolvedResult = buildMutationResolvedResult({
+      action_intent_id: intent.id,
+      operation: payload.operation,
+      reason: payload.reason,
+      target: { agent_id: targetAgentId },
+      requested: { value: payload.target_snr },
+      baseline: { value: targetAgent.snr },
+      absolute: { value: payload.target_snr }
+    });
+
     await tx.agent.update({
       where: {
         id: targetAgentId
@@ -316,10 +327,10 @@ const dispatchAdjustSnrIntent = async (context: AppContext, intent: ActionIntent
       data: {
         action_intent_id: intent.id,
         agent_id: targetAgentId,
-        operation: payload.operation,
-        requested_value: payload.target_snr,
-        baseline_value: targetAgent.snr,
-        resolved_value: payload.target_snr,
+        operation: resolvedResult.intent.operation,
+        requested_value: resolvedResult.intent.requested.value as number,
+        baseline_value: resolvedResult.baseline.value as number,
+        resolved_value: resolvedResult.result.absolute.value as number,
         reason: payload.reason,
         created_at: now
       }
@@ -343,6 +354,19 @@ const dispatchAdjustRelationshipIntent = async (context: AppContext, intent: Act
     }
   });
 
+  const buildRelationshipResolvedResult = (input: {
+    relationship_id: string;
+    baseline_weight: number | null;
+  }) => buildMutationResolvedResult({
+    action_intent_id: intent.id,
+    operation: payload.operation,
+    reason: payload.reason,
+    target: { relationship_id: input.relationship_id, from_id: actorAgentId, to_id: targetAgentId, type: payload.relationship_type },
+    requested: { weight: payload.target_weight },
+    baseline: { weight: input.baseline_weight },
+    absolute: { weight: payload.target_weight }
+  });
+
   if (!existing) {
     if (!payload.create_if_missing) {
       throw new ApiError(500, 'RELATIONSHIP_NOT_FOUND', 'relationship edge does not exist and create_if_missing is false', {
@@ -363,15 +387,17 @@ const dispatchAdjustRelationshipIntent = async (context: AppContext, intent: Act
       }
     });
 
+    const resolvedResult = buildRelationshipResolvedResult({ relationship_id: created.id, baseline_weight: null });
+
     await writeRelationshipAdjustmentLog(context, {
       action_intent_id: intent.id,
       relationship_id: created.id,
       from_id: actorAgentId,
       to_id: targetAgentId,
       type: payload.relationship_type,
-      operation: 'set',
-      old_weight: null,
-      new_weight: payload.target_weight,
+      operation: resolvedResult.intent.operation as 'set',
+      old_weight: resolvedResult.baseline.weight as number | null,
+      new_weight: resolvedResult.result.absolute.weight as number,
       reason: payload.reason,
       created_at: now
     });
@@ -392,15 +418,17 @@ const dispatchAdjustRelationshipIntent = async (context: AppContext, intent: Act
     }
   });
 
+  const resolvedResult = buildRelationshipResolvedResult({ relationship_id: existing.id, baseline_weight: existing.weight });
+
   await writeRelationshipAdjustmentLog(context, {
     action_intent_id: intent.id,
     relationship_id: existing.id,
     from_id: actorAgentId,
     to_id: targetAgentId,
     type: payload.relationship_type,
-    operation: 'set',
-    old_weight: existing.weight,
-    new_weight: payload.target_weight,
+    operation: resolvedResult.intent.operation as 'set',
+    old_weight: resolvedResult.baseline.weight as number | null,
+    new_weight: resolvedResult.result.absolute.weight as number,
     reason: payload.reason,
     created_at: now
   });

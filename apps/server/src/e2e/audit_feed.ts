@@ -286,10 +286,16 @@ const main = async () => {
       return isRecord(entry) && isRecord(entry.refs);
     };
 
-    const postEntry = entries.find(entry => hasSummary(entry) && entry.kind === 'post' && entry.summary.includes(messageContent));
+    const postOnlyRes = await requestJson(server.baseUrl, '/api/audit/feed?limit=20&kinds=post&agent_id=agent-001');
+    assert(postOnlyRes.status === 200, 'post-only audit feed should return 200');
+    assert(isRecord(postOnlyRes.body), 'post-only audit feed response should be object');
+    assert(Array.isArray(postOnlyRes.body.entries), 'post-only audit feed entries should be array');
+    const postEntries = postOnlyRes.body.entries as unknown[];
+
+    const postEntry = postEntries.find(entry => hasSummary(entry) && entry.kind === 'post' && entry.summary.includes(messageContent));
     assert(isRecord(postEntry), 'audit feed should include created social post entry');
 
-    const workflowPostEntry = entries.find(
+    const workflowPostEntry = postEntries.find(
       entry => hasSummary(entry) && entry.kind === 'post' && entry.summary.includes(workflowPostContent)
     );
     assert(isRecord(workflowPostEntry), 'audit feed should include workflow-dispatched social post entry');
@@ -451,6 +457,14 @@ const main = async () => {
     assert(Array.isArray(workflowDetailRes.body.data.related_records.posts), 'workflow audit detail should expose related post records');
     assert(Array.isArray(workflowDetailRes.body.data.related_records.events), 'workflow audit detail should expose related event records');
     assert(Array.isArray(workflowDetailRes.body.data.related_records.relationship_adjustments), 'workflow audit detail should expose related relationship adjustments');
+    assert(isRecord(workflowDetailRes.body.data.lineage_detail), 'workflow audit detail should expose lineage_detail');
+    assert('parent_workflow' in workflowDetailRes.body.data.lineage_detail, 'workflow audit detail lineage_detail should expose parent_workflow');
+    assert(Array.isArray(workflowDetailRes.body.data.lineage_detail.child_workflows), 'workflow audit detail lineage_detail should expose child_workflows');
+    if (workflowDetailRes.body.data.lineage_detail.parent_workflow !== null) {
+      assert(isRecord(workflowDetailRes.body.data.lineage_detail.parent_workflow), 'workflow audit detail parent_workflow should be object when present');
+      assert('workflow_state' in workflowDetailRes.body.data.lineage_detail.parent_workflow, 'workflow audit detail parent_workflow should expose workflow_state');
+      assert('intent_type' in workflowDetailRes.body.data.lineage_detail.parent_workflow, 'workflow audit detail parent_workflow should expose intent_type');
+    }
 
     const postDetailRes = await requestJson(server.baseUrl, `/api/audit/entries/post/${workflowPostEntry.id as string}`);
     assert(postDetailRes.status === 200, 'post audit detail should return 200');
@@ -465,6 +479,11 @@ const main = async () => {
     assert(relationshipDetailRes.body.kind === 'relationship_adjustment', 'relationship audit detail kind should match');
     assert(isRecord(relationshipDetailRes.body.data), 'relationship audit detail data should be object');
     assert(relationshipDetailRes.body.data.type === 'friend', 'relationship audit detail should preserve relationship type');
+    assert(isRecord(relationshipDetailRes.body.data.resolved_intent), 'relationship audit detail should expose resolved_intent');
+    assert(isRecord(relationshipDetailRes.body.data.resolved_intent.intent), 'relationship audit detail resolved_intent.intent should be object');
+    assert(isRecord(relationshipDetailRes.body.data.resolved_intent.result), 'relationship audit detail resolved_intent.result should be object');
+    assert(isRecord(relationshipDetailRes.body.data.resolved_intent.result.absolute), 'relationship audit detail resolved_intent.result.absolute should be object');
+    assert(relationshipDetailRes.body.data.resolved_intent.result.absolute.weight === 0.7, 'relationship audit detail resolved_intent should preserve absolute weight');
 
     const snrDetailRes = await requestJson(server.baseUrl, `/api/audit/entries/snr_adjustment/${snrEntry.id as string}`);
     assert(snrDetailRes.status === 200, 'snr audit detail should return 200');
@@ -472,6 +491,11 @@ const main = async () => {
     assert(snrDetailRes.body.kind === 'snr_adjustment', 'snr audit detail kind should match');
     assert(isRecord(snrDetailRes.body.data), 'snr audit detail data should be object');
     assert(snrDetailRes.body.data.resolved_value === 0.66, 'snr audit detail should preserve resolved_value');
+    assert(isRecord(snrDetailRes.body.data.resolved_intent), 'snr audit detail should expose resolved_intent');
+    assert(isRecord(snrDetailRes.body.data.resolved_intent.intent), 'snr audit detail resolved_intent.intent should be object');
+    assert(isRecord(snrDetailRes.body.data.resolved_intent.result), 'snr audit detail resolved_intent.result should be object');
+    assert(isRecord(snrDetailRes.body.data.resolved_intent.result.absolute), 'snr audit detail resolved_intent.result.absolute should be object');
+    assert(snrDetailRes.body.data.resolved_intent.result.absolute.value === 0.66, 'snr audit detail resolved_intent should preserve absolute value');
 
     const eventDetailRes = await requestJson(server.baseUrl, `/api/audit/entries/event/${eventEntry.id as string}`);
     assert(eventDetailRes.status === 200, 'event audit detail should return 200');

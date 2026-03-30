@@ -54,8 +54,8 @@ Status: In Progress / 进行中
 ### Planned / 规划中
 
 - [ ] Workflow Persistence Phase D: add richer replay orchestration, more durable scheduling/multi-worker safety semantics, and broader runtime workflow progression beyond the current lightweight locking baseline.
-- [~] Audit / Observability: a minimal unified audit feed across workflow records, social posts, relationship adjustments, SNR adjustments, and narrative events is now landed, with first-pass `from_tick` / `to_tick` / `job_id` / `inference_id` / `agent_id` / `action_intent_id` filters, cursor pagination, `post_message -> Post.source_action_intent_id` provenance, single-entry detail reads, and workflow-scoped related-record aggregation; richer operator views and deeper observability correlations remain to be completed.
-- [ ] Mutation Semantics: introduce a Resolved Intent pattern (`intent + baseline + absolute result`) for future delta-capable world actions.
+- [~] Audit / Observability: a minimal unified audit feed across workflow records, social posts, relationship adjustments, SNR adjustments, and narrative events is now landed, with first-pass `from_tick` / `to_tick` / `job_id` / `inference_id` / `agent_id` / `action_intent_id` filters, cursor pagination, `post_message -> Post.source_action_intent_id` provenance, single-entry detail reads, workflow-scoped related-record aggregation, and replay-lineage detail; richer operator views and deeper observability correlations remain to be completed.
+- [~] Mutation Semantics: initial Resolved Intent detail shape is now landed for `relationship_adjustment` and `snr_adjustment` audit details (`intent + baseline + result`), and the current service layer now reuses a shared builder for those detail shapes; broader write-path normalization and future delta-capable world actions remain to be completed.
 - [ ] Memory Core: add real long-term retrieval/storage and stronger summarization/policy-aware trimming strategies on top of the current baseline.
 - [ ] Action Dispatcher / L2: extend beyond `adjust_relationship` + `adjust_snr` with additional constrained world mutation actions and local-variable primitives.
 - [ ] Local Variable Actions: support actor-scoped and relationship-scoped variable mutations that can later affect graph rendering and frontend overlays.
@@ -85,4 +85,4 @@ Status: Planned / 规划中
 - Mark each section with `Currently Implemented`, `In Progress`, or `Planned` where relevant.
 - Put lint debt and warnings only in `记录.md`.
 
-Last Updated / 最后更新: 2026-03-28
+Last Updated / 最后更新: 2026-03-30

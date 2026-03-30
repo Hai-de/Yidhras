@@ -57,10 +57,12 @@
 - `POST /api/inference/jobs` now enqueues `pending` work instead of returning an immediately executed result.
 - `POST /api/inference/run` remains the immediate execution-oriented debug path, while `POST /api/inference/jobs` is the queue-oriented formal workflow entry.
 - A first-pass Action Dispatcher is now wired into the loop.
-- Current dispatcher scope:
-  - consumes `ActionIntent(intent_type=post_message)`
-  - writes to L1 social posts
-  - updates intent status to `dispatching/completed/failed/dropped`
+- Current dispatcher scope now includes:
+  - `post_message` → L1 social posts
+  - `adjust_relationship` → relationship mutation + audit log
+  - `adjust_snr` → node SNR mutation + audit log
+  - `trigger_event` → append-only event creation
+  - all of the above now run through persisted `ActionIntent` dispatch state (`pending/dispatching/completed/failed/dropped`)
 - Minimal L4 semantics are now attached to `ActionIntent`:
   - `transmission_delay_ticks`
   - `transmission_policy`
@@ -80,7 +82,7 @@
   - `DecisionJob.last_error_stage`
   - `ActionIntent.dispatch_error_code`
   - `ActionIntent.dispatch_error_message`
-- The current jobs baseline supports duplicate-submit replay by `idempotency_key`, bounded failed-job retry, loop-driven execution, workflow aggregate reads, and structured failure-stage observation, but still does not include full replay orchestration or dispatcher-driven world action consumption beyond the current `post_message` path.
+- The current jobs baseline supports duplicate-submit replay by `idempotency_key`, bounded failed-job retry, loop-driven execution, workflow aggregate reads, structured failure-stage observation, and a minimal unified audit baseline (`/api/audit/feed` + `/api/audit/entries/:kind/:id`), but still does not include full replay orchestration or broader world-action coverage beyond the current shipped constrained action set.
 
 ## Current World-Action Coverage (2026-03-30)
 - Dispatcher-supported world actions now include:
@@ -88,6 +90,9 @@
   - `adjust_relationship`
   - `adjust_snr`
   - `trigger_event`
+- Unified audit read APIs are also now available for operator/debug use:
+  - `GET /api/audit/feed`
+  - `GET /api/audit/entries/:kind/:id`
 
 ## Memory Core v1 Status (2026-03-27)
 - Memory Core v1 baseline is now partially landed in backend:
@@ -129,7 +134,7 @@
 仍在推进：
 - richer replay orchestration / audit tooling
 - replay lineage / orchestration 基线已进入实现阶段，当前目标是从已有 job 派生新的 replay workflow
-- broader world-action mapping（当前 dispatcher 仅完整消费 `post_message`）
+- broader world-action mapping（当前已覆盖 `post_message` / `adjust_relationship` / `adjust_snr` / `trigger_event`，但仍未形成更完整 action taxonomy）
 - durable scheduling / multi-worker safety（当前已具备最小轻量 job locking / claim baseline）
 - long-term memory 与更强的 summarization / trimming 策略
 

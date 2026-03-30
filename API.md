@@ -95,6 +95,10 @@
     - `kind` 当前支持: `workflow | post | relationship_adjustment | snr_adjustment | event`
     - 返回: `AuditViewEntry`
     - workflow detail 当前还会附带 `data.related_counts` 与 `data.related_records`，聚合同一 `ActionIntent` 直接产出的 posts / events / relationship adjustments / snr adjustments。
+    - workflow detail 当前还会附带 `data.lineage_detail`，聚合 replay parent/child workflow summaries；其 summary 字段已包含 `workflow_state`、`intent_type`、`action_intent_id`、`inference_id` 等可直接用于 operator/UI 的字段。
+    - `relationship_adjustment` detail 当前还会附带 `data.resolved_intent = { intent, baseline, result }`。
+    - `snr_adjustment` detail 当前还会附带 `data.resolved_intent = { intent, baseline, result }`。
+    - 当前这两类 mutation detail 已在服务层复用统一的 Resolved Intent builder，以减少后续 delta-capable action 扩展时的 detail 结构漂移。
 
 ## 5. 叙事层 (L3: Narrative Layer)
 - **GET `/api/narrative/timeline`**
@@ -363,6 +367,7 @@
 - `SNR_TARGET_NOT_FOUND`: `adjust_snr` 目标 Agent 不存在。
 - `SNR_LOG_QUERY_INVALID`: SNR 审计日志查询参数非法。
 - `AUDIT_VIEW_QUERY_INVALID`: unified audit feed 查询参数非法。
+- `AUDIT_ENTRY_NOT_FOUND`: unified audit entry 不存在。
 
 ---
-*更新时间: 2026-03-28*
+*更新时间: 2026-03-30*
