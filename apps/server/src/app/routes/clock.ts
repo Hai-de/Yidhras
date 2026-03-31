@@ -1,8 +1,13 @@
+import {
+  clockControlRequestSchema,
+  runtimeSpeedOverrideRequestSchema
+} from '@yidhras/contracts';
 import type { Express } from 'express';
 
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import { jsonOk } from '../http/json.js';
+import { parseBody } from '../http/zod.js';
 import {
   clearRuntimeSpeedOverride,
   overrideRuntimeSpeed,
@@ -23,10 +28,10 @@ export const registerClockRoutes = (
 ): void => {
   app.post('/api/runtime/speed', (req, res) => {
     context.assertRuntimeReady('runtime speed control');
-    const { action, step_ticks } = req.body as { action?: unknown; step_ticks?: unknown };
+    const body = parseBody(runtimeSpeedOverrideRequestSchema, req.body, 'RUNTIME_SPEED_INVALID');
 
-    if (action === 'override') {
-      const parsed = deps.parsePositiveStepTicks(step_ticks);
+    if (body.action === 'override') {
+      const parsed = deps.parsePositiveStepTicks(body.step_ticks);
       const runtimeSpeed = overrideRuntimeSpeed(context, parsed);
       jsonOk(res, {
         runtime_speed: deps.toJsonSafe(runtimeSpeed)
@@ -34,7 +39,7 @@ export const registerClockRoutes = (
       return;
     }
 
-    if (action === 'clear') {
+    if (body.action === 'clear') {
       const runtimeSpeed = clearRuntimeSpeedOverride(context);
       jsonOk(res, {
         runtime_speed: deps.toJsonSafe(runtimeSpeed)
@@ -69,9 +74,9 @@ export const registerClockRoutes = (
 
   app.post('/api/clock/control', (req, res) => {
     context.assertRuntimeReady('clock control');
-    const { action } = req.body as { action?: unknown };
+    const body = parseBody(clockControlRequestSchema, req.body, 'CLOCK_ACTION_INVALID');
 
-    if (action === 'pause') {
+    if (body.action === 'pause') {
       jsonOk(res, {
         acknowledged: true,
         ...pauseRuntime(context)
@@ -79,7 +84,7 @@ export const registerClockRoutes = (
       return;
     }
 
-    if (action === 'resume') {
+    if (body.action === 'resume') {
       jsonOk(res, {
         acknowledged: true,
         ...resumeRuntime(context)

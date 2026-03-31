@@ -2,22 +2,17 @@
 echo Starting Yidhras Development Services...
 
 REM 启动前：统一准备后端运行前置条件（数据库迁移 + world pack 模板）
-npm run prepare:runtime --prefix apps/server
+pnpm --filter yidhras-server prepare:runtime
+if errorlevel 1 exit /b 1
 
 REM 启动后端
-cd apps\server
-start /B npm run dev
+start /B pnpm --filter yidhras-server dev
 echo Server started
 
-REM 返回根目录
-cd ..\..
-
 REM 启动前端
-cd apps\web
-start /B npm run dev
+start /B pnpm --filter web dev
 echo Web started
 
-cd ..\..
 echo.
 echo Both services are running!
 echo Server: http://localhost:3001

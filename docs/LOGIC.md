@@ -41,6 +41,15 @@ This file focuses on business rules rather than unstable low-level algorithm det
   - token-budget trimming over lower-priority fragments
 - Product-facing backend success responses now follow the unified envelope rule `{ success: true, data, meta? }`.
 
+### Contract / Validation Boundary Note / 契约与校验边界说明
+
+- Shared contracts now exist in `packages/contracts` and currently cover transport-boundary request/query/params schemas for the shipped route batches.
+- 当前已在 `packages/contracts` 中建立共享 contract，并覆盖当前已交付路由批次的 transport-boundary request/query/params schema。
+- Zod-driven validation currently serves boundary shape and basic format checks; it does not replace business rules.
+- 当前基于 Zod 的校验用于边界 shape 与基础格式检查，不替代业务规则本身。
+- Business rules such as permission checks, state transitions, replay semantics, workflow lifecycle, and mutation safety remain in service/domain logic.
+- 权限判断、状态流转、replay 语义、workflow 生命周期与 mutation 安全约束等业务规则仍保留在 service/domain 逻辑中。
+
 ### Planned / 规划中
 
 - Full perception-decision-action loop for autonomous agents.
@@ -100,6 +109,13 @@ This file focuses on business rules rather than unstable low-level algorithm det
 - Current derivation can mark an intent as `blocked` / `fragile` / `best_effort` / `reliable` before dispatch.
 - Current derived reasons include `policy_blocked`, `visibility_denied`, `low_signal_quality`, and `probabilistic_drop`.
 - Overview summary now exposes the current runtime tick and serialized calendar snapshot as a stable aggregation read model.
+
+### BigInt Transport Rule / BigInt 传输规则
+
+- BigInt must remain string-based over HTTP payloads.
+- BigInt 在 HTTP payload 中必须保持 string 传输。
+- Frontend consumers should keep tick-like values as strings by default and only convert with `BigInt(...)` when actual comparison or computation is needed.
+- 前端默认应保留 tick 类字段为 string，仅在确实需要比较或计算时才显式 `BigInt(...)`。
 
 ### Planned / 规划中
 

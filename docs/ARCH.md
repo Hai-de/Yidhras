@@ -18,8 +18,10 @@ The formal engineering route is no longer “temporary feature probing”. The c
 
 - `apps/server`: TypeScript + Express + Prisma + SQLite backend.
 - `apps/web`: Nuxt 4 + Vue 3 + Pinia frontend.
+- `packages/contracts`: shared contract schemas/types for transport boundaries.
 - `data/world_packs`: YAML-driven world configuration packs.
-- Root docs: `README.md`, `API.md`, `LOGIC.md`, `TODO.md`, `AGENTS.md`.
+- Root entry docs: `README.md`, `AGENTS.md`, `TODO.md`.
+- Detailed docs: `docs/API.md`, `docs/ARCH.md`, `docs/LOGIC.md`.
 
 ## 3) Layered Model / 四层模型
 
@@ -80,6 +82,51 @@ The formal engineering route is no longer “temporary feature probing”. The c
 - Agent detail/operator details now have a dedicated aggregation route `GET /api/agent/:id/overview`, implemented as a lightweight read model over agent profile + bindings + relationships + audit/workflow/SNR/memory summaries.
 - Social feed now has all three planned advanced-filter batches on `GET /api/social/feed`, covering `author_id/agent_id/circle_id/source_action_intent_id/from_tick/to_tick/keyword/signal_min/signal_max/cursor/limit/sort` without introducing a separate operator-only feed endpoint yet.
 - Graph V2 now has an initial projection route `GET /api/graph/view`, currently shipped as Batch 4 minimal read-only skeleton over `Agent + AtmosphereNode + Relationship + ownership + relay/container projection`, with basic filtering (`kinds/root/depth/include_unresolved/include_inactive/search`) and summary fields.
+
+### 4.1.1 Contract / Validation Baseline / 契约与校验基线
+
+- `packages/contracts` is the current shared contract package for transport-boundary schemas and types.
+- `apps/server/src/app/http/zod.ts` provides the server-side request-boundary parsing helpers.
+- Current delivered route adoption batches:
+  - Batch 1: `system / clock / social`
+  - Batch 2: `identity / policy`
+  - Batch 3: `inference / audit / graph`
+
+#### Principle A / 原则 A
+- **Zod schema is a transport / contract asset, not the business-rule implementation.**
+- **Zod schema 是 transport / contract 层资产，不直接等于业务规则实现。**
+
+This means:
+- Zod validates request/response boundary shape, basic formats, and shared DTO contracts.
+- Business rules, permissions, state transitions, and persistence-specific checks stay in service/domain layers.
+
+这意味着：
+- Zod 负责请求/响应边界 shape、基础格式与共享 DTO 契约。
+- 业务规则、权限、状态流转与持久化相关校验仍留在 service/domain 层。
+
+#### Principle B / 原则 B
+- **Shared contracts serve API-boundary stability first; they do not aim to cover all internal models in the first round.**
+- **共享 contract 优先服务 API 边界稳定，不追求第一轮覆盖全部内部模型。**
+
+This means:
+- `packages/contracts` should prioritize boundary-facing request/query/params schemas, envelope types, and shared scalar schemas.
+- Internal workflow/memory/domain objects should not be indiscriminately moved into the shared contract package.
+
+这意味着：
+- `packages/contracts` 优先承载边界层 request/query/params schema、envelope types 与共享 scalar schema。
+- 内部 workflow/memory/domain 对象不应在第一轮无差别塞入共享 contract 包。
+
+#### Principle C / 原则 C
+- **BigInt over HTTP must remain string-based; clients convert explicitly only when needed.**
+- **BigInt over HTTP 必须继续以 string 传输；前端仅在需要时显式转换。**
+
+This means:
+- API contracts must not expose raw `bigint` in JSON payloads.
+- Frontend code should keep tick-like values as strings by default and only call `BigInt(...)` when actual numeric comparison or computation is required.
+
+这意味着：
+- API 契约中不应在 JSON payload 里暴露原生 `bigint`。
+- 前端默认保留 tick 类字段为 string，仅在需要数值比较/计算时显式 `BigInt(...)`。
 
 ### 4.2 Simulation Core / 模拟核心
 
@@ -279,4 +326,4 @@ To avoid ambiguity for agentic contributors:
 
 - This document does not define immutable long-term architecture contracts.
 - It intentionally avoids over-specifying low-level algorithms that may continue evolving on top of the current Phase B/Phase D baselines.
-- Detailed behavioral rules belong in `LOGIC.md`, milestone sequencing belongs in `TODO.md`, and historical debt/verification belongs in `记录.md`.
+- Detailed behavioral rules belong in `docs/LOGIC.md`, milestone sequencing belongs in `TODO.md`, and historical debt/verification belongs in `记录.md`.

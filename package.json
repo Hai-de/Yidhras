@@ -1,0 +1,15 @@
+{
+  "name": "yidhras-workspace",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "echo \"Run pnpm dev:server and pnpm dev:web in separate terminals, or use ./start-dev.sh / start-dev.bat\"",
+    "dev:server": "pnpm --filter yidhras-server dev",
+    "dev:web": "pnpm --filter web dev",
+    "build": "pnpm --filter yidhras-server build && pnpm --filter web build",
+    "lint": "pnpm --filter yidhras-server lint && pnpm --filter web lint",
+    "typecheck": "pnpm --filter yidhras-server typecheck && pnpm --filter web typecheck",
+    "prepare:runtime": "pnpm --filter yidhras-server prepare:runtime",
+    "smoke:server": "pnpm --filter yidhras-server smoke"
+  }
+}

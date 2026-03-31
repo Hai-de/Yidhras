@@ -1,11 +1,7 @@
+import type { TimeFormatted } from '@yidhras/contracts'
 import { defineStore } from 'pinia'
 
-export interface TimeFormatted {
-  calendar_id: string
-  calendar_name: string
-  display: string
-  units: Record<string, string | number>
-}
+import { requestApiData } from '../utils/api'
 
 interface ClockResponse {
   absolute_ticks: string
@@ -20,7 +16,7 @@ export const useClockStore = defineStore('clock', {
   }),
   getters: {
     formattedTicks: (state) => state.absoluteTicks.toString().padStart(9, '0'),
-    
+
     primaryCalendarTime: (state) => {
       return state.calendars[0]?.display || 'Syncing...'
     }
@@ -28,8 +24,8 @@ export const useClockStore = defineStore('clock', {
   actions: {
     async fetchCurrentTime() {
       try {
-        const data = await $fetch<ClockResponse>('http://localhost:3001/api/clock')
-        // 后端返回的是字符串 BigInt，前端转回 BigInt
+        const data = await requestApiData<ClockResponse>('/api/clock')
+        // 后端返回的是字符串 BigInt，前端仅在需要时显式转回 BigInt
         this.absoluteTicks = BigInt(data.absolute_ticks)
         this.calendars = data.calendars
       } catch (err) {

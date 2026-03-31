@@ -8,8 +8,13 @@ This file is intentionally specific to the current repo layout and conventions.
 - Monorepo-like layout with two Node.js apps:
 - `apps/server`: TypeScript + Express + Prisma + SQLite backend.
 - `apps/web`: Nuxt 4 + Vue 3 + Pinia frontend.
-- Shared domain/data docs at repo root: `README.md`, `ARCH.md`, `API.md`, `LOGIC.md`.
+- Shared domain/data docs at repo root: `README.md`, `AGENTS.md`, `TODO.md`, `记录.md`.
+- Detailed architecture/API/logic docs live under `docs/`:
+  - `docs/ARCH.md`
+  - `docs/API.md`
+  - `docs/LOGIC.md`
 - World-pack data under `data/world_packs` and loaded by server runtime.
+- Package management is now handled via **pnpm workspace** at repo root.
 
 ## 2) Rule Files Check (Cursor/Copilot)
 
@@ -21,7 +26,7 @@ This file is intentionally specific to the current repo layout and conventions.
 ## 3) Tooling and Runtime Baseline
 
 - Node.js 18+ expected (Nuxt 4 and modern TS/ESM usage).
-- Package manager: `npm` (lockfiles are `package-lock.json` in each app).
+- Package manager: `pnpm` (workspace root manages lockfile via `pnpm-lock.yaml`).
 - Backend uses Prisma with SQLite (`apps/server/prisma/schema.prisma`).
 - Server TypeScript config is strict (`"strict": true`).
 - Module system in server is `NodeNext` ESM; runtime imports include `.js` extensions.
@@ -29,38 +34,44 @@ This file is intentionally specific to the current repo layout and conventions.
 
 ## 4) Install Commands
 
-- Install backend deps:
-- `npm install --prefix apps/server`
-- Install frontend deps:
-- `npm install --prefix apps/web`
-- Optional full setup from root:
-- `npm install --prefix apps/server && npm install --prefix apps/web`
+- Install all workspace deps:
+- `pnpm install`
+- Install backend deps only (if needed):
+- `pnpm --filter yidhras-server install`
+- Install frontend deps only (if needed):
+- `pnpm --filter web install`
 
 ## 5) Build / Dev / Start Commands
 
 - Backend dev server (watch mode):
-- `npm run dev --prefix apps/server`
+- `pnpm --filter yidhras-server dev`
 - Backend build:
-- `npm run build --prefix apps/server`
+- `pnpm --filter yidhras-server build`
 - Backend production start (after build):
-- `npm run start --prefix apps/server`
+- `pnpm --filter yidhras-server start`
 - Frontend dev server:
-- `npm run dev --prefix apps/web`
+- `pnpm --filter web dev`
 - Frontend build:
-- `npm run build --prefix apps/web`
+- `pnpm --filter web build`
 - Frontend preview (built app):
-- `npm run preview --prefix apps/web`
+- `pnpm --filter web preview`
+- Start both services:
+- `./start-dev.sh` or `start-dev.bat`
 
 ## 5.1) Quality Commands (Lint / Typecheck)
 
 - Backend lint:
-- `npm run lint --prefix apps/server`
+- `pnpm --filter yidhras-server lint`
 - Backend typecheck:
-- `npm run typecheck --prefix apps/server`
+- `pnpm --filter yidhras-server typecheck`
 - Frontend lint:
-- `npm run lint --prefix apps/web`
+- `pnpm --filter web lint`
 - Frontend typecheck:
-- `npm run typecheck --prefix apps/web`
+- `pnpm --filter web typecheck`
+- Workspace lint:
+- `pnpm lint`
+- Workspace typecheck:
+- `pnpm typecheck`
 - `lint:fix` is intentionally not provided in this stage.
 
 ## 6) Lint / Format Status
@@ -87,33 +98,33 @@ This file is intentionally specific to the current repo layout and conventions.
 - No formal test runner (Jest/Vitest) is configured yet.
 - Existing "test" files in `apps/server/src/**/test*.ts` are executable TS scripts.
 - Current backend verification scripts include:
-- `npm run smoke --prefix apps/server`
-- `npm run test:workflow-locking --prefix apps/server`
-- `npm run test:workflow-replay --prefix apps/server`
-- `npm run test:action-intent-locking --prefix apps/server`
-- `npm run test:adjust-relationship --prefix apps/server`
-- `npm run test:adjust-snr --prefix apps/server`
-- `npm run test:trigger-event --prefix apps/server`
-- `npm run test:audit-feed --prefix apps/server`
-- `npm run test:audit-workflow-lineage --prefix apps/server`
+- `pnpm --filter yidhras-server smoke`
+- `pnpm --filter yidhras-server test:workflow-locking`
+- `pnpm --filter yidhras-server test:workflow-replay`
+- `pnpm --filter yidhras-server test:action-intent-locking`
+- `pnpm --filter yidhras-server test:adjust-relationship`
+- `pnpm --filter yidhras-server test:adjust-snr`
+- `pnpm --filter yidhras-server test:trigger-event`
+- `pnpm --filter yidhras-server test:audit-feed`
+- `pnpm --filter yidhras-server test:audit-workflow-lineage`
 - Legacy executable TS scripts still exist in `apps/server/src/**/test*.ts` and can be run manually with `tsx` when needed.
 
 ## 8) Single-Test Execution (Important)
 
 - Since there is no centralized test framework, "single test" means running one script file.
 - Preferred pattern (from repo root):
-- `npm --prefix apps/server exec tsx src/clock/test.ts`
+- `pnpm --filter yidhras-server exec tsx src/clock/test.ts`
 - Equivalent pattern (inside `apps/server`):
-- `npx tsx src/clock/test.ts`
+- `pnpm exec tsx src/clock/test.ts`
 - For any new test file, keep the same approach:
-- `npm --prefix apps/server exec tsx <path-to-test-file>.ts`
+- `pnpm --filter yidhras-server exec tsx <path-to-test-file>.ts`
 
 ## 9) Database and Prisma Commands
 
 - Generate Prisma client:
-- `npm --prefix apps/server exec prisma generate`
+- `pnpm --filter yidhras-server exec prisma generate`
 - Create/apply local migration:
-- `npm --prefix apps/server exec prisma migrate dev --name <migration_name>`
+- `pnpm --filter yidhras-server exec prisma migrate dev --name <migration_name>`
 - Schema is in `apps/server/prisma/schema.prisma`.
 - DB URL comes from `apps/server/.env` (`DATABASE_URL`).
 - Never commit secrets from `.env`.
@@ -137,6 +148,8 @@ This file is intentionally specific to the current repo layout and conventions.
 - Keep runtime gating centralized through `AppContext.assertRuntimeReady(feature)` so world-pack-dependent endpoints continue to return `503/WORLD_PACK_NOT_READY` with stable details.
 - Inference integration is intentionally reserved at `apps/server/src/app/routes/inference.ts` and `apps/server/src/inference/service.ts`; do not bypass these locations with ad-hoc route-level prompt logic.
 - Audit / observability integration is now also active through `apps/server/src/app/routes/audit.ts` and `apps/server/src/app/services/audit.ts`; prefer extending the unified audit model instead of adding one-off debug endpoints.
+- Shared transport-boundary contracts now live in `packages/contracts`.
+- Architectural/detail docs now live under `docs/`, while root docs are entry-point oriented.
 
 ### 10.1) Current Strategic Direction for Agents / 当前 Agent 工程方向
 
@@ -162,6 +175,9 @@ This file is intentionally specific to the current repo layout and conventions.
 - Treat the remaining work as expansion of the current Phase D baseline, not as a future-from-scratch rewrite.
 - When implementing inference-related code, do **not** collapse decision generation and action execution into one opaque function.
 - API handlers should remain thin shells; domain assembly belongs in service modules.
+- Zod schemas should stay in the transport/contract boundary; do not move business rules into schemas.
+- Shared contracts should prioritize API-boundary stability, not first-round coverage of every internal domain model.
+- BigInt over HTTP should remain string-based; convert explicitly on the client only when needed.
 
 ## 11) Code Style: General
 
@@ -222,14 +238,14 @@ This file is intentionally specific to the current repo layout and conventions.
 - If adding scripts (lint/test), also update this file and `README.md`.
 - Prefer validating changed paths locally (build or targeted script run) before handoff.
 - If introducing Phase B inference modules, ensure they are D-ready by design rather than temporary glue code.
-- If introducing Phase D persistence, update `ARCH.md`, `API.md`, `LOGIC.md`, `TODO.md`, and `记录.md` together.
+- If introducing Phase D persistence, update `docs/ARCH.md`, `docs/API.md`, `docs/LOGIC.md`, `TODO.md`, and `记录.md` together.
 
 ## 18) Quick Command Cheat Sheet
 
 - Start both services (Linux/macOS): `./start-dev.sh`
 - Start both services (Windows): `start-dev.bat`
-- Backend build: `npm run build --prefix apps/server`
-- Frontend build: `npm run build --prefix apps/web`
-- Backend lint: `npm run lint --prefix apps/server`
-- Frontend lint: `npm run lint --prefix apps/web`
-- Run one backend test script: `npm --prefix apps/server exec tsx src/clock/test.ts`
+- Backend build: `pnpm --filter yidhras-server build`
+- Frontend build: `pnpm --filter web build`
+- Backend lint: `pnpm --filter yidhras-server lint`
+- Frontend lint: `pnpm --filter web lint`
+- Run one backend test script: `pnpm --filter yidhras-server exec tsx src/clock/test.ts`

@@ -13,6 +13,19 @@
 - M2 已进入可运行基线阶段：Phase D 最小持久化工作流、loop-driven decision runner、first-pass action dispatcher、最小 L4 传输语义、Memory Core v1 基线均已落地，但 richer replay / broader world-action mapping / long-term memory 仍在推进。
 - 当前正式路线已从“先做临时推理接口”升级为：**直接按可演进到持久化工作流的正式工程路线推进**。
 
+## 文档索引
+
+### 仓库入口文档
+- `README.md`：项目总览与快速开始
+- `AGENTS.md`：仓库协作与工程约定
+- `TODO.md`：里程碑状态与阶段目标
+- `记录.md`：验证快照与历史工程记录
+
+### 详细文档
+- `docs/API.md`：接口契约与错误码
+- `docs/ARCH.md`：架构边界、运行结构与 contract/validation 原则
+- `docs/LOGIC.md`：业务逻辑说明、BigInt transport 规则与交付边界
+
 ## Backend Refactor Status (2026-03-23)
 - `apps/server/src/index.ts` now acts as a composition root for startup, runtime bootstrap, and route assembly.
 - Base Express wiring lives in `apps/server/src/app/create_app.ts`, which registers `identityInjector()` and `requestIdMiddleware()` before route modules.
@@ -149,16 +162,15 @@
 
 ### 1. 环境准备
 - Node.js 18+
-- npm 或 pnpm
+- pnpm 10+
 
 ### 2. 初始化项目
 ```bash
-# 安装依赖
-npm install --prefix apps/server
-npm install --prefix apps/web
+# 安装 workspace 依赖
+pnpm install
 
 # 统一准备后端运行前置条件（数据库迁移 + world pack 模板 + 身份策略初始化）
-npm run prepare:runtime --prefix apps/server
+pnpm --filter yidhras-server prepare:runtime
 ```
 
 ### 3. 运行项目
@@ -176,20 +188,20 @@ chmod +x start-dev.sh
 ```
 
 ## 开发指令
-- **Server:** `npm run dev` (位于 apps/server)
-- **Web:** `npm run dev` (位于 apps/web)
-- **Runtime Prepare:** `npm run prepare:runtime --prefix apps/server`
-- **World Pack Bootstrap:** `npm run init:world-pack --prefix apps/server`
-- **Seed Identity & Policy:** `npm run seed:identity --prefix apps/server`
+- **Server:** `pnpm --filter yidhras-server dev`
+- **Web:** `pnpm --filter web dev`
+- **Runtime Prepare:** `pnpm --filter yidhras-server prepare:runtime`
+- **World Pack Bootstrap:** `pnpm --filter yidhras-server init:world-pack`
+- **Seed Identity & Policy:** `pnpm --filter yidhras-server seed:identity`
 
 ## 冒烟测试（启动流程与关键端点）
-- **启动流程冒烟:** `npm run smoke:startup --prefix apps/server`
-- **关键端点冒烟:** `npm run smoke:endpoints --prefix apps/server`
-- **一键执行全部冒烟:** `npm run smoke --prefix apps/server`
-- **可选端口覆盖:** `SMOKE_PORT=3101 npm run smoke --prefix apps/server`
+- **启动流程冒烟:** `pnpm --filter yidhras-server smoke:startup`
+- **关键端点冒烟:** `pnpm --filter yidhras-server smoke:endpoints`
+- **一键执行全部冒烟:** `pnpm --filter yidhras-server smoke`
+- **可选端口覆盖:** `SMOKE_PORT=3101 pnpm --filter yidhras-server smoke`
 
 ## 启动与验收硬性说明
-- **运行前置条件（硬性）:** 启动服务前需完成数据库迁移和 world pack 初始化，统一通过 `npm run prepare:runtime --prefix apps/server` 执行。
+- **运行前置条件（硬性）:** 启动服务前需完成数据库迁移和 world pack 初始化，统一通过 `pnpm --filter yidhras-server prepare:runtime` 执行。
 - **降级启动策略（硬性）:** 首次拉取项目内容可能为空，`health_level=degraded` 且 `runtime_ready=false` 视为允许启动，不作为冒烟测试失败条件。
 - **关键端点一致性（硬性）:** 依赖 world-pack 的接口在运行时未就绪时统一返回 `503` + `WORLD_PACK_NOT_READY` 错误包络。
 - **统一速度策略（硬性）:** 运行时速度按 `override > world_pack.simulation_time.step_ticks > default(1)` 解析，`/api/status` 通过 `runtime_speed` 字段暴露当前生效值。

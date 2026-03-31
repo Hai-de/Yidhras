@@ -15,6 +15,7 @@
     "@pinia/nuxt": "^0.11.3",
     "@vueuse/core": "^14.2.1",
     "@vueuse/nuxt": "^14.2.1",
+    "@yidhras/contracts": "workspace:*",
     "cytoscape": "^3.33.1",
     "naive-ui": "^2.44.1",
     "nuxt": "^4.4.2",

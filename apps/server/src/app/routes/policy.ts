@@ -1,8 +1,13 @@
+import {
+  createPolicyRequestSchema,
+  evaluatePolicyRequestSchema
+} from '@yidhras/contracts';
 import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { IdentityRequest } from '../../identity/middleware.js';
 import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
+import { parseBody } from '../http/zod.js';
 import { createPolicy, evaluatePolicy } from '../services/policy.js';
 
 export interface PolicyRouteDependencies {
@@ -20,38 +25,11 @@ export const registerPolicyRoutes = (
   app.post(
     '/api/policy',
     deps.asyncHandler(async (req, res) => {
-      const {
-        effect,
-        subject_id,
-        subject_type,
-        resource,
-        action,
-        field,
-        conditions,
-        priority
-      } = req.body as {
-        effect?: string;
-        subject_id?: string;
-        subject_type?: string;
-        resource?: string;
-        action?: string;
-        field?: string;
-        conditions?: unknown;
-        priority?: number;
-      };
+      const body = parseBody(createPolicyRequestSchema, req.body, 'POLICY_INVALID');
 
       const policy = await createPolicy(
         context,
-        {
-          effect,
-          subject_id,
-          subject_type,
-          resource,
-          action,
-          field,
-          conditions,
-          priority
-        },
+        body,
         {
           validatePolicyConditions: deps.validatePolicyConditions
         }
@@ -65,19 +43,9 @@ export const registerPolicyRoutes = (
     '/api/policy/evaluate',
     deps.asyncHandler(async (req, res) => {
       const identityRequest = req as IdentityRequest;
-      const { resource, action, fields, attributes } = req.body as {
-        resource?: string;
-        action?: string;
-        fields?: string[];
-        attributes?: Record<string, unknown>;
-      };
+      const body = parseBody(evaluatePolicyRequestSchema, req.body, 'POLICY_EVAL_INVALID');
 
-      const result = await evaluatePolicy(context, identityRequest.identity, {
-        resource,
-        action,
-        fields,
-        attributes
-      });
+      const result = await evaluatePolicy(context, identityRequest.identity, body);
 
       jsonOk(res, toJsonSafe(result));
     })

@@ -50,6 +50,7 @@ Status: In Progress / 进行中
 - [~] Workflow Persistence Phase D: minimal persisted `InferenceTrace` / `ActionIntent` / `DecisionJob` baseline, async `pending` job queue + loop runner, aggregate workflow read APIs, `POST /api/inference/jobs` replay semantics with `result_source + workflow_snapshot`, failed-job retry API, structured failure-stage persistence, lightweight job locking / claim baseline, and the initial replay lineage / replay-job derivation API are now landed; richer replay orchestration and broader runtime state progression remain to be completed.
 - [~] Memory Core: short-term context adapter, noop long-term store contract, fragment-friendly prompt pipeline, chained prompt processors (`memory-injector` / `policy-filter` / `memory-summary` / `token-budget-trimmer`), and trace-side `memory_selection` / `prompt_processing_trace` observability are now landed; richer long-term retrieval/storage and more advanced policy/summarization/trimming strategies remain to be completed.
 - [~] Action Dispatcher: first-pass `post_message` dispatch is now loop-driven and writes to social posts; minimal L4 transmission delay/drop semantics, lightweight ActionIntent locking / claim baseline, heuristic transmission-policy derivation, the constrained `adjust_relationship` MVP, the constrained `adjust_snr` MVP with `SNRAdjustmentLog` auditability/read API, and the append-only `trigger_event` MVP are landed, while broader world-action mapping remains to be completed.
+- [~] Contract / Validation Baseline: `packages/contracts` pure contract package, shared envelope + BigInt-string schemas, server-side Zod boundary helper, first-batch route adoption (`system/clock/social`), second-batch request-side route adoption (`identity/policy`), and third-batch request-side route adoption (`inference/audit/graph`) are now landed; frontend has started minimal contract/client integration via the clock path, while deeper product-facing client consolidation and broader response-side/runtime contract enforcement remain to be completed.
 
 ### Planned / 规划中
 
@@ -70,6 +71,8 @@ Status: Pending Review / 待讨论
 
 - [ ] Layout is not finalized; UI will be redesigned after team discussion.
 - [ ] 当前前端布局尚未确定，待讨论后再统一重写前端 UI。
+- [~] Frontend contract/client baseline: minimal API envelope consumption and BigInt-string handling are now connected through the clock path; broader shared-contract adoption and unified request utilities across more product-facing views remain to be completed.
+- [ ] Frontend typecheck follow-up: `apps/web/components/L2Graph.vue` still has a Nuxt/Vue/Cytoscape DOM container typing incompatibility; keep it as a frontend-owner follow-up rather than blocking current backend/contract refactor closure.
 
 ## M4 - Content and Data Packs / 内容与世界包
 
@@ -84,5 +87,6 @@ Status: Planned / 规划中
 - Keep this file milestone-oriented and bilingual.
 - Mark each section with `Currently Implemented`, `In Progress`, or `Planned` where relevant.
 - Put lint debt and warnings only in `记录.md`.
+- Detailed architecture/API/logic documentation now lives under `docs/`; keep this file focused on milestone state.
 
 Last Updated / 最后更新: 2026-03-30

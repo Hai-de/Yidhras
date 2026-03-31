@@ -3,52 +3,70 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
 import cytoscape from 'cytoscape'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+
+type GraphNodeDefinition = cytoscape.NodeDefinition
+type GraphEdgeDefinition = cytoscape.EdgeDefinition
+type CytoscapeContainer = cytoscape.CytoscapeOptions['container']
 
 interface GraphData {
-  nodes: any[]
-  edges: any[]
+  nodes: GraphNodeDefinition[]
+  edges: GraphEdgeDefinition[]
 }
 
 const props = defineProps<{
   data: GraphData
 }>()
 
-const cyContainer = ref<HTMLElement | null>(null)
+const cyContainer = ref<CytoscapeContainer>(null)
 let cy: cytoscape.Core | null = null
+
+const resolveNodeSize = (ele: cytoscape.NodeSingular): number => {
+  const snr = ele.data('snr')
+  return 10 + (typeof snr === 'number' ? snr : 0) * 30
+}
+
+const resolveNodeBorderColor = (ele: cytoscape.NodeSingular): string => {
+  return ele.data('is_pinned') ? '#fbbf24' : '#312e81'
+}
+
+const toElementsDefinition = (data: GraphData): cytoscape.ElementsDefinition => ({
+  nodes: data.nodes,
+  edges: data.edges
+})
 
 const initCytoscape = () => {
   if (!cyContainer.value) return
 
   cy = cytoscape({
     container: cyContainer.value,
-    elements: props.data,
+    elements: toElementsDefinition(props.data),
     style: [
       {
         selector: 'node',
         style: {
           'background-color': '#4f46e5',
-          'label': 'data(label)',
-          'color': '#cbd5e1',
+          label: 'data(label)',
+          color: '#cbd5e1',
           'font-size': '10px',
-          'width': (ele: any) => 10 + (ele.data('snr') || 0) * 30,
-          'height': (ele: any) => 10 + (ele.data('snr') || 0) * 30,
+          width: resolveNodeSize,
+          height: resolveNodeSize,
           'text-valign': 'bottom',
           'text-margin-y': 5,
           'border-width': 2,
-          'border-color': (ele: any) => ele.data('is_pinned') ? '#fbbf24' : '#312e81'
+          'border-color': resolveNodeBorderColor
         }
       },
       {
         selector: 'edge',
         style: {
-          'width': 'data(weight)',
+          width: 'data(weight)',
           'line-color': '#334155',
           'target-arrow-color': '#334155',
           'target-arrow-shape': 'triangle',
           'curve-style': 'bezier',
-          'opacity': 0.6
+          opacity: 0.6
         }
       },
       {
@@ -70,13 +88,17 @@ const initCytoscape = () => {
   })
 }
 
-watch(() => props.data, (newData) => {
-  if (cy) {
-    cy.elements().remove()
-    cy.add(newData)
-    cy.layout({ name: 'cose', animate: true }).run()
-  }
-}, { deep: true })
+watch(
+  () => props.data,
+  newData => {
+    if (cy) {
+      cy.elements().remove()
+      cy.add(toElementsDefinition(newData))
+      cy.layout({ name: 'cose', animate: true }).run()
+    }
+  },
+  { deep: true }
+)
 
 onMounted(() => {
   initCytoscape()

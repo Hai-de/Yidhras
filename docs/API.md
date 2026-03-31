@@ -34,7 +34,7 @@
     - 返回: `{ success: true, data: { status: "running"|"paused", runtime_ready: boolean, runtime_speed: { mode: "fixed", source: "default"|"world_pack"|"override", configured_step_ticks: string|null, override_step_ticks: string|null, override_since: number|null, effective_step_ticks: string }, health_level: "ok"|"degraded"|"fail", world_pack: { id, name, version }|null, has_error: boolean, startup_errors: string[] } }`
 - **POST `/api/runtime/speed`**
     - 说明: 覆盖或清除运行时步进速度（调试用，优先级高于 world-pack）。
-    - 参数: `{ action: "override", step_ticks: string|number }` 或 `{ action: "clear" }`
+    - 参数: `{ action: "override", step_ticks: string|number }` 或 `{ action: "clear" }`（当前服务端已接入共享 contract + Zod request-side 边界校验）
     - 返回: `{ success: true, data: { runtime_speed: RuntimeSpeedSnapshot } }`
     - 备注: 当运行时未就绪时返回 `503` + `WORLD_PACK_NOT_READY`。
 - **GET `/api/health`**
@@ -52,14 +52,14 @@
     - 运行时未就绪: 返回 `503` + `WORLD_PACK_NOT_READY`（统一与其他受 world-pack 约束接口行为一致）。
 - **POST `/api/clock/control`**
     - 说明: 控制模拟时钟。
-    - 参数: `{ action: "pause" | "resume" }`
+    - 参数: `{ action: "pause" | "resume" }`（当前服务端已接入共享 contract + Zod request-side 边界校验）
     - 返回: `{ success: true, data: { acknowledged: true, status: "paused"|"running" } }`
     - 注意: 发生致命错误 (如 `SIM_STEP_ERR`) 时系统会自动暂停。
 
 ## 3. 社交层 (L1: Social Layer)
 - **GET `/api/social/feed`**
     - 说明: 获取公共舆论场信息流；返回结果会经过当前 identity 上下文的字段可读性过滤。
-    - 参数: `?limit=20&author_id=<agent_id>&agent_id=<agent_id>&circle_id=<circle_id>&source_action_intent_id=<intent_id>&from_tick=<tick>&to_tick=<tick>&keyword=<text>&signal_min=<0..1>&signal_max=<0..1>&cursor=<opaque_cursor>&sort=latest|signal`
+    - 参数: `?limit=20&author_id=<agent_id>&agent_id=<agent_id>&circle_id=<circle_id>&source_action_intent_id=<intent_id>&from_tick=<tick>&to_tick=<tick>&keyword=<text>&signal_min=<0..1>&signal_max=<0..1>&cursor=<opaque_cursor>&sort=latest|signal`（当前服务端已接入共享 contract + Zod query-side 边界校验）
     - 返回: `{ success: true, data: Post[], meta?: { pagination: { has_next_page, next_cursor } } }`
     - 当前已实现过滤能力（Batch 3）:
       - `author_id` / `agent_id`: 当前 social post projection 下两者等价；若同时提供且不一致则返回 `400 SOCIAL_FEED_QUERY_INVALID`
@@ -71,7 +71,7 @@
       - `cursor`: 当前支持基于排序键的稳定翻页，并通过 `meta.pagination` 返回 `has_next_page / next_cursor`
 - **POST `/api/social/post`**
     - 说明: 以当前 identity 上下文发布动态。
-    - 参数: `{ content: string }`
+    - 参数: `{ content: string }`（当前服务端已接入共享 contract + Zod request-side 边界校验）
     - 返回: `{ success: true, data: Post }`
     - 备注: `author_id` 由当前 identity 上下文注入并在服务端写入。
     - 当前 provenance 说明: dispatcher 产出的 `post_message` 会在 `Post.source_action_intent_id` 上记录来源 `ActionIntent`。
@@ -96,6 +96,7 @@
 ## 4.1 Graph V2 (Operator Graph Projection)
 - **GET `/api/graph/view`**
     - 说明: Graph V2 的最小只读 projection 接口，用于新版 operator graph / graph explorer。
+    - 当前说明: 当前服务端已接入共享 contract + Zod query-side 边界校验。
     - 参数: `?view=mesh|tree&root_id=<node_id>&depth=<0..3>&kinds=agent,atmosphere,relay,container&include_inactive=true|false&include_unresolved=true|false&search=<keyword>&q=<keyword>`
     - 当前返回: `{ success: true, data: { schema_version: "graph-v2", view: "mesh"|"tree", nodes: GraphNodeView[], edges: GraphEdgeView[], summary: { counts_by_kind, active_root_ids, returned_node_count, returned_edge_count, applied_filters } }, meta: { schema_version: "graph-v2" } }`
     - Batch 4 当前实现范围:
@@ -112,6 +113,7 @@
 ## 4.2 审计视图 (Audit / Observability)
 - **GET `/api/audit/feed`**
     - 说明: 统一查询 workflow / social post / relationship adjustment / SNR adjustment / event 的最小审计时间线。
+    - 当前说明: 当前服务端已接入共享 contract + Zod query-side 边界校验。
     - 参数: `?limit=20&kinds=workflow,post,relationship_adjustment,snr_adjustment,event&from_tick=<tick>&to_tick=<tick>&job_id=<job_id>&inference_id=<inference_id>&agent_id=<agent_id>&action_intent_id=<action_intent_id>&cursor=<opaque_cursor>`
     - 返回: `{ success: true, data: { entries: AuditViewEntry[], summary: { returned, limit, applied_kinds, page_info: { has_next_page, next_cursor }, counts_by_kind, filters: { from_tick, to_tick, job_id, inference_id, agent_id, action_intent_id, cursor } } }, meta: { pagination } }`
     - 当前过滤能力:
@@ -124,6 +126,7 @@
       - `post` 当前也支持 `action_intent_id` provenance 检索（基于 `Post.source_action_intent_id`）
 - **GET `/api/audit/entries/:kind/:id`**
     - 说明: 查询单条 unified audit entry 详情。
+    - 当前说明: 当前服务端已接入共享 contract + Zod params-side 边界校验。
     - `kind` 当前支持: `workflow | post | relationship_adjustment | snr_adjustment | event`
     - 返回: `{ success: true, data: AuditViewEntry }`
     - workflow detail 当前还会附带 `data.related_counts` 与 `data.related_records`，聚合同一 `ActionIntent` 直接产出的 posts / events / relationship adjustments / snr adjustments。
@@ -156,33 +159,40 @@
 ## 7. 身份与策略 (Identity & Policy)
 - **POST `/api/identity/register`**
     - 说明: 注册身份（本地身份层）。
+    - 当前说明: 当前服务端已接入共享 contract + Zod request-side 边界校验。
     - 参数: `{ id: string, type: "user"|"agent"|"system"|"plugin_reserved"|"external_reserved", name?: string, claims?: object, metadata?: object }`
     - 返回: `{ success: true, data: Identity }`
 - **POST `/api/identity/bind`**
     - 说明: 绑定 Identity 到 active/atmosphere 节点。
+    - 当前说明: 当前服务端已接入共享 contract + Zod request-side 边界校验。
     - 参数: `{ identity_id: string, agent_id?: string, atmosphere_node_id?: string, role: "active"|"atmosphere", status?: "active"|"inactive"|"expired", expires_at?: string|number }`
     - 约束: `agent_id` 与 `atmosphere_node_id` 必须二选一。
     - 约束: `status=active` 时，同一 identity + role 只能存在一个 active 绑定。
     - 返回: `{ success: true, data: IdentityNodeBinding }`
 - **POST `/api/identity/bindings/query`**
     - 说明: 查询 Identity 绑定记录。
+    - 当前说明: 当前服务端已接入共享 contract + Zod request-side 边界校验。
     - 参数: `{ identity_id: string, role?: "active"|"atmosphere", status?: "active"|"inactive"|"expired", include_expired?: boolean, agent_id?: string, atmosphere_node_id?: string }`
     - 约束: `agent_id` 与 `atmosphere_node_id` 只能二选一。
     - 返回: `{ success: true, data: IdentityNodeBinding[] }`
 - **POST `/api/identity/bindings/unbind`**
     - 说明: 解绑绑定记录（默认置为 inactive，可指定状态）。
+    - 当前说明: 当前服务端已接入共享 contract + Zod request-side 边界校验。
     - 参数: `{ binding_id: string, status?: "active"|"inactive"|"expired" }`
     - 返回: `{ success: true, data: IdentityNodeBinding }`
 - **POST `/api/identity/bindings/expire`**
     - 说明: 立即过期绑定记录。
+    - 当前说明: 当前服务端已接入共享 contract + Zod request-side 边界校验。
     - 参数: `{ binding_id: string }`
     - 返回: `{ success: true, data: IdentityNodeBinding }`
 - **POST `/api/policy`**
     - 说明: 创建策略规则（字段级；支持 deny > allow、`*` / `prefix.*` 通配与条件过滤）。
+    - 当前说明: 当前服务端已接入共享 contract + Zod request-side 边界校验；`conditions` 仍会继续经过服务层条件结构校验。
     - 参数: `{ effect: "allow"|"deny", subject_id?: string, subject_type?: string, resource: string, action: string, field: string, conditions?: object, priority?: number }`
     - 返回: `{ success: true, data: Policy }`
 - **POST `/api/policy/evaluate`**
     - 说明: 评估字段级访问结果（用于调试/验证）。
+    - 当前说明: 当前服务端已接入共享 contract + Zod request-side 边界校验。
     - 参数: `{ resource: string, action: string, fields: string[], attributes?: Record<string, unknown> }`
     - 返回: `{ success: true, data: { allowed_fields: string[], denied_fields: string[], has_wildcard_allow: boolean, details: { field: string, allow: boolean, reason: string, rule_id?: string, matched_pattern?: string }[] } }`
 
@@ -212,6 +222,7 @@
 
 - **GET `/api/inference/jobs`**
     - 说明: 查询 inference / workflow job 列表，供 operator workflow 列表页消费。
+    - 当前说明: 当前服务端已接入共享 contract + Zod request/query/params-side 边界校验。
     - 参数: `?status=pending,running,completed,failed&agent_id=&identity_id=&strategy=&job_type=&from_tick=&to_tick=&from_created_at=&to_created_at=&cursor=&limit=&has_error=true|false&action_intent_id=`
     - 成功返回: `{ success: true, data: { items: InferenceJobListItem[], page_info: { has_next_page, next_cursor }, summary: { returned, limit, counts_by_status, filters } }, meta: { pagination } }`
     - 当前实现说明:
@@ -219,34 +230,43 @@
       - 每条 item 会聚合最小 workflow 派生状态、actor_ref、strategy、request_input 摘要
 - **POST `/api/inference/jobs`**
     - 说明: 按正式工作流入口提交一次推理任务，要求提供 `idempotency_key`。
+    - 当前说明: 当前服务端已接入共享 contract + Zod request-side 边界校验。
     - 输入: `{ agent_id?: string, identity_id?: string, strategy?: "mock"|"rule_based", attributes?: Record<string, unknown>, idempotency_key: string }`
     - 成功返回: `{ success: true, data: { replayed, inference_id, job: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, last_error, idempotency_key, created_at, updated_at, completed_at }, result, result_source, workflow_snapshot } }`
 - **POST `/api/inference/jobs/:id/retry`**
     - 说明: 重试一个已失败的 `DecisionJob`。
+    - 当前说明: 当前服务端已接入共享 contract + Zod params-side 边界校验。
     - 成功返回: `{ success: true, data: { replayed: false, inference_id, job, result, result_source: "fresh_run", workflow_snapshot } }`
 - **POST `/api/inference/jobs/:id/replay`**
     - 说明: 从已有 `DecisionJob` 派生一个新的 replay job。
+    - 当前说明: 当前服务端已接入共享 contract + Zod body/params-side 边界校验。
     - 输入: `{ reason?: string, idempotency_key?: string, overrides?: { strategy?: "mock"|"rule_based", attributes?: Record<string, unknown> } }`
     - 成功返回: `{ success: true, data: { replayed: false, inference_id, job, result: null, result_source: "not_available", workflow_snapshot, replay: { source_job_id, source_trace_id, reason, override_applied, override_snapshot?, parent_job?, child_jobs[] } } }`
 - **GET `/api/inference/jobs/:id`**
     - 说明: 查询单个决策任务状态。
+    - 当前说明: 当前服务端已接入共享 contract + Zod params-side 边界校验。
     - 成功返回: `{ success: true, data: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, request_input?, last_error, last_error_code?, last_error_stage?, idempotency_key, started_at?, next_retry_at?, locked_by?, locked_at?, lock_expires_at?, replay_of_job_id?, replay_source_trace_id?, replay_reason?, replay_override_snapshot?, created_at, updated_at, completed_at } }`
 
 ### 9.2 Phase D: Persisted Workflow & Execution (Minimal Baseline Implemented)
 - **GET `/api/inference/traces/:id`**
     - 说明: 查询指定 `InferenceTrace` 持久化记录。
+    - 当前说明: 当前服务端已接入共享 contract + Zod params-side 边界校验。
     - 成功返回: `{ success: true, data: { id, kind, strategy, provider, actor_ref, input, context_snapshot, prompt_bundle, trace_metadata, decision?, created_at, updated_at } }`
 - **GET `/api/inference/traces/:id/intent`**
     - 说明: 查询指定推理记录关联的 `ActionIntent`。
+    - 当前说明: 当前服务端已接入共享 contract + Zod params-side 边界校验。
     - 成功返回: `{ success: true, data: { id, source_inference_id, intent_type, actor_ref, target_ref, payload, scheduled_after_ticks, scheduled_for_tick, transmission_delay_ticks?, transmission_policy, transmission_drop_chance, drop_reason?, dispatch_error_code?, dispatch_error_message?, status, locked_by?, locked_at?, lock_expires_at?, dispatch_started_at?, dispatched_at?, created_at, updated_at } }`
 - **GET `/api/inference/traces/:id/job`**
     - 说明: 查询指定推理记录关联的 `DecisionJob`。
+    - 当前说明: 当前服务端已接入共享 contract + Zod params-side 边界校验。
     - 成功返回: `{ success: true, data: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, request_input?, last_error, last_error_code?, last_error_stage?, idempotency_key?, started_at?, next_retry_at?, created_at, updated_at, completed_at } }`
 - **GET `/api/inference/traces/:id/workflow`**
     - 说明: 查询指定推理记录的聚合工作流快照。
+    - 当前说明: 当前服务端已接入共享 contract + Zod params-side 边界校验。
     - 成功返回: `{ success: true, data: { records: { trace, job, intent }, derived: { decision_stage, dispatch_stage, workflow_state, failure_stage, failure_code, failure_reason, outcome_summary } } }`
 - **GET `/api/inference/jobs/:id/workflow`**
     - 说明: 查询指定决策任务的聚合工作流快照。
+    - 当前说明: 当前服务端已接入共享 contract + Zod params-side 边界校验。
     - 成功返回: 与 `/api/inference/traces/:id/workflow` 相同的 `WorkflowSnapshot` 结构。
 
 ## 10. 错误代码参考 (Error Codes)
@@ -294,3 +314,8 @@
 
 ---
 *更新时间: 2026-03-30*
+
+补充说明（当前实现阶段）：
+- 前后端共享 contract 基线已开始落地，当前已引入 `packages/contracts` 纯契约包。
+- 当前已完成三批接入：第一批为 `system / clock / social`，第二批为 `identity / policy`，第三批为 `inference / audit / graph` 的 request-side 边界校验；前端当前仅完成最小 envelope 消费修正（clock 路径）。
+- 当前 BigInt HTTP 传输规则保持不变：**统一以 string 传输，前端按需显式转换**。

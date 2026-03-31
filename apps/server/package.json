@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "serve:e2e": "tsx src/index.ts",
-    "prepare:runtime": "npm exec prisma migrate deploy && npm run init:world-pack && npm run seed:identity",
+    "prepare:runtime": "pnpm exec prisma migrate deploy && pnpm run init:world-pack && pnpm run seed:identity",
+    "postinstall": "pnpm exec prisma generate",
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint \"src/**/*.ts\"",
@@ -26,14 +27,17 @@
     "test:trigger-event": "tsx src/e2e/trigger_event.ts",
     "test:workflow-locking": "tsx src/e2e/workflow_locking.ts",
     "test:workflow-replay": "tsx src/e2e/workflow_replay.ts",
-    "smoke": "npm run smoke:startup && npm run smoke:endpoints"
+    "smoke": "pnpm run smoke:startup && pnpm run smoke:endpoints"
   },
   "dependencies": {
+    "@yidhras/contracts": "workspace:*",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "sqlite3": "^5.1.7",
-    "yaml": "^2.3.4"
+    "yaml": "^2.3.4",
+    "zod": "^4.1.5",
+    "zod-validation-error": "^4.0.1"
   },
   "devDependencies": {
     "@prisma/client": "^6.2.1",
