@@ -235,6 +235,18 @@ This file is intentionally specific to the current repo layout and conventions.
 - Make focused, minimal diffs that solve the requested task.
 - Do not rewrite unrelated files or rename broadly without need.
 - Update docs when behavior or commands change.
+- Follow the repo doc-boundary rules:
+  - `README.md` is an entry page only; keep it short and avoid detailed implementation/status dumps.
+  - `TODO.md` is the primary board for current milestone status and priorities.
+  - `记录.md` is for verification evidence, acceptance notes, and dated snapshots only.
+  - `docs/API.md` is for current external API contracts, error codes, and call constraints.
+  - `docs/ARCH.md` is for relatively stable architecture boundaries, module responsibilities, and design constraints.
+  - `docs/LOGIC.md` is for business rules and domain semantics, not milestone storytelling.
+  - `docs/INDEX.md` is the navigation page for detailed docs.
+  - `.limcode/plans/` and `.limcode/design/` are process assets/drafts, not the current source of truth.
+- Prefer linking over duplicating the same status/details across multiple markdown files.
+- If information changes frequently, it probably belongs in `TODO.md` or a plan doc rather than in `README.md` or `docs/ARCH.md`.
+- If information is verification-oriented, put it in `记录.md` instead of milestone or architecture docs.
 - If adding scripts (lint/test), also update this file and `README.md`.
 - Prefer validating changed paths locally (build or targeted script run) before handoff.
 - If introducing Phase B inference modules, ensure they are D-ready by design rather than temporary glue code.

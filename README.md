@@ -1,224 +1,87 @@
 # Yidhras (伊德海拉)
 
-叙事引擎与 Agent 模拟器，为了给使用者提供情报分析 + 社会操控的感觉。
+叙事引擎与 Agent 模拟器，用于构建带有情报分析、社会操控与分层世界建模感的模拟系统。
 
-## 核心架构
-- **L1 Social:** 社交层 (Post / Noise)
-- **L2 Relational:** 关系图谱 (Cytoscape.js 可视化)
-- **L3 Narrative:** 叙事逻辑 (Chronos Engine / Resolver)
-- **L4 Transmission:** 物理传输层 (延时 / 丢包模拟)
+> 本文件是仓库入口页，只负责项目总览、启动方式与文档导航；详细架构、接口、业务规则、阶段状态请看对应专门文档。
 
-## 当前工程状态
-- M0 工程基线与 M1 运行时稳定性基线已完成：前后端 lint / typecheck 均已打通并通过，健康检查、统一错误包络、通知队列、world-pack 降级启动、运行时速度策略均已落地。
-- M2 已进入可运行基线阶段：Phase D 最小持久化工作流、loop-driven decision runner、first-pass action dispatcher、最小 L4 传输语义、Memory Core v1 基线均已落地，但 richer replay / broader world-action mapping / long-term memory 仍在推进。
-- 当前正式路线已从“先做临时推理接口”升级为：**直接按可演进到持久化工作流的正式工程路线推进**。
+## 项目定位
 
-## 文档索引
+Yidhras 当前是一套以可运行后端基线为中心的叙事模拟工程，核心关注点包括：
 
-### 仓库入口文档
-- `README.md`：项目总览与快速开始
-- `AGENTS.md`：仓库协作与工程约定
-- `TODO.md`：里程碑状态与阶段目标
-- `记录.md`：验证快照与历史工程记录
+- 分层世界模型（L1/L2/L3/L4）
+- Agent 推理与最小工作流
+- world-pack 驱动的运行时内容
+- 面向前后端协作的稳定接口边界
 
-### 详细文档
-- `docs/API.md`：接口契约与错误码
-- `docs/ARCH.md`：架构边界、运行结构与 contract/validation 原则
-- `docs/LOGIC.md`：业务逻辑说明、BigInt transport 规则与交付边界
+## 仓库结构
 
-## Backend Refactor Status (2026-03-23)
-- `apps/server/src/index.ts` now acts as a composition root for startup, runtime bootstrap, and route assembly.
-- Base Express wiring lives in `apps/server/src/app/create_app.ts`, which registers `identityInjector()` and `requestIdMiddleware()` before route modules.
-- Route modules are grouped under `apps/server/src/app/routes/*.ts` and should remain thin HTTP adapters.
-- App-level service boundaries now live in `apps/server/src/app/services/*.ts` for system, runtime control, identity, policy, social, relational, narrative, and agent-context flows.
-- Shared HTTP and runtime infrastructure lives under `apps/server/src/app/http/*.ts`, `apps/server/src/app/middleware/*.ts`, and `apps/server/src/app/runtime/*.ts`.
-- Inference integration is now active via `apps/server/src/app/routes/inference.ts`, `apps/server/src/inference/service.ts`, and the startup wiring/log in `apps/server/src/index.ts`.
-- Stable external contracts preserved during the refactor:
-  - unified error envelope: `{ success: false, error: { code, message, request_id, timestamp, details? } }`
-  - `X-Request-Id` generation/propagation via `requestIdMiddleware()`
-  - runtime gating via `assertRuntimeReady(feature)` with `503/WORLD_PACK_NOT_READY`
-  - BigInt JSON transport serialized as strings
-
-## Phase B Implementation Status (2026-03-23)
-- `POST /api/inference/preview` and `POST /api/inference/run` are now implemented as thin routes over the app-layer inference service.
-- The current Phase B baseline includes `InferenceContext`, `PromptBundle`, normalized `DecisionResult`, internal `ActionIntentDraft`, trace metadata, and a pluggable trace-sink hook.
-- Current built-in strategies: `mock` and `rule_based`.
-- Actor resolution supports `agent_id`, `identity_id`, or both together, and returns `INFERENCE_INPUT_INVALID` on invalid or conflicting combinations.
-- The HTTP success envelope for inference debug endpoints is `{ success: true, data: ... }`.
-- `ActionIntentDraft` remains an internal service-layer artifact in HTTP payloads and is not directly exposed by the debug endpoints.
-
-## Phase D Minimal Persistence & Execution Status (2026-03-27)
-- Minimal Prisma workflow models are now introduced: `InferenceTrace`, `ActionIntent`, `DecisionJob`.
-- The inference trace sink is now Prisma-backed instead of no-op.
-- `POST /api/inference/preview` persists a trace snapshot for audit/debug use.
-- `POST /api/inference/run` persists:
-  - `InferenceTrace`
-  - `ActionIntent`
-  - `DecisionJob`
-- `POST /api/inference/jobs` now provides a minimal formal workflow submission entry with `idempotency_key` support.
-- Read APIs are now available for persisted workflow inspection:
-  - `GET /api/inference/traces/:id`
-  - `GET /api/inference/traces/:id/intent`
-  - `GET /api/inference/traces/:id/job`
-  - `GET /api/inference/traces/:id/workflow`
-  - `GET /api/inference/jobs/:id`
-  - `GET /api/inference/jobs/:id/workflow`
-- Retry API is now available:
-  - `POST /api/inference/jobs/:id/retry`
-- Decision jobs now persist `request_input`, `started_at`, and `next_retry_at` scheduler fields.
-- The simulation loop now runs a minimal decision-job runner over `pending/running` jobs.
-- `POST /api/inference/jobs` now enqueues `pending` work instead of returning an immediately executed result.
-- `POST /api/inference/run` remains the immediate execution-oriented debug path, while `POST /api/inference/jobs` is the queue-oriented formal workflow entry.
-- A first-pass Action Dispatcher is now wired into the loop.
-- Current dispatcher scope now includes:
-  - `post_message` → L1 social posts
-  - `adjust_relationship` → relationship mutation + audit log
-  - `adjust_snr` → node SNR mutation + audit log
-  - `trigger_event` → append-only event creation
-  - all of the above now run through persisted `ActionIntent` dispatch state (`pending/dispatching/completed/failed/dropped`)
-- Minimal L4 semantics are now attached to `ActionIntent`:
-  - `transmission_delay_ticks`
-  - `transmission_policy`
-  - `transmission_drop_chance`
-- `transmission_policy` is now partially derivable from runtime context instead of being only manually injected.
-- Current derived reasons include:
-  - `policy_blocked`, `visibility_denied`, `low_signal_quality`, `probabilistic_drop`
-- Workflow aggregate snapshots are now available and explicitly separate:
-  - decision stage (`DecisionJob.status`)
-  - dispatch stage (`ActionIntent.status`)
-  - derived `workflow_state` / `failure_stage` / `failure_code` / `failure_reason` / `outcome_summary`
-- Job submit / replay / retry responses now include:
-  - `result_source = not_available | stored_trace | fresh_run`
-  - `workflow_snapshot`
-- Failure persistence is now more structured:
-  - `DecisionJob.last_error_code`
-  - `DecisionJob.last_error_stage`
-  - `ActionIntent.dispatch_error_code`
-  - `ActionIntent.dispatch_error_message`
-- The current jobs baseline supports duplicate-submit replay by `idempotency_key`, bounded failed-job retry, loop-driven execution, workflow aggregate reads, structured failure-stage observation, and a minimal unified audit baseline (`/api/audit/feed` + `/api/audit/entries/:kind/:id`), but still does not include full replay orchestration or broader world-action coverage beyond the current shipped constrained action set.
-
-## Current World-Action Coverage (2026-03-30)
-- Dispatcher-supported world actions now include:
-  - `post_message`
-  - `adjust_relationship`
-  - `adjust_snr`
-  - `trigger_event`
-- Unified audit read APIs are also now available for operator/debug use:
-  - `GET /api/audit/feed`
-  - `GET /api/audit/entries/:kind/:id`
-
-## Memory Core v1 Status (2026-03-27)
-- Memory Core v1 baseline is now partially landed in backend:
-  - `InferenceContext` now carries `memory_context`
-  - short-term memory adapter now derives `MemoryEntry[]` from recent trace / job / intent / post / event records
-  - long-term memory store is currently a noop contract implementation
-  - prompt building is now fragment-friendly (`buildPromptFragments` / `buildPromptBundleFromFragments`)
-  - active prompt processors now include:
-    - `memory-injector`
-    - `policy-filter`
-    - `memory-summary`
-    - `token-budget-trimmer`
-  - persisted traces now capture `memory_selection` and `prompt_processing_trace`
-- Current limitation: long-term retrieval is still noop-only, the memory service's long-term store and summarizer contracts remain placeholder/noop, and the current summary compaction lives in prompt processors with heuristic/rule-based behavior; richer policy-aware prompt filtering / trimming strategy tuning are still in progress.
-
-## 正式路线规划（B→D）
-
-### Phase B（已完成基线，D-ready 服务层）
-目标：先建立稳定的推理服务边界，而不是堆积一次性调试逻辑。
-
-当前已落地：
-- 已统一 `InferenceService` 入口，路由层与 runtime 不再重复拼装推理逻辑。
-- 已建立 `InferenceContext`、`PromptBundle`、`DecisionResult`、`ActionIntentDraft` 等领域契约。
-- 已提供策略注入能力（当前内置 `mock` / `rule_based`，后续仍可扩展 provider）。
-- prompt 已采用结构化片段构建，并与 world-pack `prompts` 片段结合。
-- `preview/run` 调试 API 已可用，用于验证 prompt 和标准化决策结果。
-- trace metadata 与可插拔 sink 已落地，当前默认实现已升级为 Prisma 持久化。
-
-### Phase D（最小工作流已落地，正在扩展）
-目标：正面拥抱软件工程复杂度，把推理和动作纳入可追踪、可重试、可审计的工作流。
-
-当前已落地：
-- 已引入持久化工作流对象：`InferenceTrace`、`ActionIntent`、`DecisionJob`。
-- 已具备最小幂等、重试、失败状态、审计读取与 stored-trace reuse 基线。
-- 已将“推理结果”与“动作执行”分离，并通过工作流快照暴露状态流转。
-- runtime loop 已基于正式工作流消费 `pending/running` jobs，并派发可执行 `ActionIntent`。
-- 已为 Memory Core 与 Action Dispatcher 提供稳定上游输入。
-
-仍在推进：
-- richer replay orchestration / audit tooling
-- replay lineage / orchestration 基线已进入实现阶段，当前目标是从已有 job 派生新的 replay workflow
-- broader world-action mapping（当前已覆盖 `post_message` / `adjust_relationship` / `adjust_snr` / `trigger_event`，但仍未形成更完整 action taxonomy）
-- durable scheduling / multi-worker safety（当前已具备最小轻量 job locking / claim baseline）
-- long-term memory 与更强的 summarization / trimming 策略
-
-### 设计原则（当前即生效）
-- 推理与执行分离：Inference 不直接等价于 Action 执行。
-- API 仅作为调用壳，不承担领域拼装职责。
-- Prompt 必须结构化输出，而不是只保留拼接后的长字符串。
-- Decision 必须标准化，避免未来从松散 JSON 迁移时大规模返工。
-- 所有新增能力默认按“未来要持久化、要审计、要回放”来约束接口。
+- `apps/server`：TypeScript + Express + Prisma + SQLite 后端
+- `apps/web`：Nuxt 4 + Vue 3 + Pinia 前端
+- `packages/contracts`：前后端共享 transport/contract 定义
+- `docs/`：详细说明文档
+- `TODO.md`：当前里程碑与优先级
+- `记录.md`：验证快照与验收记录
 
 ## 快速开始
 
-### 1. 环境准备
+### 环境要求
+
 - Node.js 18+
 - pnpm 10+
 
-### 2. 初始化项目
-```bash
-# 安装 workspace 依赖
-pnpm install
+### 安装依赖
 
-# 统一准备后端运行前置条件（数据库迁移 + world pack 模板 + 身份策略初始化）
+```bash
+pnpm install
+```
+
+### 准备运行时
+
+```bash
 pnpm --filter yidhras-server prepare:runtime
 ```
 
-### 3. 运行项目
-您可以使用根目录下的启动脚本：
-
-#### Windows
-```cmd
-start-dev.bat
-```
+### 启动项目
 
 #### Linux / macOS
+
 ```bash
 chmod +x start-dev.sh
 ./start-dev.sh
 ```
 
-## 开发指令
-- **Server:** `pnpm --filter yidhras-server dev`
-- **Web:** `pnpm --filter web dev`
-- **Runtime Prepare:** `pnpm --filter yidhras-server prepare:runtime`
-- **World Pack Bootstrap:** `pnpm --filter yidhras-server init:world-pack`
-- **Seed Identity & Policy:** `pnpm --filter yidhras-server seed:identity`
+#### Windows
 
-## 冒烟测试（启动流程与关键端点）
-- **启动流程冒烟:** `pnpm --filter yidhras-server smoke:startup`
-- **关键端点冒烟:** `pnpm --filter yidhras-server smoke:endpoints`
-- **一键执行全部冒烟:** `pnpm --filter yidhras-server smoke`
-- **可选端口覆盖:** `SMOKE_PORT=3101 pnpm --filter yidhras-server smoke`
+```cmd
+start-dev.bat
+```
 
-## 启动与验收硬性说明
-- **运行前置条件（硬性）:** 启动服务前需完成数据库迁移和 world pack 初始化，统一通过 `pnpm --filter yidhras-server prepare:runtime` 执行。
-- **降级启动策略（硬性）:** 首次拉取项目内容可能为空，`health_level=degraded` 且 `runtime_ready=false` 视为允许启动，不作为冒烟测试失败条件。
-- **关键端点一致性（硬性）:** 依赖 world-pack 的接口在运行时未就绪时统一返回 `503` + `WORLD_PACK_NOT_READY` 错误包络。
-- **统一速度策略（硬性）:** 运行时速度按 `override > world_pack.simulation_time.step_ticks > default(1)` 解析，`/api/status` 通过 `runtime_speed` 字段暴露当前生效值。
+## 常用命令
 
-## Phase B 推理调试接口
-- **预览 prompt/context:** `POST /api/inference/preview`
-- **运行标准化决策:** `POST /api/inference/run`
-- **当前策略:** `mock`, `rule_based`
-- **当前约束:** 至少提供 `agent_id` 或 `identity_id`；如两者同时提供，必须解析为同一有效 actor。
-- **当前说明:** `ActionIntentDraft` 已在服务层定义，但尚未作为 HTTP 输出公开。
+- 启动后端：`pnpm --filter yidhras-server dev`
+- 启动前端：`pnpm --filter web dev`
+- 后端 lint：`pnpm --filter yidhras-server lint`
+- 前端 lint：`pnpm --filter web lint`
+- 后端 typecheck：`pnpm --filter yidhras-server typecheck`
+- 前端 typecheck：`pnpm --filter web typecheck`
+- 后端冒烟：`pnpm --filter yidhras-server smoke`
 
-## 运行时速度覆盖（调试）
-- 覆盖速度：
-  - `POST /api/runtime/speed` body: `{ "action": "override", "step_ticks": "2" }`
-- 清除覆盖：
-  - `POST /api/runtime/speed` body: `{ "action": "clear" }`
-- 覆盖时间：
-  - `/api/status.runtime_speed.override_since` 返回覆盖生效时间戳（毫秒），清除覆盖时为 `null`。
-- 系统通知：
-  - `/api/system/notifications` 中 `details` 字段会包含 `step_ticks` 与 `override_since`（覆盖），或清除时 `override_since: null`。
+## 文档导航
+
+### 仓库入口文档
+
+- `README.md`：项目入口、快速开始、文档导航
+- `AGENTS.md`：协作约定、开发命令、工程规则
+- `TODO.md`：里程碑状态与近期优先级
+- `记录.md`：验证证据、验收边界、历史快照
+
+### 详细说明文档
+
+- `docs/INDEX.md`：详细文档导航
+- `docs/API.md`：当前对外接口契约与错误码
+- `docs/ARCH.md`：稳定架构边界与模块职责
+- `docs/LOGIC.md`：业务规则、领域语义与边界说明
+
+## 当前状态
+
+项目已具备可运行的后端基线、最小工作流与基础前端壳层；当前阶段状态与优先级以 `TODO.md` 为准。

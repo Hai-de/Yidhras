@@ -1,92 +1,93 @@
 # Yidhras Milestones / 里程碑计划
 
-本文件用于里程碑优先级管理，不用于记录 lint 历史问题。
-This file tracks milestone priorities, not lint debt details.
+本文件只用于里程碑优先级管理与当前阶段状态，不记录 lint 历史、验收证据或详细技术设计。
+This file tracks milestone priorities and current stage status only; it is not the place for lint history, verification evidence, or detailed technical design.
 
-## M0 - Engineering Baseline / 工程基线 (Highest Priority)
+## M0 - Engineering Baseline / 工程基线
 
 Status: Completed / 已完成
 
-- [x] Add repo-level ESLint + Prettier baseline for `apps/server` and `apps/web`.
-- [x] Add scripts: `lint` and `typecheck` in both app package manifests.
-- [x] Run lint/typecheck, record current warnings in `记录.md`.
-- [x] Mark temporary exceptions and cleanup window before feature sprint.
+- [x] 建立前后端 ESLint + Prettier 工程基线
+- [x] 为两个应用补齐 `lint` / `typecheck` 脚本
+- [x] 跑通基础质量检查并完成首轮清理
+- [x] 将历史 lint/验证结果收敛到 `记录.md`
 
 ## M1 - Runtime Stability / 运行稳定性
 
 Status: Completed / 已完成
 
-### Currently Implemented / 当前已实现
-
-- [x] Chronos engine with BigInt ticks and multi-calendar conversion.
-- [x] Narrative resolver with nested variable resolution and permission filtering.
-- [x] Value dynamics manager with pinning and pluggable algorithm support.
-- [x] Basic global notification queue and API endpoints.
-- [x] Unified API error envelope with request-id tracing in middleware.
-- [x] Resilient startup preflight checks (`/api/health`, `/api/status`) with degraded mode support.
-- [x] End-to-end smoke scripts for startup and key endpoints, integrated into CI.
-- [x] Centralized startup preparation command (`prepare:runtime`) reused by dev scripts and CI.
-- [x] Runtime-not-ready API consistency aligned (`503` + `WORLD_PACK_NOT_READY`) for world-pack-gated endpoints.
-- [x] Unified runtime speed policy (single source for effective step ticks, loaded at init, observable via `/api/status.runtime_speed`).
-- [x] Time stepping follow-up: add explicit runtime override control path (API/ops) on top of current unified policy when variable speed modes are needed.
-### Notes / 说明
-
-- No open M1-scoped gaps are currently tracked; future runtime expansion should be captured under M2.
+- [x] Chronos engine + BigInt ticks + multi-calendar conversion
+- [x] Narrative resolver + permission filtering
+- [x] Value dynamics manager baseline
+- [x] 全局通知队列与基础 API
+- [x] 统一错误包络与 request-id tracing
+- [x] `/api/health` / `/api/status` 与 degraded mode 启动基线
+- [x] 统一运行前置准备命令 `prepare:runtime`
+- [x] world-pack-gated 接口统一 `503/WORLD_PACK_NOT_READY`
+- [x] 统一运行时速度策略与状态暴露
+- [x] 启动流程与关键端点冒烟脚本接入
 
 ## M2 - Core Simulation Features / 核心模拟功能
 
 Status: In Progress / 进行中
 
-### Currently Implemented / 当前已实现
+### Done / 已完成
 
-- [x] Identity Layer: define policy order (deny > allow, priority tie-break), field wildcard rules, and ABAC-ready claims/conditions.
-- [x] Identity Layer: active node and atmosphere node lifecycle policies (baseline delivered: bind/query/unbind/expire APIs, uniqueness guard for active binding, runtime auto-expire, seed with atmosphere node).
-- [x] Formalize official delivery route: move from temporary B exploration to explicit B→D transition plan.
-- [x] Inference Interface Phase B (D-ready): unified inference service, context/prompt builder, strategy injection, hardcoded prompt channel, preview/run APIs, normalized decision contract, trace metadata with pluggable sink, and inference-specific smoke coverage are now delivered as the current stable baseline.
-- [x] Workflow Persistence Phase D (minimal baseline): persisted `InferenceTrace` / `ActionIntent` / `DecisionJob` models, Prisma-backed persistence sink, read APIs for trace/intent/job inspection, and `POST /api/inference/jobs` idempotency replay support.
+- [x] Identity Layer：deny > allow、wildcard field、ABAC-ready claims/conditions 基线
+- [x] Identity Binding：bind/query/unbind/expire API、active 唯一性约束、runtime auto-expire
+- [x] 正式路线从临时探索切换为明确的 B → D 工程推进路径
+- [x] Inference Phase B：统一推理服务入口、context/prompt builder、strategy injection、preview/run API、normalized decision contract、trace metadata 基线
+- [x] Workflow Phase D 最小基线：`InferenceTrace` / `ActionIntent` / `DecisionJob`、Prisma 持久化、trace/intent/job 读取能力、jobs 正式入口
 
 ### In Progress / 进行中
 
-- [~] Workflow Persistence Phase D: minimal persisted `InferenceTrace` / `ActionIntent` / `DecisionJob` baseline, async `pending` job queue + loop runner, aggregate workflow read APIs, `POST /api/inference/jobs` replay semantics with `result_source + workflow_snapshot`, failed-job retry API, structured failure-stage persistence, lightweight job locking / claim baseline, and the initial replay lineage / replay-job derivation API are now landed; richer replay orchestration and broader runtime state progression remain to be completed.
-- [~] Memory Core: short-term context adapter, noop long-term store contract, fragment-friendly prompt pipeline, chained prompt processors (`memory-injector` / `policy-filter` / `memory-summary` / `token-budget-trimmer`), and trace-side `memory_selection` / `prompt_processing_trace` observability are now landed; richer long-term retrieval/storage and more advanced policy/summarization/trimming strategies remain to be completed.
-- [~] Action Dispatcher: first-pass `post_message` dispatch is now loop-driven and writes to social posts; minimal L4 transmission delay/drop semantics, lightweight ActionIntent locking / claim baseline, heuristic transmission-policy derivation, the constrained `adjust_relationship` MVP, the constrained `adjust_snr` MVP with `SNRAdjustmentLog` auditability/read API, and the append-only `trigger_event` MVP are landed, while broader world-action mapping remains to be completed.
-- [~] Contract / Validation Baseline: `packages/contracts` pure contract package, shared envelope + BigInt-string schemas, server-side Zod boundary helper, first-batch route adoption (`system/clock/social`), second-batch request-side route adoption (`identity/policy`), and third-batch request-side route adoption (`inference/audit/graph`) are now landed; frontend has started minimal contract/client integration via the clock path, while deeper product-facing client consolidation and broader response-side/runtime contract enforcement remain to be completed.
+- [~] Workflow Persistence Phase D
+  - 已有：pending job queue、loop runner、workflow snapshot、retry、idempotency replay、replay lineage baseline
+  - 待补：richer replay orchestration、durable scheduling、multi-worker safety
+- [~] Memory Core
+  - 已有：short-term adapter、fragment-friendly prompt pipeline、memory selection / processing trace observability
+  - 待补：real long-term retrieval/storage、更强 summarization / trimming 策略
+- [~] Action Dispatcher
+  - 已有：`post_message`、`adjust_relationship`、`adjust_snr`、`trigger_event` 最小路径与基础审计能力
+  - 待补：更广的 world-action mapping 与更丰富的 L4 语义
+- [~] Contract / Validation Baseline
+  - 已有：`packages/contracts`、server-side Zod boundary helper、已交付路由批次接入、前端 clock 路径最小接入
+  - 待补：更广的前端消费收敛、更多 response/runtime contract enforcement
+- [~] Audit / Observability
+  - 已有：统一 audit feed、detail read、基础过滤、cursor、workflow related-record aggregation、replay-lineage detail
+  - 待补：更完整 operator 视图与更强关联观测
+- [~] Mutation Semantics
+  - 已有：`relationship_adjustment` / `snr_adjustment` 的 resolved-intent detail shape
+  - 待补：更广的写路径规范化与未来 delta-capable world actions
 
-### Planned / 规划中
+### Next / 下一步
 
-- [ ] Workflow Persistence Phase D: add richer replay orchestration, more durable scheduling/multi-worker safety semantics, and broader runtime workflow progression beyond the current lightweight locking baseline.
-- [~] Audit / Observability: a minimal unified audit feed across workflow records, social posts, relationship adjustments, SNR adjustments, and narrative events is now landed, with first-pass `from_tick` / `to_tick` / `job_id` / `inference_id` / `agent_id` / `action_intent_id` filters, cursor pagination, `post_message -> Post.source_action_intent_id` provenance, single-entry detail reads, workflow-scoped related-record aggregation, and replay-lineage detail; richer operator views and deeper observability correlations remain to be completed.
-- [~] Mutation Semantics: initial Resolved Intent detail shape is now landed for `relationship_adjustment` and `snr_adjustment` audit details (`intent + baseline + result`), and the current service layer now reuses a shared builder for those detail shapes; broader write-path normalization and future delta-capable world actions remain to be completed.
-- [ ] Memory Core: add real long-term retrieval/storage and stronger summarization/policy-aware trimming strategies on top of the current baseline.
-- [ ] Action Dispatcher / L2: extend beyond `adjust_relationship` + `adjust_snr` with additional constrained world mutation actions and local-variable primitives.
-- [ ] Local Variable Actions: support actor-scoped and relationship-scoped variable mutations that can later affect graph rendering and frontend overlays.
-- [ ] Event Side-Effect Design (Low Priority): keep `Event` append-only; if side effects are needed, express them as standard `ActionIntent`, and defer Event Reactor design until later.
-- [ ] Action Dispatcher / L4: extend beyond current `post_message` delivery with broader world-action mapping and richer transmission/system simulation.
+- [ ] 补齐 richer replay orchestration 与更 durable 的 job scheduling 语义
+- [ ] 扩展更多 constrained world mutation actions 与 local-variable primitives
+- [ ] 补齐 long-term memory 与更强 prompt strategy
+- [ ] 在 L4 上继续扩展 transmission / system simulation
 
 ## M3 - Frontend Capability / 前端能力完善
 
 Status: Pending Review / 待讨论
 
-### Notes / 说明
-
-- [ ] Layout is not finalized; UI will be redesigned after team discussion.
-- [ ] 当前前端布局尚未确定，待讨论后再统一重写前端 UI。
-- [~] Frontend contract/client baseline: minimal API envelope consumption and BigInt-string handling are now connected through the clock path; broader shared-contract adoption and unified request utilities across more product-facing views remain to be completed.
-- [ ] Frontend typecheck follow-up: `apps/web/components/L2Graph.vue` still has a Nuxt/Vue/Cytoscape DOM container typing incompatibility; keep it as a frontend-owner follow-up rather than blocking current backend/contract refactor closure.
+- [ ] 前端布局与产品化交互待统一讨论后重写
+- [~] Frontend contract/client baseline 已从 clock 路径起步，后续继续扩到更多 product-facing 视图
+- [ ] `apps/web/components/L2Graph.vue` 的 Nuxt/Vue/Cytoscape DOM typing 兼容问题保留为前端后续项
 
 ## M4 - Content and Data Packs / 内容与世界包
 
 Status: Planned / 规划中
 
-- [ ] Formalize world-pack schema contract and validation checklist.
-- [ ] Expand sample world packs and scenario coverage.
-- [ ] Define native noise generation policy and balancing knobs.
+- [ ] Formalize world-pack schema contract and validation checklist
+- [ ] Expand sample world packs and scenario coverage
+- [ ] Define native noise generation policy and balancing knobs
 
-## Milestone Rules / 里程碑规则
+## 使用规则 / Rules
 
-- Keep this file milestone-oriented and bilingual.
-- Mark each section with `Currently Implemented`, `In Progress`, or `Planned` where relevant.
-- Put lint debt and warnings only in `记录.md`.
-- Detailed architecture/API/logic documentation now lives under `docs/`; keep this file focused on milestone state.
+- 当前阶段状态以本文件为主。
+- 详细接口/架构/逻辑说明放在 `docs/`。
+- 验证证据、验收边界、历史快照放在 `记录.md`。
+- 过程性拆解与执行计划放在 `.limcode/plans/`，不作为当前正式状态总表。
 
 Last Updated / 最后更新: 2026-03-30
