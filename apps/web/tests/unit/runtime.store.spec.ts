@@ -13,7 +13,14 @@ describe('useRuntimeStore', () => {
 
     runtime.applyClockSnapshot({
       absolute_ticks: '42',
-      calendars: [{ display: 'Cycle 42' }]
+      calendars: [
+        {
+          calendar_id: 'default',
+          calendar_name: 'Default Calendar',
+          display: 'Cycle 42',
+          units: {}
+        }
+      ]
     })
 
     expect(runtime.absoluteTicks).toBe('42')
