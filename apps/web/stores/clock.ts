@@ -1,21 +1,23 @@
 import type { TimeFormatted } from '@yidhras/contracts'
 import { defineStore } from 'pinia'
 
-import { requestApiData } from '../utils/api'
+import { requestApiData } from '../lib/http/client'
+import { padTickString } from '../lib/time/format'
+import { type TickString,ZERO_TICK } from '../lib/time/tick'
 
 interface ClockResponse {
-  absolute_ticks: string
+  absolute_ticks: TickString
   calendars: TimeFormatted[]
 }
 
 export const useClockStore = defineStore('clock', {
   state: () => ({
-    absoluteTicks: 0n,
+    absoluteTicks: ZERO_TICK as TickString,
     calendars: [] as TimeFormatted[],
     syncInterval: null as ReturnType<typeof setInterval> | null
   }),
   getters: {
-    formattedTicks: (state) => state.absoluteTicks.toString().padStart(9, '0'),
+    formattedTicks: (state) => padTickString(state.absoluteTicks, 9),
 
     primaryCalendarTime: (state) => {
       return state.calendars[0]?.display || 'Syncing...'
@@ -24,9 +26,8 @@ export const useClockStore = defineStore('clock', {
   actions: {
     async fetchCurrentTime() {
       try {
-        const data = await requestApiData<ClockResponse>('/api/clock')
-        // 后端返回的是字符串 BigInt，前端仅在需要时显式转回 BigInt
-        this.absoluteTicks = BigInt(data.absolute_ticks)
+        const data = await requestApiData<ClockResponse>('/api/clock/formatted')
+        this.absoluteTicks = data.absolute_ticks
         this.calendars = data.calendars
       } catch (err) {
         console.error('[ClockStore] Failed to sync clock:', err)
@@ -35,7 +36,7 @@ export const useClockStore = defineStore('clock', {
 
     startSync() {
       if (this.syncInterval) return
-      // 每秒与后端同步一次核心心跳
+
       this.fetchCurrentTime()
       this.syncInterval = setInterval(() => {
         this.fetchCurrentTime()

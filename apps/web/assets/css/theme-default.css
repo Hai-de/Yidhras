@@ -1,0 +1,29 @@
+:root {
+  --yd-panel-backdrop-blur: 14px;
+}
+
+.yd-panel-surface {
+  background-color: var(--yd-color-bg-panel);
+  border: var(--yd-border-width) solid var(--yd-color-border-strong);
+  box-shadow: var(--yd-shadow-panel);
+}
+
+.yd-panel-surface--elevated {
+  background-color: var(--yd-color-bg-elevated);
+  border: var(--yd-border-width) solid var(--yd-color-border-strong);
+  box-shadow: var(--yd-shadow-elevated);
+}
+
+.yd-grid-surface {
+  background-color: var(--yd-color-bg-app);
+  background-image:
+    linear-gradient(to right, var(--yd-grid-line-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--yd-grid-line-color) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: -1px -1px;
+}
+
+.yd-overlay-surface {
+  background-color: var(--yd-color-bg-overlay);
+  backdrop-filter: blur(var(--yd-panel-backdrop-blur));
+}

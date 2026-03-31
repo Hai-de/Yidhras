@@ -22,10 +22,17 @@ module.exports = {
     'prettier'
   ],
   settings: {
+    'import/core-modules': [
+      '#imports'
+    ],
     'import/resolver': {
       typescript: true,
       node: true
-    }
+    },
+    'import/ignore': [
+      '^#imports$',
+      '^~/'
+    ]
   },
   ignorePatterns: ['.nuxt/**', '.output/**', 'node_modules/**', 'coverage/**', 'dist/**'],
   rules: {

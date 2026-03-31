@@ -1,0 +1,45 @@
+:root {
+  color-scheme: dark;
+
+  --yd-color-bg-app: #0d0f14;
+  --yd-color-bg-panel: #151b24;
+  --yd-color-bg-elevated: #1c2430;
+  --yd-color-bg-overlay: rgba(9, 12, 18, 0.82);
+
+  --yd-color-border-strong: #3a4658;
+  --yd-color-border-muted: #273140;
+
+  --yd-color-text-primary: #eef4ff;
+  --yd-color-text-secondary: #adb9cf;
+  --yd-color-text-muted: #728099;
+  --yd-color-text-inverse: #06080d;
+
+  --yd-color-state-success: #35d07f;
+  --yd-color-state-warning: #f1c453;
+  --yd-color-state-danger: #ff6e7c;
+  --yd-color-state-info: #57b8ff;
+  --yd-color-state-accent: #7e8fff;
+
+  --yd-graph-agent: #7e8fff;
+  --yd-graph-atmosphere: #3cc4aa;
+  --yd-graph-relay: #f1c453;
+  --yd-graph-container: #7a7f8d;
+  --yd-graph-edge: #334155;
+  --yd-graph-selected: #57b8ff;
+
+  --yd-grid-line-color: rgba(118, 139, 177, 0.14);
+
+  --yd-font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --yd-font-mono: 'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  --yd-radius-sm: 4px;
+  --yd-radius-md: 8px;
+  --yd-radius-lg: 12px;
+  --yd-border-width: 1px;
+
+  --yd-shadow-panel: 0 0 0 1px rgba(58, 70, 88, 0.55), 0 18px 40px rgba(0, 0, 0, 0.24);
+  --yd-shadow-elevated: 0 0 0 1px rgba(58, 70, 88, 0.65), 0 24px 56px rgba(0, 0, 0, 0.32);
+
+  --yd-layout-min-width: 1280px;
+  --yd-layout-max-content-width: 1920px;
+}

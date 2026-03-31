@@ -1,0 +1,32 @@
+.yd-font-mono {
+  font-family: var(--yd-font-mono);
+}
+
+.yd-font-sans {
+  font-family: var(--yd-font-sans);
+}
+
+.yd-text-muted {
+  color: var(--yd-color-text-muted);
+}
+
+.yd-text-secondary {
+  color: var(--yd-color-text-secondary);
+}
+
+.yd-border-strong {
+  border-color: var(--yd-color-border-strong);
+}
+
+.yd-border-muted {
+  border-color: var(--yd-color-border-muted);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

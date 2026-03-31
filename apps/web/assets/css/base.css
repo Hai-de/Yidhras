@@ -1,0 +1,30 @@
+html,
+body,
+#__nuxt {
+  min-height: 100%;
+}
+
+html {
+  background-color: var(--yd-color-bg-app);
+}
+
+body {
+  min-width: var(--yd-layout-min-width);
+  margin: 0;
+  overflow: hidden;
+  background-color: var(--yd-color-bg-app);
+  color: var(--yd-color-text-primary);
+  font-family: var(--yd-font-sans);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background-color: var(--yd-color-state-accent);
+  color: var(--yd-color-text-inverse);
+}
