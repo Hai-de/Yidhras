@@ -1,5 +1,5 @@
-import { ChronosEngine } from './engine.js';
-import { CalendarConfig } from './types.js';
+import { ChronosEngine } from '../../src/clock/engine.js';
+import { CalendarConfig } from '../../src/clock/types.js';
 
 const testCalendars: CalendarConfig[] = [
   {

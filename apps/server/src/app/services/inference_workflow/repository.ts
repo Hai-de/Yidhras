@@ -6,7 +6,11 @@ import type { AppContext } from '../../context.js';
 import { toJsonSafe } from '../../http/json.js';
 import { ensureNonEmptyId } from './parsers.js';
 import type { DecisionJobRecord } from './types.js';
-import { DEFAULT_DECISION_JOB_LOCK_TICKS, RUNNABLE_JOB_STATUSES, isRecord } from './types.js';
+import {
+  buildPendingSourceKey,
+  DEFAULT_DECISION_JOB_LOCK_TICKS,
+  isRecord,
+  RUNNABLE_JOB_STATUSES} from './types.js';
 
 export const getDecisionJobById = async (context: AppContext, jobId?: string) => {
   const id = ensureNonEmptyId(jobId, 'job_id');
@@ -235,6 +239,7 @@ export const updateDecisionJobState = async (
     replay_override_snapshot?: Prisma.InputJsonValue | typeof Prisma.JsonNull;
     source_inference_id?: string;
     action_intent_id?: string | null;
+    pending_source_key?: string | null;
     increment_attempt?: boolean;
     scheduled_for_tick?: bigint | null;
     intent_class?: InferenceJobIntentClass;
@@ -264,6 +269,7 @@ export const updateDecisionJobState = async (
       lock_expires_at: input.lock_expires_at === undefined ? existing.lock_expires_at : input.lock_expires_at,
       next_retry_at: input.next_retry_at === undefined ? existing.next_retry_at : input.next_retry_at,
       source_inference_id: input.source_inference_id ?? existing.source_inference_id,
+      pending_source_key: input.pending_source_key === undefined ? existing.pending_source_key : input.pending_source_key,
       intent_class: input.intent_class ?? existing.intent_class,
       scheduled_for_tick: input.scheduled_for_tick === undefined ? existing.scheduled_for_tick : input.scheduled_for_tick,
       action_intent_id: input.action_intent_id === undefined ? existing.action_intent_id : input.action_intent_id,
@@ -303,9 +309,13 @@ export const listPendingSchedulerDecisionJobs = async (
     where: {
       status: {
         in: ['pending', 'running']
+      },
+      idempotency_key: {
+        startsWith: 'sch:'
       }
     },
     select: {
+      idempotency_key: true,
       request_input: true
     }
   });
@@ -313,6 +323,9 @@ export const listPendingSchedulerDecisionJobs = async (
   const agentIdSet = new Set(agentIds);
   return new Set(
     jobs.flatMap(job => {
+      if (typeof job.idempotency_key !== 'string' || !job.idempotency_key.startsWith('sch:')) {
+        return [];
+      }
       const requestInput = isRecord(job.request_input) ? job.request_input : null;
       const agentId = requestInput && typeof requestInput.agent_id === 'string' ? requestInput.agent_id : null;
       return agentId && agentIdSet.has(agentId) ? [agentId] : [];
@@ -332,9 +345,13 @@ export const listPendingSchedulerActionIntents = async (
     where: {
       status: {
         in: ['pending', 'dispatching']
+      },
+      source_inference_id: {
+        startsWith: 'sch:'
       }
     },
     select: {
+      source_inference_id: true,
       actor_ref: true
     }
   });
@@ -342,6 +359,12 @@ export const listPendingSchedulerActionIntents = async (
   const agentIdSet = new Set(agentIds);
   return new Set(
     intents.flatMap(intent => {
+      if (
+        typeof intent.source_inference_id !== 'string' ||
+        !intent.source_inference_id.startsWith('sch:')
+      ) {
+        return [];
+      }
       const actorRef = isRecord(intent.actor_ref) ? intent.actor_ref : null;
       const agentId = actorRef && typeof actorRef.agent_id === 'string' ? actorRef.agent_id : null;
       return agentId && agentIdSet.has(agentId) ? [agentId] : [];
@@ -509,7 +532,7 @@ export const createPendingDecisionJob = async (
 
   return context.prisma.decisionJob.create({
     data: {
-      source_inference_id: `pending_${input.idempotency_key}`,
+      pending_source_key: buildPendingSourceKey(input.idempotency_key),
       job_type: 'inference_run',
       status: 'pending',
       idempotency_key: input.idempotency_key,
@@ -560,7 +583,7 @@ export const createReplayDecisionJob = async (
 
   return context.prisma.decisionJob.create({
     data: {
-      source_inference_id: `pending_${input.idempotency_key}`,
+      pending_source_key: buildPendingSourceKey(input.idempotency_key),
       replay_of_job_id: input.source_job.id,
       replay_source_trace_id: input.source_trace_id,
       replay_reason: input.reason ?? null,

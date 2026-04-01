@@ -32,11 +32,8 @@ export const useGraphPage = () => {
 
   const snapshot = ref<GraphViewSnapshot | null>(null)
   const errorMessage = ref<string | null>(null)
-  const isFetching = ref(false)
-  const lastSyncedAt = ref<number | null>(null)
 
   const fetchGraphView = async () => {
-    isFetching.value = true
     graphStore.setFetching(true)
 
     try {
@@ -52,7 +49,6 @@ export const useGraphPage = () => {
 
       graphStore.markSynced()
       errorMessage.value = null
-      lastSyncedAt.value = Date.now()
     } catch (error) {
       const message = getErrorMessage(error)
       errorMessage.value = message
@@ -62,7 +58,6 @@ export const useGraphPage = () => {
         code: 'graph_refresh_failed'
       })
     } finally {
-      isFetching.value = false
       graphStore.setFetching(false)
     }
   }
@@ -192,8 +187,8 @@ export const useGraphPage = () => {
     connectedEdges,
     inspector,
     errorMessage,
-    isFetching,
-    lastSyncedAt,
+    isFetching: computed(() => graphStore.isFetching),
+    lastSyncedAt: computed(() => graphStore.lastSyncedAt),
     routeState: graphRoute,
     refresh: fetchGraphView,
     refreshPolling: polling.refresh,

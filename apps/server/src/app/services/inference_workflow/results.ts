@@ -6,8 +6,9 @@ import type {
   InferenceRunResult,
   WorkflowSnapshot
 } from '../../../inference/types.js';
-import type { DecisionJobRecord } from './types.js';
 import { buildInferenceRunResultFromTrace, toInferenceJobSnapshot } from './snapshots.js';
+import type { DecisionJobRecord } from './types.js';
+import { resolveDecisionJobInferenceId } from './types.js';
 
 export const resolveInferenceIdForSubmitResult = (
   workflowSnapshot: WorkflowSnapshot,
@@ -16,8 +17,7 @@ export const resolveInferenceIdForSubmitResult = (
   return (
     workflowSnapshot.records.trace?.id ??
     workflowSnapshot.records.job?.source_inference_id ??
-    job.source_inference_id ??
-    (job.idempotency_key ? `pending_${job.idempotency_key}` : job.id)
+    resolveDecisionJobInferenceId(job)
   );
 };
 

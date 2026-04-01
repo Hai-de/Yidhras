@@ -1,4 +1,5 @@
 import { requestApiData } from '../../lib/http/client'
+import { normalizeOptionalString } from '../../lib/route/query'
 import type { TickString } from '../../lib/time/tick'
 
 export type WorkflowJobStatus = 'pending' | 'running' | 'completed' | 'failed'
@@ -184,15 +185,6 @@ export interface WorkflowJobsQueryInput {
   limit?: number
   hasError?: boolean | null
   actionIntentId?: string | null
-}
-
-const normalizeOptionalString = (value: string | null | undefined): string | null => {
-  if (typeof value !== 'string') {
-    return null
-  }
-
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
 }
 
 const buildQueryString = (input: WorkflowJobsQueryInput): string => {

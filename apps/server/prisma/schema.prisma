@@ -303,6 +303,7 @@ model DecisionJob {
   idempotency_key     String?         @unique
   attempt_count       Int             @default(1)
   max_attempts        Int             @default(3)
+  pending_source_key  String?         @unique
   request_input       Json?
   replay_override_snapshot Json?
   last_error          String?

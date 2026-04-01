@@ -1,16 +1,8 @@
 import { useRouteQuery } from '@vueuse/router'
 import { computed } from 'vue'
 
+import { normalizeOptionalString } from '../../lib/route/query'
 import { useWorkflowStore } from './store'
-
-const normalizeOptionalString = (value: string | null | undefined): string | null => {
-  if (typeof value !== 'string') {
-    return null
-  }
-
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
 
 export const useWorkflowRouteState = () => {
   const workflow = useWorkflowStore()

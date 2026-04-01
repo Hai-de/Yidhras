@@ -137,9 +137,9 @@ The following guarantees should remain stable across refactors:
 ## 5) Frontend Architecture / 前端架构
 
 - Nuxt 4 app with Pinia stores and layered layout.
-- `layouts/default.vue` provides shell and layer switcher.
-- `components/L2Graph.vue` renders relation graph with Cytoscape.
-- `stores/clock.ts` handles time sync and BigInt-string conversion on the client side.
+- `layouts/default.vue` is the default layout entry and delegates the main operator shell to `features/shell/components/AppShell.vue`.
+- Graph rendering now lives under `features/graph/components/*` and uses Cytoscape through `GraphCanvas.vue`.
+- `stores/runtime.ts` is the current runtime/clock aggregation entry on the client side.
 - Frontend is still a product shell rather than a frozen final UI.
 
 ## 6) Engineering Baseline / 工程基线

@@ -95,8 +95,9 @@ This file is intentionally specific to the current repo layout and conventions.
 
 ## 7) Test Commands (Current State)
 
-- No formal test runner (Jest/Vitest) is configured yet.
-- Existing "test" files in `apps/server/src/**/test*.ts` are executable TS scripts.
+- Frontend unit tests are now available via Vitest in `apps/web/tests/unit/*.spec.ts`.
+- Backend still does not use a centralized unit/integration test runner; existing verification is primarily script-driven.
+- Historical manual verification scripts now live under `apps/server/scripts/manual/*.ts`.
 - Current backend verification scripts include:
 - `pnpm --filter yidhras-server smoke`
 - `pnpm --filter yidhras-server test:workflow-locking`
@@ -107,15 +108,15 @@ This file is intentionally specific to the current repo layout and conventions.
 - `pnpm --filter yidhras-server test:trigger-event`
 - `pnpm --filter yidhras-server test:audit-feed`
 - `pnpm --filter yidhras-server test:audit-workflow-lineage`
-- Legacy executable TS scripts still exist in `apps/server/src/**/test*.ts` and can be run manually with `tsx` when needed.
+- Manual demo scripts can still be run with `pnpm --filter yidhras-server run manual:*` when needed, but they are not the main verification path.
 
 ## 8) Single-Test Execution (Important)
 
 - Since there is no centralized test framework, "single test" means running one script file.
 - Preferred pattern (from repo root):
-- `pnpm --filter yidhras-server exec tsx src/clock/test.ts`
+- `pnpm --filter yidhras-server exec tsx src/e2e/workflow_replay.ts`
 - Equivalent pattern (inside `apps/server`):
-- `pnpm exec tsx src/clock/test.ts`
+- `pnpm exec tsx src/e2e/workflow_replay.ts`
 - For any new test file, keep the same approach:
 - `pnpm --filter yidhras-server exec tsx <path-to-test-file>.ts`
 
@@ -143,7 +144,7 @@ This file is intentionally specific to the current repo layout and conventions.
 - World-pack loading is file-driven via YAML in `apps/server/src/world/loader.ts`.
 - Narrative templating and permission gating are in `apps/server/src/narrative/resolver.ts`.
 - Frontend state uses Pinia stores in `apps/web/stores/*.ts`.
-- L2 graph visualization is Cytoscape in `apps/web/components/L2Graph.vue`.
+- Graph visualization now lives under `apps/web/features/graph/components/*` and uses Cytoscape through `GraphCanvas.vue`.
 - Keep the stable request tracing path intact: `requestIdMiddleware()` sets `X-Request-Id` and keeps `res.locals.requestId` aligned with the unified error envelope.
 - Keep runtime gating centralized through `AppContext.assertRuntimeReady(feature)` so world-pack-dependent endpoints continue to return `503/WORLD_PACK_NOT_READY` with stable details.
 - Inference integration is intentionally reserved at `apps/server/src/app/routes/inference.ts` and `apps/server/src/inference/service.ts`; do not bypass these locations with ad-hoc route-level prompt logic.

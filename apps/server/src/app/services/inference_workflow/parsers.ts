@@ -14,9 +14,8 @@ import type {
 import {
   DEFAULT_INFERENCE_JOB_LIST_LIMIT,
   INFERENCE_JOB_STATUSES,
-  MAX_INFERENCE_JOB_LIST_LIMIT,
-  isRecord
-} from './types.js';
+  isRecord,
+  MAX_INFERENCE_JOB_LIST_LIMIT} from './types.js';
 
 export interface ListInferenceJobsInput {
   status?: string[];

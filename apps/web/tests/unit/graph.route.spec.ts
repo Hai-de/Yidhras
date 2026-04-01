@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
+import { normalizeBooleanQuery, normalizeOptionalString } from '../../lib/route/query'
 import {
-  normalizeBooleanQuery,
   normalizeGraphDepth,
-  normalizeGraphView,
-  normalizeOptionalString
+  normalizeGraphView
 } from '../../features/graph/route'
 
 describe('graph route normalizers', () => {

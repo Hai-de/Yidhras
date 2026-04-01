@@ -1,14 +1,7 @@
 import { useRouteQuery } from '@vueuse/router'
 import { computed } from 'vue'
 
-const normalizeOptionalString = (value: string | null | undefined): string | null => {
-  if (typeof value !== 'string') {
-    return null
-  }
-
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
+import { normalizeOptionalString } from '../../lib/route/query'
 
 const normalizeSocialSort = (value: string | null | undefined): 'latest' | 'signal' => {
   return value === 'signal' ? 'signal' : 'latest'

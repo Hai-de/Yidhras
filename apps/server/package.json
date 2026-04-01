@@ -32,7 +32,14 @@
     "test:inference-workflow-core": "tsx src/e2e/inference_workflow_core.ts",
     "test:workflow-locking": "tsx src/e2e/workflow_locking.ts",
     "test:workflow-replay": "tsx src/e2e/workflow_replay.ts",
-    "smoke": "pnpm run smoke:startup && pnpm run smoke:endpoints"
+    "smoke": "pnpm run smoke:startup && pnpm run smoke:endpoints",
+    "manual:clock-demo": "tsx scripts/manual/clock_demo.ts",
+    "manual:clock-raw": "tsx scripts/manual/clock_raw.ts",
+    "manual:dynamics-demo": "tsx scripts/manual/dynamics_demo.ts",
+    "manual:dynamics-pluggable-demo": "tsx scripts/manual/dynamics_pluggable_demo.ts",
+    "manual:narrative-demo": "tsx scripts/manual/narrative_demo.ts",
+    "manual:permission-demo": "tsx scripts/manual/permission_demo.ts",
+    "manual:world-pack-demo": "tsx scripts/manual/world_pack_demo.ts"
   },
   "dependencies": {
     "@yidhras/contracts": "workspace:*",

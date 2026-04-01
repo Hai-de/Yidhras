@@ -1,4 +1,5 @@
 import { requestApiData } from '../../lib/http/client'
+import { normalizeOptionalString } from '../../lib/route/query'
 import type { TickString } from '../../lib/time/tick'
 
 export type SchedulerKind = 'periodic' | 'event_driven'
@@ -112,15 +113,6 @@ export interface SchedulerDecisionsQueryInput {
   skippedReason?: SchedulerSkipReason | null
   fromTick?: TickString | null
   toTick?: TickString | null
-}
-
-const normalizeOptionalString = (value: string | null | undefined): string | null => {
-  if (typeof value !== 'string') {
-    return null
-  }
-
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
 }
 
 const buildQueryString = (input: Record<string, string | number | null | undefined>): string => {

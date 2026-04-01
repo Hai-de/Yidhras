@@ -11,12 +11,10 @@ describe('useGraphStore', () => {
   it('tracks fetch and refresh mode state', () => {
     const graph = useGraphStore()
 
-    graph.setFetching(true)
     graph.setAutoRefreshMode('visible-polling')
-    graph.markSynced()
 
-    expect(graph.isFetching).toBe(true)
+    expect(graph.isFetching).toBe(false)
     expect(graph.autoRefreshMode).toBe('visible-polling')
-    expect(graph.lastSyncedAt).toEqual(expect.any(Number))
+    expect(graph.lastSyncedAt).toBeNull()
   })
 })

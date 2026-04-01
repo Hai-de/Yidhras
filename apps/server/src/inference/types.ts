@@ -30,6 +30,7 @@ export type InferenceJobIntentClass = 'direct_inference' | 'scheduler_periodic' 
 export interface InferenceJobSnapshot {
   id: string;
   source_inference_id: string;
+  pending_source_key?: string | null;
   action_intent_id: string | null;
   job_type: string;
   status: InferenceJobStatus;

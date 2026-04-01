@@ -398,6 +398,17 @@ const buildWorkflowAuditEntries = async (
         : {}),
       ...(buildBigIntRangeWhere(filters, 'created_at') ?? {})
     },
+    select: {
+      id: true,
+      pending_source_key: true,
+      source_inference_id: true,
+      action_intent_id: true,
+      created_at: true,
+      job_type: true,
+      status: true,
+      attempt_count: true,
+      max_attempts: true
+    },
     orderBy: { created_at: 'desc' }
   });
 
@@ -410,7 +421,7 @@ const buildWorkflowAuditEntries = async (
     const workflow = snapshot.derived;
     const candidateAgentIds = extractAgentIdsFromRefs(intent?.actor_ref ?? trace?.actor_ref ?? null, intent?.target_ref ?? null);
 
-    if (filters.inference_id && trace?.id !== filters.inference_id && job.source_inference_id !== filters.inference_id) {
+    if (filters.inference_id && trace?.id !== filters.inference_id && job.pending_source_key !== filters.inference_id && job.source_inference_id !== filters.inference_id) {
       return [];
     }
 
@@ -427,13 +438,14 @@ const buildWorkflowAuditEntries = async (
       id: job.id,
       created_at: job.created_at.toString(),
       refs: {
-        inference_id: trace?.id ?? job.source_inference_id ?? null,
+        inference_id: trace?.id ?? job.pending_source_key ?? job.source_inference_id ?? null,
         job_id: job.id,
         action_intent_id: intent?.id ?? job.action_intent_id ?? null
       },
       summary: `${intent?.intent_type ?? 'workflow'} -> ${workflow.workflow_state}`,
       data: {
         source_inference_id: job.source_inference_id ?? null,
+        pending_source_key: job.pending_source_key ?? null,
         job_type: job.job_type,
         job_status: job.status,
         attempt_count: job.attempt_count,
@@ -790,13 +802,14 @@ const buildWorkflowAuditEntryBySnapshot = (jobId: string, snapshot: Awaited<Retu
     id: job.id,
     created_at: job.created_at,
     refs: {
-      inference_id: trace?.id ?? job.source_inference_id ?? null,
+      inference_id: trace?.id ?? job.pending_source_key ?? job.source_inference_id ?? null,
       job_id: job.id,
       action_intent_id: intent?.id ?? job.action_intent_id ?? null
     },
     summary: `${intent?.intent_type ?? 'workflow'} -> ${snapshot.derived.workflow_state}`,
     data: {
       source_inference_id: job.source_inference_id ?? null,
+      pending_source_key: job.pending_source_key ?? null,
       job_type: job.job_type,
       job_status: job.status,
       attempt_count: job.attempt_count,

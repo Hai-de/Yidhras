@@ -266,11 +266,14 @@ export const getAgentOverview = async (
   const recentActivity = auditFeed.entries.slice(0, limit);
   const recentWorkflows = workflowList.items.slice(0, limit);
   const traceIdsFromWorkflows = recentWorkflows
-    .map(item => item.source_inference_id)
-    .filter((value): value is string => typeof value === 'string' && value.length > 0 && !value.startsWith('pending_'));
+    .map(item => item.pending_source_key ?? item.source_inference_id)
+    .filter((value): value is string => typeof value === 'string' && value.length > 0);
   const filteredRecentTraces = recentTraces
     .filter(trace => traceIdsFromWorkflows.includes(trace.id))
     .slice(0, limit);
+  const findWorkflowByInferenceId = (inferenceId: string) => {
+    return recentWorkflows.find(item => (item.pending_source_key ?? item.source_inference_id) === inferenceId);
+  };
 
   const latestTrace = filteredRecentTraces[0] ?? null;
   const latestContextSnapshot = isRecord(latestTrace?.context_snapshot)
@@ -347,21 +350,21 @@ export const getAgentOverview = async (
     recent_events: recentEvents,
     recent_inference_results: filteredRecentTraces.map(trace => ({
       job_id:
-        recentWorkflows.find(item => item.source_inference_id === trace.id)?.id ??
+        findWorkflowByInferenceId(trace.id)?.id ??
         recentActivity.find(entry => entry.kind === 'workflow' && entry.refs.inference_id === trace.id)?.id ??
         '',
       inference_id: trace.id,
       strategy: trace.strategy,
       workflow_state:
-        recentWorkflows.find(item => item.source_inference_id === trace.id)?.workflow.workflow_state ??
+        findWorkflowByInferenceId(trace.id)?.workflow.workflow_state ??
         'unknown',
       intent_type:
-        recentWorkflows.find(item => item.source_inference_id === trace.id)?.workflow.intent_type ??
+        findWorkflowByInferenceId(trace.id)?.workflow.intent_type ??
         null,
       outcome_summary: (
-        recentWorkflows.find(item => item.source_inference_id === trace.id)?.workflow.outcome_summary
+        findWorkflowByInferenceId(trace.id)?.workflow.outcome_summary
       )
-        ? (recentWorkflows.find(item => item.source_inference_id === trace.id)?.workflow.outcome_summary as unknown as Record<string, unknown>)
+        ? (findWorkflowByInferenceId(trace.id)?.workflow.outcome_summary as unknown as Record<string, unknown>)
         : null,
       decision: isRecord(trace.decision) ? (trace.decision as Record<string, unknown>) : null,
       created_at: trace.created_at.toString()

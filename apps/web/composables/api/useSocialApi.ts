@@ -1,6 +1,7 @@
 import type { ApiSuccessMeta } from '@yidhras/contracts'
 
 import { requestApi } from '../../lib/http/client'
+import { normalizeOptionalString } from '../../lib/route/query'
 import type { TickString } from '../../lib/time/tick'
 
 export interface SocialPostSnapshot {
@@ -31,15 +32,6 @@ export interface SocialFeedQueryInput {
 export interface SocialFeedSnapshot {
   items: SocialPostSnapshot[]
   pagination: NonNullable<ApiSuccessMeta['pagination']>
-}
-
-const normalizeOptionalString = (value: string | null | undefined): string | null => {
-  if (typeof value !== 'string') {
-    return null
-  }
-
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
 }
 
 const buildSocialFeedQueryString = (input: SocialFeedQueryInput): string => {

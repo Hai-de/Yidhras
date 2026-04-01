@@ -1,11 +1,10 @@
-import type { AppContext } from '../context.js';
-
-import { getGraphView } from './relational/graph_projection.js';
+import type { AppContext } from '../context.js'
+import { getGraphView } from './relational/graph_projection.js'
 import {
   listAtmosphereNodes,
-  listRelationshipAdjustmentLogs,
-  listRelationalCircles
-} from './relational/queries.js';
+  listRelationalCircles,
+  listRelationshipAdjustmentLogs
+} from './relational/queries.js'
 import type {
   GraphEdgeView,
   GraphNodeView,
@@ -13,24 +12,17 @@ import type {
   GraphViewSnapshot,
   ListAtmosphereNodesInput,
   ListRelationshipAdjustmentLogsInput
-} from './relational/types.js';
+} from './relational/types.js'
 
-export type {
-  GraphEdgeView,
-  GraphNodeView,
-  GraphViewInput,
-  GraphViewSnapshot,
-  ListAtmosphereNodesInput,
-  ListRelationshipAdjustmentLogsInput
-};
+export type { GraphEdgeView, GraphNodeView, GraphViewInput, GraphViewSnapshot, ListAtmosphereNodesInput, ListRelationshipAdjustmentLogsInput }
 
 export const getRelationalGraph = async (context: AppContext) => {
   return context.sim.getGraphData();
-};
+}
 
 export {
   getGraphView,
   listAtmosphereNodes,
-  listRelationshipAdjustmentLogs,
-  listRelationalCircles
-};
+  listRelationalCircles,
+  listRelationshipAdjustmentLogs
+}

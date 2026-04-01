@@ -501,7 +501,7 @@ export const createInferenceService = ({
 
       const replayJob = await createReplayDecisionJob(context, {
         source_job: sourceJob,
-        source_trace_id: sourceJob.source_inference_id && !sourceJob.source_inference_id.startsWith('pending_') ? sourceJob.source_inference_id : null,
+        source_trace_id: sourceJob.pending_source_key === null ? sourceJob.source_inference_id : null,
         request_input: { ...mergedInput, idempotency_key: idempotencyKey },
         idempotency_key: idempotencyKey,
         reason: replayInput.reason ?? 'operator_manual_replay',

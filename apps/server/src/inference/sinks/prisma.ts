@@ -169,6 +169,7 @@ export const createPrismaInferenceTraceSink = (context: AppContext): InferenceTr
             },
             data: {
               source_inference_id: event.inference_id,
+              pending_source_key: null,
               action_intent_id: actionIntentId,
               job_type: 'inference_run',
               status: jobStatus,
@@ -204,6 +205,7 @@ export const createPrismaInferenceTraceSink = (context: AppContext): InferenceTr
           },
           create: {
             source_inference_id: event.inference_id,
+            pending_source_key: null,
             action_intent_id: actionIntentId,
             job_type: 'inference_run',
             status: jobStatus,

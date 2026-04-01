@@ -15,6 +15,7 @@ export interface DecisionJobRecord {
   replay_reason: string | null;
   replay_override_snapshot: unknown;
   source_inference_id: string | null;
+  pending_source_key: string | null;
   action_intent_id: string | null;
   job_type: string;
   status: string;
@@ -133,3 +134,20 @@ export const normalizeIntentStatus = (status: string): InferenceActionIntentStat
 };
 
 export type { InferenceRequestInput };
+
+export const buildPendingSourceKey = (idempotencyKey: string | null | undefined): string | null => {
+  if (typeof idempotencyKey !== 'string') {
+    return null;
+  }
+
+  const trimmed = idempotencyKey.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+export const hasMaterializedInferenceTrace = (job: Pick<DecisionJobRecord, 'source_inference_id' | 'pending_source_key'>): boolean => {
+  return typeof job.source_inference_id === 'string' && job.source_inference_id.length > 0 && job.pending_source_key === null;
+};
+
+export const resolveDecisionJobInferenceId = (job: Pick<DecisionJobRecord, 'source_inference_id' | 'pending_source_key' | 'id'>): string => {
+  return job.source_inference_id ?? job.pending_source_key ?? job.id;
+};

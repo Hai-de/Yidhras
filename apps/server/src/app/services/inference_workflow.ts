@@ -35,8 +35,8 @@ import {
   updateDecisionJobState
 } from './inference_workflow/repository.js';
 import {
-  buildInferenceJobReplaySubmitResult,
   buildInferenceJobReplayResult as buildInferenceJobReplayResultFromSnapshot,
+  buildInferenceJobReplaySubmitResult,
   buildInferenceJobRetryResult,
   buildInferenceJobSubmitResult,
   getDecisionResultFromWorkflowSnapshot
@@ -49,14 +49,15 @@ import {
 import type {
   ActionIntentRecord,
   DecisionJobRecord,
-  InferenceTraceRecord,
   InferenceRequestInput as StoredInferenceRequestInput,
+  InferenceTraceRecord,
   ParsedInferenceJobsFilters
 } from './inference_workflow/types.js';
 import {
+  hasMaterializedInferenceTrace,
   INFERENCE_JOB_STATUSES,
-  isRecord,
   normalizeJobStatus,
+  resolveDecisionJobInferenceId,
   toTickString
 } from './inference_workflow/types.js';
 
@@ -80,6 +81,7 @@ export interface InferenceJobListItem {
   strategy: string | null;
   actor_ref: Record<string, unknown> | null;
   target_ref: Record<string, unknown> | null;
+  pending_source_key: string | null;
   request_input: StoredInferenceRequestInput | null;
   workflow: {
     intent_type: string | null;
@@ -189,13 +191,12 @@ const buildWorkflowSnapshotBundleForJobs = async (
   context: AppContext,
   jobs: DecisionJobRecord[]
 ): Promise<WorkflowSnapshotBundle> => {
-  const traceIds = Array.from(
-    new Set(
-      jobs
-        .map(job => job.source_inference_id)
-        .filter((value): value is string => typeof value === 'string' && !value.startsWith('pending_'))
-    )
-  );
+  const traceIds = Array.from(new Set(
+    jobs
+      .filter(hasMaterializedInferenceTrace)
+      .map(job => job.source_inference_id)
+      .filter((value): value is string => typeof value === 'string')
+  ));
   const intentIds = Array.from(
     new Set(jobs.map(job => job.action_intent_id).filter((value): value is string => typeof value === 'string'))
   );
@@ -236,13 +237,17 @@ const buildWorkflowSnapshotBundleForJobs = async (
 };
 
 const buildWorkflowSnapshotFromBundle = (job: DecisionJobRecord, bundle: WorkflowSnapshotBundle): WorkflowSnapshot => {
+  const trace = hasMaterializedInferenceTrace(job) && typeof job.source_inference_id === 'string'
+    ? bundle.traceByInferenceId.get(job.source_inference_id) ?? null
+    : null;
+  const intent = typeof job.action_intent_id === 'string' ? bundle.intentById.get(job.action_intent_id) ?? null : null;
+  const replayParentJob = typeof job.replay_of_job_id === 'string' ? bundle.replayParentJobById.get(job.replay_of_job_id) ?? null : null;
+
   return buildWorkflowSnapshot({
-    trace: job.source_inference_id && !job.source_inference_id.startsWith('pending_')
-      ? bundle.traceByInferenceId.get(job.source_inference_id) ?? null
-      : null,
+    trace,
     job,
-    intent: job.action_intent_id ? bundle.intentById.get(job.action_intent_id) ?? null : null,
-    replayParentJob: job.replay_of_job_id ? bundle.replayParentJobById.get(job.replay_of_job_id) ?? null : null,
+    intent,
+    replayParentJob,
     replayChildJobs: bundle.replayChildJobsByParentId.get(job.id) ?? []
   });
 };
@@ -300,7 +305,8 @@ const buildInferenceJobListItem = (
 ): InferenceJobListItem => {
   return {
     id: job.id,
-    source_inference_id: job.source_inference_id,
+    source_inference_id: hasMaterializedInferenceTrace(job) ? job.source_inference_id : null,
+    pending_source_key: job.pending_source_key,
     action_intent_id: job.action_intent_id,
     job_type: job.job_type,
     status: normalizeJobStatus(job.status),
@@ -490,10 +496,9 @@ export const getWorkflowSnapshotByJobId = async (
   const job = await getDecisionJobById(context, id);
 
   const [trace, intent, replayParentJob, replayChildJobs] = await Promise.all([
-    job.source_inference_id && !job.source_inference_id.startsWith('pending_')
-      ? context.prisma.inferenceTrace.findUnique({
-          where: { id: job.source_inference_id }
-        })
+    hasMaterializedInferenceTrace(job)
+      && typeof job.source_inference_id === 'string'
+      ? context.prisma.inferenceTrace.findUnique({ where: { id: job.source_inference_id } })
       : Promise.resolve(null),
     job.action_intent_id
       ? context.prisma.actionIntent.findUnique({
@@ -525,7 +530,7 @@ export const getWorkflowSnapshotByJobId = async (
 };
 
 export {
-  DEFAULT_DECISION_JOB_LOCK_TICKS,
+  assertDecisionJobLockOwnership,
   buildInferenceJobReplaySubmitResult,
   buildInferenceJobRetryResult,
   buildInferenceJobSubmitResult,
@@ -533,9 +538,10 @@ export {
   claimDecisionJob,
   createPendingDecisionJob,
   createReplayDecisionJob,
+  DEFAULT_DECISION_JOB_LOCK_TICKS,
   getActionIntentByInferenceId,
-  getDecisionJobByIdempotencyKey,
   getDecisionJobById,
+  getDecisionJobByIdempotencyKey,
   getDecisionJobByInferenceId,
   getDecisionResultFromWorkflowSnapshot,
   getInferenceTraceById,
@@ -550,7 +556,6 @@ export {
   listRunnableDecisionJobs,
   normalizeReplayInput,
   releaseDecisionJobLock,
+  resolveDecisionJobInferenceId,
   toInferenceJobSnapshot,
-  updateDecisionJobState,
-  assertDecisionJobLockOwnership
-};
+  updateDecisionJobState};

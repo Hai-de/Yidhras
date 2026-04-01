@@ -16,6 +16,7 @@ import {
   normalizeIntentStatus,
   normalizeJobIntentClass,
   normalizeJobStatus,
+  resolveDecisionJobInferenceId,
   toRecord,
   toTickString
 } from './types.js';
@@ -45,10 +46,11 @@ const toReplayLineageChildSnapshots = (jobs: DecisionJobRecord[]) => {
 export const toInferenceJobSnapshot = (job: DecisionJobRecord) => {
   return {
     id: job.id,
-    source_inference_id: job.source_inference_id ?? '',
+    source_inference_id: resolveDecisionJobInferenceId(job),
     action_intent_id: job.action_intent_id,
     job_type: job.job_type,
     status: normalizeJobStatus(job.status),
+    pending_source_key: job.pending_source_key,
     attempt_count: job.attempt_count,
     max_attempts: job.max_attempts,
     last_error: job.last_error,

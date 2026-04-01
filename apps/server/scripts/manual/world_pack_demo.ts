@@ -1,9 +1,7 @@
 import path from 'path';
 
-import { WorldPackLoader } from './loader.js';
+import { WorldPackLoader } from '../../src/world/loader.js';
 
-// 基于 process.cwd() (预期在 apps/server 运行)
-// apps/server -> ../../data/world_packs
 const packsDir = path.resolve('../../data/world_packs');
 
 const loader = new WorldPackLoader(packsDir);
@@ -22,15 +20,15 @@ if (available.length > 0) {
   console.log(`- 版本: ${p.metadata.version}`);
   console.log(`- 变量数: ${Object.keys(p.variables || {}).length}`);
   console.log(`- 历法数: ${p.time_systems?.length || 0}`);
-  
+
   if (p.time_systems && p.time_systems.length > 0) {
     console.log(`- 首个历法: ${p.time_systems[0].name} (Tick Rate: ${p.time_systems[0].tick_rate})`);
   }
 
-  console.log("\n--- 聚合变量池 ---");
+  console.log('\n--- 聚合变量池 ---');
   const mergedVars = loader.getMergedVariables();
-  console.log("Currency:", mergedVars.currency);
-  console.log("Governance:", mergedVars.governance);
+  console.log('Currency:', mergedVars.currency);
+  console.log('Governance:', mergedVars.governance);
 } else {
-  console.log("\n未发现可用的世界包文件夹。");
+  console.log('\n未发现可用的世界包文件夹。');
 }

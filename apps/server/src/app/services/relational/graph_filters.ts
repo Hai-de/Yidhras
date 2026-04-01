@@ -1,11 +1,9 @@
-import { ApiError } from '../../../utils/api_error.js';
-
+import { ApiError } from '../../../utils/api_error.js'
 import {
   DEFAULT_GRAPH_DEPTH,
   GRAPH_NODE_KINDS,
-  MAX_GRAPH_DEPTH,
-  type GraphViewInput
-} from './types.js';
+  type GraphViewInput,
+  MAX_GRAPH_DEPTH} from './types.js'
 
 export interface ParsedGraphViewFilters {
   view: 'mesh' | 'tree';

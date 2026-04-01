@@ -100,7 +100,6 @@ export class SimulationManager {
 
   public async step(amount: bigint = 1n) {
     this.clock.tick(amount);
-    // TODO: 触发 Agent 决策逻辑
   }
 
   public async getGraphData() {

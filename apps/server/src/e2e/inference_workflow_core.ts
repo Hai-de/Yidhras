@@ -180,6 +180,7 @@ const testSnapshotDerivation = () => {
       replay_source_trace_id: null,
       replay_reason: null,
       replay_override_snapshot: null,
+      pending_source_key: null,
       source_inference_id: 'trace-1',
       action_intent_id: null,
       job_type: 'inference_run',
@@ -215,6 +216,7 @@ const testSnapshotDerivation = () => {
       replay_source_trace_id: null,
       replay_reason: null,
       replay_override_snapshot: null,
+      pending_source_key: null,
       source_inference_id: 'trace-2',
       action_intent_id: 'intent-complete',
       job_type: 'inference_run',
@@ -269,6 +271,7 @@ const testSnapshotDerivation = () => {
       replay_source_trace_id: null,
       replay_reason: null,
       replay_override_snapshot: null,
+      pending_source_key: null,
       source_inference_id: 'trace-3',
       action_intent_id: 'intent-dropped',
       job_type: 'inference_run',
@@ -377,6 +380,7 @@ const testListInferenceJobs = async (context: AppContext) => {
     data: {
       status: 'completed',
       source_inference_id: traceId,
+      pending_source_key: null,
       action_intent_id: intentId,
       updated_at: traceTick + 1n,
       completed_at: traceTick + 1n
@@ -403,7 +407,7 @@ const testListInferenceJobs = async (context: AppContext) => {
     data: {
       replay_of_job_id: agentOneJob.id,
       replay_reason: 'test replay lineage',
-      source_inference_id: `pending_${replayJob.idempotency_key}`
+      pending_source_key: replayJob.idempotency_key
     }
   });
 

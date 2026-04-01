@@ -1,4 +1,5 @@
 import { requestApiData } from '../../lib/http/client'
+import { normalizeOptionalString } from '../../lib/route/query'
 
 export type GraphViewMode = 'mesh' | 'tree'
 export type GraphNodeKind = 'agent' | 'atmosphere' | 'relay' | 'container'
@@ -77,15 +78,6 @@ export interface GraphViewQueryInput {
   includeInactive?: boolean
   includeUnresolved?: boolean
   search?: string | null
-}
-
-const normalizeOptionalString = (value: string | null | undefined): string | null => {
-  if (typeof value !== 'string') {
-    return null
-  }
-
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
 }
 
 const buildGraphQueryString = (input: GraphViewQueryInput): string => {
