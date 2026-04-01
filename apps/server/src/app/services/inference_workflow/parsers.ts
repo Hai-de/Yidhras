@@ -1,15 +1,38 @@
 import { z } from 'zod';
 
-import type { InferenceJobReplayInput, InferenceJobStatus, InferenceStrategy, ListInferenceJobsInput } from '../../../inference/types.js';
+import type {
+  InferenceJobReplayInput,
+  InferenceJobStatus,
+  InferenceStrategy
+} from '../../../inference/types.js';
 import { ApiError } from '../../../utils/api_error.js';
-import type { InferenceJobsListCursor, ParsedInferenceJobsFilters } from './types.js';
+import type {
+  InferenceJobsListCursor,
+  InferenceRequestInput,
+  ParsedInferenceJobsFilters
+} from './types.js';
 import {
   DEFAULT_INFERENCE_JOB_LIST_LIMIT,
   INFERENCE_JOB_STATUSES,
   MAX_INFERENCE_JOB_LIST_LIMIT,
-  isRecord,
-  type InferenceRequestInput
+  isRecord
 } from './types.js';
+
+export interface ListInferenceJobsInput {
+  status?: string[];
+  agent_id?: string;
+  identity_id?: string;
+  strategy?: string;
+  job_type?: string;
+  from_tick?: string | number;
+  to_tick?: string | number;
+  from_created_at?: string | number;
+  to_created_at?: string | number;
+  cursor?: string;
+  limit?: number;
+  has_error?: boolean;
+  action_intent_id?: string;
+}
 
 const storedRequestInputSchema = z.object({
   agent_id: z.string().optional(),
