@@ -1,9 +1,7 @@
 import { useRouteQuery } from '@vueuse/router'
 import { computed } from 'vue'
 
-import { useGraphStore } from './store'
-
-const normalizeOptionalString = (value: string | null | undefined): string | null => {
+export const normalizeOptionalString = (value: string | null | undefined): string | null => {
   if (typeof value !== 'string') {
     return null
   }
@@ -12,19 +10,22 @@ const normalizeOptionalString = (value: string | null | undefined): string | nul
   return trimmed.length > 0 ? trimmed : null
 }
 
-const normalizeBooleanQuery = (value: string | null | undefined, fallback: boolean): boolean => {
+export const normalizeBooleanQuery = (value: string | null | undefined, fallback: boolean): boolean => {
   if (value === 'true') return true
   if (value === 'false') return false
   return fallback
 }
 
-const normalizeGraphView = (value: string | null | undefined): 'mesh' | 'tree' => {
+export const normalizeGraphView = (value: string | null | undefined): 'mesh' | 'tree' => {
   return value === 'tree' ? 'tree' : 'mesh'
 }
 
-export const useGraphRouteState = () => {
-  const graph = useGraphStore()
+export const normalizeGraphDepth = (value: string | null | undefined): number => {
+  const parsed = Number.parseInt(value ?? '1', 10)
+  return Number.isFinite(parsed) ? Math.min(3, Math.max(0, parsed)) : 1
+}
 
+export const useGraphRouteState = () => {
   const rootIdQuery = useRouteQuery<string | null>('root_id', null, { mode: 'replace' })
   const selectedNodeIdQuery = useRouteQuery<string | null>('selected_node_id', null, { mode: 'replace' })
   const viewQuery = useRouteQuery<string | null>('view', 'mesh', { mode: 'replace' })
@@ -39,10 +40,7 @@ export const useGraphRouteState = () => {
   const searchQuery = useRouteQuery<string | null>('search', null, { mode: 'replace' })
 
   const view = computed(() => normalizeGraphView(viewQuery.value))
-  const depth = computed(() => {
-    const parsed = Number.parseInt(depthQuery.value ?? '1', 10)
-    return Number.isFinite(parsed) ? Math.min(3, Math.max(0, parsed)) : 1
-  })
+  const depth = computed(() => normalizeGraphDepth(depthQuery.value))
   const rootId = computed(() => normalizeOptionalString(rootIdQuery.value))
   const selectedNodeId = computed(() => normalizeOptionalString(selectedNodeIdQuery.value))
 
@@ -53,30 +51,16 @@ export const useGraphRouteState = () => {
     search: normalizeOptionalString(searchQuery.value)
   }))
 
-  const applyRouteToStore = () => {
-    graph.setView(view.value)
-    graph.setRootId(rootId.value)
-    graph.setSelectedNodeId(selectedNodeId.value)
-    graph.setDepth(depth.value)
-    graph.setKinds(filters.value.kinds)
-    graph.setSearch(filters.value.search)
-    graph.setIncludeInactive(filters.value.includeInactive)
-    graph.setIncludeUnresolved(filters.value.includeUnresolved)
-  }
-
   const setGraphView = (nextView: 'mesh' | 'tree') => {
     viewQuery.value = nextView === 'mesh' ? null : nextView
-    graph.setView(nextView)
   }
 
   const setRootId = (nextRootId: string | null) => {
     rootIdQuery.value = normalizeOptionalString(nextRootId)
-    graph.setRootId(normalizeOptionalString(nextRootId))
   }
 
   const setSelectedNodeId = (nodeId: string | null) => {
     selectedNodeIdQuery.value = normalizeOptionalString(nodeId)
-    graph.setSelectedNodeId(normalizeOptionalString(nodeId))
   }
 
   const setFilters = (nextFilters: {
@@ -113,7 +97,6 @@ export const useGraphRouteState = () => {
     rootId,
     selectedNodeId,
     filters,
-    applyRouteToStore,
     setGraphView,
     setRootId,
     setSelectedNodeId,

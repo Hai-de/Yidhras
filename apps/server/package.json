@@ -22,6 +22,7 @@
     "test:audit-feed": "tsx src/e2e/audit_feed.ts",
     "test:audit-workflow-lineage": "tsx src/e2e/audit_workflow_lineage.ts",
     "test:graph-view": "tsx src/e2e/graph_view.ts",
+    "test:relational-graph-core": "tsx src/e2e/relational_graph_core.ts",
     "test:overview-summary": "tsx src/e2e/overview_summary.ts",
     "test:scheduler-lease": "tsx src/e2e/scheduler_lease.ts",
     "test:scheduler-queries": "tsx src/e2e/scheduler_queries.ts",

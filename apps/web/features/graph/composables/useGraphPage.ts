@@ -50,9 +50,6 @@ export const useGraphPage = () => {
         search: graphRoute.filters.value.search
       })
 
-      graphStore.setDepth(graphRoute.depth.value)
-      graphStore.setKinds(graphRoute.filters.value.kinds)
-      graphStore.setSearch(graphRoute.filters.value.search)
       graphStore.markSynced()
       errorMessage.value = null
       lastSyncedAt.value = Date.now()
@@ -78,12 +75,9 @@ export const useGraphPage = () => {
     refreshOnVisible: true
   })
 
-  graphRoute.applyRouteToStore()
-
   watch(
     [graphRoute.view, graphRoute.depth, graphRoute.rootId, graphRoute.selectedNodeId, graphRoute.filters],
     () => {
-      graphRoute.applyRouteToStore()
       void fetchGraphView()
     },
     { deep: true, immediate: true }

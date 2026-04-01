@@ -29,8 +29,8 @@
 2. 通过职责切分和批量读取消除 N+1 风险；
 3. 只给最脆弱模块补测试；
 4. 在不扩大变更面的前提下，利用 Zod 收敛高风险 parse/normalize 边界；
-4. 把 contracts 统一 response schema 作为明确方向记录下来，但不在这一轮强推；
-5. 为后续 SimulationManager 与前端状态模型收敛留出稳定演进路径。
+5. 把 contracts 统一 response schema 作为明确方向记录下来，但不在这一轮强推；
+6. 为后续 SimulationManager 与前端状态模型收敛留出稳定演进路径。
 
 ---
 
@@ -480,6 +480,61 @@ Graph 等 feature 中存在：
 - 在计划/文档中记录这是后续方向；
 - 新增接口时优先考虑从 query schema 迈向 response schema；
 - 不把这一项与当前 service 拆分绑定，避免任务面过大。
+
+### contracts 方向的明确落地边界
+
+为了避免后续再次变成“知道要做但没人动”，这里进一步明确：
+
+#### 8.1 本轮为什么不立即实施
+
+当前刚完成：
+- workflow 服务拆分与 N+1 收敛；
+- relational graph projection 拆分；
+- Graph 前端状态镜像收敛；
+- SimulationManager 第一阶段止血；
+- 对应关键测试补齐。
+
+如果此时再同步推进 response schema 全量 contracts 化，会把以下几件事绑在同一轮：
+- 后端 read model 调整
+- contracts schema 设计
+- 前端 client/runtime parse 接入
+- 可能的 API 响应兼容处理
+
+这会显著扩大验证面，不符合本轮“优先收结构债、避免任务面爆炸”的目标。
+
+#### 8.2 后续优先纳入 contracts 的 response 候选
+
+建议按以下顺序推进：
+
+1. `graph view`
+   - 原因：Graph 已经成为前后端都相对稳定的 operator read model，且前端消费面集中。
+2. `workflow snapshot / inference job list`
+   - 原因：workflow 已完成第一轮收敛，且是高价值 operator 观察面。
+3. `overview summary`
+   - 原因：聚合读模型对前端最敏感，schema 化收益高。
+4. `scheduler summary / trends`
+   - 原因：后端读模型已稳定，但还在演进，适合排在前三之后。
+
+#### 8.3 推荐推进方式
+
+后续不要“一次性把所有 response 全 schema 化”，而应采用增量策略：
+
+- 每次只挑一个高价值 response；
+- 在 `packages/contracts/src/*.ts` 中新增对应 response schema；
+- 后端继续保留原输出结构，但在边界处对齐 schema；
+- 前端优先在 API client / composable 边界使用 schema parse；
+- 通过小步替换手写 interface duplication，逐步让 contracts 成为单一契约源。
+
+#### 8.4 成功标志
+
+当后续开始真正推进这项工作时，应以以下标志判断是否做对：
+
+- 前后端不再各自手写同一份高价值 response shape；
+- 至少一个核心 response 同时拥有：
+  - contracts schema
+  - 后端边界对齐
+  - 前端 parse/消费对齐
+- 改字段时编译期与测试期都能更早暴露漂移，而不是运行时才发现。
 
 ---
 
