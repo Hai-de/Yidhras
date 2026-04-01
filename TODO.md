@@ -42,8 +42,8 @@ Status: In Progress / 进行中
 ### In Progress / 进行中
 
 - [~] Workflow Persistence Phase D
-  - 已有：pending job queue、loop runner、workflow snapshot、retry、idempotency replay、replay lineage baseline
-  - 待补：richer replay orchestration、durable scheduling、multi-worker safety
+  - 已有：pending job queue、loop runner、Agent Scheduler v1/v2/v3/v3c/p4a/p4s/p4r-baseline/p4r-fine（durable scheduling + event-driven policy baseline + scheduler stats + scheduler observability read model + lease/cursor leader-only safety + filtered/paginated scheduler runs/decisions query API + scheduler summary/trend projections + replay/retry recovery-window periodic suppression baseline + fine-grained priority-aware replay/retry suppression） 、workflow snapshot、retry、idempotency replay、replay lineage baseline、DecisionJob intent_class / job_source baseline
+  - 待补：richer replay orchestration、operator-facing scheduler panel / cross-linking、partitioned scheduling / stronger multi-worker semantics、更细 actor readiness / recovery policy
 - [~] Memory Core
   - 已有：short-term adapter、fragment-friendly prompt pipeline、memory selection / processing trace observability
   - 待补：real long-term retrieval/storage、更强 summarization / trimming 策略
@@ -62,6 +62,8 @@ Status: In Progress / 进行中
 
 ### Next / 下一步
 
+- [ ] 基于 Agent Scheduler 现有 p4a baseline 继续补齐 operator 联动视图、scheduler timeline/read projection 与更强 multi-worker / partitioned scheduling 语义
+- [ ] 继续补齐 richer scheduler/operator query surfaces（summary projection、trend、top actors/reasons）
 - [ ] 补齐 richer replay orchestration 与更 durable 的 job scheduling 语义
 - [ ] 扩展更多 constrained world mutation actions 与 local-variable primitives
 - [ ] 补齐 long-term memory 与更强 prompt strategy
@@ -69,11 +71,35 @@ Status: In Progress / 进行中
 
 ## M3 - Frontend Capability / 前端能力完善
 
-Status: Pending Review / 待讨论
+Status: Graph + Mapping Increment Completed / Graph 与语义映射增量已完成
 
-- [ ] 前端布局与产品化交互待统一讨论后重写
-- [~] Frontend contract/client baseline 已从 clock 路径起步，后续继续扩到更多 product-facing 视图
-- [ ] `apps/web/components/L2Graph.vue` 的 Nuxt/Vue/Cytoscape DOM typing 兼容问题保留为前端后续项
+### Delivered / 已交付
+
+- [x] `apps/web` 完成目录重构 Phase 1–9：CSR、theme foundation、Operator shell、data fetching、route-state、Overview / Workflow / Graph / Social / Timeline / Agent 基线
+- [x] 旧前端壳与遗留入口已清理：`stores/clock.ts`、`stores/system.ts`、`utils/api.ts` 等退出主线
+- [x] 核心 store 单测已补齐：`runtime / shell / workflow / graph`
+- [x] Operator UI polish 第一阶段已完成：
+  - 统一页面骨架与反馈态
+  - drill-down 来源上下文与回跳
+  - Graph focus / root / result feedback
+  - freshness 与轻量通知机制
+- [x] 前端已形成冻结版 Guardrails 与验收标准，见 `.limcode/plans/frontend-operator-ui-polish-and-interaction-enhancement.plan.md`
+- [x] 第二阶段产品增强首批已完成：
+  - Workflow detail panel 强化
+  - Social detail 信息密度与相关入口增强
+  - Timeline 双栏结构与 detail pane 落地
+  - 第二阶段手动验证链路与质量门禁已冻结
+- [x] Graph 深化与 Timeline / Social 语义映射增量已完成：
+  - Graph quick roots、search context、inspector 分组与动作解释增强
+  - Timeline → Social intent-first / tick-scoped context
+  - Social → Timeline slice-based context，移除误导性的 `post.id -> event_id` 假设
+  - mapping context banner 与 string-first tick compare 已落地
+
+### Next / 下一步
+
+- [ ] 继续推进 shell 级 runtime / notification 联动，以及更丰富的 operator-facing semantic mapping read model
+- [~] 补齐 scheduler operator projection（recent runs / recent decisions / agent timeline）并继续向 workflow/audit/graph cross-linking 扩展
+- [ ] 视需要补更多 UI 层测试或 feature-level store/composable tests
 
 ## M4 - Content and Data Packs / 内容与世界包
 
@@ -90,4 +116,4 @@ Status: Planned / 规划中
 - 验证证据、验收边界、历史快照放在 `记录.md`。
 - 过程性拆解与执行计划放在 `.limcode/plans/`，不作为当前正式状态总表。
 
-Last Updated / 最后更新: 2026-03-30
+Last Updated / 最后更新: 2026-04-xx

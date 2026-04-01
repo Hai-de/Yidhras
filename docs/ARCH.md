@@ -100,6 +100,18 @@ The following guarantees should remain stable across refactors:
 - Core data model covers agents, circles, relationships, posts, events, variables, identity/policy entities, and workflow-related records.
 - Identity bindings connect identities to active/atmosphere nodes with lifecycle state.
 - Persisted workflow records provide a formal bridge between inference and runtime-side dispatch.
+- `DecisionJob.intent_class` now serves as the stable top-level workflow intent classification layer across direct submit, scheduler, replay, and retry paths.
+- `DecisionJob.intent_class` 现已作为 direct submit / scheduler / replay / retry 路径上的稳定顶层工作流意图分类层。
+- Scheduler observability now also exposes summary/trend projections for operator-facing and backend analytics use cases.
+- 调度器观测层现已进一步暴露 summary / trend projection，服务于 operator 与后端分析场景。
+- Scheduler policy baseline is now replay/retry recovery-window aware for periodic cadence suppression.
+- 调度器策略基线现已对 replay / retry recovery window 具备 periodic cadence suppression 语义。
+- Scheduler policy is now further priority-aware inside recovery windows: high-priority `event_followup` may survive, while low-priority `relationship_change_followup` / `snr_change_followup` can be suppressed.
+- 调度器策略现已进一步在 recovery window 内具备 priority-aware 语义：高优先级 `event_followup` 可保留，低优先级 `relationship_change_followup` / `snr_change_followup` 可被 suppress。
+- Scheduler observability baseline now includes persisted `SchedulerRun` and `SchedulerCandidateDecision` read models.
+- 调度器观测基线现已包含持久化的 `SchedulerRun` 与 `SchedulerCandidateDecision` 读模型。
+- Fine-grained recovery-window skip taxonomy now distinguishes periodic vs event-driven suppression for replay/retry paths.
+- recovery-window 的细粒度 skip taxonomy 现已区分 replay / retry 路径下的 periodic suppression 与 event-driven suppression。
 
 ### 4.6 Agent Runtime Route / Agent 运行路线
 
@@ -114,6 +126,13 @@ The following guarantees should remain stable across refactors:
 - `InferenceContext` may consume memory-related context.
 - Prompt construction is fragment-oriented rather than relying on one monolithic concatenation step.
 - Long-term retrieval/storage remains an implementation concern, not an API-boundary contract.
+
+### 4.8 Scheduler Observability / 调度器观测
+
+- `apps/server/src/app/routes/scheduler.ts` provides the current minimal scheduler observability read surface.
+- `apps/server/src/app/services/scheduler_observability.ts` persists `SchedulerRun` and `SchedulerCandidateDecision` snapshots and now also exposes filtered/paginated scheduler query helpers.
+- `apps/server/src/app/runtime/scheduler_lease.ts` now provides the current lease + cursor baseline for leader-only scheduler execution semantics.
+- 调度器当前已具备 `lease + cursor` 基线，用于 leader-only scheduler 扫描语义。
 
 ## 5) Frontend Architecture / 前端架构
 

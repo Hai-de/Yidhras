@@ -101,6 +101,7 @@ const main = async () => {
     );
     assert(isRecord(baseReplay.job), 'base workflow replay should include job');
     assert(isRecord(baseReplay.result), 'base workflow replay should expose stored result');
+    assert(baseReplay.job.intent_class === 'direct_inference', 'base workflow replayed direct submit job should expose direct_inference intent_class');
 
     const replayReason = 'workflow replay verification';
     const replaySubmitRes = await requestJson(server.baseUrl, `/api/inference/jobs/${baseReplay.job.id as string}/replay`, {
@@ -120,6 +121,7 @@ const main = async () => {
     const replaySubmitData = assertSuccessEnvelopeData(replaySubmitRes.body, 'workflow replay submit response');
     assert(isRecord(replaySubmitData.job), 'workflow replay submit should include job');
     assert(isRecord(replaySubmitData.replay), 'workflow replay submit should include replay metadata');
+    assert(replaySubmitData.job.intent_class === 'replay_recovery', 'workflow replay submit job should expose replay_recovery intent_class');
     assert(replaySubmitData.replay.reason === replayReason, 'workflow replay reason should match');
     assert(replaySubmitData.replay.override_applied === true, 'workflow replay override_applied should be true');
 
@@ -147,6 +149,7 @@ const main = async () => {
     assert(replayedJobRes.status === 200, 'workflow replay job read should return 200');
     const replayedJob = assertSuccessEnvelopeData(replayedJobRes.body, 'workflow replay job response');
     assert(replayedJob.id === replayJobId, 'workflow replay job response id should match');
+    assert(replayedJob.intent_class === 'replay_recovery', 'workflow replay job read should expose replay_recovery intent_class');
 
     console.log('[workflow_replay] PASS');
   } catch (error: unknown) {

@@ -16,6 +16,7 @@ import { registerNarrativeRoutes } from './app/routes/narrative.js';
 import { registerOverviewRoutes } from './app/routes/overview.js';
 import { registerPolicyRoutes } from './app/routes/policy.js';
 import { registerRelationalRoutes } from './app/routes/relational.js';
+import { registerSchedulerRoutes } from './app/routes/scheduler.js';
 import { registerSocialRoutes } from './app/routes/social.js';
 import { registerSystemRoutes } from './app/routes/system.js';
 import { startSimulationLoop } from './app/runtime/simulation_loop.js';
@@ -42,6 +43,7 @@ let timer: NodeJS.Timeout | null = null;
 let isPaused = false;
 const decisionWorkerId = `decision:${process.pid}:${Date.now()}`;
 const actionDispatcherWorkerId = `dispatcher:${process.pid}:${Date.now()}`;
+const schedulerWorkerId = `scheduler:${process.pid}:${Date.now()}`;
 
 const assertRuntimeReady = createRuntimeReadyGuard({
   getRuntimeReady: () => runtimeReady,
@@ -108,6 +110,9 @@ const registerRoutes: RouteRegistrar = (application, context) => {
     asyncHandler,
     validatePolicyConditions
   });
+  registerSchedulerRoutes(application, context, {
+    asyncHandler
+  });
 };
 
 const app = createApp({
@@ -140,6 +145,7 @@ const startSimulation = (): void => {
     inferenceService,
     decisionWorkerId,
     actionDispatcherWorkerId,
+    schedulerWorkerId,
     onStepError: handleSimulationStepError
   });
 };

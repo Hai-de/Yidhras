@@ -313,6 +313,8 @@ model DecisionJob {
   locked_by           String?
   locked_at           BigInt?
   lock_expires_at     BigInt?
+  scheduled_for_tick  BigInt?
+  intent_class        String          @default("direct_inference")
   created_at          BigInt
   updated_at          BigInt
   completed_at        BigInt?
@@ -325,5 +327,55 @@ model DecisionJob {
 
   @@index([status, created_at])
   @@index([status, lock_expires_at])
+  @@index([status, scheduled_for_tick])
+  @@index([intent_class, created_at])
   @@index([replay_of_job_id, created_at])
+}
+
+model SchedulerRun {
+  id         String                     @id
+  worker_id  String
+  tick       BigInt
+  summary    Json
+  started_at BigInt
+  finished_at BigInt
+  created_at BigInt
+
+  candidate_decisions SchedulerCandidateDecision[]
+
+  @@index([tick, created_at])
+}
+
+model SchedulerCandidateDecision {
+  id                 String       @id
+  scheduler_run_id   String
+  actor_id           String
+  kind               String
+  candidate_reasons  Json
+  chosen_reason      String
+  scheduled_for_tick BigInt
+  priority_score     Int
+  skipped_reason     String?
+  created_job_id     String?
+  created_at         BigInt
+
+  scheduler_run      SchedulerRun @relation(fields: [scheduler_run_id], references: [id])
+
+  @@index([scheduler_run_id, created_at])
+  @@index([actor_id, created_at])
+}
+
+model SchedulerLease {
+  key         String @id
+  holder      String
+  acquired_at BigInt
+  expires_at  BigInt
+  updated_at  BigInt
+}
+
+model SchedulerCursor {
+  key               String @id
+  last_scanned_tick BigInt
+  last_signal_tick  BigInt
+  updated_at        BigInt
 }

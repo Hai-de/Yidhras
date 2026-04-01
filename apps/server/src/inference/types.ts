@@ -25,6 +25,8 @@ export interface InferenceRequestInput {
   idempotency_key?: string;
 }
 
+export type InferenceJobIntentClass = 'direct_inference' | 'scheduler_periodic' | 'scheduler_event_followup' | 'replay_recovery' | 'retry_recovery' | 'operator_forced';
+
 export interface InferenceJobSnapshot {
   id: string;
   source_inference_id: string;
@@ -36,6 +38,7 @@ export interface InferenceJobSnapshot {
   last_error: string | null;
   idempotency_key: string | null;
   created_at: string;
+  intent_class: InferenceJobIntentClass;
   updated_at: string;
   completed_at: string | null;
 }
@@ -284,6 +287,7 @@ export interface WorkflowDecisionJobSnapshot extends InferenceJobSnapshot {
   locked_by: string | null;
   locked_at: string | null;
   lock_expires_at: string | null;
+  scheduled_for_tick: string | null;
   next_retry_at: string | null;
   replay_of_job_id: string | null;
   replay_source_trace_id: string | null;

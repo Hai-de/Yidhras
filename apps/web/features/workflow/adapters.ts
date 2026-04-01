@@ -1,6 +1,62 @@
-import type { WorkflowJobStatus, WorkflowState } from '../../composables/api/useWorkflowApi'
+import type {
+  WorkflowIntentDetail,
+  WorkflowJobDetail,
+  WorkflowJobStatus,
+  WorkflowState,
+  WorkflowTraceDetail
+} from '../../composables/api/useWorkflowApi'
 
 export type WorkflowTone = 'neutral' | 'success' | 'warning' | 'danger' | 'info'
+
+export interface WorkflowKeyValueField {
+  label: string
+  value: string
+}
+
+export interface WorkflowEntityLinkViewModel {
+  id: string
+  label: string
+  value: string
+  kind: 'agent' | 'workflow' | 'trace' | 'intent'
+}
+
+const stringifyUnknown = (value: unknown): string => {
+  if (value === undefined || value === null) {
+    return '—'
+  }
+
+  if (typeof value === 'string') {
+    return value
+  }
+
+  return JSON.stringify(value)
+}
+
+const resolveAgentName = (value: unknown): string => {
+  if (!value || typeof value !== 'object') {
+    return 'Unknown agent'
+  }
+
+  const record = value as Record<string, unknown>
+  if (typeof record.name === 'string' && record.name.trim().length > 0) {
+    return record.name
+  }
+
+  if (typeof record.id === 'string' && record.id.trim().length > 0) {
+    return record.id
+  }
+
+  return 'Unknown agent'
+}
+
+const extractAgentId = (value: unknown): string | null => {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  return typeof record.id === 'string' && record.id.trim().length > 0 ? record.id : null
+}
 
 export const resolveJobStatusTone = (status: WorkflowJobStatus): WorkflowTone => {
   switch (status) {
@@ -41,4 +97,118 @@ export const stringifyDebugValue = (value: unknown): string => {
   }
 
   return JSON.stringify(value, null, 2)
+}
+
+export const buildWorkflowJobSummaryFields = (job: WorkflowJobDetail): WorkflowKeyValueField[] => {
+  return [
+    { label: 'job_id', value: job.id },
+    { label: 'job_type', value: job.job_type },
+    { label: 'attempts', value: `${job.attempt_count} / ${job.max_attempts}` },
+    { label: 'created_at', value: job.created_at },
+    { label: 'updated_at', value: job.updated_at },
+    { label: 'completed_at', value: job.completed_at ?? '—' },
+    { label: 'last_error_code', value: job.last_error_code ?? '—' },
+    { label: 'last_error_stage', value: job.last_error_stage ?? '—' }
+  ]
+}
+
+export const buildWorkflowTraceSummaryFields = (trace: WorkflowTraceDetail): WorkflowKeyValueField[] => {
+  return [
+    { label: 'trace_id', value: trace.id },
+    { label: 'kind', value: trace.kind },
+    { label: 'strategy', value: trace.strategy },
+    { label: 'provider', value: trace.provider },
+    { label: 'created_at', value: trace.created_at },
+    { label: 'updated_at', value: trace.updated_at }
+  ]
+}
+
+export const buildWorkflowIntentSummaryFields = (intent: WorkflowIntentDetail): WorkflowKeyValueField[] => {
+  return [
+    { label: 'intent_id', value: intent.id },
+    { label: 'intent_type', value: intent.intent_type },
+    { label: 'status', value: intent.status },
+    { label: 'scheduled_for', value: intent.scheduled_for_tick ?? '—' },
+    { label: 'dispatched_at', value: intent.dispatched_at ?? '—' },
+    { label: 'drop_reason', value: intent.drop_reason ?? '—' }
+  ]
+}
+
+export const buildWorkflowEntityLinks = (input: {
+  job: WorkflowJobDetail | null
+  trace: WorkflowTraceDetail | null
+  intent: WorkflowIntentDetail | null
+}): WorkflowEntityLinkViewModel[] => {
+  const links: WorkflowEntityLinkViewModel[] = []
+
+  if (input.job?.source_inference_id && !input.job.source_inference_id.startsWith('pending_')) {
+    links.push({
+      id: `trace:${input.job.source_inference_id}`,
+      label: 'Open trace',
+      value: input.job.source_inference_id,
+      kind: 'trace'
+    })
+  }
+
+  if (input.job?.action_intent_id) {
+    links.push({
+      id: `intent:${input.job.action_intent_id}`,
+      label: 'Open workflow intent',
+      value: input.job.action_intent_id,
+      kind: 'workflow'
+    })
+  }
+
+  if (input.intent) {
+    links.push({
+      id: `intent-detail:${input.intent.id}`,
+      label: 'Intent record',
+      value: input.intent.id,
+      kind: 'intent'
+    })
+  }
+
+  const actorCandidate = input.intent?.actor_ref ?? input.trace?.actor_ref ?? null
+  const actorId = extractAgentId(actorCandidate)
+  if (actorId) {
+    links.push({
+      id: `actor:${actorId}`,
+      label: `Open actor · ${resolveAgentName(actorCandidate)}`,
+      value: actorId,
+      kind: 'agent'
+    })
+  }
+
+  const targetCandidate = input.intent?.target_ref ?? null
+  const targetId = extractAgentId(targetCandidate)
+  if (targetId) {
+    links.push({
+      id: `target:${targetId}`,
+      label: `Open target · ${resolveAgentName(targetCandidate)}`,
+      value: targetId,
+      kind: 'agent'
+    })
+  }
+
+  return links
+}
+
+export const buildWorkflowFailureSummary = (input: {
+  job: WorkflowJobDetail | null
+  workflowFailureCode: string | null
+  workflowFailureReason: string | null
+}): WorkflowKeyValueField[] => {
+  return [
+    { label: 'job_error', value: input.job?.last_error ?? '—' },
+    { label: 'workflow_failure_code', value: input.workflowFailureCode ?? '—' },
+    { label: 'workflow_failure_reason', value: input.workflowFailureReason ?? '—' },
+    { label: 'next_retry_at', value: input.job?.next_retry_at ?? '—' }
+  ]
+}
+
+export const toWorkflowRefField = (label: string, value: unknown): WorkflowKeyValueField => {
+  return {
+    label,
+    value: stringifyUnknown(value)
+  }
 }

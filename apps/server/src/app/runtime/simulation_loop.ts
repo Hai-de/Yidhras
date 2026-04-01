@@ -1,6 +1,7 @@
 import type { InferenceService } from '../../inference/service.js';
 import type { AppContext } from '../context.js';
 import { runActionDispatcher } from './action_dispatcher_runner.js';
+import { runAgentScheduler } from './agent_scheduler.js';
 import { runDecisionJobRunner } from './job_runner.js';
 
 export const expireIdentityBindings = async (context: AppContext): Promise<void> => {
@@ -25,6 +26,7 @@ export interface StartSimulationLoopOptions {
   inferenceService: InferenceService;
   decisionWorkerId: string;
   actionDispatcherWorkerId: string;
+  schedulerWorkerId?: string;
   intervalMs?: number;
   onStepError(err: unknown): void;
 }
@@ -34,6 +36,7 @@ export const startSimulationLoop = ({
   inferenceService,
   decisionWorkerId,
   actionDispatcherWorkerId,
+  schedulerWorkerId = `scheduler:${process.pid}`,
   intervalMs = 1000,
   onStepError
 }: StartSimulationLoopOptions): NodeJS.Timeout => {
@@ -45,6 +48,10 @@ export const startSimulationLoop = ({
     try {
       await expireIdentityBindings(context);
       await context.sim.step(context.sim.getStepTicks());
+      await runAgentScheduler({
+        context,
+        workerId: schedulerWorkerId
+      });
       await runDecisionJobRunner({
         context,
         inferenceService,

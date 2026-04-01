@@ -19,6 +19,9 @@ export const useSocialRouteState = () => {
   const authorIdQuery = useRouteQuery<string | null>('author_id', null, { mode: 'replace' })
   const circleIdQuery = useRouteQuery<string | null>('circle_id', null, { mode: 'replace' })
   const keywordQuery = useRouteQuery<string | null>('keyword', null, { mode: 'replace' })
+  const sourceActionIntentIdQuery = useRouteQuery<string | null>('source_action_intent_id', null, { mode: 'replace' })
+  const fromTickQuery = useRouteQuery<string | null>('from_tick', null, { mode: 'replace' })
+  const toTickQuery = useRouteQuery<string | null>('to_tick', null, { mode: 'replace' })
   const sortQuery = useRouteQuery<string | null>('sort', 'latest', { mode: 'replace' })
 
   const selectedPostId = computed(() => normalizeOptionalString(postIdQuery.value))
@@ -26,11 +29,17 @@ export const useSocialRouteState = () => {
     authorId: string | null
     circleId: string | null
     keyword: string | null
+    sourceActionIntentId: string | null
+    fromTick: string | null
+    toTick: string | null
     sort: 'latest' | 'signal'
   }>(() => ({
     authorId: normalizeOptionalString(authorIdQuery.value),
     circleId: normalizeOptionalString(circleIdQuery.value),
     keyword: normalizeOptionalString(keywordQuery.value),
+    sourceActionIntentId: normalizeOptionalString(sourceActionIntentIdQuery.value),
+    fromTick: normalizeOptionalString(fromTickQuery.value),
+    toTick: normalizeOptionalString(toTickQuery.value),
     sort: normalizeSocialSort(sortQuery.value)
   }))
 
@@ -42,6 +51,9 @@ export const useSocialRouteState = () => {
     authorId?: string | null
     circleId?: string | null
     keyword?: string | null
+    sourceActionIntentId?: string | null
+    fromTick?: string | null
+    toTick?: string | null
     sort?: 'latest' | 'signal'
   }) => {
     if ('authorId' in nextFilters) {
@@ -54,6 +66,18 @@ export const useSocialRouteState = () => {
 
     if ('keyword' in nextFilters) {
       keywordQuery.value = normalizeOptionalString(nextFilters.keyword ?? null)
+    }
+
+    if ('sourceActionIntentId' in nextFilters) {
+      sourceActionIntentIdQuery.value = normalizeOptionalString(nextFilters.sourceActionIntentId ?? null)
+    }
+
+    if ('fromTick' in nextFilters) {
+      fromTickQuery.value = normalizeOptionalString(nextFilters.fromTick ?? null)
+    }
+
+    if ('toTick' in nextFilters) {
+      toTickQuery.value = normalizeOptionalString(nextFilters.toTick ?? null)
     }
 
     if (nextFilters.sort) {

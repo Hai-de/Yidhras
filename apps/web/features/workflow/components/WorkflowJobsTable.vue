@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import WorkspaceEmptyState from '../../shared/components/WorkspaceEmptyState.vue'
+import WorkspaceSectionHeader from '../../shared/components/WorkspaceSectionHeader.vue'
 import type { WorkflowJobListItem } from '../../../composables/api/useWorkflowApi'
 import { resolveJobStatusTone, resolveWorkflowStateTone } from '../adapters'
 
@@ -15,14 +17,10 @@ const emit = defineEmits<{
 
 <template>
   <div class="yd-panel-surface flex h-full min-h-[28rem] flex-col rounded-xl">
-    <div class="border-b border-yd-border-muted px-5 py-4">
-      <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
-        Decision Jobs
-      </div>
-      <div class="mt-2 text-sm text-yd-text-secondary">
-        {{ props.isLoading ? 'Refreshing workflow jobs…' : `${props.items.length} job(s) in current page.` }}
-      </div>
-    </div>
+    <WorkspaceSectionHeader
+      title="Decision Jobs"
+      :subtitle="props.isLoading ? 'Refreshing workflow jobs…' : `${props.items.length} job(s) in current page.`"
+    />
 
     <div v-if="props.items.length > 0" class="min-h-0 flex-1 overflow-auto no-scrollbar">
       <table class="min-w-full border-collapse text-left text-sm">
@@ -67,8 +65,11 @@ const emit = defineEmits<{
       </table>
     </div>
 
-    <div v-else class="px-5 py-8 text-sm text-yd-text-secondary">
-      No workflow jobs available for the current filters.
+    <div v-else class="px-5 py-5">
+      <WorkspaceEmptyState
+        title="No workflow jobs in current view"
+        description="Adjust status, agent, or strategy filters to inspect another slice of the workflow queue."
+      />
     </div>
   </div>
 </template>

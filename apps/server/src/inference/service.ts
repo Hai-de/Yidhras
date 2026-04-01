@@ -453,6 +453,8 @@ export const createInferenceService = ({
       const pendingJob = await createPendingDecisionJob(context, {
         idempotency_key: idempotencyKey,
         request_input: normalizedInput,
+        intent_class: 'direct_inference',
+        job_source: 'api_submit',
         max_attempts: DEFAULT_JOB_MAX_ATTEMPTS
       });
       const workflowSnapshot = await getWorkflowSnapshotByJobId(context, pendingJob.id);
@@ -504,6 +506,8 @@ export const createInferenceService = ({
         idempotency_key: idempotencyKey,
         reason: replayInput.reason ?? 'operator_manual_replay',
         max_attempts: sourceJob.max_attempts,
+        intent_class: 'replay_recovery',
+        job_source: 'replay',
         replay_override_snapshot: replayOverrideSnapshot
       });
       const workflowSnapshot = await getWorkflowSnapshotByJobId(context, replayJob.id);
@@ -517,6 +521,7 @@ export const createInferenceService = ({
       await updateDecisionJobState(context, {
         job_id: existingJob.id,
         status: 'pending',
+        intent_class: 'retry_recovery',
         last_error: null,
   last_error_code: null,
         last_error_stage: null,

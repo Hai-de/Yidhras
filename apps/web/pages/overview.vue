@@ -1,5 +1,28 @@
 <template>
-  <div class="flex h-full flex-col gap-6 overflow-auto p-6 no-scrollbar">
+  <div class="flex h-full flex-col gap-4 overflow-auto p-6 no-scrollbar">
+    <WorkspacePageHeader
+      eyebrow="Operator Overview"
+      title="Runtime, queue, and propagation summary"
+      description="A high-level operator snapshot of runtime health, recent events, active posts, workflow exceptions, and scheduler activity projected from the overview read model."
+      :freshness="overviewFreshness"
+    >
+      <template #actions>
+        <button
+          type="button"
+          class="rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono"
+          @click="refresh"
+        >
+          Refresh
+        </button>
+      </template>
+    </WorkspacePageHeader>
+
+    <WorkspaceStatusBanner
+      v-if="errorMessage"
+      title="Overview sync error"
+      :message="errorMessage"
+    />
+
     <div class="grid gap-4 xl:grid-cols-4">
       <OverviewMetricCard
         v-for="item in metricItems"
@@ -11,55 +34,27 @@
     </div>
 
     <div class="grid gap-4 xl:grid-cols-2">
-      <div class="yd-panel-surface rounded-xl px-5 py-5">
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
-              Runtime Snapshot
-            </div>
-            <div class="mt-2 text-sm text-yd-text-secondary">
-              Aggregated overview read model for the operator console.
-            </div>
-          </div>
-          <button
-            type="button"
-            class="rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono"
-            @click="refresh"
-          >
-            Refresh
-          </button>
+      <div class="yd-panel-surface rounded-xl">
+        <WorkspaceSectionHeader
+          title="Runtime Snapshot"
+          subtitle="Aggregated overview state for runtime, health, world pack, and clock formatting."
+        />
+
+        <div v-if="overviewSummary" class="grid gap-4 px-5 py-5 lg:grid-cols-2">
+          <MetricPill label="Runtime" :value="`${overviewSummary.runtime.status} · ${overviewSummary.runtime.health_level}`" />
+          <MetricPill label="World Time" :value="overviewSummary.world_time.tick" />
+          <MetricPill
+            label="World Pack"
+            :value="overviewSummary.runtime.world_pack?.name ?? 'No world pack loaded'"
+          />
+          <MetricPill label="Primary Calendar" :value="primaryCalendarDisplay" />
         </div>
 
-        <div v-if="overviewSummary" class="mt-5 grid gap-4 lg:grid-cols-2">
-          <div class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-4">
-            <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
-              Runtime
-            </div>
-            <div class="mt-2 text-sm text-yd-text-primary">
-              {{ overviewSummary.runtime.status }} · {{ overviewSummary.runtime.health_level }}
-            </div>
-            <div class="mt-2 text-xs text-yd-text-secondary">
-              {{ overviewSummary.runtime.world_pack?.name ?? 'No world pack loaded' }}
-            </div>
-          </div>
-          <div class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-4">
-            <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
-              World Time
-            </div>
-            <div class="mt-2 text-sm text-yd-text-primary yd-font-mono">
-              {{ overviewSummary.world_time.tick }}
-            </div>
-            <div class="mt-2 text-xs text-yd-text-secondary">
-              {{ primaryCalendarDisplay }}
-            </div>
-          </div>
-        </div>
-
-        <div v-if="errorMessage" class="mt-4 rounded-lg border border-yd-state-danger/40 bg-yd-app px-4 py-3 text-sm text-yd-state-danger">
-          {{ errorMessage }}
-        </div>
-        <div v-else-if="isFetching && !overviewSummary" class="mt-4 text-sm text-yd-text-secondary">
-          Loading overview summary…
+        <div v-else class="px-5 py-5">
+          <WorkspaceEmptyState
+            :title="isFetching ? 'Loading overview summary…' : 'No overview summary loaded yet.'"
+            description="The operator overview will populate once the summary projection returns runtime and audit aggregates."
+          />
         </div>
       </div>
 
@@ -68,6 +63,23 @@
         subtitle="Current system queue snapshot and recent operator-facing warnings."
         :items="notificationItems"
         empty-message="No system notifications in queue."
+      />
+    </div>
+
+    <div class="grid gap-4 xl:grid-cols-2">
+      <OverviewListCard
+        title="Scheduler Runs"
+        subtitle="Recent scheduler scans with created/scanned counts and worker attribution."
+        :items="schedulerRunItems"
+        empty-message="No scheduler runs available yet."
+        @select="handleSelectSchedulerRun"
+      />
+      <OverviewListCard
+        title="Scheduler Decisions"
+        subtitle="Recent scheduler candidate outcomes for quick drill-down into workflow or agent context."
+        :items="schedulerDecisionListItems"
+        empty-message="No scheduler decisions available yet."
+        @select="handleSelectSchedulerDecision"
       />
     </div>
 
@@ -112,10 +124,22 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { buildOverviewMetricItems, toOverviewAuditListItems, toOverviewNotificationListItems } from '../features/overview/adapters'
+import {
+  buildOverviewMetricItems,
+  buildSchedulerDecisionListItems,
+  buildSchedulerRunListItems,
+  toOverviewAuditListItems,
+  toOverviewNotificationListItems
+} from '../features/overview/adapters'
 import OverviewListCard from '../features/overview/components/OverviewListCard.vue'
 import OverviewMetricCard from '../features/overview/components/OverviewMetricCard.vue'
 import { useOverviewPage } from '../features/overview/composables/useOverviewPage'
+import MetricPill from '../features/shared/components/MetricPill.vue'
+import WorkspaceEmptyState from '../features/shared/components/WorkspaceEmptyState.vue'
+import WorkspacePageHeader from '../features/shared/components/WorkspacePageHeader.vue'
+import WorkspaceSectionHeader from '../features/shared/components/WorkspaceSectionHeader.vue'
+import WorkspaceStatusBanner from '../features/shared/components/WorkspaceStatusBanner.vue'
+import { formatFreshnessLabel } from '../features/shared/feedback'
 
 const overviewPage = useOverviewPage()
 
@@ -128,6 +152,14 @@ const metricItems = computed(() => {
   return overviewSummary.value ? buildOverviewMetricItems(overviewSummary.value) : []
 })
 
+const overviewFreshness = computed(() => {
+  return formatFreshnessLabel(overviewPage.lastSyncedAt.value, {
+    isSyncing: isFetching.value,
+    syncingLabel: 'Refreshing overview projection',
+    idleLabel: 'Awaiting first overview sync'
+  })
+})
+
 const primaryCalendarDisplay = computed(() => {
   if (!overviewSummary.value) {
     return 'Syncing…'
@@ -135,6 +167,9 @@ const primaryCalendarDisplay = computed(() => {
 
   return overviewSummary.value.world_time.calendars[0]?.display ?? 'No formatted calendar available'
 })
+
+const schedulerRunItems = computed(() => buildSchedulerRunListItems(overviewPage.schedulerRunItems.value))
+const schedulerDecisionListItems = computed(() => buildSchedulerDecisionListItems(overviewPage.schedulerDecisionItems.value))
 
 const recentEventItems = computed(() => {
   return overviewSummary.value ? toOverviewAuditListItems(overviewSummary.value.recent_events) : []
@@ -159,4 +194,21 @@ const droppedIntentItems = computed(() => {
 const notificationItems = computed(() => {
   return overviewSummary.value ? toOverviewNotificationListItems(overviewSummary.value.notifications) : []
 })
+
+const handleSelectSchedulerRun = (runId: string) => {
+  overviewPage.openSchedulerRun(runId)
+}
+
+const handleSelectSchedulerDecision = (decisionId: string) => {
+  const decision = overviewPage.schedulerDecisionItems.value.find(item => item.id === decisionId)
+  if (!decision) {
+    return
+  }
+
+  overviewPage.openSchedulerDecision({
+    decisionId,
+    createdJobId: decision.created_job_id,
+    actorId: decision.actor_id
+  })
+}
 </script>

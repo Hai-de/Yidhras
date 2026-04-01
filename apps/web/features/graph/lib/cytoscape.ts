@@ -28,3 +28,28 @@ export const updateGraphInstance = (
   instance.add(snapshot)
   instance.layout(buildGraphLayout(view)).run()
 }
+
+export const focusGraphNeighborhood = (
+  instance: cytoscape.Core,
+  selectedNodeId: string | null
+): void => {
+  const allElements = instance.elements()
+  allElements.removeClass('yd-focus yd-dim')
+
+  if (!selectedNodeId) {
+    instance.fit(undefined, 36)
+    return
+  }
+
+  const node = instance.getElementById(selectedNodeId)
+  if (node.empty()) {
+    return
+  }
+
+  const neighborhood = node.closedNeighborhood()
+  const remainder = allElements.difference(neighborhood)
+
+  neighborhood.addClass('yd-focus')
+  remainder.addClass('yd-dim')
+  instance.animate({ fit: { eles: neighborhood, padding: 48 }, duration: 180 })
+}

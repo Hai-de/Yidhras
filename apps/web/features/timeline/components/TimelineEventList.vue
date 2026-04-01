@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import WorkspaceEmptyState from '../../shared/components/WorkspaceEmptyState.vue'
+import WorkspaceSectionHeader from '../../shared/components/WorkspaceSectionHeader.vue'
 import type { TimelineEventCardViewModel } from '../adapters'
 
 const props = defineProps<{
@@ -9,20 +11,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   selectEvent: [event: TimelineEventCardViewModel]
-  openWorkflow: [actionIntentId: string]
+  openWorkflow: [actionIntentId: string, eventId: string]
 }>()
 </script>
 
 <template>
   <div class="yd-panel-surface flex h-full min-h-[28rem] flex-col rounded-xl">
-    <div class="border-b border-yd-border-muted px-5 py-4">
-      <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
-        Timeline Events
-      </div>
-      <div class="mt-2 text-sm text-yd-text-secondary">
-        {{ props.isLoading ? 'Refreshing timeline…' : `${props.items.length} event(s) in current view.` }}
-      </div>
-    </div>
+    <WorkspaceSectionHeader
+      title="Timeline Events"
+      :subtitle="props.isLoading ? 'Refreshing timeline…' : `${props.items.length} event(s) in current view.`"
+    />
 
     <div v-if="props.items.length > 0" class="min-h-0 flex-1 overflow-auto px-5 py-4 no-scrollbar">
       <div class="space-y-3">
@@ -48,7 +46,7 @@ const emit = defineEmits<{
             v-if="item.sourceActionIntentId"
             type="button"
             class="mt-4 rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono"
-            @click="emit('openWorkflow', item.sourceActionIntentId)"
+            @click="emit('openWorkflow', item.sourceActionIntentId, item.id)"
           >
             Open workflow link
           </button>
@@ -56,8 +54,11 @@ const emit = defineEmits<{
       </div>
     </div>
 
-    <div v-else class="px-5 py-8 text-sm text-yd-text-secondary">
-      No timeline events available for the selected range.
+    <div v-else class="px-5 py-5">
+      <WorkspaceEmptyState
+        title="No timeline events in current range"
+        description="Adjust the selected tick range to inspect another narrative slice."
+      />
     </div>
   </div>
 </template>

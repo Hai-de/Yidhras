@@ -6,8 +6,12 @@ import {
   type WorkflowJobDetail,
   type WorkflowJobsSnapshot,
   type WorkflowSnapshotDetail,
-  type WorkflowTraceDetail} from '../../../composables/api/useWorkflowApi'
+  type WorkflowTraceDetail
+} from '../../../composables/api/useWorkflowApi'
 import { useVisibilityPolling } from '../../../composables/app/useVisibilityPolling'
+import { useNotificationsStore } from '../../../stores/notifications'
+import { useOperatorNavigation } from '../../shared/navigation'
+import { useOperatorSourceContext } from '../../shared/source-context'
 import { useWorkflowRouteState } from '../route'
 import { useWorkflowStore } from '../store'
 
@@ -31,6 +35,9 @@ export const useWorkflowPage = () => {
   const workflowApi = useWorkflowApi()
   const workflowRoute = useWorkflowRouteState()
   const workflowStore = useWorkflowStore()
+  const navigation = useOperatorNavigation()
+  const sourceContext = useOperatorSourceContext()
+  const notifications = useNotificationsStore()
 
   const jobsSnapshot = ref<WorkflowJobsSnapshot | null>(null)
   const selectedJob = ref<WorkflowJobDetail | null>(null)
@@ -42,6 +49,8 @@ export const useWorkflowPage = () => {
   const isRetrying = ref(false)
   const listErrorMessage = ref<string | null>(null)
   const detailErrorMessage = ref<string | null>(null)
+  const lastListSyncedAt = ref<number | null>(null)
+  const lastDetailSyncedAt = ref<number | null>(null)
 
   const fetchJobsList = async () => {
     const filters = workflowRoute.filters.value
@@ -65,8 +74,15 @@ export const useWorkflowPage = () => {
       })
       workflowStore.markListSynced()
       listErrorMessage.value = null
+      lastListSyncedAt.value = Date.now()
     } catch (error) {
-      listErrorMessage.value = getErrorMessage(error)
+      const message = getErrorMessage(error)
+      listErrorMessage.value = message
+      notifications.pushLocalItem({
+        level: 'error',
+        content: `Workflow list refresh failed: ${message}`,
+        code: 'workflow_list_refresh_failed'
+      })
     } finally {
       workflowStore.setListFetching(false)
       isListFetching.value = false
@@ -125,8 +141,15 @@ export const useWorkflowPage = () => {
       selectedIntent.value = nextIntent
       selectedWorkflow.value = nextWorkflow
       detailErrorMessage.value = null
+      lastDetailSyncedAt.value = Date.now()
     } catch (error) {
-      detailErrorMessage.value = getErrorMessage(error)
+      const message = getErrorMessage(error)
+      detailErrorMessage.value = message
+      notifications.pushLocalItem({
+        level: 'error',
+        content: `Workflow detail refresh failed: ${message}`,
+        code: 'workflow_detail_refresh_failed'
+      })
     } finally {
       isDetailFetching.value = false
     }
@@ -192,10 +215,61 @@ export const useWorkflowPage = () => {
       await workflowApi.retryJob(selectedJob.value.id)
       await Promise.all([fetchJobsList(), fetchSelectionDetails()])
       detailErrorMessage.value = null
+      notifications.pushLocalItem({
+        level: 'info',
+        content: `Retry requested for workflow job ${selectedJob.value.id}`,
+        code: 'workflow_retry_requested'
+      })
     } catch (error) {
-      detailErrorMessage.value = getErrorMessage(error)
+      const message = getErrorMessage(error)
+      detailErrorMessage.value = message
+      notifications.pushLocalItem({
+        level: 'error',
+        content: `Workflow retry failed: ${message}`,
+        code: 'workflow_retry_failed'
+      })
     } finally {
       isRetrying.value = false
+    }
+  }
+
+  const openAgent = (agentId: string) => {
+    void navigation.goToAgent(agentId, {
+      tab: 'workflows',
+      context: {
+        sourcePage: 'timeline',
+        ...(selectedJob.value?.action_intent_id ? { sourceEventId: selectedJob.value.action_intent_id } : {})
+      }
+    })
+  }
+
+  const openWorkflowIntent = (actionIntentId: string) => {
+    workflowRoute.setFilters({ actionIntentId })
+    workflowRoute.setSelectedTab('intent')
+  }
+
+  const openTrace = (traceId: string) => {
+    workflowRoute.setSelectedTraceId(traceId)
+    workflowRoute.setSelectedTab('trace')
+  }
+
+  const returnToSource = () => {
+    if (sourceContext.source.value.sourcePage === 'social' && sourceContext.source.value.sourcePostId) {
+      void navigation.goToSocialPost(sourceContext.source.value.sourcePostId)
+      return
+    }
+
+    if (sourceContext.source.value.sourcePage === 'timeline' && sourceContext.source.value.sourceEventId) {
+      void navigation.goToTimelineEvent(sourceContext.source.value.sourceEventId)
+      return
+    }
+
+    if (sourceContext.source.value.sourcePage === 'graph' && sourceContext.source.value.sourceRootId) {
+      void navigation.goToGraphRoot(sourceContext.source.value.sourceRootId, {
+        ...(sourceContext.source.value.sourceNodeId
+          ? { selectedNodeId: sourceContext.source.value.sourceNodeId }
+          : {})
+      })
     }
   }
 
@@ -210,6 +284,8 @@ export const useWorkflowPage = () => {
     isRetrying,
     listErrorMessage,
     detailErrorMessage,
+    lastListSyncedAt,
+    lastDetailSyncedAt,
     filters: workflowRoute.filters,
     selectedJobId: workflowRoute.selectedJobId,
     selectedTraceId: workflowRoute.selectedTraceId,
@@ -218,6 +294,12 @@ export const useWorkflowPage = () => {
     refreshDetails: detailPolling.refresh,
     setFilters: workflowRoute.setFilters,
     selectJob: handleSelectJob,
-    retrySelectedJob
+    retrySelectedJob,
+    openAgent,
+    openWorkflowIntent,
+    openTrace,
+    sourceSummary: sourceContext.summary,
+    hasSource: sourceContext.hasSource,
+    returnToSource
   }
 }

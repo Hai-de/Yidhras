@@ -1,8 +1,16 @@
 import type { AgentOverviewSnapshot } from '../../composables/api/useAgentApi'
+import type { SchedulerDecisionItem } from '../../composables/api/useSchedulerApi'
 
 export interface AgentSectionField {
   label: string
   value: string
+}
+
+export interface AgentSchedulerDecisionViewModel {
+  id: string
+  title: string
+  meta: string
+  createdJobId: string | null
 }
 
 export const buildAgentProfileFields = (snapshot: AgentOverviewSnapshot): AgentSectionField[] => {
@@ -25,4 +33,15 @@ export const buildAgentRelationshipFields = (snapshot: AgentOverviewSnapshot): A
     { label: 'bindings(atmosphere)', value: String(snapshot.binding_summary.counts.atmosphere) },
     { label: 'recent traces', value: String(snapshot.memory.summary.recent_trace_count) }
   ]
+}
+
+export const buildAgentSchedulerDecisionItems = (
+  decisions: SchedulerDecisionItem[]
+): AgentSchedulerDecisionViewModel[] => {
+  return decisions.map(decision => ({
+    id: decision.id,
+    title: `${decision.chosen_reason} · ${decision.kind}`,
+    meta: `${decision.scheduled_for_tick}${decision.skipped_reason ? ` · skipped ${decision.skipped_reason}` : ''}`,
+    createdJobId: decision.created_job_id
+  }))
 }

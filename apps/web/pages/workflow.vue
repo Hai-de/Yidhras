@@ -1,5 +1,29 @@
 <template>
   <div class="flex h-full flex-col gap-4 overflow-hidden p-6">
+    <WorkspacePageHeader
+      eyebrow="Workflow Console"
+      title="Decision jobs and dispatch state"
+      description="Inspect queued and completed jobs, review trace and intent details, and retry failed work without leaving the operator shell."
+      :freshness="workflowFreshness"
+    >
+      <template #actions>
+        <button
+          type="button"
+          class="rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono"
+          @click="refreshList"
+        >
+          Refresh List
+        </button>
+      </template>
+    </WorkspacePageHeader>
+
+    <SourceContextBanner
+      v-if="workflowSourceSummary"
+      :message="workflowSourceSummary"
+      return-label="Return to source"
+      @return="returnToSource"
+    />
+
     <WorkflowFiltersBar
       :status="filters.status"
       :agent-id="filters.agentId"
@@ -8,18 +32,19 @@
       @reset="handleResetFilters"
     />
 
+    <WorkspaceStatusBanner
+      v-if="listErrorMessage"
+      title="Workflow list error"
+      :message="listErrorMessage"
+    />
+
     <div class="grid min-h-0 flex-1 gap-4 xl:grid-cols-[1.1fr,0.9fr]">
-      <div class="flex min-h-0 flex-col gap-3">
-        <div v-if="listErrorMessage" class="rounded-lg border border-yd-state-danger/40 bg-yd-app px-4 py-3 text-sm text-yd-state-danger">
-          {{ listErrorMessage }}
-        </div>
-        <WorkflowJobsTable
-          :items="jobsSnapshot?.items ?? []"
-          :selected-job-id="selectedJobId"
-          :is-loading="isListFetching"
-          @select-job="selectJob"
-        />
-      </div>
+      <WorkflowJobsTable
+        :items="jobsSnapshot?.items ?? []"
+        :selected-job-id="selectedJobId"
+        :is-loading="isListFetching"
+        @select-job="selectJob"
+      />
 
       <WorkflowDetailPanel
         :job="selectedJob"
@@ -30,12 +55,21 @@
         :error-message="detailErrorMessage"
         :is-retrying="isRetrying"
         @retry="retrySelectedJob"
+        @open-agent="workflowPage.openAgent"
+        @open-workflow-intent="workflowPage.openWorkflowIntent"
+        @open-trace="workflowPage.openTrace"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
+import SourceContextBanner from '../features/shared/components/SourceContextBanner.vue'
+import WorkspacePageHeader from '../features/shared/components/WorkspacePageHeader.vue'
+import WorkspaceStatusBanner from '../features/shared/components/WorkspaceStatusBanner.vue'
+import { formatFreshnessLabel } from '../features/shared/feedback'
 import WorkflowDetailPanel from '../features/workflow/components/WorkflowDetailPanel.vue'
 import WorkflowFiltersBar from '../features/workflow/components/WorkflowFiltersBar.vue'
 import WorkflowJobsTable from '../features/workflow/components/WorkflowJobsTable.vue'
@@ -57,6 +91,19 @@ const filters = workflowPage.filters
 const selectedJobId = workflowPage.selectedJobId
 const selectJob = workflowPage.selectJob
 const retrySelectedJob = workflowPage.retrySelectedJob
+const refreshList = workflowPage.refreshList
+const workflowSourceSummary = workflowPage.sourceSummary
+const returnToSource = workflowPage.returnToSource
+
+const workflowFreshness = computed(() => {
+  return formatFreshnessLabel(workflowPage.lastListSyncedAt.value, {
+    isSyncing: isListFetching.value,
+    syncingLabel: 'Refreshing workflow list',
+    idleLabel: workflowPage.lastDetailSyncedAt.value
+      ? `Detail synced ${new Date(workflowPage.lastDetailSyncedAt.value).toLocaleTimeString('zh-CN', { hour12: false })}`
+      : 'Awaiting first workflow sync'
+  })
+})
 
 const handleApplyFilters = (nextFilters: {
   status: string | null

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import WorkspaceEmptyState from '../../shared/components/WorkspaceEmptyState.vue'
+import WorkspaceSectionHeader from '../../shared/components/WorkspaceSectionHeader.vue'
 import type { OverviewListItemViewModel } from '../adapters'
 
 const props = defineProps<{
@@ -6,6 +8,10 @@ const props = defineProps<{
   subtitle: string
   items: OverviewListItemViewModel[]
   emptyMessage?: string
+}>()
+
+const emit = defineEmits<{
+  select: [itemId: string]
 }>()
 
 const toneClass = (tone: OverviewListItemViewModel['tone']) => {
@@ -25,22 +31,17 @@ const toneClass = (tone: OverviewListItemViewModel['tone']) => {
 </script>
 
 <template>
-  <div class="yd-panel-surface flex h-full min-h-[18rem] flex-col rounded-xl px-5 py-5">
-    <div>
-      <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
-        {{ title }}
-      </div>
-      <div class="mt-2 text-sm text-yd-text-secondary">
-        {{ subtitle }}
-      </div>
-    </div>
+  <div class="yd-panel-surface flex h-full min-h-[18rem] flex-col rounded-xl">
+    <WorkspaceSectionHeader :title="title" :subtitle="subtitle" />
 
-    <div v-if="props.items.length > 0" class="mt-4 flex-1 space-y-3 overflow-y-auto no-scrollbar">
-      <div
+    <div v-if="props.items.length > 0" class="flex-1 space-y-3 overflow-y-auto px-5 py-5 no-scrollbar">
+      <button
         v-for="item in props.items"
         :key="item.id"
-        class="rounded-lg border bg-yd-app px-4 py-3"
+        type="button"
+        class="w-full rounded-lg border bg-yd-app px-4 py-3 text-left transition-colors hover:border-yd-state-accent"
         :class="toneClass(item.tone)"
+        @click="emit('select', item.id)"
       >
         <div class="text-sm font-medium text-yd-text-primary">
           {{ item.title }}
@@ -48,11 +49,17 @@ const toneClass = (tone: OverviewListItemViewModel['tone']) => {
         <div class="mt-2 text-[11px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
           {{ item.meta }}
         </div>
-      </div>
+        <div v-if="item.actionLabel" class="mt-3 text-[10px] uppercase tracking-[0.18em] text-yd-state-accent yd-font-mono">
+          {{ item.actionLabel }}
+        </div>
+      </button>
     </div>
 
-    <div v-else class="mt-4 rounded-lg border border-dashed border-yd-border-muted bg-yd-app px-4 py-6 text-sm text-yd-text-secondary">
-      {{ props.emptyMessage ?? 'No items available.' }}
+    <div v-else class="px-5 py-5">
+      <WorkspaceEmptyState
+        title="No items available"
+        :description="props.emptyMessage ?? 'No items available.'"
+      />
     </div>
   </div>
 </template>

@@ -23,8 +23,11 @@
     "test:audit-workflow-lineage": "tsx src/e2e/audit_workflow_lineage.ts",
     "test:graph-view": "tsx src/e2e/graph_view.ts",
     "test:overview-summary": "tsx src/e2e/overview_summary.ts",
-    "test:social-feed-filters": "tsx src/e2e/social_feed_filters.ts",
+    "test:scheduler-lease": "tsx src/e2e/scheduler_lease.ts",
+    "test:scheduler-queries": "tsx src/e2e/scheduler_queries.ts",
+    "test:social-feed-filters": "tsx src/e2e/social_feed_filters.ts", 
     "test:trigger-event": "tsx src/e2e/trigger_event.ts",
+    "test:agent-scheduler": "tsx src/e2e/agent_scheduler.ts",
     "test:workflow-locking": "tsx src/e2e/workflow_locking.ts",
     "test:workflow-replay": "tsx src/e2e/workflow_replay.ts",
     "smoke": "pnpm run smoke:startup && pnpm run smoke:endpoints"

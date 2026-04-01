@@ -88,7 +88,8 @@ export const buildGraphStylesheet = () => {
         'text-max-width': 120,
         'text-valign': 'bottom',
         'text-margin-y': 6,
-        'overlay-opacity': 0
+        'overlay-opacity': 0,
+        opacity: 1
       }
     },
     {
@@ -125,6 +126,18 @@ export const buildGraphStylesheet = () => {
         'line-color': 'var(--yd-graph-selected)',
         'target-arrow-color': 'var(--yd-graph-selected)',
         width: 4
+      }
+    },
+    {
+      selector: '.yd-focus',
+      style: {
+        opacity: 1
+      }
+    },
+    {
+      selector: '.yd-dim',
+      style: {
+        opacity: 0.18
       }
     }
   ]

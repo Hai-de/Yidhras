@@ -160,6 +160,32 @@
   - 说明：为 operator / overview 首屏提供聚合摘要
   - 返回：`{ success: true, data: { runtime, world_time: { tick, calendars }, active_agent_count, recent_events, latest_posts, latest_propagation, failed_jobs, dropped_intents, notifications } }`
 
+## 8.1 Scheduler Observability
+
+- **GET `/api/runtime/scheduler/runs`**
+  - 说明：分页查询 scheduler run 列表
+  - 参数：`?limit=20&cursor=<opaque_cursor>&from_tick=<tick>&to_tick=<tick>&worker_id=<worker_id>`
+  - 返回：`{ success: true, data: { items: SchedulerRunSummary[], page_info: { has_next_page, next_cursor }, summary: { returned, limit, filters: { cursor, from_tick, to_tick, worker_id } } }, meta: { pagination } }`
+- **GET `/api/runtime/scheduler/summary`**
+  - 说明：读取 scheduler 聚合 summary projection
+  - 参数：`?sample_runs=20`
+  - 返回：`{ success: true, data: { latest_run, run_totals, top_reasons, top_skipped_reasons, top_actors, intent_class_breakdown } }`
+- **GET `/api/runtime/scheduler/trends`**
+  - 说明：读取最近 scheduler runs 的趋势点集合
+  - 参数：`?sample_runs=20`
+  - 返回：`{ success: true, data: { points: { tick, run_id, created_count, created_periodic_count, created_event_driven_count, signals_detected_count }[] } }`
+- **GET `/api/runtime/scheduler/runs/latest`**
+  - 说明：读取最近一次 scheduler run 的 summary 与 candidate decisions read model
+- **GET `/api/runtime/scheduler/runs/:id`**
+  - 说明：按 run id 读取指定 scheduler run 的 summary 与 candidate decisions read model
+- **GET `/api/runtime/scheduler/decisions`**
+  - 说明：分页查询 scheduler candidate decision 列表
+  - 参数：`?limit=20&cursor=<opaque_cursor>&actor_id=<agent_id>&kind=periodic|event_driven&reason=<scheduler_reason>&skipped_reason=<scheduler_skip_reason>&from_tick=<tick>&to_tick=<tick>`
+  - 返回：`{ success: true, data: { items: SchedulerCandidateDecision[], page_info: { has_next_page, next_cursor }, summary: { returned, limit, filters: { cursor, actor_id, kind, reason, skipped_reason, from_tick, to_tick } } }, meta: { pagination } }`，`skipped_reason` 当前可能包含 `replay_window_periodic_suppressed | replay_window_event_suppressed | retry_window_periodic_suppressed | retry_window_event_suppressed`
+- **GET `/api/agent/:id/scheduler`**
+  - 说明：读取指定 agent 最近的 scheduler candidate decision 轨迹
+  - 备注：无效查询参数（如 invalid cursor / invalid tick range / unsupported kind）返回 `400 SCHEDULER_QUERY_INVALID`
+
 ## 9. 推理与工作流接口
 
 ### 9.1 Inference Debug Endpoints
@@ -185,7 +211,7 @@
 - **POST `/api/inference/jobs`**
   - 说明：按正式工作流入口提交一次推理任务
   - 输入：`{ agent_id?: string, identity_id?: string, strategy?: "mock"|"rule_based", attributes?: Record<string, unknown>, idempotency_key: string }`
-  - 成功返回：`{ success: true, data: { replayed, inference_id, job: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, last_error, idempotency_key, created_at, updated_at, completed_at }, result, result_source, workflow_snapshot } }`
+  - 成功返回：`{ success: true, data: { replayed, inference_id, job: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, last_error, idempotency_key, intent_class, created_at, updated_at, completed_at }, result, result_source, workflow_snapshot } }`
 - **POST `/api/inference/jobs/:id/retry`**
   - 说明：重试一个已失败的 `DecisionJob`
   - 成功返回：`{ success: true, data: { replayed: false, inference_id, job, result, result_source: "fresh_run", workflow_snapshot } }`
@@ -195,7 +221,7 @@
   - 成功返回：`{ success: true, data: { replayed: false, inference_id, job, result: null, result_source: "not_available", workflow_snapshot, replay: { source_job_id, source_trace_id, reason, override_applied, override_snapshot?, parent_job?, child_jobs[] } } }`
 - **GET `/api/inference/jobs/:id`**
   - 说明：查询单个决策任务状态
-  - 成功返回：`{ success: true, data: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, request_input?, last_error, last_error_code?, last_error_stage?, idempotency_key, started_at?, next_retry_at?, locked_by?, locked_at?, lock_expires_at?, replay_of_job_id?, replay_source_trace_id?, replay_reason?, replay_override_snapshot?, created_at, updated_at, completed_at } }`
+  - 成功返回：`{ success: true, data: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, intent_class, request_input?, last_error, last_error_code?, last_error_stage?, idempotency_key, started_at?, next_retry_at?, locked_by?, locked_at?, lock_expires_at?, replay_of_job_id?, replay_source_trace_id?, replay_reason?, replay_override_snapshot?, created_at, updated_at, completed_at } }`
 - **GET `/api/inference/traces/:id`**
   - 说明：查询指定 `InferenceTrace` 持久化记录
   - 成功返回：`{ success: true, data: { id, kind, strategy, provider, actor_ref, input, context_snapshot, prompt_bundle, trace_metadata, decision?, created_at, updated_at } }`
@@ -204,10 +230,10 @@
   - 成功返回：`{ success: true, data: { id, source_inference_id, intent_type, actor_ref, target_ref, payload, scheduled_after_ticks, scheduled_for_tick, transmission_delay_ticks?, transmission_policy, transmission_drop_chance, drop_reason?, dispatch_error_code?, dispatch_error_message?, status, locked_by?, locked_at?, lock_expires_at?, dispatch_started_at?, dispatched_at?, created_at, updated_at } }`
 - **GET `/api/inference/traces/:id/job`**
   - 说明：查询指定推理记录关联的 `DecisionJob`
-  - 成功返回：`{ success: true, data: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, request_input?, last_error, last_error_code?, last_error_stage?, idempotency_key?, started_at?, next_retry_at?, created_at, updated_at, completed_at } }`
+  - 成功返回：`{ success: true, data: { id, source_inference_id, action_intent_id, job_type, status, attempt_count, max_attempts, intent_class, request_input?, last_error, last_error_code?, last_error_stage?, idempotency_key?, started_at?, next_retry_at?, created_at, updated_at, completed_at } }`
 - **GET `/api/inference/traces/:id/workflow`**
   - 说明：查询指定推理记录的聚合工作流快照
-  - 成功返回：`{ success: true, data: { records: { trace, job, intent }, derived: { decision_stage, dispatch_stage, workflow_state, failure_stage, failure_code, failure_reason, outcome_summary } } }`
+  - 成功返回：`{ success: true, data: { records: { trace, job, intent }, lineage, derived: { decision_stage, dispatch_stage, workflow_state, failure_stage, failure_code, failure_reason, outcome_summary } } }`
 - **GET `/api/inference/jobs/:id/workflow`**
   - 说明：查询指定决策任务的聚合工作流快照
   - 成功返回：与 `/api/inference/traces/:id/workflow` 相同的 `WorkflowSnapshot` 结构
@@ -255,6 +281,7 @@
 - `SNR_LOG_QUERY_INVALID`
 - `AUDIT_VIEW_QUERY_INVALID`
 - `AUDIT_ENTRY_NOT_FOUND`
+- `SCHEDULER_QUERY_INVALID`
 
 ---
 

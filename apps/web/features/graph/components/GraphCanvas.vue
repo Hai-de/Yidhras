@@ -7,7 +7,7 @@ import type cytoscape from 'cytoscape'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
 import type { GraphViewMode } from '../../../composables/api/useGraphApi'
-import { createGraphInstance, updateGraphInstance } from '../lib/cytoscape'
+import { createGraphInstance, focusGraphNeighborhood, updateGraphInstance } from '../lib/cytoscape'
 import type { GraphCanvasSnapshot } from '../lib/normalize'
 
 const props = defineProps<{
@@ -49,7 +49,7 @@ const applySelectedNode = (selectedNodeId: string | null) => {
   const node = graphInstance.getElementById(selectedNodeId)
   if (node.nonempty()) {
     node.select()
-    graphInstance.center(node)
+    focusGraphNeighborhood(graphInstance, selectedNodeId)
   }
 }
 
