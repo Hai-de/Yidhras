@@ -91,6 +91,7 @@ export interface WorkflowJobDetail {
   status: WorkflowJobStatus
   attempt_count: number
   max_attempts: number
+  intent_class?: string | null
   request_input?: Record<string, unknown> | null
   last_error: string | null
   last_error_code?: string | null

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import {
+  buildAgentSchedulerSummaryMetrics
+} from '../../features/agents/adapters'
 import AgentSchedulerCard from '../../features/agents/components/AgentSchedulerCard.vue'
 import AgentSummaryCard from '../../features/agents/components/AgentSummaryCard.vue'
 import { useAgentPage } from '../../features/agents/composables/useAgentPage'
@@ -13,6 +16,7 @@ const agentActiveTab = computed(() => agentPage.activeTab.value)
 const profileFields = computed(() => agentPage.profileFields.value)
 const relationshipFields = computed(() => agentPage.relationshipFields.value)
 const schedulerDecisionItems = computed(() => agentPage.schedulerDecisionItems.value)
+const schedulerSummaryMetrics = computed(() => buildAgentSchedulerSummaryMetrics(agentPage.schedulerDecisions.value))
 const agentSourceSummary = computed(() => agentPage.sourceSummary.value)
 const agentFreshness = computed(() => {
   return agentPage.isFetching.value ? 'Refreshing agent overview' : 'Agent overview loaded'
@@ -107,7 +111,21 @@ const agentFreshness = computed(() => {
             </div>
           </div>
         </div>
-        <div v-else class="mt-4 text-sm text-yd-text-secondary">
+        <div class="mt-4 grid gap-3 md:grid-cols-2">
+          <div
+            v-for="metric in schedulerSummaryMetrics"
+            :key="metric.id"
+            class="rounded-xl border border-yd-border-muted bg-yd-app px-4 py-4"
+          >
+            <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
+              {{ metric.label }}
+            </div>
+            <div class="mt-2 break-all text-lg font-semibold text-yd-text-primary yd-font-mono">
+              {{ metric.value }}
+            </div>
+          </div>
+        </div>
+        <div v-if="!agentSnapshot" class="mt-4 text-sm text-yd-text-secondary">
           {{ agentPage.isFetching ? 'Loading agent detail…' : 'No agent overview loaded.' }}
         </div>
       </div>

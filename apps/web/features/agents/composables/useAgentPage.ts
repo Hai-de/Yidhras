@@ -1,10 +1,10 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import type { AgentOverviewSnapshot } from '../../../composables/api/useAgentApi'
 import { useAgentApi } from '../../../composables/api/useAgentApi'
-import type { SchedulerDecisionItem } from '../../../composables/api/useSchedulerApi'
+import type { AgentOverviewSnapshot } from '../../../composables/api/useAgentApi'
 import { useSchedulerApi } from '../../../composables/api/useSchedulerApi'
+import type { SchedulerDecisionItem } from '../../../composables/api/useSchedulerApi'
 import { useOperatorNavigation } from '../../shared/navigation'
 import { useOperatorSourceContext } from '../../shared/source-context'
 import {
@@ -70,18 +70,18 @@ export const useAgentPage = () => {
       return
     }
 
+    const sourceContextInput = {
+      sourcePage: 'agent' as const,
+      ...(snapshot.value ? { sourceAgentId: snapshot.value.profile.id } : {}),
+      sourceDecisionId: decision.id
+    }
+
     if (decision.created_job_id) {
-      void navigation.goToWorkflowJob(decision.created_job_id, {
-        sourcePage: 'agent',
-        ...(snapshot.value ? { sourceAgentId: snapshot.value.profile.id } : {})
-      })
+      void navigation.goToWorkflowJob(decision.created_job_id, sourceContextInput)
       return
     }
 
-    void navigation.goToWorkflowWithSchedulerRun(decisionId, {
-      sourcePage: 'agent',
-      ...(snapshot.value ? { sourceAgentId: snapshot.value.profile.id } : {})
-    })
+    void navigation.goToWorkflowActionIntent(decision.id, 'workflow', sourceContextInput)
   }
 
   const returnToSource = () => {
@@ -101,6 +101,16 @@ export const useAgentPage = () => {
 
     if (sourceContext.source.value.sourcePage === 'timeline' && sourceContext.source.value.sourceEventId) {
       void navigation.goToTimelineEvent(sourceContext.source.value.sourceEventId)
+      return
+    }
+
+    if (sourceContext.source.value.sourcePage === 'workflow') {
+      void navigation.goToWorkflow()
+      return
+    }
+
+    if (sourceContext.source.value.sourcePage === 'overview') {
+      void navigation.goToOverview()
     }
   }
 

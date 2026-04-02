@@ -7,12 +7,13 @@ export interface ActivityRailItem {
 }
 
 const props = defineProps<{
-  items: ActivityRailItem[]
+  items: ReadonlyArray<ActivityRailItem>
   activeItemId: string
 }>()
 
 const emit = defineEmits<{
-  select: [itemId: string]
+  select: [itemId: ActivityRailItem['id']]
+  openSettings: []
 }>()
 
 const handleSelect = (item: ActivityRailItem) => {
@@ -22,9 +23,7 @@ const handleSelect = (item: ActivityRailItem) => {
 </script>
 
 <template>
-  <aside
-    class="flex h-full w-20 shrink-0 flex-col justify-between border-r border-yd-border-muted bg-yd-panel px-3 py-4"
-  >
+  <aside class="flex h-full w-20 shrink-0 flex-col justify-between border-r border-yd-border-muted bg-yd-panel px-3 py-4">
     <div class="space-y-3">
       <div
         class="yd-panel-surface flex h-12 w-12 items-center justify-center rounded-lg text-sm font-bold text-yd-state-accent yd-font-mono"
@@ -52,6 +51,13 @@ const handleSelect = (item: ActivityRailItem) => {
       </div>
     </div>
 
-    <OperatorIdentityBadge />
+    <button
+      type="button"
+      class="rounded-lg border border-yd-border-muted bg-transparent px-2 py-3 text-[10px] uppercase tracking-[0.18em] text-yd-text-muted transition-colors hover:border-yd-border-strong hover:bg-yd-elevated hover:text-yd-text-primary yd-font-mono"
+      title="Settings"
+      @click="emit('openSettings')"
+    >
+      ST
+    </button>
   </aside>
 </template>

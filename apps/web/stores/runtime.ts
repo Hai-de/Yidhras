@@ -8,7 +8,20 @@ import type {
   RuntimeWorldMetadata
 } from '../composables/api/useSystemApi'
 import { padTickString } from '../lib/time/format'
-import { type TickString,ZERO_TICK } from '../lib/time/tick'
+import type { TickString } from '../lib/time/tick'
+import { ZERO_TICK } from '../lib/time/tick'
+
+const formatFreshnessLabel = (timestamp: number | null, isSyncing: boolean, idleLabel: string): string => {
+  if (isSyncing) {
+    return 'syncing'
+  }
+
+  if (!timestamp) {
+    return idleLabel
+  }
+
+  return 'synced'
+}
 
 export const useRuntimeStore = defineStore('runtime', {
   state: () => ({
@@ -31,7 +44,19 @@ export const useRuntimeStore = defineStore('runtime', {
     formattedTicks: state => padTickString(state.absoluteTicks, 9),
     primaryCalendarTime: state => state.calendars[0]?.display ?? 'Syncing...',
     hasStartupErrors: state => state.startupErrors.length > 0,
-    hasRuntimeError: state => state.status === 'error' || state.healthLevel === 'fail'
+    hasRuntimeError: state => state.status === 'error' || state.healthLevel === 'fail',
+    isAnySyncing(): boolean {
+      return this.isClockSyncing || this.isStatusSyncing
+    },
+    clockFreshnessLabel(): string {
+      return formatFreshnessLabel(this.lastClockSyncedAt, this.isClockSyncing, 'awaiting first clock sync')
+    },
+    statusFreshnessLabel(): string {
+      return formatFreshnessLabel(this.lastStatusSyncedAt, this.isStatusSyncing, 'awaiting first status sync')
+    },
+    hasDegradedSignals(): boolean {
+      return this.healthLevel !== 'ok' || this.hasStartupErrors || Boolean(this.clockError || this.statusError)
+    }
   },
   actions: {
     applyClockSnapshot(snapshot: FormattedClockSnapshot) {

@@ -1,17 +1,18 @@
 import { computed, ref, watch } from 'vue'
 
-import {
-  useWorkflowApi,
-  type WorkflowIntentDetail,
-  type WorkflowJobDetail,
-  type WorkflowJobsSnapshot,
-  type WorkflowSnapshotDetail,
-  type WorkflowTraceDetail
+import type {
+  WorkflowIntentDetail,
+  WorkflowJobDetail,
+  WorkflowJobsSnapshot,
+  WorkflowSnapshotDetail,
+  WorkflowTraceDetail
 } from '../../../composables/api/useWorkflowApi'
+import { useWorkflowApi } from '../../../composables/api/useWorkflowApi'
 import { useVisibilityPolling } from '../../../composables/app/useVisibilityPolling'
 import { useNotificationsStore } from '../../../stores/notifications'
 import { useOperatorNavigation } from '../../shared/navigation'
 import { useOperatorSourceContext } from '../../shared/source-context'
+import { buildWorkflowSchedulerSourceViewModel } from '../adapters'
 import { useWorkflowRouteState } from '../route'
 import { useWorkflowStore } from '../store'
 
@@ -253,6 +254,43 @@ export const useWorkflowPage = () => {
     workflowRoute.setSelectedTab('trace')
   }
 
+  const schedulerSource = computed(() => {
+    return buildWorkflowSchedulerSourceViewModel({
+      sourcePage: sourceContext.source.value.sourcePage,
+      sourceSummary: sourceContext.summary.value,
+      sourceRunId: sourceContext.source.value.sourceRunId,
+      sourceDecisionId: sourceContext.source.value.sourceDecisionId,
+      sourceAgentId: sourceContext.source.value.sourceAgentId,
+      selectedJob: selectedJob.value
+    })
+  })
+
+  const schedulerContextMessage = computed(() => {
+    if (!schedulerSource.value) {
+      return null
+    }
+
+    const segments = [schedulerSource.value.sourceLabel]
+
+    if (schedulerSource.value.schedulerReason) {
+      segments.push(`reason ${schedulerSource.value.schedulerReason}`)
+    }
+
+    if (schedulerSource.value.schedulerKind) {
+      segments.push(`kind ${schedulerSource.value.schedulerKind}`)
+    }
+
+    if (schedulerSource.value.schedulerRunId) {
+      segments.push(`run ${schedulerSource.value.schedulerRunId}`)
+    }
+
+    if (schedulerSource.value.schedulerDecisionId) {
+      segments.push(`decision ${schedulerSource.value.schedulerDecisionId}`)
+    }
+
+    return segments.join(' · ')
+  })
+
   const returnToSource = () => {
     if (sourceContext.source.value.sourcePage === 'social' && sourceContext.source.value.sourcePostId) {
       void navigation.goToSocialPost(sourceContext.source.value.sourcePostId)
@@ -270,6 +308,16 @@ export const useWorkflowPage = () => {
           ? { selectedNodeId: sourceContext.source.value.sourceNodeId }
           : {})
       })
+      return
+    }
+
+    if (sourceContext.source.value.sourcePage === 'agent' && sourceContext.source.value.sourceAgentId) {
+      void navigation.goToAgent(sourceContext.source.value.sourceAgentId)
+      return
+    }
+
+    if (sourceContext.source.value.sourcePage === 'overview') {
+      void navigation.goToOverview()
     }
   }
 
@@ -279,6 +327,8 @@ export const useWorkflowPage = () => {
     selectedTrace,
     selectedIntent,
     selectedWorkflow,
+    schedulerSource,
+    schedulerContextMessage,
     isListFetching,
     isDetailFetching,
     isRetrying,

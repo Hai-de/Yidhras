@@ -20,12 +20,14 @@ import {
   stringifyDebugValue,
   toWorkflowRefField
 } from '../adapters'
+import type { WorkflowSchedulerSourceViewModel } from '../adapters'
 
 const props = defineProps<{
   job: WorkflowJobDetail | null
   trace: WorkflowTraceDetail | null
   intent: WorkflowIntentDetail | null
   workflow: WorkflowSnapshotDetail | null
+  schedulerSource: WorkflowSchedulerSourceViewModel | null
   isLoading: boolean
   errorMessage: string | null
   isRetrying: boolean
@@ -71,6 +73,23 @@ const targetRefFields = computed(() => {
   return props.intent?.target_ref
     ? Object.entries(props.intent.target_ref).map(([key, value]) => toWorkflowRefField(key, value))
     : []
+})
+const schedulerSourceFields = computed(() => {
+  if (!props.schedulerSource) {
+    return []
+  }
+
+  return [
+    { label: 'source', value: props.schedulerSource.sourceLabel },
+    { label: 'scheduler_run_id', value: props.schedulerSource.schedulerRunId ?? '—' },
+    { label: 'scheduler_decision_id', value: props.schedulerSource.schedulerDecisionId ?? '—' },
+    { label: 'scheduler_agent_id', value: props.schedulerSource.schedulerAgentId ?? '—' },
+    { label: 'job_source', value: props.schedulerSource.jobSource ?? '—' },
+    { label: 'job_intent_class', value: props.schedulerSource.jobIntentClass ?? '—' },
+    { label: 'scheduler_reason', value: props.schedulerSource.schedulerReason ?? '—' },
+    { label: 'scheduler_kind', value: props.schedulerSource.schedulerKind ?? '—' },
+    { label: 'scheduled_for_tick', value: props.schedulerSource.schedulerScheduledForTick ?? '—' }
+  ]
 })
 
 const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
@@ -144,6 +163,30 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
           <WorkspaceEmptyState
             :title="props.isLoading ? 'Loading job detail…' : 'No job selected'"
             description="Choose a job from the queue table to inspect attempts, request input, and retry state."
+          />
+        </div>
+      </div>
+
+      <div class="yd-panel-surface min-h-[18rem] rounded-xl">
+        <WorkspaceSectionHeader title="Scheduler Context" subtitle="Operator source route and scheduler metadata inferred from current workflow selection." />
+        <div v-if="schedulerSourceFields.length > 0" class="grid gap-3 px-5 py-5 md:grid-cols-2">
+          <div
+            v-for="field in schedulerSourceFields"
+            :key="field.label"
+            class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3"
+          >
+            <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
+              {{ field.label }}
+            </div>
+            <div class="mt-2 break-all text-yd-text-primary">
+              {{ field.value }}
+            </div>
+          </div>
+        </div>
+        <div v-else class="px-5 py-5">
+          <WorkspaceEmptyState
+            :title="props.isLoading ? 'Resolving scheduler context…' : 'No scheduler context available'"
+            description="Scheduler source details appear when this workflow was opened from operator drill-down or the job request includes scheduler metadata."
           />
         </div>
       </div>

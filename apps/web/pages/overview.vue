@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-full flex-col gap-4 overflow-auto p-6 no-scrollbar">
+  <div class="flex min-h-full flex-col gap-4 p-6">
     <WorkspacePageHeader
       eyebrow="Operator Overview"
       title="Runtime, queue, and propagation summary"
@@ -67,9 +67,19 @@
     </div>
 
     <div class="grid gap-4 xl:grid-cols-2">
+      <SchedulerSummaryCard
+        :latest-run-label="schedulerLatestRunLabel"
+        :latest-run-meta="schedulerLatestRunMeta"
+        :metrics="schedulerSummaryMetrics"
+        :highlight-groups="schedulerHighlightGroups"
+      />
+      <SchedulerTrendsCard :items="schedulerTrendItems" />
+    </div>
+
+    <div class="grid gap-4 xl:grid-cols-2">
       <OverviewListCard
         title="Scheduler Runs"
-        subtitle="Recent scheduler scans with created/scanned counts and worker attribution."
+        subtitle="Recent scheduler scans with created/scanned counts, skip pressure, and worker attribution."
         :items="schedulerRunItems"
         empty-message="No scheduler runs available yet."
         @select="handleSelectSchedulerRun"
@@ -127,12 +137,17 @@ import { computed } from 'vue'
 import {
   buildOverviewMetricItems,
   buildSchedulerDecisionListItems,
+  buildSchedulerHighlightGroups,
   buildSchedulerRunListItems,
+  buildSchedulerSummaryMetrics,
+  buildSchedulerTrendItems,
   toOverviewAuditListItems,
   toOverviewNotificationListItems
 } from '../features/overview/adapters'
 import OverviewListCard from '../features/overview/components/OverviewListCard.vue'
 import OverviewMetricCard from '../features/overview/components/OverviewMetricCard.vue'
+import SchedulerSummaryCard from '../features/overview/components/SchedulerSummaryCard.vue'
+import SchedulerTrendsCard from '../features/overview/components/SchedulerTrendsCard.vue'
 import { useOverviewPage } from '../features/overview/composables/useOverviewPage'
 import MetricPill from '../features/shared/components/MetricPill.vue'
 import WorkspaceEmptyState from '../features/shared/components/WorkspaceEmptyState.vue'
@@ -166,6 +181,28 @@ const primaryCalendarDisplay = computed(() => {
   }
 
   return overviewSummary.value.world_time.calendars[0]?.display ?? 'No formatted calendar available'
+})
+
+const schedulerSummaryMetrics = computed(() => buildSchedulerSummaryMetrics(overviewPage.schedulerSummary.value))
+const schedulerHighlightGroups = computed(() => buildSchedulerHighlightGroups(overviewPage.schedulerSummary.value))
+const schedulerTrendItems = computed(() => buildSchedulerTrendItems(overviewPage.schedulerTrendItems.value))
+
+const schedulerLatestRunLabel = computed(() => {
+  const latestRun = overviewPage.schedulerSummary.value?.latest_run
+  if (!latestRun) {
+    return 'No scheduler run sampled yet'
+  }
+
+  return `tick ${latestRun.tick} · ${latestRun.worker_id}`
+})
+
+const schedulerLatestRunMeta = computed(() => {
+  const latestRun = overviewPage.schedulerSummary.value?.latest_run
+  if (!latestRun) {
+    return 'Summary projection will populate after the runtime records scheduler runs.'
+  }
+
+  return `created ${latestRun.summary.created_count} · skipped pending ${latestRun.summary.skipped_pending_count} · signals ${latestRun.summary.signals_detected_count}`
 })
 
 const schedulerRunItems = computed(() => buildSchedulerRunListItems(overviewPage.schedulerRunItems.value))

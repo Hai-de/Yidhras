@@ -15,8 +15,12 @@ This app is currently being rebuilt into an Operator-first control console rathe
 - Social、Timeline、Agent 页面已接入基础读模型与跨页 drill-down，正在向更丰富的工作区体验迭代。
 - Overview 与 Agent 页面现已开始接入 scheduler operator projection（recent runs / recent decisions / agent scheduler timeline）基线。
 - 旧 `stores/clock.ts` / `stores/system.ts` / `utils/api.ts` 已清理出主线，当前主状态入口为 `runtime/shell/notifications` 以及 feature stores。
-- 已新增 `vitest` 与四个核心 store 单测：`runtime / shell / workflow / graph`。
+- 已新增 `vitest` 与核心 store / shell context 单测：`runtime / notifications / shell / workflow / graph / shell context`。
 - 新一轮 Operator UI polish 已完成第一阶段，当前已有统一页面骨架、来源上下文、Graph focus/root 交互、freshness 与轻量通知反馈。
+- Shell 全局控制台体验增强第一轮最小基线已落地：
+  - TopRuntimeBar 已具备 runtime freshness、notifications 聚合、refresh all 与 dock toggle
+  - Sidebar 已升级为 context-aware shell panel（workspace / source / focus / quick actions / recent targets）
+  - BottomDock 的 jobs / traces 已不再是纯 placeholder，而是基于 recent targets 的最小回看层
 - Graph 深化与 Timeline / Social 语义映射优化已完成首轮增量：
   - Graph quick roots、search context、inspector grouping / action explainers 已落地
   - Timeline → Social 已支持 intent-first + tick-scoped context
@@ -109,8 +113,8 @@ pnpm --filter web preview
 - `lib/time/*`: tick string-first 工具与比较/格式化逻辑
 - `stores/runtime.ts`: runtime / clock 聚合状态
 - `stores/notifications.ts`: 远端通知 + 本地 UI 反馈通知
-- `stores/shell.ts`: 壳层工作区与 dock 状态
-- `tests/unit/*.spec.ts`: 核心 store 单测
+- `stores/shell.ts`: 壳层工作区与 dock 状态 / recent targets
+- `tests/unit/*.spec.ts`: 核心 store / shell context 单测
 - `tailwind.config.ts`: 主题变量到 Tailwind 的消费映射
 
 ## 已知限制 / Known Limitations
@@ -118,6 +122,7 @@ pnpm --filter web preview
 - Graph 仍使用 Cytoscape 单引擎同时承载 mesh/tree，两种视图的视觉差异仍是第一版基线。
 - Social、Timeline、Agent 页面目前是“基础工作区版”，尚未做更高级的聚类、多列配置、抽屉化 inspector 等增强。
 - Timeline ↔ Social 当前虽然已从宽松跳转收紧为 intent/tick/context 优先，但仍依赖现有读模型；若后端未来提供更强 mapping contract，仍可继续增强。
+- Shell 的 jobs / traces / notifications 虽已形成最小控制台层，但 jobs / traces 当前仍主要基于 recent targets，而非更完整的任务/trace 专属 read model。
 - `nuxt typecheck` 当前仍会输出一个来自 `vue-router/volar/sfc-route-blocks` 的外部依赖 warning，但命令最终可成功通过。
 - world-pack 主题覆盖暂未产品化，当前只提供默认 token 体系。
 
@@ -130,3 +135,4 @@ pnpm --filter web preview
 - `docs/LOGIC.md`: 业务逻辑说明与 BigInt transport 规则
 - `.limcode/plans/frontend-graph-deepen-and-timeline-social-mapping.plan.md`: Graph 深化与 Timeline / Social 语义映射优化执行与收口文档
 - `.limcode/plans/frontend-operator-ui-polish-and-interaction-enhancement.plan.md`: 当前 UI polish / interaction 增强冻结计划与验收标准
+- `.limcode/plans/shell-global-console-experience-enhancement.plan.md`: Shell 全局控制台体验增强执行计划与当前进度

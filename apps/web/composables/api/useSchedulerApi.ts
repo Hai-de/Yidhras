@@ -15,6 +15,10 @@ export type SchedulerSkipReason =
   | 'event_coalesced'
   | 'existing_same_idempotency'
   | 'limit_reached'
+  | 'replay_window_periodic_suppressed'
+  | 'replay_window_event_suppressed'
+  | 'retry_window_periodic_suppressed'
+  | 'retry_window_event_suppressed'
 
 export interface SchedulerRunSummary {
   id: string
@@ -31,7 +35,7 @@ export interface SchedulerRunSummary {
     signals_detected_count: number
     scheduled_for_future_count: number
     skipped_existing_idempotency_count: number
-    skipped_by_reason: Record<SchedulerSkipReason, number>
+    skipped_by_reason: Partial<Record<SchedulerSkipReason, number>>
     scheduler_run_id?: string
   }
   started_at: TickString
@@ -50,6 +54,53 @@ export interface SchedulerDecisionItem {
   skipped_reason: SchedulerSkipReason | null
   created_job_id: string | null
   created_at: TickString
+}
+
+export interface SchedulerReasonAggregateItem {
+  reason: string
+  count: number
+}
+
+export interface SchedulerActorAggregateItem {
+  actor_id: string
+  count: number
+}
+
+export interface SchedulerIntentClassAggregateItem {
+  intent_class: string
+  count: number
+}
+
+export interface SchedulerSummarySnapshot {
+  latest_run: SchedulerRunSummary | null
+  run_totals: {
+    sampled_runs: number
+    total_created_count: number
+    total_created_periodic_count: number
+    total_created_event_driven_count: number
+    total_skipped_pending_count: number
+    total_skipped_cooldown_count: number
+    total_signals_detected_count: number
+    total_scheduled_for_future_count: number
+    total_skipped_existing_idempotency_count: number
+  } & Record<string, number>
+  top_reasons: SchedulerReasonAggregateItem[]
+  top_skipped_reasons: SchedulerReasonAggregateItem[]
+  top_actors: SchedulerActorAggregateItem[]
+  intent_class_breakdown: SchedulerIntentClassAggregateItem[]
+}
+
+export interface SchedulerTrendPoint {
+  tick: TickString
+  run_id: string
+  created_count: number
+  created_periodic_count: number
+  created_event_driven_count: number
+  signals_detected_count: number
+}
+
+export interface SchedulerTrendsSnapshot {
+  points: SchedulerTrendPoint[]
 }
 
 export interface SchedulerRunsSnapshot {
@@ -139,6 +190,18 @@ export const useSchedulerApi = () => {
           from_tick: normalizeOptionalString(input.fromTick),
           to_tick: normalizeOptionalString(input.toTick),
           worker_id: normalizeOptionalString(input.workerId)
+        })}`
+      ),
+    getSummary: (input: { sampleRuns?: number } = {}) =>
+      requestApiData<SchedulerSummarySnapshot>(
+        `/api/runtime/scheduler/summary${buildQueryString({
+          sample_runs: input.sampleRuns
+        })}`
+      ),
+    getTrends: (input: { sampleRuns?: number } = {}) =>
+      requestApiData<SchedulerTrendsSnapshot>(
+        `/api/runtime/scheduler/trends${buildQueryString({
+          sample_runs: input.sampleRuns
         })}`
       ),
     getLatestRun: () => requestApiData<SchedulerRunReadModel | null>('/api/runtime/scheduler/runs/latest'),

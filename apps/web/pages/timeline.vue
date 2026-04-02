@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-full flex-col gap-4 overflow-hidden p-6">
+  <div class="flex min-h-full flex-col gap-4 p-6">
     <WorkspacePageHeader
       eyebrow="Narrative Timeline"
       title="Event stream and historical slices"

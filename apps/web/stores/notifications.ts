@@ -38,6 +38,21 @@ export const useNotificationsStore = defineStore('notifications', {
     },
     hasErrors(): boolean {
       return this.items.some(item => item.level === 'error')
+    },
+    errorCount(): number {
+      return this.items.filter(item => item.level === 'error').length
+    },
+    warningCount(): number {
+      return this.items.filter(item => item.level === 'warning').length
+    },
+    infoCount(): number {
+      return this.items.filter(item => item.level === 'info').length
+    },
+    latestError(): SystemNotificationSnapshot | null {
+      return this.items.find(item => item.level === 'error') ?? null
+    },
+    latestWarnings(): SystemNotificationSnapshot[] {
+      return this.items.filter(item => item.level === 'warning').slice(0, 3)
     }
   },
   actions: {

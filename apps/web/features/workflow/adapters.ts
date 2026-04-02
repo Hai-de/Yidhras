@@ -20,6 +20,19 @@ export interface WorkflowEntityLinkViewModel {
   kind: 'agent' | 'workflow' | 'trace' | 'intent'
 }
 
+export interface WorkflowSchedulerSourceViewModel {
+  sourcePage: string
+  sourceLabel: string
+  schedulerRunId: string | null
+  schedulerDecisionId: string | null
+  schedulerAgentId: string | null
+  jobIntentClass: string | null
+  jobSource: string | null
+  schedulerReason: string | null
+  schedulerKind: string | null
+  schedulerScheduledForTick: string | null
+}
+
 const stringifyUnknown = (value: unknown): string => {
   if (value === undefined || value === null) {
     return '—'
@@ -56,6 +69,24 @@ const extractAgentId = (value: unknown): string | null => {
 
   const record = value as Record<string, unknown>
   return typeof record.id === 'string' && record.id.trim().length > 0 ? record.id : null
+}
+
+const extractRequestInputAttributes = (job: WorkflowJobDetail | null): Record<string, unknown> | null => {
+  if (!job?.request_input || typeof job.request_input !== 'object' || Array.isArray(job.request_input)) {
+    return null
+  }
+
+  const requestInput = job.request_input as Record<string, unknown>
+  const attributes = requestInput.attributes
+  if (!attributes || typeof attributes !== 'object' || Array.isArray(attributes)) {
+    return null
+  }
+
+  return attributes as Record<string, unknown>
+}
+
+const toOptionalString = (value: unknown): string | null => {
+  return typeof value === 'string' && value.trim().length > 0 ? value : null
 }
 
 export const resolveJobStatusTone = (status: WorkflowJobStatus): WorkflowTone => {
@@ -104,6 +135,7 @@ export const buildWorkflowJobSummaryFields = (job: WorkflowJobDetail): WorkflowK
     { label: 'job_id', value: job.id },
     { label: 'job_type', value: job.job_type },
     { label: 'attempts', value: `${job.attempt_count} / ${job.max_attempts}` },
+    { label: 'intent_class', value: job.intent_class ?? '—' },
     { label: 'created_at', value: job.created_at },
     { label: 'updated_at', value: job.updated_at },
     { label: 'completed_at', value: job.completed_at ?? '—' },
@@ -204,6 +236,50 @@ export const buildWorkflowFailureSummary = (input: {
     { label: 'workflow_failure_reason', value: input.workflowFailureReason ?? '—' },
     { label: 'next_retry_at', value: input.job?.next_retry_at ?? '—' }
   ]
+}
+
+export const buildWorkflowSchedulerSourceViewModel = (input: {
+  sourcePage: string | null
+  sourceSummary: string | null
+  sourceRunId: string | null
+  sourceDecisionId: string | null
+  sourceAgentId: string | null
+  selectedJob: WorkflowJobDetail | null
+}): WorkflowSchedulerSourceViewModel | null => {
+  const attributes = extractRequestInputAttributes(input.selectedJob)
+
+  const jobIntentClass = input.selectedJob?.intent_class ?? null
+  const jobSource = toOptionalString(attributes?.job_source)
+  const schedulerReason = toOptionalString(attributes?.scheduler_reason)
+  const schedulerKind = toOptionalString(attributes?.scheduler_kind)
+  const schedulerScheduledForTick = toOptionalString(attributes?.scheduler_scheduled_for_tick)
+
+  if (
+    !input.sourcePage &&
+    !input.sourceRunId &&
+    !input.sourceDecisionId &&
+    !input.sourceAgentId &&
+    !jobIntentClass &&
+    !jobSource &&
+    !schedulerReason &&
+    !schedulerKind &&
+    !schedulerScheduledForTick
+  ) {
+    return null
+  }
+
+  return {
+    sourcePage: input.sourcePage ?? 'unknown',
+    sourceLabel: input.sourceSummary ?? 'Opened from workflow context',
+    schedulerRunId: input.sourceRunId,
+    schedulerDecisionId: input.sourceDecisionId,
+    schedulerAgentId: input.sourceAgentId,
+    jobIntentClass,
+    jobSource,
+    schedulerReason,
+    schedulerKind,
+    schedulerScheduledForTick
+  }
 }
 
 export const toWorkflowRefField = (label: string, value: unknown): WorkflowKeyValueField => {

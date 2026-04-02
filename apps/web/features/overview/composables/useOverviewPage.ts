@@ -1,8 +1,12 @@
 import { computed, ref } from 'vue'
 
-import type { OverviewSummarySnapshot } from '../../../composables/api/useOverviewApi'
 import { useOverviewApi } from '../../../composables/api/useOverviewApi'
+import type { OverviewSummarySnapshot } from '../../../composables/api/useOverviewApi'
 import { useSchedulerApi } from '../../../composables/api/useSchedulerApi'
+import type {
+  SchedulerSummarySnapshot,
+  SchedulerTrendsSnapshot
+} from '../../../composables/api/useSchedulerApi'
 import { useVisibilityPolling } from '../../../composables/app/useVisibilityPolling'
 import { useNotificationsStore } from '../../../stores/notifications'
 import { useOperatorNavigation } from '../../shared/navigation'
@@ -19,6 +23,8 @@ export const useOverviewPage = () => {
   const summary = ref<OverviewSummarySnapshot | null>(null)
   const schedulerRuns = ref<Awaited<ReturnType<typeof schedulerApi.listRuns>> | null>(null)
   const schedulerDecisions = ref<Awaited<ReturnType<typeof schedulerApi.listDecisions>> | null>(null)
+  const schedulerSummary = ref<SchedulerSummarySnapshot | null>(null)
+  const schedulerTrends = ref<SchedulerTrendsSnapshot | null>(null)
   const isFetching = ref(false)
   const errorMessage = ref<string | null>(null)
   const lastSyncedAt = ref<number | null>(null)
@@ -27,14 +33,18 @@ export const useOverviewPage = () => {
     isFetching.value = true
 
     try {
-      const [overviewSnapshot, runsSnapshot, decisionsSnapshot] = await Promise.all([
+      const [overviewSnapshot, runsSnapshot, decisionsSnapshot, summarySnapshot, trendsSnapshot] = await Promise.all([
         overviewApi.getSummary(),
         schedulerApi.listRuns({ limit: 5 }),
-        schedulerApi.listDecisions({ limit: 5 })
+        schedulerApi.listDecisions({ limit: 5 }),
+        schedulerApi.getSummary({ sampleRuns: 10 }),
+        schedulerApi.getTrends({ sampleRuns: 10 })
       ])
       summary.value = overviewSnapshot
       schedulerRuns.value = runsSnapshot
       schedulerDecisions.value = decisionsSnapshot
+      schedulerSummary.value = summarySnapshot
+      schedulerTrends.value = trendsSnapshot
       errorMessage.value = null
       lastSyncedAt.value = Date.now()
     } catch (error) {
@@ -58,24 +68,41 @@ export const useOverviewPage = () => {
   })
 
   const openSchedulerRun = (runId: string) => {
-    void navigation.goToWorkflowWithSchedulerRun(runId)
+    void navigation.goToWorkflowWithSchedulerRun(runId, {
+      sourcePage: 'overview',
+      sourceRunId: runId
+    })
   }
 
   const openSchedulerDecision = (input: { decisionId: string; createdJobId: string | null; actorId: string }) => {
     if (input.createdJobId) {
-      void navigation.goToWorkflowJob(input.createdJobId)
+      void navigation.goToWorkflowJob(input.createdJobId, {
+        sourcePage: 'overview',
+        sourceDecisionId: input.decisionId,
+        sourceAgentId: input.actorId
+      })
       return
     }
 
-    void navigation.goToAgent(input.actorId, { tab: 'workflows' })
+    void navigation.goToAgent(input.actorId, {
+      tab: 'workflows',
+      context: {
+        sourcePage: 'overview',
+        sourceDecisionId: input.decisionId,
+        sourceAgentId: input.actorId
+      }
+    })
   }
 
   return {
     summary,
     schedulerRuns,
     schedulerDecisions,
+    schedulerSummary,
+    schedulerTrends,
     schedulerRunItems: computed(() => schedulerRuns.value?.items ?? []),
     schedulerDecisionItems: computed(() => schedulerDecisions.value?.items ?? []),
+    schedulerTrendItems: computed(() => schedulerTrends.value?.points ?? []),
     isFetching,
     errorMessage,
     lastSyncedAt,

@@ -27,6 +27,7 @@ describe('useRuntimeStore', () => {
     expect(runtime.formattedTicks).toBe('000000042')
     expect(runtime.primaryCalendarTime).toBe('Cycle 42')
     expect(runtime.lastClockSyncedAt).toEqual(expect.any(Number))
+    expect(runtime.clockFreshnessLabel).toBe('synced')
   })
 
   it('applies runtime status snapshot and exposes status helpers', () => {
@@ -60,5 +61,22 @@ describe('useRuntimeStore', () => {
     expect(runtime.runtimeSpeed?.effective_step_ticks).toBe('3')
     expect(runtime.hasStartupErrors).toBe(true)
     expect(runtime.hasRuntimeError).toBe(false)
+    expect(runtime.statusFreshnessLabel).toBe('synced')
+    expect(runtime.hasDegradedSignals).toBe(true)
+  })
+
+  it('tracks sync state and idle freshness labels before first sync', () => {
+    const runtime = useRuntimeStore()
+
+    expect(runtime.clockFreshnessLabel).toBe('awaiting first clock sync')
+    expect(runtime.statusFreshnessLabel).toBe('awaiting first status sync')
+    expect(runtime.isAnySyncing).toBe(false)
+
+    runtime.setClockSyncing(true)
+    runtime.setStatusSyncing(true)
+
+    expect(runtime.clockFreshnessLabel).toBe('syncing')
+    expect(runtime.statusFreshnessLabel).toBe('syncing')
+    expect(runtime.isAnySyncing).toBe(true)
   })
 })

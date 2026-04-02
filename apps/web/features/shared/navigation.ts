@@ -21,7 +21,7 @@ export interface SocialFeedNavigationOptions {
   context?: OperatorNavigationSourceContext
 }
 
-const buildSourceQuery = (context?: OperatorNavigationSourceContext) => {
+export const buildSourceQuery = (context?: OperatorNavigationSourceContext) => {
   if (!context) {
     return {}
   }
@@ -38,19 +38,44 @@ const buildSourceQuery = (context?: OperatorNavigationSourceContext) => {
   }
 }
 
+export const buildWorkflowJobNavigationTarget = (jobId: string, context?: OperatorNavigationSourceContext) => ({
+  path: '/workflow',
+  query: {
+    job_id: jobId,
+    ...buildSourceQuery(context)
+  }
+})
+
+export const buildWorkflowRunNavigationTarget = (runId: string, context?: OperatorNavigationSourceContext) => ({
+  path: '/workflow',
+  query: {
+    scheduler_run_id: runId,
+    ...buildSourceQuery(context)
+  }
+})
+
+export const buildAgentNavigationTarget = (
+  agentId: string,
+  options?: {
+    tab?: 'overview' | 'relations' | 'posts' | 'workflows' | 'memory'
+    context?: OperatorNavigationSourceContext
+  }
+) => ({
+  path: `/agents/${agentId}`,
+  query: {
+    ...(options?.tab && options.tab !== 'overview' ? { tab: options.tab } : {}),
+    ...buildSourceQuery(options?.context)
+  }
+})
+
 export const useOperatorNavigation = () => {
   const router = useRouter()
 
   return {
     goToOverview: () => router.push('/overview'),
+    goToWorkflow: () => router.push('/workflow'),
     goToWorkflowJob: (jobId: string, context?: OperatorNavigationSourceContext) =>
-      router.push({
-        path: '/workflow',
-        query: {
-          job_id: jobId,
-          ...buildSourceQuery(context)
-        }
-      }),
+      router.push(buildWorkflowJobNavigationTarget(jobId, context)),
     goToWorkflowTrace: (
       traceId: string,
       tab?: 'trace' | 'intent',
@@ -78,13 +103,7 @@ export const useOperatorNavigation = () => {
         }
       }),
     goToWorkflowWithSchedulerRun: (runId: string, context?: OperatorNavigationSourceContext) =>
-      router.push({
-        path: '/workflow',
-        query: {
-          scheduler_run_id: runId,
-          ...buildSourceQuery(context)
-        }
-      }),
+      router.push(buildWorkflowRunNavigationTarget(runId, context)),
     goToSocialFeed: (options?: SocialFeedNavigationOptions) =>
       router.push({
         path: '/social',
@@ -150,13 +169,6 @@ export const useOperatorNavigation = () => {
         tab?: 'overview' | 'relations' | 'posts' | 'workflows' | 'memory'
         context?: OperatorNavigationSourceContext
       }
-    ) =>
-      router.push({
-        path: `/agents/${agentId}`,
-        query: {
-          ...(options?.tab && options.tab !== 'overview' ? { tab: options.tab } : {}),
-          ...buildSourceQuery(options?.context)
-        }
-      })
+    ) => router.push(buildAgentNavigationTarget(agentId, options))
   }
 }

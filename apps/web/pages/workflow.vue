@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-full flex-col gap-4 overflow-hidden p-6">
+  <div class="flex min-h-full flex-col gap-4 p-6">
     <WorkspacePageHeader
       eyebrow="Workflow Console"
       title="Decision jobs and dispatch state"
@@ -22,6 +22,13 @@
       :message="workflowSourceSummary"
       return-label="Return to source"
       @return="returnToSource"
+    />
+
+    <WorkspaceStatusBanner
+      v-if="workflowSchedulerContextMessage"
+      tone="info"
+      title="Scheduler / Operator Context"
+      :message="workflowSchedulerContextMessage"
     />
 
     <WorkflowFiltersBar
@@ -51,6 +58,7 @@
         :trace="selectedTrace"
         :intent="selectedIntent"
         :workflow="selectedWorkflow"
+        :scheduler-source="workflowSchedulerSource"
         :is-loading="isDetailFetching"
         :error-message="detailErrorMessage"
         :is-retrying="isRetrying"
@@ -82,6 +90,8 @@ const selectedJob = workflowPage.selectedJob
 const selectedTrace = workflowPage.selectedTrace
 const selectedIntent = workflowPage.selectedIntent
 const selectedWorkflow = workflowPage.selectedWorkflow
+const workflowSchedulerSource = workflowPage.schedulerSource
+const workflowSchedulerContextMessage = workflowPage.schedulerContextMessage
 const isListFetching = workflowPage.isListFetching
 const isDetailFetching = workflowPage.isDetailFetching
 const isRetrying = workflowPage.isRetrying
