@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppButton from '../../../components/ui/AppButton.vue'
 import WorkspaceEmptyState from '../../shared/components/WorkspaceEmptyState.vue'
 import WorkspaceSectionHeader from '../../shared/components/WorkspaceSectionHeader.vue'
 import type { TimelineEventCardViewModel } from '../adapters'
@@ -16,19 +17,19 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="yd-panel-surface flex h-full min-h-[28rem] flex-col rounded-xl">
+  <div class="yd-workbench-pane flex h-full min-h-[28rem] flex-col rounded-md">
     <WorkspaceSectionHeader
       title="Timeline Events"
       :subtitle="props.isLoading ? 'Refreshing timeline…' : `${props.items.length} event(s) in current view.`"
     />
 
-    <div v-if="props.items.length > 0" class="min-h-0 flex-1 overflow-auto px-5 py-4 no-scrollbar">
-      <div class="space-y-3">
+    <div v-if="props.items.length > 0" class="min-h-0 flex-1 overflow-auto px-4 py-4 no-scrollbar">
+      <div class="space-y-2.5">
         <div
           v-for="item in props.items"
           :key="item.id"
-          class="rounded-xl border px-4 py-4"
-          :class="item.id === props.selectedEventId ? 'border-yd-state-accent bg-yd-app/80' : 'border-yd-border-muted bg-yd-app'"
+          class="yd-workbench-item rounded-md px-4 py-4"
+          :class="item.id === props.selectedEventId ? 'yd-workbench-item--active' : ''"
         >
           <button type="button" class="w-full text-left" @click="emit('selectEvent', item)">
             <div class="text-sm font-medium text-yd-text-primary">
@@ -42,19 +43,18 @@ const emit = defineEmits<{
             </div>
           </button>
 
-          <button
+          <AppButton
             v-if="item.sourceActionIntentId"
-            type="button"
-            class="mt-4 rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono"
+            class="mt-4"
             @click="emit('openWorkflow', item.sourceActionIntentId, item.id)"
           >
             Open workflow link
-          </button>
+          </AppButton>
         </div>
       </div>
     </div>
 
-    <div v-else class="px-5 py-5">
+    <div v-else class="px-4 py-4">
       <WorkspaceEmptyState
         title="No timeline events in current range"
         description="Adjust the selected tick range to inspect another narrative slice."

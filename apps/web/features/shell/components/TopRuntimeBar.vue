@@ -70,7 +70,7 @@ const handleRefreshAll = async () => {
 </script>
 
 <template>
-  <header class="flex min-h-16 items-center justify-between border-b border-yd-border-muted bg-yd-panel px-6 py-3">
+  <header class="flex min-h-16 items-center justify-between border-b border-yd-border-muted bg-yd-panel px-5 py-3">
     <div class="flex min-w-0 items-center gap-6">
       <div>
         <div class="text-[10px] uppercase tracking-[0.24em] text-yd-text-muted yd-font-mono">
@@ -78,7 +78,7 @@ const handleRefreshAll = async () => {
         </div>
         <div class="mt-1 flex items-center gap-3">
           <span
-            class="rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.2em] yd-font-mono"
+            class="rounded-sm border px-3 py-1 text-[10px] uppercase tracking-[0.2em] yd-font-mono"
             :class="runtimeStatusClass"
           >
             {{ runtimeStatusLabel }}
@@ -105,8 +105,8 @@ const handleRefreshAll = async () => {
       </div>
     </div>
 
-    <div class="flex items-center gap-4">
-      <div class="yd-panel-surface rounded-lg px-4 py-2">
+    <div class="flex items-center gap-3">
+      <div class="yd-panel-surface rounded-sm px-4 py-2">
         <div class="text-[10px] uppercase tracking-[0.24em] text-yd-text-muted yd-font-mono">
           Runtime Speed
         </div>
@@ -115,7 +115,7 @@ const handleRefreshAll = async () => {
         </div>
       </div>
 
-      <div class="yd-panel-surface rounded-lg border px-4 py-2" :class="notificationsStatusClass">
+      <div class="yd-panel-surface rounded-sm border px-4 py-2" :class="notificationsStatusClass">
         <div class="text-[10px] uppercase tracking-[0.24em] yd-font-mono">
           Notifications
         </div>
@@ -127,14 +127,14 @@ const handleRefreshAll = async () => {
       <div class="flex items-center gap-2">
         <button
           type="button"
-          class="rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono"
+          class="rounded-sm border border-yd-border-strong bg-yd-elevated px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono transition-colors hover:border-yd-state-accent/60"
           @click="handleRefreshAll"
         >
           Refresh All
         </button>
         <button
           type="button"
-          class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-yd-text-secondary yd-font-mono"
+          class="rounded-sm border border-yd-border-muted bg-yd-app px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-yd-text-secondary yd-font-mono transition-colors hover:border-yd-border-strong hover:text-yd-text-primary"
           @click="shell.toggleDockExpanded()"
         >
           {{ dockToggleLabel }}

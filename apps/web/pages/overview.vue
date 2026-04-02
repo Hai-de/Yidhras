@@ -1,5 +1,5 @@
 <template>
-  <div class="flex min-h-full flex-col gap-4 p-6">
+  <div class="flex min-h-full flex-col" :style="pageLayoutStyle">
     <WorkspacePageHeader
       eyebrow="Operator Overview"
       title="Runtime, queue, and propagation summary"
@@ -7,13 +7,9 @@
       :freshness="overviewFreshness"
     >
       <template #actions>
-        <button
-          type="button"
-          class="rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono"
-          @click="refresh"
-        >
+        <AppButton @click="refresh">
           Refresh
-        </button>
+        </AppButton>
       </template>
     </WorkspacePageHeader>
 
@@ -23,7 +19,7 @@
       :message="errorMessage"
     />
 
-    <div class="grid gap-4 xl:grid-cols-4">
+    <div class="grid xl:grid-cols-4" :style="sectionGridStyle">
       <OverviewMetricCard
         v-for="item in metricItems"
         :key="item.id"
@@ -33,14 +29,14 @@
       />
     </div>
 
-    <div class="grid gap-4 xl:grid-cols-2">
-      <div class="yd-panel-surface rounded-xl">
+    <div class="grid xl:grid-cols-2" :style="sectionGridStyle">
+      <AppPanel>
         <WorkspaceSectionHeader
           title="Runtime Snapshot"
           subtitle="Aggregated overview state for runtime, health, world pack, and clock formatting."
         />
 
-        <div v-if="overviewSummary" class="grid gap-4 px-5 py-5 lg:grid-cols-2">
+        <div v-if="overviewSummary" class="grid px-5 py-5 lg:grid-cols-2" :style="sectionGridStyle">
           <MetricPill label="Runtime" :value="`${overviewSummary.runtime.status} · ${overviewSummary.runtime.health_level}`" />
           <MetricPill label="World Time" :value="overviewSummary.world_time.tick" />
           <MetricPill
@@ -56,7 +52,7 @@
             description="The operator overview will populate once the summary projection returns runtime and audit aggregates."
           />
         </div>
-      </div>
+      </AppPanel>
 
       <OverviewListCard
         title="Notifications"
@@ -66,7 +62,7 @@
       />
     </div>
 
-    <div class="grid gap-4 xl:grid-cols-2">
+    <div class="grid xl:grid-cols-2" :style="sectionGridStyle">
       <SchedulerSummaryCard
         :latest-run-label="schedulerLatestRunLabel"
         :latest-run-meta="schedulerLatestRunMeta"
@@ -76,7 +72,7 @@
       <SchedulerTrendsCard :items="schedulerTrendItems" />
     </div>
 
-    <div class="grid gap-4 xl:grid-cols-2">
+    <div class="grid xl:grid-cols-2" :style="sectionGridStyle">
       <OverviewListCard
         title="Scheduler Runs"
         subtitle="Recent scheduler scans with created/scanned counts, skip pressure, and worker attribution."
@@ -93,7 +89,7 @@
       />
     </div>
 
-    <div class="grid gap-4 xl:grid-cols-2">
+    <div class="grid xl:grid-cols-2" :style="sectionGridStyle">
       <OverviewListCard
         title="Recent Events"
         subtitle="Timeline-facing events from the overview aggregation endpoint."
@@ -108,7 +104,7 @@
       />
     </div>
 
-    <div class="grid gap-4 xl:grid-cols-3">
+    <div class="grid xl:grid-cols-3" :style="sectionGridStyle">
       <OverviewListCard
         title="Latest Propagation"
         subtitle="Workflow entries associated with message propagation."
@@ -134,6 +130,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import AppButton from '../components/ui/AppButton.vue'
+import AppPanel from '../components/ui/AppPanel.vue'
 import {
   buildOverviewMetricItems,
   buildSchedulerDecisionListItems,
@@ -155,6 +153,15 @@ import WorkspacePageHeader from '../features/shared/components/WorkspacePageHead
 import WorkspaceSectionHeader from '../features/shared/components/WorkspaceSectionHeader.vue'
 import WorkspaceStatusBanner from '../features/shared/components/WorkspaceStatusBanner.vue'
 import { formatFreshnessLabel } from '../features/shared/feedback'
+
+const pageLayoutStyle = {
+  gap: 'var(--yd-layout-section-gap)',
+  padding: 'var(--yd-layout-page-padding-y) var(--yd-layout-page-padding-x)'
+} as const
+
+const sectionGridStyle = {
+  gap: 'var(--yd-layout-card-gap)'
+} as const
 
 const overviewPage = useOverviewPage()
 

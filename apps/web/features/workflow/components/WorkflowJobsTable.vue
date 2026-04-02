@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import type { WorkflowJobListItem } from '../../../composables/api/useWorkflowApi'
 import WorkspaceEmptyState from '../../shared/components/WorkspaceEmptyState.vue'
 import WorkspaceSectionHeader from '../../shared/components/WorkspaceSectionHeader.vue'
-import type { WorkflowJobListItem } from '../../../composables/api/useWorkflowApi'
 import { resolveJobStatusTone, resolveWorkflowStateTone } from '../adapters'
 
 const props = defineProps<{
@@ -16,7 +16,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="yd-panel-surface flex h-full min-h-[28rem] flex-col rounded-xl">
+  <div class="yd-workbench-pane flex h-full min-h-[28rem] flex-col rounded-md">
     <WorkspaceSectionHeader
       title="Decision Jobs"
       :subtitle="props.isLoading ? 'Refreshing workflow jobs…' : `${props.items.length} job(s) in current page.`"
@@ -37,8 +37,8 @@ const emit = defineEmits<{
           <tr
             v-for="item in props.items"
             :key="item.id"
-            class="cursor-pointer border-b border-yd-border-muted transition-colors hover:bg-yd-app/70"
-            :class="item.id === props.selectedJobId ? 'bg-yd-app/80' : ''"
+            class="cursor-pointer border-b border-yd-border-muted transition-colors hover:bg-yd-elevated/55"
+            :class="item.id === props.selectedJobId ? 'bg-yd-elevated/70' : ''"
             @click="emit('selectJob', item)"
           >
             <td class="px-4 py-3 align-top">
@@ -65,7 +65,7 @@ const emit = defineEmits<{
       </table>
     </div>
 
-    <div v-else class="px-5 py-5">
+    <div v-else class="px-4 py-4">
       <WorkspaceEmptyState
         title="No workflow jobs in current view"
         description="Adjust status, agent, or strategy filters to inspect another slice of the workflow queue."

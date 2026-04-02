@@ -10,7 +10,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="rounded-lg border border-yd-state-info/40 bg-yd-app px-4 py-3 text-yd-state-info">
+  <div class="rounded-md border border-yd-state-info/40 bg-yd-panel px-4 py-3 text-yd-state-info">
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <div class="text-[10px] uppercase tracking-[0.18em] yd-font-mono">
@@ -23,7 +23,7 @@ const emit = defineEmits<{
 
       <button
         type="button"
-        class="rounded-lg border border-yd-state-info/40 bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono"
+        class="rounded-sm border border-yd-state-info/40 bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono transition-colors hover:border-yd-state-info"
         @click="emit('return')"
       >
         {{ returnLabel }}

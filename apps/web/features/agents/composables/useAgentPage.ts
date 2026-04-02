@@ -1,10 +1,10 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { useAgentApi } from '../../../composables/api/useAgentApi'
 import type { AgentOverviewSnapshot } from '../../../composables/api/useAgentApi'
-import { useSchedulerApi } from '../../../composables/api/useSchedulerApi'
+import { useAgentApi } from '../../../composables/api/useAgentApi'
 import type { SchedulerDecisionItem } from '../../../composables/api/useSchedulerApi'
+import { useSchedulerApi } from '../../../composables/api/useSchedulerApi'
 import { useOperatorNavigation } from '../../shared/navigation'
 import { useOperatorSourceContext } from '../../shared/source-context'
 import {

@@ -1,7 +1,7 @@
 import { useRouteQuery } from '@vueuse/router'
 import { computed } from 'vue'
 
-import { normalizeBooleanQuery, normalizeOptionalString } from '../../lib/route/query'
+import { normalizeOptionalString } from '../../lib/route/query'
 
 export const normalizeBooleanQuery = (value: string | null | undefined, fallback: boolean): boolean => {
   if (value === 'true') return true

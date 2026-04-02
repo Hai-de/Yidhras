@@ -9,17 +9,17 @@ defineProps<{
 </script>
 
 <template>
-  <div class="yd-panel-surface flex h-full min-h-[20rem] flex-col rounded-xl">
+  <div class="yd-workbench-pane flex h-full min-h-[20rem] flex-col rounded-md">
     <WorkspaceSectionHeader
       title="Scheduler Trends"
       subtitle="Recent sampled scheduler runs with created cadence mix and detected signals."
     />
 
-    <div v-if="items.length > 0" class="flex-1 space-y-3 overflow-y-auto px-5 py-5 no-scrollbar">
+    <div v-if="items.length > 0" class="flex-1 space-y-2.5 overflow-y-auto px-4 py-4 no-scrollbar">
       <div
         v-for="item in items"
         :key="item.id"
-        class="rounded-xl border border-yd-border-muted bg-yd-app px-4 py-4"
+        class="yd-workbench-item rounded-md px-4 py-4"
       >
         <div class="flex items-start justify-between gap-4">
           <div>
@@ -61,7 +61,7 @@ defineProps<{
       </div>
     </div>
 
-    <div v-else class="px-5 py-5">
+    <div v-else class="px-4 py-4">
       <WorkspaceEmptyState
         title="No scheduler trend samples"
         description="Trend points will appear once recent scheduler runs have been sampled."

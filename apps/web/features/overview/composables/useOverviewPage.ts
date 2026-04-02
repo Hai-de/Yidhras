@@ -1,12 +1,12 @@
 import { computed, ref } from 'vue'
 
-import { useOverviewApi } from '../../../composables/api/useOverviewApi'
 import type { OverviewSummarySnapshot } from '../../../composables/api/useOverviewApi'
-import { useSchedulerApi } from '../../../composables/api/useSchedulerApi'
+import { useOverviewApi } from '../../../composables/api/useOverviewApi'
 import type {
   SchedulerSummarySnapshot,
   SchedulerTrendsSnapshot
 } from '../../../composables/api/useSchedulerApi'
+import { useSchedulerApi } from '../../../composables/api/useSchedulerApi'
 import { useVisibilityPolling } from '../../../composables/app/useVisibilityPolling'
 import { useNotificationsStore } from '../../../stores/notifications'
 import { useOperatorNavigation } from '../../shared/navigation'

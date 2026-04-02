@@ -16,14 +16,14 @@ defineProps<{
 </script>
 
 <template>
-  <div class="yd-panel-surface flex h-full min-h-[20rem] flex-col rounded-xl">
+  <div class="yd-workbench-pane flex h-full min-h-[20rem] flex-col rounded-md">
     <WorkspaceSectionHeader
       title="Scheduler Summary"
       subtitle="Recent scheduler projection totals, top reasons, and latest run context for operator triage."
     />
 
-    <div v-if="metrics.length > 0" class="flex-1 space-y-5 px-5 py-5">
-      <div class="rounded-xl border border-yd-border-muted bg-yd-app px-4 py-4">
+    <div v-if="metrics.length > 0" class="flex-1 space-y-4 px-4 py-4">
+      <div class="yd-workbench-inset rounded-md px-4 py-4">
         <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
           Latest Run
         </div>
@@ -43,7 +43,7 @@ defineProps<{
         <div
           v-for="group in highlightGroups"
           :key="group.title"
-          class="rounded-xl border border-yd-border-muted bg-yd-app px-4 py-4"
+          class="yd-workbench-inset rounded-md px-4 py-4"
         >
           <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
             {{ group.title }}
@@ -60,7 +60,7 @@ defineProps<{
       </div>
     </div>
 
-    <div v-else class="px-5 py-5">
+    <div v-else class="px-4 py-4">
       <WorkspaceEmptyState
         title="Scheduler summary not available"
         description="The summary projection will populate after recent scheduler runs are available."

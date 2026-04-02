@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { useMessage } from 'naive-ui'
 import { watch } from 'vue'
 
+import { useAppToast } from '../../../composables/ui/useAppToast'
 import { useNotificationsStore } from '../../../stores/notifications'
 
 const notifications = useNotificationsStore()
-const message = useMessage()
+const toast = useAppToast()
 const shownIds = new Set<string>()
 
 watch(
@@ -17,7 +17,7 @@ watch(
       }
 
       shownIds.add(item.id)
-      message[item.level === 'error' ? 'error' : item.level === 'warning' ? 'warning' : 'info'](item.content, {
+      toast.show(item.level === 'error' ? 'error' : item.level === 'warning' ? 'warning' : 'info', item.content, {
         duration: item.level === 'error' ? 5000 : 3000,
         keepAliveOnHover: true
       })

@@ -1,5 +1,5 @@
 <template>
-  <div class="flex min-h-full flex-col gap-4 p-6">
+  <div class="flex min-h-full flex-col" :style="pageLayoutStyle">
     <WorkspacePageHeader
       eyebrow="Workflow Console"
       title="Decision jobs and dispatch state"
@@ -7,13 +7,9 @@
       :freshness="workflowFreshness"
     >
       <template #actions>
-        <button
-          type="button"
-          class="rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono"
-          @click="refreshList"
-        >
+        <AppButton @click="refreshList">
           Refresh List
-        </button>
+        </AppButton>
       </template>
     </WorkspacePageHeader>
 
@@ -45,7 +41,7 @@
       :message="listErrorMessage"
     />
 
-    <div class="grid min-h-0 flex-1 gap-4 xl:grid-cols-[1.1fr,0.9fr]">
+    <div class="grid min-h-0 flex-1 xl:grid-cols-[1.1fr,0.9fr]" :style="sectionGridStyle">
       <WorkflowJobsTable
         :items="jobsSnapshot?.items ?? []"
         :selected-job-id="selectedJobId"
@@ -74,6 +70,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import AppButton from '../components/ui/AppButton.vue'
 import SourceContextBanner from '../features/shared/components/SourceContextBanner.vue'
 import WorkspacePageHeader from '../features/shared/components/WorkspacePageHeader.vue'
 import WorkspaceStatusBanner from '../features/shared/components/WorkspaceStatusBanner.vue'
@@ -82,6 +79,15 @@ import WorkflowDetailPanel from '../features/workflow/components/WorkflowDetailP
 import WorkflowFiltersBar from '../features/workflow/components/WorkflowFiltersBar.vue'
 import WorkflowJobsTable from '../features/workflow/components/WorkflowJobsTable.vue'
 import { useWorkflowPage } from '../features/workflow/composables/useWorkflowPage'
+
+const pageLayoutStyle = {
+  gap: 'var(--yd-layout-section-gap)',
+  padding: 'var(--yd-layout-page-padding-y) var(--yd-layout-page-padding-x)'
+} as const
+
+const sectionGridStyle = {
+  gap: 'var(--yd-layout-card-gap)'
+} as const
 
 const workflowPage = useWorkflowPage()
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useNotificationsStore } from '../../../stores/notifications'
@@ -26,27 +26,35 @@ const isSettingsOpen = ref(false)
 
 const DEFAULT_DOCK_HEIGHT = 224
 const MIN_DOCK_HEIGHT = 160
-
-const resolveDockBodyElement = (value: unknown) => {
-  if (value instanceof HTMLElement) {
-    dockBodyRef.value = value
-    return
-  }
-
-  dockBodyRef.value = null
-}
-
-const dockBodyRef = ref<HTMLElement | null>(null)
+const dockBodyRef = useTemplateRef<HTMLElement>('dockBody')
 const availableDockHeight = ref(DEFAULT_DOCK_HEIGHT)
 let dockResizeObserver: ResizeObserver | null = null
 
+const resolveLayoutLength = (variableName: string, fallback: number): number => {
+  if (typeof window === 'undefined') {
+    return fallback
+  }
+
+  const rawValue = getComputedStyle(document.documentElement).getPropertyValue(variableName).trim()
+  const parsedValue = Number.parseFloat(rawValue)
+  return Number.isFinite(parsedValue) ? parsedValue : fallback
+}
+
+const resolvedDockDefaultHeight = computed(() => {
+  return resolveLayoutLength('--yd-layout-shell-dock-default-height', DEFAULT_DOCK_HEIGHT)
+})
+
+const resolvedDockMinHeight = computed(() => {
+  return resolveLayoutLength('--yd-layout-shell-dock-min-height', MIN_DOCK_HEIGHT)
+})
+
 const updateAvailableDockHeight = () => {
   if (!dockBodyRef.value) {
-    availableDockHeight.value = DEFAULT_DOCK_HEIGHT
+    availableDockHeight.value = resolvedDockDefaultHeight.value
     return
   }
 
-  const nextMaxHeight = Math.max(dockBodyRef.value.clientHeight, MIN_DOCK_HEIGHT)
+  const nextMaxHeight = Math.max(dockBodyRef.value.clientHeight, resolvedDockMinHeight.value)
   availableDockHeight.value = nextMaxHeight
 
   if (shell.dockHeight > nextMaxHeight) {
@@ -55,7 +63,7 @@ const updateAvailableDockHeight = () => {
 }
 
 const clampedDockHeight = computed(() => {
-  return Math.min(Math.max(shell.dockHeight, MIN_DOCK_HEIGHT), availableDockHeight.value)
+  return Math.min(Math.max(shell.dockHeight, resolvedDockMinHeight.value), availableDockHeight.value)
 })
 
 const handleWindowResize = () => {
@@ -94,6 +102,14 @@ watch(
     await nextTick()
     updateAvailableDockHeight()
   }
+)
+
+watch(
+  () => resolvedDockDefaultHeight.value,
+  nextDefaultHeight => {
+    availableDockHeight.value = nextDefaultHeight
+  },
+  { immediate: true }
 )
 
 const activityItems = [
@@ -295,7 +311,7 @@ const handlePanelTabSelect = (tabId: DockTabId) => {
 }
 
 const handleDockResize = (nextHeight: number) => {
-  shell.setDockHeight(Math.min(Math.max(nextHeight, MIN_DOCK_HEIGHT), availableDockHeight.value))
+  shell.setDockHeight(Math.min(Math.max(nextHeight, resolvedDockMinHeight.value), availableDockHeight.value))
 }
 
 const handleStatusBarAction = (actionId: string) => {
@@ -357,11 +373,15 @@ const statusBarActions = computed(() => {
 })
 
 const latestNotifications = computed(() => notifications.latestItems)
+const pageLayoutStyle = {
+  gap: 'var(--yd-layout-section-gap)',
+  padding: 'var(--yd-layout-page-padding-y) var(--yd-layout-page-padding-x)'
+} as const
 </script>
 
 <template>
   <div class="relative h-screen overflow-hidden bg-yd-app text-yd-text-primary">
-    <div class="flex h-[calc(100%-2.25rem)] min-w-0 overflow-hidden">
+    <div class="flex h-[calc(100%-2rem)] min-w-0 overflow-hidden">
       <div class="relative shrink-0">
         <ActivityRail
           :items="activityItems"
@@ -373,8 +393,8 @@ const latestNotifications = computed(() => notifications.latestItems)
 
       <WorkspaceSidebar :title="workspaceTitle" :subtitle="workspaceSubtitle" class="h-full">
         <slot name="navigation">
-          <div class="space-y-3">
-            <div class="yd-panel-surface rounded-lg px-4 py-4">
+          <div class="space-y-2.5">
+            <div class="yd-panel-surface rounded-md px-4 py-4">
               <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
                 Current Workspace
               </div>
@@ -386,7 +406,7 @@ const latestNotifications = computed(() => notifications.latestItems)
               </div>
             </div>
 
-            <div class="yd-panel-surface rounded-lg px-4 py-4">
+            <div class="yd-panel-surface rounded-md px-4 py-4">
               <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
                 Source / Context
               </div>
@@ -395,7 +415,7 @@ const latestNotifications = computed(() => notifications.latestItems)
               </div>
             </div>
 
-            <div class="yd-panel-surface rounded-lg px-4 py-4">
+            <div class="yd-panel-surface rounded-md px-4 py-4">
               <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
                 Focus Entity
               </div>
@@ -407,7 +427,7 @@ const latestNotifications = computed(() => notifications.latestItems)
               </div>
             </div>
 
-            <div class="yd-panel-surface rounded-lg px-4 py-4">
+            <div class="yd-panel-surface rounded-md px-4 py-4">
               <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
                 Quick Actions
               </div>
@@ -416,7 +436,7 @@ const latestNotifications = computed(() => notifications.latestItems)
                   v-for="action in shellContext.quickActions"
                   :key="action.id"
                   type="button"
-                  class="rounded-lg border border-yd-border-muted bg-yd-app px-3 py-2 text-left text-[11px] uppercase tracking-[0.16em] text-yd-text-primary transition-colors yd-font-mono disabled:cursor-not-allowed disabled:opacity-40"
+                  class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-2 text-left text-[11px] uppercase tracking-[0.16em] text-yd-text-primary transition-colors yd-font-mono disabled:cursor-not-allowed disabled:opacity-40 hover:border-yd-border-strong hover:bg-yd-elevated"
                   :disabled="!action.enabled"
                   @click="handleShellAction(action.id)"
                 >
@@ -425,7 +445,7 @@ const latestNotifications = computed(() => notifications.latestItems)
               </div>
             </div>
 
-            <div class="yd-panel-surface rounded-lg px-4 py-4">
+            <div class="yd-panel-surface rounded-md px-4 py-4">
               <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
                 Recent Targets
               </div>
@@ -434,7 +454,7 @@ const latestNotifications = computed(() => notifications.latestItems)
                   v-for="target in shellContext.recentTargets"
                   :key="target.id"
                   type="button"
-                  class="rounded-lg border border-yd-border-muted bg-yd-app px-3 py-2 text-left transition-colors hover:border-yd-state-accent"
+                  class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-2 text-left transition-colors hover:border-yd-state-accent hover:bg-yd-elevated"
                   @click="handleOpenRecentTarget(target.routePath)"
                 >
                   <div class="text-xs font-semibold text-yd-text-primary">
@@ -450,7 +470,7 @@ const latestNotifications = computed(() => notifications.latestItems)
               </div>
             </div>
 
-            <div class="yd-panel-surface rounded-lg px-4 py-4">
+            <div class="yd-panel-surface rounded-md px-4 py-4">
               <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
                 Runtime Sync
               </div>
@@ -469,11 +489,13 @@ const latestNotifications = computed(() => notifications.latestItems)
         <TopRuntimeBar class="shrink-0" />
 
         <main
-          :ref="resolveDockBodyElement"
+          ref="dockBody"
           class="min-h-0 flex-1 overflow-auto"
           :style="shell.isDockExpanded ? { paddingBottom: `${clampedDockHeight}px` } : undefined"
         >
-          <slot />
+          <div :style="pageLayoutStyle">
+            <slot />
+          </div>
         </main>
 
         <div v-if="shell.isDockExpanded" class="pointer-events-none absolute bottom-0 left-0 right-0 z-30">
@@ -482,17 +504,17 @@ const latestNotifications = computed(() => notifications.latestItems)
             :active-tab-id="shell.activeDockTabId"
             :tabs="panelTabs"
             :height="clampedDockHeight"
-            :min-height="MIN_DOCK_HEIGHT"
+            :min-height="resolvedDockMinHeight"
             :max-height="availableDockHeight"
             @select="handlePanelTabSelect"
             @resize="handleDockResize"
           >
-            <div v-if="shell.activeDockTabId === 'traces'" class="grid gap-3 lg:grid-cols-2">
+            <div v-if="shell.activeDockTabId === 'traces'" class="grid gap-2.5 lg:grid-cols-2">
               <button
                 v-for="target in traceTargets"
                 :key="target.id"
                 type="button"
-                class="rounded-md border border-yd-border-muted bg-yd-app px-3 py-3 text-left transition-colors hover:border-yd-state-accent"
+                class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-3 text-left transition-colors hover:border-yd-state-accent hover:bg-yd-elevated"
                 @click="handleOpenRecentTarget(target.routePath)"
               >
                 <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
@@ -507,18 +529,18 @@ const latestNotifications = computed(() => notifications.latestItems)
               </button>
               <div
                 v-if="traceTargets.length === 0"
-                class="rounded-md border border-yd-border-muted bg-yd-app px-3 py-3 text-xs text-yd-text-secondary"
+                class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-3 text-xs text-yd-text-secondary"
               >
                 No recent workflow trace context recorded yet.
               </div>
             </div>
 
-            <div v-else-if="shell.activeDockTabId === 'jobs'" class="grid gap-3 lg:grid-cols-2">
+            <div v-else-if="shell.activeDockTabId === 'jobs'" class="grid gap-2.5 lg:grid-cols-2">
               <button
                 v-for="target in jobTargets"
                 :key="target.id"
                 type="button"
-                class="rounded-md border border-yd-border-muted bg-yd-app px-3 py-3 text-left transition-colors hover:border-yd-state-accent"
+                class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-3 text-left transition-colors hover:border-yd-state-accent hover:bg-yd-elevated"
                 @click="handleOpenRecentTarget(target.routePath)"
               >
                 <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
@@ -533,15 +555,17 @@ const latestNotifications = computed(() => notifications.latestItems)
               </button>
               <div
                 v-if="jobTargets.length === 0"
-                class="rounded-md border border-yd-border-muted bg-yd-app px-3 py-3 text-xs text-yd-text-secondary"
+                class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-3 text-xs text-yd-text-secondary"
               >
                 No recent job-oriented targets recorded yet.
               </div>
             </div>
 
-            <div v-else class="grid gap-3 lg:grid-cols-3">
-              <div class="rounded-md border border-yd-border-muted bg-yd-app px-3 py-3">
-                <div class="flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
+            <div v-else class="grid gap-2.5 lg:grid-cols-3">
+              <div class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-3">
+                <div
+                  class="flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono"
+                >
                   <span>Notifications</span>
                   <span class="text-yd-text-primary">{{ notifications.unreadCount }}</span>
                 </div>
@@ -549,7 +573,7 @@ const latestNotifications = computed(() => notifications.latestItems)
                   <div
                     v-for="item in latestNotifications"
                     :key="item.id"
-                    class="rounded-md border border-yd-border-muted bg-yd-panel px-3 py-2"
+                    class="rounded-sm border border-yd-border-muted bg-yd-panel px-3 py-2"
                   >
                     <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
                       {{ item.level }}

@@ -1,10 +1,10 @@
 :root {
-  --yd-panel-backdrop-blur: 14px;
+  --yd-panel-backdrop-blur: 10px;
 }
 
 .yd-panel-surface {
   background-color: var(--yd-color-bg-panel);
-  border: var(--yd-border-width) solid var(--yd-color-border-strong);
+  border: var(--yd-border-width) solid var(--yd-color-border-muted);
   box-shadow: var(--yd-shadow-panel);
 }
 
@@ -12,6 +12,46 @@
   background-color: var(--yd-color-bg-elevated);
   border: var(--yd-border-width) solid var(--yd-color-border-strong);
   box-shadow: var(--yd-shadow-elevated);
+}
+
+.yd-panel-inset {
+  background-color: rgba(17, 20, 24, 0.88);
+  border: var(--yd-border-width) solid var(--yd-color-border-muted);
+}
+
+.yd-workbench-section {
+  border: var(--yd-border-width) solid var(--yd-color-border-muted);
+  background-color: var(--yd-color-bg-panel);
+}
+
+.yd-workbench-pane {
+  background-color: var(--yd-color-bg-panel);
+  border: var(--yd-border-width) solid var(--yd-color-border-muted);
+}
+
+.yd-workbench-pane-header {
+  border-bottom: var(--yd-border-width) solid var(--yd-color-border-muted);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.015) 0%, rgba(255, 255, 255, 0) 100%);
+}
+
+.yd-workbench-inset {
+  background-color: rgba(17, 20, 24, 0.94);
+  border: var(--yd-border-width) solid rgba(59, 67, 80, 0.72);
+}
+
+.yd-workbench-item {
+  background-color: rgba(17, 20, 24, 0.94);
+  border: var(--yd-border-width) solid var(--yd-color-border-muted);
+}
+
+.yd-workbench-item:hover {
+  border-color: var(--yd-color-border-strong);
+  background-color: rgba(24, 28, 34, 0.98);
+}
+
+.yd-workbench-item--active {
+  border-color: var(--yd-color-state-accent);
+  background-color: rgba(32, 37, 45, 0.95);
 }
 
 .yd-grid-surface {

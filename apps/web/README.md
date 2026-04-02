@@ -6,8 +6,8 @@ This app is currently being rebuilt into an Operator-first control console rathe
 ## 当前状态 / Current Status
 
 - 全站已显式切换为 **CSR**，避免在控制台型界面上为 SSR 增加额外复杂度。
-- 主题系统已建立默认 token、CSS 变量、Tailwind 消费链路与 Naive UI 同步链路。
-- `app.vue` 已回归为标准入口，只负责 Provider、bootstrap 和 `NuxtLayout` / `NuxtPage`。
+- 主题系统已建立默认 token、CSS 变量、Tailwind 消费链路，并已完成从 Naive UI 根级主题桥到 Nuxt UI 基础设施的迁移收口。
+- `app.vue` 已回归为标准入口，只负责 bootstrap、全局通知桥与 `NuxtLayout` / `NuxtPage`。
 - `layouts/default.vue` 已变薄，当前由 `features/shell/components/AppShell.vue` 承担 Operator 壳层骨架。
 - `pages/overview` 与 `pages/workflow` 已接入真实后端聚合读模型与工作流观察面板。
 - Graph 已迁入 `features/graph/*`，当前使用 `GraphToolbar + GraphMeshView/GraphTreeView + GraphInspector` 组织页面。
@@ -26,6 +26,90 @@ This app is currently being rebuilt into an Operator-first control console rathe
   - Timeline → Social 已支持 intent-first + tick-scoped context
   - Social → Timeline 已改为 timeline slice，而非伪装成精确 event 跳转
   - Social / Timeline mapping context banner 已补齐
+- Naive UI → Nuxt UI 基础设施迁移已完成当前阶段收口：
+  - 通知链路已通过 `composables/ui/useAppToast.ts` 统一抽象，并切换到底层 Nuxt UI `useToast`
+  - 根级 `NConfigProvider` / `NMessageProvider` 与 Naive 主题覆盖桥已移除
+  - `@nuxt/ui` 已接入 `nuxt.config.ts` 与主样式入口
+  - `naive-ui` / `vueuc` / `vooks` / `vite-tsconfig-paths` 相关残留已从依赖与配置中清理
+  - `pnpm --filter web typecheck && lint && test:unit` 已恢复通过
+- 主题系统 Phase 1 已完成：
+  - 默认主题已统一收敛为 `DEFAULT_APP_THEME`
+  - 运行时主题入口已从历史 `plugins/naive-ui.ts` 更名为 `plugins/theme.ts`
+  - `AppThemeDefinition` 已拆分为 `meta/core/layout/components`
+  - `color-scheme` 已改为运行时由 theme meta 驱动，而非静态 CSS 写死
+  - `assets/css/tokens.css` 已收敛为最小兜底变量层
+- 主题系统 Phase 2 已完成当前阶段收口：
+  - 已新增 world pack 主题 override 类型 `WorldPackThemeConfig`
+  - 已建立 `resolveThemeWithDiagnostics()` 作为 final theme 解析入口
+  - 已具备 merge / validate / fallback / clamp / diagnostics 基线
+  - 已接入 world pack source lookup 与 runtime `worldPack` 监听重应用
+  - shell rail/sidebar/dock 与主页面容器已开始消费 `layout` token
+  - theme resolver 基线单测已补齐
+- 主题系统 Phase 3 已开始：
+  - 已新增第一批 semantic primitives：`AppButton`、`AppPanel`、`AppAlert`、`AppInput`、`AppSelect`、`AppBadge`、`AppTabs`
+  - 页头 refresh actions、部分页面容器 panel、`SocialFiltersBar`、`TimelineRangeBar`、`WorkflowFiltersBar`、`GraphToolbar`、`WorkspaceStatusBanner`、agent tabs、`SocialPostList`、`SocialPostDetail`、`TimelineEventList`、`TimelineEventDetail`、`WorkflowStatusBadge`、`WorkflowDetailPanel` 等高收益区域已开始切换到 primitives
+  - 当前明确约束：**Nuxt UI 只作为基础组件/基础设施层使用，不作为业务层的重依赖，也不接管整站视觉风格**
+- 平台默认黑色主题当前以 **类 VSCode workbench** 为目标持续打磨：
+  - 官方默认主题负责平台自身 dark console / workbench 风格
+  - world-pack 提供者拥有自己的主题主导权，不要求跟随平台默认视觉
+  - 平台只维护默认主题、稳定 token contract、runtime resolve/apply 与少量 fallback / diagnostics
+  - semantic primitives / shell / Nuxt UI bridge 只应消费语义 token，不应写死平台默认审美
+- provider-owned 自定义能力现已收敛到单一推荐入口：
+  - runtime world metadata 只使用 `presentation.theme` 作为 provider-owned 主题入口
+  - 解析优先级为 **`presentation.theme` > 平台 registry 注册主题 > 平台默认主题**
+  - 平台继续只负责 merge / validate / clamp / diagnostics，不替 provider 改写视觉风格
+  - 开发期可通过 `document.documentElement.dataset.themeSource*` 与 console `[theme] active source` 观察当前主题来源
+
+## Provider Theme Authoring / Provider 主题编写建议
+
+推荐 provider 使用以下 runtime payload 结构：
+
+```ts
+const worldPack = {
+  id: 'pack-example',
+  name: 'Pack Example',
+  version: '1.0.0',
+  presentation: {
+    theme: {
+      meta: {
+        id: 'pack-example-theme',
+        name: 'Pack Example Theme',
+        colorScheme: 'dark'
+      },
+      core: {
+        colors: {
+          bg: {
+            app: '#0f1115',
+            panel: '#171a21',
+            elevated: '#1d2330',
+            overlay: 'rgba(7, 10, 14, 0.78)'
+          },
+          state: {
+            accent: '#c084fc'
+          }
+        },
+        radius: {
+          sm: '2px',
+          md: '6px',
+          lg: '10px'
+        }
+      },
+      layout: {
+        shell: {
+          sidebarWidth: '344px'
+        }
+      }
+    }
+  }
+}
+```
+
+建议规则：
+
+- **只使用 `presentation.theme`** 作为稳定 provider-owned 主题入口。
+- provider 只需要提供自己关心的部分字段，平台会在缺失字段上回退到默认主题。
+- 平台只校验合法性、做安全 clamp 与 diagnostics，不会把 provider 主题强制修正成平台默认风格。
+- 可直接参考并复制：`apps/web/lib/theme/provider-theme.example.ts`
 
 ## 环境要求 / Requirements
 
@@ -80,6 +164,17 @@ pnpm --filter web test:unit
 - URL 只存业务定位状态与来源上下文，不写入纯临时 UI 状态。
 - Graph 继续保持 **`ClientOnly + Cytoscape`**。
 - 通知只用于关键结果与重要失败，不制造 polling 噪声。
+- Nuxt UI 当前只作为基础设施层（toast / overlay / primitives 候选），不反向重写既有 Operator 自定义壳层。
+- Phase 3 中继续坚持：
+  - 业务层优先依赖 `App*` semantic primitives
+  - Nuxt UI 只作为基础组件层能力候选，不向业务页面直接暴露重依赖 API
+  - 产品风格仍由 yd token / theme system 主导，而不是由第三方组件库默认视觉主导
+  - 平台默认类 VSCode 黑色主题只代表官方主题，不代表 world-pack provider 的强制设计规范
+  - provider 主题只要满足最小 token contract、合法性校验与安全 clamp，即可自由自定义视觉语言
+- 主题系统后续按 `Phase 1 -> Phase 2 -> Phase 3` 推进：
+  - 先稳定平台默认主题、theme plugin 与 CSS variable 基础设施
+  - 再接入 world pack theme override、validate、fallback、clamp
+  - 最后引入 semantic primitives 与 Nuxt UI bridge
 - 所有增量改动在合并前仍需通过：
 
 ```bash
@@ -97,7 +192,7 @@ pnpm --filter web preview
 
 ## 当前文件锚点 / Current File Map
 
-- `app.vue`: Provider、基础 bootstrap、Naive message bridge 与页面渲染入口
+- `app.vue`: bootstrap、全局通知桥与页面渲染入口
 - `layouts/default.vue`: 默认布局入口，当前只包裹 `AppShell`
 - `features/shell/components/AppShell.vue`: Operator 壳层骨架（活动栏 / 顶栏 / 底栏）
 - `features/overview/*`: Overview 聚合页面、列表卡片与 summary polling
@@ -106,15 +201,20 @@ pnpm --filter web preview
 - `features/social/*`: 社交信息流过滤、列表、详情与工作流/角色跳转
 - `features/timeline/*`: 时间范围过滤、事件列表与工作流跳转
 - `features/agents/*`: Agent 概览摘要与 tab-based detail scaffold
+- `components/ui/*`: semantic primitives，当前已落地 `AppButton`、`AppPanel`、`AppAlert`、`AppInput`、`AppSelect`、`AppBadge`、`AppTabs`
 - `composables/api/useSchedulerApi.ts`: scheduler observability query API client
+- `composables/ui/useAppToast.ts`: 前端统一 toast/notification 抽象，当前底层接入 Nuxt UI
 - `features/shared/*`: workspace 共享 UI、freshness helper、source context、全局通知桥接
 - `composables/api/*.ts`: 按业务聚合的前端 API 入口
 - `lib/http/client.ts`: 统一 API client、envelope 解包与基础错误处理
 - `lib/time/*`: tick string-first 工具与比较/格式化逻辑
+- `lib/theme/*`: 主题 token、默认主题、merge/resolve/apply/clamp/validate/source 基础设施
+- `plugins/theme.ts`: 运行时主题解析与 CSS variable 应用入口
 - `stores/runtime.ts`: runtime / clock 聚合状态
 - `stores/notifications.ts`: 远端通知 + 本地 UI 反馈通知
 - `stores/shell.ts`: 壳层工作区与 dock 状态 / recent targets
 - `tests/unit/*.spec.ts`: 核心 store / shell context 单测
+- `tests/unit/theme.resolver.spec.ts`: theme merge/validate/clamp/source lookup 单测
 - `tailwind.config.ts`: 主题变量到 Tailwind 的消费映射
 
 ## 已知限制 / Known Limitations
@@ -123,8 +223,10 @@ pnpm --filter web preview
 - Social、Timeline、Agent 页面目前是“基础工作区版”，尚未做更高级的聚类、多列配置、抽屉化 inspector 等增强。
 - Timeline ↔ Social 当前虽然已从宽松跳转收紧为 intent/tick/context 优先，但仍依赖现有读模型；若后端未来提供更强 mapping contract，仍可继续增强。
 - Shell 的 jobs / traces / notifications 虽已形成最小控制台层，但 jobs / traces 当前仍主要基于 recent targets，而非更完整的任务/trace 专属 read model。
-- `nuxt typecheck` 当前仍会输出一个来自 `vue-router/volar/sfc-route-blocks` 的外部依赖 warning，但命令最终可成功通过。
-- world-pack 主题覆盖暂未产品化，当前只提供默认 token 体系。
+- Nuxt UI 迁移当前主要覆盖通知与根级基础设施层；若后续引入更多 Nuxt UI 组件，仍需保持与现有 token / Tailwind 体系的一致性约束。
+- world-pack 主题覆盖当前已完成平台级解析基线，但 world pack source 仍是 registry/lookup 形态，尚未完全产品化为 manifest/API contract。
+- 共享基础组件内部的 spacing token 收口已被记录到 `docs/ENHANCEMENTS.md`，将在后续增强阶段继续处理。
+- Phase 3 当前仍处于 early stage：已建立 primitive 层并完成第一批高收益迁移，但 Nuxt UI bridge 仍会保持轻依赖，不会转向由第三方库主导整站 UI。
 
 ## 相关文档 / Related Docs
 
@@ -133,6 +235,4 @@ pnpm --filter web preview
 - `docs/API.md`: 后端接口契约
 - `docs/ARCH.md`: 架构边界与 contract/validation 原则
 - `docs/LOGIC.md`: 业务逻辑说明与 BigInt transport 规则
-- `.limcode/plans/frontend-graph-deepen-and-timeline-social-mapping.plan.md`: Graph 深化与 Timeline / Social 语义映射优化执行与收口文档
-- `.limcode/plans/frontend-operator-ui-polish-and-interaction-enhancement.plan.md`: 当前 UI polish / interaction 增强冻结计划与验收标准
-- `.limcode/plans/shell-global-console-experience-enhancement.plan.md`: Shell 全局控制台体验增强执行计划与当前进度
+- `docs/ENHANCEMENTS.md`: 当前暂缓处理但值得后续回收的增强项清单

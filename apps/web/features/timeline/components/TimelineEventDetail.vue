@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import AppButton from '../../../components/ui/AppButton.vue'
 import WorkspaceEmptyState from '../../shared/components/WorkspaceEmptyState.vue'
 import WorkspaceSectionHeader from '../../shared/components/WorkspaceSectionHeader.vue'
 import type { TimelineEventCardViewModel } from '../adapters'
@@ -19,13 +20,13 @@ const detailFields = computed(() => (props.event ? buildTimelineDetailFields(pro
 </script>
 
 <template>
-  <div class="yd-panel-surface flex h-full min-h-[28rem] flex-col rounded-xl">
+  <div class="yd-workbench-pane flex h-full min-h-[28rem] flex-col rounded-md">
     <WorkspaceSectionHeader
       title="Event Detail"
       :subtitle="props.event?.id ?? 'Select an event to inspect timeline context and related entities.'"
     />
 
-    <div v-if="props.event" class="flex-1 space-y-4 px-5 py-5">
+    <div v-if="props.event" class="flex-1 space-y-4 px-4 py-4">
       <div>
         <div class="text-lg font-semibold text-yd-text-primary">
           {{ props.event.title }}
@@ -39,7 +40,7 @@ const detailFields = computed(() => (props.event ? buildTimelineDetailFields(pro
         <div
           v-for="field in detailFields"
           :key="field.label"
-          class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3"
+          class="yd-workbench-inset rounded-sm px-4 py-3"
         >
           <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
             {{ field.label }}
@@ -50,33 +51,28 @@ const detailFields = computed(() => (props.event ? buildTimelineDetailFields(pro
         </div>
       </div>
 
-      <div class="rounded-xl border border-yd-border-muted bg-yd-app px-4 py-4 text-sm leading-6 text-yd-text-secondary">
+      <div class="yd-workbench-inset rounded-md px-4 py-4 text-sm leading-6 text-yd-text-secondary">
         {{ props.event.description }}
       </div>
 
       <div class="grid gap-3">
-        <button
+        <AppButton
           v-if="props.event.sourceActionIntentId"
-          type="button"
-          class="rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-3 text-left text-sm text-yd-text-primary"
+          class="text-left text-sm normal-case tracking-normal yd-font-sans"
           @click="emit('openWorkflow', props.event.sourceActionIntentId, props.event.id)"
         >
           Open linked workflow intent → {{ props.event.sourceActionIntentId }}
-        </button>
-        <button
-          type="button"
-          class="rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-3 text-left text-sm text-yd-text-primary"
-          @click="emit('openSocial', props.event)"
-        >
+        </AppButton>
+        <AppButton class="text-left text-sm normal-case tracking-normal yd-font-sans" @click="emit('openSocial', props.event)">
           Open related social context → {{ props.event.sourceActionIntentId ?? props.event.title }}
-        </button>
-        <div class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3 text-sm text-yd-text-secondary">
+        </AppButton>
+        <div class="yd-workbench-inset rounded-sm px-4 py-3 text-sm text-yd-text-secondary">
           Priority: use linked workflow intent when available; otherwise fall back to semantic keyword context.
         </div>
       </div>
     </div>
 
-    <div v-else class="px-5 py-5">
+    <div v-else class="px-4 py-4">
       <WorkspaceEmptyState
         title="No event selected"
         description="Select a timeline event to inspect its type, tick position, linked workflow intent, and related social context."

@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import AppBadge from '../../../components/ui/AppBadge.vue'
 import WorkspaceEmptyState from '../../shared/components/WorkspaceEmptyState.vue'
 import WorkspaceSectionHeader from '../../shared/components/WorkspaceSectionHeader.vue'
 import type { SocialPostCardViewModel } from '../adapters'
 
 const props = defineProps<{
-  items: SocialPostCardViewModel[]
+ items: SocialPostCardViewModel[]
   selectedPostId: string | null
   isLoading: boolean
 }>()
@@ -13,33 +14,33 @@ const emit = defineEmits<{
   selectPost: [post: SocialPostCardViewModel]
 }>()
 
-const signalClass = (signalLabel: SocialPostCardViewModel['signalLabel']) => {
+const signalTone = (signalLabel: SocialPostCardViewModel['signalLabel']) => {
   switch (signalLabel) {
     case 'high':
-      return 'text-yd-state-success border-yd-state-success/40'
+      return 'success'
     case 'medium':
-      return 'text-yd-state-warning border-yd-state-warning/40'
+      return 'warning'
     default:
-      return 'text-yd-state-danger border-yd-state-danger/40'
+      return 'danger'
   }
 }
 </script>
 
 <template>
-  <div class="yd-panel-surface flex h-full min-h-[28rem] flex-col rounded-xl">
+  <div class="yd-workbench-pane flex h-full min-h-[28rem] flex-col rounded-md">
     <WorkspaceSectionHeader
       title="Social Feed"
       :subtitle="props.isLoading ? 'Refreshing feed…' : `${props.items.length} visible post(s)`"
     />
 
-    <div v-if="props.items.length > 0" class="min-h-0 flex-1 overflow-auto px-5 py-4 no-scrollbar">
-      <div class="space-y-3">
+    <div v-if="props.items.length > 0" class="min-h-0 flex-1 overflow-auto px-4 py-4 no-scrollbar">
+      <div class="space-y-2.5">
         <button
           v-for="item in props.items"
           :key="item.id"
           type="button"
-          class="w-full rounded-xl border px-4 py-4 text-left transition-colors"
-          :class="item.id === props.selectedPostId ? 'border-yd-state-accent bg-yd-app/80' : 'border-yd-border-muted bg-yd-app hover:border-yd-border-strong'"
+          class="yd-workbench-item w-full rounded-md px-4 py-4 text-left transition-colors"
+          :class="item.id === props.selectedPostId ? 'yd-workbench-item--active' : ''"
           @click="emit('selectPost', item)"
         >
           <div class="flex items-start justify-between gap-3">
@@ -52,12 +53,9 @@ const signalClass = (signalLabel: SocialPostCardViewModel['signalLabel']) => {
               </div>
             </div>
             <div class="flex flex-col items-end gap-2">
-              <span
-                class="rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] yd-font-mono"
-                :class="signalClass(item.signalLabel)"
-              >
+              <AppBadge :tone="signalTone(item.signalLabel)">
                 {{ item.signalLabel }}
-              </span>
+              </AppBadge>
               <span class="text-[11px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
                 {{ item.signalScore }}
               </span>
@@ -67,16 +65,18 @@ const signalClass = (signalLabel: SocialPostCardViewModel['signalLabel']) => {
             {{ item.body }}
           </div>
           <div class="mt-4 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
-            <span class="rounded-md border border-yd-border-muted px-2 py-1">{{ item.timelineHint }}</span>
-            <span v-if="item.sourceActionIntentId" class="rounded-md border border-yd-state-accent/30 px-2 py-1 text-yd-text-primary">
+            <AppBadge shape="tag">
+              {{ item.timelineHint }}
+            </AppBadge>
+            <AppBadge v-if="item.sourceActionIntentId" tone="accent" shape="tag">
               linked workflow
-            </span>
+            </AppBadge>
           </div>
         </button>
       </div>
     </div>
 
-    <div v-else class="px-5 py-5">
+    <div v-else class="px-4 py-4">
       <WorkspaceEmptyState
         title="No social posts in current feed"
         description="Adjust author, keyword, or sort filters to inspect another slice of the public signal stream."

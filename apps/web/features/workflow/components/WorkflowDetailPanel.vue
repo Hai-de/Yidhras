@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import AppButton from '../../../components/ui/AppButton.vue'
 import type {
   WorkflowIntentDetail,
   WorkflowJobDetail,
@@ -117,14 +118,14 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
         :subtitle="props.job?.id ?? props.trace?.id ?? 'Select a job or trace from the list to inspect details.'"
       >
         <template #actions>
-          <button
-            type="button"
-            class="rounded-lg border border-yd-state-warning/50 bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono disabled:cursor-not-allowed disabled:opacity-50"
+          <AppButton
+            size="sm"
+            class="border-yd-state-warning/50 text-yd-text-primary disabled:opacity-50"
             :disabled="!props.job || props.job.status !== 'failed' || props.isRetrying"
             @click="emit('retry')"
           >
             {{ props.isRetrying ? 'Retrying…' : 'Retry Job' }}
-          </button>
+          </AppButton>
         </template>
       </WorkspaceSectionHeader>
 
@@ -253,15 +254,14 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
       <div class="yd-panel-surface min-h-[18rem] rounded-xl">
         <WorkspaceSectionHeader title="Related Entities" subtitle="Cross-entity drill-down for actor, target, intent, and trace records." />
         <div v-if="relatedLinks.length > 0" class="grid gap-3 px-5 py-5">
-          <button
+          <AppButton
             v-for="link in relatedLinks"
             :key="link.id"
-            type="button"
-            class="rounded-lg border border-yd-border-strong bg-yd-app px-4 py-3 text-left text-sm text-yd-text-primary transition-colors hover:border-yd-state-accent"
+            class="justify-start bg-yd-app text-left text-sm normal-case tracking-normal yd-font-sans hover:border-yd-state-accent"
             @click="handleOpenLink(link)"
           >
             {{ link.label }} → {{ link.value }}
-          </button>
+          </AppButton>
         </div>
         <div v-else class="px-5 py-5">
           <WorkspaceEmptyState

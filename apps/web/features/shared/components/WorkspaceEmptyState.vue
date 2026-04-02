@@ -6,7 +6,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="rounded-xl border border-dashed border-yd-border-muted bg-yd-app px-4 py-6">
+  <div class="yd-workbench-inset rounded-md px-4 py-6">
     <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
       Empty State
     </div>

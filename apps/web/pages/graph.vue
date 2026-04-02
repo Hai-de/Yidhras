@@ -1,5 +1,5 @@
 <template>
-  <div class="flex min-h-full flex-col gap-4 p-6">
+  <div class="flex min-h-full flex-col" :style="pageLayoutStyle">
     <WorkspacePageHeader
       eyebrow="Graph Projection"
       title="Relational and tree graph workspace"
@@ -7,13 +7,9 @@
       :freshness="graphFreshness"
     >
       <template #actions>
-        <button
-          type="button"
-          class="rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono"
-          @click="refresh"
-        >
+        <AppButton @click="refresh">
           Refresh Graph
-        </button>
+        </AppButton>
       </template>
     </WorkspacePageHeader>
 
@@ -65,7 +61,7 @@
       message="Current graph filters returned no nodes. Clear filters or lower specificity to recover context."
     />
 
-    <div class="grid gap-4 xl:grid-cols-4">
+    <div class="grid xl:grid-cols-4" :style="sectionGridStyle">
       <GraphMetricCard
         v-for="item in metricItems"
         :key="item.id"
@@ -75,15 +71,17 @@
       />
     </div>
 
-    <div class="grid min-h-0 flex-1 gap-4 xl:grid-cols-[1.15fr,0.85fr]">
-      <div class="yd-panel-surface min-h-[34rem] overflow-hidden rounded-xl">
-        <component
-          :is="graphViewComponent"
-          :snapshot="canvasSnapshot"
-          :selected-node-id="routeSelectedNodeId"
-          @select-node="selectNode"
-        />
-      </div>
+    <div class="grid min-h-0 flex-1 xl:grid-cols-[1.15fr,0.85fr]" :style="sectionGridStyle">
+      <AppPanel>
+        <div class="min-h-[34rem] overflow-hidden rounded-xl">
+          <component
+            :is="graphViewComponent"
+            :snapshot="canvasSnapshot"
+            :selected-node-id="routeSelectedNodeId"
+            @select-node="selectNode"
+          />
+        </div>
+      </AppPanel>
 
       <GraphInspector
         :inspector="inspector"
@@ -98,6 +96,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import AppButton from '../components/ui/AppButton.vue'
+import AppPanel from '../components/ui/AppPanel.vue'
 import { buildGraphSearchExplainer } from '../features/graph/adapters'
 import GraphInspector from '../features/graph/components/GraphInspector.vue'
 import GraphMeshView from '../features/graph/components/GraphMeshView.vue'
@@ -111,6 +111,15 @@ import SourceContextBanner from '../features/shared/components/SourceContextBann
 import WorkspacePageHeader from '../features/shared/components/WorkspacePageHeader.vue'
 import WorkspaceStatusBanner from '../features/shared/components/WorkspaceStatusBanner.vue'
 import { formatFreshnessLabel } from '../features/shared/feedback'
+
+const pageLayoutStyle = {
+  gap: 'var(--yd-layout-section-gap)',
+  padding: 'var(--yd-layout-page-padding-y) var(--yd-layout-page-padding-x)'
+} as const
+
+const sectionGridStyle = {
+  gap: 'var(--yd-layout-card-gap)'
+} as const
 
 const graphPage = useGraphPage()
 const graphStore = useGraphStore()

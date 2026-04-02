@@ -6,7 +6,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="flex items-start justify-between gap-4 border-b border-yd-border-muted px-5 py-4">
+  <div class="yd-workbench-pane-header flex items-start justify-between gap-4 px-5 py-4">
     <div>
       <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
         {{ title }}

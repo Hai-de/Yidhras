@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AppBadge from '../../../components/ui/AppBadge.vue'
+import AppButton from '../../../components/ui/AppButton.vue'
 import WorkspaceEmptyState from '../../shared/components/WorkspaceEmptyState.vue'
 import WorkspaceSectionHeader from '../../shared/components/WorkspaceSectionHeader.vue'
 import type { SocialPostCardViewModel } from '../adapters'
@@ -13,26 +15,26 @@ const emit = defineEmits<{
   openTimeline: [post: SocialPostCardViewModel]
 }>()
 
-const signalClass = (signalLabel: SocialPostCardViewModel['signalLabel']) => {
+const signalTone = (signalLabel: SocialPostCardViewModel['signalLabel']) => {
   switch (signalLabel) {
     case 'high':
-      return 'text-yd-state-success border-yd-state-success/40'
+      return 'success'
     case 'medium':
-      return 'text-yd-state-warning border-yd-state-warning/40'
+      return 'warning'
     default:
-      return 'text-yd-state-danger border-yd-state-danger/40'
+      return 'danger'
   }
 }
 </script>
 
 <template>
-  <div class="yd-panel-surface flex h-full min-h-[28rem] flex-col rounded-xl">
+  <div class="yd-workbench-pane flex h-full min-h-[28rem] flex-col rounded-md">
     <WorkspaceSectionHeader
       title="Post Detail"
       :subtitle="props.post?.id ?? 'Select a post to inspect its context and related entities.'"
     />
 
-    <div v-if="props.post" class="flex-1 space-y-4 px-5 py-5">
+    <div v-if="props.post" class="flex-1 space-y-4 px-4 py-4">
       <div>
         <div class="text-lg font-semibold text-yd-text-primary">
           {{ props.post.title }}
@@ -43,19 +45,19 @@ const signalClass = (signalLabel: SocialPostCardViewModel['signalLabel']) => {
       </div>
 
       <div class="grid gap-3 md:grid-cols-2">
-        <div class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3">
+        <div class="yd-workbench-inset rounded-sm px-4 py-3">
           <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
             Signal
           </div>
           <div class="mt-2 flex items-center gap-2">
-            <span class="rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] yd-font-mono" :class="signalClass(props.post.signalLabel)">
+            <AppBadge :tone="signalTone(props.post.signalLabel)">
               {{ props.post.signalLabel }}
-            </span>
+            </AppBadge>
             <span class="text-sm text-yd-text-primary yd-font-mono">{{ props.post.signalScore }}</span>
           </div>
         </div>
 
-        <div class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3">
+        <div class="yd-workbench-inset rounded-sm px-4 py-3">
           <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
             Timeline Hint
           </div>
@@ -65,37 +67,28 @@ const signalClass = (signalLabel: SocialPostCardViewModel['signalLabel']) => {
         </div>
       </div>
 
-      <div class="rounded-xl border border-yd-border-muted bg-yd-app px-4 py-4 text-sm leading-6 text-yd-text-secondary">
+      <div class="yd-workbench-inset rounded-md px-4 py-4 text-sm leading-6 text-yd-text-secondary">
         {{ props.post.body }}
       </div>
 
       <div class="grid gap-3">
-        <button
-          type="button"
-          class="rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-3 text-left text-sm text-yd-text-primary"
-          @click="emit('openAgent', props.post.authorId)"
-        >
+        <AppButton class="text-left text-sm normal-case tracking-normal yd-font-sans" @click="emit('openAgent', props.post.authorId)">
           Open author detail → {{ props.post.authorId }}
-        </button>
-        <button
+        </AppButton>
+        <AppButton
           v-if="props.post.sourceActionIntentId"
-          type="button"
-          class="rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-3 text-left text-sm text-yd-text-primary"
+          class="text-left text-sm normal-case tracking-normal yd-font-sans"
           @click="emit('openWorkflow', props.post.sourceActionIntentId)"
         >
           Open linked workflow intent → {{ props.post.sourceActionIntentId }}
-        </button>
-        <button
-          type="button"
-          class="rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-3 text-left text-sm text-yd-text-primary"
-          @click="emit('openTimeline', props.post)"
-        >
+        </AppButton>
+        <AppButton class="text-left text-sm normal-case tracking-normal yd-font-sans" @click="emit('openTimeline', props.post)">
           Open timeline slice → {{ props.post.timelineHint }}
-        </button>
+        </AppButton>
       </div>
     </div>
 
-    <div v-else class="px-5 py-5">
+    <div v-else class="px-4 py-4">
       <WorkspaceEmptyState
         title="No post selected"
         description="Select a post to inspect signal strength, author context, linked workflow, and its timeline hint."

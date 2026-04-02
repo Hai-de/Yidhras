@@ -1,13 +1,22 @@
 import type { TimeFormatted } from '@yidhras/contracts'
 
 import { requestApiData } from '../../lib/http/client'
+import type { WorldPackThemeConfig } from '../../lib/theme/tokens'
 import { type TickString,toTickString } from '../../lib/time/tick'
+
+export interface RuntimeWorldThemePayload {
+  theme: WorldPackThemeConfig
+}
 
 export interface RuntimeWorldMetadata {
   id: string
   name: string
   version: string
   description?: string
+  /**
+   * Stable provider-owned runtime theme contract.
+   */
+  presentation?: RuntimeWorldThemePayload
 }
 
 export interface RuntimeSpeedSnapshot {

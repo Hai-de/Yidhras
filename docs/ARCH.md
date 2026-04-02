@@ -141,6 +141,10 @@ The following guarantees should remain stable across refactors:
 - Graph rendering now lives under `features/graph/components/*` and uses Cytoscape through `GraphCanvas.vue`.
 - `stores/runtime.ts` is the current runtime/clock aggregation entry on the client side.
 - Frontend is still a product shell rather than a frozen final UI.
+- Theme ownership rule: platform maintains the official default theme and minimal fallback/diagnostics only; world-pack providers own their custom visual identity.
+- 前端主题 ownership 规则：平台只维护官方默认主题与最小 fallback/diagnostics；world-pack provider 拥有自己的自定义视觉身份。
+- Recommended provider-owned runtime theme payload is `world_pack.presentation.theme`.
+- 推荐的 provider-owned runtime 主题载荷入口是 `world_pack.presentation.theme`。
 
 ## 6) Engineering Baseline / 工程基线
 

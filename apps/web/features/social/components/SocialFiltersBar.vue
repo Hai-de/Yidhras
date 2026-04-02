@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, watchEffect } from 'vue'
 
+import AppButton from '../../../components/ui/AppButton.vue'
+import AppInput from '../../../components/ui/AppInput.vue'
+import AppSelect from '../../../components/ui/AppSelect.vue'
+
 const props = defineProps<{
   authorId: string | null
   keyword: string | null
@@ -39,60 +43,39 @@ const handleReset = () => {
 </script>
 
 <template>
-  <div class="yd-panel-surface rounded-xl px-5 py-4">
+  <div class="yd-workbench-pane rounded-md px-5 py-4">
     <div class="flex flex-wrap items-end gap-3">
       <label class="min-w-[12rem] flex-1">
         <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
           Author ID
         </div>
-        <input
-          v-model="authorId"
-          type="text"
-          class="mt-2 w-full rounded-lg border border-yd-border-strong bg-yd-app px-3 py-2 text-sm text-yd-text-primary outline-none"
-          placeholder="agent_..."
-        >
+        <AppInput v-model="authorId" placeholder="agent_..." />
       </label>
 
       <label class="min-w-[14rem] flex-1">
         <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
           Keyword
         </div>
-        <input
-          v-model="keyword"
-          type="text"
-          class="mt-2 w-full rounded-lg border border-yd-border-strong bg-yd-app px-3 py-2 text-sm text-yd-text-primary outline-none"
-          placeholder="rumor / event / signal"
-        >
+        <AppInput v-model="keyword" placeholder="rumor / event / signal" />
       </label>
 
       <label class="min-w-[10rem]">
         <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
           Sort
         </div>
-        <select
-          v-model="sort"
-          class="mt-2 w-full rounded-lg border border-yd-border-strong bg-yd-app px-3 py-2 text-sm text-yd-text-primary outline-none"
-        >
+        <AppSelect v-model="sort">
           <option value="latest">latest</option>
           <option value="signal">signal</option>
-        </select>
+        </AppSelect>
       </label>
 
       <div class="flex items-center gap-2">
-        <button
-          type="button"
-          class="rounded-lg border border-yd-state-accent/50 bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono"
-          @click="handleApply"
-        >
+        <AppButton @click="handleApply">
           Apply
-        </button>
-        <button
-          type="button"
-          class="rounded-lg border border-yd-border-muted px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-secondary yd-font-mono"
-          @click="handleReset"
-        >
+        </AppButton>
+        <AppButton variant="secondary" @click="handleReset">
           Reset
-        </button>
+        </AppButton>
       </div>
     </div>
   </div>

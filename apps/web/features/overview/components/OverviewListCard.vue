@@ -31,15 +31,15 @@ const toneClass = (tone: OverviewListItemViewModel['tone']) => {
 </script>
 
 <template>
-  <div class="yd-panel-surface flex h-full min-h-[18rem] flex-col rounded-xl">
+  <div class="yd-workbench-pane flex h-full min-h-[18rem] flex-col rounded-md">
     <WorkspaceSectionHeader :title="title" :subtitle="subtitle" />
 
-    <div v-if="props.items.length > 0" class="flex-1 space-y-3 overflow-y-auto px-5 py-5 no-scrollbar">
+    <div v-if="props.items.length > 0" class="flex-1 space-y-2.5 overflow-y-auto px-4 py-4 no-scrollbar">
       <button
         v-for="item in props.items"
         :key="item.id"
         type="button"
-        class="w-full rounded-lg border bg-yd-app px-4 py-3 text-left transition-colors hover:border-yd-state-accent"
+        class="yd-workbench-item w-full rounded-sm px-4 py-3 text-left transition-colors"
         :class="toneClass(item.tone)"
         @click="emit('select', item.id)"
       >
@@ -55,7 +55,7 @@ const toneClass = (tone: OverviewListItemViewModel['tone']) => {
       </button>
     </div>
 
-    <div v-else class="px-5 py-5">
+    <div v-else class="px-4 py-4">
       <WorkspaceEmptyState
         title="No items available"
         :description="props.emptyMessage ?? 'No items available.'"

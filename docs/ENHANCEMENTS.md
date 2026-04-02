@@ -60,6 +60,45 @@
 - 延期原因：
   当前优先级低于主流程功能开发，但后续适合作为稳定期质量工作的一部分。
 
+### 4. 共享基础组件的 layout token 消费收口
+- 状态：deferred
+- 优先级：medium
+- 范围：shared/components、overview/graph/agents/workflow/timeline/social 中复用面板与 header 类组件
+- 背景：
+  当前 Phase 2 已让主页面容器、shell rail/sidebar、dock 高度开始消费 `layout` token，但大量共享基础组件内部仍保留 `px-5 py-5`、`gap-4` 等硬编码 spacing。
+- 后续增强候选：
+  - 将 `WorkspacePageHeader`、`WorkspaceSectionHeader`、`OverviewMetricCard`、`GraphMetricCard`、`AgentSummaryCard` 等复用组件迁移为基于 layout token 的 spacing
+  - 统一 cards / list sections / empty states 的 spacing 语义
+  - 为后续 Phase 3 semantic primitives 提前降低样式散落程度
+- 延期原因：
+  当前 Phase 2 主目标是先完成 theme/layout token 的解析、clamp、runtime source 与页面级基础消费；共享组件内部 spacing 收口属于下一轮可控优化，可记录为增强项而非继续拉长当前收口周期。
+
+### 5. 可视化主题编辑器
+- 状态：deferred
+- 优先级：low
+- 范围：theme authoring / provider-owned theming / operator tooling
+- 背景：
+  当前 provider-owned 主题能力已收敛到 `presentation.theme`，并提供了示例文件用于复制和联调；但主题编写仍然是以手写配置为主。
+- 后续增强候选：
+  - 提供面向 provider 的可视化主题编辑器
+  - 支持 token 分组浏览、实时预览、回退默认值对照
+  - 支持调整颜色、radius、layout、surface 等核心语义
+- 延期原因：
+  当前主目标是先稳定单一主题 contract 与 runtime 解析链路；等主题系统和 provider 接入模式进一步成熟后，再考虑引入可视化编辑能力。
+
+### 6. 主题导入 / 导出机制
+- 状态：deferred
+- 优先级：low
+- 范围：theme portability / provider workflow / tooling
+- 背景：
+  目前 provider 主题以 `presentation.theme` payload 与示例文件为主，尚未建立更完整的主题移植、共享与分发机制。
+- 后续增强候选：
+  - 主题 JSON / YAML 导入导出
+  - 主题 schema 版本标记与迁移策略
+  - provider theme preset 打包、共享、对比与回滚支持
+- 延期原因：
+  当前项目尚未进入需要主题资产大规模流转的阶段；建议等后续有成熟的可视化主题编辑器和更稳定的 theme schema 后，再统一设计导入导出机制。
+
 ---
 
 ## 二、后端

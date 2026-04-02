@@ -11,7 +11,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="yd-panel-surface rounded-xl px-5 py-5">
+  <div class="yd-workbench-pane rounded-md px-5 py-4">
     <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
       Scheduler Timeline
     </div>
@@ -19,12 +19,12 @@ const emit = defineEmits<{
       Recent scheduler decisions for this agent, including chosen reason, cadence kind, priority, and workflow linkage.
     </div>
 
-    <div v-if="props.items.length > 0" class="mt-4 grid gap-3 text-sm text-yd-text-secondary">
+    <div v-if="props.items.length > 0" class="mt-4 grid gap-2.5 text-sm text-yd-text-secondary">
       <button
         v-for="item in props.items"
         :key="item.id"
         type="button"
-        class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3 text-left transition-colors hover:border-yd-state-accent"
+        class="yd-workbench-item rounded-md px-4 py-3 text-left transition-colors hover:border-yd-state-accent"
         @click="emit('openDecision', item.id)"
       >
         <div class="break-all text-yd-text-primary">
@@ -42,7 +42,7 @@ const emit = defineEmits<{
       </button>
     </div>
 
-    <div v-else class="mt-4 rounded-lg border border-yd-border-muted bg-yd-app px-4 py-4 text-sm text-yd-text-secondary">
+    <div v-else class="mt-4 yd-workbench-inset rounded-md px-4 py-4 text-sm text-yd-text-secondary">
       No scheduler decisions available for this agent yet.
     </div>
   </div>

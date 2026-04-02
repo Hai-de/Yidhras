@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, watchEffect } from 'vue'
 
+import AppButton from '../../../components/ui/AppButton.vue'
+import AppInput from '../../../components/ui/AppInput.vue'
+import AppSelect from '../../../components/ui/AppSelect.vue'
 import type { GraphQuickRootViewModel } from '../adapters'
 
 const props = defineProps<{
@@ -67,8 +70,8 @@ const handleApply = () => {
 </script>
 
 <template>
-  <div class="yd-panel-surface rounded-xl px-5 py-4">
-    <div class="flex flex-wrap items-start justify-between gap-4 border-b border-yd-border-muted pb-4">
+  <div class="yd-workbench-pane rounded-md px-5 py-4">
+    <div class="yd-workbench-pane-header -mx-5 flex flex-wrap items-start justify-between gap-4 px-5 pb-4">
       <div>
         <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
           Graph Controls
@@ -102,8 +105,8 @@ const handleApply = () => {
           v-for="root in props.quickRoots"
           :key="root.id"
           type="button"
-          class="rounded-lg border px-3 py-2 text-left transition-colors"
-          :class="root.isActive ? 'border-yd-state-accent bg-yd-elevated text-yd-text-primary' : 'border-yd-border-muted bg-yd-app text-yd-text-secondary hover:border-yd-border-strong'"
+          class="yd-workbench-item rounded-sm px-3 py-2 text-left transition-colors"
+          :class="root.isActive ? 'yd-workbench-item--active text-yd-text-primary' : 'text-yd-text-secondary'"
           @click="emit('useQuickRoot', root.id)"
         >
           <div class="text-xs uppercase tracking-[0.14em] yd-font-mono">
@@ -121,50 +124,31 @@ const handleApply = () => {
         <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
           View
         </div>
-        <select
-          v-model="view"
-          class="mt-2 w-full rounded-lg border border-yd-border-strong bg-yd-app px-3 py-2 text-sm text-yd-text-primary outline-none"
-        >
+        <AppSelect v-model="view">
           <option value="mesh">mesh</option>
           <option value="tree">tree</option>
-        </select>
+        </AppSelect>
       </label>
 
       <label class="w-28">
         <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
           Depth
         </div>
-        <input
-          v-model="depth"
-          type="number"
-          min="0"
-          max="3"
-          class="mt-2 w-full rounded-lg border border-yd-border-strong bg-yd-app px-3 py-2 text-sm text-yd-text-primary outline-none"
-        >
+        <AppInput v-model="depth" type="number" placeholder="1" />
       </label>
 
       <label class="min-w-[14rem] flex-1">
         <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
           Kinds
         </div>
-        <input
-          v-model="kinds"
-          type="text"
-          class="mt-2 w-full rounded-lg border border-yd-border-strong bg-yd-app px-3 py-2 text-sm text-yd-text-primary outline-none"
-          placeholder="agent,relay"
-        >
+        <AppInput v-model="kinds" placeholder="agent,relay" />
       </label>
 
       <label class="min-w-[14rem] flex-1">
         <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
           Search
         </div>
-        <input
-          v-model="search"
-          type="text"
-          class="mt-2 w-full rounded-lg border border-yd-border-strong bg-yd-app px-3 py-2 text-sm text-yd-text-primary outline-none"
-          placeholder="root / label / metadata"
-        >
+        <AppInput v-model="search" placeholder="root / label / metadata" />
       </label>
 
       <label class="flex items-center gap-2 text-xs text-yd-text-secondary">
@@ -181,51 +165,28 @@ const handleApply = () => {
         <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
           Refresh Mode
         </div>
-        <select
-          v-model="autoRefreshMode"
-          class="mt-2 w-full rounded-lg border border-yd-border-strong bg-yd-app px-3 py-2 text-sm text-yd-text-primary outline-none"
-        >
+        <AppSelect v-model="autoRefreshMode">
           <option value="manual">manual</option>
           <option value="visible-polling">visible-polling</option>
-        </select>
+        </AppSelect>
       </label>
 
       <div class="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          class="rounded-lg border border-yd-state-accent/50 bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono"
-          @click="handleApply"
-        >
+        <AppButton @click="handleApply">
           Apply
-        </button>
-        <button
-          type="button"
-          class="rounded-lg border border-yd-border-muted px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-secondary yd-font-mono"
-          @click="emit('clearFilters')"
-        >
+        </AppButton>
+        <AppButton variant="secondary" @click="emit('clearFilters')">
           Clear Filters
-        </button>
-        <button
-          type="button"
-          class="rounded-lg border border-yd-border-muted px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-secondary yd-font-mono"
-          @click="emit('focusSelected')"
-        >
+        </AppButton>
+        <AppButton variant="secondary" @click="emit('focusSelected')">
           Focus Selected
-        </button>
-        <button
-          type="button"
-          class="rounded-lg border border-yd-border-muted px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-secondary yd-font-mono"
-          @click="emit('useSelectedAsRoot')"
-        >
+        </AppButton>
+        <AppButton variant="secondary" @click="emit('useSelectedAsRoot')">
           Use Selected as Root
-        </button>
-        <button
-          type="button"
-          class="rounded-lg border border-yd-border-muted px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-secondary yd-font-mono"
-          @click="emit('refresh')"
-        >
+        </AppButton>
+        <AppButton variant="secondary" @click="emit('refresh')">
           Refresh
-        </button>
+        </AppButton>
       </div>
     </div>
   </div>

@@ -6,7 +6,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="rounded-lg border border-yd-border-muted bg-yd-app px-3 py-2">
+  <div class="yd-workbench-inset rounded-sm px-3 py-3">
     <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
       {{ label }}
     </div>

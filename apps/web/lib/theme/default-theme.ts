@@ -1,57 +1,87 @@
-import type { AppThemeTokens } from './tokens'
+import type { AppThemeDefinition } from './tokens'
 
-export const DEFAULT_APP_THEME_TOKENS: AppThemeTokens = {
+export const DEFAULT_APP_THEME: AppThemeDefinition = {
   meta: {
     id: 'operator-intel-default',
     name: 'Operator Intel Default',
     colorScheme: 'dark'
   },
-  colors: {
-    bgApp: '#0d0f14',
-    bgPanel: '#151b24',
-    bgElevated: '#1c2430',
-    bgOverlay: 'rgba(9, 12, 18, 0.82)',
-    borderStrong: '#3a4658',
-    borderMuted: '#273140',
-    textPrimary: '#eef4ff',
-    textSecondary: '#adb9cf',
-    textMuted: '#728099',
-    textInverse: '#06080d',
-    stateSuccess: '#35d07f',
-    stateWarning: '#f1c453',
-    stateDanger: '#ff6e7c',
-    stateInfo: '#57b8ff',
-    stateAccent: '#7e8fff'
-  },
-  graph: {
-    agent: '#7e8fff',
-    atmosphere: '#3cc4aa',
-    relay: '#f1c453',
-    container: '#7a7f8d',
-    edge: '#334155',
-    selected: '#57b8ff'
-  },
-  grid: {
-    lineColor: 'rgba(118, 139, 177, 0.14)'
-  },
-  typography: {
-    fontSans: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    fontMono: "'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace"
-  },
-  radius: {
-    sm: '4px',
-    md: '8px',
-    lg: '12px'
-  },
-  border: {
-    width: '1px'
-  },
-  shadow: {
-    panel: '0 0 0 1px rgba(58, 70, 88, 0.55), 0 18px 40px rgba(0, 0, 0, 0.24)',
-    elevated: '0 0 0 1px rgba(58, 70, 88, 0.65), 0 24px 56px rgba(0, 0, 0, 0.32)'
+  core: {
+    colors: {
+      bg: {
+        app: '#111418',
+        panel: '#181c22',
+        elevated: '#20252d',
+        overlay: 'rgba(11, 14, 18, 0.82)'
+      },
+      border: {
+        strong: '#3b4350',
+        muted: '#2a313c'
+      },
+      text: {
+        primary: '#e6edf3',
+        secondary: '#a9b4c2',
+        muted: '#7d8897',
+        inverse: '#0b0f14'
+      },
+      state: {
+        success: '#35d07f',
+        warning: '#f1c453',
+        danger: '#ff6e7c',
+        info: '#57b8ff',
+        accent: '#6ea8fe'
+      },
+      graph: {
+        agent: '#6ea8fe',
+        atmosphere: '#3cc4aa',
+        relay: '#f1c453',
+        container: '#8a93a3',
+        edge: '#394252',
+        selected: '#57b8ff'
+      },
+      grid: {
+        line: 'rgba(110, 168, 254, 0.1)'
+      }
+    },
+    typography: {
+      fontSans: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      fontMono: "'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace"
+    },
+    radius: {
+      sm: '2px',
+      md: '4px',
+      lg: '6px'
+    },
+    border: {
+      width: '1px'
+    },
+    shadow: {
+      panel: 'inset 0 1px 0 rgba(255, 255, 255, 0.02)',
+      elevated: '0 0 0 1px rgba(59, 67, 80, 0.4), 0 8px 24px rgba(0, 0, 0, 0.2)'
+    }
   },
   layout: {
-    minWidth: '1280px',
-    maxContentWidth: '1920px'
+    app: {
+      minWidth: '1280px',
+      maxContentWidth: '1920px',
+      pagePaddingX: '20px',
+      pagePaddingY: '20px',
+      sectionGap: '12px',
+      cardGap: '12px'
+    },
+    shell: {
+      railWidth: '76px',
+      sidebarWidth: '300px',
+      dock: {
+        minHeight: '160px',
+        defaultHeight: '224px',
+        maxHeight: '480px'
+      }
+    }
+  },
+  components: {
+    panel: {
+      backdropBlur: '10px'
+    }
   }
 }

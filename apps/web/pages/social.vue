@@ -1,5 +1,5 @@
 <template>
-  <div class="flex min-h-full flex-col gap-4 p-6">
+  <div class="flex min-h-full flex-col" :style="pageLayoutStyle">
     <WorkspacePageHeader
       eyebrow="Social Feed"
       title="Public signal stream"
@@ -7,13 +7,9 @@
       :freshness="socialFreshness"
     >
       <template #actions>
-        <button
-          type="button"
-          class="rounded-lg border border-yd-border-strong bg-yd-elevated px-4 py-2 text-xs uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono"
-          @click="refresh"
-        >
+        <AppButton @click="refresh">
           Refresh Feed
-        </button>
+        </AppButton>
       </template>
     </WorkspacePageHeader>
 
@@ -45,7 +41,7 @@
       :message="errorMessage"
     />
 
-    <div class="grid min-h-0 flex-1 gap-4 xl:grid-cols-[1.1fr,0.9fr]">
+    <div class="grid min-h-0 flex-1 xl:grid-cols-[1.1fr,0.9fr]" :style="sectionGridStyle">
       <SocialPostList
         :items="items"
         :selected-post-id="selectedPostId"
@@ -65,6 +61,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import AppButton from '../components/ui/AppButton.vue'
 import SourceContextBanner from '../features/shared/components/SourceContextBanner.vue'
 import WorkspacePageHeader from '../features/shared/components/WorkspacePageHeader.vue'
 import WorkspaceStatusBanner from '../features/shared/components/WorkspaceStatusBanner.vue'
@@ -73,6 +70,15 @@ import SocialFiltersBar from '../features/social/components/SocialFiltersBar.vue
 import SocialPostDetail from '../features/social/components/SocialPostDetail.vue'
 import SocialPostList from '../features/social/components/SocialPostList.vue'
 import { useSocialPage } from '../features/social/composables/useSocialPage'
+
+const pageLayoutStyle = {
+  gap: 'var(--yd-layout-section-gap)',
+  padding: 'var(--yd-layout-page-padding-y) var(--yd-layout-page-padding-x)'
+} as const
+
+const sectionGridStyle = {
+  gap: 'var(--yd-layout-card-gap)'
+} as const
 
 const socialPage = useSocialPage()
 

@@ -9,7 +9,7 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div class="yd-panel-surface rounded-xl px-5 py-5">
+  <div class="yd-workbench-pane rounded-md px-5 py-4">
     <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
       {{ props.title }}
     </div>
@@ -20,7 +20,7 @@ const props = defineProps<{
       <div
         v-for="field in props.fields"
         :key="field.label"
-        class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3"
+        class="yd-workbench-inset rounded-sm px-4 py-3"
       >
         <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
           {{ field.label }}
