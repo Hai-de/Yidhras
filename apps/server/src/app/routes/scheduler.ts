@@ -1,15 +1,33 @@
+import {
+  schedulerDecisionsQuerySchema,
+  schedulerMigrationsQuerySchema,
+  schedulerOperatorQuerySchema,
+  schedulerOwnershipQuerySchema,
+  schedulerRebalanceRecommendationsQuerySchema,
+  schedulerRunIdParamsSchema,
+  schedulerRunsQuerySchema,
+  schedulerSummaryQuerySchema,
+  schedulerTrendsQuerySchema,
+  schedulerWorkersQuerySchema
+} from '@yidhras/contracts';
 import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
+import { parseParams, parseQuery } from '../http/zod.js';
 import {
   getLatestSchedulerRunReadModel,
+  getSchedulerOperatorProjection,
   getSchedulerRunReadModelById,
   getSchedulerSummarySnapshot,
   getSchedulerTrendsSnapshot,
   listAgentSchedulerDecisions,
   listSchedulerDecisions,
-  listSchedulerRuns
+  listSchedulerOwnershipAssignments,
+  listSchedulerOwnershipMigrations,
+  listSchedulerRebalanceRecommendations,
+  listSchedulerRuns,
+  listSchedulerWorkers,
 } from '../services/scheduler_observability.js';
 
 export interface SchedulerRouteDependencies {
@@ -17,15 +35,6 @@ export interface SchedulerRouteDependencies {
     handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
   ): (req: Request, res: Response, next: NextFunction) => void;
 }
-
-const parseSampleRuns = (value: unknown): number | undefined => {
-  if (typeof value !== 'string') {
-    return undefined;
-  }
-
-  const parsed = Number.parseInt(value, 10);
-  return Number.isSafeInteger(parsed) ? parsed : undefined;
-};
 
 export const registerSchedulerRoutes = (
   app: Express,
@@ -45,12 +54,14 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/runs',
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler runs list');
+      const query = parseQuery(schedulerRunsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
       const result = await listSchedulerRuns(context, {
-        limit: typeof req.query.limit === 'string' ? req.query.limit : undefined,
-        cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
-        from_tick: typeof req.query.from_tick === 'string' ? req.query.from_tick : undefined,
-        to_tick: typeof req.query.to_tick === 'string' ? req.query.to_tick : undefined,
-        worker_id: typeof req.query.worker_id === 'string' ? req.query.worker_id : undefined
+        limit: query.limit,
+        cursor: query.cursor,
+        from_tick: query.from_tick,
+        to_tick: query.to_tick,
+        worker_id: query.worker_id,
+        partition_id: query.partition_id
       });
       jsonOk(
         res,
@@ -70,8 +81,9 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/summary',
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler summary');
+      const query = parseQuery(schedulerSummaryQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
       const summary = await getSchedulerSummarySnapshot(context, {
-        sampleRuns: parseSampleRuns(req.query.sample_runs)
+        sampleRuns: query.sample_runs
       });
       jsonOk(res, toJsonSafe(summary));
     })
@@ -81,10 +93,82 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/trends',
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler trends');
+      const query = parseQuery(schedulerTrendsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
       const trends = await getSchedulerTrendsSnapshot(context, {
-        sampleRuns: parseSampleRuns(req.query.sample_runs)
+        sampleRuns: query.sample_runs
       });
       jsonOk(res, toJsonSafe(trends));
+    })
+  );
+
+  app.get(
+    '/api/runtime/scheduler/operator',
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('scheduler operator projection');
+      const query = parseQuery(schedulerOperatorQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
+      const projection = await getSchedulerOperatorProjection(context, {
+        sampleRuns: query.sample_runs,
+        recentLimit: query.recent_limit
+      });
+      jsonOk(res, toJsonSafe(projection));
+    })
+  );
+
+  app.get(
+    '/api/runtime/scheduler/ownership',
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('scheduler ownership projection');
+      const query = parseQuery(schedulerOwnershipQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
+      const result = await listSchedulerOwnershipAssignments(context, {
+        worker_id: query.worker_id,
+        partition_id: query.partition_id,
+        status: query.status
+      });
+      jsonOk(res, toJsonSafe(result));
+    })
+  );
+
+  app.get(
+    '/api/runtime/scheduler/migrations',
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('scheduler ownership migrations');
+      const query = parseQuery(schedulerMigrationsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
+      const result = await listSchedulerOwnershipMigrations(context, {
+        limit: query.limit,
+        worker_id: query.worker_id,
+        partition_id: query.partition_id,
+        status: query.status
+      });
+      jsonOk(res, toJsonSafe(result));
+    })
+  );
+
+  app.get(
+    '/api/runtime/scheduler/workers',
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('scheduler worker runtime states');
+      const query = parseQuery(schedulerWorkersQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
+      const result = await listSchedulerWorkers(context, {
+        worker_id: query.worker_id,
+        status: query.status
+      });
+      jsonOk(res, toJsonSafe(result));
+    })
+  );
+
+  app.get(
+    '/api/runtime/scheduler/rebalance/recommendations',
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('scheduler rebalance recommendations');
+      const query = parseQuery(schedulerRebalanceRecommendationsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
+      const result = await listSchedulerRebalanceRecommendations(context, {
+        limit: query.limit,
+        worker_id: query.worker_id,
+        partition_id: query.partition_id,
+        status: query.status,
+        suppress_reason: query.suppress_reason
+      });
+      jsonOk(res, toJsonSafe(result));
     })
   );
 
@@ -92,7 +176,8 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/runs/:id',
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler run read');
-      const readModel = await getSchedulerRunReadModelById(context, req.params.id);
+      const params = parseParams(schedulerRunIdParamsSchema, req.params, 'SCHEDULER_QUERY_INVALID');
+      const readModel = await getSchedulerRunReadModelById(context, params.id);
       jsonOk(res, toJsonSafe(readModel));
     })
   );
@@ -101,15 +186,17 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/decisions',
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler decisions list');
+      const query = parseQuery(schedulerDecisionsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
       const result = await listSchedulerDecisions(context, {
-        limit: typeof req.query.limit === 'string' ? req.query.limit : undefined,
-        cursor: typeof req.query.cursor === 'string' ? req.query.cursor : undefined,
-        actor_id: typeof req.query.actor_id === 'string' ? req.query.actor_id : undefined,
-        kind: typeof req.query.kind === 'string' ? req.query.kind : undefined,
-        reason: typeof req.query.reason === 'string' ? req.query.reason : undefined,
-        skipped_reason: typeof req.query.skipped_reason === 'string' ? req.query.skipped_reason : undefined,
-        from_tick: typeof req.query.from_tick === 'string' ? req.query.from_tick : undefined,
-        to_tick: typeof req.query.to_tick === 'string' ? req.query.to_tick : undefined
+        limit: query.limit,
+        cursor: query.cursor,
+        actor_id: query.actor_id,
+        kind: query.kind,
+        reason: query.reason,
+        skipped_reason: query.skipped_reason,
+        from_tick: query.from_tick,
+        to_tick: query.to_tick,
+        partition_id: query.partition_id
       });
       jsonOk(
         res,

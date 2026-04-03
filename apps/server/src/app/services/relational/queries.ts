@@ -33,6 +33,29 @@ export const listAtmosphereNodes = async (
   });
 };
 
+const parseRelationshipLogLimit = (value: number | undefined): number => {
+  if (value === undefined) {
+    return DEFAULT_RELATIONSHIP_LOG_LIMIT;
+  }
+
+  if (!Number.isFinite(value) || Number.isNaN(value)) {
+    throw new ApiError(400, 'RELATIONSHIP_LOG_QUERY_INVALID', 'limit must be a positive integer', {
+      field: 'limit',
+      value
+    });
+  }
+
+  const normalized = Math.trunc(value);
+  if (normalized < 1) {
+    throw new ApiError(400, 'RELATIONSHIP_LOG_QUERY_INVALID', 'limit must be a positive integer', {
+      field: 'limit',
+      value
+    });
+  }
+
+  return Math.min(MAX_RELATIONSHIP_LOG_LIMIT, normalized);
+};
+
 export const listRelationshipAdjustmentLogs = async (
   context: AppContext,
   input: ListRelationshipAdjustmentLogsInput
@@ -45,10 +68,7 @@ export const listRelationshipAdjustmentLogs = async (
     throw new ApiError(400, 'RELATIONSHIP_LOG_QUERY_INVALID', 'from_id, to_id, and type are required');
   }
 
-  const requestedLimit = typeof input.limit === 'number' && Number.isFinite(input.limit)
-    ? Math.trunc(input.limit)
-    : DEFAULT_RELATIONSHIP_LOG_LIMIT;
-  const limit = Math.min(MAX_RELATIONSHIP_LOG_LIMIT, Math.max(1, requestedLimit));
+  const limit = parseRelationshipLogLimit(input.limit);
 
   return context.prisma.relationshipAdjustmentLog.findMany({
     where: {

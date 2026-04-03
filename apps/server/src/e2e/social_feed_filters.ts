@@ -77,6 +77,45 @@ const createIntentRecord = (id: string, traceId: string, agentId: string, tick: 
 const prepareSocialFeedFixtures = async (runId: string, baseTick: bigint) => {
   const prisma = new PrismaClient();
 
+  const ensurePolicy = async (input: {
+    effect: 'allow' | 'deny';
+    subject_id?: string | null;
+    subject_type?: string | null;
+    resource: string;
+    action: string;
+    field: string;
+    priority: number;
+  }) => {
+    const existing = await prisma.policy.findFirst({
+      where: {
+        effect: input.effect,
+        subject_id: input.subject_id ?? null,
+        subject_type: input.subject_type ?? null,
+        resource: input.resource,
+        action: input.action,
+        field: input.field
+      }
+    });
+
+    if (existing) {
+      return;
+    }
+
+    await prisma.policy.create({
+      data: {
+        effect: input.effect,
+        subject_id: input.subject_id ?? null,
+        subject_type: input.subject_type ?? null,
+        resource: input.resource,
+        action: input.action,
+        field: input.field,
+        priority: input.priority,
+        created_at: baseTick,
+        updated_at: baseTick
+      }
+    });
+  };
+
   const circleId = `social-feed-circle-${runId}`;
 
   const traceAId = `social-feed-trace-${runId}-a`;
@@ -128,6 +167,39 @@ const prepareSocialFeedFixtures = async (runId: string, baseTick: bigint) => {
   };
 
   try {
+    await ensurePolicy({
+      effect: 'allow',
+      subject_type: 'agent',
+      resource: 'social_post',
+      action: 'read',
+      field: 'id',
+      priority: 10
+    });
+    await ensurePolicy({
+      effect: 'allow',
+      subject_type: 'agent',
+      resource: 'social_post',
+      action: 'read',
+      field: 'author_id',
+      priority: 10
+    });
+    await ensurePolicy({
+      effect: 'allow',
+      subject_type: 'agent',
+      resource: 'social_post',
+      action: 'read',
+      field: 'content',
+      priority: 10
+    });
+    await ensurePolicy({
+      effect: 'allow',
+      subject_type: 'agent',
+      resource: 'social_post',
+      action: 'read',
+      field: 'created_at',
+      priority: 10
+    });
+
     await prisma.circle.create({
       data: {
         id: circleId,
@@ -193,8 +265,19 @@ const assertFeedContents = (value: unknown, expectedContents: string[], label: s
 
   const contents = items.map(item => {
     assert(isRecord(item), `${label} item should be object`);
-    assert(typeof item.content === 'string', `${label} item.content should be string`);
-    return item.content;
+    if (typeof item.content === 'string') {
+      return item.content;
+    }
+
+    if (isRecord(item.content) && typeof item.content.public === 'string') {
+      return item.content.public;
+    }
+
+    if (isRecord(item.content) && typeof item.content.preview === 'string') {
+      return item.content.preview;
+    }
+
+    throw new Error(`${label} item.content should be string or readable content object`);
   });
 
   assert(
@@ -203,6 +286,13 @@ const assertFeedContents = (value: unknown, expectedContents: string[], label: s
   );
 
   return items;
+};
+
+const assertErrorCode = (body: unknown, expectedCode: string, label: string): void => {
+  assert(isRecord(body), `${label} should be object`);
+  assert(body.success === false, `${label} success should be false`);
+  assert(isRecord(body.error), `${label} error should be object`);
+  assert(body.error.code === expectedCode, `${label} error code should be ${expectedCode}`);
 };
 
 const main = async () => {
@@ -253,7 +343,13 @@ const main = async () => {
       'social feed author filter response'
     );
     assert(
-      authorItems.every(item => item.author_id === 'agent-001'),
+      authorItems.every(item => {
+        if (!isRecord(item.author_id)) {
+          return item.author_id === 'agent-001';
+        }
+
+        return item.author_id.id === 'agent-001' || item.author_id.public === 'agent-001' || item.author_id.preview === 'agent-001';
+      }),
       'social feed author filter should only include agent-001 authored posts'
     );
 
@@ -270,7 +366,13 @@ const main = async () => {
       'social feed agent filter response'
     );
     assert(
-      agentItems.every(item => item.author_id === 'agent-002'),
+      agentItems.every(item => {
+        if (!isRecord(item.author_id)) {
+          return item.author_id === 'agent-002';
+        }
+
+        return item.author_id.id === 'agent-002' || item.author_id.public === 'agent-002' || item.author_id.preview === 'agent-002';
+      }),
       'social feed agent filter should only include agent-002 authored posts'
     );
 
@@ -380,8 +482,7 @@ const main = async () => {
 
     const invalidSignalRangeRes = await requestJson(server.baseUrl, '/api/social/feed?signal_min=0.8&signal_max=0.2', { headers });
     assert(invalidSignalRangeRes.status === 400, 'GET /api/social/feed with invalid signal range should return 400');
-    assert(isRecord(invalidSignalRangeRes.body), 'invalid social feed signal range response should be object');
-    assert(invalidSignalRangeRes.body.success === false, 'invalid social feed signal range response success should be false');
+    assertErrorCode(invalidSignalRangeRes.body, 'SOCIAL_FEED_QUERY_INVALID', 'invalid social feed signal range');
 
     const circleRes = await requestJson(
       server.baseUrl,
@@ -414,8 +515,27 @@ const main = async () => {
 
     const invalidSortRes = await requestJson(server.baseUrl, '/api/social/feed?sort=unknown', { headers });
     assert(invalidSortRes.status === 400, 'GET /api/social/feed with invalid sort should return 400');
-    assert(isRecord(invalidSortRes.body), 'invalid social feed sort response should be object');
-    assert(invalidSortRes.body.success === false, 'invalid social feed sort response success should be false');
+    assertErrorCode(invalidSortRes.body, 'SOCIAL_FEED_QUERY_INVALID', 'invalid social feed sort');
+
+    const cursorSortMismatchRes = await requestJson(
+      server.baseUrl,
+      `/api/social/feed?from_tick=${fixtures.minTick.toString()}&to_tick=${fixtures.maxTick.toString()}&sort=signal&limit=2&cursor=${encodeURIComponent(page1Cursor)}`,
+      { headers }
+    );
+    assert(cursorSortMismatchRes.status === 400, 'GET /api/social/feed with cursor sort mismatch should return 400');
+    assertErrorCode(cursorSortMismatchRes.body, 'SOCIAL_FEED_QUERY_INVALID', 'cursor sort mismatch');
+
+    const conflictingAuthorAgentRes = await requestJson(
+      server.baseUrl,
+      `/api/social/feed?author_id=agent-001&agent_id=agent-002&from_tick=${fixtures.minTick.toString()}&to_tick=${fixtures.maxTick.toString()}`,
+      { headers }
+    );
+    assert(conflictingAuthorAgentRes.status === 400, 'GET /api/social/feed with conflicting author_id and agent_id should return 400');
+    assertErrorCode(conflictingAuthorAgentRes.body, 'SOCIAL_FEED_QUERY_INVALID', 'conflicting author and agent');
+
+    const invalidLimitRes = await requestJson(server.baseUrl, '/api/social/feed?limit=abc', { headers });
+    assert(invalidLimitRes.status === 400, 'GET /api/social/feed with invalid limit should return 400');
+    assertErrorCode(invalidLimitRes.body, 'SOCIAL_FEED_QUERY_INVALID', 'invalid social feed limit');
 
     const cursorPage2Res = await requestJson(
       server.baseUrl,
@@ -433,8 +553,7 @@ const main = async () => {
 
     const invalidCursorRes = await requestJson(server.baseUrl, '/api/social/feed?cursor=invalid-cursor', { headers });
     assert(invalidCursorRes.status === 400, 'GET /api/social/feed with invalid cursor should return 400');
-    assert(isRecord(invalidCursorRes.body), 'invalid social feed cursor response should be object');
-    assert(invalidCursorRes.body.success === false, 'invalid social feed cursor response success should be false');
+    assertErrorCode(invalidCursorRes.body, 'SOCIAL_FEED_QUERY_INVALID', 'invalid social feed cursor');
 
     console.log('[social_feed_filters] PASS');
   } catch (error: unknown) {

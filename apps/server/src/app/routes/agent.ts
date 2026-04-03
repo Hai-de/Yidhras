@@ -1,12 +1,20 @@
+import {
+  agentIdParamsSchema,
+  agentOverviewQuerySchema,
+  agentSchedulerProjectionQuerySchema,
+  agentSnrLogsQuerySchema
+} from '@yidhras/contracts';
 import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
+import { parseParams, parseQuery } from '../http/zod.js';
 import {
   getAgentContextSnapshot,
   getAgentOverview,
   listSnrAdjustmentLogs
 } from '../services/agent.js';
+import { getAgentSchedulerProjection } from '../services/scheduler_observability.js';
 
 export interface AgentRouteDependencies {
   asyncHandler(
@@ -23,7 +31,8 @@ export const registerAgentRoutes = (
     '/api/agent/:id/context',
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('agent context');
-      const snapshot = await getAgentContextSnapshot(context, req.params.id);
+      const params = parseParams(agentIdParamsSchema, req.params, 'AGENT_QUERY_INVALID');
+      const snapshot = await getAgentContextSnapshot(context, params.id);
 
       jsonOk(res, toJsonSafe(snapshot));
     })
@@ -33,8 +42,10 @@ export const registerAgentRoutes = (
     '/api/agent/:id/overview',
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('agent overview');
-      const overview = await getAgentOverview(context, req.params.id, {
-        limit: typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : undefined
+      const params = parseParams(agentIdParamsSchema, req.params, 'AGENT_QUERY_INVALID');
+      const query = parseQuery(agentOverviewQuerySchema, req.query, 'AGENT_QUERY_INVALID');
+      const overview = await getAgentOverview(context, params.id, {
+        limit: query.limit
       });
 
       jsonOk(res, toJsonSafe(overview));
@@ -42,12 +53,28 @@ export const registerAgentRoutes = (
   );
 
   app.get(
+    '/api/agent/:id/scheduler/projection',
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('agent scheduler projection');
+      const params = parseParams(agentIdParamsSchema, req.params, 'AGENT_QUERY_INVALID');
+      const query = parseQuery(agentSchedulerProjectionQuerySchema, req.query, 'AGENT_QUERY_INVALID');
+      const projection = await getAgentSchedulerProjection(context, params.id, {
+        limit: query.limit
+      });
+
+      jsonOk(res, toJsonSafe(projection));
+    })
+  );
+
+  app.get(
     '/api/agent/:id/snr/logs',
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('agent snr adjustment logs');
+      const params = parseParams(agentIdParamsSchema, req.params, 'SNR_LOG_QUERY_INVALID');
+      const query = parseQuery(agentSnrLogsQuerySchema, req.query, 'SNR_LOG_QUERY_INVALID');
       const logs = await listSnrAdjustmentLogs(context, {
-        agent_id: req.params.id,
-        limit: typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : undefined
+        agent_id: params.id,
+        limit: query.limit
       });
 
       jsonOk(res, toJsonSafe(logs));

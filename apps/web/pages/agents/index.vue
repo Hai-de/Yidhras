@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-full items-center justify-center p-8">
-    <div class="yd-panel-surface max-w-2xl rounded-xl px-8 py-10 text-center">
-      <div class="text-[11px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
+    <div class="yd-workbench-pane max-w-2xl rounded-sm px-8 py-10 text-center">
+      <div class="text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
         Agent Detail
       </div>
       <h1 class="mt-4 text-2xl font-semibold text-yd-text-primary">

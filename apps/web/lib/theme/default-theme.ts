@@ -9,38 +9,38 @@ export const DEFAULT_APP_THEME: AppThemeDefinition = {
   core: {
     colors: {
       bg: {
-        app: '#111418',
-        panel: '#181c22',
-        elevated: '#20252d',
-        overlay: 'rgba(11, 14, 18, 0.82)'
+        app: '#1e1e1e',
+        panel: '#252526',
+        elevated: '#2d2d30',
+        overlay: 'rgba(30, 30, 30, 0.78)'
       },
       border: {
-        strong: '#3b4350',
-        muted: '#2a313c'
+        strong: '#383838',
+        muted: '#2a2a2a'
       },
       text: {
-        primary: '#e6edf3',
-        secondary: '#a9b4c2',
-        muted: '#7d8897',
-        inverse: '#0b0f14'
+        primary: '#cccccc',
+        secondary: '#9da1a6',
+        muted: '#6c737f',
+        inverse: '#ffffff'
       },
       state: {
-        success: '#35d07f',
-        warning: '#f1c453',
-        danger: '#ff6e7c',
-        info: '#57b8ff',
-        accent: '#6ea8fe'
+        success: '#89d185',
+        warning: '#cca700',
+        danger: '#f14c4c',
+        info: '#4fc1ff',
+        accent: '#3794ff'
       },
       graph: {
-        agent: '#6ea8fe',
-        atmosphere: '#3cc4aa',
-        relay: '#f1c453',
-        container: '#8a93a3',
-        edge: '#394252',
-        selected: '#57b8ff'
+        agent: '#3794ff',
+        atmosphere: '#4ec9b0',
+        relay: '#d7ba7d',
+        container: '#8b949e',
+        edge: '#3d434a',
+        selected: '#4fc1ff'
       },
       grid: {
-        line: 'rgba(110, 168, 254, 0.1)'
+        line: 'rgba(121, 121, 121, 0.06)'
       }
     },
     typography: {
@@ -49,15 +49,15 @@ export const DEFAULT_APP_THEME: AppThemeDefinition = {
     },
     radius: {
       sm: '2px',
-      md: '4px',
-      lg: '6px'
+      md: '3px',
+      lg: '4px'
     },
     border: {
       width: '1px'
     },
     shadow: {
-      panel: 'inset 0 1px 0 rgba(255, 255, 255, 0.02)',
-      elevated: '0 0 0 1px rgba(59, 67, 80, 0.4), 0 8px 24px rgba(0, 0, 0, 0.2)'
+      panel: 'none',
+      elevated: '0 0 0 1px rgba(255, 255, 255, 0.02), 0 8px 24px rgba(0, 0, 0, 0.14)'
     }
   },
   layout: {

@@ -6,8 +6,8 @@ defineProps<{
 </script>
 
 <template>
-  <div class="yd-workbench-inset rounded-md px-4 py-6">
-    <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
+  <div class="yd-workbench-inset rounded-sm px-4 py-5">
+    <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
       Empty State
     </div>
     <div class="mt-3 text-sm font-medium text-yd-text-primary">

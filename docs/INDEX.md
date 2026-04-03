@@ -41,15 +41,10 @@
 - 看 `apps/web/README.md`
 - 适合前端开发者、联调者以及需要了解 Operator UI 现状的人
 
-### 想查看当前前端 UI polish / interaction 增强冻结计划
+### 想理解前端主题系统、默认主题规则与 provider-owned theming 约定
 
-- 看 `.limcode/plans/frontend-operator-ui-polish-and-interaction-enhancement.plan.md`
-- 这里记录已完成项、Guardrails、渐进式交付顺序与验收标准
-
-### 想查看 Graph 深化与 Timeline / Social 语义映射优化收口文档
-
-- 看 `.limcode/plans/frontend-graph-deepen-and-timeline-social-mapping.plan.md`
-- 这里记录本轮 Graph quick roots / search context / mapping refinement 的收口结果与冻结验证清单
+- 看 `THEME.md`
+- 适合前端开发者、provider 集成方以及需要修改默认 workbench 主题的人
 
 ## 文档职责边界
 
@@ -58,10 +53,12 @@
 - `LOGIC.md`：只负责业务规则、领域语义、当前明确成立的逻辑边界
 - `TODO.md`：只负责阶段状态、优先级、近期计划
 - `记录.md`：只负责验证证据、验收边界、历史快照
+- `THEME.md`：只负责前端主题 contract、默认主题规则、provider-owned theme 约定与主题开发操作手册
+- `ENHANCEMENTS.md`：只负责当前不阻塞主线、但值得后续回收的增强项清单
 - `apps/web/README.md`：只负责前端当前状态、Guardrails 与前端主文件导航
 
 ## 非正式文档说明
 
-- `.limcode/plans/`：执行计划、拆解草案、历史过程资产；其中当前前端 UI polish 冻结计划与 Graph/Mapping 收口计划可作为后续前端增量开发参考
+- `.limcode/plans/`：执行计划、拆解草案、历史过程资产
 - `.limcode/design/`：设计草案，不默认代表已落地实现
 - `.limcode/review/`：评审记录与结论

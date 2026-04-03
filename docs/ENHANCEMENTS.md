@@ -142,6 +142,35 @@
 - 延期原因：
   当前阶段更适合先保证主链路可跑、再逐步扩充测试资产。
 
+### 4. Agent scheduler projection 轻量摘要增强
+- 状态：deferred
+- 优先级：low
+- 范围：scheduler observability / agent projection / operator-facing read model
+- 背景：
+  当前 `GET /api/agent/:id/scheduler/projection` 已经提供 actor summary、timeline、reason breakdown 与 recent run/job linkage，且 `workflow_link` 已补到解释型摘要层；但 projection 摘要层仍保留一批轻量增强候选。
+- 后续增强候选：
+  - `latest_created_job_status`
+  - `latest_created_job_intent_class`
+  - `skipped_by_kind`
+  - `run summary excerpt`
+  - agent-level `latest_audit_summary`
+- 延期原因：
+  当前主线已从最小 cross-link 进入解释型摘要深化阶段，但 agent-level 聚合摘要增强仍属于次优先级，不应打断更高优先级的 scheduler/operator 联动建设。
+
+### 5. Scheduler operator deeper highlights / breakdowns
+- 状态：deferred
+- 优先级：low
+- 范围：scheduler operator projection / observability
+- 背景：
+  当前 operator projection 已具备 latest run、summary、trends、recent runs/decisions 以及 highlights，并已补充 skipped/failure/workflow-state 的轻量摘要；但更细的 worker-level / actor-level breakdown 仍未纳入。
+- 后续增强候选：
+  - worker-level highlights
+  - actor-level failure / skip hot spots
+  - richer failure-code breakdown
+- 延期原因：
+  当前主线优先把轻量 operator 总览层搭稳；更细分的 breakdown 应在真实前端消费需求明确后再推进。
+
+
 ---
 
 ## 三、前后端联动

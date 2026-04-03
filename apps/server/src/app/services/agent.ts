@@ -105,6 +105,7 @@ export interface AgentOverviewSnapshot {
 const DEFAULT_SNR_LOG_LIMIT = 20;
 const MAX_SNR_LOG_LIMIT = 100;
 const DEFAULT_AGENT_OVERVIEW_LIMIT = 10;
+const AGENT_QUERY_INVALID = 'AGENT_QUERY_INVALID';
 
 const buildPermissionContext = (agent: {
   id: string;
@@ -128,6 +129,37 @@ const assertNonEmptyAgentId = (agentId: string): string => {
   }
 
   return agentId.trim();
+};
+
+const parsePositiveBoundedLimit = (
+  value: number | undefined,
+  options: {
+    defaultValue: number;
+    maxValue: number;
+    errorCode: string;
+    fieldName: string;
+  }
+): number => {
+  if (value === undefined) {
+    return options.defaultValue;
+  }
+
+  if (!Number.isFinite(value) || Number.isNaN(value)) {
+    throw new ApiError(400, options.errorCode, `${options.fieldName} must be a positive integer`, {
+      field: options.fieldName,
+      value
+    });
+  }
+
+  const normalized = Math.trunc(value);
+  if (normalized < 1) {
+    throw new ApiError(400, options.errorCode, `${options.fieldName} must be a positive integer`, {
+      field: options.fieldName,
+      value
+    });
+  }
+
+  return Math.min(options.maxValue, normalized);
 };
 
 const toTickString = (value: bigint | null): string | null => {
@@ -174,7 +206,12 @@ export const getAgentOverview = async (
   }
 ): Promise<AgentOverviewSnapshot> => {
   const resolvedAgentId = assertNonEmptyAgentId(agentId);
-  const limit = Math.min(MAX_SNR_LOG_LIMIT, Math.max(1, Math.trunc(options?.limit ?? DEFAULT_AGENT_OVERVIEW_LIMIT)));
+  const limit = parsePositiveBoundedLimit(options?.limit, {
+    defaultValue: DEFAULT_AGENT_OVERVIEW_LIMIT,
+    maxValue: MAX_SNR_LOG_LIMIT,
+    errorCode: AGENT_QUERY_INVALID,
+    fieldName: 'limit'
+  });
 
   const agent = await context.prisma.agent.findUnique({
     where: { id: resolvedAgentId },
@@ -408,11 +445,12 @@ export const listSnrAdjustmentLogs = async (
     throw new ApiError(400, 'SNR_LOG_QUERY_INVALID', 'agent_id is required');
   }
 
-  const requestedLimit =
-    typeof input.limit === 'number' && Number.isFinite(input.limit)
-      ? Math.trunc(input.limit)
-      : DEFAULT_SNR_LOG_LIMIT;
-  const limit = Math.min(MAX_SNR_LOG_LIMIT, Math.max(1, requestedLimit));
+  const limit = parsePositiveBoundedLimit(input.limit, {
+    defaultValue: DEFAULT_SNR_LOG_LIMIT,
+    maxValue: MAX_SNR_LOG_LIMIT,
+    errorCode: 'SNR_LOG_QUERY_INVALID',
+    fieldName: 'limit'
+  });
 
   return context.sim.prisma.sNRAdjustmentLog.findMany({
     where: {

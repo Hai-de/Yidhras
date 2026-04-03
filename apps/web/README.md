@@ -24,7 +24,7 @@ This app is currently being rebuilt into an Operator-first control console rathe
 - Graph 深化与 Timeline / Social 语义映射优化已完成首轮增量：
   - Graph quick roots、search context、inspector grouping / action explainers 已落地
   - Timeline → Social 已支持 intent-first + tick-scoped context
-  - Social → Timeline 已改为 timeline slice，而非伪装成精确 event 跳转
+  - Social → Timeline 已改为 timeline slice，而非表达为精确 event 跳转
   - Social / Timeline mapping context banner 已补齐
 - Naive UI → Nuxt UI 基础设施迁移已完成当前阶段收口：
   - 通知链路已通过 `composables/ui/useAppToast.ts` 统一抽象，并切换到底层 Nuxt UI `useToast`
@@ -236,3 +236,4 @@ pnpm --filter web preview
 - `docs/ARCH.md`: 架构边界与 contract/validation 原则
 - `docs/LOGIC.md`: 业务逻辑说明与 BigInt transport 规则
 - `docs/ENHANCEMENTS.md`: 当前暂缓处理但值得后续回收的增强项清单
+- `docs/THEME.md`: 前端主题 contract、默认主题规则、provider-owned theme 与主题开发手册

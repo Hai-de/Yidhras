@@ -43,6 +43,11 @@ interface StatusPayload {
       override_since: number | null;
       effective_step_ticks: string;
     };
+    scheduler: {
+      worker_id: string;
+      partition_count: number;
+      owned_partition_ids: string[];
+    };
     health_level: 'ok' | 'degraded' | 'fail';
     world_pack: StatusWorldPack | null;
     has_error: boolean;
@@ -124,6 +129,10 @@ const asStatusPayload = (value: unknown): StatusPayload => {
     data.runtime_speed.override_since === null || typeof data.runtime_speed.override_since === 'number',
     'runtime_speed.override_since must be number|null'
   );
+  assert(isRecord(data.scheduler), 'status.scheduler must be object');
+  assert(typeof data.scheduler.worker_id === 'string', 'status.scheduler.worker_id must be string');
+  assert(typeof data.scheduler.partition_count === 'number', 'status.scheduler.partition_count must be number');
+  assert(Array.isArray(data.scheduler.owned_partition_ids), 'status.scheduler.owned_partition_ids must be array');
 
   const rawWorldPack = data.world_pack;
   let worldPack: StatusWorldPack | null = null;
@@ -154,6 +163,11 @@ const asStatusPayload = (value: unknown): StatusPayload => {
         override_since:
           typeof data.runtime_speed.override_since === 'number' ? data.runtime_speed.override_since : null,
         effective_step_ticks: data.runtime_speed.effective_step_ticks
+      },
+      scheduler: {
+        worker_id: data.scheduler.worker_id,
+        partition_count: data.scheduler.partition_count,
+        owned_partition_ids: data.scheduler.owned_partition_ids.filter((item: unknown) => typeof item === 'string')
       },
       health_level: data.health_level as StatusPayload['data']['health_level'],
       world_pack: worldPack,
@@ -189,6 +203,8 @@ const main = async () => {
       status.data.health_level === health.data.level,
       `status.health_level(${status.data.health_level}) should match health.level(${health.data.level})`
     );
+    assert(status.data.scheduler.partition_count > 0, 'scheduler.partition_count should be positive');
+    assert(Array.isArray(status.data.scheduler.owned_partition_ids), 'scheduler.owned_partition_ids should be array');
 
     if (health.data.level === 'ok') {
       assert(status.data.runtime_ready === true, 'runtime should be ready when level=ok');

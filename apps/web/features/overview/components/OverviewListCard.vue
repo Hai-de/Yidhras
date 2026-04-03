@@ -25,13 +25,13 @@ const toneClass = (tone: OverviewListItemViewModel['tone']) => {
     case 'info':
       return 'border-yd-state-info/40'
     default:
-      return 'border-yd-border-muted'
+      return ''
   }
 }
 </script>
 
 <template>
-  <div class="yd-workbench-pane flex h-full min-h-[18rem] flex-col rounded-md">
+  <div class="yd-workbench-pane flex h-full min-h-[18rem] flex-col rounded-sm">
     <WorkspaceSectionHeader :title="title" :subtitle="subtitle" />
 
     <div v-if="props.items.length > 0" class="flex-1 space-y-2.5 overflow-y-auto px-4 py-4 no-scrollbar">
@@ -39,17 +39,17 @@ const toneClass = (tone: OverviewListItemViewModel['tone']) => {
         v-for="item in props.items"
         :key="item.id"
         type="button"
-        class="yd-workbench-item w-full rounded-sm px-4 py-3 text-left transition-colors"
+        class="yd-list-row w-full rounded-sm px-4 py-3 text-left"
         :class="toneClass(item.tone)"
         @click="emit('select', item.id)"
       >
         <div class="text-sm font-medium text-yd-text-primary">
           {{ item.title }}
         </div>
-        <div class="mt-2 text-[11px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
+        <div class="mt-2 text-[11px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
           {{ item.meta }}
         </div>
-        <div v-if="item.actionLabel" class="mt-3 text-[10px] uppercase tracking-[0.18em] text-yd-state-accent yd-font-mono">
+        <div v-if="item.actionLabel" class="mt-3 text-[10px] uppercase tracking-[0.12em] text-yd-state-accent yd-font-mono">
           {{ item.actionLabel }}
         </div>
       </button>

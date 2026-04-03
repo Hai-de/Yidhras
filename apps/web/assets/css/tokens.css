@@ -1,42 +1,42 @@
 :root {
-  --yd-color-bg-app: #111418;
-  --yd-color-bg-panel: #181c22;
-  --yd-color-bg-elevated: #20252d;
-  --yd-color-bg-overlay: rgba(11, 14, 18, 0.82);
+  --yd-color-bg-app: #1e1e1e;
+  --yd-color-bg-panel: #252526;
+  --yd-color-bg-elevated: #2d2d30;
+  --yd-color-bg-overlay: rgba(30, 30, 30, 0.78);
 
-  --yd-color-border-strong: #3b4350;
-  --yd-color-border-muted: #2a313c;
+  --yd-color-border-strong: #383838;
+  --yd-color-border-muted: #2a2a2a;
 
-  --yd-color-text-primary: #e6edf3;
-  --yd-color-text-secondary: #a9b4c2;
-  --yd-color-text-muted: #7d8897;
-  --yd-color-text-inverse: #0b0f14;
+  --yd-color-text-primary: #cccccc;
+  --yd-color-text-secondary: #9da1a6;
+  --yd-color-text-muted: #6c737f;
+  --yd-color-text-inverse: #ffffff;
 
-  --yd-color-state-success: #35d07f;
-  --yd-color-state-warning: #f1c453;
-  --yd-color-state-danger: #ff6e7c;
-  --yd-color-state-info: #57b8ff;
-  --yd-color-state-accent: #6ea8fe;
+  --yd-color-state-success: #89d185;
+  --yd-color-state-warning: #cca700;
+  --yd-color-state-danger: #f14c4c;
+  --yd-color-state-info: #4fc1ff;
+  --yd-color-state-accent: #3794ff;
 
-  --yd-graph-agent: #6ea8fe;
-  --yd-graph-atmosphere: #3cc4aa;
-  --yd-graph-relay: #f1c453;
-  --yd-graph-container: #8a93a3;
-  --yd-graph-edge: #394252;
-  --yd-graph-selected: #57b8ff;
+  --yd-graph-agent: #3794ff;
+  --yd-graph-atmosphere: #4ec9b0;
+  --yd-graph-relay: #d7ba7d;
+  --yd-graph-container: #8b949e;
+  --yd-graph-edge: #3d434a;
+  --yd-graph-selected: #4fc1ff;
 
-  --yd-grid-line-color: rgba(110, 168, 254, 0.1);
+  --yd-grid-line-color: rgba(121, 121, 121, 0.06);
 
   --yd-font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --yd-font-mono: 'IBM Plex Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
 
   --yd-radius-sm: 2px;
-  --yd-radius-md: 4px;
-  --yd-radius-lg: 6px;
+  --yd-radius-md: 3px;
+  --yd-radius-lg: 4px;
   --yd-border-width: 1px;
 
-  --yd-shadow-panel: inset 0 1px 0 rgba(255, 255, 255, 0.02);
-  --yd-shadow-elevated: 0 0 0 1px rgba(59, 67, 80, 0.4), 0 8px 24px rgba(0, 0, 0, 0.2);
+  --yd-shadow-panel: none;
+  --yd-shadow-elevated: 0 0 0 1px rgba(255, 255, 255, 0.02), 0 8px 24px rgba(0, 0, 0, 0.14);
 
   --yd-layout-min-width: 1280px;
   --yd-layout-max-content-width: 1920px;
@@ -50,5 +50,5 @@
   --yd-layout-shell-dock-default-height: 224px;
   --yd-layout-shell-dock-max-height: 480px;
 
-  --yd-panel-backdrop-blur: 10px;
+  --yd-panel-backdrop-blur: 8px;
 }

@@ -61,27 +61,30 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex flex-col border-t border-yd-border-muted bg-yd-panel/95 backdrop-blur-sm" :style="{ height: `${clampedHeight}px` }">
-    <button
-      type="button"
-      class="flex h-3 shrink-0 cursor-row-resize items-center justify-center text-yd-text-muted transition-colors hover:text-yd-text-primary"
-      :class="isDragging ? 'text-yd-text-primary' : ''"
+  <div class="yd-dock-root yd-shell-surface yd-separator-top flex min-h-0 flex-col border-x-0 border-b-0 bg-yd-panel/95 backdrop-blur-sm" :style="{ height: `${clampedHeight}px` }">
+    <div
+      class="yd-dock-split-hit-area flex h-4 shrink-0 cursor-row-resize items-end justify-center"
+      :class="isDragging ? 'yd-dock-split-hit-area--active' : ''"
+      role="separator"
       aria-label="Resize bottom dock"
+      aria-orientation="horizontal"
       @pointerdown.prevent="handleResizeStart"
     >
-      <span class="h-px w-12 bg-current opacity-70" />
-    </button>
+      <div class="yd-dock-split-handle" :class="isDragging ? 'yd-dock-split-handle--active' : ''">
+        <span class="yd-dock-split-handle-grip" />
+      </div>
+    </div>
 
-    <div class="flex items-center gap-1.5 border-b border-yd-border-muted px-4 py-2">
+    <div class="yd-separator-bottom flex items-end gap-1 px-3">
       <button
         v-for="tab in props.tabs"
         :key="tab.id"
         type="button"
-        class="rounded-sm border px-3 py-1.5 text-[11px] uppercase tracking-[0.18em] transition-colors yd-font-mono"
+        class="relative -mb-px inline-flex h-8 items-center border-b-2 border-transparent bg-transparent px-2 text-[10px] uppercase tracking-[0.12em] transition-colors yd-font-mono"
         :class="[
           tab.id === props.activeTabId
-            ? 'border-yd-state-accent bg-yd-elevated text-yd-text-primary'
-            : 'border-yd-border-muted text-yd-text-muted hover:border-yd-border-strong hover:text-yd-text-primary'
+            ? 'text-yd-text-primary after:absolute after:bottom-0 after:left-2 after:right-2 after:h-[2px] after:bg-yd-state-accent after:content-[\'\']'
+            : 'text-yd-text-muted hover:text-yd-text-primary'
         ]"
         @click="emit('select', tab.id)"
       >
@@ -89,10 +92,12 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <div class="min-h-0 flex-1 px-3 py-3">
-      <div class="yd-panel-surface h-full overflow-y-auto rounded-md px-4 py-3 text-sm text-yd-text-secondary">
+    <div class="min-h-0 flex-1 overflow-hidden px-4 py-2.5">
+      <div class="h-full overflow-y-auto rounded-sm text-sm text-yd-text-secondary no-scrollbar">
         <slot>
-          Dock content placeholder
+          <div class="yd-workbench-inset rounded-sm px-4 py-3">
+            Dock content placeholder
+          </div>
         </slot>
       </div>
     </div>

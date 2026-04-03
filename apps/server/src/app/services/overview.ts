@@ -55,10 +55,10 @@ const hasPropagationIntent = (entry: AuditViewEntry): boolean => {
 };
 
 export const getOverviewSummary = async (context: AppContext): Promise<OverviewSummarySnapshot> => {
-  const runtime = getRuntimeStatusSnapshot(context);
   const currentTick = context.sim.clock.getTicks();
 
-  const [activeAgentCount, notifications, recentAudit, latestEvents, latestPosts] = await Promise.all([
+  const [runtime, activeAgentCount, notifications, recentAudit, latestEvents, latestPosts] = await Promise.all([
+    getRuntimeStatusSnapshot(context),
     context.prisma.agent.count({
       where: {
         type: 'active'

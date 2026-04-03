@@ -16,8 +16,25 @@ import { recordSchedulerRunSnapshot } from '../services/scheduler_observability.
 import {
   acquireSchedulerLease,
   getSchedulerCursor,
+  renewSchedulerLease,
   updateSchedulerCursor
 } from './scheduler_lease.js';
+import {
+  completeActiveSchedulerOwnershipMigration,
+  isWorkerAllowedToOperateSchedulerPartition,
+  refreshSchedulerWorkerRuntimeLiveness,
+  refreshSchedulerWorkerRuntimeState,
+  resolveSchedulerOwnershipSnapshot
+} from './scheduler_ownership.js';
+import {
+  DEFAULT_SCHEDULER_PARTITION_ID,
+  getSchedulerPartitionCount,
+  resolveSchedulerPartitionId
+} from './scheduler_partitioning.js';
+import {
+  applySchedulerAutomaticRebalanceForWorker,
+  evaluateSchedulerAutomaticRebalance
+} from './scheduler_rebalance.js';
 
 export const DEFAULT_AGENT_SCHEDULER_COOLDOWN_TICKS = 3n;
 export const DEFAULT_AGENT_SCHEDULER_LIMIT = 5;
@@ -46,6 +63,7 @@ interface SchedulerSignalRecord {
 
 interface SchedulerCandidate {
   agent_id: string;
+  partition_id: string;
   kind: SchedulerKind;
   primary_reason: SchedulerReason;
   secondary_reasons: SchedulerReason[];
@@ -67,6 +85,7 @@ interface SchedulerRecoverySuppressionPolicy {
 
 export interface AgentSchedulerCandidateDecisionSnapshot {
   actor_id: string;
+  partition_id: string;
   kind: SchedulerKind;
   candidate_reasons: SchedulerReason[];
   chosen_reason: SchedulerReason;
@@ -163,9 +182,14 @@ const shouldSuppressCandidateForRecoveryWindow = (
   return policy.suppress_event_tiers.includes(signalPolicy.suppression_tier);
 };
 
-const buildPeriodicCandidates = (agents: SchedulerAgentRecord[], now: bigint, schedulerReason: SchedulerReason): SchedulerCandidate[] => {
+const buildPeriodicCandidates = (
+  agents: SchedulerAgentRecord[],
+  now: bigint,
+  schedulerReason: SchedulerReason
+): SchedulerCandidate[] => {
   return agents.map(agent => ({
     agent_id: agent.id,
+    partition_id: agent.partition_id,
     kind: 'periodic',
     primary_reason: schedulerReason,
     secondary_reasons: [],
@@ -195,6 +219,7 @@ const mergeEventDrivenSignals = (signals: SchedulerSignalRecord[], now: bigint):
 
     candidates.push({
       agent_id: agentId,
+      partition_id: resolveSchedulerPartitionId(agentId),
       kind: 'event_driven',
       primary_reason: primaryReason,
       secondary_reasons: secondaryReasons,
@@ -214,17 +239,22 @@ const sortSchedulerCandidates = (candidates: SchedulerCandidate[]): SchedulerCan
     if (left.scheduled_for_tick !== right.scheduled_for_tick) {
       return left.scheduled_for_tick < right.scheduled_for_tick ? -1 : 1;
     }
+    if (left.partition_id !== right.partition_id) {
+      return left.partition_id.localeCompare(right.partition_id);
+    }
     return left.agent_id.localeCompare(right.agent_id);
   });
 };
 
 interface SchedulerAgentRecord {
   id: string;
+  partition_id: string;
 }
 
 export interface RunAgentSchedulerOptions {
   context: AppContext;
   workerId?: string;
+  partitionIds?: string[];
   limit?: number;
   cooldownTicks?: bigint;
   strategy?: 'mock' | 'rule_based';
@@ -244,6 +274,12 @@ export interface AgentSchedulerRunResult {
   skipped_existing_idempotency_count: number;
   skipped_by_reason: Record<SchedulerSkipReason, number>;
   scheduler_run_id?: string;
+  scheduler_run_ids?: string[];
+  partition_ids?: string[];
+}
+
+interface PartitionSchedulerRunResult extends Omit<AgentSchedulerRunResult, 'scheduler_run_ids' | 'partition_ids'> {
+  partition_id: string;
 }
 
 const buildSchedulerIdempotencyKey = (
@@ -263,7 +299,8 @@ const buildScheduledInferenceRequestInput = (
   reason: SchedulerReason,
   secondaryReasons: SchedulerReason[],
   priorityScore: number,
-  strategy: 'mock' | 'rule_based'
+  strategy: 'mock' | 'rule_based',
+  partitionId: string
 ): InferenceRequestInput => {
   return {
     agent_id: agentId,
@@ -277,7 +314,8 @@ const buildScheduledInferenceRequestInput = (
       scheduler_secondary_reasons: secondaryReasons,
       scheduler_priority_score: priorityScore,
       scheduler_tick: tick.toString(),
-      scheduler_scheduled_for_tick: scheduledForTick.toString()
+      scheduler_scheduled_for_tick: scheduledForTick.toString(),
+      scheduler_partition_id: partitionId
     }
   };
 };
@@ -302,71 +340,130 @@ const createInitialSkipCounts = (): Record<SchedulerSkipReason, number> => ({
   limit_reached: 0
 });
 
-export const runAgentScheduler = async ({
+const createEmptyPartitionRunResult = (partitionId: string): PartitionSchedulerRunResult => ({
+  partition_id: partitionId,
+  scanned_count: 0,
+  eligible_count: 0,
+  created_count: 0,
+  skipped_pending_count: 0,
+  skipped_cooldown_count: 0,
+  created_periodic_count: 0,
+  created_event_driven_count: 0,
+  signals_detected_count: 0,
+  scheduled_for_future_count: 0,
+  skipped_existing_idempotency_count: 0,
+  skipped_by_reason: createInitialSkipCounts()
+});
+
+const aggregatePartitionRunResults = (results: PartitionSchedulerRunResult[]): AgentSchedulerRunResult => {
+  const skipCounts = createInitialSkipCounts();
+  for (const result of results) {
+    for (const [reason, count] of Object.entries(result.skipped_by_reason) as Array<[SchedulerSkipReason, number]>) {
+      skipCounts[reason] += count;
+    }
+  }
+
+  const schedulerRunIds = results
+    .map(result => result.scheduler_run_id)
+    .filter((value): value is string => typeof value === 'string');
+
+  const partitionIds = results.map(result => result.partition_id);
+
+  return {
+    scanned_count: results.reduce((sum, item) => sum + item.scanned_count, 0),
+    eligible_count: results.reduce((sum, item) => sum + item.eligible_count, 0),
+    created_count: results.reduce((sum, item) => sum + item.created_count, 0),
+    skipped_pending_count: results.reduce((sum, item) => sum + item.skipped_pending_count, 0),
+    skipped_cooldown_count: results.reduce((sum, item) => sum + item.skipped_cooldown_count, 0),
+    created_periodic_count: results.reduce((sum, item) => sum + item.created_periodic_count, 0),
+    created_event_driven_count: results.reduce((sum, item) => sum + item.created_event_driven_count, 0),
+    signals_detected_count: results.reduce((sum, item) => sum + item.signals_detected_count, 0),
+    scheduled_for_future_count: results.reduce((sum, item) => sum + item.scheduled_for_future_count, 0),
+    skipped_existing_idempotency_count: results.reduce((sum, item) => sum + item.skipped_existing_idempotency_count, 0),
+    skipped_by_reason: skipCounts,
+    scheduler_run_id: schedulerRunIds[0],
+    scheduler_run_ids: schedulerRunIds,
+    partition_ids: partitionIds
+  };
+};
+
+const runAgentSchedulerForPartition = async ({
   context,
-  workerId = 'runtime:local',
-  limit = DEFAULT_AGENT_SCHEDULER_LIMIT,
-  cooldownTicks = DEFAULT_AGENT_SCHEDULER_COOLDOWN_TICKS,
-  strategy = 'rule_based',
-  schedulerReason = 'periodic_tick'
-}: RunAgentSchedulerOptions): Promise<AgentSchedulerRunResult> => {
-  const startedAt = context.sim.clock.getTicks();
-  const now = context.sim.clock.getTicks();
+  workerId,
+  partitionId,
+  limit,
+  cooldownTicks,
+  strategy,
+  schedulerReason,
+  now,
+  startedAt
+}: {
+  context: AppContext;
+  workerId: string;
+  partitionId: string;
+  limit: number;
+  cooldownTicks: bigint;
+  strategy: 'mock' | 'rule_based';
+  schedulerReason: SchedulerReason;
+  now: bigint;
+  startedAt: bigint;
+}): Promise<PartitionSchedulerRunResult> => {
   const leaseResult = await acquireSchedulerLease(context, {
     workerId,
+    partitionId,
     now
   });
   if (!leaseResult.acquired) {
-    return {
-      scanned_count: 0,
-      eligible_count: 0,
-      created_count: 0,
-      skipped_pending_count: 0,
-      skipped_cooldown_count: 0,
-      created_periodic_count: 0,
-      created_event_driven_count: 0,
-      signals_detected_count: 0,
-      scheduled_for_future_count: 0,
-      skipped_existing_idempotency_count: 0,
-      skipped_by_reason: createInitialSkipCounts()
-    };
+    return createEmptyPartitionRunResult(partitionId);
   }
-  const agents = await listActiveSchedulerAgents(context, limit);
+
+  if (!(await isWorkerAllowedToOperateSchedulerPartition(context, { partitionId, workerId }))) {
+    return createEmptyPartitionRunResult(partitionId);
+  }
+
+  await completeActiveSchedulerOwnershipMigration(context, { partitionId, toWorkerId: workerId });
+
+  const cursor = await getSchedulerCursor(context, partitionId);
   const lookbackTicks = cooldownTicks > 0n ? cooldownTicks : 1n;
-  const cursor = await getSchedulerCursor(context);
   const signalSinceTick = cursor ? cursor.last_signal_tick : now - lookbackTicks;
-  const recentEventSignals = await listRecentEventFollowupSignals(context, signalSinceTick);
-  const recentRelationshipSignals = await listRecentRelationshipFollowupSignals(context, signalSinceTick);
-  const recentSnrSignals = await listRecentSnrFollowupSignals(context, signalSinceTick);
-  const [replayRecoveryActors, retryRecoveryActors] = await Promise.all([
-    listRecentRecoveryWindowActors(context, signalSinceTick, ['replay_recovery']),
-    listRecentRecoveryWindowActors(context, signalSinceTick, ['retry_recovery'])
-  ]);
+  const [allAgents, recentEventSignals, recentRelationshipSignals, recentSnrSignals, replayRecoveryActors, retryRecoveryActors] =
+    await Promise.all([
+      listActiveSchedulerAgents(context, limit * Math.max(getSchedulerPartitionCount(), 1)),
+      listRecentEventFollowupSignals(context, signalSinceTick),
+      listRecentRelationshipFollowupSignals(context, signalSinceTick),
+      listRecentSnrFollowupSignals(context, signalSinceTick),
+      listRecentRecoveryWindowActors(context, signalSinceTick, ['replay_recovery']),
+      listRecentRecoveryWindowActors(context, signalSinceTick, ['retry_recovery'])
+    ]);
+
+  const agents: SchedulerAgentRecord[] = allAgents
+    .map(agent => ({ id: agent.id, partition_id: resolveSchedulerPartitionId(agent.id) }))
+    .filter(agent => agent.partition_id === partitionId)
+    .slice(0, limit);
+
   const agentIds = agents.map(agent => agent.id);
   const skipCounts = createInitialSkipCounts();
   const candidateDecisions: AgentSchedulerCandidateDecisionSnapshot[] = [];
 
   if (agentIds.length === 0) {
-    const summary: AgentSchedulerRunResult = {
-      scanned_count: 0,
-      eligible_count: 0,
-      created_count: 0,
-      skipped_pending_count: 0,
-      skipped_cooldown_count: 0,
-      created_periodic_count: 0,
-      created_event_driven_count: 0,
-      signals_detected_count: 0,
-      scheduled_for_future_count: 0,
-      skipped_existing_idempotency_count: 0,
-      skipped_by_reason: skipCounts
-    };
+    const summary = createEmptyPartitionRunResult(partitionId);
     const schedulerRunId = await recordSchedulerRunSnapshot(context, {
       workerId,
+      partitionId,
+      leaseHolder: workerId,
+      leaseExpiresAtSnapshot: leaseResult.expires_at,
       tick: now,
       startedAt,
       finishedAt: context.sim.clock.getTicks(),
       summary,
       candidateDecisions
+    });
+
+    await updateSchedulerCursor(context, {
+      partitionId,
+      lastScannedTick: now,
+      lastSignalTick: now,
+      now
     });
 
     return {
@@ -381,7 +478,9 @@ export const runAgentScheduler = async ({
   );
 
   const periodicCandidates = buildPeriodicCandidates(agents, now, schedulerReason);
-  const eventDrivenCandidates = mergeEventDrivenSignals(recentSignals, now);
+  const eventDrivenCandidates = mergeEventDrivenSignals(recentSignals, now).filter(
+    candidate => candidate.partition_id === partitionId && allowedAgentIds.has(candidate.agent_id)
+  );
   const candidates = sortSchedulerCandidates([...eventDrivenCandidates, ...periodicCandidates]);
 
   const [pendingJobAgentIds, pendingIntentAgentIds, recentScheduledTickByAgent] = await Promise.all([
@@ -410,10 +509,26 @@ export const runAgentScheduler = async ({
   let skippedExistingIdempotencyCount = 0;
 
   for (const candidate of candidates) {
+    if (!(await isWorkerAllowedToOperateSchedulerPartition(context, { partitionId, workerId }))) {
+      break;
+    }
+
+    await completeActiveSchedulerOwnershipMigration(context, { partitionId, toWorkerId: workerId });
+
+    const renewedLease = await renewSchedulerLease(context, {
+      workerId,
+      partitionId,
+      now: context.sim.clock.getTicks()
+    });
+    if (!renewedLease.acquired) {
+      break;
+    }
+
     if (scannedCount >= DEFAULT_AGENT_SCHEDULER_MAX_CANDIDATES) {
       skipCounts.limit_reached += 1;
       candidateDecisions.push({
         actor_id: candidate.agent_id,
+        partition_id: partitionId,
         kind: candidate.kind,
         candidate_reasons: [candidate.primary_reason, ...candidate.secondary_reasons],
         chosen_reason: candidate.primary_reason,
@@ -433,6 +548,7 @@ export const runAgentScheduler = async ({
       skipCounts.pending_workflow += 1;
       candidateDecisions.push({
         actor_id: candidate.agent_id,
+        partition_id: partitionId,
         kind: candidate.kind,
         candidate_reasons: [candidate.primary_reason, ...candidate.secondary_reasons],
         chosen_reason: candidate.primary_reason,
@@ -460,6 +576,7 @@ export const runAgentScheduler = async ({
       skipCounts[recoverySuppressedReason] += 1;
       candidateDecisions.push({
         actor_id: candidate.agent_id,
+        partition_id: partitionId,
         kind: candidate.kind,
         candidate_reasons: [candidate.primary_reason, ...candidate.secondary_reasons],
         chosen_reason: candidate.primary_reason,
@@ -476,6 +593,7 @@ export const runAgentScheduler = async ({
       skipCounts.periodic_cooldown += 1;
       candidateDecisions.push({
         actor_id: candidate.agent_id,
+        partition_id: partitionId,
         kind: candidate.kind,
         candidate_reasons: [candidate.primary_reason, ...candidate.secondary_reasons],
         chosen_reason: candidate.primary_reason,
@@ -497,7 +615,8 @@ export const runAgentScheduler = async ({
       candidate.primary_reason,
       candidate.secondary_reasons,
       candidate.priority_score,
-      strategy
+      strategy,
+      partitionId
     );
     const idempotencyKey = requestInput.idempotency_key;
     if (!idempotencyKey) {
@@ -510,6 +629,7 @@ export const runAgentScheduler = async ({
       skipCounts.existing_same_idempotency += 1;
       candidateDecisions.push({
         actor_id: candidate.agent_id,
+        partition_id: partitionId,
         kind: candidate.kind,
         candidate_reasons: [candidate.primary_reason, ...candidate.secondary_reasons],
         chosen_reason: candidate.primary_reason,
@@ -530,6 +650,7 @@ export const runAgentScheduler = async ({
     });
     candidateDecisions.push({
       actor_id: candidate.agent_id,
+      partition_id: partitionId,
       kind: candidate.kind,
       candidate_reasons: [candidate.primary_reason, ...candidate.secondary_reasons],
       chosen_reason: candidate.primary_reason,
@@ -549,7 +670,8 @@ export const runAgentScheduler = async ({
     }
   }
 
-  const summary: AgentSchedulerRunResult = {
+  const summary: PartitionSchedulerRunResult = {
+    partition_id: partitionId,
     scanned_count: scannedCount,
     eligible_count: eligibleCount,
     created_count: createdCount,
@@ -565,6 +687,9 @@ export const runAgentScheduler = async ({
 
   const schedulerRunId = await recordSchedulerRunSnapshot(context, {
     workerId,
+    partitionId,
+    leaseHolder: workerId,
+    leaseExpiresAtSnapshot: leaseResult.expires_at,
     tick: now,
     startedAt,
     finishedAt: context.sim.clock.getTicks(),
@@ -572,6 +697,7 @@ export const runAgentScheduler = async ({
     candidateDecisions
   });
   await updateSchedulerCursor(context, {
+    partitionId,
     lastScannedTick: now,
     lastSignalTick: now,
     now
@@ -581,4 +707,64 @@ export const runAgentScheduler = async ({
     ...summary,
     scheduler_run_id: schedulerRunId
   };
+};
+
+export const runAgentScheduler = async ({
+  context,
+  workerId = 'runtime:local',
+  partitionIds,
+  limit = DEFAULT_AGENT_SCHEDULER_LIMIT,
+  cooldownTicks = DEFAULT_AGENT_SCHEDULER_COOLDOWN_TICKS,
+  strategy = 'rule_based',
+  schedulerReason = 'periodic_tick'
+}: RunAgentSchedulerOptions): Promise<AgentSchedulerRunResult> => {
+  const startedAt = context.sim.clock.getTicks();
+  const now = context.sim.clock.getTicks();
+  await refreshSchedulerWorkerRuntimeLiveness(context, now);
+
+  const initialOwnershipSnapshot = await resolveSchedulerOwnershipSnapshot(context, {
+    workerId,
+    bootstrapPartitionIds: partitionIds
+  });
+  const initialOwnedPartitionIds = initialOwnershipSnapshot.owned_partition_ids;
+
+  await refreshSchedulerWorkerRuntimeState(context, {
+    workerId,
+    ownedPartitionIds: initialOwnedPartitionIds,
+    now
+  });
+
+  await evaluateSchedulerAutomaticRebalance(context, { now });
+  await applySchedulerAutomaticRebalanceForWorker(context, { workerId, now });
+
+  const ownershipSnapshot = await resolveSchedulerOwnershipSnapshot(context, {
+    workerId,
+    bootstrapPartitionIds: partitionIds
+  });
+  const ownedPartitionIds = ownershipSnapshot.owned_partition_ids;
+
+  if (ownedPartitionIds.length === 0) {
+    return {
+      ...createEmptyPartitionRunResult(DEFAULT_SCHEDULER_PARTITION_ID),
+      partition_ids: [],
+      scheduler_run_ids: []
+    };
+  }
+  const partitionResults = await Promise.all(
+    ownedPartitionIds.map(partitionId =>
+      runAgentSchedulerForPartition({
+        context,
+        workerId,
+        partitionId,
+        limit,
+        cooldownTicks,
+        strategy,
+        schedulerReason,
+        now,
+        startedAt
+      })
+    )
+  );
+
+  return aggregatePartitionRunResults(partitionResults);
 };

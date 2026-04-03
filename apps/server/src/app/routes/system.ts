@@ -1,5 +1,6 @@
 import {
   acknowledgementDataSchema,
+  runtimeStatusDataSchema,
   startupHealthDataSchema,
   systemMessageSchema
 } from '@yidhras/contracts';
@@ -27,8 +28,17 @@ export const registerSystemRoutes = (app: Express, context: AppContext): void =>
     jsonOk(res, snapshot);
   });
 
-  app.get('/api/status', (_req, res) => {
-    jsonOk(res, getRuntimeStatusSnapshot(context));
+  app.get('/api/status', async (_req, res, next) => {
+    try {
+      const snapshot = await getRuntimeStatusSnapshot(context, {
+        schedulerWorkerId: process.env.SCHEDULER_WORKER_ID,
+        schedulerPartitionIds: undefined
+      });
+      runtimeStatusDataSchema.parse(snapshot);
+      jsonOk(res, snapshot);
+    } catch (error) {
+      next(error);
+    }
   });
 
   app.get('/api/health', (_req, res) => {

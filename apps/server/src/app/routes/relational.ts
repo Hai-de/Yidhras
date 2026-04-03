@@ -1,7 +1,13 @@
+import {
+  atmosphereNodesQuerySchema,
+  relationshipLogsParamsSchema,
+  relationshipLogsQuerySchema
+} from '@yidhras/contracts';
 import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
+import { parseParams, parseQuery } from '../http/zod.js';
 import {
   getRelationalGraph,
   listAtmosphereNodes,
@@ -42,9 +48,10 @@ export const registerRelationalRoutes = (
     '/api/atmosphere/nodes',
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('atmosphere nodes');
+      const query = parseQuery(atmosphereNodesQuerySchema, req.query, 'RELATIONAL_QUERY_INVALID');
       const nodes = await listAtmosphereNodes(context, {
-        owner_id: typeof req.query.owner_id === 'string' ? req.query.owner_id : undefined,
-        include_expired: req.query.include_expired === 'true'
+        owner_id: query.owner_id,
+        include_expired: query.include_expired === 'true'
       });
 
       jsonOk(res, toJsonSafe(nodes));
@@ -55,11 +62,13 @@ export const registerRelationalRoutes = (
     '/api/relationships/:from_id/:to_id/:type/logs',
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('relationship adjustment logs');
+      const params = parseParams(relationshipLogsParamsSchema, req.params, 'RELATIONSHIP_LOG_QUERY_INVALID');
+      const query = parseQuery(relationshipLogsQuerySchema, req.query, 'RELATIONSHIP_LOG_QUERY_INVALID');
       const logs = await listRelationshipAdjustmentLogs(context, {
-        from_id: req.params.from_id,
-        to_id: req.params.to_id,
-        type: req.params.type,
-        limit: typeof req.query.limit === 'string' ? Number.parseInt(req.query.limit, 10) : undefined
+        from_id: params.from_id,
+        to_id: params.to_id,
+        type: params.type,
+        limit: query.limit
       });
 
       jsonOk(res, toJsonSafe(logs));

@@ -78,22 +78,35 @@ const main = async () => {
 
     const firstAcquire = await acquireSchedulerLease(context, {
       workerId: 'scheduler-worker-a',
+      partitionId: 'p0',
       now: 1000n,
       leaseTicks: 5n
     });
     assert(firstAcquire.acquired === true, 'first scheduler lease acquire should succeed');
     assert(firstAcquire.holder === 'scheduler-worker-a', 'first scheduler lease holder should match worker-a');
+    assert(firstAcquire.partition_id === 'p0', 'first scheduler lease should expose partition_id');
 
     const secondAcquire = await acquireSchedulerLease(context, {
       workerId: 'scheduler-worker-b',
+      partitionId: 'p0',
       now: 1001n,
       leaseTicks: 5n
     });
     assert(secondAcquire.acquired === false, 'second scheduler lease acquire while valid should fail');
     assert(secondAcquire.holder === 'scheduler-worker-a', 'second acquire should report current holder');
 
+    const parallelPartitionAcquire = await acquireSchedulerLease(context, {
+      workerId: 'scheduler-worker-b',
+      partitionId: 'p1',
+      now: 1001n,
+      leaseTicks: 5n
+    });
+    assert(parallelPartitionAcquire.acquired === true, 'different partition lease acquire should succeed in parallel');
+    assert(parallelPartitionAcquire.partition_id === 'p1', 'parallel partition acquire should expose partition_id');
+
     const renewed = await renewSchedulerLease(context, {
       workerId: 'scheduler-worker-a',
+      partitionId: 'p0',
       now: 1002n,
       leaseTicks: 5n
     });
@@ -101,29 +114,44 @@ const main = async () => {
     assert(renewed.expires_at === 1007n, 'renewed scheduler lease expiry should extend');
 
     const expiredAcquire = await acquireSchedulerLease(context, {
-      workerId: 'scheduler-worker-b',
+      workerId: 'scheduler-worker-c',
+      partitionId: 'p0',
       now: 1008n,
       leaseTicks: 3n
     });
     assert(expiredAcquire.acquired === true, 'scheduler lease should be reclaimable after expiry');
-    assert(expiredAcquire.holder === 'scheduler-worker-b', 'expired scheduler lease should transfer holder');
+    assert(expiredAcquire.holder === 'scheduler-worker-c', 'expired scheduler lease should transfer holder');
 
     await updateSchedulerCursor(context, {
+      partitionId: 'p0',
       lastScannedTick: 1008n,
       lastSignalTick: 1007n,
       now: 1008n
     });
+    await updateSchedulerCursor(context, {
+      partitionId: 'p1',
+      lastScannedTick: 1005n,
+      lastSignalTick: 1004n,
+      now: 1005n
+    });
 
-    const cursor = await getSchedulerCursor(context);
-    assert(cursor !== null, 'scheduler cursor should exist after update');
-    assert(cursor?.last_scanned_tick === 1008n, 'scheduler cursor last_scanned_tick should match');
-    assert(cursor?.last_signal_tick === 1007n, 'scheduler cursor last_signal_tick should match');
+    const cursorP0 = await getSchedulerCursor(context, 'p0');
+    const cursorP1 = await getSchedulerCursor(context, 'p1');
+    assert(cursorP0 !== null, 'scheduler cursor p0 should exist after update');
+    assert(cursorP1 !== null, 'scheduler cursor p1 should exist after update');
+    assert(cursorP0?.last_scanned_tick === 1008n, 'scheduler cursor p0 last_scanned_tick should match');
+    assert(cursorP0?.last_signal_tick === 1007n, 'scheduler cursor p0 last_signal_tick should match');
+    assert(cursorP1?.last_scanned_tick === 1005n, 'scheduler cursor p1 last_scanned_tick should match');
+    assert(cursorP1?.last_signal_tick === 1004n, 'scheduler cursor p1 last_signal_tick should match');
 
-    const wrongRelease = await releaseSchedulerLease(context, 'scheduler-worker-a');
+    const wrongRelease = await releaseSchedulerLease(context, 'scheduler-worker-a', 'p0');
     assert(wrongRelease === false, 'releasing scheduler lease by non-holder should fail');
 
-    const released = await releaseSchedulerLease(context, 'scheduler-worker-b');
-    assert(released === true, 'releasing scheduler lease by holder should succeed');
+    const releasedP0 = await releaseSchedulerLease(context, 'scheduler-worker-c', 'p0');
+    assert(releasedP0 === true, 'releasing scheduler lease by holder should succeed');
+
+    const releasedP1 = await releaseSchedulerLease(context, 'scheduler-worker-b', 'p1');
+    assert(releasedP1 === true, 'releasing second partition lease by holder should succeed');
 
     console.log('[scheduler_lease] PASS');
   } catch (error: unknown) {

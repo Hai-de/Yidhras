@@ -1,7 +1,7 @@
 # Yidhras Architecture / 架构文档
 
-Version: v0.5.3-draft
-Last Updated / 最后更新: 2026-03-30
+Version: v0.5.4-draft
+Last Updated / 最后更新: 2026-04-04
 
 > 本文件只描述相对稳定的架构边界、模块职责与设计约束；当前阶段状态请看 `TODO.md`，历史验证请看 `记录.md`。
 
@@ -11,7 +11,7 @@ Yidhras is a narrative simulation platform with layered world modeling and agent
 Yidhras 是一个具备分层世界建模与 Agent 运行逻辑的叙事模拟平台。
 
 The current implementation focuses on a practical baseline rather than speculative completeness.
-当前实现聚焦可运行基线，而不是追求文档层面的“完整幻觉”。
+当前实现聚焦可运行基线，而不是追求脱离实现状态的表面完整性。
 
 ## 2) Repo Layout / 仓库结构
 
@@ -72,8 +72,12 @@ The following guarantees should remain stable across refactors:
 - `packages/contracts` is the shared contract package for transport-boundary schemas and types.
 - `apps/server/src/app/http/zod.ts` provides server-side boundary parsing helpers.
 - Zod schemas validate request/response boundary shape and basic formats.
-- Business rules, permissions, state transitions, and persistence checks stayin service/domain layers.
+- Business rules, permissions, state transitions, and persistence checks stay in service/domain layers.
 - Shared contracts should prioritize API-boundary stability rather than covering all internal models.
+- `agent / relational / scheduler / graph / social / audit / inference / policy / system` current transport boundary now all follow the shared contracts + route parse helper path.
+- 当前 `agent / relational / scheduler / graph / social / audit / inference / policy / system` 传输边界已统一走 shared contracts + route parse helper 路径，不再鼓励 route 层零散手写 query/params 解析。
+- `policy.conditions` transport shape is now owned by `packages/contracts`, while service 层只保留业务语义与持久化层约束。
+- `/api/status` now also executes runtime response schema validation before returning, so system status is no longer a “schema declared but not enforced” surface.
 
 ### 4.2 Simulation Core / 模拟核心
 
@@ -102,16 +106,14 @@ The following guarantees should remain stable across refactors:
 - Persisted workflow records provide a formal bridge between inference and runtime-side dispatch.
 - `DecisionJob.intent_class` now serves as the stable top-level workflow intent classification layer across direct submit, scheduler, replay, and retry paths.
 - `DecisionJob.intent_class` 现已作为 direct submit / scheduler / replay / retry 路径上的稳定顶层工作流意图分类层。
-- Scheduler observability now also exposes summary/trend projections for operator-facing and backend analytics use cases.
-- 调度器观测层现已进一步暴露 summary / trend projection，服务于 operator 与后端分析场景。
-- Scheduler policy baseline is now replay/retry recovery-window aware for periodic cadence suppression.
-- 调度器策略基线现已对 replay / retry recovery window 具备 periodic cadence suppression 语义。
-- Scheduler policy is now further priority-aware inside recovery windows: high-priority `event_followup` may survive, while low-priority `relationship_change_followup` / `snr_change_followup` can be suppressed.
-- 调度器策略现已进一步在 recovery window 内具备 priority-aware 语义：高优先级 `event_followup` 可保留，低优先级 `relationship_change_followup` / `snr_change_followup` 可被 suppress。
-- Scheduler observability baseline now includes persisted `SchedulerRun` and `SchedulerCandidateDecision` read models.
-- 调度器观测基线现已包含持久化的 `SchedulerRun` 与 `SchedulerCandidateDecision` 读模型。
-- Fine-grained recovery-window skip taxonomy now distinguishes periodic vs event-driven suppression for replay/retry paths.
-- recovery-window 的细粒度 skip taxonomy 现已区分 replay / retry 路径下的 periodic suppression 与 event-driven suppression。
+- Scheduler observability is built around persisted `SchedulerRun` and `SchedulerCandidateDecision` read models, with summary/trend style projections for operator-facing and analytics scenarios.
+- 调度器观测当前围绕持久化的 `SchedulerRun` 与 `SchedulerCandidateDecision` 读模型组织，并提供面向 operator 与分析场景的 summary / trend 类投影。
+- Scheduler policy includes replay/retry recovery-window suppression and priority-aware handling for periodic and event-driven candidates.
+- 调度器策略包含 replay / retry recovery-window suppression，以及对 periodic / event-driven candidate 的 priority-aware 处理。
+- Scheduler execution is partition-aware: lease/cursor are partition-scoped, and related run/decision read models expose partition metadata.
+- 调度器执行语义具备 partition-aware 能力：lease/cursor 为 partition-scoped，相关 run/decision 读模型会暴露 partition 元信息。
+- Runtime status and persistence surfaces include scheduler ownership, migration, and worker runtime snapshots for operator diagnostics.
+- 运行态状态面与持久化观测面包含 scheduler ownership、migration 与 worker runtime 快照，用于 operator 诊断。
 
 ### 4.6 Agent Runtime Route / Agent 运行路线
 
@@ -130,9 +132,18 @@ The following guarantees should remain stable across refactors:
 ### 4.8 Scheduler Observability / 调度器观测
 
 - `apps/server/src/app/routes/scheduler.ts` provides the current minimal scheduler observability read surface.
-- `apps/server/src/app/services/scheduler_observability.ts` persists `SchedulerRun` and `SchedulerCandidateDecision` snapshots and now also exposes filtered/paginated scheduler query helpers.
-- `apps/server/src/app/runtime/scheduler_lease.ts` now provides the current lease + cursor baseline for leader-only scheduler execution semantics.
-- 调度器当前已具备 `lease + cursor` 基线，用于 leader-only scheduler 扫描语义。
+- `apps/server/src/app/services/scheduler_observability.ts` persists `SchedulerRun` and `SchedulerCandidateDecision` snapshots and exposes filtered/paginated scheduler query helpers.
+- `apps/server/src/app/runtime/scheduler_lease.ts` provides the current partition-scoped lease + cursor baseline for scheduler execution semantics.
+- `apps/server/src/app/runtime/scheduler_partitioning.ts` provides the current stable hash/bucket partition mapping helper.
+- `apps/server/src/app/services/system.ts` includes scheduler ownership snapshot in the runtime status payload, and `apps/server/src/index.ts` resolves worker-owned partitions at startup.
+- Worker-owned partition selection is currently supported through explicit `partitionIds` input and environment-driven assignment (`SCHEDULER_WORKER_PARTITIONS` or `SCHEDULER_WORKER_TOTAL` + `SCHEDULER_WORKER_INDEX`).
+- 当前已支持 worker-owned partition selection：可通过显式 `partitionIds` 输入或环境变量分配（`SCHEDULER_WORKER_PARTITIONS` 或 `SCHEDULER_WORKER_TOTAL` + `SCHEDULER_WORKER_INDEX`）控制 worker 责任边界。
+- Scheduler observability includes partition / worker aware summary, trend, recent-run, and recent-decision projections for overview/operator consumption.
+- 调度器观测层包含面向 overview/operator 的 partition / worker aware summary、trend、recent-run 与 recent-decision 投影。
+- Read-only ownership assignment, migration history, worker runtime state, and rebalance recommendation surfaces are part of the current operator diagnostics model.
+- 当前 operator 诊断模型包含只读 ownership assignment、migration history、worker runtime state 与 rebalance recommendation 读面。
+- Ownership migration and rebalance apply follow the existing lease-expiry handoff contract rather than preempting an active lease.
+- ownership migration 与 rebalance apply 遵循既有 lease-expiry handoff contract，不会直接抢占 active lease。
 
 ## 5) Frontend Architecture / 前端架构
 

@@ -25,14 +25,14 @@ const runtimeStatusLabel = computed(() => {
 
 const runtimeStatusClass = computed(() => {
   if (runtime.status === 'error') {
-    return 'border-yd-state-danger text-yd-state-danger'
+    return 'border-yd-state-danger/40 text-yd-state-danger'
   }
 
   if (runtime.healthLevel === 'degraded') {
-    return 'border-yd-state-warning text-yd-state-warning'
+    return 'border-yd-state-warning/40 text-yd-state-warning'
   }
 
-  return 'border-yd-state-success text-yd-state-success'
+  return 'border-yd-state-success/40 text-yd-state-success'
 })
 
 const runtimeSpeedLabel = computed(() => {
@@ -50,14 +50,14 @@ const notificationsSummary = computed(() => {
 
 const notificationsStatusClass = computed(() => {
   if (notifications.errorCount > 0) {
-    return 'border-yd-state-danger/40 text-yd-state-danger'
+    return 'text-yd-state-danger'
   }
 
   if (notifications.warningCount > 0) {
-    return 'border-yd-state-warning/40 text-yd-state-warning'
+    return 'text-yd-state-warning'
   }
 
-  return 'border-yd-border-muted text-yd-text-secondary'
+  return 'text-yd-text-secondary'
 })
 
 const dockToggleLabel = computed(() => {
@@ -70,30 +70,30 @@ const handleRefreshAll = async () => {
 </script>
 
 <template>
-  <header class="flex min-h-16 items-center justify-between border-b border-yd-border-muted bg-yd-panel px-5 py-3">
+  <header class="yd-toolbar-surface yd-separator-bottom flex min-h-16 items-center justify-between border-x-0 border-t-0 px-4 py-3">
     <div class="flex min-w-0 items-center gap-6">
-      <div>
-        <div class="text-[10px] uppercase tracking-[0.24em] text-yd-text-muted yd-font-mono">
+      <div class="min-w-0">
+        <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
           World State
         </div>
-        <div class="mt-1 flex items-center gap-3">
+        <div class="mt-1.5 flex min-w-0 items-center gap-3">
           <span
-            class="rounded-sm border px-3 py-1 text-[10px] uppercase tracking-[0.2em] yd-font-mono"
+            class="yd-status-pill rounded-sm text-[10px] uppercase tracking-[0.14em] yd-font-mono"
             :class="runtimeStatusClass"
           >
             {{ runtimeStatusLabel }}
           </span>
-          <span class="text-xs text-yd-text-secondary">
+          <span class="truncate text-xs text-yd-text-secondary">
             {{ runtime.worldPack?.name ?? 'No world pack loaded' }}
           </span>
         </div>
-        <div class="mt-2 text-[11px] text-yd-text-secondary yd-font-mono">
+        <div class="mt-1 text-[11px] text-yd-text-muted yd-font-mono">
           {{ runtimeSyncSummary }}
         </div>
       </div>
 
-      <div>
-        <div class="text-[10px] uppercase tracking-[0.24em] text-yd-text-muted yd-font-mono">
+      <div class="hidden min-w-0 lg:block">
+        <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
           Time Scale
         </div>
         <div class="mt-1 text-sm text-yd-text-primary yd-font-mono">
@@ -105,36 +105,38 @@ const handleRefreshAll = async () => {
       </div>
     </div>
 
-    <div class="flex items-center gap-3">
-      <div class="yd-panel-surface rounded-sm px-4 py-2">
-        <div class="text-[10px] uppercase tracking-[0.24em] text-yd-text-muted yd-font-mono">
-          Runtime Speed
+    <div class="flex items-center gap-4">
+      <div class="hidden items-center gap-5 xl:flex">
+        <div>
+          <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
+            Runtime Speed
+          </div>
+          <div class="mt-1 text-xs text-yd-text-primary yd-font-mono">
+            {{ runtimeSpeedLabel }}
+          </div>
         </div>
-        <div class="mt-1 text-xs text-yd-text-primary yd-font-mono">
-          {{ runtimeSpeedLabel }}
+
+        <div>
+          <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
+            Notifications
+          </div>
+          <div class="mt-1 text-xs yd-font-mono" :class="notificationsStatusClass">
+            {{ notificationsSummary }}
+          </div>
         </div>
       </div>
 
-      <div class="yd-panel-surface rounded-sm border px-4 py-2" :class="notificationsStatusClass">
-        <div class="text-[10px] uppercase tracking-[0.24em] yd-font-mono">
-          Notifications
-        </div>
-        <div class="mt-1 text-xs yd-font-mono">
-          {{ notificationsSummary }}
-        </div>
-      </div>
-
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 pl-4 xl:ml-1 xl:border-l xl:border-yd-border-muted/50">
         <button
           type="button"
-          class="rounded-sm border border-yd-border-strong bg-yd-elevated px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-yd-text-primary yd-font-mono transition-colors hover:border-yd-state-accent/60"
+          class="rounded-sm border border-yd-border-muted bg-yd-elevated px-3.5 py-2 text-[11px] uppercase tracking-[0.12em] text-yd-text-primary yd-font-mono transition-colors hover:border-yd-border-strong hover:bg-yd-panel"
           @click="handleRefreshAll"
         >
           Refresh All
         </button>
         <button
           type="button"
-          class="rounded-sm border border-yd-border-muted bg-yd-app px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-yd-text-secondary yd-font-mono transition-colors hover:border-yd-border-strong hover:text-yd-text-primary"
+          class="rounded-sm border border-transparent bg-transparent px-3 py-2 text-[11px] uppercase tracking-[0.12em] text-yd-text-secondary yd-font-mono transition-colors hover:bg-yd-elevated hover:text-yd-text-primary"
           @click="shell.toggleDockExpanded()"
         >
           {{ dockToggleLabel }}

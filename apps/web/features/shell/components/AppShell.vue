@@ -26,7 +26,8 @@ const isSettingsOpen = ref(false)
 
 const DEFAULT_DOCK_HEIGHT = 224
 const MIN_DOCK_HEIGHT = 160
-const dockBodyRef = useTemplateRef<HTMLElement>('dockBody')
+const MIN_MAIN_HEIGHT = 160
+const dockSplitRef = useTemplateRef<HTMLElement>('dockSplit')
 const availableDockHeight = ref(DEFAULT_DOCK_HEIGHT)
 let dockResizeObserver: ResizeObserver | null = null
 
@@ -49,12 +50,13 @@ const resolvedDockMinHeight = computed(() => {
 })
 
 const updateAvailableDockHeight = () => {
-  if (!dockBodyRef.value) {
+  if (!dockSplitRef.value) {
     availableDockHeight.value = resolvedDockDefaultHeight.value
     return
   }
 
-  const nextMaxHeight = Math.max(dockBodyRef.value.clientHeight, resolvedDockMinHeight.value)
+  const splitHeight = dockSplitRef.value.clientHeight
+  const nextMaxHeight = Math.max(splitHeight - MIN_MAIN_HEIGHT, resolvedDockMinHeight.value)
   availableDockHeight.value = nextMaxHeight
 
   if (shell.dockHeight > nextMaxHeight) {
@@ -78,11 +80,11 @@ onMounted(async () => {
     window.addEventListener('resize', handleWindowResize)
   }
 
-  if (typeof ResizeObserver !== 'undefined' && dockBodyRef.value) {
+  if (typeof ResizeObserver !== 'undefined' && dockSplitRef.value) {
     dockResizeObserver = new ResizeObserver(() => {
       updateAvailableDockHeight()
     })
-    const observedElement = dockBodyRef.value
+    const observedElement = dockSplitRef.value
     dockResizeObserver.observe(observedElement)
   }
 })
@@ -393,42 +395,42 @@ const pageLayoutStyle = {
 
       <WorkspaceSidebar :title="workspaceTitle" :subtitle="workspaceSubtitle" class="h-full">
         <slot name="navigation">
-          <div class="space-y-2.5">
-            <div class="yd-panel-surface rounded-md px-4 py-4">
-              <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
+          <div class="yd-shell-surface overflow-hidden rounded-sm">
+            <div class="yd-shell-section">
+              <div class="text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
                 Current Workspace
               </div>
               <div class="mt-2 text-sm font-semibold text-yd-text-primary">
                 {{ shellContext.workspaceTitle }}
               </div>
-              <div class="mt-2 text-xs text-yd-text-secondary">
+              <div class="mt-2 text-xs leading-5 text-yd-text-secondary">
                 {{ shellContext.workspaceSubtitle }}
               </div>
             </div>
 
-            <div class="yd-panel-surface rounded-md px-4 py-4">
-              <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
+            <div class="yd-shell-section">
+              <div class="text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
                 Source / Context
               </div>
-              <div class="mt-2 text-sm text-yd-text-primary">
+              <div class="mt-2 text-sm leading-6 text-yd-text-primary">
                 {{ shellContext.sourceSummary ?? 'No cross-workspace source context active.' }}
               </div>
             </div>
 
-            <div class="yd-panel-surface rounded-md px-4 py-4">
-              <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
+            <div class="yd-shell-section">
+              <div class="text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
                 Focus Entity
               </div>
               <div class="mt-2 text-sm font-semibold text-yd-text-primary">
                 {{ shellContext.focusLabel }}
               </div>
-              <div class="mt-2 text-xs text-yd-text-secondary">
+              <div class="mt-2 text-xs leading-5 text-yd-text-secondary">
                 {{ shellContext.focusMeta }}
               </div>
             </div>
 
-            <div class="yd-panel-surface rounded-md px-4 py-4">
-              <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
+            <div class="yd-shell-section">
+              <div class="text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
                 Quick Actions
               </div>
               <div class="mt-3 grid gap-2">
@@ -436,7 +438,7 @@ const pageLayoutStyle = {
                   v-for="action in shellContext.quickActions"
                   :key="action.id"
                   type="button"
-                  class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-2 text-left text-[11px] uppercase tracking-[0.16em] text-yd-text-primary transition-colors yd-font-mono disabled:cursor-not-allowed disabled:opacity-40 hover:border-yd-border-strong hover:bg-yd-elevated"
+                  class="yd-list-row rounded-sm px-3 py-2 text-left text-[11px] uppercase tracking-[0.12em] text-yd-text-primary transition-colors yd-font-mono disabled:cursor-not-allowed disabled:opacity-40"
                   :disabled="!action.enabled"
                   @click="handleShellAction(action.id)"
                 >
@@ -445,8 +447,8 @@ const pageLayoutStyle = {
               </div>
             </div>
 
-            <div class="yd-panel-surface rounded-md px-4 py-4">
-              <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
+            <div class="yd-shell-section">
+              <div class="text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
                 Recent Targets
               </div>
               <div v-if="shellContext.recentTargets.length > 0" class="mt-3 grid gap-2">
@@ -454,13 +456,13 @@ const pageLayoutStyle = {
                   v-for="target in shellContext.recentTargets"
                   :key="target.id"
                   type="button"
-                  class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-2 text-left transition-colors hover:border-yd-state-accent hover:bg-yd-elevated"
+                  class="yd-list-row rounded-sm px-3 py-2 text-left"
                   @click="handleOpenRecentTarget(target.routePath)"
                 >
                   <div class="text-xs font-semibold text-yd-text-primary">
                     {{ target.label }}
                   </div>
-                  <div class="mt-1 text-[10px] uppercase tracking-[0.16em] text-yd-text-secondary yd-font-mono">
+                  <div class="mt-1 text-[10px] uppercase tracking-[0.12em] text-yd-text-secondary yd-font-mono">
                     {{ target.meta }}
                   </div>
                 </button>
@@ -470,14 +472,14 @@ const pageLayoutStyle = {
               </div>
             </div>
 
-            <div class="yd-panel-surface rounded-md px-4 py-4">
-              <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
+            <div class="yd-shell-section">
+              <div class="text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
                 Runtime Sync
               </div>
               <div class="mt-2 text-sm text-yd-text-primary yd-font-mono">
                 tick {{ runtime.formattedTicks }}
               </div>
-              <div class="mt-2 text-xs text-yd-text-secondary">
+              <div class="mt-2 text-xs leading-5 text-yd-text-secondary">
                 status {{ runtime.statusFreshnessLabel }} · clock {{ runtime.clockFreshnessLabel }}
               </div>
             </div>
@@ -488,19 +490,16 @@ const pageLayoutStyle = {
       <div class="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <TopRuntimeBar class="shrink-0" />
 
-        <main
-          ref="dockBody"
-          class="min-h-0 flex-1 overflow-auto"
-          :style="shell.isDockExpanded ? { paddingBottom: `${clampedDockHeight}px` } : undefined"
-        >
-          <div :style="pageLayoutStyle">
-            <slot />
-          </div>
-        </main>
+        <div ref="dockSplit" class="min-h-0 flex flex-1 flex-col overflow-hidden">
+          <main class="min-h-0 flex-1 overflow-auto">
+            <div :style="pageLayoutStyle">
+              <slot />
+            </div>
+          </main>
 
-        <div v-if="shell.isDockExpanded" class="pointer-events-none absolute bottom-0 left-0 right-0 z-30">
           <BottomDock
-            class="pointer-events-auto"
+            v-if="shell.isDockExpanded"
+            class="shrink-0"
             :active-tab-id="shell.activeDockTabId"
             :tabs="panelTabs"
             :height="clampedDockHeight"
@@ -514,10 +513,10 @@ const pageLayoutStyle = {
                 v-for="target in traceTargets"
                 :key="target.id"
                 type="button"
-                class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-3 text-left transition-colors hover:border-yd-state-accent hover:bg-yd-elevated"
+                class="yd-list-row rounded-sm px-3 py-3 text-left"
                 @click="handleOpenRecentTarget(target.routePath)"
               >
-                <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
+                <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
                   Trace Context
                 </div>
                 <div class="mt-2 text-sm text-yd-text-primary">
@@ -529,7 +528,7 @@ const pageLayoutStyle = {
               </button>
               <div
                 v-if="traceTargets.length === 0"
-                class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-3 text-xs text-yd-text-secondary"
+                class="yd-workbench-inset rounded-sm px-3 py-3 text-xs text-yd-text-secondary lg:col-span-2"
               >
                 No recent workflow trace context recorded yet.
               </div>
@@ -540,10 +539,10 @@ const pageLayoutStyle = {
                 v-for="target in jobTargets"
                 :key="target.id"
                 type="button"
-                class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-3 text-left transition-colors hover:border-yd-state-accent hover:bg-yd-elevated"
+                class="yd-list-row rounded-sm px-3 py-3 text-left"
                 @click="handleOpenRecentTarget(target.routePath)"
               >
-                <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
+                <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
                   Recent Target
                 </div>
                 <div class="mt-2 text-sm text-yd-text-primary">
@@ -555,16 +554,16 @@ const pageLayoutStyle = {
               </button>
               <div
                 v-if="jobTargets.length === 0"
-                class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-3 text-xs text-yd-text-secondary"
+                class="yd-workbench-inset rounded-sm px-3 py-3 text-xs text-yd-text-secondary lg:col-span-2"
               >
                 No recent job-oriented targets recorded yet.
               </div>
             </div>
 
             <div v-else class="grid gap-2.5 lg:grid-cols-3">
-              <div class="rounded-sm border border-yd-border-muted bg-yd-app px-3 py-3">
+              <div class="yd-workbench-inset rounded-sm px-3 py-3 lg:col-span-3">
                 <div
-                  class="flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono"
+                  class="flex items-center justify-between text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono"
                 >
                   <span>Notifications</span>
                   <span class="text-yd-text-primary">{{ notifications.unreadCount }}</span>
@@ -573,9 +572,9 @@ const pageLayoutStyle = {
                   <div
                     v-for="item in latestNotifications"
                     :key="item.id"
-                    class="rounded-sm border border-yd-border-muted bg-yd-panel px-3 py-2"
+                    class="yd-detail-grid-item rounded-sm px-3 py-2"
                   >
-                    <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
+                    <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
                       {{ item.level }}
                     </div>
                     <div class="mt-1 text-xs text-yd-text-secondary">

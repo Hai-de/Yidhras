@@ -4,7 +4,6 @@ import { asyncHandler } from './app/http/async_handler.js';
 import { getErrorMessage } from './app/http/errors.js';
 import { toJsonSafe } from './app/http/json.js';
 import { parseOptionalTick, parsePositiveStepTicks } from './app/http/runtime.js';
-import { validatePolicyConditions } from './app/http/validators.js';
 import { createGlobalErrorMiddleware } from './app/middleware/error_handler.js';
 import { registerAgentRoutes } from './app/routes/agent.js';
 import { registerAuditRoutes } from './app/routes/audit.js';
@@ -19,6 +18,7 @@ import { registerRelationalRoutes } from './app/routes/relational.js';
 import { registerSchedulerRoutes } from './app/routes/scheduler.js';
 import { registerSocialRoutes } from './app/routes/social.js';
 import { registerSystemRoutes } from './app/routes/system.js';
+import { resolveOwnedSchedulerPartitionIds } from './app/runtime/scheduler_partitioning.js';
 import { startSimulationLoop } from './app/runtime/simulation_loop.js';
 import {
   createRuntimeReadyGuard,
@@ -27,6 +27,7 @@ import {
   runStartupPreflight,
   selectStartupWorldPack
 } from './app/runtime/startup.js';
+import { ensureSchedulerBootstrapOwnership } from './app/services/system.js';
 import { sim } from './core/simulation.js';
 import { createInferenceService } from './inference/service.js';
 import { createPrismaInferenceTraceSink } from './inference/sinks/prisma.js';
@@ -43,7 +44,8 @@ let timer: NodeJS.Timeout | null = null;
 let isPaused = false;
 const decisionWorkerId = `decision:${process.pid}:${Date.now()}`;
 const actionDispatcherWorkerId = `dispatcher:${process.pid}:${Date.now()}`;
-const schedulerWorkerId = `scheduler:${process.pid}:${Date.now()}`;
+const schedulerWorkerId = process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}:${Date.now()}`;
+const schedulerPartitionIds = resolveOwnedSchedulerPartitionIds({ workerId: schedulerWorkerId });
 
 const assertRuntimeReady = createRuntimeReadyGuard({
   getRuntimeReady: () => runtimeReady,
@@ -107,8 +109,7 @@ const registerRoutes: RouteRegistrar = (application, context) => {
     parseOptionalTick
   });
   registerPolicyRoutes(application, context, {
-    asyncHandler,
-    validatePolicyConditions
+    asyncHandler
   });
   registerSchedulerRoutes(application, context, {
     asyncHandler
@@ -159,6 +160,11 @@ const start = async (): Promise<void> => {
   });
 
   try {
+    await ensureSchedulerBootstrapOwnership(appContext, {
+      schedulerWorkerId,
+      schedulerPartitionIds
+    });
+
     if (startupHealth.level === 'fail') {
       appContext.setRuntimeReady(false);
       notifications.push('error', `系统启动健康检查失败: ${startupHealth.errors.join('; ')}`, 'SYS_PRECHECK_FAIL');
@@ -173,7 +179,7 @@ const start = async (): Promise<void> => {
 
       await sim.init(selectedPack);
       appContext.setRuntimeReady(true);
-      notifications.push('info', `Yidhras 系统初始化成功 (pack=${selectedPack})`, 'SYS_INIT_OK');
+      notifications.push('info', `Yidhras 系统初始化成功 (pack=${selectedPack}, schedulerPartitions=${schedulerPartitionIds.join(',') || 'none'})`, 'SYS_INIT_OK');
       startSimulation();
     }
   } catch (err: unknown) {
@@ -187,6 +193,7 @@ const start = async (): Promise<void> => {
   app.listen(port, () => {
     console.log(`[Yidhras Server] API full implementation running at http://localhost:${port}`);
     console.log(`[Yidhras Server] Inference module ready (phase=${inferenceService.phase}, ready=${String(inferenceService.ready)})`);
+    console.log(`[Yidhras Server] Scheduler worker=${schedulerWorkerId} partitions=${schedulerPartitionIds.join(',') || 'none'}`);
   });
 };
 

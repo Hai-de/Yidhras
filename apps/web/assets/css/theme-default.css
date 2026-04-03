@@ -1,57 +1,58 @@
 :root {
-  --yd-panel-backdrop-blur: 10px;
+  --yd-panel-backdrop-blur: 8px;
 }
 
 .yd-panel-surface {
   background-color: var(--yd-color-bg-panel);
-  border: var(--yd-border-width) solid var(--yd-color-border-muted);
+  border: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 78%, transparent 22%);
   box-shadow: var(--yd-shadow-panel);
 }
 
 .yd-panel-surface--elevated {
   background-color: var(--yd-color-bg-elevated);
-  border: var(--yd-border-width) solid var(--yd-color-border-strong);
+  border: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-strong) 82%, transparent 18%);
   box-shadow: var(--yd-shadow-elevated);
 }
 
 .yd-panel-inset {
-  background-color: rgba(17, 20, 24, 0.88);
-  border: var(--yd-border-width) solid var(--yd-color-border-muted);
+  background-color: color-mix(in srgb, var(--yd-color-bg-app) 76%, var(--yd-color-bg-panel) 24%);
+  border: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 72%, transparent 28%);
 }
 
 .yd-workbench-section {
-  border: var(--yd-border-width) solid var(--yd-color-border-muted);
   background-color: var(--yd-color-bg-panel);
+  border: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 74%, transparent 26%);
 }
 
 .yd-workbench-pane {
   background-color: var(--yd-color-bg-panel);
-  border: var(--yd-border-width) solid var(--yd-color-border-muted);
+  border: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 74%, transparent 26%);
+  box-shadow: none;
 }
 
 .yd-workbench-pane-header {
-  border-bottom: var(--yd-border-width) solid var(--yd-color-border-muted);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.015) 0%, rgba(255, 255, 255, 0) 100%);
+  border-bottom: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 74%, transparent 26%);
+  background: color-mix(in srgb, var(--yd-color-bg-panel) 94%, #ffffff 6%);
 }
 
 .yd-workbench-inset {
-  background-color: rgba(17, 20, 24, 0.94);
-  border: var(--yd-border-width) solid rgba(59, 67, 80, 0.72);
+  background-color: color-mix(in srgb, var(--yd-color-bg-app) 78%, var(--yd-color-bg-panel) 22%);
+  border: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 68%, transparent 32%);
 }
 
 .yd-workbench-item {
-  background-color: rgba(17, 20, 24, 0.94);
-  border: var(--yd-border-width) solid var(--yd-color-border-muted);
+  background-color: color-mix(in srgb, var(--yd-color-bg-app) 76%, var(--yd-color-bg-panel) 24%);
+  border: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 68%, transparent 32%);
 }
 
 .yd-workbench-item:hover {
   border-color: var(--yd-color-border-strong);
-  background-color: rgba(24, 28, 34, 0.98);
+  background-color: color-mix(in srgb, var(--yd-color-bg-elevated) 84%, var(--yd-color-bg-panel) 16%);
 }
 
 .yd-workbench-item--active {
-  border-color: var(--yd-color-state-accent);
-  background-color: rgba(32, 37, 45, 0.95);
+  border-color: color-mix(in srgb, var(--yd-color-state-accent) 48%, var(--yd-color-border-strong) 52%);
+  background-color: color-mix(in srgb, var(--yd-color-bg-elevated) 88%, var(--yd-color-bg-panel) 12%);
 }
 
 .yd-grid-surface {
@@ -66,4 +67,152 @@
 .yd-overlay-surface {
   background-color: var(--yd-color-bg-overlay);
   backdrop-filter: blur(var(--yd-panel-backdrop-blur));
+}
+
+.yd-shell-surface {
+  background-color: var(--yd-color-bg-panel);
+  border: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 72%, transparent 28%);
+}
+
+.yd-shell-section {
+  padding: 0.875rem 1rem;
+  border-bottom: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 62%, transparent 38%);
+}
+
+.yd-shell-section:last-child {
+  border-bottom: none;
+}
+
+.yd-toolbar-surface {
+  background-color: var(--yd-color-bg-panel);
+  border: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 72%, transparent 28%);
+}
+
+.yd-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.yd-inspector-section {
+  background-color: color-mix(in srgb, var(--yd-color-bg-app) 78%, var(--yd-color-bg-panel) 22%);
+  border: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 66%, transparent 34%);
+}
+
+.yd-detail-grid-item {
+  background-color: color-mix(in srgb, var(--yd-color-bg-app) 82%, var(--yd-color-bg-panel) 18%);
+  border: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 66%, transparent 34%);
+}
+
+.yd-code-surface {
+  background-color: color-mix(in srgb, var(--yd-color-bg-app) 88%, #000000 12%);
+  border: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 64%, transparent 36%);
+}
+
+.yd-list-row {
+  background-color: color-mix(in srgb, var(--yd-color-bg-app) 76%, var(--yd-color-bg-panel) 24%);
+  border: var(--yd-border-width) solid color-mix(in srgb, var(--yd-color-border-muted) 64%, transparent 36%);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.yd-list-row:hover {
+  background-color: color-mix(in srgb, var(--yd-color-bg-elevated) 86%, var(--yd-color-bg-panel) 14%);
+  border-color: var(--yd-color-border-strong);
+}
+
+.yd-list-row--active {
+  background-color: color-mix(in srgb, var(--yd-color-bg-elevated) 90%, var(--yd-color-bg-panel) 10%);
+  border-color: color-mix(in srgb, var(--yd-color-state-accent) 42%, var(--yd-color-border-strong) 58%);
+}
+
+.yd-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 1.75rem;
+  padding: 0.25rem 0.625rem;
+  background-color: color-mix(in srgb, var(--yd-color-bg-app) 72%, var(--yd-color-bg-panel) 28%);
+  border: var(--yd-border-width) solid var(--yd-color-border-muted);
+}
+
+.yd-dock-root {
+  position: relative;
+}
+
+.yd-dock-split-hit-area {
+  position: relative;
+  background-color: transparent;
+  padding-bottom: 1px;
+  margin-bottom: -1px;
+  transition: background-color 220ms ease;
+}
+
+.yd-dock-split-hit-area::before {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto 0;
+  border-top: 1px solid color-mix(in srgb, var(--yd-color-border-muted) 28%, transparent 72%);
+  transform: translateY(-50%);
+}
+
+.yd-dock-split-handle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: transparent;
+  pointer-events: none;
+  transition:
+    color 260ms ease 120ms,
+    background-color 180ms ease;
+}
+
+.yd-dock-split-handle-grip {
+  width: 2.5rem;
+  height: 3px;
+  border-radius: 999px;
+  background-color: currentColor;
+  opacity: 0;
+  transition:
+    opacity 260ms ease 120ms,
+    background-color 180ms ease;
+}
+
+.yd-dock-root:hover .yd-dock-split-hit-area::before,
+.yd-dock-root:focus-within .yd-dock-split-hit-area::before,
+.yd-dock-split-hit-area--active::before {
+  border-top-color: color-mix(in srgb, var(--yd-color-border-muted) 48%, transparent 52%);
+}
+
+.yd-dock-root:hover .yd-dock-split-handle,
+.yd-dock-root:focus-within .yd-dock-split-handle,
+.yd-dock-split-handle--active {
+  color: color-mix(in srgb, var(--yd-color-border-strong) 92%, var(--yd-color-text-muted) 8%);
+}
+
+.yd-dock-root:hover .yd-dock-split-handle-grip,
+.yd-dock-root:focus-within .yd-dock-split-handle-grip,
+.yd-dock-split-handle--active .yd-dock-split-handle-grip {
+  opacity: 0.92;
+}
+
+.yd-separator-right {
+  border-right: 1px solid color-mix(in srgb, var(--yd-color-border-muted) 58%, transparent 42%);
+}
+
+.yd-separator-bottom {
+  border-bottom: 1px solid color-mix(in srgb, var(--yd-color-border-muted) 58%, transparent 42%);
+}
+
+.yd-separator-top {
+  border-top: 1px solid color-mix(in srgb, var(--yd-color-border-muted) 58%, transparent 42%);
+}
+
+.yd-separator-strong {
+  border-color: color-mix(in srgb, var(--yd-color-border-strong) 66%, transparent 34%);
 }

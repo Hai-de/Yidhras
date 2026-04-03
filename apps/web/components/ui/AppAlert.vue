@@ -12,24 +12,35 @@ const props = withDefaults(
   }
 )
 
-const toneClass = computed(() => {
+const borderToneClass = computed(() => {
   switch (props.tone) {
     case 'warning':
-      return 'border-yd-state-warning/40 text-yd-state-warning'
+      return 'border-l-yd-state-warning'
     case 'info':
-      return 'border-yd-state-info/40 text-yd-state-info'
+      return 'border-l-yd-state-info'
     default:
-      return 'border-yd-state-danger/40 text-yd-state-danger'
+      return 'border-l-yd-state-danger'
+  }
+})
+
+const titleToneClass = computed(() => {
+  switch (props.tone) {
+    case 'warning':
+      return 'text-yd-state-warning'
+    case 'info':
+      return 'text-yd-state-info'
+    default:
+      return 'text-yd-state-danger'
   }
 })
 </script>
 
 <template>
-  <div class="rounded-sm border bg-yd-app px-4 py-3" :class="toneClass">
-    <div v-if="props.title" class="text-[10px] uppercase tracking-[0.18em] yd-font-mono">
+  <div class="rounded-sm border border-yd-border-muted border-l-2 bg-yd-panel px-4 py-3" :class="borderToneClass">
+    <div v-if="props.title" class="text-[10px] uppercase tracking-[0.12em] yd-font-mono" :class="titleToneClass">
       {{ props.title }}
     </div>
-    <div class="text-sm" :class="props.title ? 'mt-2' : ''">
+    <div class="text-sm leading-6 text-yd-text-secondary" :class="props.title ? 'mt-2' : ''">
       <slot />
     </div>
   </div>

@@ -14,7 +14,6 @@ export interface PolicyRouteDependencies {
   asyncHandler(
     handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
   ): (req: Request, res: Response, next: NextFunction) => void;
-  validatePolicyConditions(conditions: unknown): Record<string, unknown>;
 }
 
 export const registerPolicyRoutes = (
@@ -27,13 +26,7 @@ export const registerPolicyRoutes = (
     deps.asyncHandler(async (req, res) => {
       const body = parseBody(createPolicyRequestSchema, req.body, 'POLICY_INVALID');
 
-      const policy = await createPolicy(
-        context,
-        body,
-        {
-          validatePolicyConditions: deps.validatePolicyConditions
-        }
-      );
+      const policy = await createPolicy(context, body);
 
       jsonOk(res, toJsonSafe(policy));
     })

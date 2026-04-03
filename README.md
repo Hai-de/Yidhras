@@ -83,20 +83,12 @@ start-dev.bat
 - `docs/API.md`：当前对外接口契约与错误码
 - `docs/ARCH.md`：稳定架构边界与模块职责
 - `docs/LOGIC.md`：业务规则、领域语义与边界说明
+- `docs/THEME.md`：前端主题 contract、默认主题与 provider-owned theme 约定
+- `docs/ENHANCEMENTS.md`：当前暂缓处理、但值得后续回收的增强项清单
 - `apps/web/README.md`：前端当前状态、Guardrails 与主文件锚点
-- `.limcode/plans/frontend-operator-ui-polish-and-interaction-enhancement.plan.md`：当前 UI polish / interaction 增强冻结计划与验收标准
-- `.limcode/plans/frontend-graph-deepen-and-timeline-social-mapping.plan.md`：Graph 深化与 Timeline / Social 语义映射优化收口文档
 
 ## 当前状态
 
 - 后端基线、最小工作流、contracts/Zod 路径与统一错误包络已稳定。
-- 前端 `apps/web` 已完成 Operator UI polish 第一阶段：
-  - 统一页面骨架
-  - 跨页来源上下文与回跳
-  - Graph focus / root / result feedback
-  - freshness 与轻量通知反馈
-- 前端已完成一轮 Graph 深化与 Timeline / Social 语义映射优化增量：
-  - quick roots、search context、inspector 分组增强
-  - Timeline ↔ Social context mapping 收紧
-  - 仍保持不干扰当前后端 scheduler 主线
-- 当前正式里程碑状态与下一优先级以 `TODO.md` 为准。
+- 前端 Operator-first 控制台、Graph 深化与 Timeline / Social 语义映射增量已落地；细节见 `apps/web/README.md`。
+- 当前正式里程碑状态与下一优先级以 `TODO.md` 为准，验证证据与历史快照见 `记录.md`。

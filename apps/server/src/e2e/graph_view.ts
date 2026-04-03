@@ -1,3 +1,7 @@
+import 'dotenv/config';
+
+import { Prisma, PrismaClient } from '@prisma/client';
+
 import {
   assert,
   isRecord,
@@ -6,6 +10,8 @@ import {
   summarizeResponse
 } from './helpers.js';
 import { assertSuccessEnvelopeData } from './status_helpers.js';
+
+const prisma = new PrismaClient();
 
 const parsePort = (): number => {
   const value = process.env.SMOKE_PORT;
@@ -20,11 +26,196 @@ const parsePort = (): number => {
   return port;
 };
 
+const assertErrorCode = (body: unknown, expectedCode: string, label: string): void => {
+  assert(isRecord(body), `${label} should return object`);
+  assert(body.success === false, `${label} success should be false`);
+  assert(isRecord(body.error), `${label} error should be object`);
+  assert(body.error.code === expectedCode, `${label} error code should be ${expectedCode}`);
+};
+
+const ensureGraphFixtures = async () => {
+  const now = BigInt(Date.now());
+  const traceId = 'graph-view-trace-001';
+  const intentId = 'graph-view-intent-001';
+
+  await prisma.agent.upsert({
+    where: { id: 'agent-001' },
+    update: { name: 'Agent-001', type: 'active', snr: 0.5, updated_at: now },
+    create: {
+      id: 'agent-001',
+      name: 'Agent-001',
+      type: 'active',
+      snr: 0.5,
+      is_pinned: false,
+      created_at: now,
+      updated_at: now
+    }
+  });
+
+  await prisma.agent.upsert({
+    where: { id: 'agent-002' },
+    update: { name: 'Agent-002', type: 'active', snr: 0.4, updated_at: now },
+    create: {
+      id: 'agent-002',
+      name: 'Agent-002',
+      type: 'active',
+      snr: 0.4,
+      is_pinned: false,
+      created_at: now,
+      updated_at: now
+    }
+  });
+
+  await prisma.relationship.upsert({
+    where: { from_id_to_id_type: { from_id: 'agent-001', to_id: 'agent-002', type: 'friend' } },
+    update: {
+      id: 'graph-view-rel-001',
+      from_id: 'agent-001',
+      to_id: 'agent-002',
+      type: 'friend',
+      weight: 0.7,
+      updated_at: now
+    },
+    create: {
+      id: 'graph-view-rel-001',
+      from_id: 'agent-001',
+      to_id: 'agent-002',
+      type: 'friend',
+      weight: 0.7,
+      created_at: now,
+      updated_at: now
+    }
+  });
+
+  await prisma.atmosphereNode.upsert({
+    where: { id: 'graph-view-atm-001' },
+    update: {
+      owner_id: 'agent-001',
+      name: 'Graph View Atmosphere',
+      expires_at: null
+    },
+    create: {
+      id: 'graph-view-atm-001',
+      owner_id: 'agent-001',
+      name: 'Graph View Atmosphere',
+      expires_at: null,
+      created_at: now
+    }
+  });
+
+  await prisma.identity.upsert({
+    where: { id: 'agent-001' },
+    update: {
+      type: 'agent',
+      name: 'Agent-001',
+      provider: 'm2',
+      status: 'active',
+      updated_at: now
+    },
+    create: {
+      id: 'agent-001',
+      type: 'agent',
+      name: 'Agent-001',
+      provider: 'm2',
+      status: 'active',
+      created_at: now,
+      updated_at: now
+    }
+  });
+
+  await prisma.identityNodeBinding.upsert({
+    where: { id: 'graph-view-binding-001' },
+    update: {
+      identity_id: 'agent-001',
+      agent_id: 'agent-001',
+      atmosphere_node_id: null,
+      role: 'active',
+      status: 'active',
+      updated_at: now
+    },
+    create: {
+      id: 'graph-view-binding-001',
+      identity_id: 'agent-001',
+      agent_id: 'agent-001',
+      atmosphere_node_id: null,
+      role: 'active',
+      status: 'active',
+      expires_at: null,
+      created_at: now,
+      updated_at: now
+    }
+  });
+
+  await prisma.inferenceTrace.upsert({
+    where: { id: traceId },
+    update: {
+      kind: 'run',
+      strategy: 'mock',
+      provider: 'mock',
+      actor_ref: { agent_id: 'agent-001', identity_id: 'agent-001', role: 'active' },
+      input: { agent_id: 'agent-001' },
+      context_snapshot: {},
+      prompt_bundle: {},
+      trace_metadata: { tick: now.toString() },
+      decision: { action_type: 'post_message', payload: { content: 'graph fixture' } },
+      updated_at: now
+    },
+    create: {
+      id: traceId,
+      kind: 'run',
+      strategy: 'mock',
+      provider: 'mock',
+      actor_ref: { agent_id: 'agent-001', identity_id: 'agent-001', role: 'active' },
+      input: { agent_id: 'agent-001' },
+      context_snapshot: {},
+      prompt_bundle: {},
+      trace_metadata: { tick: now.toString() },
+      decision: { action_type: 'post_message', payload: { content: 'graph fixture' } },
+      created_at: now,
+      updated_at: now
+    }
+  });
+
+  await prisma.actionIntent.upsert({
+    where: { id: intentId },
+    update: {
+      source_inference_id: traceId,
+      intent_type: 'post_message',
+      actor_ref: { agent_id: 'agent-001', identity_id: 'agent-001', role: 'active' },
+      target_ref: Prisma.JsonNull,
+      payload: { content: 'graph fixture' },
+      status: 'failed',
+      transmission_policy: 'reliable',
+      transmission_drop_chance: 0,
+      dispatch_error_code: 'ACTION_DISPATCH_FAIL',
+      dispatch_error_message: 'graph fixture failed dispatch',
+      updated_at: now
+    },
+    create: {
+      id: intentId,
+      source_inference_id: traceId,
+      intent_type: 'post_message',
+      actor_ref: { agent_id: 'agent-001', identity_id: 'agent-001', role: 'active' },
+      target_ref: Prisma.JsonNull,
+      payload: { content: 'graph fixture' },
+      status: 'failed',
+      transmission_policy: 'reliable',
+      transmission_drop_chance: 0,
+      dispatch_error_code: 'ACTION_DISPATCH_FAIL',
+      dispatch_error_message: 'graph fixture failed dispatch',
+      created_at: now,
+      updated_at: now
+    }
+  });
+};
+
 const main = async () => {
   const port = parsePort();
   const server = await startServer({ port });
 
   try {
+    await ensureGraphFixtures();
+
     const statusRes = await requestJson(server.baseUrl, '/api/status');
     assert(statusRes.status === 200, 'GET /api/status should return 200');
     const statusData = assertSuccessEnvelopeData(statusRes.body, '/api/status');
@@ -69,7 +260,7 @@ const main = async () => {
     assert(isRecord(sampleContainerNode.metadata), 'graph view container metadata should be object');
     assert('container_type' in sampleContainerNode.metadata, 'graph view container metadata should include container_type');
 
-    const relayKindsRes = await requestJson(server.baseUrl, '/api/graph/view?kinds=relay,container');
+    const relayKindsRes = await requestJson(server.baseUrl, '/api/graph/view?kinds=relay&kinds=container');
     assert(relayKindsRes.status === 200, 'GET /api/graph/view?kinds=relay,container should return 200');
     const relayKindsGraph = assertSuccessEnvelopeData(relayKindsRes.body, 'graph view relay kinds response');
     assert(Array.isArray(relayKindsGraph.nodes), 'graph view relay kinds response nodes should be array');
@@ -105,6 +296,15 @@ const main = async () => {
       'graph view search should filter nodes by search term'
     );
 
+    const qAliasRes = await requestJson(server.baseUrl, '/api/graph/view?q=relay');
+    assert(qAliasRes.status === 200, 'GET /api/graph/view?q=relay should return 200');
+    const qAliasGraph = assertSuccessEnvelopeData(qAliasRes.body, 'graph view q alias response');
+    assert(
+      Array.isArray(qAliasGraph.nodes) &&
+        qAliasGraph.nodes.every((node: unknown) => isRecord(node) && String(node.label).toLowerCase().includes('relay')),
+      'graph view q alias should behave like search'
+    );
+
     const inactiveRes = await requestJson(server.baseUrl, '/api/graph/view?include_inactive=true');
     assert(inactiveRes.status === 200, 'GET /api/graph/view?include_inactive=true should return 200');
     const inactiveGraph = assertSuccessEnvelopeData(inactiveRes.body, 'graph view inactive response');
@@ -119,8 +319,11 @@ const main = async () => {
 
     const invalidKindsRes = await requestJson(server.baseUrl, '/api/graph/view?kinds=unknown_kind');
     assert(invalidKindsRes.status === 400, 'GET /api/graph/view with unsupported kinds should return 400');
-    assert(isRecord(invalidKindsRes.body), 'invalid graph view response should be object');
-    assert(invalidKindsRes.body.success === false, 'invalid graph view response success should be false');
+    assertErrorCode(invalidKindsRes.body, 'GRAPH_VIEW_QUERY_INVALID', 'invalid graph view kinds');
+
+    const invalidDepthRes = await requestJson(server.baseUrl, '/api/graph/view?depth=abc');
+    assert(invalidDepthRes.status === 400, 'GET /api/graph/view with invalid depth should return 400');
+    assertErrorCode(invalidDepthRes.body, 'GRAPH_VIEW_QUERY_INVALID', 'invalid graph view depth');
 
     console.log('[graph_view] PASS');
   } catch (error: unknown) {
@@ -143,6 +346,7 @@ const main = async () => {
     process.exitCode = 1;
   } finally {
     await server.stop();
+    await prisma.$disconnect();
   }
 };
 

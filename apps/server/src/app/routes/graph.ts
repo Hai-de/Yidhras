@@ -29,14 +29,13 @@ export const registerGraphRoutes = (
         : typeof query.kinds === 'string'
           ? [query.kinds]
           : undefined;
-      const depth = typeof query.depth === 'string' ? Number.parseInt(query.depth, 10) : undefined;
       const includeInactive = query.include_inactive === 'true' ? true : query.include_inactive === 'false' ? false : undefined;
       const includeUnresolved = query.include_unresolved === 'true' ? true : query.include_unresolved === 'false' ? false : undefined;
 
       const snapshot = await getGraphView(context, {
         view: query.view,
         root_id: query.root_id,
-        depth,
+        depth: query.depth,
         kinds,
         include_inactive: includeInactive,
         include_unresolved: includeUnresolved,

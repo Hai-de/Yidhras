@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AppButton from '../../../components/ui/AppButton.vue'
+import AppPanel from '../../../components/ui/AppPanel.vue'
 import WorkspaceEmptyState from '../../shared/components/WorkspaceEmptyState.vue'
 import WorkspaceSectionHeader from '../../shared/components/WorkspaceSectionHeader.vue'
 import type { GraphInspectorField, GraphInspectorViewModel } from '../adapters'
@@ -16,7 +18,7 @@ const emit = defineEmits<{
 
 <template>
   <div class="flex h-full min-h-[24rem] flex-col gap-4">
-    <div class="yd-panel-surface rounded-xl">
+    <AppPanel surface="pane">
       <WorkspaceSectionHeader
         title="Projection Summary"
         subtitle="Current graph read model counts, applied filters, and projection metadata."
@@ -25,19 +27,19 @@ const emit = defineEmits<{
         <div
           v-for="field in props.summaryFields"
           :key="field.label"
-          class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3"
+          class="yd-detail-grid-item rounded-sm px-4 py-3"
         >
-          <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
+          <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
             {{ field.label }}
           </div>
-          <div class="mt-2 text-yd-text-primary">
+          <div class="mt-2 break-all text-yd-text-primary">
             {{ field.value }}
           </div>
         </div>
       </div>
-    </div>
+    </AppPanel>
 
-    <div class="yd-panel-surface min-h-0 flex-1 rounded-xl">
+    <AppPanel surface="pane" class="min-h-0 flex-1">
       <WorkspaceSectionHeader
         title="Node Inspector"
         subtitle="Inspect node fields, references, metadata, and continue into related workspaces."
@@ -48,45 +50,48 @@ const emit = defineEmits<{
           <div class="text-lg font-semibold text-yd-text-primary">
             {{ props.inspector.title }}
           </div>
-          <div class="mt-2 text-sm text-yd-text-secondary">
+          <div class="mt-2 text-sm leading-6 text-yd-text-secondary">
             {{ props.inspector.subtitle }}
           </div>
         </div>
 
         <div class="grid gap-3 md:grid-cols-2">
-          <button
+          <AppButton
             v-for="action in props.inspector.actions"
             :key="action.id"
-            type="button"
-            class="rounded-xl border px-4 py-3 text-left disabled:cursor-not-allowed disabled:opacity-50"
-            :class="action.disabled ? 'border-yd-border-muted bg-yd-app text-yd-text-secondary' : 'border-yd-border-strong bg-yd-elevated text-yd-text-primary'"
+            kind="plain"
+            :variant="action.disabled ? 'secondary' : 'primary'"
+            class="justify-start text-left"
+            :class="action.disabled ? 'opacity-50' : ''"
             :disabled="action.disabled"
             @click="action.id === 'agent' ? emit('openAgent') : emit('openWorkflow')"
           >
-            <div class="text-xs uppercase tracking-[0.16em] yd-font-mono">
-              {{ action.label }}
-            </div>
-            <div class="mt-2 text-sm leading-5">
-              {{ action.helper }}
-            </div>
-          </button>
+            <span class="flex flex-col items-start gap-2">
+              <span class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
+                {{ action.label }}
+              </span>
+              <span class="text-sm leading-5 text-current">
+                {{ action.helper }}
+              </span>
+            </span>
+          </AppButton>
         </div>
 
         <div class="grid gap-3">
           <div
             v-for="section in props.inspector.sections"
             :key="section.id"
-            class="rounded-xl border border-yd-border-muted bg-yd-app px-4 py-4"
+            class="yd-inspector-section rounded-sm px-4 py-4"
           >
-            <div class="text-[10px] uppercase tracking-[0.18em] text-yd-text-muted yd-font-mono">
+            <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
               {{ section.title }}
             </div>
-            <div class="mt-2 text-sm text-yd-text-secondary">
+            <div class="mt-2 text-sm leading-6 text-yd-text-secondary">
               {{ section.subtitle }}
             </div>
             <div v-if="section.fields.length > 0" class="mt-3 grid gap-3 text-sm text-yd-text-secondary">
               <div v-for="field in section.fields" :key="field.label">
-                <div class="text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
+                <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
                   {{ field.label }}
                 </div>
                 <div class="mt-1 break-all text-yd-text-primary">
@@ -107,6 +112,6 @@ const emit = defineEmits<{
           description="Select a node from the graph canvas to inspect refs, metadata, and graph semantics."
         />
       </div>
-    </div>
+    </AppPanel>
   </div>
 </template>

@@ -8,6 +8,7 @@ body,
 html {
   background-color: var(--yd-color-bg-app);
   overflow: hidden;
+  color-scheme: dark;
 }
 
 body {
@@ -21,13 +22,39 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
 }
 
 * {
   box-sizing: border-box;
 }
 
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+a {
+  color: inherit;
+}
+
 ::selection {
   background-color: var(--yd-color-state-accent);
   color: var(--yd-color-text-inverse);
+}
+
+:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--yd-color-state-accent) 68%, transparent 32%);
+  outline-offset: 1px;
 }

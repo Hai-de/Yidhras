@@ -12,7 +12,7 @@ export interface CreatePolicyInput {
   resource?: string;
   action?: string;
   field?: string;
-  conditions?: unknown;
+  conditions?: Record<string, string | number | boolean | null | Array<string | number | boolean | null>>;
   priority?: number;
 }
 
@@ -27,10 +27,6 @@ export interface PolicyAccessInput {
   resource: string;
   action: string;
   attributes?: Record<string, unknown>;
-}
-
-export interface PolicyServiceDependencies {
-  validatePolicyConditions(conditions: unknown): Record<string, unknown>;
 }
 
 interface PolicyAccessContext {
@@ -68,8 +64,7 @@ const createPolicyAccessContext = (
 
 export const createPolicy = async (
   context: AppContext,
-  input: CreatePolicyInput,
-  deps: PolicyServiceDependencies
+  input: CreatePolicyInput
 ) => {
   const { effect, subject_id, subject_type, resource, action, field, conditions, priority } = input;
 
@@ -81,7 +76,6 @@ export const createPolicy = async (
     throw new ApiError(400, 'POLICY_INVALID', 'effect must be allow or deny');
   }
 
-  const validatedConditions = deps.validatePolicyConditions(conditions);
   const now = context.sim.clock.getTicks();
 
   return context.sim.prisma.policy.create({
@@ -93,8 +87,8 @@ export const createPolicy = async (
       action,
       field,
       conditions:
-        Object.keys(validatedConditions).length > 0
-          ? (validatedConditions as Prisma.InputJsonValue)
+        conditions && Object.keys(conditions).length > 0
+          ? (conditions as Prisma.InputJsonValue)
           : undefined,
       priority: priority ?? 0,
       created_at: now,
@@ -117,7 +111,7 @@ export const filterReadableFieldsForIdentity = async <T extends Record<string, u
 export const assertWriteAllowedForIdentity = async (
   context: AppContext,
   identity: IdentityContext | undefined,
- input: PolicyAccessInput,
+  input: PolicyAccessInput,
   payload: Record<string, unknown>
 ): Promise<void> => {
   const { service, matchInput } = createPolicyAccessContext(context, identity, input);

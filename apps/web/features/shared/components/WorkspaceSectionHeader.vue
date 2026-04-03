@@ -8,10 +8,10 @@ defineProps<{
 <template>
   <div class="yd-workbench-pane-header flex items-start justify-between gap-4 px-5 py-4">
     <div>
-      <div class="text-[10px] uppercase tracking-[0.22em] text-yd-text-muted yd-font-mono">
+      <div class="text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
         {{ title }}
       </div>
-      <div class="mt-2 text-sm text-yd-text-secondary">
+      <div class="mt-2 text-sm leading-6 text-yd-text-secondary">
         {{ subtitle }}
       </div>
     </div>

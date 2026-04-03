@@ -6,11 +6,11 @@ defineProps<{
 </script>
 
 <template>
-  <div class="yd-workbench-inset rounded-sm px-3 py-3">
-    <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
+  <div class="yd-detail-grid-item rounded-sm px-3 py-3">
+    <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
       {{ label }}
     </div>
-    <div class="mt-2 text-sm font-medium text-yd-text-primary yd-font-mono">
+    <div class="mt-2 text-sm font-medium leading-6 text-yd-text-primary yd-font-mono">
       {{ value }}
     </div>
   </div>

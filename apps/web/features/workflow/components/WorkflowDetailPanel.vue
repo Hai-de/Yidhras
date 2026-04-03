@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 
 import AppButton from '../../../components/ui/AppButton.vue'
+import AppPanel from '../../../components/ui/AppPanel.vue'
 import type {
   WorkflowIntentDetail,
   WorkflowJobDetail,
@@ -112,7 +113,7 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
 
 <template>
   <div class="flex h-full min-h-[28rem] flex-col gap-4">
-    <div class="yd-panel-surface rounded-xl">
+    <AppPanel surface="pane">
       <WorkspaceSectionHeader
         title="Selected Workflow"
         :subtitle="props.job?.id ?? props.trace?.id ?? 'Select a job or trace from the list to inspect details.'"
@@ -120,7 +121,7 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
         <template #actions>
           <AppButton
             size="sm"
-            class="border-yd-state-warning/50 text-yd-text-primary disabled:opacity-50"
+            variant="secondary"
             :disabled="!props.job || props.job.status !== 'failed' || props.isRetrying"
             @click="emit('retry')"
           >
@@ -132,10 +133,10 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
       <div v-if="props.errorMessage" class="px-5 pb-5">
         <WorkspaceEmptyState title="Workflow detail error" :description="props.errorMessage" />
       </div>
-    </div>
+    </AppPanel>
 
     <div class="grid min-h-0 flex-1 gap-4 xl:grid-cols-2">
-      <div class="yd-panel-surface min-h-[18rem] rounded-xl">
+      <AppPanel surface="pane" class="min-h-[18rem]">
         <WorkspaceSectionHeader title="Job Snapshot" subtitle="Execution status, attempts, timestamps, and failure metadata." />
         <div v-if="props.job" class="space-y-4 px-5 py-5 text-sm text-yd-text-secondary">
           <div class="flex items-center gap-2">
@@ -145,9 +146,9 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
             <div
               v-for="field in jobSummaryFields"
               :key="field.label"
-              class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3"
+              class="yd-detail-grid-item rounded-sm px-4 py-3"
             >
-              <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
+              <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
                 {{ field.label }}
               </div>
               <div class="mt-2 break-all text-yd-text-primary">
@@ -156,8 +157,8 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
             </div>
           </div>
           <div>
-            <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">Request Input</div>
-            <pre class="mt-2 max-h-40 overflow-auto rounded-lg border border-yd-border-muted bg-yd-app px-3 py-3 text-[11px] text-yd-text-secondary no-scrollbar">{{ stringifyDebugValue(props.job.request_input) }}</pre>
+            <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">Request Input</div>
+            <pre class="yd-code-surface mt-2 max-h-40 overflow-auto rounded-sm px-3 py-3 text-[11px] text-yd-text-secondary no-scrollbar">{{ stringifyDebugValue(props.job.request_input) }}</pre>
           </div>
         </div>
         <div v-else class="px-5 py-5">
@@ -166,17 +167,17 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
             description="Choose a job from the queue table to inspect attempts, request input, and retry state."
           />
         </div>
-      </div>
+      </AppPanel>
 
-      <div class="yd-panel-surface min-h-[18rem] rounded-xl">
+      <AppPanel surface="pane" class="min-h-[18rem]">
         <WorkspaceSectionHeader title="Scheduler Context" subtitle="Operator source route and scheduler metadata inferred from current workflow selection." />
         <div v-if="schedulerSourceFields.length > 0" class="grid gap-3 px-5 py-5 md:grid-cols-2">
           <div
             v-for="field in schedulerSourceFields"
             :key="field.label"
-            class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3"
+            class="yd-detail-grid-item rounded-sm px-4 py-3"
           >
-            <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
+            <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
               {{ field.label }}
             </div>
             <div class="mt-2 break-all text-yd-text-primary">
@@ -190,18 +191,18 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
             description="Scheduler source details appear when this workflow was opened from operator drill-down or the job request includes scheduler metadata."
           />
         </div>
-      </div>
+      </AppPanel>
 
-      <div class="yd-panel-surface min-h-[18rem] rounded-xl">
+      <AppPanel surface="pane" class="min-h-[18rem]">
         <WorkspaceSectionHeader title="Failure / Retry Context" subtitle="Failure code, reason, pending retry timing, and operator response path." />
         <div class="space-y-4 px-5 py-5 text-sm text-yd-text-secondary">
           <div class="grid gap-3 md:grid-cols-2">
             <div
               v-for="field in failureSummaryFields"
               :key="field.label"
-              class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3"
+              class="yd-detail-grid-item rounded-sm px-4 py-3"
             >
-              <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
+              <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
                 {{ field.label }}
               </div>
               <div class="mt-2 break-all text-yd-text-primary">
@@ -209,15 +210,15 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
               </div>
             </div>
           </div>
-          <div class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-4 text-sm leading-6 text-yd-text-secondary">
+          <div class="yd-inspector-section rounded-sm px-4 py-4 text-sm leading-6 text-yd-text-secondary">
             {{ props.job?.status === 'failed'
               ? 'This job is currently eligible for retry. Review the failure fields above before requesting another execution attempt.'
               : 'No failed workflow is selected. Retry actions stay disabled until a failed job is focused.' }}
           </div>
         </div>
-      </div>
+      </AppPanel>
 
-      <div class="yd-panel-surface min-h-[18rem] rounded-xl">
+      <AppPanel surface="pane" class="min-h-[18rem]">
         <WorkspaceSectionHeader title="Workflow Derived State" subtitle="Decision, dispatch, workflow result, and final outcome summary." />
         <div v-if="props.workflow" class="space-y-4 px-5 py-5 text-sm text-yd-text-secondary">
           <div class="flex items-center gap-2">
@@ -227,16 +228,16 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
             />
           </div>
           <div class="grid gap-3 md:grid-cols-2">
-            <div class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3">
-              <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">Decision Stage</div>
+            <div class="yd-detail-grid-item rounded-sm px-4 py-3">
+              <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">Decision Stage</div>
               <div class="mt-2 text-yd-text-primary">{{ props.workflow.derived.decision_stage }}</div>
             </div>
-            <div class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3">
-              <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">Dispatch Stage</div>
+            <div class="yd-detail-grid-item rounded-sm px-4 py-3">
+              <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">Dispatch Stage</div>
               <div class="mt-2 text-yd-text-primary">{{ props.workflow.derived.dispatch_stage }}</div>
             </div>
-            <div class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3 md:col-span-2">
-              <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">Outcome</div>
+            <div class="yd-detail-grid-item rounded-sm px-4 py-3 md:col-span-2">
+              <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">Outcome</div>
               <div class="mt-2 text-yd-text-primary">
                 {{ props.workflow.derived.outcome_summary.kind }} · {{ props.workflow.derived.outcome_summary.message }}
               </div>
@@ -249,15 +250,16 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
             description="The derived workflow state appears once a job or trace selection resolves to a workflow snapshot."
           />
         </div>
-      </div>
+      </AppPanel>
 
-      <div class="yd-panel-surface min-h-[18rem] rounded-xl">
+      <AppPanel surface="pane" class="min-h-[18rem]">
         <WorkspaceSectionHeader title="Related Entities" subtitle="Cross-entity drill-down for actor, target, intent, and trace records." />
         <div v-if="relatedLinks.length > 0" class="grid gap-3 px-5 py-5">
           <AppButton
             v-for="link in relatedLinks"
             :key="link.id"
-            class="justify-start bg-yd-app text-left text-sm normal-case tracking-normal yd-font-sans hover:border-yd-state-accent"
+            kind="plain"
+            class="justify-start text-left"
             @click="handleOpenLink(link)"
           >
             {{ link.label }} → {{ link.value }}
@@ -269,41 +271,41 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
             description="Actor, target, trace, or action intent references will appear here when the selected workflow exposes them."
           />
         </div>
-      </div>
+      </AppPanel>
 
-      <div class="yd-panel-surface min-h-[18rem] rounded-xl">
+      <AppPanel surface="pane" class="min-h-[18rem]">
         <WorkspaceSectionHeader title="Trace Decision" subtitle="Provider, strategy, actor context, and normalized decision payload." />
         <div v-if="props.trace" class="space-y-4 px-5 py-5 text-sm text-yd-text-secondary">
           <div class="grid gap-3 md:grid-cols-2">
             <div
               v-for="field in traceSummaryFields"
               :key="field.label"
-              class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3"
+              class="yd-detail-grid-item rounded-sm px-4 py-3"
             >
-              <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
+              <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
                 {{ field.label }}
               </div>
               <div class="mt-2 break-all text-yd-text-primary">
                 {{ field.value }}
               </div>
             </div>
-            <div class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3">
-              <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">trace_tick</div>
+            <div class="yd-detail-grid-item rounded-sm px-4 py-3">
+              <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">trace_tick</div>
               <div class="mt-2 text-yd-text-primary yd-font-mono">{{ traceTick }}</div>
             </div>
           </div>
-          <div v-if="actorRefFields.length > 0" class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-4">
-            <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">Actor Ref</div>
+          <div v-if="actorRefFields.length > 0" class="yd-inspector-section rounded-sm px-4 py-4">
+            <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">Actor Ref</div>
             <div class="mt-3 grid gap-3 md:grid-cols-2">
               <div v-for="field in actorRefFields" :key="field.label">
-                <div class="text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">{{ field.label }}</div>
+                <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">{{ field.label }}</div>
                 <div class="mt-1 break-all text-yd-text-primary">{{ field.value }}</div>
               </div>
             </div>
           </div>
           <div>
-            <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">Decision</div>
-            <pre class="mt-2 max-h-40 overflow-auto rounded-lg border border-yd-border-muted bg-yd-app px-3 py-3 text-[11px] text-yd-text-secondary no-scrollbar">{{ stringifyDebugValue(props.trace.decision) }}</pre>
+            <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">Decision</div>
+            <pre class="yd-code-surface mt-2 max-h-40 overflow-auto rounded-sm px-3 py-3 text-[11px] text-yd-text-secondary no-scrollbar">{{ stringifyDebugValue(props.trace.decision) }}</pre>
           </div>
         </div>
         <div v-else class="px-5 py-5">
@@ -312,52 +314,52 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
             description="Select a job with a resolved inference trace to inspect model strategy, provider, and decision payload."
           />
         </div>
-      </div>
+      </AppPanel>
 
-      <div class="yd-panel-surface min-h-[18rem] rounded-xl">
+      <AppPanel surface="pane" class="min-h-[18rem]">
         <WorkspaceSectionHeader title="Intent Dispatch" subtitle="Intent scheduling, transmission policy, actor/target refs, and payload." />
         <div v-if="props.intent" class="space-y-4 px-5 py-5 text-sm text-yd-text-secondary">
           <div class="grid gap-3 md:grid-cols-2">
             <div
               v-for="field in intentSummaryFields"
               :key="field.label"
-              class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3"
+              class="yd-detail-grid-item rounded-sm px-4 py-3"
             >
-              <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
+              <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">
                 {{ field.label }}
               </div>
               <div class="mt-2 break-all text-yd-text-primary">
                 {{ field.value }}
               </div>
             </div>
-            <div class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-3 md:col-span-2">
-              <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">Transmission</div>
+            <div class="yd-detail-grid-item rounded-sm px-4 py-3 md:col-span-2">
+              <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">Transmission</div>
               <div class="mt-2 text-yd-text-primary">
                 {{ props.intent.transmission_policy }} · drop {{ props.intent.transmission_drop_chance }}
               </div>
             </div>
           </div>
-          <div v-if="actorRefFields.length > 0" class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-4">
-            <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">Actor Ref</div>
+          <div v-if="actorRefFields.length > 0" class="yd-inspector-section rounded-sm px-4 py-4">
+            <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">Actor Ref</div>
             <div class="mt-3 grid gap-3 md:grid-cols-2">
               <div v-for="field in actorRefFields" :key="field.label">
-                <div class="text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">{{ field.label }}</div>
+                <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">{{ field.label }}</div>
                 <div class="mt-1 break-all text-yd-text-primary">{{ field.value }}</div>
               </div>
             </div>
           </div>
-          <div v-if="targetRefFields.length > 0" class="rounded-lg border border-yd-border-muted bg-yd-app px-4 py-4">
-            <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">Target Ref</div>
+          <div v-if="targetRefFields.length > 0" class="yd-inspector-section rounded-sm px-4 py-4">
+            <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">Target Ref</div>
             <div class="mt-3 grid gap-3 md:grid-cols-2">
               <div v-for="field in targetRefFields" :key="field.label">
-                <div class="text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">{{ field.label }}</div>
+                <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">{{ field.label }}</div>
                 <div class="mt-1 break-all text-yd-text-primary">{{ field.value }}</div>
               </div>
             </div>
           </div>
           <div>
-            <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">Payload</div>
-            <pre class="mt-2 max-h-40 overflow-auto rounded-lg border border-yd-border-muted bg-yd-app px-3 py-3 text-[11px] text-yd-text-secondary no-scrollbar">{{ stringifyDebugValue(props.intent.payload) }}</pre>
+            <div class="text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono">Payload</div>
+            <pre class="yd-code-surface mt-2 max-h-40 overflow-auto rounded-sm px-3 py-3 text-[11px] text-yd-text-secondary no-scrollbar">{{ stringifyDebugValue(props.intent.payload) }}</pre>
           </div>
         </div>
         <div v-else class="px-5 py-5">
@@ -366,7 +368,7 @@ const handleOpenLink = (link: (typeof relatedLinks.value)[number]) => {
             description="Intent details appear after a trace resolves to a dispatchable action intent in the workflow projection."
           />
         </div>
-      </div>
+      </AppPanel>
     </div>
   </div>
 </template>

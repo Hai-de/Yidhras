@@ -28,10 +28,19 @@ export interface RuntimeSpeedSnapshot {
   effective_step_ticks: TickString
 }
 
+export interface SchedulerWorkerRuntimeSnapshot {
+  worker_id: string
+  partition_count: number
+  owned_partition_ids: string[]
+  assignment_source: 'persisted' | 'bootstrap' | 'fallback'
+  migration_in_progress_count: number
+}
+
 export interface RuntimeStatusSnapshot {
   status: 'running' | 'paused'
   runtime_ready: boolean
   runtime_speed: RuntimeSpeedSnapshot
+  scheduler: SchedulerWorkerRuntimeSnapshot
   health_level: 'ok' | 'degraded' | 'fail'
   world_pack: RuntimeWorldMetadata | null
   has_error: boolean

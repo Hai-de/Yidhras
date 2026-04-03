@@ -44,6 +44,13 @@ describe('useRuntimeStore', () => {
         override_since: null,
         effective_step_ticks: '3'
       },
+      scheduler: {
+        worker_id: 'scheduler:test',
+        partition_count: 4,
+        owned_partition_ids: ['p0', 'p2'],
+        assignment_source: 'persisted',
+        migration_in_progress_count: 1
+      },
       health_level: 'degraded',
       world_pack: {
         id: 'pack-alpha',

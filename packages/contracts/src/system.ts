@@ -11,10 +11,22 @@ export const runtimeSpeedSnapshotSchema = z.object({
   effective_step_ticks: positiveBigIntStringSchema
 })
 
+export const schedulerWorkerConfigSchema = z.object({
+  worker_id: z.string(),
+  partition_count: z.number().int().positive(),
+  owned_partition_ids: z.array(z.string()),
+  assignment_source: z.enum(['persisted', 'bootstrap', 'fallback']),
+  migration_in_progress_count: z.number().int().nonnegative(),
+  worker_runtime_status: z.string(),
+  last_heartbeat_at: nonNegativeBigIntStringSchema.nullable(),
+  automatic_rebalance_enabled: z.boolean()
+})
+
 export const runtimeStatusDataSchema = z.object({
   status: z.enum(['running', 'paused']),
   runtime_ready: z.boolean(),
   runtime_speed: runtimeSpeedSnapshotSchema,
+  scheduler: schedulerWorkerConfigSchema,
   health_level: z.enum(['ok', 'degraded', 'fail']),
   world_pack: z
     .object({

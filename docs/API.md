@@ -1,4 +1,4 @@
-# Yidhras API 接口规范 (v0.1.9)
+# Yidhras API 接口规范 (v0.1.10)
 
 > 本文件只负责当前对外接口契约、错误码与调用约束；阶段状态与优先级请看根目录 `TODO.md`。
 
@@ -24,11 +24,18 @@
 - 示例：`{"id":"user-001","type":"user","name":"Operator"}`
 - 若不提供，默认使用 `system` 身份
 
+### 0.4 Query / Params 校验约定
+
+- `agent / graph / relational / scheduler / social / audit / inference` 相关接口现均已走共享 contracts + Zod 边界解析
+- 若 query / params 不满足约束（非法数字、非法枚举、空白必填 params 等），当前实现会优先返回 `400`，而不是静默回退
+- `limit / sample_runs / recent_limit / depth` 等参数若被声明为正整数，则非法值（如 `abc`、`0`、负数）应视为请求错误
+
 ## 1. 基础信息 (System)
 
 - **GET `/api/status`**
   - 说明：获取系统运行状态、健康级别、当前加载的 World Pack 元数据
-  - 返回：`{ success: true, data: { status: "running"|"paused", runtime_ready: boolean, runtime_speed: { mode: "fixed", source: "default"|"world_pack"|"override", configured_step_ticks: string|null, override_step_ticks: string|null, override_since: number|null, effective_step_ticks: string }, health_level: "ok"|"degraded"|"fail", world_pack: { id, name, version }|null, has_error: boolean, startup_errors: string[] } }`
+  - 返回：`{ success: true, data: { status: "running"|"paused", runtime_ready: boolean, runtime_speed: { mode: "fixed", source: "default"|"world_pack"|"override", configured_step_ticks: string|null, override_step_ticks: string|null, override_since: number|null, effective_step_ticks: string }, scheduler: { worker_id: string, partition_count: number, owned_partition_ids: string[], assignment_source: "persisted"|"bootstrap"|"fallback", migration_in_progress_count: number, worker_runtime_status: string, last_heartbeat_at: string|null, automatic_rebalance_enabled: boolean }, health_level: "ok"|"degraded"|"fail", world_pack: { id, name, version }|null, has_error: boolean, startup_errors: string[] } }`
+  - 备注：当前服务端在返回前会执行 `runtimeStatusDataSchema` 运行时校验
 - **POST `/api/runtime/speed`**
   - 说明：覆盖或清除运行时步进速度
   - 参数：`{ action: "override", step_ticks: string|number }` 或 `{ action: "clear" }`
@@ -61,6 +68,7 @@
   - 返回：`{ success: true, data: Post[], meta?: { pagination: { has_next_page, next_cursor } } }`
   - 约束：
     - `author_id` / `agent_id` 当前等价；若同时提供且不一致则返回 `400 SOCIAL_FEED_QUERY_INVALID`
+    - 非法 `limit`、非法 `sort`、非法 `cursor`、`signal_min > signal_max` 等均返回 `400 SOCIAL_FEED_QUERY_INVALID`
 - **POST `/api/social/post`**
   - 说明：以当前 identity 上下文发布动态
   - 参数：`{ content: string }`
@@ -79,18 +87,21 @@
   - 说明：查询指定单向关系边的调整日志
   - 参数：`?limit=20`
   - 返回：`{ success: true, data: RelationshipAdjustmentLog[] }`
+  - 备注：非法 `limit` 或空白 `from_id / to_id / type` 返回 `400 RELATIONSHIP_LOG_QUERY_INVALID`
 - **GET `/api/atmosphere/nodes`**
   - 说明：查询 atmosphere nodes
   - 参数：`?owner_id=<agent_id>&include_expired=true|false`
   - 默认：`include_expired=false`
   - 返回：`{ success: true, data: AtmosphereNode[] }`
+  - 备注：非法 `include_expired` 返回 `400 RELATIONAL_QUERY_INVALID`
 
 ## 4.1 Graph V2
 
 - **GET `/api/graph/view`**
   - 说明：Graph V2 的最小只读 projection 接口
-  - 参数：`?view=mesh|tree&root_id=<node_id>&depth=<0..3>&kinds=agent,atmosphere,relay,container&include_inactive=true|false&include_unresolved=true|false&search=<keyword>&q=<keyword>`
+  - 参数：`?view=mesh|tree&root_id=<node_id>&depth=<0..3>&kinds=agent&kinds=atmosphere&kinds=relay&kinds=container&include_inactive=true|false&include_unresolved=true|false&search=<keyword>&q=<keyword>`
   - 返回：`{ success: true, data: { schema_version: "graph-v2", view: "mesh"|"tree", nodes: GraphNodeView[], edges: GraphEdgeView[], summary: { counts_by_kind, active_root_ids, returned_node_count, returned_edge_count, applied_filters } }, meta: { schema_version: "graph-v2" } }`
+  - 备注：非法 `depth` 或非法 `kinds` 返回 `400 GRAPH_VIEW_QUERY_INVALID`；`q` 当前作为 `search` 的别名
 
 ## 4.2 审计视图 (Audit / Observability)
 
@@ -114,14 +125,21 @@
 - **GET `/api/agent/:id/context`**
   - 说明：获取特定 Agent 的认知上下文
   - 返回：`{ success: true, data: { identity: Agent, variables: ResolvedVariablePool } }`
+  - 备注：空白/非法 `id` 返回 `400 AGENT_QUERY_INVALID`
 - **GET `/api/agent/:id/overview`**
   - 说明：获取特定 Agent 的聚合总览 read model
   - 参数：`?limit=10`
   - 返回：`{ success: true, data: { profile, binding_summary, relationship_summary, recent_activity, recent_posts, recent_workflows, recent_events, recent_inference_results, snr, memory } }`
+  - 备注：非法 `limit` 返回 `400 AGENT_QUERY_INVALID`
 - **GET `/api/agent/:id/snr/logs`**
   - 说明：查询指定 Agent 的 SNR 调整日志
   - 参数：`?limit=20`
   - 返回：`{ success: true, data: SNRAdjustmentLog[] }`
+  - 备注：非法 `limit` 返回 `400 SNR_LOG_QUERY_INVALID`
+- **GET `/api/agent/:id/scheduler/projection`**
+  - 说明：读取指定 agent 的 scheduler operator projection
+  - 参数：`?limit=20`
+  - 备注：非法 `limit` 返回 `400 AGENT_QUERY_INVALID`
 
 ## 7. 身份与策略 (Identity & Policy)
 
@@ -147,8 +165,9 @@
   - 返回：`{ success: true, data: IdentityNodeBinding }`
 - **POST `/api/policy`**
   - 说明：创建策略规则
-  - 参数：`{ effect: "allow"|"deny", subject_id?: string, subject_type?: string, resource: string, action: string, field: string, conditions?: object, priority?: number }`
+  - 参数：`{ effect: "allow"|"deny", subject_id?: string, subject_type?: string, resource: string, action: string, field: string, conditions?: Record<string, string | number | boolean | null | Array<string | number | boolean | null>>, priority?: number }`
   - 返回：`{ success: true, data: Policy }`
+  - 备注：`conditions` 当前已纳入 shared contracts；primitive、嵌套 object、非法 key/value 会返回 `400 POLICY_INVALID`
 - **POST `/api/policy/evaluate`**
   - 说明：评估字段级访问结果
   - 参数：`{ resource: string, action: string, fields: string[], attributes?: Record<string, unknown> }`
@@ -164,27 +183,62 @@
 
 - **GET `/api/runtime/scheduler/runs`**
   - 说明：分页查询 scheduler run 列表
-  - 参数：`?limit=20&cursor=<opaque_cursor>&from_tick=<tick>&to_tick=<tick>&worker_id=<worker_id>`
-  - 返回：`{ success: true, data: { items: SchedulerRunSummary[], page_info: { has_next_page, next_cursor }, summary: { returned, limit, filters: { cursor, from_tick, to_tick, worker_id } } }, meta: { pagination } }`
+  - 参数：`?limit=20&cursor=<opaque_cursor>&from_tick=<tick>&to_tick=<tick>&worker_id=<worker_id>&partition_id=<partition_id>`
+  - 返回：`{ success: true, data: { items: SchedulerRunSummary[], page_info: { has_next_page, next_cursor }, summary: { returned, limit, filters: { cursor, from_tick, to_tick, worker_id, partition_id } } }, meta: { pagination } }`，其中 `items[*]` 当前会带 `partition_id`、`lease_holder`、`lease_expires_at_snapshot` 与 `cross_link_summary`
+  - 备注：非法 `limit`、非法 `cursor`、非法 tick range 返回 `400 SCHEDULER_QUERY_INVALID`
 - **GET `/api/runtime/scheduler/summary`**
   - 说明：读取 scheduler 聚合 summary projection
   - 参数：`?sample_runs=20`
-  - 返回：`{ success: true, data: { latest_run, run_totals, top_reasons, top_skipped_reasons, top_actors, intent_class_breakdown } }`
+  - 返回：`{ success: true, data: { latest_run, run_totals, top_reasons, top_skipped_reasons, top_actors, top_partitions, top_workers, intent_class_breakdown } }`
+  - 备注：非法 `sample_runs` 返回 `400 SCHEDULER_QUERY_INVALID`
 - **GET `/api/runtime/scheduler/trends`**
   - 说明：读取最近 scheduler runs 的趋势点集合
   - 参数：`?sample_runs=20`
-  - 返回：`{ success: true, data: { points: { tick, run_id, created_count, created_periodic_count, created_event_driven_count, signals_detected_count }[] } }`
+  - 返回：`{ success: true, data: { points: { tick, run_id, partition_id, worker_id, created_count, created_periodic_count, created_event_driven_count, signals_detected_count }[] } }`
+  - 备注：非法 `sample_runs` 返回 `400 SCHEDULER_QUERY_INVALID`
+- **GET `/api/runtime/scheduler/operator`**
+  - 说明：读取面向 overview / operator 的 scheduler 聚合 projection，聚合 latest run、summary、trends、recent runs、recent decisions 与 highlights
+  - 参数：`?sample_runs=20&recent_limit=5`
+  - 返回：`{ success: true, data: { latest_run, summary, trends, recent_runs, recent_decisions, ownership: { assignments, recent_migrations, summary }, workers: { items, summary }, rebalance: { recommendations, summary }, highlights: { latest_partition_id, latest_created_workflow_count, latest_skipped_count, latest_top_reason, latest_top_intent_type, latest_top_workflow_state, latest_top_skipped_reason, latest_top_failure_code, latest_failed_workflow_count, latest_pending_workflow_count, latest_completed_workflow_count, latest_top_actor, migration_in_progress_count, latest_migration_partition_id, latest_migration_to_worker_id, top_owner_worker_id, latest_rebalance_status, latest_rebalance_partition_id, latest_rebalance_suppress_reason, latest_stale_worker_id } } }`
+  - 备注：非法 `sample_runs` / `recent_limit` 返回 `400 SCHEDULER_QUERY_INVALID`
+- **GET `/api/runtime/scheduler/ownership`**
+  - 说明：读取当前 scheduler partition ownership assignment 视图
+  - 参数：`?worker_id=<worker_id>&partition_id=<partition_id>&status=<assigned|migrating|released>`
+  - 返回：`{ success: true, data: { items: { partition_id, worker_id, status, version, source, updated_at, latest_migration }[], summary: { returned, assigned_count, migrating_count, released_count, active_partition_count, top_workers, source_breakdown, filters } } }`
+  - 备注：非法 `status` 返回 `400 SCHEDULER_QUERY_INVALID`
+- **GET `/api/runtime/scheduler/migrations`**
+  - 说明：读取最近 scheduler ownership migration 历史
+  - 参数：`?limit=20&worker_id=<worker_id>&partition_id=<partition_id>&status=<requested|in_progress|completed|failed|cancelled>`
+  - 返回：`{ success: true, data: { items: { id, partition_id, from_worker_id, to_worker_id, status, reason, details, created_at, updated_at, completed_at }[], summary: { returned, limit, in_progress_count, filters } } }`
+  - 备注：当前 migration handoff 语义已验证与 lease-expiry failover 兼容；planned migration 不会绕过已有 lease，而是在旧 lease 过期后由新 owner 接管并完成 handoff；非法 `status` / `limit` 返回 `400 SCHEDULER_QUERY_INVALID`
+- **GET `/api/runtime/scheduler/workers`**
+  - 说明：读取 scheduler worker runtime heartbeat / liveness / capacity snapshot
+  - 参数：`?worker_id=<worker_id>&status=<active|stale|suspected_dead>`
+  - 返回：`{ success: true, data: { items: { worker_id, status, last_heartbeat_at, owned_partition_count, active_migration_count, capacity_hint, updated_at }[], summary: { returned, active_count, stale_count, suspected_dead_count, filters } } }`
+  - 备注：非法 `status` 返回 `400 SCHEDULER_QUERY_INVALID`
+- **GET `/api/runtime/scheduler/rebalance/recommendations`**
+  - 说明：读取 scheduler automatic rebalance recommendation / suppression / apply 历史
+  - 参数：`?limit=20&worker_id=<worker_id>&partition_id=<partition_id>&status=<recommended|suppressed|applied|superseded|expired>&suppress_reason=<reason>`
+  - 返回：`{ success: true, data: { items: { id, partition_id, from_worker_id, to_worker_id, status, reason, score, suppress_reason, details, created_at, updated_at, applied_migration_id }[], summary: { returned, limit, status_breakdown, suppress_reason_breakdown, filters } } }`
+  - 备注：automatic recommendation 的 apply 仍保持 bounded 且 lease-respecting；即使 recommendation 已 applied，active lease 仍不会被抢占，而是等待 lease expiry 后由新 owner 完成 handoff；非法 `status` / `limit` 返回 `400 SCHEDULER_QUERY_INVALID`
 - **GET `/api/runtime/scheduler/runs/latest`**
-  - 说明：读取最近一次 scheduler run 的 summary 与 candidate decisions read model
+  - 说明：读取最近一次 scheduler run 的 summary、candidate decisions read model，以及 run-level `cross_link_summary`
+  - 备注：当前 `run` 载荷会带 `partition_id`、`lease_holder`、`lease_expires_at_snapshot`；`candidates[*]` 会带 `partition_id`
 - **GET `/api/runtime/scheduler/runs/:id`**
-  - 说明：按 run id 读取指定 scheduler run 的 summary 与 candidate decisions read model
+  - 说明：按 run id 读取指定 scheduler run 的 summary、candidate decisions read model，以及 run-level `cross_link_summary`
+  - 备注：当前 `run` 载荷会带 `partition_id`、`lease_holder`、`lease_expires_at_snapshot`；`candidates[*]` 会带 `partition_id`；空白 `id` 返回 `400 SCHEDULER_QUERY_INVALID`
 - **GET `/api/runtime/scheduler/decisions`**
   - 说明：分页查询 scheduler candidate decision 列表
-  - 参数：`?limit=20&cursor=<opaque_cursor>&actor_id=<agent_id>&kind=periodic|event_driven&reason=<scheduler_reason>&skipped_reason=<scheduler_skip_reason>&from_tick=<tick>&to_tick=<tick>`
-  - 返回：`{ success: true, data: { items: SchedulerCandidateDecision[], page_info: { has_next_page, next_cursor }, summary: { returned, limit, filters: { cursor, actor_id, kind, reason, skipped_reason, from_tick, to_tick } } }, meta: { pagination } }`，`skipped_reason` 当前可能包含 `replay_window_periodic_suppressed | replay_window_event_suppressed | retry_window_periodic_suppressed | retry_window_event_suppressed`
+  - 参数：`?limit=20&cursor=<opaque_cursor>&actor_id=<agent_id>&kind=periodic|event_driven&reason=<scheduler_reason>&skipped_reason=<scheduler_skip_reason>&from_tick=<tick>&to_tick=<tick>&partition_id=<partition_id>`
+  - 返回：`{ success: true, data: { items: SchedulerCandidateDecision[], page_info: { has_next_page, next_cursor }, summary: { returned, limit, filters: { cursor, actor_id, kind, reason, skipped_reason, from_tick, to_tick, partition_id } } }, meta: { pagination } }`，其中 `items[*]` 现在额外带 `partition_id`；created decision 继续带 `workflow_link: { job_id, status, intent_class, workflow_state, action_intent_id, inference_id, intent_type, dispatch_stage, failure_stage, failure_code, outcome_summary_excerpt, audit_entry } | null`；`skipped_reason` 当前可能包含 `replay_window_periodic_suppressed | replay_window_event_suppressed | retry_window_periodic_suppressed | retry_window_event_suppressed`
+  - 备注：无效查询参数（如 invalid cursor / invalid tick range / unsupported kind / unsupported reason / unsupported skipped_reason）返回 `400 SCHEDULER_QUERY_INVALID`
 - **GET `/api/agent/:id/scheduler`**
   - 说明：读取指定 agent 最近的 scheduler candidate decision 轨迹
-  - 备注：无效查询参数（如 invalid cursor / invalid tick range / unsupported kind）返回 `400 SCHEDULER_QUERY_INVALID`
+- **GET `/api/agent/:id/scheduler/projection`**
+  - 说明：读取指定 agent 的 scheduler operator projection，返回 actor summary、reason/skipped_reason breakdown、recent timeline 与 recent run/job linkage
+  - 参数：`?limit=20`
+  - 返回：`{ success: true, data: { actor_id, summary: { total_decisions, created_count, skipped_count, periodic_count, event_driven_count, latest_scheduled_tick, latest_run_id, latest_partition_id, top_reason, top_skipped_reason }, reason_breakdown, skipped_reason_breakdown, timeline, linkage: { recent_runs, recent_created_jobs } } }`，其中 `timeline[*]` 现与 scheduler decisions list 一样可带增强后的 `workflow_link + partition_id`，`linkage.recent_runs[*]` 与 `linkage.recent_created_jobs[*]` 也会带 `partition_id`
+  - 备注：非法 `limit` 返回 `400 AGENT_QUERY_INVALID`
 
 ## 9. 推理与工作流接口
 
@@ -247,6 +301,7 @@
 - `CLOCK_ACTION_INVALID`
 - `RUNTIME_SPEED_INVALID`
 - `RUNTIME_SPEED_ACTION_INVALID`
+- `AGENT_QUERY_INVALID`
 - `AGENT_NOT_FOUND`
 - `IDENTITY_HEADER_INVALID`
 - `IDENTITY_REQUIRED`
@@ -255,10 +310,13 @@
 - `IDENTITY_BINDING_INVALID`
 - `IDENTITY_BINDING_NOT_FOUND`
 - `IDENTITY_BINDING_CONFLICT`
+- `SOCIAL_FEED_QUERY_INVALID`
 - `SOCIAL_POST_INVALID`
 - `POLICY_INVALID`
 - `POLICY_EVAL_INVALID`
 - `POLICY_CONDITIONS_INVALID`
+- `RELATIONAL_QUERY_INVALID`
+- `RELATIONSHIP_LOG_QUERY_INVALID`
 - `WORLD_PACK_NOT_READY`
 - `SYS_PRECHECK_FAIL`
 - `WORLD_PACK_EMPTY`
@@ -281,8 +339,9 @@
 - `SNR_LOG_QUERY_INVALID`
 - `AUDIT_VIEW_QUERY_INVALID`
 - `AUDIT_ENTRY_NOT_FOUND`
+- `GRAPH_VIEW_QUERY_INVALID`
 - `SCHEDULER_QUERY_INVALID`
 
 ---
 
-*更新时间: 2026-03-30*
+*更新时间: 2026-04-04*
