@@ -114,6 +114,8 @@ This keeps `SimulationManager` as a runtime composition object rather than allow
 - `apps/server/src/app/runtime/scheduler_lease.ts` 负责 partition-scoped lease / cursor 读写，并对竞争 create/update 场景做了最小容错处理。
 - `apps/server/src/app/services/inference_workflow/repository.ts` 现会为 scheduler followup/recovery 查询返回带 tick 的 signal/recovery 数据，以支撑更真实的 cursor watermark 推进语义。
 - 当前 closure pass 后，`last_signal_tick` 不再无条件推进到 `now`，而是优先推进到该 partition 本轮真正观测到的最新 signal / recovery watermark。
+- 当前 replay/retry recovery-window suppression 已升级为细粒度、按优先级生效：periodic candidate 会继续被 suppress，低优先级 event-driven candidate（如 relationship / snr followup）也会在恢复窗口内被 suppress，而高优先级 `event_followup` 默认可穿透 suppression。
+- scheduler skip taxonomy 已显式区分 `replay_window_periodic_suppressed` / `replay_window_event_suppressed` / `retry_window_periodic_suppressed` / `retry_window_event_suppressed`，summary/read-model/trends 可直接暴露这些细粒度 suppression 统计。
 - `event_coalesced` 仍保留为 summary-side taxonomy / aggregate counter，不被伪装成 candidate-level `skipped_reason`；candidate explainability 由 `candidate_reasons` 与派生 coalescing 字段承接。
 
 ---

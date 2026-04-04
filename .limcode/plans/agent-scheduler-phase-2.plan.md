@@ -1,10 +1,10 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-- [ ] 落地 durable scheduled jobs 的 schema 与 workflow/runner 基线  `#s2p1`
-- [ ] 实现 event-driven cadence 的最小 follow-up 调度  `#s2p2`
-- [ ] 扩展 scheduler 统计与 observability 输出  `#s2p3`
-- [ ] 补充 e2e 验证并同步 TODO/记录文档  `#s2p4`
+- [x] 落地 durable scheduled jobs 的 schema 与 workflow/runner 基线  `#s2p1`
+- [x] 实现 event-driven cadence 的最小 follow-up 调度  `#s2p2`
+- [x] 扩展 scheduler 统计与 observability 输出  `#s2p3`
+- [x] 补充 e2e 验证并同步 TODO/记录文档  `#s2p4`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # Agent Scheduler 第二阶段实现计划

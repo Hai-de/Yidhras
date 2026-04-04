@@ -2,10 +2,10 @@
 
 <!-- LIMCODE_TODO_LIST_START -->
 - [x] 梳理并冻结 Agent Scheduler 首期边界与设计来源  `#p1`
-- [ ] 新增 Agent Scheduler runtime/service 模块并实现 active agent 扫描  `#p2`
-- [ ] 实现去重、cooldown 与 scheduler idempotency key 生成  `#p3`
-- [ ] 将 scheduler 接入 simulation loop 并打通 DecisionJob 提交链路  `#p4`
-- [ ] 补充 e2e/脚本验证与必要文档同步  `#p5`
+- [x] 新增 Agent Scheduler runtime/service 模块并实现 active agent 扫描  `#p2`
+- [x] 实现去重、cooldown 与 scheduler idempotency key 生成  `#p3`
+- [x] 将 scheduler 接入 simulation loop 并打通 DecisionJob 提交链路  `#p4`
+- [x] 补充 e2e/脚本验证与必要文档同步  `#p5`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # Agent Scheduler 首期开发计划

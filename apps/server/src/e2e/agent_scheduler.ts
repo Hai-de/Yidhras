@@ -489,6 +489,8 @@ async function main(): Promise<void> {
   );
   assertCondition(typeof followupRun.skipped_by_reason.replay_window_periodic_suppressed === 'number', 'replay periodic suppression count should be present');
   assertCondition(typeof followupRun.skipped_by_reason.retry_window_periodic_suppressed === 'number', 'retry periodic suppression count should be present');
+  assertCondition(typeof followupRun.skipped_by_reason.replay_window_event_suppressed === 'number', 'replay event suppression count should be present');
+  assertCondition(typeof followupRun.skipped_by_reason.retry_window_event_suppressed === 'number', 'retry event suppression count should be present');
 
   const eventDrivenJobs = await prisma.decisionJob.findMany({
     where: {
@@ -595,6 +597,308 @@ async function main(): Promise<void> {
     'read model should expose at least one fine-grained recovery-window periodic suppression decision'
   );
 
+  await prisma.decisionJob.deleteMany({
+    where: {
+      status: {
+        in: ['pending', 'running']
+      },
+      idempotency_key: {
+        startsWith: 'sch:agent-002:'
+      }
+    }
+  });
+  await prisma.decisionJob.deleteMany({
+    where: {
+      OR: [
+        { idempotency_key: { startsWith: 'scheduler-e2e-replay-' } },
+        { idempotency_key: { startsWith: 'scheduler-e2e-retry-' } }
+      ]
+    }
+  });
+
+  context.sim.clock.tick(1n);
+  const lowPriorityReplayTick = context.sim.clock.getTicks();
+  const lowPriorityRelationshipIntentId = `scheduler-e2e-intent-rel-only-${Date.now()}`;
+  const lowPriorityRelationshipTraceId = `scheduler-e2e-trace-rel-only-${Date.now()}`;
+  const lowPriorityReplayPendingKey = `scheduler-e2e-replay-low-priority-${Date.now()}`;
+  const lowPriorityReplayRequestKey = `scheduler-e2e-replay-low-priority-request-${Date.now()}`;
+  const lowPriorityRelationship = await prisma.relationship.upsert({
+    where: {
+      from_id_to_id_type: {
+        from_id: 'agent-002',
+        to_id: 'agent-001',
+        type: 'ally'
+      }
+    },
+    update: {
+      weight: 0.9,
+      updated_at: lowPriorityReplayTick
+    },
+    create: {
+      id: `scheduler-e2e-rel-only-${Date.now()}`,
+      from_id: 'agent-002',
+      to_id: 'agent-001',
+      type: 'ally',
+      weight: 0.9,
+      created_at: lowPriorityReplayTick,
+      updated_at: lowPriorityReplayTick
+    }
+  });
+  await prisma.inferenceTrace.create({
+    data: {
+      id: lowPriorityRelationshipTraceId,
+      kind: 'run',
+      strategy: 'mock',
+      provider: 'mock',
+      actor_ref: {
+        identity_id: 'agent-002',
+        identity_type: 'agent',
+        role: 'active',
+        agent_id: 'agent-002',
+        atmosphere_node_id: null
+      },
+      input: { agent_id: 'agent-002', strategy: 'mock' },
+      context_snapshot: {},
+      prompt_bundle: {},
+      trace_metadata: {
+        inference_id: lowPriorityRelationshipTraceId,
+        tick: lowPriorityReplayTick.toString(),
+        strategy: 'mock',
+        provider: 'mock',
+        world_pack_id: worldPack
+      },
+      decision: {},
+      created_at: lowPriorityReplayTick,
+      updated_at: lowPriorityReplayTick
+    }
+  });
+  await prisma.actionIntent.create({
+    data: {
+      id: lowPriorityRelationshipIntentId,
+      source_inference_id: lowPriorityRelationshipTraceId,
+      intent_type: 'adjust_relationship',
+      actor_ref: {
+        identity_id: 'agent-002',
+        role: 'active',
+        agent_id: 'agent-002',
+        atmosphere_node_id: null
+      },
+      target_ref: undefined,
+      payload: {
+        target_agent_id: 'agent-001',
+        relationship_type: 'ally',
+        new_weight: 0.9
+      },
+      status: 'completed',
+      created_at: lowPriorityReplayTick,
+      updated_at: lowPriorityReplayTick,
+      dispatched_at: lowPriorityReplayTick
+    }
+  });
+  await prisma.relationshipAdjustmentLog.create({
+    data: {
+      id: `scheduler-e2e-rel-log-only-${Date.now()}`,
+      action_intent_id: lowPriorityRelationshipIntentId,
+      relationship_id: lowPriorityRelationship.id,
+      from_id: 'agent-002',
+      to_id: 'agent-001',
+      type: 'ally',
+      operation: 'set',
+      old_weight: 0.1,
+      new_weight: 0.9,
+      reason: 'scheduler e2e low-priority replay suppression',
+      created_at: lowPriorityReplayTick
+    }
+  });
+  await prisma.decisionJob.create({
+    data: {
+      pending_source_key: lowPriorityReplayPendingKey,
+      job_type: 'inference_run',
+      status: 'completed',
+      idempotency_key: lowPriorityReplayPendingKey,
+      intent_class: 'replay_recovery',
+      attempt_count: 1,
+      max_attempts: 3,
+      request_input: {
+        agent_id: 'agent-002',
+        identity_id: 'agent-002',
+        strategy: 'rule_based',
+        idempotency_key: lowPriorityReplayRequestKey,
+        attributes: {
+          job_intent_class: 'replay_recovery',
+          job_source: 'replay'
+        }
+      },
+      created_at: lowPriorityReplayTick,
+      updated_at: lowPriorityReplayTick,
+      completed_at: lowPriorityReplayTick
+    }
+  });
+
+  const replaySuppressedRun = await runAgentScheduler({ context, limit: 10 });
+  assertCondition(
+    replaySuppressedRun.skipped_by_reason.replay_window_event_suppressed > 0,
+    'low-priority relationship followup should be suppressed during replay recovery window'
+  );
+
+  const replaySuppressedReadModels = Array.isArray(replaySuppressedRun.scheduler_run_ids)
+    ? await Promise.all(replaySuppressedRun.scheduler_run_ids.map(runId => getSchedulerRunReadModelById(context, runId)))
+    : [];
+  assertCondition(
+    replaySuppressedReadModels.some(
+      readModel =>
+        readModel?.candidates.some(
+          candidate =>
+            candidate.actor_id === 'agent-002' &&
+            candidate.kind === 'event_driven' &&
+            candidate.chosen_reason === 'relationship_change_followup' &&
+            candidate.skipped_reason === 'replay_window_event_suppressed'
+        ) ?? false
+    ),
+    'read model should record replay_window_event_suppressed for low-priority relationship followup'
+  );
+
+  await prisma.relationshipAdjustmentLog.deleteMany({
+    where: {
+      action_intent_id: lowPriorityRelationshipIntentId
+    }
+  });
+  await prisma.decisionJob.deleteMany({
+    where: {
+      OR: [
+        { idempotency_key: { startsWith: 'scheduler-e2e-replay-' } },
+        { idempotency_key: { startsWith: 'scheduler-e2e-retry-' } }
+      ]
+    }
+  });
+
+  await prisma.decisionJob.deleteMany({
+    where: {
+      status: {
+        in: ['pending', 'running']
+      },
+      idempotency_key: {
+        startsWith: 'sch:agent-002:'
+      }
+    }
+  });
+
+  context.sim.clock.tick(1n);
+  const lowPriorityRetryTick = context.sim.clock.getTicks();
+  const lowPrioritySnrTraceId = `scheduler-e2e-trace-snr-only-${Date.now()}`;
+  const lowPrioritySnrIntentId = `scheduler-e2e-intent-snr-only-${Date.now()}`;
+  const lowPriorityRetryPendingKey = `scheduler-e2e-retry-low-priority-${Date.now()}`;
+  const lowPriorityRetryRequestKey = `scheduler-e2e-retry-low-priority-request-${Date.now()}`;
+  await prisma.inferenceTrace.create({
+    data: {
+      id: lowPrioritySnrTraceId,
+      kind: 'run',
+      strategy: 'mock',
+      provider: 'mock',
+      actor_ref: {
+        identity_id: 'agent-002',
+        identity_type: 'agent',
+        role: 'active',
+        agent_id: 'agent-002',
+        atmosphere_node_id: null
+      },
+      input: { agent_id: 'agent-002', strategy: 'mock' },
+      context_snapshot: {},
+      prompt_bundle: {},
+      trace_metadata: {
+        inference_id: lowPrioritySnrTraceId,
+        tick: lowPriorityRetryTick.toString(),
+        strategy: 'mock',
+        provider: 'mock',
+        world_pack_id: worldPack
+      },
+      decision: {},
+      created_at: lowPriorityRetryTick,
+      updated_at: lowPriorityRetryTick
+    }
+  });
+  await prisma.actionIntent.create({
+    data: {
+      id: lowPrioritySnrIntentId,
+      source_inference_id: lowPrioritySnrTraceId,
+      intent_type: 'adjust_snr',
+      actor_ref: {
+        identity_id: 'agent-002',
+        role: 'active',
+        agent_id: 'agent-002',
+        atmosphere_node_id: null
+      },
+      target_ref: undefined,
+      payload: {
+        requested_value: 0.4
+      },
+      status: 'completed',
+      created_at: lowPriorityRetryTick,
+      updated_at: lowPriorityRetryTick,
+      dispatched_at: lowPriorityRetryTick
+    }
+  });
+  await prisma.sNRAdjustmentLog.create({
+    data: {
+      id: `scheduler-e2e-snr-only-${Date.now()}`,
+      action_intent_id: lowPrioritySnrIntentId,
+      agent_id: 'agent-002',
+      operation: 'set',
+      requested_value: 0.4,
+      baseline_value: 0.2,
+      resolved_value: 0.4,
+      reason: 'scheduler e2e low-priority retry suppression',
+      created_at: lowPriorityRetryTick
+    }
+  });
+  await prisma.decisionJob.create({
+    data: {
+      pending_source_key: lowPriorityRetryPendingKey,
+      job_type: 'inference_run',
+      status: 'completed',
+      idempotency_key: lowPriorityRetryPendingKey,
+      intent_class: 'retry_recovery',
+      attempt_count: 1,
+      max_attempts: 3,
+      request_input: {
+        agent_id: 'agent-002',
+        identity_id: 'agent-002',
+        strategy: 'rule_based',
+        idempotency_key: lowPriorityRetryRequestKey,
+        attributes: {
+          job_intent_class: 'retry_recovery',
+          job_source: 'retry'
+        }
+      },
+      created_at: lowPriorityRetryTick,
+      updated_at: lowPriorityRetryTick,
+      completed_at: lowPriorityRetryTick
+    }
+  });
+
+  const retrySuppressedRun = await runAgentScheduler({ context, limit: 10 });
+  assertCondition(
+    retrySuppressedRun.skipped_by_reason.retry_window_event_suppressed > 0,
+    'low-priority snr followup should be suppressed during retry recovery window'
+  );
+
+  const retrySuppressedReadModels = Array.isArray(retrySuppressedRun.scheduler_run_ids)
+    ? await Promise.all(retrySuppressedRun.scheduler_run_ids.map(runId => getSchedulerRunReadModelById(context, runId)))
+    : [];
+  assertCondition(
+    retrySuppressedReadModels.some(
+      readModel =>
+        readModel?.candidates.some(
+          candidate =>
+            candidate.actor_id === 'agent-002' &&
+            candidate.kind === 'event_driven' &&
+            candidate.chosen_reason === 'snr_change_followup' &&
+            candidate.skipped_reason === 'retry_window_event_suppressed'
+        ) ?? false
+    ),
+    'read model should record retry_window_event_suppressed for low-priority snr followup'
+  );
+
   const summarySnapshot = await getSchedulerSummarySnapshot(context, { sampleRuns: 10 });
   assertCondition(Array.isArray(summarySnapshot.top_skipped_reasons), 'scheduler summary should include top_skipped_reasons');
   assertCondition(
@@ -602,7 +906,9 @@ async function main(): Promise<void> {
       item =>
         item.skipped_reason === 'pending_workflow' ||
         item.skipped_reason === 'replay_window_periodic_suppressed' ||
-        item.skipped_reason === 'retry_window_periodic_suppressed'
+        item.skipped_reason === 'retry_window_periodic_suppressed' ||
+        item.skipped_reason === 'replay_window_event_suppressed' ||
+        item.skipped_reason === 'retry_window_event_suppressed'
     ),
     'scheduler summary should expose fine-grained skipped reason aggregation'
   );
@@ -611,7 +917,9 @@ async function main(): Promise<void> {
     beforeCount,
     afterFirstCount,
     afterSecondCount,
+    replaySuppressedRun,
     firstRun,
+    retrySuppressedRun,
     secondRun,
     followupRun
   });

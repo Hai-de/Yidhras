@@ -477,6 +477,7 @@ export interface SchedulerTrendPoint {
   created_periodic_count: number;
   created_event_driven_count: number;
   signals_detected_count: number;
+  skipped_by_reason: Partial<Record<SchedulerSkipReason, number>>;
 }
 
 export interface SchedulerTrendsSnapshot {
@@ -1576,7 +1577,8 @@ export const getSchedulerTrendsSnapshot = async (
           created_count: summary.created_count,
           created_periodic_count: summary.created_periodic_count,
           created_event_driven_count: summary.created_event_driven_count,
-          signals_detected_count: summary.signals_detected_count
+          signals_detected_count: summary.signals_detected_count,
+          skipped_by_reason: summary.skipped_by_reason ?? {}
         };
       })
       .reverse()

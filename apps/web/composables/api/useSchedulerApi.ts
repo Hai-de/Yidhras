@@ -93,10 +93,13 @@ export interface SchedulerSummarySnapshot {
 export interface SchedulerTrendPoint {
   tick: TickString
   run_id: string
+  partition_id: string
+  worker_id: string
   created_count: number
   created_periodic_count: number
   created_event_driven_count: number
   signals_detected_count: number
+  skipped_by_reason: Partial<Record<SchedulerSkipReason, number>>
 }
 
 export interface SchedulerTrendsSnapshot {

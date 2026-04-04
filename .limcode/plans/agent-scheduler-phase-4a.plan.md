@@ -1,10 +1,10 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-- [ ] 实现 scheduler runs list / decisions query 后端查询与路由  `#p4a1`
-- [ ] 补充 scheduler 查询分页/过滤与返回模型  `#p4a2`
-- [ ] 补充 P4-A e2e 验证并修复 lint/typecheck  `#p4a3`
-- [ ] 同步 API/ARCH/TODO/记录 文档  `#p4a4`
+- [x] 实现 scheduler runs list / decisions query 后端查询与路由  `#p4a1`
+- [x] 补充 scheduler 查询分页/过滤与返回模型  `#p4a2`
+- [x] 补充 P4-A e2e 验证并修复 lint/typecheck  `#p4a3`
+- [x] 同步 API/ARCH/TODO/记录 文档  `#p4a4`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # Agent Scheduler Phase 4A 实施计划

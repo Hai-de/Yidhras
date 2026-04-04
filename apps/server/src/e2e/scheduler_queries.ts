@@ -79,9 +79,10 @@ const main = async () => {
           isRecord(point) &&
           typeof point.tick === 'string' &&
           typeof point.partition_id === 'string' &&
-          typeof point.worker_id === 'string'
+          typeof point.worker_id === 'string' &&
+          isRecord(point.skipped_by_reason)
       ),
-      'scheduler trends points should expose tick strings with partition/worker context'
+      'scheduler trends points should expose tick strings with partition/worker context and skipped_by_reason aggregation'
     );
 
     const operatorRes = await requestJson(server.baseUrl, '/api/runtime/scheduler/operator?sample_runs=5&recent_limit=5');

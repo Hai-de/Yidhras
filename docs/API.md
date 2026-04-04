@@ -194,7 +194,7 @@
 - **GET `/api/runtime/scheduler/trends`**
   - 说明：读取最近 scheduler runs 的趋势点集合
   - 参数：`?sample_runs=20`
-  - 返回：`{ success: true, data: { points: { tick, run_id, partition_id, worker_id, created_count, created_periodic_count, created_event_driven_count, signals_detected_count }[] } }`
+  - 返回：`{ success: true, data: { points: { tick, run_id, partition_id, worker_id, created_count, created_periodic_count, created_event_driven_count, signals_detected_count, skipped_by_reason }[] } }`
   - 备注：非法 `sample_runs` 返回 `400 SCHEDULER_QUERY_INVALID`
 - **GET `/api/runtime/scheduler/operator`**
   - 说明：读取面向 overview / operator 的 scheduler 聚合 projection，聚合 latest run、summary、trends、recent runs、recent decisions 与 highlights

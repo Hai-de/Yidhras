@@ -1,11 +1,11 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-- [ ] 设计并实现细粒度 suppression policy 结构（按 intent_class / signal priority / candidate kind）  `#sfg1`
-- [ ] 在 scheduler 中对低优先级 event-driven candidate 引入 replay/retry window suppression  `#sfg2`
-- [ ] 扩展 skip reason taxonomy 与 summary/trend 聚合以反映细粒度 suppression  `#sfg3`
-- [ ] 补充 agent_scheduler e2e 覆盖 survive/suppress 分支  `#sfg4`
-- [ ] 同步 API/ARCH/TODO/记录 文档  `#sfg5`
+- [X] 设计并实现细粒度 suppression policy 结构（按 intent_class / signal priority / candidate kind）  `#sfg1`
+- [x] 在 scheduler 中对低优先级 event-driven candidate 引入 replay/retry window suppression  `#sfg2`
+- [X] 扩展 skip reason taxonomy 与 summary/trend 聚合以反映细粒度 suppression  `#sfg3`
+- [x] 补充 agent_scheduler e2e 覆盖 survive/suppress 分支  `#sfg4`
+- [X] 同步 API/ARCH/TODO/记录 文档  `#sfg5`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # Scheduler Fine-Grained Replay-Aware Suppression 实施计划

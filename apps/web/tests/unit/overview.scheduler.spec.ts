@@ -69,18 +69,24 @@ const createTrendPoints = (): SchedulerTrendPoint[] => [
   {
     tick: '1000',
     run_id: 'run-1',
+    partition_id: 'p0',
+    worker_id: 'worker-a',
     created_count: 4,
     created_periodic_count: 3,
     created_event_driven_count: 1,
-    signals_detected_count: 5
+    signals_detected_count: 5,
+    skipped_by_reason: { replay_window_event_suppressed: 1 }
   },
   {
     tick: '1002',
     run_id: 'run-2',
+    partition_id: 'p0',
+    worker_id: 'worker-a',
     created_count: 2,
     created_periodic_count: 1,
     created_event_driven_count: 1,
-    signals_detected_count: 3
+    signals_detected_count: 3,
+    skipped_by_reason: { retry_window_event_suppressed: 1 }
   }
 ]
 
