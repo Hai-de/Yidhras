@@ -60,7 +60,7 @@ export const acquireSchedulerLease = async (
   });
 
   if (!existing) {
-    await context.prisma.schedulerLease.create({
+    const createdLease = await context.prisma.schedulerLease.create({
       data: {
         key,
         partition_id: partitionId,
@@ -69,7 +69,29 @@ export const acquireSchedulerLease = async (
         expires_at: expiresAt,
         updated_at: now
       }
+    }).catch(async error => {
+      const prismaError = error as { code?: string };
+      if (prismaError?.code !== 'P2002') {
+        throw error;
+      }
+
+      return context.prisma.schedulerLease.findUnique({
+        where: {
+          partition_id: partitionId
+        }
+      });
     });
+
+    if (createdLease && createdLease.holder !== input.workerId && createdLease.expires_at > now) {
+      return {
+        acquired: false,
+        holder: createdLease.holder,
+        expires_at: createdLease.expires_at,
+        partition_id: partitionId,
+        key: createdLease.key
+      };
+    }
+
     return {
       acquired: true,
       holder: input.workerId,
@@ -80,7 +102,7 @@ export const acquireSchedulerLease = async (
   }
 
   if (existing.holder === input.workerId || existing.expires_at <= now) {
-    await context.prisma.schedulerLease.update({
+    const updatedLease = await context.prisma.schedulerLease.update({
       where: {
         partition_id: partitionId
       },
@@ -91,7 +113,33 @@ export const acquireSchedulerLease = async (
         expires_at: expiresAt,
         updated_at: now
       }
+    }).catch(async error => {
+      const prismaError = error as { code?: string };
+      if (prismaError?.code !== 'P2025') {
+        throw error;
+      }
+
+      return context.prisma.schedulerLease.findUnique({
+        where: {
+          partition_id: partitionId
+        }
+      });
     });
+
+    if (!updatedLease) {
+      return acquireSchedulerLease(context, input);
+    }
+
+    if (updatedLease.holder !== input.workerId && updatedLease.expires_at > now) {
+      return {
+        acquired: false,
+        holder: updatedLease.holder,
+        expires_at: updatedLease.expires_at,
+        partition_id: partitionId,
+        key: updatedLease.key
+      };
+    }
+
     return {
       acquired: true,
       holder: input.workerId,

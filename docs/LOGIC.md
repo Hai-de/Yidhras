@@ -119,7 +119,17 @@ This file focuses on business rules and domain semantics rather than unstable im
 - Cross-layer coupling is only partially formalized.
 - Some couplings are represented in data structures and APIs, but full enforcement remains phased.
 
-## 7) Agent System Scope / Agent 系统边界
+## 7) Scheduler Logic Notes / Scheduler 逻辑说明
+
+- Scheduler 当前会为 agent 形成 `periodic` 与 `event_driven` 两类 candidate，并通过 signal weighting + merge 形成单个 event-driven decision。
+- 一个 merged event-driven candidate 会保留 `chosen_reason + candidate_reasons[]`；secondary reasons 不会伪装成真正独立的 skipped candidate。
+- `event_coalesced` 当前代表“secondary reasons 被合并进主决策”的 summary-side taxonomy，用于 run summary / skipped_by_reason 聚合，而不是 candidate-level `skipped_reason`。
+- closure pass 后，candidate evaluation 已收敛为更清晰的 readiness 顺序：`limit -> pending_workflow -> replay/retry suppression -> periodic cooldown -> existing idempotency / create`。
+- replay / retry recovery window 仍会继续 suppress periodic cadence；高优先级 event-driven followup 可在未被 pending/idempotency 阻断时继续存活。
+- scheduler read model 现在会从 `candidate_reasons` 派生 `coalesced_secondary_reason_count` 与 `has_coalesced_signals`，用于解释 merged event-driven decision 的 coalescing 行为。
+- closure pass 后，`last_signal_tick` 表示“本 partition 最近真正观测到的 signal / recovery watermark”，而不再只是“这轮调度运行结束时的 now”。
+
+## 8) Agent System Scope / Agent 系统边界
 
 ### Core Modules / 核心模块
 
@@ -137,7 +147,7 @@ This file focuses on business rules and domain semantics rather than unstable im
 - Keep internal draft artifacts separate from formal external contracts.
 - Keep current L4 semantics intentionally minimal until richer simulation rules are truly needed.
 
-## 8) Product Rules for Contributors / 贡献者规则
+## 9) Product Rules for Contributors / 贡献者规则
 
 - Mark business statements clearly as current rules or planned direction.
 - Avoid presenting speculative behavior as already available.

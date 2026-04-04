@@ -188,7 +188,7 @@ const main = async () => {
     const finalCursor = await getSchedulerCursor(context, 'p0');
     assert(finalCursor !== null, 'cursor should survive automatic rebalance failover compatibility handoff');
     assert(finalCursor?.last_scanned_tick === 1003n, 'cursor last_scanned_tick should advance under the new owner after lease expiry');
-    assert(finalCursor?.last_signal_tick === 1003n, 'cursor last_signal_tick should advance under the new owner after lease expiry');
+    assert(finalCursor?.last_signal_tick === 998n, 'cursor last_signal_tick should preserve latest observed signal watermark when no newer signals appear after takeover');
 
     console.log('[scheduler_automatic_rebalance_failover_compatibility] PASS');
   } catch (error: unknown) {

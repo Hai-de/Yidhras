@@ -137,7 +137,7 @@
   - 返回：`{ success: true, data: SNRAdjustmentLog[] }`
   - 备注：非法 `limit` 返回 `400 SNR_LOG_QUERY_INVALID`
 - **GET `/api/agent/:id/scheduler/projection`**
-  - 说明：读取指定 agent 的 scheduler operator projection
+  - 说明：读取指定 agent 的 scheduler actor-centric projection
   - 参数：`?limit=20`
   - 备注：非法 `limit` 返回 `400 AGENT_QUERY_INVALID`
 
@@ -230,14 +230,14 @@
 - **GET `/api/runtime/scheduler/decisions`**
   - 说明：分页查询 scheduler candidate decision 列表
   - 参数：`?limit=20&cursor=<opaque_cursor>&actor_id=<agent_id>&kind=periodic|event_driven&reason=<scheduler_reason>&skipped_reason=<scheduler_skip_reason>&from_tick=<tick>&to_tick=<tick>&partition_id=<partition_id>`
-  - 返回：`{ success: true, data: { items: SchedulerCandidateDecision[], page_info: { has_next_page, next_cursor }, summary: { returned, limit, filters: { cursor, actor_id, kind, reason, skipped_reason, from_tick, to_tick, partition_id } } }, meta: { pagination } }`，其中 `items[*]` 现在额外带 `partition_id`；created decision 继续带 `workflow_link: { job_id, status, intent_class, workflow_state, action_intent_id, inference_id, intent_type, dispatch_stage, failure_stage, failure_code, outcome_summary_excerpt, audit_entry } | null`；`skipped_reason` 当前可能包含 `replay_window_periodic_suppressed | replay_window_event_suppressed | retry_window_periodic_suppressed | retry_window_event_suppressed`
+  - 返回：`{ success: true, data: { items: SchedulerCandidateDecision[], page_info: { has_next_page, next_cursor }, summary: { returned, limit, filters: { cursor, actor_id, kind, reason, skipped_reason, from_tick, to_tick, partition_id } } }, meta: { pagination } }`，其中 `items[*]` 现在额外带 `partition_id`；created decision 继续带 `workflow_link: { job_id, status, intent_class, workflow_state, action_intent_id, inference_id, intent_type, dispatch_stage, failure_stage, failure_code, outcome_summary_excerpt, audit_entry } | null`；`skipped_reason` 当前可能包含 `replay_window_periodic_suppressed | replay_window_event_suppressed | retry_window_periodic_suppressed | retry_window_event_suppressed`；`candidate_reasons` 继续保留 merged reasons，同时 read model 现在还会派生 `coalesced_secondary_reason_count` 与 `has_coalesced_signals`
   - 备注：无效查询参数（如 invalid cursor / invalid tick range / unsupported kind / unsupported reason / unsupported skipped_reason）返回 `400 SCHEDULER_QUERY_INVALID`
 - **GET `/api/agent/:id/scheduler`**
   - 说明：读取指定 agent 最近的 scheduler candidate decision 轨迹
 - **GET `/api/agent/:id/scheduler/projection`**
-  - 说明：读取指定 agent 的 scheduler operator projection，返回 actor summary、reason/skipped_reason breakdown、recent timeline 与 recent run/job linkage
+  - 说明：读取指定 agent 的 scheduler actor-centric projection，返回 actor summary、reason/skipped_reason breakdown、recent timeline 与 recent run/job linkage
   - 参数：`?limit=20`
-  - 返回：`{ success: true, data: { actor_id, summary: { total_decisions, created_count, skipped_count, periodic_count, event_driven_count, latest_scheduled_tick, latest_run_id, latest_partition_id, top_reason, top_skipped_reason }, reason_breakdown, skipped_reason_breakdown, timeline, linkage: { recent_runs, recent_created_jobs } } }`，其中 `timeline[*]` 现与 scheduler decisions list 一样可带增强后的 `workflow_link + partition_id`，`linkage.recent_runs[*]` 与 `linkage.recent_created_jobs[*]` 也会带 `partition_id`
+  - 返回：`{ success: true, data: { actor_id, summary: { total_decisions, created_count, skipped_count, periodic_count, event_driven_count, latest_scheduled_tick, latest_run_id, latest_partition_id, top_reason, top_skipped_reason }, reason_breakdown, skipped_reason_breakdown, timeline, linkage: { recent_runs, recent_created_jobs } } }`，其中 `timeline[*]` 现与 scheduler decisions list 一样可带增强后的 `workflow_link + partition_id`，并派生 `coalesced_secondary_reason_count` / `has_coalesced_signals` 以解释 merged event-driven candidates；`linkage.recent_runs[*]` 与 `linkage.recent_created_jobs[*]` 也会带 `partition_id`
   - 备注：非法 `limit` 返回 `400 AGENT_QUERY_INVALID`
 
 ## 9. 推理与工作流接口

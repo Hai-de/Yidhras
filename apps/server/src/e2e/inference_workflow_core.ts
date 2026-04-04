@@ -2,12 +2,21 @@ import { Prisma, PrismaClient } from '@prisma/client';
 
 import type { AppContext, StartupHealth } from '../app/context.js';
 import {
+  buildInferenceJobReplaySubmitResult,
+  buildInferenceJobRetryResult,
+  buildInferenceJobSubmitResult,
   createPendingDecisionJob,
   getDecisionJobById,
   getWorkflowSnapshotByJobId,
   listInferenceJobs
 } from '../app/services/inference_workflow.js';
 import { ensureNonEmptyId, normalizeReplayInput, normalizeStoredRequestInput, parseInferenceJobsCursor } from '../app/services/inference_workflow/parsers.js';
+import {
+  buildInferenceJobReplayResult,
+  getDecisionResultFromWorkflowSnapshot,
+  resolveInferenceIdForSubmitResult,
+  resolveResultSource
+} from '../app/services/inference_workflow/results.js';
 import { buildWorkflowSnapshot } from '../app/services/inference_workflow/snapshots.js';
 import { ChronosEngine } from '../clock/engine.js';
 import type { SimulationManager } from '../core/simulation.js';
@@ -169,6 +178,77 @@ const testSnapshotDerivation = () => {
   });
   assert(previewOnly.derived.workflow_state === 'preview_only', 'preview trace without job should derive preview_only');
 
+  const decisionPending = buildWorkflowSnapshot({
+    trace: null,
+    job: {
+      id: 'job-pending',
+      locked_by: null,
+      locked_at: null,
+      lock_expires_at: null,
+      replay_of_job_id: null,
+      replay_source_trace_id: null,
+      replay_reason: null,
+      replay_override_snapshot: null,
+      pending_source_key: 'pending-key',
+      source_inference_id: null,
+      action_intent_id: null,
+      job_type: 'inference_run',
+      status: 'pending',
+      attempt_count: 0,
+      max_attempts: 3,
+      request_input: { agent_id: 'agent-001' },
+      last_error: null,
+      last_error_code: null,
+      last_error_stage: null,
+      idempotency_key: 'job-pending-key',
+      started_at: null,
+      next_retry_at: null,
+      intent_class: 'direct_inference',
+      scheduled_for_tick: null,
+      created_at: 1000n,
+      updated_at: 1000n,
+      completed_at: null
+    },
+    intent: null
+  });
+  assert(decisionPending.derived.workflow_state === 'decision_pending', 'pending job should derive decision_pending');
+  assert(decisionPending.derived.decision_stage === 'queued', 'pending job should keep queued decision stage');
+
+  const decisionRunning = buildWorkflowSnapshot({
+    trace: null,
+    job: {
+      id: 'job-running',
+      locked_by: 'worker-a',
+      locked_at: 1000n,
+      lock_expires_at: 1005n,
+      replay_of_job_id: null,
+      replay_source_trace_id: null,
+      replay_reason: null,
+      replay_override_snapshot: null,
+      pending_source_key: null,
+      source_inference_id: 'trace-running',
+      action_intent_id: null,
+      job_type: 'inference_run',
+      status: 'running',
+      attempt_count: 1,
+      max_attempts: 3,
+      request_input: { agent_id: 'agent-001' },
+      last_error: null,
+      last_error_code: null,
+      last_error_stage: null,
+      idempotency_key: 'job-running-key',
+      started_at: 1000n,
+      next_retry_at: null,
+      intent_class: 'direct_inference',
+      scheduled_for_tick: null,
+      created_at: 1000n,
+      updated_at: 1001n,
+      completed_at: null
+    },
+    intent: null
+  });
+  assert(decisionRunning.derived.workflow_state === 'decision_running', 'running job should derive decision_running');
+
   const decisionFailed = buildWorkflowSnapshot({
     trace: null,
     job: {
@@ -204,6 +284,109 @@ const testSnapshotDerivation = () => {
   });
   assert(decisionFailed.derived.workflow_state === 'decision_failed', 'failed job should derive decision_failed');
   assert(decisionFailed.derived.failure_stage === 'provider', 'failed job should expose provider failure stage');
+
+  const dispatchPending = buildWorkflowSnapshot({
+    trace: {
+      id: 'trace-dispatch-pending',
+      kind: 'run',
+      strategy: 'mock',
+      provider: 'mock',
+      actor_ref: { agent_id: 'agent-001' },
+      input: {},
+      context_snapshot: {},
+      prompt_bundle: {},
+      trace_metadata: { tick: '1000' },
+      decision: { action_type: 'post_message', payload: { content: 'hello' } },
+      created_at: 1000n,
+      updated_at: 1000n
+    },
+    job: {
+      id: 'job-dispatch-pending',
+      locked_by: null,
+      locked_at: null,
+      lock_expires_at: null,
+      replay_of_job_id: null,
+      replay_source_trace_id: null,
+      replay_reason: null,
+      replay_override_snapshot: null,
+      pending_source_key: null,
+      source_inference_id: 'trace-dispatch-pending',
+      action_intent_id: null,
+      job_type: 'inference_run',
+      status: 'completed',
+      attempt_count: 1,
+      max_attempts: 3,
+      request_input: { agent_id: 'agent-001' },
+      last_error: null,
+      last_error_code: null,
+      last_error_stage: null,
+      idempotency_key: 'job-dispatch-pending-key',
+      started_at: 1000n,
+      next_retry_at: null,
+      intent_class: 'direct_inference',
+      scheduled_for_tick: null,
+      created_at: 1000n,
+      updated_at: 1001n,
+      completed_at: 1002n
+    },
+    intent: null
+  });
+  assert(dispatchPending.derived.workflow_state === 'dispatch_pending', 'completed decision without intent should derive dispatch_pending');
+
+  const dispatching = buildWorkflowSnapshot({
+    trace: null,
+    job: {
+      id: 'job-dispatching',
+      locked_by: null,
+      locked_at: null,
+      lock_expires_at: null,
+      replay_of_job_id: null,
+      replay_source_trace_id: null,
+      replay_reason: null,
+      replay_override_snapshot: null,
+      pending_source_key: null,
+      source_inference_id: 'trace-dispatching',
+      action_intent_id: 'intent-dispatching',
+      job_type: 'inference_run',
+      status: 'completed',
+      attempt_count: 1,
+      max_attempts: 3,
+      request_input: { agent_id: 'agent-001' },
+      last_error: null,
+      last_error_code: null,
+      last_error_stage: null,
+      idempotency_key: 'job-dispatching-key',
+      started_at: 1000n,
+      next_retry_at: null,
+      intent_class: 'direct_inference',
+      scheduled_for_tick: null,
+      created_at: 1000n,
+      updated_at: 1001n,
+      completed_at: 1002n
+    },
+    intent: {
+      id: 'intent-dispatching',
+      source_inference_id: 'trace-dispatching',
+      intent_type: 'post_message',
+      actor_ref: { agent_id: 'agent-001' },
+      target_ref: null,
+      payload: {},
+      scheduled_after_ticks: null,
+      scheduled_for_tick: null,
+      status: 'dispatching',
+      dispatch_started_at: 1002n,
+      dispatched_at: null,
+      transmission_delay_ticks: null,
+      transmission_policy: 'reliable',
+      transmission_drop_chance: 0,
+      drop_reason: null,
+      dispatch_error_code: null,
+      dispatch_error_message: null,
+      created_at: 1000n,
+      updated_at: 1002n
+    }
+  });
+  assert(dispatching.derived.workflow_state === 'dispatching', 'dispatching intent should derive dispatching state');
 
   const workflowCompleted = buildWorkflowSnapshot({
     trace: null,
@@ -314,6 +497,193 @@ const testSnapshotDerivation = () => {
     }
   });
   assert(workflowDropped.derived.workflow_state === 'workflow_dropped', 'dropped intent should derive workflow_dropped');
+
+  const workflowFailed = buildWorkflowSnapshot({
+    trace: null,
+    job: {
+      id: 'job-workflow-failed',
+      locked_by: null,
+      locked_at: null,
+      lock_expires_at: null,
+      replay_of_job_id: null,
+      replay_source_trace_id: null,
+      replay_reason: null,
+      replay_override_snapshot: null,
+      pending_source_key: null,
+      source_inference_id: 'trace-workflow-failed',
+      action_intent_id: 'intent-workflow-failed',
+      job_type: 'inference_run',
+      status: 'completed',
+      attempt_count: 1,
+      max_attempts: 3,
+      request_input: { agent_id: 'agent-001' },
+      last_error: null,
+      last_error_code: null,
+      last_error_stage: null,
+      idempotency_key: 'job-workflow-failed-key',
+      started_at: 1000n,
+      next_retry_at: null,
+      intent_class: 'direct_inference',
+      scheduled_for_tick: null,
+      created_at: 1000n,
+      updated_at: 1001n,
+      completed_at: 1002n
+    },
+    intent: {
+      id: 'intent-workflow-failed',
+      source_inference_id: 'trace-workflow-failed',
+      intent_type: 'post_message',
+      actor_ref: { agent_id: 'agent-001' },
+      target_ref: null,
+      payload: {},
+      scheduled_after_ticks: null,
+      scheduled_for_tick: null,
+      status: 'failed',
+      dispatch_started_at: 1001n,
+      dispatched_at: null,
+      transmission_delay_ticks: null,
+      transmission_policy: 'fragile',
+      transmission_drop_chance: 0.2,
+      drop_reason: null,
+      dispatch_error_code: 'ACTION_DISPATCH_FAIL',
+      dispatch_error_message: 'dispatch exploded',
+      created_at: 1000n,
+      updated_at: 1002n
+    }
+  });
+  assert(workflowFailed.derived.workflow_state === 'workflow_failed', 'failed intent dispatch should derive workflow_failed');
+  assert(workflowFailed.derived.failure_stage === 'dispatch', 'dispatch failure should expose dispatch failure stage');
+};
+
+const testResultBuilders = async (context: AppContext) => {
+  const job = await createWorkflowJob(context, {
+    suffix: 'results-base',
+    agentId: 'agent-003',
+    strategy: 'mock'
+  });
+
+  const noResultWorkflow = buildWorkflowSnapshot({
+    trace: null,
+    job,
+    intent: null
+  });
+
+  assert(resolveResultSource(false, null) === 'not_available', 'missing fresh result should resolve to not_available');
+  assert(resolveResultSource(true, { inference_id: 'trace-x', actor_ref: { identity_id: 'agent-003', identity_type: 'agent', role: 'active', agent_id: 'agent-003', atmosphere_node_id: null }, strategy: 'mock', provider: 'mock', tick: '1000', decision: { action_type: 'noop', target_ref: null, payload: {} }, trace_metadata: { inference_id: 'trace-x', world_pack_id: 'world', binding_ref: null, prompt_version: null, tick: '1000', strategy: 'mock', provider: 'mock' } }) === 'stored_trace', 'replayed result with trace should resolve to stored_trace');
+  assert(resolveInferenceIdForSubmitResult(noResultWorkflow, job) === job.pending_source_key, 'submit result should fall back to pending source key when no trace exists');
+  assert(getDecisionResultFromWorkflowSnapshot(noResultWorkflow) === null, 'workflow without trace decision should not expose decision result');
+
+  const submitResult = buildInferenceJobSubmitResult(job, null, noResultWorkflow, false);
+  assert(submitResult.result_source === 'not_available', 'fresh submit without result should stay not_available');
+  assert(submitResult.result === null, 'fresh submit without result should keep null result');
+
+  const traceId = `trace-result-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  const tick = 3000n;
+  await context.prisma.inferenceTrace.create({
+    data: {
+      id: traceId,
+      kind: 'run',
+      strategy: 'mock',
+      provider: 'mock',
+      actor_ref: { agent_id: 'agent-003', identity_id: 'agent-003' } as Prisma.InputJsonValue,
+      input: { agent_id: 'agent-003' } as Prisma.InputJsonValue,
+      context_snapshot: {} as Prisma.InputJsonValue,
+      prompt_bundle: {} as Prisma.InputJsonValue,
+      trace_metadata: {
+        inference_id: traceId,
+        tick: tick.toString(),
+        strategy: 'mock',
+        provider: 'mock',
+        world_pack_id: 'cyber_noir',
+        binding_ref: null,
+        prompt_version: null
+      } as Prisma.InputJsonValue,
+      decision: {
+        action_type: 'post_message',
+        target_ref: null,
+        payload: { content: 'result path' }
+      } as Prisma.InputJsonValue,
+      created_at: tick,
+      updated_at: tick
+    }
+  });
+
+  const intentId = `intent-result-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  await context.prisma.actionIntent.create({
+    data: {
+      id: intentId,
+      source_inference_id: traceId,
+      intent_type: 'post_message',
+      actor_ref: { agent_id: 'agent-003', identity_id: 'agent-003' } as Prisma.InputJsonValue,
+      target_ref: Prisma.JsonNull,
+      payload: { content: 'result path' } as Prisma.InputJsonValue,
+      scheduled_after_ticks: null,
+      scheduled_for_tick: null,
+      status: 'completed',
+      dispatch_started_at: tick,
+      dispatched_at: tick + 1n,
+      transmission_delay_ticks: null,
+      transmission_policy: 'reliable',
+      transmission_drop_chance: 0,
+      drop_reason: null,
+      dispatch_error_code: null,
+      dispatch_error_message: null,
+      created_at: tick,
+      updated_at: tick + 1n
+    }
+  });
+
+  await context.prisma.decisionJob.update({
+    where: { id: job.id },
+    data: {
+      status: 'completed',
+      source_inference_id: traceId,
+      action_intent_id: intentId,
+      pending_source_key: null,
+      updated_at: tick + 1n,
+      completed_at: tick + 1n
+    }
+  });
+
+  const completedJob = await getDecisionJobById(context, job.id);
+  const completedWorkflow = await getWorkflowSnapshotByJobId(context, completedJob.id);
+  const decisionResult = getDecisionResultFromWorkflowSnapshot(completedWorkflow);
+  assert(decisionResult?.inference_id === traceId, 'workflow snapshot should rebuild inference run result from trace');
+
+  const replayResult = await buildInferenceJobReplayResult(completedJob, completedWorkflow);
+  assert(replayResult.result_source === 'stored_trace', 'replay result should mark stored_trace source when trace exists');
+  assert(replayResult.result?.inference_id === traceId, 'replay result should expose stored trace payload');
+
+  const retryResult = buildInferenceJobRetryResult(completedJob, decisionResult!, completedWorkflow);
+  assert(retryResult.result_source === 'fresh_run', 'retry result should mark fresh_run source');
+  assert(retryResult.result?.inference_id === traceId, 'retry result should expose fresh run payload');
+
+  const replayChild = await createPendingDecisionJob(context, {
+    idempotency_key: `workflow-core-results-replay-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    request_input: {
+      agent_id: 'agent-003',
+      strategy: 'mock'
+    },
+    intent_class: 'replay_recovery'
+  });
+
+  await context.prisma.decisionJob.update({
+    where: { id: replayChild.id },
+    data: {
+      replay_of_job_id: completedJob.id,
+      replay_source_trace_id: traceId,
+      replay_reason: 'result-builder-replay',
+      replay_override_snapshot: { strategy: 'mock' } as Prisma.InputJsonValue,
+      pending_source_key: replayChild.idempotency_key,
+      updated_at: tick + 2n
+    }
+  });
+
+  const replayChildWorkflow = await getWorkflowSnapshotByJobId(context, replayChild.id);
+  const replaySubmitResult = buildInferenceJobReplaySubmitResult(await getDecisionJobById(context, replayChild.id), replayChildWorkflow);
+  assert(replaySubmitResult.result_source === 'not_available', 'replay submit without trace result should stay not_available');
+  assert(replaySubmitResult.replay.source_job_id === completedJob.id, 'replay submit should expose parent job id');
+  assert(replaySubmitResult.replay.override_applied === true, 'replay submit should expose override_applied');
 };
 
 const testListInferenceJobs = async (context: AppContext) => {
@@ -418,8 +788,32 @@ const testListInferenceJobs = async (context: AppContext) => {
   assert(listByAgent.items.length >= 2, 'listInferenceJobs should return agent-001 jobs with batch snapshot assembly');
   assert(listByAgent.items.every(item => item.actor_ref?.agent_id === 'agent-001'), 'agent filter should keep only matching actor_ref.agent_id');
 
+  const listByIdentity = await listInferenceJobs(context, {
+    identity_id: 'agent-001',
+    limit: 10
+  });
+  assert(listByIdentity.items.length >= 1, 'identity_id filter should keep matching workflow items');
+  assert(listByIdentity.items.every(item => item.actor_ref?.identity_id === 'agent-001'), 'identity_id filter should use actor_ref/request_input fallback');
+
+  const listByStrategy = await listInferenceJobs(context, {
+    strategy: 'rule_based',
+    agent_id: 'agent-002',
+    limit: 10
+  });
+  assert(listByStrategy.items.some(item => item.id === agentTwoJob.id), 'strategy filter should include the targeted rule_based failed job');
+  assert(listByStrategy.items.every(item => item.strategy === 'rule_based'), 'strategy filter should only keep rule_based jobs');
+
+  const listByStatus = await listInferenceJobs(context, {
+    status: ['failed'],
+    agent_id: 'agent-002',
+    limit: 10
+  });
+  assert(listByStatus.items.some(item => item.id === agentTwoJob.id), 'status filter should include the targeted failed job');
+  assert(listByStatus.items.every(item => item.status === 'failed'), 'status filter should only return failed jobs');
+
   const listFailed = await listInferenceJobs(context, {
     has_error: true,
+    agent_id: 'agent-002',
     limit: 10
   });
   assert(listFailed.items.some(item => item.id === agentTwoJob.id), 'has_error filter should include failed job');
@@ -466,6 +860,7 @@ const main = async () => {
   try {
     testParsers();
     testSnapshotDerivation();
+    await testResultBuilders(context);
     await testListInferenceJobs(context);
 
     console.log('[inference_workflow_core] PASS');

@@ -38,12 +38,13 @@ Status: In Progress / 进行中
 - [x] 正式路线从临时探索切换为明确的 B → D 工程推进路径
 - [x] Inference Phase B：统一推理服务入口、context/prompt builder、strategy injection、preview/run API、normalized decision contract、trace metadata 基线
 - [x] Workflow Phase D 最小基线：`InferenceTrace` / `ActionIntent` / `DecisionJob`、Prisma 持久化、trace/intent/job 读取能力、jobs 正式入口
+- [x] Agent Scheduler Phase 3 收尾：actor readiness 评估层、event coalescing explainability、cursor/watermark baseline 与 focused e2e 已收口
 
 ### In Progress / 进行中
 
 - [~] Workflow Persistence Phase D
-  - 已有：pending job queue、loop runner、Agent Scheduler v1/v2/v3/v3c/p4a/p4s/p4r-baseline/p4r-fine/p4c-baseline/dynamic-ownership-baseline/automatic-rebalance-baseline（durable scheduling + event-driven policy baseline + scheduler stats + scheduler observability read model + lease/cursor leader-only safety + filtered/paginated scheduler runs/decisions query API + scheduler summary/trend projections + replay/retry recovery-window periodic suppression baseline + fine-grained priority-aware replay/retry suppression + partitioned multi-worker baseline + persisted ownership/migration state + runtime handoff + ownership/migration/workers/rebalance read surfaces + bounded automatic recommendation/apply baseline） 、workflow snapshot、retry、idempotency replay、replay lineage baseline、DecisionJob intent_class / job_source baseline
-  - 待补：richer replay orchestration、operator-facing scheduler panel / deeper cross-linking、更强 automatic rebalance 策略（更丰富 guardrails / recommendation policy / apply linkage）、更细 actor readiness / recovery policy
+  - 已有：pending job queue、loop runner、Agent Scheduler v1/v2/v3/v3c/p4a/p4s/p4r-baseline/p4r-fine/p4c-baseline/dynamic-ownership-baseline/automatic-rebalance-baseline（durable scheduling + event-driven policy baseline + scheduler stats + scheduler observability read model + lease/cursor leader-only safety + filtered/paginated scheduler runs/decisions query API + scheduler summary/trend projections + replay/retry recovery-window periodic suppression baseline + fine-grained priority-aware replay/retry suppression + partitioned multi-worker baseline + persisted ownership/migration state + runtime handoff + ownership/migration/workers/rebalance read surfaces + bounded automatic recommendation/apply baseline + closure pass for actor readiness / coalescing explainability / cursor watermark semantics） 、workflow snapshot、retry、idempotency replay、replay lineage baseline、DecisionJob intent_class / job_source baseline
+  - 待补：richer replay orchestration、operator-facing scheduler panel / deeper cross-linking、更强 automatic rebalance 策略（更丰富 guardrails / recommendation policy / apply linkage）
 - [~] Memory Core
   - 已有：short-term adapter、fragment-friendly prompt pipeline、memory selection / processing trace observability
   - 待补：real long-term retrieval/storage、更强 summarization / trimming 策略
@@ -63,7 +64,7 @@ Status: In Progress / 进行中
 ### Next / 下一步
 
 - [ ] 基于 Agent Scheduler 现有 p4a/p4c/dynamic-ownership/automatic-rebalance baseline 继续补齐 operator 联动视图、scheduler timeline/read projection 与更强 automatic rebalance 语义
-- [ ] 继续补齐 richer scheduler/operator query surfaces（更深的 partition / worker breakdown、deeper highlights、ownership history、worker health、rebalance recommendation/suppress reason、cross-link drill-down）
+- [ ] 继续补齐 richer scheduler/operator query surfaces（更深的 partition / worker breakdown、deeper highlights、ownership history、worker health、rebalance recommendation / suppress reason、cross-link drill-down）
 - [ ] 补齐 richer replay orchestration 与更 durable 的 job scheduling 语义
 - [ ] 扩展更多 constrained world mutation actions 与 local-variable primitives
 - [ ] 补齐 long-term memory 与更强 prompt strategy

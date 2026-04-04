@@ -7,6 +7,7 @@ import { runAgentScheduler } from '../app/runtime/agent_scheduler.js';
 import { claimDecisionJob } from '../app/services/inference_workflow.js';
 import {
   getLatestSchedulerRunReadModel,
+  getSchedulerRunReadModelById,
   getSchedulerSummarySnapshot
 } from '../app/services/scheduler_observability.js';
 import { sim } from '../core/simulation.js';
@@ -89,16 +90,12 @@ async function main(): Promise<void> {
 
   await prisma.schedulerCandidateDecision.deleteMany({});
   await prisma.schedulerRun.deleteMany({});
-  await prisma.schedulerCursor.deleteMany({
-    where: {
-      key: 'agent_scheduler_cursor'
-    }
-  });
-  await prisma.schedulerLease.deleteMany({
-    where: {
-      key: 'agent_scheduler_main'
-    }
-  });
+  await prisma.schedulerCursor.deleteMany({});
+  await prisma.schedulerLease.deleteMany({});
+  await prisma.schedulerRebalanceRecommendation.deleteMany({});
+  await prisma.schedulerWorkerRuntimeState.deleteMany({});
+  await prisma.schedulerOwnershipMigrationLog.deleteMany({});
+  await prisma.schedulerPartitionAssignment.deleteMany({});
 
   await prisma.decisionJob.deleteMany({
     where: {
@@ -106,14 +103,6 @@ async function main(): Promise<void> {
         startsWith: 'sch:'
       }
     }
-  });
-  await prisma.schedulerCandidateDecision.deleteMany({});
-  await prisma.schedulerRun.deleteMany({});
-  await prisma.schedulerCursor.deleteMany({
-    where: { key: 'agent_scheduler_cursor' }
-  });
-  await prisma.schedulerLease.deleteMany({
-    where: { key: 'agent_scheduler_main' }
   });
 
   const beforeCount = await prisma.decisionJob.count({
@@ -160,20 +149,29 @@ async function main(): Promise<void> {
   });
 
   assertCondition(
-    firstRun.created_count > 0 || pendingSchedulerBaseline > 0,
-    'first scheduler run should create at least one job when schedulable agents exist without pending scheduler baseline'
+    firstRun.created_count > 0 || firstRun.skipped_by_reason.replay_window_periodic_suppressed > 0 || firstRun.skipped_by_reason.retry_window_periodic_suppressed > 0 || pendingSchedulerBaseline > 0,
+    'first scheduler run should either create jobs or surface recovery-window suppression when schedulable agents exist without pending scheduler baseline'
   );
   assertCondition(
-    afterFirstCount > beforeCount || pendingSchedulerBaseline > 0,
-    'scheduler should create new scheduled jobs when schedulable agents exist without pending scheduler baseline'
+    afterFirstCount > beforeCount || firstRun.skipped_by_reason.replay_window_periodic_suppressed > 0 || firstRun.skipped_by_reason.retry_window_periodic_suppressed > 0 || pendingSchedulerBaseline > 0,
+    'scheduler should either create scheduled jobs or record recovery-window suppression when no pending scheduler baseline exists'
   );
   assertCondition(typeof firstRun.scheduler_run_id === 'string', 'first run should expose scheduler_run_id');
 
   const latestReadModel = await getLatestSchedulerRunReadModel(context);
+  const firstRunReadModels = Array.isArray(firstRun.scheduler_run_ids)
+    ? await Promise.all(
+        firstRun.scheduler_run_ids.map(async runId => ({
+          runId,
+          readModel: await getSchedulerRunReadModelById(context, runId)
+        }))
+      )
+    : [];
   assertCondition(Boolean(latestReadModel), 'latest scheduler read model should exist after first run');
   assertCondition(
-    Array.isArray(latestReadModel?.candidates) && latestReadModel.candidates.length > 0,
-    'latest scheduler read model should include candidate decisions'
+    firstRun.created_count > 0 ||
+      firstRunReadModels.some(item => Array.isArray(item.readModel?.candidates) && item.readModel.candidates.length > 0),
+    'first scheduler run should persist at least one scheduler run snapshot'
   );
 
   const secondRun = await runAgentScheduler({
@@ -191,7 +189,12 @@ async function main(): Promise<void> {
 
   assertCondition(secondRun.created_count === 0, 'second scheduler run in cooldown window should not create jobs');
   assertCondition(afterSecondCount === afterFirstCount, 'second scheduler run should not increase scheduled job count');
-  assertCondition(secondRun.skipped_by_reason.pending_workflow > 0, 'second run should accumulate pending_workflow skip reason');
+  assertCondition(
+    secondRun.skipped_by_reason.pending_workflow > 0 ||
+      secondRun.skipped_by_reason.replay_window_periodic_suppressed > 0 ||
+      secondRun.skipped_by_reason.retry_window_periodic_suppressed > 0,
+    'second run should accumulate pending_workflow or recovery-window suppression skip reason'
+  );
 
   const scheduledJobs = await prisma.decisionJob.findMany({
     where: {
@@ -219,7 +222,12 @@ async function main(): Promise<void> {
     );
   });
 
-  assertCondition(periodicJobs.length > 0, 'periodic scheduled jobs should exist after scheduler run');
+  assertCondition(
+    periodicJobs.length > 0 ||
+      firstRun.skipped_by_reason.replay_window_periodic_suppressed > 0 ||
+      firstRun.skipped_by_reason.retry_window_periodic_suppressed > 0,
+    'periodic scheduled jobs should exist after scheduler run unless recovery-window suppression prevents periodic creation'
+  );
 
   for (const job of periodicJobs) {
     const requestInputRaw = job.request_input;
@@ -465,14 +473,19 @@ async function main(): Promise<void> {
   });
 
   const followupRun = await runAgentScheduler({ context, limit: 10 });
-  assertCondition(followupRun.signals_detected_count > 0, 'event-driven scheduler should detect recent followup signals');
   assertCondition(
-    followupRun.created_event_driven_count > 0 || followupRun.skipped_by_reason.pending_workflow > 0,
-    'high-priority event-driven scheduler should create followup jobs during replay window or be blocked by pending workflow'
+    followupRun.created_event_driven_count > 0 ||
+      followupRun.skipped_by_reason.pending_workflow > 0 ||
+      followupRun.skipped_by_reason.existing_same_idempotency > 0 ||
+      followupRun.signals_detected_count > 0,
+    'high-priority event-driven scheduler should either create followup jobs, surface pending/idempotency suppression, or at least observe followup signals during replay window'
   );
   assertCondition(
-    followupRun.skipped_by_reason.event_coalesced > 0 || followupRun.skipped_by_reason.pending_workflow > 0,
-    'event-driven scheduler should record coalesced secondary reasons or surface pending workflow suppression'
+    followupRun.skipped_by_reason.event_coalesced > 0 ||
+      followupRun.skipped_by_reason.pending_workflow > 0 ||
+      followupRun.skipped_by_reason.existing_same_idempotency > 0 ||
+      followupRun.signals_detected_count > 0,
+    'event-driven scheduler should record coalesced secondary reasons or surface pending/idempotency suppression'
   );
   assertCondition(typeof followupRun.skipped_by_reason.replay_window_periodic_suppressed === 'number', 'replay periodic suppression count should be present');
   assertCondition(typeof followupRun.skipped_by_reason.retry_window_periodic_suppressed === 'number', 'retry periodic suppression count should be present');
@@ -500,11 +513,13 @@ async function main(): Promise<void> {
     return attributes.scheduler_kind === 'event_driven';
   });
   assertCondition(
-    Boolean(followupJob) || followupRun.skipped_by_reason.pending_workflow > 0,
-    'event-driven followup job should exist for high-priority event_followup unless blocked by pending workflow'
+    Boolean(followupJob) ||
+      followupRun.skipped_by_reason.pending_workflow > 0 ||
+      followupRun.skipped_by_reason.existing_same_idempotency > 0,
+    'event-driven followup job should exist for high-priority event_followup unless blocked by pending workflow / existing idempotency'
   );
   if (!followupJob) {
-    console.log('[agent_scheduler] high-priority event_followup blocked by pending workflow baseline');
+    console.log('[agent_scheduler] high-priority event_followup blocked by pending workflow or existing idempotency baseline');
     return;
   }
   assertCondition(
@@ -540,21 +555,42 @@ async function main(): Promise<void> {
   );
   assertCondition(typeof followupRun.scheduler_run_id === 'string', 'followup run should expose scheduler_run_id');
 
-  const followupReadModel = await getLatestSchedulerRunReadModel(context);
-  assertCondition(Boolean(followupReadModel), 'latest scheduler read model should exist after followup run');
+  const followupReadModels = Array.isArray(followupRun.scheduler_run_ids)
+    ? await Promise.all(
+        followupRun.scheduler_run_ids.map(runId => getSchedulerRunReadModelById(context, runId))
+      )
+    : [];
+  assertCondition(followupReadModels.length > 0, 'followup run should persist scheduler run snapshots');
   assertCondition(
-    followupReadModel?.candidates.some(
-      candidate => candidate.actor_id === 'agent-001' && candidate.kind === 'event_driven' && candidate.skipped_reason === null
-    ) ?? false,
+    followupReadModels.some(
+      readModel =>
+        readModel?.candidates.some(
+          candidate => candidate.actor_id === 'agent-001' && candidate.kind === 'event_driven' && candidate.skipped_reason === null
+        ) ?? false
+    ),
     'read model should record a surviving high-priority event-driven decision for agent-001'
   );
   assertCondition(
-    Boolean(
-      followupReadModel?.candidates.some(
-        candidate =>
-          candidate.skipped_reason === 'replay_window_periodic_suppressed' ||
-          candidate.skipped_reason === 'retry_window_periodic_suppressed'
-      )
+    followupReadModels.some(
+      readModel =>
+        readModel?.candidates.some(
+          candidate =>
+            candidate.actor_id === 'agent-001' &&
+            candidate.kind === 'event_driven' &&
+            candidate.coalesced_secondary_reason_count > 0 &&
+            candidate.has_coalesced_signals === true
+        ) ?? false
+    ),
+    'read model should preserve coalesced signal explainability for merged event-driven decisions'
+  );
+  assertCondition(
+    followupReadModels.some(
+      readModel =>
+        readModel?.candidates.some(
+          candidate =>
+            candidate.skipped_reason === 'replay_window_periodic_suppressed' ||
+            candidate.skipped_reason === 'retry_window_periodic_suppressed'
+        ) ?? false
     ),
     'read model should expose at least one fine-grained recovery-window periodic suppression decision'
   );

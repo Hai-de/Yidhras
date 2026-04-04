@@ -3,7 +3,11 @@ import { computed } from 'vue'
 
 import { normalizeOptionalString } from '../../lib/route/query'
 
-const normalizeSocialSort = (value: string | null | undefined): 'latest' | 'signal' => {
+export const normalizeSocialRouteValue = (value: string | null | undefined): string | null => {
+  return normalizeOptionalString(value)
+}
+
+export const normalizeSocialSort = (value: string | null | undefined): 'latest' | 'signal' => {
   return value === 'signal' ? 'signal' : 'latest'
 }
 
@@ -17,7 +21,7 @@ export const useSocialRouteState = () => {
   const toTickQuery = useRouteQuery<string | null>('to_tick', null, { mode: 'replace' })
   const sortQuery = useRouteQuery<string | null>('sort', 'latest', { mode: 'replace' })
 
-  const selectedPostId = computed(() => normalizeOptionalString(postIdQuery.value))
+  const selectedPostId = computed(() => normalizeSocialRouteValue(postIdQuery.value))
   const filters = computed<{
     authorId: string | null
     circleId: string | null
@@ -27,17 +31,17 @@ export const useSocialRouteState = () => {
     toTick: string | null
     sort: 'latest' | 'signal'
   }>(() => ({
-    authorId: normalizeOptionalString(authorIdQuery.value),
-    circleId: normalizeOptionalString(circleIdQuery.value),
-    keyword: normalizeOptionalString(keywordQuery.value),
-    sourceActionIntentId: normalizeOptionalString(sourceActionIntentIdQuery.value),
-    fromTick: normalizeOptionalString(fromTickQuery.value),
-    toTick: normalizeOptionalString(toTickQuery.value),
+    authorId: normalizeSocialRouteValue(authorIdQuery.value),
+    circleId: normalizeSocialRouteValue(circleIdQuery.value),
+    keyword: normalizeSocialRouteValue(keywordQuery.value),
+    sourceActionIntentId: normalizeSocialRouteValue(sourceActionIntentIdQuery.value),
+    fromTick: normalizeSocialRouteValue(fromTickQuery.value),
+    toTick: normalizeSocialRouteValue(toTickQuery.value),
     sort: normalizeSocialSort(sortQuery.value)
   }))
 
   const setSelectedPostId = (postId: string | null) => {
-    postIdQuery.value = normalizeOptionalString(postId)
+    postIdQuery.value = normalizeSocialRouteValue(postId)
   }
 
   const setFilters = (nextFilters: {
@@ -50,27 +54,27 @@ export const useSocialRouteState = () => {
     sort?: 'latest' | 'signal'
   }) => {
     if ('authorId' in nextFilters) {
-      authorIdQuery.value = normalizeOptionalString(nextFilters.authorId ?? null)
+      authorIdQuery.value = normalizeSocialRouteValue(nextFilters.authorId ?? null)
     }
 
     if ('circleId' in nextFilters) {
-      circleIdQuery.value = normalizeOptionalString(nextFilters.circleId ?? null)
+      circleIdQuery.value = normalizeSocialRouteValue(nextFilters.circleId ?? null)
     }
 
     if ('keyword' in nextFilters) {
-      keywordQuery.value = normalizeOptionalString(nextFilters.keyword ?? null)
+      keywordQuery.value = normalizeSocialRouteValue(nextFilters.keyword ?? null)
     }
 
     if ('sourceActionIntentId' in nextFilters) {
-      sourceActionIntentIdQuery.value = normalizeOptionalString(nextFilters.sourceActionIntentId ?? null)
+      sourceActionIntentIdQuery.value = normalizeSocialRouteValue(nextFilters.sourceActionIntentId ?? null)
     }
 
     if ('fromTick' in nextFilters) {
-      fromTickQuery.value = normalizeOptionalString(nextFilters.fromTick ?? null)
+      fromTickQuery.value = normalizeSocialRouteValue(nextFilters.fromTick ?? null)
     }
 
     if ('toTick' in nextFilters) {
-      toTickQuery.value = normalizeOptionalString(nextFilters.toTick ?? null)
+      toTickQuery.value = normalizeSocialRouteValue(nextFilters.toTick ?? null)
     }
 
     if (nextFilters.sort) {

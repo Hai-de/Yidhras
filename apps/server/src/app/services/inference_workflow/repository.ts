@@ -411,10 +411,11 @@ export const listRecentScheduledDecisionJobs = async (
 export const listRecentRecoveryWindowActors = async (
   context: AppContext,
   sinceTick: bigint,
-  intentClasses: InferenceJobIntentClass[]
-): Promise<Set<string>> => {
+  intentClasses: InferenceJobIntentClass[],
+  untilTick?: bigint
+): Promise<Map<string, bigint>> => {
   if (intentClasses.length === 0) {
-    return new Set();
+    return new Map();
   }
 
   const jobs = await context.prisma.decisionJob.findMany({
@@ -423,31 +424,59 @@ export const listRecentRecoveryWindowActors = async (
         in: intentClasses
       },
       created_at: {
-        gte: sinceTick
+        gte: sinceTick,
+        ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {})
       }
     },
     select: {
-      request_input: true
+      request_input: true,
+      created_at: true
     }
   });
 
-  return new Set(
-    jobs.flatMap(job => {
-      const requestInput = isRecord(job.request_input) ? job.request_input : null;
-      const agentId = requestInput && typeof requestInput.agent_id === 'string' ? requestInput.agent_id : null;
-      return agentId ? [agentId] : [];
-    })
+  const latestByActor = new Map<string, bigint>();
+  for (const job of jobs) {
+    const requestInput = isRecord(job.request_input) ? job.request_input : null;
+    const agentId = requestInput && typeof requestInput.agent_id === 'string' ? requestInput.agent_id : null;
+    if (!agentId) {
+      continue;
+    }
+    if (!latestByActor.has(agentId) || job.created_at > (latestByActor.get(agentId) ?? sinceTick)) {
+      latestByActor.set(agentId, job.created_at);
+    }
+  }
+
+  return latestByActor;
+};
+
+export const getLatestSchedulerSignalTick = async (
+  context: AppContext,
+  sinceTick: bigint,
+  untilTick?: bigint
+): Promise<bigint | null> => {
+  const [latestEvent, latestRelationshipLog, latestSnrLog, latestRecoveryJob] = await Promise.all([
+    context.prisma.event.findFirst({ where: { created_at: { gte: sinceTick, ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {}) }, source_action_intent_id: { not: null } }, orderBy: { created_at: 'desc' }, select: { created_at: true } }),
+    context.prisma.relationshipAdjustmentLog.findFirst({ where: { created_at: { gte: sinceTick, ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {}) } }, orderBy: { created_at: 'desc' }, select: { created_at: true } }),
+    context.prisma.sNRAdjustmentLog.findFirst({ where: { created_at: { gte: sinceTick, ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {}) } }, orderBy: { created_at: 'desc' }, select: { created_at: true } }),
+    context.prisma.decisionJob.findFirst({ where: { created_at: { gte: sinceTick, ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {}) }, intent_class: { in: ['replay_recovery', 'retry_recovery'] } }, orderBy: { created_at: 'desc' }, select: { created_at: true } })
+  ]);
+
+  return [latestEvent?.created_at, latestRelationshipLog?.created_at, latestSnrLog?.created_at, latestRecoveryJob?.created_at].reduce<bigint | null>(
+    (latest, current) => (typeof current === 'bigint' && (latest === null || current > latest) ? current : latest),
+    null
   );
 };
 
 export const listRecentEventFollowupSignals = async (
   context: AppContext,
-  sinceTick: bigint
-): Promise<Array<{ agent_id: string; reason: 'event_followup' }>> => {
+  sinceTick: bigint,
+  untilTick?: bigint
+): Promise<Array<{ agent_id: string; reason: 'event_followup'; created_at: bigint }>> => {
   const events = await context.prisma.event.findMany({
     where: {
       created_at: {
-        gte: sinceTick
+        gte: sinceTick,
+        ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {})
       },
       source_action_intent_id: {
         not: null
@@ -470,19 +499,21 @@ export const listRecentEventFollowupSignals = async (
       ? event.source_action_intent.actor_ref
       : null;
     return actorRef && typeof actorRef.agent_id === 'string'
-      ? [{ agent_id: actorRef.agent_id, reason: 'event_followup' as const }]
+      ? [{ agent_id: actorRef.agent_id, reason: 'event_followup' as const, created_at: event.created_at }]
       : [];
   });
 };
 
 export const listRecentRelationshipFollowupSignals = async (
   context: AppContext,
-  sinceTick: bigint
-): Promise<Array<{ agent_id: string; reason: 'relationship_change_followup' }>> => {
+  sinceTick: bigint,
+  untilTick?: bigint
+): Promise<Array<{ agent_id: string; reason: 'relationship_change_followup'; created_at: bigint }>> => {
   const logs = await context.prisma.relationshipAdjustmentLog.findMany({
     where: {
       created_at: {
-        gte: sinceTick
+        gte: sinceTick,
+        ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {})
       }
     },
     orderBy: {
@@ -491,19 +522,21 @@ export const listRecentRelationshipFollowupSignals = async (
   });
 
   return logs.flatMap(log => [
-    { agent_id: log.from_id, reason: 'relationship_change_followup' as const },
-    { agent_id: log.to_id, reason: 'relationship_change_followup' as const }
+    { agent_id: log.from_id, reason: 'relationship_change_followup' as const, created_at: log.created_at },
+    { agent_id: log.to_id, reason: 'relationship_change_followup' as const, created_at: log.created_at }
   ]);
 };
 
 export const listRecentSnrFollowupSignals = async (
   context: AppContext,
-  sinceTick: bigint
-): Promise<Array<{ agent_id: string; reason: 'snr_change_followup' }>> => {
+  sinceTick: bigint,
+  untilTick?: bigint
+): Promise<Array<{ agent_id: string; reason: 'snr_change_followup'; created_at: bigint }>> => {
   const logs = await context.prisma.sNRAdjustmentLog.findMany({
     where: {
       created_at: {
-        gte: sinceTick
+        gte: sinceTick,
+        ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {})
       }
     },
     orderBy: {
@@ -513,7 +546,8 @@ export const listRecentSnrFollowupSignals = async (
 
   return logs.map(log => ({
     agent_id: log.agent_id,
-    reason: 'snr_change_followup' as const
+    reason: 'snr_change_followup' as const,
+    created_at: log.created_at
   }));
 };
 

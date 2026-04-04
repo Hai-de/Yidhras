@@ -8,6 +8,7 @@ import {
   listPendingSchedulerDecisionJobs,
   listRecentEventFollowupSignals,
   listRecentRecoveryWindowActors,
+  getLatestSchedulerSignalTick,
   listRecentRelationshipFollowupSignals,
   listRecentScheduledDecisionJobs,
   listRecentSnrFollowupSignals
@@ -93,6 +94,24 @@ export interface AgentSchedulerCandidateDecisionSnapshot {
   priority_score: number;
   skipped_reason: SchedulerSkipReason | null;
   created_job_id: string | null;
+}
+
+interface SchedulerActorReadinessContext {
+  now: bigint;
+  cooldownTicks: bigint;
+  scannedCount: number;
+  maxCandidates: number;
+  pendingIntentAgentIds: Set<string>;
+  pendingJobKeySet: Set<string>;
+  recentScheduledTickByAgent: Map<string, bigint>;
+  replayRecoveryActors: Set<string>;
+  retryRecoveryActors: Set<string>;
+}
+
+interface SchedulerActorReadinessResult {
+  skipped_reason: SchedulerSkipReason | null;
+  counts_as_scanned: boolean;
+  coalesced_secondary_reason_count: number;
 }
 
 const PERIODIC_REASON_SET = new Set<SchedulerReason>(['periodic_tick', 'bootstrap_seed']);
@@ -229,6 +248,88 @@ const mergeEventDrivenSignals = (signals: SchedulerSignalRecord[], now: bigint):
   }
 
   return candidates;
+};
+
+const getCandidateDecisionReasons = (candidate: SchedulerCandidate): SchedulerReason[] => {
+  return [candidate.primary_reason, ...candidate.secondary_reasons];
+};
+
+const buildCandidateDecisionSnapshot = (
+  candidate: SchedulerCandidate,
+  partitionId: string,
+  input: {
+    skippedReason: SchedulerSkipReason | null;
+    createdJobId: string | null;
+  }
+): AgentSchedulerCandidateDecisionSnapshot => ({
+  actor_id: candidate.agent_id,
+  partition_id: partitionId,
+  kind: candidate.kind,
+  candidate_reasons: getCandidateDecisionReasons(candidate),
+  chosen_reason: candidate.primary_reason,
+  scheduled_for_tick: candidate.scheduled_for_tick,
+  priority_score: candidate.priority_score,
+  skipped_reason: input.skippedReason,
+  created_job_id: input.createdJobId
+});
+
+const countCoalescedSecondaryReasons = (candidate: SchedulerCandidate): number => {
+  return candidate.kind === 'event_driven' ? candidate.secondary_reasons.length : 0;
+};
+
+const evaluateSchedulerActorReadiness = (
+  candidate: SchedulerCandidate,
+  input: SchedulerActorReadinessContext
+): SchedulerActorReadinessResult => {
+  if (input.scannedCount >= input.maxCandidates) {
+    return {
+      skipped_reason: 'limit_reached',
+      counts_as_scanned: false,
+      coalesced_secondary_reason_count: 0
+    };
+  }
+
+  const pendingKey = buildSchedulerCandidateKey(candidate.agent_id, candidate.kind, candidate.primary_reason);
+  const hasPendingWorkflow = input.pendingIntentAgentIds.has(candidate.agent_id) || input.pendingJobKeySet.has(pendingKey);
+  if (hasPendingWorkflow) {
+    return {
+      skipped_reason: 'pending_workflow',
+      counts_as_scanned: true,
+      coalesced_secondary_reason_count: 0
+    };
+  }
+
+  const coalescedSecondaryReasonCount = countCoalescedSecondaryReasons(candidate);
+  if (input.replayRecoveryActors.has(candidate.agent_id) && shouldSuppressCandidateForRecoveryWindow(candidate, 'replay')) {
+    return {
+      skipped_reason: getRecoverySuppressionSkipReason('replay', candidate.kind),
+      counts_as_scanned: true,
+      coalesced_secondary_reason_count: coalescedSecondaryReasonCount
+    };
+  }
+
+  if (input.retryRecoveryActors.has(candidate.agent_id) && shouldSuppressCandidateForRecoveryWindow(candidate, 'retry')) {
+    return {
+      skipped_reason: getRecoverySuppressionSkipReason('retry', candidate.kind),
+      counts_as_scanned: true,
+      coalesced_secondary_reason_count: coalescedSecondaryReasonCount
+    };
+  }
+
+  const lastScheduledTick = input.recentScheduledTickByAgent.get(candidate.agent_id) ?? null;
+  if (isPeriodicReason(candidate.primary_reason) && isAgentInCooldown(input.now, lastScheduledTick, input.cooldownTicks)) {
+    return {
+      skipped_reason: 'periodic_cooldown',
+      counts_as_scanned: true,
+      coalesced_secondary_reason_count: coalescedSecondaryReasonCount
+    };
+  }
+
+  return {
+    skipped_reason: null,
+    counts_as_scanned: true,
+    coalesced_secondary_reason_count: coalescedSecondaryReasonCount
+  };
 };
 
 const sortSchedulerCandidates = (candidates: SchedulerCandidate[]): SchedulerCandidate[] => {
@@ -426,14 +527,14 @@ const runAgentSchedulerForPartition = async ({
   const cursor = await getSchedulerCursor(context, partitionId);
   const lookbackTicks = cooldownTicks > 0n ? cooldownTicks : 1n;
   const signalSinceTick = cursor ? cursor.last_signal_tick : now - lookbackTicks;
-  const [allAgents, recentEventSignals, recentRelationshipSignals, recentSnrSignals, replayRecoveryActors, retryRecoveryActors] =
+  const [allAgents, recentEventSignals, recentRelationshipSignals, recentSnrSignals, replayRecoveryActorTicks, retryRecoveryActorTicks] =
     await Promise.all([
       listActiveSchedulerAgents(context, limit * Math.max(getSchedulerPartitionCount(), 1)),
-      listRecentEventFollowupSignals(context, signalSinceTick),
-      listRecentRelationshipFollowupSignals(context, signalSinceTick),
-      listRecentSnrFollowupSignals(context, signalSinceTick),
-      listRecentRecoveryWindowActors(context, signalSinceTick, ['replay_recovery']),
-      listRecentRecoveryWindowActors(context, signalSinceTick, ['retry_recovery'])
+      listRecentEventFollowupSignals(context, signalSinceTick, now),
+      listRecentRelationshipFollowupSignals(context, signalSinceTick, now),
+      listRecentSnrFollowupSignals(context, signalSinceTick, now),
+      listRecentRecoveryWindowActors(context, signalSinceTick, ['replay_recovery'], now),
+      listRecentRecoveryWindowActors(context, signalSinceTick, ['retry_recovery'], now)
     ]);
 
   const agents: SchedulerAgentRecord[] = allAgents
@@ -462,7 +563,7 @@ const runAgentSchedulerForPartition = async ({
     await updateSchedulerCursor(context, {
       partitionId,
       lastScannedTick: now,
-      lastSignalTick: now,
+      lastSignalTick: signalSinceTick,
       now
     });
 
@@ -480,6 +581,16 @@ const runAgentSchedulerForPartition = async ({
   const periodicCandidates = buildPeriodicCandidates(agents, now, schedulerReason);
   const eventDrivenCandidates = mergeEventDrivenSignals(recentSignals, now).filter(
     candidate => candidate.partition_id === partitionId && allowedAgentIds.has(candidate.agent_id)
+  );
+  const replayRecoveryActors = new Set(
+    Array.from(replayRecoveryActorTicks.entries())
+      .filter(([actorId]) => allowedAgentIds.has(actorId))
+      .map(([actorId]) => actorId)
+  );
+  const retryRecoveryActors = new Set(
+    Array.from(retryRecoveryActorTicks.entries())
+      .filter(([actorId]) => allowedAgentIds.has(actorId))
+      .map(([actorId]) => actorId)
   );
   const candidates = sortSchedulerCandidates([...eventDrivenCandidates, ...periodicCandidates]);
 
@@ -524,84 +635,46 @@ const runAgentSchedulerForPartition = async ({
       break;
     }
 
-    if (scannedCount >= DEFAULT_AGENT_SCHEDULER_MAX_CANDIDATES) {
+    const readiness = evaluateSchedulerActorReadiness(candidate, {
+      now,
+      cooldownTicks,
+      scannedCount,
+      maxCandidates: DEFAULT_AGENT_SCHEDULER_MAX_CANDIDATES,
+      pendingIntentAgentIds,
+      pendingJobKeySet,
+      recentScheduledTickByAgent,
+      replayRecoveryActors,
+      retryRecoveryActors
+    });
+
+    if (readiness.coalesced_secondary_reason_count > 0) {
+      skipCounts.event_coalesced += readiness.coalesced_secondary_reason_count;
+    }
+
+    if (!readiness.counts_as_scanned) {
       skipCounts.limit_reached += 1;
-      candidateDecisions.push({
-        actor_id: candidate.agent_id,
-        partition_id: partitionId,
-        kind: candidate.kind,
-        candidate_reasons: [candidate.primary_reason, ...candidate.secondary_reasons],
-        chosen_reason: candidate.primary_reason,
-        scheduled_for_tick: candidate.scheduled_for_tick,
-        priority_score: candidate.priority_score,
-        skipped_reason: 'limit_reached',
-        created_job_id: null
-      });
+      candidateDecisions.push(buildCandidateDecisionSnapshot(candidate, partitionId, {
+        skippedReason: 'limit_reached',
+        createdJobId: null
+      }));
       continue;
     }
+
     scannedCount += 1;
 
-    const pendingKey = buildSchedulerCandidateKey(candidate.agent_id, candidate.kind, candidate.primary_reason);
-    const hasPendingWorkflow = pendingIntentAgentIds.has(candidate.agent_id) || pendingJobKeySet.has(pendingKey);
-    if (hasPendingWorkflow) {
-      skippedPendingCount += 1;
-      skipCounts.pending_workflow += 1;
-      candidateDecisions.push({
-        actor_id: candidate.agent_id,
-        partition_id: partitionId,
-        kind: candidate.kind,
-        candidate_reasons: [candidate.primary_reason, ...candidate.secondary_reasons],
-        chosen_reason: candidate.primary_reason,
-        scheduled_for_tick: candidate.scheduled_for_tick,
-        priority_score: candidate.priority_score,
-        skipped_reason: 'pending_workflow',
-        created_job_id: null
-      });
-      continue;
-    }
+    if (readiness.skipped_reason !== null) {
+      if (readiness.skipped_reason === 'pending_workflow') {
+        skippedPendingCount += 1;
+      }
+      if (readiness.skipped_reason === 'periodic_cooldown') {
+        skippedCooldownCount += 1;
+      }
 
-    const lastScheduledTick = recentScheduledTickByAgent.get(candidate.agent_id) ?? null;
-    if (candidate.kind === 'event_driven' && candidate.secondary_reasons.length > 0) {
-      skipCounts.event_coalesced += candidate.secondary_reasons.length;
-    }
-
-    let recoverySuppressedReason: SchedulerSkipReason | null = null;
-    if (replayRecoveryActors.has(candidate.agent_id) && shouldSuppressCandidateForRecoveryWindow(candidate, 'replay')) {
-      recoverySuppressedReason = getRecoverySuppressionSkipReason('replay', candidate.kind);
-    } else if (retryRecoveryActors.has(candidate.agent_id) && shouldSuppressCandidateForRecoveryWindow(candidate, 'retry')) {
-      recoverySuppressedReason = getRecoverySuppressionSkipReason('retry', candidate.kind);
-    }
-
-    if (recoverySuppressedReason !== null) {
-      skipCounts[recoverySuppressedReason] += 1;
-      candidateDecisions.push({
-        actor_id: candidate.agent_id,
-        partition_id: partitionId,
-        kind: candidate.kind,
-        candidate_reasons: [candidate.primary_reason, ...candidate.secondary_reasons],
-        chosen_reason: candidate.primary_reason,
-        scheduled_for_tick: candidate.scheduled_for_tick,
-        priority_score: candidate.priority_score,
-        skipped_reason: recoverySuppressedReason,
-        created_job_id: null
-      });
-      continue;
-    }
-
-    if (isPeriodicReason(candidate.primary_reason) && isAgentInCooldown(now, lastScheduledTick, cooldownTicks)) {
-      skippedCooldownCount += 1;
-      skipCounts.periodic_cooldown += 1;
-      candidateDecisions.push({
-        actor_id: candidate.agent_id,
-        partition_id: partitionId,
-        kind: candidate.kind,
-        candidate_reasons: [candidate.primary_reason, ...candidate.secondary_reasons],
-        chosen_reason: candidate.primary_reason,
-        scheduled_for_tick: candidate.scheduled_for_tick,
-        priority_score: candidate.priority_score,
-        skipped_reason: 'periodic_cooldown',
-        created_job_id: null
-      });
+      skipCounts[readiness.skipped_reason] += 1;
+      candidateDecisions.push(buildCandidateDecisionSnapshot(candidate, partitionId, {
+        skippedReason: readiness.skipped_reason,
+        createdJobId: null
+      }));
       continue;
     }
 
@@ -627,17 +700,10 @@ const runAgentSchedulerForPartition = async ({
     if (existingJob) {
       skippedExistingIdempotencyCount += 1;
       skipCounts.existing_same_idempotency += 1;
-      candidateDecisions.push({
-        actor_id: candidate.agent_id,
-        partition_id: partitionId,
-        kind: candidate.kind,
-        candidate_reasons: [candidate.primary_reason, ...candidate.secondary_reasons],
-        chosen_reason: candidate.primary_reason,
-        scheduled_for_tick: candidate.scheduled_for_tick,
-        priority_score: candidate.priority_score,
-        skipped_reason: 'existing_same_idempotency',
-        created_job_id: existingJob.id
-      });
+      candidateDecisions.push(buildCandidateDecisionSnapshot(candidate, partitionId, {
+        skippedReason: 'existing_same_idempotency',
+        createdJobId: existingJob.id
+      }));
       continue;
     }
 
@@ -648,17 +714,10 @@ const runAgentSchedulerForPartition = async ({
       job_source: 'scheduler',
       scheduled_for_tick: candidate.scheduled_for_tick
     });
-    candidateDecisions.push({
-      actor_id: candidate.agent_id,
-      partition_id: partitionId,
-      kind: candidate.kind,
-      candidate_reasons: [candidate.primary_reason, ...candidate.secondary_reasons],
-      chosen_reason: candidate.primary_reason,
-      scheduled_for_tick: candidate.scheduled_for_tick,
-      priority_score: candidate.priority_score,
-      skipped_reason: null,
-      created_job_id: createdJob.id
-    });
+    candidateDecisions.push(buildCandidateDecisionSnapshot(candidate, partitionId, {
+      skippedReason: null,
+      createdJobId: createdJob.id
+    }));
     createdCount += 1;
     if (candidate.kind === 'periodic') {
       createdPeriodicCount += 1;
@@ -696,10 +755,19 @@ const runAgentSchedulerForPartition = async ({
     summary,
     candidateDecisions
   });
+  const observedSignalTickCandidates = [
+    ...recentSignals.map(signal => signal.created_at),
+    ...Array.from(replayRecoveryActorTicks.entries()).filter(([actorId]) => allowedAgentIds.has(actorId)).map(([_actorId, tick]) => tick),
+    ...Array.from(retryRecoveryActorTicks.entries()).filter(([actorId]) => allowedAgentIds.has(actorId)).map(([_actorId, tick]) => tick)
+  ];
+  const observedSignalTick = observedSignalTickCandidates.length > 0
+    ? observedSignalTickCandidates.reduce<bigint | null>((latest, tick) => (latest === null || tick > latest ? tick : latest), null)
+    : await getLatestSchedulerSignalTick(context, signalSinceTick, now);
+
   await updateSchedulerCursor(context, {
     partitionId,
     lastScannedTick: now,
-    lastSignalTick: now,
+    lastSignalTick: observedSignalTick ?? signalSinceTick,
     now
   });
 

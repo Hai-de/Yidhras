@@ -13,6 +13,7 @@ import { useNotificationsStore } from '../../../stores/notifications'
 import { useOperatorNavigation } from '../../shared/navigation'
 import { useOperatorSourceContext } from '../../shared/source-context'
 import { buildWorkflowSchedulerSourceViewModel } from '../adapters'
+import type { WorkflowRouteTab } from '../route'
 import { useWorkflowRouteState } from '../route'
 import { useWorkflowStore } from '../store'
 
@@ -45,25 +46,16 @@ export const useWorkflowPage = () => {
   const selectedTrace = ref<WorkflowTraceDetail | null>(null)
   const selectedIntent = ref<WorkflowIntentDetail | null>(null)
   const selectedWorkflow = ref<WorkflowSnapshotDetail | null>(null)
-  const isListFetching = ref(false)
   const isDetailFetching = ref(false)
   const isRetrying = ref(false)
   const listErrorMessage = ref<string | null>(null)
   const detailErrorMessage = ref<string | null>(null)
-  const lastListSyncedAt = ref<number | null>(null)
   const lastDetailSyncedAt = ref<number | null>(null)
 
   const fetchJobsList = async () => {
     const filters = workflowRoute.filters.value
 
     workflowStore.setListFetching(true)
-    workflowStore.setListFilters({
-      status: filters.status,
-      agentId: filters.agentId,
-      strategy: filters.strategy,
-      actionIntentId: filters.actionIntentId
-    })
-    isListFetching.value = true
 
     try {
       jobsSnapshot.value = await workflowApi.listJobs({
@@ -75,7 +67,6 @@ export const useWorkflowPage = () => {
       })
       workflowStore.markListSynced()
       listErrorMessage.value = null
-      lastListSyncedAt.value = Date.now()
     } catch (error) {
       const message = getErrorMessage(error)
       listErrorMessage.value = message
@@ -86,7 +77,6 @@ export const useWorkflowPage = () => {
       })
     } finally {
       workflowStore.setListFetching(false)
-      isListFetching.value = false
     }
   }
 
@@ -98,8 +88,6 @@ export const useWorkflowPage = () => {
   }
 
   const fetchSelectionDetails = async () => {
-    workflowRoute.applyRouteToStore()
-
     const jobId = workflowRoute.selectedJobId.value
     const explicitTraceId = workflowRoute.selectedTraceId.value
 
@@ -175,13 +163,7 @@ export const useWorkflowPage = () => {
 
   watch(
     () => workflowRoute.filters.value,
-    filters => {
-      workflowStore.setListFilters({
-        status: filters.status,
-        agentId: filters.agentId,
-        strategy: filters.strategy,
-        actionIntentId: filters.actionIntentId
-      })
+    () => {
       void fetchJobsList()
     },
     { deep: true, immediate: true }
@@ -189,11 +171,7 @@ export const useWorkflowPage = () => {
 
   watch(
     [workflowRoute.selectedJobId, workflowRoute.selectedTraceId, workflowRoute.selectedTab],
-    ([jobId, traceId, selectedTab]) => {
-      workflowStore.setSelectedJobId(jobId)
-      workflowStore.setSelectedTraceId(traceId)
-      workflowStore.setSelectedIntentId(selectedTab === 'intent' ? traceId : null)
-      workflowStore.setActiveTab(selectedTab as 'job' | 'trace' | 'intent' | 'workflow')
+    () => {
       void fetchSelectionDetails()
     },
     { immediate: true }
@@ -329,12 +307,12 @@ export const useWorkflowPage = () => {
     selectedWorkflow,
     schedulerSource,
     schedulerContextMessage,
-    isListFetching,
+    isListFetching: computed(() => workflowStore.isListFetching),
     isDetailFetching,
     isRetrying,
     listErrorMessage,
     detailErrorMessage,
-    lastListSyncedAt,
+    lastListSyncedAt: computed(() => workflowStore.lastListSyncedAt),
     lastDetailSyncedAt,
     filters: workflowRoute.filters,
     selectedJobId: workflowRoute.selectedJobId,
@@ -348,6 +326,7 @@ export const useWorkflowPage = () => {
     openAgent,
     openWorkflowIntent,
     openTrace,
+    setSelectedTab: (tab: WorkflowRouteTab) => workflowRoute.setSelectedTab(tab),
     sourceSummary: sourceContext.summary,
     hasSource: sourceContext.hasSource,
     returnToSource

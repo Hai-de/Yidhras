@@ -92,6 +92,8 @@ export interface SchedulerCandidateDecisionReadModel {
   scheduled_for_tick: string;
   priority_score: number;
   skipped_reason: SchedulerSkipReason | null;
+  coalesced_secondary_reason_count: number;
+  has_coalesced_signals: boolean;
   created_job_id: string | null;
   created_at: string;
   workflow_link: SchedulerDecisionWorkflowLink | null;
@@ -827,21 +829,28 @@ const toCandidateDecisionReadModel = (candidate: {
   created_job_id: string | null;
   workflow_link?: SchedulerDecisionWorkflowLink | null;
   created_at: bigint;
-}): SchedulerCandidateDecisionReadModel => ({
-  id: candidate.id,
-  scheduler_run_id: candidate.scheduler_run_id,
-  partition_id: candidate.partition_id,
-  actor_id: candidate.actor_id,
-  kind: candidate.kind,
-  candidate_reasons: Array.isArray(candidate.candidate_reasons) ? (candidate.candidate_reasons as string[]) : [],
-  chosen_reason: candidate.chosen_reason,
-  scheduled_for_tick: candidate.scheduled_for_tick.toString(),
-  priority_score: candidate.priority_score,
-  skipped_reason: candidate.skipped_reason as SchedulerSkipReason | null,
-  created_job_id: candidate.created_job_id,
-  created_at: candidate.created_at.toString(),
-  workflow_link: candidate.workflow_link ?? null
-});
+}): SchedulerCandidateDecisionReadModel => {
+  const candidateReasons = Array.isArray(candidate.candidate_reasons) ? (candidate.candidate_reasons as string[]) : [];
+  const coalescedSecondaryReasonCount = candidate.kind === 'event_driven' ? Math.max(candidateReasons.length - 1, 0) : 0;
+
+  return {
+    id: candidate.id,
+    scheduler_run_id: candidate.scheduler_run_id,
+    partition_id: candidate.partition_id,
+    actor_id: candidate.actor_id,
+    kind: candidate.kind,
+    candidate_reasons: candidateReasons,
+    chosen_reason: candidate.chosen_reason,
+    scheduled_for_tick: candidate.scheduled_for_tick.toString(),
+    priority_score: candidate.priority_score,
+    skipped_reason: candidate.skipped_reason as SchedulerSkipReason | null,
+    coalesced_secondary_reason_count: coalescedSecondaryReasonCount,
+    has_coalesced_signals: coalescedSecondaryReasonCount > 0,
+    created_job_id: candidate.created_job_id,
+    created_at: candidate.created_at.toString(),
+    workflow_link: candidate.workflow_link ?? null
+  };
+};
 
 const toOwnershipMigrationReadModel = (migration: {
   id: string;

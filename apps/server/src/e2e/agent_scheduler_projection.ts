@@ -233,6 +233,14 @@ async function main(): Promise<void> {
     projection.timeline[1]?.skipped_reason === 'pending_workflow',
     'older timeline item should preserve skipped_reason'
   );
+  assertCondition(
+    projection.timeline[0]?.coalesced_secondary_reason_count === 1 && projection.timeline[0]?.has_coalesced_signals === true,
+    'newest timeline item should expose coalesced signal explainability'
+  );
+  assertCondition(
+    projection.timeline[1]?.coalesced_secondary_reason_count === 0 && projection.timeline[1]?.has_coalesced_signals === false,
+    'older timeline item should preserve non-coalesced explainability flags'
+  );
 
   assertCondition(
     projection.reason_breakdown.some(item => item.reason === 'event_followup' && item.count === 1),
