@@ -1,12 +1,14 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-- [ ] 增加开发环境的数据收敛策略：启动清理或保留上限，避免 scheduler/trace 表持续膨胀  `#dev-retention-reset-switch`
-- [ ] 修正误导性的 BigInt 报错文案，并补充锁竞争/超时诊断信息  `#error-message-observability`
-- [ ] 补充验证脚本或 e2e，确认无重入、SQLite pragma 生效、冷启动后不会复现超时  `#regression-verification`
-- [ ] 新增开发环境数据库重置方案：停止服务后清空/重建 SQLite 文件，并提供一键脚本  `#reset-dev-db`
-- [ ] 将 simulation loop 从 setInterval(async) 改为严格串行执行，彻底消除步进重入  `#serialize-simulation-loop`
-- [ ] 在 Prisma/SQLite 初始化阶段应用 WAL、busy_timeout 等运行时 pragma  `#sqlite-runtime-pragmas`
+- [x] 增加开发环境的数据收敛策略：启动清理或保留上限，避免 scheduler/trace 表持续膨胀  `#dev-retention-reset-switch`
+- [x] 补充 README/开发文档，说明开发库重置、SQLite pragma、串行 simulation loop 与调试开关  `#docs-readme-runtime-stability`
+- [x] 新增更强的 e2e，通过人为注入长耗时 step 证明 simulation loop 不会重入  `#e2e-loop-overlap-proof`
+- [x] 修正误导性的 BigInt 报错文案，并补充锁竞争/超时诊断信息  `#error-message-observability`
+- [x] 补充验证脚本或 e2e，确认无重入、SQLite pragma 生效、冷启动后不会复现超时  `#regression-verification`
+- [x] 新增开发环境数据库重置方案：停止服务后清空/重建 SQLite 文件，并提供一键脚本  `#reset-dev-db`
+- [x] 将 simulation loop 从 setInterval(async) 改为严格串行执行，彻底消除步进重入  `#serialize-simulation-loop`
+- [x] 在 Prisma/SQLite 初始化阶段应用 WAL、busy_timeout 等运行时 pragma  `#sqlite-runtime-pragmas`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # 开发环境调度超时根除计划

@@ -62,3 +62,16 @@
 - `.limcode/plans/`：执行计划、拆解草案、历史过程资产
 - `.limcode/design/`：设计草案，不默认代表已落地实现
 - `.limcode/review/`：评审记录与结论
+
+## 最近新增的开发稳定性阅读入口
+
+如果你是来排查或理解 server 开发环境稳定性改造，建议按下面顺序阅读：
+
+1. `README.md`
+   - 看如何重置开发数据库、哪些环境变量会影响 runtime 稳定性
+2. `ARCH.md`
+   - 看 simulation loop 串行化、SQLite pragma 初始化、development 数据清理这几个架构约束
+3. `apps/server/src/e2e/scheduler_runtime_status.ts`
+   - 看 `/api/status` 对 `runtime_loop` 与 `sqlite` 的验证断言
+4. `apps/server/src/e2e/scheduler_loop_serialization.ts`
+   - 看“人为注入长耗时 step 也不会重入”的证明性 e2e

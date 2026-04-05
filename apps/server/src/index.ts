@@ -1,4 +1,4 @@
-import type { AppContext, RouteRegistrar } from './app/context.js';
+import type { AppContext, RouteRegistrar, RuntimeLoopDiagnostics } from './app/context.js';
 import { createApp } from './app/create_app.js';
 import { asyncHandler } from './app/http/async_handler.js';
 import { getErrorMessage } from './app/http/errors.js';
@@ -19,14 +19,14 @@ import { registerSchedulerRoutes } from './app/routes/scheduler.js';
 import { registerSocialRoutes } from './app/routes/social.js';
 import { registerSystemRoutes } from './app/routes/system.js';
 import { resolveOwnedSchedulerPartitionIds } from './app/runtime/scheduler_partitioning.js';
-import { startSimulationLoop } from './app/runtime/simulation_loop.js';
+import { type SimulationLoopHandle,startSimulationLoop } from './app/runtime/simulation_loop.js';
 import {
   createRuntimeReadyGuard,
   createStartupHealth,
   runStartupPreflight,
   selectStartupWorldPack
 } from './app/runtime/startup.js';
-import { ensureSchedulerBootstrapOwnership } from './app/services/system.js';
+import { ensureSchedulerBootstrapOwnership, resetDevelopmentRuntimeState } from './app/services/system.js';
 import {
   getAppPort,
   getPreferredWorldPack,
@@ -46,13 +46,40 @@ const preferredWorldPack = getPreferredWorldPack();
 const startupPolicy = getStartupPolicy();
 const startupHealth = createStartupHealth();
 
+const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
+  status: 'idle',
+  in_flight: false,
+  overlap_skipped_count: 0,
+  iteration_count: 0,
+  last_started_at: null,
+  last_finished_at: null,
+  last_duration_ms: null,
+  last_error_message: null
+};
+
+const parseSimulationLoopIntervalMs = (): number => {
+  const raw = process.env.SIM_LOOP_INTERVAL_MS;
+  if (typeof raw !== 'string' || raw.trim().length === 0) {
+    return 1000;
+  }
+
+  const parsed = Number.parseInt(raw.trim(), 10);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(`SIM_LOOP_INTERVAL_MS is invalid: ${raw}`);
+  }
+
+  return parsed;
+};
+
 let runtimeReady = false;
-let timer: NodeJS.Timeout | null = null;
+let timer: SimulationLoopHandle | null = null;
 let isPaused = false;
+let runtimeLoopDiagnostics: RuntimeLoopDiagnostics = { ...DEFAULT_RUNTIME_LOOP_DIAGNOSTICS };
 const decisionWorkerId = `decision:${process.pid}:${Date.now()}`;
 const actionDispatcherWorkerId = `dispatcher:${process.pid}:${Date.now()}`;
 const schedulerWorkerId = process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}:${Date.now()}`;
 const schedulerPartitionIds = resolveOwnedSchedulerPartitionIds({ workerId: schedulerWorkerId });
+const simulationLoopIntervalMs = parseSimulationLoopIntervalMs();
 
 const assertRuntimeReady = createRuntimeReadyGuard({
   getRuntimeReady: () => runtimeReady,
@@ -72,6 +99,11 @@ const appContext: AppContext = {
   setPaused: (paused: boolean) => {
     isPaused = paused;
   },
+  getRuntimeLoopDiagnostics: () => runtimeLoopDiagnostics,
+  setRuntimeLoopDiagnostics: next => {
+    runtimeLoopDiagnostics = next;
+  },
+  getSqliteRuntimePragmas: () => sim.getSqliteRuntimePragmaSnapshot(),
   assertRuntimeReady
 };
 
@@ -130,13 +162,42 @@ const app = createApp({
 
 app.use(createGlobalErrorMiddleware(appContext));
 
+const isDatabaseTimeoutError = (message: string): boolean => {
+  const normalized = message.toLowerCase();
+  return normalized.includes('socket timeout') || normalized.includes('database failed to respond') || normalized.includes('database is locked');
+};
+
 const handleSimulationStepError = (err: unknown): void => {
+  const message = getErrorMessage(err);
+  const runtimeLoop = appContext.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
+  const sqlitePragmas = appContext.getSqliteRuntimePragmas?.() ?? null;
+  const details = {
+    runtime_loop_status: runtimeLoop.status,
+    runtime_loop_in_flight: runtimeLoop.in_flight,
+    runtime_loop_iteration_count: runtimeLoop.iteration_count,
+    runtime_loop_overlap_skipped_count: runtimeLoop.overlap_skipped_count,
+    runtime_loop_last_duration_ms: runtimeLoop.last_duration_ms,
+    sqlite_journal_mode: sqlitePragmas?.journal_mode ?? null,
+    sqlite_busy_timeout: sqlitePragmas?.busy_timeout ?? null,
+    sqlite_synchronous: sqlitePragmas?.synchronous ?? null
+  };
+
   notifications.push(
     'error',
-    `模拟步进失败 (可能存在 BigInt 异常): ${getErrorMessage(err)}`,
-    'SIM_STEP_ERR'
+    isDatabaseTimeoutError(message)
+      ? `模拟步进失败（数据库锁竞争或查询超时）: ${message}`
+      : `模拟步进失败: ${message}`,
+    'SIM_STEP_ERR',
+    details
   );
   appContext.setPaused(true);
+  const latestDiagnostics = appContext.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
+  appContext.setRuntimeLoopDiagnostics?.({
+    ...latestDiagnostics,
+    status: 'paused',
+    in_flight: false,
+    last_error_message: message
+  });
 };
 
 const startSimulation = (): void => {
@@ -145,7 +206,7 @@ const startSimulation = (): void => {
   }
 
   if (timer) {
-    clearInterval(timer);
+    timer.stop();
   }
 
   timer = startSimulationLoop({
@@ -154,12 +215,15 @@ const startSimulation = (): void => {
     decisionWorkerId,
     actionDispatcherWorkerId,
     schedulerWorkerId,
+    intervalMs: simulationLoopIntervalMs,
     onStepError: handleSimulationStepError
   });
 };
 
 const start = async (): Promise<void> => {
   logRuntimeConfigSnapshot();
+
+  await sim.prepareDatabase();
 
   await runStartupPreflight({
     startupHealth,
@@ -170,6 +234,11 @@ const start = async (): Promise<void> => {
   });
 
   try {
+    const resetSummary = await resetDevelopmentRuntimeState(appContext);
+    if (resetSummary) {
+      notifications.push('info', '开发环境 runtime 观测数据已清理', 'DEV_RUNTIME_RESET', toJsonSafe(resetSummary) as Record<string, unknown>);
+    }
+
     await ensureSchedulerBootstrapOwnership(appContext, {
       schedulerWorkerId,
       schedulerPartitionIds
@@ -189,7 +258,7 @@ const start = async (): Promise<void> => {
 
       await sim.init(selectedPack);
       appContext.setRuntimeReady(true);
-      notifications.push('info', `Yidhras 系统初始化成功 (pack=${selectedPack}, schedulerPartitions=${schedulerPartitionIds.join(',') || 'none'})`, 'SYS_INIT_OK');
+      notifications.push('info', `Yidhras 系统初始化成功 (pack=${selectedPack}, schedulerPartitions=${schedulerPartitionIds.join(',') || 'none'}, loopIntervalMs=${String(simulationLoopIntervalMs)})`, 'SYS_INIT_OK');
       startSimulation();
     }
   } catch (err: unknown) {
@@ -203,7 +272,7 @@ const start = async (): Promise<void> => {
   app.listen(port, () => {
     console.log(`[Yidhras Server] API full implementation running at http://localhost:${port}`);
     console.log(`[Yidhras Server] Inference module ready (phase=${inferenceService.phase}, ready=${String(inferenceService.ready)})`);
-    console.log(`[Yidhras Server] Scheduler worker=${schedulerWorkerId} partitions=${schedulerPartitionIds.join(',') || 'none'}`);
+    console.log(`[Yidhras Server] Scheduler worker=${schedulerWorkerId} partitions=${schedulerPartitionIds.join(',') || 'none'} loopIntervalMs=${String(simulationLoopIntervalMs)}`);
   });
 };
 

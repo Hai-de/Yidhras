@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import { ChronosEngine } from '../clock/engine.js';
 import type { CalendarConfig } from '../clock/types.js';
 import { getWorldPacksDir } from '../config/runtime_config.js';
+import { applySqliteRuntimePragmas, type SqliteRuntimePragmaSnapshot } from '../db/sqlite_runtime.js';
 import { ValueDynamicsManager } from '../dynamics/manager.js';
 import { NarrativeResolver } from '../narrative/resolver.js';
 import { notifications } from '../utils/notifications.js';
@@ -24,6 +25,7 @@ export class SimulationManager {
   private activePack?: WorldPack;
   private runtimeSpeed: RuntimeSpeedPolicy;
   private readonly packsDir: string;
+  private sqliteRuntimePragmas: SqliteRuntimePragmaSnapshot | null;
 
   constructor() {
     this.packsDir = getWorldPacksDir();
@@ -34,9 +36,29 @@ export class SimulationManager {
     this.resolver = new NarrativeResolver({});
     this.dynamics = new ValueDynamicsManager();
     this.runtimeSpeed = new RuntimeSpeedPolicy(1n);
+    this.sqliteRuntimePragmas = null;
+  }
+
+  public async prepareDatabase(): Promise<SqliteRuntimePragmaSnapshot> {
+    if (this.sqliteRuntimePragmas !== null) {
+      return this.sqliteRuntimePragmas;
+    }
+
+    this.sqliteRuntimePragmas = await applySqliteRuntimePragmas(this.prisma);
+    console.log(
+      `[SimulationManager] SQLite pragmas journal_mode=${this.sqliteRuntimePragmas.journal_mode} busy_timeout=${String(
+        this.sqliteRuntimePragmas.busy_timeout
+      )} synchronous=${this.sqliteRuntimePragmas.synchronous} foreign_keys=${String(
+        this.sqliteRuntimePragmas.foreign_keys
+      )} wal_autocheckpoint=${String(this.sqliteRuntimePragmas.wal_autocheckpoint)}`
+    );
+
+    return this.sqliteRuntimePragmas;
   }
 
   public async init(packFolderName: string) {
+    await this.prepareDatabase();
+
     const pack = this.loader.loadPack(packFolderName);
     this.activePack = pack;
 
@@ -94,6 +116,10 @@ export class SimulationManager {
 
   public getRuntimeSpeedSnapshot(): RuntimeSpeedSnapshot {
     return this.runtimeSpeed.getSnapshot();
+  }
+
+  public getSqliteRuntimePragmaSnapshot(): SqliteRuntimePragmaSnapshot | null {
+    return this.sqliteRuntimePragmas;
   }
 
   public setRuntimeSpeedOverride(stepTicks: bigint): void {

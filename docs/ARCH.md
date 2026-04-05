@@ -69,6 +69,7 @@ This document summarizes the current high-level architecture and the most import
 
 - `SimulationManager` (`apps/server/src/core/simulation.ts`) still orchestrates:
   - Prisma initialization
+  - SQLite runtime pragma initialization
   - world-pack loading
   - clock initialization and tick advancement
   - narrative resolver setup
@@ -108,6 +109,21 @@ During ongoing workflow/relational hardening:
 - if a feature only needs speed/tick policy access, prefer focused policy/service wrappers instead of broadening `SimulationManager`
 
 This keeps `SimulationManager` as a runtime composition object rather than allowing it to become a new all-purpose service hub.
+
+### 4.5 Runtime Stability Contract / 运行稳定性约束
+
+为根除开发环境下的 scheduler lease timeout，runtime loop 与 SQLite baseline 已增加以下稳定性约束：
+
+- `apps/server/src/app/runtime/simulation_loop.ts` 现采用**串行 `setTimeout` 调度**，而非可重入的 `setInterval(async ...)`
+- runtime loop diagnostics 已成为 `AppContext` 的一部分，并通过 `/api/status` 对外暴露
+- `apps/server/src/core/simulation.ts` 在 runtime 初始化前会统一执行 SQLite pragma 初始化
+- development 环境启动时可通过 `resetDevelopmentRuntimeState()` 清理易膨胀的 runtime 表，避免本地 SQLite 长期累积导致写压反复回潮
+
+这意味着：
+
+- 任意时刻最多只允许一轮 simulation iteration 在执行
+- SQLite runtime 行为应可从 `/api/status` 中直接观察，而不是靠猜测
+- development 环境默认以“可重建、可清理、稳定优先”为取舍，而不是以保留历史本地数据为优先
 
 ---
 

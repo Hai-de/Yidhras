@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { Express } from 'express';
 
 import type { SimulationManager } from '../core/simulation.js';
+import type { SqliteRuntimePragmaSnapshot } from '../db/sqlite_runtime.js';
 import type { NotificationLevel, SystemMessage } from '../utils/notifications.js';
 
 export type HealthLevel = 'ok' | 'degraded' | 'fail';
@@ -28,6 +29,17 @@ export interface NotificationStore {
   clear(): void;
 }
 
+export interface RuntimeLoopDiagnostics {
+  status: 'idle' | 'scheduled' | 'running' | 'paused' | 'stopped';
+  in_flight: boolean;
+  overlap_skipped_count: number;
+  iteration_count: number;
+  last_started_at: number | null;
+  last_finished_at: number | null;
+  last_duration_ms: number | null;
+  last_error_message: string | null;
+}
+
 export interface AppContext {
   prisma: PrismaClient;
   sim: SimulationManager;
@@ -37,6 +49,9 @@ export interface AppContext {
   setRuntimeReady(ready: boolean): void;
   getPaused(): boolean;
   setPaused(paused: boolean): void;
+  getRuntimeLoopDiagnostics?(): RuntimeLoopDiagnostics;
+  setRuntimeLoopDiagnostics?(next: RuntimeLoopDiagnostics): void;
+  getSqliteRuntimePragmas?(): SqliteRuntimePragmaSnapshot | null;
   assertRuntimeReady(feature: string): void;
 }
 

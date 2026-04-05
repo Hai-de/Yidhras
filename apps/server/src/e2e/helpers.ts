@@ -12,6 +12,7 @@ interface StartServerOptions {
   startupTimeoutMs?: number;
   prepareRuntime?: boolean;
   prepareTimeoutMs?: number;
+  envOverrides?: Record<string, string>;
 }
 
 export interface RunningServer {
@@ -149,6 +150,7 @@ export const startServer = async (options: StartServerOptions): Promise<RunningS
     cwd: process.cwd(),
     env: {
       ...process.env,
+      ...options.envOverrides,
       PORT: String(options.port)
     },
     stdio: ['ignore', 'pipe', 'pipe']

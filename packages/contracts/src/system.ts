@@ -11,6 +11,25 @@ export const runtimeSpeedSnapshotSchema = z.object({
   effective_step_ticks: positiveBigIntStringSchema
 })
 
+export const runtimeLoopDiagnosticsSchema = z.object({
+  status: z.enum(['idle', 'scheduled', 'running', 'paused', 'stopped']),
+  in_flight: z.boolean(),
+  overlap_skipped_count: z.number().int().nonnegative(),
+  iteration_count: z.number().int().nonnegative(),
+  last_started_at: z.number().nullable(),
+  last_finished_at: z.number().nullable(),
+  last_duration_ms: z.number().int().nonnegative().nullable(),
+  last_error_message: z.string().nullable()
+})
+
+export const sqliteRuntimePragmaSchema = z.object({
+  journal_mode: z.string(),
+  busy_timeout: z.number().int().nonnegative(),
+  synchronous: z.enum(['OFF', 'NORMAL', 'FULL', 'EXTRA', 'UNKNOWN']),
+  foreign_keys: z.boolean(),
+  wal_autocheckpoint: z.number().int().nonnegative()
+})
+
 export const schedulerWorkerConfigSchema = z.object({
   worker_id: z.string(),
   partition_count: z.number().int().positive(),
@@ -26,6 +45,8 @@ export const runtimeStatusDataSchema = z.object({
   status: z.enum(['running', 'paused']),
   runtime_ready: z.boolean(),
   runtime_speed: runtimeSpeedSnapshotSchema,
+  runtime_loop: runtimeLoopDiagnosticsSchema,
+  sqlite: sqliteRuntimePragmaSchema.nullable(),
   scheduler: schedulerWorkerConfigSchema,
   health_level: z.enum(['ok', 'degraded', 'fail']),
   world_pack: z

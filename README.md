@@ -57,6 +57,76 @@ chmod +x start-dev.sh
 start-dev.bat
 ```
 
+## 开发环境稳定性说明
+
+后端开发环境现在默认启用了针对 SQLite runtime 的稳定性修复，以避免 `schedulerLease.upsert()` 一类因锁竞争导致的超时：
+
+- simulation loop 已改为**严格串行执行**，不再使用会重入的 `setInterval(async ...)`
+- SQLite 启动时会自动应用运行时 pragma：
+  - `journal_mode=WAL`
+  - `busy_timeout=5000`
+  - `synchronous=NORMAL`
+  - `foreign_keys=ON`
+- development 环境默认会在服务启动前清理 runtime 观测/工作流表，防止开发库无限膨胀
+
+### 一键重建开发数据库
+
+如果开发库状态混乱、体积过大，或想重新从干净环境开始：
+
+```bash
+pnpm --filter yidhras-server run reset:dev-db
+```
+
+这个脚本会：
+
+1. 检查 `apps/server` 是否仍有 dev/e2e 进程在运行
+2. 删除：
+   - `data/yidhras.sqlite`
+   - `data/yidhras.sqlite-wal`
+   - `data/yidhras.sqlite-shm`
+3. 重新执行：
+   - `prisma migrate deploy`
+   - `init:runtime`
+   - `seed:identity`
+
+> 这是开发环境破坏式重置命令，会清空本地 SQLite 数据。
+
+### 开发环境默认开关
+
+以下环境变量可用于调试 runtime 稳定性行为：
+
+- `DEV_RUNTIME_RESET_ON_START`
+  - 默认：开启
+  - 作用：development 环境启动前是否自动清理 `SchedulerRun / SchedulerCandidateDecision / InferenceTrace / DecisionJob / ActionIntent / SchedulerCursor / SchedulerLease`
+- `SIM_LOOP_INTERVAL_MS`
+  - 默认：`1000`
+  - 作用：覆盖 simulation loop 的串行调度间隔
+- `SQLITE_BUSY_TIMEOUT_MS`
+  - 默认：`5000`
+  - 作用：覆盖 SQLite busy timeout
+- `SQLITE_WAL_AUTOCHECKPOINT_PAGES`
+  - 默认：`1000`
+  - 作用：覆盖 SQLite WAL autocheckpoint 页数
+- `SQLITE_SYNCHRONOUS`
+  - 默认：`NORMAL`
+  - 可选：`OFF | NORMAL | FULL | EXTRA`
+  - 作用：覆盖 SQLite synchronous 模式
+
+### 调试与验证
+
+可以通过以下方式确认修复生效：
+
+```bash
+pnpm --filter yidhras-server typecheck
+pnpm --filter yidhras-server run test:scheduler-runtime-status
+pnpm --filter yidhras-server run test:scheduler-loop-serialization
+```
+
+其中：
+
+- `test:scheduler-runtime-status` 会检查 `/api/status` 中是否暴露 `runtime_loop` 和 `sqlite` 信息，以及 pragma 是否生效
+- `test:scheduler-loop-serialization` 会注入人为延迟，证明 simulation loop 在长耗时场景下仍不会重入
+
 ## 运行时配置（configw）
 
 `data/` 目录继续作为部署者本地运行数据区，默认不纳入版本管理。项目拉取后即使不存在 `data/`，服务端也会在首次启动时自动创建并补齐运行所需的 `data/configw/**` 配置文件与模板副本。

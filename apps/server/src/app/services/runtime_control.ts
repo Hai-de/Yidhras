@@ -1,9 +1,20 @@
 import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
-import type { AppContext } from '../context.js';
+import type { AppContext, RuntimeLoopDiagnostics } from '../context.js';
 
 export interface RuntimeControlSnapshot {
   status: 'paused' | 'running';
 }
+
+const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
+  status: 'idle',
+  in_flight: false,
+  overlap_skipped_count: 0,
+  iteration_count: 0,
+  last_started_at: null,
+  last_finished_at: null,
+  last_duration_ms: null,
+  last_error_message: null
+};
 
 export const overrideRuntimeSpeed = (context: AppContext, stepTicks: bigint): RuntimeSpeedSnapshot => {
   context.sim.setRuntimeSpeedOverride(stepTicks);
@@ -30,12 +41,23 @@ export const clearRuntimeSpeedOverride = (context: AppContext): RuntimeSpeedSnap
 
 export const pauseRuntime = (context: AppContext): RuntimeControlSnapshot => {
   context.setPaused(true);
+  const diagnostics = context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
+  context.setRuntimeLoopDiagnostics?.({
+    ...diagnostics,
+    status: 'paused',
+    in_flight: false
+  });
   context.notifications.push('info', '模拟已暂停');
   return { status: 'paused' };
 };
 
 export const resumeRuntime = (context: AppContext): RuntimeControlSnapshot => {
   context.setPaused(false);
+  const diagnostics = context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
+  context.setRuntimeLoopDiagnostics?.({
+    ...diagnostics,
+    status: 'idle'
+  });
   context.notifications.push('info', '模拟已恢复');
   return { status: 'running' };
 };

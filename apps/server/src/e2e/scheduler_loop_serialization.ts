@@ -1,9 +1,9 @@
-import { assert, requestJson, startServer, summarizeResponse } from './helpers.js';
+import { assert, isRecord, requestJson, startServer, summarizeResponse } from './helpers.js';
 
 const parsePort = (): number => {
   const value = process.env.SMOKE_PORT;
   if (!value) {
-    return 3111;
+    return 3112;
   }
 
   const port = Number.parseInt(value, 10);
@@ -14,15 +14,22 @@ const parsePort = (): number => {
   return port;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-};
+const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
 const main = async (): Promise<void> => {
   const port = parsePort();
-  const server = await startServer({ port });
+  const server = await startServer({
+    port,
+    envOverrides: {
+      DEV_RUNTIME_RESET_ON_START: '1',
+      SIM_LOOP_INTERVAL_MS: '50',
+      SIM_LOOP_TEST_DELAY_MS: '250'
+    }
+  });
 
   try {
+    await sleep(900);
+
     const response = await requestJson(server.baseUrl, '/api/status');
     assert(response.status === 200, summarizeResponse('/api/status', response));
     assert(isRecord(response.body), '/api/status body should be object');
@@ -31,24 +38,21 @@ const main = async (): Promise<void> => {
 
     const data = response.body.data as Record<string, unknown>;
     assert(isRecord(data.runtime_loop), 'runtime_loop should be object');
-    assert(isRecord(data.sqlite), 'sqlite should be object after runtime init');
 
     const runtimeLoop = data.runtime_loop as Record<string, unknown>;
-    const sqlite = data.sqlite as Record<string, unknown>;
-
-    assert(typeof runtimeLoop.status === 'string', 'runtime_loop.status should be string');
-    assert(typeof runtimeLoop.in_flight === 'boolean', 'runtime_loop.in_flight should be boolean');
-    assert(typeof runtimeLoop.overlap_skipped_count === 'number', 'runtime_loop.overlap_skipped_count should be number');
     assert(typeof runtimeLoop.iteration_count === 'number', 'runtime_loop.iteration_count should be number');
-    assert(runtimeLoop.overlap_skipped_count === 0, 'runtime loop should not report overlap in serial mode');
+    assert(runtimeLoop.iteration_count >= 2, 'runtime loop should execute at least two delayed iterations');
+    assert(runtimeLoop.overlap_skipped_count === 0, 'serial runtime loop should never record overlap skips');
+    assert(typeof runtimeLoop.last_duration_ms === 'number', 'runtime loop should expose last_duration_ms');
+    assert(runtimeLoop.last_duration_ms >= 250, 'last_duration_ms should reflect the injected artificial delay');
+    assert(
+      typeof runtimeLoop.status === 'string' && ['idle', 'scheduled', 'running'].includes(runtimeLoop.status),
+      'runtime loop status should stay within serialized lifecycle states'
+    );
 
-    assert(sqlite.journal_mode === 'wal', 'sqlite journal_mode should be wal');
-    assert(typeof sqlite.busy_timeout === 'number' && sqlite.busy_timeout >= 5000, 'sqlite busy_timeout should be >= 5000');
-    assert(sqlite.foreign_keys === true, 'sqlite foreign_keys should be enabled');
-
-    console.log('[scheduler_runtime_status] PASS');
+    console.log('[scheduler_loop_serialization] PASS');
   } catch (error: unknown) {
-    console.error('[scheduler_runtime_status] FAIL');
+    console.error('[scheduler_loop_serialization] FAIL');
     if (error instanceof Error) {
       console.error(error.stack ?? error.message);
     } else {

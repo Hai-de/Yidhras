@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-import type { AppContext, StartupHealth } from '../app/context.js';
+import type { AppContext, RuntimeLoopDiagnostics, StartupHealth } from '../app/context.js';
 import {
   acquireSchedulerLease,
   getSchedulerCursor,
@@ -19,9 +19,21 @@ function assert(condition: unknown, message: string): asserts condition {
   }
 }
 
+const createDefaultRuntimeLoopDiagnostics = (): RuntimeLoopDiagnostics => ({
+  status: 'idle',
+  in_flight: false,
+  overlap_skipped_count: 0,
+  iteration_count: 0,
+  last_started_at: null,
+  last_finished_at: null,
+  last_duration_ms: null,
+  last_error_message: null
+});
+
 const buildTestContext = (prisma: PrismaClient): AppContext => {
   let paused = false;
   let runtimeReady = true;
+  let runtimeLoopDiagnostics = createDefaultRuntimeLoopDiagnostics();
 
   const sim = {
     prisma,
@@ -37,6 +49,7 @@ const buildTestContext = (prisma: PrismaClient): AppContext => {
       override_since: null,
       effective_step_ticks: '1'
     }),
+    getSqliteRuntimePragmaSnapshot: () => null,
     setRuntimeSpeedOverride: () => {},
     clearRuntimeSpeedOverride: () => {}
   } as unknown as SimulationManager;
@@ -65,6 +78,11 @@ const buildTestContext = (prisma: PrismaClient): AppContext => {
     setPaused: next => {
       paused = next;
     },
+    getRuntimeLoopDiagnostics: () => runtimeLoopDiagnostics,
+    setRuntimeLoopDiagnostics: next => {
+      runtimeLoopDiagnostics = next;
+    },
+    getSqliteRuntimePragmas: () => null,
     assertRuntimeReady: () => {}
   };
 };
@@ -79,7 +97,6 @@ const main = async () => {
 
     const firstAcquire = await acquireSchedulerLease(context, {
       workerId: 'scheduler-worker-a',
-      partitionId: 'p0',
       now: 1000n,
       leaseTicks: 5n
     });
@@ -89,8 +106,7 @@ const main = async () => {
 
     const secondAcquire = await acquireSchedulerLease(context, {
       workerId: 'scheduler-worker-b',
-      partitionId: 'p0',
-      now: 1001n,
+      now: 1002n,
       leaseTicks: 5n
     });
     assert(secondAcquire.acquired === false, 'second scheduler lease acquire while valid should fail');
@@ -99,46 +115,48 @@ const main = async () => {
     const parallelPartitionAcquire = await acquireSchedulerLease(context, {
       workerId: 'scheduler-worker-b',
       partitionId: 'p1',
-      now: 1001n,
+      now: 1002n,
       leaseTicks: 5n
     });
-    assert(parallelPartitionAcquire.acquired === true, 'different partition lease acquire should succeed in parallel');
-    assert(parallelPartitionAcquire.partition_id === 'p1', 'parallel partition acquire should expose partition_id');
+    assert(parallelPartitionAcquire.acquired === true, 'second partition lease acquire should succeed independently');
+    assert(parallelPartitionAcquire.partition_id === 'p1', 'second partition lease should preserve requested partition id');
 
     await prisma.schedulerLease.deleteMany({ where: { partition_id: 'p2' } });
     const [raceAcquireA, raceAcquireB] = await Promise.all([
       acquireSchedulerLease(context, {
         workerId: 'scheduler-race-worker-a',
         partitionId: 'p2',
-        now: 1010n,
-        leaseTicks: 4n
+        now: 1002n,
+        leaseTicks: 5n
       }),
       acquireSchedulerLease(context, {
         workerId: 'scheduler-race-worker-b',
         partitionId: 'p2',
-        now: 1010n,
-        leaseTicks: 4n
+        now: 1002n,
+        leaseTicks: 5n
       })
     ]);
+    const raceWinners = [raceAcquireA, raceAcquireB].filter(result => result.acquired);
+    const raceLosers = [raceAcquireA, raceAcquireB].filter(result => !result.acquired);
+    assert(raceWinners.length === 1, 'exactly one concurrent scheduler lease acquire should succeed');
+    assert(raceLosers.length === 1, 'exactly one concurrent scheduler lease acquire should fail');
     assert(
-      (raceAcquireA.acquired && !raceAcquireB.acquired) || (!raceAcquireA.acquired && raceAcquireB.acquired),
-      'parallel same-partition lease acquire should elect exactly one holder without throwing'
+      raceLosers[0]?.holder === raceWinners[0]?.holder,
+      'failed concurrent scheduler lease acquire should report the winner as holder'
     );
     const persistedRaceLease = await prisma.schedulerLease.findUnique({
       where: {
         partition_id: 'p2'
       }
     });
-    assert(persistedRaceLease !== null, 'parallel same-partition lease acquire should persist a lease row');
+    assert(persistedRaceLease !== null, 'concurrent scheduler lease acquire should persist a lease row');
     assert(
-      persistedRaceLease?.holder === 'scheduler-race-worker-a' || persistedRaceLease?.holder === 'scheduler-race-worker-b',
-      'parallel same-partition lease acquire should persist one of the competing holders'
+      persistedRaceLease?.holder === raceWinners[0]?.holder,
+      'persisted concurrent scheduler lease holder should match the winning acquire result'
     );
-
 
     const renewed = await renewSchedulerLease(context, {
       workerId: 'scheduler-worker-a',
-      partitionId: 'p0',
       now: 1002n,
       leaseTicks: 5n
     });
@@ -147,34 +165,36 @@ const main = async () => {
 
     const expiredAcquire = await acquireSchedulerLease(context, {
       workerId: 'scheduler-worker-c',
-      partitionId: 'p0',
       now: 1008n,
-      leaseTicks: 3n
+      leaseTicks: 5n
     });
     assert(expiredAcquire.acquired === true, 'scheduler lease should be reclaimable after expiry');
     assert(expiredAcquire.holder === 'scheduler-worker-c', 'expired scheduler lease should transfer holder');
 
+    const cursorBeforeCreate = await getSchedulerCursor(context);
+    assert(cursorBeforeCreate === null, 'scheduler cursor should be null before first update');
+
     await updateSchedulerCursor(context, {
-      partitionId: 'p0',
-      lastScannedTick: 1008n,
-      lastSignalTick: 1007n,
-      now: 1008n
-    });
-    await updateSchedulerCursor(context, {
-      partitionId: 'p1',
       lastScannedTick: 1005n,
       lastSignalTick: 1004n,
       now: 1005n
     });
+    const cursorAfterCreate = await getSchedulerCursor(context);
+    assert(cursorAfterCreate !== null, 'scheduler cursor should be created by first update');
+    assert(cursorAfterCreate?.partition_id === 'p0', 'scheduler cursor should expose default partition id');
+    assert(cursorAfterCreate?.last_scanned_tick === 1005n, 'scheduler cursor should persist last_scanned_tick');
+    assert(cursorAfterCreate?.last_signal_tick === 1004n, 'scheduler cursor should persist last_signal_tick');
 
-    const cursorP0 = await getSchedulerCursor(context, 'p0');
+    await updateSchedulerCursor(context, {
+      partitionId: 'p1',
+      lastScannedTick: 1006n,
+      lastSignalTick: 1005n,
+      now: 1006n
+    });
     const cursorP1 = await getSchedulerCursor(context, 'p1');
-    assert(cursorP0 !== null, 'scheduler cursor p0 should exist after update');
-    assert(cursorP1 !== null, 'scheduler cursor p1 should exist after update');
-    assert(cursorP0?.last_scanned_tick === 1008n, 'scheduler cursor p0 last_scanned_tick should match');
-    assert(cursorP0?.last_signal_tick === 1007n, 'scheduler cursor p0 last_signal_tick should match');
-    assert(cursorP1?.last_scanned_tick === 1005n, 'scheduler cursor p1 last_scanned_tick should match');
-    assert(cursorP1?.last_signal_tick === 1004n, 'scheduler cursor p1 last_signal_tick should match');
+    assert(cursorP1 !== null, 'scheduler cursor should support multi-partition updates');
+    assert(cursorP1?.last_scanned_tick === 1006n, 'partition cursor should persist last_scanned_tick');
+    assert(cursorP1?.last_signal_tick === 1005n, 'partition cursor should persist last_signal_tick');
 
     const wrongRelease = await releaseSchedulerLease(context, 'scheduler-worker-a', 'p0');
     assert(wrongRelease === false, 'releasing scheduler lease by non-holder should fail');
@@ -184,18 +204,19 @@ const main = async () => {
         partition_id: 'p3'
       },
       update: {
+        key: 'agent_scheduler_main:p3',
         holder: 'scheduler-release-owner',
-        acquired_at: 1012n,
-        expires_at: 1017n,
-        updated_at: 1012n
+        acquired_at: 1010n,
+        expires_at: 1015n,
+        updated_at: 1010n
       },
       create: {
         key: 'agent_scheduler_main:p3',
         partition_id: 'p3',
         holder: 'scheduler-release-owner',
-        acquired_at: 1012n,
-        expires_at: 1017n,
-        updated_at: 1012n
+        acquired_at: 1010n,
+        expires_at: 1015n,
+        updated_at: 1010n
       }
     });
     const staleRelease = await releaseSchedulerLease(context, 'scheduler-worker-a', 'p3');
@@ -219,7 +240,7 @@ const main = async () => {
   } catch (error: unknown) {
     console.error('[scheduler_lease] FAIL');
     if (error instanceof Error) {
-      console.error(error.message);
+      console.error(error.stack ?? error.message);
     } else {
       console.error(String(error));
     }
