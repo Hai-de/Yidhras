@@ -1,0 +1,81 @@
+# Yidhras World Pack: Death Note
+metadata:
+  id: "world-death-note"
+  name: "死亡笔记"
+  version: "0.1.0"
+  description: "一个围绕死亡笔记、基拉审判、侦探追缉与舆论震荡展开的现代悬疑世界。"
+
+# 1. 变量池 (支持嵌套解析)
+variables:
+  currency: "日元"
+  governance: "警视厅与国际搜查协作网络"
+  location_suffix: "本部"
+  main_location: "基拉对策{{location_suffix}}"
+  tech_level: "现代信息社会，依赖监控、媒体传播与高强度刑侦推理"
+  system_status: "当前社会因“基拉”事件陷入持续震荡，{{main_location}} 正在全球追查异常死亡案件。"
+
+# 2. 多历法系统 (Chronos Engine Config)
+simulation_time:
+  initial_tick: 1000000000000
+  min_tick: 900000000000
+  max_tick: 1200000000000
+  step_ticks: 1
+
+time_systems:
+  - id: "case_clock"
+    name: "案件调查时序"
+    is_primary: true
+    tick_rate: 1000 # 1 Global Tick = 1s
+    units:
+      - name: "second"
+        ratio: 1
+      - name: "minute"
+        ratio: 60
+      - name: "hour"
+        ratio: 60
+      - name: "day"
+        ratio: 24
+
+  - id: "gregorian"
+    name: "公历"
+    tick_rate: 1000
+    units:
+      - name: "second"
+        ratio: 1
+      - name: "minute"
+        ratio: 60
+      - name: "hour"
+        ratio: 60
+      - name: "day"
+        ratio: 24
+      - name: "month"
+        irregular_ratios: [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+      - name: "year"
+        ratio: 12
+
+# 3. 核心提示词模板
+prompts:
+  global_prefix: |
+    你处于 {{name}} 的世界中。
+    {{system_status}}
+    社会流通货币为 {{currency}}。
+
+  agent_initial_context: "作为 {{main_location}} 的一员，你的基础认知基于：{{tech_level}}"
+
+# 4. 价值动态配置 (Value Dynamics Algorithms)
+dynamics_config:
+  algorithms:
+    - reason: "case_breakthrough"
+      type: "linear"
+      params:
+        factor: 1.2
+    - reason: "media_rumor"
+      type: "exponential"
+      params:
+        base: 1.5
+        scale: 0.5
+    - reason: "suspect_exposure"
+      type: "sigmoid"
+      params:
+        midpoint: 0.6
+        steepness: 12

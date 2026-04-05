@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 
 import type {
   InferenceActionIntentSnapshot,
+  InferenceJobIntentClass,
   InferenceRequestInput,
   WorkflowSnapshot
 } from '../../../inference/types.js';
@@ -26,6 +27,7 @@ import type {
 import {
   hasMaterializedInferenceTrace,
   INFERENCE_JOB_STATUSES,
+  normalizeJobIntentClass,
   normalizeJobStatus,
   toTickString
 } from './types.js';
@@ -40,6 +42,7 @@ export interface InferenceJobListItem {
   max_attempts: number;
   idempotency_key: string | null;
   last_error: string | null;
+  intent_class: InferenceJobIntentClass;
   last_error_code: string | null;
   last_error_stage: string | null;
   created_at: string;
@@ -363,6 +366,7 @@ const buildInferenceJobListItem = (
     max_attempts: job.max_attempts,
     idempotency_key: job.idempotency_key,
     last_error: job.last_error,
+    intent_class: normalizeJobIntentClass(job.intent_class),
     last_error_code: job.last_error_code,
     last_error_stage: job.last_error_stage,
     created_at: job.created_at.toString(),

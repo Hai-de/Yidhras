@@ -23,20 +23,27 @@ import { startSimulationLoop } from './app/runtime/simulation_loop.js';
 import {
   createRuntimeReadyGuard,
   createStartupHealth,
-  resolveWorldPacksDir,
   runStartupPreflight,
   selectStartupWorldPack
 } from './app/runtime/startup.js';
 import { ensureSchedulerBootstrapOwnership } from './app/services/system.js';
+import {
+  getAppPort,
+  getPreferredWorldPack,
+  getStartupPolicy,
+  getWorldPacksDir,
+  logRuntimeConfigSnapshot
+} from './config/runtime_config.js';
 import { sim } from './core/simulation.js';
 import { createInferenceService } from './inference/service.js';
 import { createPrismaInferenceTraceSink } from './inference/sinks/prisma.js';
 import { ApiError } from './utils/api_error.js';
 import { notifications } from './utils/notifications.js';
 
-const port = process.env.PORT || 3001;
-const worldPacksDir = resolveWorldPacksDir();
-const preferredWorldPack = 'cyber_noir';
+const port = getAppPort();
+const worldPacksDir = getWorldPacksDir();
+const preferredWorldPack = getPreferredWorldPack();
+const startupPolicy = getStartupPolicy();
 const startupHealth = createStartupHealth();
 
 let runtimeReady = false;
@@ -152,8 +159,11 @@ const startSimulation = (): void => {
 };
 
 const start = async (): Promise<void> => {
+  logRuntimeConfigSnapshot();
+
   await runStartupPreflight({
     startupHealth,
+    startupPolicy,
     worldPacksDir,
     queryDatabaseHealth: () => sim.prisma.$queryRawUnsafe('SELECT 1'),
     getErrorMessage

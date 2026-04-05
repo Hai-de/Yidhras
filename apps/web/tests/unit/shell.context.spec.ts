@@ -9,6 +9,7 @@ import {
 describe('shell context helpers', () => {
   it('resolves focus labels for key workspaces', () => {
     expect(resolveShellFocusLabel('/workflow')).toBe('Current focus: workflow records')
+    expect(resolveShellFocusLabel('/scheduler')).toBe('Current focus: scheduler operations')
     expect(resolveShellFocusLabel('/graph')).toBe('Current focus: graph projection')
     expect(resolveShellFocusLabel('/social')).toBe('Current focus: public signal stream')
     expect(resolveShellFocusLabel('/timeline')).toBe('Current focus: narrative event stream')
@@ -19,6 +20,10 @@ describe('shell context helpers', () => {
   it('resolves focus meta from route path and query-like path', () => {
     expect(resolveShellFocusMeta('/workflow', '/workflow?job_id=job-1')).toBe('Focused from workflow job selection.')
     expect(resolveShellFocusMeta('/workflow', '/workflow?trace_id=trace-1')).toBe('Focused from workflow trace selection.')
+    expect(resolveShellFocusMeta('/scheduler', '/scheduler?run_id=run-1')).toBe('Scheduler workspace is focused on a specific run.')
+    expect(resolveShellFocusMeta('/scheduler', '/scheduler?decision_id=decision-1')).toBe(
+      'Scheduler workspace is focused on a specific decision.'
+    )
     expect(resolveShellFocusMeta('/graph', '/graph?root_id=node-1')).toBe('Graph root is pinned via route state.')
     expect(resolveShellFocusMeta('/social', '/social?post_id=post-1')).toBe('A social post is currently selected.')
     expect(resolveShellFocusMeta('/timeline', '/timeline?event_id=event-1')).toBe('A timeline event is currently selected.')
@@ -51,7 +56,7 @@ describe('shell context helpers', () => {
 
     expect(
       buildShellQuickActions({
-        activeWorkspaceId: 'workflow',
+        activeWorkspaceId: 'scheduler',
         hasSource: true
       })
     ).toEqual([

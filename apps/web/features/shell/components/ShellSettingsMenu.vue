@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const props = defineProps<{
   open: boolean
+  anchorStyle: Record<string, string>
   runtimeLabel: string
   notificationsLabel: string
 }>()
@@ -13,7 +14,10 @@ const emit = defineEmits<{
 <template>
   <div
     v-if="props.open"
-    class="absolute bottom-12 left-4 z-50 w-72 rounded-md border border-yd-border-muted/70 bg-yd-elevated p-3 shadow-[0_12px_28px_rgba(0,0,0,0.24)]"
+    class="yd-shell-settings-menu fixed z-[70] max-h-[calc(100vh-1.5rem)] w-72 overflow-y-auto rounded-md border border-yd-border-muted/70 bg-yd-elevated p-3 shadow-[0_12px_28px_rgba(0,0,0,0.24)]"
+    :style="props.anchorStyle"
+    role="dialog"
+    aria-label="Operator settings"
   >
     <div class="yd-separator-bottom flex items-start justify-between gap-3 pb-3">
       <div>

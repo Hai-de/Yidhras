@@ -41,6 +41,18 @@ This document summarizes the current high-level architecture and the most import
 - Result shapes are kept stable while internal responsibilities are being separated.
 - Query assembly should continue to live outside the facade file.
 
+### 2.3 Workflow Semantics Layer / 工作流语义分层
+
+- `DecisionJob.intent_class` 现已作为 workflow semantics 的稳定顶层分类层，用于区分：
+  - `direct_inference`
+  - `scheduler_periodic`
+  - `scheduler_event_followup`
+  - `replay_recovery`
+  - `retry_recovery`
+- `request_input.attributes.job_intent_class` / `job_source` 继续保留为原始工作流上下文字段，适合 trace / audit / debug 场景直接消费。
+- 两层语义应保持分工：`intent_class` 用于正式过滤、索引、read model 投影；`job_source` 与 `job_intent_class` 用于保留入口上下文与原始 source label。
+- 当前 retry 采用“复用同一 `DecisionJob` 记录”的实现模型，而不是新建 retry child job；reset 后会刷新顶层 `intent_class` 与 `request_input.attributes.job_intent_class / job_source`，并重新 claim 执行。
+
 ---
 
 ## 3. Relational Read Models / 关系图读模型
@@ -123,8 +135,13 @@ This keeps `SimulationManager` as a runtime composition object rather than allow
 ## 7. World Packs / 世界包
 
 - World packs are file-driven and loaded through `apps/server/src/world/loader.ts`.
-- Runtime config is derived from world-pack metadata through `core/world_pack_runtime.ts`.
-- Bootstrap resources are prepared by `apps/server/src/world/bootstrap.ts`.
+- World pack runtime metadata is still derived from pack content through `apps/server/src/core/world_pack_runtime.ts`.
+- Project-level runtime configuration is generated into `data/configw/**` on first startup and loaded through `apps/server/src/config/runtime_config.ts`.
+- The version-managed seeds for runtime config and world pack templates live under `apps/server/templates/**`, then get materialized into `data/` for each deployment.
+- Runtime initialization has been explicitly split into scaffold and bootstrap stages under `apps/server/src/init/**`.
+- `runtime_scaffold.ts` is responsible for materializing configw seed templates into `data/configw/**`.
+- `world_pack_bootstrap.ts` is responsible for creating or refreshing the configured default world pack in `data/world_packs/**`.
+- `prepare_runtime.ts` is the composition entry for runtime initialization, and script-level commands (`init:configw`, `init:world-pack`, `init:runtime`) map to these focused responsibilities.
 
 ---
 

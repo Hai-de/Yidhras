@@ -13,7 +13,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   select: [itemId: ActivityRailItem['id']]
-  openSettings: []
+  openSettings: [event: MouseEvent]
 }>()
 
 const handleSelect = (item: ActivityRailItem) => {
@@ -28,7 +28,7 @@ const handleSelect = (item: ActivityRailItem) => {
     :style="{ width: 'var(--yd-layout-shell-rail-width)' }"
   >
     <div class="space-y-3">
-      <div class="flex h-11 items-center justify-center rounded-sm border border-transparent text-sm font-semibold text-yd-text-primary">
+      <div class="yd-industrial-button yd-industrial-button--active flex h-11 items-center justify-center rounded-sm text-sm font-semibold text-yd-text-primary">
         <span class="tracking-[0.08em]">YD</span>
       </div>
 
@@ -37,11 +37,11 @@ const handleSelect = (item: ActivityRailItem) => {
           v-for="item in props.items"
           :key="item.id"
           type="button"
-          class="relative flex h-10 w-full items-center justify-center rounded-sm border border-transparent bg-transparent text-[10px] font-semibold transition-colors yd-font-mono"
+          class="yd-industrial-button relative flex h-10 w-full items-center justify-center rounded-sm text-[10px] font-semibold yd-font-mono"
           :class="[
             item.id === props.activeItemId
-              ? 'bg-yd-elevated text-yd-text-primary'
-              : 'text-yd-text-muted hover:bg-yd-elevated hover:text-yd-text-primary',
+              ? 'yd-industrial-button--active text-yd-text-primary'
+              : 'text-yd-text-muted hover:text-yd-text-primary',
             item.disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'
           ]"
           :title="item.label"
@@ -49,7 +49,7 @@ const handleSelect = (item: ActivityRailItem) => {
         >
           <span
             v-if="item.id === props.activeItemId"
-            class="absolute left-0 top-1.5 h-7 w-0.5 rounded-full bg-yd-state-accent"
+            class="absolute left-1.5 top-2.5 h-5 w-0.5 bg-yd-state-accent"
           />
           {{ item.shortLabel }}
         </button>
@@ -58,9 +58,10 @@ const handleSelect = (item: ActivityRailItem) => {
 
     <button
       type="button"
-      class="relative flex h-10 w-full items-center justify-center rounded-sm border border-transparent bg-transparent text-[10px] font-semibold text-yd-text-muted transition-colors yd-font-mono hover:bg-yd-elevated hover:text-yd-text-primary"
+      class="yd-industrial-button relative flex h-10 w-full items-center justify-center rounded-sm text-[10px] font-semibold text-yd-text-muted yd-font-mono hover:text-yd-text-primary"
       title="Settings"
-      @click="emit('openSettings')"
+      data-yd-shell-settings-trigger="true"
+      @click="emit('openSettings', $event)"
     >
       ST
     </button>

@@ -1,6 +1,6 @@
 import { useRouter } from 'vue-router'
 
-export type OperatorSourcePage = 'social' | 'timeline' | 'graph' | 'overview' | 'workflow' | 'agent'
+export type OperatorSourcePage = 'social' | 'timeline' | 'graph' | 'overview' | 'workflow' | 'agent' | 'scheduler'
 
 export interface OperatorNavigationSourceContext {
   sourcePage: OperatorSourcePage
@@ -11,6 +11,8 @@ export interface OperatorNavigationSourceContext {
   sourceRunId?: string
   sourceDecisionId?: string
   sourceAgentId?: string
+  sourcePartitionId?: string
+  sourceWorkerId?: string
 }
 
 export interface SocialFeedNavigationOptions {
@@ -34,7 +36,9 @@ export const buildSourceQuery = (context?: OperatorNavigationSourceContext) => {
     ...(context.sourceNodeId ? { source_node_id: context.sourceNodeId } : {}),
     ...(context.sourceRunId ? { source_run_id: context.sourceRunId } : {}),
     ...(context.sourceDecisionId ? { source_decision_id: context.sourceDecisionId } : {}),
-    ...(context.sourceAgentId ? { source_agent_id: context.sourceAgentId } : {})
+    ...(context.sourceAgentId ? { source_agent_id: context.sourceAgentId } : {}),
+    ...(context.sourcePartitionId ? { source_partition_id: context.sourcePartitionId } : {}),
+    ...(context.sourceWorkerId ? { source_worker_id: context.sourceWorkerId } : {})
   }
 }
 
@@ -68,11 +72,37 @@ export const buildAgentNavigationTarget = (
   }
 })
 
+export const buildSchedulerNavigationTarget = (
+  options?: {
+    partitionId?: string | null
+    workerId?: string | null
+    runId?: string | null
+    decisionId?: string | null
+    context?: OperatorNavigationSourceContext
+  }
+) => ({
+  path: '/scheduler',
+  query: {
+    ...(options?.partitionId ? { partition_id: options.partitionId } : {}),
+    ...(options?.workerId ? { worker_id: options.workerId } : {}),
+    ...(options?.runId ? { run_id: options.runId } : {}),
+    ...(options?.decisionId ? { decision_id: options.decisionId } : {}),
+    ...buildSourceQuery(options?.context)
+  }
+})
+
 export const useOperatorNavigation = () => {
   const router = useRouter()
 
   return {
     goToOverview: () => router.push('/overview'),
+    goToScheduler: (options?: {
+      partitionId?: string | null
+      workerId?: string | null
+      runId?: string | null
+      decisionId?: string | null
+      context?: OperatorNavigationSourceContext
+    }) => router.push(buildSchedulerNavigationTarget(options)),
     goToWorkflow: () => router.push('/workflow'),
     goToWorkflowJob: (jobId: string, context?: OperatorNavigationSourceContext) =>
       router.push(buildWorkflowJobNavigationTarget(jobId, context)),

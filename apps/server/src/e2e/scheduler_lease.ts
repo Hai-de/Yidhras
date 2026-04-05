@@ -11,6 +11,7 @@ import {
 import { ChronosEngine } from '../clock/engine.js';
 import type { SimulationManager } from '../core/simulation.js';
 import { notifications } from '../utils/notifications.js';
+import { DEFAULT_E2E_WORLD_PACK } from './config.js';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
@@ -47,7 +48,7 @@ const buildTestContext = (prisma: PrismaClient): AppContext => {
       world_pack_dir: true,
       world_pack_available: true
     },
-    available_world_packs: ['cyber_noir'],
+    available_world_packs: [DEFAULT_E2E_WORLD_PACK],
     errors: []
   };
 
@@ -104,6 +105,37 @@ const main = async () => {
     assert(parallelPartitionAcquire.acquired === true, 'different partition lease acquire should succeed in parallel');
     assert(parallelPartitionAcquire.partition_id === 'p1', 'parallel partition acquire should expose partition_id');
 
+    await prisma.schedulerLease.deleteMany({ where: { partition_id: 'p2' } });
+    const [raceAcquireA, raceAcquireB] = await Promise.all([
+      acquireSchedulerLease(context, {
+        workerId: 'scheduler-race-worker-a',
+        partitionId: 'p2',
+        now: 1010n,
+        leaseTicks: 4n
+      }),
+      acquireSchedulerLease(context, {
+        workerId: 'scheduler-race-worker-b',
+        partitionId: 'p2',
+        now: 1010n,
+        leaseTicks: 4n
+      })
+    ]);
+    assert(
+      (raceAcquireA.acquired && !raceAcquireB.acquired) || (!raceAcquireA.acquired && raceAcquireB.acquired),
+      'parallel same-partition lease acquire should elect exactly one holder without throwing'
+    );
+    const persistedRaceLease = await prisma.schedulerLease.findUnique({
+      where: {
+        partition_id: 'p2'
+      }
+    });
+    assert(persistedRaceLease !== null, 'parallel same-partition lease acquire should persist a lease row');
+    assert(
+      persistedRaceLease?.holder === 'scheduler-race-worker-a' || persistedRaceLease?.holder === 'scheduler-race-worker-b',
+      'parallel same-partition lease acquire should persist one of the competing holders'
+    );
+
+
     const renewed = await renewSchedulerLease(context, {
       workerId: 'scheduler-worker-a',
       partitionId: 'p0',
@@ -146,6 +178,36 @@ const main = async () => {
 
     const wrongRelease = await releaseSchedulerLease(context, 'scheduler-worker-a', 'p0');
     assert(wrongRelease === false, 'releasing scheduler lease by non-holder should fail');
+
+    await prisma.schedulerLease.upsert({
+      where: {
+        partition_id: 'p3'
+      },
+      update: {
+        holder: 'scheduler-release-owner',
+        acquired_at: 1012n,
+        expires_at: 1017n,
+        updated_at: 1012n
+      },
+      create: {
+        key: 'agent_scheduler_main:p3',
+        partition_id: 'p3',
+        holder: 'scheduler-release-owner',
+        acquired_at: 1012n,
+        expires_at: 1017n,
+        updated_at: 1012n
+      }
+    });
+    const staleRelease = await releaseSchedulerLease(context, 'scheduler-worker-a', 'p3');
+    assert(staleRelease === false, 'stale holder should not release lease after holder has changed');
+    const persistedP3Lease = await prisma.schedulerLease.findUnique({
+      where: {
+        partition_id: 'p3'
+      }
+    });
+    assert(persistedP3Lease?.holder === 'scheduler-release-owner', 'failed stale release should not delete the current holder lease');
+    const releasedP3 = await releaseSchedulerLease(context, 'scheduler-release-owner', 'p3');
+    assert(releasedP3 === true, 'current holder should still be able to release lease after stale release attempt');
 
     const releasedP0 = await releaseSchedulerLease(context, 'scheduler-worker-c', 'p0');
     assert(releasedP0 === true, 'releasing scheduler lease by holder should succeed');

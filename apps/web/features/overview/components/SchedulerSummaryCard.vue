@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppButton from '../../../components/ui/AppButton.vue'
 import MetricPill from '../../shared/components/MetricPill.vue'
 import WorkspaceEmptyState from '../../shared/components/WorkspaceEmptyState.vue'
 import WorkspaceSectionHeader from '../../shared/components/WorkspaceSectionHeader.vue'
@@ -13,14 +14,24 @@ defineProps<{
   metrics: OverviewSchedulerSummaryMetric[]
   highlightGroups: OverviewSchedulerHighlightGroup[]
 }>()
+
+const emit = defineEmits<{
+  openSchedulerWorkspace: []
+}>()
 </script>
 
 <template>
   <div class="yd-workbench-pane flex h-full min-h-[20rem] flex-col rounded-md">
     <WorkspaceSectionHeader
       title="Scheduler Summary"
-      subtitle="Recent scheduler projection totals, top reasons, and latest run context for operator triage."
-    />
+      subtitle="Recent scheduler projection totals, highlights, ownership cues, and latest run context for operator triage."
+    >
+      <template #actions>
+        <AppButton size="sm" variant="secondary" kind="toolbar" @click="emit('openSchedulerWorkspace')">
+          Open Scheduler Workspace
+        </AppButton>
+      </template>
+    </WorkspaceSectionHeader>
 
     <div v-if="metrics.length > 0" class="flex-1 space-y-4 px-4 py-4">
       <div class="yd-workbench-inset rounded-md px-4 py-4">
@@ -35,11 +46,11 @@ defineProps<{
         </div>
       </div>
 
-      <div class="grid gap-3 md:grid-cols-2">
+      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <MetricPill v-for="item in metrics" :key="item.id" :label="item.label" :value="item.value" />
       </div>
 
-      <div class="grid gap-3 md:grid-cols-2">
+      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <div
           v-for="group in highlightGroups"
           :key="group.title"

@@ -17,6 +17,7 @@ import {
 import { ChronosEngine } from '../clock/engine.js';
 import type { SimulationManager } from '../core/simulation.js';
 import { notifications } from '../utils/notifications.js';
+import { DEFAULT_E2E_WORLD_PACK } from './config.js';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
@@ -53,7 +54,7 @@ const buildTestContext = (prisma: PrismaClient): AppContext => {
       world_pack_dir: true,
       world_pack_available: true
     },
-    available_world_packs: ['cyber_noir'],
+    available_world_packs: [DEFAULT_E2E_WORLD_PACK],
     errors: []
   };
 

@@ -68,6 +68,7 @@
         :latest-run-meta="schedulerLatestRunMeta"
         :metrics="schedulerSummaryMetrics"
         :highlight-groups="schedulerHighlightGroups"
+        @open-scheduler-workspace="overviewPage.openSchedulerWorkspace"
       />
       <SchedulerTrendsCard :items="schedulerTrendItems" />
     </div>
@@ -190,8 +191,12 @@ const primaryCalendarDisplay = computed(() => {
   return overviewSummary.value.world_time.calendars[0]?.display ?? 'No formatted calendar available'
 })
 
-const schedulerSummaryMetrics = computed(() => buildSchedulerSummaryMetrics(overviewPage.schedulerSummary.value))
-const schedulerHighlightGroups = computed(() => buildSchedulerHighlightGroups(overviewPage.schedulerSummary.value))
+const schedulerSummaryMetrics = computed(() =>
+  buildSchedulerSummaryMetrics(overviewPage.schedulerSummary.value, overviewPage.schedulerProjection.value)
+)
+const schedulerHighlightGroups = computed(() =>
+  buildSchedulerHighlightGroups(overviewPage.schedulerSummary.value, overviewPage.schedulerProjection.value)
+)
 const schedulerTrendItems = computed(() => buildSchedulerTrendItems(overviewPage.schedulerTrendItems.value))
 
 const schedulerLatestRunLabel = computed(() => {
@@ -200,7 +205,7 @@ const schedulerLatestRunLabel = computed(() => {
     return 'No scheduler run sampled yet'
   }
 
-  return `tick ${latestRun.tick} · ${latestRun.worker_id}`
+  return `tick ${latestRun.tick} · ${latestRun.partition_id} · ${latestRun.worker_id}`
 })
 
 const schedulerLatestRunMeta = computed(() => {
@@ -209,7 +214,7 @@ const schedulerLatestRunMeta = computed(() => {
     return 'Summary projection will populate after the runtime records scheduler runs.'
   }
 
-  return `created ${latestRun.summary.created_count} · skipped pending ${latestRun.summary.skipped_pending_count} · signals ${latestRun.summary.signals_detected_count}`
+  return `created ${latestRun.summary.created_count} · linked workflows ${latestRun.cross_link_summary?.linked_workflow_count ?? 0} · signals ${latestRun.summary.signals_detected_count}`
 })
 
 const schedulerRunItems = computed(() => buildSchedulerRunListItems(overviewPage.schedulerRunItems.value))

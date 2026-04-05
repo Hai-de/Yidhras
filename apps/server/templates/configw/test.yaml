@@ -1,0 +1,8 @@
+app:
+  env: "test"
+
+world:
+  preferred_pack: "death_note"
+
+startup:
+  allow_degraded_mode: true

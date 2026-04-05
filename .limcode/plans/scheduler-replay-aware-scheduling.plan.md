@@ -1,12 +1,14 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-- [ ] 为 DecisionJob 增加 intent_class 字段与迁移  `#sra1`
-- [ ] 在 direct submit / scheduler / replay / retry 路径写入统一 intent_class 与 job_source metadata  `#sra2`
-- [ ] 在 workflow list/detail/snapshot 读模型中暴露 intent_class  `#sra3`
-- [ ] 补充 scheduler/replay/retry/direct submit e2e 验证  `#sra4`
-- [ ] 同步 API/ARCH/TODO/记录 文档  `#sra5`
+- [x] 为 DecisionJob 增加 intent_class 字段与迁移  `#sra1`
+- [x] 在 direct submit / scheduler / replay / retry 路径写入统一 intent_class 与 job_source metadata  `#sra2`
+- [x] 在 workflow list/detail/snapshot 读模型中暴露 intent_class  `#sra3`
+- [x] 补充 scheduler/replay/retry/direct submit e2e 验证  `#sra4`
+- [x] 同步 API/ARCH/TODO/记录 文档  `#sra5`
 <!-- LIMCODE_TODO_LIST_END -->
+
+> Historical Status: 该计划的主线已被当前代码实现并由 `.limcode/plans/scheduler-replay-aware-scheduling-closure.plan.md` 收尾；保留此文件仅作为历史实施记录。
 
 # Scheduler Replay-Aware Scheduling 与 Job Intent Classes 实施计划
 

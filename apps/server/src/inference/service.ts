@@ -521,7 +521,9 @@ export const createInferenceService = ({
       await updateDecisionJobState(context, {
         job_id: existingJob.id,
         status: 'pending',
+        started_at: null,
         intent_class: 'retry_recovery',
+        request_input_attributes_patch: { job_intent_class: 'retry_recovery', job_source: 'retry' },
         last_error: null,
   last_error_code: null,
         last_error_stage: null,

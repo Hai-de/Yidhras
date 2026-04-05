@@ -17,13 +17,13 @@ const emit = defineEmits<{
 const toneClass = (tone: OverviewListItemViewModel['tone']) => {
   switch (tone) {
     case 'success':
-      return 'border-yd-state-success/40'
+      return 'yd-tone-success'
     case 'warning':
-      return 'border-yd-state-warning/40'
+      return 'yd-tone-warning'
     case 'danger':
-      return 'border-yd-state-danger/40'
+      return 'yd-tone-danger'
     case 'info':
-      return 'border-yd-state-info/40'
+      return 'yd-tone-info'
     default:
       return ''
   }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildAgentNavigationTarget,
+  buildSchedulerNavigationTarget,
   buildSourceQuery,
   buildWorkflowJobNavigationTarget,
   buildWorkflowRunNavigationTarget
@@ -14,13 +15,17 @@ describe('operator navigation helpers', () => {
         sourcePage: 'overview',
         sourceRunId: 'run-1',
         sourceDecisionId: 'decision-1',
-        sourceAgentId: 'agent-1'
+        sourceAgentId: 'agent-1',
+        sourcePartitionId: 'p2',
+        sourceWorkerId: 'worker-a'
       })
     ).toEqual({
       source_page: 'overview',
       source_run_id: 'run-1',
       source_decision_id: 'decision-1',
-      source_agent_id: 'agent-1'
+      source_agent_id: 'agent-1',
+      source_partition_id: 'p2',
+      source_worker_id: 'worker-a'
     })
   })
 
@@ -54,6 +59,31 @@ describe('operator navigation helpers', () => {
         scheduler_run_id: 'run-7',
         source_page: 'overview',
         source_run_id: 'run-7'
+      }
+    })
+  })
+
+  it('builds scheduler navigation target with filter and source context', () => {
+    expect(
+      buildSchedulerNavigationTarget({
+        partitionId: 'p4',
+        workerId: 'worker-b',
+        runId: 'run-44',
+        decisionId: 'decision-44',
+        context: {
+          sourcePage: 'agent',
+          sourceAgentId: 'agent-2'
+        }
+      })
+    ).toEqual({
+      path: '/scheduler',
+      query: {
+        partition_id: 'p4',
+        worker_id: 'worker-b',
+        run_id: 'run-44',
+        decision_id: 'decision-44',
+        source_page: 'agent',
+        source_agent_id: 'agent-2'
       }
     })
   })

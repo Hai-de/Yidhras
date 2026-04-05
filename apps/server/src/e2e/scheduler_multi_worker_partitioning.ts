@@ -7,6 +7,7 @@ import { runAgentScheduler } from '../app/runtime/agent_scheduler.js';
 import { listSchedulerDecisions, listSchedulerRuns } from '../app/services/scheduler_observability.js';
 import { sim } from '../core/simulation.js';
 import type { SystemMessage } from '../utils/notifications.js';
+import { DEFAULT_E2E_WORLD_PACK } from './config.js';
 
 const assertCondition: (condition: unknown, message: string) => asserts condition = (condition, message) => {
   if (!condition) {
@@ -45,7 +46,7 @@ const createTestContext = (worldPack: string): AppContext => ({
 });
 
 async function main(): Promise<void> {
-  const worldPack = process.env.WORLD_PACK ?? 'cyber_noir';
+  const worldPack = process.env.WORLD_PACK ?? DEFAULT_E2E_WORLD_PACK;
   await sim.init(worldPack);
 
   const context = createTestContext(worldPack);

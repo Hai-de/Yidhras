@@ -31,6 +31,7 @@ export interface WorkflowJobListItem {
   attempt_count: number
   max_attempts: number
   idempotency_key: string | null
+  intent_class?: string | null
   last_error: string | null
   last_error_code: string | null
   last_error_stage: string | null

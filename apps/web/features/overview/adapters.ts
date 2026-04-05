@@ -3,10 +3,13 @@ import type {
   SchedulerActorAggregateItem,
   SchedulerDecisionItem,
   SchedulerIntentClassAggregateItem,
+  SchedulerOperatorProjection,
   SchedulerReasonAggregateItem,
   SchedulerRunSummary,
+  SchedulerSkippedReasonAggregateItem,
   SchedulerSummarySnapshot,
-  SchedulerTrendPoint
+  SchedulerTrendPoint,
+  SchedulerWorkerRuntimeReadModel
 } from '../../composables/api/useSchedulerApi'
 import type { SystemNotificationSnapshot } from '../../composables/api/useSystemApi'
 
@@ -51,10 +54,23 @@ const toneByLevel = (level: string): OverviewListItemViewModel['tone'] => {
 }
 
 const formatAggregateItems = (
-  items: Array<SchedulerReasonAggregateItem | SchedulerActorAggregateItem | SchedulerIntentClassAggregateItem>,
-  resolveLabel: (item: SchedulerReasonAggregateItem | SchedulerActorAggregateItem | SchedulerIntentClassAggregateItem) => string
+  items: Array<SchedulerReasonAggregateItem | SchedulerSkippedReasonAggregateItem | SchedulerActorAggregateItem | SchedulerIntentClassAggregateItem>,
+  resolveLabel: (
+    item: SchedulerReasonAggregateItem | SchedulerSkippedReasonAggregateItem | SchedulerActorAggregateItem | SchedulerIntentClassAggregateItem
+  ) => string
 ): string[] => {
   return items.slice(0, 3).map(item => `${resolveLabel(item)} · ${item.count}`)
+}
+
+const formatWorkerItems = (items: SchedulerWorkerRuntimeReadModel[]): string[] => {
+  return items.slice(0, 3).map(item => `${item.worker_id} · ${item.status} · partitions ${item.owned_partition_count}`)
+}
+
+const appendHighlight = (target: string[], value: string | null | undefined) => {
+  if (!value) {
+    return
+  }
+  target.push(value)
 }
 
 export const toOverviewAuditListItems = (entries: OverviewAuditEntry[]): OverviewListItemViewModel[] => {
@@ -112,7 +128,8 @@ export const buildOverviewMetricItems = (summary: OverviewSummarySnapshot) => {
 }
 
 export const buildSchedulerSummaryMetrics = (
-  summary: SchedulerSummarySnapshot | null
+  summary: SchedulerSummarySnapshot | null,
+  projection: SchedulerOperatorProjection | null = null
 ): OverviewSchedulerSummaryMetric[] => {
   if (!summary) {
     return []
@@ -127,44 +144,107 @@ export const buildSchedulerSummaryMetrics = (
     {
       id: 'scheduler-created-total',
       label: 'Created Jobs',
-      value: String(summary.run_totals.total_created_count)
+      value: String(summary.run_totals.created_total)
     },
     {
       id: 'scheduler-skipped-pending',
       label: 'Skipped Pending',
-      value: String(summary.run_totals.total_skipped_pending_count)
+      value: String(summary.run_totals.skipped_pending_total)
     },
     {
       id: 'scheduler-signals',
       label: 'Signals Detected',
-      value: String(summary.run_totals.total_signals_detected_count)
+      value: String(summary.run_totals.signals_detected_total)
+    },
+    {
+      id: 'scheduler-migrations-in-progress',
+      label: 'Migrations In Progress',
+      value: String(projection?.highlights.migration_in_progress_count ?? 0)
+    },
+    {
+      id: 'scheduler-stale-workers',
+      label: 'Stale Workers',
+      value: String(projection?.workers.summary.stale_count ?? 0)
     }
   ]
 }
 
 export const buildSchedulerHighlightGroups = (
-  summary: SchedulerSummarySnapshot | null
+  summary: SchedulerSummarySnapshot | null,
+  projection: SchedulerOperatorProjection | null = null
 ): OverviewSchedulerHighlightGroup[] => {
   if (!summary) {
     return []
   }
 
+  const latestHighlights: string[] = []
+  appendHighlight(
+    latestHighlights,
+    projection?.highlights.latest_partition_id ? `Latest partition · ${projection.highlights.latest_partition_id}` : null
+  )
+  appendHighlight(
+    latestHighlights,
+    projection ? `Created workflows · ${projection.highlights.latest_created_workflow_count}` : null
+  )
+  appendHighlight(
+    latestHighlights,
+    projection ? `Skipped decisions · ${projection.highlights.latest_skipped_count}` : null
+  )
+  appendHighlight(
+    latestHighlights,
+    projection?.highlights.latest_rebalance_status ? `Rebalance · ${projection.highlights.latest_rebalance_status}` : null
+  )
+
+  const ownershipHighlights: string[] = []
+  appendHighlight(
+    ownershipHighlights,
+    projection?.highlights.top_owner_worker_id ? `Top owner · ${projection.highlights.top_owner_worker_id}` : null
+  )
+  appendHighlight(
+    ownershipHighlights,
+    projection?.highlights.latest_stale_worker_id ? `Stale worker · ${projection.highlights.latest_stale_worker_id}` : null
+  )
+  appendHighlight(
+    ownershipHighlights,
+    projection?.highlights.latest_migration_partition_id
+      ? `Latest migration · ${projection.highlights.latest_migration_partition_id}`
+      : null
+  )
+  appendHighlight(
+    ownershipHighlights,
+    projection?.highlights.latest_rebalance_partition_id
+      ? `Latest rebalance partition · ${projection.highlights.latest_rebalance_partition_id}`
+      : null
+  )
+
   return [
+    {
+      title: 'Latest Highlights',
+      items: latestHighlights
+    },
     {
       title: 'Top Reasons',
       items: formatAggregateItems(summary.top_reasons, item => ('reason' in item ? item.reason : 'unknown'))
     },
     {
       title: 'Top Skipped',
-      items: formatAggregateItems(summary.top_skipped_reasons, item => ('reason' in item ? item.reason : 'unknown'))
+      items: formatAggregateItems(summary.top_skipped_reasons, item => ('skipped_reason' in item ? item.skipped_reason : 'unknown'))
     },
     {
       title: 'Top Actors',
       items: formatAggregateItems(summary.top_actors, item => ('actor_id' in item ? item.actor_id : 'unknown'))
     },
     {
+      title: 'Worker Health',
+      items: projection ? formatWorkerItems(projection.workers.items) : []
+    },
+    {
       title: 'Intent Classes',
       items: formatAggregateItems(summary.intent_class_breakdown, item => ('intent_class' in item ? item.intent_class : 'unknown'))
+    },
+    {
+      title: 'Ownership / Rebalance',
+      items: ownershipHighlights
     }
   ]
 }
@@ -182,7 +262,7 @@ export const buildSchedulerTrendItems = (points: SchedulerTrendPoint[]): Overvie
 export const buildSchedulerRunListItems = (runs: SchedulerRunSummary[]): OverviewListItemViewModel[] => {
   return runs.map(run => ({
     id: run.id,
-    title: `tick ${run.tick} · created ${run.summary.created_count} · scanned ${run.summary.scanned_count}`,
+    title: `tick ${run.tick} · ${run.partition_id} · created ${run.summary.created_count}`,
     meta: `${run.worker_id} · signals ${run.summary.signals_detected_count} · skipped ${run.summary.skipped_pending_count + run.summary.skipped_cooldown_count}`,
     tone: run.summary.created_count > 0 ? 'info' : 'neutral',
     actionLabel: 'Open workflow context'
@@ -193,8 +273,8 @@ export const buildSchedulerDecisionListItems = (decisions: SchedulerDecisionItem
   return decisions.map(decision => ({
     id: decision.id,
     title: `${decision.actor_id} · ${decision.chosen_reason}`,
-    meta: `${decision.kind} · priority ${decision.priority_score} · tick ${decision.scheduled_for_tick}${decision.skipped_reason ? ` · skipped ${decision.skipped_reason}` : decision.created_job_id ? ` · job ${decision.created_job_id}` : ''}`,
+    meta: `${decision.kind} · ${decision.partition_id} · priority ${decision.priority_score} · tick ${decision.scheduled_for_tick}${decision.skipped_reason ? ` · skipped ${decision.skipped_reason}` : decision.workflow_link?.job_id ? ` · job ${decision.workflow_link.job_id}` : decision.created_job_id ? ` · job ${decision.created_job_id}` : ''}`,
     tone: decision.skipped_reason ? 'warning' : 'success',
-    actionLabel: decision.created_job_id ? 'Open workflow' : 'Open agent'
+    actionLabel: decision.created_job_id || decision.workflow_link?.job_id ? 'Open workflow' : 'Open agent'
   }))
 }

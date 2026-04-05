@@ -3,13 +3,14 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
 import { ChronosEngine } from '../clock/engine.js';
+import { getWorldPacksDir } from '../config/runtime_config.js';
 import { ValueDynamicsManager } from '../dynamics/manager.js';
 import { NarrativeResolver } from '../narrative/resolver.js';
 import { notifications } from '../utils/notifications.js';
 import { WorldPack, WorldPackLoader } from '../world/loader.js';
 import { getGraphData } from './graph_data.js';
 import { RuntimeSpeedPolicy, RuntimeSpeedSnapshot } from './runtime_speed.js';
-import { getWorldPackRuntimeConfig, resolveWorldPacksDir } from './world_pack_runtime.js';
+import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
 
 export class SimulationManager {
   public prisma: PrismaClient;
@@ -23,7 +24,7 @@ export class SimulationManager {
   private readonly packsDir: string;
 
   constructor() {
-    this.packsDir = resolveWorldPacksDir();
+    this.packsDir = getWorldPacksDir();
 
     this.prisma = new PrismaClient();
     this.loader = new WorldPackLoader(this.packsDir);

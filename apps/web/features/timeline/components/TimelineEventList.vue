@@ -28,7 +28,7 @@ const emit = defineEmits<{
         <div
           v-for="item in props.items"
           :key="item.id"
-          class="yd-workbench-item rounded-md px-4 py-4"
+          class="yd-workbench-item yd-tone-info rounded-md px-4 py-4"
           :class="item.id === props.selectedEventId ? 'yd-workbench-item--active' : ''"
         >
           <button type="button" class="w-full text-left" @click="emit('selectEvent', item)">

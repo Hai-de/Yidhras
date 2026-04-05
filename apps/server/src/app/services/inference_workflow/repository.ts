@@ -29,6 +29,22 @@ export const getDecisionJobById = async (context: AppContext, jobId?: string) =>
   return job;
 };
 
+const mergeDecisionJobRequestInputAttributes = (
+  existing: Pick<DecisionJobRecord, 'request_input'>,
+  attributesPatch: Record<string, unknown>
+): Prisma.InputJsonValue => {
+  const requestInput = isRecord(existing.request_input) ? existing.request_input : {};
+  const requestInputAttributes = isRecord(requestInput.attributes) ? requestInput.attributes : {};
+
+  return toJsonSafe({
+    ...requestInput,
+    attributes: {
+      ...requestInputAttributes,
+      ...attributesPatch
+    }
+  }) as Prisma.InputJsonValue;
+};
+
 export const getDecisionJobByInferenceId = async (context: AppContext, inferenceId?: string) => {
   const id = ensureNonEmptyId(inferenceId, 'inference_id');
   const decisionJob = await context.prisma.decisionJob.findUnique({
@@ -243,6 +259,7 @@ export const updateDecisionJobState = async (
     increment_attempt?: boolean;
     scheduled_for_tick?: bigint | null;
     intent_class?: InferenceJobIntentClass;
+    request_input_attributes_patch?: Record<string, unknown>;
   }
 ): Promise<DecisionJobRecord> => {
   const existing = await getDecisionJobById(context, input.job_id);
@@ -274,6 +291,9 @@ export const updateDecisionJobState = async (
       scheduled_for_tick: input.scheduled_for_tick === undefined ? existing.scheduled_for_tick : input.scheduled_for_tick,
       action_intent_id: input.action_intent_id === undefined ? existing.action_intent_id : input.action_intent_id,
       updated_at: context.sim.clock.getTicks(),
+      ...(input.request_input_attributes_patch
+        ? { request_input: mergeDecisionJobRequestInputAttributes(existing, input.request_input_attributes_patch) }
+        : {}),
       completed_at: input.completed_at === undefined ? existing.completed_at : input.completed_at
     }
   });

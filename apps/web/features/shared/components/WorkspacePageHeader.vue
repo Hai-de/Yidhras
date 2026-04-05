@@ -25,7 +25,7 @@ defineProps<{
       <div class="flex min-w-[12rem] flex-col items-start gap-3 sm:items-end">
         <div
           v-if="freshness"
-          class="yd-status-pill rounded-sm text-[10px] uppercase tracking-[0.12em] text-yd-text-secondary yd-font-mono"
+          class="yd-status-pill yd-tone-info rounded-sm text-[10px] uppercase tracking-[0.12em] text-yd-text-secondary yd-font-mono"
         >
           {{ freshness }}
         </div>

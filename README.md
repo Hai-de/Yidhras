@@ -57,6 +57,82 @@ chmod +x start-dev.sh
 start-dev.bat
 ```
 
+## 运行时配置（configw）
+
+`data/` 目录继续作为部署者本地运行数据区，默认不纳入版本管理。项目拉取后即使不存在 `data/`，服务端也会在首次启动时自动创建并补齐运行所需的 `data/configw/**` 配置文件与模板副本。
+
+### 初始化链路
+
+当前初始化职责已收口为 3 层：
+
+1. `init:configw`
+   - 仅负责把版本管理中的种子模板 materialize 到 `data/configw/**`
+2. `init:world-pack`
+   - 仅负责根据运行时配置执行默认 world pack bootstrap
+3. `init:runtime`
+   - 组合执行 configw scaffold + runtime snapshot + world pack bootstrap
+
+而 `prepare:runtime` 负责：
+
+- 数据库迁移
+- `init:runtime`
+- identity seed
+
+### 初始化报告
+
+`init:configw`、`init:world-pack`、`init:runtime` 现在都会额外输出一条结构化日志：
+
+- 前缀：`[init-report]`
+- 内容：JSON
+
+可用于：
+
+- CI 检查
+- 首次部署验证
+- 运维排障
+
+### 版本管理中的种子模板
+
+版本管理保留的是种子模板，而不是部署者运行后的 `data/` 内容：
+
+- `apps/server/templates/configw/default.yaml`
+- `apps/server/templates/configw/development.yaml`
+- `apps/server/templates/configw/production.yaml`
+- `apps/server/templates/configw/test.yaml`
+- `apps/server/templates/world-pack/death_note.yaml`
+
+首次启动时，这些模板会被复制到：
+
+- `data/configw/default.yaml`
+- `data/configw/development.yaml`
+- `data/configw/production.yaml`
+- `data/configw/test.yaml`
+- `data/configw/templates/world-pack/death_note.yaml`
+
+### 配置优先级
+
+最终生效配置按以下顺序覆盖：
+
+1. 代码内置默认值
+2. `data/configw/default.yaml`
+3. `data/configw/{APP_ENV}.yaml`
+4. `data/configw/local.yaml`
+5. 环境变量
+
+### 当前支持的关键环境变量
+
+- `APP_ENV`：选择环境配置文件，默认回退 `NODE_ENV`，最终默认 `development`
+- `PORT`：覆盖服务端端口
+- `WORLD_PACK`：覆盖默认启动 world pack
+- `WORLD_PACKS_DIR`：覆盖 world packs 根目录
+- `WORLD_BOOTSTRAP_ENABLED`：控制是否执行默认 world pack bootstrap
+- `WORLD_BOOTSTRAP_TARGET_PACK_DIR`：控制 bootstrap 目标文件夹名
+- `WORLD_BOOTSTRAP_TEMPLATE_FILE`：控制 bootstrap 模板文件路径
+- `WORLD_BOOTSTRAP_OVERWRITE`：控制是否覆盖已有 `config.yaml`
+- `STARTUP_ALLOW_DEGRADED_MODE`：控制是否允许以 degraded 模式启动
+- `STARTUP_FAIL_ON_MISSING_WORLD_PACK_DIR`：缺少 world pack 目录时是否直接 fail
+- `STARTUP_FAIL_ON_NO_WORLD_PACK`：没有可用 world pack 时是否直接 fail
+
 ## 常用命令
 
 - 启动后端：`pnpm --filter yidhras-server dev`

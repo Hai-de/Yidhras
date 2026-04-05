@@ -53,93 +53,22 @@ export const acquireSchedulerLease = async (
   const leaseTicks = input.leaseTicks ?? DEFAULT_SCHEDULER_LEASE_TICKS;
   const expiresAt = now + leaseTicks;
   const key = buildSchedulerLeaseKey(partitionId);
-  const existing = await context.prisma.schedulerLease.findUnique({
+  const existing = await context.prisma.schedulerLease.upsert({
     where: {
       partition_id: partitionId
+    },
+    update: {},
+    create: {
+      key,
+      partition_id: partitionId,
+      holder: input.workerId,
+      acquired_at: now,
+      expires_at: expiresAt,
+      updated_at: now
     }
   });
 
-  if (!existing) {
-    const createdLease = await context.prisma.schedulerLease.create({
-      data: {
-        key,
-        partition_id: partitionId,
-        holder: input.workerId,
-        acquired_at: now,
-        expires_at: expiresAt,
-        updated_at: now
-      }
-    }).catch(async error => {
-      const prismaError = error as { code?: string };
-      if (prismaError?.code !== 'P2002') {
-        throw error;
-      }
-
-      return context.prisma.schedulerLease.findUnique({
-        where: {
-          partition_id: partitionId
-        }
-      });
-    });
-
-    if (createdLease && createdLease.holder !== input.workerId && createdLease.expires_at > now) {
-      return {
-        acquired: false,
-        holder: createdLease.holder,
-        expires_at: createdLease.expires_at,
-        partition_id: partitionId,
-        key: createdLease.key
-      };
-    }
-
-    return {
-      acquired: true,
-      holder: input.workerId,
-      expires_at: expiresAt,
-      partition_id: partitionId,
-      key
-    };
-  }
-
-  if (existing.holder === input.workerId || existing.expires_at <= now) {
-    const updatedLease = await context.prisma.schedulerLease.update({
-      where: {
-        partition_id: partitionId
-      },
-      data: {
-        key: existing.key ?? key,
-        holder: input.workerId,
-        acquired_at: existing.holder === input.workerId ? existing.acquired_at : now,
-        expires_at: expiresAt,
-        updated_at: now
-      }
-    }).catch(async error => {
-      const prismaError = error as { code?: string };
-      if (prismaError?.code !== 'P2025') {
-        throw error;
-      }
-
-      return context.prisma.schedulerLease.findUnique({
-        where: {
-          partition_id: partitionId
-        }
-      });
-    });
-
-    if (!updatedLease) {
-      return acquireSchedulerLease(context, input);
-    }
-
-    if (updatedLease.holder !== input.workerId && updatedLease.expires_at > now) {
-      return {
-        acquired: false,
-        holder: updatedLease.holder,
-        expires_at: updatedLease.expires_at,
-        partition_id: partitionId,
-        key: updatedLease.key
-      };
-    }
-
+  if (existing.holder === input.workerId && existing.acquired_at === now && existing.expires_at === expiresAt) {
     return {
       acquired: true,
       holder: input.workerId,
@@ -149,10 +78,60 @@ export const acquireSchedulerLease = async (
     };
   }
 
+  if (existing.holder !== input.workerId && existing.expires_at > now) {
+    return {
+      acquired: false,
+      holder: existing.holder,
+      expires_at: existing.expires_at,
+      partition_id: partitionId,
+      key: existing.key
+    };
+  }
+
+  const updatedLease = await context.prisma.schedulerLease.updateMany({
+    where: {
+      partition_id: partitionId,
+      OR: [{ holder: input.workerId }, { expires_at: { lte: now } }]
+    },
+    data: {
+      key: existing.key ?? key,
+      holder: input.workerId,
+      acquired_at: existing.holder === input.workerId ? existing.acquired_at : now,
+      expires_at: expiresAt,
+      updated_at: now
+    }
+  });
+
+  if (updatedLease.count === 0) {
+    const latestLease = await context.prisma.schedulerLease.findUnique({
+      where: {
+        partition_id: partitionId
+      }
+    });
+
+    if (!latestLease) {
+      return {
+        acquired: false,
+        holder: null,
+        expires_at: null,
+        partition_id: partitionId,
+        key
+      };
+    }
+
+    return {
+      acquired: latestLease.holder === input.workerId,
+      holder: latestLease.holder,
+      expires_at: latestLease.expires_at,
+      partition_id: partitionId,
+      key: latestLease.key
+    };
+  }
+
   return {
-    acquired: false,
-    holder: existing.holder,
-    expires_at: existing.expires_at,
+    acquired: true,
+    holder: input.workerId,
+    expires_at: expiresAt,
     partition_id: partitionId,
     key: existing.key
   };
@@ -176,21 +155,16 @@ export const releaseSchedulerLease = async (
   partitionId?: string
 ): Promise<boolean> => {
   const normalizedPartitionId = normalizePartitionId(partitionId);
-  const existing = await context.prisma.schedulerLease.findUnique({
+  const releaseResult = await context.prisma.schedulerLease.deleteMany({
     where: {
-      partition_id: normalizedPartitionId
+      partition_id: normalizedPartitionId,
+      holder: workerId
     }
   });
 
-  if (!existing || existing.holder !== workerId) {
+  if (releaseResult.count === 0) {
     return false;
   }
-
-  await context.prisma.schedulerLease.delete({
-    where: {
-      partition_id: normalizedPartitionId
-    }
-  });
 
   return true;
 };

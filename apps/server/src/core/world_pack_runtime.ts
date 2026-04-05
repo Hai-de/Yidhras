@@ -1,6 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-
 import { notifications } from '../utils/notifications.js';
 import type { WorldPack } from '../world/loader.js';
 
@@ -18,17 +15,6 @@ export const parseTickToBigInt = (
     notifications.push('warning', `世界包字段 ${fieldName} 无法解析为 BigInt，已忽略该配置`, 'PACK_TIME_PARSE_WARN');
     return undefined;
   }
-};
-
-export const resolveWorldPacksDir = (): string => {
-  const candidates = [
-    path.resolve(process.cwd(), 'data/world_packs'),
-    path.resolve(process.cwd(), '../../data/world_packs'),
-    path.resolve(process.cwd(), '../data/world_packs')
-  ];
-
-  const existing = candidates.find(candidate => fs.existsSync(candidate));
-  return existing ?? candidates[0];
 };
 
 export interface WorldPackRuntimeConfig {

@@ -3,7 +3,7 @@ import { useRoute } from 'vue-router'
 
 import type { AgentOverviewSnapshot } from '../../../composables/api/useAgentApi'
 import { useAgentApi } from '../../../composables/api/useAgentApi'
-import type { SchedulerDecisionItem } from '../../../composables/api/useSchedulerApi'
+import type { AgentSchedulerProjection } from '../../../composables/api/useSchedulerApi'
 import { useSchedulerApi } from '../../../composables/api/useSchedulerApi'
 import { useOperatorNavigation } from '../../shared/navigation'
 import { useOperatorSourceContext } from '../../shared/source-context'
@@ -27,7 +27,7 @@ export const useAgentPage = () => {
   const sourceContext = useOperatorSourceContext()
 
   const snapshot = ref<AgentOverviewSnapshot | null>(null)
-  const schedulerDecisions = ref<SchedulerDecisionItem[]>([])
+  const schedulerProjection = ref<AgentSchedulerProjection | null>(null)
   const isFetching = ref(false)
   const errorMessage = ref<string | null>(null)
 
@@ -35,19 +35,19 @@ export const useAgentPage = () => {
     const agentId = typeof route.params.id === 'string' ? route.params.id : null
     if (!agentId) {
       snapshot.value = null
-      schedulerDecisions.value = []
+      schedulerProjection.value = null
       return
     }
 
     isFetching.value = true
 
     try {
-      const [overviewSnapshot, decisionItems] = await Promise.all([
+      const [overviewSnapshot, projection] = await Promise.all([
         agentApi.getOverview(agentId, 10),
-        schedulerApi.listAgentDecisions(agentId)
+        schedulerApi.getAgentProjection(agentId, { limit: 20 })
       ])
       snapshot.value = overviewSnapshot
-      schedulerDecisions.value = decisionItems
+      schedulerProjection.value = projection
       errorMessage.value = null
     } catch (error) {
       errorMessage.value = getErrorMessage(error)
@@ -65,7 +65,7 @@ export const useAgentPage = () => {
   )
 
   const openSchedulerDecision = (decisionId: string) => {
-    const decision = schedulerDecisions.value.find(item => item.id === decisionId)
+    const decision = schedulerProjection.value?.timeline.find(item => item.id === decisionId)
     if (!decision) {
       return
     }
@@ -76,12 +76,35 @@ export const useAgentPage = () => {
       sourceDecisionId: decision.id
     }
 
-    if (decision.created_job_id) {
-      void navigation.goToWorkflowJob(decision.created_job_id, sourceContextInput)
+    const resolvedJobId = decision.workflow_link?.job_id ?? decision.created_job_id
+    if (resolvedJobId) {
+      void navigation.goToWorkflowJob(resolvedJobId, sourceContextInput)
       return
     }
 
-    void navigation.goToWorkflowActionIntent(decision.id, 'workflow', sourceContextInput)
+    void navigation.goToScheduler({
+      decisionId: decision.id,
+      runId: decision.scheduler_run_id,
+      partitionId: decision.partition_id,
+      context: sourceContextInput
+    })
+  }
+
+  const openSchedulerRun = (runId: string) => {
+    void navigation.goToScheduler({
+      runId,
+      context: {
+        sourcePage: 'agent',
+        ...(snapshot.value ? { sourceAgentId: snapshot.value.profile.id } : {})
+      }
+    })
+  }
+
+  const openSchedulerJob = (jobId: string) => {
+    void navigation.goToWorkflowJob(jobId, {
+      sourcePage: 'agent',
+      ...(snapshot.value ? { sourceAgentId: snapshot.value.profile.id } : {})
+    })
   }
 
   const returnToSource = () => {
@@ -109,6 +132,16 @@ export const useAgentPage = () => {
       return
     }
 
+    if (sourceContext.source.value.sourcePage === 'scheduler') {
+      void navigation.goToScheduler({
+        partitionId: sourceContext.source.value.sourcePartitionId,
+        workerId: sourceContext.source.value.sourceWorkerId,
+        runId: sourceContext.source.value.sourceRunId,
+        decisionId: sourceContext.source.value.sourceDecisionId
+      })
+      return
+    }
+
     if (sourceContext.source.value.sourcePage === 'overview') {
       void navigation.goToOverview()
     }
@@ -116,8 +149,9 @@ export const useAgentPage = () => {
 
   return {
     snapshot,
-    schedulerDecisions,
-    schedulerDecisionItems: computed(() => buildAgentSchedulerDecisionItems(schedulerDecisions.value)),
+    schedulerProjection,
+    schedulerDecisions: computed(() => schedulerProjection.value?.timeline ?? []),
+    schedulerDecisionItems: computed(() => buildAgentSchedulerDecisionItems(schedulerProjection.value?.timeline ?? [])),
     activeTab: agentRoute.activeTab,
     setActiveTab: agentRoute.setActiveTab,
     profileFields: computed(() => (snapshot.value ? buildAgentProfileFields(snapshot.value) : [])),
@@ -126,6 +160,8 @@ export const useAgentPage = () => {
     errorMessage,
     refresh: fetchOverview,
     openSchedulerDecision,
+    openSchedulerRun,
+    openSchedulerJob,
     sourceSummary: sourceContext.summary,
     hasSource: sourceContext.hasSource,
     returnToSource

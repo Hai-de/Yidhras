@@ -15,7 +15,9 @@ const baseSource = (): OperatorSourceSnapshot => ({
   sourceNodeId: null,
   sourceRunId: null,
   sourceDecisionId: null,
-  sourceAgentId: null
+  sourceAgentId: null,
+  sourcePartitionId: null,
+  sourceWorkerId: null
 })
 
 describe('operator source-context helpers', () => {
@@ -23,6 +25,7 @@ describe('operator source-context helpers', () => {
     expect(normalizeSourcePage('overview')).toBe('overview')
     expect(normalizeSourcePage('workflow')).toBe('workflow')
     expect(normalizeSourcePage('agent')).toBe('agent')
+    expect(normalizeSourcePage('scheduler')).toBe('scheduler')
     expect(normalizeSourcePage('unknown')).toBeNull()
   })
 
@@ -42,6 +45,14 @@ describe('operator source-context helpers', () => {
         sourceAgentId: 'agent-7'
       })
     ).toBe('Opened from agent agent-7')
+
+    expect(
+      buildSourceSummary({
+        ...baseSource(),
+        sourcePage: 'scheduler',
+        sourcePartitionId: 'p5'
+      })
+    ).toBe('Opened from scheduler partition p5')
   })
 
   it('builds timeline and social semantic hints without regressing mapping semantics', () => {

@@ -105,8 +105,8 @@ const handleApply = () => {
           v-for="root in props.quickRoots"
           :key="root.id"
           type="button"
-          class="yd-workbench-item rounded-sm px-3 py-2 text-left transition-colors"
-          :class="root.isActive ? 'yd-workbench-item--active text-yd-text-primary' : 'text-yd-text-secondary'"
+          class="yd-workbench-item yd-tone-info rounded-sm px-3 py-2 text-left transition-colors"
+          :class="root.isActive ? 'yd-workbench-item--active text-yd-text-primary' : 'text-yd-text-secondary hover:text-yd-text-primary'"
           @click="emit('useQuickRoot', root.id)"
         >
           <div class="text-xs uppercase tracking-[0.14em] yd-font-mono">

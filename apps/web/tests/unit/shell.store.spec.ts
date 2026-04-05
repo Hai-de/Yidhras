@@ -52,10 +52,10 @@ describe('useShellStore', () => {
   it('updates active workspace and dock tab', () => {
     const shell = useShellStore()
 
-    shell.setActiveWorkspace('graph')
+    shell.setActiveWorkspace('scheduler')
     shell.setActiveDockTab('notifications')
 
-    expect(shell.activeWorkspaceId).toBe('graph')
+    expect(shell.activeWorkspaceId).toBe('scheduler')
     expect(shell.activeDockTabId).toBe('notifications')
   })
 
@@ -94,11 +94,11 @@ describe('useShellStore', () => {
     const shell = useShellStore()
 
     shell.recordRecentTarget({
-      id: 'workflow:job-1',
-      label: 'Workflow job job-1',
-      meta: 'workflow',
-      workspaceId: 'workflow',
-      routePath: '/workflow?job_id=job-1'
+      id: 'scheduler-run:run-1',
+      label: 'Scheduler run run-1',
+      meta: 'scheduler run',
+      workspaceId: 'scheduler',
+      routePath: '/scheduler?run_id=run-1'
     })
     shell.recordRecentTarget({
       id: 'agent:agent-1',
@@ -108,15 +108,15 @@ describe('useShellStore', () => {
       routePath: '/agents/agent-1'
     })
     shell.recordRecentTarget({
-      id: 'workflow:job-1',
-      label: 'Workflow job job-1',
-      meta: 'workflow repeat',
-      workspaceId: 'workflow',
-      routePath: '/workflow?job_id=job-1'
+      id: 'scheduler-run:run-1',
+      label: 'Scheduler run run-1',
+      meta: 'scheduler run repeat',
+      workspaceId: 'scheduler',
+      routePath: '/scheduler?run_id=run-1'
     })
 
     expect(shell.recentTargets).toHaveLength(2)
-    expect(shell.recentTargets[0]?.id).toBe('workflow:job-1')
-    expect(shell.recentTargets[0]?.meta).toBe('workflow repeat')
+    expect(shell.recentTargets[0]?.id).toBe('scheduler-run:run-1')
+    expect(shell.recentTargets[0]?.meta).toBe('scheduler run repeat')
   })
 })

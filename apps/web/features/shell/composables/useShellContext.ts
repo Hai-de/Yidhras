@@ -30,6 +30,7 @@ export interface ShellContextViewModel {
 
 const workspaceTitleMap = {
   overview: 'World Overview',
+  scheduler: 'Scheduler Control Tower',
   social: 'Social Feed',
   workflow: 'Workflow Inspector',
   timeline: 'Narrative Timeline',
@@ -40,6 +41,10 @@ const workspaceTitleMap = {
 export const resolveShellFocusLabel = (path: string): string => {
   if (path.startsWith('/workflow')) {
     return 'Current focus: workflow records'
+  }
+
+  if (path.startsWith('/scheduler')) {
+    return 'Current focus: scheduler operations'
   }
 
   if (path.startsWith('/graph')) {
@@ -68,6 +73,26 @@ export const resolveShellFocusMeta = (path: string, search: string): string => {
       : search.includes('trace_id=')
         ? 'Focused from workflow trace selection.'
         : 'Workflow queue and detail panel are active.'
+  }
+
+  if (path.startsWith('/scheduler')) {
+    if (search.includes('run_id=')) {
+      return 'Scheduler workspace is focused on a specific run.'
+    }
+
+    if (search.includes('decision_id=')) {
+      return 'Scheduler workspace is focused on a specific decision.'
+    }
+
+    if (search.includes('worker_id=')) {
+      return 'Scheduler workspace is filtered by worker context.'
+    }
+
+    if (search.includes('partition_id=')) {
+      return 'Scheduler workspace is filtered by partition context.'
+    }
+
+    return 'Scheduler operator projection is active.'
   }
 
   if (path.startsWith('/graph')) {

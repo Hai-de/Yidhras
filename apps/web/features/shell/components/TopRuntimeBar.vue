@@ -4,11 +4,9 @@ import { computed } from 'vue'
 import { useOperatorBootstrap } from '../../../composables/app/useOperatorBootstrap'
 import { useNotificationsStore } from '../../../stores/notifications'
 import { useRuntimeStore } from '../../../stores/runtime'
-import { useShellStore } from '../../../stores/shell'
 
 const runtime = useRuntimeStore()
 const notifications = useNotificationsStore()
-const shell = useShellStore()
 const operatorBootstrap = useOperatorBootstrap()
 
 const runtimeStatusLabel = computed(() => {
@@ -25,14 +23,14 @@ const runtimeStatusLabel = computed(() => {
 
 const runtimeStatusClass = computed(() => {
   if (runtime.status === 'error') {
-    return 'border-yd-state-danger/40 text-yd-state-danger'
+    return 'yd-tone-danger text-yd-state-danger'
   }
 
   if (runtime.healthLevel === 'degraded') {
-    return 'border-yd-state-warning/40 text-yd-state-warning'
+    return 'yd-tone-warning text-yd-state-warning'
   }
 
-  return 'border-yd-state-success/40 text-yd-state-success'
+  return 'yd-tone-success text-yd-state-success'
 })
 
 const runtimeSpeedLabel = computed(() => {
@@ -60,22 +58,15 @@ const notificationsStatusClass = computed(() => {
   return 'text-yd-text-secondary'
 })
 
-const dockToggleLabel = computed(() => {
-  return shell.isDockExpanded ? 'Hide Dock' : 'Show Dock'
-})
-
 const handleRefreshAll = async () => {
   await operatorBootstrap.refreshAll()
 }
 </script>
 
 <template>
-  <header class="yd-toolbar-surface yd-separator-bottom flex min-h-16 items-center justify-between border-x-0 border-t-0 px-4 py-3">
+  <header class="yd-toolbar-surface yd-toolbar-surface--flush yd-shell-divider-bottom flex min-h-16 items-center justify-between px-4 py-3">
     <div class="flex min-w-0 items-center gap-6">
       <div class="min-w-0">
-        <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
-          World State
-        </div>
         <div class="mt-1.5 flex min-w-0 items-center gap-3">
           <span
             class="yd-status-pill rounded-sm text-[10px] uppercase tracking-[0.14em] yd-font-mono"
@@ -89,18 +80,6 @@ const handleRefreshAll = async () => {
         </div>
         <div class="mt-1 text-[11px] text-yd-text-muted yd-font-mono">
           {{ runtimeSyncSummary }}
-        </div>
-      </div>
-
-      <div class="hidden min-w-0 lg:block">
-        <div class="text-[10px] uppercase tracking-[0.16em] text-yd-text-muted yd-font-mono">
-          Time Scale
-        </div>
-        <div class="mt-1 text-sm text-yd-text-primary yd-font-mono">
-          {{ runtime.formattedTicks }}
-        </div>
-        <div class="text-xs text-yd-text-secondary">
-          {{ runtime.primaryCalendarTime }}
         </div>
       </div>
     </div>
@@ -126,20 +105,13 @@ const handleRefreshAll = async () => {
         </div>
       </div>
 
-      <div class="flex items-center gap-2 pl-4 xl:ml-1 xl:border-l xl:border-yd-border-muted/50">
+      <div class="flex items-center pl-4 xl:ml-1 xl:border-l xl:border-yd-border-muted/50">
         <button
           type="button"
-          class="rounded-sm border border-yd-border-muted bg-yd-elevated px-3.5 py-2 text-[11px] uppercase tracking-[0.12em] text-yd-text-primary yd-font-mono transition-colors hover:border-yd-border-strong hover:bg-yd-panel"
+          class="yd-industrial-button rounded-sm px-3.5 py-2 text-[11px] uppercase tracking-[0.12em] text-yd-text-primary yd-font-mono"
           @click="handleRefreshAll"
         >
           Refresh All
-        </button>
-        <button
-          type="button"
-          class="rounded-sm border border-transparent bg-transparent px-3 py-2 text-[11px] uppercase tracking-[0.12em] text-yd-text-secondary yd-font-mono transition-colors hover:bg-yd-elevated hover:text-yd-text-primary"
-          @click="shell.toggleDockExpanded()"
-        >
-          {{ dockToggleLabel }}
         </button>
       </div>
     </div>

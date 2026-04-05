@@ -13,6 +13,8 @@ export interface OperatorSourceSnapshot {
   sourceRunId: string | null
   sourceDecisionId: string | null
   sourceAgentId: string | null
+  sourcePartitionId: string | null
+  sourceWorkerId: string | null
 }
 
 export const normalizeSourcePage = (value: string | null | undefined): OperatorSourcePage | null => {
@@ -23,6 +25,7 @@ export const normalizeSourcePage = (value: string | null | undefined): OperatorS
     case 'overview':
     case 'workflow':
     case 'agent':
+    case 'scheduler':
       return value
     default:
       return null
@@ -65,6 +68,20 @@ export const buildSourceSummary = (source: OperatorSourceSnapshot): string | nul
       return 'Opened from workflow console'
     case 'agent':
       return source.sourceAgentId ? `Opened from agent ${source.sourceAgentId}` : 'Opened from agent workspace'
+    case 'scheduler':
+      if (source.sourceDecisionId) {
+        return `Opened from scheduler decision ${source.sourceDecisionId}`
+      }
+      if (source.sourceRunId) {
+        return `Opened from scheduler run ${source.sourceRunId}`
+      }
+      if (source.sourcePartitionId) {
+        return `Opened from scheduler partition ${source.sourcePartitionId}`
+      }
+      if (source.sourceWorkerId) {
+        return `Opened from scheduler worker ${source.sourceWorkerId}`
+      }
+      return 'Opened from scheduler workspace'
     default:
       return null
   }
@@ -113,6 +130,8 @@ export const useOperatorSourceContext = () => {
   const sourceRunIdQuery = useRouteQuery<string | null>('source_run_id', null, { mode: 'replace' })
   const sourceDecisionIdQuery = useRouteQuery<string | null>('source_decision_id', null, { mode: 'replace' })
   const sourceAgentIdQuery = useRouteQuery<string | null>('source_agent_id', null, { mode: 'replace' })
+  const sourcePartitionIdQuery = useRouteQuery<string | null>('source_partition_id', null, { mode: 'replace' })
+  const sourceWorkerIdQuery = useRouteQuery<string | null>('source_worker_id', null, { mode: 'replace' })
   const sourceActionIntentIdQuery = useRouteQuery<string | null>('source_action_intent_id', null, {
     mode: 'replace'
   })
@@ -128,7 +147,9 @@ export const useOperatorSourceContext = () => {
     sourceNodeId: normalizeOptionalString(sourceNodeIdQuery.value),
     sourceRunId: normalizeOptionalString(sourceRunIdQuery.value),
     sourceDecisionId: normalizeOptionalString(sourceDecisionIdQuery.value),
-    sourceAgentId: normalizeOptionalString(sourceAgentIdQuery.value)
+    sourceAgentId: normalizeOptionalString(sourceAgentIdQuery.value),
+    sourcePartitionId: normalizeOptionalString(sourcePartitionIdQuery.value),
+    sourceWorkerId: normalizeOptionalString(sourceWorkerIdQuery.value)
   }))
 
   const hasSource = computed(() => {
@@ -140,7 +161,9 @@ export const useOperatorSourceContext = () => {
         source.value.sourceNodeId ||
         source.value.sourceRunId ||
         source.value.sourceDecisionId ||
-        source.value.sourceAgentId
+        source.value.sourceAgentId ||
+        source.value.sourcePartitionId ||
+        source.value.sourceWorkerId
     )
   })
 

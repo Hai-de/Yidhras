@@ -39,7 +39,7 @@ const signalTone = (signalLabel: SocialPostCardViewModel['signalLabel']) => {
           v-for="item in props.items"
           :key="item.id"
           type="button"
-          class="yd-workbench-item w-full rounded-md px-4 py-4 text-left transition-colors"
+          class="yd-workbench-item yd-tone-info w-full rounded-md px-4 py-4 text-left transition-colors"
           :class="item.id === props.selectedPostId ? 'yd-workbench-item--active' : ''"
           @click="emit('selectPost', item)"
         >

@@ -1,0 +1,31 @@
+config_version: 1
+
+app:
+  name: "Yidhras"
+  env: "development"
+  port: 3001
+
+paths:
+  world_packs_dir: "data/world_packs"
+  assets_dir: "data/assets"
+  plugins_dir: "data/plugins"
+
+world:
+  preferred_pack: "death_note"
+  bootstrap:
+    enabled: true
+    target_pack_dir: "death_note"
+    template_file: "data/configw/templates/world-pack/death_note.yaml"
+    overwrite: false
+
+startup:
+  allow_degraded_mode: true
+  fail_on_missing_world_pack_dir: false
+  fail_on_no_world_pack: false
+
+scheduler:
+  enabled: true
+
+features:
+  inference_trace: true
+  notifications: true

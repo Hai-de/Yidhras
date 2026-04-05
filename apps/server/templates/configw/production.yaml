@@ -1,0 +1,7 @@
+app:
+  env: "production"
+
+startup:
+  allow_degraded_mode: false
+  fail_on_missing_world_pack_dir: true
+  fail_on_no_world_pack: true

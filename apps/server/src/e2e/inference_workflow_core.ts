@@ -21,6 +21,7 @@ import { buildWorkflowSnapshot } from '../app/services/inference_workflow/snapsh
 import { ChronosEngine } from '../clock/engine.js';
 import type { SimulationManager } from '../core/simulation.js';
 import { notifications } from '../utils/notifications.js';
+import { DEFAULT_E2E_WORLD_PACK } from './config.js';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
@@ -67,7 +68,7 @@ const buildTestContext = (prisma: PrismaClient): AppContext => {
       world_pack_dir: true,
       world_pack_available: true
     },
-    available_world_packs: ['cyber_noir'],
+    available_world_packs: [DEFAULT_E2E_WORLD_PACK],
     errors: []
   };
 
@@ -594,7 +595,7 @@ const testResultBuilders = async (context: AppContext) => {
         tick: tick.toString(),
         strategy: 'mock',
         provider: 'mock',
-        world_pack_id: 'cyber_noir',
+        world_pack_id: DEFAULT_E2E_WORLD_PACK,
         binding_ref: null,
         prompt_version: null
       } as Prisma.InputJsonValue,
@@ -802,6 +803,8 @@ const testListInferenceJobs = async (context: AppContext) => {
   });
   assert(listByStrategy.items.some(item => item.id === agentTwoJob.id), 'strategy filter should include the targeted rule_based failed job');
   assert(listByStrategy.items.every(item => item.strategy === 'rule_based'), 'strategy filter should only keep rule_based jobs');
+  assert(listByStrategy.items.every(item => typeof item.intent_class === 'string'), 'listInferenceJobs should expose intent_class for all items');
+  assert(listByStrategy.items.some(item => item.intent_class === 'direct_inference'), 'default workflow list items should expose direct_inference intent_class');
 
   const listByStatus = await listInferenceJobs(context, {
     status: ['failed'],

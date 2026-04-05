@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 
 export type OperatorWorkspaceId =
   | 'overview'
+  | 'scheduler'
   | 'social'
   | 'workflow'
   | 'timeline'

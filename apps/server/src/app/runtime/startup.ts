@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
+import type { RuntimeStartupPolicy } from '../../config/runtime_config.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { StartupHealth } from '../context.js';
 
@@ -15,17 +16,6 @@ export const createStartupHealth = (): StartupHealth => {
     available_world_packs: [],
     errors: []
   };
-};
-
-export const resolveWorldPacksDir = (): string => {
-  const candidates = [
-    path.resolve(process.cwd(), 'data/world_packs'),
-    path.resolve(process.cwd(), '../../data/world_packs'),
-    path.resolve(process.cwd(), '../data/world_packs')
-  ];
-
-  const existing = candidates.find(candidate => fs.existsSync(candidate));
-  return existing ?? candidates[0];
 };
 
 const hasPackConfig = (packDir: string): boolean => {
@@ -45,8 +35,37 @@ const detectAvailableWorldPacks = (worldPacksDir: string): string[] => {
     .map(entry => entry.name);
 };
 
+const hasNonDatabaseStartupIssue = (startupHealth: StartupHealth): boolean => {
+  return !startupHealth.checks.world_pack_dir || !startupHealth.checks.world_pack_available;
+};
+
+const shouldFailStartup = (startupHealth: StartupHealth, startupPolicy: RuntimeStartupPolicy): boolean => {
+  if (!startupHealth.checks.db) {
+    return true;
+  }
+
+  if (!hasNonDatabaseStartupIssue(startupHealth)) {
+    return false;
+  }
+
+  if (!startupPolicy.allowDegradedMode) {
+    return true;
+  }
+
+  if (!startupHealth.checks.world_pack_dir && startupPolicy.failOnMissingWorldPackDir) {
+    return true;
+  }
+
+  if (!startupHealth.checks.world_pack_available && startupPolicy.failOnNoWorldPack) {
+    return true;
+  }
+
+  return false;
+};
+
 export interface RunStartupPreflightOptions {
   startupHealth: StartupHealth;
+  startupPolicy: RuntimeStartupPolicy;
   worldPacksDir: string;
   queryDatabaseHealth(): Promise<unknown>;
   getErrorMessage(err: unknown): string;
@@ -54,6 +73,7 @@ export interface RunStartupPreflightOptions {
 
 export const runStartupPreflight = async ({
   startupHealth,
+  startupPolicy,
   worldPacksDir,
   queryDatabaseHealth,
   getErrorMessage
@@ -78,13 +98,12 @@ export const runStartupPreflight = async ({
     startupHealth.errors.push('no available world pack found');
   }
 
-  if (!startupHealth.checks.db) {
+  if (shouldFailStartup(startupHealth, startupPolicy)) {
     startupHealth.level = 'fail';
-  } else if (!startupHealth.checks.world_pack_dir || !startupHealth.checks.world_pack_available) {
-    startupHealth.level = 'degraded';
-  } else {
-    startupHealth.level = 'ok';
+    return;
   }
+
+  startupHealth.level = hasNonDatabaseStartupIssue(startupHealth) ? 'degraded' : 'ok';
 };
 
 export interface RuntimeReadyGuardOptions {

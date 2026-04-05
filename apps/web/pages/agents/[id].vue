@@ -4,6 +4,11 @@ import { computed } from 'vue'
 import AppPanel from '../../components/ui/AppPanel.vue'
 import AppTabs from '../../components/ui/AppTabs.vue'
 import {
+  buildAgentSchedulerBreakdownItems,
+  buildAgentSchedulerJobLinks,
+  buildAgentSchedulerReasonList,
+  buildAgentSchedulerRunLinks,
+  buildAgentSchedulerSkippedReasonList,
   buildAgentSchedulerSummaryMetrics
 } from '../../features/agents/adapters'
 import AgentSchedulerCard from '../../features/agents/components/AgentSchedulerCard.vue'
@@ -29,7 +34,13 @@ const agentActiveTab = computed(() => agentPage.activeTab.value)
 const profileFields = computed(() => agentPage.profileFields.value)
 const relationshipFields = computed(() => agentPage.relationshipFields.value)
 const schedulerDecisionItems = computed(() => agentPage.schedulerDecisionItems.value)
-const schedulerSummaryMetrics = computed(() => buildAgentSchedulerSummaryMetrics(agentPage.schedulerDecisions.value))
+const schedulerProjection = computed(() => agentPage.schedulerProjection.value)
+const schedulerSummaryMetrics = computed(() => buildAgentSchedulerSummaryMetrics(schedulerProjection.value))
+const schedulerBreakdownItems = computed(() => buildAgentSchedulerBreakdownItems(schedulerProjection.value))
+const schedulerReasonItems = computed(() => buildAgentSchedulerReasonList(schedulerProjection.value))
+const schedulerSkippedReasonItems = computed(() => buildAgentSchedulerSkippedReasonList(schedulerProjection.value))
+const schedulerRunLinks = computed(() => buildAgentSchedulerRunLinks(schedulerProjection.value))
+const schedulerJobLinks = computed(() => buildAgentSchedulerJobLinks(schedulerProjection.value))
 const agentSourceSummary = computed(() => agentPage.sourceSummary.value)
 const agentFreshness = computed(() => {
   return agentPage.isFetching.value ? 'Refreshing agent overview' : 'Agent overview loaded'
@@ -37,11 +48,11 @@ const agentFreshness = computed(() => {
 </script>
 
 <template>
-  <div class="flex h-full flex-col overflow-auto no-scrollbar" :style="pageLayoutStyle">
+  <div class="flex min-h-full flex-col" :style="pageLayoutStyle">
     <WorkspacePageHeader
       eyebrow="Agent Detail"
       :title="agentSnapshot?.profile.name ?? 'Agent detail'"
-      description="Inspect profile state, relation counts, recent workflow volume, memory trace density, and scheduler decision history for a selected agent projection."
+      description="Inspect profile state, relation counts, recent workflow volume, memory trace density, and scheduler projection history for a selected agent."
       :freshness="agentFreshness"
     />
 
@@ -79,10 +90,17 @@ const agentFreshness = computed(() => {
       />
     </div>
 
-    <div class="grid xl:grid-cols-[1fr,1fr]" :style="sectionGridStyle">
+    <div class="grid xl:grid-cols-[1.2fr,0.8fr]" :style="sectionGridStyle">
       <AgentSchedulerCard
         :items="schedulerDecisionItems"
+        :breakdown-items="schedulerBreakdownItems"
+        :reason-items="schedulerReasonItems"
+        :skipped-reason-items="schedulerSkippedReasonItems"
+        :run-links="schedulerRunLinks"
+        :job-links="schedulerJobLinks"
         @open-decision="agentPage.openSchedulerDecision"
+        @open-run="agentPage.openSchedulerRun"
+        @open-job="agentPage.openSchedulerJob"
       />
 
       <AppPanel surface="pane" padded>

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import yaml from 'yaml';
+import * as YAML from 'yaml';
 
 import { CalendarConfig } from '../clock/types.js';
 import { VariablePool } from '../narrative/types.js';
@@ -36,7 +36,7 @@ export class WorldPackLoader {
 
   /**
    * 按需加载一个世界包 (由文件夹名决定加载路径，不再全量扫描)
-   * @param folderName 文件夹名称 (如: 'cyber_noir')
+   * @param folderName 文件夹名称 (如: 'death_note')
    */
   public loadPack(folderName: string): WorldPack {
     if (this.packs.has(folderName)) {
@@ -60,8 +60,8 @@ export class WorldPackLoader {
 
     try {
       const content = fs.readFileSync(packPath, 'utf-8');
-      const parsed = yaml.parse(content) as WorldPack;
-      
+      const parsed = YAML.parse(content) as WorldPack;
+
       if (!parsed.metadata || !parsed.metadata.id) {
         throw new Error(`[WorldPackLoader] Skipping invalid pack (missing metadata.id): ${packPath}`);
       }
@@ -69,7 +69,7 @@ export class WorldPackLoader {
       // 同时用 folderName 和 ID 索引
       this.packs.set(folderName, parsed);
       this.packs.set(parsed.metadata.id, parsed);
-      
+
       console.log(`[WorldPackLoader] Loaded pack: ${parsed.metadata.name} (${parsed.metadata.id})`);
       return parsed;
     } catch (err) {

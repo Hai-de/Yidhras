@@ -10,12 +10,15 @@ This app is currently being rebuilt into an Operator-first control console rathe
 - `app.vue` 已回归为标准入口，只负责 bootstrap、全局通知桥与 `NuxtLayout` / `NuxtPage`。
 - `layouts/default.vue` 已变薄，当前由 `features/shell/components/AppShell.vue` 承担 Operator 壳层骨架。
 - `pages/overview` 与 `pages/workflow` 已接入真实后端聚合读模型与工作流观察面板。
+- `pages/scheduler` 与 `features/scheduler/*` 已新增独立 Scheduler Workspace，承载 scheduler control tower 级观测与 drill-down。
 - Graph 已迁入 `features/graph/*`，当前使用 `GraphToolbar + GraphMeshView/GraphTreeView + GraphInspector` 组织页面。
 - `pages/graph.vue` 不再直接承载旧 `L2Graph.vue`；Graph 渲染通过 `ClientOnly + GraphCanvas + Cytoscape` 运行。
 - Social、Timeline、Agent 页面已接入基础读模型与跨页 drill-down，正在向更丰富的工作区体验迭代。
-- Overview 与 Agent 页面现已开始接入 scheduler operator projection（recent runs / recent decisions / agent scheduler timeline）基线。
+- Overview 现已直接消费 `/api/runtime/scheduler/operator`；Agent 页面现已直接消费 `/api/agent/:id/scheduler/projection`。
+- Scheduler Workspace 现已接入 ownership / workers / rebalance / recent activity，并提供 run / decision / partition / worker 的基础 drill-down。
+- Shell activity rail 与 source-context 现已正式纳入 `scheduler` workspace，recent targets 也会记录 scheduler run / decision / worker / partition 焦点。
 - 旧 `stores/clock.ts` / `stores/system.ts` / `utils/api.ts` 已清理出主线，当前主状态入口为 `runtime/shell/notifications` 以及 feature stores。
-- 已新增 `vitest` 与核心 store / shell context 单测：`runtime / notifications / shell / workflow / graph / shell context`。
+- 已新增 `vitest` 与核心 store / shell context 单测：`runtime / notifications / shell / workflow / graph / shell context / scheduler api`
 - 新一轮 Operator UI polish 已完成第一阶段，当前已有统一页面骨架、来源上下文、Graph focus/root 交互、freshness 与轻量通知反馈。
 - Shell 全局控制台体验增强第一轮最小基线已落地：
   - TopRuntimeBar 已具备 runtime freshness、notifications 聚合、refresh all 与 dock toggle
@@ -196,13 +199,14 @@ pnpm --filter web preview
 - `layouts/default.vue`: 默认布局入口，当前只包裹 `AppShell`
 - `features/shell/components/AppShell.vue`: Operator 壳层骨架（活动栏 / 顶栏 / 底栏）
 - `features/overview/*`: Overview 聚合页面、列表卡片与 summary polling
+- `features/scheduler/*`: Scheduler Workspace、route state、run/decision/ownership/worker/rebalance 视图与 adapters
 - `features/workflow/*`: Workflow 过滤器、jobs table、detail panel、retry 与页面 composable
 - `features/graph/*`: Graph V2 页面、route/store、toolbar、canvas、inspector 与 Cytoscape 内聚实现
 - `features/social/*`: 社交信息流过滤、列表、详情与工作流/角色跳转
 - `features/timeline/*`: 时间范围过滤、事件列表与工作流跳转
-- `features/agents/*`: Agent 概览摘要与 tab-based detail scaffold
+- `features/agents/*`: Agent 概览摘要与 scheduler projection detail
 - `components/ui/*`: semantic primitives，当前已落地 `AppButton`、`AppPanel`、`AppAlert`、`AppInput`、`AppSelect`、`AppBadge`、`AppTabs`
-- `composables/api/useSchedulerApi.ts`: scheduler observability query API client
+- `composables/api/useSchedulerApi.ts`: scheduler observability / operator / agent projection API client
 - `composables/ui/useAppToast.ts`: 前端统一 toast/notification 抽象，当前底层接入 Nuxt UI
 - `features/shared/*`: workspace 共享 UI、freshness helper、source context、全局通知桥接
 - `composables/api/*.ts`: 按业务聚合的前端 API 入口
@@ -213,7 +217,7 @@ pnpm --filter web preview
 - `stores/runtime.ts`: runtime / clock 聚合状态
 - `stores/notifications.ts`: 远端通知 + 本地 UI 反馈通知
 - `stores/shell.ts`: 壳层工作区与 dock 状态 / recent targets
-- `tests/unit/*.spec.ts`: 核心 store / shell context 单测
+- `tests/unit/*.spec.ts`: 核心 store / shell context / scheduler api 单测
 - `tests/unit/theme.resolver.spec.ts`: theme merge/validate/clamp/source lookup 单测
 - `tailwind.config.ts`: 主题变量到 Tailwind 的消费映射
 
@@ -223,6 +227,7 @@ pnpm --filter web preview
 - Social、Timeline、Agent 页面目前是“基础工作区版”，尚未做更高级的聚类、多列配置、抽屉化 inspector 等增强。
 - Timeline ↔ Social 当前虽然已从宽松跳转收紧为 intent/tick/context 优先，但仍依赖现有读模型；若后端未来提供更强 mapping contract，仍可继续增强。
 - Shell 的 jobs / traces / notifications 虽已形成最小控制台层，但 jobs / traces 当前仍主要基于 recent targets，而非更完整的任务/trace 专属 read model。
+- Scheduler Workspace 当前是 Phase 4B baseline：已完成独立入口、projection 消费与基础 drill-down，但更深的 decision detail / richer worker hot spots / actor hot spots 仍属后续增强。
 - Nuxt UI 迁移当前主要覆盖通知与根级基础设施层；若后续引入更多 Nuxt UI 组件，仍需保持与现有 token / Tailwind 体系的一致性约束。
 - world-pack 主题覆盖当前已完成平台级解析基线，但 world pack source 仍是 registry/lookup 形态，尚未完全产品化为 manifest/API contract。
 - 共享基础组件内部的 spacing token 收口已被记录到 `docs/ENHANCEMENTS.md`，将在后续增强阶段继续处理。

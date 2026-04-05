@@ -34,11 +34,23 @@ const clampHeight = (value: number) => {
   return Math.min(Math.max(value, resolvedMinHeight.value), resolvedMaxHeight.value)
 }
 
+const resetDragInteractionState = () => {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  document.body.style.userSelect = ''
+  document.body.style.cursor = ''
+}
+
 const stopDragging = () => {
   if (!isDragging.value) return
+
   isDragging.value = false
+  resetDragInteractionState()
   window.removeEventListener('pointermove', handlePointerMove)
   window.removeEventListener('pointerup', stopDragging)
+  window.removeEventListener('pointercancel', stopDragging)
 }
 
 const handlePointerMove = (event: PointerEvent) => {
@@ -48,11 +60,27 @@ const handlePointerMove = (event: PointerEvent) => {
 }
 
 const handleResizeStart = (event: PointerEvent) => {
+  if (event.button !== 0) {
+    return
+  }
+
   isDragging.value = true
   dragStartY.value = event.clientY
   dragStartHeight.value = clampedHeight.value
+
+  if (typeof document !== 'undefined') {
+    document.body.style.userSelect = 'none'
+    document.body.style.cursor = 'row-resize'
+  }
+
+  const target = event.currentTarget
+  if (target instanceof HTMLElement) {
+    target.setPointerCapture?.(event.pointerId)
+  }
+
   window.addEventListener('pointermove', handlePointerMove)
   window.addEventListener('pointerup', stopDragging)
+  window.addEventListener('pointercancel', stopDragging)
 }
 
 onBeforeUnmount(() => {
@@ -61,9 +89,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="yd-dock-root yd-shell-surface yd-separator-top flex min-h-0 flex-col border-x-0 border-b-0 bg-yd-panel/95 backdrop-blur-sm" :style="{ height: `${clampedHeight}px` }">
+  <div
+    class="yd-dock-root yd-shell-surface yd-shell-surface--flush yd-separator-top flex min-h-0 flex-col bg-yd-panel/95 backdrop-blur-sm"
+    :style="{ height: `${clampedHeight}px` }"
+  >
     <div
-      class="yd-dock-split-hit-area flex h-4 shrink-0 cursor-row-resize items-end justify-center"
+      class="yd-dock-split-hit-area flex h-4 shrink-0 cursor-row-resize select-none touch-none items-end justify-center"
       :class="isDragging ? 'yd-dock-split-hit-area--active' : ''"
       role="separator"
       aria-label="Resize bottom dock"

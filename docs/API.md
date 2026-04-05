@@ -261,7 +261,7 @@
 - **GET `/api/inference/jobs`**
   - 说明：查询 inference / workflow job 列表
   - 参数：`?status=pending,running,completed,failed&agent_id=&identity_id=&strategy=&job_type=&from_tick=&to_tick=&from_created_at=&to_created_at=&cursor=&limit=&has_error=true|false&action_intent_id=`
-  - 成功返回：`{ success: true, data: { items: InferenceJobListItem[], page_info: { has_next_page, next_cursor }, summary: { returned, limit, counts_by_status, filters } }, meta: { pagination } }`
+  - 成功返回：`{ success: true, data: { items: InferenceJobListItem[], page_info: { has_next_page, next_cursor }, summary: { returned, limit, counts_by_status, filters } }, meta: { pagination } }`，其中 `items[*]` 当前已稳定包含 `intent_class`
 - **POST `/api/inference/jobs`**
   - 说明：按正式工作流入口提交一次推理任务
   - 输入：`{ agent_id?: string, identity_id?: string, strategy?: "mock"|"rule_based", attributes?: Record<string, unknown>, idempotency_key: string }`
@@ -269,6 +269,7 @@
 - **POST `/api/inference/jobs/:id/retry`**
   - 说明：重试一个已失败的 `DecisionJob`
   - 成功返回：`{ success: true, data: { replayed: false, inference_id, job, result, result_source: "fresh_run", workflow_snapshot } }`
+  - 备注：当前 retry 复用同一个 `DecisionJob` 记录；成功 reset 后会把顶层 `intent_class` 切到 `retry_recovery`，并同步刷新 `request_input.attributes.job_intent_class=retry_recovery` / `job_source=retry`，随后重置 `started_at` 并重新 claim 执行
 - **POST `/api/inference/jobs/:id/replay`**
   - 说明：从已有 `DecisionJob` 派生一个新的 replay job
   - 输入：`{ reason?: string, idempotency_key?: string, overrides?: { strategy?: "mock"|"rule_based", attributes?: Record<string, unknown> } }`
@@ -290,7 +291,7 @@
   - 成功返回：`{ success: true, data: { records: { trace, job, intent }, lineage, derived: { decision_stage, dispatch_stage, workflow_state, failure_stage, failure_code, failure_reason, outcome_summary } } }`
 - **GET `/api/inference/jobs/:id/workflow`**
   - 说明：查询指定决策任务的聚合工作流快照
-  - 成功返回：与 `/api/inference/traces/:id/workflow` 相同的 `WorkflowSnapshot` 结构
+  - 成功返回：与 `/api/inference/traces/:id/workflow` 相同的 `WorkflowSnapshot` 结构；`records.job` 当前会继续带 `intent_class` 以及刷新后的 `request_input.attributes.job_intent_class / job_source`
 
 ## 10. 错误代码参考 (Error Codes)
 
