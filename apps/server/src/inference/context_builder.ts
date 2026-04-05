@@ -7,15 +7,22 @@ import type { IdentityContext } from '../identity/types.js';
 import { createMemoryService } from '../memory/service.js';
 import type { VariablePool } from '../narrative/types.js';
 import { ApiError } from '../utils/api_error.js';
+import { DEFAULT_WORLD_STATE_ENTITY_ID } from '../world/materializer.js';
+import { listScenarioEntityStatesWithPrisma } from '../world/state.js';
 import type {
   InferenceActorRef,
   InferenceAgentSnapshot,
   InferenceBindingRef,
   InferenceContext,
+  InferencePackArtifactSnapshot,
+  InferencePackRuntimeContract,
+  InferencePackStateRecord,
+  InferencePackStateSnapshot,
   InferencePolicySummary,
   InferenceRequestInput,
   InferenceStrategy,
-  InferenceTransmissionProfile} from './types.js';
+  InferenceTransmissionProfile
+} from './types.js';
 
 const SUPPORTED_STRATEGIES: InferenceStrategy[] = ['mock', 'rule_based'];
 
@@ -47,6 +54,10 @@ interface ResolvedActor {
   bindingRef: InferenceBindingRef | null;
   resolvedAgentId: string | null;
 }
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+};
 
 const toIdentityContext = (identity: {
   id: string;
@@ -349,6 +360,68 @@ const buildAgentSnapshot = (
   };
 };
 
+const normalizePackStateRecord = (value: unknown): InferencePackStateRecord => {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return value as InferencePackStateRecord;
+};
+
+const buildPackStateSnapshot = async (
+  context: AppContext,
+  packId: string,
+  resolvedAgentId: string | null,
+  attributes: Record<string, unknown>
+): Promise<InferencePackStateSnapshot> => {
+  const states = await listScenarioEntityStatesWithPrisma(context.sim.prisma, {
+    pack_id: packId
+  });
+
+  const actorState = resolvedAgentId
+    ? states.find(state => state.entity_type === 'actor' && state.entity_id === resolvedAgentId) ?? null
+    : null;
+
+  const artifactStates = states.filter(state => state.entity_type === 'artifact');
+  const ownedArtifacts: InferencePackArtifactSnapshot[] = resolvedAgentId
+    ? artifactStates
+        .filter(state => state.state_json.holder_agent_id === resolvedAgentId)
+        .map(state => ({
+          id: state.entity_id,
+          state: state.state_json
+        }))
+    : [];
+
+  const worldState =
+    states.find(state => state.entity_type === 'world' && state.entity_id === DEFAULT_WORLD_STATE_ENTITY_ID) ?? null;
+
+  return {
+    actor_roles: actorState && Array.isArray(actorState.state_json.roles)
+      ? actorState.state_json.roles.filter((value): value is string => typeof value === 'string')
+      : [],
+    actor_state: actorState ? normalizePackStateRecord(actorState.state_json) : null,
+    owned_artifacts: ownedArtifacts,
+    world_state: worldState ? normalizePackStateRecord(worldState.state_json) : null,
+    latest_event: typeof attributes.latest_event_semantic_type === 'string'
+      ? {
+          event_id: 'synthetic-latest-event',
+          title: String(attributes.latest_event_semantic_type),
+          type: 'history',
+          semantic_type: attributes.latest_event_semantic_type,
+          created_at: context.sim.clock.getTicks().toString()
+        }
+      : null
+  };
+};
+
+const buildPackRuntimeContract = (context: AppContext): InferencePackRuntimeContract => {
+  const pack = context.sim.getActivePack();
+  return {
+    actions: pack?.actions ?? {},
+    decision_rules: pack?.decision_rules ?? []
+  };
+};
+
 const buildPolicySummary = async (
   context: AppContext,
   identity: IdentityContext,
@@ -471,6 +544,8 @@ export const buildInferenceContext = async (
     agentSnapshot = buildAgentSnapshot(agentContext.identity as Record<string, unknown>);
   }
 
+  const packState = await buildPackStateSnapshot(context, pack.metadata.id, resolvedActor.resolvedAgentId, attributes);
+  const packRuntime = buildPackRuntimeContract(context);
   const policySummary = await buildPolicySummary(context, resolvedActor.identity, attributes);
   const transmissionProfile = buildTransmissionProfile(resolvedActor.actorRef, agentSnapshot, policySummary, attributes);
   const memoryService = createMemoryService({ context });
@@ -499,6 +574,8 @@ export const buildInferenceContext = async (
     visible_variables: visibleVariables,
     policy_summary: policySummary,
     transmission_profile: transmissionProfile,
-    memory_context: memoryResult.context_pack
+    memory_context: memoryResult.context_pack,
+    pack_state: packState,
+    pack_runtime: packRuntime
   };
 };

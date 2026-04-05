@@ -2,32 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import * as YAML from 'yaml';
 
-import { CalendarConfig } from '../clock/types.js';
-import { VariablePool } from '../narrative/types.js';
+import { parseWorldPack, type SimulationTimeConfig, type WorldPack } from './schema.js';
 
-type WorldPackExtra = Record<string, unknown>;
-
-export interface SimulationTimeConfig {
-  min_tick?: string | number;
-  max_tick?: string | number;
-  initial_tick?: string | number;
-  step_ticks?: string | number;
-}
-
-export interface WorldPack {
-  metadata: {
-    id: string;
-    name: string;
-    version: string;
-    [key: string]: unknown;
-  };
-  variables?: VariablePool;
-  prompts?: Record<string, string>;
-  time_systems?: CalendarConfig[];
-  simulation_time?: SimulationTimeConfig;
-  // 允许任意扩展字段 (如: dynamics_config, item_definitions)
-  [key: string]: unknown;
-}
+export type { WorldPack } from './schema.js';
 
 export class WorldPackLoader {
   private packs: Map<string, WorldPack> = new Map();
@@ -60,11 +37,8 @@ export class WorldPackLoader {
 
     try {
       const content = fs.readFileSync(packPath, 'utf-8');
-      const parsed = YAML.parse(content) as WorldPack;
-
-      if (!parsed.metadata || !parsed.metadata.id) {
-        throw new Error(`[WorldPackLoader] Skipping invalid pack (missing metadata.id): ${packPath}`);
-      }
+      const parsedYaml = YAML.parse(content) as unknown;
+      const parsed = parseWorldPack(parsedYaml, packPath);
 
       // 同时用 folderName 和 ID 索引
       this.packs.set(folderName, parsed);
@@ -98,7 +72,8 @@ export class WorldPackLoader {
    */
   public listAvailablePacks(): string[] {
     if (!fs.existsSync(this.packsDir)) return [];
-    return fs.readdirSync(this.packsDir, { withFileTypes: true })
+    return fs
+      .readdirSync(this.packsDir, { withFileTypes: true })
       .filter(entry => entry.isDirectory())
       .map(entry => entry.name);
   }
@@ -106,13 +81,15 @@ export class WorldPackLoader {
   /**
    * 聚合所有已加载包的变量池
    */
-  public getMergedVariables(): VariablePool {
-    let merged: VariablePool = {};
+  public getMergedVariables(): Record<string, unknown> {
+    let merged: Record<string, unknown> = {};
     for (const pack of this.getAllPacks()) {
       if (pack.variables) {
-        merged = { ...merged, ...(pack.variables as WorldPackExtra) } as VariablePool;
+        merged = { ...merged, ...pack.variables };
       }
     }
     return merged;
   }
 }
+
+export type { SimulationTimeConfig };

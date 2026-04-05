@@ -2,7 +2,7 @@
 metadata:
   id: "world-death-note"
   name: "死亡笔记"
-  version: "0.1.0"
+  version: "0.2.0"
   description: "一个围绕死亡笔记、基拉审判、侦探追缉与舆论震荡展开的现代悬疑世界。"
 
 # 1. 变量池 (支持嵌套解析)
@@ -79,3 +79,112 @@ dynamics_config:
       params:
         midpoint: 0.6
         steepness: 12
+
+# 5. Demo Scenario Contract (第一版仅用于校验 / 后续 materializer 使用)
+scenario:
+  agents:
+    - id: "agent-light"
+      name: "夜神月"
+      type: "active"
+      identity:
+        id: "agent-light"
+        type: "agent"
+        name: "夜神月"
+        provider: "world_pack"
+      roles: ["notebook_candidate", "planner"]
+      state:
+        murderous_intent: false
+        knows_notebook_power: false
+    - id: "agent-l"
+      name: "L"
+      type: "active"
+      identity:
+        id: "agent-l"
+        type: "agent"
+        name: "L"
+        provider: "world_pack"
+      roles: ["investigator"]
+      state:
+        suspicion_level: 0
+    - id: "agent-ryuk"
+      name: "琉克"
+      type: "active"
+      identity:
+        id: "agent-ryuk"
+        type: "agent"
+        name: "琉克"
+        provider: "world_pack"
+      roles: ["observer", "shinigami"]
+      state:
+        amused: true
+  relationships:
+    - from_id: "agent-light"
+      to_id: "agent-l"
+      type: "suspect"
+      weight: 0.2
+    - from_id: "agent-ryuk"
+      to_id: "agent-light"
+      type: "observer"
+      weight: 1
+  artifacts:
+    - id: "artifact-death-note"
+      kind: "death_note"
+      label: "死亡笔记"
+      state:
+        holder_agent_id: null
+        location: "school_ground"
+  world_state:
+    opening_phase: "notebook_unclaimed"
+
+event_templates:
+  notebook_claimed:
+    type: "history"
+    title: "{{actor.name}} 捡到了 {{artifact.label}}"
+    description: "{{actor.name}} 在 {{artifact.state.location}} 发现并持有了 {{artifact.label}}。"
+    impact_data:
+      semantic_type: "notebook_claimed"
+      actor_id: "{{actor.id}}"
+      artifact_id: "{{artifact.id}}"
+  murderous_intent_formed:
+    type: "history"
+    title: "{{actor.name}} 产生了杀意"
+    description: "{{actor.name}} 开始认真考虑利用 {{artifact.label}} 制裁目标。"
+    impact_data:
+      semantic_type: "murderous_intent_formed"
+      actor_id: "{{actor.id}}"
+      artifact_id: "{{artifact.id}}"
+
+actions:
+  claim_death_note:
+    executor: "claim_artifact"
+    defaults:
+      artifact_id: "artifact-death-note"
+      emit_event_template: "notebook_claimed"
+  form_murderous_intent:
+    executor: "set_actor_state"
+    defaults:
+      artifact_id: "artifact-death-note"
+      state_patch:
+        murderous_intent: true
+      emit_event_template: "murderous_intent_formed"
+
+decision_rules:
+  - id: "discoverer_claims_notebook"
+    priority: 200
+    when:
+      latest_event:
+        semantic_type: "notebook_discovered"
+    decide:
+      action_type: "claim_death_note"
+      target_ref: null
+      payload: {}
+  - id: "holder_forms_intent"
+    priority: 100
+    when:
+      actor_has_artifact: "artifact-death-note"
+      actor_state:
+        murderous_intent: false
+    decide:
+      action_type: "form_murderous_intent"
+      target_ref: null
+      payload: {}

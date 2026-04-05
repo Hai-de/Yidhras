@@ -1,11 +1,11 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-- [ ] 设计并实现 replay/retry recovery window 查询 helper  `#srs1`
-- [ ] 在 scheduler candidate evaluation 中加入 replay/retry suppression policy  `#srs2`
-- [ ] 扩展 skip reason taxonomy、observability snapshot 与 summary/trend 聚合  `#srs3`
-- [ ] 补充 agent_scheduler / workflow_replay e2e 验证 suppression 行为  `#srs4`
-- [ ] 同步 API/ARCH/TODO/记录 文档  `#srs5`
+- [X] 设计并实现 replay/retry recovery window 查询 helper  `#srs1`
+- [X] 在 scheduler candidate evaluation 中加入 replay/retry suppression policy  `#srs2`
+- [X] 扩展 skip reason taxonomy、observability snapshot 与 summary/trend 聚合  `#srs3`
+- [X] 补充 agent_scheduler / workflow_replay e2e 验证 suppression 行为  `#srs4`
+- [X] 同步 API/ARCH/TODO/记录 文档  `#srs5`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # Scheduler Replay-Aware Suppression Policy 实施计划

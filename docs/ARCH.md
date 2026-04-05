@@ -142,6 +142,12 @@ This keeps `SimulationManager` as a runtime composition object rather than allow
 - `runtime_scaffold.ts` is responsible for materializing configw seed templates into `data/configw/**`.
 - `world_pack_bootstrap.ts` is responsible for creating or refreshing the configured default world pack in `data/world_packs/**`.
 - `prepare_runtime.ts` is the composition entry for runtime initialization, and script-level commands (`init:configw`, `init:world-pack`, `init:runtime`) map to these focused responsibilities.
+- 当前 world-pack contract 已开始从“静态背景配置”扩展为“scenario-driven runtime declaration”：`apps/server/src/world/schema.ts` 会校验 `scenario / event_templates / actions / decision_rules` 等结构化字段。
+- `apps/server/src/world/materializer.ts` 负责把 active world-pack 中声明的 scenario agents / identities / bindings / relationships / artifact/world state 幂等 materialize 到数据库。
+- `ScenarioEntityState` 现作为最小通用状态承载层，用于保存 pack-driven actor / artifact / world state，而不强行把所有剧情状态塞进 event 文本或变量池。
+- `apps/server/src/inference/context_builder.ts` 会把 `pack_state + pack_runtime` 注入 inference context；`apps/server/src/inference/providers/rule_based.ts` 再通过 `apps/server/src/inference/pack_rules.ts` 优先评估 pack decision rules。
+- `apps/server/src/app/services/action_dispatcher.ts` 现支持 pack action registry：若 `ActionIntent.intent_type` 命中 pack action，则按引擎内置 executor（当前为 `claim_artifact / set_actor_state / emit_event`）执行；若未命中才回退到既有内置 intent。
+- 这条扩展路径的目标是让 world-pack 声明 demo 级剧情实体与规则，而不是把 Death Note 场景硬编码进 runtime 主干。
 
 ---
 

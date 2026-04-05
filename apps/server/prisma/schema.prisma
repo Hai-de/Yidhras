@@ -333,6 +333,20 @@ model DecisionJob {
   @@index([replay_of_job_id, created_at])
 }
 
+model ScenarioEntityState {
+  id         String @id
+  pack_id    String
+  entity_type String
+  entity_id  String
+  state_json Json
+  created_at BigInt
+  updated_at BigInt
+
+  @@unique([pack_id, entity_type, entity_id])
+  @@index([pack_id, entity_type])
+  @@index([entity_type, entity_id])
+}
+
 model SchedulerRun {
   id         String                     @id
   worker_id  String

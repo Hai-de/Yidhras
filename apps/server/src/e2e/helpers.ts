@@ -10,6 +10,8 @@ export interface JsonResponse {
 interface StartServerOptions {
   port: number;
   startupTimeoutMs?: number;
+  prepareRuntime?: boolean;
+  prepareTimeoutMs?: number;
 }
 
 export interface RunningServer {
@@ -17,6 +19,8 @@ export interface RunningServer {
   stop: () => Promise<void>;
   getLogs: () => string;
 }
+
+let runtimePreparationPromise: Promise<void> | null = null;
 
 export function assert(condition: unknown, message: string): asserts condition {
   if (!condition) {
@@ -55,6 +59,66 @@ export const requestJson = async (
 
 const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
+const runPackageScript = async (scriptName: string, timeoutMs: number): Promise<void> => {
+  await new Promise<void>((resolve, reject) => {
+    const logs: string[] = [];
+    const child = spawn('pnpm', ['run', scriptName], {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
+    const timer = setTimeout(() => {
+      child.kill('SIGTERM');
+      reject(new Error(`${scriptName} timed out after ${timeoutMs}ms\n${logs.join('')}`));
+    }, timeoutMs);
+
+    child.stdout?.on('data', chunk => {
+      logs.push(String(chunk));
+    });
+
+    child.stderr?.on('data', chunk => {
+      logs.push(String(chunk));
+    });
+
+    child.once('exit', code => {
+      clearTimeout(timer);
+      if (code === 0) {
+        resolve();
+        return;
+      }
+
+      reject(new Error(`${scriptName} exited with code=${code}\n${logs.join('')}`));
+    });
+  });
+};
+
+const ensureRuntimePrepared = async (timeoutMs: number): Promise<void> => {
+  if (!runtimePreparationPromise) {
+    runtimePreparationPromise = (async () => {
+      let lastError: Error | null = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          await runPackageScript('prepare:runtime', timeoutMs);
+          return;
+        } catch (error: unknown) {
+          lastError = error instanceof Error ? error : new Error(String(error));
+          if (!lastError.message.includes('database is locked') || attempt === 2) {
+            throw lastError;
+          }
+          await sleep(750);
+        }
+      }
+      throw lastError ?? new Error('prepare:runtime failed for unknown reason');
+    })().catch(error => {
+      runtimePreparationPromise = null;
+      throw error;
+    });
+  }
+
+  await runtimePreparationPromise;
+};
+
 const stopProcess = (child: ChildProcess): Promise<void> => {
   return new Promise(resolve => {
     if (child.exitCode !== null || child.signalCode !== null) {
@@ -76,6 +140,10 @@ const stopProcess = (child: ChildProcess): Promise<void> => {
 export const startServer = async (options: StartServerOptions): Promise<RunningServer> => {
   const timeoutMs = options.startupTimeoutMs ?? 30000;
   const logs: string[] = [];
+
+  if (options.prepareRuntime) {
+    await ensureRuntimePrepared(options.prepareTimeoutMs ?? 120000);
+  }
 
   const child = spawn('npm', ['run', 'serve:e2e'], {
     cwd: process.cwd(),

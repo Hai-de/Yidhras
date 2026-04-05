@@ -49,6 +49,8 @@
     "test:inference-workflow-core": "tsx src/e2e/inference_workflow_core.ts",
     "test:workflow-locking": "tsx src/e2e/workflow_locking.ts",
     "test:workflow-retry-semantics": "tsx src/e2e/workflow_retry_semantics.ts",
+    "test:workflow-replay-scheduler-suppression": "tsx src/e2e/workflow_replay_scheduler_suppression.ts",
+    "test:world-pack-scenario-demo": "tsx src/e2e/world_pack_scenario_demo.ts",
     "test:workflow-replay": "tsx src/e2e/workflow_replay.ts",
     "smoke": "pnpm run smoke:startup && pnpm run smoke:endpoints",
     "manual:clock-demo": "tsx scripts/manual/clock_demo.ts",

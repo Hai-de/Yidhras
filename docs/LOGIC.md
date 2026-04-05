@@ -19,6 +19,8 @@ This file focuses on business rules and domain semantics rather than unstable im
 - Inference and execution are treated as related but distinct concerns.
 - Workflow records act as the formal bridge between decision generation and runtime-side dispatch.
 - Product-facing backend success responses follow the unified envelope rule `{ success: true, data, meta? }`.
+- world-pack 现已开始承载 scenario-driven runtime declaration：角色、物理实体、事件模板、动作与决策规则可由 pack 声明，并由 runtime materialize / consume。
+- 当前 Death Note demo baseline 已能沿 `notebook_discovered -> claim_death_note -> murderous_intent_formed -> timeline evidence` 方向驱动最小剧情闭环。
 
 ### Contract / Validation Boundary Note / 契约与校验边界说明
 
@@ -31,6 +33,7 @@ This file focuses on business rules and domain semantics rather than unstable im
 - Full autonomous perception-decision-action loop for agents.
 - Richer delayed dispatch behavior aligned with fuller transmission-layer constraints.
 - Continued expansion on top of the current workflow baseline rather than replacing it with a second temporary path.
+- More complete pack-driven scenario loops where possession/state/event semantics feed back into rule-based or provider-side decisions.
 
 ## 2) Information Boundary / 信息边界规则
 
@@ -118,6 +121,7 @@ This file focuses on business rules and domain semantics rather than unstable im
 
 - Cross-layer coupling is only partially formalized.
 - Some couplings are represented in data structures and APIs, but full enforcement remains phased.
+- world-pack scenario baseline 现已开始让 L3 narrative event、actor/artifact state 与 inference/action decision 形成最小反馈回路，但仍不是完整通用 simulation DSL。
 
 ## 7) Scheduler Logic Notes / Scheduler 逻辑说明
 

@@ -1,6 +1,11 @@
 import type { IdentityContext } from '../identity/types.js';
 import type { MemoryContextPack } from '../memory/types.js';
 import type { VariablePool } from '../narrative/types.js';
+import type {
+  WorldPackActionConfig,
+  WorldPackDecisionRuleConfig,
+  WorldPackScenarioValue
+} from '../world/schema.js';
 import type { PromptFragment } from './prompt_fragments.js';
 
 export type InferenceStrategy = 'mock' | 'rule_based';
@@ -147,6 +152,35 @@ export interface InferenceWorldPackRef {
   version: string;
 }
 
+export type InferencePackStateValue = WorldPackScenarioValue;
+export type InferencePackStateRecord = Record<string, InferencePackStateValue>;
+
+export interface InferencePackArtifactSnapshot {
+  id: string;
+  state: InferencePackStateRecord;
+}
+
+export interface InferencePackLatestEventSnapshot {
+  event_id: string;
+  title: string;
+  type: string;
+  semantic_type: string | null;
+  created_at: string;
+}
+
+export interface InferencePackStateSnapshot {
+  actor_roles: string[];
+  actor_state: InferencePackStateRecord | null;
+  owned_artifacts: InferencePackArtifactSnapshot[];
+  world_state: InferencePackStateRecord | null;
+  latest_event: InferencePackLatestEventSnapshot | null;
+}
+
+export interface InferencePackRuntimeContract {
+  actions: Record<string, WorldPackActionConfig>;
+  decision_rules: WorldPackDecisionRuleConfig[];
+}
+
 export interface InferenceContext {
   inference_id: string;
   actor_ref: InferenceActorRef;
@@ -164,6 +198,8 @@ export interface InferenceContext {
   policy_summary: InferencePolicySummary;
   transmission_profile: InferenceTransmissionProfile;
   memory_context: MemoryContextPack;
+  pack_state: InferencePackStateSnapshot;
+  pack_runtime: InferencePackRuntimeContract;
 }
 
 export interface PromptProcessingTrace {

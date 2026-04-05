@@ -3,11 +3,13 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
 import { ChronosEngine } from '../clock/engine.js';
+import type { CalendarConfig } from '../clock/types.js';
 import { getWorldPacksDir } from '../config/runtime_config.js';
 import { ValueDynamicsManager } from '../dynamics/manager.js';
 import { NarrativeResolver } from '../narrative/resolver.js';
 import { notifications } from '../utils/notifications.js';
 import { WorldPack, WorldPackLoader } from '../world/loader.js';
+import { materializeWorldPackScenario } from '../world/materializer.js';
 import { getGraphData } from './graph_data.js';
 import { RuntimeSpeedPolicy, RuntimeSpeedSnapshot } from './runtime_speed.js';
 import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
@@ -39,6 +41,7 @@ export class SimulationManager {
     this.activePack = pack;
 
     const runtimeConfig = getWorldPackRuntimeConfig(pack);
+    const calendars = (pack.time_systems ?? []) as unknown as CalendarConfig[];
 
     if (runtimeConfig.configuredStepTicks !== undefined && runtimeConfig.configuredStepTicks > 0n) {
       this.runtimeSpeed.setConfiguredStepTicks(runtimeConfig.configuredStepTicks);
@@ -49,15 +52,17 @@ export class SimulationManager {
       }
     }
 
-    this.clock = new ChronosEngine(pack.time_systems || [], runtimeConfig.initialTick);
+    this.clock = new ChronosEngine(calendars, runtimeConfig.initialTick);
     this.resolver = new NarrativeResolver(pack.variables || {});
     this.dynamics = new ValueDynamicsManager();
+
+    await materializeWorldPackScenario(this.prisma, pack, runtimeConfig.initialTick ?? 0n);
 
     const lastEvent = await this.prisma.event.findFirst({
       orderBy: { tick: 'desc' }
     });
     if (lastEvent) {
-      this.clock = new ChronosEngine(pack.time_systems || [], lastEvent.tick);
+      this.clock = new ChronosEngine(calendars, lastEvent.tick);
     }
 
     const currentTick = this.clock.getTicks();

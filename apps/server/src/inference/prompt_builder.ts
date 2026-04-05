@@ -46,6 +46,7 @@ const buildContextPromptPayload = (context: InferenceContext): Record<string, un
     attributes: context.attributes,
     visible_variables: context.visible_variables,
     memory_context: context.memory_context,
+    pack_state: context.pack_state,
     tick: context.tick.toString(),
     world_pack: context.world_pack,
     strategy: context.strategy
@@ -123,7 +124,7 @@ const buildCombinedPrompt = (fragments: PromptFragment[]): string => {
 
 export const buildPromptFragments = (context: InferenceContext): PromptFragment[] => {
   const resolver = new NarrativeResolver(context.visible_variables);
-  const templateContext = {
+  const resolverTemplateContext = {
     ...context.visible_variables,
     name: context.world_pack.name,
     actor_name: context.actor_display_name,
@@ -136,13 +137,15 @@ export const buildPromptFragments = (context: InferenceContext): PromptFragment[
   const worldTemplate = context.world_prompts.global_prefix ?? '';
   const roleTemplate = context.world_prompts.agent_initial_context ?? '';
 
-  const worldPrompt = worldTemplate.length > 0 ? resolver.resolve(worldTemplate, templateContext) : '';
-  const resolvedRoleTemplate = roleTemplate.length > 0 ? resolver.resolve(roleTemplate, templateContext) : '';
+  const worldPrompt = worldTemplate.length > 0 ? resolver.resolve(worldTemplate, resolverTemplateContext) : '';
+  const resolvedRoleTemplate = roleTemplate.length > 0 ? resolver.resolve(roleTemplate, resolverTemplateContext) : '';
   const rolePrompt = [
     resolvedRoleTemplate,
     `Actor display name: ${context.actor_display_name}`,
     `Actor role: ${context.actor_ref.role}`,
-    `Resolved agent id: ${context.resolved_agent_id ?? 'none'}`
+    `Resolved agent id: ${context.resolved_agent_id ?? 'none'}`,
+    `Pack actor roles: ${context.pack_state.actor_roles.join(', ') || 'none'}`,
+    `Owned artifacts: ${context.pack_state.owned_artifacts.map(artifact => artifact.id).join(', ') || 'none'}`
   ]
     .filter(line => line.length > 0)
     .join('\n');

@@ -3,6 +3,7 @@
 > 用于沉淀当前不阻塞主干开发、但值得后续逐步回收的小功能、改善项与增强项。
 >
 > 这些条目默认不进入当前主线里程碑；待项目主干稳定、架构边界更清晰后，再按专题逐步实施。
+> 本轮为了收口“整个流程流通”的最小 demo，已将多项未开发但非主链路必需的事项主动下沉到本文档。
 
 ## 使用说明
 
@@ -99,6 +100,48 @@
 - 延期原因：
   当前项目尚未进入需要主题资产大规模流转的阶段；建议等后续有成熟的可视化主题编辑器和更稳定的 theme schema 后，再统一设计导入导出机制。
 
+### 7. Notifications Center 与 BottomDock 数据模型深化
+- 状态：deferred
+- 优先级：medium
+- 范围：notifications / shell / bottom dock / recent targets
+- 背景：
+  当前 shell 已具备 TopRuntimeBar 状态摘要、轻量通知反馈、BottomDock jobs/traces 最小回看层与 recent targets，但这些能力仍偏 baseline，足以支撑最小 demo，不足以支撑长期调试与值班式观察。
+- 后续增强候选：
+  - notifications center 深化（`code` / `details` / clear actions）
+  - BottomDock traces / jobs 从 recent-target 回看层升级为更真实的专属 read model
+  - recent target 持久化
+  - command palette / 快速动作入口
+- 延期原因：
+  当前最小 demo 已能完成基础流程展示；这些项主要提升控制台效率与调试舒适度，不构成主链路阻塞。
+
+### 8. Scheduler Workspace 深度诊断与跨工作区联动
+- 状态：deferred
+- 优先级：medium
+- 范围：scheduler workspace / overview / agent / workflow / audit / graph
+- 背景：
+  当前前端已经具备独立 Scheduler Workspace，并能消费 operator / agent projection、ownership、workers、rebalance 与基础 drill-down；它已经足够承担最小 demo 的调度观测入口。
+- 后续增强候选：
+  - 更深的 decision detail 展示
+  - worker / actor hot spots
+  - ownership history 与更丰富的 worker health 视图
+  - rebalance recommendation / suppress reason / apply linkage 的更深 drill-down
+  - 更强 cross-linking 到 workflow / audit / graph
+- 延期原因：
+  当前 workspace 已能证明 scheduler 主链路存在且可观测；继续下钻主要是 operator 分析效率增强，而不是 demo 成立条件。
+
+### 9. 前端测试资产扩充
+- 状态：deferred
+- 优先级：low
+- 范围：web unit tests / feature stores / composables / page adapters
+- 背景：
+  当前前端已经具备 `runtime / shell / workflow / graph / notifications / scheduler api` 等核心单测基线，足以支撑当前收口阶段的基本回归信心。
+- 后续增强候选：
+  - feature-level store / composable tests
+  - 更细的 scheduler workspace view-model tests
+  - 关键工作区页面的组合式回归测试
+- 延期原因：
+  当前阶段优先级是先确认最小 demo 能顺畅跑通；测试广度补强适合在主线稳定后系统推进。
+
 ---
 
 ## 二、后端
@@ -170,6 +213,73 @@
 - 延期原因：
   当前主线优先把轻量 operator 总览层搭稳；更细分的 breakdown 应在真实前端消费需求明确后再推进。
 
+### 6. Replay Orchestration 与 Durable Job Scheduling 深化
+- 状态：deferred
+- 优先级：medium
+- 范围：workflow runtime / replay / scheduler / durable scheduling
+- 背景：
+  当前系统已经具备 retry、replay、intent class、replay-aware suppression 与 `scheduled_for_tick` 等 durable baseline，足以支撑最小 demo 的工作流闭环。
+- 后续增强候选：
+  - richer replay orchestration
+  - 更 durable 的 job scheduling 语义
+  - windowed / not-before / not-after 风格的调度约束
+  - 更清晰的 replay-derived scheduling linkage
+- 延期原因：
+  当前主线需要的是“可跑通”而不是“编排语义尽可能完整”；继续深挖 orchestration 会显著拉长收口周期。
+
+### 7. Automatic Rebalance 策略与 Operator-Forced Workflow 语义深化
+- 状态：deferred
+- 优先级：medium
+- 范围：scheduler ownership / rebalance / operator control plane
+- 背景：
+  当前 scheduler 已经具备 partition ownership、migration、worker runtime state 与 automatic rebalance baseline，也已有相应读接口与前端观察面。
+- 后续增强候选：
+  - 更丰富的 rebalance guardrails
+  - recommendation policy 深化
+  - recommendation -> apply linkage 收口
+  - 更明确的 operator-forced workflow semantics
+- 延期原因：
+  这些能力更偏生产级调度治理与人工干预语义；对当前最小 demo 来说，现有 baseline 已足够展示调度系统在运作。
+
+### 8. Memory Core 分层读模型与 Retrieval / Aggregation
+- 状态：deferred
+- 优先级：medium
+- 范围：memory core / agent overview / retrieval
+- 背景：
+  当前已经有 MemoryTrace persistence、recent trace read 与 agent overview memory summary，足以支撑最小 demo 对“记忆存在”的基本表达。
+- 后续增强候选：
+  - 更长期 / 分层 memory read model
+  - retrieval / aggregation 能力
+  - 更适合 prompt / overview 消费的 memory condensation
+- 延期原因：
+  这些增强更偏行为质量提升与长期演化，不是打通 demo 主流程的必要前提。
+
+### 9. Audit / Review Operator 视图深化
+- 状态：deferred
+- 优先级：medium
+- 范围：audit feed / detail / related-record aggregation / operator observability
+- 背景：
+  当前统一 audit feed、detail read、基础过滤、cursor、workflow related-record aggregation 与 replay-lineage detail 已经具备，能满足最小 demo 的基础观察需求。
+- 后续增强候选：
+  - 更完整的 operator 视图
+  - 更强的跨对象关联观测
+  - 与 scheduler / workflow / graph / social 的更顺滑交叉定位
+- 延期原因：
+  当前已有读面已经能承担 demo 的“可看见、可追踪”需求；进一步增强主要优化定位速度与解释深度。
+
+### 10. Mutation 写路径规范化与 Delta-Capable World Actions
+- 状态：deferred
+- 优先级：medium
+- 范围：mutation semantics / workflow writes / world actions
+- 背景：
+  当前 `relationship_adjustment` 与 `snr_adjustment` 已经提供 resolved-intent detail shape，足够支撑现阶段工作流结果的最小解释。
+- 后续增强候选：
+  - 更广的写路径规范化
+  - future delta-capable world actions
+  - 更统一的 mutation result / intent projection 约定
+- 延期原因：
+  这些属于下一层领域写模型演进；在当前阶段优先落地会把最小 demo 的范围拉得过宽。
+
 
 ---
 
@@ -213,6 +323,49 @@
   - 一旦转正，补充对应设计/计划/评审文档并在此处标记状态
 - 延期原因：
   当前先建立收纳池与分类方法，后续再制度化执行。
+
+---
+
+## 四、内容与数据包
+
+### 1. World-Pack Schema Contract 与 Validation Checklist
+- 状态：deferred
+- 优先级：medium
+- 范围：world-pack contract / validation / docs
+- 背景：
+  当前项目已经有可运行的 world-pack baseline 与 configw/bootstrap 链路，足以支撑最小 demo 启动和展示。
+- 后续增强候选：
+  - formalize world-pack schema contract
+  - validation checklist
+  - 作者侧约束与错误说明文档
+- 延期原因：
+  当前阶段继续复用现有 pack baseline 成本最低；正式契约化更适合等内容体系更稳定后统一收口。
+
+### 2. Pack-Level Metadata / Registry / Docs Tooling
+- 状态：deferred
+- 优先级：low
+- 范围：content packaging / registry / docs tooling
+- 背景：
+  当前 world-pack 使用方式仍以项目内置模板和本地运行数据目录为主，尚未进入需要多 pack 资产治理的阶段。
+- 后续增强候选：
+  - pack-level metadata
+  - registry
+  - docs tooling / discoverability tooling
+- 延期原因：
+  这些项对资产规模化管理有价值，但并不影响当前最小 demo 的单 pack 运行闭环。
+
+### 3. Provider-Owned Presentation / Theme / Data Authoring 示例与校验路径
+- 状态：deferred
+- 优先级：low
+- 范围：provider workflow / theme authoring / data authoring / validation
+- 背景：
+  当前 provider-owned 主题入口、示例 theme 与基础 runtime 解析链路已经存在，但内容作者工作流仍然是最小形态。
+- 后续增强候选：
+  - 更完整的 presentation / theme / data authoring 示例
+  - provider authoring validation path
+  - 面向内容作者的操作说明与校验反馈
+- 延期原因：
+  当前最小 demo 优先级是跑通已有 pack，而不是把内容生产工具链一次做全。
 
 ---
 
