@@ -118,14 +118,15 @@ pnpm --filter yidhras-server run reset:dev-db
 
 ```bash
 pnpm --filter yidhras-server typecheck
-pnpm --filter yidhras-server run test:scheduler-runtime-status
-pnpm --filter yidhras-server run test:scheduler-loop-serialization
+pnpm --filter yidhras-server test:integration
+pnpm --filter yidhras-server test:e2e
 ```
 
 其中：
 
-- `test:scheduler-runtime-status` 会检查 `/api/status` 中是否暴露 `runtime_loop` 和 `sqlite` 信息，以及 pragma 是否生效
-- `test:scheduler-loop-serialization` 会注入人为延迟，证明 simulation loop 在长耗时场景下仍不会重入
+- `test:integration` 当前包含首批 runtime / lease / locking 集成测试模板
+- `test:e2e` 当前包含首批隔离数据库驱动的 `/api/status`、startup smoke 与 loop serialization 模板
+- 历史 `test:*` 单文件脚本仍在迁移期保留，但已迁移的场景优先使用新的 Vitest 分层入口
 
 ## 运行时配置（configw）
 
@@ -207,11 +208,16 @@ pnpm --filter yidhras-server run test:scheduler-loop-serialization
 
 - 启动后端：`pnpm --filter yidhras-server dev`
 - 启动前端：`pnpm --filter web dev`
+- 工作区单测：`pnpm test:unit`
+- 工作区测试总入口：`pnpm test`
 - 后端 lint：`pnpm --filter yidhras-server lint`
 - 前端 lint：`pnpm --filter web lint`
 - 后端 typecheck：`pnpm --filter yidhras-server typecheck`
 - 前端 typecheck：`pnpm --filter web typecheck`
-- 前端单测：`pnpm --filter web test:unit`
+- 前端单测：`pnpm --filter web test`
+- 后端集成测试：`pnpm --filter yidhras-server test:integration`
+- 后端 E2E 测试：`pnpm --filter yidhras-server test:e2e`
+- 后端测试 watch：`pnpm --filter yidhras-server test:watch`
 - 后端冒烟：`pnpm --filter yidhras-server smoke`
 
 ## 文档导航

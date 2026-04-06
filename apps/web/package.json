@@ -9,8 +9,10 @@
     "lint": "eslint .",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
+    "test": "vitest run --config vitest.config.ts",
     "typecheck": "nuxt typecheck",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
     "@nuxt/ui": "^4.6.0",

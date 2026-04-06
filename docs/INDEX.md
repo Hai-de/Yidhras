@@ -71,7 +71,7 @@
    - 看如何重置开发数据库、哪些环境变量会影响 runtime 稳定性
 2. `ARCH.md`
    - 看 simulation loop 串行化、SQLite pragma 初始化、development 数据清理这几个架构约束
-3. `apps/server/src/e2e/scheduler_runtime_status.ts`
+3. `apps/server/tests/e2e/scheduler-runtime-status.spec.ts`
    - 看 `/api/status` 对 `runtime_loop` 与 `sqlite` 的验证断言
-4. `apps/server/src/e2e/scheduler_loop_serialization.ts`
+4. `apps/server/tests/e2e/scheduler-loop-serialization.spec.ts`
    - 看“人为注入长耗时 step 也不会重入”的证明性 e2e

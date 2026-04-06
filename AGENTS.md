@@ -96,13 +96,21 @@ This file is intentionally specific to the current repo layout and conventions.
 ## 7) Test Commands (Current State)
 
 - Frontend unit tests are now available via Vitest in `apps/web/tests/unit/*.spec.ts`.
-- Backend still does not use a centralized unit/integration test runner; existing verification is primarily script-driven.
+- Backend now uses Vitest as the canonical test runner with layered entry points.
 - Historical manual verification scripts now live under `apps/server/scripts/manual/*.ts`.
-- Current backend verification scripts include:
+- Preferred workspace / app-level test commands now include:
+- `pnpm test`
+- `pnpm test:unit`
+- `pnpm test:integration`
+- `pnpm test:e2e`
+- `pnpm --filter web test`
+- `pnpm --filter yidhras-server test:integration`
+- `pnpm --filter yidhras-server test:e2e`
+- `pnpm --filter yidhras-server test:watch`
+- Existing backend script-driven verification still exists during migration for scenarios not yet ported to Vitest, for example:
 - `pnpm --filter yidhras-server smoke`
 - `pnpm --filter yidhras-server test:workflow-locking`
 - `pnpm --filter yidhras-server test:workflow-replay`
-- `pnpm --filter yidhras-server test:action-intent-locking`
 - `pnpm --filter yidhras-server test:adjust-relationship`
 - `pnpm --filter yidhras-server test:adjust-snr`
 - `pnpm --filter yidhras-server test:trigger-event`
@@ -112,13 +120,11 @@ This file is intentionally specific to the current repo layout and conventions.
 
 ## 8) Single-Test Execution (Important)
 
-- Since there is no centralized test framework, "single test" means running one script file.
-- Preferred pattern (from repo root):
-- `pnpm --filter yidhras-server exec tsx src/e2e/workflow_replay.ts`
-- Equivalent pattern (inside `apps/server`):
-- `pnpm exec tsx src/e2e/workflow_replay.ts`
-- For any new test file, keep the same approach:
-- `pnpm --filter yidhras-server exec tsx <path-to-test-file>.ts`
+- For canonical tests, prefer Vitest file targeting:
+- `pnpm --filter yidhras-server exec vitest run --config vitest.integration.config.ts tests/integration/<file>.spec.ts`
+- `pnpm --filter yidhras-server exec vitest run --config vitest.e2e.config.ts tests/e2e/<file>.spec.ts`
+- For not-yet-migrated legacy script tests, continue using:
+- `pnpm --filter yidhras-server exec tsx src/e2e/<file>.ts`
 
 ## 9) Database and Prisma Commands
 

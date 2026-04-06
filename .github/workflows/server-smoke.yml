@@ -1,13 +1,19 @@
 name: Server Smoke Tests
 
-on: 
+on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'apps/server/**'
+      - 'packages/contracts/**'
+      - '.github/workflows/server-smoke.yml'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: file:./prisma/dev.db
 
     steps:
       - name: Checkout
@@ -32,8 +38,8 @@ jobs:
         run: pnpm --filter yidhras-server prepare:runtime
 
       - name: Startup smoke test
-        run: pnpm --filter yidhras-server smoke:startup
+        run: pnpm --filter yidhras-server exec vitest run --config vitest.e2e.config.ts tests/e2e/smoke-startup.spec.ts
 
       - name: Key endpoints smoke test
-        run: pnpm --filter yidhras-server smoke:endpoints
+        run: pnpm --filter yidhras-server exec vitest run --config vitest.e2e.config.ts tests/e2e/smoke-endpoints.spec.ts
 
