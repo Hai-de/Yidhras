@@ -1,270 +1,174 @@
 # AGENTS.md
 
 Repository guidance for coding agents working in `Yidhras`.
-This file is intentionally specific to the current repo layout and conventions.
 
-## 1) Workspace Overview
+## 1. Workspace
 
-- Monorepo-like layout with two Node.js apps:
 - `apps/server`: TypeScript + Express + Prisma + SQLite backend.
 - `apps/web`: Nuxt 4 + Vue 3 + Pinia frontend.
-- Shared domain/data docs at repo root: `README.md`, `AGENTS.md`, `TODO.md`, `记录.md`.
-- Detailed architecture/API/logic docs live under `docs/`:
-  - `docs/ARCH.md`
-  - `docs/API.md`
-  - `docs/LOGIC.md`
-- World-pack data under `data/world_packs` and loaded by server runtime.
-- Package management is now handled via **pnpm workspace** at repo root.
+- `packages/contracts`: shared transport schemas and envelope types.
+- `docs/`: stable reference docs.
+- `data/`: runtime data area created locally at startup; do not treat it as the main source of truth in Git.
+- Package manager: `pnpm` workspace.
 
-## 2) Rule Files Check (Cursor/Copilot)
+## 2. Tooling Baseline
 
-- No `.cursorrules` file found.
-- No `.cursor/rules/` directory found.
-- No `.github/copilot-instructions.md` file found.
-- If any of these are added later, treat them as high-priority constraints.
+- Node.js 18+ and `pnpm` 10+.
+- Server TypeScript is strict and uses `NodeNext` ESM.
+- In `apps/server`, keep `.js` extensions in relative TS imports.
+- Frontend runs CSR-only (`apps/web/nuxt.config.ts`, `ssr: false`).
+- Prisma schema lives at `apps/server/prisma/schema.prisma`.
+- Shared transport-boundary contracts live in `packages/contracts`.
 
-## 3) Tooling and Runtime Baseline
+## 3. Commands
 
-- Node.js 18+ expected (Nuxt 4 and modern TS/ESM usage).
-- Package manager: `pnpm` (workspace root manages lockfile via `pnpm-lock.yaml`).
-- Backend uses Prisma with SQLite (`apps/server/prisma/schema.prisma`).
-- Server TypeScript config is strict (`"strict": true`).
-- Module system in server is `NodeNext` ESM; runtime imports include `.js` extensions.
-- M0 engineering baseline is completed; future server work should assume lint/typecheck cleanliness is already a hard expectation rather than an open milestone.
+### Install
 
-## 4) Install Commands
-
-- Install all workspace deps:
 - `pnpm install`
-- Install backend deps only (if needed):
 - `pnpm --filter yidhras-server install`
-- Install frontend deps only (if needed):
 - `pnpm --filter web install`
 
-## 5) Build / Dev / Start Commands
+### Dev / Build / Start
 
-- Backend dev server (watch mode):
 - `pnpm --filter yidhras-server dev`
-- Backend build:
 - `pnpm --filter yidhras-server build`
-- Backend production start (after build):
 - `pnpm --filter yidhras-server start`
-- Frontend dev server:
 - `pnpm --filter web dev`
-- Frontend build:
 - `pnpm --filter web build`
-- Frontend preview (built app):
 - `pnpm --filter web preview`
-- Start both services:
 - `./start-dev.sh` or `start-dev.bat`
 
-## 5.1) Quality Commands (Lint / Typecheck)
+### Quality
 
-- Backend lint:
-- `pnpm --filter yidhras-server lint`
-- Backend typecheck:
-- `pnpm --filter yidhras-server typecheck`
-- Frontend lint:
-- `pnpm --filter web lint`
-- Frontend typecheck:
-- `pnpm --filter web typecheck`
-- Workspace lint:
 - `pnpm lint`
-- Workspace typecheck:
 - `pnpm typecheck`
-- `lint:fix` is intentionally not provided in this stage.
+- `pnpm --filter yidhras-server lint`
+- `pnpm --filter yidhras-server typecheck`
+- `pnpm --filter web lint`
+- `pnpm --filter web typecheck`
 
-## 6) Lint / Format Status
+### Tests
 
-- ESLint is enabled in both apps:
-- `apps/server/.eslintrc.cjs`
-- `apps/web/.eslintrc.cjs`
-- Prettier is enabled at repo root:
-- `.prettierrc.json`
-- Current strategy is safety-first with selected rule hardening (practical over style maximalism).
-- Ignored paths are explicitly configured, including:
-- `**/node_modules/**`, `**/dist/**`, `**/.nuxt/**`, `**/.output/**`, `**/coverage/**`.
-- Existing lint debt should be tracked in `记录.md`, not silently fixed in broad sweeps.
-- Hardened-as-error rules include:
-- `@typescript-eslint/no-explicit-any`
-- `@typescript-eslint/no-unused-vars`
-- `simple-import-sort/imports`
-- `simple-import-sort/exports`
-- `prefer-const` (server)
-- `no-case-declarations` (server)
+- Workspace:
+  - `pnpm test`
+  - `pnpm test:unit`
+  - `pnpm test:integration`
+  - `pnpm test:e2e`
+- Server:
+  - `pnpm --filter yidhras-server test:unit`
+  - `pnpm --filter yidhras-server test:integration`
+  - `pnpm --filter yidhras-server test:e2e`
+  - `pnpm --filter yidhras-server test:watch`
+  - `pnpm --filter yidhras-server smoke`
+- Web:
+  - `pnpm --filter web test:unit`
+  - `pnpm --filter web test:watch`
 
-## 7) Test Commands (Current State)
+### Single-spec examples
 
-- Frontend unit tests are now available via Vitest in `apps/web/tests/unit/*.spec.ts`.
-- Backend now uses Vitest as the canonical test runner with layered entry points.
-- Historical manual verification scripts now live under `apps/server/scripts/manual/*.ts`.
-- Preferred workspace / app-level test commands now include:
-- `pnpm test`
-- `pnpm test:unit`
-- `pnpm test:integration`
-- `pnpm test:e2e`
-- `pnpm --filter web test`
-- `pnpm --filter yidhras-server test:integration`
-- `pnpm --filter yidhras-server test:e2e`
-- `pnpm --filter yidhras-server test:watch`
-- Existing backend script-driven verification still exists during migration for scenarios not yet ported to Vitest, for example:
-- `pnpm --filter yidhras-server smoke`
-- `pnpm --filter yidhras-server test:workflow-locking`
-- `pnpm --filter yidhras-server test:workflow-replay`
-- `pnpm --filter yidhras-server test:adjust-relationship`
-- `pnpm --filter yidhras-server test:adjust-snr`
-- `pnpm --filter yidhras-server test:trigger-event`
-- `pnpm --filter yidhras-server test:audit-feed`
-- `pnpm --filter yidhras-server test:audit-workflow-lineage`
-- Manual demo scripts can still be run with `pnpm --filter yidhras-server run manual:*` when needed, but they are not the main verification path.
-
-## 8) Single-Test Execution (Important)
-
-- For canonical tests, prefer Vitest file targeting:
 - `pnpm --filter yidhras-server exec vitest run --config vitest.integration.config.ts tests/integration/<file>.spec.ts`
 - `pnpm --filter yidhras-server exec vitest run --config vitest.e2e.config.ts tests/e2e/<file>.spec.ts`
-- For not-yet-migrated legacy script tests, continue using:
-- `pnpm --filter yidhras-server exec tsx src/e2e/<file>.ts`
+- `pnpm --filter web exec vitest run --config vitest.config.ts tests/unit/<file>.spec.ts`
 
-## 9) Database and Prisma Commands
+### Runtime setup
 
-- Generate Prisma client:
-- `pnpm --filter yidhras-server exec prisma generate`
-- Create/apply local migration:
-- `pnpm --filter yidhras-server exec prisma migrate dev --name <migration_name>`
-- Schema is in `apps/server/prisma/schema.prisma`.
-- DB URL comes from `apps/server/.env` (`DATABASE_URL`).
-- Never commit secrets from `.env`.
+- `pnpm --filter yidhras-server prepare:runtime`
+- `pnpm --filter yidhras-server reset:dev-db`
+- Manual/demo scripts live under `apps/server/scripts/manual/*`.
 
-## 10) Architecture-Aware Coding Notes
+## 4. Architecture Anchors
 
-- Server entry starts in `apps/server/src/index.ts`, but Express assembly is now split across:
-  - `apps/server/src/app/create_app.ts`
-  - `apps/server/src/app/routes/*.ts`
-  - `apps/server/src/app/services/*.ts`
-  - `apps/server/src/app/http/*.ts`
-  - `apps/server/src/app/middleware/*.ts`
-  - `apps/server/src/app/runtime/*.ts`
-- `apps/server/src/index.ts` should remain a composition root for startup, runtime bootstrap, and route assembly rather than growing back into an all-in-one route file.
-- Simulation entrypoint is `SimulationManager` in `apps/server/src/core/simulation.ts`.
-- World-pack loading is file-driven via YAML in `apps/server/src/world/loader.ts`.
-- Narrative templating and permission gating are in `apps/server/src/narrative/resolver.ts`.
-- Frontend state uses Pinia stores in `apps/web/stores/*.ts`.
-- Graph visualization now lives under `apps/web/features/graph/components/*` and uses Cytoscape through `GraphCanvas.vue`.
-- Keep the stable request tracing path intact: `requestIdMiddleware()` sets `X-Request-Id` and keeps `res.locals.requestId` aligned with the unified error envelope.
-- Keep runtime gating centralized through `AppContext.assertRuntimeReady(feature)` so world-pack-dependent endpoints continue to return `503/WORLD_PACK_NOT_READY` with stable details.
-- Inference integration is intentionally reserved at `apps/server/src/app/routes/inference.ts` and `apps/server/src/inference/service.ts`; do not bypass these locations with ad-hoc route-level prompt logic.
-- Audit / observability integration is now also active through `apps/server/src/app/routes/audit.ts` and `apps/server/src/app/services/audit.ts`; prefer extending the unified audit model instead of adding one-off debug endpoints.
-- Shared transport-boundary contracts now live in `packages/contracts`.
-- Architectural/detail docs now live under `docs/`, while root docs are entry-point oriented.
+### Server
 
-### 10.1) Current Strategic Direction for Agents / 当前 Agent 工程方向
+- `apps/server/src/index.ts` is the composition root.
+- `apps/server/src/app/create_app.ts` wires Express middleware and route registration.
+- `apps/server/src/app/routes/*.ts` should remain transport-level and thin.
+- `apps/server/src/app/services/*.ts` hold orchestration and read-model assembly.
+- `apps/server/src/app/runtime/*.ts` holds runtime loop, scheduler, job runner, dispatcher, lease, ownership, and rebalance logic.
+- `apps/server/src/core/simulation.ts` owns runtime core concerns: Prisma init, SQLite pragmas, world-pack loading, clock, narrative resolver, dynamics, runtime speed, and graph access.
+- Do not turn `SimulationManager` into a generic app-service bucket; put new query/orchestration logic in focused modules.
 
-- The official route is now **Phase B → Phase D**, not a disposable prototype path.
-- Phase B is already delivered as a **D-ready inference service layer**:
-  - unified service entry
-  - context builder
-  - prompt builder
-  - provider abstraction
-  - normalized decision contract
-  - trace metadata
-  - pluggable sink
-- Phase D is already partially delivered as the minimal **persisted workflow complexity** baseline:
-  - `InferenceTrace`
-  - `ActionIntent`
-  - `DecisionJob` or equivalent runtime workflow state
-  - idempotency / retry / audit / replay
-- The current shipped world-action set is no longer only `post_message`; it now also includes:
-  - `adjust_relationship`
-  - `adjust_snr`
-  - `trigger_event`
-- Unified audit reads (`/api/audit/feed`, `/api/audit/entries/:kind/:id`) should be treated as part of the current Phase D observability surface.
-- Treat the remaining work as expansion of the current Phase D baseline, not as a future-from-scratch rewrite.
-- When implementing inference-related code, do **not** collapse decision generation and action execution into one opaque function.
-- API handlers should remain thin shells; domain assembly belongs in service modules.
-- Zod schemas should stay in the transport/contract boundary; do not move business rules into schemas.
-- Shared contracts should prioritize API-boundary stability, not first-round coverage of every internal domain model.
-- BigInt over HTTP should remain string-based; convert explicitly on the client only when needed.
+### Workflow / Inference
 
-## 11) Code Style: General
+- `apps/server/src/app/services/inference_workflow.ts` is a facade/export surface.
+- Split responsibilities across:
+  - `inference_workflow/parsers.ts`
+  - `inference_workflow/repository.ts`
+  - `inference_workflow/snapshots.ts`
+  - `inference_workflow/results.ts`
+  - `inference_workflow/workflow_query.ts`
+- Keep decision generation, workflow persistence, and action dispatch as separate concerns.
+- Keep API handlers thin; domain assembly belongs in services.
+- Keep inference route/service boundaries centralized at:
+  - `apps/server/src/app/routes/inference.ts`
+  - `apps/server/src/inference/service.ts`
 
-- Prefer TypeScript for all new backend/frontend logic.
-- Match local style first; avoid repo-wide reformatting.
+### Scheduler / Runtime constraints
+
+- Scheduler is partition-aware and multi-worker.
+- Lease and cursor state are partition-scoped.
+- Runtime loop is serialized in `apps/server/src/app/runtime/simulation_loop.ts`.
+- Runtime readiness is gated through `AppContext.assertRuntimeReady(feature)`.
+- Request tracing is provided by `requestIdMiddleware()` and `X-Request-Id`.
+
+### World packs
+
+- World packs are file-driven and loaded through `apps/server/src/world/loader.ts`.
+- World-pack schema lives in `apps/server/src/world/schema.ts`.
+- Scenario materialization lives in `apps/server/src/world/materializer.ts`.
+- Pack-specific decision rules and actions should flow through existing world-pack modules, not ad-hoc route logic.
+
+### Frontend
+
+- `apps/web/pages/*.vue` define page-level routes.
+- `apps/web/features/**` contain feature UI, adapters, composables, and route-state helpers.
+- Prefer route-backed state for page location/filter context; stores should mainly hold fetch state or ephemeral UI state.
+- Graph rendering stays in `features/graph/*` and uses `ClientOnly + GraphCanvas + Cytoscape`.
+- Theme application lives in `apps/web/plugins/theme.ts`; shared semantic UI lives in `apps/web/components/ui/*`.
+
+## 5. Coding Rules
+
+### General
+
+- Prefer TypeScript for new backend/frontend logic.
+- Match local style before introducing new style.
 - Keep functions small and intent-revealing.
-- Avoid dead abstractions; follow existing structure.
-- Prefer explicit data contracts for API I/O.
+- Avoid dead abstractions and broad rewrites.
+- Make focused, minimal diffs.
 
-## 12) Code Style: Imports and Modules
+### Types / API contracts
 
-- Server (NodeNext ESM): use relative imports with `.js` extension in TS source.
-- Example pattern: `import { X } from './module.js';`
-- Keep imports grouped: external packages first, local modules second.
-- Prefer named imports unless there is a clear default-export convention.
-- Remove unused imports as part of each change.
+- Avoid `any` unless unavoidable; if used, explain why inline.
+- Prefer explicit types for payloads and store state.
+- BigInt over HTTP must remain string-based.
+- Convert string → `BigInt` only where computation is required.
+- Keep Zod/contracts at the transport boundary; keep business rules in services/domain logic.
 
-## 13) Code Style: Formatting and Syntax
+### Imports / formatting
 
-- In `apps/server`: semicolons are standard; keep them.
-- In `apps/web` Vue/Pinia files: semicolons are often omitted; follow local file style.
-- Prefer single quotes in TS/JS unless file already uses another style.
-- Preserve existing whitespace rhythm; do not churn formatting-only diffs.
-- Keep comments only when they clarify non-obvious behavior.
+- In `apps/server`, use relative imports with `.js` extension.
+- Remove unused imports.
+- Avoid formatting-only churn.
+- Keep comments only when they explain non-obvious behavior.
 
-## 14) Code Style: Types and Data Modeling
+### Error handling
 
-- Respect strict TypeScript in server; avoid `any` unless unavoidable.
-- If `any` is unavoidable, add an inline comment explaining why and planned refinement.
-- Prefer interfaces/types for structured payloads and store state.
-- Use narrow unions for finite state (`'idle' | 'running' | ...`) as in stores.
-- For BigInt fields crossing API boundaries, serialize as strings over JSON.
-- Validate assumptions when converting string -> BigInt on the client.
-- For inference/workflow code, define domain contracts before writing route payload types.
-- Prefer explicit intermediate models such as `DecisionResult` / `ActionIntentDraft` over untyped freeform JSON.
+- Keep success/error envelopes stable.
+- Do not expose sensitive internals in HTTP responses.
+- Keep logs actionable and scoped.
+- Preserve stage-specific failure information for workflow/inference paths.
 
-## 15) Code Style: Naming
+## 6. Documentation Boundaries
 
-- `camelCase` for variables/functions, `PascalCase` for classes/types/components.
-- Keep API field names consistent with existing payloads (snake_case appears in API responses).
-- Keep domain naming aligned with docs: L1/L2/L3/L4, Chronos, Narrative, World Pack.
-- Use descriptive names over short abbreviations unless domain-standard (`snr`, `id`).
+- `README.md`: entry page only.
+- `TODO.md`: current status and priorities.
+- `记录.md`: verification evidence and acceptance notes.
+- `docs/API.md`: external API contracts and error codes.
+- `docs/ARCH.md`: architecture boundaries and module responsibilities.
+- `docs/LOGIC.md`: business rules and domain semantics.
+- `docs/INDEX.md`: document navigation.
+- `apps/web/README.md`: frontend-specific structure and guardrails.
+- `.limcode/design/`, `.limcode/plans/`, `.limcode/review/`: process artifacts, not the primary source of truth.
 
-## 16) Error Handling and Logging
-
-- Wrap risky API handlers with `try/catch` and return stable error responses.
-- Push operational errors into notifications queue when relevant.
-- Avoid exposing sensitive internals in HTTP responses.
-- Keep server logs actionable and scoped (include subsystem context).
-- Fail closed for permission-gated or missing-variable resolver paths.
-- Future inference/workflow failures should remain distinguishable by stage (provider / normalization / persistence / dispatch).
-
-## 17) Change Discipline for Agents
-
-- Make focused, minimal diffs that solve the requested task.
-- Do not rewrite unrelated files or rename broadly without need.
-- Update docs when behavior or commands change.
-- Follow the repo doc-boundary rules:
-  - `README.md` is an entry page only; keep it short and avoid detailed implementation/status dumps.
-  - `TODO.md` is the primary board for current milestone status and priorities.
-  - `记录.md` is for verification evidence, acceptance notes, and dated snapshots only.
-  - `docs/API.md` is for current external API contracts, error codes, and call constraints.
-  - `docs/ARCH.md` is for relatively stable architecture boundaries, module responsibilities, and design constraints.
-  - `docs/LOGIC.md` is for business rules and domain semantics, not milestone storytelling.
-  - `docs/INDEX.md` is the navigation page for detailed docs.
-  - `.limcode/plans/` and `.limcode/design/` are process assets/drafts, not the current source of truth.
-- Prefer linking over duplicating the same status/details across multiple markdown files.
-- If information changes frequently, it probably belongs in `TODO.md` or a plan doc rather than in `README.md` or `docs/ARCH.md`.
-- If information is verification-oriented, put it in `记录.md` instead of milestone or architecture docs.
-- If adding scripts (lint/test), also update this file and `README.md`.
-- Prefer validating changed paths locally (build or targeted script run) before handoff.
-- If introducing Phase B inference modules, ensure they are D-ready by design rather than temporary glue code.
-- If introducing Phase D persistence, update `docs/ARCH.md`, `docs/API.md`, `docs/LOGIC.md`, `TODO.md`, and `记录.md` together.
-
-## 18) Quick Command Cheat Sheet
-
-- Start both services (Linux/macOS): `./start-dev.sh`
-- Start both services (Windows): `start-dev.bat`
-- Backend build: `pnpm --filter yidhras-server build`
-- Frontend build: `pnpm --filter web build`
-- Backend lint: `pnpm --filter yidhras-server lint`
-- Frontend lint: `pnpm --filter web lint`
-- Run one backend test script: `pnpm --filter yidhras-server exec tsx src/clock/test.ts`
+Prefer linking over duplicating the same status/details across multiple markdown files.
+If behavior or commands change, update the relevant docs in the same change.

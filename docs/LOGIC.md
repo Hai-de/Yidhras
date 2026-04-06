@@ -1,164 +1,104 @@
 # Yidhras Logic / 业务逻辑说明
 
-Version: v0.3.2-draft
-Last Updated / 最后更新: 2026-03-30
+本文件只记录当前已成立的业务规则与领域边界，不记录阶段叙事。
 
-本文件偏向业务规则表达，不绑定未来可能变化的算法细节。
-This file focuses on business rules and domain semantics rather than unstable implementation storytelling.
+> 当前优先级请看 `TODO.md`；验证记录请看 `记录.md`。
 
-> 当前阶段状态请看 `TODO.md`；历史验证与验收记录请看 `记录.md`。
+## 1. Core Behavior Loop / 核心行为闭环
 
-## 1) Core Behavior Loop / 核心行为闭环
+- Agent context 可通过后端 API 查询。
+- Narrative variables 在解析时会经过权限过滤。
+- Social post 的创建与读取可通过 API 完成。
+- Simulation tick 持续推进，并支持 pause / resume。
+- inference、workflow persistence、action dispatch 是相关但分层的三类职责。
+- 正式成功响应遵循统一包络：`{ success: true, data, meta? }`。
+- world-pack 可声明 scenario、event template、action 与 decision rule，运行时会 materialize 并消费这些声明。
 
-### Current Logic Baseline / 当前逻辑基线
+## 2. Information Boundary / 信息边界规则
 
-- Agent context can be queried through backend API.
-- Narrative variables are resolved with permission-aware filtering.
-- Social post creation and retrieval are available through API.
-- Simulation tick advances continuously with pause/resume controls.
-- Inference and execution are treated as related but distinct concerns.
-- Workflow records act as the formal bridge between decision generation and runtime-side dispatch.
-- Product-facing backend success responses follow the unified envelope rule `{ success: true, data, meta? }`.
-- world-pack 现已开始承载 scenario-driven runtime declaration：角色、物理实体、事件模板、动作与决策规则可由 pack 声明，并由 runtime materialize / consume。
-- 当前 Death Note demo baseline 已能沿 `notebook_discovered -> claim_death_note -> murderous_intent_formed -> timeline evidence` 方向驱动最小剧情闭环。
+### Variables and resolver
 
-### Contract / Validation Boundary Note / 契约与校验边界说明
+- Variables 可携带访问元数据（如 `min_level`、可选 `circle_id`）。
+- 对受限或缺失变量，resolver 返回安全占位结果，而不是泄露原值。
+- Agent context API 会结合 circle / identity 上下文做权限判断。
+- inference context 应复用 identity / binding / policy 结果，而不是绕过这些边界。
 
-- Shared contracts live in `packages/contracts` and cover transport-boundary schemas.
-- Zod-driven validation serves boundary shape and basic format checks.
-- Business rules such as permission checks, state transitions, replay semantics, and mutation safety remain in service/domain logic.
+### Identity binding lifecycle / 身份绑定生命周期
 
-### Planned Direction / 规划方向
+- Identity 可绑定到 active / atmosphere 节点，并带有显式 role 与 status。
+- Binding 支持手动 unbind 与显式 expire。
+- runtime loop 会在 `expires_at` 到达后自动过期相关 binding。
+- 同一 `identity_id + role` 不能重复持有多个 `active` 绑定。
+- 非法 actor 组合应返回明确输入错误，而不是静默猜测。
 
-- Full autonomous perception-decision-action loop for agents.
-- Richer delayed dispatch behavior aligned with fuller transmission-layer constraints.
-- Continued expansion on top of the current workflow baseline rather than replacing it with a second temporary path.
-- More complete pack-driven scenario loops where possession/state/event semantics feed back into rule-based or provider-side decisions.
+### Identity policy / 身份策略规则
 
-## 2) Information Boundary / 信息边界规则
+- 字段级策略遵循 deny-first：`deny > allow`。
+- field wildcard 支持 `*`、精确路径与 `prefix.*`。
+- policy conditions 可使用 claims 与 attributes 的合并上下文。
+- policy 评估结果应保留可解释性，便于调试与审计。
 
-### Current Rules / 当前规则
+## 3. Time and Transport / 时间与传输规则
 
-- Variables can carry access metadata (`min_level`, optional `circle_id`).
-- Resolver returns safe placeholders for restricted or missing values.
-- Agent context API computes circle-based permission context.
-- Inference context assembly should reuse identity/binding/policy results rather than bypassing them.
+- 绝对时间以 `BigInt` tick 表示。
+- 多历法显示由同一绝对时间轴派生。
+- API transport 中的 tick-like 字段保持 string-based。
+- 延迟执行通过显式 workflow/time 字段表达，而不是依赖隐式内存状态。
+- 前端默认应保留 tick 字符串；仅在比较或计算时再转换为 `BigInt(...)`。
 
-### Identity Binding Lifecycle / 身份绑定生命周期
+## 4. Node Dynamics / 节点价值动态
 
-- Identity can bind to active/atmosphere nodes with explicit role and status.
-- Bindings support manual unbind and explicit expiration.
-- Runtime loop may auto-expire bindings when `expires_at` is reached.
-- Same `identity_id + role` cannot have duplicate `active` bindings.
-- Invalid actor combinations should return explicit input errors rather than silently guessing.
+- Node value（SNR）支持增减式更新。
+- pinned node 可根据当前 manager 逻辑抵抗部分衰减。
+- dynamics algorithm 按 reason type 可插拔。
 
-### Identity Policy Baseline / 身份策略基线
+## 5. Notification and Fault Feedback / 通知与故障反馈
 
-- Field-level policy evaluation follows deny-first ordering (`deny > allow`) with priority tie-break.
-- Field wildcard matching supports `*`, exact path, and `prefix.*`.
-- Policy conditions may use merged claims/attributes context.
-- Policy evaluation should be explainable enough for debugging.
+- 后端维护 system notification queue。
+- API 支持读取与清理通知。
+- runtime error 会推送带 level 和 code 的结构化通知。
+- 失败类别应保持可区分，便于 operator 与调试使用。
 
-## 3) Time and Narrative Consistency / 时间与叙事一致性
+## 6. Layer Coupling / 层级联动规则
 
-### Current Rules / 当前规则
+- L1 信号会影响 L2 关系权重。
+- L2 关系变化会影响 L1 可见性与影响力。
+- L3 叙事事件会影响下一步可执行动作。
+- L4 传输限制会影响动作时机与覆盖范围。
+- 当前实现只对部分跨层耦合做了 formalize。
+- world-pack 的 event / actor state / artifact state 已可反馈到 inference 与 action decision，但这还不是完整的通用 simulation DSL。
 
-- Absolute time is represented by `BigInt` ticks.
-- Multiple calendar displays can be derived from one absolute timeline.
-- API serializes tick values as strings for frontend compatibility.
-- Tick-like fields should remain string-based across transport boundaries.
-- Runtime-side delayed execution must be expressed through explicit workflow/time fields rather than implicit in-memory assumptions.
+## 7. Scheduler Rules / 调度规则
 
-### BigInt Transport Rule / BigInt 传输规则
+- Scheduler 会为 agent 形成 `periodic` 与 `event_driven` 两类 candidate。
+- event-driven candidate 会按 signal priority 合并；结果保留 `chosen_reason + candidate_reasons[]`。
+- `event_coalesced` 仅用于 summary/read-model 聚合，不是 candidate-level `skipped_reason`。
+- candidate readiness 顺序为：
+  - `limit`
+  - `pending_workflow`
+  - `replay/retry suppression`
+  - `periodic cooldown`
+  - `existing idempotency / create`
+- replay / retry recovery window 会继续 suppress periodic cadence。
+- 高优先级 `event_followup` 在未被 pending/idempotency 阻断时可继续存活；较低优先级 followup 可能在恢复窗口内被 suppress。
+- scheduler read model 会派生 `coalesced_secondary_reason_count` 与 `has_coalesced_signals`，用于解释 merged event-driven decision。
+- `last_signal_tick` 表示某个 partition 最近观测到的 signal / recovery watermark。
 
-- BigInt must remain string-based over HTTP payloads.
-- Frontend consumers should keep tick-like values as strings by default and only convert with `BigInt(...)` when actual comparison or computation is needed.
-
-### Planned / 规划中
-
--More explicit timeline impact tracking per action/event.
-- Clearer reconciliation rules when actions compete at similar ticks.
-- Richer delayed execution semantics on top of the current workflow/time baseline.
-
-## 4) Node Value Dynamics / 节点价值动态
-
-### Current Rules / 当前规则
-
-- Node value (SNR) supports increase/decrease style updates.
-- Pinned nodes can resist depreciation according to current manager logic.
-- Dynamics algorithms are pluggable by reason type.
-
-### Planned / 规划中
-
-- Tie value changes to broader narrative and social outcomes.
-- Add balancing strategy for native noise and high-authority nodes.
-
-## 5) Notification and Fault Feedback / 通知与故障反馈
-
-### Current Rules / 当前规则
-
-- Backend has a system notification queue.
-- API endpoints support fetch and clear notification operations.
-- Runtime errors push structured notifications with level and code.
-- Failure classes should remain distinguishable enough for operator/debug usage.
-
-### Planned / 规划中
-
-- Frontend global notification panel fully wired to backend queue.
-- Stronger categorization for operational vs business-level alerts.
-- Broader alert aggregation/reporting across workflow history.
-
-## 6) Layer Coupling Rules / 层级联动规则
-
-### Business Intention / 业务意图
-
-- L1 signals should influence L2 relation weight over time.
-- L2 relation shifts should affect L1 visibility and influence.
-- L3 narrative events should alter what actions are feasible next.
-- L4 transmission limits should shape action timing and reach.
-
-### Current State / 当前状态
-
-- Cross-layer coupling is only partially formalized.
-- Some couplings are represented in data structures and APIs, but full enforcement remains phased.
-- world-pack scenario baseline 现已开始让 L3 narrative event、actor/artifact state 与 inference/action decision 形成最小反馈回路，但仍不是完整通用 simulation DSL。
-
-## 7) Scheduler Logic Notes / Scheduler 逻辑说明
-
-- Scheduler 当前会为 agent 形成 `periodic` 与 `event_driven` 两类 candidate，并通过 signal weighting + merge 形成单个 event-driven decision。
-- 一个 merged event-driven candidate 会保留 `chosen_reason + candidate_reasons[]`；secondary reasons 不会伪装成真正独立的 skipped candidate。
-- `event_coalesced` 当前代表“secondary reasons 被合并进主决策”的 summary-side taxonomy，用于 run summary / skipped_by_reason 聚合，而不是 candidate-level `skipped_reason`。
-- closure pass 后，candidate evaluation 已收敛为更清晰的 readiness 顺序：`limit -> pending_workflow -> replay/retry suppression -> periodic cooldown -> existing idempotency / create`。
-- replay / retry recovery window 仍会继续 suppress periodic cadence；高优先级 event-driven followup 可在未被 pending/idempotency 阻断时继续存活。
-- scheduler read model 现在会从 `candidate_reasons` 派生 `coalesced_secondary_reason_count` 与 `has_coalesced_signals`，用于解释 merged event-driven decision 的 coalescing 行为。
-- closure pass 后，`last_signal_tick` 表示“本 partition 最近真正观测到的 signal / recovery watermark”，而不再只是“这轮调度运行结束时的 now”。
-
-## 8) Agent System Scope / Agent 系统边界
-
-### Core Modules / 核心模块
+## 8. Agent System Boundary / Agent 系统边界
 
 - Identity Layer：身份、绑定、生命周期与权限上下文。
-- Inference Interface：prompt/context assembly、decision normalization、provider boundary。
-- Workflow Persistence：decision/intent/job style formal records and state bridge。
-- Memory Core：memory context and prompt-fragment-oriented integration boundary。
-- Action Dispatcher：runtime-side consumption of executable intents。
+- Inference Interface：context assembly、decision normalization、provider boundary。
+- Workflow Persistence：trace / intent / job 记录与状态桥接。
+- Memory Core：memory context 与 prompt-fragment 集成边界。
+- Action Dispatcher：运行时可执行 intent 的消费与派发。
 
-### Current Delivery Principle / 当前交付原则
+## 9. Contributor Rules / 贡献者规则
 
-- Prioritize stable interfaces before deep behavior expansion.
-- Keep logic contracts explicit, but avoid freezing implementation noise as permanent rules.
-- Treat workflow state as first-class instead of hiding execution semantics in temporary synchronous flows.
-- Keep internal draft artifacts separate from formal external contracts.
-- Keep current L4 semantics intentionally minimal until richer simulation rules are truly needed.
-
-## 9) Product Rules for Contributors / 贡献者规则
-
-- Mark business statements clearly as current rules or planned direction.
-- Avoid presenting speculative behavior as already available.
-- Keep logic docs synced with API and architecture docs at the boundary level, not by duplicating every implementation detail.
-- Put implementation debt and lint debt into the right tracking files.
-- When adding inference-related rules, explicitly state whether they belong to:
-  - prompt construction,
-  - decision normalization,
-  - workflow persistence,
-  - action dispatch.
+- 只把已经成立的业务规则写进本文件。
+- 不要把推测中的行为写成已实现能力。
+- 与 `docs/API.md`、`docs/ARCH.md` 对齐边界，不要重复实现细节。
+- 如果新增 inference 相关规则，请明确它属于：
+  - prompt construction
+  - decision normalization
+  - workflow persistence
+  - action dispatch
