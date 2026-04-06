@@ -105,7 +105,6 @@ pnpm-debug.log
 
 # Optional lock files if not using npm (keep package-lock.json)
 yarn.lock
-pnpm-lock.yaml
 
 # macOS
 *.DS_Store
