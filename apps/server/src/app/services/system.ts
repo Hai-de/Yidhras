@@ -57,11 +57,17 @@ export interface AcknowledgementSnapshot {
 }
 
 export interface DevRuntimeResetSummary {
-  scheduler_runs_deleted: number;
   scheduler_candidate_decisions_deleted: number;
-  inference_traces_deleted: number;
-  action_intents_deleted: number;
+  scheduler_runs_deleted: number;
+  relationship_adjustment_logs_deleted: number;
+  snr_adjustment_logs_deleted: number;
   decision_jobs_deleted: number;
+  action_intents_deleted: number;
+  inference_traces_deleted: number;
+  scheduler_rebalance_recommendations_deleted: number;
+  scheduler_ownership_migrations_deleted: number;
+  scheduler_worker_runtime_states_deleted: number;
+  scheduler_partition_assignments_deleted: number;
   scheduler_cursor_deleted: number;
   scheduler_lease_deleted: number;
 }
@@ -101,26 +107,37 @@ export const resetDevelopmentRuntimeState = async (context: AppContext): Promise
     return null;
   }
 
-  const [schedulerCandidateDecisions, schedulerRuns, actionIntents, decisionJobs, inferenceTraces, schedulerCursor, schedulerLease] =
-    await Promise.all([
-      context.prisma.schedulerCandidateDecision.deleteMany(),
-      context.prisma.schedulerRun.deleteMany(),
-      context.prisma.actionIntent.deleteMany(),
-      context.prisma.decisionJob.deleteMany(),
-      context.prisma.inferenceTrace.deleteMany(),
-      context.prisma.schedulerCursor.deleteMany(),
-      context.prisma.schedulerLease.deleteMany()
-    ]);
+  return context.prisma.$transaction(async tx => {
+    const schedulerCandidateDecisions = await tx.schedulerCandidateDecision.deleteMany();
+    const schedulerRuns = await tx.schedulerRun.deleteMany();
+    const relationshipAdjustmentLogs = await tx.relationshipAdjustmentLog.deleteMany();
+    const snrAdjustmentLogs = await tx.sNRAdjustmentLog.deleteMany();
+    const decisionJobs = await tx.decisionJob.deleteMany();
+    const actionIntents = await tx.actionIntent.deleteMany();
+    const inferenceTraces = await tx.inferenceTrace.deleteMany();
+    const schedulerRebalanceRecommendations = await tx.schedulerRebalanceRecommendation.deleteMany();
+    const schedulerOwnershipMigrations = await tx.schedulerOwnershipMigrationLog.deleteMany();
+    const schedulerWorkerRuntimeStates = await tx.schedulerWorkerRuntimeState.deleteMany();
+    const schedulerPartitionAssignments = await tx.schedulerPartitionAssignment.deleteMany();
+    const schedulerCursor = await tx.schedulerCursor.deleteMany();
+    const schedulerLease = await tx.schedulerLease.deleteMany();
 
-  return {
-    scheduler_runs_deleted: schedulerRuns.count,
-    scheduler_candidate_decisions_deleted: schedulerCandidateDecisions.count,
-    inference_traces_deleted: inferenceTraces.count,
-    action_intents_deleted: actionIntents.count,
-    decision_jobs_deleted: decisionJobs.count,
-    scheduler_cursor_deleted: schedulerCursor.count,
-    scheduler_lease_deleted: schedulerLease.count
-  };
+    return {
+      scheduler_candidate_decisions_deleted: schedulerCandidateDecisions.count,
+      scheduler_runs_deleted: schedulerRuns.count,
+      relationship_adjustment_logs_deleted: relationshipAdjustmentLogs.count,
+      snr_adjustment_logs_deleted: snrAdjustmentLogs.count,
+      decision_jobs_deleted: decisionJobs.count,
+      action_intents_deleted: actionIntents.count,
+      inference_traces_deleted: inferenceTraces.count,
+      scheduler_rebalance_recommendations_deleted: schedulerRebalanceRecommendations.count,
+      scheduler_ownership_migrations_deleted: schedulerOwnershipMigrations.count,
+      scheduler_worker_runtime_states_deleted: schedulerWorkerRuntimeStates.count,
+      scheduler_partition_assignments_deleted: schedulerPartitionAssignments.count,
+      scheduler_cursor_deleted: schedulerCursor.count,
+      scheduler_lease_deleted: schedulerLease.count
+    } satisfies DevRuntimeResetSummary;
+  });
 };
 
 export const getRuntimeStatusSnapshot = async (

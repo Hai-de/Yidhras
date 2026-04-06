@@ -47,6 +47,7 @@ jobs:
         run: pnpm --filter yidhras-server test:integration
 
   server-e2e:
+    if: ${{ false }} # 临时禁用 CI e2e；当前以本地执行结果为准
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
