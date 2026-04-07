@@ -49,7 +49,7 @@ export const acquireSchedulerLease = async (
   }
 ): Promise<SchedulerLeaseAcquireResult> => {
   const partitionId = normalizePartitionId(input.partitionId);
-  const now = input.now ?? context.sim.clock.getTicks();
+  const now = input.now ?? context.sim.getCurrentTick();
   const leaseTicks = input.leaseTicks ?? DEFAULT_SCHEDULER_LEASE_TICKS;
   const expiresAt = now + leaseTicks;
   const key = buildSchedulerLeaseKey(partitionId);
@@ -180,7 +180,7 @@ export const updateSchedulerCursor = async (
 ): Promise<void> => {
   const partitionId = normalizePartitionId(input.partitionId);
   const key = buildSchedulerCursorKey(partitionId);
-  const now = input.now ?? context.sim.clock.getTicks();
+  const now = input.now ?? context.sim.getCurrentTick();
   await context.prisma.schedulerCursor.upsert({
     where: {
       partition_id: partitionId

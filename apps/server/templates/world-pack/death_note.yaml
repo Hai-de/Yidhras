@@ -2,19 +2,17 @@
 metadata:
   id: "world-death-note"
   name: "死亡笔记"
-  version: "0.2.0"
-  description: "一个围绕死亡笔记、基拉审判、侦探追缉与舆论震荡展开的现代悬疑世界。"
+  version: "0.3.0"
+  description: "一个围绕规则媒介、侦查对抗、舆论震荡与执行资格传播展开的现代悬疑世界。"
 
-# 1. 变量池 (支持嵌套解析)
 variables:
   currency: "日元"
   governance: "警视厅与国际搜查协作网络"
   location_suffix: "本部"
   main_location: "基拉对策{{location_suffix}}"
   tech_level: "现代信息社会，依赖监控、媒体传播与高强度刑侦推理"
-  system_status: "当前社会因“基拉”事件陷入持续震荡，{{main_location}} 正在全球追查异常死亡案件。"
+  system_status: "当前社会因异常死亡事件陷入持续震荡，{{main_location}} 正在全球追查可疑执行链。"
 
-# 2. 多历法系统 (Chronos Engine Config)
 simulation_time:
   initial_tick: 1000000000000
   min_tick: 900000000000
@@ -25,7 +23,7 @@ time_systems:
   - id: "case_clock"
     name: "案件调查时序"
     is_primary: true
-    tick_rate: 1000 # 1 Global Tick = 1s
+    tick_rate: 1000
     units:
       - name: "second"
         ratio: 1
@@ -53,7 +51,6 @@ time_systems:
       - name: "year"
         ratio: 12
 
-# 3. 核心提示词模板
 prompts:
   global_prefix: |
     你处于 {{name}} 的世界中。
@@ -62,7 +59,6 @@ prompts:
 
   agent_initial_context: "作为 {{main_location}} 的一员，你的基础认知基于：{{tech_level}}"
 
-# 4. 价值动态配置 (Value Dynamics Algorithms)
 dynamics_config:
   algorithms:
     - reason: "case_breakthrough"
@@ -80,111 +76,156 @@ dynamics_config:
         midpoint: 0.6
         steepness: 12
 
-# 5. Demo Scenario Contract (第一版仅用于校验 / 后续 materializer 使用)
-scenario:
-  agents:
+entities:
+  actors:
     - id: "agent-light"
-      name: "夜神月"
-      type: "active"
-      identity:
-        id: "agent-light"
-        type: "agent"
-        name: "夜神月"
-        provider: "world_pack"
-      roles: ["notebook_candidate", "planner"]
+      label: "夜神月"
+      kind: "actor"
+      tags: ["notebook_candidate", "planner"]
       state:
         murderous_intent: false
         knows_notebook_power: false
+        roles: ["notebook_candidate", "planner"]
     - id: "agent-l"
-      name: "L"
-      type: "active"
-      identity:
-        id: "agent-l"
-        type: "agent"
-        name: "L"
-        provider: "world_pack"
-      roles: ["investigator"]
+      label: "L"
+      kind: "actor"
+      tags: ["investigator"]
       state:
         suspicion_level: 0
+        roles: ["investigator"]
     - id: "agent-ryuk"
-      name: "琉克"
-      type: "active"
-      identity:
-        id: "agent-ryuk"
-        type: "agent"
-        name: "琉克"
-        provider: "world_pack"
-      roles: ["observer", "shinigami"]
+      label: "琉克"
+      kind: "actor"
+      tags: ["observer", "shinigami"]
       state:
         amused: true
-  relationships:
-    - from_id: "agent-light"
-      to_id: "agent-l"
-      type: "suspect"
-      weight: 0.2
-    - from_id: "agent-ryuk"
-      to_id: "agent-light"
-      type: "observer"
-      weight: 1
+        roles: ["observer", "shinigami"]
   artifacts:
     - id: "artifact-death-note"
-      kind: "death_note"
       label: "死亡笔记"
+      kind: "artifact"
+      entity_type: "death_note"
+      tags: ["supernatural", "vessel", "lethal"]
       state:
         holder_agent_id: null
         location: "school_ground"
-  world_state:
-    opening_phase: "notebook_unclaimed"
+  mediators:
+    - id: "mediator-death-note"
+      entity_ref: "artifact-death-note"
+      mediator_kind: "artifact_vessel"
+      grants:
+        - capability_key: "invoke.claim_death_note"
+        - capability_key: "invoke.form_murderous_intent"
+      requires:
+        - relation: "holder"
+      execution_effects:
+        - effect_key: "objective_enforcement"
+      override_rules: []
+      revocation_rules: []
+      binding_rules: []
+      perception_effects: []
+  domains: []
+  institutions: []
 
-event_templates:
-  notebook_claimed:
-    type: "history"
-    title: "{{actor.name}} 捡到了 {{artifact.label}}"
-    description: "{{actor.name}} 在 {{artifact.state.location}} 发现并持有了 {{artifact.label}}。"
-    impact_data:
-      semantic_type: "notebook_claimed"
-      actor_id: "{{actor.id}}"
-      artifact_id: "{{artifact.id}}"
-  murderous_intent_formed:
-    type: "history"
-    title: "{{actor.name}} 产生了杀意"
-    description: "{{actor.name}} 开始认真考虑利用 {{artifact.label}} 制裁目标。"
-    impact_data:
-      semantic_type: "murderous_intent_formed"
-      actor_id: "{{actor.id}}"
-      artifact_id: "{{artifact.id}}"
+bootstrap:
+  initial_states:
+    - entity_id: "__world__"
+      state_namespace: "world"
+      state_json:
+        opening_phase: "notebook_unclaimed"
+  initial_events: []
 
-actions:
-  claim_death_note:
-    executor: "claim_artifact"
-    defaults:
-      artifact_id: "artifact-death-note"
-      emit_event_template: "notebook_claimed"
-  form_murderous_intent:
-    executor: "set_actor_state"
-    defaults:
-      artifact_id: "artifact-death-note"
-      state_patch:
-        murderous_intent: true
-      emit_event_template: "murderous_intent_formed"
+identities:
+  - id: "agent-light"
+    subject_entity_id: "agent-light"
+    type: "agent"
+    metadata:
+      display_name: "夜神月"
+  - id: "agent-l"
+    subject_entity_id: "agent-l"
+    type: "agent"
+    metadata:
+      display_name: "L"
+  - id: "agent-ryuk"
+    subject_entity_id: "agent-ryuk"
+    type: "agent"
+    metadata:
+      display_name: "琉克"
 
-decision_rules:
-  - id: "discoverer_claims_notebook"
-    priority: 200
-    when:
-      latest_event:
-        semantic_type: "notebook_discovered"
-    decide:
-      action_type: "claim_death_note"
-      target_ref: null
-      payload: {}
-  - id: "holder_forms_intent"
+authorities:
+  - id: "grant-claim-death-note"
+    source_entity_id: "mediator-death-note"
+    mediated_by_entity_id: "mediator-death-note"
+    target_selector:
+      kind: "holder_of"
+      entity_id: "artifact-death-note"
+    capability_key: "invoke.claim_death_note"
+    grant_type: "mediated"
     priority: 100
-    when:
-      actor_has_artifact: "artifact-death-note"
-      actor_state:
-        murderous_intent: false
-    decide:
-      action_type: "form_murderous_intent"
-      target_ref: null
-      payload: {}
+  - id: "grant-form-murderous-intent"
+    source_entity_id: "mediator-death-note"
+    mediated_by_entity_id: "mediator-death-note"
+    target_selector:
+      kind: "holder_of"
+      entity_id: "artifact-death-note"
+    capability_key: "invoke.form_murderous_intent"
+    grant_type: "mediated"
+    conditions_json:
+      subject_state.knows_notebook_power: true
+    priority: 100
+
+rules:
+  perception: []
+  capability_resolution: []
+  invocation: []
+  projection: []
+  objective_enforcement:
+    - id: "objective-claim-death-note"
+      when:
+        capability: "invoke.claim_death_note"
+        mediator: "mediator-death-note"
+        invocation_type: "invoke.claim_death_note"
+      then:
+        mutate:
+          subject_state:
+            knows_notebook_power: true
+          target_state:
+            holder_agent_id: "{{subject_entity_id}}"
+            location: null
+        emit_events:
+          - type: "history"
+            title: "{{actor.id}} 取得了规则媒介 {{artifact.id}}"
+            description: "{{actor.id}} 与 {{artifact.id}} 建立了持有关系，并首次接触该媒介的执行资格。"
+            artifact_id: "{{artifact_id}}"
+            impact_data:
+              semantic_type: "notebook_claimed"
+              actor_id: "{{subject_entity_id}}"
+              artifact_id: "{{artifact_id}}"
+              mediator_id: "{{mediator_id}}"
+    - id: "objective-form-murderous-intent"
+      when:
+        capability: "invoke.form_murderous_intent"
+        mediator: "mediator-death-note"
+        invocation_type: "invoke.form_murderous_intent"
+      then:
+        mutate:
+          subject_state:
+            murderous_intent: true
+        emit_events:
+          - type: "history"
+            title: "{{actor.id}} 通过 {{artifact.id}} 形成了执行意图"
+            description: "{{actor.id}} 开始认真考虑利用 {{artifact.id}} 所承载的规则媒介执行目标裁定。"
+            artifact_id: "{{artifact_id}}"
+            impact_data:
+              semantic_type: "murderous_intent_formed"
+              actor_id: "{{subject_entity_id}}"
+              artifact_id: "{{artifact_id}}"
+              mediator_id: "{{mediator_id}}"
+
+capabilities:
+  - key: "invoke.claim_death_note"
+    category: "invoke"
+    target_schema: "artifact"
+  - key: "invoke.form_murderous_intent"
+    category: "invoke"
+    target_schema: "actor"

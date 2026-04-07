@@ -1,10 +1,10 @@
 import path from 'path';
 
-import { WorldPackLoader } from '../../src/world/loader.js';
+import { PackManifestLoader } from '../../src/packs/manifest/loader.js';
 
 const packsDir = path.resolve('../../data/world_packs');
 
-const loader = new WorldPackLoader(packsDir);
+const loader = new PackManifestLoader(packsDir);
 
 console.log(`--- 扫描 World Packs 目录: ${packsDir} ---`);
 const available = loader.listAvailablePacks();

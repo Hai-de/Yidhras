@@ -109,7 +109,7 @@ export const listRunnableDecisionJobs = async (
   context: AppContext,
   limit = 10
 ): Promise<DecisionJobRecord[]> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
 
   return context.prisma.decisionJob.findMany({
     where: {
@@ -141,7 +141,7 @@ export const claimDecisionJob = async (
   }
 ): Promise<DecisionJobRecord | null> => {
   const existing = await getDecisionJobById(context, input.job_id);
-  const now = input.now ?? context.sim.clock.getTicks();
+  const now = input.now ?? context.sim.getCurrentTick();
   const lockTicks = input.lock_ticks ?? DEFAULT_DECISION_JOB_LOCK_TICKS;
 
   if (!RUNNABLE_JOB_STATUSES.includes(existing.status as (typeof RUNNABLE_JOB_STATUSES)[number])) {
@@ -215,7 +215,7 @@ export const releaseDecisionJobLock = async (
       locked_by: null,
       locked_at: null,
       lock_expires_at: null,
-      updated_at: context.sim.clock.getTicks()
+      updated_at: context.sim.getCurrentTick()
     }
   });
 };
@@ -290,7 +290,7 @@ export const updateDecisionJobState = async (
       intent_class: input.intent_class ?? existing.intent_class,
       scheduled_for_tick: input.scheduled_for_tick === undefined ? existing.scheduled_for_tick : input.scheduled_for_tick,
       action_intent_id: input.action_intent_id === undefined ? existing.action_intent_id : input.action_intent_id,
-      updated_at: context.sim.clock.getTicks(),
+      updated_at: context.sim.getCurrentTick(),
       ...(input.request_input_attributes_patch
         ? { request_input: mergeDecisionJobRequestInputAttributes(existing, input.request_input_attributes_patch) }
         : {}),
@@ -582,7 +582,7 @@ export const createPendingDecisionJob = async (
     job_source?: string;
   }
 ): Promise<DecisionJobRecord> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
 
   return context.prisma.decisionJob.create({
     data: {
@@ -633,7 +633,7 @@ export const createReplayDecisionJob = async (
     job_source?: string;
   }
 ): Promise<DecisionJobRecord> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
 
   return context.prisma.decisionJob.create({
     data: {

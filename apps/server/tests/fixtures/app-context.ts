@@ -42,10 +42,17 @@ export const createTestAppContext = (
   let paused = options.paused ?? false;
   let runtimeReady = options.runtimeReady ?? true;
   let runtimeLoopDiagnostics = options.runtimeLoopDiagnostics ?? createDefaultRuntimeLoopDiagnostics();
+  const clock = new ChronosEngine([], 1000n);
 
   const sim = {
     prisma,
-    clock: new ChronosEngine([], 1000n),
+    clock,
+    getCurrentTick() {
+      return clock.getTicks();
+    },
+    getAllTimes() {
+      return clock.getAllTimes();
+    },
     getStepTicks: () => 1n,
     step: async () => {},
     getActivePack: () => null,

@@ -6,9 +6,8 @@ import { IdentityPolicyService } from '../identity/service.js';
 import type { IdentityContext } from '../identity/types.js';
 import { createMemoryService } from '../memory/service.js';
 import type { VariablePool } from '../narrative/types.js';
+import { listPackEntityStateProjectionRecords } from '../packs/storage/entity_state_projection.js';
 import { ApiError } from '../utils/api_error.js';
-import { DEFAULT_WORLD_STATE_ENTITY_ID } from '../world/materializer.js';
-import { listScenarioEntityStatesWithPrisma } from '../world/state.js';
 import type {
   InferenceActorRef,
   InferenceAgentSnapshot,
@@ -25,6 +24,7 @@ import type {
 } from './types.js';
 
 const SUPPORTED_STRATEGIES: InferenceStrategy[] = ['mock', 'rule_based'];
+const DEFAULT_PACK_WORLD_ENTITY_ID = '__world__';
 
 interface BindingRecord {
   id: string;
@@ -115,11 +115,11 @@ const normalizeAttributes = (value: unknown): Record<string, unknown> => {
 };
 
 const createIdentityPolicyService = (context: AppContext): IdentityPolicyService => {
-  return new IdentityPolicyService(context.sim.prisma);
+  return new IdentityPolicyService(context.prisma);
 };
 
 const listActiveBindingsForIdentity = async (context: AppContext, identityId: string): Promise<BindingRecord[]> => {
-  return context.sim.prisma.identityNodeBinding.findMany({
+  return context.prisma.identityNodeBinding.findMany({
     where: {
       identity_id: identityId,
       status: 'active'
@@ -208,7 +208,7 @@ const resolveIdentityOnlyActor = async (context: AppContext, identityId: string)
 };
 
 const resolveAgentOnlyActor = async (context: AppContext, agentId: string): Promise<ResolvedActor> => {
-  const bindings = (await context.sim.prisma.identityNodeBinding.findMany({
+  const bindings = (await context.prisma.identityNodeBinding.findMany({
     where: {
       agent_id: agentId,
       role: 'active',
@@ -369,31 +369,29 @@ const normalizePackStateRecord = (value: unknown): InferencePackStateRecord => {
 };
 
 const buildPackStateSnapshot = async (
-  context: AppContext,
+  _context: AppContext,
   packId: string,
   resolvedAgentId: string | null,
   attributes: Record<string, unknown>
 ): Promise<InferencePackStateSnapshot> => {
-  const states = await listScenarioEntityStatesWithPrisma(context.sim.prisma, {
-    pack_id: packId
-  });
+  const states = await listPackEntityStateProjectionRecords(packId);
 
   const actorState = resolvedAgentId
-    ? states.find(state => state.entity_type === 'actor' && state.entity_id === resolvedAgentId) ?? null
+    ? states.find(state => state.entity_id === resolvedAgentId && state.state_namespace === 'core') ?? null
     : null;
 
-  const artifactStates = states.filter(state => state.entity_type === 'artifact');
+  const artifactStates = states.filter(state => state.state_namespace === 'core' && state.entity_id.startsWith('artifact-'));
   const ownedArtifacts: InferencePackArtifactSnapshot[] = resolvedAgentId
     ? artifactStates
         .filter(state => state.state_json.holder_agent_id === resolvedAgentId)
         .map(state => ({
           id: state.entity_id,
-          state: state.state_json
+          state: normalizePackStateRecord(state.state_json)
         }))
     : [];
 
   const worldState =
-    states.find(state => state.entity_type === 'world' && state.entity_id === DEFAULT_WORLD_STATE_ENTITY_ID) ?? null;
+    states.find(state => state.entity_id === DEFAULT_PACK_WORLD_ENTITY_ID && state.state_namespace === 'world') ?? null;
 
   return {
     actor_roles: actorState && Array.isArray(actorState.state_json.roles)
@@ -408,18 +406,14 @@ const buildPackStateSnapshot = async (
           title: String(attributes.latest_event_semantic_type),
           type: 'history',
           semantic_type: attributes.latest_event_semantic_type,
-          created_at: context.sim.clock.getTicks().toString()
+          created_at: _context.sim.getCurrentTick().toString()
         }
       : null
   };
 };
 
-const buildPackRuntimeContract = (context: AppContext): InferencePackRuntimeContract => {
-  const pack = context.sim.getActivePack();
-  return {
-    actions: pack?.actions ?? {},
-    decision_rules: pack?.decision_rules ?? []
-  };
+const buildPackRuntimeContract = (_context: AppContext): InferencePackRuntimeContract => {
+  return {};
 };
 
 const buildPolicySummary = async (
@@ -562,7 +556,7 @@ export const buildInferenceContext = async (
     binding_ref: resolvedActor.bindingRef,
     resolved_agent_id: resolvedActor.resolvedAgentId,
     agent_snapshot: agentSnapshot,
-    tick: context.sim.clock.getTicks(),
+    tick: context.sim.getCurrentTick(),
     strategy,
     attributes,
     world_pack: {

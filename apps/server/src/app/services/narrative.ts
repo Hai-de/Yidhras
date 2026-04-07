@@ -1,7 +1,8 @@
 import type { AppContext } from '../context.js';
 
-export const listNarrativeTimeline = async (context: AppContext) => {
-  return context.sim.prisma.event.findMany({
-    orderBy: { tick: 'desc' }
-  });
-};
+import { listPackNarrativeTimelineProjection } from '../../packs/runtime/projections/narrative_projection_service.js';
+
+export const getPackNarrativeTimelineProjection = async (
+  context: AppContext,
+  packId?: string
+) => listPackNarrativeTimelineProjection(context, packId);

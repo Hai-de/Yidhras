@@ -13,12 +13,12 @@ import {
 import { ensureRuntimeConfigScaffold,logRuntimeConfigScaffoldResult } from './runtime_scaffold.js';
 import { ensureBootstrapWorldPack, logWorldPackBootstrapResult } from './world_pack_bootstrap.js';
 
-const main = (): void => {
+const main = async (): Promise<void> => {
   const scaffoldResult = ensureRuntimeConfigScaffold();
   logRuntimeConfigScaffoldResult(scaffoldResult);
   logRuntimeConfigSnapshot();
 
-  const bootstrapResult = ensureBootstrapWorldPack();
+  const bootstrapResult = await ensureBootstrapWorldPack();
   logWorldPackBootstrapResult(bootstrapResult);
 
   printInitReport({
@@ -33,4 +33,4 @@ const main = (): void => {
   });
 };
 
-main();
+void main();

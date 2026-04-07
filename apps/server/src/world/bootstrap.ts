@@ -1,10 +1,10 @@
 import { logRuntimeConfigSnapshot } from '../config/runtime_config.js';
 import { ensureBootstrapWorldPack, logWorldPackBootstrapResult } from '../init/world_pack_bootstrap.js';
 
-const main = (): void => {
+const main = async (): Promise<void> => {
   logRuntimeConfigSnapshot();
-  const result = ensureBootstrapWorldPack();
+  const result = await ensureBootstrapWorldPack();
   logWorldPackBootstrapResult(result);
 };
 
-main();
+void main();

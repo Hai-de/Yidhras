@@ -95,7 +95,7 @@ export interface AgentOverviewSnapshot {
 
 export const useAgentApi = () => {
   return {
-    getOverview: (agentId: string, limit = 10) =>
-      requestApiData<AgentOverviewSnapshot>(`/api/agent/${agentId}/overview?limit=${limit}`)
+    getOverview: (entityId: string, limit = 10) =>
+      requestApiData<AgentOverviewSnapshot>(`/api/entities/${entityId}/overview?limit=${limit}`)
   }
 }

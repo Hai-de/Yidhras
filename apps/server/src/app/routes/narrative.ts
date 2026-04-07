@@ -1,8 +1,10 @@
+import { packIdParamsSchema, packNarrativeProjectionDataSchema } from '@yidhras/contracts';
 import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
-import { listNarrativeTimeline } from '../services/narrative.js';
+import { parseParams } from '../http/zod.js';
+import { getPackNarrativeTimelineProjection } from '../services/narrative.js';
 
 export interface NarrativeRouteDependencies {
   asyncHandler(
@@ -16,10 +18,12 @@ export const registerNarrativeRoutes = (
   deps: NarrativeRouteDependencies
 ): void => {
   app.get(
-    '/api/narrative/timeline',
-    deps.asyncHandler(async (_req, res) => {
-      context.assertRuntimeReady('narrative timeline');
-      const events = await listNarrativeTimeline(context);
+    '/api/packs/:packId/projections/timeline',
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('pack narrative timeline');
+      const params = parseParams(packIdParamsSchema, req.params, 'AGENT_QUERY_INVALID');
+      const events = await getPackNarrativeTimelineProjection(context, params.packId);
+      packNarrativeProjectionDataSchema.parse(events);
       jsonOk(res, toJsonSafe(events));
     })
   );

@@ -1,19 +1,29 @@
 import { requestApiData } from '../../lib/http/client'
-import type { TickString } from '../../lib/time/tick'
 
 export interface TimelineEventSnapshot {
   id: string
+  kind: 'event' | 'rule_execution'
+  created_at: string
   title: string
   description: string
-  tick: TickString
-  type: string
-  impact_data: string | null
-  source_action_intent_id: string | null
-  created_at: TickString
+  refs: Record<string, string | null>
+  data: Record<string, unknown>
 }
+
+export interface PackNarrativeProjectionSnapshot {
+  pack: {
+    id: string
+    name: string
+    version: string
+  }
+  timeline: TimelineEventSnapshot[]
+}
+
+const DEFAULT_TIMELINE_PACK_ID = 'world-death-note'
 
 export const useTimelineApi = () => {
   return {
-    listTimeline: () => requestApiData<TimelineEventSnapshot[]>('/api/narrative/timeline')
+    listTimeline: (packId = DEFAULT_TIMELINE_PACK_ID) =>
+      requestApiData<PackNarrativeProjectionSnapshot>(`/api/packs/${packId}/projections/timeline`)
   }
 }

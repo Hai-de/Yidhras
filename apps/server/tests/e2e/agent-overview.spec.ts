@@ -12,9 +12,9 @@ describe('agent overview e2e', () => {
       const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');
       expect(statusData.runtime_ready).toBe(true);
 
-      const overviewResponse = await requestJson(server.baseUrl, '/api/agent/agent-001/overview?limit=5');
+      const overviewResponse = await requestJson(server.baseUrl, '/api/entities/agent-001/overview?limit=5');
       expect(overviewResponse.status).toBe(200);
-      const overview = assertSuccessEnvelopeData(overviewResponse.body, 'agent overview response');
+      const overview = assertSuccessEnvelopeData(overviewResponse.body, 'entity overview response');
 
       const profile = assertRecord(overview.profile, 'agent overview profile');
       expect(profile.id).toBe('agent-001');
@@ -44,7 +44,7 @@ describe('agent overview e2e', () => {
       const memorySummary = assertRecord(memory.summary, 'agent overview memory.summary');
       expect(typeof memorySummary.recent_trace_count).toBe('number');
 
-      const invalidOverviewLimitResponse = await requestJson(server.baseUrl, '/api/agent/agent-001/overview?limit=abc');
+      const invalidOverviewLimitResponse = await requestJson(server.baseUrl, '/api/entities/agent-001/overview?limit=abc');
       expect(invalidOverviewLimitResponse.status).toBe(400);
       assertErrorEnvelope(invalidOverviewLimitResponse.body, 'AGENT_QUERY_INVALID', 'invalid agent overview limit');
 
@@ -63,7 +63,7 @@ describe('agent overview e2e', () => {
       expect(invalidSnrLimitResponse.status).toBe(400);
       assertErrorEnvelope(invalidSnrLimitResponse.body, 'SNR_LOG_QUERY_INVALID', 'invalid agent snr logs limit');
 
-      const missingAgentResponse = await requestJson(server.baseUrl, '/api/agent/missing-agent/overview');
+      const missingAgentResponse = await requestJson(server.baseUrl, '/api/entities/missing-agent/overview');
       expect(missingAgentResponse.status).toBe(404);
       assertErrorEnvelope(missingAgentResponse.body, 'AGENT_NOT_FOUND', 'missing agent overview');
     });

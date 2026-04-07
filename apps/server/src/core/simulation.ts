@@ -3,26 +3,22 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
 import { ChronosEngine } from '../clock/engine.js';
-import type { CalendarConfig } from '../clock/types.js';
 import { getWorldPacksDir } from '../config/runtime_config.js';
 import { applySqliteRuntimePragmas, type SqliteRuntimePragmaSnapshot } from '../db/sqlite_runtime.js';
-import { ValueDynamicsManager } from '../dynamics/manager.js';
 import { NarrativeResolver } from '../narrative/resolver.js';
-import { notifications } from '../utils/notifications.js';
-import { WorldPack, WorldPackLoader } from '../world/loader.js';
-import { materializeWorldPackScenario } from '../world/materializer.js';
+import { PackManifestLoader, type WorldPack } from '../packs/manifest/loader.js';
+import type { PermissionContext } from '../permission/types.js';
 import { getGraphData } from './graph_data.js';
-import { RuntimeSpeedPolicy, RuntimeSpeedSnapshot } from './runtime_speed.js';
-import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
+import { activateWorldPackRuntime } from './runtime_activation.js';
+import { RuntimeSpeedPolicy, type RuntimeSpeedSnapshot } from './runtime_speed.js';
 
 export class SimulationManager {
   public prisma: PrismaClient;
-  public loader: WorldPackLoader;
   public clock!: ChronosEngine;
-  public resolver!: NarrativeResolver;
-  public dynamics!: ValueDynamicsManager;
 
+  private readonly loader: PackManifestLoader;
   private activePack?: WorldPack;
+  private runtimeResolver: NarrativeResolver;
   private runtimeSpeed: RuntimeSpeedPolicy;
   private readonly packsDir: string;
   private sqliteRuntimePragmas: SqliteRuntimePragmaSnapshot | null;
@@ -31,10 +27,9 @@ export class SimulationManager {
     this.packsDir = getWorldPacksDir();
 
     this.prisma = new PrismaClient();
-    this.loader = new WorldPackLoader(this.packsDir);
+    this.loader = new PackManifestLoader(this.packsDir);
     this.clock = new ChronosEngine([], 0n);
-    this.resolver = new NarrativeResolver({});
-    this.dynamics = new ValueDynamicsManager();
+    this.runtimeResolver = new NarrativeResolver({});
     this.runtimeSpeed = new RuntimeSpeedPolicy(1n);
     this.sqliteRuntimePragmas = null;
   }
@@ -56,61 +51,33 @@ export class SimulationManager {
     return this.sqliteRuntimePragmas;
   }
 
-  public async init(packFolderName: string) {
+  public async init(packFolderName: string): Promise<void> {
     await this.prepareDatabase();
 
-    const pack = this.loader.loadPack(packFolderName);
-    this.activePack = pack;
-
-    const runtimeConfig = getWorldPackRuntimeConfig(pack);
-    const calendars = (pack.time_systems ?? []) as unknown as CalendarConfig[];
-
-    if (runtimeConfig.configuredStepTicks !== undefined && runtimeConfig.configuredStepTicks > 0n) {
-      this.runtimeSpeed.setConfiguredStepTicks(runtimeConfig.configuredStepTicks);
-    } else {
-      this.runtimeSpeed.setConfiguredStepTicks(null);
-      if (runtimeConfig.configuredStepTicks !== undefined) {
-        notifications.push('warning', '世界包字段 simulation_time.step_ticks 必须大于 0，已回退为 1', 'PACK_STEP_TICK_INVALID');
-      }
-    }
-
-    this.clock = new ChronosEngine(calendars, runtimeConfig.initialTick);
-    this.resolver = new NarrativeResolver(pack.variables || {});
-    this.dynamics = new ValueDynamicsManager();
-
-    await materializeWorldPackScenario(this.prisma, pack, runtimeConfig.initialTick ?? 0n);
-
-    const lastEvent = await this.prisma.event.findFirst({
-      orderBy: { tick: 'desc' }
+    const activated = await activateWorldPackRuntime({
+      packFolderName,
+      loader: this.loader,
+      prisma: this.prisma,
+      runtimeSpeed: this.runtimeSpeed
     });
-    if (lastEvent) {
-      this.clock = new ChronosEngine(calendars, lastEvent.tick);
-    }
 
-    const currentTick = this.clock.getTicks();
-    if (runtimeConfig.minTick !== undefined && currentTick < runtimeConfig.minTick) {
-      notifications.push(
-        'warning',
-        `当前模拟时间 ${currentTick.toString()} 低于世界包最小时间 ${runtimeConfig.minTick.toString()}`,
-        'SIM_TICK_BELOW_MIN'
-      );
-    }
-    if (runtimeConfig.maxTick !== undefined && currentTick > runtimeConfig.maxTick) {
-      notifications.push(
-        'warning',
-        `当前模拟时间 ${currentTick.toString()} 超出世界包最大时间 ${runtimeConfig.maxTick.toString()}`,
-        'SIM_TICK_ABOVE_MAX'
-      );
-    }
+    this.activePack = activated.pack;
+    this.clock = activated.clock;
+    this.runtimeResolver = new NarrativeResolver(activated.pack.variables || {});
 
-    console.log(`[SimulationManager] Initialized with pack: ${pack.metadata.name}`);
+    console.log(`[SimulationManager] Initialized with pack: ${activated.pack.metadata.name}`);
   }
 
-  public getActivePack() {
+  public getActivePack(): WorldPack | undefined {
     return this.activePack;
   }
 
-  public getStepTicks() {
+  public resolvePackVariables(template: string, permission?: PermissionContext): string {
+    const pack = this.activePack;
+    return this.runtimeResolver.resolve(template, pack?.variables || {}, permission);
+  }
+
+  public getStepTicks(): bigint {
     return this.runtimeSpeed.getEffectiveStepTicks();
   }
 
@@ -130,12 +97,28 @@ export class SimulationManager {
     this.runtimeSpeed.clearOverride();
   }
 
-  public async step(amount: bigint = 1n) {
+  public getCurrentTick(): bigint {
+    return this.clock.getTicks();
+  }
+
+  public getAllTimes() {
+    return this.clock.getAllTimes();
+  }
+
+  public async step(amount: bigint = 1n): Promise<void> {
     this.clock.tick(amount);
   }
 
-  public async getGraphData() {
+  public async getGraphData(): ReturnType<typeof getGraphData> {
     return getGraphData(this.prisma);
+  }
+
+  public listAvailablePacks(): string[] {
+    return this.loader.listAvailablePacks();
+  }
+
+  public getPacksDir(): string {
+    return this.packsDir;
   }
 }
 

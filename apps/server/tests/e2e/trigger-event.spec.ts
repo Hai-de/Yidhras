@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertRecord, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
+import { assertErrorEnvelope, assertRecord, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
 import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { isRecord, requestJson, sleep } from '../helpers/server.js';
+
+const ACTIVE_PACK_ROUTE_NAME = 'world-death-note';
 
 const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
   return JSON.stringify({
@@ -88,13 +90,13 @@ describe('trigger event e2e', () => {
       );
       expect(isRecord(activeReplay.job)).toBe(true);
 
-      const timelineResponse = await requestJson(server.baseUrl, '/api/narrative/timeline');
-      expect(timelineResponse.status).toBe(200);
-      const timelineEnvelope = assertRecord(timelineResponse.body, 'timeline envelope');
-      expect(Array.isArray(timelineEnvelope.data)).toBe(true);
+      const packTimelineResponse = await requestJson(server.baseUrl, `/api/packs/${ACTIVE_PACK_ROUTE_NAME}/projections/timeline`);
+      expect(packTimelineResponse.status).toBe(200);
+      const packTimelineData = assertSuccessEnvelopeData(packTimelineResponse.body, 'pack timeline envelope') as { timeline: unknown[] };
+      expect(Array.isArray(packTimelineData.timeline)).toBe(true);
       expect(
-        timelineEnvelope.data.some(
-          (entry: unknown) => isRecord(entry) && entry.title === activeEventTitle && entry.type === 'history'
+        packTimelineData.timeline.some(
+          (entry: unknown) => isRecord(entry) && entry.title === activeEventTitle && entry.kind === 'event'
         )
       ).toBe(true);
 
@@ -128,13 +130,16 @@ describe('trigger event e2e', () => {
         'system trigger_event replay poll'
       );
 
-      const timelineAfterSystemResponse = await requestJson(server.baseUrl, '/api/narrative/timeline');
-      expect(timelineAfterSystemResponse.status).toBe(200);
-      const timelineAfterSystemEnvelope = assertRecord(timelineAfterSystemResponse.body, 'timeline after system envelope');
-      expect(Array.isArray(timelineAfterSystemEnvelope.data)).toBe(true);
+      const packTimelineAfterSystemResponse = await requestJson(server.baseUrl, `/api/packs/${ACTIVE_PACK_ROUTE_NAME}/projections/timeline`);
+      expect(packTimelineAfterSystemResponse.status).toBe(200);
+      const packTimelineAfterSystemData = assertSuccessEnvelopeData(
+        packTimelineAfterSystemResponse.body,
+        'pack timeline after system envelope'
+      ) as { timeline: unknown[] };
+      expect(Array.isArray(packTimelineAfterSystemData.timeline)).toBe(true);
       expect(
-        timelineAfterSystemEnvelope.data.some(
-          (entry: unknown) => isRecord(entry) && entry.title === systemEventTitle && entry.type === 'system'
+        packTimelineAfterSystemData.timeline.some(
+          (entry: unknown) => isRecord(entry) && entry.title === systemEventTitle && entry.kind === 'event'
         )
       ).toBe(true);
 
@@ -171,6 +176,10 @@ describe('trigger event e2e', () => {
         'invalid trigger_event workflow derived'
       );
       expect(invalidTypeDerived.failure_stage).toBe('dispatch');
+
+      const mismatchedTimelineResponse = await requestJson(server.baseUrl, '/api/packs/death_note/projections/timeline');
+      expect(mismatchedTimelineResponse.status).toBe(409);
+      assertErrorEnvelope(mismatchedTimelineResponse.body, 'PACK_ROUTE_ACTIVE_PACK_MISMATCH', 'mismatched trigger-event pack timeline');
     });
   });
 });

@@ -161,7 +161,7 @@ export const applySchedulerAutomaticRebalanceForWorker = async (
     maxApply?: number;
   }
 ): Promise<ApplySchedulerAutomaticRebalanceResult> => {
-  const now = input.now ?? context.sim.clock.getTicks();
+  const now = input.now ?? context.sim.getCurrentTick();
   const maxApply = Math.max(input.maxApply ?? DEFAULT_AUTOMATIC_REBALANCE_MAX_APPLY, 1);
   const recommendations = await context.prisma.schedulerRebalanceRecommendation.findMany({
     where: {
@@ -250,7 +250,7 @@ export const evaluateSchedulerAutomaticRebalance = async (
     migrationBacklogLimit?: number;
   }
 ): Promise<EvaluateSchedulerAutomaticRebalanceResult> => {
-  const now = input?.now ?? context.sim.clock.getTicks();
+  const now = input?.now ?? context.sim.getCurrentTick();
   const maxRecommendations = Math.max(input?.maxRecommendations ?? DEFAULT_AUTOMATIC_REBALANCE_MAX_RECOMMENDATIONS, 1);
   const migrationBacklogLimit = Math.max(
     input?.migrationBacklogLimit ?? DEFAULT_AUTOMATIC_REBALANCE_BACKLOG_LIMIT,

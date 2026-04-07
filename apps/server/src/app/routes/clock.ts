@@ -55,7 +55,7 @@ export const registerClockRoutes = (
   app.get('/api/clock', (_req, res) => {
     context.assertRuntimeReady('clock read');
     jsonOk(res, {
-      absolute_ticks: context.sim.clock.getTicks().toString(),
+      absolute_ticks: context.sim.getCurrentTick().toString(),
       calendars: []
     });
   });
@@ -64,8 +64,8 @@ export const registerClockRoutes = (
     context.assertRuntimeReady('clock formatted read');
     try {
       jsonOk(res, {
-        absolute_ticks: context.sim.clock.getTicks().toString(),
-        calendars: deps.toJsonSafe(context.sim.clock.getAllTimes())
+        absolute_ticks: context.sim.getCurrentTick().toString(),
+        calendars: deps.toJsonSafe(context.sim.getAllTimes())
       });
     } catch (err: unknown) {
       next(new ApiError(500, 'CLOCK_FORMAT_ERR', `读取格式化时钟失败: ${deps.getErrorMessage(err)}`));

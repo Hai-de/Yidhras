@@ -6,7 +6,7 @@ import { runAgentScheduler } from './agent_scheduler.js';
 import { runDecisionJobRunner } from './job_runner.js';
 
 export const expireIdentityBindings = async (context: AppContext): Promise<void> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
   await context.prisma.identityNodeBinding.updateMany({
     where: {
       AND: [

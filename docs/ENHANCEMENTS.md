@@ -1,9 +1,9 @@
 # Enhancements Backlog
 
-> 用于沉淀当前不阻塞主干开发、但值得后续逐步回收的小功能、改善项与增强项。
+> 用于记录当前不阻塞主干开发、可后续评估的小功能、改善项与增强项。
 >
-> 这些条目默认不进入当前主线里程碑；待项目主干稳定、架构边界更清晰后，再按专题逐步实施。
-> 本轮为了收口“整个流程流通”的最小 demo，已将多项未开发但非主链路必需的事项主动下沉到本文档。
+> 这些条目默认不进入当前里程碑；待项目主干稳定、架构边界更清晰后，再按专题逐步实施。
+> 本文档记录当前未纳入本轮范围、但后续可继续评估的事项。
 
 ## 使用说明
 
@@ -33,7 +33,7 @@
   - Dock 展开/收起的微动效与更平滑的尺寸过渡
   - Dock tab、StatusBar、TopRuntimeBar 之间的视觉节奏进一步统一
 - 延期原因：
-  当前实现已满足主干可用性，后续主要属于交互精修与体验打磨。
+  当前实现已满足基本可用性，后续可继续优化交互与体验。
 
 ### 2. Shell 视觉一致性与边界收敛
 - 状态：deferred
@@ -46,7 +46,7 @@
   - 底栏与 Dock 的连续感优化
   - 不同 workspace 页面在 shell 容器内的视觉统一验收
 - 延期原因：
-  属于 UI polish，收益真实但不影响核心功能闭环。
+  属于 UI polish，不影响当前核心功能闭环。
 
 ### 3. 复杂页面的可视化布局回归检查
 - 状态：deferred
@@ -72,7 +72,7 @@
   - 统一 cards / list sections / empty states 的 spacing 语义
   - 为后续 Phase 3 semantic primitives 提前降低样式散落程度
 - 延期原因：
-  当前 Phase 2 主目标是先完成 theme/layout token 的解析、clamp、runtime source 与页面级基础消费；共享组件内部 spacing 收口属于下一轮可控优化，可记录为增强项而非继续拉长当前收口周期。
+  当前 Phase 2 主目标是先完成 theme/layout token 的解析、clamp、runtime source 与页面级基础消费；共享组件内部 spacing 调整可在后续阶段处理。
 
 ### 5. 可视化主题编辑器
 - 状态：deferred
@@ -105,21 +105,21 @@
 - 优先级：medium
 - 范围：notifications / shell / bottom dock / recent targets
 - 背景：
-  当前 shell 已具备 TopRuntimeBar 状态摘要、轻量通知反馈、BottomDock jobs/traces 最小回看层与 recent targets，但这些能力仍偏 baseline，足以支撑最小 demo，不足以支撑长期调试与值班式观察。
+  当前 shell 已具备 TopRuntimeBar 状态摘要、轻量通知反馈、BottomDock jobs/traces 回看层与 recent targets；如需支持更长期的调试与值班观察，仍可继续扩展。
 - 后续增强候选：
   - notifications center 深化（`code` / `details` / clear actions）
   - BottomDock traces / jobs 从 recent-target 回看层升级为更真实的专属 read model
   - recent target 持久化
   - command palette / 快速动作入口
 - 延期原因：
-  当前最小 demo 已能完成基础流程展示；这些项主要提升控制台效率与调试舒适度，不构成主链路阻塞。
+  当前已具备基础流程展示能力；这些项主要提升控制台效率与调试体验，不构成当前阻塞。
 
 ### 8. Scheduler Workspace 深度诊断与跨工作区联动
 - 状态：deferred
 - 优先级：medium
 - 范围：scheduler workspace / overview / agent / workflow / audit / graph
 - 背景：
-  当前前端已经具备独立 Scheduler Workspace，并能消费 operator / agent projection、ownership、workers、rebalance 与基础 drill-down；它已经足够承担最小 demo 的调度观测入口。
+  当前前端已经具备独立 Scheduler Workspace，并能消费 operator / agent projection、ownership、workers、rebalance 与基础 drill-down，可作为当前阶段的调度观测入口。
 - 后续增强候选：
   - 更深的 decision detail 展示
   - worker / actor hot spots
@@ -127,20 +127,20 @@
   - rebalance recommendation / suppress reason / apply linkage 的更深 drill-down
   - 更强 cross-linking 到 workflow / audit / graph
 - 延期原因：
-  当前 workspace 已能证明 scheduler 主链路存在且可观测；继续下钻主要是 operator 分析效率增强，而不是 demo 成立条件。
+  当前 workspace 已具备基础调度观测能力；继续下钻主要提升 operator 分析效率。
 
 ### 9. 前端测试资产扩充
 - 状态：deferred
 - 优先级：low
 - 范围：web unit tests / feature stores / composables / page adapters
 - 背景：
-  当前前端已经具备 `runtime / shell / workflow / graph / notifications / scheduler api` 等核心单测基线，足以支撑当前收口阶段的基本回归信心。
+  当前前端已经具备 `runtime / shell / workflow / graph / notifications / scheduler api` 等核心单测基线，可支撑当前阶段的基本回归验证。
 - 后续增强候选：
   - feature-level store / composable tests
   - 更细的 scheduler workspace view-model tests
   - 关键工作区页面的组合式回归测试
 - 延期原因：
-  当前阶段优先级是先确认最小 demo 能顺畅跑通；测试广度补强适合在主线稳定后系统推进。
+  当前阶段优先保证主要流程稳定运行；测试广度补强适合在后续阶段系统推进。
 
 ---
 
@@ -198,7 +198,7 @@
   - `run summary excerpt`
   - agent-level `latest_audit_summary`
 - 延期原因：
-  当前主线已从最小 cross-link 进入解释型摘要深化阶段，但 agent-level 聚合摘要增强仍属于次优先级，不应打断更高优先级的 scheduler/operator 联动建设。
+  当前已具备基础 cross-link 与解释型摘要；agent-level 聚合摘要增强仍属于次优先级。
 
 ### 5. Scheduler operator deeper highlights / breakdowns
 - 状态：deferred
@@ -211,21 +211,21 @@
   - actor-level failure / skip hot spots
   - richer failure-code breakdown
 - 延期原因：
-  当前主线优先把轻量 operator 总览层搭稳；更细分的 breakdown 应在真实前端消费需求明确后再推进。
+  当前优先保持轻量 operator 总览层稳定；更细分的 breakdown 可在前端消费需求明确后再推进。
 
 ### 6. Replay Orchestration 与 Durable Job Scheduling 深化
 - 状态：deferred
 - 优先级：medium
 - 范围：workflow runtime / replay / scheduler / durable scheduling
 - 背景：
-  当前系统已经具备 retry、replay、intent class、replay-aware suppression 与 `scheduled_for_tick` 等 durable baseline，足以支撑最小 demo 的工作流闭环。
+  当前系统已经具备 retry、replay、intent class、replay-aware suppression 与 `scheduled_for_tick` 等基础能力，可支撑当前阶段的工作流闭环。
 - 后续增强候选：
   - richer replay orchestration
   - 更 durable 的 job scheduling 语义
   - windowed / not-before / not-after 风格的调度约束
   - 更清晰的 replay-derived scheduling linkage
 - 延期原因：
-  当前主线需要的是“可跑通”而不是“编排语义尽可能完整”；继续深挖 orchestration 会显著拉长收口周期。
+  当前优先保证流程可运行；继续扩展 orchestration 语义会增加实现范围。
 
 ### 7. Automatic Rebalance 策略与 Operator-Forced Workflow 语义深化
 - 状态：deferred
@@ -239,14 +239,14 @@
   - recommendation -> apply linkage 收口
   - 更明确的 operator-forced workflow semantics
 - 延期原因：
-  这些能力更偏生产级调度治理与人工干预语义；对当前最小 demo 来说，现有 baseline 已足够展示调度系统在运作。
+  这些能力更偏生产级调度治理与人工干预语义；现有基础能力已可满足当前阶段的展示与验证。
 
 ### 8. Memory Core 分层读模型与 Retrieval / Aggregation
 - 状态：deferred
 - 优先级：medium
 - 范围：memory core / agent overview / retrieval
 - 背景：
-  当前已经有 MemoryTrace persistence、recent trace read 与 agent overview memory summary，足以支撑最小 demo 对“记忆存在”的基本表达。
+  当前已经有 MemoryTrace persistence、recent trace read 与 agent overview memory summary，可支持当前阶段对记忆能力的基本展示。
 - 后续增强候选：
   - 更长期 / 分层 memory read model
   - retrieval / aggregation 能力
@@ -259,7 +259,7 @@
 - 优先级：medium
 - 范围：audit feed / detail / related-record aggregation / operator observability
 - 背景：
-  当前统一 audit feed、detail read、基础过滤、cursor、workflow related-record aggregation 与 replay-lineage detail 已经具备，能满足最小 demo 的基础观察需求。
+  当前统一 audit feed、detail read、基础过滤、cursor、workflow related-record aggregation 与 replay-lineage detail 已经具备，可满足当前阶段的基础观察需求。
 - 后续增强候选：
   - 更完整的 operator 视图
   - 更强的跨对象关联观测
@@ -278,7 +278,7 @@
   - future delta-capable world actions
   - 更统一的 mutation result / intent projection 约定
 - 延期原因：
-  这些属于下一层领域写模型演进；在当前阶段优先落地会把最小 demo 的范围拉得过宽。
+  这些属于下一层领域写模型演进；在当前阶段优先落地会扩大实现范围。
 
 
 ---
@@ -333,13 +333,13 @@
 - 优先级：medium
 - 范围：world-pack contract / validation / docs
 - 背景：
-  当前项目已经有可运行的 world-pack baseline 与 configw/bootstrap 链路，足以支撑最小 demo 启动和展示。
+  当前项目已经有可运行的 world-pack baseline 与 configw/bootstrap 链路，可支持当前阶段的启动和展示。
 - 后续增强候选：
   - formalize world-pack schema contract
   - validation checklist
   - 作者侧约束与错误说明文档
 - 延期原因：
-  当前阶段继续复用现有 pack baseline 成本最低；正式契约化更适合等内容体系更稳定后统一收口。
+  当前阶段继续复用现有 pack baseline 更直接；正式契约化更适合在内容体系更稳定后推进。
 
 ### 2. Pack-Level Metadata / Registry / Docs Tooling
 - 状态：deferred
@@ -352,7 +352,7 @@
   - registry
   - docs tooling / discoverability tooling
 - 延期原因：
-  这些项对资产规模化管理有价值，但并不影响当前最小 demo 的单 pack 运行闭环。
+  这些项对资产规模化管理有价值，但不影响当前阶段的单 pack 运行闭环。
 
 ### 3. Provider-Owned Presentation / Theme / Data Authoring 示例与校验路径
 - 状态：deferred
@@ -365,13 +365,13 @@
   - provider authoring validation path
   - 面向内容作者的操作说明与校验反馈
 - 延期原因：
-  当前最小 demo 优先级是跑通已有 pack，而不是把内容生产工具链一次做全。
+  当前优先保证已有 pack 的运行链路稳定，而不是一次性补齐全部内容生产工具链。
 
 ---
 
 ## 状态约定
 
-- `deferred`：明确记录，但当前不进入主线开发。
+- `deferred`：明确记录，但当前不进入本轮开发。
 - `planned`：已确认未来会处理，但尚未进入正式计划文档。
 - `in_progress`：已进入实际实现阶段。
 - `promoted`：已升级为正式设计/计划项，由其他文档承接。

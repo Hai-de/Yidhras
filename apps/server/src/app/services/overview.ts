@@ -1,8 +1,9 @@
+import { getOperatorOverviewProjection } from '../../kernel/projections/operator_overview_service.js';
+import { extractGlobalProjectionIndex } from '../../kernel/projections/projection_extractor.js';
 import type { AppContext } from '../context.js';
 import { toJsonSafe } from '../http/json.js';
 import type { AuditViewEntry } from './audit.js';
 import { listAuditFeed } from './audit.js';
-import { getRuntimeStatusSnapshot } from './system.js';
 
 export interface OverviewSummarySnapshot {
   runtime: {
@@ -31,6 +32,23 @@ export interface OverviewSummarySnapshot {
   failed_jobs: AuditViewEntry[];
   dropped_intents: AuditViewEntry[];
   notifications: ReturnType<AppContext['notifications']['getMessages']>;
+  operator_projection: Awaited<ReturnType<typeof getOperatorOverviewProjection>>['pack_projection'];
+  global_projection_index: Awaited<ReturnType<typeof extractGlobalProjectionIndex>>;
+}
+
+export interface PackOverviewProjectionSummary {
+  pack_id: string;
+  entity_count: number;
+  entity_state_count: number;
+  authority_grant_count: number;
+  mediator_binding_count: number;
+  rule_execution_count: number;
+  latest_rule_execution: {
+    id: string;
+    rule_id: string;
+    execution_status: string;
+    created_at: string;
+  } | null;
 }
 
 const isWorkflowEntry = (entry: AuditViewEntry): boolean => {
@@ -55,10 +73,11 @@ const hasPropagationIntent = (entry: AuditViewEntry): boolean => {
 };
 
 export const getOverviewSummary = async (context: AppContext): Promise<OverviewSummarySnapshot> => {
-  const currentTick = context.sim.clock.getTicks();
+  const currentTick = context.sim.getCurrentTick();
 
-  const [runtime, activeAgentCount, notifications, recentAudit, latestEvents, latestPosts] = await Promise.all([
-    getRuntimeStatusSnapshot(context),
+  const [operatorProjection, globalProjectionIndex, activeAgentCount, notifications, recentAudit, latestEvents, latestPosts] = await Promise.all([
+    getOperatorOverviewProjection(context),
+    extractGlobalProjectionIndex(context),
     context.prisma.agent.count({
       where: {
         type: 'active'
@@ -82,10 +101,10 @@ export const getOverviewSummary = async (context: AppContext): Promise<OverviewS
   const workflowEntries = recentAudit.entries.filter(isWorkflowEntry);
 
   return {
-    runtime,
+    runtime: operatorProjection.runtime,
     world_time: {
       tick: currentTick.toString(),
-      calendars: context.getRuntimeReady() ? toJsonSafe(context.sim.clock.getAllTimes()) : []
+      calendars: context.getRuntimeReady() ? toJsonSafe(context.sim.getAllTimes()) : []
     },
     active_agent_count: activeAgentCount,
     recent_events: latestEvents.entries,
@@ -93,6 +112,23 @@ export const getOverviewSummary = async (context: AppContext): Promise<OverviewS
     latest_propagation: workflowEntries.filter(hasPropagationIntent).slice(0, 10),
     failed_jobs: workflowEntries.filter(hasFailureState).slice(0, 10),
     dropped_intents: workflowEntries.filter(hasDroppedState).slice(0, 10),
-    notifications
+    notifications,
+    operator_projection: operatorProjection.pack_projection,
+    global_projection_index: globalProjectionIndex
+  };
+};
+
+export const getPackOverviewProjectionSummary = async (
+  context: AppContext,
+  packId: string
+): Promise<PackOverviewProjectionSummary> => {
+  const projection = await getOperatorOverviewProjection(context, {
+    packId,
+    feature: 'pack overview'
+  });
+
+  return {
+    pack_id: packId,
+    ...projection.pack_projection
   };
 };

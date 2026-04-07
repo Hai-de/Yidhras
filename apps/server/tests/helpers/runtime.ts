@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,11 +11,12 @@ import { withTestServer } from './server.js';
 
 const helpersDirectory = dirname(fileURLToPath(import.meta.url));
 const serverRoot = resolve(helpersDirectory, '../..');
-const workspaceRoot = resolve(serverRoot, '../..');
-const sharedWorldPacksDir = join(workspaceRoot, 'data', 'world_packs');
+const versionManagedWorldPackTemplatePath = join(serverRoot, 'templates', 'world-pack', 'death_note.yaml');
+const defaultWorldPackDirName = 'death_note';
 
 export interface IsolatedRuntimeEnvironment {
   rootDir: string;
+  worldPacksDir: string;
   databasePath: string;
   databaseUrl: string;
   envOverrides: Record<string, string>;
@@ -75,6 +76,15 @@ const runServerCommand = async (
   });
 };
 
+const seedDefaultWorldPack = async (worldPacksDir: string): Promise<void> => {
+  const targetPackDir = join(worldPacksDir, defaultWorldPackDirName);
+  await mkdir(targetPackDir, { recursive: true });
+  await copyFile(
+    versionManagedWorldPackTemplatePath,
+    join(targetPackDir, 'config.yaml')
+  );
+};
+
 export const createIsolatedRuntimeEnvironment = async (
   options: CreateIsolatedRuntimeEnvironmentOptions = {}
 ): Promise<IsolatedRuntimeEnvironment> => {
@@ -82,8 +92,11 @@ export const createIsolatedRuntimeEnvironment = async (
   const runtimeDir = join(rootDir, 'runtime');
   const databaseFileName = options.databaseFileName ?? 'yidhras.sqlite';
   const databasePath = join(runtimeDir, 'db', databaseFileName);
+  const worldPacksDir = join(rootDir, 'data', 'world_packs');
 
   await mkdir(join(runtimeDir, 'db'), { recursive: true });
+  await mkdir(worldPacksDir, { recursive: true });
+  await seedDefaultWorldPack(worldPacksDir);
 
   const databaseUrl = `file:${databasePath}`;
   const envOverrides: Record<string, string> = {
@@ -92,12 +105,13 @@ export const createIsolatedRuntimeEnvironment = async (
     DEV_RUNTIME_RESET_ON_START: '0',
     NODE_ENV: 'test',
     WORLD_BOOTSTRAP_ENABLED: 'false',
-    WORLD_PACKS_DIR: sharedWorldPacksDir,
+    WORLD_PACKS_DIR: worldPacksDir,
     ...(options.envOverrides ?? {})
   };
 
   return {
     rootDir,
+    worldPacksDir,
     databasePath,
     databaseUrl,
     envOverrides,

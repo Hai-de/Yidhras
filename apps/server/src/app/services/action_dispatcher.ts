@@ -1,8 +1,6 @@
+import { dispatchInvocationFromActionIntent } from '../../domain/invocation/invocation_dispatcher.js';
 import { IdentityPolicyService } from '../../identity/service.js';
 import { ApiError } from '../../utils/api_error.js';
-import { emitPackEventTemplateWithPrisma,getPackArtifactState } from '../../world/event_templates.js';
-import type { WorldPackActionConfig, WorldPackScenarioValue } from '../../world/schema.js';
-import { patchScenarioEntityState } from '../../world/state.js';
 import type { AppContext } from '../context.js';
 import { buildMutationResolvedResult } from './mutation_resolved.js';
 import { createSocialPost } from './social.js';
@@ -251,191 +249,6 @@ const resolveAdjustSnrPayload = (payload: unknown): {
   };
 };
 
-const resolvePackActionConfig = (context: AppContext, intentType: string): WorldPackActionConfig | null => {
-  const pack = context.sim.getActivePack();
-  if (!pack?.actions) {
-    return null;
-  }
-
-  return pack.actions[intentType] ?? null;
-};
-
-const resolvePackActorAgentId = (actorRef: unknown): string | null => {
-  if (!isRecord(actorRef) || typeof actorRef.agent_id !== 'string' || actorRef.agent_id.trim().length === 0) {
-    return null;
-  }
-
-  return actorRef.agent_id.trim();
-};
-
-const resolvePackArtifactId = (payload: unknown): string | null => {
-  if (!isRecord(payload) || typeof payload.artifact_id !== 'string' || payload.artifact_id.trim().length === 0) {
-    return null;
-  }
-
-  return payload.artifact_id.trim();
-};
-
-const resolvePackStatePatch = (payload: unknown): Record<string, WorldPackScenarioValue> => {
-  if (!isRecord(payload) || !isRecord(payload.state_patch)) {
-    return {};
-  }
-
-  return payload.state_patch as Record<string, WorldPackScenarioValue>;
-};
-
-const resolveEmitEventTemplateKey = (payload: unknown): string | null => {
-  if (!isRecord(payload) || typeof payload.emit_event_template !== 'string' || payload.emit_event_template.trim().length === 0) {
-    return null;
-  }
-
-  return payload.emit_event_template.trim();
-};
-
-const resolvePackActionTargetEntityId = (payload: unknown): string | null => {
-  if (!isRecord(payload) || typeof payload.target_entity_id !== 'string' || payload.target_entity_id.trim().length === 0) {
-    return null;
-  }
-
-  return payload.target_entity_id.trim();
-};
-
-const emitPackEventTemplate = async (
-  context: AppContext,
-  input: {
-    templateKey: string;
-    actorAgentId: string | null;
-    artifactId?: string | null;
-    sourceActionIntentId: string;
-  }
-): Promise<void> => {
-  const now = context.sim.clock.getTicks();
-  await context.prisma.$transaction(async tx => {
-    await emitPackEventTemplateWithPrisma(tx, context, {
-      ...input,
-      now
-    });
-  });
-};
-
-const dispatchClaimArtifactIntent = async (context: AppContext, intent: ActionIntentRecord): Promise<void> => {
-  const actorAgentId = resolvePackActorAgentId(intent.actor_ref);
-  const artifactId = resolvePackArtifactId(intent.payload);
-  const templateKey = resolveEmitEventTemplateKey(intent.payload);
-
-  if (!actorAgentId) {
-    throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'claim_artifact requires an active actor agent');
-  }
-  if (!artifactId) {
-    throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'claim_artifact requires payload.artifact_id');
-  }
-
-  const pack = context.sim.getActivePack();
-  if (!pack) {
-    throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for claim_artifact');
-  }
-
-  const artifactState = await getPackArtifactState(context, artifactId);
-  if (!artifactState) {
-    throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'claim_artifact target artifact state not found', {
-      artifact_id: artifactId,
-      pack_id: pack.metadata.id
-    });
-  }
-
-  await patchScenarioEntityState(context, {
-    pack_id: pack.metadata.id,
-    entity_type: 'artifact',
-    entity_id: artifactId,
-    patch: {
-      ...artifactState.state_json,
-      holder_agent_id: actorAgentId,
-      location: null
-    }
-  });
-
-  if (templateKey) {
-    await emitPackEventTemplate(context, {
-      templateKey,
-      actorAgentId,
-      artifactId,
-      sourceActionIntentId: intent.id
-    });
-  }
-};
-
-const dispatchSetActorStateIntent = async (context: AppContext, intent: ActionIntentRecord): Promise<void> => {
-  const actorAgentId = resolvePackActionTargetEntityId(intent.payload) ?? resolvePackActorAgentId(intent.actor_ref);
-  const artifactId = resolvePackArtifactId(intent.payload);
-  const templateKey = resolveEmitEventTemplateKey(intent.payload);
-  const statePatch = resolvePackStatePatch(intent.payload);
-
-  if (!actorAgentId) {
-    throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'set_actor_state requires an actor agent id');
-  }
-
-  const pack = context.sim.getActivePack();
-  if (!pack) {
-    throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for set_actor_state');
-  }
-
-  await patchScenarioEntityState(context, {
-    pack_id: pack.metadata.id,
-    entity_type: 'actor',
-    entity_id: actorAgentId,
-    patch: statePatch
-  });
-
-  if (templateKey) {
-    await emitPackEventTemplate(context, {
-      templateKey,
-      actorAgentId,
-      artifactId,
-      sourceActionIntentId: intent.id
-    });
-  }
-};
-
-const dispatchPackEmitEventIntent = async (context: AppContext, intent: ActionIntentRecord): Promise<void> => {
-  const actorAgentId = resolvePackActorAgentId(intent.actor_ref);
-  const artifactId = resolvePackArtifactId(intent.payload);
-  const templateKey = resolveEmitEventTemplateKey(intent.payload);
-
-  if (!templateKey) {
-    throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'emit_event requires payload.emit_event_template');
-  }
-
-  await emitPackEventTemplate(context, {
-    templateKey,
-    actorAgentId,
-    artifactId,
-    sourceActionIntentId: intent.id
-  });
-};
-
-const dispatchPackConfiguredIntent = async (
-  context: AppContext,
-  intent: ActionIntentRecord,
-  actionConfig: WorldPackActionConfig
-): Promise<void> => {
-  switch (actionConfig.executor) {
-    case 'claim_artifact':
-      await dispatchClaimArtifactIntent(context, intent);
-      return;
-    case 'set_actor_state':
-      await dispatchSetActorStateIntent(context, intent);
-      return;
-    case 'emit_event':
-      await dispatchPackEmitEventIntent(context, intent);
-      return;
-    default:
-      throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'Unsupported pack action executor', {
-        intent_type: intent.intent_type,
-        executor: actionConfig.executor
-      });
-  }
-};
-
 const writeRelationshipAdjustmentLog = async (context: AppContext, input: {
   action_intent_id: string;
   relationship_id: string;
@@ -452,9 +265,19 @@ const writeRelationshipAdjustmentLog = async (context: AppContext, input: {
 };
 
 const dispatchTriggerEventIntent = async (context: AppContext, intent: ActionIntentRecord): Promise<void> => {
-  resolveTriggerEventActor(intent.actor_ref);
+  const actor = resolveTriggerEventActor(intent.actor_ref);
   const payload = resolveTriggerEventPayload(intent.payload);
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
+
+  const activePack = context.sim.getActivePack();
+  const impactData = {
+    ...(payload.impact_data ?? {}),
+    pack_id: activePack?.metadata.id ?? null,
+    source_action_intent_id: intent.id,
+    actor_identity_id: actor.identity_id,
+    actor_agent_id: actor.agent_id,
+    actor_kind: actor.kind
+  };
 
   await context.prisma.event.create({
     data: {
@@ -462,7 +285,7 @@ const dispatchTriggerEventIntent = async (context: AppContext, intent: ActionInt
       description: payload.description,
       tick: now,
       type: payload.event_type,
-      impact_data: payload.impact_data ? JSON.stringify(payload.impact_data) : null,
+      impact_data: JSON.stringify(impactData),
       source_action_intent_id: intent.id,
       created_at: now
     }
@@ -473,7 +296,7 @@ const dispatchAdjustSnrIntent = async (context: AppContext, intent: ActionIntent
   resolveAdjustSnrActorAgentId(intent.actor_ref);
   const targetAgentId = resolveAdjustSnrTargetAgentId(intent.target_ref);
   const payload = resolveAdjustSnrPayload(intent.payload);
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
 
   await context.prisma.$transaction(async tx => {
     const targetAgent = await tx.agent.findUnique({
@@ -530,7 +353,7 @@ const dispatchAdjustRelationshipIntent = async (context: AppContext, intent: Act
   const actorAgentId = resolveActiveAgentIdFromActorRef(intent.actor_ref);
   const targetAgentId = await resolveRelationshipTargetAgentId(context, intent.target_ref, actorAgentId);
   const payload = resolveAdjustRelationshipPayload(intent.payload);
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
 
   const existing = await context.prisma.relationship.findUnique({
     where: {
@@ -672,7 +495,7 @@ export const listDispatchableActionIntents = async (
   context: AppContext,
   limit = 10
 ): Promise<ActionIntentRecord[]> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
 
   return context.prisma.actionIntent.findMany({
     where: {
@@ -707,7 +530,7 @@ export const claimActionIntent = async (
     lock_ticks?: bigint;
   }
 ): Promise<ActionIntentRecord | null> => {
-  const now = input.now ?? context.sim.clock.getTicks();
+  const now = input.now ?? context.sim.getCurrentTick();
   const lockTicks = input.lock_ticks ?? DEFAULT_ACTION_INTENT_LOCK_TICKS;
   const existing = await context.prisma.actionIntent.findUnique({
     where: {
@@ -796,7 +619,7 @@ export const releaseActionIntentLock = async (
       locked_by: null,
       locked_at: null,
       lock_expires_at: null,
-      updated_at: context.sim.clock.getTicks()
+      updated_at: context.sim.getCurrentTick()
     }
   });
 };
@@ -814,7 +637,7 @@ export const markActionIntentDispatching = async (
   context: AppContext,
   intentId: string
 ): Promise<ActionIntentRecord> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
 
   return context.prisma.actionIntent.update({
     where: {
@@ -835,7 +658,7 @@ export const markActionIntentCompleted = async (
   context: AppContext,
   intentId: string
 ): Promise<ActionIntentRecord> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
 
   return context.prisma.actionIntent.update({
     where: {
@@ -861,7 +684,7 @@ export const markActionIntentFailed = async (
   reason: string | null = null,
   code: string | null = 'ACTION_DISPATCH_FAIL'
 ): Promise<ActionIntentRecord> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
 
   return context.prisma.actionIntent.update({
     where: {
@@ -884,7 +707,7 @@ export const markActionIntentDropped = async (
   intentId: string,
   reason: string | null
 ): Promise<ActionIntentRecord> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
 
   return context.prisma.actionIntent.update({
     where: {
@@ -907,15 +730,18 @@ export const dispatchActionIntent = async (
   context: AppContext,
   intent: ActionIntentRecord
 ): Promise<{ outcome: 'completed' | 'dropped'; reason: string | null }> => {
-  assertActionIntentLockOwnership(intent, intent.locked_by ?? '', context.sim.clock.getTicks());
+  assertActionIntentLockOwnership(intent, intent.locked_by ?? '', context.sim.getCurrentTick());
 
-  const packActionConfig = resolvePackActionConfig(context, intent.intent_type);
-  if (packActionConfig) {
-    await dispatchPackConfiguredIntent(context, intent, packActionConfig);
-    return {
-      outcome: 'completed',
-      reason: null
-    };
+  const invocationResult = await dispatchInvocationFromActionIntent(context, {
+    id: intent.id,
+    source_inference_id: intent.source_inference_id,
+    intent_type: intent.intent_type,
+    actor_ref: intent.actor_ref,
+    target_ref: intent.target_ref,
+    payload: intent.payload
+  });
+  if (invocationResult) {
+    return { outcome: invocationResult.outcome, reason: invocationResult.reason };
   }
 
   if (intent.intent_type === 'trigger_event') {

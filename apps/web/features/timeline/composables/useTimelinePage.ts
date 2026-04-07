@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useTimelineApi } from '../../../composables/api/useTimelineApi'
 import { useVisibilityPolling } from '../../../composables/app/useVisibilityPolling'
 import { useNotificationsStore } from '../../../stores/notifications'
+import { useRuntimeStore } from '../../../stores/runtime'
 import { useOperatorNavigation } from '../../shared/navigation'
 import { useOperatorSourceContext } from '../../shared/source-context'
 import type { TimelineEventCardViewModel } from '../adapters'
@@ -43,6 +44,7 @@ export const useTimelinePage = () => {
   const navigation = useOperatorNavigation()
   const sourceContext = useOperatorSourceContext()
   const notifications = useNotificationsStore()
+  const runtimeStore = useRuntimeStore()
 
   const items = ref<TimelineEventCardViewModel[]>([])
   const isFetching = ref(false)
@@ -53,9 +55,14 @@ export const useTimelinePage = () => {
     isFetching.value = true
 
     try {
-      const snapshot = await timelineApi.listTimeline()
-      const filteredItems = snapshot.filter(event =>
-        matchesTickRange(event.tick, timelineRoute.range.value.fromTick, timelineRoute.range.value.toTick)
+      const packId = runtimeStore.worldPack?.id ?? 'death_note'
+      const snapshot = await timelineApi.listTimeline(packId)
+      const filteredItems = snapshot.timeline.filter(event =>
+        matchesTickRange(
+          typeof event.data.tick === 'string' ? event.data.tick : event.created_at,
+          timelineRoute.range.value.fromTick,
+          timelineRoute.range.value.toTick
+        )
       )
       items.value = filteredItems.map(toTimelineEventCardViewModel)
       errorMessage.value = null

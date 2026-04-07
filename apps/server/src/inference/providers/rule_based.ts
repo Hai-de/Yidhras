@@ -1,4 +1,3 @@
-import { evaluateWorldPackDecisionRules } from '../pack_rules.js';
 import type { InferenceProvider } from '../provider.js';
 
 const buildRuleBasedPostContent = (actorDisplayName: string, worldName: string): string => {
@@ -72,11 +71,6 @@ export const createRuleBasedInferenceProvider = (): InferenceProvider => {
     name: 'rule_based',
     strategies: ['rule_based'],
     async run(context) {
-      const packRuleDecision = evaluateWorldPackDecisionRules(context);
-      if (packRuleDecision) {
-        return packRuleDecision;
-      }
-
       const transmissionPolicy = normalizeTransmissionPolicy(
         context.attributes.transmission_policy ?? context.transmission_profile.policy
       );

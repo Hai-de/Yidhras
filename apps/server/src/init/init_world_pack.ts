@@ -11,9 +11,9 @@ import {
 } from './report.js';
 import { ensureBootstrapWorldPack, logWorldPackBootstrapResult } from './world_pack_bootstrap.js';
 
-const main = (): void => {
+const main = async (): Promise<void> => {
   logRuntimeConfigSnapshot();
-  const result = ensureBootstrapWorldPack();
+  const result = await ensureBootstrapWorldPack();
   logWorldPackBootstrapResult(result);
   printInitReport({
     kind: 'world_pack',
@@ -26,4 +26,4 @@ const main = (): void => {
   });
 };
 
-main();
+void main();

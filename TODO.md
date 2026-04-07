@@ -1,61 +1,64 @@
 # TODO
 
-## M1 - Backend and Runtime / 后端与运行时
+## Current Status / 当前状态
 
-Status: In Progress / 聚焦最小 Demo 收口中
+当前 `world-pack unified governance framework` 相关实施计划（见 `.limcode/plans/world-pack-unified-governance-framework.plan.md`）已完成：
 
-- [x] 基础 Express + Prisma 服务骨架、统一 envelope、错误码与最小 status/clock API
-- [x] 最小 inference / timeline / graph / social / workflow 读写链路
-- [x] inference / graph / relational / timeline / social contracts + Zod 运行时边界
-- [x] workflow query / detail / retry baseline
-- [x] Agent Scheduler / Replay / Durable Workflow runtime 最小主线已具备
-  - 已有：pending job queue、loop runner、Agent Scheduler v1/v2/v3/v3c/p4a/p4s/p4r-baseline/p4r-fine/p4c-baseline/dynamic-ownership-baseline/automatic-rebalance-baseline（durable scheduling + event-driven policy baseline + scheduler stats + scheduler observability read model + lease/cursor leader-only safety + runs/decisions/summary/trends/operator projection + partition ownership/migration + worker runtime state + automatic rebalance read surface）
-  - 延后：更深 scheduler/operator 读面、richer replay orchestration、更强 automatic rebalance 策略、operator-forced workflow semantics 已转入 `docs/ENHANCEMENTS.md`
-- [x] Memory Core baseline
-  - 已有：MemoryTrace persistence、recent trace read、agent overview memory summary
-  - 延后：更长期/分层 memory read model 与 retrieval/aggregation 已转入 `docs/ENHANCEMENTS.md`
-- [x] Audit / Review Surfaces baseline
-  - 已有：统一 audit feed、detail read、基础过滤、cursor、workflow related-record aggregation、replay-lineage detail
-  - 延后：更完整 operator 视图与更强关联观测 已转入 `docs/ENHANCEMENTS.md`
-- [x] Mutation Semantics baseline
-  - 已有：`relationship_adjustment` / `snr_adjustment` 的 resolved-intent detail shape
-  - 延后：更广的写路径规范化与未来 delta-capable world actions 已转入 `docs/ENHANCEMENTS.md`
+- [x] `p1` 固化 world-pack schema 与 storage schema
+- [x] `p2` 建立 kernel db / pack db / install/materialize 生命周期边界
+- [x] `p3` 引入 pack runtime 核心模型
+- [x] `p4` 重写 authority resolver / perception resolver / inference context assembler
+- [x] `p5` 以 objective enforcement engine 替换旧 action_dispatcher 世界规则中心职责
+- [x] `p6` 迁移 API/read model 到 kernel projection 与 pack projection 结构
+- [x] `p7` 补齐 install/integration/e2e 验证与清理 legacy 主线
+- [x] 移除 world-pack 输入兼容层：`scenario / event_templates / actions / decision_rules`
+- [x] 以 `bootstrap.initial_states` 替代 `scenario.world_state`
+- [x] 以 objective rule 内联事件声明替代 `event_templates`
+- [x] 明确 ownership matrix 当前中间态：world governance core -> pack runtime；social/narrative/workflow evidence -> kernel-side Prisma
+- [x] 将 `death_note` 默认样板重构为显式 mediator 表达
+- [x] 删除 `/api/narrative/timeline`
+- [x] 删除 `/api/agent/:id/overview`
+- [x] 删除 `world/schema.ts` 与 `world/loader.ts`，统一 imports 到 `packs/*`
 
-### Next / 下一步
+## Current Architecture Snapshot / 当前架构概览
 
-- [ ] 围绕现有 runtime / workflow / scheduler / operator console 闭环整理最小 demo 路径，并用 smoke / walkthrough 方式确认“流程流通”已成立
-- [ ] 在 `death_note` world-pack scenario-driven 主线下，继续收口“notebook_discovered -> claim_death_note -> murderous_intent_formed -> timeline/operator evidence” 的完整 walkthrough 与验证说明
+当前已形成的核心结构包括：
 
-## M2 - Frontend Operator Console / 前端控制台
+- pack schema：`packs/schema/**`
+- pack manifest loader：`packs/manifest/constitution_loader.ts` + `packs/manifest/loader.ts`
+- pack runtime materializer：`packs/runtime/materializer.ts`
+- pack runtime repositories：`packs/storage/**`
+- authority / perception / inference context assembler：`domain/authority/**`、`domain/perception/**`、`domain/inference/**`
+- invocation / objective enforcement：`domain/invocation/**`、`domain/rule/**`
+- kernel + pack projections：`kernel/projections/**`、`packs/runtime/projections/**`
 
-Status: In Progress / 聚焦最小 Demo 收口中
+## Remaining Compatibility Surfaces / 剩余兼容面
 
-- [x] `apps/web` 完成目录重构 Phase 1–9：CSR、theme foundation、Operator shell、data fetching、route-state、Overview / Workflow / Graph / Social / Timeline / Agent 基线
-- [x] 旧前端壳与遗留入口已清理：`stores/clock.ts`、`stores/system.ts`、`utils/api.ts` 等退出主线
-- [x] 核心 store 单测已补齐：`runtime / shell / workflow / graph`
-- [x] Operator UI polish 第一阶段已完成：
-  - 统一页面骨架与反馈态
-  - 来源上下文 banner / return_to_source
-  - Graph focus/root/result feedback
-  - freshness 与轻量通知反馈
-- [x] Graph 深化与 Timeline / Social 语义映射增量已完成：
-  - Graph quick roots、search context、inspector 分组与动作解释增强
-  - Timeline → Social intent-first / tick-scoped context
-  - Social → Timeline slice-based context，移除误导性的 `post.id -> event_id` 假设
-  - mapping context banner 与 string-first tick compare 已落地
-- [x] shell 级 runtime / notification 联动 baseline 已具备
-  - 已有：TopRuntimeBar 全局状态摘要、refresh all、dock toggle、notifications 聚合 getters、ShellContext 聚合层、Sidebar context 区块、shell 级 return_to_source、recent targets 与 BottomDock jobs/traces 最小回看层
-  - 延后：notifications center 深化（code/details/clear actions）、BottomDock traces/jobs 更真实的数据模型、可选 recent target 持久化 / command palette 已转入 `docs/ENHANCEMENTS.md`
-- [x] Scheduler operator workspace Phase 4B baseline 已进入主线
-  - 已有：Overview 直接消费 `/api/runtime/scheduler/operator`、Agent 页面直接消费 `/api/agent/:id/scheduler/projection`、独立 `pages/scheduler.vue` + `features/scheduler/*`、shell `scheduler` workspace、recent runs / decisions / ownership / workers / rebalance 基础 drill-down
-  - 延后：更深 decision detail、worker/actor hot spots、更强 cross-linking 到 workflow/audit/graph 已转入 `docs/ENHANCEMENTS.md`
-- [x] 当前 operator console 已具备支撑最小 demo 的基础页面与导航闭环
-  - 范围：Overview / Workflow / Graph / Social / Timeline / Agent / Scheduler
-  - 延后：更多 UI 层测试或 feature-level store/composable tests 已转入 `docs/ENHANCEMENTS.md`
+以下内容仍保留，但已不属于 world-pack 输入或运行时兼容桥：
 
-## M4 - Content and Data Packs / 内容与世界包
+- `/api/policy/*` 的 access/policy debug surface
+- `apps/server/src/core/simulation.ts` 仍未拆成更细的 runtime manager / pack instance 边界
 
-Status: Deferred to Enhancements / 当前已转入增强池
+## Suggested Next Work / 建议后续工作
 
-- 当前最小 demo 继续复用现有 world-pack / configw baseline。
-- world-pack schema contract、pack-level metadata / registry / docs tooling、provider-owned presentation/theme/data authoring 示例与校验路径 已转入 `docs/ENHANCEMENTS.md`
+### A. 最终兼容表面清除
+- [ ] 评估 `/api/policy/*` 是否继续保留为 debug surface，或进一步内聚到 access/perception 子系统
+- [ ] 继续推动 `SimulationManager` 向更清晰的 runtime manager / pack instance 边界演进
+
+### B. 文档与契约同步深化
+- [x] 同步 `docs/ARCH.md`
+- [x] 同步 `docs/LOGIC.md`
+- [x] 同步 `docs/API.md`
+- [x] 同步 `TODO.md`
+- [x] 同步 `记录.md`
+- [ ] 如有需要，继续补 shared contracts 对 canonical pack/entity endpoint 的正式 schema
+
+### C. ownership matrix 深化
+- [ ] 评估 `Event / Post / ActionIntent / InferenceTrace / DecisionJob` 是否存在进一步 pack-owned 化的必要
+- [ ] 若引入 `PackOutboxEvent`，明确与当前 projection extraction 的替换关系
+- [ ] 评估 relationship runtime evidence 的最终归属边界
+
+## Notes / 说明
+
+- 当前文档描述应区分“已实现”和“仍保留的兼容表面”，避免将设计目标写成已完成实现。
+- scheduler、operator console、frontend workspace 等既有能力保持不变，后续工作应避免无关回归。

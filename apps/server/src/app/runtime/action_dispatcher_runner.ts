@@ -39,7 +39,7 @@ export const runActionDispatcher = async ({
         continue;
       }
 
-      assertActionIntentLockOwnership(claimedIntent, workerId, context.sim.clock.getTicks());
+      assertActionIntentLockOwnership(claimedIntent, workerId, context.sim.getCurrentTick());
 
       const result = await dispatchActionIntent(context, claimedIntent);
       if (result.outcome === 'dropped') {

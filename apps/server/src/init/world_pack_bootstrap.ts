@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 
 import { getWorldBootstrapConfig, getWorldPacksDir } from '../config/runtime_config.js';
+import { installPackRuntime, type InstalledPackRuntimeSummary } from '../kernel/install/install_pack.js';
+import { PackManifestLoader } from '../packs/manifest/loader.js';
 
 const DEFAULT_PACK_CONFIG_FILE = 'config.yaml';
 
@@ -11,9 +13,10 @@ export interface WorldPackBootstrapResult {
   targetPackDirPath: string;
   targetConfigPath: string;
   templateFilePath: string;
+  packRuntime?: InstalledPackRuntimeSummary;
 }
 
-export const ensureBootstrapWorldPack = (): WorldPackBootstrapResult => {
+export const ensureBootstrapWorldPack = async (): Promise<WorldPackBootstrapResult> => {
   const worldPacksDir = getWorldPacksDir();
   const bootstrapConfig = getWorldBootstrapConfig();
   const targetConfigPath = path.join(bootstrapConfig.targetPackDirPath, DEFAULT_PACK_CONFIG_FILE);
@@ -46,11 +49,14 @@ export const ensureBootstrapWorldPack = (): WorldPackBootstrapResult => {
   const shouldWrite = bootstrapConfig.overwrite || !fs.existsSync(targetConfigPath);
   if (!shouldWrite) {
     result.status = 'skipped';
-    return result;
+  } else {
+    fs.copyFileSync(bootstrapConfig.templateFilePath, targetConfigPath);
+    result.status = bootstrapConfig.overwrite ? 'updated' : 'created';
   }
 
-  fs.copyFileSync(bootstrapConfig.templateFilePath, targetConfigPath);
-  result.status = bootstrapConfig.overwrite ? 'updated' : 'created';
+  const loader = new PackManifestLoader(worldPacksDir);
+  const pack = loader.loadPack(bootstrapConfig.targetPackDirName);
+  result.packRuntime = await installPackRuntime(pack);
   return result;
 };
 
@@ -64,10 +70,20 @@ export const logWorldPackBootstrapResult = (
       return;
     case 'skipped':
       logger(`[bootstrap] World pack config exists, skipped: ${result.targetConfigPath}`);
+      if (result.packRuntime) {
+        logger(
+          `[bootstrap] Pack runtime materialized at ${result.packRuntime.runtimeDbPath} (created=${String(result.packRuntime.runtimeDbCreated)})`
+        );
+      }
       return;
     case 'created':
     case 'updated':
       logger(`[bootstrap] ${result.status === 'updated' ? 'Updated' : 'Created'} default world pack config: ${result.targetConfigPath}`);
+      if (result.packRuntime) {
+        logger(
+          `[bootstrap] Pack runtime materialized at ${result.packRuntime.runtimeDbPath} (created=${String(result.packRuntime.runtimeDbCreated)})`
+        );
+      }
       return;
   }
 };

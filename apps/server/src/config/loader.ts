@@ -9,6 +9,11 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 };
 
 export const resolveWorkspaceRoot = (startDir: string = process.cwd()): string => {
+  const explicitWorkspaceRoot = process.env.WORKSPACE_ROOT?.trim();
+  if (explicitWorkspaceRoot) {
+    return path.resolve(explicitWorkspaceRoot);
+  }
+
   const initial = path.resolve(startDir);
   let current: string | null = initial;
 

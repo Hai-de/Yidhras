@@ -1,3 +1,4 @@
+import { getPackEntityOverviewProjection } from '../../packs/runtime/projections/entity_overview_service.js';
 import { PermissionContext } from '../../permission/types.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
@@ -65,6 +66,24 @@ export interface AgentOverviewSnapshot {
       outgoing: number;
       total: number;
     };
+  };
+  pack_projection: {
+    entity: {
+      entity_kind: string;
+      entity_type: string | null;
+      tags: string[];
+      state: Array<{
+        namespace: string;
+        value: Record<string, unknown>;
+      }>;
+    } | null;
+    recent_rule_executions: Array<{
+      id: string;
+      rule_id: string;
+      capability_key: string | null;
+      execution_status: string;
+      created_at: string;
+    }>;
   };
   recent_activity: AuditViewEntry[];
   recent_posts: AuditViewEntry[];
@@ -175,7 +194,7 @@ const toAuditEntries = (entries: AuditViewEntry[], kind: AuditViewEntry['kind'])
 };
 
 export const getAgentContextSnapshot = async (context: AppContext, agentId: string) => {
-  const agent = await context.sim.prisma.agent.findUnique({
+  const agent = await context.prisma.agent.findUnique({
     where: { id: agentId },
     include: { circle_memberships: { include: { circle: true } } }
   });
@@ -185,12 +204,7 @@ export const getAgentContextSnapshot = async (context: AppContext, agentId: stri
   }
 
   const permission = buildPermissionContext(agent);
-  const pack = context.sim.getActivePack();
-  const resolvedVariables = context.sim.resolver.resolve(
-    JSON.stringify(pack?.variables || {}),
-    {},
-    permission
-  );
+  const resolvedVariables = context.sim.resolvePackVariables(JSON.stringify(context.sim.getActivePack()?.variables || {}), permission);
 
   return {
     identity: agent,
@@ -198,14 +212,14 @@ export const getAgentContextSnapshot = async (context: AppContext, agentId: stri
   };
 };
 
-export const getAgentOverview = async (
+export const getEntityOverview = async (
   context: AppContext,
-  agentId: string,
+  entityId: string,
   options?: {
     limit?: number;
   }
 ): Promise<AgentOverviewSnapshot> => {
-  const resolvedAgentId = assertNonEmptyAgentId(agentId);
+  const resolvedAgentId = assertNonEmptyAgentId(entityId);
   const limit = parsePositiveBoundedLimit(options?.limit, {
     defaultValue: DEFAULT_AGENT_OVERVIEW_LIMIT,
     maxValue: MAX_SNR_LOG_LIMIT,
@@ -228,7 +242,7 @@ export const getAgentOverview = async (
     throw new ApiError(404, 'AGENT_NOT_FOUND', 'Agent not found', { agent_id: resolvedAgentId });
   }
 
-  const [bindings, outgoingRelationships, incomingRelationships, auditFeed, workflowList, snrLogs, recentTraces] = await Promise.all([
+  const [bindings, outgoingRelationships, incomingRelationships, auditFeed, workflowList, snrLogs, recentTraces, packProjection] = await Promise.all([
     context.prisma.identityNodeBinding.findMany({
       where: {
         agent_id: resolvedAgentId
@@ -295,7 +309,8 @@ export const getAgentOverview = async (
         created_at: 'desc'
       },
       take: limit
-    })
+    }),
+    getPackEntityOverviewProjection(context)
   ]);
 
   const recentEvents = toAuditEntries(auditFeed.entries, 'event').slice(0, limit);
@@ -316,6 +331,7 @@ export const getAgentOverview = async (
   const latestContextSnapshot = isRecord(latestTrace?.context_snapshot)
     ? (latestTrace?.context_snapshot as Record<string, unknown>)
     : null;
+  const packEntity = packProjection.entities.find(entity => entity.id === resolvedAgentId) ?? null;
 
   const bindingSummary = {
     active: bindings
@@ -380,6 +396,26 @@ export const getAgentOverview = async (
         outgoing: outgoingRelationships.length,
         total: incomingRelationships.length + outgoingRelationships.length
       }
+    },
+    pack_projection: {
+      entity: packEntity
+        ? {
+            entity_kind: packEntity.entity_kind,
+            entity_type: packEntity.entity_type,
+            tags: packEntity.tags,
+            state: packEntity.state
+          }
+        : null,
+      recent_rule_executions: packProjection.recent_rule_executions
+        .filter(record => record.subject_entity_id === resolvedAgentId || record.target_entity_id === resolvedAgentId)
+        .slice(0, limit)
+        .map(record => ({
+          id: record.id,
+          rule_id: record.rule_id,
+          capability_key: record.capability_key,
+          execution_status: record.execution_status,
+          created_at: record.created_at
+        }))
     },
     recent_activity: recentActivity,
     recent_posts: recentPosts,
@@ -452,7 +488,7 @@ export const listSnrAdjustmentLogs = async (
     fieldName: 'limit'
   });
 
-  return context.sim.prisma.sNRAdjustmentLog.findMany({
+  return context.prisma.sNRAdjustmentLog.findMany({
     where: {
       agent_id: agentId
     },

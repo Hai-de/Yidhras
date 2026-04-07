@@ -241,7 +241,7 @@ const executeRunInternal = async (
     const failure = classifyFailure(err);
 
     if (options?.jobId) {
-      const currentTick = context.sim.clock.getTicks();
+      const currentTick = context.sim.getCurrentTick();
       const existingJob = await getDecisionJobById(context, options.jobId);
       const retryExhausted = existingJob.attempt_count >= existingJob.max_attempts;
       await updateDecisionJobState(context, {
@@ -276,7 +276,7 @@ const executeRunInternal = async (
   } catch (err) {
     if (options?.jobId) {
       const failure = classifyFailure(err);
-      const currentTick = context.sim.clock.getTicks();
+      const currentTick = context.sim.getCurrentTick();
       const existingJob = await getDecisionJobById(context, options.jobId);
       const retryExhausted = existingJob.attempt_count >= existingJob.max_attempts;
       await updateDecisionJobState(context, {
@@ -527,7 +527,7 @@ export const createInferenceService = ({
         last_error: null,
   last_error_code: null,
         last_error_stage: null,
-        next_retry_at: context.sim.clock.getTicks(),
+        next_retry_at: context.sim.getCurrentTick(),
         locked_by: null,
         locked_at: null,
         lock_expires_at: null,
@@ -556,7 +556,7 @@ export const createInferenceService = ({
     },
     async executeDecisionJob(jobId, options) {
       const job = await getDecisionJobById(context, jobId);
-      const now = context.sim.clock.getTicks();
+      const now = context.sim.getCurrentTick();
 
       if (job.status !== 'running') {
         return null;

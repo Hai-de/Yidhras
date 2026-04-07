@@ -56,8 +56,8 @@ export const registerIdentity = async (
     throw new ApiError(400, 'IDENTITY_INVALID', 'id and type are required');
   }
 
-  const now = context.sim.clock.getTicks();
-  return context.sim.prisma.identity.create({
+  const now = context.sim.getCurrentTick();
+  return context.prisma.identity.create({
     data: {
       id,
       type,
@@ -100,7 +100,7 @@ export const createIdentityBinding = async (
   }
 
   if (normalizedStatus === 'active') {
-    const existingActive = await context.sim.prisma.identityNodeBinding.findFirst({
+    const existingActive = await context.prisma.identityNodeBinding.findFirst({
       where: {
         identity_id,
         role: role as IdentityBindingRole,
@@ -117,9 +117,9 @@ export const createIdentityBinding = async (
   }
 
   const expiresAt = deps.parseOptionalTick(expires_at, 'expires_at');
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
 
-  return context.sim.prisma.identityNodeBinding.create({
+  return context.prisma.identityNodeBinding.create({
     data: {
       identity_id,
       agent_id: hasAgent ? agent_id : null,
@@ -176,7 +176,7 @@ export const queryIdentityBindings = async (
     where.atmosphere_node_id = atmosphere_node_id;
   }
 
-  return context.sim.prisma.identityNodeBinding.findMany({
+  return context.prisma.identityNodeBinding.findMany({
     where,
     orderBy: { created_at: 'desc' }
   });
@@ -192,7 +192,7 @@ export const unbindIdentityBinding = async (
     throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'binding_id is required');
   }
 
-  const existing = await context.sim.prisma.identityNodeBinding.findUnique({
+  const existing = await context.prisma.identityNodeBinding.findUnique({
     where: { id: binding_id }
   });
   if (!existing) {
@@ -203,8 +203,8 @@ export const unbindIdentityBinding = async (
     throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'status must be active, inactive, or expired');
   }
 
-  const now = context.sim.clock.getTicks();
-  return context.sim.prisma.identityNodeBinding.update({
+  const now = context.sim.getCurrentTick();
+  return context.prisma.identityNodeBinding.update({
     where: { id: binding_id },
     data: {
       status: (status ?? 'inactive') as IdentityBindingStatus,
@@ -223,15 +223,15 @@ export const expireIdentityBinding = async (
     throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'binding_id is required');
   }
 
-  const existing = await context.sim.prisma.identityNodeBinding.findUnique({
+  const existing = await context.prisma.identityNodeBinding.findUnique({
     where: { id: binding_id }
   });
   if (!existing) {
     throw new ApiError(404, 'IDENTITY_BINDING_NOT_FOUND', 'Binding not found', { binding_id });
   }
 
-  const now = context.sim.clock.getTicks();
-  return context.sim.prisma.identityNodeBinding.update({
+  const now = context.sim.getCurrentTick();
+  return context.prisma.identityNodeBinding.update({
     where: { id: binding_id },
     data: {
       status: 'expired',

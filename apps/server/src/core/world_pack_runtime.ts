@@ -1,5 +1,5 @@
+import type { WorldPack } from '../packs/manifest/constitution_loader.js';
 import { notifications } from '../utils/notifications.js';
-import type { WorldPack } from '../world/loader.js';
 
 export const parseTickToBigInt = (
   value: string | number | undefined,

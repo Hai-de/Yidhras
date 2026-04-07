@@ -7,7 +7,7 @@ import {
   MAX_RELATIONSHIP_LOG_LIMIT} from './types.js'
 
 export const listRelationalCircles = async (context: AppContext) => {
-  return context.sim.prisma.circle.findMany({
+  return context.prisma.circle.findMany({
     include: { members: true }
   });
 };
@@ -18,9 +18,9 @@ export const listAtmosphereNodes = async (
 ) => {
   const ownerId = typeof input.owner_id === 'string' ? input.owner_id.trim() : '';
   const includeExpired = input.include_expired === true;
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
 
-  return context.sim.prisma.atmosphereNode.findMany({
+  return context.prisma.atmosphereNode.findMany({
     where: {
       ...(ownerId.length === 0 ? {} : { owner_id: ownerId }),
       ...(includeExpired

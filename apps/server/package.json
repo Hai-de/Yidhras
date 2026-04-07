@@ -22,7 +22,7 @@
     "init:runtime": "tsx src/init/prepare_runtime.ts",
     "seed:identity": "tsx src/db/seed_identity.ts",
     "smoke": "vitest run --config vitest.e2e.config.ts tests/e2e/smoke-startup.spec.ts tests/e2e/smoke-endpoints.spec.ts",
-    "manual:world-pack-scenario-demo": "tsx scripts/manual/world_pack_scenario_demo.ts",
+    "manual:world-pack-runtime-demo": "tsx scripts/manual/world_pack_runtime_demo.ts",
     "manual:clock-demo": "tsx scripts/manual/clock_demo.ts",
     "manual:clock-raw": "tsx scripts/manual/clock_raw.ts",
     "manual:dynamics-demo": "tsx scripts/manual/dynamics_demo.ts",

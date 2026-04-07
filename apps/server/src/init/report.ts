@@ -23,6 +23,12 @@ export interface InitReport {
     target_pack_dir: string;
     target_config_path: string;
     template_file_path: string;
+    pack_runtime?: {
+      runtime_db_path: string;
+      runtime_db_created: boolean;
+      engine_owned_collections: string[];
+      pack_collections: string[];
+    };
   };
 }
 
@@ -60,7 +66,17 @@ export const buildWorldPackBootstrapReport = (
     status: result.status,
     target_pack_dir: result.targetPackDirPath,
     target_config_path: result.targetConfigPath,
-    template_file_path: result.templateFilePath
+    template_file_path: result.templateFilePath,
+    ...(result.packRuntime
+      ? {
+          pack_runtime: {
+            runtime_db_path: result.packRuntime.runtimeDbPath,
+            runtime_db_created: result.packRuntime.runtimeDbCreated,
+            engine_owned_collections: result.packRuntime.engineOwnedCollections,
+            pack_collections: result.packRuntime.packCollections
+          }
+        }
+      : {})
   };
 };
 

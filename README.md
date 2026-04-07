@@ -98,7 +98,7 @@ pnpm --filter yidhras-server reset:dev-db
 - `docs/ENHANCEMENTS.md`：延后处理的增强项
 - `apps/web/README.md`：前端应用说明与约束
 
-## 当前实现范围
+## 当前范围
 
 - 服务端包含 runtime、world pack 加载、scheduler、inference / workflow、audit 与 read-model API。
 - 前端包含 overview、workflow、scheduler、graph、social、timeline、agents 页面。

@@ -129,7 +129,7 @@ export const refreshSchedulerWorkerRuntimeState = async (
     now?: bigint;
   }
 ): Promise<SchedulerWorkerRuntimeStateRecord> => {
-  const now = input.now ?? context.sim.clock.getTicks();
+  const now = input.now ?? context.sim.getCurrentTick();
   const activeMigrationCount = await countSchedulerOwnershipMigrationsInProgress(context, input.workerId);
 
   return context.prisma.schedulerWorkerRuntimeState.upsert({
@@ -160,7 +160,7 @@ export const refreshSchedulerWorkerRuntimeLiveness = async (
   context: AppContext,
   now?: bigint
 ): Promise<void> => {
-  const currentTick = now ?? context.sim.clock.getTicks();
+  const currentTick = now ?? context.sim.getCurrentTick();
   const staleThreshold = BigInt(process.env.SCHEDULER_WORKER_STALE_TICKS ?? DEFAULT_SCHEDULER_WORKER_STALE_TICKS.toString());
   const deadThreshold = BigInt(process.env.SCHEDULER_WORKER_DEAD_TICKS ?? DEFAULT_SCHEDULER_WORKER_DEAD_TICKS.toString());
   const workerStates = await listSchedulerWorkerRuntimeStates(context);
@@ -189,7 +189,7 @@ export const reconcileSchedulerBootstrapAssignments = async (
   workerId: string,
   partitionIds?: string[]
 ): Promise<void> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
   const partitionCount = getSchedulerPartitionCount();
   const bootstrapPartitionIds = resolveOwnedSchedulerPartitionIds({
     explicitPartitionIds: partitionIds,
@@ -297,7 +297,7 @@ export const createSchedulerOwnershipMigration = async (
     requestedByWorkerId?: string | null;
   }
 ): Promise<SchedulerOwnershipMigrationRecord> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
   const existingAssignment = await context.prisma.schedulerPartitionAssignment.findUnique({
     where: {
       partition_id: input.partitionId
@@ -353,7 +353,7 @@ export const markSchedulerOwnershipMigrationInProgress = async (
   context: AppContext,
   migrationId: string
 ): Promise<void> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
   await context.prisma.schedulerOwnershipMigrationLog.update({
     where: {
       id: migrationId
@@ -372,7 +372,7 @@ export const completeActiveSchedulerOwnershipMigration = async (
     toWorkerId: string;
   }
 ): Promise<void> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
   const migration = await context.prisma.schedulerOwnershipMigrationLog.findFirst({
     where: {
       partition_id: input.partitionId,
@@ -399,7 +399,7 @@ export const completeSchedulerOwnershipMigration = async (
   context: AppContext,
   migrationId: string
 ): Promise<void> => {
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
   const migration = await context.prisma.schedulerOwnershipMigrationLog.findUnique({
     where: {
       id: migrationId

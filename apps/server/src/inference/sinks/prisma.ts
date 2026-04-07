@@ -36,10 +36,7 @@ const buildContextSnapshot = (event: InferenceTraceEvent): Prisma.InputJsonValue
     policy_summary: event.context.policy_summary,
     memory_context: event.context.memory_context,
     pack_state: event.context.pack_state,
-    pack_runtime: {
-      action_keys: Object.keys(event.context.pack_runtime.actions),
-      decision_rule_ids: event.context.pack_runtime.decision_rules.map(rule => rule.id)
-    },
+    pack_runtime: event.context.pack_runtime,
     memory_selection: event.context.memory_context.diagnostics.memory_selection ?? null,
     prompt_processing_trace:
       event.prompt.metadata.processing_trace ??

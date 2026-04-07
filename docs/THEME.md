@@ -10,10 +10,10 @@
 
 本文档只覆盖 `apps/web` 前端主题开发。
 
-- 平台维护一套**官方默认主题**（当前为 VSCode-like dark workbench）
+- 平台维护一套默认主题（当前为 VSCode-like dark workbench）
 - World-pack provider 可通过 `presentation.theme` 提供自定义主题
 - 平台负责：默认主题、稳定 token contract、runtime resolve/apply、validate/clamp/fallback/diagnostics
-- Provider 拥有自己的视觉身份，平台不对 provider 主题做审美修正
+- Provider 可定义自己的视觉风格，平台不对 provider 主题做审美调整
 
 ---
 
@@ -125,7 +125,7 @@ presentation.theme > platform registry theme > DEFAULT_APP_THEME
 
 ### 新增 token 时的考量
 
-新增 token 需要同步多个位置（类型、默认值、CSS fallback、apply、validate、Tailwind），成本不低。建议先评估是否能用已有 token 组合实现。
+新增 token 需要同步多个位置（类型、默认值、CSS fallback、apply、validate、Tailwind）。建议先评估是否可以通过已有 token 组合实现。
 
 ---
 
@@ -149,7 +149,7 @@ presentation: {
 }
 ```
 
-平台对 provider 主题只做 merge → validate → clamp → diagnostics，不做审美干预。
+平台对 provider 主题只做 merge → validate → clamp → diagnostics，不做审美调整。
 
 ---
 
@@ -199,4 +199,4 @@ document.documentElement.dataset.themeSourceLabel
 
 ## 10. Summary
 
-主题系统的 source of truth 在 `lib/theme/*`，默认视觉语法在 `theme-default.css`，`App*` primitives 提供语义化的主题消费方式。Provider 可自由定义自己的视觉语言，平台只负责 contract、resolve 和 fallback。
+主题系统的 source of truth 在 `lib/theme/*`，默认视觉语法在 `theme-default.css`，`App*` primitives 提供语义化的主题消费方式。Provider 可定义自己的视觉风格，平台负责 contract、resolve 和 fallback。

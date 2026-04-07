@@ -555,7 +555,7 @@ const runAgentSchedulerForPartition = async ({
       leaseExpiresAtSnapshot: leaseResult.expires_at,
       tick: now,
       startedAt,
-      finishedAt: context.sim.clock.getTicks(),
+      finishedAt: context.sim.getCurrentTick(),
       summary,
       candidateDecisions
     });
@@ -629,7 +629,7 @@ const runAgentSchedulerForPartition = async ({
     const renewedLease = await renewSchedulerLease(context, {
       workerId,
       partitionId,
-      now: context.sim.clock.getTicks()
+      now: context.sim.getCurrentTick()
     });
     if (!renewedLease.acquired) {
       break;
@@ -751,7 +751,7 @@ const runAgentSchedulerForPartition = async ({
     leaseExpiresAtSnapshot: leaseResult.expires_at,
     tick: now,
     startedAt,
-    finishedAt: context.sim.clock.getTicks(),
+    finishedAt: context.sim.getCurrentTick(),
     summary,
     candidateDecisions
   });
@@ -786,8 +786,8 @@ export const runAgentScheduler = async ({
   strategy = 'rule_based',
   schedulerReason = 'periodic_tick'
 }: RunAgentSchedulerOptions): Promise<AgentSchedulerRunResult> => {
-  const startedAt = context.sim.clock.getTicks();
-  const now = context.sim.clock.getTicks();
+  const startedAt = context.sim.getCurrentTick();
+  const now = context.sim.getCurrentTick();
   await refreshSchedulerWorkerRuntimeLiveness(context, now);
 
   const initialOwnershipSnapshot = await resolveSchedulerOwnershipSnapshot(context, {

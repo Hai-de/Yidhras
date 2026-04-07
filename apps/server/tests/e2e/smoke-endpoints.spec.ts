@@ -152,7 +152,7 @@ describe('smoke endpoints e2e', () => {
 
       const feedResponse = await requestJson(server.baseUrl, '/api/social/feed?limit=5');
       const graphResponse = await requestJson(server.baseUrl, '/api/relational/graph');
-      const timelineResponse = await requestJson(server.baseUrl, '/api/narrative/timeline');
+      const timelineResponse = await requestJson(server.baseUrl, '/api/packs/world-death-note/projections/timeline');
 
       if (runtimeReady) {
         expect(feedResponse.status).toBe(200);
@@ -164,7 +164,8 @@ describe('smoke endpoints e2e', () => {
         expect(Array.isArray(graphData.edges)).toBe(true);
 
         expect(timelineResponse.status).toBe(200);
-        assertSuccessEnvelopeArrayData(timelineResponse.body, '/api/narrative/timeline');
+        const packTimelineData = assertSuccessEnvelopeData(timelineResponse.body, '/api/packs/world-death-note/projections/timeline');
+        expect(Array.isArray(packTimelineData.timeline)).toBe(true);
 
         const overrideResponse = await requestJson(server.baseUrl, '/api/runtime/speed', {
           method: 'POST',
@@ -478,25 +479,28 @@ describe('smoke endpoints e2e', () => {
           contextSnapshot.prompt_processing_trace,
           'persisted trace prompt processing trace'
         );
-        expect(Array.isArray(promptProcessingTrace.processor_names)).toBe(true);
+        const processorNames = Array.isArray(promptProcessingTrace.processor_names) ? promptProcessingTrace.processor_names : [];
+        expect(Array.isArray(processorNames)).toBe(true);
         const promptBundle = assertRecord(persistedTraceData.prompt_bundle, 'persisted trace prompt bundle');
         const promptBundleMetadata = assertRecord(promptBundle.metadata, 'persisted trace prompt bundle metadata');
         const processingTrace = assertRecord(promptBundleMetadata.processing_trace, 'persisted trace bundle processing trace');
-        expect(Array.isArray(processingTrace.processor_names)).toBe(true);
-        expect(processingTrace.processor_names.includes('policy-filter')).toBe(true);
-        expect(processingTrace.processor_names.includes('memory-summary')).toBe(true);
-        expect(processingTrace.processor_names.includes('token-budget-trimmer')).toBe(true);
+        const bundleProcessorNames = Array.isArray(processingTrace.processor_names) ? processingTrace.processor_names : [];
+        expect(Array.isArray(bundleProcessorNames)).toBe(true);
+        expect(bundleProcessorNames.includes('policy-filter')).toBe(true);
+        expect(bundleProcessorNames.includes('memory-summary')).toBe(true);
+        expect(bundleProcessorNames.includes('token-budget-trimmer')).toBe(true);
         const tokenBudgetTrimming = assertRecord(
           promptProcessingTrace.token_budget_trimming,
           'persisted trace token budget trimming'
         );
         expect(typeof tokenBudgetTrimming.budget).toBe('number');
-        expect(Array.isArray(promptProcessingTrace.steps)).toBe(true);
+        const promptProcessingSteps = Array.isArray(promptProcessingTrace.steps) ? promptProcessingTrace.steps : [];
+        expect(Array.isArray(promptProcessingSteps)).toBe(true);
         expect(
-          promptProcessingTrace.steps.some(step => isRecord(step) && step.processor_name === 'policy-filter')
+          promptProcessingSteps.some((step: unknown) => isRecord(step) && step.processor_name === 'policy-filter')
         ).toBe(true);
         expect(
-          promptProcessingTrace.steps.some(step => isRecord(step) && step.processor_name === 'token-budget-trimmer')
+          promptProcessingSteps.some((step: unknown) => isRecord(step) && step.processor_name === 'token-budget-trimmer')
         ).toBe(true);
 
         const persistedIntentResponse = await requestJson(

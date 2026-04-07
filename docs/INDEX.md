@@ -23,7 +23,7 @@
 - `ARCH.md`：稳定架构边界、模块职责、设计约束
 - `LOGIC.md`：当前成立的业务规则与领域语义
 - `THEME.md`：前端主题 contract 与主题开发入口
-- `ENHANCEMENTS.md`：不阻塞主线的延后增强项
+- `ENHANCEMENTS.md`：延后处理的增强项
 
 ## 非正式 / 过程性文档
 

@@ -43,7 +43,7 @@ export const requirePolicyIdentity = (identity: IdentityContext | undefined): Id
 };
 
 const createIdentityPolicyService = (context: AppContext): IdentityPolicyService => {
-  return new IdentityPolicyService(context.sim.prisma);
+  return new IdentityPolicyService(context.prisma);
 };
 
 const createPolicyAccessContext = (
@@ -76,9 +76,9 @@ export const createPolicy = async (
     throw new ApiError(400, 'POLICY_INVALID', 'effect must be allow or deny');
   }
 
-  const now = context.sim.clock.getTicks();
+  const now = context.sim.getCurrentTick();
 
-  return context.sim.prisma.policy.create({
+  return context.prisma.policy.create({
     data: {
       effect,
       subject_id: subject_id ?? null,

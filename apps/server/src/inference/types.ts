@@ -1,11 +1,7 @@
+import type { WorldPackValue } from '../packs/schema/constitution_schema.js';
 import type { IdentityContext } from '../identity/types.js';
 import type { MemoryContextPack } from '../memory/types.js';
 import type { VariablePool } from '../narrative/types.js';
-import type {
-  WorldPackActionConfig,
-  WorldPackDecisionRuleConfig,
-  WorldPackScenarioValue
-} from '../world/schema.js';
 import type { PromptFragment } from './prompt_fragments.js';
 
 export type InferenceStrategy = 'mock' | 'rule_based';
@@ -152,7 +148,7 @@ export interface InferenceWorldPackRef {
   version: string;
 }
 
-export type InferencePackStateValue = WorldPackScenarioValue;
+export type InferencePackStateValue = WorldPackValue;
 export type InferencePackStateRecord = Record<string, InferencePackStateValue>;
 
 export interface InferencePackArtifactSnapshot {
@@ -176,10 +172,9 @@ export interface InferencePackStateSnapshot {
   latest_event: InferencePackLatestEventSnapshot | null;
 }
 
-export interface InferencePackRuntimeContract {
-  actions: Record<string, WorldPackActionConfig>;
-  decision_rules: WorldPackDecisionRuleConfig[];
-}
+export type InferencePackRuntimeContract = Record<string, never>
+
+
 
 export interface InferenceContext {
   inference_id: string;
