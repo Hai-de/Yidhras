@@ -215,26 +215,22 @@
 - pack 世界规则执行当前主要通过 `InvocationRequest -> enforcement engine` 完成
 - `ActionIntent` / `InferenceTrace` / `DecisionJob` 当前仍保留在 kernel-side Prisma，而不是 pack runtime
 
-## 10. 身份与策略接口
+## 10. 身份与 Access-Policy 接口
 
 - **POST `/api/identity/register`**
 - **POST `/api/identity/bind`**
 - **POST `/api/identity/bindings/query`**
 - **POST `/api/identity/bindings/unbind`**
 - **POST `/api/identity/bindings/expire`**
-- **POST `/api/policy`**
-- **POST `/api/policy/evaluate`**
+- **POST `/api/access-policy`**
+- **POST `/api/access-policy/evaluate`**
 
 说明：
 
-- `/api/policy/*` 当前保留为 access / projection policy debug surface
-- 它们不属于 world-pack governance framework 的核心接口
-- 当前仍作为已公开的 debug/ops surface 保留
-- 当前响应会附带 warning，明确其 debug/ops 属性
-- 删除或外提条件：
-  1. access-policy 子系统拥有独立稳定宿主
-  2. 当前 debug 读写面不再被 operator/workflow 主流程依赖
-  3. 文档中已完成从 unified governance 主线到独立子系统的迁移
+- `/api/access-policy/*` 当前已作为独立 access-policy 子系统宿主
+- 它们负责 access / projection policy 的显式写入与评估
+- 它们不属于 world-pack governance framework 的核心接口，但也不再被视为 compat/debug surface
+- 当前响应不再附带 debug-surface warning meta
 
 ## 11. Operator 高级视图后端合同
 
@@ -325,7 +321,7 @@
 
 1. `/api/packs/:packId/projections/timeline` 是当前唯一的 narrative timeline 接口
 2. `/api/entities/:id/overview` 是当前唯一 canonical entity overview 接口
-3. `/api/policy/*` 保留，但当前只应视为 access/policy debug surface，而不是世界治理主接口
+3. `/api/access-policy/*` 属于独立 access-policy 子系统，而不是 world-pack governance 主接口
 4. world-pack schema 当前不再接受 legacy `scenario / actions / decision_rules / event_templates`
 5. 当前 ownership matrix 已明确：
    - world governance core -> pack runtime

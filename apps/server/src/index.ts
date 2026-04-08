@@ -13,7 +13,7 @@ import { registerIdentityRoutes } from './app/routes/identity.js';
 import { registerInferenceRoutes } from './app/routes/inference.js';
 import { registerNarrativeRoutes } from './app/routes/narrative.js';
 import { registerOverviewRoutes } from './app/routes/overview.js';
-import { registerPolicyRoutes } from './app/routes/policy.js';
+import { registerAccessPolicyRoutes } from './app/routes/access_policy.js';
 import { registerRelationalRoutes } from './app/routes/relational.js';
 import { registerSchedulerRoutes } from './app/routes/scheduler.js';
 import { registerSocialRoutes } from './app/routes/social.js';
@@ -147,7 +147,7 @@ const registerRoutes: RouteRegistrar = (application, context) => {
     asyncHandler,
     parseOptionalTick
   });
-  registerPolicyRoutes(application, context, {
+  registerAccessPolicyRoutes(application, context, {
     asyncHandler
   });
   registerSchedulerRoutes(application, context, {

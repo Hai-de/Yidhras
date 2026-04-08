@@ -4,10 +4,10 @@ import type { IdentityContext } from '../../identity/types.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import {
-  assertWriteAllowedForIdentity,
-  filterReadableFieldsForIdentity,
-  requirePolicyIdentity
-} from './policy.js';
+  assertWriteAllowedByAccessPolicy,
+  filterReadableFieldsByAccessPolicy,
+  requireAccessPolicyIdentity
+} from '../../access_policy/service.js';
 
 export interface ListSocialFeedInput {
   limit?: number | string;
@@ -289,7 +289,7 @@ export const listSocialFeed = async (
   identity: IdentityContext | undefined,
   input: ListSocialFeedInput = {}
 ) => {
-  const resolvedIdentity = requirePolicyIdentity(identity);
+  const resolvedIdentity = requireAccessPolicyIdentity(identity);
   const limit = parseSocialFeedLimit(input.limit);
   const authorId = normalizeOptionalString(input.author_id);
   const agentId = normalizeOptionalString(input.agent_id);
@@ -397,7 +397,7 @@ export const listSocialFeed = async (
 
   const items = await Promise.all(
     pagePosts.map(async post => {
-      return filterReadableFieldsForIdentity(
+      return filterReadableFieldsByAccessPolicy(
         context,
         resolvedIdentity,
         {
@@ -426,12 +426,12 @@ export const createSocialPost = async (
     source_action_intent_id?: string | null;
   }
 ) => {
-  const resolvedIdentity = requirePolicyIdentity(identity);
+  const resolvedIdentity = requireAccessPolicyIdentity(identity);
   if (typeof content !== 'string' || content.trim().length === 0) {
     throw new ApiError(400, 'SOCIAL_POST_INVALID', 'content is required');
   }
 
-  await assertWriteAllowedForIdentity(
+  await assertWriteAllowedByAccessPolicy(
     context,
     resolvedIdentity,
     {

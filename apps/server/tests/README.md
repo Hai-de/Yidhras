@@ -3,7 +3,7 @@
 本目录是 `apps/server` 的 canonical Vitest 测试工作区。
 
 - `apps/server/tests/**`：正式自动化测试入口
-- `apps/server/src/e2e/*.ts`：仅保留少量辅助文件，不再作为主测试入口
+- `apps/server/tests/support/**`：测试与手动脚本共享的轻量支持模块
 
 ## 常用命令
 
@@ -25,7 +25,8 @@ pnpm --filter yidhras-server exec vitest run --config vitest.e2e.config.ts tests
 
 ```text
 tests/
-  helpers/      # 轻量工具、共享断言、进程封装
+  support/      # 轻量共享支持模块（server 启动、status/assert helpers、默认 pack 配置）
+  helpers/      # 进程封装、隔离环境、共享断言
   fixtures/     # 测试上下文与资源装配
   unit/         # 纯逻辑与快速反馈层
   integration/  # Prisma / service / runtime 模块集成
@@ -43,6 +44,12 @@ tests/
   - 禁用 `DEV_RUNTIME_RESET_ON_START`
   - 在独立环境中运行 `prepare:runtime`
 - 在临时数据库与独立 runtime 目录尚未普及前，不要把 server 的 `integration` / `e2e` 提升为并行默认值。
+
+## CI 基线
+
+- `server-tests.yml`：当前只运行 `integration`，作为默认 server CI 门禁。
+- `server-smoke.yml`：独立运行 startup + key endpoints smoke，覆盖最小 HTTP/启动链路。
+- `test:e2e`：仍保留为本地/手动验证入口，但当前不作为默认 CI 门禁。
 
 ## 其他说明
 

@@ -6,6 +6,8 @@
 
 这意味着本文档不再讨论“是否继续保留旧输入兼容层”，而是同步当前真实代码状态，并记录当前已经完成的一轮边界收口结果。
 
+> 注：本文中提及的历史 `/api/policy/*` compatibility/debug surface，已在后续收尾中外提为独立 `/api/access-policy/*` 子系统。除特别说明外，旧路由表述均用于保留当时上下文，而非表示当前实现仍以其为正式入口。
+
 当前已经成立的事实如下：
 
 - world-pack 的 canonical contract 已收敛为：
@@ -749,21 +751,28 @@ bootstrap:
 
 ---
 
-## 15. 推荐下一步
+## 15. 实施状态审计 (Last Updated: 2026-04-08)
 
-基于当前代码状态，下一阶段最值得推进的已不再是“让 unified governance framework 成立”，而是继续做更长期的纯化与产品化：
+> **审计结论**：主线已落地。当前进入 **边界纯化 & Operator 产品化** 阶段。
 
-1. **长期 runtime boundary 演进**
-   - 继续评估 `SimulationManager` 的更细拆分
-   - 决定 `getGraphData()` 等 query facade 是否进一步外提
-2. **Event / bridge 合同演进**
-   - 评估是否需要更显式的 outbox / extractor contract
-   - 在不破坏现有 evidence 链的前提下提升边界清晰度
-3. **Compat API 最终退场策略**
-   - 评估 `/api/policy/*` 是否长期保留
-4. **Operator 高级视图**
-   - 后端继续稳定 authority / perception / rule execution evidence contract
-   - 前端推进 Authority Inspector / Rule Execution Timeline / Perception Diff 等产品形态
+### ✅ 已完成 (主线封板)
+- [x] Canonical Schema 收敛 & 旧字段拦截
+- [x] Runtime Materializer (Entities, Auth, Mediators, Bootstrap)
+- [x] Authority Resolution & Mediator Provenance
+- [x] Objective Enforcement 替代旧 Action 体系
+- [x] Pack-local SQLite 存储边界
+- [x] Death Note 样板 Mediator 化
+- [x] API 路由收口 (`/api/entities/:id`, Active Pack Guard)
+
+### ⚠️ 部分完成 (基础实现，待增强)
+- [~] Perception 系统 (可见集基础版，缺 Diff/复杂规则)
+- [~] Operator 后端证据 (数据已有，前端视图缺失)
+
+### ❌ 未启动 / 后续阶段
+- [ ] Authority Inspector / Perception Diff 前端界面
+- [ ] SimulationManager 深度拆分
+- [ ] `/api/policy/*` 彻底下线策略
+- [ ] `PackOutboxEvent` 引入
 
 当前 unified governance framework 应被视为：
 

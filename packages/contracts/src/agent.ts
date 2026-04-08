@@ -1,10 +1,15 @@
 import { z } from 'zod'
 
+const nonEmptyIdParamSchema = z.string().trim().min(1)
+const positiveAgentLimitQuerySchema = z.coerce.number().finite().int().positive()
+
 export const agentIdParamsSchema = z.object({
-  id: z.string().min(1)
+  id: nonEmptyIdParamSchema
 })
 
-const positiveAgentLimitQuerySchema = z.coerce.number().finite().int().positive()
+export const entityIdParamsSchema = z.object({
+  id: nonEmptyIdParamSchema
+})
 
 export const agentOverviewQuerySchema = z.object({
   limit: positiveAgentLimitQuerySchema.optional()

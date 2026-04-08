@@ -1,9 +1,10 @@
 import {
   agentIdParamsSchema,
-  agentOverviewQuerySchema,
   agentSchedulerProjectionQuerySchema,
   agentSnrLogsQuerySchema,
-  entityOverviewDataSchema
+  entityIdParamsSchema,
+  entityOverviewDataSchema,
+  entityOverviewQuerySchema
 } from '@yidhras/contracts';
 import type { Express, NextFunction, Request, Response } from 'express';
 
@@ -32,8 +33,8 @@ export const registerAgentRoutes = (
     }
   ): Promise<void> => {
     context.assertRuntimeReady(options.runtimeFeature);
-    const params = parseParams(agentIdParamsSchema, req.params, 'AGENT_QUERY_INVALID');
-    const query = parseQuery(agentOverviewQuerySchema, req.query, 'AGENT_QUERY_INVALID');
+    const params = parseParams(entityIdParamsSchema, req.params, 'AGENT_QUERY_INVALID');
+    const query = parseQuery(entityOverviewQuerySchema, req.query, 'AGENT_QUERY_INVALID');
     const overview = await getEntityOverview(context, params.id, {
       limit: query.limit
     });

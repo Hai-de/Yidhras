@@ -32,17 +32,17 @@
 - invocation / objective enforcement：`domain/invocation/**`、`domain/rule/**`
 - kernel + pack projections：`kernel/projections/**`、`packs/runtime/projections/**`
 
-## Remaining Compatibility Surfaces / 剩余兼容面
+## Remaining Non-Core Surfaces / 剩余非主线表面
 
-以下内容仍保留，但已不属于 world-pack 输入或运行时兼容桥：
+以下内容仍保留，但已不属于 world-pack 输入、运行时兼容桥或治理主线核心：
 
-- `/api/policy/*` 的 access/policy debug surface
+- `/api/access-policy/*` 的独立 access-policy 子系统接口
 - `apps/server/src/core/simulation.ts` 仍未拆成更细的 runtime manager / pack instance 边界
 
 ## Suggested Next Work / 建议后续工作
 
-### A. 最终兼容表面清除
-- [ ] 评估 `/api/policy/*` 是否继续保留为 debug surface，或进一步内聚到 access/perception 子系统
+### A. 子系统边界收口
+- [x] 完成 access-policy 子系统独立化，当前正式入口为 `/api/access-policy/*`
 - [ ] 继续推动 `SimulationManager` 向更清晰的 runtime manager / pack instance 边界演进
 
 ### B. 文档与契约同步深化

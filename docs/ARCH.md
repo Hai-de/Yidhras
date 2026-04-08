@@ -125,12 +125,12 @@ Yidhras 当前采用“kernel + world-pack runtime”双层架构：
 
 这表示 pack projection API 目前明确采用 **single-active-pack** 合同。
 
-### Compat / Debug Surface Contract
+### Access-Policy Subsystem Contract
 
-- `/api/policy/*`
-  - access / projection policy debug surface
+- `/api/access-policy/*`
+  - access / projection policy 的独立子系统接口
   - 不属于 unified governance canonical API
-  - 如后续独立为 access-policy 子系统，可再迁移
+  - 负责 projection access / write policy 的显式管理与评估
 
 ### Operator 高级视图后端合同
 

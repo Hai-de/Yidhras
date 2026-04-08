@@ -278,9 +278,9 @@ bridge 规则：
 - `/api/packs/:packId/projections/timeline`
 - `/api/entities/:id/overview`
 
-兼容读接口当前只剩：
+已独立外提的相关读写策略子系统：
 
-- `/api/policy/*`
+- `/api/access-policy/*`
 
 当前阶段可归纳为：
 
@@ -309,10 +309,10 @@ bridge 规则：
 
 但 policy 当前不再适合作为世界治理中心的描述。
 
-当前 `/api/policy/*` 更准确的定位是：
+当前 `/api/access-policy/*` 更准确的定位是：
 
-- projection/access policy debug surface
-- 不是 world-pack governance framework 的核心入口
+- 独立 access-policy 子系统接口
+- 不是 world-pack governance framework 的核心入口，但也不再属于 compat/debug surface
 
 ## 11. Ownership Matrix Status / 当前归属矩阵状态
 
@@ -354,9 +354,9 @@ bridge 规则：
 6. `world/schema.ts` 与 `world/loader.ts` 已删除，imports 已统一到 `packs/*`
 7. `/api/narrative/timeline` 已删除
 
-当前仍保留的兼容面只剩：
+当前仍值得持续观察的非治理主线边界对象包括：
 
-- `/api/policy/*` 的历史调试/访问策略接口
+- `/api/access-policy/*` 的独立 access-policy 子系统接口
 
 ## 13. Contributor Rules / 贡献者规则
 

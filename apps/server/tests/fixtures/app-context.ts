@@ -3,7 +3,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { AppContext, RuntimeLoopDiagnostics, StartupHealth } from '../../src/app/context.js';
 import { ChronosEngine } from '../../src/clock/engine.js';
 import type { SimulationManager } from '../../src/core/simulation.js';
-import { DEFAULT_E2E_WORLD_PACK } from '../../src/e2e/config.js';
+import { DEFAULT_E2E_WORLD_PACK } from '../support/config.js';
 import { notifications } from '../../src/utils/notifications.js';
 
 export interface CreateTestAppContextOptions {

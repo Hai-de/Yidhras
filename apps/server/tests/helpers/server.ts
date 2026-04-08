@@ -1,12 +1,12 @@
-import type { RunningServer } from '../../src/e2e/helpers.js';
+import type { RunningServer } from '../support/helpers.js';
 import {
   isRecord,
   requestJson,
   startServer,
   summarizeResponse
-} from '../../src/e2e/helpers.js';
+} from '../support/helpers.js';
 
-export type { JsonResponse, RunningServer } from '../../src/e2e/helpers.js';
+export type { JsonResponse, RunningServer } from '../support/helpers.js';
 
 export interface TestServerOptions {
   defaultPort: number;

@@ -3,8 +3,8 @@ import {
   requestJson,
   startServer,
   summarizeResponse
-} from '../../src/e2e/helpers.js';
-import { assertSuccessEnvelopeData } from '../../src/e2e/status_helpers.js';
+} from '../../tests/support/helpers.js';
+import { assertSuccessEnvelopeData } from '../../tests/support/status_helpers.js';
 
 const parsePort = (): number => {
   const value = process.env.SMOKE_PORT;

@@ -84,17 +84,6 @@ export const packNarrativeProjectionDataSchema = z.object({
   timeline: z.array(packTimelineEntrySchema)
 })
 
-export const legacyNarrativeEventSchema = z.object({
-  id: nonEmptyStringSchema,
-  title: z.string(),
-  description: z.string(),
-  created_at: nonEmptyStringSchema,
-  type: nonEmptyStringSchema,
-  tick: nonEmptyStringSchema,
-  impact_data: z.unknown().nullable(),
-  source_action_intent_id: z.string().nullable()
-})
-
 export const entityOverviewQuerySchema = z.object({
   limit: positiveIntQuerySchema.optional()
 })

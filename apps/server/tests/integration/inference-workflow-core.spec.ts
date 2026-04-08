@@ -29,7 +29,7 @@ import type {
   DecisionJobRecord,
   InferenceTraceRecord
 } from '../../src/app/services/inference_workflow/types.js';
-import { DEFAULT_E2E_WORLD_PACK } from '../../src/e2e/config.js';
+import { DEFAULT_E2E_WORLD_PACK } from '../support/config.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 
 describe('inference workflow core integration', () => {

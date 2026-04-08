@@ -4,7 +4,7 @@ import { assertErrorEnvelope } from '../helpers/envelopes.js';
 import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { isRecord, requestJson } from '../helpers/server.js';
 
-describe('policy contracts e2e', () => {
+describe('access-policy contracts e2e', () => {
   it('accepts flat primitive/array conditions and rejects primitive or nested-object conditions', async () => {
     await withIsolatedTestServer({ defaultPort: 3117 }, async server => {
       const headers = {
@@ -12,7 +12,7 @@ describe('policy contracts e2e', () => {
         'x-m2-identity': JSON.stringify({ id: 'system', type: 'system', name: 'System' })
       };
 
-      const createResponse = await requestJson(server.baseUrl, '/api/policy', {
+      const createResponse = await requestJson(server.baseUrl, '/api/access-policy', {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -33,7 +33,7 @@ describe('policy contracts e2e', () => {
       expect(isRecord(createResponse.body)).toBe(true);
       expect((createResponse.body as Record<string, unknown>).success).toBe(true);
 
-      const invalidPrimitiveResponse = await requestJson(server.baseUrl, '/api/policy', {
+      const invalidPrimitiveResponse = await requestJson(server.baseUrl, '/api/access-policy', {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -51,7 +51,7 @@ describe('policy contracts e2e', () => {
         'invalid primitive conditions'
       );
 
-      const invalidNestedResponse = await requestJson(server.baseUrl, '/api/policy', {
+      const invalidNestedResponse = await requestJson(server.baseUrl, '/api/access-policy', {
         method: 'POST',
         headers,
         body: JSON.stringify({

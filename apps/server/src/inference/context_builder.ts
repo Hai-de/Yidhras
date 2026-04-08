@@ -2,8 +2,9 @@ import { randomUUID } from 'node:crypto';
 
 import type { AppContext } from '../app/context.js';
 import { getAgentContextSnapshot } from '../app/services/agent.js';
-import { IdentityPolicyService } from '../identity/service.js';
+import { AccessPolicyService } from '../access_policy/service.js';
 import type { IdentityContext } from '../identity/types.js';
+import { IdentityService } from '../identity/service.js';
 import { createMemoryService } from '../memory/service.js';
 import type { VariablePool } from '../narrative/types.js';
 import { listPackEntityStateProjectionRecords } from '../packs/storage/entity_state_projection.js';
@@ -114,8 +115,12 @@ const normalizeAttributes = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 
-const createIdentityPolicyService = (context: AppContext): IdentityPolicyService => {
-  return new IdentityPolicyService(context.prisma);
+const createIdentityService = (context: AppContext): IdentityService => {
+  return new IdentityService(context.prisma);
+};
+
+const createAccessPolicyService = (context: AppContext): AccessPolicyService => {
+  return new AccessPolicyService(context.prisma);
 };
 
 const listActiveBindingsForIdentity = async (context: AppContext, identityId: string): Promise<BindingRecord[]> => {
@@ -139,7 +144,7 @@ const listActiveBindingsForIdentity = async (context: AppContext, identityId: st
 };
 
 const resolveIdentityOnlyActor = async (context: AppContext, identityId: string): Promise<ResolvedActor> => {
-  const identityService = createIdentityPolicyService(context);
+  const identityService = createIdentityService(context);
   const identity = await identityService.fetchIdentity(identityId);
   if (!identity) {
     throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'identity_id could not be resolved', {
@@ -263,7 +268,7 @@ const resolveExplicitActor = async (
   agentId: string,
   identityId: string
 ): Promise<ResolvedActor> => {
-  const identityService = createIdentityPolicyService(context);
+  const identityService = createIdentityService(context);
   const identity = await identityService.fetchIdentity(identityId);
   if (!identity) {
     throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'identity_id could not be resolved', {
@@ -421,7 +426,7 @@ const buildPolicySummary = async (
   identity: IdentityContext,
   attributes: Record<string, unknown>
 ): Promise<InferencePolicySummary> => {
-  const service = createIdentityPolicyService(context);
+  const service = createAccessPolicyService(context);
   const readInput = {
     identity,
     resource: 'social_post',
