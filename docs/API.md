@@ -208,8 +208,10 @@ This is the current API-level observability path for narrativized failure.
 - **POST `/api/inference/preview`**
   - 说明：预览推理上下文与结构化 prompt 结果
   - 输入：`{ agent_id?: string, identity_id?: string, strategy?: "mock"|"rule_based", attributes?: Record<string, unknown>, idempotency_key?: string }`
+  - 边界说明：公共 HTTP contract 仍只保证 `mock | rule_based`；内部虽然已存在 `model_routed` 能力，但尚未作为稳定 public contract 正式开放
 - **POST `/api/inference/run`**
   - 说明：手动触发一次推理并返回标准化 decision
+  - 边界说明：与 preview 相同，当前 public docs 仍只承诺 `mock | rule_based`
 
 ### 9.2 Workflow endpoints
 
@@ -223,6 +225,12 @@ This is the current API-level observability path for narrativized failure.
 - **GET `/api/inference/traces/:id/job`**
 - **GET `/api/inference/traces/:id/workflow`**
 - **GET `/api/inference/jobs/:id/workflow`**
+- **GET `/api/inference/ai-invocations`**
+  - 说明：分页列出 kernel-side `AiInvocationRecord` 观测记录
+  - 输入：`{ status?: "completed"|"failed"|"blocked"|"timeout", provider?: string, model?: string, task_type?: string, source_inference_id?: string, route_id?: string, has_error?: "true"|"false", from_created_at?: string, to_created_at?: string, cursor?: string, limit?: string }`
+  - 返回：`{ success: true, data: { items, page_info, summary }, meta?: { pagination } }`
+- **GET `/api/inference/ai-invocations/:id`**
+  - 说明：读取单条 `AiInvocationRecord` 详情
 
 ### 9.3 Execution semantics note
 
@@ -244,6 +252,34 @@ There is currently no public `semantic_intent` strategy. Instead:
 - providers may emit intermediate `action_type='semantic_intent'`
 - the server-side Intent Grounder resolves it before final `ActionIntentDraft` persistence
 - grounding uses active-pack `rules.invocation`
+
+### 9.4.1 Internal multi-model gateway note
+
+Current server runtime already includes an internal multi-model AI gateway path:
+
+- internal strategy support includes `model_routed`
+- `gateway_backed` inference provider can route `agent_decision` through `AiTaskService -> RouteResolver -> ModelGateway -> provider adapter`
+- default built-in rollout is OpenAI-first
+
+But current public API boundary remains:
+
+- `/api/inference/*` external contract is still documented as `mock | rule_based`
+- `model_routed` should currently be treated as internal/controlled capability
+- world-pack `pack.ai` only declaratively influences prompt/output/parse/route hints
+- pack config does **not** directly control raw OpenAI/provider protocol payloads
+
+Current read-only observability surface that is now public:
+
+- `GET /api/inference/ai-invocations`
+- `GET /api/inference/ai-invocations/:id`
+
+### 9.4.2 AI invocation evidence note
+
+When inference is executed through the internal gateway path, trace metadata may include:
+
+- `ai_invocation_id`
+
+This id links the workflow-side `InferenceTrace` to kernel-side `AiInvocationRecord` evidence. A dedicated public query API for `AiInvocationRecord` is not exposed in the current stage.
 
 ### 9.5 Context Module MVP note
 

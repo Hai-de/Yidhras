@@ -1,24 +1,5 @@
 # TODO
 
-## Current Status / 当前状态
-
-当前 `world-pack unified governance framework` 相关实施计划（见 `.limcode/plans/world-pack-unified-governance-framework.plan.md`）已完成：
-
-- [x] `p1` 固化 world-pack schema 与 storage schema
-- [x] `p2` 建立 kernel db / pack db / install/materialize 生命周期边界
-- [x] `p3` 引入 pack runtime 核心模型
-- [x] `p4` 重写 authority resolver / perception resolver / inference context assembler
-- [x] `p5` 以 objective enforcement engine 替换旧 action_dispatcher 世界规则中心职责
-- [x] `p6` 迁移 API/read model 到 kernel projection 与 pack projection 结构
-- [x] `p7` 补齐 install/integration/e2e 验证与清理 legacy 主线
-- [x] 移除 world-pack 输入兼容层：`scenario / event_templates / actions / decision_rules`
-- [x] 以 `bootstrap.initial_states` 替代 `scenario.world_state`
-- [x] 以 objective rule 内联事件声明替代 `event_templates`
-- [x] 明确 ownership matrix 当前中间态：world governance core -> pack runtime；social/narrative/workflow evidence -> kernel-side Prisma
-- [x] 将 `death_note` 默认样板重构为显式 mediator 表达
-- [x] 删除 `/api/narrative/timeline`
-- [x] 删除 `/api/agent/:id/overview`
-- [x] 删除 `world/schema.ts` 与 `world/loader.ts`，统一 imports 到 `packs/*`
 
 ## Current Architecture Snapshot / 当前架构概览
 
@@ -39,29 +20,6 @@
 - `/api/access-policy/*` 的独立 access-policy 子系统接口
 - `apps/server/src/core/simulation.ts` 仍未拆成更细的 runtime manager / pack instance 边界
 
-## Suggested Next Work / 建议后续工作
-
-### Death Note Intent Grounder / 第一阶段收尾状态
-
-- [x] Death Note pack 第一版题材动作链已落地：notebook acquisition / rule learning / murderous intent / intel / target / judgement / investigation / intel sharing
-- [x] `rules.invocation` 已成为运行时 grounding 层，而不再只是 schema 占位
-- [x] Intent Grounder 已接入 inference → workflow 主链
-- [x] `ritual_divination` 等 unexpected action 已支持 narrativized failed-attempt fallback
-- [x] scheduler 已消费事件桥接 metadata（如 `followup_actor_ids`）形成最小协作回流
-- [x] server 侧 typecheck / unit / integration / e2e 已全部通过
-
-### 当前后续重点
-
-- [x] 已引入 Context Module MVP：`ContextNode / ContextRun / ContextService / Context Orchestrator Lite`
-- [x] inference context 已先走 Context Module，再向下派生 legacy `memory_context`
-- [x] `InferenceTrace.context_snapshot` 已包含 `context_module / context_debug / prompt_assembly` 等上下文诊断字段
-- [x] prompt 主线已通过线性 orchestrator-lite 收口既有 processors
-- [x] 已将 policy 从 fragment-level 上移到 node-level / working-set 治理，并保留 `policy_filter` 作为 compatibility fallback
-- [x] 已引入 kernel-side overlay store / `ContextOverlayEntry` / overlay source adapter，并 materialize 为 `writable_overlay` 节点
-- [x] `InferenceTrace.context_snapshot`、workflow debug 读取层与 entity overview 已可观察 policy / overlay 摘要
-- [x] 已预留 future `ContextDirective` schema 与 trace 字段：`submitted/approved/denied_directives`
-- [x] 继续补文档同步与阶段性收尾，明确当前 **仍未** 开放 directive 执行、通用 DAG workflow engine、visual editor 与 plugin runtime
-
 ### Context Module MVP / 当前阶段说明
 
 - 当前完成的是 Context Module MVP + policy/overlay deepening，而不是完整 Prompt Workflow Engine
@@ -73,6 +31,7 @@
 - [ ] 同步更多设计/实现细节到 docs/ 与根文档，减少新读者理解 Intent Grounder 与 narrativized failure 的成本
 - [ ] 继续观察 `SimulationManager` / runtime facade 边界，决定是否需要下一轮收口
 - [ ] 评估是否需要进一步补针对 Death Note semantic path 的专门 review 文档
+- [x] 已新增 `AiInvocationRecord` 的查询/read-model/API surface（`/api/inference/ai-invocations*`）
 
 ### A. 子系统边界收口
 - [x] 完成 access-policy 子系统独立化，当前正式入口为 `/api/access-policy/*`

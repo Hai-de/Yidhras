@@ -251,6 +251,7 @@ model InferenceTrace {
   action_intent    ActionIntent?
   decision_job     DecisionJob?
   replay_source_jobs DecisionJob[] @relation("DecisionJobReplaySourceTrace")
+  ai_invocations   AiInvocationRecord[]
 
   @@index([kind, created_at])
   @@index([strategy, provider])
@@ -331,6 +332,38 @@ model DecisionJob {
   @@index([status, scheduled_for_tick])
   @@index([intent_class, created_at])
   @@index([replay_of_job_id, created_at])
+}
+
+model AiInvocationRecord {
+  id                  String   @id
+  task_id             String
+  task_type           String
+  source_inference_id String?
+  provider            String
+  model               String
+  route_id            String?
+  status              String
+  finish_reason       String
+  attempted_models_json Json
+  fallback_used       Boolean  @default(false)
+  latency_ms          Int?
+  usage_json          Json?
+  safety_json         Json?
+  request_json        Json?
+  response_json       Json?
+  error_code          String?
+  error_message       String?
+  error_stage         String?
+  audit_level         String
+  created_at          BigInt
+  completed_at        BigInt?
+
+  source_inference    InferenceTrace? @relation(fields: [source_inference_id], references: [id])
+
+  @@index([source_inference_id, created_at])
+  @@index([task_type, created_at])
+  @@index([provider, model, created_at])
+  @@index([status, created_at])
 }
 
 model ContextOverlayEntry {

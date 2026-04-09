@@ -11,6 +11,8 @@ const DEVELOPMENT_CONFIG_BASENAME = 'development.yaml';
 const PRODUCTION_CONFIG_BASENAME = 'production.yaml';
 const TEST_CONFIG_BASENAME = 'test.yaml';
 const DEFAULT_WORLD_PACK_TEMPLATE_BASENAME = 'death_note.yaml';
+const DEFAULT_AI_MODELS_CONFIG_BASENAME = 'ai_models.yaml';
+const VERSION_MANAGED_AI_CONFIG_RELATIVE_PATH = path.join('apps', 'server', 'config', DEFAULT_AI_MODELS_CONFIG_BASENAME);
 
 const SEEDED_CONFIG_BASENAMES = [
   DEFAULT_CONFIG_BASENAME,
@@ -51,6 +53,7 @@ export const ensureRuntimeConfigScaffold = (
   const configDir = resolveFromWorkspaceRoot(CONFIG_DIR_RELATIVE_PATH, workspaceRoot);
   const configTemplateDir = resolveFromWorkspaceRoot(VERSION_MANAGED_CONFIG_TEMPLATE_DIR_RELATIVE_PATH, workspaceRoot);
   const worldPackTemplateDir = resolveFromWorkspaceRoot(VERSION_MANAGED_WORLD_PACK_TEMPLATE_DIR_RELATIVE_PATH, workspaceRoot);
+  const aiModelsConfigTemplatePath = resolveFromWorkspaceRoot(VERSION_MANAGED_AI_CONFIG_RELATIVE_PATH, workspaceRoot);
 
   fs.mkdirSync(configDir, { recursive: true });
 
@@ -68,6 +71,12 @@ export const ensureRuntimeConfigScaffold = (
   ensureFileFromTemplate(
     path.join(configDir, 'templates', 'world-pack', DEFAULT_WORLD_PACK_TEMPLATE_BASENAME),
     path.join(worldPackTemplateDir, DEFAULT_WORLD_PACK_TEMPLATE_BASENAME),
+    result
+  );
+
+  ensureFileFromTemplate(
+    resolveFromWorkspaceRoot(path.join('apps', 'server', 'config', DEFAULT_AI_MODELS_CONFIG_BASENAME), workspaceRoot),
+    aiModelsConfigTemplatePath,
     result
   );
 

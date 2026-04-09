@@ -1,6 +1,6 @@
 # Yidhras (伊德海拉)
 
-Yidhras 是一个叙事模拟工程，包含运行时、world pack、Agent 推理/工作流，以及面向操作台的前端。
+Yidhras 是一个以 world pack 驱动的叙事模拟项目，包含服务端运行时、前端操作台和前后端共享 contracts。
 
 > 本文件只保留仓库概览、启动方式、常用命令与文档导航。更细的接口、架构和业务规则见 `docs/`。
 
@@ -98,22 +98,10 @@ pnpm --filter yidhras-server reset:dev-db
 - `docs/ENHANCEMENTS.md`：延后处理的增强项
 - `apps/web/README.md`：前端应用说明与约束
 
-## 当前范围
+## 当前实现概览
 
 - 服务端包含 runtime、world pack 加载、scheduler、inference / workflow、audit 与 read-model API。
 - 前端包含 overview、workflow、scheduler、graph、social、timeline、agents 页面。
-- 当前优先级以 `TODO.md` 为准，验证记录见 `记录.md`。
-
-## Current Implementation Highlight
-
-The first Death Note-specific semantic behavior loop is now implemented on the server side.
-
-Current status includes:
-
-- `world-death-note` pack expanded with thematic capabilities, state, invocation grounding rules and objective enforcement
-- server-side Intent Grounder inserted between provider decision and final `ActionIntentDraft`
-- active-pack `rules.invocation` consumed at runtime
-- unexpected semantic action can fall back to narrativized `history` events instead of hard failure
-- scheduler follow-up can consume event metadata such as `followup_actor_ids`
-
-This phase was completed without introducing a privileged Death Note-specific governor/admin agent and without changing the public inference strategy surface (`mock | rule_based`).
+- 内部 AI 执行链为 `AiTaskService -> RouteResolver -> ModelGateway -> provider adapters`，当前默认提供 `mock` 与 `openai` 适配器。
+- `/api/inference/*` 的公开契约当前仍以 `mock | rule_based` 为准；`model_routed` 仍属于内部能力。
+- AI 调用观测已通过 `AiInvocationRecord` 落库，并提供 `GET /api/inference/ai-invocations` 与 `GET /api/inference/ai-invocations/:id` 只读查询。

@@ -50,6 +50,31 @@ export interface InferenceTraceRecord {
   updated_at: bigint;
 }
 
+export interface AiInvocationRecord {
+  id: string;
+  task_id: string;
+  task_type: string;
+  source_inference_id: string | null;
+  provider: string;
+  model: string;
+  route_id: string | null;
+  status: string;
+  finish_reason: string;
+  attempted_models_json: unknown;
+  fallback_used: boolean;
+  latency_ms: number | null;
+  usage_json: unknown;
+  safety_json: unknown;
+  request_json: unknown;
+  response_json: unknown;
+  error_code: string | null;
+  error_message: string | null;
+  error_stage: string | null;
+  audit_level: string;
+  created_at: bigint;
+  completed_at: bigint | null;
+}
+
 export interface ActionIntentRecord {
   id: string;
   source_inference_id: string;

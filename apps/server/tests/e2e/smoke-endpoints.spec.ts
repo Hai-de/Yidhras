@@ -466,6 +466,26 @@ describe('smoke endpoints e2e', () => {
         expect(persistedTraceData.id).toBe(runByMixedActorData.inference_id);
         expect(persistedTraceData.kind).toBe('run');
         expect(persistedTraceData.provider).toBe('rule_based');
+
+        const aiInvocationListResponse = await requestJson(server.baseUrl, '/api/inference/ai-invocations?limit=5');
+        expect(aiInvocationListResponse.status).toBe(200);
+        const aiInvocationListData = assertSuccessEnvelopeData(aiInvocationListResponse.body, 'ai invocation list');
+        expect(Array.isArray(aiInvocationListData.items)).toBe(true);
+        expect(isRecord(aiInvocationListData.page_info)).toBe(true);
+        expect(isRecord(aiInvocationListData.summary)).toBe(true);
+
+        const runTraceMetadata = assertRecord(runByMixedActorData.trace_metadata, 'run by mixed actor trace_metadata');
+        if (typeof runTraceMetadata.ai_invocation_id === 'string') {
+          const aiInvocationReadResponse = await requestJson(
+            server.baseUrl,
+            `/api/inference/ai-invocations/${runTraceMetadata.ai_invocation_id}`
+          );
+          expect(aiInvocationReadResponse.status).toBe(200);
+          const aiInvocationReadData = assertSuccessEnvelopeData(aiInvocationReadResponse.body, 'ai invocation read');
+          expect(aiInvocationReadData.id).toBe(runTraceMetadata.ai_invocation_id);
+          expect(typeof aiInvocationReadData.task_type).toBe('string');
+        }
+
         expect(isRecord(persistedTraceData.prompt_bundle)).toBe(true);
         expect(isRecord(persistedTraceData.context_snapshot)).toBe(true);
         expect(isRecord(persistedTraceData.decision)).toBe(true);
@@ -726,6 +746,26 @@ describe('smoke endpoints e2e', () => {
           'INFERENCE_INPUT_INVALID',
           'unsupported inference strategy'
         );
+
+        const modelRoutedWithoutKeyResponse = await requestJson(server.baseUrl, '/api/inference/run', {
+          method: 'POST',
+          headers: activeIdentityHeaders,
+          body: JSON.stringify({
+            agent_id: 'agent-001',
+            strategy: 'model_routed'
+          })
+        });
+        expect([200, 400, 500]).toContain(modelRoutedWithoutKeyResponse.status);
+        if (modelRoutedWithoutKeyResponse.status === 400) {
+          assertErrorEnvelope(modelRoutedWithoutKeyResponse.body, 'INFERENCE_INPUT_INVALID', 'model routed not public contract');
+        } else if (modelRoutedWithoutKeyResponse.status === 500) {
+          assertErrorEnvelope(modelRoutedWithoutKeyResponse.body, 'AI_PROVIDER_AUTH_MISSING', 'model routed without openai key');
+        } else {
+          const modelRoutedData = assertSuccessEnvelopeData(modelRoutedWithoutKeyResponse.body, 'model routed success');
+          expect(typeof modelRoutedData.inference_id).toBe('string');
+          expect(typeof modelRoutedData.provider).toBe('string');
+          expect(isRecord(modelRoutedData.decision)).toBe(true);
+        }
 
         const invalidAttributesResponse = await requestJson(server.baseUrl, '/api/inference/preview', {
           method: 'POST',

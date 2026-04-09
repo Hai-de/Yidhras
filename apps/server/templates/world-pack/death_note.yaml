@@ -59,6 +59,64 @@ prompts:
 
   agent_initial_context: "作为 {{main_location}} 的一员，你的基础认知基于：{{tech_level}}"
 
+ai:
+  defaults:
+    prompt_preset: "default_decision_v1"
+    decoder: "default_json_schema"
+    route_id: "default.agent_decision"
+    privacy_tier: "trusted_cloud"
+  tasks:
+    agent_decision:
+      prompt:
+        preset: "death_note_agent_decision_v1"
+        system_append: |
+          你正在死亡笔记世界中为单个主体生成下一步决策。
+          该世界允许开放语义意图先输出，再由服务器侧 Grounder 进行能力落地。
+        developer_append: |
+          当直接动作无法可靠表达时，优先输出可被解释的 semantic intent，而不是编造世界不存在的能力。
+        include_sections:
+          - actor_profile
+          - pack_rules
+          - recent_events
+          - overlay_notes
+      output:
+        mode: "json_schema"
+        strict: true
+        schema:
+          type: "object"
+          properties:
+            action_type:
+              type: "string"
+            target_ref:
+              anyOf:
+                - type: "object"
+                - type: "null"
+            payload:
+              type: "object"
+            confidence:
+              type: "number"
+            delay_hint_ticks:
+              anyOf:
+                - type: "string"
+                - type: "integer"
+            reasoning:
+              type: "string"
+            meta:
+              anyOf:
+                - type: "object"
+                - type: "null"
+          required: ["action_type", "payload"]
+      parse:
+        decoder: "default_json_schema"
+        required_fields: ["action_type", "payload"]
+      route:
+        route_id: "default.agent_decision"
+        provider: "openai"
+        model: "gpt-4.1-mini"
+        latency_tier: "interactive"
+        determinism_tier: "balanced"
+        privacy_tier: "trusted_cloud"
+
 dynamics_config:
   algorithms:
     - reason: "case_breakthrough"

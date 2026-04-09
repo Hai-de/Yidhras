@@ -1,0 +1,23 @@
+version: 1
+
+# This file allows workspace-level AI model registry overrides without changing the
+# canonical server-side gateway contract.
+#
+# Arrays are merged by stable keys in code:
+# - providers => provider
+# - models => provider + model
+# - routes => route_id
+#
+# Typical usage:
+# providers:
+#   - provider: openai
+#     enabled: true
+# models:
+#   - provider: openai
+#     model: gpt-4.1-mini
+#     availability: active
+# routes:
+#   - route_id: default.agent_decision
+#     preferred_models:
+#       - provider: openai
+#         model: gpt-4.1-mini

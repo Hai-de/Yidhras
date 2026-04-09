@@ -280,6 +280,39 @@
 - 延期原因：
   这些属于下一层领域写模型演进；在当前阶段优先落地会扩大实现范围。
 
+### 11. AiInvocationRecord 的 operator / debug 视图接入
+- 状态：deferred
+- 优先级：medium
+- 范围：workflow detail / trace detail / operator workspace / debug read model
+- 背景：
+  当前服务端已经具备 `AiInvocationRecord` 持久化与只读查询接口：
+  - `GET /api/inference/ai-invocations`
+  - `GET /api/inference/ai-invocations/:id`
+  - 并且 `InferenceTrace.trace_metadata.ai_invocation_id` 已可回链到具体 invocation 证据。
+  但这些能力目前主要停留在后端 observability surface，尚未深度接入 operator / workflow / trace 视图。
+- 后续增强候选：
+  - workflow detail 中直接展示关联的 provider/model/route/attempts
+  - trace detail 中增加 ai invocation drill-down 与回跳
+  - operator workspace 中增加 AI 调用热点、失败热点与 fallback 热点观察面
+  - 基于 `audit_level` 的 request/response 证据展示分级
+- 延期原因：
+  当前后端最小读面已经足够支撑调试与验收，是否继续下钻应等待前端消费需求与 operator 视图形态更明确后再推进。
+
+### 12. AI Invocation 的 summary / analytics 聚合接口深化
+- 状态：deferred
+- 优先级：medium
+- 范围：AI observability aggregation / operator analytics / read-model API
+- 背景：
+  当前 `AiInvocationRecord` 已具备列表与详情读取，但仍以 item-level query 为主，聚合分析能力尚未形成正式接口。
+- 后续增强候选：
+  - 增加更细过滤：`task_id` / `finish_reason` / `fallback_used` / `audit_level`
+  - provider/model/task_type 维度的窗口统计
+  - success / fail / blocked / timeout 趋势摘要
+  - usage / token / latency / estimated cost 聚合
+  - 供 operator/workspace 直接消费的 summary endpoint，而不是完全由前端二次聚合
+- 延期原因：
+  当前最小列表/详情查询已满足本轮目标；进一步聚合会扩大 operator observability 与 API 设计范围，适合在后续专门立项时推进。
+
 
 ---
 

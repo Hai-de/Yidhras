@@ -1,6 +1,6 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-08T23:15:48.540Z
+- Updated At: 2026-04-09T05:41:14.260Z
 - Status: completed
 - Phase: implementation
 
@@ -8,28 +8,31 @@
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
 - 当前进度：1/1 个里程碑已完成；最新：acm-p6
-- 当前焦点：完成 Context Module policy/overlay/deferred-directive 深化阶段收尾
-- 最新结论：cmpo-p6 已正式完成：文档、typecheck、unit 与 e2e 已全部收尾，当前阶段已经完成 Context Module 的 node-level policy governance、kernel-side overlay store/adapter、trace/debug/agent overview 可观测性增强，以及 future Con…
-- 下一步：等待下一轮需求；若继续演进，建议基于本阶段结果单独启动新的设计/计划，而不是在当前分支继续扩成通用 DAG 工作流引擎。
+- 当前焦点：AiInvocationRecord 查询/read-model/API surface 已完成
+- 最新结论：已新增 /api/inference/ai-invocations 与 /api/inference/ai-invocations/:id，只读暴露 kernel-side AiInvocationRecord observability，并补齐 contracts、integration、smoke 与 typecheck。
+- 下一步：如需下一轮，可继续做 operator/debug 视图接入，或再评估何时公开 model_routed public contract。
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/context-module-policy-overlay-deepening-design.md`
-- 计划：`.limcode/plans/context-module-policy-overlay-deepening.plan.md`
+- 设计：`.limcode/design/multi-model-gateway-and-unified-ai-task-contract-design.md`
+- 计划：`.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md`
 - 审查：`.limcode/review/system-architecture-analysis.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 引入 Context Policy Engine 最小版，定义 visibility / operation / placement 的节点级决策模型、reason codes 与执行入口  `#cmpo-p1`
-- [x] 将现有 policy_gate / visibility_blocked 过滤从 fragment 级兼容逻辑上移到 ContextNode / working-set 级治理，同时保持 orchestrator-lite 与 memory_context 兼容  `#cmpo-p2`
-- [x] 引入 ContextOverlayEntry 最小持久化模型与 kernel-side overlay store，并实现 overlay source adapter materialization 为 writable_overlay 节点  `#cmpo-p3`
-- [x] 将 overlay 与 policy 决策接入 ContextService / ContextRun / trace snapshot，增强 workflow debug、agent overview 所需的 overlay/policy 可观测字段  `#cmpo-p4`
-- [x] 预留 future ContextDirective schema、拒绝原因与 trace 结构，但不开放模型直接自写上下文操作  `#cmpo-p5`
-- [x] 补齐 unit/integration/e2e 与文档同步，验证 Death Note、scheduler、workflow debug 链在 policy/overlay 深化后无回归，并明确仍未进入通用 DAG 工作流引擎阶段  `#cmpo-p6`
+- [x] 建立 apps/server/src/ai/ 内部合同与基础模块，定义 AiTaskType、ModelGatewayRequest/Response、ModelRegistry、AiRoutePolicy、provider capability 模型与配置装载入口  `#mmg-p1`
+- [x] 实现 ModelGateway / AiTaskService 最小骨架、provider adapter SPI、PromptBundle→AiMessage 适配与结构化输出校验链，并保留 mock 适配路径  `#mmg-p2`
+- [x] 将 inference 与新网关集成，引入 gateway-backed provider/engine mode 适配层，在不破坏现有 /api/inference/* 与 mock/rule_based 兼容性的前提下打通调用主链  `#mmg-p3`
+- [x] 新增 AiInvocationRecord 持久化、fallback/usage/safety/error-stage 观测与与 InferenceTrace 的关联证据面  `#mmg-p4`
+- [x] 落地首个真实 provider adapter 与模型注册配置（默认按 OpenAI-first 规划，若执行前确定本地优先则可等价替换为 Ollama-first），打通路由、超时、重试与降级策略  `#mmg-p5`
+- [x] 补齐 unit/integration/e2e 与文档同步，明确内部网关与公共 API 的边界，并为后续 public model_routed 扩展保留但不立即开放  `#mmg-p6`
+- [x] 梳理 AiInvocationRecord 当前落库链、现有 inference 路由与读取服务模式，确定查询/read-model/API 接入点  `#aiq-p1`
+- [x] 实现 AiInvocationRecord 查询服务与 /api/inference/ai-invocations* 读取接口，并与 trace/workflow 证据关联  `#aiq-p2`
+- [x] 补测试与文档，验证 AiInvocationRecord 查询路径、错误处理与公共边界说明  `#aiq-p3`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -57,26 +60,26 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-08T11:56:46.703Z | updated | acm-p5 | 已增强 InferenceTrace.context_snapshot，新增 context_module/context_debug 结构，包含 selected node summaries、dropped nodes、orchestration 与 prompt assembly 诊断。
-- 2026-04-08T11:57:51.653Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/agent-context-module-mvp-implementation.plan.md
-- 2026-04-08T12:15:07.872Z | milestone_recorded | acm-p6 | 记录里程碑：完成 Context Module MVP 测试与文档同步
-- 2026-04-08T12:16:46.765Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/agent-context-module-mvp-implementation.plan.md
-- 2026-04-08T21:53:04.956Z | artifact_changed | design | 同步设计文档：.limcode/design/context-module-policy-overlay-deepening-design.md
-- 2026-04-08T21:55:47.519Z | artifact_changed | plan | 同步计划文档：.limcode/plans/context-module-policy-overlay-deepening.plan.md
-- 2026-04-08T21:56:53.888Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/context-module-policy-overlay-deepening.plan.md
-- 2026-04-08T22:01:14.807Z | updated | cmpo-p1 | 已新增 context/policy_engine.ts，并将 Context Policy Engine 最小版接入 ContextService 与 ContextRun diagnostics。
-- 2026-04-08T22:01:35.008Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/context-module-policy-overlay-deepening.plan.md
-- 2026-04-08T22:06:32.392Z | updated | cmpo-p2 | 已将 hidden_mandatory / policy_gate deny 的 working-set 影响进一步前移到 ContextService，并让 policy_filter 优先消费 context_run.diagnostics.blocked_nodes。
-- 2026-04-08T22:45:53.033Z | updated | cmpo-p3 | 已新增 ContextOverlayEntry 持久化模型、overlay store 与 overlay source adapter，overlay 节点现可进入 ContextRun 主链，并对缺少新表的旧数据库做安全降级。
-- 2026-04-08T22:46:03.923Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/context-module-policy-overlay-deepening.plan.md
-- 2026-04-08T22:55:03.437Z | updated | cmpo-p4 | 已把 overlay/policy 可观测字段接入 trace snapshot 与 agent overview，并通过 e2e 回归验证 smoke endpoints 与 agent overview 稳定。
-- 2026-04-08T23:03:33.032Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/context-module-policy-overlay-deepening.plan.md
-- 2026-04-08T23:03:40.828Z | updated | cmpo-p5 | 已新增 ContextDirective 预留 schema，并在 context diagnostics / trace snapshot / workflow snapshot 中预留 submitted/approved/denied directives 字段，保持默认空数组且不启用执行。
-- 2026-04-08T23:08:04.417Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/context-module-policy-overlay-deepening.plan.md
-- 2026-04-08T23:08:15.348Z | updated | cmpo-p6 | cmpo-p5 已收尾完成，当前进入 cmpo-p6 文档同步阶段；已验证 directive schema 预留不会影响 Death Note、scheduler、workflow debug 与 agent overview 链路。
 - 2026-04-08T23:13:52.291Z | updated | cmpo-p6 | 已完成 policy/overlay/direction reservation 阶段文档同步，当前 docs/API/ARCH/LOGIC/TODO/记录 均已反映 kernel-side overlay、node-level policy 与 directive trace reservation 的实际边界。
 - 2026-04-08T23:15:40.799Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/context-module-policy-overlay-deepening.plan.md
 - 2026-04-08T23:15:48.540Z | milestone_recorded | cmpo-p6 | 完成 Context Module policy/overlay 深化阶段收尾：文档、验证与阶段边界说明已同步完成。
+- 2026-04-09T00:34:32.236Z | artifact_changed | design | 同步设计文档：.limcode/design/multi-model-gateway-and-unified-ai-task-contract-design.md
+- 2026-04-09T01:03:04.368Z | artifact_changed | plan | 同步计划文档：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md
+- 2026-04-09T01:08:27.386Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md
+- 2026-04-09T01:43:13.324Z | updated | mmg-p1 | 确认 OpenAI-first 与 pack-level 声明式 AI override 边界后，开始实现 AI 内部合同、注册表、路由骨架与 world-pack AI task 配置结构。
+- 2026-04-09T02:23:01.052Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md
+- 2026-04-09T02:23:47.991Z | updated | mmg-p1 | 已完成 AI 内部合同、ModelRegistry、RouteResolver、runtime ai_models 配置与 world-pack ai override schema，并为 Death Note pack 加入声明式 AI task 示例。
+- 2026-04-09T03:15:19.882Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md
+- 2026-04-09T03:16:06.040Z | updated | mmg-p2 | 已完成网关骨架、AiTaskService、mock provider adapter、PromptBundle→AiMessage 适配与默认结构化输出解码链，开始将 inference 主链兼容接入新 AI 网关。
+- 2026-04-09T03:35:43.273Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md
+- 2026-04-09T03:36:56.708Z | updated | mmg-p3 | 已完成 inference 与 AI 网关的兼容接线：新增 gateway-backed inference provider，并将 model_routed 纳入 strategy 解析、replay parser 与 InferenceService provider 选择链。
+- 2026-04-09T04:05:36.988Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md
+- 2026-04-09T04:05:54.154Z | updated | mmg-p4 | 已新增 AiInvocationRecord Prisma 模型与 observability 记录链，gateway 现在会持久化 attempts/fallback/usage/safety/error-stage，并将 ai_invocation_id 回写到 inference trace metadata。
+- 2026-04-09T04:26:15.133Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md
+- 2026-04-09T04:26:31.519Z | updated | mmg-p5 | 已完成真实 OpenAI provider adapter 落地，并补充 AI gateway unit tests、route/registry override 测试辅助与 model_routed smoke 覆盖。
+- 2026-04-09T04:37:34.610Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md
+- 2026-04-09T04:37:49.550Z | milestone_recorded | mmg-p6 | 多模型网关与统一 AI 任务合同实施已完成：OpenAI-first adapter、gateway-backed inference、AiInvocationRecord observability、测试与文档同步均已收尾。
+- 2026-04-09T05:41:14.260Z | updated | aiq-p2 | 已新增 AiInvocationRecord 查询服务与 /api/inference/ai-invocations* 读取接口，并补齐 contracts、integration、smoke 与文档同步。
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -86,47 +89,62 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-08T02:51:55.529Z",
-  "updatedAt": "2026-04-08T23:15:48.540Z",
+  "updatedAt": "2026-04-09T05:41:14.260Z",
   "status": "completed",
   "phase": "implementation",
-  "currentFocus": "完成 Context Module policy/overlay/deferred-directive 深化阶段收尾",
-  "latestConclusion": "cmpo-p6 已正式完成：文档、typecheck、unit 与 e2e 已全部收尾，当前阶段已经完成 Context Module 的 node-level policy governance、kernel-side overlay store/adapter、trace/debug/agent overview 可观测性增强，以及 future ContextDirective 的 schema/trace reservation，同时保持 Death Note、scheduler、workflow debug 与 agent overview 链稳定。",
+  "currentFocus": "AiInvocationRecord 查询/read-model/API surface 已完成",
+  "latestConclusion": "已新增 /api/inference/ai-invocations 与 /api/inference/ai-invocations/:id，只读暴露 kernel-side AiInvocationRecord observability，并补齐 contracts、integration、smoke 与 typecheck。",
   "currentBlocker": null,
-  "nextAction": "等待下一轮需求；若继续演进，建议基于本阶段结果单独启动新的设计/计划，而不是在当前分支继续扩成通用 DAG 工作流引擎。",
+  "nextAction": "如需下一轮，可继续做 operator/debug 视图接入，或再评估何时公开 model_routed public contract。",
   "activeArtifacts": {
-    "design": ".limcode/design/context-module-policy-overlay-deepening-design.md",
-    "plan": ".limcode/plans/context-module-policy-overlay-deepening.plan.md",
+    "design": ".limcode/design/multi-model-gateway-and-unified-ai-task-contract-design.md",
+    "plan": ".limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md",
     "review": ".limcode/review/system-architecture-analysis.md"
   },
   "todos": [
     {
-      "id": "cmpo-p1",
-      "content": "引入 Context Policy Engine 最小版，定义 visibility / operation / placement 的节点级决策模型、reason codes 与执行入口",
+      "id": "mmg-p1",
+      "content": "建立 apps/server/src/ai/ 内部合同与基础模块，定义 AiTaskType、ModelGatewayRequest/Response、ModelRegistry、AiRoutePolicy、provider capability 模型与配置装载入口",
       "status": "completed"
     },
     {
-      "id": "cmpo-p2",
-      "content": "将现有 policy_gate / visibility_blocked 过滤从 fragment 级兼容逻辑上移到 ContextNode / working-set 级治理，同时保持 orchestrator-lite 与 memory_context 兼容",
+      "id": "mmg-p2",
+      "content": "实现 ModelGateway / AiTaskService 最小骨架、provider adapter SPI、PromptBundle→AiMessage 适配与结构化输出校验链，并保留 mock 适配路径",
       "status": "completed"
     },
     {
-      "id": "cmpo-p3",
-      "content": "引入 ContextOverlayEntry 最小持久化模型与 kernel-side overlay store，并实现 overlay source adapter materialization 为 writable_overlay 节点",
+      "id": "mmg-p3",
+      "content": "将 inference 与新网关集成，引入 gateway-backed provider/engine mode 适配层，在不破坏现有 /api/inference/* 与 mock/rule_based 兼容性的前提下打通调用主链",
       "status": "completed"
     },
     {
-      "id": "cmpo-p4",
-      "content": "将 overlay 与 policy 决策接入 ContextService / ContextRun / trace snapshot，增强 workflow debug、agent overview 所需的 overlay/policy 可观测字段",
+      "id": "mmg-p4",
+      "content": "新增 AiInvocationRecord 持久化、fallback/usage/safety/error-stage 观测与与 InferenceTrace 的关联证据面",
       "status": "completed"
     },
     {
-      "id": "cmpo-p5",
-      "content": "预留 future ContextDirective schema、拒绝原因与 trace 结构，但不开放模型直接自写上下文操作",
+      "id": "mmg-p5",
+      "content": "落地首个真实 provider adapter 与模型注册配置（默认按 OpenAI-first 规划，若执行前确定本地优先则可等价替换为 Ollama-first），打通路由、超时、重试与降级策略",
       "status": "completed"
     },
     {
-      "id": "cmpo-p6",
-      "content": "补齐 unit/integration/e2e 与文档同步，验证 Death Note、scheduler、workflow debug 链在 policy/overlay 深化后无回归，并明确仍未进入通用 DAG 工作流引擎阶段",
+      "id": "mmg-p6",
+      "content": "补齐 unit/integration/e2e 与文档同步，明确内部网关与公共 API 的边界，并为后续 public model_routed 扩展保留但不立即开放",
+      "status": "completed"
+    },
+    {
+      "id": "aiq-p1",
+      "content": "梳理 AiInvocationRecord 当前落库链、现有 inference 路由与读取服务模式，确定查询/read-model/API 接入点",
+      "status": "completed"
+    },
+    {
+      "id": "aiq-p2",
+      "content": "实现 AiInvocationRecord 查询服务与 /api/inference/ai-invocations* 读取接口，并与 trace/workflow 证据关联",
+      "status": "completed"
+    },
+    {
+      "id": "aiq-p3",
+      "content": "补测试与文档，验证 AiInvocationRecord 查询路径、错误处理与公共边界说明",
       "status": "completed"
     }
   ],
@@ -152,108 +170,6 @@
   "risks": [],
   "log": [
     {
-      "at": "2026-04-08T11:56:46.703Z",
-      "type": "updated",
-      "refId": "acm-p5",
-      "message": "已增强 InferenceTrace.context_snapshot，新增 context_module/context_debug 结构，包含 selected node summaries、dropped nodes、orchestration 与 prompt assembly 诊断。"
-    },
-    {
-      "at": "2026-04-08T11:57:51.653Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/agent-context-module-mvp-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-08T12:15:07.872Z",
-      "type": "milestone_recorded",
-      "refId": "acm-p6",
-      "message": "记录里程碑：完成 Context Module MVP 测试与文档同步"
-    },
-    {
-      "at": "2026-04-08T12:16:46.765Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/agent-context-module-mvp-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-08T21:53:04.956Z",
-      "type": "artifact_changed",
-      "refId": "design",
-      "message": "同步设计文档：.limcode/design/context-module-policy-overlay-deepening-design.md"
-    },
-    {
-      "at": "2026-04-08T21:55:47.519Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/context-module-policy-overlay-deepening.plan.md"
-    },
-    {
-      "at": "2026-04-08T21:56:53.888Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/context-module-policy-overlay-deepening.plan.md"
-    },
-    {
-      "at": "2026-04-08T22:01:14.807Z",
-      "type": "updated",
-      "refId": "cmpo-p1",
-      "message": "已新增 context/policy_engine.ts，并将 Context Policy Engine 最小版接入 ContextService 与 ContextRun diagnostics。"
-    },
-    {
-      "at": "2026-04-08T22:01:35.008Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/context-module-policy-overlay-deepening.plan.md"
-    },
-    {
-      "at": "2026-04-08T22:06:32.392Z",
-      "type": "updated",
-      "refId": "cmpo-p2",
-      "message": "已将 hidden_mandatory / policy_gate deny 的 working-set 影响进一步前移到 ContextService，并让 policy_filter 优先消费 context_run.diagnostics.blocked_nodes。"
-    },
-    {
-      "at": "2026-04-08T22:45:53.033Z",
-      "type": "updated",
-      "refId": "cmpo-p3",
-      "message": "已新增 ContextOverlayEntry 持久化模型、overlay store 与 overlay source adapter，overlay 节点现可进入 ContextRun 主链，并对缺少新表的旧数据库做安全降级。"
-    },
-    {
-      "at": "2026-04-08T22:46:03.923Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/context-module-policy-overlay-deepening.plan.md"
-    },
-    {
-      "at": "2026-04-08T22:55:03.437Z",
-      "type": "updated",
-      "refId": "cmpo-p4",
-      "message": "已把 overlay/policy 可观测字段接入 trace snapshot 与 agent overview，并通过 e2e 回归验证 smoke endpoints 与 agent overview 稳定。"
-    },
-    {
-      "at": "2026-04-08T23:03:33.032Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/context-module-policy-overlay-deepening.plan.md"
-    },
-    {
-      "at": "2026-04-08T23:03:40.828Z",
-      "type": "updated",
-      "refId": "cmpo-p5",
-      "message": "已新增 ContextDirective 预留 schema，并在 context diagnostics / trace snapshot / workflow snapshot 中预留 submitted/approved/denied directives 字段，保持默认空数组且不启用执行。"
-    },
-    {
-      "at": "2026-04-08T23:08:04.417Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/context-module-policy-overlay-deepening.plan.md"
-    },
-    {
-      "at": "2026-04-08T23:08:15.348Z",
-      "type": "updated",
-      "refId": "cmpo-p6",
-      "message": "cmpo-p5 已收尾完成，当前进入 cmpo-p6 文档同步阶段；已验证 directive schema 预留不会影响 Death Note、scheduler、workflow debug 与 agent overview 链路。"
-    },
-    {
       "at": "2026-04-08T23:13:52.291Z",
       "type": "updated",
       "refId": "cmpo-p6",
@@ -270,21 +186,123 @@
       "type": "milestone_recorded",
       "refId": "cmpo-p6",
       "message": "完成 Context Module policy/overlay 深化阶段收尾：文档、验证与阶段边界说明已同步完成。"
+    },
+    {
+      "at": "2026-04-09T00:34:32.236Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/multi-model-gateway-and-unified-ai-task-contract-design.md"
+    },
+    {
+      "at": "2026-04-09T01:03:04.368Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md"
+    },
+    {
+      "at": "2026-04-09T01:08:27.386Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md"
+    },
+    {
+      "at": "2026-04-09T01:43:13.324Z",
+      "type": "updated",
+      "refId": "mmg-p1",
+      "message": "确认 OpenAI-first 与 pack-level 声明式 AI override 边界后，开始实现 AI 内部合同、注册表、路由骨架与 world-pack AI task 配置结构。"
+    },
+    {
+      "at": "2026-04-09T02:23:01.052Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md"
+    },
+    {
+      "at": "2026-04-09T02:23:47.991Z",
+      "type": "updated",
+      "refId": "mmg-p1",
+      "message": "已完成 AI 内部合同、ModelRegistry、RouteResolver、runtime ai_models 配置与 world-pack ai override schema，并为 Death Note pack 加入声明式 AI task 示例。"
+    },
+    {
+      "at": "2026-04-09T03:15:19.882Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md"
+    },
+    {
+      "at": "2026-04-09T03:16:06.040Z",
+      "type": "updated",
+      "refId": "mmg-p2",
+      "message": "已完成网关骨架、AiTaskService、mock provider adapter、PromptBundle→AiMessage 适配与默认结构化输出解码链，开始将 inference 主链兼容接入新 AI 网关。"
+    },
+    {
+      "at": "2026-04-09T03:35:43.273Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md"
+    },
+    {
+      "at": "2026-04-09T03:36:56.708Z",
+      "type": "updated",
+      "refId": "mmg-p3",
+      "message": "已完成 inference 与 AI 网关的兼容接线：新增 gateway-backed inference provider，并将 model_routed 纳入 strategy 解析、replay parser 与 InferenceService provider 选择链。"
+    },
+    {
+      "at": "2026-04-09T04:05:36.988Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md"
+    },
+    {
+      "at": "2026-04-09T04:05:54.154Z",
+      "type": "updated",
+      "refId": "mmg-p4",
+      "message": "已新增 AiInvocationRecord Prisma 模型与 observability 记录链，gateway 现在会持久化 attempts/fallback/usage/safety/error-stage，并将 ai_invocation_id 回写到 inference trace metadata。"
+    },
+    {
+      "at": "2026-04-09T04:26:15.133Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md"
+    },
+    {
+      "at": "2026-04-09T04:26:31.519Z",
+      "type": "updated",
+      "refId": "mmg-p5",
+      "message": "已完成真实 OpenAI provider adapter 落地，并补充 AI gateway unit tests、route/registry override 测试辅助与 model_routed smoke 覆盖。"
+    },
+    {
+      "at": "2026-04-09T04:37:34.610Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/multi-model-gateway-and-unified-ai-task-contract.plan.md"
+    },
+    {
+      "at": "2026-04-09T04:37:49.550Z",
+      "type": "milestone_recorded",
+      "refId": "mmg-p6",
+      "message": "多模型网关与统一 AI 任务合同实施已完成：OpenAI-first adapter、gateway-backed inference、AiInvocationRecord observability、测试与文档同步均已收尾。"
+    },
+    {
+      "at": "2026-04-09T05:41:14.260Z",
+      "type": "updated",
+      "refId": "aiq-p2",
+      "message": "已新增 AiInvocationRecord 查询服务与 /api/inference/ai-invocations* 读取接口，并补齐 contracts、integration、smoke 与文档同步。"
     }
   ],
   "stats": {
     "milestonesTotal": 1,
     "milestonesCompleted": 1,
-    "todosTotal": 6,
-    "todosCompleted": 6,
+    "todosTotal": 9,
+    "todosCompleted": 9,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-08T23:15:48.540Z",
-    "bodyHash": "sha256:9ee1b81235e1ec6d7423ae412ebe1bf96074139621117ca2cea869f6275100ea"
+    "generatedAt": "2026-04-09T05:41:14.260Z",
+    "bodyHash": "sha256:4e58d49d1dd10304b87839e13d9e951f9d52fc78988ddaaab4b224bae6f18d0e"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

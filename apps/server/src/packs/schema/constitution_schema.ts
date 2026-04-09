@@ -29,6 +29,18 @@ export type WorldPackValue =
       [key: string]: WorldPackValue;
     };
 
+export type WorldPackAiTaskType =
+  | 'agent_decision'
+  | 'intent_grounding_assist'
+  | 'context_summary'
+  | 'memory_compaction'
+  | 'narrative_projection'
+  | 'entity_extraction'
+  | 'classification'
+  | 'moderation'
+  | 'embedding'
+  | 'rerank';
+
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 };
@@ -49,6 +61,90 @@ const worldPackValueSchema: z.ZodType<WorldPackValue> = z.lazy(() =>
 );
 
 const tickLikeSchema = z.union([nonEmptyStringSchema, z.number().int()]);
+
+const aiTaskTypeSchema = z.enum([
+  'agent_decision',
+  'intent_grounding_assist',
+  'context_summary',
+  'memory_compaction',
+  'narrative_projection',
+  'entity_extraction',
+  'classification',
+  'moderation',
+  'embedding',
+  'rerank'
+]);
+
+const aiResponseModeSchema = z.enum(['free_text', 'json_object', 'json_schema', 'tool_call', 'embedding']);
+const aiPrivacyTierSchema = z.enum(['local_only', 'trusted_cloud', 'any']);
+const aiLatencyTierSchema = z.enum(['interactive', 'background', 'offline']);
+const aiDeterminismTierSchema = z.enum(['strict', 'balanced', 'creative']);
+
+const aiTaskPromptOverrideSchema = z
+  .object({
+    preset: nonEmptyStringSchema.optional(),
+    system_append: z.string().optional(),
+    developer_append: z.string().optional(),
+    user_prefix: z.string().optional(),
+    include_sections: z.array(nonEmptyStringSchema).optional(),
+    examples: z.array(z.record(z.string(), worldPackValueSchema)).optional()
+  })
+  .strict();
+
+const aiTaskOutputOverrideSchema = z
+  .object({
+    mode: aiResponseModeSchema.optional(),
+    schema: z.record(z.string(), worldPackValueSchema).optional(),
+    strict: z.boolean().optional()
+  })
+  .strict();
+
+const aiTaskParseOverrideSchema = z
+  .object({
+    decoder: nonEmptyStringSchema.optional(),
+    unwrap: nonEmptyStringSchema.optional(),
+    field_alias: z.record(z.string(), nonEmptyStringSchema).optional(),
+    required_fields: z.array(nonEmptyStringSchema).optional(),
+    defaults: z.record(z.string(), worldPackValueSchema).optional()
+  })
+  .strict();
+
+const aiTaskRouteOverrideSchema = z
+  .object({
+    route_id: nonEmptyStringSchema.optional(),
+    provider: nonEmptyStringSchema.optional(),
+    model: nonEmptyStringSchema.optional(),
+    latency_tier: aiLatencyTierSchema.optional(),
+    determinism_tier: aiDeterminismTierSchema.optional(),
+    privacy_tier: aiPrivacyTierSchema.optional()
+  })
+  .strict();
+
+const aiTaskOverrideSchema = z
+  .object({
+    prompt: aiTaskPromptOverrideSchema.optional(),
+    output: aiTaskOutputOverrideSchema.optional(),
+    parse: aiTaskParseOverrideSchema.optional(),
+    route: aiTaskRouteOverrideSchema.optional(),
+    metadata: z.record(z.string(), worldPackValueSchema).optional()
+  })
+  .strict();
+
+const aiPackDefaultsSchema = z
+  .object({
+    prompt_preset: nonEmptyStringSchema.optional(),
+    decoder: nonEmptyStringSchema.optional(),
+    route_id: nonEmptyStringSchema.optional(),
+    privacy_tier: aiPrivacyTierSchema.optional()
+  })
+  .strict();
+
+const aiPackConfigSchema = z
+  .object({
+    defaults: aiPackDefaultsSchema.optional(),
+    tasks: z.partialRecord(aiTaskTypeSchema, aiTaskOverrideSchema).optional()
+  })
+  .strict();
 
 const timeUnitSchema = z
   .object({
@@ -287,6 +383,7 @@ export const worldPackConstitutionSchema = z
     constitution: constitutionSchema.optional(),
     variables: z.record(z.string(), worldPackVariableValueSchema).optional(),
     prompts: z.record(z.string(), z.string()).optional(),
+    ai: aiPackConfigSchema.optional(),
     time_systems: z.array(calendarConfigSchema).optional(),
     simulation_time: simulationTimeConfigSchema.optional(),
     entities: entitiesSchema.optional(),
@@ -347,6 +444,7 @@ export const worldPackConstitutionSchema = z
 export type SimulationTimeConfig = z.infer<typeof simulationTimeConfigSchema>;
 export type WorldPackBootstrapInitialState = z.infer<typeof bootstrapInitialStateSchema>;
 export type WorldPackVariableRecord = Record<string, WorldPackVariableValue>;
+export type WorldPackAiConfig = z.infer<typeof aiPackConfigSchema>;
 export type WorldPack = z.infer<typeof worldPackConstitutionSchema>;
 
 export const parseWorldPackConstitution = (value: unknown, sourceLabel = 'world pack'): WorldPack => {

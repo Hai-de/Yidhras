@@ -3,7 +3,7 @@ import path from 'path';
 import { ensureRuntimeConfigScaffold } from '../init/runtime_scaffold.js';
 import { readYamlFileIfExists, resolveFromWorkspaceRoot, resolveWorkspaceRoot } from './loader.js';
 import { deepMergeAll } from './merge.js';
-import { type RuntimeConfig,RuntimeConfigSchema } from './schema.js';
+import { type RuntimeConfig, RuntimeConfigSchema } from './schema.js';
 
 export interface RuntimeConfigMetadata {
   workspaceRoot: string;
@@ -45,7 +45,8 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
   paths: {
     world_packs_dir: 'data/world_packs',
     assets_dir: 'data/assets',
-    plugins_dir: 'data/plugins'
+    plugins_dir: 'data/plugins',
+    ai_models_config: 'apps/server/config/ai_models.yaml'
   },
   world: {
     preferred_pack: 'death_note',
@@ -128,6 +129,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   const appPort = parseIntegerEnv('PORT', process.env.PORT);
   const preferredPack = parseOptionalStringEnv(process.env.WORLD_PACK);
   const worldPacksDir = parseOptionalStringEnv(process.env.WORLD_PACKS_DIR);
+  const aiModelsConfigPath = parseOptionalStringEnv(process.env.AI_MODELS_CONFIG_PATH);
   const bootstrapEnabled = parseBooleanEnv('WORLD_BOOTSTRAP_ENABLED', process.env.WORLD_BOOTSTRAP_ENABLED);
   const bootstrapTargetPackDir = parseOptionalStringEnv(process.env.WORLD_BOOTSTRAP_TARGET_PACK_DIR);
   const bootstrapTemplateFile = parseOptionalStringEnv(process.env.WORLD_BOOTSTRAP_TEMPLATE_FILE);
@@ -149,9 +151,10 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     (overrides.app as Record<string, unknown>).port = appPort;
   }
 
-  if (worldPacksDir !== undefined) {
+  if (worldPacksDir !== undefined || aiModelsConfigPath !== undefined) {
     overrides.paths = {
-      world_packs_dir: worldPacksDir
+      ...(worldPacksDir !== undefined ? { world_packs_dir: worldPacksDir } : {}),
+      ...(aiModelsConfigPath !== undefined ? { ai_models_config: aiModelsConfigPath } : {})
     };
   }
 
@@ -254,6 +257,10 @@ export const getWorldPacksDir = (): string => {
   return resolveWorkspacePath(getRuntimeConfig().paths.world_packs_dir);
 };
 
+export const getAiModelsConfigPath = (): string => {
+  return resolveWorkspacePath(getRuntimeConfig().paths.ai_models_config);
+};
+
 export const getPreferredWorldPack = (): string => {
   return getRuntimeConfig().world.preferred_pack;
 };
@@ -293,6 +300,7 @@ export const buildRuntimeConfigSnapshot = (): Record<string, string | boolean | 
     app_port: String(config.app.port),
     preferred_world_pack: config.world.preferred_pack,
     world_packs_dir: getWorldPacksDir(),
+    ai_models_config: getAiModelsConfigPath(),
     bootstrap_enabled: String(bootstrap.enabled),
     bootstrap_target_pack_dir: bootstrap.targetPackDirName,
     bootstrap_template_file: bootstrap.templateFilePath,

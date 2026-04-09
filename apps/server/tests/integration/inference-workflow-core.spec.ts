@@ -26,11 +26,12 @@ import {
 import { buildWorkflowSnapshot } from '../../src/app/services/inference_workflow/snapshots.js';
 import type {
   ActionIntentRecord,
+  AiInvocationRecord,
   DecisionJobRecord,
   InferenceTraceRecord
 } from '../../src/app/services/inference_workflow/types.js';
-import { DEFAULT_E2E_WORLD_PACK } from '../support/config.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
+import { DEFAULT_E2E_WORLD_PACK } from '../support/config.js';
 
 describe('inference workflow core integration', () => {
   let cleanup: (() => Promise<void>) | null = null;
@@ -160,7 +161,7 @@ describe('inference workflow core integration', () => {
     expect(replayInput.idempotency_key).toBe('replay-key');
     expect(replayInput.overrides?.strategy).toBe('rule_based');
 
-    expect(() => normalizeReplayInput({ overrides: { strategy: 'unsupported' as 'mock' } })).toThrow();
+    expect(() => normalizeReplayInput({ overrides: { strategy: 'unsupported' as 'model_routed' } })).toThrow();
 
     const encodedCursor = Buffer.from(
       JSON.stringify({ created_at: '100', id: 'job-1' }),
@@ -494,6 +495,133 @@ describe('inference workflow core integration', () => {
     expect(replaySubmitResult.result_source).toBe('not_available');
     expect(replaySubmitResult.replay.source_job_id).toBe(completedJob.id);
     expect(replaySubmitResult.replay.override_applied).toBe(true);
+  });
+
+  it('persists and reads AiInvocationRecord linked to an inference trace', async () => {
+    const traceId = `trace-ai-invocation-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+    const tick = 4000n;
+
+    await context.prisma.inferenceTrace.create({
+      data: {
+        id: traceId,
+        kind: 'run',
+        strategy: 'model_routed',
+        provider: 'openai',
+        actor_ref: { agent_id: 'agent-ai', identity_id: 'agent-ai' } as Prisma.InputJsonValue,
+        input: { agent_id: 'agent-ai' } as Prisma.InputJsonValue,
+        context_snapshot: {} as Prisma.InputJsonValue,
+        prompt_bundle: {} as Prisma.InputJsonValue,
+        trace_metadata: {
+          inference_id: traceId,
+          tick: tick.toString(),
+          strategy: 'model_routed',
+          provider: 'openai',
+          ai_invocation_id: 'ai-invocation-1'
+        } as Prisma.InputJsonValue,
+        decision: {
+          action_type: 'post_message',
+          payload: { content: 'ai invocation linked' },
+          meta: { ai_invocation_id: 'ai-invocation-1' }
+        } as Prisma.InputJsonValue,
+        created_at: tick,
+        updated_at: tick
+      }
+    });
+
+    await context.prisma.aiInvocationRecord.create({
+      data: {
+        id: 'ai-invocation-1',
+        task_id: traceId,
+        task_type: 'agent_decision',
+        source_inference_id: traceId,
+        provider: 'openai',
+        model: 'gpt-4.1-mini',
+        route_id: 'default.agent_decision',
+        status: 'completed',
+        finish_reason: 'stop',
+        attempted_models_json: ['openai:gpt-4.1-mini'] as unknown as Prisma.InputJsonValue,
+        fallback_used: false,
+        latency_ms: 123,
+        usage_json: { input_tokens: 100, output_tokens: 50, total_tokens: 150 } as Prisma.InputJsonValue,
+        safety_json: { blocked: false } as Prisma.InputJsonValue,
+        request_json: { response_mode: 'json_schema', message_count: 3 } as Prisma.InputJsonValue,
+        response_json: { status: 'completed', provider: 'openai', model: 'gpt-4.1-mini' } as Prisma.InputJsonValue,
+        error_code: null,
+        error_message: null,
+        error_stage: null,
+        audit_level: 'standard',
+        created_at: tick,
+        completed_at: tick + 1n
+      }
+    });
+
+    const persisted = (await context.prisma.aiInvocationRecord.findUnique({ where: { id: 'ai-invocation-1' } })) as AiInvocationRecord | null;
+    expect(persisted?.source_inference_id).toBe(traceId);
+    expect(persisted?.provider).toBe('openai');
+    expect(persisted?.route_id).toBe('default.agent_decision');
+    expect(persisted?.status).toBe('completed');
+  });
+
+  it('lists AiInvocationRecord snapshots with pagination and filters', async () => {
+    const first = await context.prisma.aiInvocationRecord.create({
+      data: {
+        id: `ai-list-${Date.now()}-a`,
+        task_id: 'task-a',
+        task_type: 'agent_decision',
+        source_inference_id: null,
+        provider: 'openai',
+        model: 'gpt-4.1-mini',
+        route_id: 'default.agent_decision',
+        status: 'completed',
+        finish_reason: 'stop',
+        attempted_models_json: ['openai:gpt-4.1-mini'] as unknown as Prisma.InputJsonValue,
+        fallback_used: false,
+        audit_level: 'standard',
+        created_at: 5000n
+      }
+    });
+    await context.prisma.aiInvocationRecord.create({
+      data: {
+        id: `ai-list-${Date.now()}-b`,
+        task_id: 'task-b',
+        task_type: 'agent_decision',
+        source_inference_id: null,
+        provider: 'openai',
+        model: 'gpt-4.1',
+        route_id: 'default.agent_decision',
+        status: 'failed',
+        finish_reason: 'error',
+        attempted_models_json: ['openai:gpt-4.1-mini', 'openai:gpt-4.1'] as unknown as Prisma.InputJsonValue,
+        fallback_used: true,
+        error_code: 'AI_PROVIDER_FAIL',
+        error_message: 'forced fail',
+        error_stage: 'provider',
+        audit_level: 'standard',
+        created_at: 5001n
+      }
+    });
+
+    const { listAiInvocations } = await import('../../src/app/services/inference_workflow.js');
+    const snapshot = await listAiInvocations(context, {
+      provider: 'openai',
+      limit: 1
+    });
+
+    expect(snapshot.items.length).toBe(1);
+    expect(snapshot.summary.filters.provider).toBe('openai');
+    expect(snapshot.page_info.has_next_page).toBe(true);
+    expect(typeof snapshot.page_info.next_cursor).toBe('string');
+
+    const filtered = await listAiInvocations(context, {
+      status: ['completed'],
+      provider: 'openai',
+      model: 'gpt-4.1-mini',
+      source_inference_id: first.source_inference_id ?? undefined,
+      limit: 10
+    });
+
+    expect(filtered.items.some(item => item.id === first.id)).toBe(true);
+    expect(filtered.items.every(item => item.status === 'completed')).toBe(true);
   });
 
   it('lists inference jobs with workflow summaries, replay lineage and cursor pagination', async () => {

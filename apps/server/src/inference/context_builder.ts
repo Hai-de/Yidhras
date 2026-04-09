@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
+import { AccessPolicyService } from '../access_policy/service.js';
 import type { AppContext } from '../app/context.js';
 import { getAgentContextSnapshot } from '../app/services/agent.js';
-import { AccessPolicyService } from '../access_policy/service.js';
 import { createContextService } from '../context/service.js';
 import { IdentityService } from '../identity/service.js';
 import type { IdentityContext } from '../identity/types.js';
@@ -25,7 +25,7 @@ import type {
   InferenceTransmissionProfile
 } from './types.js';
 
-const SUPPORTED_STRATEGIES: InferenceStrategy[] = ['mock', 'rule_based'];
+const SUPPORTED_STRATEGIES: InferenceStrategy[] = ['mock', 'rule_based', 'model_routed'];
 const DEFAULT_PACK_WORLD_ENTITY_ID = '__world__';
 
 interface BindingRecord {
@@ -585,6 +585,7 @@ export const buildInferenceContext = async (
       version: pack.metadata.version
     },
     world_prompts: pack.prompts ?? {},
+    world_ai: pack.ai ?? null,
     visible_variables: visibleVariables,
     policy_summary: policySummary,
     transmission_profile: transmissionProfile,

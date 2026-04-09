@@ -2,10 +2,10 @@ import type { ContextRun } from '../context/types.js';
 import type { IdentityContext } from '../identity/types.js';
 import type { MemoryContextPack } from '../memory/types.js';
 import type { VariablePool } from '../narrative/types.js';
-import type { WorldPackValue } from '../packs/schema/constitution_schema.js';
+import type { WorldPackAiConfig, WorldPackValue } from '../packs/schema/constitution_schema.js';
 import type { PromptFragment } from './prompt_fragments.js';
 
-export type InferenceStrategy = 'mock' | 'rule_based';
+export type InferenceStrategy = 'mock' | 'rule_based' | 'model_routed';
 export type InferenceActorRole = 'active' | 'atmosphere';
 
 /**
@@ -196,6 +196,7 @@ export interface InferenceContext {
   attributes: Record<string, unknown>;
   world_pack: InferenceWorldPackRef;
   world_prompts: Record<string, string>;
+  world_ai?: WorldPackAiConfig | null;
   visible_variables: VariablePool;
   policy_summary: InferencePolicySummary;
   transmission_profile: InferenceTransmissionProfile;

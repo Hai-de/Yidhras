@@ -4,6 +4,7 @@ import { nonNegativeBigIntStringSchema } from './scalars.js'
 
 export const inferenceStrategySchema = z.enum(['mock', 'rule_based'])
 export const inferenceJobStatusSchema = z.enum(['pending', 'running', 'completed', 'failed'])
+export const aiInvocationStatusSchema = z.enum(['completed', 'failed', 'blocked', 'timeout'])
 
 export const inferenceRequestSchema = z.object({
   agent_id: z.string().optional(),
@@ -44,4 +45,22 @@ export const inferenceJobsQuerySchema = z.object({
   limit: z.string().optional(),
   has_error: z.enum(['true', 'false']).optional(),
   action_intent_id: z.string().optional()
+})
+
+export const aiInvocationIdParamsSchema = z.object({
+  id: z.string().min(1)
+})
+
+export const aiInvocationsQuerySchema = z.object({
+  status: z.union([aiInvocationStatusSchema, z.array(aiInvocationStatusSchema)]).optional(),
+  provider: z.string().optional(),
+  model: z.string().optional(),
+  task_type: z.string().optional(),
+  source_inference_id: z.string().optional(),
+  route_id: z.string().optional(),
+  has_error: z.enum(['true', 'false']).optional(),
+  from_created_at: nonNegativeBigIntStringSchema.optional(),
+  to_created_at: nonNegativeBigIntStringSchema.optional(),
+  cursor: z.string().optional(),
+  limit: z.string().optional()
 })

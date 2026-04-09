@@ -2,6 +2,10 @@ import type { InferenceJobSubmitResult, InferenceRequestInput } from '../../infe
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import {
+  getAiInvocationById,
+  listAiInvocations
+} from './inference_workflow/ai_invocations.js';
+import {
   normalizeReplayInput,
   normalizeStoredRequestInput
 } from './inference_workflow/parsers.js';
@@ -106,6 +110,7 @@ export {
   createReplayDecisionJob,
   DEFAULT_DECISION_JOB_LOCK_TICKS,
   getActionIntentByInferenceId,
+  getAiInvocationById,
   getDecisionJobById,
   getDecisionJobByIdempotencyKey,
   getDecisionJobByInferenceId,
@@ -115,6 +120,7 @@ export {
   getWorkflowSnapshotByInferenceId,
   getWorkflowSnapshotByJobId,
   listActiveSchedulerAgents,
+  listAiInvocations,
   listInferenceJobs,
   listPendingSchedulerActionIntents,
   listPendingSchedulerDecisionJobs,

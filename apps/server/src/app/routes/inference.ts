@@ -1,4 +1,6 @@
 import {
+  aiInvocationIdParamsSchema,
+  aiInvocationsQuerySchema,
   inferenceJobIdParamsSchema,
   inferenceJobReplayRequestSchema,
   inferenceJobsQuerySchema,
@@ -12,11 +14,13 @@ import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseBody, parseParams, parseQuery } from '../http/zod.js';
 import {
   getActionIntentByInferenceId,
+  getAiInvocationById,
   getDecisionJobById,
   getDecisionJobByInferenceId,
   getInferenceTraceById,
   getWorkflowSnapshotByInferenceId,
   getWorkflowSnapshotByJobId,
+  listAiInvocations,
   listInferenceJobs
 } from '../services/inference_workflow.js';
 
@@ -88,6 +92,46 @@ export const registerInferenceRoutes = (
       });
     })
   );
+
+  app.get(
+    '/api/inference/ai-invocations',
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('ai invocation list');
+      const query = parseQuery(aiInvocationsQuerySchema, req.query, 'AI_INVOCATION_QUERY_INVALID');
+      const normalizedStatus = Array.isArray(query.status)
+        ? query.status
+        : typeof query.status === 'string'
+          ? [query.status]
+          : undefined;
+      const limit = typeof query.limit === 'string' ? Number.parseInt(query.limit, 10) : undefined;
+      const hasError = query.has_error === 'true' ? true : query.has_error === 'false' ? false : undefined;
+
+      const snapshot = await listAiInvocations(context, {
+        status: normalizedStatus,
+        provider: query.provider,
+        model: query.model,
+        task_type: query.task_type,
+        source_inference_id: query.source_inference_id,
+        route_id: query.route_id,
+        has_error: hasError,
+        from_created_at: query.from_created_at,
+        to_created_at: query.to_created_at,
+        cursor: query.cursor,
+        limit
+      });
+
+      jsonOk(res, toJsonSafe(snapshot), {
+        pagination: snapshot.page_info
+      });
+    })
+  );
+
+  app.get('/api/inference/ai-invocations/:id', deps.asyncHandler(async (req, res) => {
+    context.assertRuntimeReady('ai invocation read');
+    const params = parseParams(aiInvocationIdParamsSchema, req.params, 'AI_INVOCATION_QUERY_INVALID');
+    const record = await getAiInvocationById(context, params.id);
+    jsonOk(res, toJsonSafe(record));
+  }));
 
   app.post(
     '/api/inference/jobs',

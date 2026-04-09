@@ -176,6 +176,7 @@ export const createPrismaInferenceTraceSink = (context: AppContext): InferenceTr
             context_snapshot: buildContextSnapshot(event),
             prompt_bundle: toJsonValue(event.prompt),
             trace_metadata: toJsonValue({
+              ai_invocation_id: event.ai_invocation_id ?? null,
               ...event.trace_metadata,
               semantic_intent: event.semantic_intent ?? null,
               intent_grounding: event.intent_grounding ?? null
@@ -193,6 +194,7 @@ export const createPrismaInferenceTraceSink = (context: AppContext): InferenceTr
             context_snapshot: buildContextSnapshot(event),
             prompt_bundle: toJsonValue(event.prompt),
             trace_metadata: toJsonValue({
+              ai_invocation_id: event.ai_invocation_id ?? null,
               ...event.trace_metadata,
               semantic_intent: event.semantic_intent ?? null,
               intent_grounding: event.intent_grounding ?? null

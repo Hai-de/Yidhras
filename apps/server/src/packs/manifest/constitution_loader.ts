@@ -4,7 +4,7 @@ export { parseWorldPackConstitution };
 export type {
   SimulationTimeConfig,
   WorldPack,
+  WorldPackAiConfig,
   WorldPackBootstrapInitialState
 } from '../schema/constitution_schema.js';
-
 export type { WorldPackStorage } from '../schema/storage_schema.js';

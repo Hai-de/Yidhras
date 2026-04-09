@@ -1,3 +1,4 @@
+import { type AiTaskService,createAiTaskService } from '../ai/task_service.js';
 import type { AppContext } from '../app/context.js';
 import { toJsonSafe } from '../app/http/json.js';
 import {
@@ -25,6 +26,7 @@ import { ApiError } from '../utils/api_error.js';
 import { buildInferenceContext } from './context_builder.js';
 import { buildPromptBundle } from './prompt_builder.js';
 import type { InferenceProvider } from './provider.js';
+import { createGatewayBackedInferenceProvider } from './providers/gateway_backed.js';
 import { createMockInferenceProvider } from './providers/mock.js';
 import { createRuleBasedInferenceProvider } from './providers/rule_based.js';
 import { createNoopInferenceTraceSink } from './sinks/noop.js';
@@ -60,6 +62,7 @@ export interface CreateInferenceServiceOptions {
   context: AppContext;
   providers?: InferenceProvider[];
   traceSink?: InferenceTraceSink;
+  aiTaskService?: AiTaskService;
 }
 
 const DEFAULT_JOB_MAX_ATTEMPTS = 3;
@@ -350,6 +353,10 @@ const executeRunInternal = async (
     inferenceContext.binding_ref,
     prompt.metadata.prompt_version
   );
+  const aiInvocationId =
+    grounded.decision.meta && typeof grounded.decision.meta.ai_invocation_id === 'string'
+      ? grounded.decision.meta.ai_invocation_id
+      : null;
 
   await persistTraceEvent(traceSink, {
     kind: 'run',
@@ -371,7 +378,8 @@ const executeRunInternal = async (
     job_last_error_code: null,
     job_last_error_stage: null,
     job_attempt_count: attemptCount,
-    job_max_attempts: maxAttempts
+    job_max_attempts: maxAttempts,
+    ai_invocation_id: aiInvocationId
   });
 
   return {
@@ -387,15 +395,22 @@ const executeRunInternal = async (
 
 export const createInferenceService = ({
   context,
-  providers = [createMockInferenceProvider(), createRuleBasedInferenceProvider()],
-  traceSink = createNoopInferenceTraceSink()
+  providers,
+  traceSink = createNoopInferenceTraceSink(),
+  aiTaskService = createAiTaskService({ context })
 }: CreateInferenceServiceOptions): InferenceService => {
+  const resolvedProviders = providers ?? [
+    createMockInferenceProvider(),
+    createRuleBasedInferenceProvider(),
+    createGatewayBackedInferenceProvider({ aiTaskService })
+  ];
+
   const service: InferenceService = {
     phase: 'workflow_baseline',
     ready: true,
     async previewInference(input) {
       const inferenceContext = await buildInferenceContext(context, input);
-      const provider = selectProvider(providers, inferenceContext.strategy);
+      const provider = selectProvider(resolvedProviders, inferenceContext.strategy);
       const prompt = await buildPromptBundle(inferenceContext);
       const tick = inferenceContext.tick.toString();
       const metadata = {
@@ -436,7 +451,7 @@ export const createInferenceService = ({
       };
     },
     async runInference(input) {
-      return executeRunInternal(service, traceSink, context, providers, input);
+      return executeRunInternal(service, traceSink, context, resolvedProviders, input);
     },
     async submitInferenceJob(input) {
       if (!hasIdempotencyKey(input)) {
@@ -572,7 +587,7 @@ export const createInferenceService = ({
 
       const requestInput = getDecisionJobRequestInput(job);
       try {
-        const result = await executeRunInternal(service, traceSink, context, providers, requestInput, {
+        const result = await executeRunInternal(service, traceSink, context, resolvedProviders, requestInput, {
           jobId: job.id,
           attemptCount: job.attempt_count,
           maxAttempts: job.max_attempts
