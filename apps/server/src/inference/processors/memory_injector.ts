@@ -35,6 +35,8 @@ export const createMemoryInjectorPromptProcessor = (): PromptProcessor => {
           {
             memory_entry_id: entry.id,
             source_ref: entry.source_ref,
+            policy_gate: entry.visibility?.policy_gate ?? null,
+            visibility_blocked: entry.visibility?.policy_gate === 'deny',
             tags: entry.tags,
             importance: entry.importance,
             salience: entry.salience,
@@ -52,6 +54,8 @@ export const createMemoryInjectorPromptProcessor = (): PromptProcessor => {
           {
             memory_entry_id: entry.id,
             source_ref: entry.source_ref,
+            policy_gate: entry.visibility?.policy_gate ?? null,
+            visibility_blocked: entry.visibility?.policy_gate === 'deny',
             tags: entry.tags,
             importance: entry.importance,
             salience: entry.salience,
@@ -69,6 +73,8 @@ export const createMemoryInjectorPromptProcessor = (): PromptProcessor => {
           {
             memory_entry_id: entry.id,
             source_ref: entry.source_ref,
+            policy_gate: entry.visibility?.policy_gate ?? null,
+            visibility_blocked: entry.visibility?.policy_gate === 'deny',
             tags: entry.tags,
             importance: entry.importance,
             salience: entry.salience,

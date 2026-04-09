@@ -80,6 +80,15 @@
 - **GET `/api/audit/entries/:kind/:id`**
   - 说明：查询单条 unified audit entry 详情
 
+Current workflow audit payload may include semantic grounding fields when the source workflow came from Intent Grounder resolution:
+
+- `semantic_intent`
+- `intent_grounding`
+- `semantic_outcome`
+- `objective_effect_applied`
+
+This is the current API-level observability path for narrativized failure.
+
 ### Scheduler
 
 当前 scheduler 接口族保持不变，仍包括：
@@ -117,6 +126,9 @@
   - 当前补充约束：pack runtime 的 `rule_execution` 证据来自 pack-local `runtime.sqlite`
   - 当前 `Event` 仍为 kernel-hosted shared evidence bridge；其 pack-scoped 过滤/关联契约仍在继续完善
   - 当前 packId 语义：在单 active-pack 模式下，请求的 `packId` 必须与当前 active pack 一致；不一致时返回 `409 / PACK_ROUTE_ACTIVE_PACK_MISMATCH`
+  - Current Death Note usage also relies on timeline visibility for:
+    - `history` events emitted by objective rules
+    - narrativized failed attempts produced by Intent Grounder fallback
 
 ## 7. Agent / Entity 读取接口
 
@@ -143,6 +155,11 @@
     - `recent_inference_results`
     - `snr`
     - `memory`
+    - `context_governance`
+  - 当前说明：entity overview 会聚合 audit/workflow/projection evidence，因此 narrativized failure 与 related pack events 可经现有字段观察，而不需要单独新增 endpoint
+  - 当前 `context_governance` 轻量暴露最近一次 trace 中的：
+    - `latest_policy`（policy decisions / blocked / locked / visibility denials）
+    - `overlay`（count / latest_items / latest_mutations）
 
 ### 7.4 Agent SNR logs
 
@@ -214,6 +231,71 @@
 - `ActionIntent` 仍是持久化工作流中的外显对象
 - pack 世界规则执行当前主要通过 `InvocationRequest -> enforcement engine` 完成
 - `ActionIntent` / `InferenceTrace` / `DecisionJob` 当前仍保留在 kernel-side Prisma，而不是 pack runtime
+
+### 9.4 Semantic intent grounding note
+
+Current public inference strategy surface remains unchanged:
+
+- `mock`
+- `rule_based`
+
+There is currently no public `semantic_intent` strategy. Instead:
+
+- providers may emit intermediate `action_type='semantic_intent'`
+- the server-side Intent Grounder resolves it before final `ActionIntentDraft` persistence
+- grounding uses active-pack `rules.invocation`
+
+### 9.5 Context Module MVP note
+
+Current inference workflow now also persists a first-stage Context Module trace.
+
+Current `GET /api/inference/traces/:id` response may include, inside `context_snapshot`:
+
+- `context_run`
+- `context_module`
+- `context_debug`
+- `memory_context`
+- `memory_selection`
+- `prompt_processing_trace`
+- `prompt_assembly`
+
+Current policy / overlay observability fields may additionally appear in `context_snapshot`, `context_module`, and `context_debug`:
+
+- `policy_decisions`
+- `blocked_nodes`
+- `locked_nodes`
+- `visibility_denials`
+- `overlay_nodes_loaded`
+- `overlay_nodes_mutated`
+- `submitted_directives`
+- `approved_directives`
+- `denied_directives`
+
+Current intended usage:
+
+- `context_run` / `context_module` = structured context selection + orchestration summary
+- `context_debug` = compact debug-oriented selected-node preview and assembly trace
+- `memory_context` = legacy compatibility surface for current prompt/memory consumers
+
+Current important boundary notes:
+
+- `memory_context` remains a compatibility projection, not the canonical upstream abstraction
+- policy authority is now node-level / working-set level, not primarily fragment-level
+- overlay nodes are kernel-side working-layer context objects, not pack runtime source-of-truth
+- directive fields are currently **schema + trace reservation only**; no public API enables directive execution in this stage
+
+Current grounding result classes are:
+
+- `exact`
+- `translated`
+- `narrativized`
+- `blocked`
+
+Current narrativized fallback contract:
+
+- world workflow may still complete technically
+- semantic failure is expressed through metadata such as `semantic_outcome='failed_attempt'`
+- a `history` event remains queryable through audit/timeline/entity overview surfaces
 
 ## 10. 身份与 Access-Policy 接口
 
@@ -337,6 +419,10 @@
 9. 当前 pack 投影 API 在单 active-pack 模式下运行：
    - `packId` 必须与当前 active pack 一致
    - 不一致时返回 `PACK_ROUTE_ACTIVE_PACK_MISMATCH`
+10. Current scheduler event-followup can consume event bridge metadata such as:
+    - `followup_actor_ids`
+    - semantic target hints carried through `impact_data.semantic_intent.target_ref`
+    - this is the current minimum collaboration/event-feedback path used by `world-death-note`
 
 ## 13. 错误代码参考 (Error Codes)
 

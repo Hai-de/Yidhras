@@ -10,7 +10,8 @@ import {
   buildPendingSourceKey,
   DEFAULT_DECISION_JOB_LOCK_TICKS,
   isRecord,
-  RUNNABLE_JOB_STATUSES} from './types.js';
+  RUNNABLE_JOB_STATUSES
+} from './types.js';
 
 export const getDecisionJobById = async (context: AppContext, jobId?: string) => {
   const id = ensureNonEmptyId(jobId, 'job_id');
@@ -492,6 +493,19 @@ export const listRecentEventFollowupSignals = async (
   sinceTick: bigint,
   untilTick?: bigint
 ): Promise<Array<{ agent_id: string; reason: 'event_followup'; created_at: bigint }>> => {
+  const parseImpactData = (value: unknown): Record<string, unknown> | null => {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return isRecord(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+
   const events = await context.prisma.event.findMany({
     where: {
       created_at: {
@@ -518,9 +532,32 @@ export const listRecentEventFollowupSignals = async (
     const actorRef = event.source_action_intent && isRecord(event.source_action_intent.actor_ref)
       ? event.source_action_intent.actor_ref
       : null;
-    return actorRef && typeof actorRef.agent_id === 'string'
-      ? [{ agent_id: actorRef.agent_id, reason: 'event_followup' as const, created_at: event.created_at }]
+    const impactData = parseImpactData(event.impact_data);
+    const followupActorIds = Array.isArray(impactData?.followup_actor_ids)
+      ? impactData.followup_actor_ids.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
       : [];
+    const semanticIntent = impactData && isRecord(impactData.semantic_intent) ? impactData.semantic_intent : null;
+    const semanticTargetRef = semanticIntent && isRecord(semanticIntent.target_ref) ? semanticIntent.target_ref : null;
+    const semanticTargetAgentId = semanticTargetRef && typeof semanticTargetRef.agent_id === 'string'
+      ? semanticTargetRef.agent_id.trim()
+      : null;
+
+    const candidateAgentIds = new Set<string>();
+    if (actorRef && typeof actorRef.agent_id === 'string' && actorRef.agent_id.trim().length > 0) {
+      candidateAgentIds.add(actorRef.agent_id.trim());
+    }
+    if (semanticTargetAgentId) {
+      candidateAgentIds.add(semanticTargetAgentId);
+    }
+    for (const agentId of followupActorIds) {
+      candidateAgentIds.add(agentId.trim());
+    }
+
+    return Array.from(candidateAgentIds).map(agent_id => ({
+      agent_id,
+      reason: 'event_followup' as const,
+      created_at: event.created_at
+    }));
   });
 };
 
@@ -629,38 +666,42 @@ export const createReplayDecisionJob = async (
     reason?: string | null;
     max_attempts?: number;
     replay_override_snapshot?: Record<string, unknown> | null;
-    intent_class?: InferenceJobIntentClass;
-    job_source?: string;
   }
 ): Promise<DecisionJobRecord> => {
   const now = context.sim.getCurrentTick();
-
   return context.prisma.decisionJob.create({
     data: {
       pending_source_key: buildPendingSourceKey(input.idempotency_key),
+      job_type: 'inference_run',
+      status: 'pending',
+      idempotency_key: input.idempotency_key,
+      intent_class: 'replay_recovery',
+      attempt_count: 0,
+      max_attempts: input.max_attempts ?? input.source_job.max_attempts,
+      request_input: toJsonSafe({
+        ...input.request_input,
+        attributes: {
+          ...(input.request_input.attributes ?? {}),
+          job_intent_class: 'replay_recovery',
+          job_source: 'replay'
+        }
+      }) as Prisma.InputJsonValue,
       replay_of_job_id: input.source_job.id,
       replay_source_trace_id: input.source_trace_id,
       replay_reason: input.reason ?? null,
       replay_override_snapshot: input.replay_override_snapshot
         ? (toJsonSafe(input.replay_override_snapshot) as Prisma.InputJsonValue)
         : Prisma.JsonNull,
-      job_type: 'inference_run',
-      intent_class: input.intent_class ?? 'replay_recovery',
-      status: 'pending',
-      idempotency_key: input.idempotency_key,
-      attempt_count: 0,
-      max_attempts: input.max_attempts ?? input.source_job.max_attempts,
+      last_error: null,
+      started_at: null,
+      locked_by: null,
+      locked_at: null,
+      lock_expires_at: null,
+      next_retry_at: null,
       scheduled_for_tick: null,
-      request_input: toJsonSafe({
-        ...input.request_input,
-        attributes: {
-          ...(input.request_input.attributes ?? {}),
-          job_intent_class: input.intent_class ?? 'replay_recovery',
-          job_source: input.job_source ?? 'replay'
-        }
-      }) as Prisma.InputJsonValue,
       created_at: now,
-      updated_at: now
+      updated_at: now,
+      completed_at: null
     }
   });
 };

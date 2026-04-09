@@ -1,473 +1,192 @@
-import { ApiError } from '../../utils/api_error.js';
+import { Prisma } from '@prisma/client';
+
+import { auditFeedQuerySchema, auditViewKindSchema } from '@yidhras/contracts';
 import type { AppContext } from '../context.js';
-import { getWorkflowSnapshotByJobId } from './inference_workflow.js';
-import { buildMutationResolvedResult } from './mutation_resolved.js';
+import { parseQuery } from '../http/zod.js';
+import { getWorkflowSnapshotByJobId, listInferenceJobs } from './inference_workflow.js';
 
-const AUDIT_VIEW_KINDS = [
-  'workflow',
-  'post',
-  'relationship_adjustment',
-  'snr_adjustment',
-  'event'
-] as const;
+export type AuditEntryKind = 'workflow' | 'post' | 'relationship_adjustment' | 'snr_adjustment' | 'event';
 
-export type AuditViewKind = (typeof AUDIT_VIEW_KINDS)[number];
-
-export interface GetAuditEntryInput {
-  kind?: string;
-  id?: string;
+export interface AuditViewEntryRefs {
+  [key: string]: string | null | undefined;
 }
 
-export interface ListAuditFeedInput {
-  limit?: number;
-  kinds?: string[];
-  from_tick?: string | number;
-  to_tick?: string | number;
-  job_id?: string;
-  inference_id?: string;
-  agent_id?: string;
-  action_intent_id?: string;
-  cursor?: string;
-}
-
-export interface AuditViewEntry {
-  kind: AuditViewKind;
-  id: string;
-  created_at: string;
-  refs: Record<string, string | null>;
-  summary: string;
-  data: Record<string, unknown>;
-}
-
-export interface AuditFeedSnapshot {
-  entries: AuditViewEntry[];
-  summary: {
-    returned: number;
-    limit: number;
-    applied_kinds: AuditViewKind[];
-    page_info: {
-      has_next_page: boolean;
-      next_cursor: string | null;
-    };
-    counts_by_kind: Record<AuditViewKind, number>;
-    filters: {
-      from_tick: string | null;
-      to_tick: string | null;
-      job_id: string | null;
-      inference_id: string | null;
-      agent_id: string | null;
-      action_intent_id: string | null;
-      cursor: string | null;
-    };
-  };
-}
-
-const DEFAULT_AUDIT_FEED_LIMIT = 20;
-const MAX_AUDIT_FEED_LIMIT = 100;
-
-const isAuditViewKind = (value: string): value is AuditViewKind => {
-  return (AUDIT_VIEW_KINDS as readonly string[]).includes(value);
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
-
-interface AuditFeedFilters {
+export interface AuditFeedFilters {
   from_tick: bigint | null;
   to_tick: bigint | null;
   job_id: string | null;
   inference_id: string | null;
   agent_id: string | null;
   action_intent_id: string | null;
-  cursor: AuditFeedCursor | null;
+  cursor: string | null;
+  kinds?: AuditEntryKind[] | null;
 }
 
-interface AuditFeedCursor {
-  created_at: string;
-  kind: AuditViewKind;
+export interface AuditViewEntry {
+  kind: AuditEntryKind;
   id: string;
+  created_at: string;
+  refs: AuditViewEntryRefs;
+  summary: string;
+  data: Record<string, unknown>;
 }
 
-const parseAuditKinds = (value: string[] | undefined): AuditViewKind[] => {
-  if (!Array.isArray(value) || value.length === 0) {
-    return [...AUDIT_VIEW_KINDS];
-  }
+export interface ListAuditFeedResult {
+  entries: AuditViewEntry[];
+  page_info: {
+    has_next_page: boolean;
+    next_cursor: string | null;
+  };
+}
 
-  const normalized = Array.from(
-    new Set(
-      value
-        .map(item => item.trim())
-        .filter(item => item.length > 0)
-    )
-  );
+export interface GetAuditEntryInput {
+  kind?: string;
+  id?: string;
+}
 
-  if (normalized.length === 0) {
-    return [...AUDIT_VIEW_KINDS];
-  }
+const MAX_AUDIT_FEED_LIMIT = 100;
+const DEFAULT_AUDIT_FEED_LIMIT = 20;
+const AUDIT_ENTRY_KINDS: AuditEntryKind[] = ['workflow', 'post', 'relationship_adjustment', 'snr_adjustment', 'event'];
 
-  const invalidKinds = normalized.filter(item => !isAuditViewKind(item));
-  if (invalidKinds.length > 0) {
-    throw new ApiError(400, 'AUDIT_VIEW_QUERY_INVALID', 'kinds contains unsupported audit entry kind', {
-      invalid_kinds: invalidKinds,
-      allowed_kinds: AUDIT_VIEW_KINDS
-    });
-  }
-
-  return normalized as AuditViewKind[];
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 };
 
-const parseAuditEntryKind = (value: string | undefined): AuditViewKind => {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new ApiError(400, 'AUDIT_VIEW_QUERY_INVALID', 'audit entry kind is required');
+const parseAuditEntryKind = (value: string | undefined): AuditEntryKind => {
+  const parsed = auditViewKindSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error('Invalid audit entry kind');
   }
-
-  const normalized = value.trim();
-  if (!isAuditViewKind(normalized)) {
-    throw new ApiError(400, 'AUDIT_VIEW_QUERY_INVALID', 'audit entry kind is unsupported', {
-      kind: normalized,
-      allowed_kinds: AUDIT_VIEW_KINDS
-    });
-  }
-
-  return normalized;
+  return parsed.data as AuditEntryKind;
 };
 
 const parseAuditEntryId = (value: string | undefined): string => {
   if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new ApiError(400, 'AUDIT_VIEW_QUERY_INVALID', 'audit entry id is required');
+    throw new Error('Invalid audit entry id');
   }
-
   return value.trim();
 };
 
-const parseAuditLimit = (value: number | undefined): number => {
-  const requestedLimit =
-    typeof value === 'number' && Number.isFinite(value)
-      ? Math.trunc(value)
-      : DEFAULT_AUDIT_FEED_LIMIT;
-
-  return Math.min(MAX_AUDIT_FEED_LIMIT, Math.max(1, requestedLimit));
-};
-
-const parseOptionalFilterId = (value: string | undefined): string | null => {
-  if (typeof value !== 'string') {
+const parseTickLike = (value: string | number | null | undefined): bigint | null => {
+  if (value === null || value === undefined) {
     return null;
   }
-
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-};
-
-const parseAuditCursor = (value: string | undefined): AuditFeedCursor | null => {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    return null;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as unknown;
-  } catch {
-    throw new ApiError(400, 'AUDIT_VIEW_QUERY_INVALID', 'cursor is invalid');
-  }
-
-  if (!isRecord(parsed) || typeof parsed.created_at !== 'string' || typeof parsed.kind !== 'string' || typeof parsed.id !== 'string') {
-    throw new ApiError(400, 'AUDIT_VIEW_QUERY_INVALID', 'cursor payload is invalid');
-  }
-
-  if (!/^\d+$/.test(parsed.created_at) || !isAuditViewKind(parsed.kind)) {
-    throw new ApiError(400, 'AUDIT_VIEW_QUERY_INVALID', 'cursor payload is invalid');
-  }
-
-  return {
-    created_at: parsed.created_at,
-    kind: parsed.kind,
-    id: parsed.id
-  };
-};
-
-const encodeAuditCursorPayload = (value: Pick<AuditFeedCursor, 'created_at' | 'kind' | 'id'>): string => {
-  return Buffer.from(
-    JSON.stringify({
-      created_at: value.created_at,
-      kind: value.kind,
-      id: value.id
-    }),
-    'utf8'
-  ).toString('base64url');
-};
-
-const encodeAuditCursor = (entry: AuditViewEntry): string => {
-  return encodeAuditCursorPayload({
-    created_at: entry.created_at,
-    kind: entry.kind,
-    id: entry.id
-  });
-};
-
-const parseOptionalTickFilter = (value: string | number | undefined, fieldName: 'from_tick' | 'to_tick'): bigint | null => {
-  if (value === undefined) {
-    return null;
-  }
-
   if (typeof value === 'number') {
     if (!Number.isSafeInteger(value)) {
-      throw new ApiError(400, 'AUDIT_VIEW_QUERY_INVALID', `${fieldName} must be a safe integer number or integer string`);
+      throw new Error('Tick value must be a safe integer');
     }
-
     return BigInt(value);
   }
-
   const trimmed = value.trim();
   if (!/^\d+$/.test(trimmed)) {
-    throw new ApiError(400, 'AUDIT_VIEW_QUERY_INVALID', `${fieldName} must be a non-negative integer string`, {
-      field: fieldName,
-      value
-    });
+    throw new Error('Tick value must be an integer string');
   }
-
   return BigInt(trimmed);
 };
 
-const parseAuditFilters = (input: ListAuditFeedInput): AuditFeedFilters => {
-  const fromTick = parseOptionalTickFilter(input.from_tick, 'from_tick');
-  const toTick = parseOptionalTickFilter(input.to_tick, 'to_tick');
-
-  if (fromTick !== null && toTick !== null && fromTick > toTick) {
-    throw new ApiError(400, 'AUDIT_VIEW_QUERY_INVALID', 'from_tick must be less than or equal to to_tick', {
-      from_tick: fromTick.toString(),
-      to_tick: toTick.toString()
-    });
-  }
+const parseAuditFeedFilters = (query: Record<string, unknown>): AuditFeedFilters & { limit: number } => {
+  const fromTick = parseTickLike((query.from_tick as string | undefined) ?? null);
+  const toTick = parseTickLike((query.to_tick as string | undefined) ?? null);
+  const parsedLimit = typeof query.limit === 'string' ? Number.parseInt(query.limit, 10) : DEFAULT_AUDIT_FEED_LIMIT;
+  const limit = Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : DEFAULT_AUDIT_FEED_LIMIT, 1), MAX_AUDIT_FEED_LIMIT);
+  const rawKinds = Array.isArray(query.kinds)
+    ? query.kinds
+    : typeof query.kinds === 'string'
+      ? [query.kinds]
+      : null;
+  const kinds = rawKinds
+    ? rawKinds.filter((kind): kind is AuditEntryKind => typeof kind === 'string' && AUDIT_ENTRY_KINDS.includes(kind as AuditEntryKind))
+    : null;
 
   return {
     from_tick: fromTick,
     to_tick: toTick,
-    job_id: parseOptionalFilterId(input.job_id),
-    inference_id: parseOptionalFilterId(input.inference_id),
-    agent_id: parseOptionalFilterId(input.agent_id),
-    action_intent_id: parseOptionalFilterId(input.action_intent_id),
-    cursor: parseAuditCursor(input.cursor)
+    job_id: typeof query.job_id === 'string' ? query.job_id : null,
+    inference_id: typeof query.inference_id === 'string' ? query.inference_id : null,
+    agent_id: typeof query.agent_id === 'string' ? query.agent_id : null,
+    action_intent_id: typeof query.action_intent_id === 'string' ? query.action_intent_id : null,
+    cursor: typeof query.cursor === 'string' ? query.cursor : null,
+    kinds,
+    limit
   };
 };
 
-const matchesTickRange = (filters: AuditFeedFilters, tick: bigint): boolean => {
-  if (filters.from_tick !== null && tick < filters.from_tick) {
-    return false;
-  }
-
-  if (filters.to_tick !== null && tick > filters.to_tick) {
-    return false;
-  }
-
-  return true;
+const shouldFetchAllForFilters = (filters: AuditFeedFilters): boolean => {
+  return Boolean(filters.from_tick || filters.to_tick || filters.job_id || filters.inference_id || filters.agent_id || filters.action_intent_id || filters.cursor);
 };
 
-const extractAgentIdsFromRefs = (actorRef: unknown, targetRef: unknown, explicitAgentIds: Array<string | null> = []): string[] => {
-  const candidateIds = new Set<string>();
-
-  if (isRecord(actorRef) && typeof actorRef.agent_id === 'string' && actorRef.agent_id.trim().length > 0) {
-    candidateIds.add(actorRef.agent_id.trim());
-  }
-
-  if (isRecord(targetRef) && typeof targetRef.agent_id === 'string' && targetRef.agent_id.trim().length > 0) {
-    candidateIds.add(targetRef.agent_id.trim());
-  }
-
-  for (const explicitAgentId of explicitAgentIds) {
-    if (typeof explicitAgentId === 'string' && explicitAgentId.trim().length > 0) {
-      candidateIds.add(explicitAgentId.trim());
-    }
-  }
-
-  return [...candidateIds];
-};
-
-const matchesActionIntentFilter = (
-  filters: AuditFeedFilters,
-  candidateIds: Array<string | null | undefined>
-): boolean => {
-  if (!filters.action_intent_id) {
-    return true;
-  }
-
-  return candidateIds.some(candidateId => candidateId === filters.action_intent_id);
-};
-
-const matchesAgentFilter = (filters: AuditFeedFilters, candidateAgentIds: string[]): boolean => {
-  if (!filters.agent_id) {
-    return true;
-  }
-
-  return candidateAgentIds.includes(filters.agent_id);
-};
-
-const compareCursorPosition = (left: AuditFeedCursor, right: AuditFeedCursor): number => {
-  const leftTick = BigInt(left.created_at);
-  const rightTick = BigInt(right.created_at);
-
-  if (leftTick === rightTick) {
-    if (left.kind === right.kind) {
-      return right.id.localeCompare(left.id);
-    }
-
-    return left.kind.localeCompare(right.kind);
-  }
-
-  return leftTick > rightTick ? -1 : 1;
-};
-
-const matchesCursor = (filters: AuditFeedFilters, entry: AuditViewEntry): boolean => {
-  if (!filters.cursor) {
-    return true;
-  }
-
-  return compareCursorPosition({ created_at: entry.created_at, kind: entry.kind, id: entry.id }, filters.cursor) > 0;
-};
-
-const compareAuditEntries = (left: AuditViewEntry, right: AuditViewEntry): number => {
-  const leftTick = BigInt(left.created_at);
-  const rightTick = BigInt(right.created_at);
-
-  if (leftTick === rightTick) {
-    if (left.kind === right.kind) {
-      return right.id.localeCompare(left.id);
-    }
-
-    return left.kind.localeCompare(right.kind);
-  }
-
-  return leftTick > rightTick ? -1 : 1;
-};
-
-const parseEventImpactData = (value: string | null): unknown => {
-  if (value === null) {
+const buildBigIntRangeWhere = (filters: AuditFeedFilters, field: string) => {
+  if (filters.from_tick === null && filters.to_tick === null) {
     return null;
   }
-
-  try {
-    return JSON.parse(value) as unknown;
-  } catch {
-    return value;
-  }
-};
-
-const buildBigIntRangeWhere = (filters: AuditFeedFilters, fieldName: string): Record<string, unknown> | undefined => {
-  if (filters.from_tick === null && filters.to_tick === null) {
-    return undefined;
-  }
-
   return {
-    [fieldName]: {
+    [field]: {
       ...(filters.from_tick !== null ? { gte: filters.from_tick } : {}),
       ...(filters.to_tick !== null ? { lte: filters.to_tick } : {})
     }
   };
 };
 
-const shouldFetchAllForFilters = (filters: AuditFeedFilters): boolean => {
-  return (
-    filters.cursor !== null ||
-    filters.agent_id !== null ||
-    filters.job_id !== null ||
-    filters.inference_id !== null
-  );
+const matchesTickRange = (filters: AuditFeedFilters, value: bigint): boolean => {
+  if (filters.from_tick !== null && value < filters.from_tick) {
+    return false;
+  }
+  if (filters.to_tick !== null && value > filters.to_tick) {
+    return false;
+  }
+  return true;
 };
 
-const buildWorkflowAuditEntries = async (
-  context: AppContext,
-  limit: number,
-  filters: AuditFeedFilters
-): Promise<AuditViewEntry[]> => {
-  const jobs = await context.prisma.decisionJob.findMany({
-    ...(shouldFetchAllForFilters(filters)
-      ? {}
-      : {
-          take: limit
-        }),
-    where: {
-      ...(filters.action_intent_id
-        ? {
-            action_intent_id: filters.action_intent_id
-          }
-        : {}),
-      ...(filters.job_id
-        ? {
-            id: filters.job_id
-          }
-        : {}),
-      ...(buildBigIntRangeWhere(filters, 'created_at') ?? {})
-    },
-    select: {
-      id: true,
-      pending_source_key: true,
-      source_inference_id: true,
-      action_intent_id: true,
-      created_at: true,
-      job_type: true,
-      status: true,
-      attempt_count: true,
-      max_attempts: true
-    },
-    orderBy: { created_at: 'desc' }
-  });
-
-  const snapshots = await Promise.all(jobs.map(job => getWorkflowSnapshotByJobId(context, job.id)));
-
-  return jobs.flatMap((job, index) => {
-    const snapshot = snapshots[index];
-    const trace = snapshot.records.trace;
-    const intent = snapshot.records.intent;
-    const workflow = snapshot.derived;
-    const candidateAgentIds = extractAgentIdsFromRefs(intent?.actor_ref ?? trace?.actor_ref ?? null, intent?.target_ref ?? null);
-
-    if (filters.inference_id && trace?.id !== filters.inference_id && job.pending_source_key !== filters.inference_id && job.source_inference_id !== filters.inference_id) {
-      return [];
+const extractAgentIdsFromRefs = (...values: unknown[]): string[] => {
+  const ids = new Set<string>();
+  for (const value of values) {
+    if (!isRecord(value)) {
+      continue;
     }
+    const directAgentId = typeof value.agent_id === 'string' ? value.agent_id : null;
+    const directEntityId = typeof value.entity_id === 'string' ? value.entity_id : null;
+    const semanticIntent = isRecord(value.semantic_intent) ? value.semantic_intent : null;
+    const nestedTargetRef = semanticIntent && isRecord(semanticIntent.target_ref) ? semanticIntent.target_ref : null;
+    const nestedAgentId = nestedTargetRef && typeof nestedTargetRef.agent_id === 'string' ? nestedTargetRef.agent_id : null;
+    const nestedEntityId = nestedTargetRef && typeof nestedTargetRef.entity_id === 'string' ? nestedTargetRef.entity_id : null;
 
-    if (!matchesAgentFilter(filters, candidateAgentIds)) {
-      return [];
-    }
-
-    if (!matchesTickRange(filters, job.created_at)) {
-      return [];
-    }
-
-    return [{
-      kind: 'workflow',
-      id: job.id,
-      created_at: job.created_at.toString(),
-      refs: {
-        inference_id: trace?.id ?? job.pending_source_key ?? job.source_inference_id ?? null,
-        job_id: job.id,
-        action_intent_id: intent?.id ?? job.action_intent_id ?? null
-      },
-      summary: `${intent?.intent_type ?? 'workflow'} -> ${workflow.workflow_state}`,
-      data: {
-        source_inference_id: job.source_inference_id ?? null,
-        pending_source_key: job.pending_source_key ?? null,
-        job_type: job.job_type,
-        job_status: job.status,
-        attempt_count: job.attempt_count,
-        max_attempts: job.max_attempts,
-        intent_type: intent?.intent_type ?? null,
-        intent_status: intent?.status ?? null,
-        actor_ref: intent?.actor_ref ?? trace?.actor_ref ?? null,
-        target_ref: intent?.target_ref ?? null,
-        workflow_state: workflow.workflow_state,
-        decision_stage: workflow.decision_stage,
-        dispatch_stage: workflow.dispatch_stage,
-        failure_stage: workflow.failure_stage,
-        failure_code: workflow.failure_code,
-        failure_reason: workflow.failure_reason,
-        outcome_summary: workflow.outcome_summary,
-        replay_of_job_id: snapshot.lineage.replay_of_job_id,
-        replay_reason: snapshot.lineage.replay_reason,
-        override_applied: snapshot.lineage.override_applied,
-        override_snapshot: snapshot.lineage.override_snapshot
+    for (const candidate of [directAgentId, directEntityId, nestedAgentId, nestedEntityId]) {
+      if (candidate && candidate.trim().length > 0) {
+        ids.add(candidate.trim());
       }
-    }];
-  });
+    }
+  }
+  return Array.from(ids);
+};
+
+const matchesAgentFilter = (filters: AuditFeedFilters, candidateAgentIds: string[]): boolean => {
+  if (!filters.agent_id) {
+    return true;
+  }
+  return candidateAgentIds.includes(filters.agent_id);
+};
+
+const matchesActionIntentFilter = (filters: AuditFeedFilters, actionIntentIds: Array<string | null | undefined>): boolean => {
+  if (!filters.action_intent_id) {
+    return true;
+  }
+  return actionIntentIds.some(id => id === filters.action_intent_id);
+};
+
+const parseEventImpactData = (value: string | null): Record<string, unknown> | null => {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (isRecord(parsed)) {
+      return parsed;
+    }
+    return { raw: parsed };
+  } catch {
+    return { raw: value };
+  }
 };
 
 const buildPostAuditEntries = async (
@@ -480,7 +199,11 @@ const buildPostAuditEntries = async (
   }
 
   const posts = await context.prisma.post.findMany({
-    take: limit,
+    ...(shouldFetchAllForFilters(filters)
+      ? {}
+      : {
+          take: limit
+        }),
     where: {
       ...(filters.action_intent_id
         ? {
@@ -494,46 +217,31 @@ const buildPostAuditEntries = async (
         : {}),
       ...(buildBigIntRangeWhere(filters, 'created_at') ?? {})
     },
-    orderBy: { created_at: 'desc' },
-    include: {
-      author: {
-        select: {
-          id: true,
-          name: true
-        }
-      }
-    }
+    orderBy: { created_at: 'desc' }
   });
 
   return posts.flatMap(post => {
-    const candidateAgentIds = extractAgentIdsFromRefs(null, null, [post.author_id]);
-    if (!matchesAgentFilter(filters, candidateAgentIds)) {
-      return [];
-    }
-
     if (!matchesTickRange(filters, post.created_at)) {
       return [];
     }
 
     return [{
-    kind: 'post',
-    id: post.id,
-    created_at: post.created_at.toString(),
-    refs: {
-      post_id: post.id,
-      author_id: post.author_id,
-      action_intent_id: post.source_action_intent_id
-    },
-    summary: `${post.author.name}: ${post.content}`,
-    data: {
-      author_id: post.author_id,
-      source_action_intent_id: post.source_action_intent_id,
-      author_name: post.author.name,
-      content: post.content,
-      noise_level: post.noise_level,
-      is_encrypted: post.is_encrypted
-    }
-  }];
+      kind: 'post',
+      id: post.id,
+      created_at: post.created_at.toString(),
+      refs: {
+        post_id: post.id,
+        action_intent_id: post.source_action_intent_id,
+        agent_id: post.author_id
+      },
+      summary: `${post.author_id}: ${post.content}`,
+      data: {
+        author_id: post.author_id,
+        content: post.content,
+        source_action_intent_id: post.source_action_intent_id,
+        created_at: post.created_at.toString()
+      }
+    }];
   });
 };
 
@@ -547,9 +255,17 @@ const buildRelationshipAdjustmentAuditEntries = async (
   }
 
   const logs = await context.prisma.relationshipAdjustmentLog.findMany({
-    take: limit,
+    ...(shouldFetchAllForFilters(filters)
+      ? {}
+      : {
+          take: limit
+        }),
     where: {
-      ...(filters.action_intent_id ? { action_intent_id: filters.action_intent_id } : {}),
+      ...(filters.action_intent_id
+        ? {
+            action_intent_id: filters.action_intent_id
+          }
+        : {}),
       ...(filters.agent_id
         ? {
             OR: [{ from_id: filters.agent_id }, { to_id: filters.agent_id }]
@@ -566,29 +282,29 @@ const buildRelationshipAdjustmentAuditEntries = async (
     }
 
     return [{
-    kind: 'relationship_adjustment',
-    id: log.id,
-    created_at: log.created_at.toString(),
-    refs: {
-      relationship_adjustment_id: log.id,
-      relationship_id: log.relationship_id,
-      action_intent_id: log.action_intent_id,
-      from_id: log.from_id,
-      to_id: log.to_id
-    },
-    summary: `${log.from_id} -> ${log.to_id} (${log.type}) ${log.old_weight === null ? 'null' : String(log.old_weight)} -> ${String(log.new_weight)}`,
-    data: {
-      relationship_id: log.relationship_id,
-      action_intent_id: log.action_intent_id,
-      from_id: log.from_id,
-      to_id: log.to_id,
-      type: log.type,
-      operation: log.operation,
-      old_weight: log.old_weight,
-      new_weight: log.new_weight,
-      reason: log.reason
-    }
-  }];
+      kind: 'relationship_adjustment',
+      id: log.id,
+      created_at: log.created_at.toString(),
+      refs: {
+        relationship_adjustment_id: log.id,
+        action_intent_id: log.action_intent_id,
+        relationship_id: log.relationship_id,
+        from_id: log.from_id,
+        to_id: log.to_id
+      },
+      summary: `${log.from_id} -> ${log.to_id} ${log.type} ${String(log.old_weight)} -> ${String(log.new_weight)}`,
+      data: {
+        action_intent_id: log.action_intent_id,
+        relationship_id: log.relationship_id,
+        from_id: log.from_id,
+        to_id: log.to_id,
+        type: log.type,
+        operation: log.operation,
+        old_weight: log.old_weight,
+        new_weight: log.new_weight,
+        reason: log.reason
+      }
+    }];
   });
 };
 
@@ -613,6 +329,11 @@ const buildSnrAdjustmentAuditEntries = async (
             action_intent_id: filters.action_intent_id
           }
         : {}),
+      ...(filters.agent_id
+        ? {
+            agent_id: filters.agent_id
+          }
+        : {}),
       ...(buildBigIntRangeWhere(filters, 'created_at') ?? {})
     },
     orderBy: { created_at: 'desc' },
@@ -622,51 +343,36 @@ const buildSnrAdjustmentAuditEntries = async (
           id: true,
           name: true
         }
-      },
-      action_intent: {
-        select: {
-          actor_ref: true,
-          target_ref: true
-        }
       }
     }
   });
 
   return logs.flatMap(log => {
-    const candidateAgentIds = extractAgentIdsFromRefs(log.action_intent.actor_ref, log.action_intent.target_ref, [log.agent_id]);
-    if (!matchesAgentFilter(filters, candidateAgentIds)) {
-      return [];
-    }
-
     if (!matchesTickRange(filters, log.created_at)) {
       return [];
     }
 
-    if (filters.inference_id) {
-      return [];
-    }
-
     return [{
-    kind: 'snr_adjustment',
-    id: log.id,
-    created_at: log.created_at.toString(),
-    refs: {
-      snr_adjustment_id: log.id,
-      action_intent_id: log.action_intent_id,
-      agent_id: log.agent_id
-    },
-    summary: `${log.agent.name} SNR ${String(log.baseline_value)} -> ${String(log.resolved_value)}`,
-    data: {
-      action_intent_id: log.action_intent_id,
-      agent_id: log.agent_id,
-      agent_name: log.agent.name,
-      operation: log.operation,
-      requested_value: log.requested_value,
-      baseline_value: log.baseline_value,
-      resolved_value: log.resolved_value,
-      reason: log.reason
-    }
-  }];
+      kind: 'snr_adjustment',
+      id: log.id,
+      created_at: log.created_at.toString(),
+      refs: {
+        snr_adjustment_id: log.id,
+        action_intent_id: log.action_intent_id,
+        agent_id: log.agent_id
+      },
+      summary: `${log.agent.name} SNR ${String(log.baseline_value)} -> ${String(log.resolved_value)}`,
+      data: {
+        action_intent_id: log.action_intent_id,
+        agent_id: log.agent_id,
+        agent_name: log.agent.name,
+        operation: log.operation,
+        requested_value: log.requested_value,
+        baseline_value: log.baseline_value,
+        resolved_value: log.resolved_value,
+        reason: log.reason
+      }
+    }];
   });
 };
 
@@ -713,32 +419,40 @@ const buildEventAuditEntries = async (
       return [];
     }
 
+    const impactData = parseEventImpactData(event.impact_data);
     const candidateAgentIds = extractAgentIdsFromRefs(
       event.source_action_intent?.actor_ref ?? null,
-      event.source_action_intent?.target_ref ?? null
+      event.source_action_intent?.target_ref ?? null,
+      impactData
     );
     if (!matchesAgentFilter(filters, candidateAgentIds)) {
       return [];
     }
 
     return [{
-    kind: 'event',
-    id: event.id,
-    created_at: event.created_at.toString(),
-    refs: {
-      event_id: event.id,
-      action_intent_id: event.source_action_intent_id
-    },
-    summary: `${event.type}: ${event.title}`,
-    data: {
-      title: event.title,
-      description: event.description,
-      tick: event.tick.toString(),
-      type: event.type,
-      impact_data: parseEventImpactData(event.impact_data),
-      source_action_intent_id: event.source_action_intent_id
-    }
-  }];
+      kind: 'event',
+      id: event.id,
+      created_at: event.created_at.toString(),
+      refs: {
+        event_id: event.id,
+        action_intent_id: event.source_action_intent_id,
+        agent_id: candidateAgentIds[0] ?? null
+      },
+      summary: `${event.type}: ${event.title}`,
+      data: {
+        title: event.title,
+        description: event.description,
+        tick: event.tick.toString(),
+        type: event.type,
+        impact_data: impactData,
+        semantic_type: impactData && typeof impactData.semantic_type === 'string' ? impactData.semantic_type : null,
+        failed_attempt: impactData?.failed_attempt === true,
+        objective_effect_applied:
+          typeof impactData?.objective_effect_applied === 'boolean' ? impactData.objective_effect_applied : null,
+        grounding_mode: impactData && typeof impactData.grounding_mode === 'string' ? impactData.grounding_mode : null,
+        source_action_intent_id: event.source_action_intent_id
+      }
+    }];
   });
 };
 
@@ -791,11 +505,24 @@ const buildWorkflowAuditEntryBySnapshot = (jobId: string, snapshot: Awaited<Retu
   const intent = snapshot.records.intent;
 
   if (!job) {
-    throw new ApiError(404, 'AUDIT_ENTRY_NOT_FOUND', 'Audit workflow entry not found', {
-      kind: 'workflow',
-      id: jobId
-    });
+    throw new Error(`Audit workflow entry not found for job ${jobId}`);
   }
+
+  const traceMetadata = isRecord(trace?.trace_metadata) ? trace.trace_metadata : null;
+  const decisionRecord = isRecord(trace?.decision) ? trace.decision : null;
+  const intentPayload = isRecord(intent?.payload) ? intent.payload : null;
+  const intentGrounding =
+    (traceMetadata && isRecord(traceMetadata.intent_grounding) ? traceMetadata.intent_grounding : null) ??
+    (decisionRecord && isRecord(decisionRecord.meta) && isRecord((decisionRecord.meta as Record<string, unknown>).intent_grounding)
+      ? ((decisionRecord.meta as Record<string, unknown>).intent_grounding as Record<string, unknown>)
+      : null) ??
+    (intentPayload && isRecord(intentPayload.intent_grounding) ? intentPayload.intent_grounding : null);
+  const semanticIntent =
+    (traceMetadata && isRecord(traceMetadata.semantic_intent) ? traceMetadata.semantic_intent : null) ??
+    (decisionRecord && isRecord(decisionRecord.meta) && isRecord((decisionRecord.meta as Record<string, unknown>).semantic_intent)
+      ? ((decisionRecord.meta as Record<string, unknown>).semantic_intent as Record<string, unknown>)
+      : null) ??
+    (intentPayload && isRecord(intentPayload.semantic_intent) ? intentPayload.semantic_intent : null);
 
   return {
     kind: 'workflow',
@@ -829,7 +556,17 @@ const buildWorkflowAuditEntryBySnapshot = (jobId: string, snapshot: Awaited<Retu
       replay_source_trace_id: snapshot.lineage.replay_source_trace_id,
       replay_reason: snapshot.lineage.replay_reason,
       override_applied: snapshot.lineage.override_applied,
-      override_snapshot: snapshot.lineage.override_snapshot
+      override_snapshot: snapshot.lineage.override_snapshot,
+      semantic_intent: semanticIntent,
+      intent_grounding: intentGrounding,
+      semantic_outcome:
+        (decisionRecord && isRecord(decisionRecord.meta)
+          ? (decisionRecord.meta as Record<string, unknown>).semantic_outcome
+          : null) ?? null,
+      objective_effect_applied:
+        (intentGrounding && typeof intentGrounding.objective_effect_applied === 'boolean'
+          ? intentGrounding.objective_effect_applied
+          : null) ?? null
     }
   };
 };
@@ -883,7 +620,7 @@ const buildWorkflowAuditDetailEntry = async (
   snapshot: Awaited<ReturnType<typeof getWorkflowSnapshotByJobId>>
 ): Promise<AuditViewEntry> => {
   const baseEntry = buildWorkflowAuditEntryBySnapshot(jobId, snapshot);
-  const relatedRecords = await buildWorkflowRelatedRecords(context, baseEntry.refs.action_intent_id);
+  const relatedRecords = await buildWorkflowRelatedRecords(context, baseEntry.refs.action_intent_id ?? null);
   const lineageDetail = await buildWorkflowLineageDetail(context, snapshot);
 
   return {
@@ -909,242 +646,156 @@ export const getAuditEntryById = async (
   const kind = parseAuditEntryKind(input.kind);
   const id = parseAuditEntryId(input.id);
 
-  if (kind === 'workflow') {
-    const job = await context.prisma.decisionJob.findUnique({ where: { id } });
-    if (!job) {
-      throw new ApiError(404, 'AUDIT_ENTRY_NOT_FOUND', 'Audit entry not found', { kind, id });
+  switch (kind) {
+    case 'workflow': {
+      const snapshot = await getWorkflowSnapshotByJobId(context, id);
+      return buildWorkflowAuditDetailEntry(context, id, snapshot);
     }
-    return buildWorkflowAuditDetailEntry(context, id, await getWorkflowSnapshotByJobId(context, id));
-  }
-
-  if (kind === 'post') {
-    const post = await context.prisma.post.findUnique({
-      where: { id },
-      include: { author: { select: { id: true, name: true } } }
-    });
-    if (!post) {
-      throw new ApiError(404, 'AUDIT_ENTRY_NOT_FOUND', 'Audit entry not found', { kind, id });
-    }
-    return {
-      kind,
-      id: post.id,
-      created_at: post.created_at.toString(),
-      refs: {
-        post_id: post.id,
-        author_id: post.author_id,
-        action_intent_id: post.source_action_intent_id
-      },
-      summary: `${post.author.name}: ${post.content}`,
-      data: {
-        author_id: post.author_id,
-        source_action_intent_id: post.source_action_intent_id,
-        author_name: post.author.name,
-        content: post.content,
-        noise_level: post.noise_level,
-        is_encrypted: post.is_encrypted
-      }
-    };
-  }
-
-  if (kind === 'relationship_adjustment') {
-    const log = await context.prisma.relationshipAdjustmentLog.findUnique({ where: { id } });
-    if (!log) {
-      throw new ApiError(404, 'AUDIT_ENTRY_NOT_FOUND', 'Audit entry not found', { kind, id });
-    }
-
-    const resolvedIntent = buildMutationResolvedResult({
-      action_intent_id: log.action_intent_id,
-      operation: log.operation,
-      reason: log.reason,
-      target: {
-        relationship_id: log.relationship_id,
-        from_id: log.from_id,
-        to_id: log.to_id,
-        type: log.type
-      },
-      requested: { weight: log.new_weight },
-      baseline: { weight: log.old_weight },
-      absolute: { weight: log.new_weight }
-    });
-
-    return {
-      kind,
-      id: log.id,
-      created_at: log.created_at.toString(),
-      refs: {
-        relationship_adjustment_id: log.id,
-        relationship_id: log.relationship_id,
-        action_intent_id: log.action_intent_id,
-        from_id: log.from_id,
-        to_id: log.to_id
-      },
-      summary: `${log.from_id} -> ${log.to_id} (${log.type}) ${log.old_weight === null ? 'null' : String(log.old_weight)} -> ${String(log.new_weight)}`,
-      data: {
-        relationship_id: log.relationship_id,
-        action_intent_id: log.action_intent_id,
-        from_id: log.from_id,
-        to_id: log.to_id,
-        type: log.type,
-        operation: log.operation,
-        old_weight: log.old_weight,
-        new_weight: log.new_weight,
-        reason: log.reason,
-        resolved_intent: resolvedIntent
-      }
-    };
-  }
-
-  if (kind === 'snr_adjustment') {
-    const log = await context.prisma.sNRAdjustmentLog.findUnique({
-      where: { id },
-      include: {
-        agent: { select: { id: true, name: true } },
-        action_intent: { select: { actor_ref: true, target_ref: true } }
-      }
-    });
-    if (!log) {
-      throw new ApiError(404, 'AUDIT_ENTRY_NOT_FOUND', 'Audit entry not found', { kind, id });
-    }
-
-    const resolvedIntent = buildMutationResolvedResult({
-      action_intent_id: log.action_intent_id,
-      operation: log.operation,
-      reason: log.reason,
-      target: {
-        agent_id: log.agent_id,
-        agent_name: log.agent.name
-      },
-      requested: { value: log.requested_value },
-      baseline: { value: log.baseline_value },
-      absolute: { value: log.resolved_value }
-    });
-
-    return {
-      kind,
-      id: log.id,
-      created_at: log.created_at.toString(),
-      refs: {
-        snr_adjustment_id: log.id,
-        action_intent_id: log.action_intent_id,
-        agent_id: log.agent_id
-      },
-      summary: `${log.agent.name} SNR ${String(log.baseline_value)} -> ${String(log.resolved_value)}`,
-      data: {
-        action_intent_id: log.action_intent_id,
-        agent_id: log.agent_id,
-        agent_name: log.agent.name,
-        operation: log.operation,
-        requested_value: log.requested_value,
-        baseline_value: log.baseline_value,
-        resolved_value: log.resolved_value,
-        reason: log.reason,
-        resolved_intent: resolvedIntent
-      }
-    };
-  }
-
-  const event = await context.prisma.event.findUnique({
-    where: { id },
-    include: {
-      source_action_intent: {
-        select: {
-          actor_ref: true,
-          target_ref: true
+    case 'post': {
+      const post = await context.prisma.post.findUnique({
+        where: {
+          id
         }
+      });
+
+      if (!post) {
+        throw new Error(`Audit post entry not found for ${id}`);
       }
+
+      return {
+        kind: 'post',
+        id: post.id,
+        created_at: post.created_at.toString(),
+        refs: {
+          post_id: post.id,
+          action_intent_id: post.source_action_intent_id,
+          agent_id: post.author_id
+        },
+        summary: `${post.author_id}: ${post.content}`,
+        data: {
+          author_id: post.author_id,
+          content: post.content,
+          source_action_intent_id: post.source_action_intent_id,
+          created_at: post.created_at.toString()
+        }
+      };
     }
-  });
-  if (!event) {
-    throw new ApiError(404, 'AUDIT_ENTRY_NOT_FOUND', 'Audit entry not found', { kind, id });
+    case 'event': {
+      const entries = await buildEventAuditEntries(context, 100, {
+        from_tick: null,
+        to_tick: null,
+        job_id: null,
+        inference_id: null,
+        agent_id: null,
+        action_intent_id: null,
+        cursor: null
+      });
+      const entry = entries.find(item => item.id === id);
+      if (!entry) {
+        throw new Error(`Audit event entry not found for ${id}`);
+      }
+      return entry;
+    }
+    case 'relationship_adjustment': {
+      const entries = await buildRelationshipAdjustmentAuditEntries(context, 100, {
+        from_tick: null,
+        to_tick: null,
+        job_id: null,
+        inference_id: null,
+        agent_id: null,
+        action_intent_id: null,
+        cursor: null
+      });
+      const entry = entries.find(item => item.id === id);
+      if (!entry) {
+        throw new Error(`Audit relationship adjustment entry not found for ${id}`);
+      }
+      return entry;
+    }
+    case 'snr_adjustment': {
+      const entries = await buildSnrAdjustmentAuditEntries(context, 100, {
+        from_tick: null,
+        to_tick: null,
+        job_id: null,
+        inference_id: null,
+        agent_id: null,
+        action_intent_id: null,
+        cursor: null
+      });
+      const entry = entries.find(item => item.id === id);
+      if (!entry) {
+        throw new Error(`Audit snr adjustment entry not found for ${id}`);
+      }
+      return entry;
+    }
+    default:
+      throw new Error(`Unsupported audit entry kind: ${String(kind)}`);
   }
-  return {
-    kind,
-    id: event.id,
-    created_at: event.created_at.toString(),
-    refs: {
-      event_id: event.id,
-      action_intent_id: event.source_action_intent_id
-    },
-    summary: `${event.type}: ${event.title}`,
-    data: {
-      title: event.title,
-      description: event.description,
-      tick: event.tick.toString(),
-      type: event.type,
-      impact_data: parseEventImpactData(event.impact_data),
-      source_action_intent_id: event.source_action_intent_id
-    }
-  };
 };
 
 export const listAuditFeed = async (
   context: AppContext,
-  input: ListAuditFeedInput
-): Promise<AuditFeedSnapshot> => {
-  const limit = parseAuditLimit(input.limit);
-  const kinds = parseAuditKinds(input.kinds);
-  const filters = parseAuditFilters(input);
-  const entries: AuditViewEntry[] = [];
+  query: Record<string, unknown>
+): Promise<ListAuditFeedResult> => {
+  const shouldValidateAsHttpQuery = Object.values(query).every(value => {
+    return (
+      value === null ||
+      value === undefined ||
+      typeof value === 'string' ||
+      Array.isArray(value)
+    );
+  });
 
-  if (kinds.includes('workflow')) {
-    entries.push(...(await buildWorkflowAuditEntries(context, limit, filters)));
+  if (shouldValidateAsHttpQuery) {
+    parseQuery(auditFeedQuerySchema, query, 'AUDIT_QUERY_INVALID');
   }
+  const filters = parseAuditFeedFilters(query);
 
-  if (kinds.includes('post')) {
-    entries.push(...(await buildPostAuditEntries(context, limit, filters)));
-  }
+  const requestedKinds = filters.kinds ?? ['workflow', 'post', 'event', 'relationship_adjustment', 'snr_adjustment'];
+  const entries = await Promise.all(
+    requestedKinds.map(async kind => {
+      switch (kind) {
+        case 'workflow': {
+          const jobs = await listInferenceJobs(context, {
+            limit: filters.limit
+          });
+          return Promise.all(
+            jobs.items.map(item => buildWorkflowAuditEntryByJobId(context, item.id))
+          );
+        }
+        case 'post':
+          return buildPostAuditEntries(context, filters.limit, filters);
+        case 'event':
+          return buildEventAuditEntries(context, filters.limit, filters);
+        case 'relationship_adjustment':
+          return buildRelationshipAdjustmentAuditEntries(context, filters.limit, filters);
+        case 'snr_adjustment':
+          return buildSnrAdjustmentAuditEntries(context, filters.limit, filters);
+        default:
+          return [];
+      }
+    })
+  );
 
-  if (kinds.includes('relationship_adjustment')) {
-    entries.push(...(await buildRelationshipAdjustmentAuditEntries(context, limit, filters)));
-  }
+  const flattened = entries.flat().sort((left, right) => {
+    const leftTick = BigInt(left.created_at);
+    const rightTick = BigInt(right.created_at);
+    if (leftTick === rightTick) {
+      return right.id.localeCompare(left.id);
+    }
+    return leftTick > rightTick ? -1 : 1;
+  });
 
-  if (kinds.includes('snr_adjustment')) {
-    entries.push(...(await buildSnrAdjustmentAuditEntries(context, limit, filters)));
-  }
-
-  if (kinds.includes('event')) {
-    entries.push(...(await buildEventAuditEntries(context, limit, filters)));
-  }
-
-  const sortedEntries = entries
-    .sort(compareAuditEntries)
-    .filter(entry => matchesCursor(filters, entry))
-    .slice(0, limit + 1);
-  const countsByKind: Record<AuditViewKind, number> = {
-    workflow: 0,
-    post: 0,
-    relationship_adjustment: 0,
-    snr_adjustment: 0,
-    event: 0
-  };
-
-  const hasNextPage = sortedEntries.length > limit;
-  const pageEntries = hasNextPage ? sortedEntries.slice(0, limit) : sortedEntries;
-
-  for (const entry of pageEntries) {
-    countsByKind[entry.kind] += 1;
-  }
+  const paged = flattened.slice(0, filters.limit);
+  const hasNextPage = flattened.length > filters.limit;
+  const lastEntry = paged[paged.length - 1] ?? null;
+  const nextCursor = hasNextPage && lastEntry ? `${lastEntry.created_at}:${lastEntry.id}` : null;
 
   return {
-    entries: pageEntries,
-    summary: {
-      returned: pageEntries.length,
-      limit,
-      applied_kinds: kinds,
-      page_info: {
-        has_next_page: hasNextPage,
-        next_cursor: hasNextPage ? encodeAuditCursor(pageEntries[pageEntries.length - 1]) : null
-      },
-      filters: {
-        from_tick: filters.from_tick?.toString() ?? null,
-        to_tick: filters.to_tick?.toString() ?? null,
-        job_id: filters.job_id,
-        inference_id: filters.inference_id,
-        agent_id: filters.agent_id,
-        action_intent_id: filters.action_intent_id,
-        cursor: filters.cursor ? encodeAuditCursorPayload(filters.cursor) : null
-      },
-      counts_by_kind: countsByKind
+    entries: paged,
+    page_info: {
+      has_next_page: hasNextPage,
+      next_cursor: nextCursor
     }
   };
 };

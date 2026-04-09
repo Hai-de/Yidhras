@@ -1,3 +1,4 @@
+import type { ContextOverlayType } from '../../context/overlay/types.js';
 import { getPackEntityOverviewProjection } from '../../packs/runtime/projections/entity_overview_service.js';
 import { PermissionContext } from '../../permission/types.js';
 import { ApiError } from '../../utils/api_error.js';
@@ -117,6 +118,27 @@ export interface AgentOverviewSnapshot {
       latest_memory_context: Record<string, unknown> | null;
       latest_memory_selection: Record<string, unknown> | null;
       latest_prompt_processing_trace: Record<string, unknown> | null;
+    };
+  };
+  context_governance: {
+    latest_policy: {
+      policy_decisions: Array<Record<string, unknown>>;
+      blocked_nodes: Array<Record<string, unknown>>;
+      locked_nodes: Array<Record<string, unknown>>;
+      visibility_denials: Array<Record<string, unknown>>;
+    };
+    overlay: {
+      count: number;
+      latest_items: Array<{
+        node_id: string;
+        overlay_id: string;
+        overlay_type: ContextOverlayType | string;
+        persistence_mode: string;
+        created_by: 'system' | 'agent';
+        status: string;
+        preferred_slot: string | null;
+      }>;
+      latest_mutations: Array<Record<string, unknown>>;
     };
   };
 }
@@ -331,6 +353,24 @@ export const getEntityOverview = async (
   const latestContextSnapshot = isRecord(latestTrace?.context_snapshot)
     ? (latestTrace?.context_snapshot as Record<string, unknown>)
     : null;
+  const latestPolicyDecisions = latestContextSnapshot && Array.isArray(latestContextSnapshot.policy_decisions)
+    ? latestContextSnapshot.policy_decisions.filter(isRecord).map(item => item as Record<string, unknown>)
+    : [];
+  const latestBlockedNodes = latestContextSnapshot && Array.isArray(latestContextSnapshot.blocked_nodes)
+    ? latestContextSnapshot.blocked_nodes.filter(isRecord).map(item => item as Record<string, unknown>)
+    : [];
+  const latestLockedNodes = latestContextSnapshot && Array.isArray(latestContextSnapshot.locked_nodes)
+    ? latestContextSnapshot.locked_nodes.filter(isRecord).map(item => item as Record<string, unknown>)
+    : [];
+  const latestVisibilityDenials = latestContextSnapshot && Array.isArray(latestContextSnapshot.visibility_denials)
+    ? latestContextSnapshot.visibility_denials.filter(isRecord).map(item => item as Record<string, unknown>)
+    : [];
+  const latestOverlayNodesLoaded = latestContextSnapshot && Array.isArray(latestContextSnapshot.overlay_nodes_loaded)
+    ? latestContextSnapshot.overlay_nodes_loaded.filter(isRecord)
+    : [];
+  const latestOverlayNodesMutated = latestContextSnapshot && Array.isArray(latestContextSnapshot.overlay_nodes_mutated)
+    ? latestContextSnapshot.overlay_nodes_mutated.filter(isRecord).map(item => item as Record<string, unknown>)
+    : [];
   const packEntity = packProjection.entities.find(entity => entity.id === resolvedAgentId) ?? null;
 
   const bindingSummary = {
@@ -401,7 +441,7 @@ export const getEntityOverview = async (
       entity: packEntity
         ? {
             entity_kind: packEntity.entity_kind,
-            entity_type: packEntity.entity_type,
+            entity_type: packEntity.entity_type ?? null,
             tags: packEntity.tags,
             state: packEntity.state
           }
@@ -466,6 +506,27 @@ export const getEntityOverview = async (
         latest_prompt_processing_trace: latestContextSnapshot && isRecord(latestContextSnapshot.prompt_processing_trace)
           ? (latestContextSnapshot.prompt_processing_trace as Record<string, unknown>)
           : null
+      }
+    },
+    context_governance: {
+      latest_policy: {
+        policy_decisions: latestPolicyDecisions,
+        blocked_nodes: latestBlockedNodes,
+        locked_nodes: latestLockedNodes,
+        visibility_denials: latestVisibilityDenials
+      },
+      overlay: {
+        count: latestOverlayNodesLoaded.length,
+        latest_items: latestOverlayNodesLoaded.slice(0, limit).map(item => ({
+          node_id: typeof item.node_id === 'string' ? item.node_id : '',
+          overlay_id: typeof item.overlay_id === 'string' ? item.overlay_id : '',
+          overlay_type: typeof item.overlay_type === 'string' ? item.overlay_type : 'self_note',
+          persistence_mode: typeof item.persistence_mode === 'string' ? item.persistence_mode : 'sticky',
+          created_by: item.created_by === 'agent' ? 'agent' : 'system',
+          status: typeof item.status === 'string' ? item.status : 'active',
+          preferred_slot: typeof item.preferred_slot === 'string' ? item.preferred_slot : null
+        })),
+        latest_mutations: latestOverlayNodesMutated.slice(0, limit)
       }
     }
   };

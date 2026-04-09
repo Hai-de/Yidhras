@@ -91,6 +91,27 @@ export interface AgentOverviewSnapshot {
       latest_prompt_processing_trace: Record<string, unknown> | null
     }
   }
+  context_governance: {
+    latest_policy: {
+      policy_decisions: Array<Record<string, unknown>>
+      blocked_nodes: Array<Record<string, unknown>>
+      locked_nodes: Array<Record<string, unknown>>
+      visibility_denials: Array<Record<string, unknown>>
+    }
+    overlay: {
+      count: number
+      latest_items: Array<{
+        node_id: string
+        overlay_id: string
+        overlay_type: string
+        persistence_mode: string
+        created_by: 'system' | 'agent'
+        status: string
+        preferred_slot: string | null
+      }>
+      latest_mutations: Array<Record<string, unknown>>
+    }
+  }
 }
 
 export const useAgentApi = () => {

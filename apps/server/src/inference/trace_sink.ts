@@ -6,7 +6,9 @@ import type {
   InferenceJobStatus,
   InferenceRequestInput,
   InferenceStrategy,
+  IntentGroundingResult,
   PromptBundle,
+  SemanticIntentResult,
   TraceMetadata
 } from './types.js';
 
@@ -21,6 +23,8 @@ export interface InferenceTraceEvent {
   prompt: PromptBundle;
   trace_metadata: TraceMetadata;
   decision?: DecisionResult;
+  semantic_intent?: SemanticIntentResult;
+  intent_grounding?: IntentGroundingResult;
   action_intent_draft?: ActionIntentDraft;
   job_id?: string;
   job_status?: InferenceJobStatus;

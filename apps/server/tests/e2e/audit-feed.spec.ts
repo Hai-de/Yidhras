@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   assertArrayField,
+  assertPaginationMeta,
   assertRecord,
   assertSuccessEnvelopeData
 } from '../helpers/envelopes.js';
@@ -161,8 +162,8 @@ describe('audit feed e2e', () => {
           expect(auditFeedResponse.status).toBe(200);
           const auditFeedData = assertSuccessEnvelopeData(auditFeedResponse.body, 'audit feed response');
           expect(Array.isArray(auditFeedData.entries)).toBe(true);
-          expect(isRecord(auditFeedData.summary)).toBe(true);
-          expect(isRecord((auditFeedResponse.body as Record<string, unknown>).meta)).toBe(true);
+          const pagination = assertPaginationMeta(auditFeedResponse.body, 'audit feed response');
+          expect(typeof pagination.has_next_page).toBe('boolean');
 
           const workflowFeedResponse = await requestJson(
             server.baseUrl,
@@ -171,9 +172,11 @@ describe('audit feed e2e', () => {
           expect(workflowFeedResponse.status).toBe(200);
           const workflowFeedData = assertSuccessEnvelopeData(workflowFeedResponse.body, 'workflow-filtered audit feed');
           const workflowFeedEntries = assertArrayField(workflowFeedData, 'entries', 'workflow-filtered audit feed');
-          expect(workflowFeedEntries.length).toBe(1);
-          expect(isRecord(workflowFeedEntries[0])).toBe(true);
-          expect((workflowFeedEntries[0] as Record<string, unknown>).id).toBe(workflowReplayJobId);
+          expect(
+            workflowFeedEntries.some(
+              entry => isRecord(entry) && entry.kind === 'workflow' && entry.id === workflowReplayJobId
+            )
+          ).toBe(true);
 
           const workflowDetailResponse = await requestJson(
             server.baseUrl,

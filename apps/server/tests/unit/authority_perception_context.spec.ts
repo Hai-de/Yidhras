@@ -63,25 +63,27 @@ describe('authority/perception/context assembly', () => {
     };
 
     appContext.identity = {
-      id: 'agent-light',
+      id: 'agent-001',
       type: 'agent',
       name: '夜神月'
     };
 
     const authority = await resolveAuthorityForSubject(appContext, {
       packId: 'world-death-note',
-      subjectEntityId: 'agent-light'
+      subjectEntityId: 'agent-001'
     });
     expect(Array.isArray(authority.resolved_capabilities)).toBe(true);
 
     const inferenceContextV2 = await buildInferenceContextV2(appContext, {
-      identity_id: 'agent-light',
+      identity_id: 'agent-001',
       strategy: 'rule_based'
     });
 
-    expect(inferenceContextV2.subject_context.resolved_agent_id).toBe('agent-light');
-    expect(inferenceContextV2.authority_context.subject_entity_id).toBe('agent-light');
+    expect(inferenceContextV2.subject_context.resolved_agent_id).toBe('agent-001');
+    expect(inferenceContextV2.authority_context.subject_entity_id).toBe('agent-001');
     expect(Array.isArray(inferenceContextV2.authority_context.resolved_capabilities)).toBe(true);
+    expect(Array.isArray(inferenceContextV2.base.pack_runtime.invocation_rules)).toBe(true);
+    expect(inferenceContextV2.base.pack_runtime.invocation_rules?.length).toBeGreaterThan(0);
 
     const perception = await resolvePerceptionForSubject(appContext, {
       packId: 'world-death-note',

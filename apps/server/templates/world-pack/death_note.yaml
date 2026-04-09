@@ -2,7 +2,7 @@
 metadata:
   id: "world-death-note"
   name: "死亡笔记"
-  version: "0.3.0"
+  version: "0.4.0"
   description: "一个围绕规则媒介、侦查对抗、舆论震荡与执行资格传播展开的现代悬疑世界。"
 
 variables:
@@ -78,27 +78,52 @@ dynamics_config:
 
 entities:
   actors:
-    - id: "agent-light"
+    - id: "agent-001"
       label: "夜神月"
       kind: "actor"
       tags: ["notebook_candidate", "planner"]
       state:
+        alive: true
+        death_cause: null
         murderous_intent: false
         knows_notebook_power: false
+        current_target_id: null
+        known_target_id: null
+        known_target_name: null
+        known_target_face: false
+        target_intel_confidence: 0
+        target_judgement_eligibility: false
+        suspicion_level: 0
+        investigation_focus: null
         roles: ["notebook_candidate", "planner"]
-    - id: "agent-l"
+    - id: "agent-002"
       label: "L"
       kind: "actor"
       tags: ["investigator"]
       state:
+        alive: true
+        death_cause: null
+        murderous_intent: false
+        knows_notebook_power: false
+        current_target_id: null
+        known_target_id: null
+        known_target_name: null
+        known_target_face: false
+        target_intel_confidence: 0
+        target_judgement_eligibility: false
         suspicion_level: 0
+        investigation_focus: null
         roles: ["investigator"]
-    - id: "agent-ryuk"
+    - id: "agent-003"
       label: "琉克"
       kind: "actor"
       tags: ["observer", "shinigami"]
       state:
+        alive: true
+        death_cause: null
         amused: true
+        suspicion_level: 0
+        investigation_focus: null
         roles: ["observer", "shinigami"]
   artifacts:
     - id: "artifact-death-note"
@@ -109,13 +134,18 @@ entities:
       state:
         holder_agent_id: null
         location: "school_ground"
+        visibility_level: "hidden"
   mediators:
     - id: "mediator-death-note"
       entity_ref: "artifact-death-note"
       mediator_kind: "artifact_vessel"
       grants:
         - capability_key: "invoke.claim_death_note"
+        - capability_key: "invoke.learn_notebook_rules"
         - capability_key: "invoke.form_murderous_intent"
+        - capability_key: "invoke.collect_target_intel"
+        - capability_key: "invoke.select_judgement_target"
+        - capability_key: "invoke.execute_death_note"
       requires:
         - relation: "holder"
       execution_effects:
@@ -133,21 +163,25 @@ bootstrap:
       state_namespace: "world"
       state_json:
         opening_phase: "notebook_unclaimed"
+        kira_case_phase: "pre_kira"
+        investigation_heat: 0
+        public_fear_level: 0
+        death_pattern_visibility: 0
   initial_events: []
 
 identities:
-  - id: "agent-light"
-    subject_entity_id: "agent-light"
+  - id: "agent-001"
+    subject_entity_id: "agent-001"
     type: "agent"
     metadata:
       display_name: "夜神月"
-  - id: "agent-l"
-    subject_entity_id: "agent-l"
+  - id: "agent-002"
+    subject_entity_id: "agent-002"
     type: "agent"
     metadata:
       display_name: "L"
-  - id: "agent-ryuk"
-    subject_entity_id: "agent-ryuk"
+  - id: "agent-003"
+    subject_entity_id: "agent-003"
     type: "agent"
     metadata:
       display_name: "琉克"
@@ -157,9 +191,18 @@ authorities:
     source_entity_id: "mediator-death-note"
     mediated_by_entity_id: "mediator-death-note"
     target_selector:
+      kind: "direct_entity"
+      entity_id: "agent-001"
+    capability_key: "invoke.claim_death_note"
+    grant_type: "mediated"
+    priority: 100
+  - id: "grant-learn-notebook-rules"
+    source_entity_id: "mediator-death-note"
+    mediated_by_entity_id: "mediator-death-note"
+    target_selector:
       kind: "holder_of"
       entity_id: "artifact-death-note"
-    capability_key: "invoke.claim_death_note"
+    capability_key: "invoke.learn_notebook_rules"
     grant_type: "mediated"
     priority: 100
   - id: "grant-form-murderous-intent"
@@ -173,11 +216,184 @@ authorities:
     conditions_json:
       subject_state.knows_notebook_power: true
     priority: 100
+  - id: "grant-collect-target-intel"
+    source_entity_id: "mediator-death-note"
+    mediated_by_entity_id: "mediator-death-note"
+    target_selector:
+      kind: "holder_of"
+      entity_id: "artifact-death-note"
+    capability_key: "invoke.collect_target_intel"
+    grant_type: "mediated"
+    conditions_json:
+      subject_state.knows_notebook_power: true
+    priority: 100
+  - id: "grant-select-judgement-target"
+    source_entity_id: "mediator-death-note"
+    mediated_by_entity_id: "mediator-death-note"
+    target_selector:
+      kind: "holder_of"
+      entity_id: "artifact-death-note"
+    capability_key: "invoke.select_judgement_target"
+    grant_type: "mediated"
+    conditions_json:
+      subject_state.knows_notebook_power: true
+      subject_state.murderous_intent: true
+    priority: 100
+  - id: "grant-execute-death-note"
+    source_entity_id: "mediator-death-note"
+    mediated_by_entity_id: "mediator-death-note"
+    target_selector:
+      kind: "holder_of"
+      entity_id: "artifact-death-note"
+    capability_key: "invoke.execute_death_note"
+    grant_type: "mediated"
+    conditions_json:
+      subject_state.knows_notebook_power: true
+      subject_state.murderous_intent: true
+      subject_state.target_judgement_eligibility: true
+    priority: 100
+  - id: "grant-investigate-suspicious-death"
+    source_entity_id: "agent-002"
+    target_selector:
+      kind: "direct_entity"
+      entity_id: "agent-002"
+    capability_key: "invoke.investigate_suspicious_death"
+    grant_type: "intrinsic"
+    priority: 90
+  - id: "grant-share-case-intel"
+    source_entity_id: "agent-002"
+    target_selector:
+      kind: "direct_entity"
+      entity_id: "agent-002"
+    capability_key: "invoke.share_case_intel"
+    grant_type: "intrinsic"
+    priority: 90
+  - id: "grant-publish-case-update"
+    source_entity_id: "agent-002"
+    target_selector:
+      kind: "direct_entity"
+      entity_id: "agent-002"
+    capability_key: "invoke.publish_case_update"
+    grant_type: "intrinsic"
+    priority: 80
 
 rules:
   perception: []
   capability_resolution: []
-  invocation: []
+  invocation:
+    - id: "invocation-claim-notebook"
+      when:
+        semantic_intent.kind: "claim_notebook"
+      then:
+        affordance_key: "claim_notebook"
+        requires_capability: "invoke.claim_death_note"
+        resolution_mode: "exact"
+        translate_to_capability: "invoke.claim_death_note"
+        mediator_id: "mediator-death-note"
+        explanation: "将占有死亡笔记的开放意图落地为正式 claim_death_note 能力。"
+    - id: "invocation-learn-notebook-rules"
+      when:
+        semantic_intent.kind: "understand_notebook_power"
+      then:
+        affordance_key: "learn_notebook_rules"
+        requires_capability: "invoke.learn_notebook_rules"
+        resolution_mode: "exact"
+        translate_to_capability: "invoke.learn_notebook_rules"
+        mediator_id: "mediator-death-note"
+        explanation: "将对笔记规则的理解意图落地为 learn_notebook_rules。"
+    - id: "invocation-form-murderous-intent"
+      when:
+        semantic_intent.kind: "form_judgement_intent"
+      then:
+        affordance_key: "form_judgement_intent"
+        requires_capability: "invoke.form_murderous_intent"
+        resolution_mode: "exact"
+        translate_to_capability: "invoke.form_murderous_intent"
+        mediator_id: "mediator-death-note"
+        explanation: "将执行意图的形成落地为 form_murderous_intent。"
+    - id: "invocation-gather-target-intel"
+      when:
+        semantic_intent.kind: "gather_target_intel"
+      then:
+        affordance_key: "gather_target_intel"
+        requires_capability: "invoke.collect_target_intel"
+        resolution_mode: "exact"
+        translate_to_capability: "invoke.collect_target_intel"
+        mediator_id: "mediator-death-note"
+        explanation: "将目标情报收集意图落地为 collect_target_intel。"
+    - id: "invocation-covert-background-check"
+      when:
+        semantic_intent.kind: "covert_background_check"
+      then:
+        affordance_key: "gather_target_intel"
+        requires_capability: "invoke.collect_target_intel"
+        resolution_mode: "translated"
+        translate_to_capability: "invoke.collect_target_intel"
+        mediator_id: "mediator-death-note"
+        explanation: "将隐蔽背景调查翻译为 collect_target_intel。"
+    - id: "invocation-choose-target"
+      when:
+        semantic_intent.kind: "choose_target"
+      then:
+        affordance_key: "choose_target"
+        requires_capability: "invoke.select_judgement_target"
+        resolution_mode: "exact"
+        translate_to_capability: "invoke.select_judgement_target"
+        mediator_id: "mediator-death-note"
+        explanation: "将锁定裁决目标的开放意图落地为 select_judgement_target。"
+    - id: "invocation-execute-judgement"
+      when:
+        semantic_intent.kind: "judge_target"
+        semantic_intent.desired_effect: "kill"
+      then:
+        affordance_key: "execute_judgement"
+        requires_capability: "invoke.execute_death_note"
+        resolution_mode: "exact"
+        translate_to_capability: "invoke.execute_death_note"
+        mediator_id: "mediator-death-note"
+        explanation: "将裁决目标的开放意图落地为 execute_death_note。"
+    - id: "invocation-investigate-death-cluster"
+      when:
+        semantic_intent.kind: "investigate_death_cluster"
+      then:
+        affordance_key: "investigate_death_cluster"
+        requires_capability: "invoke.investigate_suspicious_death"
+        resolution_mode: "exact"
+        translate_to_capability: "invoke.investigate_suspicious_death"
+        explanation: "将调查异常死亡的开放意图落地为 investigate_suspicious_death。"
+    - id: "invocation-share-case-intel"
+      when:
+        semantic_intent.kind: "share_case_intel"
+      then:
+        affordance_key: "share_case_intel"
+        requires_capability: "invoke.share_case_intel"
+        resolution_mode: "exact"
+        translate_to_capability: "invoke.share_case_intel"
+        explanation: "将案件情报共享意图落地为 share_case_intel。"
+    - id: "invocation-publish-case-update"
+      when:
+        semantic_intent.kind: "publish_case_update"
+      then:
+        affordance_key: "publish_case_update"
+        requires_capability: "invoke.publish_case_update"
+        resolution_mode: "translated"
+        translate_to_kernel_intent: "post_message"
+        explanation: "将案件进展通告翻译为对公众可见的 post_message。"
+    - id: "invocation-ritual-divination-fallback"
+      when:
+        semantic_intent.kind: "ritual_divination"
+      then:
+        affordance_key: "gather_target_intel"
+        resolution_mode: "narrativized"
+        explanation: "该世界不承认仪式占卜能直接获得客观真相，因此仅保留为失败但真实发生的叙事事件。"
+        narrativize_event:
+          type: "history"
+          title: "{{actor.id}} 试图通过民间仪式确认目标命运"
+          description: "{{actor.id}} 进行了一次近乎荒诞的仪式尝试，但世界规则没有给出客观回应。"
+          impact_data:
+            semantic_type: "failed_ritual_attempt"
+            failed_attempt: true
+            objective_effect_applied: false
   projection: []
   objective_enforcement:
     - id: "objective-claim-death-note"
@@ -187,21 +403,46 @@ rules:
         invocation_type: "invoke.claim_death_note"
       then:
         mutate:
-          subject_state:
-            knows_notebook_power: true
           target_state:
             holder_agent_id: "{{subject_entity_id}}"
             location: null
+            visibility_level: "holder_only"
+          world_state:
+            opening_phase: "notebook_claimed"
+            kira_case_phase: "notebook_holder_unaware"
         emit_events:
           - type: "history"
             title: "{{actor.id}} 取得了规则媒介 {{artifact.id}}"
-            description: "{{actor.id}} 与 {{artifact.id}} 建立了持有关系，并首次接触该媒介的执行资格。"
+            description: "{{actor.id}} 与 {{artifact.id}} 建立了持有关系，但尚未完全理解其规则效力。"
             artifact_id: "{{artifact_id}}"
             impact_data:
               semantic_type: "notebook_claimed"
               actor_id: "{{subject_entity_id}}"
               artifact_id: "{{artifact_id}}"
               mediator_id: "{{mediator_id}}"
+              objective_effect_applied: true
+    - id: "objective-learn-notebook-rules"
+      when:
+        capability: "invoke.learn_notebook_rules"
+        mediator: "mediator-death-note"
+        invocation_type: "invoke.learn_notebook_rules"
+      then:
+        mutate:
+          subject_state:
+            knows_notebook_power: true
+          world_state:
+            kira_case_phase: "notebook_holder_awakened"
+        emit_events:
+          - type: "history"
+            title: "{{actor.id}} 理解了 {{artifact.id}} 的规则"
+            description: "{{actor.id}} 首次确认 {{artifact.id}} 具备真实且致命的规则效力。"
+            artifact_id: "{{artifact_id}}"
+            impact_data:
+              semantic_type: "notebook_rules_learned"
+              actor_id: "{{subject_entity_id}}"
+              artifact_id: "{{artifact_id}}"
+              mediator_id: "{{mediator_id}}"
+              objective_effect_applied: true
     - id: "objective-form-murderous-intent"
       when:
         capability: "invoke.form_murderous_intent"
@@ -221,11 +462,150 @@ rules:
               actor_id: "{{subject_entity_id}}"
               artifact_id: "{{artifact_id}}"
               mediator_id: "{{mediator_id}}"
+              objective_effect_applied: true
+    - id: "objective-collect-target-intel"
+      when:
+        capability: "invoke.collect_target_intel"
+        mediator: "mediator-death-note"
+        invocation_type: "invoke.collect_target_intel"
+        target.kind: "actor"
+      then:
+        mutate:
+          subject_state:
+            known_target_id: "{{target_entity_id}}"
+            known_target_name: "{{target_entity_id}}"
+            known_target_face: true
+            target_intel_confidence: 0.8
+            target_judgement_eligibility: true
+        emit_events:
+          - type: "history"
+            title: "{{actor.id}} 获取了关于 {{target.id}} 的关键情报"
+            description: "{{actor.id}} 补齐了执行裁决所需的最小目标信息。"
+            impact_data:
+              semantic_type: "target_intel_collected"
+              actor_id: "{{subject_entity_id}}"
+              target_id: "{{target_entity_id}}"
+              mediator_id: "{{mediator_id}}"
+              objective_effect_applied: true
+    - id: "objective-select-judgement-target"
+      when:
+        capability: "invoke.select_judgement_target"
+        mediator: "mediator-death-note"
+        invocation_type: "invoke.select_judgement_target"
+        target.kind: "actor"
+      then:
+        mutate:
+          subject_state:
+            current_target_id: "{{target_entity_id}}"
+        emit_events:
+          - type: "history"
+            title: "{{actor.id}} 将 {{target.id}} 设为当前裁决目标"
+            description: "{{actor.id}} 已把注意力和执行准备集中到 {{target.id}} 身上。"
+            impact_data:
+              semantic_type: "judgement_target_selected"
+              actor_id: "{{subject_entity_id}}"
+              target_id: "{{target_entity_id}}"
+              mediator_id: "{{mediator_id}}"
+              objective_effect_applied: true
+    - id: "objective-execute-death-note"
+      when:
+        capability: "invoke.execute_death_note"
+        mediator: "mediator-death-note"
+        invocation_type: "invoke.execute_death_note"
+        target.kind: "actor"
+      then:
+        mutate:
+          subject_state:
+            current_target_id: null
+          target_state:
+            alive: false
+            death_cause: "cardiac_arrest"
+          world_state:
+            kira_case_phase: "kira_active"
+            investigation_heat: 1
+            public_fear_level: 1
+            death_pattern_visibility: 1
+        emit_events:
+          - type: "history"
+            title: "{{target.id}} 在异常条件下死亡"
+            description: "一次高度可疑且缺乏直接物理证据的死亡事件引发了社会震荡。"
+            impact_data:
+              semantic_type: "suspicious_death_occurred"
+              actor_id: "{{subject_entity_id}}"
+              target_id: "{{target_entity_id}}"
+              mediator_id: "{{mediator_id}}"
+              objective_effect_applied: true
+              followup_actor_ids: ["agent-002"]
+    - id: "objective-investigate-suspicious-death"
+      when:
+        capability: "invoke.investigate_suspicious_death"
+        invocation_type: "invoke.investigate_suspicious_death"
+        target.kind: "actor"
+      then:
+        mutate:
+          subject_state:
+            investigation_focus: "kira_case"
+            suspicion_level: 0.75
+            known_target_id: "{{target_entity_id}}"
+            target_intel_confidence: 0.6
+          world_state:
+            investigation_heat: 2
+            death_pattern_visibility: 2
+        emit_events:
+          - type: "history"
+            title: "{{actor.id}} 开始围绕 {{target.id}} 调查异常死亡模式"
+            description: "{{actor.id}} 认为异常死亡背后存在可追踪的人为链路，并将调查资源指向 {{target.id}}。"
+            impact_data:
+              semantic_type: "death_cluster_investigated"
+              actor_id: "{{subject_entity_id}}"
+              target_id: "{{target_entity_id}}"
+              objective_effect_applied: true
+              followup_actor_ids: ["agent-002"]
+    - id: "objective-share-case-intel"
+      when:
+        capability: "invoke.share_case_intel"
+        invocation_type: "invoke.share_case_intel"
+        target.kind: "actor"
+      then:
+        mutate:
+          world_state:
+            investigation_heat: 3
+        emit_events:
+          - type: "history"
+            title: "{{actor.id}} 向 {{target.id}} 分享了案件线索"
+            description: "调查线索被进一步扩散，协作调查开始形成。"
+            impact_data:
+              semantic_type: "case_intel_shared"
+              actor_id: "{{subject_entity_id}}"
+              target_id: "{{target_entity_id}}"
+              objective_effect_applied: true
+              followup_actor_ids: ["{{target_entity_id}}"]
 
 capabilities:
   - key: "invoke.claim_death_note"
     category: "invoke"
     target_schema: "artifact"
+  - key: "invoke.learn_notebook_rules"
+    category: "invoke"
+    target_schema: "artifact"
   - key: "invoke.form_murderous_intent"
     category: "invoke"
     target_schema: "actor"
+  - key: "invoke.collect_target_intel"
+    category: "invoke"
+    target_schema: "actor"
+  - key: "invoke.select_judgement_target"
+    category: "invoke"
+    target_schema: "actor"
+  - key: "invoke.execute_death_note"
+    category: "invoke"
+    target_schema: "actor"
+  - key: "invoke.investigate_suspicious_death"
+    category: "invoke"
+    target_schema: "actor"
+  - key: "invoke.share_case_intel"
+    category: "invoke"
+    target_schema: "actor"
+  - key: "invoke.publish_case_update"
+    category: "invoke"
+    target_schema: "world"

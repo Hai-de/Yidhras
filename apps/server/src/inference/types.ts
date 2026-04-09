@@ -1,7 +1,8 @@
-import type { WorldPackValue } from '../packs/schema/constitution_schema.js';
+import type { ContextRun } from '../context/types.js';
 import type { IdentityContext } from '../identity/types.js';
 import type { MemoryContextPack } from '../memory/types.js';
 import type { VariablePool } from '../narrative/types.js';
+import type { WorldPackValue } from '../packs/schema/constitution_schema.js';
 import type { PromptFragment } from './prompt_fragments.js';
 
 export type InferenceStrategy = 'mock' | 'rule_based';
@@ -172,9 +173,15 @@ export interface InferencePackStateSnapshot {
   latest_event: InferencePackLatestEventSnapshot | null;
 }
 
-export type InferencePackRuntimeContract = Record<string, never>
+export interface InferencePackInvocationRule {
+  id: string;
+  when: Record<string, unknown>;
+  then: Record<string, unknown>;
+}
 
-
+export interface InferencePackRuntimeContract {
+  invocation_rules?: InferencePackInvocationRule[];
+}
 
 export interface InferenceContext {
   inference_id: string;
@@ -192,6 +199,7 @@ export interface InferenceContext {
   visible_variables: VariablePool;
   policy_summary: InferencePolicySummary;
   transmission_profile: InferenceTransmissionProfile;
+  context_run: ContextRun;
   memory_context: MemoryContextPack;
   pack_state: InferencePackStateSnapshot;
   pack_runtime: InferencePackRuntimeContract;
@@ -255,6 +263,23 @@ export interface ProviderDecisionRaw {
   delay_hint_ticks?: unknown;
   reasoning?: unknown;
   meta?: unknown;
+}
+
+export interface SemanticIntentResult {
+  kind: string | null;
+  text: string | null;
+  desired_effect: string | null;
+  proposed_method: string | null;
+  target_ref: Record<string, unknown> | null;
+}
+
+export interface IntentGroundingResult {
+  resolution_mode: 'exact' | 'translated' | 'narrativized' | 'blocked';
+  affordance_key: string | null;
+  required_capability_key: string | null;
+  explanation: string | null;
+  objective_effect_applied: boolean;
+  failure_kind: 'failed_attempt' | 'blocked' | null;
 }
 
 export interface DecisionResult {

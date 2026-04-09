@@ -3,8 +3,9 @@ import { randomUUID } from 'node:crypto';
 import type { AppContext } from '../app/context.js';
 import { getAgentContextSnapshot } from '../app/services/agent.js';
 import { AccessPolicyService } from '../access_policy/service.js';
-import type { IdentityContext } from '../identity/types.js';
+import { createContextService } from '../context/service.js';
 import { IdentityService } from '../identity/service.js';
+import type { IdentityContext } from '../identity/types.js';
 import { createMemoryService } from '../memory/service.js';
 import type { VariablePool } from '../narrative/types.js';
 import { listPackEntityStateProjectionRecords } from '../packs/storage/entity_state_projection.js';
@@ -417,8 +418,15 @@ const buildPackStateSnapshot = async (
   };
 };
 
-const buildPackRuntimeContract = (_context: AppContext): InferencePackRuntimeContract => {
-  return {};
+const buildPackRuntimeContract = (context: AppContext): InferencePackRuntimeContract => {
+  const pack = context.sim.getActivePack();
+  return {
+    invocation_rules: (pack?.rules?.invocation ?? []).map(rule => ({
+      id: rule.id,
+      when: rule.when ?? {},
+      then: rule.then ?? {}
+    }))
+  };
 };
 
 const buildPolicySummary = async (
@@ -547,10 +555,17 @@ export const buildInferenceContext = async (
   const packRuntime = buildPackRuntimeContract(context);
   const policySummary = await buildPolicySummary(context, resolvedActor.identity, attributes);
   const transmissionProfile = buildTransmissionProfile(resolvedActor.actorRef, agentSnapshot, policySummary, attributes);
-  const memoryService = createMemoryService({ context });
-  const memoryResult = await memoryService.buildMemoryContext({
-    actor_ref: resolvedActor.actorRef,
-    resolved_agent_id: resolvedActor.resolvedAgentId
+  const contextService = createContextService({
+    context,
+    memoryService: createMemoryService({ context })
+  });
+  const contextResult = await contextService.buildContextRun({
+    actor_ref: resolvedActor.actorRef as unknown as Record<string, unknown>,
+    resolved_agent_id: resolvedActor.resolvedAgentId,
+    tick: context.sim.getCurrentTick(),
+    policy_summary: policySummary,
+    pack_state: packState,
+    pack_id: pack.metadata.id
   });
 
   return {
@@ -573,7 +588,8 @@ export const buildInferenceContext = async (
     visible_variables: visibleVariables,
     policy_summary: policySummary,
     transmission_profile: transmissionProfile,
-    memory_context: memoryResult.context_pack,
+    context_run: contextResult.context_run,
+    memory_context: contextResult.memory_context,
     pack_state: packState,
     pack_runtime: packRuntime
   };

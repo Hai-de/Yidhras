@@ -94,6 +94,21 @@ describe('pack runtime materializer', () => {
           priority: 100
         }
       ],
+      rules: {
+        invocation: [
+          {
+            id: 'invocation-collect-intel',
+            when: {
+              'semantic_intent.kind': 'gather_target_intel'
+            },
+            then: {
+              affordance_key: 'gather_target_intel',
+              requires_capability: 'invoke.death_rule',
+              resolution_mode: 'exact'
+            }
+          }
+        ]
+      },
       bootstrap: {
         initial_states: [
           {
@@ -125,6 +140,7 @@ describe('pack runtime materializer', () => {
     expect(worldEntities.some(item => item.label === '夜神月')).toBe(true);
     expect(worldEntities.some(item => item.entity_kind === 'mediator')).toBe(true);
     expect(worldEntities.some(item => item.id === 'world-test-pack:entity:__world__')).toBe(true);
+    expect(worldEntities.some(item => item.id === 'world-test-pack:entity:identity-light-human')).toBe(true);
     expect(entityStates.some(item => item.entity_id === 'actor-light' && item.state_namespace === 'core')).toBe(true);
     expect(entityStates.some(item => item.entity_id === '__world__' && item.state_namespace === 'world')).toBe(true);
     expect(authorityGrants[0]?.capability_key).toBe('invoke.death_rule');

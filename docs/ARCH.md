@@ -101,6 +101,77 @@ Yidhras 当前采用“kernel + world-pack runtime”双层架构：
 - `storage`
 - `bootstrap`
 
+Current semantic execution architecture additionally includes a server-side **Intent Grounder** layer:
+
+- provider output may be direct action or open semantic intent
+- active-pack `rules.invocation` are loaded into inference runtime context
+- the Grounder resolves semantic intent into executable capability, translated kernel action, or narrativized fallback
+- only explicit capability execution proceeds into objective mutation
+
+This keeps the public inference strategy surface unchanged while allowing pack-specific semantic behavior.
+
+### Death Note first working loop status
+
+`world-death-note` is now the first pack that uses this semantic grounding path end-to-end.
+
+Current implemented loop covers:
+
+- notebook acquisition
+- notebook rule learning
+- murderous intent formation
+- target intel gathering
+- target selection
+- judgement execution
+- investigation follow-up
+- case intel sharing / publish-style communication fallback
+
+Unexpected semantic action is not forced into a closed action list; it can become a narrativized failed attempt.
+
+
+### Context Module MVP status
+
+Current inference runtime now also includes a first-stage **Context Module MVP**.
+
+Current structure:
+
+- `apps/server/src/context/types.ts`
+- `apps/server/src/context/service.ts`
+- `apps/server/src/context/source_registry.ts`
+- `apps/server/src/context/workflow/orchestrator.ts`
+
+Current responsibilities:
+
+- collect unified `ContextNode`s from legacy memory selection and runtime state snapshots
+- materialize a `ContextRun`
+- expose compatibility `memory_context` for existing prompt consumers
+- persist context selection / orchestration evidence into `InferenceTrace.context_snapshot`
+
+Current policy / overlay deepening status:
+
+- node-level policy governance is now handled in `ContextService` + `Context Policy Engine`
+- fragment-level `policy_filter` remains only as compatibility/fallback guard inside orchestrator-lite
+- overlay is now a formal **kernel-side working-layer object**:
+  - `apps/server/src/context/overlay/types.ts`
+  - `apps/server/src/context/overlay/store.ts`
+  - `apps/server/src/context/sources/overlay.ts`
+- `ContextOverlayEntry` is persisted in kernel Prisma, then re-materialized into `ContextNode(source_kind='overlay', visibility.level='writable_overlay')`
+- overlay is intentionally not moved into pack runtime because it belongs to inference/workflow working memory, not world governance source-of-truth
+- current diagnostics already expose:
+  - `policy_decisions`
+  - `blocked_nodes`
+  - `locked_nodes`
+  - `visibility_denials`
+  - `overlay_nodes_loaded`
+  - `overlay_nodes_mutated`
+  - reserved directive arrays
+
+Important boundary note:
+
+- current `memory_context` is still present
+- but it is now a **compatibility projection**, not the new canonical upstream abstraction
+- current implementation is still intentionally linear, not a general DAG workflow engine
+- current overlay does not bypass source-of-truth and does not replace pack runtime state
+- current future `ContextDirective` support is schema/trace reservation only; execution is still disabled
 
 ## Projection 层
 
@@ -125,6 +196,12 @@ Yidhras 当前采用“kernel + world-pack runtime”双层架构：
 
 这表示 pack projection API 目前明确采用 **single-active-pack** 合同。
 
+Current read-model visibility for semantic grounding includes:
+
+- workflow/audit metadata carrying `semantic_intent` and `intent_grounding`
+- pack timeline visibility for `history` events emitted by narrativized fallback
+- entity/agent overview visibility through existing aggregated evidence surfaces
+
 ### Access-Policy Subsystem Contract
 
 - `/api/access-policy/*`
@@ -142,10 +219,49 @@ Yidhras 当前采用“kernel + world-pack runtime”双层架构：
 - `recent_rule_executions`
 - pack narrative timeline 中的 `rule_execution` / `event` bridge 数据
 
+Current scheduler/event collaboration path now also consumes event bridge metadata such as:
+
+- `followup_actor_ids`
+- semantic target hints carried in `impact_data.semantic_intent.target_ref`
+
+This is the current minimum multi-agent follow-up path for Death Note-style investigation/collaboration loops without introducing a privileged governor/admin agent.
+
 并已新增：
 
 - `apps/server/src/app/services/operator_contracts.ts`
 
 作为前端 handoff 所依赖的后端合同整理层。
+
+### Context Orchestrator Lite backend status
+
+Current prompt pipeline is now explicitly routed through a linear **Context Orchestrator Lite**.
+
+Current fixed stages:
+
+1. `memory_injection`
+2. `policy_filter`
+3. `summary_compaction`
+4. `token_budget_trim`
+
+Current architectural meaning:
+
+- legacy `PromptProcessor` implementations still exist
+- but orchestration order is no longer only an implicit list inside prompt builder
+- prompt assembly now happens after an explicit context orchestration pass
+- node-level working-set policy is already decided before this fragment pipeline runs
+- `policy_filter` is no longer the primary policy authority
+
+This is intentionally a transitional architecture:
+
+- enough to formalize the context pipeline
+- not yet a full prompt workflow engine
+
+Explicitly out of scope in the current stage:
+
+- general DAG prompt workflow engine
+- front-end node editor / visual workflow canvas
+- plugin execution runtime
+- model-driven directive execution
+- direct model-side overlay writing
 
 Operator 高级视图（Authority Inspector / Rule Execution Timeline / Perception Diff）的前端页面、交互、布局、状态管理与可视化属于前端实现范围；后端仅负责相应 evidence / contract / projection 能力。

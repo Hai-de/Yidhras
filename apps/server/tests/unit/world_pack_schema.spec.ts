@@ -68,6 +68,19 @@ describe('world pack constitution schema', () => {
         }
       ],
       rules: {
+        invocation: [
+          {
+            id: 'invocation-1',
+            when: {
+              'semantic_intent.kind': 'judge_target'
+            },
+            then: {
+              affordance_key: 'execute_judgement',
+              requires_capability: 'invoke.death_rule',
+              resolution_mode: 'exact'
+            }
+          }
+        ],
         objective_enforcement: [
           {
             id: 'rule-1',
@@ -125,6 +138,183 @@ describe('world pack constitution schema', () => {
     expect(pack.storage?.pack_collections[0]?.key).toBe('death_rule_targets');
     expect(pack.authorities?.[0]?.target_selector.kind).toBe('holder_of');
     expect(pack.bootstrap?.initial_states[0]?.state_json.opening_phase).toBe('notebook_unclaimed');
+    expect(pack.rules?.invocation[0]?.then.affordance_key).toBe('execute_judgement');
+  });
+
+  it('accepts richer death note invocation and objective rule declarations', () => {
+    const pack = parseWorldPackConstitution({
+      metadata: {
+        id: 'world-death-note-rich',
+        name: '死亡笔记测试世界',
+        version: '1.0.0'
+      },
+      entities: {
+        actors: [
+          {
+            id: 'agent-001',
+            label: '夜神月',
+            kind: 'actor',
+            state: {
+              alive: true,
+              current_target_id: null,
+              target_judgement_eligibility: false
+            }
+          },
+          {
+            id: 'agent-002',
+            label: 'L',
+            kind: 'actor',
+            state: {
+              alive: true
+            }
+          }
+        ],
+        artifacts: [
+          {
+            id: 'artifact-death-note',
+            label: '死亡笔记',
+            kind: 'artifact',
+            state: {
+              holder_agent_id: null,
+              visibility_level: 'hidden'
+            }
+          }
+        ],
+        mediators: [
+          {
+            id: 'mediator-death-note',
+            entity_ref: 'artifact-death-note',
+            mediator_kind: 'artifact_vessel',
+            grants: [
+              { capability_key: 'invoke.claim_death_note' },
+              { capability_key: 'invoke.collect_target_intel' },
+              { capability_key: 'invoke.execute_death_note' }
+            ]
+          }
+        ],
+        domains: [],
+        institutions: []
+      },
+      capabilities: [
+        {
+          key: 'invoke.claim_death_note',
+          category: 'invoke',
+          target_schema: 'artifact'
+        },
+        {
+          key: 'invoke.collect_target_intel',
+          category: 'invoke',
+          target_schema: 'actor'
+        },
+        {
+          key: 'invoke.execute_death_note',
+          category: 'invoke',
+          target_schema: 'actor'
+        }
+      ],
+      authorities: [
+        {
+          id: 'grant-claim',
+          source_entity_id: 'mediator-death-note',
+          target_selector: {
+            kind: 'direct_entity',
+            entity_id: 'agent-001'
+          },
+          capability_key: 'invoke.claim_death_note',
+          grant_type: 'mediated'
+        }
+      ],
+      rules: {
+        invocation: [
+          {
+            id: 'invocation-ritual-fallback',
+            when: {
+              'semantic_intent.kind': 'ritual_divination'
+            },
+            then: {
+              affordance_key: 'gather_target_intel',
+              resolution_mode: 'narrativized',
+              narrativize_event: {
+                type: 'history',
+                title: '{{actor.id}} 试图通过民间仪式确认目标命运',
+                description: '{{actor.id}} 进行了一次近乎荒诞的仪式尝试，但世界规则没有给出客观回应。',
+                impact_data: {
+                  semantic_type: 'failed_ritual_attempt',
+                  failed_attempt: true,
+                  objective_effect_applied: false
+                }
+              }
+            }
+          }
+        ],
+        objective_enforcement: [
+          {
+            id: 'rule-collect-intel',
+            when: {
+              capability: 'invoke.collect_target_intel',
+              'target.kind': 'actor'
+            },
+            then: {
+              mutate: {
+                subject_state: {
+                  known_target_id: '{{target_entity_id}}',
+                  target_judgement_eligibility: true
+                }
+              }
+            }
+          },
+          {
+            id: 'rule-execute-judgement',
+            when: {
+              capability: 'invoke.execute_death_note',
+              'target.kind': 'actor'
+            },
+            then: {
+              mutate: {
+                target_state: {
+                  alive: false,
+                  death_cause: 'cardiac_arrest'
+                },
+                world_state: {
+                  kira_case_phase: 'kira_active'
+                }
+              },
+              emit_events: [
+                {
+                  type: 'history',
+                  title: '{{target.id}} 在异常条件下死亡',
+                  description: '一次高度可疑且缺乏直接物理证据的死亡事件引发了社会震荡。',
+                  impact_data: {
+                    semantic_type: 'suspicious_death_occurred',
+                    objective_effect_applied: true
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      bootstrap: {
+        initial_states: [
+          {
+            entity_id: '__world__',
+            state_namespace: 'world',
+            state_json: {
+              kira_case_phase: 'pre_kira',
+              investigation_heat: 0
+            }
+          }
+        ],
+        initial_events: []
+      }
+    });
+
+    expect(pack.rules?.invocation[0]?.then.resolution_mode).toBe('narrativized');
+    const secondRule = pack.rules?.objective_enforcement[1];
+    const secondRuleThen = secondRule?.then as Record<string, unknown> | undefined;
+    const emittedEvents = Array.isArray(secondRuleThen?.emit_events) ? secondRuleThen.emit_events : [];
+    const firstEvent = emittedEvents[0];
+    expect((firstEvent as Record<string, unknown>)?.type).toBe('history');
   });
 
   it('rejects storage schemas that shadow engine-owned collections', () => {

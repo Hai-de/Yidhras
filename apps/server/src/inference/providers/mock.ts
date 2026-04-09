@@ -62,6 +62,10 @@ const resolveTransmissionDropChanceByPolicy = (
   }
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+};
+
 export const createMockInferenceProvider = (): InferenceProvider => {
   return {
     name: 'mock',
@@ -76,6 +80,51 @@ export const createMockInferenceProvider = (): InferenceProvider => {
           action_type: 'post_message',
           target_ref: null,
           payload: null
+        };
+      }
+
+      if (context.attributes.mock_action_type === 'semantic_intent') {
+        const targetRef = isRecord(context.attributes.semantic_target_ref)
+          ? context.attributes.semantic_target_ref
+          : null;
+        const semanticIntentKind =
+          typeof context.attributes.semantic_intent_kind === 'string' && context.attributes.semantic_intent_kind.trim().length > 0
+            ? context.attributes.semantic_intent_kind.trim()
+            : 'ritual_divination';
+        const semanticIntentText =
+          typeof context.attributes.semantic_intent_text === 'string' && context.attributes.semantic_intent_text.trim().length > 0
+            ? context.attributes.semantic_intent_text.trim()
+            : 'The actor attempts an unsupported semantic action.';
+        const desiredEffect =
+          typeof context.attributes.semantic_intent_desired_effect === 'string'
+            ? context.attributes.semantic_intent_desired_effect
+            : null;
+        const proposedMethod =
+          typeof context.attributes.semantic_intent_proposed_method === 'string'
+            ? context.attributes.semantic_intent_proposed_method
+            : null;
+
+        return {
+          action_type: 'semantic_intent',
+          target_ref: targetRef,
+          payload: {
+            semantic_intent_kind: semanticIntentKind,
+            ...(desiredEffect ? { semantic_intent_desired_effect: desiredEffect } : {}),
+            ...(proposedMethod ? { semantic_intent_proposed_method: proposedMethod } : {})
+          },
+          confidence: 0.88,
+          delay_hint_ticks: '1',
+          reasoning: semanticIntentText,
+          meta: {
+            provider_mode: 'mock_semantic_intent',
+            semantic_intent: {
+              kind: semanticIntentKind,
+              text: semanticIntentText,
+              desired_effect: desiredEffect,
+              proposed_method: proposedMethod,
+              target_ref: targetRef
+            }
+          }
         };
       }
 

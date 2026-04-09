@@ -164,6 +164,58 @@ bridge 规则：
 - 若 intent 能映射到 pack capability 或 objective rule，则优先进入 invocation 路径
 - 若不能映射，则仍由 action dispatcher 处理保留分支
 
+### Intent Grounder / Semantic intent grounding
+
+The current inference chain now includes an explicit **Intent Grounder** between decision normalization and `ActionIntentDraft` creation.
+
+Current runtime behavior:
+
+1. provider outputs either a direct action or an open semantic intent
+2. `rules.invocation` from the active pack runtime are loaded into inference context
+3. the Grounder resolves the decision into one of:
+   - `exact`
+   - `translated`
+   - `narrativized`
+   - `blocked` (reserved, still rare)
+4. only explicit capability execution can proceed into objective world mutation
+
+Current direct passthrough actions include:
+
+- `invoke.*`
+- `trigger_event`
+- `post_message`
+- `adjust_relationship`
+- `adjust_snr`
+
+Current persisted grounding evidence includes:
+
+- `semantic_intent`
+- `intent_grounding`
+- `semantic_outcome`
+- `objective_effect_applied`
+
+These fields are now present in trace/workflow evidence and are consumed by audit-oriented read models.
+
+### Narrativized failure rules
+
+Unexpected action is no longer forced into an enumerated action menu.
+
+Current rule:
+
+- if semantic intent cannot be objectively executed by granted capability,
+- and pack invocation rules allow fallback,
+- the system records a **narrativized failed attempt** instead of treating it as infrastructure failure.
+
+Current narrativized fallback semantics:
+
+- workflow remains technically successful
+- semantic result is represented as `failed_attempt`
+- a `trigger_event` / `history` event is emitted
+- `objective_effect_applied=false`
+- the failed attempt remains visible to timeline / audit / agent read models
+
+This is the current canonical interpretation for Death Note examples such as `ritual_divination`.
+
 ### Objective enforcement
 
 当前 enforcement engine 会：
@@ -184,6 +236,14 @@ bridge 规则：
 - `description`
 - `impact_data`
 - 可选 `artifact_id`
+
+Current event bridge metadata may also carry follow-up semantics, including:
+
+- `semantic_type`
+- `failed_attempt`
+- `grounding_mode`
+- `objective_effect_applied`
+- `followup_actor_ids`
 
 事件渲染规则：
 
@@ -221,6 +281,69 @@ bridge 规则：
 
 ## 8. Inference Context Rules / 推理上下文规则
 
+### Context Module MVP
+
+当前推理上下文已开始从“memory-only 数据包”演化为正式的 **Context Module MVP**。
+
+当前成立的实现规则：
+
+- `buildInferenceContext()` 仍返回 `memory_context`
+- 但其上游已经先经由 `ContextService.buildContextRun(...)`
+- `ContextRun` 当前统一收编：
+  - legacy memory selection
+  - policy summary
+  - pack actor/world/runtime state snapshots
+  - kernel-side overlay working-layer nodes
+- 当前 `memory_context` 已降级为 **compatibility surface**，主要用于兼容：
+  - `memory_injector`
+  - `memory_summary`
+  - `policy_filter`
+  - `token_budget_trimmer`
+  - 以及现有 provider / trace 持久化逻辑
+
+当前 Context Module 已进一步深化为 policy / overlay 阶段，当前成立的规则包括：
+
+- policy 判定已正式进入 node-level / working-set 级治理，而不再主要依赖 fragment-level filter
+- `policy_filter` 仍保留，但其角色已收敛为 compatibility guard / fragment safety fallback
+- `hidden_mandatory` 节点不会进入最终 working set，但会在 trace 中保留 hidden/denial 语义
+- overlay 已成为 **kernel-side working-layer object**，通过 source adapter materialize 为 `writable_overlay` 节点
+- overlay 不覆盖 source of truth，也不进入 pack runtime world governance core
+
+当前 Context Module 最小模型已经包括：
+
+- `ContextNode`
+- `ContextRun`
+- `ContextSelectionResult`
+- `ContextRunDiagnostics`
+
+当前 `ContextRunDiagnostics` 可稳定输出：
+
+- `policy_decisions`
+- `blocked_nodes`
+- `locked_nodes`
+- `visibility_denials`
+- `overlay_nodes_loaded`
+- `overlay_nodes_mutated`
+- `submitted_directives`
+- `approved_directives`
+- `denied_directives`
+
+当前 future directive 仅完成 schema / trace reservation：
+
+- `create_self_note`
+- `pin_node`
+- `deprioritize_node`
+- `summarize_cluster`
+- `archive_overlay`
+- 当前 **未开放** 模型直接执行 directive，也未开放自动 overlay mutation
+
+当前并未引入：
+
+- 通用 DAG workflow engine
+- 节点可视化编排器
+- 插件执行 runtime
+- Agent 自主上下文 directive 执行
+
 ### Current context assembly
 
 当前 inference 主上下文仍通过 `buildInferenceContext()` 生成基础结构，随后可由 `buildInferenceContextV2()` 扩展为：
@@ -245,7 +368,47 @@ bridge 规则：
 
 当前 `rule_based` provider 不再消费 legacy `decision_rules`，而只执行通用 fallback 行为。
 
+For `world-death-note`, the current rule-based provider now emits semantic decisions for the first working thematic loop, including:
+
+- notebook claim
+- notebook rule learning
+- murderous intent formation
+- target intel gathering
+- target selection
+- judgement execution
+
+This semantic output is intentionally intermediate and must be grounded before it reaches final workflow dispatch.
+
 ## 9. Projection Rules / 投影规则
+
+### Context Orchestrator Lite
+
+当前 prompt 处理主线已从“隐式 processor 串联”收口为一个线性的 **Context Orchestrator Lite**。
+
+当前编排阶段固定为：
+
+1. `memory_injection`
+2. `policy_filter`
+3. `summary_compaction`
+4. `token_budget_trim`
+
+说明：
+
+- 当前 orchestrator-lite 仍内部复用既有 processors
+- 当前真正的 policy 治理已前移到 `ContextService` / `ContextRun` / working-set
+- `policy_filter` 当前只保留 compatibility fallback 语义
+- 当前阶段顺序仍固定，不支持节点图、分支 DAG 或用户可编排 workflow engine
+- `PromptProcessor` 接口仍保留，但其角色已变为 compatibility surface
+- `prompt_builder.ts` 当前负责：
+  - 基础 fragment seed
+  - 调用 orchestrator-lite
+  - 最终 prompt assembly
+
+这意味着当前 prompt pipeline 已具备：
+
+- 显式阶段顺序
+- 可观测的 orchestrator trace
+- 面向未来 plugin / variable / slot 扩展的落点
 
 ### Pack projections
 
@@ -287,6 +450,53 @@ bridge 规则：
 - canonical pack/entity projection surface 已形成
 - `/api/narrative/timeline` 已退出代码库
 - `/api/agent/:id/overview` 已退出代码库
+
+Current Death Note visibility guarantee:
+
+- narrativized failure is visible in workflow/audit evidence
+- related `history` events are visible in pack timeline
+- entity overview / agent overview can observe those events through existing read-model surfaces
+- follow-up actors can be scheduled from emitted event metadata
+
+### Context trace observability
+
+当前 `InferenceTrace.context_snapshot` 已增强为同时承载：
+
+- `context_run`
+- `context_module`
+- `context_debug`
+- `memory_context`
+- `memory_selection`
+- `prompt_processing_trace`
+- `prompt_assembly`
+
+当前可观察语义包括：
+
+- selected node ids
+- selected node summaries
+- dropped node reasons
+- policy decisions / blocked nodes / locked nodes / visibility denials
+- overlay nodes loaded / overlay mutation results（当前 mutation 默认多为空）
+- submitted / approved / denied directives（当前为 schema reservation，默认空数组）
+- node counts by type
+- orchestrator step trace
+- prompt assembly summary
+
+因此当前 workflow / audit / operator 调试链已经可以观察：
+
+- 上下文是如何被选择的
+- 哪些节点被 policy 拒绝或锁定
+- 哪些 overlay 被载入到当前 working set
+- 哪些 directive 只是被保留为 trace reservation
+- 上下文是如何被过滤/压缩的
+- prompt 是如何被组装的
+
+当前 `/api/entities/:id/overview` 也已能从最近 trace 中读取轻量治理摘要：
+
+- `context_governance.latest_policy`
+- `context_governance.overlay`
+
+这使 agent overview 不再只能观察 legacy memory diagnostics，也能观察 policy / overlay 对上下文组织的影响。
 
 ## 10. Identity and Policy Rules / 身份与策略规则
 

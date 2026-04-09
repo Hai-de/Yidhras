@@ -43,6 +43,26 @@ describe('agent overview e2e', () => {
       const memory = assertRecord(overview.memory, 'agent overview memory');
       const memorySummary = assertRecord(memory.summary, 'agent overview memory.summary');
       expect(typeof memorySummary.recent_trace_count).toBe('number');
+      expect(
+        memorySummary.latest_memory_context === null ||
+          assertRecord(memorySummary.latest_memory_context, 'agent overview memory.summary.latest_memory_context')
+      ).toBeTruthy();
+      expect(
+        memorySummary.latest_prompt_processing_trace === null ||
+          assertRecord(memorySummary.latest_prompt_processing_trace, 'agent overview memory.summary.latest_prompt_processing_trace')
+      ).toBeTruthy();
+
+      const contextGovernance = assertRecord(overview.context_governance, 'agent overview context_governance');
+      const latestPolicy = assertRecord(contextGovernance.latest_policy, 'agent overview context_governance.latest_policy');
+      expect(Array.isArray(latestPolicy.policy_decisions)).toBe(true);
+      expect(Array.isArray(latestPolicy.blocked_nodes)).toBe(true);
+      expect(Array.isArray(latestPolicy.locked_nodes)).toBe(true);
+      expect(Array.isArray(latestPolicy.visibility_denials)).toBe(true);
+
+      const overlay = assertRecord(contextGovernance.overlay, 'agent overview context_governance.overlay');
+      expect(typeof overlay.count).toBe('number');
+      expect(Array.isArray(overlay.latest_items)).toBe(true);
+      expect(Array.isArray(overlay.latest_mutations)).toBe(true);
 
       const invalidOverviewLimitResponse = await requestJson(server.baseUrl, '/api/entities/agent-001/overview?limit=abc');
       expect(invalidOverviewLimitResponse.status).toBe(400);

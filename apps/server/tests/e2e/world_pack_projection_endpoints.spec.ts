@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { assertErrorEnvelope, assertRecord, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
 import { withIsolatedTestServer } from '../helpers/runtime.js';
-import { requestJson } from '../helpers/server.js';
+import { requestJson, summarizeResponse } from '../helpers/server.js';
 
 const PACK_ROUTE_NAME = 'world-death-note';
 const NON_ACTIVE_PACK_ROUTE_NAME = 'death_note';
@@ -27,7 +27,7 @@ describe('world-pack projection endpoints e2e', () => {
       assertErrorEnvelope(mismatchedOverviewResponse.body, 'PACK_ROUTE_ACTIVE_PACK_MISMATCH', 'mismatched pack overview');
 
       const entityOverviewResponse = await requestJson(server.baseUrl, '/api/entities/agent-001/overview?limit=5');
-      expect(entityOverviewResponse.status).toBe(200);
+      expect(entityOverviewResponse.status, summarizeResponse('entity overview', entityOverviewResponse)).toBe(200);
       const entityOverview = assertSuccessEnvelopeData(entityOverviewResponse.body, 'entity overview');
       const profile = assertRecord(entityOverview.profile, 'entity overview profile');
       expect(profile.id).toBe('agent-001');

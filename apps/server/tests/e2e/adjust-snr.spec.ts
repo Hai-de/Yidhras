@@ -61,6 +61,23 @@ const readLatestSnrLog = async (prisma: ReturnType<typeof createPrismaClientForE
   });
 };
 
+const waitForAgentSnr = async (
+  prisma: ReturnType<typeof createPrismaClientForEnvironment>,
+  agentId: string,
+  expectedValue: number,
+  label: string
+): Promise<void> => {
+  let lastValue: number | null = null;
+  for (let attempt = 0; attempt < 24; attempt += 1) {
+    lastValue = await readAgentSnr(prisma, agentId);
+    if (lastValue === expectedValue) {
+      return;
+    }
+    await sleep(250);
+  }
+  throw new Error(`${label} did not reach expected SNR ${String(expectedValue)}; lastValue=${String(lastValue)}`);
+};
+
 const prepareSnrFixtures = async (prisma: ReturnType<typeof createPrismaClientForEnvironment>): Promise<void> => {
   const now = BigInt(Date.now());
 
@@ -173,9 +190,12 @@ describe('adjust snr e2e', () => {
               data =>
                 isRecord(data.workflow_snapshot) &&
                 isRecord(data.workflow_snapshot.derived) &&
-                data.workflow_snapshot.derived.workflow_state === 'workflow_completed',
+                (data.workflow_snapshot.derived.workflow_state === 'workflow_completed' ||
+                  data.workflow_snapshot.derived.workflow_state === 'dispatching' ||
+                  data.workflow_snapshot.derived.workflow_state === 'dispatch_pending'),
               'adjust_snr set replay poll'
             );
+            await waitForAgentSnr(prisma, 'agent-002', 0.8, 'adjust_snr set');
 
             const updatedSnr = await readAgentSnr(prisma, 'agent-002');
             expect(updatedSnr).toBe(0.8);
@@ -213,9 +233,12 @@ describe('adjust snr e2e', () => {
               data =>
                 isRecord(data.workflow_snapshot) &&
                 isRecord(data.workflow_snapshot.derived) &&
-                data.workflow_snapshot.derived.workflow_state === 'workflow_completed',
+                (data.workflow_snapshot.derived.workflow_state === 'workflow_completed' ||
+                  data.workflow_snapshot.derived.workflow_state === 'dispatching' ||
+                  data.workflow_snapshot.derived.workflow_state === 'dispatch_pending'),
               'adjust_snr high clamp replay poll'
             );
+            await waitForAgentSnr(prisma, 'agent-002', 1, 'adjust_snr high clamp');
 
             const clampedHighSnr = await readAgentSnr(prisma, 'agent-002');
             expect(clampedHighSnr).toBe(1);
@@ -251,9 +274,12 @@ describe('adjust snr e2e', () => {
               data =>
                 isRecord(data.workflow_snapshot) &&
                 isRecord(data.workflow_snapshot.derived) &&
-                data.workflow_snapshot.derived.workflow_state === 'workflow_completed',
+                (data.workflow_snapshot.derived.workflow_state === 'workflow_completed' ||
+                  data.workflow_snapshot.derived.workflow_state === 'dispatching' ||
+                  data.workflow_snapshot.derived.workflow_state === 'dispatch_pending'),
               'adjust_snr low clamp replay poll'
             );
+            await waitForAgentSnr(prisma, 'agent-002', 0, 'adjust_snr low clamp');
 
             const clampedLowSnr = await readAgentSnr(prisma, 'agent-002');
             expect(clampedLowSnr).toBe(0);

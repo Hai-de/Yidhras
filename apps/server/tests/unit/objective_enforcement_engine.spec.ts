@@ -332,4 +332,193 @@ describe('objective enforcement engine', () => {
     expect(executionRecords[0]?.capability_key).toBe('invoke.death_rule');
     expect(executionRecords[0]?.execution_status).toBe('completed');
   });
+
+  it('supports richer death note objective rules including judgement execution and investigation followup', async () => {
+    const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test' });
+    createdRoots.push(environment.rootDir);
+    process.env.WORKSPACE_ROOT = environment.rootDir;
+
+    const pack = parseWorldPackConstitution({
+      metadata: {
+        id: 'world-death-note-rich',
+        name: '死亡笔记进阶世界',
+        version: '1.0.0'
+      },
+      entities: {
+        actors: [
+          {
+            id: 'agent-001',
+            label: '夜神月',
+            kind: 'actor',
+            state: {
+              alive: true,
+              knows_notebook_power: true,
+              murderous_intent: true,
+              target_judgement_eligibility: true,
+              current_target_id: 'agent-002'
+            }
+          },
+          {
+            id: 'agent-002',
+            label: 'L',
+            kind: 'actor',
+            state: {
+              alive: true,
+              suspicion_level: 0,
+              investigation_focus: null
+            }
+          }
+        ],
+        artifacts: [
+          {
+            id: 'artifact-death-note',
+            label: '死亡笔记',
+            kind: 'artifact',
+            state: {
+              holder_agent_id: 'agent-001'
+            }
+          }
+        ],
+        mediators: [
+          {
+            id: 'mediator-death-note',
+            entity_ref: 'artifact-death-note',
+            mediator_kind: 'artifact_vessel',
+            grants: [{ capability_key: 'invoke.execute_death_note' }]
+          }
+        ],
+        domains: [],
+        institutions: []
+      },
+      capabilities: [
+        {
+          key: 'invoke.execute_death_note',
+          category: 'invoke',
+          target_schema: 'actor'
+        }
+      ],
+      authorities: [
+        {
+          id: 'grant-execute-death-note',
+          source_entity_id: 'mediator-death-note',
+          target_selector: {
+            kind: 'holder_of',
+            entity_id: 'artifact-death-note'
+          },
+          capability_key: 'invoke.execute_death_note',
+          grant_type: 'mediated',
+          mediated_by_entity_id: 'mediator-death-note',
+          conditions_json: {
+            'subject_state.knows_notebook_power': true,
+            'subject_state.murderous_intent': true,
+            'subject_state.target_judgement_eligibility': true
+          },
+          priority: 100
+        }
+      ],
+      bootstrap: {
+        initial_states: [
+          {
+            entity_id: '__world__',
+            state_namespace: 'world',
+            state_json: {
+              investigation_heat: 0,
+              public_fear_level: 0,
+              death_pattern_visibility: 0,
+              kira_case_phase: 'pre_kira'
+            }
+          }
+        ],
+        initial_events: []
+      },
+      rules: {
+        perception: [],
+        capability_resolution: [],
+        invocation: [],
+        projection: [],
+        objective_enforcement: [
+          {
+            id: 'execute-death-note-objective',
+            when: {
+              capability: 'invoke.execute_death_note',
+              mediator: 'mediator-death-note',
+              invocation_type: 'invoke.execute_death_note',
+              'target.kind': 'actor'
+            },
+            then: {
+              mutate: {
+                subject_state: {
+                  current_target_id: null
+                },
+                target_state: {
+                  alive: false,
+                  death_cause: 'cardiac_arrest'
+                },
+                world_state: {
+                  kira_case_phase: 'kira_active',
+                  investigation_heat: 1,
+                  public_fear_level: 1,
+                  death_pattern_visibility: 1
+                }
+              },
+              emit_events: [
+                {
+                  type: 'history',
+                  title: '{{target.id}} 在异常条件下死亡',
+                  description: '一次高度可疑且缺乏直接物理证据的死亡事件引发了社会震荡。',
+                  impact_data: {
+                    semantic_type: 'suspicious_death_occurred',
+                    actor_id: '{{subject_entity_id}}',
+                    target_id: '{{target_entity_id}}',
+                    objective_effect_applied: true
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    });
+
+    await installPackRuntime(pack);
+    await materializePackRuntimeCoreModels(pack, 1000n);
+
+    const context = buildTestContext(pack);
+    const result = await dispatchInvocationFromActionIntent(context, {
+      id: 'intent-execute-death-note',
+      source_inference_id: 'inference-execute-death-note',
+      intent_type: 'invoke.execute_death_note',
+      actor_ref: {
+        identity_id: 'agent-001',
+        role: 'active',
+        agent_id: 'agent-001',
+        atmosphere_node_id: null
+      },
+      target_ref: {
+        entity_id: 'agent-002'
+      },
+      payload: {
+        mediator_id: 'mediator-death-note'
+      }
+    });
+
+    expect(result?.outcome).toBe('completed');
+
+    const states = await listPackEntityStates(pack.metadata.id);
+    const actorState = states.find(state => state.entity_id === 'agent-001' && state.state_namespace === 'core');
+    const targetState = states.find(state => state.entity_id === 'agent-002' && state.state_namespace === 'core');
+    const worldState = states.find(state => state.entity_id === '__world__' && state.state_namespace === 'world');
+
+    expect(actorState?.state_json.current_target_id).toBeNull();
+    expect(targetState?.state_json.alive).toBe(false);
+    expect(targetState?.state_json.death_cause).toBe('cardiac_arrest');
+    expect(worldState?.state_json.kira_case_phase).toBe('kira_active');
+    expect(worldState?.state_json.investigation_heat).toBe(1);
+    expect(worldState?.state_json.public_fear_level).toBe(1);
+
+    const executionRecords = await listPackRuleExecutionRecords(pack.metadata.id);
+    expect(executionRecords).toHaveLength(1);
+    expect(executionRecords[0]?.rule_id).toBe('execute-death-note-objective');
+    expect(executionRecords[0]?.execution_status).toBe('completed');
+  });
 });

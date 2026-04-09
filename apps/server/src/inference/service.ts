@@ -20,6 +20,7 @@ import {
   releaseDecisionJobLock,
   updateDecisionJobState
 } from '../app/services/inference_workflow.js';
+import { groundDecisionIntent } from '../domain/invocation/intent_grounder.js';
 import { ApiError } from '../utils/api_error.js';
 import { buildInferenceContext } from './context_builder.js';
 import { buildPromptBundle } from './prompt_builder.js';
@@ -296,29 +297,30 @@ const executeRunInternal = async (
     throw err;
   }
 
+  const grounded = await groundDecisionIntent(context, inferenceContext, decision);
   const actionIntentDraft = service.buildActionIntentDraft(
-    decision,
+    grounded.decision,
     inferenceContext.inference_id,
     inferenceContext.actor_ref
   );
 
   const transmissionDelayTicks =
-    decision.meta && typeof decision.meta.transmission_delay_ticks === 'string'
-      ? decision.meta.transmission_delay_ticks
-      : decision.meta && typeof decision.meta.transmission_delay_ticks === 'number'
-        ? String(decision.meta.transmission_delay_ticks)
-        : decision.delay_hint_ticks ?? '0';
+    grounded.decision.meta && typeof grounded.decision.meta.transmission_delay_ticks === 'string'
+      ? grounded.decision.meta.transmission_delay_ticks
+      : grounded.decision.meta && typeof grounded.decision.meta.transmission_delay_ticks === 'number'
+        ? String(grounded.decision.meta.transmission_delay_ticks)
+        : grounded.decision.delay_hint_ticks ?? '0';
   const transmissionDropChance =
-    decision.meta && typeof decision.meta.transmission_drop_chance === 'number'
-      ? decision.meta.transmission_drop_chance
+    grounded.decision.meta && typeof grounded.decision.meta.transmission_drop_chance === 'number'
+      ? grounded.decision.meta.transmission_drop_chance
       : 0;
   const transmissionPolicy =
-    decision.meta && typeof decision.meta.transmission_policy === 'string'
-      ? decision.meta.transmission_policy
+    grounded.decision.meta && typeof grounded.decision.meta.transmission_policy === 'string'
+      ? grounded.decision.meta.transmission_policy
       : 'reliable';
   const dropReason =
-    decision.meta && typeof decision.meta.drop_reason === 'string'
-      ? decision.meta.drop_reason
+    grounded.decision.meta && typeof grounded.decision.meta.drop_reason === 'string'
+      ? grounded.decision.meta.drop_reason
       : null;
 
   actionIntentDraft.transmission_delay_ticks = transmissionDelayTicks;
@@ -359,7 +361,9 @@ const executeRunInternal = async (
     context: inferenceContext,
     prompt,
     trace_metadata: traceMetadata,
-    decision,
+    decision: grounded.decision,
+    semantic_intent: grounded.semantic_intent,
+    intent_grounding: grounded.grounding,
     action_intent_draft: actionIntentDraft,
     job_id: options?.jobId,
     job_status: 'completed',
@@ -376,7 +380,7 @@ const executeRunInternal = async (
     strategy: inferenceContext.strategy,
     provider: provider.name,
     tick,
-    decision: toJsonSafe(decision) as InferenceRunResult['decision'],
+    decision: toJsonSafe(grounded.decision) as InferenceRunResult['decision'],
     trace_metadata: toJsonSafe(traceMetadata) as InferenceRunResult['trace_metadata']
   };
 };
@@ -506,8 +510,6 @@ export const createInferenceService = ({
         idempotency_key: idempotencyKey,
         reason: replayInput.reason ?? 'operator_manual_replay',
         max_attempts: sourceJob.max_attempts,
-        intent_class: 'replay_recovery',
-        job_source: 'replay',
         replay_override_snapshot: replayOverrideSnapshot
       });
       const workflowSnapshot = await getWorkflowSnapshotByJobId(context, replayJob.id);
@@ -525,7 +527,7 @@ export const createInferenceService = ({
         intent_class: 'retry_recovery',
         request_input_attributes_patch: { job_intent_class: 'retry_recovery', job_source: 'retry' },
         last_error: null,
-  last_error_code: null,
+        last_error_code: null,
         last_error_stage: null,
         next_retry_at: context.sim.getCurrentTick(),
         locked_by: null,

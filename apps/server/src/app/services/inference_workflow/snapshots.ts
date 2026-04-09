@@ -97,7 +97,48 @@ export const toInferenceTraceRecordSnapshot = (
     provider: trace.provider,
     actor_ref: toRecord(toJsonSafe(trace.actor_ref)),
     input: toRecord(toJsonSafe(trace.input)),
-    context_snapshot: toRecord(toJsonSafe(trace.context_snapshot)),
+    context_snapshot: (() => {
+      const snapshot = toRecord(toJsonSafe(trace.context_snapshot));
+
+      const contextModule = isRecord(snapshot.context_module) ? toRecord(snapshot.context_module) : null;
+      if (contextModule) {
+        contextModule.policy_decisions = Array.isArray(contextModule.policy_decisions) ? contextModule.policy_decisions : [];
+        contextModule.blocked_nodes = Array.isArray(contextModule.blocked_nodes) ? contextModule.blocked_nodes : [];
+        contextModule.locked_nodes = Array.isArray(contextModule.locked_nodes) ? contextModule.locked_nodes : [];
+        contextModule.visibility_denials = Array.isArray(contextModule.visibility_denials) ? contextModule.visibility_denials : [];
+        contextModule.overlay_nodes_loaded = Array.isArray(contextModule.overlay_nodes_loaded) ? contextModule.overlay_nodes_loaded : [];
+        contextModule.overlay_nodes_mutated = Array.isArray(contextModule.overlay_nodes_mutated) ? contextModule.overlay_nodes_mutated : [];
+        contextModule.submitted_directives = Array.isArray(contextModule.submitted_directives) ? contextModule.submitted_directives : [];
+        contextModule.approved_directives = Array.isArray(contextModule.approved_directives) ? contextModule.approved_directives : [];
+        contextModule.denied_directives = Array.isArray(contextModule.denied_directives) ? contextModule.denied_directives : [];
+        snapshot.context_module = contextModule;
+      }
+
+      const contextDebug = isRecord(snapshot.context_debug) ? toRecord(snapshot.context_debug) : null;
+      if (contextDebug) {
+        contextDebug.policy_decisions = Array.isArray(contextDebug.policy_decisions) ? contextDebug.policy_decisions : [];
+        contextDebug.blocked_nodes = Array.isArray(contextDebug.blocked_nodes) ? contextDebug.blocked_nodes : [];
+        contextDebug.locked_nodes = Array.isArray(contextDebug.locked_nodes) ? contextDebug.locked_nodes : [];
+        contextDebug.visibility_denials = Array.isArray(contextDebug.visibility_denials) ? contextDebug.visibility_denials : [];
+        contextDebug.overlay_nodes_loaded = Array.isArray(contextDebug.overlay_nodes_loaded) ? contextDebug.overlay_nodes_loaded : [];
+        contextDebug.overlay_nodes_mutated = Array.isArray(contextDebug.overlay_nodes_mutated) ? contextDebug.overlay_nodes_mutated : [];
+        contextDebug.submitted_directives = Array.isArray(contextDebug.submitted_directives) ? contextDebug.submitted_directives : [];
+        contextDebug.approved_directives = Array.isArray(contextDebug.approved_directives) ? contextDebug.approved_directives : [];
+        contextDebug.denied_directives = Array.isArray(contextDebug.denied_directives) ? contextDebug.denied_directives : [];
+        snapshot.context_debug = contextDebug;
+      }
+
+      snapshot.policy_decisions = Array.isArray(snapshot.policy_decisions) ? snapshot.policy_decisions : [];
+      snapshot.blocked_nodes = Array.isArray(snapshot.blocked_nodes) ? snapshot.blocked_nodes : [];
+      snapshot.locked_nodes = Array.isArray(snapshot.locked_nodes) ? snapshot.locked_nodes : [];
+      snapshot.visibility_denials = Array.isArray(snapshot.visibility_denials) ? snapshot.visibility_denials : [];
+      snapshot.overlay_nodes_loaded = Array.isArray(snapshot.overlay_nodes_loaded) ? snapshot.overlay_nodes_loaded : [];
+      snapshot.overlay_nodes_mutated = Array.isArray(snapshot.overlay_nodes_mutated) ? snapshot.overlay_nodes_mutated : [];
+      snapshot.submitted_directives = Array.isArray(snapshot.submitted_directives) ? snapshot.submitted_directives : [];
+      snapshot.approved_directives = Array.isArray(snapshot.approved_directives) ? snapshot.approved_directives : [];
+      snapshot.denied_directives = Array.isArray(snapshot.denied_directives) ? snapshot.denied_directives : [];
+      return snapshot;
+    })(),
     prompt_bundle: toRecord(toJsonSafe(trace.prompt_bundle)),
     trace_metadata: toRecord(toJsonSafe(trace.trace_metadata)),
     decision: trace.decision ? toRecord(toJsonSafe(trace.decision)) : null,

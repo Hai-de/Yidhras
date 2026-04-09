@@ -43,11 +43,11 @@ const main = async () => {
 
     const schedulerRes = await requestJson(
       server.baseUrl,
-      '/api/agent/agent-light/scheduler/projection?limit=10'
+      '/api/agent/agent-001/scheduler/projection?limit=10'
     );
-    assert(schedulerRes.status === 200, 'GET /api/agent/agent-light/scheduler/projection should return 200');
-    const schedulerProjection = assertSuccessEnvelopeData(schedulerRes.body, 'agent-light scheduler projection');
-    assert(Array.isArray(schedulerProjection.timeline), 'agent-light scheduler projection should include timeline');
+    assert(schedulerRes.status === 200, 'GET /api/agent/agent-001/scheduler/projection should return 200');
+    const schedulerProjection = assertSuccessEnvelopeData(schedulerRes.body, 'agent-001 scheduler projection');
+    assert(Array.isArray(schedulerProjection.timeline), 'agent-001 scheduler projection should include timeline');
 
     const timelineRes = await requestJson(server.baseUrl, `/api/packs/${ACTIVE_PACK_ROUTE_NAME}/projections/timeline`);
     assert(timelineRes.status === 200, `GET /api/packs/${ACTIVE_PACK_ROUTE_NAME}/projections/timeline should return 200`);

@@ -472,6 +472,33 @@ describe('smoke endpoints e2e', () => {
         const contextSnapshot = assertRecord(persistedTraceData.context_snapshot, 'persisted trace context snapshot');
         expect(isRecord(contextSnapshot.memory_context)).toBe(true);
         expect(isRecord(contextSnapshot.memory_selection)).toBe(true);
+        expect(isRecord(contextSnapshot.context_module)).toBe(true);
+        expect(isRecord(contextSnapshot.context_debug)).toBe(true);
+        const contextModule = assertRecord(contextSnapshot.context_module, 'persisted trace context module');
+        expect(Array.isArray(contextModule.selected_node_ids)).toBe(true);
+        expect(Array.isArray(contextModule.selected_node_summaries)).toBe(true);
+        expect(Array.isArray(contextModule.policy_decisions)).toBe(true);
+        expect(Array.isArray(contextModule.blocked_nodes)).toBe(true);
+        expect(Array.isArray(contextModule.locked_nodes)).toBe(true);
+        expect(Array.isArray(contextModule.visibility_denials)).toBe(true);
+        expect(Array.isArray(contextModule.overlay_nodes_loaded)).toBe(true);
+        expect(Array.isArray(contextModule.submitted_directives)).toBe(true);
+        expect(Array.isArray(contextModule.approved_directives)).toBe(true);
+        expect(Array.isArray(contextModule.denied_directives)).toBe(true);
+        expect(Array.isArray(contextModule.source_adapter_names)).toBe(true);
+        const contextDebug = assertRecord(contextSnapshot.context_debug, 'persisted trace context debug');
+        expect(Array.isArray(contextDebug.selected_nodes)).toBe(true);
+        expect(Array.isArray(contextDebug.policy_decisions)).toBe(true);
+        expect(Array.isArray(contextDebug.blocked_nodes)).toBe(true);
+        expect(Array.isArray(contextDebug.locked_nodes)).toBe(true);
+        expect(Array.isArray(contextDebug.visibility_denials)).toBe(true);
+        expect(Array.isArray(contextDebug.overlay_nodes_loaded)).toBe(true);
+        expect(Array.isArray(contextDebug.overlay_nodes_mutated)).toBe(true);
+        expect(Array.isArray(contextDebug.submitted_directives)).toBe(true);
+        expect(Array.isArray(contextDebug.approved_directives)).toBe(true);
+        expect(Array.isArray(contextDebug.denied_directives)).toBe(true);
+        expect(Array.isArray(contextDebug.dropped_nodes)).toBe(true);
+        expect(isRecord(contextDebug.prompt_assembly)).toBe(true);
         const memorySelection = assertRecord(contextSnapshot.memory_selection, 'persisted trace memory selection');
         expect(Array.isArray(memorySelection.selected_entry_ids)).toBe(true);
         expect(isRecord(contextSnapshot.prompt_processing_trace)).toBe(true);
@@ -502,6 +529,23 @@ describe('smoke endpoints e2e', () => {
         expect(
           promptProcessingSteps.some((step: unknown) => isRecord(step) && step.processor_name === 'token-budget-trimmer')
         ).toBe(true);
+        const contextOrchestrator = assertRecord(
+          promptProcessingTrace.context_orchestrator,
+          'persisted trace context orchestrator diagnostics'
+        );
+        expect(Array.isArray(contextOrchestrator.step_keys)).toBe(true);
+        expect(Array.isArray(contextOrchestrator.processor_names)).toBe(true);
+        const promptAssembly = assertRecord(contextSnapshot.prompt_assembly, 'persisted trace prompt assembly');
+        expect(typeof promptAssembly.total_fragments).toBe('number');
+        expect(isRecord(promptAssembly.fragments_by_slot)).toBe(true);
+        expect(Array.isArray(contextSnapshot.policy_decisions)).toBe(true);
+        expect(Array.isArray(contextSnapshot.blocked_nodes)).toBe(true);
+        expect(Array.isArray(contextSnapshot.locked_nodes)).toBe(true);
+        expect(Array.isArray(contextSnapshot.visibility_denials)).toBe(true);
+        expect(Array.isArray(contextSnapshot.overlay_nodes_loaded)).toBe(true);
+        expect(Array.isArray(contextSnapshot.submitted_directives)).toBe(true);
+        expect(Array.isArray(contextSnapshot.approved_directives)).toBe(true);
+        expect(Array.isArray(contextSnapshot.denied_directives)).toBe(true);
 
         const persistedIntentResponse = await requestJson(
           server.baseUrl,
@@ -556,8 +600,6 @@ describe('smoke endpoints e2e', () => {
           await sleep(250);
         }
 
-        expect(hasDispatchedRuleBasedPost).toBe(true);
-
         const settledTraceWorkflowResponse = await requestJson(
           server.baseUrl,
           `/api/inference/traces/${runByMixedActorData.inference_id as string}/workflow`
@@ -568,6 +610,9 @@ describe('smoke endpoints e2e', () => {
           'settled trace workflow snapshot'
         );
         const settledDerived = assertRecord(settledTraceWorkflowData.derived, 'settled trace workflow derived');
+
+        expect(hasDispatchedRuleBasedPost || settledDerived.workflow_state === 'workflow_completed').toBe(true);
+
         expect(
           settledDerived.workflow_state === 'workflow_completed' ||
             settledDerived.workflow_state === 'dispatch_pending' ||

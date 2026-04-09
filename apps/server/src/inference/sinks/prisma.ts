@@ -21,7 +21,74 @@ const parseOptionalTickString = (value: string | null | undefined): bigint | nul
 const buildContextSnapshot = (event: InferenceTraceEvent): Prisma.InputJsonValue => {
   return toJsonValue({
     inference_id: event.context.inference_id,
+    context_module: {
+      run_id: event.context.context_run.id,
+      created_at_tick: event.context.context_run.created_at_tick,
+      source_adapter_names: event.context.context_run.diagnostics.source_adapter_names,
+      node_count: event.context.context_run.diagnostics.node_count,
+      node_counts_by_type: event.context.context_run.diagnostics.node_counts_by_type,
+      selected_node_ids: event.context.context_run.selected_node_ids,
+      selected_node_summaries: event.context.context_run.diagnostics.selected_node_summaries ?? [],
+      policy_decisions: event.context.context_run.diagnostics.policy_decisions ?? [],
+      blocked_nodes: event.context.context_run.diagnostics.blocked_nodes ?? [],
+      locked_nodes: event.context.context_run.diagnostics.locked_nodes ?? [],
+      visibility_denials: event.context.context_run.diagnostics.visibility_denials ?? [],
+      overlay_nodes_loaded: event.context.context_run.diagnostics.overlay_nodes_loaded ?? [],
+      submitted_directives: event.context.context_run.diagnostics.submitted_directives ?? [],
+      approved_directives: event.context.context_run.diagnostics.approved_directives ?? [],
+      denied_directives: event.context.context_run.diagnostics.denied_directives ?? [],
+      dropped_nodes: event.context.context_run.diagnostics.dropped_nodes,
+      orchestration: event.context.context_run.diagnostics.orchestration ?? null,
+      prompt_assembly: event.context.context_run.diagnostics.prompt_assembly ?? null
+    },
+    context_debug: {
+      selected_nodes: event.context.context_run.nodes.map(node => ({
+        id: node.id,
+        node_type: node.node_type,
+        source_kind: node.source_kind,
+        preferred_slot: node.placement_policy.preferred_slot,
+        visibility_level: node.visibility.level,
+        mutability_level: node.mutability.level,
+        importance: node.importance,
+        salience: node.salience,
+        tags: node.tags,
+        content_preview: node.content.text.slice(0, 240)
+      })),
+      policy_decisions: event.context.context_run.diagnostics.policy_decisions ?? [],
+      blocked_nodes: event.context.context_run.diagnostics.blocked_nodes ?? [],
+      locked_nodes: event.context.context_run.diagnostics.locked_nodes ?? [],
+      visibility_denials: event.context.context_run.diagnostics.visibility_denials ?? [],
+      overlay_nodes_loaded: event.context.context_run.diagnostics.overlay_nodes_loaded ?? [],
+      overlay_nodes_mutated: event.context.context_run.diagnostics.overlay_nodes_mutated ?? [],
+      submitted_directives: event.context.context_run.diagnostics.submitted_directives ?? [],
+      approved_directives: event.context.context_run.diagnostics.approved_directives ?? [],
+      denied_directives: event.context.context_run.diagnostics.denied_directives ?? [],
+      dropped_nodes: event.context.context_run.diagnostics.dropped_nodes,
+      prompt_assembly: event.context.context_run.diagnostics.prompt_assembly ?? null,
+      processing_trace:
+        event.prompt.metadata.processing_trace ??
+        event.context.memory_context.diagnostics.prompt_processing_trace ??
+        null
+    },
     actor_ref: event.context.actor_ref,
+    context_run: {
+      id: event.context.context_run.id,
+      created_at_tick: event.context.context_run.created_at_tick,
+      selected_node_ids: event.context.context_run.selected_node_ids,
+      node_count: event.context.context_run.diagnostics.node_count,
+      node_counts_by_type: event.context.context_run.diagnostics.node_counts_by_type,
+      source_adapter_names: event.context.context_run.diagnostics.source_adapter_names,
+      dropped_nodes: event.context.context_run.diagnostics.dropped_nodes,
+      policy_decisions: event.context.context_run.diagnostics.policy_decisions ?? [],
+      blocked_nodes: event.context.context_run.diagnostics.blocked_nodes ?? [],
+      locked_nodes: event.context.context_run.diagnostics.locked_nodes ?? [],
+      visibility_denials: event.context.context_run.diagnostics.visibility_denials ?? [],
+      overlay_nodes_loaded: event.context.context_run.diagnostics.overlay_nodes_loaded ?? [],
+      submitted_directives: event.context.context_run.diagnostics.submitted_directives ?? [],
+      approved_directives: event.context.context_run.diagnostics.approved_directives ?? [],
+      denied_directives: event.context.context_run.diagnostics.denied_directives ?? [],
+      nodes: event.context.context_run.nodes
+    },
     actor_display_name: event.context.actor_display_name,
     identity: event.context.identity,
     binding_ref: event.context.binding_ref,
@@ -41,7 +108,21 @@ const buildContextSnapshot = (event: InferenceTraceEvent): Prisma.InputJsonValue
     prompt_processing_trace:
       event.prompt.metadata.processing_trace ??
       event.context.memory_context.diagnostics.prompt_processing_trace ??
-      null
+      null,
+    prompt_assembly: event.context.context_run.diagnostics.prompt_assembly ?? null,
+    selected_node_summaries: event.context.context_run.diagnostics.selected_node_summaries ?? [],
+    policy_decisions: event.context.context_run.diagnostics.policy_decisions ?? [],
+    blocked_nodes: event.context.context_run.diagnostics.blocked_nodes ?? [],
+    locked_nodes: event.context.context_run.diagnostics.locked_nodes ?? [],
+    visibility_denials: event.context.context_run.diagnostics.visibility_denials ?? [],
+    overlay_nodes_loaded: event.context.context_run.diagnostics.overlay_nodes_loaded ?? [],
+    overlay_nodes_mutated: event.context.context_run.diagnostics.overlay_nodes_mutated ?? [],
+    submitted_directives: event.context.context_run.diagnostics.submitted_directives ?? [],
+    approved_directives: event.context.context_run.diagnostics.approved_directives ?? [],
+    denied_directives: event.context.context_run.diagnostics.denied_directives ?? [],
+    dropped_nodes: event.context.context_run.diagnostics.dropped_nodes,
+    semantic_intent: event.semantic_intent ?? null,
+    intent_grounding: event.intent_grounding ?? null
   });
 };
 
@@ -94,7 +175,11 @@ export const createPrismaInferenceTraceSink = (context: AppContext): InferenceTr
             input: toJsonValue(event.input),
             context_snapshot: buildContextSnapshot(event),
             prompt_bundle: toJsonValue(event.prompt),
-            trace_metadata: toJsonValue(event.trace_metadata),
+            trace_metadata: toJsonValue({
+              ...event.trace_metadata,
+              semantic_intent: event.semantic_intent ?? null,
+              intent_grounding: event.intent_grounding ?? null
+            }),
             decision: event.decision ? toJsonValue(event.decision) : undefined,
             updated_at: now
           },
@@ -107,7 +192,11 @@ export const createPrismaInferenceTraceSink = (context: AppContext): InferenceTr
             input: toJsonValue(event.input),
             context_snapshot: buildContextSnapshot(event),
             prompt_bundle: toJsonValue(event.prompt),
-            trace_metadata: toJsonValue(event.trace_metadata),
+            trace_metadata: toJsonValue({
+              ...event.trace_metadata,
+              semantic_intent: event.semantic_intent ?? null,
+              intent_grounding: event.intent_grounding ?? null
+            }),
             decision: event.decision ? toJsonValue(event.decision) : undefined,
             created_at: now,
             updated_at: now

@@ -333,6 +333,27 @@ model DecisionJob {
   @@index([replay_of_job_id, created_at])
 }
 
+model ContextOverlayEntry {
+  id                String @id @default(uuid())
+  actor_id          String
+  pack_id           String?
+  overlay_type      String
+  title             String?
+  content_text      String
+  content_structured Json?
+  tags              String
+  status            String
+  persistence_mode  String
+  source_node_ids   String
+  created_by        String
+  created_at_tick   BigInt
+  updated_at_tick   BigInt
+
+  @@index([actor_id, updated_at_tick])
+  @@index([actor_id, pack_id, status])
+  @@index([overlay_type, status])
+}
+
 model ScenarioEntityState {
   id         String @id
   pack_id    String

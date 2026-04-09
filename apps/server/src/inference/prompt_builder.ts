@@ -1,12 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
+import { buildContextPromptAssemblySummary, runContextOrchestrator } from '../context/workflow/orchestrator.js';
 import { NarrativeResolver } from '../narrative/resolver.js';
-import { createMemoryInjectorPromptProcessor } from './processors/memory_injector.js';
-import { createMemorySummaryPromptProcessor } from './processors/memory_summary.js';
-import { createPolicyFilterPromptProcessor } from './processors/policy_filter.js';
-import { createTokenBudgetTrimmerPromptProcessor } from './processors/token_budget_trimmer.js';
 import type { PromptFragment, PromptFragmentSlot } from './prompt_fragments.js';
-import type { PromptProcessor } from './prompt_processors.js';
 import type { InferenceContext, PromptBundle, PromptProcessingTrace } from './types.js';
 
 const PROMPT_VERSION = 'phase-b-v1';
@@ -39,6 +35,7 @@ const buildContextPromptPayload = (context: InferenceContext): Record<string, un
   return {
     actor_ref: context.actor_ref,
     actor_display_name: context.actor_display_name,
+    context_run: context.context_run,
     binding_ref: context.binding_ref,
     resolved_agent_id: context.resolved_agent_id,
     agent_snapshot: context.agent_snapshot,
@@ -174,118 +171,17 @@ export const buildPromptFragments = (context: InferenceContext): PromptFragment[
   ];
 };
 
-const buildPromptProcessingTrace = (
-  processorNames: string[],
-  fragmentsBefore: PromptFragment[],
-  fragmentsAfter: PromptFragment[],
-  steps: PromptProcessingTrace['steps'] = []
-): PromptProcessingTrace => {
-  return {
-    processor_names: processorNames,
-    fragment_count_before: fragmentsBefore.length,
-    fragment_count_after: fragmentsAfter.length,
-    steps,
-    fragments: fragmentsAfter.map(fragment => ({
-      id: fragment.id,
-      slot: fragment.slot,
-      source: fragment.source,
-      priority: fragment.priority,
-      metadata: fragment.metadata
-    }))
-  };
-};
-
-const diffFragments = (
-  before: PromptFragment[],
-  after: PromptFragment[],
-  processorName: string
-): NonNullable<PromptProcessingTrace['steps']>[number] => {
-  const beforeIds = new Set(before.map(fragment => fragment.id));
-  const afterIds = new Set(after.map(fragment => fragment.id));
-  const addedFragmentIds = after
-    .filter(fragment => !beforeIds.has(fragment.id))
-    .map(fragment => fragment.id);
-  const removedFragmentIds = before
-    .filter(fragment => !afterIds.has(fragment.id))
-    .map(fragment => fragment.id);
-
-  const notes: Record<string, unknown> = {};
-  const summaryCompaction = after.find(fragment => fragment.source === 'memory.summary.compaction');
-  if (processorName === 'memory-summary' && summaryCompaction) {
-    notes.summary_fragment_id = summaryCompaction.id;
-    notes.summarized_fragment_ids = summaryCompaction.metadata?.summarized_fragment_ids;
-  }
-
-  if (processorName === 'policy-filter') {
-    notes.policy_filtered = removedFragmentIds.length;
-  }
-
-  if (processorName === 'token-budget-trimmer') {
-    notes.trimmed = removedFragmentIds.length;
-  }
-
-  return {
-    processor_name: processorName,
-    fragment_count_before: before.length,
-    fragment_count_after: after.length,
-    added_fragment_ids: addedFragmentIds,
-    removed_fragment_ids: removedFragmentIds,
-    notes
-  };
-};
-
-export const runPromptProcessors = async (
-  context: InferenceContext,
-  fragments: PromptFragment[],
-  processors: PromptProcessor[] = [
-    createMemoryInjectorPromptProcessor(),
-    createPolicyFilterPromptProcessor(),
-    createMemorySummaryPromptProcessor(),
-    createTokenBudgetTrimmerPromptProcessor()
-  ]
-): Promise<PromptFragment[]> => {
-  let current = sortFragments(fragments);
-  const initialFragments = current;
-  const steps: NonNullable<PromptProcessingTrace['steps']> = [];
-
-  for (const processor of processors) {
-    const before = current;
-    const after = sortFragments(
-      await processor.process({
-        context,
-        fragments: before
-      })
-    );
-    steps.push(diffFragments(before, after, processor.name));
-    current = after;
-  }
-
-  const baseTrace = buildPromptProcessingTrace(
-    processors.map(processor => processor.name),
-    initialFragments,
-    current,
-    steps
-  );
-
-  context.memory_context.diagnostics = {
-    ...context.memory_context.diagnostics,
-    prompt_processing_trace: {
-      ...baseTrace,
-      ...((typeof context.memory_context.diagnostics.prompt_processing_trace === 'object' &&
-        context.memory_context.diagnostics.prompt_processing_trace !== null)
-        ? (context.memory_context.diagnostics.prompt_processing_trace as Record<string, unknown>)
-        : {})
-    }
-  };
-  return current;
-};
-
 export const buildPromptBundleFromFragments = (
   fragments: PromptFragment[],
   context: InferenceContext
 ): PromptBundle => {
   const sortedFragments = sortFragments(fragments);
 
+  context.context_run.diagnostics.prompt_assembly = buildContextPromptAssemblySummary(sortedFragments);
+  context.context_run.diagnostics.orchestration = {
+    ...(context.context_run.diagnostics.orchestration ?? {}),
+    prompt_assembly: context.context_run.diagnostics.prompt_assembly
+  };
   return {
     system_prompt: buildSlotPrompt(sortedFragments, 'system_core'),
     role_prompt: buildSlotPrompt(sortedFragments, 'role_core'),
@@ -308,6 +204,6 @@ export const buildPromptBundleFromFragments = (
 
 export const buildPromptBundle = async (context: InferenceContext): Promise<PromptBundle> => {
   const fragments = buildPromptFragments(context);
-  const processed = await runPromptProcessors(context, fragments);
-  return buildPromptBundleFromFragments(processed, context);
+  const orchestrated = await runContextOrchestrator(context, fragments);
+  return buildPromptBundleFromFragments(orchestrated.fragments, context);
 };

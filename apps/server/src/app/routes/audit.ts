@@ -48,7 +48,7 @@ export const registerAuditRoutes = (
       });
 
       jsonOk(res, toJsonSafe(snapshot), {
-        pagination: snapshot.summary.page_info
+        pagination: snapshot.page_info
       });
     })
   );

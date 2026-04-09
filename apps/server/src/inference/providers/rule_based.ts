@@ -66,11 +66,113 @@ const resolveTransmissionDropChanceByPolicy = (
   }
 };
 
+const isDeathNotePack = (context: Parameters<InferenceProvider['run']>[0]): boolean => {
+  return context.world_pack.id === 'world-death-note';
+};
+
+const buildDeathNoteSemanticDecision = (
+  context: Parameters<InferenceProvider['run']>[0],
+  input: {
+    semanticIntentKind: string;
+    desiredEffect?: string;
+    proposedMethod?: string;
+    targetRef?: Record<string, unknown> | null;
+    reasoning: string;
+  }
+) => ({
+  action_type: 'semantic_intent',
+  target_ref: input.targetRef ?? null,
+  payload: {
+    semantic_intent_kind: input.semanticIntentKind,
+    ...(input.desiredEffect ? { semantic_intent_desired_effect: input.desiredEffect } : {}),
+    ...(input.proposedMethod ? { semantic_intent_proposed_method: input.proposedMethod } : {})
+  },
+  confidence: 0.82,
+  delay_hint_ticks: '1',
+  reasoning: input.reasoning,
+  meta: {
+    provider_mode: 'rule_based_death_note',
+    semantic_intent: {
+      kind: input.semanticIntentKind,
+      text: input.reasoning,
+      desired_effect: input.desiredEffect ?? null,
+      proposed_method: input.proposedMethod ?? null,
+      target_ref: input.targetRef ?? null
+    },
+    transmission_delay_ticks: '1',
+    transmission_policy: 'reliable',
+    transmission_drop_chance: 0,
+    drop_reason: null
+  }
+});
+
+const buildDeathNoteRuleBasedDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
+  const actorState = context.pack_state.actor_state ?? {};
+  const worldState = context.pack_state.world_state ?? {};
+  const currentTargetId = typeof actorState.current_target_id === 'string' ? actorState.current_target_id : null;
+  const knownTargetId = typeof actorState.known_target_id === 'string' ? actorState.known_target_id : null;
+  const knowsNotebookPower = actorState.knows_notebook_power === true;
+  const murderousIntent = actorState.murderous_intent === true;
+  const targetEligible = actorState.target_judgement_eligibility === true;
+  const holderArtifact = context.pack_state.owned_artifacts.find(item => item.id === 'artifact-death-note') ?? null;
+  const notebookClaimed = worldState.opening_phase === 'notebook_claimed' || worldState.kira_case_phase !== 'pre_kira';
+  const defaultTargetRef = { entity_id: 'agent-002', kind: 'actor', agent_id: 'agent-002' };
+
+  if (!holderArtifact && !notebookClaimed) {
+    return buildDeathNoteSemanticDecision(context, {
+      semanticIntentKind: 'claim_notebook',
+      reasoning: `${context.actor_display_name} 决定先确保自己持有死亡笔记。`
+    });
+  }
+
+  if (!knowsNotebookPower) {
+    return buildDeathNoteSemanticDecision(context, {
+      semanticIntentKind: 'understand_notebook_power',
+      reasoning: `${context.actor_display_name} 需要先确认死亡笔记究竟具备什么规则效力。`
+    });
+  }
+
+  if (!murderousIntent) {
+    return buildDeathNoteSemanticDecision(context, {
+      semanticIntentKind: 'form_judgement_intent',
+      reasoning: `${context.actor_display_name} 开始认真思考是否要利用死亡笔记执行裁决。`
+    });
+  }
+
+  if (!knownTargetId || !targetEligible) {
+    return buildDeathNoteSemanticDecision(context, {
+      semanticIntentKind: 'gather_target_intel',
+      proposedMethod: 'covert_background_check',
+      targetRef: defaultTargetRef,
+      reasoning: `${context.actor_display_name} 试图补齐对目标的姓名与长相情报，以便后续执行裁决。`
+    });
+  }
+
+  if (!currentTargetId) {
+    return buildDeathNoteSemanticDecision(context, {
+      semanticIntentKind: 'choose_target',
+      targetRef: { entity_id: knownTargetId, kind: 'actor', agent_id: knownTargetId },
+      reasoning: `${context.actor_display_name} 已经满足前置条件，准备正式锁定裁决目标。`
+    });
+  }
+
+  return buildDeathNoteSemanticDecision(context, {
+    semanticIntentKind: 'judge_target',
+    desiredEffect: 'kill',
+    targetRef: { entity_id: currentTargetId, kind: 'actor', agent_id: currentTargetId },
+    reasoning: `${context.actor_display_name} 认为时机已到，准备利用死亡笔记执行最终裁决。`
+  });
+};
+
 export const createRuleBasedInferenceProvider = (): InferenceProvider => {
   return {
     name: 'rule_based',
     strategies: ['rule_based'],
     async run(context) {
+      if (isDeathNotePack(context)) {
+        return buildDeathNoteRuleBasedDecision(context);
+      }
+
       const transmissionPolicy = normalizeTransmissionPolicy(
         context.attributes.transmission_policy ?? context.transmission_profile.policy
       );
@@ -108,14 +210,21 @@ export const createRuleBasedInferenceProvider = (): InferenceProvider => {
       }
 
       return {
-        action_type: 'observe_state',
+        action_type: 'trigger_event',
         target_ref: null,
         payload: {
-          summary: `${context.actor_display_name} can only observe the current world state.`
+          event_type: 'history',
+          title: `${context.actor_display_name} 继续观察局势`,
+          description: `${context.actor_display_name} 暂时无法公开行动，只能继续观察当前世界状态。`,
+          impact_data: {
+            semantic_type: 'observe_state',
+            objective_effect_applied: false,
+            failed_attempt: false
+          }
         },
         confidence: 0.61,
         delay_hint_ticks: '1',
-        reasoning: 'The actor cannot write social posts, so the rule-based provider falls back to observation.',
+        reasoning: 'The actor cannot write social posts, so the rule-based provider falls back to observation as a history event.',
         meta: {
           provider_mode: 'rule_based',
           social_post_write_allowed: false,

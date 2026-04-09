@@ -41,6 +41,39 @@
 
 ## Suggested Next Work / 建议后续工作
 
+### Death Note Intent Grounder / 第一阶段收尾状态
+
+- [x] Death Note pack 第一版题材动作链已落地：notebook acquisition / rule learning / murderous intent / intel / target / judgement / investigation / intel sharing
+- [x] `rules.invocation` 已成为运行时 grounding 层，而不再只是 schema 占位
+- [x] Intent Grounder 已接入 inference → workflow 主链
+- [x] `ritual_divination` 等 unexpected action 已支持 narrativized failed-attempt fallback
+- [x] scheduler 已消费事件桥接 metadata（如 `followup_actor_ids`）形成最小协作回流
+- [x] server 侧 typecheck / unit / integration / e2e 已全部通过
+
+### 当前后续重点
+
+- [x] 已引入 Context Module MVP：`ContextNode / ContextRun / ContextService / Context Orchestrator Lite`
+- [x] inference context 已先走 Context Module，再向下派生 legacy `memory_context`
+- [x] `InferenceTrace.context_snapshot` 已包含 `context_module / context_debug / prompt_assembly` 等上下文诊断字段
+- [x] prompt 主线已通过线性 orchestrator-lite 收口既有 processors
+- [x] 已将 policy 从 fragment-level 上移到 node-level / working-set 治理，并保留 `policy_filter` 作为 compatibility fallback
+- [x] 已引入 kernel-side overlay store / `ContextOverlayEntry` / overlay source adapter，并 materialize 为 `writable_overlay` 节点
+- [x] `InferenceTrace.context_snapshot`、workflow debug 读取层与 entity overview 已可观察 policy / overlay 摘要
+- [x] 已预留 future `ContextDirective` schema 与 trace 字段：`submitted/approved/denied_directives`
+- [x] 继续补文档同步与阶段性收尾，明确当前 **仍未** 开放 directive 执行、通用 DAG workflow engine、visual editor 与 plugin runtime
+
+### Context Module MVP / 当前阶段说明
+
+- 当前完成的是 Context Module MVP + policy/overlay deepening，而不是完整 Prompt Workflow Engine
+- 当前 orchestrator 仍是固定线性阶段：memory injection / policy filter / summary compaction / token budget trim
+- 当前不包含可视化节点编排、插件执行平台、Agent 自主 context directives 执行路径
+- 当前 overlay 属于 kernel-side working-layer object，不属于 pack runtime world governance core
+- 当前 `memory_context` 仍然保留，但仅作为 compatibility surface
+
+- [ ] 同步更多设计/实现细节到 docs/ 与根文档，减少新读者理解 Intent Grounder 与 narrativized failure 的成本
+- [ ] 继续观察 `SimulationManager` / runtime facade 边界，决定是否需要下一轮收口
+- [ ] 评估是否需要进一步补针对 Death Note semantic path 的专门 review 文档
+
 ### A. 子系统边界收口
 - [x] 完成 access-policy 子系统独立化，当前正式入口为 `/api/access-policy/*`
 - [ ] 继续推动 `SimulationManager` 向更清晰的 runtime manager / pack instance 边界演进

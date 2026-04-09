@@ -41,6 +41,13 @@ export const createPolicyFilterPromptProcessor = (): PromptProcessor => {
   return {
     name: 'policy-filter',
     async process({ context, fragments }) {
+      const blockedNodeIds = new Set(
+        Array.isArray(context.context_run.diagnostics.blocked_nodes)
+          ? context.context_run.diagnostics.blocked_nodes
+              .map(entry => (entry && typeof entry === 'object' && typeof entry.node_id === 'string' ? entry.node_id : null))
+              .filter((value): value is string => value !== null)
+          : []
+      );
       const filtered: Record<string, string> = {};
       const nextFragments = fragments
         .map(fragment => {
@@ -49,6 +56,11 @@ export const createPolicyFilterPromptProcessor = (): PromptProcessor => {
           }
 
           const metadata = fragment.metadata;
+          if (typeof metadata?.memory_entry_id === 'string' && blockedNodeIds.has(metadata.memory_entry_id)) {
+            filtered[fragment.id] = 'context_policy_engine';
+            return markPolicyFiltered(fragment, 'context_policy_engine');
+          }
+
           if (isBlockedByVisibility(metadata)) {
             filtered[fragment.id] = 'visibility_or_policy_gate';
             return markPolicyFiltered(fragment, 'visibility_or_policy_gate');

@@ -103,3 +103,17 @@ pnpm --filter yidhras-server reset:dev-db
 - 服务端包含 runtime、world pack 加载、scheduler、inference / workflow、audit 与 read-model API。
 - 前端包含 overview、workflow、scheduler、graph、social、timeline、agents 页面。
 - 当前优先级以 `TODO.md` 为准，验证记录见 `记录.md`。
+
+## Current Implementation Highlight
+
+The first Death Note-specific semantic behavior loop is now implemented on the server side.
+
+Current status includes:
+
+- `world-death-note` pack expanded with thematic capabilities, state, invocation grounding rules and objective enforcement
+- server-side Intent Grounder inserted between provider decision and final `ActionIntentDraft`
+- active-pack `rules.invocation` consumed at runtime
+- unexpected semantic action can fall back to narrativized `history` events instead of hard failure
+- scheduler follow-up can consume event metadata such as `followup_actor_ids`
+
+This phase was completed without introducing a privileged Death Note-specific governor/admin agent and without changing the public inference strategy surface (`mock | rule_based`).
