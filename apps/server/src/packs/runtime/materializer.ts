@@ -1,8 +1,8 @@
+import type { WorldPack } from '../schema/constitution_schema.js';
 import { upsertPackAuthorityGrant } from '../storage/authority_repo.js';
+import { upsertPackWorldEntity } from '../storage/entity_repo.js';
 import { upsertPackEntityState } from '../storage/entity_state_repo.js';
 import { upsertPackMediatorBinding } from '../storage/mediator_repo.js';
-import { upsertPackWorldEntity } from '../storage/entity_repo.js';
-import type { WorldPack } from '../schema/constitution_schema.js';
 import {
   DEFAULT_PACK_WORLD_ENTITY_ID,
   type PackRuntimeAuthorityGrantInput,

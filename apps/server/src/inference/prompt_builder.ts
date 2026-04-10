@@ -78,8 +78,25 @@ const buildFragment = (
   };
 };
 
+const slotOrderMap = new Map(SLOT_ORDER.map((slot, index) => [slot, index]));
+
+const getAnchorKey = (fragment: PromptFragment): string => {
+  if (!fragment.anchor || typeof fragment.anchor !== 'object') {
+    return '';
+  }
+
+  return `${fragment.anchor.kind}:${fragment.anchor.value}`;
+};
+
+const getDepth = (fragment: PromptFragment): number => {
+  return typeof fragment.depth === 'number' && Number.isFinite(fragment.depth) ? fragment.depth : 0;
+};
+
+const getOrder = (fragment: PromptFragment): number => {
+  return typeof fragment.order === 'number' && Number.isFinite(fragment.order) ? fragment.order : 0;
+};
+
 const sortFragments = (fragments: PromptFragment[]): PromptFragment[] => {
-  const slotOrderMap = new Map(SLOT_ORDER.map((slot, index) => [slot, index]));
   return [...fragments].sort((left, right) => {
     const slotOrderDiff =
       (slotOrderMap.get(left.slot) ?? Number.MAX_SAFE_INTEGER) -
@@ -88,7 +105,27 @@ const sortFragments = (fragments: PromptFragment[]): PromptFragment[] => {
       return slotOrderDiff;
     }
 
-    return right.priority - left.priority;
+    const anchorDiff = getAnchorKey(left).localeCompare(getAnchorKey(right));
+    if (anchorDiff !== 0) {
+      return anchorDiff;
+    }
+
+    const depthDiff = getDepth(left) - getDepth(right);
+    if (depthDiff !== 0) {
+      return depthDiff;
+    }
+
+    const orderDiff = getOrder(left) - getOrder(right);
+    if (orderDiff !== 0) {
+      return orderDiff;
+    }
+
+    const priorityDiff = right.priority - left.priority;
+    if (priorityDiff !== 0) {
+      return priorityDiff;
+    }
+
+    return left.id.localeCompare(right.id);
   });
 };
 
@@ -206,4 +243,4 @@ export const buildPromptBundle = async (context: InferenceContext): Promise<Prom
   const fragments = buildPromptFragments(context);
   const orchestrated = await runContextOrchestrator(context, fragments);
   return buildPromptBundleFromFragments(orchestrated.fragments, context);
-};
+}

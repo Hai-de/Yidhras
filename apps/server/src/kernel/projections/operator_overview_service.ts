@@ -1,11 +1,11 @@
 import type { AppContext } from '../../app/context.js';
 import { getRuntimeStatusSnapshot } from '../../app/services/system.js';
+import { resolvePackProjectionTarget } from '../../packs/runtime/projections/active_pack_projection_guard.js';
 import { listPackAuthorityGrants } from '../../packs/storage/authority_repo.js';
-import { listPackEntityStates } from '../../packs/storage/entity_state_repo.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
+import { listPackEntityStates } from '../../packs/storage/entity_state_repo.js';
 import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js';
 import { listPackRuleExecutionRecords } from '../../packs/storage/rule_execution_repo.js';
-import { resolvePackProjectionTarget } from '../../packs/runtime/projections/active_pack_projection_guard.js';
 
 export interface OperatorOverviewProjectionSnapshot {
   runtime: Awaited<ReturnType<typeof getRuntimeStatusSnapshot>>;

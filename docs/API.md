@@ -1,31 +1,7 @@
-# Yidhras API 接口规范 (v0.2.x)
+# API 说明
 
-> 本文件只负责当前对外接口契约、错误码与调用约束；阶段状态与优先级请看根目录 `TODO.md`。
-
-## 0. 通用约定
-
-### 0.1 Success Envelope
-
-- 所有成功响应统一返回：`{ success: true, data: ... }`
-- 可选附带：`meta?: { pagination?, warnings?, schema_version? }`
-
-### 0.2 Unified Error Envelope
-
-- 所有 API 错误统一返回：`{ success: false, error: { code, message, request_id, timestamp, details? } }`
-- 每个请求会携带响应头 `X-Request-Id`，与 `error.request_id` 一致
-- 错误分层：
-  - `4xx`：业务/请求错误（可预期）
-  - `5xx`：系统内部错误（需排查服务端日志）
-
-### 0.3 Identity Header (开发/内置)
-
-- `x-m2-identity`: JSON 字符串，注入身份上下文
-- 示例：`{"id":"user-001","type":"user","name":"Operator"}`
-- 若不提供，默认使用 `system` 身份
-
-### 0.4 Query / Params 校验约定
-
-- `agent / graph / relational / scheduler / social / audit / inference` 相关接口当前均走共享 contracts + Zod 边界解析
+> 通用说明
+- agent / graph / relational / scheduler / social / audit / inference 相关接口当前均走共享 contracts + Zod 边界解析
 - 若 query / params 不满足约束（非法数字、非法枚举、空白必填 params 等），当前实现返回 `400`
 
 ## 1. 基础信息 (System)
@@ -39,6 +15,12 @@
 - **GET `/api/health`**
   - 说明：启动与运行健康检查结果
   - 返回：`{ success: true, data: { healthy, level, runtime_ready, checks, available_world_packs, errors } }`
+- **GET `/api/system/notifications`**
+  - 说明：读取当前系统通知队列中的 operator-facing 消息
+  - 返回：`{ success: true, data: Array<{ id, level, content, timestamp, code?, details? }> }`
+- **POST `/api/system/notifications/clear`**
+  - 说明：清空当前系统通知队列
+  - 返回：`{ success: true, data: { acknowledged: true } }`
 
 ## 2. 虚拟时间轴 (Chronos Layer)
 
@@ -157,9 +139,21 @@ This is the current API-level observability path for narrativized failure.
     - `memory`
     - `context_governance`
   - 当前说明：entity overview 会聚合 audit/workflow/projection evidence，因此 narrativized failure 与 related pack events 可经现有字段观察，而不需要单独新增 endpoint
+  - 当前 `memory.summary` 轻量暴露最近一次 trace 中的：
+    - `latest_memory_context`
+    - `latest_memory_selection`
+    - `latest_prompt_processing_trace`
+  - 当前 `memory.latest_blocks` 轻量暴露最近一次 trace 中的：
+    - `evaluated`
+    - `inserted`
+    - `delayed`
+    - `cooling`
+    - `retained`
+    - `inactive`
   - 当前 `context_governance` 轻量暴露最近一次 trace 中的：
     - `latest_policy`（policy decisions / blocked / locked / visibility denials）
     - `overlay`（count / latest_items / latest_mutations）
+    - `memory_blocks`（与 memory.latest_blocks 同源的最近 memory block diagnostics）
 
 ### 7.4 Agent SNR logs
 
@@ -253,7 +247,26 @@ There is currently no public `semantic_intent` strategy. Instead:
 - the server-side Intent Grounder resolves it before final `ActionIntentDraft` persistence
 - grounding uses active-pack `rules.invocation`
 
-### 9.4.1 Internal multi-model gateway note
+### 9.4.1 Context / memory trace note
+
+当前 `InferenceTrace.context_snapshot` 已包含：
+
+- `context_module`
+- `context_debug`
+- `context_run`
+- `memory_context`
+- `memory_selection`
+- `prompt_processing_trace`
+- `memory_blocks`
+- `overlay_nodes_loaded / overlay_nodes_mutated`
+
+其中 memory block 相关字段当前主要用于：
+
+- 调试 long memory trigger / retention / cooldown / delay
+- entity overview / workflow snapshot 的轻量观察
+- 后续 memory block 可视化或调试界面复用
+
+### 9.4.2 Internal multi-model gateway note
 
 Current server runtime already includes an internal multi-model AI gateway path:
 
@@ -273,13 +286,20 @@ Current read-only observability surface that is now public:
 - `GET /api/inference/ai-invocations`
 - `GET /api/inference/ai-invocations/:id`
 
-### 9.4.2 AI invocation evidence note
+### 9.4.3 AI invocation evidence note
 
 When inference is executed through the internal gateway path, trace metadata may include:
 
 - `ai_invocation_id`
 
-This id links the workflow-side `InferenceTrace` to kernel-side `AiInvocationRecord` evidence. A dedicated public query API for `AiInvocationRecord` is not exposed in the current stage.
+This id links the workflow-side `InferenceTrace` to kernel-side `AiInvocationRecord` evidence.
+
+Current public read-only query APIs are:
+
+- `GET /api/inference/ai-invocations`
+- `GET /api/inference/ai-invocations/:id`
+
+These endpoints expose observability evidence only; they do not change the external execution contract of `/api/inference/*`.
 
 ### 9.5 Context Module MVP note
 

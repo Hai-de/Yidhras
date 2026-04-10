@@ -180,6 +180,22 @@ export interface ContextOverlayMutationRecord {
   status?: string | null;
 }
 
+export interface ContextMemoryBlockDiagnostics {
+  evaluated: Array<{
+    memory_id: string;
+    status: 'inactive' | 'delayed' | 'active' | 'retained' | 'cooling';
+    activation_score: number;
+    matched_triggers: string[];
+    reason: string | null;
+    recent_distance_from_latest_message: number | null;
+  }>;
+  inserted: string[];
+  delayed: string[];
+  cooling: string[];
+  retained: string[];
+  inactive: string[];
+}
+
 export interface ContextRunDiagnostics {
   source_adapter_names: string[];
   node_count: number;
@@ -192,6 +208,7 @@ export interface ContextRunDiagnostics {
   visibility_denials?: ContextPolicyVisibilityDenial[];
   overlay_nodes_loaded?: ContextOverlayLoadedNode[];
   overlay_nodes_mutated?: ContextOverlayMutationRecord[];
+  memory_blocks?: ContextMemoryBlockDiagnostics | null;
   submitted_directives?: ContextDirectiveRequest[];
   approved_directives?: ContextApprovedDirective[];
   denied_directives?: ContextDeniedDirective[];

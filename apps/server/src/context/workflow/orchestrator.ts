@@ -1,11 +1,11 @@
-import type { InferenceContext, PromptProcessingTrace } from '../../inference/types.js';
-import type { PromptFragment } from '../../inference/prompt_fragments.js';
-import type { PromptProcessor } from '../../inference/prompt_processors.js';
-import type { ContextPromptAssemblySummary } from '../types.js';
 import { createMemoryInjectorPromptProcessor } from '../../inference/processors/memory_injector.js';
 import { createMemorySummaryPromptProcessor } from '../../inference/processors/memory_summary.js';
 import { createPolicyFilterPromptProcessor } from '../../inference/processors/policy_filter.js';
 import { createTokenBudgetTrimmerPromptProcessor } from '../../inference/processors/token_budget_trimmer.js';
+import type { PromptFragment } from '../../inference/prompt_fragments.js';
+import type { PromptProcessor } from '../../inference/prompt_processors.js';
+import type { InferenceContext, PromptProcessingTrace } from '../../inference/types.js';
+import type { ContextPromptAssemblySummary } from '../types.js';
 
 export interface ContextOrchestratorStep {
   key: string;
@@ -50,13 +50,50 @@ const buildDefaultSteps = (): ContextOrchestratorStep[] => {
   ];
 };
 
+const getAnchorKey = (fragment: PromptFragment): string => {
+  if (!fragment.anchor || typeof fragment.anchor !== 'object') {
+    return '';
+  }
+
+  return `${fragment.anchor.kind}:${fragment.anchor.value}`;
+};
+
+const getDepth = (fragment: PromptFragment): number => {
+  return typeof fragment.depth === 'number' && Number.isFinite(fragment.depth) ? fragment.depth : 0;
+};
+
+const getOrder = (fragment: PromptFragment): number => {
+  return typeof fragment.order === 'number' && Number.isFinite(fragment.order) ? fragment.order : 0;
+};
+
 const sortFragments = (fragments: PromptFragment[]): PromptFragment[] => {
   return [...fragments].sort((left, right) => {
     if (left.slot !== right.slot) {
       return left.slot.localeCompare(right.slot);
     }
 
-    return right.priority - left.priority;
+    const leftAnchor = getAnchorKey(left);
+    const rightAnchor = getAnchorKey(right);
+    if (leftAnchor !== rightAnchor) {
+      return leftAnchor.localeCompare(rightAnchor);
+    }
+
+    const depthDiff = getDepth(left) - getDepth(right);
+    if (depthDiff !== 0) {
+      return depthDiff;
+    }
+
+    const orderDiff = getOrder(left) - getOrder(right);
+    if (orderDiff !== 0) {
+      return orderDiff;
+    }
+
+    const priorityDiff = right.priority - left.priority;
+    if (priorityDiff !== 0) {
+      return priorityDiff;
+    }
+
+    return left.id.localeCompare(right.id);
   });
 };
 

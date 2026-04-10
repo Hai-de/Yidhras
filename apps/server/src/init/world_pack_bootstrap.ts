@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { getWorldBootstrapConfig, getWorldPacksDir } from '../config/runtime_config.js';
-import { installPackRuntime, type InstalledPackRuntimeSummary } from '../kernel/install/install_pack.js';
+import { type InstalledPackRuntimeSummary,installPackRuntime } from '../kernel/install/install_pack.js';
 import { PackManifestLoader } from '../packs/manifest/loader.js';
 
 const DEFAULT_PACK_CONFIG_FILE = 'config.yaml';

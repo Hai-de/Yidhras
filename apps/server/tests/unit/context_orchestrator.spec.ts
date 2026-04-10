@@ -57,19 +57,20 @@ const buildInferenceContext = (): InferenceContext => ({
   context_run: {
     id: 'context-run-1',
     created_at_tick: '1000',
-    selected_node_ids: ['mem-short-1', 'mem-short-2', 'mem-short-3', 'mem-short-4', 'mem-short-5', 'mem-long-1', 'mem-summary-1'],
+    selected_node_ids: ['mem-short-1', 'mem-short-2', 'mem-short-3', 'mem-short-4', 'mem-short-5', 'mem-long-1', 'mem-summary-1', 'memory-block-1'],
     nodes: [],
     diagnostics: {
-      source_adapter_names: ['legacy-memory-selection', 'runtime-state-snapshots'],
-      node_count: 7,
+      source_adapter_names: ['legacy-memory-selection', 'runtime-state-snapshots', 'memory-block-runtime'],
+      node_count: 8,
       node_counts_by_type: {
         recent_trace: 3,
         recent_event: 1,
         recent_post: 1,
         manual_note: 1,
-        memory_summary: 1
+        memory_summary: 1,
+        memory_block_reflection: 1
       },
-      selected_node_ids: ['mem-short-1', 'mem-short-2', 'mem-short-3', 'mem-short-4', 'mem-short-5', 'mem-long-1', 'mem-summary-1'],
+      selected_node_ids: ['mem-short-1', 'mem-short-2', 'mem-short-3', 'mem-short-4', 'mem-short-5', 'mem-long-1', 'mem-summary-1', 'memory-block-1'],
       dropped_nodes: []
     }
   },
@@ -126,8 +127,7 @@ const buildInferenceContext = (): InferenceContext => ({
         visibility: { policy_gate: 'deny' },
         created_at: '997',
         occurred_at: '997'
-      }
-      ,
+      },
       {
         id: 'mem-short-5',
         scope: 'short_term',
@@ -155,6 +155,29 @@ const buildInferenceContext = (): InferenceContext => ({
         visibility: { policy_gate: 'allow' },
         created_at: '950',
         occurred_at: '950'
+      },
+      {
+        id: 'memory-block-1',
+        scope: 'long_term',
+        source_kind: 'manual',
+        source_ref: { source_message_id: 'trace-1' },
+        content: { text: 'Long suspicion memo\nMemory block should be placed after the anchor.' },
+        tags: ['memory_block', 'memory_kind:reflection'],
+        importance: 0.88,
+        salience: 0.77,
+        visibility: { policy_gate: 'allow' },
+        created_at: '995',
+        occurred_at: '999',
+        metadata: {
+          memory_block_id: 'memory-block-1',
+          placement_anchor: {
+            kind: 'source',
+            value: 'memory.long_term.manual'
+          },
+          placement_depth: 10,
+          placement_order: 2,
+          placement_mode: 'after_anchor'
+        }
       }
     ],
     summaries: [
@@ -173,10 +196,10 @@ const buildInferenceContext = (): InferenceContext => ({
       }
     ],
     diagnostics: {
-      selected_count: 7,
+      selected_count: 8,
       skipped_count: 0,
       memory_selection: {
-        selected_entry_ids: ['mem-short-1', 'mem-short-2', 'mem-short-3', 'mem-short-4', 'mem-short-5', 'mem-long-1', 'mem-summary-1'],
+        selected_entry_ids: ['mem-short-1', 'mem-short-2', 'mem-short-3', 'mem-short-4', 'mem-short-5', 'mem-long-1', 'mem-summary-1', 'memory-block-1'],
         dropped: []
       }
     }
@@ -218,43 +241,49 @@ const baseFragments: PromptFragment[] = [
     priority: 80,
     content: 'World prompt',
     source: 'world.prompt'
-  },
-  {
-    id: 'fragment-summary-anchor',
-    slot: 'memory_summary',
-    priority: 10,
-    content: '',
-    source: 'memory.summary'
-  },
-  {
-    id: 'fragment-output',
-    slot: 'output_contract',
-    priority: 50,
-    content: 'Output contract',
-    source: 'output.contract'
   }
 ];
 
 describe('context orchestrator', () => {
-  it('runs linear orchestration stages and records context orchestrator diagnostics', async () => {
+  it('injects memory fragments, applies policy filtering, compacts summaries, and preserves placement ordering metadata', async () => {
     const context = buildInferenceContext();
-
     const result = await runContextOrchestrator(context, baseFragments);
 
-    expect(result.fragments.some(fragment => fragment.source === 'memory.summary.compaction')).toBe(true);
-    expect(result.fragments.some(fragment => fragment.source === 'memory.short_term.intent')).toBe(false);
-    expect(result.processing_trace.steps?.map(step => step.notes?.context_orchestrator_stage)).toEqual([
-      'memory_injection',
-      'policy_filter',
-      'summary_compaction',
-      'token_budget_trim'
-    ]);
-    expect((context.context_run.diagnostics.orchestration as Record<string, unknown>)?.processing_trace).toBeTruthy();
+    const memoryLongTerm = result.fragments.filter(fragment => fragment.slot === 'memory_long_term');
+    expect(memoryLongTerm).toHaveLength(2);
+    expect(memoryLongTerm[0]?.metadata?.memory_entry_id).toBe('mem-long-1');
+    expect(memoryLongTerm[1]?.metadata?.memory_block_id).toBe('memory-block-1');
+    expect(memoryLongTerm[1]?.anchor).toEqual({
+      kind: 'source',
+      value: 'memory.long_term.manual'
+    });
+    expect(memoryLongTerm[1]?.depth).toBe(10);
+    expect(memoryLongTerm[1]?.order).toBe(2);
 
-    const diagnostics = context.memory_context.diagnostics.prompt_processing_trace as Record<string, unknown>;
-    expect(diagnostics.context_orchestrator).toEqual({
+    const summaryFragments = result.fragments.filter(fragment => fragment.slot === 'memory_summary');
+    expect(summaryFragments.length).toBeGreaterThan(0);
+    expect(summaryFragments.some(fragment => fragment.source === 'memory.summary.compaction')).toBe(true);
+
+    const blockedFragment = result.fragments.find(fragment => fragment.metadata?.memory_entry_id === 'mem-short-4');
+    expect(blockedFragment).toBeUndefined();
+
+    expect(context.memory_context.diagnostics.prompt_processing_trace).toMatchObject({
+      context_run_id: 'context-run-1',
+      context_orchestrator: {
+        step_keys: ['memory_injection', 'policy_filter', 'summary_compaction', 'token_budget_trim']
+      },
+      summary_compaction: {
+        summarized_fragment_ids: expect.any(Array),
+        summary_fragment_id: expect.any(String)
+      },
+      policy_filtering: {
+        filtered_fragment_ids: expect.any(Array),
+        reasons: expect.any(Object)
+      }
+    });
+
+    expect(context.context_run.diagnostics.orchestration).toMatchObject({
       step_keys: ['memory_injection', 'policy_filter', 'summary_compaction', 'token_budget_trim'],
-      stage_order: ['memory_injection', 'policy_filter', 'summary_compaction', 'token_budget_trim'],
       processor_names: ['memory-injector', 'policy-filter', 'memory-summary', 'token-budget-trimmer']
     });
   });

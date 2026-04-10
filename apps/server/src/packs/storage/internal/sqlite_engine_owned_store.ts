@@ -1,6 +1,6 @@
-import fs from 'fs';
-
 import { DatabaseSync } from 'node:sqlite';
+
+import fs from 'fs';
 
 import type {
   PackRuntimeAuthorityGrantRecord,

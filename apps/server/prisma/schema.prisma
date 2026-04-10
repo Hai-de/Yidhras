@@ -387,6 +387,69 @@ model ContextOverlayEntry {
   @@index([overlay_type, status])
 }
 
+model MemoryBlock {
+  id                String @id @default(uuid())
+  owner_agent_id    String
+  pack_id           String?
+  kind              String
+  status            String
+  title             String?
+  content_text      String
+  content_structured Json?
+  tags              String
+  keywords          String
+  source_ref        Json?
+  importance        Float
+  salience          Float
+  confidence        Float?
+  created_at_tick   BigInt
+  updated_at_tick   BigInt
+
+  behavior          MemoryBlockBehavior?
+  runtime_state     MemoryBlockRuntimeState?
+
+  @@index([owner_agent_id, updated_at_tick])
+  @@index([owner_agent_id, pack_id, status])
+  @@index([kind, status])
+}
+
+model MemoryBlockBehavior {
+  memory_block_id   String @id
+  behavior_json     Json
+  created_at_tick   BigInt
+  updated_at_tick   BigInt
+
+  memory_block      MemoryBlock @relation(fields: [memory_block_id], references: [id], onDelete: Cascade)
+}
+
+model MemoryBlockRuntimeState {
+  memory_block_id                     String @id
+  trigger_count                       Int     @default(0)
+  last_triggered_tick                 BigInt?
+  last_inserted_tick                  BigInt?
+  cooldown_until_tick                 BigInt?
+  delayed_until_tick                  BigInt?
+  retain_until_tick                   BigInt?
+  currently_active                    Boolean @default(false)
+  last_activation_score               Float?
+  recent_distance_from_latest_message Int?
+
+  memory_block                        MemoryBlock @relation(fields: [memory_block_id], references: [id], onDelete: Cascade)
+
+  @@index([currently_active, last_triggered_tick])
+}
+
+model MemoryBlockDeletionAudit {
+  id                String @id @default(uuid())
+  memory_block_id   String
+  deleted_by        String
+  actor_id          String?
+  reason            String?
+  deleted_at_tick   BigInt
+
+  @@index([memory_block_id, deleted_at_tick])
+}
+
 model ScenarioEntityState {
   id         String @id
   pack_id    String

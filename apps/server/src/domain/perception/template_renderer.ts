@@ -1,6 +1,6 @@
-import type { PermissionContext } from '../../permission/types.js';
 import { NarrativeResolver } from '../../narrative/resolver.js';
 import type { VariablePool } from '../../narrative/types.js';
+import type { PermissionContext } from '../../permission/types.js';
 
 export const renderTemplateWithVisibleVariables = (
   template: string,

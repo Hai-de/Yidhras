@@ -1,6 +1,6 @@
 import type { AppContext } from '../../app/context.js';
-import type { InferenceContext } from '../../inference/types.js';
 import { buildInferenceContext } from '../../inference/context_builder.js';
+import type { InferenceContext } from '../../inference/types.js';
 import { resolveAuthorityForSubject, resolveMediatorBindingsForPack } from '../authority/resolver.js';
 import { resolvePerceptionForSubject } from '../perception/resolver.js';
 

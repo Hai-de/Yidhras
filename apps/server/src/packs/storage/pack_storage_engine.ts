@@ -1,6 +1,7 @@
 import fs from 'fs';
 
 import type { WorldPackStorage, WorldPackStorageCollectionDefinition } from '../schema/storage_schema.js';
+import { asMutablePlanRecord, type PersistedStoragePlan,readPersistedStoragePlan, writePersistedStoragePlan } from './internal/plan_store.js';
 import {
   ensurePackRuntimeSqliteStorage,
   packRuntimeAuthorityGrantTableSpec,
@@ -12,7 +13,6 @@ import {
   type SqliteEngineOwnedTableSpec
 } from './internal/sqlite_engine_owned_store.js';
 import { ensurePackRuntimeDirectory, type PackRuntimeDatabaseLocation } from './pack_db_locator.js';
-import { asMutablePlanRecord, readPersistedStoragePlan, writePersistedStoragePlan, type PersistedStoragePlan } from './internal/plan_store.js';
 
 export interface PackStorageMaterializeSummary {
   location: PackRuntimeDatabaseLocation;
@@ -22,14 +22,6 @@ export interface PackStorageMaterializeSummary {
   packCollections: string[];
 }
 
-const ENGINE_OWNED_COLLECTION_KEYS = [
-  'world_entities',
-  'entity_states',
-  'authority_grants',
-  'mediator_bindings',
-  'rule_execution_records',
-  'projection_events'
-] as const;
 
 const LEGACY_SQLITE_MIGRATION_SPECS = {
   world_entities: packRuntimeWorldEntityTableSpec,

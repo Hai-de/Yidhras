@@ -1,5 +1,5 @@
-import type { DecisionResult, InferenceContext } from '../../inference/types.js';
 import type { AppContext } from '../../app/context.js';
+import type { DecisionResult, InferenceContext } from '../../inference/types.js';
 import { resolveAuthorityForSubject } from '../authority/resolver.js';
 
 export type IntentGroundingResolutionMode = 'exact' | 'translated' | 'narrativized' | 'blocked';

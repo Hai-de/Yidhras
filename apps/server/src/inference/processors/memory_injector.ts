@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import type { PromptFragment } from '../prompt_fragments.js';
+import type {
+  PromptFragment,
+  PromptFragmentAnchor,
+  PromptFragmentPlacementMode
+} from '../prompt_fragments.js';
 import type { PromptProcessor } from '../prompt_processors.js';
 
 const buildMemoryFragment = (
@@ -8,7 +12,13 @@ const buildMemoryFragment = (
   priority: number,
   source: string,
   content: string,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown>,
+  placement?: {
+    anchor?: PromptFragmentAnchor | null;
+    placement_mode?: PromptFragmentPlacementMode | null;
+    depth?: number | null;
+    order?: number | null;
+  }
 ): PromptFragment => {
   return {
     id: randomUUID(),
@@ -18,7 +28,46 @@ const buildMemoryFragment = (
     source,
     removable: true,
     replaceable: true,
+    anchor: placement?.anchor ?? null,
+    placement_mode: placement?.placement_mode ?? null,
+    depth: placement?.depth ?? null,
+    order: placement?.order ?? null,
     metadata
+  };
+};
+
+const toOptionalNumber = (value: unknown): number | null => {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+};
+
+const toPlacement = (metadata: Record<string, unknown> | undefined): {
+  anchor?: PromptFragmentAnchor | null;
+  placement_mode?: PromptFragmentPlacementMode | null;
+  depth?: number | null;
+  order?: number | null;
+} => {
+  const anchorValue = metadata?.placement_anchor;
+  const anchor =
+    anchorValue && typeof anchorValue === 'object' && !Array.isArray(anchorValue)
+      ? ({
+          kind: (anchorValue as Record<string, unknown>).kind,
+          value: (anchorValue as Record<string, unknown>).value
+        } as PromptFragmentAnchor)
+      : null;
+
+  const placementMode =
+    metadata?.placement_mode === 'prepend' ||
+    metadata?.placement_mode === 'append' ||
+    metadata?.placement_mode === 'before_anchor' ||
+    metadata?.placement_mode === 'after_anchor'
+      ? metadata.placement_mode
+      : null;
+
+  return {
+    anchor,
+    placement_mode: placementMode,
+    depth: toOptionalNumber(metadata?.placement_depth),
+    order: toOptionalNumber(metadata?.placement_order)
   };
 };
 
@@ -40,8 +89,10 @@ export const createMemoryInjectorPromptProcessor = (): PromptProcessor => {
             tags: entry.tags,
             importance: entry.importance,
             salience: entry.salience,
-            visibility: entry.visibility
-          }
+            visibility: entry.visibility,
+            ...(entry.metadata ? entry.metadata : {})
+          },
+          toPlacement(entry.metadata)
         );
       });
 
@@ -59,8 +110,10 @@ export const createMemoryInjectorPromptProcessor = (): PromptProcessor => {
             tags: entry.tags,
             importance: entry.importance,
             salience: entry.salience,
-            visibility: entry.visibility
-          }
+            visibility: entry.visibility,
+            ...(entry.metadata ? entry.metadata : {})
+          },
+          toPlacement(entry.metadata)
         );
       });
 
@@ -78,8 +131,10 @@ export const createMemoryInjectorPromptProcessor = (): PromptProcessor => {
             tags: entry.tags,
             importance: entry.importance,
             salience: entry.salience,
-            visibility: entry.visibility
-          }
+            visibility: entry.visibility,
+            ...(entry.metadata ? entry.metadata : {})
+          },
+          toPlacement(entry.metadata)
         );
       });
 

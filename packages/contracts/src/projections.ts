@@ -113,6 +113,40 @@ export const entityPackProjectionSchema = z.object({
   )
 })
 
+const memoryBlockDiagnosticsSchema = z.object({
+  evaluated: z.array(z.record(z.string(), z.unknown())),
+  inserted: z.array(nonEmptyStringSchema),
+  delayed: z.array(nonEmptyStringSchema),
+  cooling: z.array(nonEmptyStringSchema),
+  retained: z.array(nonEmptyStringSchema),
+  inactive: z.array(nonEmptyStringSchema)
+})
+
+const contextGovernanceSchema = z.object({
+  latest_policy: z.object({
+    policy_decisions: z.array(z.record(z.string(), z.unknown())),
+    blocked_nodes: z.array(z.record(z.string(), z.unknown())),
+    locked_nodes: z.array(z.record(z.string(), z.unknown())),
+    visibility_denials: z.array(z.record(z.string(), z.unknown()))
+  }),
+  overlay: z.object({
+    count: z.number().int().nonnegative(),
+    latest_items: z.array(
+      z.object({
+        node_id: z.string(),
+        overlay_id: z.string(),
+        overlay_type: z.string(),
+        persistence_mode: z.string(),
+        created_by: z.enum(['system', 'agent']),
+        status: z.string(),
+        preferred_slot: z.string().nullable()
+      })
+    ),
+    latest_mutations: z.array(z.record(z.string(), z.unknown()))
+  }),
+  memory_blocks: memoryBlockDiagnosticsSchema
+})
+
 export const entityOverviewDataSchema = z.object({
   profile: z.object({
     id: nonEmptyStringSchema,
@@ -144,6 +178,8 @@ export const entityOverviewDataSchema = z.object({
     recent_logs: z.array(z.record(z.string(), z.unknown()))
   }),
   memory: z.object({
-    summary: z.record(z.string(), z.unknown())
-  })
+    summary: z.record(z.string(), z.unknown()),
+    latest_blocks: memoryBlockDiagnosticsSchema
+  }),
+  context_governance: contextGovernanceSchema
 })

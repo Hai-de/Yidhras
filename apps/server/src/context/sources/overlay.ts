@@ -1,5 +1,5 @@
-import type { ContextNode } from '../types.js';
 import type { ContextOverlayEntry } from '../overlay/types.js';
+import type { ContextNode } from '../types.js';
 
 const buildOverlayText = (entry: ContextOverlayEntry): string => {
   if (entry.title && entry.title.trim().length > 0) {

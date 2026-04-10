@@ -8,6 +8,7 @@ import { IdentityService } from '../identity/service.js';
 import type { IdentityContext } from '../identity/types.js';
 import { createMemoryService } from '../memory/service.js';
 import type { VariablePool } from '../narrative/types.js';
+import { DEFAULT_PACK_WORLD_ENTITY_ID } from '../packs/runtime/core_models.js';
 import { listPackEntityStateProjectionRecords } from '../packs/storage/entity_state_projection.js';
 import { ApiError } from '../utils/api_error.js';
 import type {
@@ -26,7 +27,6 @@ import type {
 } from './types.js';
 
 const SUPPORTED_STRATEGIES: InferenceStrategy[] = ['mock', 'rule_based', 'model_routed'];
-const DEFAULT_PACK_WORLD_ENTITY_ID = '__world__';
 
 interface BindingRecord {
   id: string;
@@ -59,24 +59,6 @@ interface ResolvedActor {
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
-
-const toIdentityContext = (identity: {
-  id: string;
-  type: string;
-  name: string | null;
-  provider: string | null;
-  status: string | null;
-  claims: unknown;
-}): IdentityContext => {
-  return {
-    id: identity.id,
-    type: identity.type as IdentityContext['type'],
-    name: identity.name,
-    provider: identity.provider,
-    status: identity.status,
-    claims: (identity.claims as Record<string, unknown> | null | undefined) ?? null
-  };
 };
 
 const toBindingRef = (binding: BindingRecord): InferenceBindingRef => {
@@ -140,27 +122,78 @@ const listActiveBindingsForIdentity = async (context: AppContext, identityId: st
         }
       }
     },
-    orderBy: { created_at: 'desc' }
+    orderBy: {
+      created_at: 'desc'
+    }
   }) as Promise<BindingRecord[]>;
 };
 
-const resolveIdentityOnlyActor = async (context: AppContext, identityId: string): Promise<ResolvedActor> => {
-  const identityService = createIdentityService(context);
-  const identity = await identityService.fetchIdentity(identityId);
-  if (!identity) {
-    throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'identity_id could not be resolved', {
-      identity_id: identityId
-    });
+const resolveIdentityById = async (context: AppContext, identityId: string): Promise<IdentityContext | null> => {
+  const service = createIdentityService(context);
+  return service.fetchIdentity(identityId);
+};
+
+const resolveActor = async (context: AppContext, input: InferenceRequestInput): Promise<ResolvedActor> => {
+  if (input.agent_id) {
+    const agentContext = await getAgentContextSnapshot(context, input.agent_id);
+    return {
+      identity: agentContext.identity as IdentityContext,
+      actorRef: {
+        identity_id: agentContext.identity.id,
+        identity_type: agentContext.identity.type as IdentityContext['type'],
+        role: 'active',
+        agent_id: input.agent_id,
+        atmosphere_node_id: null
+      },
+      actorDisplayName: agentContext.identity.name ?? input.agent_id,
+      bindingRef: null,
+      resolvedAgentId: input.agent_id
+    };
   }
 
-  const bindings = await listActiveBindingsForIdentity(context, identityId);
-  const activeBinding = bindings.find(binding => binding.role === 'active' && binding.agent_id);
-  const atmosphereBinding = bindings.find(
-    binding => binding.role === 'atmosphere' && binding.atmosphere_node_id && binding.atmosphere_node?.owner_id
-  );
-  const binding = activeBinding ?? atmosphereBinding;
+  if (input.identity_id) {
+    const identity = await resolveIdentityById(context, input.identity_id);
+    if (!identity) {
+      throw new ApiError(404, 'IDENTITY_NOT_FOUND', 'Identity not found', {
+        identity_id: input.identity_id
+      });
+    }
 
-  if (!binding && (identity.id === 'system' || identity.type === 'system')) {
+    const bindings = await listActiveBindingsForIdentity(context, identity.id);
+    const binding = bindings[0] ?? null;
+
+    if (binding?.agent_id) {
+      return {
+        identity,
+        actorRef: {
+          identity_id: identity.id,
+          identity_type: identity.type,
+          role: binding.role === 'atmosphere' ? 'atmosphere' : 'active',
+          agent_id: binding.agent_id,
+          atmosphere_node_id: binding.atmosphere_node_id
+        },
+        actorDisplayName: identity.name ?? binding.agent_id,
+        bindingRef: toBindingRef(binding),
+        resolvedAgentId: binding.agent_id
+      };
+    }
+
+    if (binding?.atmosphere_node) {
+      return {
+        identity,
+        actorRef: {
+          identity_id: identity.id,
+          identity_type: identity.type,
+          role: 'atmosphere',
+          agent_id: null,
+          atmosphere_node_id: binding.atmosphere_node.id
+        },
+        actorDisplayName: binding.atmosphere_node.name,
+        bindingRef: toBindingRef(binding),
+        resolvedAgentId: null
+      };
+    }
+
     return {
       identity,
       actorRef: {
@@ -176,256 +209,33 @@ const resolveIdentityOnlyActor = async (context: AppContext, identityId: string)
     };
   }
 
-  if (!binding) {
-    throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'identity_id has no active binding', {
-      identity_id: identityId
-    });
-  }
-
-  if (binding.role === 'active') {
-    return {
-      identity,
-      actorRef: {
-        identity_id: identity.id,
-        identity_type: identity.type,
-        role: 'active',
-        agent_id: binding.agent_id,
-        atmosphere_node_id: null
-      },
-      actorDisplayName: binding.identity.name ?? binding.agent_id ?? identity.id,
-      bindingRef: toBindingRef(binding),
-      resolvedAgentId: binding.agent_id
-    };
+  const systemIdentity = await resolveIdentityById(context, 'system');
+  if (!systemIdentity) {
+    throw new ApiError(500, 'SYSTEM_IDENTITY_MISSING', 'System identity is not configured');
   }
 
   return {
-    identity,
+    identity: systemIdentity,
     actorRef: {
-      identity_id: identity.id,
-      identity_type: identity.type,
-      role: 'atmosphere',
-      agent_id: binding.atmosphere_node?.owner_id ?? null,
-      atmosphere_node_id: binding.atmosphere_node_id
-    },
-    actorDisplayName: binding.atmosphere_node?.name ?? binding.identity.name ?? identity.id,
-    bindingRef: toBindingRef(binding),
-    resolvedAgentId: binding.atmosphere_node?.owner_id ?? null
-  };
-};
-
-const resolveAgentOnlyActor = async (context: AppContext, agentId: string): Promise<ResolvedActor> => {
-  const bindings = (await context.prisma.identityNodeBinding.findMany({
-    where: {
-      agent_id: agentId,
+      identity_id: systemIdentity.id,
+      identity_type: systemIdentity.type,
       role: 'active',
-      status: 'active'
-    },
-    include: {
-      identity: true,
-      atmosphere_node: {
-        select: {
-          id: true,
-          name: true,
-          owner_id: true
-        }
-      }
-    },
-    orderBy: { created_at: 'desc' }
-  })) as BindingRecord[];
-
-  if (bindings.length === 0) {
-    throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'agent_id has no active binding', {
-      agent_id: agentId
-    });
-  }
-
-  if (bindings.length > 1) {
-    throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'agent_id resolves to multiple active bindings', {
-      agent_id: agentId,
-      binding_ids: bindings.map(binding => binding.id)
-    });
-  }
-
-  const binding = bindings[0];
-  const identity = toIdentityContext(binding.identity);
-
-  return {
-    identity,
-    actorRef: {
-      identity_id: identity.id,
-      identity_type: identity.type,
-      role: 'active',
-      agent_id: binding.agent_id,
+      agent_id: null,
       atmosphere_node_id: null
     },
-    actorDisplayName: binding.identity.name ?? binding.agent_id ?? identity.id,
-    bindingRef: toBindingRef(binding),
-    resolvedAgentId: binding.agent_id
+    actorDisplayName: systemIdentity.name ?? 'system',
+    bindingRef: null,
+    resolvedAgentId: null
   };
 };
 
-const resolveExplicitActor = async (
-  context: AppContext,
-  agentId: string,
-  identityId: string
-): Promise<ResolvedActor> => {
-  const identityService = createIdentityService(context);
-  const identity = await identityService.fetchIdentity(identityId);
-  if (!identity) {
-    throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'identity_id could not be resolved', {
-      identity_id: identityId
-    });
-  }
-
-  const bindings = await listActiveBindingsForIdentity(context, identityId);
-  const matchingActiveBinding = bindings.find(binding => binding.role === 'active' && binding.agent_id === agentId);
-  if (matchingActiveBinding) {
-    return {
-      identity,
-      actorRef: {
-        identity_id: identity.id,
-        identity_type: identity.type,
-        role: 'active',
-        agent_id: matchingActiveBinding.agent_id,
-        atmosphere_node_id: null
-      },
-      actorDisplayName: matchingActiveBinding.identity.name ?? matchingActiveBinding.agent_id ?? identity.id,
-      bindingRef: toBindingRef(matchingActiveBinding),
-      resolvedAgentId: matchingActiveBinding.agent_id
-    };
-  }
-
-  const matchingAtmosphereBinding = bindings.find(
-    binding => binding.role === 'atmosphere' && binding.atmosphere_node?.owner_id === agentId
-  );
-  if (matchingAtmosphereBinding) {
-    return {
-      identity,
-      actorRef: {
-        identity_id: identity.id,
-        identity_type: identity.type,
-        role: 'atmosphere',
-        agent_id: matchingAtmosphereBinding.atmosphere_node?.owner_id ?? null,
-        atmosphere_node_id: matchingAtmosphereBinding.atmosphere_node_id
-      },
-      actorDisplayName:
-        matchingAtmosphereBinding.atmosphere_node?.name ?? matchingAtmosphereBinding.identity.name ?? identity.id,
-      bindingRef: toBindingRef(matchingAtmosphereBinding),
-      resolvedAgentId: matchingAtmosphereBinding.atmosphere_node?.owner_id ?? null
-    };
-  }
-
-  throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'agent_id and identity_id do not resolve to the same active actor', {
-    agent_id: agentId,
-    identity_id: identityId
-  });
-};
-
-const resolveActor = async (context: AppContext, input: InferenceRequestInput): Promise<ResolvedActor> => {
-  const agentId = input.agent_id?.trim();
-  const identityId = input.identity_id?.trim();
-
-  if (!agentId && !identityId) {
-    throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'Either agent_id or identity_id is required');
-  }
-
-  if (agentId && identityId) {
-    return resolveExplicitActor(context, agentId, identityId);
-  }
-
-  if (identityId) {
-    return resolveIdentityOnlyActor(context, identityId);
-  }
-
-  return resolveAgentOnlyActor(context, agentId!);
-};
-
-const buildAgentSnapshot = (
-  identity: Record<string, unknown> | null | undefined
-): InferenceAgentSnapshot | null => {
-  if (!identity) {
-    return null;
-  }
-
-  const id = typeof identity.id === 'string' ? identity.id : null;
-  const name = typeof identity.name === 'string' ? identity.name : null;
-  const type = typeof identity.type === 'string' ? identity.type : null;
-  const snr = typeof identity.snr === 'number' ? identity.snr : null;
-  const isPinned = typeof identity.is_pinned === 'boolean' ? identity.is_pinned : null;
-
-  if (!id || !name || !type || snr === null || isPinned === null) {
-    return null;
-  }
-
+const buildAgentSnapshot = (identity: Record<string, unknown>): InferenceAgentSnapshot => {
   return {
-    id,
-    name,
-    type,
-    snr,
-    is_pinned: isPinned
-  };
-};
-
-const normalizePackStateRecord = (value: unknown): InferencePackStateRecord => {
-  if (!isRecord(value)) {
-    return {};
-  }
-
-  return value as InferencePackStateRecord;
-};
-
-const buildPackStateSnapshot = async (
-  _context: AppContext,
-  packId: string,
-  resolvedAgentId: string | null,
-  attributes: Record<string, unknown>
-): Promise<InferencePackStateSnapshot> => {
-  const states = await listPackEntityStateProjectionRecords(packId);
-
-  const actorState = resolvedAgentId
-    ? states.find(state => state.entity_id === resolvedAgentId && state.state_namespace === 'core') ?? null
-    : null;
-
-  const artifactStates = states.filter(state => state.state_namespace === 'core' && state.entity_id.startsWith('artifact-'));
-  const ownedArtifacts: InferencePackArtifactSnapshot[] = resolvedAgentId
-    ? artifactStates
-        .filter(state => state.state_json.holder_agent_id === resolvedAgentId)
-        .map(state => ({
-          id: state.entity_id,
-          state: normalizePackStateRecord(state.state_json)
-        }))
-    : [];
-
-  const worldState =
-    states.find(state => state.entity_id === DEFAULT_PACK_WORLD_ENTITY_ID && state.state_namespace === 'world') ?? null;
-
-  return {
-    actor_roles: actorState && Array.isArray(actorState.state_json.roles)
-      ? actorState.state_json.roles.filter((value): value is string => typeof value === 'string')
-      : [],
-    actor_state: actorState ? normalizePackStateRecord(actorState.state_json) : null,
-    owned_artifacts: ownedArtifacts,
-    world_state: worldState ? normalizePackStateRecord(worldState.state_json) : null,
-    latest_event: typeof attributes.latest_event_semantic_type === 'string'
-      ? {
-          event_id: 'synthetic-latest-event',
-          title: String(attributes.latest_event_semantic_type),
-          type: 'history',
-          semantic_type: attributes.latest_event_semantic_type,
-          created_at: _context.sim.getCurrentTick().toString()
-        }
-      : null
-  };
-};
-
-const buildPackRuntimeContract = (context: AppContext): InferencePackRuntimeContract => {
-  const pack = context.sim.getActivePack();
-  return {
-    invocation_rules: (pack?.rules?.invocation ?? []).map(rule => ({
-      id: rule.id,
-      when: rule.when ?? {},
-      then: rule.then ?? {}
-    }))
+    id: typeof identity.id === 'string' ? identity.id : '',
+    name: typeof identity.name === 'string' ? identity.name : '',
+    type: typeof identity.type === 'string' ? identity.type : '',
+    snr: typeof identity.snr === 'number' ? identity.snr : 0,
+    is_pinned: identity.is_pinned === true
   };
 };
 
@@ -435,23 +245,24 @@ const buildPolicySummary = async (
   attributes: Record<string, unknown>
 ): Promise<InferencePolicySummary> => {
   const service = createAccessPolicyService(context);
-  const readInput = {
-    identity,
-    resource: 'social_post',
-    action: 'read',
-    attributes
-  };
-  const writeInput = {
-    identity,
-    resource: 'social_post',
-    action: 'write',
-    attributes
-  };
-  const readableFields = ['id', 'author_id', 'content', 'created_at'];
-  const writableFields = ['content'];
-
-  const readResult = await service.evaluateFields(readInput, readableFields);
-  const writeResult = await service.evaluateFields(writeInput, writableFields);
+  const readResult = await service.evaluateFields(
+    {
+      identity,
+      resource: 'social_post',
+      action: 'read',
+      attributes
+    },
+    ['id', 'author_id', 'content', 'created_at', 'content.private.preview', 'content.private.raw']
+  );
+  const writeResult = await service.evaluateFields(
+    {
+      identity,
+      resource: 'social_post',
+      action: 'write',
+      attributes
+    },
+    ['content']
+  );
 
   return {
     social_post_read_allowed: readResult.allowedFields.size > 0,
@@ -462,65 +273,143 @@ const buildPolicySummary = async (
 };
 
 const buildTransmissionProfile = (
-  actorRef: InferenceContext['actor_ref'],
+  actorRef: InferenceActorRef,
   agentSnapshot: InferenceAgentSnapshot | null,
   policySummary: InferencePolicySummary,
   attributes: Record<string, unknown>
 ): InferenceTransmissionProfile => {
-  const derivedFrom: string[] = [];
+  const explicitPolicy = typeof attributes.transmission_policy === 'string' ? attributes.transmission_policy : null;
+  const explicitDropChance = typeof attributes.transmission_drop_chance === 'number' ? attributes.transmission_drop_chance : null;
+  const explicitDelayTicks =
+    typeof attributes.transmission_delay_ticks === 'string' || typeof attributes.transmission_delay_ticks === 'number'
+      ? String(attributes.transmission_delay_ticks)
+      : null;
 
-  if (typeof attributes.transmission_policy === 'string') {
-    const policy = attributes.transmission_policy;
-    if (policy === 'reliable' || policy === 'best_effort' || policy === 'fragile' || policy === 'blocked') {
-      derivedFrom.push('attributes.transmission_policy');
-      return {
-        policy,
-        drop_reason: policy === 'blocked' ? 'policy_blocked' : null,
-        delay_ticks: typeof attributes.transmission_delay_ticks === 'string' ? attributes.transmission_delay_ticks : '1',
-        drop_chance: typeof attributes.transmission_drop_chance === 'number' ? attributes.transmission_drop_chance : policy === 'blocked' ? 1 : 0,
-        derived_from: derivedFrom
-      };
+  if (explicitPolicy === 'blocked') {
+    return {
+      policy: 'blocked',
+      drop_reason: 'policy_blocked',
+      delay_ticks: explicitDelayTicks ?? '0',
+      drop_chance: 1,
+      derived_from: ['attributes.transmission_policy']
+    };
+  }
+
+  const actorSNR = agentSnapshot?.snr ?? 0.5;
+  const readRestricted = !policySummary.social_post_read_allowed;
+  const basePolicy = readRestricted ? 'best_effort' : actorSNR < 0.3 ? 'fragile' : 'reliable';
+  const dropChance = explicitDropChance ?? (basePolicy === 'fragile' ? 0.35 : basePolicy === 'best_effort' ? 0.15 : 0);
+
+  return {
+    policy:
+      explicitPolicy === 'reliable' || explicitPolicy === 'best_effort' || explicitPolicy === 'fragile'
+        ? explicitPolicy
+        : basePolicy,
+    drop_reason: null,
+    delay_ticks: explicitDelayTicks ?? '1',
+    drop_chance: dropChance,
+    derived_from: [
+      ...(explicitPolicy ? ['attributes.transmission_policy'] : ['default.reliable']),
+      ...(actorRef.role === 'atmosphere' ? ['actor_ref.role'] : []),
+      ...(readRestricted ? ['policy_summary.social_post_read_allowed'] : []),
+      ...(agentSnapshot ? ['agent_snapshot.snr'] : [])
+    ]
+  };
+};
+
+const parsePackStateRecord = (value: unknown): InferencePackStateRecord => {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  return value as InferencePackStateRecord;
+};
+
+const buildPackStateSnapshot = async (
+  context: AppContext,
+  packId: string,
+  resolvedAgentId: string | null,
+  attributes: Record<string, unknown>
+): Promise<InferencePackStateSnapshot> => {
+  const rows = await listPackEntityStateProjectionRecords(packId);
+
+  let actorState: InferencePackStateRecord | null = null;
+  let worldState: InferencePackStateRecord | null = null;
+  const artifacts: InferencePackArtifactSnapshot[] = [];
+
+  for (const row of rows) {
+    const state = parsePackStateRecord(row.state_json);
+    if (resolvedAgentId && row.entity_id === resolvedAgentId && row.state_namespace === 'core') {
+      actorState = state;
+      continue;
+    }
+    if (row.entity_id === DEFAULT_PACK_WORLD_ENTITY_ID && row.state_namespace === 'world') {
+      worldState = state;
+      continue;
+    }
+    if (row.state_namespace === 'artifact') {
+      artifacts.push({
+        id: row.entity_id,
+        state
+      });
     }
   }
 
-  if (!policySummary.social_post_write_allowed) {
-    return {
-      policy: 'blocked',
-      drop_reason: 'visibility_denied',
-      delay_ticks: '1',
-      drop_chance: 1,
-      derived_from: ['policy_summary.social_post_write_allowed=false']
-    };
-  }
+  const actorRoles = Array.isArray(attributes.actor_roles)
+    ? attributes.actor_roles.filter((entry): entry is string => typeof entry === 'string')
+    : [];
 
-  if (actorRef.role === 'atmosphere') {
-    derivedFrom.push('actor_ref.role=atmosphere');
-    return {
-      policy: 'fragile',
-      drop_reason: 'low_signal_quality',
-      delay_ticks: '2',
-      drop_chance: 0.5,
-      derived_from: derivedFrom
-    };
-  }
+  const latestEventRecord = await context.sim.prisma.event.findFirst({
+    orderBy: {
+      tick: 'desc'
+    }
+  });
 
-  if (agentSnapshot && agentSnapshot.snr < 0.4) {
-    derivedFrom.push('agent_snapshot.snr<0.4');
-    return {
-      policy: 'fragile',
-      drop_reason: 'low_signal_quality',
-      delay_ticks: '2',
-      drop_chance: 0.5,
-      derived_from: derivedFrom
-    };
+  const latestEvent = latestEventRecord
+    ? {
+        event_id: latestEventRecord.id,
+        title: latestEventRecord.title,
+        type: latestEventRecord.type,
+        semantic_type:
+          latestEventRecord.impact_data && latestEventRecord.impact_data.trim().length > 0
+            ? (() => {
+                try {
+                  const parsed = JSON.parse(latestEventRecord.impact_data) as unknown;
+                  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    const semanticType = (parsed as Record<string, unknown>).semantic_type;
+                    return typeof semanticType === 'string' ? semanticType : null;
+                  }
+                } catch {
+                  return null;
+                }
+                return null;
+              })()
+            : null,
+        created_at: latestEventRecord.created_at.toString()
+      }
+    : null;
+
+  return {
+    actor_roles: actorRoles,
+    actor_state: actorState,
+    owned_artifacts: artifacts,
+    world_state: worldState,
+    latest_event: latestEvent
+  };
+};
+
+const buildPackRuntimeContract = (context: AppContext): InferencePackRuntimeContract => {
+  const activePack = context.sim.getActivePack();
+  if (!activePack) {
+    return {};
   }
 
   return {
-    policy: 'reliable',
-    drop_reason: null,
-    delay_ticks: '1',
-    drop_chance: 0,
-    derived_from: ['default.reliable']
+    invocation_rules: (activePack.rules?.invocation ?? []).map(rule => ({
+      id: rule.id,
+      when: { ...(rule.when ?? {}) },
+      then: { ...(rule.then ?? {}) }
+    }))
   };
 };
 
@@ -561,6 +450,7 @@ export const buildInferenceContext = async (
   });
   const contextResult = await contextService.buildContextRun({
     actor_ref: resolvedActor.actorRef as unknown as Record<string, unknown>,
+    identity: resolvedActor.identity,
     resolved_agent_id: resolvedActor.resolvedAgentId,
     tick: context.sim.getCurrentTick(),
     policy_summary: policySummary,
@@ -594,4 +484,4 @@ export const buildInferenceContext = async (
     pack_state: packState,
     pack_runtime: packRuntime
   };
-};
+}

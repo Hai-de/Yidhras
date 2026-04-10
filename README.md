@@ -1,6 +1,6 @@
 # Yidhras (伊德海拉)
 
-Yidhras 是一个以 world pack 驱动的叙事模拟项目，包含服务端运行时、前端操作台和前后端共享 contracts。
+Yidhras 是以 world pack 驱动的叙事模拟项目，被设计用于模拟社会情报流转，散播，代理人链路。
 
 > 本文件只保留仓库概览、启动方式、常用命令与文档导航。更细的接口、架构和业务规则见 `docs/`。
 
@@ -102,6 +102,7 @@ pnpm --filter yidhras-server reset:dev-db
 
 - 服务端包含 runtime、world pack 加载、scheduler、inference / workflow、audit 与 read-model API。
 - 前端包含 overview、workflow、scheduler、graph、social、timeline、agents 页面。
+- operator 壳层当前通过 `/api/status`、`/api/clock/formatted`、`/api/system/notifications` 与 `/api/system/notifications/clear` 暴露运行态与通知读面。
 - 内部 AI 执行链为 `AiTaskService -> RouteResolver -> ModelGateway -> provider adapters`，当前默认提供 `mock` 与 `openai` 适配器。
 - `/api/inference/*` 的公开契约当前仍以 `mock | rule_based` 为准；`model_routed` 仍属于内部能力。
 - AI 调用观测已通过 `AiInvocationRecord` 落库，并提供 `GET /api/inference/ai-invocations` 与 `GET /api/inference/ai-invocations/:id` 只读查询。

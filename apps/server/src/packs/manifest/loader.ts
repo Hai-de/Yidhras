@@ -2,8 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import * as YAML from 'yaml';
 
-import { parseWorldPackConstitution } from './constitution_loader.js';
 import type { SimulationTimeConfig, WorldPack } from './constitution_loader.js';
+import { parseWorldPackConstitution } from './constitution_loader.js';
 
 export class PackManifestLoader {
   private packs: Map<string, WorldPack> = new Map();

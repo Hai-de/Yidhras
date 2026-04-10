@@ -1,10 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
 import type { AppContext } from '../app/context.js';
+import type { IdentityContext } from '../identity/types.js';
 import type {
   InferencePackStateSnapshot,
   InferencePolicySummary
 } from '../inference/types.js';
+import { createPrismaLongMemoryBlockStore } from '../memory/blocks/store.js';
+import type { LongMemoryBlockStore } from '../memory/blocks/types.js';
 import { createMemoryService, type MemoryService } from '../memory/service.js';
 import type { MemoryContextPack } from '../memory/types.js';
 import { buildLegacyMemoryContextPack } from './compat.js';
@@ -12,10 +15,11 @@ import { createContextOverlayStore } from './overlay/store.js';
 import type { ContextOverlayStore } from './overlay/types.js';
 import { applyPolicyDecisionsToSelection, evaluateContextPolicies } from './policy_engine.js';
 import { buildContextNodesFromSources, createDefaultContextSourceAdapters } from './source_registry.js';
-import type { ContextOverlayLoadedNode, ContextRun, ContextSelectionResult } from './types.js';
+import type { ContextMemoryBlockDiagnostics, ContextOverlayLoadedNode, ContextRun, ContextSelectionResult } from './types.js';
 
 export interface BuildContextRunInput {
   actor_ref: Record<string, unknown>;
+  identity?: IdentityContext | null;
   resolved_agent_id: string | null;
   tick: bigint;
   policy_summary?: InferencePolicySummary | null;
@@ -37,6 +41,7 @@ export interface CreateContextServiceOptions {
   context: AppContext;
   memoryService?: MemoryService;
   overlayStore?: ContextOverlayStore | null;
+  longMemoryBlockStore?: LongMemoryBlockStore | null;
 }
 
 const buildNodeCountsByType = (nodeTypes: string[]): Record<string, number> => {
@@ -46,10 +51,20 @@ const buildNodeCountsByType = (nodeTypes: string[]): Record<string, number> => {
   }, {});
 };
 
+const emptyMemoryBlockDiagnostics = (): ContextMemoryBlockDiagnostics => ({
+  evaluated: [],
+  inserted: [],
+  delayed: [],
+  cooling: [],
+  retained: [],
+  inactive: []
+});
+
 export const createContextService = ({
   context,
   memoryService = createMemoryService({ context }),
-  overlayStore = createContextOverlayStore(context)
+  overlayStore = createContextOverlayStore(context),
+  longMemoryBlockStore = createPrismaLongMemoryBlockStore(context)
 }: CreateContextServiceOptions): ContextService => {
   return {
     async buildContextRun(input) {
@@ -58,10 +73,11 @@ export const createContextService = ({
         resolved_agent_id: input.resolved_agent_id
       });
 
-      const adapters = createDefaultContextSourceAdapters({ overlayStore });
+      const adapters = createDefaultContextSourceAdapters({ context, overlayStore, longMemoryBlockStore });
       const built = await buildContextNodesFromSources(adapters, {
         tick: input.tick,
         actor_ref: input.actor_ref,
+        identity: input.identity ?? null,
         resolved_agent_id: input.resolved_agent_id,
         memory_selection: memoryResult.selection,
         policy_summary: input.policy_summary ?? null,
@@ -96,6 +112,11 @@ export const createContextService = ({
           preferred_slot: node.placement_policy.preferred_slot
         }));
 
+      const memoryBlockDiagnostics =
+        built.diagnostics['memory-block-runtime'] && typeof built.diagnostics['memory-block-runtime'] === 'object'
+          ? ((built.diagnostics['memory-block-runtime'] as { memory_blocks?: ContextMemoryBlockDiagnostics }).memory_blocks ?? emptyMemoryBlockDiagnostics())
+          : emptyMemoryBlockDiagnostics();
+
       const diagnosticsBase = {
         source_adapter_names: built.adapter_names,
         node_count: policySelection.nodes.length,
@@ -108,6 +129,7 @@ export const createContextService = ({
         visibility_denials: policyResult.visibility_denials,
         overlay_nodes_loaded: overlayNodesLoaded,
         overlay_nodes_mutated: [],
+        memory_blocks: memoryBlockDiagnostics,
         submitted_directives: [],
         approved_directives: [],
         denied_directives: [],

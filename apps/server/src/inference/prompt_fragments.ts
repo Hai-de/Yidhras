@@ -9,6 +9,14 @@ export type PromptFragmentSlot =
   | 'output_contract'
   | 'post_process';
 
+export type PromptFragmentPlacementMode = 'prepend' | 'append' | 'before_anchor' | 'after_anchor';
+export type PromptFragmentAnchorKind = 'slot_start' | 'slot_end' | 'source' | 'tag' | 'fragment_id';
+
+export interface PromptFragmentAnchor {
+  kind: PromptFragmentAnchorKind;
+  value: string;
+}
+
 export interface PromptFragment {
   id: string;
   slot: PromptFragmentSlot;
@@ -17,5 +25,9 @@ export interface PromptFragment {
   source: string;
   removable?: boolean;
   replaceable?: boolean;
+  anchor?: PromptFragmentAnchor | null;
+  placement_mode?: PromptFragmentPlacementMode | null;
+  depth?: number | null;
+  order?: number | null;
   metadata?: Record<string, unknown>;
 }

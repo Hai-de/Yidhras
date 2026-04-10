@@ -9,6 +9,7 @@ export interface MemorySourceRef {
   intent_id?: string;
   post_id?: string;
   event_id?: string;
+  source_message_id?: string;
 }
 
 export interface MemoryVisibility {
@@ -82,3 +83,5 @@ export interface LongTermMemoryStore {
   search(input: LongTermMemorySearchInput): Promise<MemoryEntry[]>;
   save(entries: MemoryEntry[]): Promise<void>;
 }
+
+export * from './blocks/types.js';

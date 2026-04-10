@@ -1,6 +1,5 @@
-import { Prisma } from '@prisma/client';
-
 import { auditFeedQuerySchema, auditViewKindSchema } from '@yidhras/contracts';
+
 import type { AppContext } from '../context.js';
 import { parseQuery } from '../http/zod.js';
 import { getWorkflowSnapshotByJobId, listInferenceJobs } from './inference_workflow.js';

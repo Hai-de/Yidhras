@@ -119,6 +119,14 @@ export interface AgentOverviewSnapshot {
       latest_memory_selection: Record<string, unknown> | null;
       latest_prompt_processing_trace: Record<string, unknown> | null;
     };
+    latest_blocks: {
+      evaluated: Array<Record<string, unknown>>;
+      inserted: string[];
+      delayed: string[];
+      cooling: string[];
+      retained: string[];
+      inactive: string[];
+    };
   };
   context_governance: {
     latest_policy: {
@@ -139,6 +147,14 @@ export interface AgentOverviewSnapshot {
         preferred_slot: string | null;
       }>;
       latest_mutations: Array<Record<string, unknown>>;
+    };
+    memory_blocks: {
+      evaluated: Array<Record<string, unknown>>;
+      inserted: string[];
+      delayed: string[];
+      cooling: string[];
+      retained: string[];
+      inactive: string[];
     };
   };
 }
@@ -261,62 +277,57 @@ export const getEntityOverview = async (
   });
 
   if (!agent) {
-    throw new ApiError(404, 'AGENT_NOT_FOUND', 'Agent not found', { agent_id: resolvedAgentId });
+    throw new ApiError(404, 'AGENT_NOT_FOUND', 'Agent not found', {
+      agent_id: resolvedAgentId
+    });
   }
 
-  const [bindings, outgoingRelationships, incomingRelationships, auditFeed, workflowList, snrLogs, recentTraces, packProjection] = await Promise.all([
+  const [
+    bindings,
+    incomingRelationships,
+    outgoingRelationships,
+    auditFeed,
+    workflowList,
+    snrLogs,
+    recentTraces,
+    packProjection
+  ] = await Promise.all([
     context.prisma.identityNodeBinding.findMany({
       where: {
         agent_id: resolvedAgentId
       },
+      include: {
+        identity: true
+      },
       orderBy: {
         created_at: 'desc'
-      },
-      include: {
-        identity: {
-          select: {
-            id: true
-          }
-        }
-      }
-    }),
-    context.prisma.relationship.findMany({
-      where: {
-        from_id: resolvedAgentId
-      },
-      orderBy: {
-        updated_at: 'desc'
-      },
-      take: limit,
-      include: {
-        to: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
       }
     }),
     context.prisma.relationship.findMany({
       where: {
         to_id: resolvedAgentId
       },
+      include: {
+        from: true
+      },
       orderBy: {
         updated_at: 'desc'
+      }
+    }),
+    context.prisma.relationship.findMany({
+      where: {
+        from_id: resolvedAgentId
       },
-      take: limit,
       include: {
-        from: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
+        to: true
+      },
+      orderBy: {
+        updated_at: 'desc'
       }
     }),
     listAuditFeed(context, {
-      agent_id: resolvedAgentId,
-      limit: Math.max(limit * 3, 20)
+      filter_agent_id: resolvedAgentId,
+      limit
     }),
     listInferenceJobs(context, {
       agent_id: resolvedAgentId,
@@ -371,6 +382,9 @@ export const getEntityOverview = async (
   const latestOverlayNodesMutated = latestContextSnapshot && Array.isArray(latestContextSnapshot.overlay_nodes_mutated)
     ? latestContextSnapshot.overlay_nodes_mutated.filter(isRecord).map(item => item as Record<string, unknown>)
     : [];
+  const latestMemoryBlocks = latestContextSnapshot && isRecord(latestContextSnapshot.memory_blocks)
+    ? latestContextSnapshot.memory_blocks as Record<string, unknown>
+    : null;
   const packEntity = packProjection.entities.find(entity => entity.id === resolvedAgentId) ?? null;
 
   const bindingSummary = {
@@ -506,6 +520,26 @@ export const getEntityOverview = async (
         latest_prompt_processing_trace: latestContextSnapshot && isRecord(latestContextSnapshot.prompt_processing_trace)
           ? (latestContextSnapshot.prompt_processing_trace as Record<string, unknown>)
           : null
+      },
+      latest_blocks: {
+        evaluated: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.evaluated)
+          ? latestMemoryBlocks.evaluated.filter(isRecord).map(item => item as Record<string, unknown>)
+          : [],
+        inserted: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.inserted)
+          ? latestMemoryBlocks.inserted.filter((item): item is string => typeof item === 'string')
+          : [],
+        delayed: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.delayed)
+          ? latestMemoryBlocks.delayed.filter((item): item is string => typeof item === 'string')
+          : [],
+        cooling: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.cooling)
+          ? latestMemoryBlocks.cooling.filter((item): item is string => typeof item === 'string')
+          : [],
+        retained: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.retained)
+          ? latestMemoryBlocks.retained.filter((item): item is string => typeof item === 'string')
+          : [],
+        inactive: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.inactive)
+          ? latestMemoryBlocks.inactive.filter((item): item is string => typeof item === 'string')
+          : []
       }
     },
     context_governance: {
@@ -527,6 +561,26 @@ export const getEntityOverview = async (
           preferred_slot: typeof item.preferred_slot === 'string' ? item.preferred_slot : null
         })),
         latest_mutations: latestOverlayNodesMutated.slice(0, limit)
+      },
+      memory_blocks: {
+        evaluated: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.evaluated)
+          ? latestMemoryBlocks.evaluated.filter(isRecord).map(item => item as Record<string, unknown>)
+          : [],
+        inserted: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.inserted)
+          ? latestMemoryBlocks.inserted.filter((item): item is string => typeof item === 'string')
+          : [],
+        delayed: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.delayed)
+          ? latestMemoryBlocks.delayed.filter((item): item is string => typeof item === 'string')
+          : [],
+        cooling: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.cooling)
+          ? latestMemoryBlocks.cooling.filter((item): item is string => typeof item === 'string')
+          : [],
+        retained: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.retained)
+          ? latestMemoryBlocks.retained.filter((item): item is string => typeof item === 'string')
+          : [],
+        inactive: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.inactive)
+          ? latestMemoryBlocks.inactive.filter((item): item is string => typeof item === 'string')
+          : []
       }
     }
   };
