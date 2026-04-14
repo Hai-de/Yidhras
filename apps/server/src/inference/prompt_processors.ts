@@ -1,5 +1,5 @@
 import type { PromptFragment } from './prompt_fragments.js';
-import type { InferenceContext } from './types.js';
+import type { InferenceContext, PromptWorkflowSnapshot } from './types.js';
 
 /**
  * Legacy prompt processor contract.
@@ -13,6 +13,15 @@ import type { InferenceContext } from './types.js';
 export interface PromptProcessorInput {
   context: InferenceContext;
   fragments: PromptFragment[];
+  workflow?: {
+    task_type: string;
+    profile_id: string;
+    profile_version: string;
+    selected_step_keys: string[];
+    prompt_workflow?: PromptWorkflowSnapshot | null;
+    section_drafts?: Array<{ id: string; slot: string; section_type: string; ranking_score: number }>;
+    section_summary?: Record<string, unknown> | null;
+  };
 }
 
 export interface PromptProcessor {

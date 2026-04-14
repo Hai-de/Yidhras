@@ -206,10 +206,67 @@ export interface InferenceContext {
   pack_runtime: InferencePackRuntimeContract;
 }
 
+export interface InferenceMemoryMutationRecord {
+  kind: 'overlay' | 'memory_block';
+  record_id: string;
+  operation: 'created' | 'updated' | 'archived' | 'deleted';
+  actor_id?: string | null;
+  pack_id?: string | null;
+  note_kind?: string | null;
+  status?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface InferenceMemoryMutationSnapshot {
+  records: InferenceMemoryMutationRecord[];
+}
+
+export interface PromptWorkflowStepTraceSnapshot {
+  key: string;
+  kind: string;
+  status: 'completed' | 'skipped' | 'failed';
+  before: Record<string, unknown>;
+  after: Record<string, unknown>;
+  notes?: Record<string, unknown>;
+}
+
+export interface PromptWorkflowPlacementSummarySnapshot {
+  total_fragments: number;
+  resolved_with_anchor: number;
+  fallback_count: number;
+}
+
+export interface PromptWorkflowSnapshot {
+  task_type: string | null;
+  profile_id: string | null;
+  profile_version: string | null;
+  selected_step_keys: string[];
+  step_traces?: PromptWorkflowStepTraceSnapshot[];
+  compatibility?: Record<string, unknown> | null;
+  placement_summary?: PromptWorkflowPlacementSummarySnapshot | null;
+  section_summary?: Record<string, unknown> | null;
+}
+
+export interface PromptWorkflowMetadata {
+  workflow_task_type?: string | null;
+  workflow_profile_id?: string | null;
+  workflow_profile_version?: string | null;
+  workflow_step_keys?: string[];
+  workflow_section_summary?: Record<string, unknown>;
+  workflow_placement_summary?: Record<string, unknown>;
+}
+
 export interface PromptProcessingTrace {
   processor_names: string[];
   fragment_count_before: number;
   fragment_count_after: number;
+  workflow_task_type?: string | null;
+  workflow_profile_id?: string | null;
+  workflow_profile_version?: string | null;
+  workflow_step_keys?: string[];
+  workflow_compatibility_mode?: 'full' | 'bridge_only' | 'off';
+  workflow_step_traces?: PromptWorkflowStepTraceSnapshot[];
+  prompt_workflow?: PromptWorkflowSnapshot | null;
   steps?: Array<{
     processor_name: string;
     fragment_count_before: number;
@@ -234,13 +291,38 @@ export interface PromptProcessingTrace {
     reasons: Record<string, string>;
   } | null;
   token_budget_trimming?: {
+    task_type?: string | null;
     budget: number;
     used: number;
     trimmed_fragment_ids: string[];
+    kept_fragment_ids?: string[];
+    always_kept_fragment_ids?: string[];
+    kept_optional_fragment_ids?: string[];
+    slot_priority?: Partial<Record<PromptFragment['slot'], number>>;
+    optional_fragment_scores?: Array<{ fragment_id: string; slot: PromptFragment['slot']; score: number; estimated_cost: number; kept: boolean }>;
+    trimmed_by_slot?: Partial<Record<PromptFragment['slot'], string[]>>;
+    section_budget?: {
+      mode: 'fragment_only' | 'section_level';
+      total_budget: number;
+      allocated_budget: number;
+      allocations: Array<{
+        section_id: string;
+        section_type: string;
+        slot: PromptFragment['slot'];
+        budget_share: number;
+        budget_tokens: number;
+        ranking_score: number;
+        kept: boolean;
+      }>;
+      kept_section_ids: string[];
+      dropped_section_ids: string[];
+    } | null;
+    trimmed_sources?: string[];
+    section_summary?: Record<string, unknown> | null;
   } | null;
 }
 
-export interface PromptBundleMetadata {
+export interface PromptBundleMetadata extends PromptWorkflowMetadata {
   prompt_version: string | null;
   source_prompt_keys: string[];
   processing_trace?: PromptProcessingTrace;
@@ -317,6 +399,7 @@ export interface TraceMetadata extends InferencePreviewMetadata {
   tick: string;
   strategy: InferenceStrategy;
   provider: string;
+  memory_mutations?: InferenceMemoryMutationSnapshot | null;
 }
 
 export interface InferencePreviewResult {

@@ -22,6 +22,9 @@ describe('agent scheduler projection integration', () => {
     await context.prisma.schedulerCursor.deleteMany();
     await context.prisma.schedulerLease.deleteMany();
     await context.prisma.decisionJob.deleteMany();
+    await context.prisma.contextOverlayEntry.deleteMany();
+    await context.prisma.memoryBlock.deleteMany();
+    await context.prisma.memoryCompactionState.deleteMany();
   });
 
   afterAll(async () => {

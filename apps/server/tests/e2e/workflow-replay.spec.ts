@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertRecord, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
+import { assertRecord, assertStringArrayField, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
 import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { isRecord, requestJson, sleep } from '../helpers/server.js';
+
+const assertStringArray = (value: unknown, label: string): string[] => {
+  if (!Array.isArray(value) || value.some(item => typeof item !== 'string')) {
+    throw new Error(`${label} should be a string array`);
+  }
+
+  return value;
+};
 
 const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
   return JSON.stringify({
@@ -121,6 +129,29 @@ describe('workflow replay e2e', () => {
       );
       expect(isRecord(settledReplay.result)).toBe(true);
       expect(isRecord(settledReplay.workflow_snapshot)).toBe(true);
+      const settledWorkflowSnapshot = assertRecord(settledReplay.workflow_snapshot, 'workflow replay settled snapshot');
+      const settledRecords = assertRecord(settledWorkflowSnapshot.records, 'workflow replay settled snapshot records');
+      const settledTrace = assertRecord(settledRecords.trace, 'workflow replay settled trace');
+      const settledPromptBundle = assertRecord(settledTrace.prompt_bundle, 'workflow replay settled prompt bundle');
+      const settledPromptBundleMetadata = assertRecord(settledPromptBundle.metadata, 'workflow replay settled prompt bundle metadata');
+      const workflowStepKeys = assertStringArray(settledPromptBundleMetadata.workflow_step_keys, 'workflow replay settled prompt bundle metadata.workflow_step_keys');
+      expect(settledPromptBundleMetadata.workflow_task_type).toBe('agent_decision');
+      expect(typeof settledPromptBundleMetadata.workflow_profile_id).toBe('string');
+      expect(
+        workflowStepKeys.includes('fragment_assembly') || workflowStepKeys.includes('placement_resolution')
+      ).toBe(true);
+      expect(isRecord(settledPromptBundleMetadata.workflow_section_summary)).toBe(true);
+      expect(isRecord(settledPromptBundleMetadata.workflow_placement_summary)).toBe(true);
+      const settledSectionSummary = assertRecord(settledPromptBundleMetadata.workflow_section_summary, 'workflow replay settled prompt bundle section summary');
+      expect(isRecord(settledSectionSummary.sections_by_type)).toBe(true);
+      expect(Array.isArray(settledSectionSummary.section_scores)).toBe(true);
+      expect(assertStringArrayField(settledSectionSummary, 'section_policies', 'workflow replay settled prompt bundle section summary')).toEqual(
+        expect.arrayContaining(['standard'])
+      );
+      const settledContextSnapshot = assertRecord(settledTrace.context_snapshot, 'workflow replay settled context snapshot');
+      const settledPromptWorkflow = assertRecord(settledContextSnapshot.prompt_workflow, 'workflow replay settled prompt workflow');
+      expect(settledPromptWorkflow.task_type).toBe('agent_decision');
+      expect(typeof settledPromptWorkflow.profile_id).toBe('string');
 
       const replayWorkflowResponse = await requestJson(server.baseUrl, `/api/inference/jobs/${replayJobId}/workflow`);
       expect(replayWorkflowResponse.status).toBe(200);

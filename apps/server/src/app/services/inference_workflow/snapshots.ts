@@ -21,6 +21,20 @@ import {
   toTickString
 } from './types.js';
 
+const normalizePromptWorkflow = (value: unknown) => {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const record = toRecord(value);
+  record.selected_step_keys = Array.isArray(record.selected_step_keys) ? record.selected_step_keys : [];
+  record.step_traces = Array.isArray(record.step_traces) ? record.step_traces : [];
+  record.compatibility = isRecord(record.compatibility) ? toRecord(record.compatibility) : null;
+  record.placement_summary = isRecord(record.placement_summary) ? toRecord(record.placement_summary) : null;
+  record.section_summary = isRecord(record.section_summary) ? toRecord(record.section_summary) : null;
+  return record;
+};
+
 const toReplayLineageParentSnapshot = (job: DecisionJobRecord | null) => {
   if (!job) {
     return null;
@@ -108,7 +122,9 @@ export const toInferenceTraceRecordSnapshot = (
         contextModule.visibility_denials = Array.isArray(contextModule.visibility_denials) ? contextModule.visibility_denials : [];
         contextModule.overlay_nodes_loaded = Array.isArray(contextModule.overlay_nodes_loaded) ? contextModule.overlay_nodes_loaded : [];
         contextModule.overlay_nodes_mutated = Array.isArray(contextModule.overlay_nodes_mutated) ? contextModule.overlay_nodes_mutated : [];
+        contextModule.memory_block_mutations = Array.isArray(contextModule.memory_block_mutations) ? contextModule.memory_block_mutations : [];
         contextModule.memory_blocks = isRecord(contextModule.memory_blocks) ? toRecord(contextModule.memory_blocks) : null;
+        contextModule.prompt_workflow = normalizePromptWorkflow(contextModule.prompt_workflow);
         contextModule.submitted_directives = Array.isArray(contextModule.submitted_directives) ? contextModule.submitted_directives : [];
         contextModule.approved_directives = Array.isArray(contextModule.approved_directives) ? contextModule.approved_directives : [];
         contextModule.denied_directives = Array.isArray(contextModule.denied_directives) ? contextModule.denied_directives : [];
@@ -123,7 +139,9 @@ export const toInferenceTraceRecordSnapshot = (
         contextDebug.visibility_denials = Array.isArray(contextDebug.visibility_denials) ? contextDebug.visibility_denials : [];
         contextDebug.overlay_nodes_loaded = Array.isArray(contextDebug.overlay_nodes_loaded) ? contextDebug.overlay_nodes_loaded : [];
         contextDebug.overlay_nodes_mutated = Array.isArray(contextDebug.overlay_nodes_mutated) ? contextDebug.overlay_nodes_mutated : [];
+        contextDebug.memory_block_mutations = Array.isArray(contextDebug.memory_block_mutations) ? contextDebug.memory_block_mutations : [];
         contextDebug.memory_blocks = isRecord(contextDebug.memory_blocks) ? toRecord(contextDebug.memory_blocks) : null;
+        contextDebug.prompt_workflow = normalizePromptWorkflow(contextDebug.prompt_workflow);
         contextDebug.submitted_directives = Array.isArray(contextDebug.submitted_directives) ? contextDebug.submitted_directives : [];
         contextDebug.approved_directives = Array.isArray(contextDebug.approved_directives) ? contextDebug.approved_directives : [];
         contextDebug.denied_directives = Array.isArray(contextDebug.denied_directives) ? contextDebug.denied_directives : [];
@@ -136,7 +154,9 @@ export const toInferenceTraceRecordSnapshot = (
       snapshot.visibility_denials = Array.isArray(snapshot.visibility_denials) ? snapshot.visibility_denials : [];
       snapshot.overlay_nodes_loaded = Array.isArray(snapshot.overlay_nodes_loaded) ? snapshot.overlay_nodes_loaded : [];
       snapshot.overlay_nodes_mutated = Array.isArray(snapshot.overlay_nodes_mutated) ? snapshot.overlay_nodes_mutated : [];
+      snapshot.memory_block_mutations = Array.isArray(snapshot.memory_block_mutations) ? snapshot.memory_block_mutations : [];
       snapshot.memory_blocks = isRecord(snapshot.memory_blocks) ? toRecord(snapshot.memory_blocks) : null;
+      snapshot.prompt_workflow = normalizePromptWorkflow(snapshot.prompt_workflow);
       snapshot.submitted_directives = Array.isArray(snapshot.submitted_directives) ? snapshot.submitted_directives : [];
       snapshot.approved_directives = Array.isArray(snapshot.approved_directives) ? snapshot.approved_directives : [];
       snapshot.denied_directives = Array.isArray(snapshot.denied_directives) ? snapshot.denied_directives : [];

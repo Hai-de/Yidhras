@@ -47,7 +47,27 @@ export interface ContextOverlayCreateInput {
   updated_at_tick?: string;
 }
 
+export interface ContextOverlayUpdateInput {
+  id: string;
+  title?: string | null;
+  content_text?: string;
+  content_structured?: Record<string, unknown> | null;
+  tags?: string[];
+  status?: ContextOverlayStatus;
+  persistence_mode?: ContextOverlayPersistenceMode;
+  source_node_ids?: string[];
+  updated_at_tick: string;
+}
+
+export interface ContextOverlayArchiveInput {
+  id: string;
+  updated_at_tick: string;
+}
+
 export interface ContextOverlayStore {
   listEntries(input: ContextOverlayQuery): Promise<ContextOverlayEntry[]>;
+  getEntryById(id: string): Promise<ContextOverlayEntry | null>;
   createEntry(input: ContextOverlayCreateInput): Promise<ContextOverlayEntry>;
+  updateEntry(input: ContextOverlayUpdateInput): Promise<ContextOverlayEntry>;
+  archiveEntry(input: ContextOverlayArchiveInput): Promise<ContextOverlayEntry>;
 }

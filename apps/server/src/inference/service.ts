@@ -22,6 +22,7 @@ import {
   updateDecisionJobState
 } from '../app/services/inference_workflow.js';
 import { groundDecisionIntent } from '../domain/invocation/intent_grounder.js';
+import { createMemoryRecordingService } from '../memory/recording/service.js';
 import { ApiError } from '../utils/api_error.js';
 import { buildInferenceContext } from './context_builder.js';
 import { buildPromptBundle } from './prompt_builder.js';
@@ -234,9 +235,10 @@ const executeRunInternal = async (
 ): Promise<InferenceRunResult> => {
   const inferenceContext = await buildInferenceContext(context, input);
   const provider = selectProvider(providers, inferenceContext.strategy);
-  const prompt = await buildPromptBundle(inferenceContext);
+  const prompt = await buildPromptBundle(inferenceContext, { task_type: 'agent_decision' });
   const attemptCount = options?.attemptCount ?? 1;
   const maxAttempts = options?.maxAttempts ?? DEFAULT_JOB_MAX_ATTEMPTS;
+  const memoryRecordingService = createMemoryRecordingService({ context });
 
   let rawDecision: ProviderDecisionRaw;
   try {
@@ -353,6 +355,32 @@ const executeRunInternal = async (
     inferenceContext.binding_ref,
     prompt.metadata.prompt_version
   );
+  const semanticIntentKind =
+    grounded.semantic_intent.kind ??
+    (typeof grounded.decision.payload.semantic_intent_kind === 'string' ? grounded.decision.payload.semantic_intent_kind : null);
+  const decisionReflection = await memoryRecordingService.recordDecisionReflection({
+    actor_id: inferenceContext.resolved_agent_id ?? inferenceContext.actor_ref.agent_id ?? inferenceContext.actor_ref.identity_id,
+    pack_id: inferenceContext.world_pack.id,
+    tick,
+    source_inference_id: inferenceContext.inference_id,
+    reasoning: grounded.decision.reasoning,
+    semantic_intent_kind: semanticIntentKind,
+    target_ref: grounded.semantic_intent.target_ref ?? grounded.decision.target_ref,
+    metadata: {
+      strategy: inferenceContext.strategy,
+      provider: provider.name,
+      action_type: grounded.decision.action_type
+    }
+  });
+  traceMetadata.memory_mutations = decisionReflection.trace_memory_mutations;
+  inferenceContext.context_run.diagnostics.overlay_nodes_mutated = [
+    ...(inferenceContext.context_run.diagnostics.overlay_nodes_mutated ?? []),
+    ...decisionReflection.overlay_mutations
+  ];
+  inferenceContext.context_run.diagnostics.memory_block_mutations = [
+    ...(inferenceContext.context_run.diagnostics.memory_block_mutations ?? []),
+    ...decisionReflection.memory_block_mutations
+  ];
   const aiInvocationId =
     grounded.decision.meta && typeof grounded.decision.meta.ai_invocation_id === 'string'
       ? grounded.decision.meta.ai_invocation_id
@@ -379,7 +407,8 @@ const executeRunInternal = async (
     job_last_error_stage: null,
     job_attempt_count: attemptCount,
     job_max_attempts: maxAttempts,
-    ai_invocation_id: aiInvocationId
+    ai_invocation_id: aiInvocationId,
+    memory_mutations: decisionReflection.trace_memory_mutations
   });
 
   return {
@@ -411,7 +440,7 @@ export const createInferenceService = ({
     async previewInference(input) {
       const inferenceContext = await buildInferenceContext(context, input);
       const provider = selectProvider(resolvedProviders, inferenceContext.strategy);
-      const prompt = await buildPromptBundle(inferenceContext);
+      const prompt = await buildPromptBundle(inferenceContext, { task_type: 'agent_decision' });
       const tick = inferenceContext.tick.toString();
       const metadata = {
         world_pack_id: inferenceContext.world_pack.id,

@@ -53,6 +53,15 @@ export const assertArrayField = (value: Record<string, unknown>, field: string, 
   return result;
 };
 
+export const assertStringArrayField = (value: Record<string, unknown>, field: string, label: string): string[] => {
+  const result = assertArrayField(value, field, label);
+  if (result.some(item => typeof item !== 'string')) {
+    throw new Error(`${label}.${field} should be a string array`);
+  }
+
+  return result as string[];
+};
+
 export const assertPaginationMeta = (body: unknown, label: string): Record<string, unknown> => {
   const envelope = assertRecord(body, `${label} envelope`);
   const meta = assertRecord(envelope.meta, `${label}.meta`);

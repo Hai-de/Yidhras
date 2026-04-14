@@ -6,11 +6,13 @@ import type { AppContext } from '../../app/context.js';
 import { getErrorMessage } from '../../app/http/errors.js';
 import { toJsonSafe } from '../../app/http/json.js';
 import type {
+  ContextOverlayArchiveInput,
   ContextOverlayCreateInput,
   ContextOverlayEntry,
   ContextOverlayQuery,
   ContextOverlayStatus,
-  ContextOverlayStore
+  ContextOverlayStore,
+  ContextOverlayUpdateInput
 } from './types.js';
 
 const DEFAULT_LIMIT = 10;
@@ -141,6 +143,23 @@ export const createContextOverlayStore = (context: AppContext): ContextOverlaySt
 
       return rows.map(toOverlayEntry);
     },
+    async getEntryById(id: string): Promise<ContextOverlayEntry | null> {
+      try {
+        const row = await context.prisma.contextOverlayEntry.findUnique({
+          where: {
+            id
+          }
+        });
+
+        return row ? toOverlayEntry(row) : null;
+      } catch (error) {
+        if (isMissingOverlayTableError(error)) {
+          return null;
+        }
+
+        throw error;
+      }
+    },
     async createEntry(input: ContextOverlayCreateInput): Promise<ContextOverlayEntry> {
       try {
         const created = await context.prisma.contextOverlayEntry.create({
@@ -173,6 +192,47 @@ export const createContextOverlayStore = (context: AppContext): ContextOverlaySt
 
         throw error;
       }
+    },
+    async updateEntry(input: ContextOverlayUpdateInput): Promise<ContextOverlayEntry> {
+      try {
+        const updated = await context.prisma.contextOverlayEntry.update({
+          where: {
+            id: input.id
+          },
+          data: {
+            ...(input.title !== undefined ? { title: input.title } : {}),
+            ...(input.content_text !== undefined ? { content_text: input.content_text } : {}),
+            ...(input.content_structured !== undefined
+              ? {
+                  content_structured:
+                    input.content_structured && Object.keys(input.content_structured).length > 0
+                      ? toJsonValue(input.content_structured)
+                      : Prisma.JsonNull
+                }
+              : {}),
+            ...(input.tags !== undefined ? { tags: stringifyStringArray(input.tags) } : {}),
+            ...(input.status !== undefined ? { status: input.status } : {}),
+            ...(input.persistence_mode !== undefined ? { persistence_mode: input.persistence_mode } : {}),
+            ...(input.source_node_ids !== undefined ? { source_node_ids: stringifyStringArray(input.source_node_ids) } : {}),
+            updated_at_tick: BigInt(input.updated_at_tick)
+          }
+        });
+
+        return toOverlayEntry(updated);
+      } catch (error) {
+        if (isMissingOverlayTableError(error)) {
+          throw new Error('ContextOverlayEntry table is not available yet. Run prisma migrate deploy before updating overlay entries.');
+        }
+
+        throw error;
+      }
+    },
+    async archiveEntry(input: ContextOverlayArchiveInput): Promise<ContextOverlayEntry> {
+      return this.updateEntry({
+        id: input.id,
+        status: 'archived',
+        updated_at_tick: input.updated_at_tick
+      });
     }
   };
 };

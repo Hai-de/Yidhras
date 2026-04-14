@@ -528,19 +528,41 @@ describe('smoke endpoints e2e', () => {
         );
         const processorNames = Array.isArray(promptProcessingTrace.processor_names) ? promptProcessingTrace.processor_names : [];
         expect(Array.isArray(processorNames)).toBe(true);
+        expect(promptProcessingTrace.workflow_task_type).toBe('agent_decision');
+        expect(assertRecord(contextSnapshot.prompt_workflow, 'persisted trace prompt workflow').task_type).toBe('agent_decision');
         const promptBundle = assertRecord(persistedTraceData.prompt_bundle, 'persisted trace prompt bundle');
         const promptBundleMetadata = assertRecord(promptBundle.metadata, 'persisted trace prompt bundle metadata');
         const processingTrace = assertRecord(promptBundleMetadata.processing_trace, 'persisted trace bundle processing trace');
         const bundleProcessorNames = Array.isArray(processingTrace.processor_names) ? processingTrace.processor_names : [];
         expect(Array.isArray(bundleProcessorNames)).toBe(true);
+        expect(promptBundleMetadata.workflow_task_type).toBe('agent_decision');
         expect(bundleProcessorNames.includes('policy-filter')).toBe(true);
         expect(bundleProcessorNames.includes('memory-summary')).toBe(true);
         expect(bundleProcessorNames.includes('token-budget-trimmer')).toBe(true);
+        expect(isRecord(promptBundleMetadata.workflow_section_summary)).toBe(true);
+        expect(isRecord(promptBundleMetadata.workflow_placement_summary)).toBe(true);
+        const persistedSectionSummary = assertRecord(promptBundleMetadata.workflow_section_summary, 'persisted trace prompt bundle section summary');
+        expect(persistedSectionSummary.task_type).toBe('agent_decision');
+        expect(isRecord(persistedSectionSummary.sections_by_type)).toBe(true);
+        expect(Array.isArray(persistedSectionSummary.section_policies)).toBe(true);
+        expect(Array.isArray(persistedSectionSummary.section_scores)).toBe(true);
         const tokenBudgetTrimming = assertRecord(
           promptProcessingTrace.token_budget_trimming,
           'persisted trace token budget trimming'
         );
+        expect(tokenBudgetTrimming.task_type).toBe('agent_decision');
         expect(typeof tokenBudgetTrimming.budget).toBe('number');
+        expect(Array.isArray(tokenBudgetTrimming.kept_fragment_ids)).toBe(true);
+        expect(Array.isArray(tokenBudgetTrimming.always_kept_fragment_ids)).toBe(true);
+        expect(Array.isArray(tokenBudgetTrimming.kept_optional_fragment_ids)).toBe(true);
+        expect(Array.isArray(tokenBudgetTrimming.optional_fragment_scores)).toBe(true);
+        expect(isRecord(tokenBudgetTrimming.slot_priority)).toBe(true);
+        const sectionBudget = assertRecord(tokenBudgetTrimming.section_budget, 'persisted trace token budget section budget');
+        expect(typeof sectionBudget.total_budget).toBe('number');
+        expect(typeof sectionBudget.allocated_budget).toBe('number');
+        expect(Array.isArray(sectionBudget.allocations)).toBe(true);
+        expect(Array.isArray(sectionBudget.kept_section_ids)).toBe(true);
+        expect(Array.isArray(sectionBudget.dropped_section_ids)).toBe(true);
         const promptProcessingSteps = Array.isArray(promptProcessingTrace.steps) ? promptProcessingTrace.steps : [];
         expect(Array.isArray(promptProcessingSteps)).toBe(true);
         expect(

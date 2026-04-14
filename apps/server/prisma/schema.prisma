@@ -450,6 +450,18 @@ model MemoryBlockDeletionAudit {
   @@index([memory_block_id, deleted_at_tick])
 }
 
+model MemoryCompactionState {
+  agent_id                    String @id
+  pack_id                     String?
+  inference_count_since_summary Int   @default(0)
+  inference_count_since_compaction Int @default(0)
+  last_summary_tick           BigInt?
+  last_compaction_tick        BigInt?
+  updated_at_tick             BigInt
+
+  @@index([pack_id, updated_at_tick])
+}
+
 model ScenarioEntityState {
   id         String @id
   pack_id    String

@@ -81,9 +81,16 @@ const buildGatewayRequest = (
     metadata: {
       prompt_preset: taskConfig.prompt.preset,
       decoder: taskConfig.parse.decoder,
+      workflow_task_type: typeof request.metadata?.workflow_task_type === 'string' ? request.metadata.workflow_task_type : request.task_type,
       task_metadata: taskConfig.metadata ?? null,
       task_input: request.input,
-      inference_id: typeof request.metadata?.inference_id === 'string' ? request.metadata.inference_id : null
+      inference_id: typeof request.metadata?.inference_id === 'string' ? request.metadata.inference_id : null,
+      workflow_profile_id:
+        typeof request.metadata?.workflow_profile_id === 'string' ? request.metadata.workflow_profile_id : null,
+      workflow_profile_version:
+        typeof request.metadata?.workflow_profile_version === 'string' ? request.metadata.workflow_profile_version : null,
+      workflow_step_keys: Array.isArray(request.metadata?.workflow_step_keys) ? request.metadata.workflow_step_keys : [],
+      processing_trace: request.metadata?.processing_trace ?? null
     }
   };
 };

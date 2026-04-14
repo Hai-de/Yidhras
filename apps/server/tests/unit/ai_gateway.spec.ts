@@ -5,8 +5,11 @@ import { createModelGateway } from '../../src/ai/gateway.js';
 import type { AiProviderAdapter, AiProviderAdapterResult } from '../../src/ai/providers/types.js';
 import { resolveAiRoute } from '../../src/ai/route_resolver.js';
 import { resolveAiTaskConfig } from '../../src/ai/task_definitions.js';
+import { buildAiTaskRequestFromInferenceContext } from '../../src/ai/task_prompt_builder.js';
 import { createAiTaskService } from '../../src/ai/task_service.js';
 import type { AiRegistryConfig, AiTaskRequest, ModelGatewayResponse } from '../../src/ai/types.js';
+import type { InferenceContext } from '../../src/inference/types.js';
+import type { MemoryContextPack } from '../../src/memory/types.js';
 
 const createAgentDecisionTaskRequest = (): AiTaskRequest => ({
   task_id: 'task-agent-decision',
@@ -30,12 +33,48 @@ const createAgentDecisionTaskRequest = (): AiTaskRequest => ({
       output_contract_prompt: 'output contract prompt',
       combined_prompt: 'combined prompt',
       metadata: {
-        source_prompt_keys: ['global_prefix', 'agent_initial_context']
+        prompt_version: 'phase-b-v1',
+        source_prompt_keys: ['global_prefix', 'agent_initial_context'],
+        workflow_task_type: 'agent_decision',
+        workflow_profile_id: 'agent-decision-default',
+        workflow_profile_version: '1',
+        workflow_step_keys: ['legacy_memory_projection', 'placement_resolution'],
+        processing_trace: {
+          processor_names: ['memory-injector', 'prompt-workflow:placement_resolution'],
+          fragment_count_before: 4,
+          fragment_count_after: 4,
+          workflow_task_type: 'agent_decision',
+          workflow_profile_id: 'agent-decision-default',
+          workflow_profile_version: '1',
+          workflow_step_keys: ['legacy_memory_projection', 'placement_resolution'],
+          fragments: [],
+          prompt_workflow: {
+            task_type: 'agent_decision',
+            profile_id: 'agent-decision-default',
+            profile_version: '1',
+            selected_step_keys: ['legacy_memory_projection', 'placement_resolution'],
+            section_summary: {
+              total_sections: 2
+            },
+            placement_summary: {
+              total_fragments: 4,
+              resolved_with_anchor: 1,
+              fallback_count: 0
+            },
+            step_traces: []
+          }
+        }
       }
     }
   },
   metadata: {
-    inference_id: 'inf-001'
+    inference_id: 'inf-001',
+    prompt_version: 'phase-b-v1',
+    source_prompt_keys: ['global_prefix', 'agent_initial_context'],
+    workflow_task_type: 'agent_decision',
+    workflow_profile_id: 'agent-decision-default',
+    workflow_profile_version: '1',
+    workflow_step_keys: ['legacy_memory_projection', 'placement_resolution']
   }
 });
 
@@ -171,6 +210,78 @@ const createFallbackRegistry = (): AiRegistryConfig => ({
 });
 
 describe('ai gateway unit', () => {
+  it('builds context_summary and memory_compaction ai task requests with task-aware workflow metadata', async () => {
+    const baseMemoryContext = {
+      short_term: [],
+      long_term: [],
+      summaries: [],
+      diagnostics: {
+        selected_count: 0,
+        skipped_count: 0,
+        memory_selection: {
+          selected_entry_ids: [],
+          dropped: []
+        }
+      }
+    } satisfies MemoryContextPack;
+
+    const inferenceContext = {
+      inference_id: 'inf-task-aware-001',
+      actor_ref: { identity_id: 'agent-001', identity_type: 'agent', role: 'active', agent_id: 'agent-001', atmosphere_node_id: null },
+      actor_display_name: '夜神月',
+      identity: { id: 'agent-001', type: 'agent', name: '夜神月', provider: null, status: null, claims: null },
+      binding_ref: null,
+      resolved_agent_id: 'agent-001',
+      agent_snapshot: null,
+      tick: 1000n,
+      strategy: 'model_routed',
+      attributes: {},
+      world_pack: { id: 'world-death-note', name: '死亡笔记', version: '0.4.0' },
+      world_prompts: {},
+      world_ai: null,
+      visible_variables: {},
+      policy_summary: {
+        social_post_read_allowed: true,
+        social_post_readable_fields: ['id', 'content'],
+        social_post_write_allowed: true,
+        social_post_writable_fields: ['content']
+      },
+      transmission_profile: { policy: 'reliable', drop_reason: null, delay_ticks: '1', drop_chance: 0, derived_from: ['test'] },
+      context_run: {
+        id: 'ctx-task-aware-001',
+        created_at_tick: '1000',
+        selected_node_ids: [],
+        nodes: [],
+        diagnostics: { source_adapter_names: [], node_count: 0, node_counts_by_type: {}, selected_node_ids: [], dropped_nodes: [] }
+      },
+      memory_context: baseMemoryContext,
+      pack_state: { actor_roles: [], actor_state: null, owned_artifacts: [], world_state: null, latest_event: null },
+      pack_runtime: { invocation_rules: [] }
+    } satisfies InferenceContext;
+
+    const contextSummaryRequest = await buildAiTaskRequestFromInferenceContext(inferenceContext, { task_type: 'context_summary' });
+    expect(contextSummaryRequest.task_type).toBe('context_summary');
+    expect(contextSummaryRequest.prompt_context.prompt_bundle?.metadata?.workflow_task_type).toBe('context_summary');
+    expect(contextSummaryRequest.prompt_context.prompt_bundle?.metadata?.workflow_profile_id).toBe('context-summary-default');
+    expect(contextSummaryRequest.prompt_context.prompt_bundle?.metadata?.workflow_section_summary).toMatchObject({
+      task_type: 'context_summary',
+      section_policy: 'minimal',
+      section_scores: expect.any(Array),
+      section_policies: ['evidence_first']
+    });
+
+    const memoryCompactionRequest = await buildAiTaskRequestFromInferenceContext(inferenceContext, { task_type: 'memory_compaction' });
+    expect(memoryCompactionRequest.task_type).toBe('memory_compaction');
+    expect(memoryCompactionRequest.prompt_context.prompt_bundle?.metadata?.workflow_task_type).toBe('memory_compaction');
+    expect(memoryCompactionRequest.prompt_context.prompt_bundle?.metadata?.workflow_profile_id).toBe('memory-compaction-default');
+    expect(memoryCompactionRequest.prompt_context.prompt_bundle?.metadata?.workflow_section_summary).toMatchObject({
+      task_type: 'memory_compaction',
+      section_policy: 'minimal',
+      section_scores: expect.any(Array),
+      section_policies: ['memory_focused']
+    });
+  });
+
   it('resolves pack-aware route and prioritizes explicit model hint without failing when the hinted model is absent from route candidates', () => {
     const selected = resolveAiRoute({
       task_type: 'agent_decision',
@@ -193,7 +304,7 @@ describe('ai gateway unit', () => {
     expect(selected.primary_model_candidates[0]?.provider).toBe('openai');
   });
 
-  it('adapts prompt bundle into structured ai messages and merges task config from pack overrides', () => {
+  it('adapts prompt bundle into structured ai messages and carries workflow metadata', () => {
     const taskConfig = resolveAiTaskConfig({
       taskType: 'agent_decision',
       packAiConfig: {
@@ -233,6 +344,20 @@ describe('ai gateway unit', () => {
     expect(messages[1]?.role).toBe('developer');
     expect(messages[2]?.role).toBe('user');
     expect(messages[0]?.parts[0]?.type).toBe('text');
+    expect(messages[0]?.metadata).toMatchObject({
+      workflow_task_type: 'agent_decision',
+      workflow_profile_id: 'agent-decision-default',
+      workflow_profile_version: '1',
+      workflow_step_keys: ['legacy_memory_projection', 'placement_resolution'],
+      workflow_section_summary: {
+        total_sections: 2
+      },
+      workflow_placement_summary: {
+        total_fragments: 4,
+        resolved_with_anchor: 1,
+        fallback_count: 0
+      }
+    });
   });
 
   it('executes through mock gateway and returns decoded structured output', async () => {
@@ -255,6 +380,7 @@ describe('ai gateway unit', () => {
     expect(result.invocation.provider).toBe('mock');
     expect(result.invocation.status).toBe('completed');
     expect(result.invocation.trace?.task_type).toBe('agent_decision');
+    expect(result.invocation.trace?.workflow_task_type).toBe('agent_decision');
   });
 
   it('falls back to the next candidate when the primary provider fails and records attempts', async () => {
@@ -312,7 +438,8 @@ describe('ai gateway unit', () => {
           safety_profile: null
         },
         metadata: {
-          inference_id: 'inf-001'
+          inference_id: 'inf-001',
+          workflow_profile_id: 'agent-decision-default'
         }
       },
       task_request: request,

@@ -36,6 +36,9 @@ describe('agent scheduler integration', () => {
     await context.prisma.actionIntent.deleteMany();
     await context.prisma.decisionJob.deleteMany();
     await context.prisma.inferenceTrace.deleteMany();
+    await context.prisma.contextOverlayEntry.deleteMany();
+    await context.prisma.memoryBlock.deleteMany();
+    await context.prisma.memoryCompactionState.deleteMany();
     await context.prisma.relationship.deleteMany();
 
     const baseTick = context.sim.clock.getTicks();

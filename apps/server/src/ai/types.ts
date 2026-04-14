@@ -1,3 +1,5 @@
+import type { PromptBundleMetadata } from '../inference/types.js';
+
 export const AI_TASK_TYPES = [
   'agent_decision',
   'intent_grounding_assist',
@@ -111,6 +113,7 @@ export interface AiInvocationTrace {
   task_type: AiTaskType;
   route_id: string | null;
   source_inference_id?: string | null;
+  workflow_task_type?: string | null;
   audit_level: AiAuditLevel;
   attempts: AiInvocationAttemptRecord[];
   request?: Record<string, unknown> | null;
@@ -165,6 +168,21 @@ export interface ModelGatewayResponse {
   trace?: AiInvocationTrace;
 }
 
+export interface AiTaskRequestMetadata extends PromptBundleMetadata {
+  inference_id?: string | null;
+  binding_ref?: unknown;
+}
+
+export interface AiTaskPromptBundleSnapshot {
+  system_prompt: string;
+  role_prompt: string;
+  world_prompt: string;
+  context_prompt: string;
+  output_contract_prompt: string;
+  combined_prompt: string;
+  metadata?: AiTaskRequestMetadata;
+}
+
 export interface AiTaskRequest {
   task_id: string;
   task_type: AiTaskType;
@@ -173,15 +191,7 @@ export interface AiTaskRequest {
   input: Record<string, unknown>;
   prompt_context: {
     messages?: AiMessage[];
-    prompt_bundle?: {
-      system_prompt: string;
-      role_prompt: string;
-      world_prompt: string;
-      context_prompt: string;
-      output_contract_prompt: string;
-      combined_prompt: string;
-      metadata?: Record<string, unknown>;
-    } | null;
+    prompt_bundle?: AiTaskPromptBundleSnapshot | null;
   };
   output_contract?: {
     mode: AiResponseMode;
@@ -195,7 +205,7 @@ export interface AiTaskRequest {
     determinism_tier?: AiDeterminismTier;
     privacy_tier?: AiPrivacyTier;
   };
-  metadata?: Record<string, unknown>;
+  metadata?: AiTaskRequestMetadata;
 }
 
 export interface AiTaskResult<TOutput = unknown> {
@@ -346,8 +356,14 @@ export interface AiPackConfigDefaults {
   privacy_tier?: AiPrivacyTier;
 }
 
+export interface AiPackMemoryLoopConfig {
+  summary_every_n_rounds?: number;
+  compaction_every_n_rounds?: number;
+}
+
 export interface AiPackConfig {
   defaults?: AiPackConfigDefaults;
+  memory_loop?: AiPackMemoryLoopConfig;
   tasks?: Partial<Record<AiTaskType, AiTaskOverride>>;
 }
 

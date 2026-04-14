@@ -536,7 +536,9 @@ const SCHEDULER_REASONS: SchedulerReason[] = [
   'bootstrap_seed',
   'event_followup',
   'relationship_change_followup',
-  'snr_change_followup'
+  'snr_change_followup',
+  'overlay_change_followup',
+  'memory_change_followup'
 ];
 const SCHEDULER_SKIP_REASONS: SchedulerSkipReason[] = [
   'pending_workflow',

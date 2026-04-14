@@ -2,7 +2,7 @@
 metadata:
   id: "world-death-note"
   name: "死亡笔记"
-  version: "0.4.0"
+  version: "0.5.0"
   description: "一个围绕规则媒介、侦查对抗、舆论震荡与执行资格传播展开的现代悬疑世界。"
 
 variables:
@@ -65,6 +65,9 @@ ai:
     decoder: "default_json_schema"
     route_id: "default.agent_decision"
     privacy_tier: "trusted_cloud"
+  memory_loop:
+    summary_every_n_rounds: 5
+    compaction_every_n_rounds: 5
   tasks:
     agent_decision:
       prompt:
@@ -149,9 +152,20 @@ entities:
         known_target_id: null
         known_target_name: null
         known_target_face: false
+        target_name_confirmed: false
+        target_face_confirmed: false
+        target_schedule_known: false
         target_intel_confidence: 0
         target_judgement_eligibility: false
         suspicion_level: 0
+        observed_case_pressure: 0
+        cover_story_stability: 1
+        evidence_chain_strength: 0
+        case_theory_strength: 0
+        last_execution_outcome: null
+        last_reflection_kind: null
+        judgement_strategy_phase: "acquisition"
+        exposure_risk: 0
         investigation_focus: null
         roles: ["notebook_candidate", "planner"]
     - id: "agent-002"
@@ -167,9 +181,21 @@ entities:
         known_target_id: null
         known_target_name: null
         known_target_face: false
+        target_name_confirmed: false
+        target_face_confirmed: false
+        target_schedule_known: false
         target_intel_confidence: 0
         target_judgement_eligibility: false
         suspicion_level: 0
+        observed_case_pressure: 0
+        cover_story_stability: 0.5
+        evidence_chain_strength: 0
+        case_theory_strength: 0
+        lead_target_id: null
+        last_case_update_kind: null
+        last_reflection_kind: null
+        judgement_strategy_phase: "case_assessment"
+        exposure_risk: 0
         investigation_focus: null
         roles: ["investigator"]
     - id: "agent-003"
@@ -181,6 +207,10 @@ entities:
         death_cause: null
         amused: true
         suspicion_level: 0
+        observed_case_pressure: 0
+        cover_story_stability: 1
+        evidence_chain_strength: 0
+        case_theory_strength: 0
         investigation_focus: null
         roles: ["observer", "shinigami"]
   artifacts:
@@ -204,6 +234,7 @@ entities:
         - capability_key: "invoke.collect_target_intel"
         - capability_key: "invoke.select_judgement_target"
         - capability_key: "invoke.execute_death_note"
+        - capability_key: "invoke.raise_false_suspicion"
       requires:
         - relation: "holder"
       execution_effects:
@@ -225,6 +256,8 @@ bootstrap:
         investigation_heat: 0
         public_fear_level: 0
         death_pattern_visibility: 0
+        countermeasure_pressure: 0
+        last_case_update_kind: null
   initial_events: []
 
 identities:
@@ -310,6 +343,17 @@ authorities:
       subject_state.murderous_intent: true
       subject_state.target_judgement_eligibility: true
     priority: 100
+  - id: "grant-raise-false-suspicion"
+    source_entity_id: "mediator-death-note"
+    mediated_by_entity_id: "mediator-death-note"
+    target_selector:
+      kind: "holder_of"
+      entity_id: "artifact-death-note"
+    capability_key: "invoke.raise_false_suspicion"
+    grant_type: "mediated"
+    conditions_json:
+      subject_state.knows_notebook_power: true
+    priority: 95
   - id: "grant-investigate-suspicious-death"
     source_entity_id: "agent-002"
     target_selector:
@@ -334,6 +378,14 @@ authorities:
     capability_key: "invoke.publish_case_update"
     grant_type: "intrinsic"
     priority: 80
+  - id: "grant-request-joint-observation"
+    source_entity_id: "agent-002"
+    target_selector:
+      kind: "direct_entity"
+      entity_id: "agent-002"
+    capability_key: "invoke.request_joint_observation"
+    grant_type: "intrinsic"
+    priority: 85
 
 rules:
   perception: []
@@ -434,9 +486,72 @@ rules:
       then:
         affordance_key: "publish_case_update"
         requires_capability: "invoke.publish_case_update"
-        resolution_mode: "translated"
-        translate_to_kernel_intent: "post_message"
-        explanation: "将案件进展通告翻译为对公众可见的 post_message。"
+        resolution_mode: "exact"
+        translate_to_capability: "invoke.publish_case_update"
+        explanation: "将案件进展通告落地为 publish_case_update。"
+    - id: "invocation-request-joint-observation"
+      when:
+        semantic_intent.kind: "request_joint_observation"
+      then:
+        affordance_key: "request_joint_observation"
+        requires_capability: "invoke.request_joint_observation"
+        resolution_mode: "exact"
+        translate_to_capability: "invoke.request_joint_observation"
+        explanation: "将联合观察请求落地为 request_joint_observation。"
+    - id: "invocation-raise-false-suspicion"
+      when:
+        semantic_intent.kind: "raise_false_suspicion"
+      then:
+        affordance_key: "raise_false_suspicion"
+        requires_capability: "invoke.raise_false_suspicion"
+        resolution_mode: "exact"
+        translate_to_capability: "invoke.raise_false_suspicion"
+        mediator_id: "mediator-death-note"
+        explanation: "当案件压力上升时，将误导调查的开放意图落地为 raise_false_suspicion。"
+    - id: "invocation-record-private-reflection"
+      when:
+        semantic_intent.kind: "record_private_reflection"
+      then:
+        affordance_key: "record_private_reflection"
+        resolution_mode: "narrativized"
+        explanation: "该意图不会直接改变世界客观事实，而是要求服务器侧把主体当前思考沉淀为内部记录。"
+        narrativize_event:
+          type: "history"
+          title: "{{actor.id}} 对当前局势进行了私下反思"
+          description: "{{actor.id}} 记录了对当前局势与下一步判断的私密思考。"
+          impact_data:
+            semantic_type: "private_reflection_recorded"
+            failed_attempt: false
+            objective_effect_applied: false
+    - id: "invocation-update-target-dossier"
+      when:
+        semantic_intent.kind: "update_target_dossier"
+      then:
+        affordance_key: "update_target_dossier"
+        resolution_mode: "narrativized"
+        explanation: "该意图不会直接改变世界客观事实，而是要求服务器侧更新主体对目标的内部 dossier。"
+    - id: "invocation-revise-judgement-plan"
+      when:
+        semantic_intent.kind: "revise_judgement_plan"
+      then:
+        affordance_key: "revise_judgement_plan"
+        resolution_mode: "narrativized"
+        explanation: "该意图不会直接改变世界客观事实，而是要求服务器侧把最新执行计划沉淀为内部方案记录。"
+    - id: "invocation-record-execution-postmortem"
+      when:
+        semantic_intent.kind: "record_execution_postmortem"
+      then:
+        affordance_key: "record_execution_postmortem"
+        resolution_mode: "narrativized"
+        explanation: "该意图不会直接改变世界客观事实，而是要求服务器侧记录执行后的复盘结论。"
+        narrativize_event:
+          type: "history"
+          title: "{{actor.id}} 私下复盘了最近一次行动"
+          description: "{{actor.id}} 将最近一次行动的得失与风险重新整理为内部结论。"
+          impact_data:
+            semantic_type: "execution_postmortem_recorded"
+            failed_attempt: false
+            objective_effect_applied: false
     - id: "invocation-ritual-divination-fallback"
       when:
         semantic_intent.kind: "ritual_divination"
@@ -510,6 +625,8 @@ rules:
         mutate:
           subject_state:
             murderous_intent: true
+            investigation_focus: "judgement_preparation"
+            last_execution_outcome: "intent_reaffirmed"
         emit_events:
           - type: "history"
             title: "{{actor.id}} 通过 {{artifact.id}} 形成了执行意图"
@@ -533,8 +650,15 @@ rules:
             known_target_id: "{{target_entity_id}}"
             known_target_name: "{{target_entity_id}}"
             known_target_face: true
+            target_name_confirmed: true
+            target_face_confirmed: true
+            target_schedule_known: true
             target_intel_confidence: 0.8
             target_judgement_eligibility: true
+            observed_case_pressure: 1
+            evidence_chain_strength: 0.25
+            case_theory_strength: 0.2
+            investigation_focus: "target_profiling"
         emit_events:
           - type: "history"
             title: "{{actor.id}} 获取了关于 {{target.id}} 的关键情报"
@@ -555,6 +679,7 @@ rules:
         mutate:
           subject_state:
             current_target_id: "{{target_entity_id}}"
+            investigation_focus: "execution_window"
         emit_events:
           - type: "history"
             title: "{{actor.id}} 将 {{target.id}} 设为当前裁决目标"
@@ -575,14 +700,20 @@ rules:
         mutate:
           subject_state:
             current_target_id: null
+            murderous_intent: false
+            investigation_focus: "post_execution_assessment"
+            observed_case_pressure: 2
+            last_execution_outcome: "target_eliminated"
           target_state:
             alive: false
             death_cause: "cardiac_arrest"
           world_state:
             kira_case_phase: "kira_active"
-            investigation_heat: 1
+            investigation_heat: 2
             public_fear_level: 1
             death_pattern_visibility: 1
+            countermeasure_pressure: 2
+            last_case_update_kind: "execution_detected"
         emit_events:
           - type: "history"
             title: "{{target.id}} 在异常条件下死亡"
@@ -593,7 +724,18 @@ rules:
               target_id: "{{target_entity_id}}"
               mediator_id: "{{mediator_id}}"
               objective_effect_applied: true
-              followup_actor_ids: ["agent-002"]
+              followup_actor_ids: ["agent-001", "agent-002"]
+          - type: "history"
+            title: "异常死亡迫使调查网络迅速升温"
+            description: "一次执行后的现实反馈开始反噬执行者与调查者，案件压力明显升高。"
+            impact_data:
+              semantic_type: "post_execution_pressure_feedback"
+              actor_id: "{{subject_entity_id}}"
+              target_id: "{{target_entity_id}}"
+              mediator_id: "{{mediator_id}}"
+              objective_effect_applied: true
+              failed_attempt: false
+              followup_actor_ids: ["agent-001", "agent-002"]
     - id: "objective-investigate-suspicious-death"
       when:
         capability: "invoke.investigate_suspicious_death"
@@ -604,11 +746,17 @@ rules:
           subject_state:
             investigation_focus: "kira_case"
             suspicion_level: 0.75
+            observed_case_pressure: 2
             known_target_id: "{{target_entity_id}}"
             target_intel_confidence: 0.6
+            evidence_chain_strength: 0.6
+            case_theory_strength: 0.7
+            lead_target_id: "{{target_entity_id}}"
           world_state:
             investigation_heat: 2
             death_pattern_visibility: 2
+            countermeasure_pressure: 2
+            last_case_update_kind: "investigation_escalated"
         emit_events:
           - type: "history"
             title: "{{actor.id}} 开始围绕 {{target.id}} 调查异常死亡模式"
@@ -618,7 +766,16 @@ rules:
               actor_id: "{{subject_entity_id}}"
               target_id: "{{target_entity_id}}"
               objective_effect_applied: true
-              followup_actor_ids: ["agent-002"]
+              followup_actor_ids: ["agent-001", "agent-002"]
+          - type: "history"
+            title: "{{actor.id}} 宣布异常死亡案件进入高压调查阶段"
+            description: "调查方开始把异常死亡视为系统性事件，执行者将持续感受到外部压力。"
+            impact_data:
+              semantic_type: "investigation_pressure_escalated"
+              actor_id: "{{subject_entity_id}}"
+              target_id: "{{target_entity_id}}"
+              objective_effect_applied: true
+              followup_actor_ids: ["agent-001", "agent-002"]
     - id: "objective-share-case-intel"
       when:
         capability: "invoke.share_case_intel"
@@ -628,6 +785,11 @@ rules:
         mutate:
           world_state:
             investigation_heat: 3
+            countermeasure_pressure: 3
+            last_case_update_kind: "intel_shared"
+          target_state:
+            investigation_focus: "joint_observation"
+            evidence_chain_strength: 0.65
         emit_events:
           - type: "history"
             title: "{{actor.id}} 向 {{target.id}} 分享了案件线索"
@@ -637,7 +799,83 @@ rules:
               actor_id: "{{subject_entity_id}}"
               target_id: "{{target_entity_id}}"
               objective_effect_applied: true
-              followup_actor_ids: ["{{target_entity_id}}"]
+              followup_actor_ids: ["agent-001", "{{target_entity_id}}"]
+    - id: "objective-request-joint-observation"
+      when:
+        capability: "invoke.request_joint_observation"
+        invocation_type: "invoke.request_joint_observation"
+        target.kind: "actor"
+      then:
+        mutate:
+          subject_state:
+            investigation_focus: "joint_observation"
+          target_state:
+            investigation_focus: "joint_observation"
+          world_state:
+            countermeasure_pressure: 3
+            last_case_update_kind: "joint_observation_requested"
+        emit_events:
+          - type: "history"
+            title: "{{actor.id}} 请求 {{target.id}} 协同观察案件动向"
+            description: "案件调查开始进入联合观察阶段，更多主体会被拉入同一证据链。"
+            impact_data:
+              semantic_type: "joint_observation_requested"
+              actor_id: "{{subject_entity_id}}"
+              target_id: "{{target_entity_id}}"
+              objective_effect_applied: true
+              followup_actor_ids: ["agent-001", "{{target_entity_id}}", "{{subject_entity_id}}"]
+    - id: "objective-publish-case-update"
+      when:
+        capability: "invoke.publish_case_update"
+        invocation_type: "invoke.publish_case_update"
+      then:
+        mutate:
+          subject_state:
+            last_case_update_kind: "public_briefing"
+          world_state:
+            public_fear_level: 2
+            death_pattern_visibility: 3
+            countermeasure_pressure: 3
+            last_case_update_kind: "public_case_update"
+        emit_events:
+          - type: "history"
+            title: "{{actor.id}} 发布了新的案件进展通告"
+            description: "公开通报让社会恐慌与调查压力同步上升，也迫使执行者重新评估下一步动作。"
+            impact_data:
+              semantic_type: "case_update_published"
+              actor_id: "{{subject_entity_id}}"
+              objective_effect_applied: true
+              followup_actor_ids: ["agent-001", "agent-002"]
+
+    - id: "objective-raise-false-suspicion"
+      when:
+        capability: "invoke.raise_false_suspicion"
+        mediator: "mediator-death-note"
+        invocation_type: "invoke.raise_false_suspicion"
+        target.kind: "actor"
+      then:
+        mutate:
+          subject_state:
+            suspicion_level: 0.15
+            investigation_focus: "counter_investigation"
+            cover_story_stability: 0.8
+          target_state:
+            suspicion_level: 0.4
+            investigation_focus: "false_lead"
+          world_state:
+            countermeasure_pressure: 1
+            last_case_update_kind: "false_lead_seeded"
+        emit_events:
+          - type: "history"
+            title: "{{actor.id}} 故意抛出了新的可疑线索"
+            description: "一次经过设计的误导让调查方向短暂偏移，但也留下了新的噪声痕迹。"
+            impact_data:
+              semantic_type: "false_suspicion_raised"
+              actor_id: "{{subject_entity_id}}"
+              target_id: "{{target_entity_id}}"
+              mediator_id: "{{mediator_id}}"
+              objective_effect_applied: true
+              followup_actor_ids: ["agent-001", "{{target_entity_id}}"]
 
 capabilities:
   - key: "invoke.claim_death_note"
@@ -664,6 +902,12 @@ capabilities:
   - key: "invoke.share_case_intel"
     category: "invoke"
     target_schema: "actor"
+  - key: "invoke.request_joint_observation"
+    category: "invoke"
+    target_schema: "actor"
   - key: "invoke.publish_case_update"
     category: "invoke"
     target_schema: "world"
+  - key: "invoke.raise_false_suspicion"
+    category: "invoke"
+    target_schema: "actor"

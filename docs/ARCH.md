@@ -26,10 +26,29 @@
 
 1. `buildInferenceContext()` 组装运行时上下文
 2. `ContextService.buildContextRun()` 收口 context node / policy / diagnostics
-3. `buildPromptBundle()` 调用 Context Orchestrator Lite 完成 fragment 编排
+3. `buildPromptBundle()` 调用 Prompt Workflow Runtime 完成 fragment / section / placement 编排
 4. provider 输出 normalized decision / semantic intent
 5. `Intent Grounder` 将开放语义映射为 capability、kernel action 或 narrativized fallback
 6. `InferenceTrace / ActionIntent / DecisionJob` 写入 kernel Prisma
+
+### Death Note pack 语义闭环
+
+当前 `world-death-note` 已不再只是“拿到笔记 / 形成杀意”的静态样板，而是具备最小可重复语义循环：
+
+- notebook side：
+  - `claim_notebook`
+  - `understand_notebook_power`
+  - `form_judgement_intent`
+  - `gather_target_intel`
+  - `choose_target`
+  - `judge_target`
+  - 在案件压力升高时切换到 `raise_false_suspicion`
+- investigator side：
+  - `investigate_death_cluster`
+  - `share_case_intel`
+  - `request_joint_observation`
+  - `publish_case_update`
+- execution 后会通过 objective events 发出 `post_execution_pressure_feedback / investigation_pressure_escalated / case_update_published`，再由 scheduler follow-up 驱动下一轮 actor 再思考。
 
 ## Context Module
 
@@ -39,6 +58,11 @@
 - `apps/server/src/context/service.ts`
 - `apps/server/src/context/source_registry.ts`
 - `apps/server/src/context/workflow/orchestrator.ts`
+- `apps/server/src/context/workflow/runtime.ts`
+- `apps/server/src/context/workflow/types.ts`
+- `apps/server/src/context/workflow/profiles.ts`
+- `apps/server/src/context/workflow/placement_resolution.ts`
+- `apps/server/src/context/workflow/section_drafts.ts`
 
 当前职责：
 
@@ -50,7 +74,7 @@
 ### policy / overlay / memory block 相关实现
 
 - node-level policy governance 由 `ContextService` 与 `Context Policy Engine` 处理
-- fragment-level `policy_filter` 仅保留为 orchestrator-lite 内的兼容/兜底机制
+- fragment-level `policy_filter` 仅保留为 runtime 内的兼容/兜底机制
 - overlay 作为 kernel-side working-layer object 存在：
   - `apps/server/src/context/overlay/types.ts`
   - `apps/server/src/context/overlay/store.ts`
@@ -69,7 +93,7 @@
   - trigger engine 评估 active/delayed/retained/cooling/inactive
   - runtime state 更新
   - materialize 为 `ContextNode`
-  - 再经 orchestrator 进入 `PromptFragment`
+  - 再经 Prompt Workflow Runtime 进入 `PromptFragment`
 - `recent trace / intent / event` 仅在权限裁剪后进入 memory block evaluation context
 - 当前 diagnostics 已输出：
   - `policy_decisions`
@@ -80,6 +104,179 @@
   - `overlay_nodes_mutated`
   - `memory_blocks`
   - reserved directive arrays
+
+### Prompt Workflow Runtime
+
+当前 Prompt Workflow 已不再只是固定 processor 数组，而是具备正式 runtime 外壳。
+
+当前已落地的核心组件包括：
+
+- `PromptWorkflowProfile`
+- `PromptWorkflowStepSpec`
+- `PromptWorkflowState`
+- `PromptWorkflowDiagnostics`
+- step registry / executors
+- placement resolution
+- section drafts
+
+当前内置 profiles：
+
+- `agent-decision-default`
+- `context-summary-default`
+- `memory-compaction-default`
+
+当前 runtime 已具备 task-aware 入口：
+
+- `buildPromptBundle(context, { task_type })`
+- `buildAiTaskPromptBundleFromInferenceContext(...)`
+- `buildAiTaskRequestFromInferenceContext(...)`
+
+其中：
+
+- `agent_decision` 仍对应当前 inference 主链默认 profile
+- `context_summary` 会命中 `context-summary-default`
+- `memory_compaction` 会命中 `memory-compaction-default`
+
+这意味着 Prompt Workflow 已不再只是“agent decision 专用 prompt pipeline”，而是一个可按 task type 切换 profile 的正式 runtime。
+
+### 当前 runtime 分层
+
+当前主线已演进为：
+
+```text
+ContextRun / ContextNode
+  -> PromptWorkflowState
+  -> grouped_nodes
+  -> PromptSectionDraft
+  -> PromptFragment
+  -> PromptBundle
+  -> AiMessages / ModelGatewayRequest
+```
+
+当前已稳定落地的 runtime 行为：
+
+- profile-driven step 选择
+- `placement_resolution`
+- `node_grouping`
+- `fragment_assembly`
+- workflow metadata 透传
+
+### task-aware section-driven 差异
+
+当前 runtime 已开始在 `section_drafts` 与 trimming 层体现任务差异：
+
+- `agent_decision`
+  - 保持较完整的 system / role / world / memory / output contract 结构
+  - 对应 `standard` task policy
+- `context_summary`
+  - 倾向 recent evidence / memory summary 优先
+  - 对应 `evidence_first` task policy
+  - `minimal` section policy 下会移除 `output_contract`
+  - 当已经存在 `context_snapshot` 或 memory sections 时，会进一步压低/移除 `role_context` 与 `world_context`
+- `memory_compaction`
+  - 倾向 memory_long_term / memory_summary / memory_short_term 优先
+  - 对应 `memory_focused` task policy
+  - `minimal` section policy 下会移除 `output_contract / role_context / world_context`
+  - 当已经存在 memory sections 时，会进一步移除 `context_snapshot`
+
+当前这些差异主要落在：
+
+- `buildSectionDraftsFromFragments(...)` 的 task-aware ordering / pruning
+- `token_budget_trim` 的 task-aware slot priority
+- `section_summary` diagnostics 中的 `task_type / section_policy / grouped_node_keys / sections_by_type / section_policies`
+
+同时，当前 `PromptSectionDraft.metadata.task_policy` 已会记录：
+
+- `task_type`
+- `section_policy`
+- `policy_name`
+- `priority`
+- `ranking_score`
+- `score_components`
+- `score_reasons`
+
+并且 `section_summary.section_scores` 已会把这些 ranking 结果聚合为稳定读面，便于 persisted trace / replay / smoke e2e 直接读取。
+
+这样后续 trace / bundle metadata 不仅能看到“结果是什么”，也能看到“为何采用该 section 策略”。
+
+### placement / diagnostics
+
+当前 placement 已支持：
+
+- `prepend`
+- `append`
+- `before_anchor`
+- `after_anchor`
+
+以及 anchor：
+
+- `slot_start`
+- `slot_end`
+- `source`
+- `tag`
+- `fragment_id`
+
+当前 workflow diagnostics 已稳定输出：
+
+- `profile_id / profile_version`
+- `task_type`
+- `selected_step_keys`
+- `step_traces`
+- `placement_summary`
+- `section_summary`
+- `compatibility`
+
+其中 `token_budget_trimming` 现已扩展为更可解释的读面，除 `budget / used / trimmed_fragment_ids` 外，还包括：
+
+- `task_type`
+- `kept_fragment_ids`
+- `always_kept_fragment_ids`
+- `kept_optional_fragment_ids`
+- `slot_priority`
+- `optional_fragment_scores`
+- `trimmed_by_slot`
+- `trimmed_sources`
+- `section_summary`
+
+同时，当前 `token_budget_trimming` 已开始暴露 `section_budget`：
+
+- `mode`
+- `total_budget`
+- `allocated_budget`
+- `allocations`
+- `kept_section_ids`
+- `dropped_section_ids`
+
+当前这一层表示 **section-level token budget 的第一轮接线**：
+
+- runtime 已能基于 `section_scores` 生成 section budget allocation
+- trimming 已会把 section keep/drop 结果写回 diagnostics
+- 但它仍不是精确 tokenizer 级预算器，也还不是最终复杂的多轮 section rebalancer
+
+当前以下读面都已暴露 task-aware workflow 信息：
+
+- `PromptBundle.metadata.workflow_task_type / workflow_profile_id / workflow_step_keys`
+- `PromptBundle.metadata.workflow_section_summary / workflow_placement_summary`
+- `InferenceTrace.context_snapshot.prompt_workflow`
+- `InferenceTrace.context_snapshot.prompt_processing_trace`
+
+其中 `PromptProcessingTrace` 现已包含结构化 `prompt_workflow` 快照，优先作为 runtime → trace → bundle / snapshot 的统一工作流读面，而不是继续主要依赖 legacy trace 字段回推。
+
+### Compatibility 边界
+
+当前仍保留：
+
+- `memory_context`
+- legacy `PromptProcessor`
+- legacy prompt trace 字段
+
+但它们当前的角色已收敛为：
+
+- compatibility projection
+- fallback execution bridge
+- trace bridge
+
+而不是新的 source-of-truth。
 
 ### Long memory / prompt workflow
 
@@ -96,20 +293,19 @@
   - `placement_mode`
   - `depth`
   - `order`
-- Context Orchestrator Lite 的排序现已支持：
-  - slot
-  - anchor key
-  - depth
-  - order
-  - priority
+- Prompt Workflow Runtime 已统一处理：
+  - slot order
+  - placement anchor
+  - depth / order
+  - fallback reason
 
 ### 边界
 
-- `memory_context` 仍保留，但属于 compatibility projection
-- 当前实现为线性流程，不是通用 DAG workflow engine
+- 当前实现仍为线性 runtime，不是通用 DAG workflow engine
 - overlay 不绕过 source-of-truth，也不替代 pack runtime state
 - `ContextDirective` 目前仅保留 schema / trace reservation，执行仍关闭
 - 当前 Memory Block 仍未引入 embedding / semantic retrieval / graph memory
+- `memory_context` 仍保留，但已明确属于 compatibility projection
 
 ## Unified AI task / gateway
 
@@ -136,9 +332,23 @@
   - output schema
   - parse/decoder behavior
   - route hints
+- 当前 workflow metadata 也会进入：
+  - AI messages metadata
+  - `AiTaskRequest.metadata`
+  - `ModelGatewayRequest.metadata`
+- `AiInvocationTrace`
 - world pack 不能直接写 raw provider payload
 - world pack 不能注入任意可执行 parser/composer 代码
 - 更复杂的行为应通过 server-side registered extension 实现
+
+当前 AI task / gateway 观测面已可直接看到：
+
+- `workflow_task_type`
+- `workflow_profile_id / workflow_profile_version`
+- `workflow_step_keys`
+- `workflow_section_summary`
+- `workflow_placement_summary`
+- `processing_trace`
 
 当前默认 registry 提供 OpenAI provider / model / route，`ModelGateway` 默认注册 `mock` 与 `openai` adapters。缺少 `OPENAI_API_KEY` 时不会影响 `mock / rule_based` 主线启动。
 
@@ -213,30 +423,5 @@ AI 调用观测的只读接口为：
 - `apps/server/src/app/services/operator_contracts.ts`
 
 用于整理前端 handoff 所依赖的后端合同。
-
-### Context Orchestrator Lite backend
-
-当前 prompt pipeline 通过线性的 Context Orchestrator Lite 执行。固定阶段为：
-
-1. `memory_injection`
-2. `policy_filter`
-3. `summary_compaction`
-4. `token_budget_trim`
-
-当前含义：
-
-- legacy `PromptProcessor` 实现仍然存在
-- 编排顺序不再只隐含在 prompt builder 内
-- prompt assembly 在显式 context orchestration 之后执行
-- node-level working-set policy 会先于 fragment pipeline 决定
-- `policy_filter` 不再是主要 policy authority
-
-当前不在范围内：
-
-- general DAG prompt workflow engine
-- front-end node editor / visual workflow canvas
-- plugin execution runtime
-- model-driven directive execution
-- direct model-side overlay writing
 
 Operator 高级视图（Authority Inspector / Rule Execution Timeline / Perception Diff）的前端页面、交互、布局、状态管理与可视化属于前端实现范围；后端仅负责相应 evidence / contract / projection 能力。

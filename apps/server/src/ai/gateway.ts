@@ -134,6 +134,10 @@ const buildFailureResponse = (
         typeof input.task_request.metadata?.inference_id === 'string'
           ? input.task_request.metadata.inference_id
           : null,
+      workflow_task_type:
+        typeof input.task_request.metadata?.workflow_task_type === 'string'
+          ? input.task_request.metadata.workflow_task_type
+          : input.task_request.task_type,
       audit_level: auditLevel,
       attempts,
       request: auditLevel === 'full'
@@ -186,6 +190,10 @@ const finalizeProviderResponse = (
         typeof input.task_request.metadata?.inference_id === 'string'
           ? input.task_request.metadata.inference_id
           : null,
+      workflow_task_type:
+        typeof input.task_request.metadata?.workflow_task_type === 'string'
+          ? input.task_request.metadata.workflow_task_type
+          : input.task_request.task_type,
       audit_level: auditLevel,
       attempts,
       request: auditLevel === 'full'

@@ -126,6 +126,7 @@ export interface AgentOverviewSnapshot {
       cooling: string[];
       retained: string[];
       inactive: string[];
+      mutations: Array<Record<string, unknown>>;
     };
   };
   context_governance: {
@@ -155,6 +156,9 @@ export interface AgentOverviewSnapshot {
       cooling: string[];
       retained: string[];
       inactive: string[];
+      mutations: Array<Record<string, unknown>>;
+      compaction_state: Record<string, unknown> | null;
+      latest_trace_memory_mutations: Array<Record<string, unknown>>;
     };
   };
 }
@@ -385,7 +389,16 @@ export const getEntityOverview = async (
   const latestMemoryBlocks = latestContextSnapshot && isRecord(latestContextSnapshot.memory_blocks)
     ? latestContextSnapshot.memory_blocks as Record<string, unknown>
     : null;
+  const latestMemoryBlockMutations = latestContextSnapshot && Array.isArray(latestContextSnapshot.memory_block_mutations)
+    ? latestContextSnapshot.memory_block_mutations.filter(isRecord).map(item => item as Record<string, unknown>)
+    : [];
+  const latestTraceMemoryMutations = latestTrace && isRecord(latestTrace.trace_metadata) && Array.isArray((latestTrace.trace_metadata as Record<string, unknown>).memory_mutations)
+    ? (((latestTrace.trace_metadata as Record<string, unknown>).memory_mutations as unknown[]).filter(isRecord).map(item => item as Record<string, unknown>))
+    : latestTrace && isRecord(latestTrace.trace_metadata) && isRecord((latestTrace.trace_metadata as Record<string, unknown>).memory_mutations) && Array.isArray(((latestTrace.trace_metadata as Record<string, unknown>).memory_mutations as Record<string, unknown>).records)
+      ? ((((latestTrace.trace_metadata as Record<string, unknown>).memory_mutations as Record<string, unknown>).records as unknown[]).filter(isRecord).map(item => item as Record<string, unknown>))
+      : [];
   const packEntity = packProjection.entities.find(entity => entity.id === resolvedAgentId) ?? null;
+  const memoryCompactionState = await context.prisma.memoryCompactionState.findUnique({ where: { agent_id: resolvedAgentId } });
 
   const bindingSummary = {
     active: bindings
@@ -539,7 +552,8 @@ export const getEntityOverview = async (
           : [],
         inactive: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.inactive)
           ? latestMemoryBlocks.inactive.filter((item): item is string => typeof item === 'string')
-          : []
+          : [],
+        mutations: latestMemoryBlockMutations
       }
     },
     context_governance: {
@@ -580,7 +594,17 @@ export const getEntityOverview = async (
           : [],
         inactive: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.inactive)
           ? latestMemoryBlocks.inactive.filter((item): item is string => typeof item === 'string')
-          : []
+          : [],
+        mutations: latestMemoryBlockMutations,
+        compaction_state: memoryCompactionState
+          ? {
+              ...memoryCompactionState,
+              updated_at_tick: memoryCompactionState.updated_at_tick.toString(),
+              last_summary_tick: memoryCompactionState.last_summary_tick?.toString() ?? null,
+              last_compaction_tick: memoryCompactionState.last_compaction_tick?.toString() ?? null
+            }
+          : null,
+        latest_trace_memory_mutations: latestTraceMemoryMutations
       }
     }
   };

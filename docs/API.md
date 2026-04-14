@@ -111,6 +111,9 @@ This is the current API-level observability path for narrativized failure.
   - Current Death Note usage also relies on timeline visibility for:
     - `history` events emitted by objective rules
     - narrativized failed attempts produced by Intent Grounder fallback
+    - execution feedback events such as `post_execution_pressure_feedback`
+    - investigation escalation events such as `investigation_pressure_escalated`
+    - public pressure / briefing events such as `case_update_published`
 
 ## 7. Agent / Entity 读取接口
 

@@ -139,9 +139,17 @@ const aiPackDefaultsSchema = z
   })
   .strict();
 
+const aiPackMemoryLoopSchema = z
+  .object({
+    summary_every_n_rounds: z.number().int().positive().optional(),
+    compaction_every_n_rounds: z.number().int().positive().optional()
+  })
+  .strict();
+
 const aiPackConfigSchema = z
   .object({
     defaults: aiPackDefaultsSchema.optional(),
+    memory_loop: aiPackMemoryLoopSchema.optional(),
     tasks: z.partialRecord(aiTaskTypeSchema, aiTaskOverrideSchema).optional()
   })
   .strict();

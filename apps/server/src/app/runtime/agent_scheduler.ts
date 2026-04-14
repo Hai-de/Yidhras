@@ -8,11 +8,12 @@ import {
   listPendingSchedulerActionIntents,
   listPendingSchedulerDecisionJobs,
   listRecentEventFollowupSignals,
+  listRecentMemoryBlockFollowupSignals,
+  listRecentOverlayFollowupSignals,
   listRecentRecoveryWindowActors,
   listRecentRelationshipFollowupSignals,
   listRecentScheduledDecisionJobs,
-  listRecentSnrFollowupSignals
-} from '../services/inference_workflow.js';
+  listRecentSnrFollowupSignals} from '../services/inference_workflow.js';
 import { recordSchedulerRunSnapshot } from '../services/scheduler_observability.js';
 import {
   acquireSchedulerLease,
@@ -42,7 +43,7 @@ export const DEFAULT_AGENT_SCHEDULER_LIMIT = 5;
 export const DEFAULT_AGENT_SCHEDULER_EVENT_DELAY_TICKS = 1n;
 export const DEFAULT_AGENT_SCHEDULER_MAX_CANDIDATES = 20;
 
-type EventDrivenSchedulerReason = 'event_followup' | 'relationship_change_followup' | 'snr_change_followup';
+type EventDrivenSchedulerReason = 'event_followup' | 'relationship_change_followup' | 'snr_change_followup' | 'overlay_change_followup' | 'memory_change_followup';
 export type SchedulerReason = 'periodic_tick' | 'bootstrap_seed' | EventDrivenSchedulerReason;
 export type SchedulerKind = 'periodic' | 'event_driven';
 type SchedulerRecoveryWindowType = 'replay' | 'retry';
@@ -131,6 +132,18 @@ const SCHEDULER_SIGNAL_POLICY: Record<EventDrivenSchedulerReason, SchedulerSigna
   },
   snr_change_followup: {
     priority_score: 10,
+    delay_ticks: DEFAULT_AGENT_SCHEDULER_EVENT_DELAY_TICKS,
+    coalesce_window_ticks: 2n,
+    suppression_tier: 'low'
+  },
+  overlay_change_followup: {
+    priority_score: 8,
+    delay_ticks: DEFAULT_AGENT_SCHEDULER_EVENT_DELAY_TICKS,
+    coalesce_window_ticks: 2n,
+    suppression_tier: 'low'
+  },
+  memory_change_followup: {
+    priority_score: 9,
     delay_ticks: DEFAULT_AGENT_SCHEDULER_EVENT_DELAY_TICKS,
     coalesce_window_ticks: 2n,
     suppression_tier: 'low'
@@ -527,12 +540,14 @@ const runAgentSchedulerForPartition = async ({
   const cursor = await getSchedulerCursor(context, partitionId);
   const lookbackTicks = cooldownTicks > 0n ? cooldownTicks : 1n;
   const signalSinceTick = cursor ? cursor.last_signal_tick : now - lookbackTicks;
-  const [allAgents, recentEventSignals, recentRelationshipSignals, recentSnrSignals, replayRecoveryActorTicks, retryRecoveryActorTicks] =
+  const [allAgents, recentEventSignals, recentRelationshipSignals, recentSnrSignals, recentOverlaySignals, recentMemorySignals, replayRecoveryActorTicks, retryRecoveryActorTicks] =
     await Promise.all([
       listActiveSchedulerAgents(context, limit * Math.max(getSchedulerPartitionCount(), 1)),
       listRecentEventFollowupSignals(context, signalSinceTick, now),
       listRecentRelationshipFollowupSignals(context, signalSinceTick, now),
       listRecentSnrFollowupSignals(context, signalSinceTick, now),
+      listRecentOverlayFollowupSignals(context, signalSinceTick, now),
+      listRecentMemoryBlockFollowupSignals(context, signalSinceTick, now),
       listRecentRecoveryWindowActors(context, signalSinceTick, ['replay_recovery'], now),
       listRecentRecoveryWindowActors(context, signalSinceTick, ['retry_recovery'], now)
     ]);
@@ -574,7 +589,7 @@ const runAgentSchedulerForPartition = async ({
   }
 
   const allowedAgentIds = new Set(agentIds);
-  const recentSignals = [...recentEventSignals, ...recentRelationshipSignals, ...recentSnrSignals].filter(signal =>
+  const recentSignals = [...recentEventSignals, ...recentRelationshipSignals, ...recentSnrSignals, ...recentOverlaySignals, ...recentMemorySignals].filter(signal =>
     allowedAgentIds.has(signal.agent_id)
   );
 
@@ -605,7 +620,9 @@ const runAgentSchedulerForPartition = async ({
       buildSchedulerCandidateKey(agentId, 'periodic', 'periodic_tick'),
       buildSchedulerCandidateKey(agentId, 'event_driven', 'event_followup'),
       buildSchedulerCandidateKey(agentId, 'event_driven', 'relationship_change_followup'),
-      buildSchedulerCandidateKey(agentId, 'event_driven', 'snr_change_followup')
+      buildSchedulerCandidateKey(agentId, 'event_driven', 'snr_change_followup'),
+      buildSchedulerCandidateKey(agentId, 'event_driven', 'overlay_change_followup'),
+      buildSchedulerCandidateKey(agentId, 'event_driven', 'memory_change_followup')
     ])
   );
 

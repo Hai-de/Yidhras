@@ -1,11 +1,23 @@
 import { randomUUID } from 'node:crypto';
 
 import { buildContextPromptAssemblySummary, runContextOrchestrator } from '../context/workflow/orchestrator.js';
+import { sortPromptFragmentsBase } from '../context/workflow/placement_resolution.js';
+import { buildSectionDraftsFromFragments, buildSectionSummary } from '../context/workflow/section_drafts.js';
+import type { PromptWorkflowTaskType } from '../context/workflow/types.js';
 import { NarrativeResolver } from '../narrative/resolver.js';
 import type { PromptFragment, PromptFragmentSlot } from './prompt_fragments.js';
 import type { InferenceContext, PromptBundle, PromptProcessingTrace } from './types.js';
 
 const PROMPT_VERSION = 'phase-b-v1';
+
+export interface PromptWorkflowBuildOptions {
+  task_type?: PromptWorkflowTaskType;
+  profile_id?: string | null;
+}
+
+const resolvePromptWorkflowTaskType = (options?: PromptWorkflowBuildOptions): PromptWorkflowTaskType => {
+  return options?.task_type ?? 'agent_decision';
+};
 
 const SLOT_HEADINGS: Record<PromptFragmentSlot, string> = {
   system_core: 'System Prompt',
@@ -30,6 +42,10 @@ const SLOT_ORDER: PromptFragmentSlot[] = [
   'output_contract',
   'post_process'
 ];
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+};
 
 const buildContextPromptPayload = (context: InferenceContext): Record<string, unknown> => {
   return {
@@ -78,55 +94,60 @@ const buildFragment = (
   };
 };
 
-const slotOrderMap = new Map(SLOT_ORDER.map((slot, index) => [slot, index]));
-
-const getAnchorKey = (fragment: PromptFragment): string => {
-  if (!fragment.anchor || typeof fragment.anchor !== 'object') {
-    return '';
-  }
-
-  return `${fragment.anchor.kind}:${fragment.anchor.value}`;
-};
-
-const getDepth = (fragment: PromptFragment): number => {
-  return typeof fragment.depth === 'number' && Number.isFinite(fragment.depth) ? fragment.depth : 0;
-};
-
-const getOrder = (fragment: PromptFragment): number => {
-  return typeof fragment.order === 'number' && Number.isFinite(fragment.order) ? fragment.order : 0;
-};
-
 const sortFragments = (fragments: PromptFragment[]): PromptFragment[] => {
-  return [...fragments].sort((left, right) => {
-    const slotOrderDiff =
-      (slotOrderMap.get(left.slot) ?? Number.MAX_SAFE_INTEGER) -
-      (slotOrderMap.get(right.slot) ?? Number.MAX_SAFE_INTEGER);
-    if (slotOrderDiff !== 0) {
-      return slotOrderDiff;
-    }
+  return sortPromptFragmentsBase(fragments, SLOT_ORDER);
+};
 
-    const anchorDiff = getAnchorKey(left).localeCompare(getAnchorKey(right));
-    if (anchorDiff !== 0) {
-      return anchorDiff;
-    }
+const readPromptWorkflowMetadata = (context: InferenceContext): {
+  workflow_task_type: string | null;
+  workflow_profile_id: string | null;
+  workflow_profile_version: string | null;
+  workflow_step_keys?: string[];
+  workflow_section_summary?: Record<string, unknown> | null;
+  workflow_placement_summary?: Record<string, unknown> | null;
+  processing_trace?: PromptProcessingTrace;
+} => {
+  const orchestration = isRecord(context.context_run.diagnostics.orchestration)
+    ? context.context_run.diagnostics.orchestration
+    : null;
+  const promptWorkflow = orchestration && isRecord(orchestration.prompt_workflow)
+    ? orchestration.prompt_workflow
+    : null;
+  const orchestrationTrace = orchestration?.processing_trace;
+  const legacyTrace = context.memory_context.diagnostics.prompt_processing_trace;
+  const processingTrace = isRecord(orchestrationTrace)
+    ? (orchestrationTrace as unknown as PromptProcessingTrace)
+    : isRecord(legacyTrace)
+      ? (legacyTrace as unknown as PromptProcessingTrace)
+      : undefined;
 
-    const depthDiff = getDepth(left) - getDepth(right);
-    if (depthDiff !== 0) {
-      return depthDiff;
-    }
-
-    const orderDiff = getOrder(left) - getOrder(right);
-    if (orderDiff !== 0) {
-      return orderDiff;
-    }
-
-    const priorityDiff = right.priority - left.priority;
-    if (priorityDiff !== 0) {
-      return priorityDiff;
-    }
-
-    return left.id.localeCompare(right.id);
-  });
+  return {
+    workflow_task_type:
+      promptWorkflow && typeof promptWorkflow.task_type === 'string'
+        ? promptWorkflow.task_type
+        : processingTrace?.workflow_task_type ?? null,
+    workflow_profile_id:
+      promptWorkflow && typeof promptWorkflow.profile_id === 'string'
+        ? promptWorkflow.profile_id
+        : processingTrace?.workflow_profile_id ?? null,
+    workflow_profile_version:
+      promptWorkflow && typeof promptWorkflow.profile_version === 'string'
+        ? promptWorkflow.profile_version
+        : processingTrace?.workflow_profile_version ?? null,
+    workflow_step_keys:
+      promptWorkflow && Array.isArray(promptWorkflow.selected_step_keys)
+        ? promptWorkflow.selected_step_keys.filter((value): value is string => typeof value === 'string')
+        : processingTrace?.workflow_step_keys,
+    workflow_section_summary:
+      promptWorkflow && isRecord(promptWorkflow.section_summary)
+        ? promptWorkflow.section_summary
+        : null,
+    workflow_placement_summary:
+      promptWorkflow && isRecord(promptWorkflow.placement_summary)
+        ? promptWorkflow.placement_summary
+        : null,
+    processing_trace: processingTrace
+  };
 };
 
 const buildSlotPrompt = (fragments: PromptFragment[], slot: PromptFragmentSlot): string => {
@@ -213,6 +234,19 @@ export const buildPromptBundleFromFragments = (
   context: InferenceContext
 ): PromptBundle => {
   const sortedFragments = sortFragments(fragments);
+  const workflowMetadata = readPromptWorkflowMetadata(context);
+  const fallbackSectionSummary = buildSectionSummary(
+    buildSectionDraftsFromFragments(sortedFragments, {
+      task_type: (workflowMetadata.workflow_task_type ?? 'agent_decision') as PromptWorkflowTaskType,
+      section_policy: 'standard'
+    })
+  );
+  const resolvedSectionSummary = workflowMetadata.workflow_section_summary ?? fallbackSectionSummary;
+  const resolvedPlacementSummary = workflowMetadata.workflow_placement_summary ?? {
+    total_fragments: sortedFragments.length,
+    resolved_with_anchor: sortedFragments.filter(fragment => fragment.anchor).length,
+    fallback_count: 0
+  };
 
   context.context_run.diagnostics.prompt_assembly = buildContextPromptAssemblySummary(sortedFragments);
   context.context_run.diagnostics.orchestration = {
@@ -232,15 +266,19 @@ export const buildPromptBundleFromFragments = (
         ...Object.keys(context.world_prompts),
         ...sortedFragments.map(fragment => fragment.source)
       ],
-      processing_trace: context.memory_context.diagnostics.prompt_processing_trace as
-        | PromptProcessingTrace
-        | undefined
+      workflow_task_type: workflowMetadata.workflow_task_type,
+      workflow_profile_id: workflowMetadata.workflow_profile_id,
+      workflow_profile_version: workflowMetadata.workflow_profile_version,
+      workflow_step_keys: workflowMetadata.workflow_step_keys,
+      workflow_section_summary: resolvedSectionSummary,
+      workflow_placement_summary: resolvedPlacementSummary,
+      processing_trace: workflowMetadata.processing_trace
     }
   };
 };
 
-export const buildPromptBundle = async (context: InferenceContext): Promise<PromptBundle> => {
+export const buildPromptBundle = async (context: InferenceContext, options: PromptWorkflowBuildOptions = {}): Promise<PromptBundle> => {
   const fragments = buildPromptFragments(context);
-  const orchestrated = await runContextOrchestrator(context, fragments);
+  const orchestrated = await runContextOrchestrator(context, fragments, { task_type: resolvePromptWorkflowTaskType(options), profile_id: options.profile_id ?? null });
   return buildPromptBundleFromFragments(orchestrated.fragments, context);
-}
+};

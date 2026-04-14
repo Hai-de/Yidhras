@@ -475,14 +475,23 @@ export const getLatestSchedulerSignalTick = async (
   sinceTick: bigint,
   untilTick?: bigint
 ): Promise<bigint | null> => {
-  const [latestEvent, latestRelationshipLog, latestSnrLog, latestRecoveryJob] = await Promise.all([
+  const [latestEvent, latestRelationshipLog, latestSnrLog, latestRecoveryJob, latestOverlay, latestMemoryBlock] = await Promise.all([
     context.prisma.event.findFirst({ where: { created_at: { gte: sinceTick, ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {}) }, source_action_intent_id: { not: null } }, orderBy: { created_at: 'desc' }, select: { created_at: true } }),
     context.prisma.relationshipAdjustmentLog.findFirst({ where: { created_at: { gte: sinceTick, ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {}) } }, orderBy: { created_at: 'desc' }, select: { created_at: true } }),
     context.prisma.sNRAdjustmentLog.findFirst({ where: { created_at: { gte: sinceTick, ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {}) } }, orderBy: { created_at: 'desc' }, select: { created_at: true } }),
-    context.prisma.decisionJob.findFirst({ where: { created_at: { gte: sinceTick, ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {}) }, intent_class: { in: ['replay_recovery', 'retry_recovery'] } }, orderBy: { created_at: 'desc' }, select: { created_at: true } })
+    context.prisma.decisionJob.findFirst({ where: { created_at: { gte: sinceTick, ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {}) }, intent_class: { in: ['replay_recovery', 'retry_recovery'] } }, orderBy: { created_at: 'desc' }, select: { created_at: true } }),
+    context.prisma.contextOverlayEntry.findFirst({ where: { updated_at_tick: { gte: sinceTick, ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {}) } }, orderBy: { updated_at_tick: 'desc' }, select: { updated_at_tick: true } }),
+    context.prisma.memoryBlock.findFirst({ where: { updated_at_tick: { gte: sinceTick, ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {}) } }, orderBy: { updated_at_tick: 'desc' }, select: { updated_at_tick: true } })
   ]);
 
-  return [latestEvent?.created_at, latestRelationshipLog?.created_at, latestSnrLog?.created_at, latestRecoveryJob?.created_at].reduce<bigint | null>(
+  return [
+    latestEvent?.created_at,
+    latestRelationshipLog?.created_at,
+    latestSnrLog?.created_at,
+    latestRecoveryJob?.created_at,
+    latestOverlay?.updated_at_tick,
+    latestMemoryBlock?.updated_at_tick
+  ].reduce<bigint | null>(
     (latest, current) => (typeof current === 'bigint' && (latest === null || current > latest) ? current : latest),
     null
   );
@@ -606,6 +615,52 @@ export const listRecentSnrFollowupSignals = async (
     reason: 'snr_change_followup' as const,
     created_at: log.created_at
   }));
+};
+
+export const listRecentOverlayFollowupSignals = async (
+  context: AppContext,
+  sinceTick: bigint,
+  untilTick?: bigint
+): Promise<Array<{ agent_id: string; reason: 'overlay_change_followup'; created_at: bigint }>> => {
+  const overlays = await context.prisma.contextOverlayEntry.findMany({
+    where: {
+      updated_at_tick: {
+        gte: sinceTick,
+        ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {})
+      }
+    },
+    orderBy: {
+      updated_at_tick: 'desc'
+    }
+  });
+
+  return overlays
+    .filter(entry => typeof entry.actor_id === 'string' && entry.actor_id.trim().length > 0)
+    .map(entry => ({
+      agent_id: entry.actor_id.trim(),
+      reason: 'overlay_change_followup' as const,
+      created_at: entry.updated_at_tick
+    }));
+};
+
+export const listRecentMemoryBlockFollowupSignals = async (
+  context: AppContext,
+  sinceTick: bigint,
+  untilTick?: bigint
+): Promise<Array<{ agent_id: string; reason: 'memory_change_followup'; created_at: bigint }>> => {
+  const blocks = await context.prisma.memoryBlock.findMany({
+    where: {
+      updated_at_tick: {
+        gte: sinceTick,
+        ...(typeof untilTick === 'bigint' ? { lte: untilTick } : {})
+      }
+    },
+    orderBy: {
+      updated_at_tick: 'desc'
+    }
+  });
+
+  return blocks.map(block => ({ agent_id: block.owner_agent_id, reason: 'memory_change_followup' as const, created_at: block.updated_at_tick }));
 };
 
 export const createPendingDecisionJob = async (

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import type { AppContext } from '../../app/context.js';
 import { toJsonSafe } from '../../app/http/json.js';
 import type { InferenceTraceEvent, InferenceTraceSink } from '../trace_sink.js';
+import type { PromptWorkflowSnapshot } from '../types.js';
 
 const DEFAULT_JOB_MAX_ATTEMPTS = 3;
 
@@ -18,7 +19,53 @@ const parseOptionalTickString = (value: string | null | undefined): bigint | nul
   return BigInt(value);
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+};
+
+const toStringArray = (value: unknown): string[] => {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+};
+
+const toPlacementSummary = (value: unknown): PromptWorkflowSnapshot['placement_summary'] => {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  return {
+    total_fragments: typeof value.total_fragments === 'number' ? value.total_fragments : 0,
+    resolved_with_anchor: typeof value.resolved_with_anchor === 'number' ? value.resolved_with_anchor : 0,
+    fallback_count: typeof value.fallback_count === 'number' ? value.fallback_count : 0
+  };
+};
+
+const extractPromptWorkflowSnapshot = (event: InferenceTraceEvent): PromptWorkflowSnapshot | null => {
+  const orchestration = event.context.context_run.diagnostics.orchestration;
+  if (!isRecord(orchestration)) {
+    return null;
+  }
+
+  const promptWorkflow = isRecord(orchestration.prompt_workflow) ? orchestration.prompt_workflow : null;
+
+  if (!promptWorkflow) {
+    return null;
+  }
+
+  return {
+    task_type: typeof promptWorkflow.task_type === 'string' ? promptWorkflow.task_type : null,
+    profile_id: typeof promptWorkflow.profile_id === 'string' ? promptWorkflow.profile_id : null,
+    profile_version: typeof promptWorkflow.profile_version === 'string' ? promptWorkflow.profile_version : null,
+    selected_step_keys: toStringArray(promptWorkflow.selected_step_keys),
+    placement_summary: toPlacementSummary(promptWorkflow.placement_summary),
+    section_summary: isRecord(promptWorkflow.section_summary) ? promptWorkflow.section_summary : null,
+    compatibility: isRecord(promptWorkflow.compatibility) ? promptWorkflow.compatibility : null,
+    step_traces: Array.isArray(promptWorkflow.step_traces) ? (promptWorkflow.step_traces as PromptWorkflowSnapshot['step_traces']) : []
+  };
+};
+
 const buildContextSnapshot = (event: InferenceTraceEvent): Prisma.InputJsonValue => {
+  const promptWorkflow = extractPromptWorkflowSnapshot(event);
+
   return toJsonValue({
     inference_id: event.context.inference_id,
     context_module: {
@@ -35,12 +82,14 @@ const buildContextSnapshot = (event: InferenceTraceEvent): Prisma.InputJsonValue
       visibility_denials: event.context.context_run.diagnostics.visibility_denials ?? [],
       overlay_nodes_loaded: event.context.context_run.diagnostics.overlay_nodes_loaded ?? [],
       overlay_nodes_mutated: event.context.context_run.diagnostics.overlay_nodes_mutated ?? [],
+      memory_block_mutations: event.context.context_run.diagnostics.memory_block_mutations ?? [],
       memory_blocks: event.context.context_run.diagnostics.memory_blocks ?? null,
       submitted_directives: event.context.context_run.diagnostics.submitted_directives ?? [],
       approved_directives: event.context.context_run.diagnostics.approved_directives ?? [],
       denied_directives: event.context.context_run.diagnostics.denied_directives ?? [],
       dropped_nodes: event.context.context_run.diagnostics.dropped_nodes,
       orchestration: event.context.context_run.diagnostics.orchestration ?? null,
+      prompt_workflow: promptWorkflow,
       prompt_assembly: event.context.context_run.diagnostics.prompt_assembly ?? null
     },
     context_debug: {
@@ -63,11 +112,13 @@ const buildContextSnapshot = (event: InferenceTraceEvent): Prisma.InputJsonValue
       visibility_denials: event.context.context_run.diagnostics.visibility_denials ?? [],
       overlay_nodes_loaded: event.context.context_run.diagnostics.overlay_nodes_loaded ?? [],
       overlay_nodes_mutated: event.context.context_run.diagnostics.overlay_nodes_mutated ?? [],
+      memory_block_mutations: event.context.context_run.diagnostics.memory_block_mutations ?? [],
       memory_blocks: event.context.context_run.diagnostics.memory_blocks ?? null,
       submitted_directives: event.context.context_run.diagnostics.submitted_directives ?? [],
       approved_directives: event.context.context_run.diagnostics.approved_directives ?? [],
       denied_directives: event.context.context_run.diagnostics.denied_directives ?? [],
       dropped_nodes: event.context.context_run.diagnostics.dropped_nodes,
+      prompt_workflow: promptWorkflow,
       prompt_assembly: event.context.context_run.diagnostics.prompt_assembly ?? null,
       processing_trace:
         event.prompt.metadata.processing_trace ??
@@ -89,6 +140,7 @@ const buildContextSnapshot = (event: InferenceTraceEvent): Prisma.InputJsonValue
       visibility_denials: event.context.context_run.diagnostics.visibility_denials ?? [],
       overlay_nodes_loaded: event.context.context_run.diagnostics.overlay_nodes_loaded ?? [],
       overlay_nodes_mutated: event.context.context_run.diagnostics.overlay_nodes_mutated ?? [],
+      memory_block_mutations: event.context.context_run.diagnostics.memory_block_mutations ?? [],
       memory_blocks: event.context.context_run.diagnostics.memory_blocks ?? null,
       submitted_directives: event.context.context_run.diagnostics.submitted_directives ?? [],
       approved_directives: event.context.context_run.diagnostics.approved_directives ?? [],
@@ -111,6 +163,7 @@ const buildContextSnapshot = (event: InferenceTraceEvent): Prisma.InputJsonValue
     pack_state: event.context.pack_state,
     pack_runtime: event.context.pack_runtime,
     memory_selection: event.context.memory_context.diagnostics.memory_selection ?? null,
+    prompt_workflow: promptWorkflow,
     prompt_processing_trace:
       event.prompt.metadata.processing_trace ??
       event.context.memory_context.diagnostics.prompt_processing_trace ??
@@ -123,6 +176,7 @@ const buildContextSnapshot = (event: InferenceTraceEvent): Prisma.InputJsonValue
     visibility_denials: event.context.context_run.diagnostics.visibility_denials ?? [],
     overlay_nodes_loaded: event.context.context_run.diagnostics.overlay_nodes_loaded ?? [],
     overlay_nodes_mutated: event.context.context_run.diagnostics.overlay_nodes_mutated ?? [],
+    memory_block_mutations: event.context.context_run.diagnostics.memory_block_mutations ?? [],
     memory_blocks: event.context.context_run.diagnostics.memory_blocks ?? null,
     submitted_directives: event.context.context_run.diagnostics.submitted_directives ?? [],
     approved_directives: event.context.context_run.diagnostics.approved_directives ?? [],
@@ -185,6 +239,7 @@ export const createPrismaInferenceTraceSink = (context: AppContext): InferenceTr
             trace_metadata: toJsonValue({
               ai_invocation_id: event.ai_invocation_id ?? null,
               ...event.trace_metadata,
+              memory_mutations: event.memory_mutations ?? null,
               semantic_intent: event.semantic_intent ?? null,
               intent_grounding: event.intent_grounding ?? null
             }),
@@ -203,6 +258,7 @@ export const createPrismaInferenceTraceSink = (context: AppContext): InferenceTr
             trace_metadata: toJsonValue({
               ai_invocation_id: event.ai_invocation_id ?? null,
               ...event.trace_metadata,
+              memory_mutations: event.memory_mutations ?? null,
               semantic_intent: event.semantic_intent ?? null,
               intent_grounding: event.intent_grounding ?? null
             }),

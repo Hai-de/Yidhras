@@ -4,6 +4,7 @@ import type {
   InferenceActorRef,
   InferenceContext,
   InferenceJobStatus,
+  InferenceMemoryMutationSnapshot,
   InferenceRequestInput,
   InferenceStrategy,
   IntentGroundingResult,
@@ -34,6 +35,7 @@ export interface InferenceTraceEvent {
   job_attempt_count?: number;
   job_max_attempts?: number;
   ai_invocation_id?: string | null;
+  memory_mutations?: InferenceMemoryMutationSnapshot | null;
 }
 
 export interface InferenceTraceSink {

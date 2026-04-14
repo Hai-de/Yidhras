@@ -180,6 +180,14 @@ export interface ContextOverlayMutationRecord {
   status?: string | null;
 }
 
+export interface ContextMemoryBlockMutationRecord {
+  memory_id: string;
+  operation: 'created' | 'updated' | 'deleted';
+  kind?: string | null;
+  status?: string | null;
+  source_kind?: string | null;
+}
+
 export interface ContextMemoryBlockDiagnostics {
   evaluated: Array<{
     memory_id: string;
@@ -208,6 +216,7 @@ export interface ContextRunDiagnostics {
   visibility_denials?: ContextPolicyVisibilityDenial[];
   overlay_nodes_loaded?: ContextOverlayLoadedNode[];
   overlay_nodes_mutated?: ContextOverlayMutationRecord[];
+  memory_block_mutations?: ContextMemoryBlockMutationRecord[];
   memory_blocks?: ContextMemoryBlockDiagnostics | null;
   submitted_directives?: ContextDirectiveRequest[];
   approved_directives?: ContextApprovedDirective[];

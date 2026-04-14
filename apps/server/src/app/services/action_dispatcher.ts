@@ -794,3 +794,60 @@ export const dispatchActionIntent = async (
     reason: null
   };
 };
+
+export const getActionIntentForDispatchReflection = async (
+  context: AppContext,
+  intentId: string
+): Promise<{
+  id: string;
+  source_inference_id: string;
+  intent_type: string;
+  actor_agent_id: string;
+  target_ref: Record<string, unknown> | null;
+  semantic_intent_kind: string | null;
+  event_summaries: Array<{ id: string; type: string; title: string }>;
+} | null> => {
+  const intent = await context.prisma.actionIntent.findUnique({
+    where: {
+      id: intentId
+    }
+  });
+  if (!intent || !isRecord(intent.actor_ref)) {
+    return null;
+  }
+
+  const actorAgentId = typeof intent.actor_ref.agent_id === 'string' && intent.actor_ref.agent_id.trim().length > 0
+    ? intent.actor_ref.agent_id.trim()
+    : null;
+  if (!actorAgentId) {
+    return null;
+  }
+
+  const trace = await context.prisma.inferenceTrace.findUnique({
+    where: {
+      id: intent.source_inference_id
+    }
+  });
+  const decision = trace && isRecord(trace.decision) ? trace.decision : null;
+  const events = await context.prisma.event.findMany({
+    where: {
+      source_action_intent_id: intentId
+    },
+    orderBy: {
+      created_at: 'desc'
+    },
+    take: 5
+  });
+
+  return {
+    id: intent.id,
+    source_inference_id: intent.source_inference_id,
+    intent_type: intent.intent_type,
+    actor_agent_id: actorAgentId,
+    target_ref: isRecord(intent.target_ref) ? intent.target_ref : null,
+    semantic_intent_kind: decision && typeof decision.payload === 'object' && decision.payload !== null && !Array.isArray(decision.payload) && typeof (decision.payload as Record<string, unknown>).semantic_intent_kind === 'string'
+      ? ((decision.payload as Record<string, unknown>).semantic_intent_kind as string)
+      : null,
+    event_summaries: events.map(event => ({ id: event.id, type: event.type, title: event.title }))
+  };
+};

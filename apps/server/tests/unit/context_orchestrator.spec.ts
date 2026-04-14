@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { runContextOrchestrator } from '../../src/context/workflow/orchestrator.js';
+import { buildPromptBundle, buildPromptBundleFromFragments } from '../../src/inference/prompt_builder.js';
 import type { PromptFragment } from '../../src/inference/prompt_fragments.js';
 import type { InferenceContext } from '../../src/inference/types.js';
 
@@ -245,7 +246,7 @@ const baseFragments: PromptFragment[] = [
 ];
 
 describe('context orchestrator', () => {
-  it('injects memory fragments, applies policy filtering, compacts summaries, and preserves placement ordering metadata', async () => {
+  it('injects memory fragments, applies policy filtering, compacts summaries, and records prompt workflow diagnostics', async () => {
     const context = buildInferenceContext();
     const result = await runContextOrchestrator(context, baseFragments);
 
@@ -269,22 +270,182 @@ describe('context orchestrator', () => {
 
     expect(context.memory_context.diagnostics.prompt_processing_trace).toMatchObject({
       context_run_id: 'context-run-1',
-      context_orchestrator: {
-        step_keys: ['memory_injection', 'policy_filter', 'summary_compaction', 'token_budget_trim']
+      workflow_task_type: 'agent_decision',
+      workflow_profile_id: 'agent-decision-default',
+      workflow_profile_version: '1',
+      workflow_step_keys: [
+        'legacy_memory_projection',
+        'node_working_set_filter',
+        'summary_compaction',
+        'token_budget_trim',
+        'placement_resolution',
+        'bundle_finalize'
+      ],
+      prompt_workflow: {
+        task_type: 'agent_decision',
+        profile_id: 'agent-decision-default',
+        profile_version: '1',
+        selected_step_keys: [
+          'legacy_memory_projection',
+          'node_working_set_filter',
+          'summary_compaction',
+          'token_budget_trim',
+          'placement_resolution',
+          'bundle_finalize'
+        ],
+        placement_summary: {
+          total_fragments: expect.any(Number),
+          resolved_with_anchor: expect.any(Number),
+          fallback_count: expect.any(Number)
+        },
+        section_summary: null
       },
       summary_compaction: {
         summarized_fragment_ids: expect.any(Array),
         summary_fragment_id: expect.any(String)
       },
+      token_budget_trimming: {
+        task_type: 'agent_decision',
+        budget: expect.any(Number),
+        used: expect.any(Number),
+        trimmed_fragment_ids: expect.any(Array),
+        kept_fragment_ids: expect.any(Array),
+        always_kept_fragment_ids: expect.any(Array),
+        kept_optional_fragment_ids: expect.any(Array),
+        slot_priority: expect.any(Object),
+        optional_fragment_scores: expect.any(Array),
+        section_budget: {
+          mode: expect.any(String),
+          total_budget: expect.any(Number),
+          allocated_budget: expect.any(Number),
+          allocations: expect.any(Array),
+          kept_section_ids: expect.any(Array),
+          dropped_section_ids: expect.any(Array),
+        },
+        trimmed_by_slot: expect.any(Object),
+        trimmed_sources: expect.any(Array),
+        section_summary: null
+      },
       policy_filtering: {
         filtered_fragment_ids: expect.any(Array),
         reasons: expect.any(Object)
-      }
+      },
+      workflow_step_traces: expect.any(Array)
     });
 
     expect(context.context_run.diagnostics.orchestration).toMatchObject({
-      step_keys: ['memory_injection', 'policy_filter', 'summary_compaction', 'token_budget_trim'],
-      processor_names: ['memory-injector', 'policy-filter', 'memory-summary', 'token-budget-trimmer']
+      step_keys: [
+        'legacy_memory_projection',
+        'node_working_set_filter',
+        'summary_compaction',
+        'token_budget_trim',
+        'placement_resolution',
+        'bundle_finalize'
+      ],
+      processor_names: [
+        'memory-injector',
+        'policy-filter',
+        'memory-summary',
+        'token-budget-trimmer',
+        'prompt-workflow:placement_resolution',
+        'prompt-workflow:bundle_finalize'
+      ],
+      prompt_workflow: {
+        task_type: 'agent_decision',
+        profile_id: 'agent-decision-default',
+        profile_version: '1',
+        selected_step_keys: [
+          'legacy_memory_projection',
+          'node_working_set_filter',
+          'summary_compaction',
+          'token_budget_trim',
+          'placement_resolution',
+          'bundle_finalize'
+        ],
+        step_traces: expect.any(Array),
+        placement_summary: {
+          total_fragments: expect.any(Number),
+          resolved_with_anchor: expect.any(Number),
+          fallback_count: expect.any(Number)
+        },
+        section_summary: null
+      }
     });
+
+    const bundle = buildPromptBundleFromFragments(result.fragments, context);
+    expect(bundle.metadata.workflow_task_type).toBe('agent_decision');
+    expect(bundle.metadata.workflow_profile_id).toBe('agent-decision-default');
+    expect(bundle.metadata.workflow_profile_version).toBe('1');
+    expect(bundle.metadata.workflow_placement_summary).toMatchObject({
+      total_fragments: expect.any(Number),
+      resolved_with_anchor: expect.any(Number),
+      fallback_count: expect.any(Number)
+    });
+    expect(
+      context.context_run.diagnostics.orchestration &&
+      typeof context.context_run.diagnostics.orchestration === 'object' &&
+      (context.context_run.diagnostics.orchestration as Record<string, unknown>).prompt_workflow
+    ).toBeTruthy();
+    expect(bundle.metadata.workflow_step_keys).toEqual([
+      'legacy_memory_projection',
+      'node_working_set_filter',
+      'summary_compaction',
+      'token_budget_trim',
+      'placement_resolution',
+      'bundle_finalize'
+    ]);
+    expect(bundle.metadata.processing_trace?.workflow_task_type).toBe('agent_decision');
+    expect(bundle.metadata.processing_trace?.workflow_profile_id).toBe('agent-decision-default');
+  });
+
+  it('selects task-aware workflow profiles when buildPromptBundle receives explicit task types', async () => {
+    const contextSummaryContext = buildInferenceContext();
+    const contextSummaryBundle = await buildPromptBundle(contextSummaryContext, { task_type: 'context_summary' });
+
+    expect(contextSummaryBundle.metadata.workflow_task_type).toBe('context_summary');
+    expect(contextSummaryBundle.metadata.workflow_profile_id).toBe('context-summary-default');
+    expect(contextSummaryBundle.metadata.workflow_step_keys).toEqual([
+      'legacy_memory_projection',
+      'node_working_set_filter',
+      'summary_compaction',
+      'fragment_assembly',
+      'token_budget_trim',
+      'bundle_finalize'
+    ]);
+    expect(contextSummaryBundle.metadata.workflow_section_summary).toMatchObject({
+      task_type: 'context_summary',
+      section_policy: 'minimal',
+      section_scores: expect.any(Array),
+      section_policies: ['evidence_first'],
+      sections_by_type: expect.any(Object)
+    });
+    expect(
+      Array.isArray((contextSummaryBundle.metadata.workflow_section_summary as Record<string, unknown>).section_scores)
+    ).toBe(true);
+
+    const memoryCompactionContext = buildInferenceContext();
+    const memoryCompactionBundle = await buildPromptBundle(memoryCompactionContext, { task_type: 'memory_compaction' });
+
+    expect(memoryCompactionBundle.metadata.workflow_task_type).toBe('memory_compaction');
+    expect(memoryCompactionBundle.metadata.workflow_profile_id).toBe('memory-compaction-default');
+    expect(memoryCompactionBundle.metadata.workflow_step_keys).toEqual([
+      'legacy_memory_projection',
+      'node_working_set_filter',
+      'node_grouping',
+      'summary_compaction',
+      'fragment_assembly',
+      'token_budget_trim',
+      'bundle_finalize'
+    ]);
+    expect(memoryCompactionBundle.metadata.workflow_section_summary).toMatchObject({
+      task_type: 'memory_compaction',
+      section_policy: 'minimal',
+      section_scores: expect.any(Array),
+      section_policies: ['memory_focused'],
+      sections_by_type: expect.any(Object)
+    });
+    expect(
+      Array.isArray((memoryCompactionBundle.metadata.workflow_section_summary as Record<string, unknown>).section_scores)
+    ).toBe(true);
   });
 });

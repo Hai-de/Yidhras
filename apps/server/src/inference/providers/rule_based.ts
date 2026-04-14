@@ -70,6 +70,21 @@ const isDeathNotePack = (context: Parameters<InferenceProvider['run']>[0]): bool
   return context.world_pack.id === 'world-death-note';
 };
 
+const toNumber = (value: unknown, fallback = 0): number => {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+};
+
+const toNullableString = (value: unknown): string | null => {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+};
+
+const getDeathNoteRoles = (context: Parameters<InferenceProvider['run']>[0]): string[] => {
+  const actorStateRoles = Array.isArray(context.pack_state.actor_state?.roles)
+    ? context.pack_state.actor_state?.roles.filter((role): role is string => typeof role === 'string' && role.trim().length > 0)
+    : [];
+  return Array.from(new Set([...context.pack_state.actor_roles, ...actorStateRoles]));
+};
+
 const buildDeathNoteSemanticDecision = (
   context: Parameters<InferenceProvider['run']>[0],
   input: {
@@ -106,17 +121,82 @@ const buildDeathNoteSemanticDecision = (
   }
 });
 
-const buildDeathNoteRuleBasedDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
+const buildDeathNoteObserverDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
+  const latestSemanticType = context.pack_state.latest_event?.semantic_type ?? 'none';
+
+  return {
+    action_type: 'trigger_event',
+    target_ref: null,
+    payload: {
+      event_type: 'history',
+      title: `${context.actor_display_name} 继续旁观人间的连锁反应`,
+      description: `${context.actor_display_name} 对最近的案件语义信号（${latestSemanticType}）表现出浓厚兴趣，但暂不直接介入。`,
+      impact_data: {
+        semantic_type: 'observer_reaction',
+        observed_semantic_type: latestSemanticType,
+        objective_effect_applied: false,
+        failed_attempt: false
+      }
+    },
+    confidence: 0.58,
+    delay_hint_ticks: '1',
+    reasoning: `${context.actor_display_name} 目前更倾向于观察案件升级与人类反应，而不是直接采取客观行动。`,
+    meta: {
+      provider_mode: 'rule_based_death_note_observer',
+      transmission_delay_ticks: '1',
+      transmission_policy: 'reliable',
+      transmission_drop_chance: 0,
+      drop_reason: null
+    }
+  };
+};
+
+const buildDeathNoteReflectionDecision = (
+  context: Parameters<InferenceProvider['run']>[0],
+  input: {
+    semanticIntentKind: 'record_private_reflection' | 'update_target_dossier' | 'revise_judgement_plan' | 'record_execution_postmortem';
+    targetRef?: Record<string, unknown> | null;
+    reasoning: string;
+  }
+) => {
+  return buildDeathNoteSemanticDecision(context, {
+    semanticIntentKind: input.semanticIntentKind,
+    targetRef: input.targetRef ?? null,
+    reasoning: input.reasoning,
+    proposedMethod:
+      input.semanticIntentKind === 'update_target_dossier'
+        ? 'target_dossier_refresh'
+        : input.semanticIntentKind === 'revise_judgement_plan'
+          ? 'strategy_revision'
+          : input.semanticIntentKind === 'record_execution_postmortem'
+            ? 'execution_postmortem'
+            : 'private_reflection'
+  });
+};
+
+const buildDeathNoteNotebookDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
   const actorState = context.pack_state.actor_state ?? {};
   const worldState = context.pack_state.world_state ?? {};
-  const currentTargetId = typeof actorState.current_target_id === 'string' ? actorState.current_target_id : null;
-  const knownTargetId = typeof actorState.known_target_id === 'string' ? actorState.known_target_id : null;
+  const currentTargetId = toNullableString(actorState.current_target_id);
+  const knownTargetId = toNullableString(actorState.known_target_id);
   const knowsNotebookPower = actorState.knows_notebook_power === true;
   const murderousIntent = actorState.murderous_intent === true;
   const targetEligible = actorState.target_judgement_eligibility === true;
+  const targetNameConfirmed = actorState.target_name_confirmed === true;
+  const targetFaceConfirmed = actorState.target_face_confirmed === true;
+  const coverStoryStability = toNumber(actorState.cover_story_stability, 1);
+  const suspicionLevel = toNumber(actorState.suspicion_level, 0);
+  const countermeasurePressure = toNumber(worldState.countermeasure_pressure, 0);
+  const latestSemanticType = context.pack_state.latest_event?.semantic_type ?? null;
   const holderArtifact = context.pack_state.owned_artifacts.find(item => item.id === 'artifact-death-note') ?? null;
   const notebookClaimed = worldState.opening_phase === 'notebook_claimed' || worldState.kira_case_phase !== 'pre_kira';
-  const defaultTargetRef = { entity_id: 'agent-002', kind: 'actor', agent_id: 'agent-002' };
+  const lastExecutionOutcome = toNullableString(actorState.last_execution_outcome);
+  const lastReflectionKind = toNullableString(actorState.last_reflection_kind);
+  const judgementStrategyPhase = toNullableString(actorState.judgement_strategy_phase);
+  const investigatorTargetRef = { entity_id: 'agent-002', kind: 'actor', agent_id: 'agent-002' };
+  const resolvedTargetRef = knownTargetId
+    ? { entity_id: knownTargetId, kind: 'actor', agent_id: knownTargetId }
+    : investigatorTargetRef;
 
   if (!holderArtifact && !notebookClaimed) {
     return buildDeathNoteSemanticDecision(context, {
@@ -132,26 +212,78 @@ const buildDeathNoteRuleBasedDecision = (context: Parameters<InferenceProvider['
     });
   }
 
-  if (!murderousIntent) {
-    return buildDeathNoteSemanticDecision(context, {
-      semanticIntentKind: 'form_judgement_intent',
-      reasoning: `${context.actor_display_name} 开始认真思考是否要利用死亡笔记执行裁决。`
+  if (latestSemanticType === 'post_execution_pressure_feedback' && lastReflectionKind !== 'execution_postmortem') {
+    return buildDeathNoteReflectionDecision(context, {
+      semanticIntentKind: 'record_execution_postmortem',
+      targetRef: currentTargetId ? { entity_id: currentTargetId, kind: 'actor', agent_id: currentTargetId } : resolvedTargetRef,
+      reasoning: `${context.actor_display_name} 需要先复盘最近一次行动带来的压力反馈，再决定是否继续推进裁决链。`
     });
   }
 
-  if (!knownTargetId || !targetEligible) {
+  const shouldCounterInvestigate =
+    countermeasurePressure >= 2 ||
+    suspicionLevel >= 0.35 ||
+    coverStoryStability < 0.75 ||
+    latestSemanticType === 'investigation_pressure_escalated' ||
+    latestSemanticType === 'case_update_published' ||
+    latestSemanticType === 'post_execution_pressure_feedback';
+
+  if (
+    knownTargetId &&
+    (judgementStrategyPhase === 'target_selection' || latestSemanticType === 'target_intel_collected') &&
+    lastReflectionKind !== 'update_target_dossier'
+  ) {
+    return buildDeathNoteReflectionDecision(context, {
+      semanticIntentKind: 'update_target_dossier',
+      targetRef: resolvedTargetRef,
+      reasoning: `${context.actor_display_name} 准备把现有目标的姓名、长相与可利用时机整理进 dossier，避免后续判断失真。`
+    });
+  }
+
+  if (!murderousIntent && shouldCounterInvestigate) {
+    return buildDeathNoteSemanticDecision(context, {
+      semanticIntentKind: 'raise_false_suspicion',
+      targetRef: investigatorTargetRef,
+      reasoning: `${context.actor_display_name} 判断外部调查压力正在逼近自己，需要主动制造误导线索来转移视线。`
+    });
+  }
+
+  if (!murderousIntent && lastExecutionOutcome === 'intent_reaffirmed' && lastReflectionKind !== 'revise_judgement_plan') {
+    return buildDeathNoteReflectionDecision(context, {
+      semanticIntentKind: 'revise_judgement_plan',
+      targetRef: resolvedTargetRef,
+      reasoning: `${context.actor_display_name} 想先修正本轮裁决计划与执行顺序，再进入正式行动。`
+    });
+  }
+
+  if (!murderousIntent) {
+    return buildDeathNoteSemanticDecision(context, {
+      semanticIntentKind: 'form_judgement_intent',
+      reasoning: `${context.actor_display_name} 开始重新思考是否要利用死亡笔记推进下一轮裁决。`
+    });
+  }
+
+  if (!knownTargetId || !targetEligible || !targetNameConfirmed || !targetFaceConfirmed) {
     return buildDeathNoteSemanticDecision(context, {
       semanticIntentKind: 'gather_target_intel',
       proposedMethod: 'covert_background_check',
-      targetRef: defaultTargetRef,
-      reasoning: `${context.actor_display_name} 试图补齐对目标的姓名与长相情报，以便后续执行裁决。`
+      targetRef: investigatorTargetRef,
+      reasoning: `${context.actor_display_name} 试图补齐对目标的姓名、长相与行动情报，以便后续执行裁决。`
+    });
+  }
+
+  if (shouldCounterInvestigate && latestSemanticType !== 'false_suspicion_raised') {
+    return buildDeathNoteSemanticDecision(context, {
+      semanticIntentKind: 'raise_false_suspicion',
+      targetRef: investigatorTargetRef,
+      reasoning: `${context.actor_display_name} 意识到调查热度正在上升，必须先投放假线索稳住局面。`
     });
   }
 
   if (!currentTargetId) {
     return buildDeathNoteSemanticDecision(context, {
       semanticIntentKind: 'choose_target',
-      targetRef: { entity_id: knownTargetId, kind: 'actor', agent_id: knownTargetId },
+      targetRef: resolvedTargetRef,
       reasoning: `${context.actor_display_name} 已经满足前置条件，准备正式锁定裁决目标。`
     });
   }
@@ -162,6 +294,102 @@ const buildDeathNoteRuleBasedDecision = (context: Parameters<InferenceProvider['
     targetRef: { entity_id: currentTargetId, kind: 'actor', agent_id: currentTargetId },
     reasoning: `${context.actor_display_name} 认为时机已到，准备利用死亡笔记执行最终裁决。`
   });
+};
+
+const buildDeathNoteInvestigatorDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
+  const actorState = context.pack_state.actor_state ?? {};
+  const worldState = context.pack_state.world_state ?? {};
+  const evidenceChainStrength = toNumber(actorState.evidence_chain_strength, 0);
+  const caseTheoryStrength = toNumber(actorState.case_theory_strength, 0);
+  const investigationFocus = toNullableString(actorState.investigation_focus);
+  const latestCaseUpdateKind = toNullableString(worldState.last_case_update_kind);
+  const latestSemanticType = context.pack_state.latest_event?.semantic_type ?? null;
+  const defaultSuspectRef = { entity_id: 'agent-001', kind: 'actor', agent_id: 'agent-001' };
+  const lastReflectionKind = toNullableString(actorState.last_reflection_kind);
+  const judgementStrategyPhase = toNullableString(actorState.judgement_strategy_phase);
+  const collaborationTargetRef = { entity_id: 'agent-003', kind: 'actor', agent_id: 'agent-003' };
+  const investigationHeat = toNumber(worldState.investigation_heat, 0);
+  const countermeasurePressure = toNumber(worldState.countermeasure_pressure, 0);
+
+  if (
+    latestSemanticType === 'suspicious_death_occurred' ||
+    latestSemanticType === 'post_execution_pressure_feedback' ||
+    evidenceChainStrength < 0.55
+  ) {
+    return buildDeathNoteSemanticDecision(context, {
+      semanticIntentKind: 'investigate_death_cluster',
+      targetRef: defaultSuspectRef,
+      reasoning: `${context.actor_display_name} 认为异常死亡模式已经具备连续性，必须立即扩大调查并锁定潜在执行者。`
+    });
+  }
+
+  if (
+    evidenceChainStrength >= 0.55 && evidenceChainStrength < 0.68 &&
+    lastReflectionKind !== 'update_target_dossier' &&
+    judgementStrategyPhase !== 'joint_pressure' &&
+    latestCaseUpdateKind !== 'intel_shared' &&
+    latestSemanticType !== 'case_intel_shared'
+  ) {
+    return buildDeathNoteReflectionDecision(context, {
+      semanticIntentKind: 'update_target_dossier',
+      targetRef: defaultSuspectRef,
+      reasoning: `${context.actor_display_name} 准备先把现有嫌疑链、证据强度与推断缺口整理进 dossier，避免协作时信息失焦。`
+    });
+  }
+
+  if (evidenceChainStrength >= 0.55 && latestCaseUpdateKind !== 'intel_shared' && lastReflectionKind === 'update_target_dossier') {
+    return buildDeathNoteSemanticDecision(context, {
+      semanticIntentKind: 'share_case_intel',
+      targetRef: collaborationTargetRef,
+      reasoning: `${context.actor_display_name} 已掌握一批可共享的线索，准备先把情报扩散到协作观察链。`
+    });
+  }
+
+  if (investigationHeat >= 2 && countermeasurePressure >= 2 && latestCaseUpdateKind !== 'intel_shared' && lastReflectionKind === 'update_target_dossier') {
+    return buildDeathNoteReflectionDecision(context, {
+      semanticIntentKind: 'revise_judgement_plan',
+      targetRef: defaultSuspectRef,
+      reasoning: `${context.actor_display_name} 需要先修正调查计划与协同顺序，再决定下一步公开或联合行动。`
+    });
+  }
+
+  if (
+    (latestCaseUpdateKind === 'intel_shared' || countermeasurePressure >= 2 || caseTheoryStrength >= 0.65) &&
+    investigationFocus !== 'joint_observation'
+  ) {
+    return buildDeathNoteSemanticDecision(context, {
+      semanticIntentKind: 'request_joint_observation',
+      targetRef: collaborationTargetRef,
+      reasoning: `${context.actor_display_name} 需要更多外部观察位来比对异常死亡与可疑行为的同步变化。`
+    });
+  }
+
+  if (investigationHeat >= 2 && latestCaseUpdateKind !== 'public_case_update') {
+    return buildDeathNoteSemanticDecision(context, {
+      semanticIntentKind: 'publish_case_update',
+      reasoning: `${context.actor_display_name} 判断案件已经进入必须公开通报的阶段，需要通过正式更新提升世界层面的压迫感。`
+    });
+  }
+
+  return buildDeathNoteSemanticDecision(context, {
+    semanticIntentKind: 'investigate_death_cluster',
+    targetRef: defaultSuspectRef,
+    reasoning: `${context.actor_display_name} 继续围绕现有可疑主体推进调查与验证。`
+  });
+};
+
+const buildDeathNoteRuleBasedDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
+  const roles = getDeathNoteRoles(context);
+
+  if (roles.includes('investigator')) {
+    return buildDeathNoteInvestigatorDecision(context);
+  }
+
+  if (roles.includes('observer') || roles.includes('shinigami')) {
+    return buildDeathNoteObserverDecision(context);
+  }
+
+  return buildDeathNoteNotebookDecision(context);
 };
 
 export const createRuleBasedInferenceProvider = (): InferenceProvider => {
