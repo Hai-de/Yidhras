@@ -9,6 +9,7 @@
 - **GET `/api/status`**
   - 说明：获取系统运行状态、健康级别、当前加载的 world-pack 元数据
   - 返回：`{ success: true, data: { status, runtime_ready, runtime_speed, scheduler, health_level, world_pack, has_error, startup_errors } }`
+  - `world_pack` 当前除 `id/name/version` 外，也可能包含 `description/authors/license/homepage/repository/tags/compatibility`
 - **POST `/api/runtime/speed`**
   - 说明：覆盖或清除运行时步进速度
   - 参数：`{ action: "override", step_ticks: string|number }` 或 `{ action: "clear" }`

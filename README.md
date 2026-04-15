@@ -67,6 +67,28 @@ pnpm --filter web dev
 pnpm --filter yidhras-server reset:dev-db
 ```
 
+### 6. 新建一个 world pack 项目骨架
+
+```bash
+pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"
+```
+
+常用可选参数：
+
+- `--id <pack-id>`
+- `--version <semver>`
+- `--description <text>`
+- `--homepage <url>`
+- `--repository <url>`
+- `--license <license>`
+- `--tags <a,b,c>`
+- `--status <draft|stable|template>`
+- `--overwrite`
+- `--set-preferred`（写入 `data/configw/default.yaml` 的 `world.preferred_pack`）
+- `--set-bootstrap-template`（更新 `bootstrap.target_pack_dir/template_file` 指向新 pack）
+- `--disable-bootstrap`（把 `bootstrap.enabled` 写为 `false`）
+- `--dry-run`（只预览文件与配置变更，不落盘）
+
 ## 常用命令
 
 - 工作区构建：`pnpm build`
@@ -78,6 +100,8 @@ pnpm --filter yidhras-server reset:dev-db
 - 后端 E2E：`pnpm --filter yidhras-server test:e2e`
 - 后端冒烟：`pnpm --filter yidhras-server smoke`
 - 前端单测：`pnpm --filter web test:unit`
+- 新建世界包骨架：`pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"`
+- 新建并设置为默认包：`pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name" --set-preferred`
 
 ## 文档导航
 
@@ -94,6 +118,7 @@ pnpm --filter yidhras-server reset:dev-db
 - `docs/API.md`：当前对外接口契约与错误码
 - `docs/ARCH.md`：稳定架构边界与模块职责
 - `docs/LOGIC.md`：当前业务规则与领域语义
+- `docs/WORLD_PACK.md`：world pack 项目化、README 标配与发布规范
 - `docs/THEME.md`：前端主题系统说明
 - `docs/ENHANCEMENTS.md`：延后处理的增强项
 - `apps/web/README.md`：前端应用说明与约束
@@ -103,6 +128,7 @@ pnpm --filter yidhras-server reset:dev-db
 - 服务端包含 runtime、world pack 加载、scheduler、inference / workflow、audit 与 read-model API。
 - 前端包含 overview、workflow、scheduler、graph、social、timeline、agents 页面。
 - operator 壳层当前通过 `/api/status`、`/api/clock/formatted`、`/api/system/notifications` 与 `/api/system/notifications/clear` 暴露运行态与通知读面。
+- world pack 当前除了基础 `id/name/version` 外，也支持 `authors/license/homepage/repository/tags/compatibility` 等发布元数据。
 - 内部 AI 执行链为 `AiTaskService -> RouteResolver -> ModelGateway -> provider adapters`，当前默认提供 `mock` 与 `openai` 适配器。
 - `/api/inference/*` 的公开契约当前仍以 `mock | rule_based` 为准；`model_routed` 仍属于内部能力。
 - AI 调用观测已通过 `AiInvocationRecord` 落库，并提供 `GET /api/inference/ai-invocations` 与 `GET /api/inference/ai-invocations/:id` 只读查询。

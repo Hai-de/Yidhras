@@ -1,0 +1,69 @@
+metadata:
+  id: "{{PACK_ID}}"
+  name: "{{PACK_NAME}}"
+  version: "{{PACK_VERSION}}"
+  description: "{{PACK_DESCRIPTION}}"
+  authors:
+{{PACK_AUTHORS_YAML}}
+  license: "{{PACK_LICENSE}}"
+  homepage: "{{PACK_HOMEPAGE}}"
+  repository: "{{PACK_REPOSITORY}}"
+  tags: {{PACK_TAGS_INLINE_YAML}}
+  compatibility:
+    yidhras: "{{YIDHRAS_COMPATIBILITY}}"
+    schema_version: "world-pack/v1"
+    notes: "{{PACK_COMPATIBILITY_NOTES}}"
+  published_at: "{{PACK_PUBLISHED_AT}}"
+  status: "{{PACK_STATUS}}"
+
+variables: {}
+
+prompts: {}
+
+time_systems:
+  - id: "default_clock"
+    name: "默认时钟"
+    is_primary: true
+    tick_rate: 1000
+    units:
+      - name: "second"
+        ratio: 1
+      - name: "minute"
+        ratio: 60
+      - name: "hour"
+        ratio: 60
+      - name: "day"
+        ratio: 24
+
+simulation_time:
+  initial_tick: 0
+  min_tick: 0
+  step_ticks: 1
+
+entities:
+  actors: []
+  artifacts: []
+  mediators: []
+  domains: []
+  institutions: []
+
+bootstrap:
+  initial_states:
+    - entity_id: "__world__"
+      state_namespace: "world"
+      state_json:
+        phase: "bootstrap"
+  initial_events: []
+
+identities: []
+
+authorities: []
+
+rules:
+  perception: []
+  capability_resolution: []
+  invocation: []
+  objective_enforcement: []
+  projection: []
+
+capabilities: []

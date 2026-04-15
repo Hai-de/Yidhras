@@ -4,6 +4,19 @@ metadata:
   name: "死亡笔记"
   version: "0.5.0"
   description: "一个围绕规则媒介、侦查对抗、舆论震荡与执行资格传播展开的现代悬疑世界。"
+  authors:
+    - name: "Yidhras Team"
+      role: "default pack maintainer"
+  license: "SEE LICENSE IN ROOT PROJECT"
+  homepage: "https://github.com/example/example"
+  repository: "https://github.com/example/example"
+  tags: ["thriller", "investigation", "supernatural", "governance"]
+  compatibility:
+    yidhras: ">=0.5.0"
+    schema_version: "world-pack/v1"
+    notes: "默认样板，适合作为 capability/mediator/objective enforcement 参考实现。"
+  published_at: "2026-04-14"
+  status: "template"
 
 variables:
   currency: "日元"

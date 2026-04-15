@@ -189,12 +189,47 @@ export const simulationTimeConfigSchema = z
   })
   .strict();
 
+const metadataLinkSchema = z.union([z.string().url(), nonEmptyStringSchema]);
+
+const metadataAuthorSchema = z
+  .object({
+    name: nonEmptyStringSchema,
+    role: nonEmptyStringSchema.optional(),
+    homepage: metadataLinkSchema.optional()
+  })
+  .strict();
+
+const metadataCompatibilitySchema = z
+  .object({
+    yidhras: nonEmptyStringSchema.optional(),
+    schema_version: nonEmptyStringSchema.optional(),
+    notes: nonEmptyStringSchema.optional()
+  })
+  .strict();
+
+const metadataPresentationSchema = z
+  .object({
+    cover_image: nonEmptyStringSchema.optional(),
+    icon: nonEmptyStringSchema.optional(),
+    theme: z.record(z.string(), worldPackValueSchema).optional()
+  })
+  .strict();
+
 const metadataSchema = z
   .object({
     id: nonEmptyStringSchema,
     name: nonEmptyStringSchema,
     version: nonEmptyStringSchema,
-    description: nonEmptyStringSchema.optional()
+    description: nonEmptyStringSchema.optional(),
+    authors: z.array(metadataAuthorSchema).optional(),
+    license: nonEmptyStringSchema.optional(),
+    homepage: metadataLinkSchema.optional(),
+    repository: metadataLinkSchema.optional(),
+    tags: z.array(nonEmptyStringSchema).optional(),
+    compatibility: metadataCompatibilitySchema.optional(),
+    presentation: metadataPresentationSchema.optional(),
+    published_at: nonEmptyStringSchema.optional(),
+    status: nonEmptyStringSchema.optional()
   })
   .passthrough();
 
@@ -452,6 +487,7 @@ export const worldPackConstitutionSchema = z
 export type SimulationTimeConfig = z.infer<typeof simulationTimeConfigSchema>;
 export type WorldPackBootstrapInitialState = z.infer<typeof bootstrapInitialStateSchema>;
 export type WorldPackVariableRecord = Record<string, WorldPackVariableValue>;
+export type WorldPackMetadata = z.infer<typeof metadataSchema>;
 export type WorldPackAiConfig = z.infer<typeof aiPackConfigSchema>;
 export type WorldPack = z.infer<typeof worldPackConstitutionSchema>;
 

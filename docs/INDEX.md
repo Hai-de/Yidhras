@@ -13,6 +13,7 @@
 - API 契约：`API.md`
 - 架构边界：`ARCH.md`
 - 业务规则：`LOGIC.md`
+- World Pack 项目化与发布规范：`WORLD_PACK.md`
 - 前端主题：`THEME.md`
 - 延后增强项：`ENHANCEMENTS.md`
 - 前端应用说明：`../apps/web/README.md`
@@ -22,6 +23,7 @@
 - `API.md`：当前对外接口契约、错误码、调用约束
 - `ARCH.md`：稳定架构边界、模块职责、设计约束
 - `LOGIC.md`：当前成立的业务规则与领域语义
+- `WORLD_PACK.md`：world pack 目录组织、README 标配与发布规范
 - `THEME.md`：前端主题 contract 与主题开发入口
 - `ENHANCEMENTS.md`：延后处理的增强项
 

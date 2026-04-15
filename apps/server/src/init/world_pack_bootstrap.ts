@@ -51,6 +51,25 @@ export const ensureBootstrapWorldPack = async (): Promise<WorldPackBootstrapResu
     result.status = 'skipped';
   } else {
     fs.copyFileSync(bootstrapConfig.templateFilePath, targetConfigPath);
+
+    const templateDir = path.dirname(bootstrapConfig.templateFilePath);
+    const templateBasename = path.basename(
+      bootstrapConfig.templateFilePath,
+      path.extname(bootstrapConfig.templateFilePath)
+    );
+    const readmeTemplatePath = path.join(templateDir, `${templateBasename}.README.md`);
+    const changelogTemplatePath = path.join(templateDir, `${templateBasename}.CHANGELOG.md`);
+    const targetReadmePath = path.join(bootstrapConfig.targetPackDirPath, 'README.md');
+    const targetChangelogPath = path.join(bootstrapConfig.targetPackDirPath, 'CHANGELOG.md');
+
+    if (fs.existsSync(readmeTemplatePath) && (bootstrapConfig.overwrite || !fs.existsSync(targetReadmePath))) {
+      fs.copyFileSync(readmeTemplatePath, targetReadmePath);
+    }
+
+    if (fs.existsSync(changelogTemplatePath) && (bootstrapConfig.overwrite || !fs.existsSync(targetChangelogPath))) {
+      fs.copyFileSync(changelogTemplatePath, targetChangelogPath);
+    }
+
     result.status = bootstrapConfig.overwrite ? 'updated' : 'created';
   }
 

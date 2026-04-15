@@ -11,6 +11,8 @@ const DEVELOPMENT_CONFIG_BASENAME = 'development.yaml';
 const PRODUCTION_CONFIG_BASENAME = 'production.yaml';
 const TEST_CONFIG_BASENAME = 'test.yaml';
 const DEFAULT_WORLD_PACK_TEMPLATE_BASENAME = 'death_note.yaml';
+const DEFAULT_WORLD_PACK_README_TEMPLATE_BASENAME = 'death_note.README.md';
+const DEFAULT_WORLD_PACK_CHANGELOG_TEMPLATE_BASENAME = 'death_note.CHANGELOG.md';
 const DEFAULT_AI_MODELS_CONFIG_BASENAME = 'ai_models.yaml';
 const VERSION_MANAGED_AI_CONFIG_RELATIVE_PATH = path.join('apps', 'server', 'config', DEFAULT_AI_MODELS_CONFIG_BASENAME);
 
@@ -19,6 +21,12 @@ const SEEDED_CONFIG_BASENAMES = [
   DEVELOPMENT_CONFIG_BASENAME,
   PRODUCTION_CONFIG_BASENAME,
   TEST_CONFIG_BASENAME
+] as const;
+
+const SEEDED_WORLD_PACK_TEMPLATE_BASENAMES = [
+  DEFAULT_WORLD_PACK_TEMPLATE_BASENAME,
+  DEFAULT_WORLD_PACK_README_TEMPLATE_BASENAME,
+  DEFAULT_WORLD_PACK_CHANGELOG_TEMPLATE_BASENAME
 ] as const;
 
 export interface RuntimeConfigScaffoldResult {
@@ -68,11 +76,9 @@ export const ensureRuntimeConfigScaffold = (
     ensureFileFromTemplate(path.join(configDir, basename), path.join(configTemplateDir, basename), result);
   }
 
-  ensureFileFromTemplate(
-    path.join(configDir, 'templates', 'world-pack', DEFAULT_WORLD_PACK_TEMPLATE_BASENAME),
-    path.join(worldPackTemplateDir, DEFAULT_WORLD_PACK_TEMPLATE_BASENAME),
-    result
-  );
+  for (const basename of SEEDED_WORLD_PACK_TEMPLATE_BASENAMES) {
+    ensureFileFromTemplate(path.join(configDir, 'templates', 'world-pack', basename), path.join(worldPackTemplateDir, basename), result);
+  }
 
   ensureFileFromTemplate(
     resolveFromWorkspaceRoot(path.join('apps', 'server', 'config', DEFAULT_AI_MODELS_CONFIG_BASENAME), workspaceRoot),

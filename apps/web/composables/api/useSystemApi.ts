@@ -8,11 +8,29 @@ export interface RuntimeWorldThemePayload {
   theme: WorldPackThemeConfig
 }
 
+export interface RuntimeWorldAuthor {
+  name: string
+  role?: string
+  homepage?: string
+}
+
+export interface RuntimeWorldCompatibility {
+  yidhras?: string
+  schema_version?: string
+  notes?: string
+}
+
 export interface RuntimeWorldMetadata {
   id: string
   name: string
   version: string
   description?: string
+  authors?: RuntimeWorldAuthor[]
+  license?: string
+  homepage?: string
+  repository?: string
+  tags?: string[]
+  compatibility?: RuntimeWorldCompatibility
   /**
    * Stable provider-owned runtime theme contract.
    */

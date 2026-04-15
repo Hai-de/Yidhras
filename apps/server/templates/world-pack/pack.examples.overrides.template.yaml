@@ -1,0 +1,13 @@
+# 示例：通过环境配置把这个 pack 设为默认 world pack
+# 使用方式（示例）：
+#   APP_ENV=development WORLD_PACK={{PACK_DIR}} pnpm --filter yidhras-server dev
+
+world:
+  preferred_pack: "{{PACK_DIR}}"
+
+# 如果你希望自动 bootstrap 到该 pack，可在本地配置文件中同步调整：
+# world:
+#   bootstrap:
+#     target_pack_dir: "{{PACK_DIR}}"
+#     template_file: "data/world_packs/{{PACK_DIR}}/config.yaml"
+#     overwrite: false

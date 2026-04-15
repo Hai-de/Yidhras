@@ -8,7 +8,23 @@ describe('world pack constitution schema', () => {
       metadata: {
         id: 'world-test-pack',
         name: '测试世界',
-        version: '1.0.0'
+        version: '1.0.0',
+        description: '用于测试 world pack 发布元数据与治理 contract 的世界。',
+        authors: [
+          {
+            name: 'Yidhras Team',
+            role: 'maintainer',
+            homepage: 'https://example.com/team'
+          }
+        ],
+        license: 'MIT',
+        homepage: 'https://example.com/world-test-pack',
+        repository: 'https://example.com/repo/world-test-pack',
+        tags: ['test', 'governance'],
+        compatibility: {
+          yidhras: '>=0.5.0',
+          schema_version: 'world-pack/v1'
+        }
       },
       constitution: {
         axioms: ['world_rule_objective'],
@@ -137,6 +153,9 @@ describe('world pack constitution schema', () => {
     expect(pack.metadata.id).toBe('world-test-pack');
     expect(pack.storage?.pack_collections[0]?.key).toBe('death_rule_targets');
     expect(pack.authorities?.[0]?.target_selector.kind).toBe('holder_of');
+    expect(pack.metadata.authors?.[0]?.name).toBe('Yidhras Team');
+    expect(pack.metadata.license).toBe('MIT');
+    expect(pack.metadata.compatibility?.schema_version).toBe('world-pack/v1');
     expect(pack.bootstrap?.initial_states[0]?.state_json.opening_phase).toBe('notebook_unclaimed');
     expect(pack.rules?.invocation[0]?.then.affordance_key).toBe('execute_judgement');
   });

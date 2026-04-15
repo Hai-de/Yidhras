@@ -113,10 +113,15 @@ Repository guidance for coding agents working in `Yidhras`.
 
 ### World packs
 
-- World packs are file-driven and loaded through `apps/server/src/world/loader.ts`.
-- World-pack schema lives in `apps/server/src/world/schema.ts`.
-- Scenario materialization lives in `apps/server/src/world/materializer.ts`.
+- World packs are file-driven and loaded through `apps/server/src/packs/manifest/loader.ts`.
+- World-pack schema lives in `apps/server/src/packs/schema/constitution_schema.ts` and `apps/server/src/packs/manifest/constitution_loader.ts`.
+- Pack runtime materialization lives in `apps/server/src/packs/runtime/materializer.ts`.
 - Pack-specific decision rules and actions should flow through existing world-pack modules, not ad-hoc route logic.
+- Treat a publishable world pack as a small project, not only a YAML file.
+- Prefer keeping publish/release metadata in `metadata` (for example: `authors`, `license`, `homepage`, `repository`, `tags`, `compatibility`).
+- Recommended minimum contents for a pack directory: `config.yaml` + `README.md`.
+- Use `pnpm scaffold:world-pack -- --dir <pack-dir> --name "<Pack Name>" --author "<Author>" [--set-preferred] [--set-bootstrap-template] [--disable-bootstrap] [--dry-run]` to create a new pack project skeleton.
+- See `docs/WORLD_PACK.md` for packaging and release guidance.
 
 ### Frontend
 
@@ -166,6 +171,7 @@ Repository guidance for coding agents working in `Yidhras`.
 - `docs/API.md`: external API contracts and error codes.
 - `docs/ARCH.md`: architecture boundaries and module responsibilities.
 - `docs/LOGIC.md`: business rules and domain semantics.
+- `docs/WORLD_PACK.md`: world-pack packaging, README baseline, and release guidance.
 - `docs/INDEX.md`: document navigation.
 - `apps/web/README.md`: frontend-specific structure and guardrails.
 - `.limcode/design/`, `.limcode/plans/`, `.limcode/review/`: process artifacts, not the primary source of truth.

@@ -15,6 +15,7 @@
     "test:watch": "pnpm -r --parallel --filter web --filter yidhras-server test:watch",
     "typecheck": "pnpm --filter yidhras-server typecheck && pnpm --filter web typecheck",
     "prepare:runtime": "pnpm --filter yidhras-server prepare:runtime",
+    "scaffold:world-pack": "pnpm --filter yidhras-server scaffold:world-pack",
     "smoke:server": "pnpm --filter yidhras-server smoke"
   }
 }

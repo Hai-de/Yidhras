@@ -37,6 +37,13 @@ export interface RuntimeStatusSnapshot {
         id: string;
         name: string;
         version: string;
+        description?: string;
+        authors?: Array<{ name: string; role?: string; homepage?: string }>;
+        license?: string;
+        homepage?: string;
+        repository?: string;
+        tags?: string[];
+        compatibility?: { yidhras?: string; schema_version?: string; notes?: string };
       }
     | null;
   has_error: boolean;
@@ -176,9 +183,17 @@ export const getRuntimeStatusSnapshot = async (
       ? {
           id: pack.metadata.id,
           name: pack.metadata.name,
-          version: pack.metadata.version
+          version: pack.metadata.version,
+          ...(pack.metadata.description ? { description: pack.metadata.description } : {}),
+          ...(pack.metadata.authors ? { authors: pack.metadata.authors } : {}),
+          ...(pack.metadata.license ? { license: pack.metadata.license } : {}),
+          ...(pack.metadata.homepage ? { homepage: pack.metadata.homepage } : {}),
+          ...(pack.metadata.repository ? { repository: pack.metadata.repository } : {}),
+          ...(pack.metadata.tags ? { tags: pack.metadata.tags } : {}),
+          ...(pack.metadata.compatibility ? { compatibility: pack.metadata.compatibility } : {})
         }
       : null,
+
     has_error: context.notifications.getMessages().some(message => message.level === 'error'),
     startup_errors: context.startupHealth.errors
   };

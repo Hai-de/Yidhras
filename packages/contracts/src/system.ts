@@ -49,11 +49,30 @@ export const runtimeStatusDataSchema = z.object({
   sqlite: sqliteRuntimePragmaSchema.nullable(),
   scheduler: schedulerWorkerConfigSchema,
   health_level: z.enum(['ok', 'degraded', 'fail']),
+
+  
   world_pack: z
     .object({
       id: z.string(),
       name: z.string(),
-      version: z.string()
+      version: z.string(),
+      description: z.string().optional(),
+      authors: z.array(
+        z.object({
+          name: z.string(),
+          role: z.string().optional(),
+          homepage: z.string().optional()
+        })
+      ).optional(),
+      license: z.string().optional(),
+      homepage: z.string().optional(),
+      repository: z.string().optional(),
+      tags: z.array(z.string()).optional(),
+      compatibility: z.object({
+        yidhras: z.string().optional(),
+        schema_version: z.string().optional(),
+        notes: z.string().optional()
+      }).optional()
     })
     .nullable(),
   has_error: z.boolean(),
