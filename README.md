@@ -80,6 +80,18 @@ pnpm --filter yidhras-server reset:dev-db
 - 前端单测：`pnpm --filter web test:unit`
 - 新建世界包骨架：`pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"`
 - 新建并设置为默认包：`pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name" --set-preferred`
+- 插件治理 CLI：`pnpm --filter yidhras-server plugin -- <list|confirm|enable|disable> [--pack <packId>] [--installation <id>] [--grant a,b] [--acknowledge-plugin-risk] [--non-interactive]`
+
+### Plugin CLI 示例
+
+- 查看当前 pack 插件：`pnpm --filter yidhras-server plugin -- list --pack my_pack`
+- 查看单个插件详情：`pnpm --filter yidhras-server plugin -- show --plugin plugin.alpha --pack my_pack`
+- 确认并授予 manifest 请求能力：`pnpm --filter yidhras-server plugin -- confirm --plugin plugin.alpha --pack my_pack --grant requested`
+- 非交互启用 trusted plugin：`pnpm --filter yidhras-server plugin -- enable --plugin plugin.alpha --pack my_pack --yes --non-interactive`
+- 重新扫描 pack-local 插件目录：`pnpm --filter yidhras-server plugin -- rescan --pack my_pack`
+- 查看插件 activation / acknowledgement 日志：`pnpm --filter yidhras-server plugin -- logs --plugin plugin.alpha --pack my_pack --limit 10`
+- 按状态/能力过滤插件列表：`pnpm --filter yidhras-server plugin -- list --pack my_pack --state enabled --capability server.api_route.register`
+- 诊断为什么当前不能启用：`pnpm --filter yidhras-server plugin -- why-not-enable --installation <installation-id> --pack my_pack --non-interactive`
 
 ## 文档导航
 

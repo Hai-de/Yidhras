@@ -20,6 +20,7 @@
     "init:configw": "tsx src/init/init_configw.ts",
     "init:world-pack": "tsx src/init/init_world_pack.ts",
     "init:runtime": "tsx src/init/prepare_runtime.ts",
+    "plugin": "tsx src/cli/plugin_cli.ts",
     "scaffold:world-pack": "tsx src/init/scaffold_world_pack.ts",
     "seed:identity": "tsx src/db/seed_identity.ts",
     "smoke": "vitest run --config vitest.e2e.config.ts tests/e2e/smoke-startup.spec.ts tests/e2e/smoke-endpoints.spec.ts",

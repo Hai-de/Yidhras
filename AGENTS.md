@@ -167,7 +167,7 @@ Repository guidance for coding agents working in `Yidhras`.
 
 - `README.md`: entry page only.
 - `TODO.md`: current status and priorities.
-- `记录.md`: verification evidence and acceptance notes.
+- `docs/记录.md`: verification evidence and acceptance notes.
 - `docs/API.md`: external API contracts and error codes.
 - `docs/ARCH.md`: architecture boundaries and module responsibilities.
 - `docs/LOGIC.md`: business rules and domain semantics.
