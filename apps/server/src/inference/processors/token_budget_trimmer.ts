@@ -2,7 +2,6 @@ import type { PromptFragment, PromptFragmentSlot } from '../prompt_fragments.js'
 import type { PromptProcessor } from '../prompt_processors.js';
 import type { PromptProcessingTrace } from '../types.js';
 
-const DEFAULT_BUDGET = 2200;
 
 type SectionBudgetAllocation = NonNullable<NonNullable<PromptProcessingTrace['token_budget_trimming']>['section_budget']>['allocations'][number];
 
@@ -186,9 +185,13 @@ const shouldAlwaysKeep = (fragment: PromptFragment): boolean => {
   );
 };
 
-export const createTokenBudgetTrimmerPromptProcessor = (
-  budget = DEFAULT_BUDGET
-): PromptProcessor => {
+const resolveBudget = (workflow?: {
+  profile_defaults?: { token_budget?: number };
+}): number => {
+  return workflow?.profile_defaults?.token_budget ?? 2200;
+};
+
+export const createTokenBudgetTrimmerPromptProcessor = (): PromptProcessor => {
   return {
     name: 'token-budget-trimmer',
     async process({ context, fragments, workflow }) {
@@ -199,6 +202,7 @@ export const createTokenBudgetTrimmerPromptProcessor = (
         workflowTaskType: workflow?.task_type ?? null,
         legacyTrace
       });
+      const budget = resolveBudget(workflow);
       const slotPriority = buildSlotPriority(workflowTaskType);
       const kept: PromptFragment[] = [];
       const alwaysKept: PromptFragment[] = [];

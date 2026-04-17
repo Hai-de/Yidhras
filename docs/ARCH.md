@@ -66,6 +66,35 @@
 - 消费端横跨 audit / memory / workflow / projection
 - 它不是纯 pack-owned narrative source-of-truth
 
+## 2.4 Runtime 配置边界
+
+当前运行时配置继续沿用既有 `data/configw` scaffold：
+
+- 内建 defaults 定义于：`apps/server/src/config/runtime_config.ts`
+- schema 定义于：`apps/server/src/config/schema.ts`
+- YAML 读取 / 合并入口位于：`apps/server/src/config/runtime_config.ts`
+- scaffold 模板位于：`apps/server/templates/configw/*.yaml`
+- 工作区实际配置位于：`data/configw/*.yaml`
+
+明确边界如下：
+
+- `data/configw/*.yaml`
+  - 承载 **宿主级 / 部署级 / runtime 行为级** 配置
+  - 如端口、路径、bootstrap、sqlite pragma、scheduler runtime/lease/rebalance/runner/observability、prompt workflow defaults
+- `apps/server/config/ai_models.yaml`
+  - 承载 **AI provider / model registry / route policy** 配置
+  - 不与 `configw` 混为一体，避免 runtime host config 与 AI registry config 混杂
+
+当前优先级：
+
+1. code builtin defaults
+2. `data/configw/default.yaml`
+3. `data/configw/<APP_ENV>.yaml`
+4. `data/configw/local.yaml`
+5. env overrides
+
+也即：**env > yaml > code default**。
+
 ## 3. 组合根与应用层
 
 ### 3.1 Server 组合根
@@ -91,6 +120,22 @@
 - runtime loop 在 `simulation_loop.ts` 中串行化
 - runtime readiness 通过 `AppContext.assertRuntimeReady(feature)` 统一门控
 
+当前 scheduler 相关的宿主级运行参数已收口进 runtime config，而不是继续散落为局部常量：
+
+- `scheduler.runtime.simulation_loop_interval_ms`
+- `scheduler.lease_ticks`
+- `scheduler.automatic_rebalance.*`
+- `scheduler.runners.decision_job.*`
+- `scheduler.runners.action_dispatcher.*`
+- `scheduler.agent.*`
+- `scheduler.observability.*`
+
+这意味着：
+
+- 调度主循环节奏、lease 生命周期、自动 rebalance 阈值、runner 批量参数、operator 观测默认 limit
+  都属于 **runtime host policy**，应通过 YAML / env 调整；
+- 业务层不再把这些值继续内嵌为新的 ad-hoc 常量。
+
 ### 3.3 Core simulation 层
 
 - `apps/server/src/core/simulation.ts`
@@ -105,6 +150,15 @@
 - dynamics
 - runtime speed
 - graph access
+
+另外，SQLite runtime pragma 也已纳入 runtime host config：
+
+- `sqlite.busy_timeout_ms`
+- `sqlite.wal_autocheckpoint_pages`
+- `sqlite.synchronous`
+
+它们属于 **宿主运行时稳定性 / 部署调优参数**，不是业务语义的一部分；
+修改方式应优先经 `configw` 或 env override，而不是直接改 `SimulationManager` / sqlite helper 内部常量。
 
 约束：
 - 不把 `SimulationManager` 继续扩张为通用 app-service bucket
@@ -184,6 +238,14 @@
 - 负责 `ContextRun / ContextNode -> PromptBundle / request` 的组织层
 - 仍是线性 runtime，不是通用 DAG engine
 - 保留 compatibility bridges，但不再把 legacy path 视为 source-of-truth
+
+当前 prompt workflow 中已经外置到 runtime config 的部分，是**适合部署者 / 运营调参的默认值**，例如：
+
+- `prompt_workflow.profiles.agent_decision_default.*`
+- `prompt_workflow.profiles.context_summary_default.*`
+- `prompt_workflow.profiles.memory_compaction_default.*`
+
+而 step graph / executor registry / orchestration 主体仍留在代码中，避免把整个 workflow runtime 直接变成自由形态配置系统。
 
 ### 6.2 Unified AI task / gateway
 

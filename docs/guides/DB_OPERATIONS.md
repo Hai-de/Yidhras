@@ -112,7 +112,7 @@ DATABASE_URL="file:../../../runtime/db/prod.sqlite"
 
 ### `WORLD_PACKS_DIR`
 
-会覆盖 runtime config 中的 world packs 目录。
+会覆盖 runtime config 中的 `paths.world_packs_dir`。
 
 作用：
 
@@ -121,7 +121,43 @@ DATABASE_URL="file:../../../runtime/db/prod.sqlite"
 
 ### `PORT`
 
+会覆盖 runtime config 中的 `app.port`。
+
 影响 server 监听端口，与数据库无直接关系。
+
+### `data/configw/*.yaml`
+
+当前 runtime host 级配置继续沿用 `data/configw`：
+
+- `data/configw/default.yaml`
+- `data/configw/<APP_ENV>.yaml`
+- `data/configw/local.yaml`
+
+优先级为：
+
+1. code builtin defaults
+2. `default.yaml`
+3. `<APP_ENV>.yaml`
+4. `local.yaml`
+5. env overrides
+
+也即：**env > yaml > code default**。
+
+其中与数据库 / runtime 稳定性直接相关的字段，已经包括：
+
+- `paths.world_packs_dir`
+- `sqlite.busy_timeout_ms`
+- `sqlite.wal_autocheckpoint_pages`
+- `sqlite.synchronous`
+- `scheduler.runtime.simulation_loop_interval_ms`
+- `scheduler.lease_ticks`
+- `scheduler.automatic_rebalance.*`
+
+这些字段不改变 Prisma datasource 本身，但会影响：
+
+- server 启动节奏
+- SQLite 锁等待与 checkpoint 行为
+- scheduler 运行和 operator 观测体验
 
 ---
 
@@ -225,9 +261,22 @@ pnpm --filter yidhras-server init:runtime
 职责：
 
 - 确保 runtime config scaffold 存在；
-- 输出 runtime config snapshot；
+- 输出 runtime config snapshot（便于确认最终生效值）；
 - 确保 bootstrap world pack 已准备；
 - 输出初始化报告。
+
+典型会在 snapshot 中看到的字段包括：
+
+- `app_port`
+- `world_packs_dir`
+- `sqlite_busy_timeout_ms`
+- `sqlite_wal_autocheckpoint_pages`
+- `sqlite_synchronous`
+- `simulation_loop_interval_ms`
+- `scheduler_lease_ticks`
+- `scheduler_automatic_rebalance_*`
+- `scheduler_runner_*`
+- `scheduler_default_query_limit`
 
 ## 5.2 `seed:identity`
 

@@ -1,10 +1,10 @@
+import { getSchedulerRunnerConfig } from '../../config/runtime_config.js';
 import { createMemoryCompactionService } from '../../memory/recording/compaction_service.js';
 import { createMemoryRecordingService } from '../../memory/recording/service.js';
 import type { AppContext } from '../context.js';
 import {
   assertActionIntentLockOwnership,
   claimActionIntent,
-  DEFAULT_ACTION_INTENT_LOCK_TICKS,
   dispatchActionIntent,
   getActionIntentForDispatchReflection,
   listDispatchableActionIntents,
@@ -23,8 +23,8 @@ export interface RunActionDispatcherOptions {
 export const runActionDispatcher = async ({
   context,
   workerId,
-  limit = 5,
-  lockTicks = DEFAULT_ACTION_INTENT_LOCK_TICKS
+  limit = getSchedulerRunnerConfig().action_dispatcher.batch_limit,
+  lockTicks = BigInt(getSchedulerRunnerConfig().action_dispatcher.lock_ticks)
 }: RunActionDispatcherOptions): Promise<number> => {
   const intents = await listDispatchableActionIntents(context, limit);
   let dispatchedCount = 0;

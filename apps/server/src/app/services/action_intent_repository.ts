@@ -75,7 +75,7 @@ export const claimActionIntent = async (
   }
 ): Promise<ActionIntentRecord | null> => {
   const now = input.now ?? context.sim.getCurrentTick();
-  const lockTicks = input.lock_ticks ?? DEFAULT_ACTION_INTENT_LOCK_TICKS;
+  const lockTicks = input.lock_ticks ?? 5n;
   const existing = await context.prisma.actionIntent.findUnique({
     where: {
       id: input.intent_id

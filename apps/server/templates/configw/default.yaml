@@ -24,8 +24,84 @@ startup:
   fail_on_missing_world_pack_dir: false
   fail_on_no_world_pack: false
 
+sqlite:
+  busy_timeout_ms: 5000
+  wal_autocheckpoint_pages: 1000
+  synchronous: "NORMAL"
+
 scheduler:
   enabled: true
+  runtime:
+    simulation_loop_interval_ms: 1000
+  lease_ticks: 5
+  automatic_rebalance:
+    backlog_limit: 2
+    max_recommendations: 1
+    max_apply: 1
+  runners:
+    decision_job:
+      batch_limit: 5
+      lock_ticks: 5
+    action_dispatcher:
+      batch_limit: 5
+      lock_ticks: 5
+  observability:
+    default_query_limit: 20
+    max_query_limit: 100
+    summary:
+      default_sample_runs: 20
+      max_sample_runs: 100
+    trends:
+      default_sample_runs: 20
+      max_sample_runs: 100
+    operator_projection:
+      default_sample_runs: 20
+      max_sample_runs: 100
+      default_recent_limit: 5
+      max_recent_limit: 20
+  agent:
+    limit: 5
+    cooldown_ticks: 3
+    max_candidates: 20
+    signal_policy:
+      event_followup:
+        priority_score: 30
+        delay_ticks: 1
+        coalesce_window_ticks: 2
+        suppression_tier: "high"
+      relationship_change_followup:
+        priority_score: 20
+        delay_ticks: 1
+        coalesce_window_ticks: 2
+        suppression_tier: "low"
+      snr_change_followup:
+        priority_score: 10
+        delay_ticks: 1
+        coalesce_window_ticks: 2
+        suppression_tier: "low"
+      overlay_change_followup:
+        priority_score: 8
+        delay_ticks: 1
+        coalesce_window_ticks: 2
+        suppression_tier: "low"
+      memory_change_followup:
+        priority_score: 9
+        delay_ticks: 1
+        coalesce_window_ticks: 2
+        suppression_tier: "low"
+    recovery_suppression:
+      replay:
+        suppress_periodic: true
+        suppress_event_tiers: ["low"]
+      retry:
+        suppress_periodic: true
+        suppress_event_tiers: ["low"]
+
+prompt_workflow:
+  profiles:
+    agent_decision_default: { token_budget: 2200, section_policy: "standard", compatibility_mode: "full" }
+    context_summary_default: { token_budget: 1600, section_policy: "minimal", compatibility_mode: "bridge_only" }
+    memory_compaction_default: { token_budget: 1800, section_policy: "minimal", compatibility_mode: "bridge_only" }
 
 features:
   inference_trace: true

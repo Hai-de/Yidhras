@@ -1,151 +1,72 @@
 import type { InferenceStrategy } from '../../inference/types.js';
+import { getRuntimeConfig } from '../../config/runtime_config.js';
 import type {
   PromptWorkflowProfile,
   PromptWorkflowSelectionInput,
   PromptWorkflowTaskType
 } from './types.js';
 
-const DEFAULT_AGENT_DECISION_PROFILE: PromptWorkflowProfile = {
-  id: 'agent-decision-default',
-  version: '1',
-  description: '默认 agent decision prompt workflow，兼容现有 Orchestrator Lite 并为后续正式化阶段预留显式 step 边界。',
-  applies_to: {
-    task_types: ['agent_decision'],
-    strategies: ['mock', 'rule_based', 'model_routed']
-  },
-  defaults: {
-    token_budget: 2200,
-    section_policy: 'standard',
-    compatibility_mode: 'full'
-  },
-  steps: [
+const buildBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => {
+  const config = getRuntimeConfig();
+
+  return [
     {
-      key: 'legacy_memory_projection',
-      kind: 'legacy_memory_projection',
-      produces: ['compatibility.legacy_memory_context']
+      id: 'agent-decision-default',
+      version: '1',
+      description: '默认 agent decision prompt workflow，兼容现有 Orchestrator Lite 并为后续正式化阶段预留显式 step 边界。',
+      applies_to: {
+        task_types: ['agent_decision'],
+        strategies: ['mock', 'rule_based', 'model_routed']
+      },
+      defaults: { ...config.prompt_workflow.profiles.agent_decision_default },
+      steps: [
+        { key: 'legacy_memory_projection', kind: 'legacy_memory_projection', produces: ['compatibility.legacy_memory_context'] },
+        { key: 'node_working_set_filter', kind: 'node_working_set_filter', requires: ['selected_nodes'], produces: ['working_set'] },
+        { key: 'summary_compaction', kind: 'summary_compaction', requires: ['working_set', 'fragments'], produces: ['fragments'] },
+        { key: 'token_budget_trim', kind: 'token_budget_trim', requires: ['fragments'], produces: ['fragments'] },
+        { key: 'placement_resolution', kind: 'placement_resolution', requires: ['fragments'], produces: ['fragments', 'diagnostics.placement_summary'] },
+        { key: 'bundle_finalize', kind: 'bundle_finalize', requires: ['fragments'], produces: ['prompt_bundle'] }
+      ]
     },
     {
-      key: 'node_working_set_filter',
-      kind: 'node_working_set_filter',
-      requires: ['selected_nodes'],
-      produces: ['working_set']
+      id: 'context-summary-default',
+      version: '1',
+      description: '为 context summary 任务保留的默认 profile，目前先提供稳定 selector 落点。',
+      applies_to: {
+        task_types: ['context_summary']
+      },
+      defaults: { ...config.prompt_workflow.profiles.context_summary_default },
+      steps: [
+        { key: 'legacy_memory_projection', kind: 'legacy_memory_projection' },
+        { key: 'node_working_set_filter', kind: 'node_working_set_filter' },
+        { key: 'summary_compaction', kind: 'summary_compaction' },
+        { key: 'fragment_assembly', kind: 'fragment_assembly' },
+        { key: 'token_budget_trim', kind: 'token_budget_trim' },
+        { key: 'bundle_finalize', kind: 'bundle_finalize' }
+      ]
     },
     {
-      key: 'summary_compaction',
-      kind: 'summary_compaction',
-      requires: ['working_set', 'fragments'],
-      produces: ['fragments']
-    },
-    {
-      key: 'token_budget_trim',
-      kind: 'token_budget_trim',
-      requires: ['fragments'],
-      produces: ['fragments']
-    },
-    {
-      key: 'placement_resolution',
-      kind: 'placement_resolution',
-      requires: ['fragments'],
-      produces: ['fragments', 'diagnostics.placement_summary']
-    },
-    {
-      key: 'bundle_finalize',
-      kind: 'bundle_finalize',
-      requires: ['fragments'],
-      produces: ['prompt_bundle']
+      id: 'memory-compaction-default',
+      version: '1',
+      description: '为 memory compaction 任务保留的默认 profile，目前先提供稳定 selector 落点。',
+      applies_to: {
+        task_types: ['memory_compaction']
+      },
+      defaults: { ...config.prompt_workflow.profiles.memory_compaction_default },
+      steps: [
+        { key: 'legacy_memory_projection', kind: 'legacy_memory_projection' },
+        { key: 'node_working_set_filter', kind: 'node_working_set_filter' },
+        { key: 'node_grouping', kind: 'node_grouping' },
+        { key: 'summary_compaction', kind: 'summary_compaction' },
+        { key: 'fragment_assembly', kind: 'fragment_assembly' },
+        { key: 'token_budget_trim', kind: 'token_budget_trim' },
+        { key: 'bundle_finalize', kind: 'bundle_finalize' }
+      ]
     }
-  ]
+  ];
 };
 
-const DEFAULT_CONTEXT_SUMMARY_PROFILE: PromptWorkflowProfile = {
-  id: 'context-summary-default',
-  version: '1',
-  description: '为 context summary 任务保留的默认 profile，目前先提供稳定 selector 落点。',
-  applies_to: {
-    task_types: ['context_summary']
-  },
-  defaults: {
-    token_budget: 1600,
-    section_policy: 'minimal',
-    compatibility_mode: 'bridge_only'
-  },
-  steps: [
-    {
-      key: 'legacy_memory_projection',
-      kind: 'legacy_memory_projection'
-    },
-    {
-      key: 'node_working_set_filter',
-      kind: 'node_working_set_filter'
-    },
-    {
-      key: 'summary_compaction',
-      kind: 'summary_compaction'
-    },
-    {
-      key: 'fragment_assembly',
-      kind: 'fragment_assembly'
-    },
-    {
-      key: 'token_budget_trim',
-      kind: 'token_budget_trim'
-    },
-    {
-      key: 'bundle_finalize',
-      kind: 'bundle_finalize'
-    }
-  ]
-};
-
-const DEFAULT_MEMORY_COMPACTION_PROFILE: PromptWorkflowProfile = {
-  id: 'memory-compaction-default',
-  version: '1',
-  description: '为 memory compaction 任务保留的默认 profile，目前先提供稳定 selector 落点。',
-  applies_to: {
-    task_types: ['memory_compaction']
-  },
-  defaults: {
-    token_budget: 1800,
-    section_policy: 'minimal',
-    compatibility_mode: 'bridge_only'
-  },
-  steps: [
-    {
-      key: 'legacy_memory_projection',
-      kind: 'legacy_memory_projection'
-    },
-    {
-      key: 'node_working_set_filter',
-      kind: 'node_working_set_filter'
-    },
-    {
-      key: 'node_grouping',
-      kind: 'node_grouping'
-    },
-    {
-      key: 'summary_compaction',
-      kind: 'summary_compaction'
-    },
-    {
-      key: 'fragment_assembly',
-      kind: 'fragment_assembly'
-    },
-    {
-      key: 'token_budget_trim',
-      kind: 'token_budget_trim'
-    },
-    {
-      key: 'bundle_finalize',
-      kind: 'bundle_finalize'
-    }
-  ]
-};
-
-const BUILTIN_WORKFLOW_PROFILES: PromptWorkflowProfile[] = [
-  DEFAULT_AGENT_DECISION_PROFILE,
-  DEFAULT_CONTEXT_SUMMARY_PROFILE,
-  DEFAULT_MEMORY_COMPACTION_PROFILE
-];
+const getBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => buildBuiltInWorkflowProfiles();
 
 const matchesTaskType = (profile: PromptWorkflowProfile, taskType: PromptWorkflowTaskType): boolean => {
   const taskTypes = profile.applies_to.task_types;
@@ -177,7 +98,7 @@ const calculateSpecificity = (profile: PromptWorkflowProfile): number => {
 };
 
 export const listBuiltInPromptWorkflowProfiles = (): PromptWorkflowProfile[] => {
-  return BUILTIN_WORKFLOW_PROFILES.map(profile => ({
+  return getBuiltInWorkflowProfiles().map(profile => ({
     ...profile,
     applies_to: {
       task_types: profile.applies_to.task_types ? [...profile.applies_to.task_types] : undefined,
@@ -219,5 +140,5 @@ export const selectPromptWorkflowProfile = (input: PromptWorkflowSelectionInput)
       return left.id.localeCompare(right.id);
     });
 
-  return matching[0] ?? listBuiltInPromptWorkflowProfiles()[0] ?? DEFAULT_AGENT_DECISION_PROFILE;
+  return matching[0] ?? listBuiltInPromptWorkflowProfiles()[0] ?? getBuiltInWorkflowProfiles()[0];
 };

@@ -1,8 +1,8 @@
+import { getSchedulerRunnerConfig } from '../../config/runtime_config.js';
 import type { InferenceService } from '../../inference/service.js';
 import type { AppContext } from '../context.js';
 import {
   claimDecisionJob,
-  DEFAULT_DECISION_JOB_LOCK_TICKS,
   listRunnableDecisionJobs
 } from '../services/inference_workflow.js';
 
@@ -18,8 +18,8 @@ export const runDecisionJobRunner = async ({
   context,
   inferenceService,
   workerId,
-  limit = 5,
-  lockTicks = DEFAULT_DECISION_JOB_LOCK_TICKS
+  limit = getSchedulerRunnerConfig().decision_job.batch_limit,
+  lockTicks = BigInt(getSchedulerRunnerConfig().decision_job.lock_ticks)
 }: RunDecisionJobRunnerOptions): Promise<number> => {
   const jobs = await listRunnableDecisionJobs(context, limit);
   let executedCount = 0;

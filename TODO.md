@@ -22,15 +22,16 @@
   - [x] 为宏展开与 Prompt Workflow 增加可观测诊断，保证出错时可定位
   - [x] 编写基础的文档，让使用者能上手
 
-- [ ] **第三阶段：把适合外置的硬编码参数迁到 YAML 配置**
-  - [ ] 继续沿用现有 `data/configw` / runtime config scaffold 机制，不另起一套配置系统
-  - [ ] 先迁移部署者关心的配置：运行端口、路径、provider/model route、feature flag、bootstrap 行为
-  - [ ] 再迁移世界包作者和运营调参关心的配置：prompt workflow profile、token budget、section policy、scheduler 阈值等
-  - [ ] 为配置补 schema 校验、注释说明、示例文件、首次启动自动生成逻辑
-  - [ ] 补配置介绍与部署文档，明确 env / yaml / code default 的优先级
+- [x] **第三阶段：把适合外置的硬编码参数迁到 YAML 配置**
+  - [x] 继续沿用现有 `data/configw` / runtime config scaffold 机制，不另起一套配置系统
+  - [x] 先迁移部署者关心的配置：运行端口、路径、provider/model route、feature flag、bootstrap 行为
+  - [x] 再迁移世界包作者和运营调参关心的配置：prompt workflow profile、token budget、section policy、scheduler 阈值等
+  - [x] 为配置补 schema 校验、注释说明、示例文件、首次启动自动生成逻辑
+  - [x] 补配置介绍与部署文档，明确 env / yaml / code default 的优先级
 
 - [ ] **第四阶段：单世界包内的多实体并发请求**
-  - [ ] 先在单 active pack 前提下评估实体级并发，而不是直接进入多世界包并行
+  - [ ] 完善实体在虚拟时钟下的活动行为分配和限制的具体机制
+  - [ ] 在单 active pack 前提下评估实体级并发，而不是直接进入多世界包并行
   - [ ] 梳理 scheduler、job runner、ownership / lease、冲突控制与幂等要求
   - [ ] 设计实体并发的分区、锁、重试、失败恢复与观测指标
 

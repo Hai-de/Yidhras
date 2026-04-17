@@ -322,10 +322,14 @@ export const buildPromptBundleFromFragments = (
 ): PromptBundle => {
   const sortedFragments = sortFragments(fragments);
   const workflowMetadata = readPromptWorkflowMetadata(context);
+  const workflowSectionPolicy = workflowMetadata.workflow_profile_id === 'context-summary-default'
+    || workflowMetadata.workflow_profile_id === 'memory-compaction-default'
+    ? 'minimal'
+    : 'standard';
   const fallbackSectionSummary = buildSectionSummary(
     buildSectionDraftsFromFragments(sortedFragments, {
       task_type: (workflowMetadata.workflow_task_type ?? 'agent_decision') as PromptWorkflowTaskType,
-      section_policy: 'standard'
+      section_policy: workflowSectionPolicy
     })
   );
   const resolvedSectionSummary = workflowMetadata.workflow_section_summary ?? fallbackSectionSummary;

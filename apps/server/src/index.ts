@@ -33,6 +33,7 @@ import {
   getAppPort,
   getPreferredWorldPack,
   getRuntimeConfig,
+  getSimulationLoopIntervalMs,
   getStartupPolicy,
   getWorldPacksDir,
   logRuntimeConfigSnapshot
@@ -61,20 +62,6 @@ const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
   last_error_message: null
 };
 
-const parseSimulationLoopIntervalMs = (): number => {
-  const raw = process.env.SIM_LOOP_INTERVAL_MS;
-  if (typeof raw !== 'string' || raw.trim().length === 0) {
-    return 1000;
-  }
-
-  const parsed = Number.parseInt(raw.trim(), 10);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-    throw new Error(`SIM_LOOP_INTERVAL_MS is invalid: ${raw}`);
-  }
-
-  return parsed;
-};
-
 let runtimeReady = false;
 let timer: SimulationLoopHandle | null = null;
 let isPaused = false;
@@ -84,7 +71,7 @@ const decisionWorkerId = `decision:${process.pid}:${Date.now()}`;
 const actionDispatcherWorkerId = `dispatcher:${process.pid}:${Date.now()}`;
 const schedulerWorkerId = process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}:${Date.now()}`;
 const schedulerPartitionIds = resolveOwnedSchedulerPartitionIds({ workerId: schedulerWorkerId });
-const simulationLoopIntervalMs = parseSimulationLoopIntervalMs();
+const simulationLoopIntervalMs = getSimulationLoopIntervalMs();
 
 const assertRuntimeReady = createRuntimeReadyGuard({
   getRuntimeReady: () => runtimeReady,

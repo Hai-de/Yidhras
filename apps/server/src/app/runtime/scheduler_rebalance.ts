@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 
+import { getSchedulerAutomaticRebalanceConfig } from '../../config/runtime_config.js';
 import type { AppContext } from '../context.js';
 import {
   countSchedulerOwnershipMigrationsInProgress,
@@ -43,10 +44,6 @@ export interface ApplySchedulerAutomaticRebalanceResult {
   created_migration_ids: string[];
   superseded_recommendation_ids: string[];
 }
-
-const DEFAULT_AUTOMATIC_REBALANCE_BACKLOG_LIMIT = 2;
-const DEFAULT_AUTOMATIC_REBALANCE_MAX_RECOMMENDATIONS = 1;
-const DEFAULT_AUTOMATIC_REBALANCE_MAX_APPLY = 1;
 
 const findOpenRecommendation = async (
   context: AppContext,
@@ -153,7 +150,8 @@ export const applySchedulerAutomaticRebalanceForWorker = async (
   }
 ): Promise<ApplySchedulerAutomaticRebalanceResult> => {
   const now = input.now ?? context.sim.getCurrentTick();
-  const maxApply = Math.max(input.maxApply ?? DEFAULT_AUTOMATIC_REBALANCE_MAX_APPLY, 1);
+  const config = getSchedulerAutomaticRebalanceConfig();
+  const maxApply = Math.max(input.maxApply ?? config.max_apply, 1);
   const recommendations = await listPendingSchedulerRebalanceRecommendationsForWorker(context, {
     worker_id: input.workerId,
     max_apply: maxApply
@@ -237,9 +235,10 @@ export const evaluateSchedulerAutomaticRebalance = async (
   }
 ): Promise<EvaluateSchedulerAutomaticRebalanceResult> => {
   const now = input?.now ?? context.sim.getCurrentTick();
-  const maxRecommendations = Math.max(input?.maxRecommendations ?? DEFAULT_AUTOMATIC_REBALANCE_MAX_RECOMMENDATIONS, 1);
+  const config = getSchedulerAutomaticRebalanceConfig();
+  const maxRecommendations = Math.max(input?.maxRecommendations ?? config.max_recommendations, 1);
   const migrationBacklogLimit = Math.max(
-    input?.migrationBacklogLimit ?? DEFAULT_AUTOMATIC_REBALANCE_BACKLOG_LIMIT,
+    input?.migrationBacklogLimit ?? config.backlog_limit,
     0
   );
 

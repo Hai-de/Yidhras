@@ -18,6 +18,11 @@ export interface PromptProcessorInput {
     profile_id: string;
     profile_version: string;
     selected_step_keys: string[];
+    profile_defaults?: {
+      token_budget?: number;
+      section_policy?: string;
+      compatibility_mode?: string;
+    };
     prompt_workflow?: PromptWorkflowSnapshot | null;
     section_drafts?: Array<{ id: string; slot: string; section_type: string; ranking_score: number }>;
     section_summary?: Record<string, unknown> | null;

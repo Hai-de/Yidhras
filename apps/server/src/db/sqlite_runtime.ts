@@ -1,5 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 
+import { getSqliteRuntimeConfig } from '../config/runtime_config.js';
+
 export interface SqliteRuntimePragmaSnapshot {
   journal_mode: string;
   busy_timeout: number;
@@ -7,38 +9,6 @@ export interface SqliteRuntimePragmaSnapshot {
   foreign_keys: boolean;
   wal_autocheckpoint: number;
 }
-
-const DEFAULT_SQLITE_BUSY_TIMEOUT_MS = 5_000;
-const DEFAULT_SQLITE_WAL_AUTOCHECKPOINT_PAGES = 1_000;
-const DEFAULT_SQLITE_SYNCHRONOUS = 'NORMAL';
-
-const parsePositiveIntegerEnv = (name: string, fallback: number): number => {
-  const raw = process.env[name];
-  if (typeof raw !== 'string' || raw.trim().length === 0) {
-    return fallback;
-  }
-
-  const parsed = Number.parseInt(raw.trim(), 10);
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-    throw new Error(`[sqlite_runtime] 环境变量 ${name} 不是合法正整数: ${raw}`);
-  }
-
-  return parsed;
-};
-
-const parseSynchronousEnv = (): 'OFF' | 'NORMAL' | 'FULL' | 'EXTRA' => {
-  const raw = process.env.SQLITE_SYNCHRONOUS;
-  if (typeof raw !== 'string' || raw.trim().length === 0) {
-    return DEFAULT_SQLITE_SYNCHRONOUS;
-  }
-
-  const normalized = raw.trim().toUpperCase();
-  if (normalized === 'OFF' || normalized === 'NORMAL' || normalized === 'FULL' || normalized === 'EXTRA') {
-    return normalized;
-  }
-
-  throw new Error(`[sqlite_runtime] 环境变量 SQLITE_SYNCHRONOUS 不是合法值: ${raw}`);
-};
 
 const normalizeInteger = (value: unknown, fallback = 0): number => {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -121,12 +91,10 @@ export const readSqliteRuntimePragmas = async (prisma: PrismaClient): Promise<Sq
 };
 
 export const applySqliteRuntimePragmas = async (prisma: PrismaClient): Promise<SqliteRuntimePragmaSnapshot> => {
-  const busyTimeoutMs = parsePositiveIntegerEnv('SQLITE_BUSY_TIMEOUT_MS', DEFAULT_SQLITE_BUSY_TIMEOUT_MS);
-  const walAutocheckpointPages = parsePositiveIntegerEnv(
-    'SQLITE_WAL_AUTOCHECKPOINT_PAGES',
-    DEFAULT_SQLITE_WAL_AUTOCHECKPOINT_PAGES
-  );
-  const synchronousMode = parseSynchronousEnv();
+  const config = getSqliteRuntimeConfig();
+  const busyTimeoutMs = config.busy_timeout_ms;
+  const walAutocheckpointPages = config.wal_autocheckpoint_pages;
+  const synchronousMode = config.synchronous;
 
   await runPragma(prisma, 'PRAGMA journal_mode = WAL;');
   await runPragma(prisma, `PRAGMA busy_timeout = ${busyTimeoutMs};`);

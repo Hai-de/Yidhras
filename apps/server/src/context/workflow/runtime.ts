@@ -256,6 +256,11 @@ const buildProcessorExecutor = (input: {
             task_type: state.task_type,
             profile_id: state.profile.id,
             profile_version: state.profile.version,
+            profile_defaults: {
+              token_budget: state.profile.defaults?.token_budget,
+              section_policy: state.profile.defaults?.section_policy,
+              compatibility_mode: state.profile.defaults?.compatibility_mode
+            },
             selected_step_keys: state.diagnostics.selected_step_keys,
             prompt_workflow: context.context_run.diagnostics.orchestration?.prompt_workflow as PromptProcessingTrace['prompt_workflow'] ?? null,
             section_drafts: state.section_drafts.map(draft => ({

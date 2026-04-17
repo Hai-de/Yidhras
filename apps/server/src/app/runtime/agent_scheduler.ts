@@ -1,4 +1,5 @@
 import type { InferenceRequestInput } from '../../inference/types.js';
+import { getSchedulerAgentConfig } from '../../config/runtime_config.js';
 import type { AppContext } from '../context.js';
 import {
   createPendingDecisionJob,
@@ -37,11 +38,6 @@ import {
   applySchedulerAutomaticRebalanceForWorker,
   evaluateSchedulerAutomaticRebalance
 } from './scheduler_rebalance.js';
-
-export const DEFAULT_AGENT_SCHEDULER_COOLDOWN_TICKS = 3n;
-export const DEFAULT_AGENT_SCHEDULER_LIMIT = 5;
-export const DEFAULT_AGENT_SCHEDULER_EVENT_DELAY_TICKS = 1n;
-export const DEFAULT_AGENT_SCHEDULER_MAX_CANDIDATES = 20;
 
 type EventDrivenSchedulerReason = 'event_followup' | 'relationship_change_followup' | 'snr_change_followup' | 'overlay_change_followup' | 'memory_change_followup';
 export type SchedulerReason = 'periodic_tick' | 'bootstrap_seed' | EventDrivenSchedulerReason;
@@ -117,51 +113,56 @@ interface SchedulerActorReadinessResult {
 
 const PERIODIC_REASON_SET = new Set<SchedulerReason>(['periodic_tick', 'bootstrap_seed']);
 
-const SCHEDULER_SIGNAL_POLICY: Record<EventDrivenSchedulerReason, SchedulerSignalPolicy> = {
-  event_followup: {
-    priority_score: 30,
-    delay_ticks: DEFAULT_AGENT_SCHEDULER_EVENT_DELAY_TICKS,
-    coalesce_window_ticks: 2n,
-    suppression_tier: 'high'
-  },
-  relationship_change_followup: {
-    priority_score: 20,
-    delay_ticks: DEFAULT_AGENT_SCHEDULER_EVENT_DELAY_TICKS,
-    coalesce_window_ticks: 2n,
-    suppression_tier: 'low'
-  },
-  snr_change_followup: {
-    priority_score: 10,
-    delay_ticks: DEFAULT_AGENT_SCHEDULER_EVENT_DELAY_TICKS,
-    coalesce_window_ticks: 2n,
-    suppression_tier: 'low'
-  },
-  overlay_change_followup: {
-    priority_score: 8,
-    delay_ticks: DEFAULT_AGENT_SCHEDULER_EVENT_DELAY_TICKS,
-    coalesce_window_ticks: 2n,
-    suppression_tier: 'low'
-  },
-  memory_change_followup: {
-    priority_score: 9,
-    delay_ticks: DEFAULT_AGENT_SCHEDULER_EVENT_DELAY_TICKS,
-    coalesce_window_ticks: 2n,
-    suppression_tier: 'low'
-  }
+const getDefaultSchedulerSignalPolicy = (): Record<EventDrivenSchedulerReason, SchedulerSignalPolicy> => {
+  const config = getSchedulerAgentConfig().signal_policy;
+
+  return {
+    event_followup: {
+      priority_score: config.event_followup.priority_score,
+      delay_ticks: BigInt(config.event_followup.delay_ticks),
+      coalesce_window_ticks: BigInt(config.event_followup.coalesce_window_ticks),
+      suppression_tier: config.event_followup.suppression_tier
+    },
+    relationship_change_followup: {
+      priority_score: config.relationship_change_followup.priority_score,
+      delay_ticks: BigInt(config.relationship_change_followup.delay_ticks),
+      coalesce_window_ticks: BigInt(config.relationship_change_followup.coalesce_window_ticks),
+      suppression_tier: config.relationship_change_followup.suppression_tier
+    },
+    snr_change_followup: {
+      priority_score: config.snr_change_followup.priority_score,
+      delay_ticks: BigInt(config.snr_change_followup.delay_ticks),
+      coalesce_window_ticks: BigInt(config.snr_change_followup.coalesce_window_ticks),
+      suppression_tier: config.snr_change_followup.suppression_tier
+    },
+    overlay_change_followup: {
+      priority_score: config.overlay_change_followup.priority_score,
+      delay_ticks: BigInt(config.overlay_change_followup.delay_ticks),
+      coalesce_window_ticks: BigInt(config.overlay_change_followup.coalesce_window_ticks),
+      suppression_tier: config.overlay_change_followup.suppression_tier
+    },
+    memory_change_followup: {
+      priority_score: config.memory_change_followup.priority_score,
+      delay_ticks: BigInt(config.memory_change_followup.delay_ticks),
+      coalesce_window_ticks: BigInt(config.memory_change_followup.coalesce_window_ticks),
+      suppression_tier: config.memory_change_followup.suppression_tier
+    }
+  };
 };
 
-const SCHEDULER_RECOVERY_SUPPRESSION_POLICY: Record<
-  SchedulerRecoveryWindowType,
-  SchedulerRecoverySuppressionPolicy
-> = {
-  replay: {
-    suppress_periodic: true,
-    suppress_event_tiers: ['low']
-  },
-  retry: {
-    suppress_periodic: true,
-    suppress_event_tiers: ['low']
-  }
+const getDefaultSchedulerRecoverySuppressionPolicy = (): Record<SchedulerRecoveryWindowType, SchedulerRecoverySuppressionPolicy> => {
+  const config = getSchedulerAgentConfig().recovery_suppression;
+
+  return {
+    replay: {
+      suppress_periodic: config.replay.suppress_periodic,
+      suppress_event_tiers: [...config.replay.suppress_event_tiers]
+    },
+    retry: {
+      suppress_periodic: config.retry.suppress_periodic,
+      suppress_event_tiers: [...config.retry.suppress_event_tiers]
+    }
+  };
 };
 
 const buildSchedulerCandidateKey = (agentId: string, kind: SchedulerKind, reason: SchedulerReason): string => {
@@ -177,13 +178,13 @@ const isEventDrivenReason = (reason: SchedulerReason): reason is EventDrivenSche
 };
 
 const getSignalPolicy = (reason: EventDrivenSchedulerReason): SchedulerSignalPolicy => {
-  return SCHEDULER_SIGNAL_POLICY[reason];
+  return getDefaultSchedulerSignalPolicy()[reason];
 };
 
 const getRecoverySuppressionPolicy = (
   recoveryWindowType: SchedulerRecoveryWindowType
 ): SchedulerRecoverySuppressionPolicy => {
-  return SCHEDULER_RECOVERY_SUPPRESSION_POLICY[recoveryWindowType];
+  return getDefaultSchedulerRecoverySuppressionPolicy()[recoveryWindowType];
 };
 
 const getRecoverySuppressionSkipReason = (
@@ -656,7 +657,7 @@ const runAgentSchedulerForPartition = async ({
       now,
       cooldownTicks,
       scannedCount,
-      maxCandidates: DEFAULT_AGENT_SCHEDULER_MAX_CANDIDATES,
+      maxCandidates: getSchedulerAgentConfig().max_candidates,
       pendingIntentAgentIds,
       pendingJobKeySet,
       recentScheduledTickByAgent,
@@ -798,8 +799,8 @@ export const runAgentScheduler = async ({
   context,
   workerId = 'runtime:local',
   partitionIds,
-  limit = DEFAULT_AGENT_SCHEDULER_LIMIT,
-  cooldownTicks = DEFAULT_AGENT_SCHEDULER_COOLDOWN_TICKS,
+  limit = getSchedulerAgentConfig().limit,
+  cooldownTicks = BigInt(getSchedulerAgentConfig().cooldown_ticks),
   strategy = 'rule_based',
   schedulerReason = 'periodic_tick'
 }: RunAgentSchedulerOptions): Promise<AgentSchedulerRunResult> => {

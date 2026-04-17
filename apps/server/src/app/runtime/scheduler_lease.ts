@@ -1,3 +1,4 @@
+import { getSchedulerLeaseTicks } from '../../config/runtime_config.js';
 import type { AppContext } from '../context.js';
 import {
   deleteSchedulerLeaseRecordByHolder,
@@ -16,7 +17,6 @@ export const SCHEDULER_LEASE_KEY_PREFIX = 'agent_scheduler_main';
 export const SCHEDULER_CURSOR_KEY_PREFIX = 'agent_scheduler_cursor';
 export const SCHEDULER_LEASE_KEY = `${SCHEDULER_LEASE_KEY_PREFIX}:${DEFAULT_SCHEDULER_PARTITION_ID}`;
 export const SCHEDULER_CURSOR_KEY = `${SCHEDULER_CURSOR_KEY_PREFIX}:${DEFAULT_SCHEDULER_PARTITION_ID}`;
-export const DEFAULT_SCHEDULER_LEASE_TICKS = 5n;
 
 export interface SchedulerLeaseAcquireResult {
   acquired: boolean;
@@ -58,7 +58,7 @@ export const acquireSchedulerLease = async (
 ): Promise<SchedulerLeaseAcquireResult> => {
   const partitionId = normalizePartitionId(input.partitionId);
   const now = input.now ?? context.sim.getCurrentTick();
-  const leaseTicks = input.leaseTicks ?? DEFAULT_SCHEDULER_LEASE_TICKS;
+  const leaseTicks = input.leaseTicks ?? getSchedulerLeaseTicks();
   const expiresAt = now + leaseTicks;
   const key = buildSchedulerLeaseKey(partitionId);
   const existing = await upsertSchedulerLeaseRecord(context, {

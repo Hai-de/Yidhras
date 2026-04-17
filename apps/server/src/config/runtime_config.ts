@@ -68,8 +68,98 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
     fail_on_missing_world_pack_dir: false,
     fail_on_no_world_pack: false
   },
+  sqlite: {
+    busy_timeout_ms: 5000,
+    wal_autocheckpoint_pages: 1000,
+    synchronous: 'NORMAL'
+  },
   scheduler: {
-    enabled: true
+    enabled: true,
+    runtime: {
+      simulation_loop_interval_ms: 1000
+    },
+    lease_ticks: 5,
+    automatic_rebalance: {
+      backlog_limit: 2,
+      max_recommendations: 1,
+      max_apply: 1
+    },
+    runners: {
+      decision_job: {
+        batch_limit: 5,
+        lock_ticks: 5
+      },
+      action_dispatcher: {
+        batch_limit: 5,
+        lock_ticks: 5
+      }
+    },
+    observability: {
+      default_query_limit: 20,
+      max_query_limit: 100,
+      summary: {
+        default_sample_runs: 20,
+        max_sample_runs: 100
+      },
+      trends: {
+        default_sample_runs: 20,
+        max_sample_runs: 100
+      },
+      operator_projection: {
+        default_sample_runs: 20,
+        max_sample_runs: 100,
+        default_recent_limit: 5,
+        max_recent_limit: 20
+      }
+    },
+    agent: {
+      limit: 5,
+      cooldown_ticks: 3,
+      max_candidates: 20,
+      signal_policy: {
+        event_followup: {
+          priority_score: 30,
+          delay_ticks: 1,
+          coalesce_window_ticks: 2,
+          suppression_tier: 'high'
+        },
+        relationship_change_followup: {
+          priority_score: 20,
+          delay_ticks: 1,
+          coalesce_window_ticks: 2,
+          suppression_tier: 'low'
+        },
+        snr_change_followup: {
+          priority_score: 10,
+          delay_ticks: 1,
+          coalesce_window_ticks: 2,
+          suppression_tier: 'low'
+        },
+        overlay_change_followup: {
+          priority_score: 8,
+          delay_ticks: 1,
+          coalesce_window_ticks: 2,
+          suppression_tier: 'low'
+        },
+        memory_change_followup: {
+          priority_score: 9,
+          delay_ticks: 1,
+          coalesce_window_ticks: 2,
+          suppression_tier: 'low'
+        }
+      },
+      recovery_suppression: {
+        replay: { suppress_periodic: true, suppress_event_tiers: ['low'] },
+        retry: { suppress_periodic: true, suppress_event_tiers: ['low'] }
+      }
+    }
+  },
+  prompt_workflow: {
+    profiles: {
+      agent_decision_default: { token_budget: 2200, section_policy: 'standard', compatibility_mode: 'full' },
+      context_summary_default: { token_budget: 1600, section_policy: 'minimal', compatibility_mode: 'bridge_only' },
+      memory_compaction_default: { token_budget: 1800, section_policy: 'minimal', compatibility_mode: 'bridge_only' }
+    }
   },
   features: {
     inference_trace: true,
@@ -140,6 +230,26 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   const bootstrapTargetPackDir = parseOptionalStringEnv(process.env.WORLD_BOOTSTRAP_TARGET_PACK_DIR);
   const bootstrapTemplateFile = parseOptionalStringEnv(process.env.WORLD_BOOTSTRAP_TEMPLATE_FILE);
   const bootstrapOverwrite = parseBooleanEnv('WORLD_BOOTSTRAP_OVERWRITE', process.env.WORLD_BOOTSTRAP_OVERWRITE);
+  const sqliteBusyTimeoutMs = parseIntegerEnv('SQLITE_BUSY_TIMEOUT_MS', process.env.SQLITE_BUSY_TIMEOUT_MS);
+  const sqliteWalAutocheckpointPages = parseIntegerEnv('SQLITE_WAL_AUTOCHECKPOINT_PAGES', process.env.SQLITE_WAL_AUTOCHECKPOINT_PAGES);
+  const sqliteSynchronous = parseOptionalStringEnv(process.env.SQLITE_SYNCHRONOUS)?.toUpperCase();
+  const simulationLoopIntervalMs = parseIntegerEnv('SIM_LOOP_INTERVAL_MS', process.env.SIM_LOOP_INTERVAL_MS);
+  const schedulerLeaseTicks = parseIntegerEnv('SCHEDULER_LEASE_TICKS', process.env.SCHEDULER_LEASE_TICKS);
+  const schedulerAutomaticRebalanceBacklogLimit = parseIntegerEnv('SCHEDULER_AUTOMATIC_REBALANCE_BACKLOG_LIMIT', process.env.SCHEDULER_AUTOMATIC_REBALANCE_BACKLOG_LIMIT);
+  const schedulerAutomaticRebalanceMaxRecommendations = parseIntegerEnv('SCHEDULER_AUTOMATIC_REBALANCE_MAX_RECOMMENDATIONS', process.env.SCHEDULER_AUTOMATIC_REBALANCE_MAX_RECOMMENDATIONS);
+  const schedulerAutomaticRebalanceMaxApply = parseIntegerEnv('SCHEDULER_AUTOMATIC_REBALANCE_MAX_APPLY', process.env.SCHEDULER_AUTOMATIC_REBALANCE_MAX_APPLY);
+  const schedulerAgentLimit = parseIntegerEnv('SCHEDULER_AGENT_LIMIT', process.env.SCHEDULER_AGENT_LIMIT);
+  const schedulerAgentCooldownTicks = parseIntegerEnv('SCHEDULER_AGENT_COOLDOWN_TICKS', process.env.SCHEDULER_AGENT_COOLDOWN_TICKS);
+  const schedulerDecisionJobBatchLimit = parseIntegerEnv('SCHEDULER_DECISION_JOB_BATCH_LIMIT', process.env.SCHEDULER_DECISION_JOB_BATCH_LIMIT);
+  const schedulerDecisionJobLockTicks = parseIntegerEnv('SCHEDULER_DECISION_JOB_LOCK_TICKS', process.env.SCHEDULER_DECISION_JOB_LOCK_TICKS);
+  const schedulerActionDispatcherBatchLimit = parseIntegerEnv('SCHEDULER_ACTION_DISPATCHER_BATCH_LIMIT', process.env.SCHEDULER_ACTION_DISPATCHER_BATCH_LIMIT);
+  const schedulerActionDispatcherLockTicks = parseIntegerEnv('SCHEDULER_ACTION_DISPATCHER_LOCK_TICKS', process.env.SCHEDULER_ACTION_DISPATCHER_LOCK_TICKS);
+  const schedulerDefaultQueryLimit = parseIntegerEnv('SCHEDULER_DEFAULT_QUERY_LIMIT', process.env.SCHEDULER_DEFAULT_QUERY_LIMIT);
+  const schedulerMaxQueryLimit = parseIntegerEnv('SCHEDULER_MAX_QUERY_LIMIT', process.env.SCHEDULER_MAX_QUERY_LIMIT);
+  const schedulerSummaryDefaultSampleRuns = parseIntegerEnv('SCHEDULER_SUMMARY_DEFAULT_SAMPLE_RUNS', process.env.SCHEDULER_SUMMARY_DEFAULT_SAMPLE_RUNS);
+  const schedulerSummaryMaxSampleRuns = parseIntegerEnv('SCHEDULER_SUMMARY_MAX_SAMPLE_RUNS', process.env.SCHEDULER_SUMMARY_MAX_SAMPLE_RUNS);
+  const schedulerOperatorDefaultRecentLimit = parseIntegerEnv('SCHEDULER_OPERATOR_DEFAULT_RECENT_LIMIT', process.env.SCHEDULER_OPERATOR_DEFAULT_RECENT_LIMIT);
+  const schedulerOperatorMaxRecentLimit = parseIntegerEnv('SCHEDULER_OPERATOR_MAX_RECENT_LIMIT', process.env.SCHEDULER_OPERATOR_MAX_RECENT_LIMIT);
   const allowDegradedMode = parseBooleanEnv('STARTUP_ALLOW_DEGRADED_MODE', process.env.STARTUP_ALLOW_DEGRADED_MODE);
   const failOnMissingWorldPackDir = parseBooleanEnv(
     'STARTUP_FAIL_ON_MISSING_WORLD_PACK_DIR',
@@ -157,6 +267,16 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
       env: activeEnv
     }
   };
+
+  if (sqliteBusyTimeoutMs !== undefined || sqliteWalAutocheckpointPages !== undefined || sqliteSynchronous !== undefined) {
+    overrides.sqlite = {
+      ...(sqliteBusyTimeoutMs !== undefined ? { busy_timeout_ms: sqliteBusyTimeoutMs } : {}),
+      ...(sqliteWalAutocheckpointPages !== undefined
+        ? { wal_autocheckpoint_pages: sqliteWalAutocheckpointPages }
+        : {}),
+      ...(sqliteSynchronous !== undefined ? { synchronous: sqliteSynchronous } : {})
+    };
+  }
 
   if (appPort !== undefined) {
     (overrides.app as Record<string, unknown>).port = appPort;
@@ -207,6 +327,70 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
       ...(allowDegradedMode !== undefined ? { allow_degraded_mode: allowDegradedMode } : {}),
       ...(failOnMissingWorldPackDir !== undefined ? { fail_on_missing_world_pack_dir: failOnMissingWorldPackDir } : {}),
       ...(failOnNoWorldPack !== undefined ? { fail_on_no_world_pack: failOnNoWorldPack } : {})
+    };
+  }
+
+  if (
+    simulationLoopIntervalMs !== undefined
+    || schedulerLeaseTicks !== undefined
+    || schedulerAutomaticRebalanceBacklogLimit !== undefined
+    || schedulerAutomaticRebalanceMaxRecommendations !== undefined
+    || schedulerAutomaticRebalanceMaxApply !== undefined
+    || schedulerAgentLimit !== undefined
+    || schedulerAgentCooldownTicks !== undefined
+    || schedulerDecisionJobBatchLimit !== undefined
+    || schedulerDecisionJobLockTicks !== undefined
+    || schedulerActionDispatcherBatchLimit !== undefined
+    || schedulerActionDispatcherLockTicks !== undefined
+    || schedulerDefaultQueryLimit !== undefined
+    || schedulerMaxQueryLimit !== undefined
+    || schedulerSummaryDefaultSampleRuns !== undefined
+    || schedulerSummaryMaxSampleRuns !== undefined
+    || schedulerOperatorDefaultRecentLimit !== undefined
+    || schedulerOperatorMaxRecentLimit !== undefined
+  ) {
+    overrides.scheduler = {
+      runtime: {
+        ...(simulationLoopIntervalMs !== undefined ? { simulation_loop_interval_ms: simulationLoopIntervalMs } : {})
+      },
+      ...(schedulerLeaseTicks !== undefined ? { lease_ticks: schedulerLeaseTicks } : {}),
+      automatic_rebalance: {
+        ...(schedulerAutomaticRebalanceBacklogLimit !== undefined ? { backlog_limit: schedulerAutomaticRebalanceBacklogLimit } : {}),
+        ...(schedulerAutomaticRebalanceMaxRecommendations !== undefined ? { max_recommendations: schedulerAutomaticRebalanceMaxRecommendations } : {}),
+        ...(schedulerAutomaticRebalanceMaxApply !== undefined ? { max_apply: schedulerAutomaticRebalanceMaxApply } : {})
+      },
+      runners: {
+        decision_job: {
+          ...(schedulerDecisionJobBatchLimit !== undefined ? { batch_limit: schedulerDecisionJobBatchLimit } : {}),
+          ...(schedulerDecisionJobLockTicks !== undefined ? { lock_ticks: schedulerDecisionJobLockTicks } : {})
+        },
+        action_dispatcher: {
+          ...(schedulerActionDispatcherBatchLimit !== undefined ? { batch_limit: schedulerActionDispatcherBatchLimit } : {}),
+          ...(schedulerActionDispatcherLockTicks !== undefined ? { lock_ticks: schedulerActionDispatcherLockTicks } : {})
+        }
+      },
+      observability: {
+        ...(schedulerDefaultQueryLimit !== undefined ? { default_query_limit: schedulerDefaultQueryLimit } : {}),
+        ...(schedulerMaxQueryLimit !== undefined ? { max_query_limit: schedulerMaxQueryLimit } : {}),
+        summary: {
+          ...(schedulerSummaryDefaultSampleRuns !== undefined ? { default_sample_runs: schedulerSummaryDefaultSampleRuns } : {}),
+          ...(schedulerSummaryMaxSampleRuns !== undefined ? { max_sample_runs: schedulerSummaryMaxSampleRuns } : {})
+        },
+        trends: {
+          ...(schedulerSummaryDefaultSampleRuns !== undefined ? { default_sample_runs: schedulerSummaryDefaultSampleRuns } : {}),
+          ...(schedulerSummaryMaxSampleRuns !== undefined ? { max_sample_runs: schedulerSummaryMaxSampleRuns } : {})
+        },
+        operator_projection: {
+          ...(schedulerSummaryDefaultSampleRuns !== undefined ? { default_sample_runs: schedulerSummaryDefaultSampleRuns } : {}),
+          ...(schedulerSummaryMaxSampleRuns !== undefined ? { max_sample_runs: schedulerSummaryMaxSampleRuns } : {}),
+          ...(schedulerOperatorDefaultRecentLimit !== undefined ? { default_recent_limit: schedulerOperatorDefaultRecentLimit } : {}),
+          ...(schedulerOperatorMaxRecentLimit !== undefined ? { max_recent_limit: schedulerOperatorMaxRecentLimit } : {})
+        }
+      },
+      agent: {
+        ...(schedulerAgentLimit !== undefined ? { limit: schedulerAgentLimit } : {}),
+        ...(schedulerAgentCooldownTicks !== undefined ? { cooldown_ticks: schedulerAgentCooldownTicks } : {})
+      }
     };
   }
 
@@ -275,6 +459,34 @@ export const getAppPort = (): number => {
   return getRuntimeConfig().app.port;
 };
 
+export const getSqliteRuntimeConfig = (): RuntimeConfig['sqlite'] => {
+  return getRuntimeConfig().sqlite;
+};
+
+export const getSimulationLoopIntervalMs = (): number => {
+  return getRuntimeConfig().scheduler.runtime.simulation_loop_interval_ms;
+};
+
+export const getSchedulerLeaseTicks = (): bigint => {
+  return BigInt(getRuntimeConfig().scheduler.lease_ticks);
+};
+
+export const getSchedulerAutomaticRebalanceConfig = (): RuntimeConfig['scheduler']['automatic_rebalance'] => {
+  return getRuntimeConfig().scheduler.automatic_rebalance;
+};
+
+export const getSchedulerObservabilityConfig = (): RuntimeConfig['scheduler']['observability'] => {
+  return getRuntimeConfig().scheduler.observability;
+};
+
+export const getSchedulerRunnerConfig = (): RuntimeConfig['scheduler']['runners'] => {
+  return getRuntimeConfig().scheduler.runners;
+};
+
+export const getSchedulerAgentConfig = (): RuntimeConfig['scheduler']['agent'] => {
+  return getRuntimeConfig().scheduler.agent;
+};
+
 export const getWorldPacksDir = (): string => {
   return resolveWorkspacePath(getRuntimeConfig().paths.world_packs_dir);
 };
@@ -323,11 +535,33 @@ export const buildRuntimeConfigSnapshot = (): Record<string, string | boolean | 
     preferred_world_pack: config.world.preferred_pack,
     world_packs_dir: getWorldPacksDir(),
     ai_models_config: getAiModelsConfigPath(),
+    sqlite_busy_timeout_ms: String(config.sqlite.busy_timeout_ms),
+    sqlite_wal_autocheckpoint_pages: String(config.sqlite.wal_autocheckpoint_pages),
+    sqlite_synchronous: config.sqlite.synchronous,
     plugin_enable_warning_enabled: String(config.plugins.enable_warning.enabled),
     bootstrap_enabled: String(bootstrap.enabled),
     plugin_enable_warning_require_acknowledgement: String(config.plugins.enable_warning.require_acknowledgement),
     bootstrap_target_pack_dir: bootstrap.targetPackDirName,
+    simulation_loop_interval_ms: String(config.scheduler.runtime.simulation_loop_interval_ms),
+    scheduler_lease_ticks: String(config.scheduler.lease_ticks),
+    scheduler_automatic_rebalance_backlog_limit: String(config.scheduler.automatic_rebalance.backlog_limit),
+    scheduler_automatic_rebalance_max_recommendations: String(config.scheduler.automatic_rebalance.max_recommendations),
+    scheduler_automatic_rebalance_max_apply: String(config.scheduler.automatic_rebalance.max_apply),
+    scheduler_runner_decision_job_batch_limit: String(config.scheduler.runners.decision_job.batch_limit),
+    scheduler_runner_decision_job_lock_ticks: String(config.scheduler.runners.decision_job.lock_ticks),
+    scheduler_runner_action_dispatcher_batch_limit: String(config.scheduler.runners.action_dispatcher.batch_limit),
+    scheduler_runner_action_dispatcher_lock_ticks: String(config.scheduler.runners.action_dispatcher.lock_ticks),
+    scheduler_default_query_limit: String(config.scheduler.observability.default_query_limit),
+    scheduler_max_query_limit: String(config.scheduler.observability.max_query_limit),
+    scheduler_summary_default_sample_runs: String(config.scheduler.observability.summary.default_sample_runs),
+    scheduler_summary_max_sample_runs: String(config.scheduler.observability.summary.max_sample_runs),
+    scheduler_operator_default_recent_limit: String(config.scheduler.observability.operator_projection.default_recent_limit),
+    scheduler_operator_max_recent_limit: String(config.scheduler.observability.operator_projection.max_recent_limit),
+    scheduler_agent_limit: String(config.scheduler.agent.limit),
+    scheduler_agent_cooldown_ticks: String(config.scheduler.agent.cooldown_ticks),
+    scheduler_agent_max_candidates: String(config.scheduler.agent.max_candidates),
     bootstrap_template_file: bootstrap.templateFilePath,
+    prompt_workflow_agent_decision_budget: String(config.prompt_workflow.profiles.agent_decision_default.token_budget),
     startup_allow_degraded_mode: String(config.startup.allow_degraded_mode)
   };
 };

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { Prisma } from '@prisma/client';
 
+import { getSchedulerObservabilityConfig } from '../../config/runtime_config.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import type {
@@ -528,8 +529,6 @@ export interface SchedulerOperatorProjection {
 }
 
 const SCHEDULER_QUERY_INVALID = 'SCHEDULER_QUERY_INVALID';
-const DEFAULT_QUERY_LIMIT = 20;
-const MAX_QUERY_LIMIT = 100;
 const SCHEDULER_KINDS: SchedulerKind[] = ['periodic', 'event_driven'];
 const SCHEDULER_REASONS: SchedulerReason[] = [
   'periodic_tick',
@@ -624,15 +623,16 @@ const parseOptionalTickFilter = (value: string | number | undefined, fieldName: 
 };
 
 const parseLimit = (value: string | number | undefined): number => {
+  const config = getSchedulerObservabilityConfig();
   if (value === undefined) {
-    return DEFAULT_QUERY_LIMIT;
+    return config.default_query_limit;
   }
 
   if (typeof value === 'number') {
     if (!Number.isSafeInteger(value) || value <= 0) {
       throw new ApiError(400, SCHEDULER_QUERY_INVALID, 'limit must be a positive safe integer');
     }
-    return Math.min(value, MAX_QUERY_LIMIT);
+    return Math.min(value, config.max_query_limit);
   }
 
   const trimmed = value.trim();
@@ -645,7 +645,7 @@ const parseLimit = (value: string | number | undefined): number => {
     throw new ApiError(400, SCHEDULER_QUERY_INVALID, 'limit must be a positive safe integer');
   }
 
-  return Math.min(parsed, MAX_QUERY_LIMIT);
+  return Math.min(parsed, config.max_query_limit);
 };
 
 const parseOptionalIdFilter = (value: string | undefined, fieldName: string): string | null => {
@@ -1320,7 +1320,7 @@ export const getAgentSchedulerProjection = async (
 export const listAgentSchedulerDecisions = async (
   context: AppContext,
   actorId: string,
-  limit = 20
+  limit = getSchedulerObservabilityConfig().default_query_limit
 ): Promise<SchedulerCandidateDecisionReadModel[]> => {
   const decisions = await context.prisma.schedulerCandidateDecision.findMany({
     where: {
@@ -1454,7 +1454,11 @@ export const getSchedulerSummarySnapshot = async (
   context: AppContext,
   input?: { sampleRuns?: number }
 ): Promise<SchedulerSummarySnapshot> => {
-  const sampleRuns = Math.min(Math.max(input?.sampleRuns ?? 20, 1), 100);
+  const config = getSchedulerObservabilityConfig().summary;
+  const sampleRuns = Math.min(
+    Math.max(input?.sampleRuns ?? config.default_sample_runs, 1),
+    config.max_sample_runs
+  );
   const [latestRunReadModel, recentRuns, recentDecisions, recentJobs] = await Promise.all([
     getLatestSchedulerRunReadModel(context),
     context.prisma.schedulerRun.findMany({
@@ -1561,7 +1565,11 @@ export const getSchedulerTrendsSnapshot = async (
   context: AppContext,
   input?: { sampleRuns?: number }
 ): Promise<SchedulerTrendsSnapshot> => {
-  const sampleRuns = Math.min(Math.max(input?.sampleRuns ?? 20, 1), 100);
+  const config = getSchedulerObservabilityConfig().trends;
+  const sampleRuns = Math.min(
+    Math.max(input?.sampleRuns ?? config.default_sample_runs, 1),
+    config.max_sample_runs
+  );
   const recentRuns = await context.prisma.schedulerRun.findMany({
     orderBy: [{ created_at: 'desc' }],
     take: sampleRuns
@@ -1733,8 +1741,12 @@ export const getSchedulerOperatorProjection = async (
   context: AppContext,
   input?: { sampleRuns?: number; recentLimit?: number }
 ): Promise<SchedulerOperatorProjection> => {
-  const sampleRuns = Math.min(Math.max(input?.sampleRuns ?? 20, 1), 100);
-  const recentLimit = Math.min(Math.max(input?.recentLimit ?? 5, 1), 20);
+  const config = getSchedulerObservabilityConfig().operator_projection;
+  const sampleRuns = Math.min(
+    Math.max(input?.sampleRuns ?? config.default_sample_runs, 1),
+    config.max_sample_runs
+  );
+  const recentLimit = Math.min(Math.max(input?.recentLimit ?? config.default_recent_limit, 1), config.max_recent_limit);
 
   const [latestRun, summary, trends, recentRunsResult, recentDecisionsResult, ownershipAssignments, ownershipMigrations, workers, rebalanceRecommendations] = await Promise.all([
     getLatestSchedulerRunReadModel(context),
