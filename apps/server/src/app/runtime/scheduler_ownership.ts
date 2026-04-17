@@ -1,10 +1,25 @@
 import type { AppContext } from '../context.js';
 import {
+  countSchedulerOwnershipMigrationsInProgress,
+  createSchedulerOwnershipMigrationRecord,
+  createSchedulerPartitionAssignmentRecord,
+  findLatestActiveSchedulerOwnershipMigrationForPartition,
+  getSchedulerOwnershipMigrationRecordById,
+  getSchedulerPartitionAssignmentRecord,
+  getSchedulerWorkerRuntimeStateRecord,
+  listSchedulerOwnershipMigrationRecords,
+  listSchedulerPartitionAssignmentRecords,
+  listSchedulerWorkerRuntimeStateRecords,
+  updateSchedulerOwnershipMigrationRecord,
+  updateSchedulerPartitionAssignmentRecord,
+  updateSchedulerWorkerRuntimeStatus,
+  upsertSchedulerWorkerRuntimeStateRecord
+} from './scheduler_ownership_repository.js';
+import {
   getSchedulerPartitionCount,
   listSchedulerPartitionIds,
   resolveOwnedSchedulerPartitionIds
 } from './scheduler_partitioning.js';
-
 
 export interface SchedulerOwnershipSnapshot {
   worker_id: string;
@@ -58,11 +73,7 @@ export const getSchedulerPartitionAssignment = async (
   context: AppContext,
   partitionId: string
 ): Promise<SchedulerPartitionAssignmentRecord | null> => {
-  return context.prisma.schedulerPartitionAssignment.findUnique({
-    where: {
-      partition_id: partitionId
-    }
-  });
+  return getSchedulerPartitionAssignmentRecord(context, partitionId);
 };
 
 export const isWorkerAllowedToOperateSchedulerPartition = async (
@@ -83,41 +94,22 @@ export const isWorkerAllowedToOperateSchedulerPartition = async (
 export const listSchedulerPartitionAssignments = async (
   context: AppContext
 ): Promise<SchedulerPartitionAssignmentRecord[]> => {
-  return context.prisma.schedulerPartitionAssignment.findMany({
-    orderBy: [{ partition_id: 'asc' }]
-  });
+  return listSchedulerPartitionAssignmentRecords(context);
 };
 
 export const listRecentSchedulerOwnershipMigrations = async (
   context: AppContext,
   limit = 20
 ): Promise<SchedulerOwnershipMigrationRecord[]> => {
-  return context.prisma.schedulerOwnershipMigrationLog.findMany({
-    orderBy: [{ created_at: 'desc' }],
-    take: limit
-  });
+  return listSchedulerOwnershipMigrationRecords(context, limit);
 };
 
-export const countSchedulerOwnershipMigrationsInProgress = async (
-  context: AppContext,
-  workerId?: string
-): Promise<number> => {
-  return context.prisma.schedulerOwnershipMigrationLog.count({
-    where: {
-      status: {
-        in: ['requested', 'in_progress']
-      },
-      ...(typeof workerId === 'string' ? { to_worker_id: workerId } : {})
-    }
-  });
-};
+export { countSchedulerOwnershipMigrationsInProgress };
 
 export const listSchedulerWorkerRuntimeStates = async (
   context: AppContext
 ): Promise<SchedulerWorkerRuntimeStateRecord[]> => {
-  return context.prisma.schedulerWorkerRuntimeState.findMany({
-    orderBy: [{ worker_id: 'asc' }]
-  });
+  return listSchedulerWorkerRuntimeStateRecords(context);
 };
 
 export const refreshSchedulerWorkerRuntimeState = async (
@@ -132,27 +124,14 @@ export const refreshSchedulerWorkerRuntimeState = async (
   const now = input.now ?? context.sim.getCurrentTick();
   const activeMigrationCount = await countSchedulerOwnershipMigrationsInProgress(context, input.workerId);
 
-  return context.prisma.schedulerWorkerRuntimeState.upsert({
-    where: {
-      worker_id: input.workerId
-    },
-    create: {
-      worker_id: input.workerId,
-      status: 'active',
-      last_heartbeat_at: now,
-      owned_partition_count: input.ownedPartitionIds.length,
-      active_migration_count: activeMigrationCount,
-      capacity_hint: input.capacityHint ?? null,
-      updated_at: now
-    },
-    update: {
-      status: 'active',
-      last_heartbeat_at: now,
-      owned_partition_count: input.ownedPartitionIds.length,
-      active_migration_count: activeMigrationCount,
-      capacity_hint: input.capacityHint ?? null,
-      updated_at: now
-    }
+  return upsertSchedulerWorkerRuntimeStateRecord(context, {
+    worker_id: input.workerId,
+    status: 'active',
+    last_heartbeat_at: now,
+    owned_partition_count: input.ownedPartitionIds.length,
+    active_migration_count: activeMigrationCount,
+    capacity_hint: input.capacityHint ?? null,
+    updated_at: now
   });
 };
 
@@ -172,14 +151,10 @@ export const refreshSchedulerWorkerRuntimeLiveness = async (
       continue;
     }
 
-    await context.prisma.schedulerWorkerRuntimeState.update({
-      where: {
-        worker_id: state.worker_id
-      },
-      data: {
-        status: nextStatus,
-        updated_at: currentTick
-      }
+    await updateSchedulerWorkerRuntimeStatus(context, {
+      worker_id: state.worker_id,
+      status: nextStatus,
+      updated_at: currentTick
     });
   }
 };
@@ -199,7 +174,7 @@ export const reconcileSchedulerBootstrapAssignments = async (
   const allPartitionIds = listSchedulerPartitionIds(partitionCount);
   const bootstrapPartitionIdSet = new Set(bootstrapPartitionIds);
 
-  const existingAssignments = await context.prisma.schedulerPartitionAssignment.findMany();
+  const existingAssignments = await listSchedulerPartitionAssignmentRecords(context);
   const existingByPartition = new Map(existingAssignments.map(item => [item.partition_id, item]));
 
   for (const partitionId of allPartitionIds) {
@@ -209,15 +184,13 @@ export const reconcileSchedulerBootstrapAssignments = async (
     const nextStatus = shouldOwn ? 'assigned' : 'released';
 
     if (!existing) {
-      await context.prisma.schedulerPartitionAssignment.create({
-        data: {
-          partition_id: partitionId,
-          worker_id: nextWorkerId,
-          status: nextStatus,
-          version: 1,
-          source: 'bootstrap',
-          updated_at: now
-        }
+      await createSchedulerPartitionAssignmentRecord(context, {
+        partition_id: partitionId,
+        worker_id: nextWorkerId,
+        status: nextStatus,
+        version: 1,
+        source: 'bootstrap',
+        updated_at: now
       });
       continue;
     }
@@ -230,16 +203,12 @@ export const reconcileSchedulerBootstrapAssignments = async (
       continue;
     }
 
-    await context.prisma.schedulerPartitionAssignment.update({
-      where: {
-        partition_id: partitionId
-      },
-      data: {
-        worker_id: nextWorkerId,
-        status: nextStatus,
-        version: existing.version + 1,
-        updated_at: now
-      }
+    await updateSchedulerPartitionAssignmentRecord(context, {
+      partition_id: partitionId,
+      worker_id: nextWorkerId,
+      status: nextStatus,
+      version: existing.version + 1,
+      updated_at: now
     });
   }
 };
@@ -270,11 +239,7 @@ export const resolveSchedulerOwnershipSnapshot = async (
         });
 
   const migrationInProgressCount = await countSchedulerOwnershipMigrationsInProgress(context, input.workerId);
-  const workerState = await context.prisma.schedulerWorkerRuntimeState.findUnique({
-    where: {
-      worker_id: input.workerId
-    }
-  });
+  const workerState = await getSchedulerWorkerRuntimeStateRecord(context, input.workerId);
 
   return {
     worker_id: input.workerId,
@@ -298,51 +263,39 @@ export const createSchedulerOwnershipMigration = async (
   }
 ): Promise<SchedulerOwnershipMigrationRecord> => {
   const now = context.sim.getCurrentTick();
-  const existingAssignment = await context.prisma.schedulerPartitionAssignment.findUnique({
-    where: {
-      partition_id: input.partitionId
-    }
-  });
+  const existingAssignment = await getSchedulerPartitionAssignmentRecord(context, input.partitionId);
 
-  const migration = await context.prisma.schedulerOwnershipMigrationLog.create({
-    data: {
-      partition_id: input.partitionId,
-      from_worker_id: existingAssignment?.worker_id ?? null,
-      to_worker_id: input.toWorkerId,
-      status: 'requested',
-      reason: input.reason ?? null,
-      details: {
-        requested_by_worker_id: input.requestedByWorkerId ?? null
-      },
-      created_at: now,
-      updated_at: now,
-      completed_at: null
-    }
+  const migration = await createSchedulerOwnershipMigrationRecord(context, {
+    partition_id: input.partitionId,
+    from_worker_id: existingAssignment?.worker_id ?? null,
+    to_worker_id: input.toWorkerId,
+    status: 'requested',
+    reason: input.reason ?? null,
+    details: {
+      requested_by_worker_id: input.requestedByWorkerId ?? null
+    },
+    created_at: now,
+    updated_at: now,
+    completed_at: null
   });
 
   if (!existingAssignment) {
-    await context.prisma.schedulerPartitionAssignment.create({
-      data: {
-        partition_id: input.partitionId,
-        worker_id: input.toWorkerId,
-        status: 'migrating',
-        version: 1,
-        source: 'rebalance',
-        updated_at: now
-      }
+    await createSchedulerPartitionAssignmentRecord(context, {
+      partition_id: input.partitionId,
+      worker_id: input.toWorkerId,
+      status: 'migrating',
+      version: 1,
+      source: 'rebalance',
+      updated_at: now
     });
   } else {
-    await context.prisma.schedulerPartitionAssignment.update({
-      where: {
-        partition_id: input.partitionId
-      },
-      data: {
-        worker_id: input.toWorkerId,
-        status: 'migrating',
-        version: existingAssignment.version + 1,
-        source: 'rebalance',
-        updated_at: now
-      }
+    await updateSchedulerPartitionAssignmentRecord(context, {
+      partition_id: input.partitionId,
+      worker_id: input.toWorkerId,
+      status: 'migrating',
+      version: existingAssignment.version + 1,
+      source: 'rebalance',
+      updated_at: now
     });
   }
 
@@ -354,14 +307,10 @@ export const markSchedulerOwnershipMigrationInProgress = async (
   migrationId: string
 ): Promise<void> => {
   const now = context.sim.getCurrentTick();
-  await context.prisma.schedulerOwnershipMigrationLog.update({
-    where: {
-      id: migrationId
-    },
-    data: {
-      status: 'in_progress',
-      updated_at: now
-    }
+  await updateSchedulerOwnershipMigrationRecord(context, {
+    id: migrationId,
+    status: 'in_progress',
+    updated_at: now
   });
 };
 
@@ -373,15 +322,9 @@ export const completeActiveSchedulerOwnershipMigration = async (
   }
 ): Promise<void> => {
   const now = context.sim.getCurrentTick();
-  const migration = await context.prisma.schedulerOwnershipMigrationLog.findFirst({
-    where: {
-      partition_id: input.partitionId,
-      to_worker_id: input.toWorkerId,
-      status: {
-        in: ['requested', 'in_progress']
-      }
-    },
-    orderBy: [{ created_at: 'desc' }]
+  const migration = await findLatestActiveSchedulerOwnershipMigrationForPartition(context, {
+    partition_id: input.partitionId,
+    to_worker_id: input.toWorkerId
   });
 
   if (!migration) {
@@ -389,9 +332,9 @@ export const completeActiveSchedulerOwnershipMigration = async (
   }
 
   await completeSchedulerOwnershipMigration(context, migration.id);
-  await context.prisma.schedulerOwnershipMigrationLog.update({
-    where: { id: migration.id },
-    data: { updated_at: now }
+  await updateSchedulerOwnershipMigrationRecord(context, {
+    id: migration.id,
+    updated_at: now
   });
 };
 
@@ -400,35 +343,23 @@ export const completeSchedulerOwnershipMigration = async (
   migrationId: string
 ): Promise<void> => {
   const now = context.sim.getCurrentTick();
-  const migration = await context.prisma.schedulerOwnershipMigrationLog.findUnique({
-    where: {
-      id: migrationId
-    }
-  });
+  const migration = await getSchedulerOwnershipMigrationRecordById(context, migrationId);
   if (!migration) {
     return;
   }
 
-  await context.prisma.schedulerOwnershipMigrationLog.update({
-    where: {
-      id: migrationId
-    },
-    data: {
-      status: 'completed',
-      updated_at: now,
-      completed_at: now
-    }
+  await updateSchedulerOwnershipMigrationRecord(context, {
+    id: migrationId,
+    status: 'completed',
+    updated_at: now,
+    completed_at: now
   });
 
-  await context.prisma.schedulerPartitionAssignment.update({
-    where: {
-      partition_id: migration.partition_id
-    },
-    data: {
-      worker_id: migration.to_worker_id,
-      status: 'assigned',
-      source: 'rebalance',
-      updated_at: now
-    }
+  await updateSchedulerPartitionAssignmentRecord(context, {
+    partition_id: migration.partition_id,
+    worker_id: migration.to_worker_id,
+    status: 'assigned',
+    source: 'rebalance',
+    updated_at: now
   });
 };

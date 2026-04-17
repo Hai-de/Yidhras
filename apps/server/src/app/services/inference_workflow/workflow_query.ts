@@ -15,7 +15,6 @@ import {
   normalizeStoredRequestInput,
   parseInferenceJobsFilters
 } from './parsers.js';
-import { getDecisionJobById } from './repository.js';
 import { buildWorkflowSnapshot } from './snapshots.js';
 import type {
   ActionIntentRecord,
@@ -31,6 +30,7 @@ import {
   normalizeJobStatus,
   toTickString
 } from './types.js';
+import { getDecisionJobById } from './workflow_job_repository.js';
 
 export interface InferenceJobListItem {
   id: string;

@@ -34,6 +34,7 @@ pnpm prepare:runtime
 
 说明：
 - 该命令会完成数据库迁移、运行时初始化和 identity seed。
+- 如果你是部署者，想了解 `DATABASE_URL`、Prisma migration、初始化步骤、数据库文件更换和常见坑，请看：`docs/guides/DB_OPERATIONS.md`
 
 ### 3. 启动开发环境
 
@@ -82,6 +83,7 @@ pnpm --filter yidhras-server reset:dev-db
 更多命令、单测入口、Server/Web 分项命令与插件 CLI 入口，见：
 
 - `docs/guides/COMMANDS.md`
+- `docs/guides/DB_OPERATIONS.md`
 - `docs/guides/PLUGIN_OPERATIONS.md`
 
 ## 文档导航
@@ -106,6 +108,7 @@ pnpm --filter yidhras-server reset:dev-db
 ### 操作手册
 
 - `docs/guides/COMMANDS.md`：仓库、Server、Web、测试、脚手架命令
+- `docs/guides/DB_OPERATIONS.md`：数据库迁移、初始化、更换与常见坑
 - `docs/guides/PLUGIN_OPERATIONS.md`：pack-local plugin 的 CLI / GUI / API 操作说明
 
 ### 过程资产
@@ -120,6 +123,7 @@ pnpm --filter yidhras-server reset:dev-db
 
 - **第一次进入仓库**：先看本文件，再看 `docs/INDEX.md`
 - **想启动项目**：看本文件的“快速开始”与 `docs/guides/COMMANDS.md`
+- **想处理数据库迁移或更换数据库文件路径**：看 `docs/guides/DB_OPERATIONS.md`
 - **想理解接口**：看 `docs/API.md`
 - **想理解架构边界**：看 `docs/ARCH.md`
 - **想理解业务语义**：看 `docs/LOGIC.md`

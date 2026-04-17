@@ -48,6 +48,8 @@
 
 - `guides/COMMANDS.md`
   - 用途：工作区 / server / web 常用命令、测试矩阵、运行时准备与脚手架命令
+- `guides/DB_OPERATIONS.md`
+  - 用途：数据库迁移、初始化、数据库文件路径更换、部署者常见坑
 - `guides/PLUGIN_OPERATIONS.md`
   - 用途：插件 CLI / GUI / API 的治理流程与常见排查路径
 - 如后续需要，再补：
@@ -96,6 +98,7 @@
 ### 操作手册
 
 - 命令手册：`guides/COMMANDS.md`
+- 数据库迁移与更换：`guides/DB_OPERATIONS.md`
 - 插件治理操作：`guides/PLUGIN_OPERATIONS.md`
 
 ### 历史归档
@@ -121,6 +124,7 @@
 - Prompt Workflow 细节 -> `capabilities/PROMPT_WORKFLOW.md`
 - AI Gateway 细节 -> `capabilities/AI_GATEWAY.md`
 - Plugin Runtime 细节 -> `capabilities/PLUGIN_RUNTIME.md`
+- 数据库迁移与更换操作 -> `guides/DB_OPERATIONS.md`
 - 当前 backlog -> `TODO.md`
 - 设计/计划/评审过程 -> `.limcode/`
 - 人类可读历史归档 -> `history/`
@@ -158,6 +162,7 @@
 - 改了 Prompt Workflow 细节 -> 更新 `capabilities/PROMPT_WORKFLOW.md`
 - 改了 AI Gateway / invocation observability -> 更新 `capabilities/AI_GATEWAY.md`
 - 改了 Plugin Runtime / runtime host / governance boundary -> 更新 `capabilities/PLUGIN_RUNTIME.md`
+- 改了数据库迁移 / 更换 / 初始化说明 -> 更新 `guides/DB_OPERATIONS.md`
 - 改了主题 contract -> 更新 `THEME.md`
 - 改了 world pack 项目化规范 -> 更新 `WORLD_PACK.md`
 - 改了当前优先级 -> 更新 `TODO.md`
@@ -174,5 +179,6 @@
 - 架构边界以 `ARCH.md` 为准
 - 业务语义以 `LOGIC.md` 为准
 - 专题高耦合细节以 `capabilities/` 为准
+- 部署与数据库迁移/更换操作以 `guides/DB_OPERATIONS.md` 为准
 - 阶段性结论以最新 `.limcode/review/` / `.limcode/plans/` / `.limcode/progress.md` 为准
 - 历史迁移与归档说明以 `history/` 为准

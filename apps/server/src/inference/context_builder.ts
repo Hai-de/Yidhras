@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { AccessPolicyService } from '../access_policy/service.js';
 import type { AppContext } from '../app/context.js';
 import { getAgentContextSnapshot } from '../app/services/agent.js';
+import { getLatestEventEvidenceRecord } from '../app/services/event_evidence_repository.js';
 import { createContextService } from '../context/service.js';
 import { IdentityService } from '../identity/service.js';
 import type { IdentityContext } from '../identity/types.js';
@@ -359,11 +360,7 @@ const buildPackStateSnapshot = async (
     ? attributes.actor_roles.filter((entry): entry is string => typeof entry === 'string')
     : [];
 
-  const latestEventRecord = await context.sim.prisma.event.findFirst({
-    orderBy: {
-      tick: 'desc'
-    }
-  });
+  const latestEventRecord = await getLatestEventEvidenceRecord(context);
 
   const latestEvent = latestEventRecord
     ? {
@@ -484,4 +481,4 @@ export const buildInferenceContext = async (
     pack_state: packState,
     pack_runtime: packRuntime
   };
-}
+};

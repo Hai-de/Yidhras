@@ -1,5 +1,13 @@
 import type { AppContext } from '../context.js';
 import {
+  deleteSchedulerLeaseRecordByHolder,
+  getSchedulerCursorRecord,
+  getSchedulerLeaseRecord,
+  updateSchedulerLeaseRecordIfClaimable,
+  upsertSchedulerCursorRecord,
+  upsertSchedulerLeaseRecord
+} from './scheduler_lease_repository.js';
+import {
   DEFAULT_SCHEDULER_PARTITION_ID,
   isSchedulerPartitionId
 } from './scheduler_partitioning.js';
@@ -53,19 +61,13 @@ export const acquireSchedulerLease = async (
   const leaseTicks = input.leaseTicks ?? DEFAULT_SCHEDULER_LEASE_TICKS;
   const expiresAt = now + leaseTicks;
   const key = buildSchedulerLeaseKey(partitionId);
-  const existing = await context.prisma.schedulerLease.upsert({
-    where: {
-      partition_id: partitionId
-    },
-    update: {},
-    create: {
-      key,
-      partition_id: partitionId,
-      holder: input.workerId,
-      acquired_at: now,
-      expires_at: expiresAt,
-      updated_at: now
-    }
+  const existing = await upsertSchedulerLeaseRecord(context, {
+    key,
+    partition_id: partitionId,
+    holder: input.workerId,
+    acquired_at: now,
+    expires_at: expiresAt,
+    updated_at: now
   });
 
   if (existing.holder === input.workerId && existing.acquired_at === now && existing.expires_at === expiresAt) {
@@ -88,26 +90,18 @@ export const acquireSchedulerLease = async (
     };
   }
 
-  const updatedLease = await context.prisma.schedulerLease.updateMany({
-    where: {
-      partition_id: partitionId,
-      OR: [{ holder: input.workerId }, { expires_at: { lte: now } }]
-    },
-    data: {
-      key: existing.key ?? key,
-      holder: input.workerId,
-      acquired_at: existing.holder === input.workerId ? existing.acquired_at : now,
-      expires_at: expiresAt,
-      updated_at: now
-    }
+  const updatedLease = await updateSchedulerLeaseRecordIfClaimable(context, {
+    partition_id: partitionId,
+    holder: input.workerId,
+    acquired_at: existing.holder === input.workerId ? existing.acquired_at : now,
+    expires_at: expiresAt,
+    updated_at: now,
+    key: existing.key ?? key,
+    now
   });
 
   if (updatedLease.count === 0) {
-    const latestLease = await context.prisma.schedulerLease.findUnique({
-      where: {
-        partition_id: partitionId
-      }
-    });
+    const latestLease = await getSchedulerLeaseRecord(context, partitionId);
 
     if (!latestLease) {
       return {
@@ -155,11 +149,9 @@ export const releaseSchedulerLease = async (
   partitionId?: string
 ): Promise<boolean> => {
   const normalizedPartitionId = normalizePartitionId(partitionId);
-  const releaseResult = await context.prisma.schedulerLease.deleteMany({
-    where: {
-      partition_id: normalizedPartitionId,
-      holder: workerId
-    }
+  const releaseResult = await deleteSchedulerLeaseRecordByHolder(context, {
+    partition_id: normalizedPartitionId,
+    holder: workerId
   });
 
   if (releaseResult.count === 0) {
@@ -181,23 +173,12 @@ export const updateSchedulerCursor = async (
   const partitionId = normalizePartitionId(input.partitionId);
   const key = buildSchedulerCursorKey(partitionId);
   const now = input.now ?? context.sim.getCurrentTick();
-  await context.prisma.schedulerCursor.upsert({
-    where: {
-      partition_id: partitionId
-    },
-    update: {
-      key,
-      last_scanned_tick: input.lastScannedTick,
-      last_signal_tick: input.lastSignalTick,
-      updated_at: now
-    },
-    create: {
-      key,
-      partition_id: partitionId,
-      last_scanned_tick: input.lastScannedTick,
-      last_signal_tick: input.lastSignalTick,
-      updated_at: now
-    }
+  await upsertSchedulerCursorRecord(context, {
+    key,
+    partition_id: partitionId,
+    last_scanned_tick: input.lastScannedTick,
+    last_signal_tick: input.lastSignalTick,
+    updated_at: now
   });
 };
 
@@ -206,11 +187,7 @@ export const getSchedulerCursor = async (
   partitionId?: string
 ): Promise<{ partition_id: string; last_scanned_tick: bigint; last_signal_tick: bigint } | null> => {
   const normalizedPartitionId = normalizePartitionId(partitionId);
-  const cursor = await context.prisma.schedulerCursor.findUnique({
-    where: {
-      partition_id: normalizedPartitionId
-    }
-  });
+  const cursor = await getSchedulerCursorRecord(context, normalizedPartitionId);
 
   if (!cursor) {
     return null;

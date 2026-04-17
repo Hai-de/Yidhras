@@ -8,6 +8,14 @@ import {
   listSchedulerPartitionAssignments,
   listSchedulerWorkerRuntimeStates
 } from './scheduler_ownership.js';
+import {
+  createSchedulerRebalanceRecommendationRecord,
+  findOpenSchedulerRebalanceRecommendation,
+  getSchedulerRebalanceRecommendationRecordById,
+  listPendingSchedulerRebalanceRecommendationsForWorker,
+  listRecentSchedulerRebalanceRecommendationRecords,
+  updateSchedulerRebalanceRecommendationRecord
+} from './scheduler_rebalance_repository.js';
 
 export interface SchedulerRebalanceRecommendationRecord {
   id: string;
@@ -51,17 +59,13 @@ const findOpenRecommendation = async (
     suppressReason: string | null;
   }
 ): Promise<SchedulerRebalanceRecommendationRecord | null> => {
-  return context.prisma.schedulerRebalanceRecommendation.findFirst({
-    where: {
-      partition_id: input.partitionId,
-      status: input.status,
-      reason: input.reason,
-      from_worker_id: input.fromWorkerId,
-      to_worker_id: input.toWorkerId,
-      suppress_reason: input.suppressReason,
-      applied_migration_id: null
-    },
-    orderBy: [{ created_at: 'desc' }]
+  return findOpenSchedulerRebalanceRecommendation(context, {
+    partition_id: input.partitionId,
+    status: input.status,
+    reason: input.reason,
+    from_worker_id: input.fromWorkerId,
+    to_worker_id: input.toWorkerId,
+    suppress_reason: input.suppressReason
   });
 };
 
@@ -92,20 +96,18 @@ const createRecommendation = async (
     return existing;
   }
 
-  return context.prisma.schedulerRebalanceRecommendation.create({
-    data: {
-      partition_id: input.partitionId,
-      from_worker_id: input.fromWorkerId,
-      to_worker_id: input.toWorkerId,
-      status: input.status,
-      reason: input.reason,
-      score: input.score ?? null,
-      suppress_reason: input.suppressReason ?? null,
-      details: (input.details ?? {}) as Prisma.InputJsonValue,
-      created_at: input.now,
-      updated_at: input.now,
-      applied_migration_id: null
-    }
+  return createSchedulerRebalanceRecommendationRecord(context, {
+    partition_id: input.partitionId,
+    from_worker_id: input.fromWorkerId,
+    to_worker_id: input.toWorkerId,
+    status: input.status,
+    reason: input.reason,
+    score: input.score ?? null,
+    suppress_reason: input.suppressReason ?? null,
+    details: input.details ?? {},
+    created_at: input.now,
+    updated_at: input.now,
+    applied_migration_id: null
   });
 };
 
@@ -113,10 +115,7 @@ export const listRecentSchedulerRebalanceRecommendations = async (
   context: AppContext,
   limit = 20
 ): Promise<SchedulerRebalanceRecommendationRecord[]> => {
-  return context.prisma.schedulerRebalanceRecommendation.findMany({
-    orderBy: [{ created_at: 'desc' }],
-    take: limit
-  });
+  return listRecentSchedulerRebalanceRecommendationRecords(context, limit);
 };
 
 const markRecommendationStatus = async (
@@ -129,27 +128,19 @@ const markRecommendationStatus = async (
     extraDetails?: Record<string, unknown>;
   }
 ): Promise<void> => {
-  const existing = await context.prisma.schedulerRebalanceRecommendation.findUnique({
-    where: {
-      id: input.recommendationId
-    }
-  });
+  const existing = await getSchedulerRebalanceRecommendationRecordById(context, input.recommendationId);
 
-  await context.prisma.schedulerRebalanceRecommendation.update({
-    where: {
-      id: input.recommendationId
-    },
-    data: {
-      status: input.status,
-      updated_at: input.now,
-      applied_migration_id: input.appliedMigrationId ?? existing?.applied_migration_id ?? null,
-      details: ({
-        ...(typeof existing?.details === 'object' && existing?.details !== null && !Array.isArray(existing.details)
-          ? (existing.details as Record<string, unknown>)
-          : {}),
-        ...(input.extraDetails ?? {})
-      } satisfies Record<string, unknown>) as Prisma.InputJsonValue
-    }
+  await updateSchedulerRebalanceRecommendationRecord(context, {
+    id: input.recommendationId,
+    status: input.status,
+    updated_at: input.now,
+    applied_migration_id: input.appliedMigrationId ?? existing?.applied_migration_id ?? null,
+    details: ({
+      ...(typeof existing?.details === 'object' && existing?.details !== null && !Array.isArray(existing.details)
+        ? (existing.details as Record<string, unknown>)
+        : {}),
+      ...(input.extraDetails ?? {})
+    } satisfies Record<string, unknown>) as Prisma.InputJsonValue
   });
 };
 
@@ -163,14 +154,9 @@ export const applySchedulerAutomaticRebalanceForWorker = async (
 ): Promise<ApplySchedulerAutomaticRebalanceResult> => {
   const now = input.now ?? context.sim.getCurrentTick();
   const maxApply = Math.max(input.maxApply ?? DEFAULT_AUTOMATIC_REBALANCE_MAX_APPLY, 1);
-  const recommendations = await context.prisma.schedulerRebalanceRecommendation.findMany({
-    where: {
-      status: 'recommended',
-      to_worker_id: input.workerId,
-      applied_migration_id: null
-    },
-    orderBy: [{ score: 'desc' }, { created_at: 'asc' }],
-    take: maxApply
+  const recommendations = await listPendingSchedulerRebalanceRecommendationsForWorker(context, {
+    worker_id: input.workerId,
+    max_apply: maxApply
   });
 
   const appliedRecommendationIds: string[] = [];

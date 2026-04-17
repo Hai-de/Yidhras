@@ -76,6 +76,7 @@ pnpm smoke:server
 - `pnpm prepare:runtime` 会委托给 server 完成数据库迁移、运行时初始化与 identity seed。
 - `pnpm scaffold:world-pack` 是新建 world pack 项目的统一入口。
 - `pnpm smoke:server` 用于快速运行 server 冒烟验证。
+- 数据库迁移、初始化、路径更换与常见坑的展开说明见：`DB_OPERATIONS.md`
 
 ## 3. Server 命令
 
@@ -115,6 +116,7 @@ pnpm --filter yidhras-server prepare:runtime
 pnpm --filter yidhras-server reset:dev-db
 pnpm --filter yidhras-server init:runtime
 pnpm --filter yidhras-server seed:identity
+pnpm --filter yidhras-server exec prisma migrate deploy
 ```
 
 说明：
@@ -122,6 +124,8 @@ pnpm --filter yidhras-server seed:identity
 - `reset:dev-db`：重置本地开发数据库
 - `init:runtime`：单独执行运行时准备
 - `seed:identity`：单独执行 identity seed
+- `pnpm --filter yidhras-server exec prisma migrate deploy`：只应用 Prisma migration，不执行 runtime scaffold / seed
+- 部署者数据库迁移/更换文档见：`DB_OPERATIONS.md`
 
 ### 3.5 World Pack 与手工脚本
 

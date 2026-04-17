@@ -10,16 +10,13 @@ import {
   normalizeStoredRequestInput
 } from './inference_workflow/parsers.js';
 import {
-  assertDecisionJobLockOwnership,
-  claimDecisionJob,
-  createPendingDecisionJob,
-  createReplayDecisionJob,
-  DEFAULT_DECISION_JOB_LOCK_TICKS,
-  getActionIntentByInferenceId,
-  getDecisionJobById,
-  getDecisionJobByIdempotencyKey,
-  getDecisionJobByInferenceId,
-  getInferenceTraceById,
+  buildInferenceJobReplayResult as buildInferenceJobReplayResultFromSnapshot,
+  buildInferenceJobReplaySubmitResult,
+  buildInferenceJobRetryResult,
+  buildInferenceJobSubmitResult,
+  getDecisionResultFromWorkflowSnapshot
+} from './inference_workflow/results.js';
+import {
   getLatestSchedulerSignalTick,
   listActiveSchedulerAgents,
   listPendingSchedulerActionIntents,
@@ -30,24 +27,29 @@ import {
   listRecentRecoveryWindowActors,
   listRecentRelationshipFollowupSignals,
   listRecentScheduledDecisionJobs,
-  listRecentSnrFollowupSignals,
-  listRunnableDecisionJobs,
-  releaseDecisionJobLock,
-  updateDecisionJobState
-} from './inference_workflow/repository.js';
-import {
-  buildInferenceJobReplayResult as buildInferenceJobReplayResultFromSnapshot,
-  buildInferenceJobReplaySubmitResult,
-  buildInferenceJobRetryResult,
-  buildInferenceJobSubmitResult,
-  getDecisionResultFromWorkflowSnapshot
-} from './inference_workflow/results.js';
+  listRecentSnrFollowupSignals
+} from './inference_workflow/scheduler_signal_repository.js';
 import {
   buildInferenceRunResultFromTrace,
   toInferenceJobSnapshot
 } from './inference_workflow/snapshots.js';
 import type { DecisionJobRecord } from './inference_workflow/types.js';
 import { resolveDecisionJobInferenceId } from './inference_workflow/types.js';
+import {
+  assertDecisionJobLockOwnership,
+  claimDecisionJob,
+  createPendingDecisionJob,
+  createReplayDecisionJob,
+  DEFAULT_DECISION_JOB_LOCK_TICKS,
+  getActionIntentByInferenceId,
+  getDecisionJobById,
+  getDecisionJobByIdempotencyKey,
+  getDecisionJobByInferenceId,
+  getInferenceTraceById,
+  listRunnableDecisionJobs,
+  releaseDecisionJobLock,
+  updateDecisionJobState
+} from './inference_workflow/workflow_job_repository.js';
 import {
   getWorkflowSnapshotByInferenceId,
   getWorkflowSnapshotByJobId,
