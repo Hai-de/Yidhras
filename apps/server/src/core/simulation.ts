@@ -5,7 +5,12 @@ import { PrismaClient } from '@prisma/client';
 import { ChronosEngine } from '../clock/engine.js';
 import { getWorldPacksDir } from '../config/runtime_config.js';
 import { applySqliteRuntimePragmas, type SqliteRuntimePragmaSnapshot } from '../db/sqlite_runtime.js';
-import { NarrativeResolver } from '../narrative/resolver.js';
+import { renderNarrativeTemplate } from '../narrative/resolver.js';
+import {
+  createPromptVariableContext,
+  createPromptVariableLayer,
+  normalizePromptVariableRecord
+} from '../narrative/variable_context.js';
 import { PackManifestLoader, type WorldPack } from '../packs/manifest/loader.js';
 import type { PermissionContext } from '../permission/types.js';
 import { getGraphData } from './graph_data.js';
@@ -18,7 +23,6 @@ export class SimulationManager {
 
   private readonly loader: PackManifestLoader;
   private activePack?: WorldPack;
-  private runtimeResolver: NarrativeResolver;
   private runtimeSpeed: RuntimeSpeedPolicy;
   private readonly packsDir: string;
   private sqliteRuntimePragmas: SqliteRuntimePragmaSnapshot | null;
@@ -29,7 +33,6 @@ export class SimulationManager {
     this.prisma = new PrismaClient();
     this.loader = new PackManifestLoader(this.packsDir);
     this.clock = new ChronosEngine([], 0n);
-    this.runtimeResolver = new NarrativeResolver({});
     this.runtimeSpeed = new RuntimeSpeedPolicy(1n);
     this.sqliteRuntimePragmas = null;
   }
@@ -64,7 +67,6 @@ export class SimulationManager {
 
     this.activePack = activated.pack;
     this.clock = activated.clock;
-    this.runtimeResolver = new NarrativeResolver(activated.pack.variables || {});
 
     console.log(`[SimulationManager] Initialized with pack: ${activated.pack.metadata.name}`);
   }
@@ -75,7 +77,47 @@ export class SimulationManager {
 
   public resolvePackVariables(template: string, permission?: PermissionContext): string {
     const pack = this.activePack;
-    return this.runtimeResolver.resolve(template, pack?.variables || {}, permission);
+    const variableContext = createPromptVariableContext({
+      layers: [
+        createPromptVariableLayer({
+          namespace: 'pack',
+          values: normalizePromptVariableRecord({
+            metadata: pack?.metadata ?? null,
+            variables: pack?.variables ?? {}
+          }),
+          alias_values: normalizePromptVariableRecord({
+            ...(pack?.variables ?? {}),
+            world_name: pack?.metadata.name ?? '',
+            pack_name: pack?.metadata.name ?? '',
+            pack_id: pack?.metadata.id ?? ''
+          }),
+          metadata: {
+            source_label: 'simulation-active-pack',
+            trusted: true
+          }
+        }),
+        createPromptVariableLayer({
+          namespace: 'runtime',
+          values: normalizePromptVariableRecord({
+            current_tick: this.getCurrentTick().toString()
+          }),
+          alias_values: normalizePromptVariableRecord({
+            current_tick: this.getCurrentTick().toString()
+          }),
+          metadata: {
+            source_label: 'simulation-runtime',
+            trusted: true
+          }
+        })
+      ]
+    });
+
+    return renderNarrativeTemplate({
+      template,
+      variableContext,
+      permission,
+      templateSource: 'simulation.resolvePackVariables'
+    }).text;
   }
 
   public getStepTicks(): bigint {

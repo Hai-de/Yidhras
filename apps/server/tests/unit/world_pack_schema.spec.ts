@@ -255,8 +255,8 @@ describe('world pack constitution schema', () => {
               resolution_mode: 'narrativized',
               narrativize_event: {
                 type: 'history',
-                title: '{{actor.id}} 试图通过民间仪式确认目标命运',
-                description: '{{actor.id}} 进行了一次近乎荒诞的仪式尝试，但世界规则没有给出客观回应。',
+                title: '{{ actor.id }} 试图通过民间仪式确认目标命运',
+                description: '{{ actor.id }} 进行了一次近乎荒诞的仪式尝试，但世界规则没有给出客观回应。',
                 impact_data: {
                   semantic_type: 'failed_ritual_attempt',
                   failed_attempt: true,
@@ -276,7 +276,7 @@ describe('world pack constitution schema', () => {
             then: {
               mutate: {
                 subject_state: {
-                  known_target_id: '{{target_entity_id}}',
+                  known_target_id: '{{ invocation.target_entity_id }}',
                   target_judgement_eligibility: true
                 }
               }
@@ -301,7 +301,7 @@ describe('world pack constitution schema', () => {
               emit_events: [
                 {
                   type: 'history',
-                  title: '{{target.id}} 在异常条件下死亡',
+                  title: '{{ target.id }} 在异常条件下死亡',
                   description: '一次高度可疑且缺乏直接物理证据的死亡事件引发了社会震荡。',
                   impact_data: {
                     semantic_type: 'suspicious_death_occurred',

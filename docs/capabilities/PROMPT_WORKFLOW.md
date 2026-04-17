@@ -156,6 +156,143 @@ Prompt Workflow 当前不再只有 fragment 一层，而是显式引入：
 - 最小策略下会移除 `output_contract / role_context / world_context`
 - 已存在 memory sections 时，会进一步移除 `context_snapshot`
 
+
+## 7. 变量上下文与宏系统
+
+Prompt Workflow Runtime 现在不再只依赖单一 `visible_variables` 平铺对象，而是正式引入：
+
+- `PromptVariableContext`
+- `PromptVariableLayer`
+- `variable_context_summary`
+- `workflow_variable_summary`
+- `workflow_macro_summary`
+
+### 7.1 正式变量命名空间
+
+当前运行时正式支持以下命名空间：
+
+- `system.*`
+- `app.*`
+- `pack.*`
+- `runtime.*`
+- `actor.*`
+- `request.*`
+- `plugin.<pluginId>.*`
+
+推荐新模板优先使用带 namespace 的写法，例如：
+
+```txt
+{{ pack.metadata.name }}
+{{ actor.display_name }}
+{{ runtime.current_tick }}
+{{ request.strategy }}
+```
+
+### 7.2 alias fallback 的兼容定位
+
+当前仍保留未带 namespace 的兼容写法，例如：
+
+```txt
+{{ actor_name }}
+{{ world_name }}
+```
+
+但这些已被降级为 compatibility alias surface，而不是 source-of-truth。
+
+当前 alias fallback 顺序为：
+
+```text
+request > actor > runtime > pack > app > system
+```
+
+说明：
+
+- 命中带 namespace 的路径时，不会再走 alias fallback
+- `plugin.*` 不参与默认 alias fallback
+- 新模板和新文档不再推荐继续扩写裸 key
+
+### 7.3 当前支持的受控宏语法
+
+#### 基础插值
+
+```txt
+{{ actor.display_name }}
+{{ pack.metadata.name }}
+```
+
+#### 默认值
+
+```txt
+{{ actor.profile.title | default("unknown") }}
+```
+
+适用场景：
+
+- 可选字段不存在
+- 字段可能为 `null`
+- 字段为空字符串时希望提供保底文案
+
+#### 条件块
+
+```txt
+{{#if actor.has_bound_artifact}}
+当前主体持有关键媒介。
+{{/if}}
+```
+
+适用场景：
+
+- 根据主体状态决定是否插入某段 prompt
+- 根据 pack/runtime 条件控制说明段落
+
+#### 列表展开
+
+```txt
+{{#each runtime.owned_artifacts as artifact}}
+- {{ artifact.id }}
+{{/each}}
+```
+
+适用场景：
+
+- 展开 artifact / evidence / candidate 列表
+- 按行生成上下文摘要
+
+### 7.4 当前不支持的能力
+
+本阶段有意不支持：
+
+- 任意 JS 表达式
+- `eval` / script execution
+- 用户自定义函数执行
+- 通用模板平台化扩展
+
+Prompt Workflow 在这里的目标是“受控模板运行时”，不是“任意脚本模板引擎”。
+
+### 7.5 使用建议
+
+对于 Prompt Workflow profile、world prompts、perception templates，推荐按以下方式书写：
+
+1. **优先带 namespace**
+2. **缺省值用 `default(...)`，不要依赖缺失占位符**
+3. **条件内容放进 `#if` block，而不是外层拼接字符串**
+4. **列表内容用 `#each` block，而不是预先拼接大字符串**
+5. **不要让 pack 模板依赖 plugin 变量的隐式注入**
+
+错误示例：
+
+```txt
+{{ pack.metadata.name }}
+{{ actor_name }}
+```
+
+更推荐：
+
+```txt
+{{ pack.metadata.name }}
+{{ actor.display_name }}
+```
+
 ## 7. Placement 解析
 
 当前 `placement_resolution` 支持：
@@ -200,6 +337,41 @@ Prompt Workflow 当前不再只有 fragment 一层，而是显式引入：
 - `dropped_section_ids`
 
 语义上，这代表 section ranking 已进入 budget 分配主线；但它仍属于第一轮预算模型，而不是精确 tokenizer 级预算器或复杂 section rebalance 引擎。
+
+
+### 9.1 变量与宏诊断字段
+
+除了 profile / placement / section 诊断之外，当前还会输出变量与宏相关摘要，例如：
+
+- `PromptBundle.metadata.workflow_variable_summary`
+- `PromptBundle.metadata.workflow_macro_summary`
+- `PromptProcessingTrace.prompt_workflow.variable_summary`
+- `PromptProcessingTrace.prompt_workflow.macro_summary`
+- `context_run.diagnostics.orchestration.variable_resolution`
+
+这些字段主要用于回答：
+
+- 本次 prompt 渲染用了哪些 namespace
+- 是否发生 alias fallback
+- 哪些路径缺失
+- 哪些 block 执行了 / 没执行
+- 模板输出长度大致如何变化
+
+### 9.2 使用者如何排查模板问题
+
+当模板没有按预期展开时，建议按下面顺序排查：
+
+1. 先看 `workflow_variable_summary.namespaces`
+   - 确认目标 namespace 是否真的进入本次上下文
+2. 再看 `workflow_macro_summary.traces`
+   - 确认路径是 namespaced 命中，还是 alias fallback 命中
+3. 再看 `workflow_macro_summary.missing_paths`
+   - 确认是不是字段名写错，或当前上下文里不存在该字段
+4. 若使用 `#if` / `#each`
+   - 看 `workflow_macro_summary.blocks`
+   - 确认 block 是否执行、迭代次数是否为 0
+5. 若仍异常
+   - 检查模板是否仍在使用旧裸 key，建议改成 namespaced 写法
 
 ## 9. Diagnostics 与观测面
 

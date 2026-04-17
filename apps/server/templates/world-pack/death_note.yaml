@@ -22,9 +22,9 @@ variables:
   currency: "日元"
   governance: "警视厅与国际搜查协作网络"
   location_suffix: "本部"
-  main_location: "基拉对策{{location_suffix}}"
+  main_location: "基拉对策{{ pack.variables.location_suffix }}"
   tech_level: "现代信息社会，依赖监控、媒体传播与高强度刑侦推理"
-  system_status: "当前社会因异常死亡事件陷入持续震荡，{{main_location}} 正在全球追查可疑执行链。"
+  system_status: "当前社会因异常死亡事件陷入持续震荡，{{ pack.variables.main_location }} 正在全球追查可疑执行链。"
 
 simulation_time:
   initial_tick: 1000000000000
@@ -66,11 +66,11 @@ time_systems:
 
 prompts:
   global_prefix: |
-    你处于 {{name}} 的世界中。
-    {{system_status}}
-    社会流通货币为 {{currency}}。
+    你处于 {{ pack.metadata.name }} 的世界中。
+    {{ pack.variables.system_status }}
+    社会流通货币为 {{ pack.variables.currency }}。
 
-  agent_initial_context: "作为 {{main_location}} 的一员，你的基础认知基于：{{tech_level}}"
+  agent_initial_context: "作为 {{ pack.variables.main_location }} 的一员，你的基础认知基于：{{ pack.variables.tech_level }}"
 
 ai:
   defaults:
@@ -530,8 +530,8 @@ rules:
         explanation: "该意图不会直接改变世界客观事实，而是要求服务器侧把主体当前思考沉淀为内部记录。"
         narrativize_event:
           type: "history"
-          title: "{{actor.id}} 对当前局势进行了私下反思"
-          description: "{{actor.id}} 记录了对当前局势与下一步判断的私密思考。"
+          title: "{{ actor.id }} 对当前局势进行了私下反思"
+          description: "{{ actor.id }} 记录了对当前局势与下一步判断的私密思考。"
           impact_data:
             semantic_type: "private_reflection_recorded"
             failed_attempt: false
@@ -559,8 +559,8 @@ rules:
         explanation: "该意图不会直接改变世界客观事实，而是要求服务器侧记录执行后的复盘结论。"
         narrativize_event:
           type: "history"
-          title: "{{actor.id}} 私下复盘了最近一次行动"
-          description: "{{actor.id}} 将最近一次行动的得失与风险重新整理为内部结论。"
+          title: "{{ actor.id }} 私下复盘了最近一次行动"
+          description: "{{ actor.id }} 将最近一次行动的得失与风险重新整理为内部结论。"
           impact_data:
             semantic_type: "execution_postmortem_recorded"
             failed_attempt: false
@@ -574,8 +574,8 @@ rules:
         explanation: "该世界不承认仪式占卜能直接获得客观真相，因此仅保留为失败但真实发生的叙事事件。"
         narrativize_event:
           type: "history"
-          title: "{{actor.id}} 试图通过民间仪式确认目标命运"
-          description: "{{actor.id}} 进行了一次近乎荒诞的仪式尝试，但世界规则没有给出客观回应。"
+          title: "{{ actor.id }} 试图通过民间仪式确认目标命运"
+          description: "{{ actor.id }} 进行了一次近乎荒诞的仪式尝试，但世界规则没有给出客观回应。"
           impact_data:
             semantic_type: "failed_ritual_attempt"
             failed_attempt: true
@@ -590,7 +590,7 @@ rules:
       then:
         mutate:
           target_state:
-            holder_agent_id: "{{subject_entity_id}}"
+            holder_agent_id: "{{ invocation.subject_entity_id }}"
             location: null
             visibility_level: "holder_only"
           world_state:
@@ -598,14 +598,14 @@ rules:
             kira_case_phase: "notebook_holder_unaware"
         emit_events:
           - type: "history"
-            title: "{{actor.id}} 取得了规则媒介 {{artifact.id}}"
-            description: "{{actor.id}} 与 {{artifact.id}} 建立了持有关系，但尚未完全理解其规则效力。"
-            artifact_id: "{{artifact_id}}"
+            title: "{{ actor.id }} 取得了规则媒介 {{ artifact.id }}"
+            description: "{{ actor.id }} 与 {{ artifact.id }} 建立了持有关系，但尚未完全理解其规则效力。"
+            artifact_id: "{{ invocation.artifact_id }}"
             impact_data:
               semantic_type: "notebook_claimed"
-              actor_id: "{{subject_entity_id}}"
-              artifact_id: "{{artifact_id}}"
-              mediator_id: "{{mediator_id}}"
+              actor_id: "{{ invocation.subject_entity_id }}"
+              artifact_id: "{{ invocation.artifact_id }}"
+              mediator_id: "{{ invocation.mediator_id }}"
               objective_effect_applied: true
     - id: "objective-learn-notebook-rules"
       when:
@@ -620,14 +620,14 @@ rules:
             kira_case_phase: "notebook_holder_awakened"
         emit_events:
           - type: "history"
-            title: "{{actor.id}} 理解了 {{artifact.id}} 的规则"
-            description: "{{actor.id}} 首次确认 {{artifact.id}} 具备真实且致命的规则效力。"
-            artifact_id: "{{artifact_id}}"
+            title: "{{ actor.id }} 理解了 {{ artifact.id }} 的规则"
+            description: "{{ actor.id }} 首次确认 {{ artifact.id }} 具备真实且致命的规则效力。"
+            artifact_id: "{{ invocation.artifact_id }}"
             impact_data:
               semantic_type: "notebook_rules_learned"
-              actor_id: "{{subject_entity_id}}"
-              artifact_id: "{{artifact_id}}"
-              mediator_id: "{{mediator_id}}"
+              actor_id: "{{ invocation.subject_entity_id }}"
+              artifact_id: "{{ invocation.artifact_id }}"
+              mediator_id: "{{ invocation.mediator_id }}"
               objective_effect_applied: true
     - id: "objective-form-murderous-intent"
       when:
@@ -642,14 +642,14 @@ rules:
             last_execution_outcome: "intent_reaffirmed"
         emit_events:
           - type: "history"
-            title: "{{actor.id}} 通过 {{artifact.id}} 形成了执行意图"
-            description: "{{actor.id}} 开始认真考虑利用 {{artifact.id}} 所承载的规则媒介执行目标裁定。"
-            artifact_id: "{{artifact_id}}"
+            title: "{{ actor.id }} 通过 {{ artifact.id }} 形成了执行意图"
+            description: "{{ actor.id }} 开始认真考虑利用 {{ artifact.id }} 所承载的规则媒介执行目标裁定。"
+            artifact_id: "{{ invocation.artifact_id }}"
             impact_data:
               semantic_type: "murderous_intent_formed"
-              actor_id: "{{subject_entity_id}}"
-              artifact_id: "{{artifact_id}}"
-              mediator_id: "{{mediator_id}}"
+              actor_id: "{{ invocation.subject_entity_id }}"
+              artifact_id: "{{ invocation.artifact_id }}"
+              mediator_id: "{{ invocation.mediator_id }}"
               objective_effect_applied: true
     - id: "objective-collect-target-intel"
       when:
@@ -660,8 +660,8 @@ rules:
       then:
         mutate:
           subject_state:
-            known_target_id: "{{target_entity_id}}"
-            known_target_name: "{{target_entity_id}}"
+            known_target_id: "{{ invocation.target_entity_id }}"
+            known_target_name: "{{ invocation.target_entity_id }}"
             known_target_face: true
             target_name_confirmed: true
             target_face_confirmed: true
@@ -674,13 +674,13 @@ rules:
             investigation_focus: "target_profiling"
         emit_events:
           - type: "history"
-            title: "{{actor.id}} 获取了关于 {{target.id}} 的关键情报"
-            description: "{{actor.id}} 补齐了执行裁决所需的最小目标信息。"
+            title: "{{ actor.id }} 获取了关于 {{ target.id }} 的关键情报"
+            description: "{{ actor.id }} 补齐了执行裁决所需的最小目标信息。"
             impact_data:
               semantic_type: "target_intel_collected"
-              actor_id: "{{subject_entity_id}}"
-              target_id: "{{target_entity_id}}"
-              mediator_id: "{{mediator_id}}"
+              actor_id: "{{ invocation.subject_entity_id }}"
+              target_id: "{{ invocation.target_entity_id }}"
+              mediator_id: "{{ invocation.mediator_id }}"
               objective_effect_applied: true
     - id: "objective-select-judgement-target"
       when:
@@ -691,17 +691,17 @@ rules:
       then:
         mutate:
           subject_state:
-            current_target_id: "{{target_entity_id}}"
+            current_target_id: "{{ invocation.target_entity_id }}"
             investigation_focus: "execution_window"
         emit_events:
           - type: "history"
-            title: "{{actor.id}} 将 {{target.id}} 设为当前裁决目标"
-            description: "{{actor.id}} 已把注意力和执行准备集中到 {{target.id}} 身上。"
+            title: "{{ actor.id }} 将 {{ target.id }} 设为当前裁决目标"
+            description: "{{ actor.id }} 已把注意力和执行准备集中到 {{ target.id }} 身上。"
             impact_data:
               semantic_type: "judgement_target_selected"
-              actor_id: "{{subject_entity_id}}"
-              target_id: "{{target_entity_id}}"
-              mediator_id: "{{mediator_id}}"
+              actor_id: "{{ invocation.subject_entity_id }}"
+              target_id: "{{ invocation.target_entity_id }}"
+              mediator_id: "{{ invocation.mediator_id }}"
               objective_effect_applied: true
     - id: "objective-execute-death-note"
       when:
@@ -729,13 +729,13 @@ rules:
             last_case_update_kind: "execution_detected"
         emit_events:
           - type: "history"
-            title: "{{target.id}} 在异常条件下死亡"
+            title: "{{ target.id }} 在异常条件下死亡"
             description: "一次高度可疑且缺乏直接物理证据的死亡事件引发了社会震荡。"
             impact_data:
               semantic_type: "suspicious_death_occurred"
-              actor_id: "{{subject_entity_id}}"
-              target_id: "{{target_entity_id}}"
-              mediator_id: "{{mediator_id}}"
+              actor_id: "{{ invocation.subject_entity_id }}"
+              target_id: "{{ invocation.target_entity_id }}"
+              mediator_id: "{{ invocation.mediator_id }}"
               objective_effect_applied: true
               followup_actor_ids: ["agent-001", "agent-002"]
           - type: "history"
@@ -743,9 +743,9 @@ rules:
             description: "一次执行后的现实反馈开始反噬执行者与调查者，案件压力明显升高。"
             impact_data:
               semantic_type: "post_execution_pressure_feedback"
-              actor_id: "{{subject_entity_id}}"
-              target_id: "{{target_entity_id}}"
-              mediator_id: "{{mediator_id}}"
+              actor_id: "{{ invocation.subject_entity_id }}"
+              target_id: "{{ invocation.target_entity_id }}"
+              mediator_id: "{{ invocation.mediator_id }}"
               objective_effect_applied: true
               failed_attempt: false
               followup_actor_ids: ["agent-001", "agent-002"]
@@ -760,11 +760,11 @@ rules:
             investigation_focus: "kira_case"
             suspicion_level: 0.75
             observed_case_pressure: 2
-            known_target_id: "{{target_entity_id}}"
+            known_target_id: "{{ invocation.target_entity_id }}"
             target_intel_confidence: 0.6
             evidence_chain_strength: 0.6
             case_theory_strength: 0.7
-            lead_target_id: "{{target_entity_id}}"
+            lead_target_id: "{{ invocation.target_entity_id }}"
           world_state:
             investigation_heat: 2
             death_pattern_visibility: 2
@@ -772,21 +772,21 @@ rules:
             last_case_update_kind: "investigation_escalated"
         emit_events:
           - type: "history"
-            title: "{{actor.id}} 开始围绕 {{target.id}} 调查异常死亡模式"
-            description: "{{actor.id}} 认为异常死亡背后存在可追踪的人为链路，并将调查资源指向 {{target.id}}。"
+            title: "{{ actor.id }} 开始围绕 {{ target.id }} 调查异常死亡模式"
+            description: "{{ actor.id }} 认为异常死亡背后存在可追踪的人为链路，并将调查资源指向 {{ target.id }}。"
             impact_data:
               semantic_type: "death_cluster_investigated"
-              actor_id: "{{subject_entity_id}}"
-              target_id: "{{target_entity_id}}"
+              actor_id: "{{ invocation.subject_entity_id }}"
+              target_id: "{{ invocation.target_entity_id }}"
               objective_effect_applied: true
               followup_actor_ids: ["agent-001", "agent-002"]
           - type: "history"
-            title: "{{actor.id}} 宣布异常死亡案件进入高压调查阶段"
+            title: "{{ actor.id }} 宣布异常死亡案件进入高压调查阶段"
             description: "调查方开始把异常死亡视为系统性事件，执行者将持续感受到外部压力。"
             impact_data:
               semantic_type: "investigation_pressure_escalated"
-              actor_id: "{{subject_entity_id}}"
-              target_id: "{{target_entity_id}}"
+              actor_id: "{{ invocation.subject_entity_id }}"
+              target_id: "{{ invocation.target_entity_id }}"
               objective_effect_applied: true
               followup_actor_ids: ["agent-001", "agent-002"]
     - id: "objective-share-case-intel"
@@ -805,14 +805,14 @@ rules:
             evidence_chain_strength: 0.65
         emit_events:
           - type: "history"
-            title: "{{actor.id}} 向 {{target.id}} 分享了案件线索"
+            title: "{{ actor.id }} 向 {{ target.id }} 分享了案件线索"
             description: "调查线索被进一步扩散，协作调查开始形成。"
             impact_data:
               semantic_type: "case_intel_shared"
-              actor_id: "{{subject_entity_id}}"
-              target_id: "{{target_entity_id}}"
+              actor_id: "{{ invocation.subject_entity_id }}"
+              target_id: "{{ invocation.target_entity_id }}"
               objective_effect_applied: true
-              followup_actor_ids: ["agent-001", "{{target_entity_id}}"]
+              followup_actor_ids: ["agent-001", "{{ invocation.target_entity_id }}"]
     - id: "objective-request-joint-observation"
       when:
         capability: "invoke.request_joint_observation"
@@ -829,14 +829,14 @@ rules:
             last_case_update_kind: "joint_observation_requested"
         emit_events:
           - type: "history"
-            title: "{{actor.id}} 请求 {{target.id}} 协同观察案件动向"
+            title: "{{ actor.id }} 请求 {{ target.id }} 协同观察案件动向"
             description: "案件调查开始进入联合观察阶段，更多主体会被拉入同一证据链。"
             impact_data:
               semantic_type: "joint_observation_requested"
-              actor_id: "{{subject_entity_id}}"
-              target_id: "{{target_entity_id}}"
+              actor_id: "{{ invocation.subject_entity_id }}"
+              target_id: "{{ invocation.target_entity_id }}"
               objective_effect_applied: true
-              followup_actor_ids: ["agent-001", "{{target_entity_id}}", "{{subject_entity_id}}"]
+              followup_actor_ids: ["agent-001", "{{ invocation.target_entity_id }}", "{{ invocation.subject_entity_id }}"]
     - id: "objective-publish-case-update"
       when:
         capability: "invoke.publish_case_update"
@@ -852,11 +852,11 @@ rules:
             last_case_update_kind: "public_case_update"
         emit_events:
           - type: "history"
-            title: "{{actor.id}} 发布了新的案件进展通告"
+            title: "{{ actor.id }} 发布了新的案件进展通告"
             description: "公开通报让社会恐慌与调查压力同步上升，也迫使执行者重新评估下一步动作。"
             impact_data:
               semantic_type: "case_update_published"
-              actor_id: "{{subject_entity_id}}"
+              actor_id: "{{ invocation.subject_entity_id }}"
               objective_effect_applied: true
               followup_actor_ids: ["agent-001", "agent-002"]
 
@@ -880,15 +880,15 @@ rules:
             last_case_update_kind: "false_lead_seeded"
         emit_events:
           - type: "history"
-            title: "{{actor.id}} 故意抛出了新的可疑线索"
+            title: "{{ actor.id }} 故意抛出了新的可疑线索"
             description: "一次经过设计的误导让调查方向短暂偏移，但也留下了新的噪声痕迹。"
             impact_data:
               semantic_type: "false_suspicion_raised"
-              actor_id: "{{subject_entity_id}}"
-              target_id: "{{target_entity_id}}"
-              mediator_id: "{{mediator_id}}"
+              actor_id: "{{ invocation.subject_entity_id }}"
+              target_id: "{{ invocation.target_entity_id }}"
+              mediator_id: "{{ invocation.mediator_id }}"
               objective_effect_applied: true
-              followup_actor_ids: ["agent-001", "{{target_entity_id}}"]
+              followup_actor_ids: ["agent-001", "{{ invocation.target_entity_id }}"]
 
 capabilities:
   - key: "invoke.claim_death_note"

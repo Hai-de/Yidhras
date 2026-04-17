@@ -42,6 +42,17 @@ const buildInferenceContext = (): InferenceContext => ({
   },
   world_prompts: {},
   visible_variables: {},
+  variable_context: {
+    layers: [],
+    alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
+    strict_namespace: false
+  },
+  variable_context_summary: {
+    namespaces: [],
+    alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
+    strict_namespace: false,
+    layer_count: 0
+  },
   policy_summary: {
     social_post_read_allowed: true,
     social_post_readable_fields: ['id', 'content'],
@@ -448,4 +459,49 @@ describe('context orchestrator', () => {
       Array.isArray((memoryCompactionBundle.metadata.workflow_section_summary as Record<string, unknown>).section_scores)
     ).toBe(true);
   });
+
+  it('exposes variable resolution summaries through prompt bundle metadata when namespaced prompts are used', async () => {
+    const context = buildInferenceContext();
+    context.world_prompts = {
+      global_prefix: 'World={{ pack.metadata.name }} / Tick={{ runtime.current_tick }}',
+      agent_initial_context: '{{ actor.display_name }} / {{ request.strategy }}'
+    };
+    context.variable_context = {
+      layers: [
+        {
+          namespace: 'pack',
+          values: { metadata: { name: '死亡笔记' } },
+          alias_values: {},
+          metadata: { source_label: 'test-pack', trusted: true }
+        },
+        {
+          namespace: 'runtime',
+          values: { current_tick: '1000' },
+          alias_values: {},
+          metadata: { source_label: 'test-runtime', trusted: true }
+        },
+        {
+          namespace: 'actor',
+          values: { display_name: '夜神月' },
+          alias_values: {},
+          metadata: { source_label: 'test-actor', trusted: true }
+        },
+        {
+          namespace: 'request',
+          values: { strategy: 'rule_based' },
+          alias_values: { strategy: 'rule_based' },
+          metadata: { source_label: 'test-request', trusted: true }
+        }
+      ],
+      alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
+      strict_namespace: false
+    };
+    const bundle = await buildPromptBundle(context, { task_type: 'agent_decision' });
+
+    expect(bundle.metadata.workflow_variable_summary).toMatchObject({
+      namespaces: expect.arrayContaining(['pack', 'runtime', 'actor'])
+    });
+    expect(bundle.metadata.workflow_macro_summary?.traces.length).toBeGreaterThan(0);
+  });
+
 });

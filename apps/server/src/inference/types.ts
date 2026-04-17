@@ -1,7 +1,12 @@
 import type { ContextRun } from '../context/types.js';
 import type { IdentityContext } from '../identity/types.js';
 import type { MemoryContextPack } from '../memory/types.js';
-import type { VariablePool } from '../narrative/types.js';
+import type {
+  PromptMacroDiagnostics,
+  PromptVariableContext,
+  PromptVariableContextSummary,
+  VariablePool
+} from '../narrative/types.js';
 import type { WorldPackAiConfig, WorldPackValue } from '../packs/schema/constitution_schema.js';
 import type { PromptFragment } from './prompt_fragments.js';
 
@@ -198,6 +203,8 @@ export interface InferenceContext {
   world_prompts: Record<string, string>;
   world_ai?: WorldPackAiConfig | null;
   visible_variables: VariablePool;
+  variable_context: PromptVariableContext;
+  variable_context_summary: PromptVariableContextSummary;
   policy_summary: InferencePolicySummary;
   transmission_profile: InferenceTransmissionProfile;
   context_run: ContextRun;
@@ -244,6 +251,8 @@ export interface PromptWorkflowSnapshot {
   step_traces?: PromptWorkflowStepTraceSnapshot[];
   compatibility?: Record<string, unknown> | null;
   placement_summary?: PromptWorkflowPlacementSummarySnapshot | null;
+  variable_summary?: Record<string, unknown> | null;
+  macro_summary?: PromptMacroDiagnostics | null;
   section_summary?: Record<string, unknown> | null;
 }
 
@@ -254,6 +263,8 @@ export interface PromptWorkflowMetadata {
   workflow_step_keys?: string[];
   workflow_section_summary?: Record<string, unknown>;
   workflow_placement_summary?: Record<string, unknown>;
+  workflow_variable_summary?: Record<string, unknown>;
+  workflow_macro_summary?: PromptMacroDiagnostics;
 }
 
 export interface PromptProcessingTrace {

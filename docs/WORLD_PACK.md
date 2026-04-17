@@ -113,6 +113,150 @@ metadata:
 - `CHANGELOG.md`：面向版本管理
 - `assets/`、`docs/`：面向展示、协作与长期维护
 
+
+## 2.3 变量与宏模板使用说明
+
+随着 Prompt Workflow 宏 / 变量系统正式化，world pack 作者现在可以在以下位置使用统一模板语法：
+
+- `variables` 中的可递归字符串值
+- `prompts.*`
+- 某些 runtime / rule / event narrative 文本字段（按具体执行链支持情况）
+
+### 2.3.1 推荐写法：优先使用命名空间
+
+当前正式推荐使用：
+
+- `system.*`
+- `app.*`
+- `pack.*`
+- `runtime.*`
+- `actor.*`
+- `request.*`
+- `plugin.<pluginId>.*`
+
+例如：
+
+```yaml
+prompts:
+  global_prefix: |
+    你处于 {{ pack.metadata.name }} 的世界中。
+    当前时间刻为 {{ runtime.current_tick }}。
+
+  agent_initial_context: |
+    你当前扮演 {{ actor.display_name }}。
+    当前任务策略为 {{ request.strategy }}。
+```
+
+相比旧写法：
+
+```yaml
+prompts:
+  global_prefix: "你处于 {{ pack.metadata.name }} 的世界中。"
+```
+
+更推荐：
+
+```yaml
+prompts:
+  global_prefix: "你处于 {{ pack.metadata.name }} 的世界中。"
+```
+
+### 2.3.2 兼容 alias 的定位
+
+当前运行时仍保留少量裸 key 写法兼容，例如：
+
+- `{{ actor_name }}`（兼容写法，不推荐继续新增）
+- `{{ world_name }}`（兼容写法，不推荐继续新增）
+
+但这只是 compatibility bridge，不再是推荐主写法。
+
+作者应尽量避免在新 pack 中继续扩写裸 key，因为：
+
+1. 不够直观，容易撞名
+2. 来源层级不够透明
+3. 后续清理时更容易成为技术债
+
+### 2.3.3 当前支持的宏能力
+
+#### 基础插值
+
+```yaml
+variables:
+  city: "东京"
+
+prompts:
+  global_prefix: "故事发生在 {{ pack.variables.city }}。"
+```
+
+#### 默认值
+
+```yaml
+prompts:
+  agent_initial_context: "当前身份称号：{{ actor.profile.title | default(\"unknown\") }}"
+```
+
+#### 条件块
+
+```yaml
+prompts:
+  global_prefix: |
+    {{#if actor.has_bound_artifact}}
+    该主体当前持有关键媒介。
+    {{/if}}
+```
+
+#### 列表展开
+
+```yaml
+prompts:
+  global_prefix: |
+    当前已知持有物：
+    {{#each runtime.owned_artifacts as artifact}}
+    - {{ artifact.id }}
+    {{/each}}
+```
+
+### 2.3.4 当前不支持的能力
+
+本阶段不支持：
+
+- 任意脚本执行
+- JS 表达式
+- 用户自定义宏函数
+- 通用模板编程能力
+
+如果模板需要复杂业务逻辑，应该把逻辑放在服务端 runtime 或 projection 层，而不是继续往模板表达式里堆。
+
+### 2.3.5 作者上手建议
+
+对于第一次编写 world pack 的作者，推荐这样开始：
+
+1. 先把静态信息放进 `metadata` / `variables`
+2. prompt 文本里优先从 `pack.metadata.*` / `pack.variables.*` 取值
+3. 需要依赖主体状态时，再使用 `actor.*`
+4. 需要依赖运行态时，再使用 `runtime.*`
+5. 对不稳定字段统一补 `default(...)`
+6. 不要假设 plugin 变量会自动进入裸 key 空间
+
+一个较稳妥的起步例子：
+
+```yaml
+variables:
+  city: "东京"
+  case_unit: "基拉对策本部"
+
+prompts:
+  global_prefix: |
+    你处于 {{ pack.metadata.name }} 的世界中。
+    当前舞台位于 {{ pack.variables.city }}。
+    调查组织为 {{ pack.variables.case_unit }}。
+
+  agent_initial_context: |
+    你当前扮演 {{ actor.display_name }}。
+    当前 tick 为 {{ runtime.current_tick }}。
+    当前策略为 {{ request.strategy | default("mock") }}。
+```
+
 ---
 
 ## 3. 推荐目录结构

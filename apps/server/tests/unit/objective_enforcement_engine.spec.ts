@@ -126,19 +126,19 @@ describe('objective enforcement engine', () => {
             then: {
               mutate: {
                 target_state: {
-                  holder_agent_id: '{{subject_entity_id}}',
+                  holder_agent_id: '{{ invocation.subject_entity_id }}',
                   location: null
                 }
               },
               emit_events: [
                 {
                   type: 'history',
-                  title: '{{actor.id}} 取得了 {{artifact.id}}',
-                  description: '{{actor.id}} 将 {{artifact.id}} 持有为自身媒介。',
+                  title: '{{ actor.id }} 取得了 {{ artifact.id }}',
+                  description: '{{ actor.id }} 将 {{ artifact.id }} 持有为自身媒介。',
                   impact_data: {
                     semantic_type: 'book_claimed',
-                    actor_id: '{{subject_entity_id}}',
-                    artifact_id: '{{artifact_id}}'
+                    actor_id: '{{ invocation.subject_entity_id }}',
+                    artifact_id: '{{ invocation.artifact_id }}'
                   }
                 }
               ]
@@ -464,12 +464,12 @@ describe('objective enforcement engine', () => {
               emit_events: [
                 {
                   type: 'history',
-                  title: '{{target.id}} 在异常条件下死亡',
+                  title: '{{ target.id }} 在异常条件下死亡',
                   description: '一次高度可疑且缺乏直接物理证据的死亡事件引发了社会震荡。',
                   impact_data: {
                     semantic_type: 'suspicious_death_occurred',
-                    actor_id: '{{subject_entity_id}}',
-                    target_id: '{{target_entity_id}}',
+                    actor_id: '{{ invocation.subject_entity_id }}',
+                    target_id: '{{ invocation.target_entity_id }}',
                     objective_effect_applied: true
                   }
                 }

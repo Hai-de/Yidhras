@@ -5,6 +5,7 @@ import { createTokenBudgetTrimmerPromptProcessor } from '../../inference/process
 import type { PromptFragment } from '../../inference/prompt_fragments.js';
 import type { PromptProcessor } from '../../inference/prompt_processors.js';
 import type { InferenceContext, PromptProcessingTrace } from '../../inference/types.js';
+import type { PromptMacroDiagnostics } from '../../narrative/types.js';
 import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import type { ContextPromptAssemblySummary } from '../types.js';
 import { resolvePromptFragmentPlacement, sortPromptFragmentsBase } from './placement_resolution.js';
@@ -133,6 +134,15 @@ const buildProcessingTrace = (input: {
   step_traces: NonNullable<PromptProcessingTrace['steps']>;
   workflow_state: PromptWorkflowState;
 }): PromptProcessingTrace => {
+  const orchestration =
+    input.workflow_state.context_run.diagnostics.orchestration && typeof input.workflow_state.context_run.diagnostics.orchestration === 'object'
+      ? (input.workflow_state.context_run.diagnostics.orchestration as Record<string, unknown>)
+      : null;
+  const variableResolution =
+    orchestration && typeof orchestration.variable_resolution === 'object' && orchestration.variable_resolution !== null
+      ? (orchestration.variable_resolution as Record<string, unknown>)
+      : null;
+
   return {
     processor_names: input.processor_names,
     fragment_count_before: input.initial_fragments.length,
@@ -144,7 +154,9 @@ const buildProcessingTrace = (input: {
       selected_step_keys: input.workflow_state.diagnostics.selected_step_keys,
       step_traces: input.workflow_state.diagnostics.step_traces,
       compatibility: input.workflow_state.diagnostics.compatibility ?? null,
+      variable_summary: (variableResolution?.variable_summary as Record<string, unknown> | null | undefined) ?? null,
       placement_summary: input.workflow_state.diagnostics.placement_summary ?? null,
+      macro_summary: (variableResolution?.macro_summary as PromptMacroDiagnostics | null | undefined) ?? null,
       section_summary: input.workflow_state.diagnostics.section_summary ?? null
     },
     workflow_task_type: input.workflow_state.task_type,
@@ -169,6 +181,15 @@ const syncDiagnosticsToContext = (context: InferenceContext, input: {
   processing_trace: PromptProcessingTrace;
   workflow_state: PromptWorkflowState;
 }): void => {
+  const orchestration =
+    context.context_run.diagnostics.orchestration && typeof context.context_run.diagnostics.orchestration === 'object'
+      ? (context.context_run.diagnostics.orchestration as Record<string, unknown>)
+      : null;
+  const variableResolution =
+    orchestration && typeof orchestration.variable_resolution === 'object' && orchestration.variable_resolution !== null
+      ? (orchestration.variable_resolution as Record<string, unknown>)
+      : null;
+
   context.memory_context.diagnostics = {
     ...context.memory_context.diagnostics,
     prompt_processing_trace: {
@@ -192,7 +213,9 @@ const syncDiagnosticsToContext = (context: InferenceContext, input: {
         profile_version: input.workflow_state.profile.version,
         selected_step_keys: input.workflow_state.diagnostics.selected_step_keys,
         compatibility: input.workflow_state.diagnostics.compatibility ?? null,
+        variable_summary: variableResolution?.variable_summary ?? null,
         placement_summary: input.workflow_state.diagnostics.placement_summary ?? null,
+        macro_summary: variableResolution?.macro_summary ?? null,
         section_summary: input.workflow_state.diagnostics.section_summary ?? null
       },
       ...input.processing_trace
@@ -210,7 +233,9 @@ const syncDiagnosticsToContext = (context: InferenceContext, input: {
       selected_step_keys: input.workflow_state.diagnostics.selected_step_keys,
       step_traces: input.workflow_state.diagnostics.step_traces,
       compatibility: input.workflow_state.diagnostics.compatibility ?? null,
+      variable_summary: variableResolution?.variable_summary ?? null,
       placement_summary: input.workflow_state.diagnostics.placement_summary ?? null,
+      macro_summary: variableResolution?.macro_summary ?? null,
       section_summary: input.workflow_state.diagnostics.section_summary ?? null
     }
   };

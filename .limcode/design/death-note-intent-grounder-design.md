@@ -468,8 +468,8 @@ unexpected action 不应直接报系统失败。
 ### 结果 B：narrativized（默认优先）
 若 pack 不承认这种方法能获得客观真相，则生成 narrative event：
 
-- title：`{{actor.id}} 试图通过民间仪式确认目标命运`
-- description：`{{actor.id}} 进行了一次近乎荒诞的仪式尝试，但世界规则没有给出客观回应。`
+- title：`{{ actor.id }} 试图通过民间仪式确认目标命运`
+- description：`{{ actor.id }} 进行了一次近乎荒诞的仪式尝试，但世界规则没有给出客观回应。`
 - semantic_type：`failed_ritual_attempt`
 - `objective_effect_applied = false`
 

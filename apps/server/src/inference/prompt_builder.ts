@@ -4,7 +4,8 @@ import { buildContextPromptAssemblySummary, runContextOrchestrator } from '../co
 import { sortPromptFragmentsBase } from '../context/workflow/placement_resolution.js';
 import { buildSectionDraftsFromFragments, buildSectionSummary } from '../context/workflow/section_drafts.js';
 import type { PromptWorkflowTaskType } from '../context/workflow/types.js';
-import { NarrativeResolver } from '../narrative/resolver.js';
+import { renderNarrativeTemplate } from '../narrative/resolver.js';
+import type { PromptMacroDiagnostics } from '../narrative/types.js';
 import type { PromptFragment, PromptFragmentSlot } from './prompt_fragments.js';
 import type { InferenceContext, PromptBundle, PromptProcessingTrace } from './types.js';
 
@@ -58,6 +59,7 @@ const buildContextPromptPayload = (context: InferenceContext): Record<string, un
     policy_summary: context.policy_summary,
     attributes: context.attributes,
     visible_variables: context.visible_variables,
+    variable_context_summary: context.variable_context_summary,
     memory_context: context.memory_context,
     pack_state: context.pack_state,
     tick: context.tick.toString(),
@@ -105,6 +107,8 @@ const readPromptWorkflowMetadata = (context: InferenceContext): {
   workflow_step_keys?: string[];
   workflow_section_summary?: Record<string, unknown> | null;
   workflow_placement_summary?: Record<string, unknown> | null;
+  workflow_variable_summary?: Record<string, unknown> | null;
+  workflow_macro_summary?: PromptMacroDiagnostics | null;
   processing_trace?: PromptProcessingTrace;
 } => {
   const orchestration = isRecord(context.context_run.diagnostics.orchestration)
@@ -146,6 +150,14 @@ const readPromptWorkflowMetadata = (context: InferenceContext): {
       promptWorkflow && isRecord(promptWorkflow.placement_summary)
         ? promptWorkflow.placement_summary
         : null,
+    workflow_variable_summary:
+      promptWorkflow && isRecord(promptWorkflow.variable_summary)
+        ? promptWorkflow.variable_summary
+        : null,
+    workflow_macro_summary:
+      promptWorkflow && isRecord(promptWorkflow.macro_summary)
+        ? (promptWorkflow.macro_summary as unknown as PromptMacroDiagnostics)
+        : null,
     processing_trace: processingTrace
   };
 };
@@ -177,25 +189,96 @@ const buildCombinedPrompt = (fragments: PromptFragment[]): string => {
     .join('\n\n');
 };
 
-export const buildPromptFragments = (context: InferenceContext): PromptFragment[] => {
-  const resolver = new NarrativeResolver(context.visible_variables);
-  const resolverTemplateContext = {
-    ...context.visible_variables,
-    name: context.world_pack.name,
-    actor_name: context.actor_display_name,
-    actor_role: context.actor_ref.role,
-    identity_id: context.identity.id,
-    strategy: context.strategy,
-    current_tick: context.tick.toString()
-  };
+const summarizeMacroDiagnostics = (
+  diagnostics: PromptMacroDiagnostics[]
+): { variableSummary: Record<string, unknown>; macroSummary: PromptMacroDiagnostics } => {
+  const namespaces = new Set<string>();
+  const missingPaths = new Set<string>();
+  const restrictedPaths = new Set<string>();
+  let aliasFallbackCount = 0;
+  let outputLength = 0;
+  const traces: PromptMacroDiagnostics['traces'] = [];
+  const blocks: NonNullable<PromptMacroDiagnostics['blocks']> = [];
 
+  for (const item of diagnostics) {
+    for (const namespace of item.namespaces_used ?? []) {
+      namespaces.add(namespace);
+    }
+    for (const path of item.missing_paths) {
+      missingPaths.add(path);
+    }
+    for (const path of item.restricted_paths) {
+      restrictedPaths.add(path);
+    }
+    aliasFallbackCount += item.alias_fallback_count ?? 0;
+    outputLength += item.output_length ?? 0;
+    traces.push(...item.traces);
+    blocks.push(...(item.blocks ?? []));
+  }
+
+  return {
+    variableSummary: {
+      namespaces: Array.from(namespaces),
+      alias_fallback_count: aliasFallbackCount,
+      missing_paths: Array.from(missingPaths),
+      restricted_paths: Array.from(restrictedPaths)
+    },
+    macroSummary: {
+      template_source: diagnostics.map(item => item.template_source).filter((value): value is string => Boolean(value)).join(',') || undefined,
+      traces,
+      missing_paths: Array.from(missingPaths),
+      restricted_paths: Array.from(restrictedPaths),
+      blocks,
+      alias_fallback_count: aliasFallbackCount,
+      namespaces_used: Array.from(namespaces),
+      output_length: outputLength
+    }
+  };
+};
+
+export const buildPromptFragments = (context: InferenceContext): PromptFragment[] => {
   const worldTemplate = context.world_prompts.global_prefix ?? '';
   const roleTemplate = context.world_prompts.agent_initial_context ?? '';
 
-  const worldPrompt = worldTemplate.length > 0 ? resolver.resolve(worldTemplate, resolverTemplateContext) : '';
-  const resolvedRoleTemplate = roleTemplate.length > 0 ? resolver.resolve(roleTemplate, resolverTemplateContext) : '';
+  const worldRender = worldTemplate.length > 0
+    ? renderNarrativeTemplate({
+        template: worldTemplate,
+        variableContext: context.variable_context,
+        extraContext: {
+          actor_name: context.actor_display_name,
+          actor_role: context.actor_ref.role,
+          current_tick: context.tick.toString()
+        },
+        templateSource: 'world_prompts.global_prefix'
+      })
+    : { text: '', diagnostics: { traces: [], missing_paths: [], restricted_paths: [], blocks: [], alias_fallback_count: 0, namespaces_used: [], output_length: 0 } };
+
+  const roleRender = roleTemplate.length > 0
+    ? renderNarrativeTemplate({
+        template: roleTemplate,
+        variableContext: context.variable_context,
+        extraContext: {
+          actor_name: context.actor_display_name,
+          actor_role: context.actor_ref.role,
+          identity_id: context.identity.id,
+          strategy: context.strategy,
+          current_tick: context.tick.toString()
+        },
+        templateSource: 'world_prompts.agent_initial_context'
+      })
+    : { text: '', diagnostics: { traces: [], missing_paths: [], restricted_paths: [], blocks: [], alias_fallback_count: 0, namespaces_used: [], output_length: 0 } };
+
+  const { variableSummary, macroSummary } = summarizeMacroDiagnostics([worldRender.diagnostics, roleRender.diagnostics]);
+  context.context_run.diagnostics.orchestration = {
+    ...(context.context_run.diagnostics.orchestration ?? {}),
+    variable_resolution: {
+      variable_summary: variableSummary,
+      macro_summary: macroSummary
+    }
+  };
+
   const rolePrompt = [
-    resolvedRoleTemplate,
+    roleRender.text,
     `Actor display name: ${context.actor_display_name}`,
     `Actor role: ${context.actor_ref.role}`,
     `Resolved agent id: ${context.resolved_agent_id ?? 'none'}`,
@@ -216,8 +299,12 @@ export const buildPromptFragments = (context: InferenceContext): PromptFragment[
 
   return [
     buildFragment('system_core', 100, systemPrompt, 'system.core'),
-    buildFragment('role_core', 90, rolePrompt, 'world_prompts.agent_initial_context'),
-    buildFragment('world_context', 80, worldPrompt, 'world_prompts.global_prefix'),
+    buildFragment('role_core', 90, rolePrompt, 'world_prompts.agent_initial_context', {
+      prompt_macro_diagnostics: roleRender.diagnostics
+    }),
+    buildFragment('world_context', 80, worldRender.text, 'world_prompts.global_prefix', {
+      prompt_macro_diagnostics: worldRender.diagnostics
+    }),
     buildFragment('memory_summary', 70, '', 'memory.summary', {
       memory_selection_count:
         context.memory_context.short_term.length +
@@ -247,6 +334,9 @@ export const buildPromptBundleFromFragments = (
     resolved_with_anchor: sortedFragments.filter(fragment => fragment.anchor).length,
     fallback_count: 0
   };
+  const variableResolution = isRecord(context.context_run.diagnostics.orchestration?.variable_resolution)
+    ? context.context_run.diagnostics.orchestration?.variable_resolution as Record<string, unknown>
+    : null;
 
   context.context_run.diagnostics.prompt_assembly = buildContextPromptAssemblySummary(sortedFragments);
   context.context_run.diagnostics.orchestration = {
@@ -272,6 +362,8 @@ export const buildPromptBundleFromFragments = (
       workflow_step_keys: workflowMetadata.workflow_step_keys,
       workflow_section_summary: resolvedSectionSummary,
       workflow_placement_summary: resolvedPlacementSummary,
+      workflow_variable_summary: workflowMetadata.workflow_variable_summary ?? (variableResolution?.variable_summary as Record<string, unknown> | undefined),
+      workflow_macro_summary: workflowMetadata.workflow_macro_summary ?? (variableResolution?.macro_summary as PromptMacroDiagnostics | undefined),
       processing_trace: workflowMetadata.processing_trace
     }
   };

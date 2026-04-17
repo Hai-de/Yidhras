@@ -8,7 +8,14 @@ import { createContextService } from '../context/service.js';
 import { IdentityService } from '../identity/service.js';
 import type { IdentityContext } from '../identity/types.js';
 import { createMemoryService } from '../memory/service.js';
-import type { VariablePool } from '../narrative/types.js';
+import type { PromptVariableContext, VariablePool } from '../narrative/types.js';
+import {
+  createPromptVariableContext,
+  createPromptVariableContextSummary,
+  createPromptVariableLayer,
+  flattenPromptVariableContextToVisibleVariables,
+  normalizePromptVariableRecord
+} from '../narrative/variable_context.js';
 import { DEFAULT_PACK_WORLD_ENTITY_ID } from '../packs/runtime/core_models.js';
 import { listPackEntityStateProjectionRecords } from '../packs/storage/entity_state_projection.js';
 import { ApiError } from '../utils/api_error.js';
@@ -410,6 +417,59 @@ const buildPackRuntimeContract = (context: AppContext): InferencePackRuntimeCont
   };
 };
 
+const buildInferenceVariableContext = (input: {
+  context: AppContext;
+  pack: NonNullable<ReturnType<AppContext['sim']['getActivePack']>>;
+  strategy: InferenceStrategy;
+  attributes: Record<string, unknown>;
+  resolvedActor: ResolvedActor;
+  agentSnapshot: InferenceAgentSnapshot | null;
+  packState: InferencePackStateSnapshot;
+  packRuntime: InferencePackRuntimeContract;
+  requestInput: InferenceRequestInput;
+}): PromptVariableContext => {
+  return createPromptVariableContext({
+    layers: [
+      createPromptVariableLayer({
+        namespace: 'system',
+        values: normalizePromptVariableRecord({ name: 'Yidhras', timezone: 'Asia/Shanghai' }),
+        alias_values: normalizePromptVariableRecord({ system_name: 'Yidhras', timezone: 'Asia/Shanghai' }),
+        metadata: { source_label: 'system-defaults', trusted: true }
+      }),
+      createPromptVariableLayer({
+        namespace: 'app',
+        values: normalizePromptVariableRecord({ startup_health: input.context.startupHealth }),
+        alias_values: normalizePromptVariableRecord({ startup_level: input.context.startupHealth.level }),
+        metadata: { source_label: 'app-context', trusted: true }
+      }),
+      createPromptVariableLayer({
+        namespace: 'pack',
+        values: normalizePromptVariableRecord({ metadata: input.pack.metadata, variables: input.pack.variables ?? {}, prompts: input.pack.prompts ?? {}, ai: input.pack.ai ?? null }),
+        alias_values: normalizePromptVariableRecord({ ...(input.pack.variables ?? {}), world_name: input.pack.metadata.name, pack_id: input.pack.metadata.id, pack_name: input.pack.metadata.name }),
+        metadata: { source_label: 'world-pack', trusted: true }
+      }),
+      createPromptVariableLayer({
+        namespace: 'runtime',
+        values: normalizePromptVariableRecord({ current_tick: input.context.sim.getCurrentTick().toString(), pack_state: input.packState, pack_runtime: input.packRuntime, world_state: input.packState.world_state, owned_artifacts: input.packState.owned_artifacts, latest_event: input.packState.latest_event }),
+        alias_values: normalizePromptVariableRecord({ current_tick: input.context.sim.getCurrentTick().toString(), world_state: input.packState.world_state, latest_event: input.packState.latest_event, owned_artifacts: input.packState.owned_artifacts }),
+        metadata: { source_label: 'runtime-state', trusted: true }
+      }),
+      createPromptVariableLayer({
+        namespace: 'actor',
+        values: normalizePromptVariableRecord({ identity_id: input.resolvedActor.identity.id, identity_type: input.resolvedActor.identity.type, display_name: input.resolvedActor.actorDisplayName, role: input.resolvedActor.actorRef.role, binding_ref: input.resolvedActor.bindingRef, agent_id: input.resolvedActor.resolvedAgentId, agent_snapshot: input.agentSnapshot }),
+        alias_values: normalizePromptVariableRecord({ actor_name: input.resolvedActor.actorDisplayName, actor_role: input.resolvedActor.actorRef.role, actor_id: input.resolvedActor.resolvedAgentId ?? input.resolvedActor.identity.id, identity_id: input.resolvedActor.identity.id }),
+        metadata: { source_label: 'resolved-actor', trusted: true }
+      }),
+      createPromptVariableLayer({
+        namespace: 'request',
+        values: normalizePromptVariableRecord({ task_type: 'agent_decision', strategy: input.strategy, attributes: input.attributes, agent_id: input.requestInput.agent_id ?? null, identity_id: input.requestInput.identity_id ?? null, idempotency_key: input.requestInput.idempotency_key ?? null }),
+        alias_values: normalizePromptVariableRecord({ strategy: input.strategy, task_type: 'agent_decision', request_agent_id: input.requestInput.agent_id ?? null, request_identity_id: input.requestInput.identity_id ?? null }),
+        metadata: { source_label: 'inference-request', mutable: true, trusted: true }
+      })
+    ]
+  });
+};
+
 export const buildInferenceContext = async (
   context: AppContext,
   input: InferenceRequestInput
@@ -428,12 +488,10 @@ export const buildInferenceContext = async (
   const attributes = normalizeAttributes(input.attributes);
   const resolvedActor = await resolveActor(context, input);
 
-  let visibleVariables: VariablePool = pack.variables ?? {};
   let agentSnapshot: InferenceAgentSnapshot | null = null;
 
   if (resolvedActor.resolvedAgentId) {
     const agentContext = await getAgentContextSnapshot(context, resolvedActor.resolvedAgentId);
-    visibleVariables = agentContext.variables as VariablePool;
     agentSnapshot = buildAgentSnapshot(agentContext.identity as Record<string, unknown>);
   }
 
@@ -454,6 +512,9 @@ export const buildInferenceContext = async (
     pack_state: packState,
     pack_id: pack.metadata.id
   });
+  const variableContext = buildInferenceVariableContext({
+    context, pack, strategy, attributes, resolvedActor, agentSnapshot, packState, packRuntime, requestInput: input
+  });
 
   return {
     inference_id: randomUUID(),
@@ -473,12 +534,14 @@ export const buildInferenceContext = async (
     },
     world_prompts: pack.prompts ?? {},
     world_ai: pack.ai ?? null,
-    visible_variables: visibleVariables,
+    visible_variables: flattenPromptVariableContextToVisibleVariables(variableContext) as VariablePool,
+    variable_context: variableContext,
     policy_summary: policySummary,
     transmission_profile: transmissionProfile,
     context_run: contextResult.context_run,
     memory_context: contextResult.memory_context,
     pack_state: packState,
-    pack_runtime: packRuntime
+    pack_runtime: packRuntime,
+    variable_context_summary: createPromptVariableContextSummary(variableContext)
   };
 };

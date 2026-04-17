@@ -102,18 +102,9 @@ const renderStringTemplate = (template: string, context: Record<string, unknown>
 
 const renderObjectiveEffectValue = (value: unknown, invocation: InvocationRequest): unknown => {
   if (typeof value === 'string') {
-    switch (value.trim()) {
-      case '{{subject_entity_id}}':
-        return invocation.subject_entity_id;
-      case '{{target_entity_id}}':
-        return resolveTargetEntityId(invocation);
-      case '{{artifact_id}}':
-        return resolveArtifactId(invocation);
-      case '{{mediator_id}}':
-        return invocation.mediator_id;
-      default:
-        return value;
-    }
+    return value.includes('{{') && value.includes('}}')
+      ? renderStringTemplate(value, buildObjectiveTemplateContext(invocation, resolveArtifactId(invocation)))
+      : value;
   }
 
   if (Array.isArray(value)) {
@@ -136,19 +127,29 @@ const renderObjectiveStatePatch = (
   return renderObjectiveEffectValue(statePatch, invocation) as Record<string, unknown>;
 };
 
-const buildObjectiveEventTemplateContext = (invocation: InvocationRequest, artifactId: string | null): Record<string, unknown> => {
+const buildObjectiveTemplateContext = (invocation: InvocationRequest, artifactId: string | null): Record<string, unknown> => {
   const targetEntityId = resolveTargetEntityId(invocation);
   return {
     subject_entity_id: invocation.subject_entity_id,
     target_entity_id: targetEntityId,
     artifact_id: artifactId,
     mediator_id: invocation.mediator_id,
+    invocation: {
+      subject_entity_id: invocation.subject_entity_id,
+      target_entity_id: targetEntityId,
+      artifact_id: artifactId,
+      mediator_id: invocation.mediator_id,
+      invocation_type: invocation.invocation_type,
+      capability_key: invocation.capability_key,
+      pack_id: invocation.pack_id
+    },
     actor: {
       id: invocation.subject_entity_id,
       name: invocation.subject_entity_id
     },
     target: {
-      id: targetEntityId
+      id: targetEntityId,
+      entity_id: targetEntityId
     },
     artifact: {
       id: artifactId,
@@ -185,7 +186,6 @@ const resolveObjectiveEventEffects = (
 
     const artifactIdCandidate = renderObjectiveEffectValue(effect.artifact_id, invocation);
     const artifactId = typeof artifactIdCandidate === 'string' ? artifactIdCandidate : resolveArtifactId(invocation);
-    const templateContext = buildObjectiveEventTemplateContext(invocation, artifactId);
 
     const typeValue = renderObjectiveEffectValue(effect.type, invocation);
     const titleValue = renderObjectiveEffectValue(effect.title, invocation);
@@ -193,10 +193,8 @@ const resolveObjectiveEventEffects = (
     const impactDataValue = renderObjectiveEffectValue(effect.impact_data, invocation);
 
     const type = typeof typeValue === 'string' && typeValue.trim().length > 0 ? typeValue.trim() : 'history';
-    const titleSource = typeof titleValue === 'string' ? titleValue : '';
-    const descriptionSource = typeof descriptionValue === 'string' ? descriptionValue : '';
-    const title = renderStringTemplate(titleSource, templateContext).trim();
-    const description = renderStringTemplate(descriptionSource, templateContext).trim();
+    const title = typeof titleValue === 'string' ? titleValue.trim() : '';
+    const description = typeof descriptionValue === 'string' ? descriptionValue.trim() : '';
 
     if (title.length === 0 || description.length === 0) {
       return [];

@@ -7,7 +7,7 @@
 
 ### P0 下一阶段开发顺序（方案 A：架构优先）
 
-- [ ] **第一阶段：数据库边界治理（继续使用 Prisma，但降低迁移/更换成本）**
+- [x] **第一阶段：数据库边界治理（继续使用 Prisma，但降低迁移/更换成本）**
   - [x] 盘点 `context.prisma` / `sim.prisma` / `new PrismaClient()` 的直接依赖点，按模块分组（scheduler、inference、plugin、audit、projection、memory）
   - [x] 明确 kernel-side 数据、pack-owned 数据、read model / projection 数据、审计追踪数据的存储边界
   - [x] 为高频核心域补 repository / store / facade 收口，避免业务层继续直接散射 Prisma 查询
@@ -15,11 +15,12 @@
   - [x] 让数据库迁移与更换更容易：优先做到“仍用 Prisma，但 schema / migration / repository 边界清晰”，而不是直接抽象成多 ORM
   - [x] 为部署者补数据库迁移/更换文档：环境变量、Prisma migration、初始化步骤、常见坑
 
-- [ ] **第二阶段：世界包与 Prompt Workflow 宏 / 变量系统正式化**
-  - [ ] 梳理变量来源优先级：system / app config / world pack / runtime state / actor / request / plugin
-  - [ ] 在现有 `NarrativeResolver` 基础上设计正式宏能力边界：默认值、条件、列表展开、命名空间、调试 trace
-  - [ ] 统一 Prompt Workflow、模板变量、世界包变量的作用域和覆盖规则，避免多套隐式机制并存
-  - [ ] 为宏展开与 Prompt Workflow 增加可观测诊断，保证出错时可定位
+- [x] **第二阶段：世界包与 Prompt Workflow 宏 / 变量系统正式化**
+  - [x] 梳理变量来源优先级：system / app config / world pack / runtime state / actor / request / plugin
+  - [x] 在现有 `NarrativeResolver` 基础上设计正式宏能力边界：默认值、条件、列表展开、命名空间、调试 trace
+  - [x] 统一 Prompt Workflow、模板变量、世界包变量的作用域和覆盖规则，避免多套隐式机制并存
+  - [x] 为宏展开与 Prompt Workflow 增加可观测诊断，保证出错时可定位
+  - [x] 编写基础的文档，让使用者能上手
 
 - [ ] **第三阶段：把适合外置的硬编码参数迁到 YAML 配置**
   - [ ] 继续沿用现有 `data/configw` / runtime config scaffold 机制，不另起一套配置系统

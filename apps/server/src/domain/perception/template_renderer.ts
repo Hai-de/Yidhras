@@ -1,5 +1,10 @@
-import { NarrativeResolver } from '../../narrative/resolver.js';
-import type { VariablePool } from '../../narrative/types.js';
+import { renderNarrativeTemplate } from '../../narrative/resolver.js';
+import type { PromptVariableContext, VariablePool } from '../../narrative/types.js';
+import {
+  createPromptVariableContext,
+  createPromptVariableLayer,
+  normalizePromptVariableRecord
+} from '../../narrative/variable_context.js';
 import type { PermissionContext } from '../../permission/types.js';
 
 export const renderTemplateWithVisibleVariables = (
@@ -8,6 +13,43 @@ export const renderTemplateWithVisibleVariables = (
   extraContext: VariablePool = {},
   permission?: PermissionContext
 ): string => {
-  const resolver = new NarrativeResolver(visibleVariables);
-  return resolver.resolve(template, extraContext, permission);
+  const variableContext = createPromptVariableContext({
+    layers: [
+      createPromptVariableLayer({
+        namespace: 'pack',
+        values: normalizePromptVariableRecord(visibleVariables),
+        alias_values: normalizePromptVariableRecord({
+          ...visibleVariables,
+          ...extraContext
+        }),
+        metadata: {
+          source_label: 'perception-visible-variables',
+          trusted: true
+        }
+      })
+    ]
+  });
+
+  return renderNarrativeTemplate({
+    template,
+    variableContext,
+    extraContext,
+    permission,
+    templateSource: 'perception.template'
+  }).text;
+};
+
+export const renderTemplateWithVariableContext = (
+  template: string,
+  variableContext: PromptVariableContext,
+  extraContext: Record<string, unknown> = {},
+  permission?: PermissionContext
+): string => {
+  return renderNarrativeTemplate({
+    template,
+    variableContext,
+    extraContext,
+    permission,
+    templateSource: 'perception.template'
+  }).text;
 };
