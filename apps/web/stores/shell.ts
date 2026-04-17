@@ -7,6 +7,7 @@ export type OperatorWorkspaceId =
   | 'workflow'
   | 'timeline'
   | 'graph'
+  | 'plugins'
   | 'agents'
 
 export type DockTabId = 'traces' | 'jobs' | 'notifications'

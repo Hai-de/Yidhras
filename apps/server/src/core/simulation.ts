@@ -58,6 +58,7 @@ export class SimulationManager {
       packFolderName,
       loader: this.loader,
       prisma: this.prisma,
+      packsDir: this.packsDir,
       runtimeSpeed: this.runtimeSpeed
     });
 

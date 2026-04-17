@@ -26,6 +26,16 @@ export const RuntimeConfigSchema = z
         ai_models_config: AiModelsConfigPathSchema
       })
       .strict(),
+    plugins: z
+      .object({
+        enable_warning: z
+          .object({
+            enabled: z.boolean(),
+            require_acknowledgement: z.boolean()
+          })
+          .strict()
+      })
+      .strict(),
     world: z
       .object({
         preferred_pack: NonEmptyStringSchema,

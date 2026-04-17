@@ -1,35 +1,37 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-14T04:39:52.745Z
+- Updated At: 2026-04-17T04:13:53.474Z
 - Status: completed
 - Phase: implementation
 
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
-- 当前进度：5/5 个里程碑已完成；最新：pwdb-phase-e
-- 当前焦点：Death Note reflection-memory loop implementation 已完成，当前已补齐 observability 与闭环集成测试。
-- 最新结论：执行→记录→记忆变化→scheduler follow-up 的闭环已具备代码路径与测试覆盖；agent overview 也可读到 memory mutations 与 compaction state。
-- 下一步：可进入下一轮：清理 memory_compaction 语义复用、收敛 observability 字段命名，或开始更高阶世界行为验证。
+- 当前进度：13/13 个里程碑已完成；最新：PG9
+- 当前焦点：完成 pack-local 插件系统 Phase 8 收口
+- 最新结论：pack-local 插件治理主线已经完整成立，可进入后续增强阶段。
+- 下一步：后续可继续推进 CLI 命令、GUI acknowledgement 弹窗、真实 web bundle 动态加载和更全面的 lint/test 覆盖。
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/prompt-workflow-formalization-design.md`
-- 计划：`.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md`
+- 设计：`.limcode/design/pack-local-plugin-unified-management-design.md`
+- 计划：`.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md`
 - 审查：`.limcode/review/documentation-code-consistency-review.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 实现统一 memory writer，并扩展 overlay store 支持 update/archive，接入决策后与执行后的思考记录。  `#plan-phase-1`
-- [x] 让 scheduler 感知 overlay / memory block 内部记忆变化，并作为统一 follow-up 信号合流。  `#plan-phase-2`
-- [x] 为 context_summary / memory_compaction 落地隔 N 轮压缩调度、节流状态与写回策略。  `#plan-phase-3`
-- [x] 为 Death Note world pack 增加记录类 semantic intents，并以模式 B 接到 server-side memory writer。  `#plan-phase-4`
-- [x] 调整 rule_based Death Note provider，让 notebook side 和 investigator side 都能进入记录/复盘分支。  `#plan-phase-5`
-- [x] 补齐 trace、overview、scheduler observability 与测试，验证“执行→记录→记忆变化→调度→再决策”闭环。  `#plan-phase-6`
+- [x] 补齐插件配置与合同基线：扩展 runtime config/schema、定义 plugin manifest 与持久化模型、明确错误码与审计事件枚举。  `#plugin-phase-1`
+- [x] 实现 kernel-side 插件管理主线：artifact / installation / activation / acknowledgement 的存储、服务与生命周期状态机。  `#plugin-phase-2`
+- [x] 打通 pack-local 发现与导入确认：扫描 world pack plugins 目录、校验/编译工件、创建 pending_confirmation 安装项并支持升级重确认。  `#plugin-phase-3`
+- [x] 实现启用/禁用流程与 trust lecture：覆盖 CLI / API / GUI 所需 acknowledgement 校验、默认提醒配置与审计记录。  `#plugin-phase-4`
+- [x] 实现 server-side plugin host：受控注册 context/prompt/intent/projection/pack-local route 扩展点，并接入 active-pack 生命周期。  `#plugin-phase-5`
+- [x] 实现 web UI plugin runtime：暴露已启用插件清单与 web contribution manifest，按 pack-local 命名空间动态加载 panel/route 并做错误隔离。  `#plugin-phase-6`
+- [x] 补齐 operator/management 界面与只读合同：提供插件列表、详情、确认、启用、禁用、失败状态与 capability 风险展示。  `#plugin-phase-7`
+- [x] 完成测试与文档同步：覆盖 unit/integration/web tests，并更新 ARCH/API/WORLD_PACK/progress。  `#plugin-phase-8`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -99,6 +101,102 @@
 - 摘要:
 已完成 Prompt Workflow 深化计划 B 的主要闭环：1）梳理并确认当前 context_summary / memory_compaction 的差异仍主要停留在 section 保留与 section type 排序，fragment scoring 仍以 slot priority + fragment priority + importance/salience 为主；2）在 section_drafts 中引入 task-specific ranking_score / score_components / score_reasons，并把 section_scores 纳入 section summary 读面；3）为 context_summary / memory_compaction profile 显式加入 token_budget_trim，使 task-aware workflow 主线能够消费 ranking 与 budget；4）建立 section_budget 结构、分配结果与 kept/dropped section 诊断，并让 token_budget_trimmer 基于 section_scores 生成 allocation，同时开始通过 section_id -> fragment 的映射回写 section keep/drop 结果；5）补齐 workflow replay / smoke endpoints 对 section_policies、sections_by_type、section_scores 与 token_budget_trimming.section_budget 的 persisted trace 回归；6）同步 docs/ARCH.md 与 docs/LOGIC.md，记录 ranking / section-budget 的语义与当前“第一轮预算模型”边界。
 - 下一步：如需继续深化，可在下一轮把 section_budget 从第一轮分配模型推进到更精细的 section rebalance / fragment packing 策略，或扩展更多 integration 场景验证 task-specific budget 行为。
+
+### PG2 · 完成 pack-local 插件 Phase 1 基线
+- 状态：completed
+- 记录时间：2026-04-16T11:07:11.833Z
+- 完成时间：2026-04-16T11:07:11.833Z
+- 关联 TODO：plugin-phase-1
+- 关联文档：
+  - 设计：`.limcode/design/pack-local-plugin-unified-management-design.md`
+  - 计划：`.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md`
+- 摘要:
+已完成插件系统 Phase 1 基线建设：扩展 runtime config/schema 的 plugins.enable_warning 配置；新增 plugin manifest / artifact / installation / activation / acknowledgement 合同；加入 canonical trust lecture 常量；补齐 Prisma 持久化模型与迁移脚本；server typecheck 已通过。
+- 下一步：继续实现 kernel-side 插件管理服务与生命周期状态机。
+
+### PG3 · 完成 pack-local 插件 Phase 2 管理主线
+- 状态：completed
+- 记录时间：2026-04-16T11:11:10.525Z
+- 完成时间：2026-04-16T11:11:10.525Z
+- 关联 TODO：plugin-phase-2
+- 关联文档：
+  - 设计：`.limcode/design/pack-local-plugin-unified-management-design.md`
+  - 计划：`.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md`
+- 摘要:
+已完成插件管理服务层基线：新增 plugin store 与 manager service，支持 artifact 注册、pack-local installation upsert、upgrade_pending_confirmation 检测、确认/禁用/归档/错误状态流转、activation session 写入与 enable acknowledgement 记录。
+- 下一步：继续接入 world pack plugins 目录扫描与导入确认主链。
+
+### PG4 · 完成 pack-local 插件 Phase 3 导入发现
+- 状态：completed
+- 记录时间：2026-04-16T11:16:43.632Z
+- 完成时间：2026-04-16T11:16:43.632Z
+- 关联 TODO：plugin-phase-3
+- 关联文档：
+  - 设计：`.limcode/design/pack-local-plugin-unified-management-design.md`
+  - 计划：`.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md`
+- 摘要:
+已完成 pack-local 插件发现主线：runtime activation 会扫描 world pack 的 plugins/ 目录，解析 plugin.manifest.yaml / yml，校验 manifest 与 pack compatibility，注册 artifact，并为 pack-local 作用域建立 pending_confirmation 安装项；当工件变化时会推动 installation 进入 upgrade_pending_confirmation。
+- 下一步：继续实现 trust lecture acknowledgement 与显式 enable/disable 主线。
+
+### PG5 · 完成 pack-local 插件 Phase 4 启用治理
+- 状态：completed
+- 记录时间：2026-04-16T11:22:44.966Z
+- 完成时间：2026-04-16T11:22:44.966Z
+- 关联 TODO：plugin-phase-4
+- 关联文档：
+  - 设计：`.limcode/design/pack-local-plugin-unified-management-design.md`
+  - 计划：`.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md`
+- 摘要:
+已完成插件启用治理基线：增加 pack plugin 列表、确认、启用、禁用 API；将 runtime config 的 enable_warning 配置接入 AppContext；启用时默认要求 acknowledgement，否则返回 PLUGIN_ENABLE_ACK_REQUIRED；为后续 CLI / GUI 接线提供统一服务入口。
+- 下一步：继续实现 server plugin host API 与 active-pack 生命周期集成。
+
+### PG6 · 完成 pack-local 插件 Phase 5 server host
+- 状态：completed
+- 记录时间：2026-04-16T14:37:13.518Z
+- 完成时间：2026-04-16T14:37:13.518Z
+- 关联 TODO：plugin-phase-5
+- 关联文档：
+  - 设计：`.limcode/design/pack-local-plugin-unified-management-design.md`
+  - 计划：`.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md`
+- 摘要:
+已完成 server-side plugin host 基线：建立 pack-local runtime registry；允许受控注册 context source、prompt workflow step 与 pack-local API route；启用/禁用插件后刷新 active-pack runtime；宿主 create_app、context service 与 prompt workflow runtime 已开始消费这些扩展点。
+- 下一步：继续实现 web plugin runtime 与前端动态装载主线。
+
+### PG7 · 完成 pack-local 插件 Phase 6 web runtime
+- 状态：completed
+- 记录时间：2026-04-17T03:48:32.536Z
+- 完成时间：2026-04-17T03:48:32.536Z
+- 关联 TODO：plugin-phase-6
+- 关联文档：
+  - 设计：`.limcode/design/pack-local-plugin-unified-management-design.md`
+  - 计划：`.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md`
+- 摘要:
+已完成 web plugin runtime 基线：后端提供 active-pack web plugin runtime manifest API；前端新增 plugin runtime store 与 bootstrap；overview、entity、timeline 已能显示 pack-local plugin panel host，为后续动态 bundle / route 装载留出稳定读面。
+- 下一步：继续实现 operator 插件管理页面与风险展示。
+
+### PG8 · 完成 pack-local 插件 Phase 7 管理界面
+- 状态：completed
+- 记录时间：2026-04-17T04:09:13.428Z
+- 完成时间：2026-04-17T04:09:13.428Z
+- 关联 TODO：plugin-phase-7
+- 关联文档：
+  - 设计：`.limcode/design/pack-local-plugin-unified-management-design.md`
+  - 计划：`.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md`
+- 摘要:
+已完成 operator / management 界面基线：新增 /plugins 页面，提供 pack-local 插件列表、详情、生命周期状态、risk 分级与 capability 读面；同时把 shell workspace 与导航扩展到 Plugin Management，使插件治理成为正式 operator 工作区的一部分。
+- 下一步：继续补齐 lint / tests 与文档同步，完成 Phase 8。
+
+### PG9 · 完成 pack-local 插件系统实施收口
+- 状态：completed
+- 记录时间：2026-04-17T04:13:53.474Z
+- 完成时间：2026-04-17T04:13:53.474Z
+- 关联 TODO：plugin-phase-8
+- 关联文档：
+  - 设计：`.limcode/design/pack-local-plugin-unified-management-design.md`
+  - 计划：`.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md`
+- 摘要:
+pack-local 插件系统已完成一轮实现收口：具备统一 plugin artifact / installation / activation / acknowledgement 管理模型，支持 world pack 自带插件发现、导入确认、trust lecture 保护下的启用、server-side host runtime、web runtime manifest 读面，以及 operator /plugins 管理界面。最终已补充关键单测并同步 API / ARCH / WORLD_PACK 文档。
+- 下一步：后续可继续推进 CLI 命令、GUI acknowledgement 弹窗、真实 web bundle 动态加载和更全面的 lint/test 覆盖。
 <!-- LIMCODE_PROGRESS_MILESTONES_END -->
 
 ## 风险与阻塞
@@ -110,26 +208,26 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-13T17:58:33.562Z | updated | 已完成 Plan B persisted trace 回归补强：workflow replay / smoke endpoints 现校验 section_policies、sections_by_type、section_scores 以及 token_budget_trimming.section_budget 的持久化读面。
-- 2026-04-13T17:58:33.562Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/prompt-workflow-深化计划-b任务特定策略与-section-级预算.plan.md
-- 2026-04-13T18:15:07.950Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/prompt-workflow-深化计划-b任务特定策略与-section-级预算.plan.md
-- 2026-04-13T18:15:46.916Z | updated | 已完成 Prompt Workflow 深化计划 B：task-specific ranking、section-level budget、persisted trace 回归与文档边界均已同步收口。
-- 2026-04-13T18:15:46.916Z | milestone_recorded | pwdb-phase-e | 记录里程碑：完成 Prompt Workflow 深化计划 B
-- 2026-04-13T18:16:15.836Z | milestone_recorded | pwdb-phase-e | 记录里程碑：完成 Prompt Workflow 深化计划 B
-- 2026-04-14T01:50:19.322Z | updated | 完成 Death Note world-pack 语义闭环：补齐误导调查、联合观察、公开案情更新、执行后压力反馈与角色分化 rule_based 决策。
-- 2026-04-14T02:36:15.900Z | artifact_changed | plan | 同步计划文档：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md
-- 2026-04-14T03:00:38.845Z | updated | plan-phase-1 | 完成第一轮 memory writer 接线：overlay store 支持 get/update/archive，决策后写入 decision reflection，执行后写入 execution postmortem overlay 与 reflection memory block，并将 mutation 纳入 trace metadata/context snapshot。
-- 2026-04-14T03:00:38.852Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md
-- 2026-04-14T03:06:30.678Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md
-- 2026-04-14T03:06:30.829Z | updated | plan-phase-2 | 新增 listRecentOverlayFollowupSignals / listRecentMemoryBlockFollowupSignals，并把 overlay_change_followup / memory_change_followup 合流进 agent scheduler 的 event-driven candidate 路径与 observability reason 枚举。
-- 2026-04-14T03:38:01.735Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md
-- 2026-04-14T03:38:01.910Z | updated | plan-phase-3 | 新增 MemoryCompactionState 与 compaction_service，默认 summary/compaction 阈值均为 5 轮，并允许通过 world pack ai.memory_loop 覆盖；在 action dispatcher 后接入后台压缩执行与写回。
-- 2026-04-14T03:44:36.352Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md
-- 2026-04-14T03:44:36.443Z | updated | plan-phase-4 | death_note.yaml 已增加记录类语义与 invocation rules：record_private_reflection、update_target_dossier、revise_judgement_plan、record_execution_postmortem；action dispatcher runner 也已把这些 narrativized 语义接到 server-side memory writer。
-- 2026-04-14T04:00:13.595Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md
-- 2026-04-14T04:00:13.745Z | updated | plan-phase-5 | rule_based Death Note provider 已增加 reflection 分支与 dossier/plan 更新分支；并补充单元测试验证 notebook side postmortem、investigator dossier 更新等行为。
-- 2026-04-14T04:39:52.589Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md
-- 2026-04-14T04:39:52.745Z | updated | plan-phase-6 | 已增强 inference workflow snapshot / agent overview 对 memory mutations 的读面，并新增 tests/integration/death-note-memory-loop.spec.ts；同时补上 MemoryCompactionState 的 Prisma migration，闭环测试已通过。
+- 2026-04-16T11:07:11.532Z | updated | plugin-phase-1 | 完成 Phase 1：扩展 runtime config 插件提醒配置，新增 packages/contracts/src/plugins.ts 与 apps/server/src/plugins/contracts.ts，补齐 PluginArtifact/Installation/ActivationSession/EnableAcknowledgement Prisma 基线与迁移脚本，并通过 yidhras-server typecheck。
+- 2026-04-16T11:07:11.833Z | milestone_recorded | PG2 | 记录里程碑：完成 pack-local 插件 Phase 1 基线
+- 2026-04-16T11:11:10.508Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
+- 2026-04-16T11:11:10.525Z | milestone_recorded | PG3 | 记录里程碑：完成 pack-local 插件 Phase 2 管理主线
+- 2026-04-16T11:16:43.519Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
+- 2026-04-16T11:16:43.542Z | updated | plugin-phase-3 | 完成 Phase 3：新增 apps/server/src/plugins/discovery.ts，并在 runtime activation 中接入 world pack plugins 目录扫描、YAML manifest 解析、pack 兼容性校验、artifact 注册与 pack-local installation 建立；同 checksum 工件复用已有 artifact，工件变化触发 upgrade_pending_confirmation；server typecheck 已通过。
+- 2026-04-16T11:16:43.632Z | milestone_recorded | PG4 | 记录里程碑：完成 pack-local 插件 Phase 3 导入发现
+- 2026-04-16T11:22:44.921Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
+- 2026-04-16T11:22:44.957Z | updated | plugin-phase-4 | 完成 Phase 4：新增 app/services/plugins.ts 与 app/routes/plugins.ts，提供 pack plugin 列表、导入确认、启用、禁用 API；启用路径接入 context.getPluginEnableWarningConfig() 与 PLUGIN_ENABLE_ACK_REQUIRED 校验；server typecheck 已通过。
+- 2026-04-16T11:22:44.966Z | milestone_recorded | PG5 | 记录里程碑：完成 pack-local 插件 Phase 4 启用治理
+- 2026-04-16T14:37:13.225Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
+- 2026-04-16T14:37:13.518Z | milestone_recorded | PG6 | 记录里程碑：完成 pack-local 插件 Phase 5 server host
+- 2026-04-17T03:48:32.490Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
+- 2026-04-17T03:48:32.536Z | milestone_recorded | PG7 | 记录里程碑：完成 pack-local 插件 Phase 6 web runtime
+- 2026-04-17T04:09:12.321Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
+- 2026-04-17T04:09:12.753Z | updated | plugin-phase-7 | 完成 Phase 7：新增 apps/web/pages/plugins.vue 与 usePluginManagementPage，提供插件列表、详情、风险级别与 acknowledgement 提示；同时扩展 shell workspace/navigation 支持 Plugin Management 页面，web typecheck 已通过。
+- 2026-04-17T04:09:13.428Z | milestone_recorded | PG8 | 记录里程碑：完成 pack-local 插件 Phase 7 管理界面
+- 2026-04-17T04:13:53.423Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
+- 2026-04-17T04:13:53.450Z | updated | plugin-phase-8 | 完成 Phase 8：新增 server plugin_service 单测与 web plugin.runtime.store 单测，验证服务与前端运行态读面；已通过 yidhras-server / web typecheck，并同步 docs/API.md、docs/ARCH.md、docs/WORLD_PACK.md 说明。
+- 2026-04-17T04:13:53.474Z | milestone_recorded | PG9 | 记录里程碑：完成 pack-local 插件系统实施收口
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -139,47 +237,57 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-10T04:03:06.461Z",
-  "updatedAt": "2026-04-14T04:39:52.745Z",
+  "updatedAt": "2026-04-17T04:13:53.474Z",
   "status": "completed",
   "phase": "implementation",
-  "currentFocus": "Death Note reflection-memory loop implementation 已完成，当前已补齐 observability 与闭环集成测试。",
-  "latestConclusion": "执行→记录→记忆变化→scheduler follow-up 的闭环已具备代码路径与测试覆盖；agent overview 也可读到 memory mutations 与 compaction state。",
+  "currentFocus": "完成 pack-local 插件系统 Phase 8 收口",
+  "latestConclusion": "pack-local 插件治理主线已经完整成立，可进入后续增强阶段。",
   "currentBlocker": null,
-  "nextAction": "可进入下一轮：清理 memory_compaction 语义复用、收敛 observability 字段命名，或开始更高阶世界行为验证。",
+  "nextAction": "后续可继续推进 CLI 命令、GUI acknowledgement 弹窗、真实 web bundle 动态加载和更全面的 lint/test 覆盖。",
   "activeArtifacts": {
-    "design": ".limcode/design/prompt-workflow-formalization-design.md",
-    "plan": ".limcode/plans/death-note-reflection-memory-loop-implementation.plan.md",
+    "design": ".limcode/design/pack-local-plugin-unified-management-design.md",
+    "plan": ".limcode/plans/pack-local-plugin-unified-management-implementation.plan.md",
     "review": ".limcode/review/documentation-code-consistency-review.md"
   },
   "todos": [
     {
-      "id": "plan-phase-1",
-      "content": "实现统一 memory writer，并扩展 overlay store 支持 update/archive，接入决策后与执行后的思考记录。",
+      "id": "plugin-phase-1",
+      "content": "补齐插件配置与合同基线：扩展 runtime config/schema、定义 plugin manifest 与持久化模型、明确错误码与审计事件枚举。",
       "status": "completed"
     },
     {
-      "id": "plan-phase-2",
-      "content": "让 scheduler 感知 overlay / memory block 内部记忆变化，并作为统一 follow-up 信号合流。",
+      "id": "plugin-phase-2",
+      "content": "实现 kernel-side 插件管理主线：artifact / installation / activation / acknowledgement 的存储、服务与生命周期状态机。",
       "status": "completed"
     },
     {
-      "id": "plan-phase-3",
-      "content": "为 context_summary / memory_compaction 落地隔 N 轮压缩调度、节流状态与写回策略。",
+      "id": "plugin-phase-3",
+      "content": "打通 pack-local 发现与导入确认：扫描 world pack plugins 目录、校验/编译工件、创建 pending_confirmation 安装项并支持升级重确认。",
       "status": "completed"
     },
     {
-      "id": "plan-phase-4",
-      "content": "为 Death Note world pack 增加记录类 semantic intents，并以模式 B 接到 server-side memory writer。",
+      "id": "plugin-phase-4",
+      "content": "实现启用/禁用流程与 trust lecture：覆盖 CLI / API / GUI 所需 acknowledgement 校验、默认提醒配置与审计记录。",
       "status": "completed"
     },
     {
-      "id": "plan-phase-5",
-      "content": "调整 rule_based Death Note provider，让 notebook side 和 investigator side 都能进入记录/复盘分支。",
+      "id": "plugin-phase-5",
+      "content": "实现 server-side plugin host：受控注册 context/prompt/intent/projection/pack-local route 扩展点，并接入 active-pack 生命周期。",
       "status": "completed"
     },
     {
-      "id": "plan-phase-6",
-      "content": "补齐 trace、overview、scheduler observability 与测试，验证“执行→记录→记忆变化→调度→再决策”闭环。",
+      "id": "plugin-phase-6",
+      "content": "实现 web UI plugin runtime：暴露已启用插件清单与 web contribution manifest，按 pack-local 命名空间动态加载 panel/route 并做错误隔离。",
+      "status": "completed"
+    },
+    {
+      "id": "plugin-phase-7",
+      "content": "补齐 operator/management 界面与只读合同：提供插件列表、详情、确认、启用、禁用、失败状态与 capability 风险展示。",
+      "status": "completed"
+    },
+    {
+      "id": "plugin-phase-8",
+      "content": "完成测试与文档同步：覆盖 unit/integration/web tests，并更新 ARCH/API/WORLD_PACK/progress。",
       "status": "completed"
     }
   ],
@@ -294,141 +402,280 @@
       "completedAt": "2026-04-13T18:15:46+08:00",
       "recordedAt": "2026-04-13T18:16:15.836Z",
       "nextAction": "如需继续深化，可在下一轮把 section_budget 从第一轮分配模型推进到更精细的 section rebalance / fragment packing 策略，或扩展更多 integration 场景验证 task-specific budget 行为。"
+    },
+    {
+      "id": "PG2",
+      "title": "完成 pack-local 插件 Phase 1 基线",
+      "status": "completed",
+      "summary": "已完成插件系统 Phase 1 基线建设：扩展 runtime config/schema 的 plugins.enable_warning 配置；新增 plugin manifest / artifact / installation / activation / acknowledgement 合同；加入 canonical trust lecture 常量；补齐 Prisma 持久化模型与迁移脚本；server typecheck 已通过。",
+      "relatedTodoIds": [
+        "plugin-phase-1"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/pack-local-plugin-unified-management-design.md",
+        "plan": ".limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
+      },
+      "completedAt": "2026-04-16T11:07:11.833Z",
+      "recordedAt": "2026-04-16T11:07:11.833Z",
+      "nextAction": "继续实现 kernel-side 插件管理服务与生命周期状态机。"
+    },
+    {
+      "id": "PG3",
+      "title": "完成 pack-local 插件 Phase 2 管理主线",
+      "status": "completed",
+      "summary": "已完成插件管理服务层基线：新增 plugin store 与 manager service，支持 artifact 注册、pack-local installation upsert、upgrade_pending_confirmation 检测、确认/禁用/归档/错误状态流转、activation session 写入与 enable acknowledgement 记录。",
+      "relatedTodoIds": [
+        "plugin-phase-2"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/pack-local-plugin-unified-management-design.md",
+        "plan": ".limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
+      },
+      "completedAt": "2026-04-16T11:11:10.525Z",
+      "recordedAt": "2026-04-16T11:11:10.525Z",
+      "nextAction": "继续接入 world pack plugins 目录扫描与导入确认主链。"
+    },
+    {
+      "id": "PG4",
+      "title": "完成 pack-local 插件 Phase 3 导入发现",
+      "status": "completed",
+      "summary": "已完成 pack-local 插件发现主线：runtime activation 会扫描 world pack 的 plugins/ 目录，解析 plugin.manifest.yaml / yml，校验 manifest 与 pack compatibility，注册 artifact，并为 pack-local 作用域建立 pending_confirmation 安装项；当工件变化时会推动 installation 进入 upgrade_pending_confirmation。",
+      "relatedTodoIds": [
+        "plugin-phase-3"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/pack-local-plugin-unified-management-design.md",
+        "plan": ".limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
+      },
+      "completedAt": "2026-04-16T11:16:43.632Z",
+      "recordedAt": "2026-04-16T11:16:43.632Z",
+      "nextAction": "继续实现 trust lecture acknowledgement 与显式 enable/disable 主线。"
+    },
+    {
+      "id": "PG5",
+      "title": "完成 pack-local 插件 Phase 4 启用治理",
+      "status": "completed",
+      "summary": "已完成插件启用治理基线：增加 pack plugin 列表、确认、启用、禁用 API；将 runtime config 的 enable_warning 配置接入 AppContext；启用时默认要求 acknowledgement，否则返回 PLUGIN_ENABLE_ACK_REQUIRED；为后续 CLI / GUI 接线提供统一服务入口。",
+      "relatedTodoIds": [
+        "plugin-phase-4"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/pack-local-plugin-unified-management-design.md",
+        "plan": ".limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
+      },
+      "completedAt": "2026-04-16T11:22:44.966Z",
+      "recordedAt": "2026-04-16T11:22:44.966Z",
+      "nextAction": "继续实现 server plugin host API 与 active-pack 生命周期集成。"
+    },
+    {
+      "id": "PG6",
+      "title": "完成 pack-local 插件 Phase 5 server host",
+      "status": "completed",
+      "summary": "已完成 server-side plugin host 基线：建立 pack-local runtime registry；允许受控注册 context source、prompt workflow step 与 pack-local API route；启用/禁用插件后刷新 active-pack runtime；宿主 create_app、context service 与 prompt workflow runtime 已开始消费这些扩展点。",
+      "relatedTodoIds": [
+        "plugin-phase-5"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/pack-local-plugin-unified-management-design.md",
+        "plan": ".limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
+      },
+      "completedAt": "2026-04-16T14:37:13.518Z",
+      "recordedAt": "2026-04-16T14:37:13.518Z",
+      "nextAction": "继续实现 web plugin runtime 与前端动态装载主线。"
+    },
+    {
+      "id": "PG7",
+      "title": "完成 pack-local 插件 Phase 6 web runtime",
+      "status": "completed",
+      "summary": "已完成 web plugin runtime 基线：后端提供 active-pack web plugin runtime manifest API；前端新增 plugin runtime store 与 bootstrap；overview、entity、timeline 已能显示 pack-local plugin panel host，为后续动态 bundle / route 装载留出稳定读面。",
+      "relatedTodoIds": [
+        "plugin-phase-6"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/pack-local-plugin-unified-management-design.md",
+        "plan": ".limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
+      },
+      "completedAt": "2026-04-17T03:48:32.536Z",
+      "recordedAt": "2026-04-17T03:48:32.536Z",
+      "nextAction": "继续实现 operator 插件管理页面与风险展示。"
+    },
+    {
+      "id": "PG8",
+      "title": "完成 pack-local 插件 Phase 7 管理界面",
+      "status": "completed",
+      "summary": "已完成 operator / management 界面基线：新增 /plugins 页面，提供 pack-local 插件列表、详情、生命周期状态、risk 分级与 capability 读面；同时把 shell workspace 与导航扩展到 Plugin Management，使插件治理成为正式 operator 工作区的一部分。",
+      "relatedTodoIds": [
+        "plugin-phase-7"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/pack-local-plugin-unified-management-design.md",
+        "plan": ".limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
+      },
+      "completedAt": "2026-04-17T04:09:13.428Z",
+      "recordedAt": "2026-04-17T04:09:13.428Z",
+      "nextAction": "继续补齐 lint / tests 与文档同步，完成 Phase 8。"
+    },
+    {
+      "id": "PG9",
+      "title": "完成 pack-local 插件系统实施收口",
+      "status": "completed",
+      "summary": "pack-local 插件系统已完成一轮实现收口：具备统一 plugin artifact / installation / activation / acknowledgement 管理模型，支持 world pack 自带插件发现、导入确认、trust lecture 保护下的启用、server-side host runtime、web runtime manifest 读面，以及 operator /plugins 管理界面。最终已补充关键单测并同步 API / ARCH / WORLD_PACK 文档。",
+      "relatedTodoIds": [
+        "plugin-phase-8"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/pack-local-plugin-unified-management-design.md",
+        "plan": ".limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
+      },
+      "completedAt": "2026-04-17T04:13:53.474Z",
+      "recordedAt": "2026-04-17T04:13:53.474Z",
+      "nextAction": "后续可继续推进 CLI 命令、GUI acknowledgement 弹窗、真实 web bundle 动态加载和更全面的 lint/test 覆盖。"
     }
   ],
   "risks": [],
   "log": [
     {
-      "at": "2026-04-13T17:58:33.562Z",
+      "at": "2026-04-16T11:07:11.532Z",
       "type": "updated",
-      "message": "已完成 Plan B persisted trace 回归补强：workflow replay / smoke endpoints 现校验 section_policies、sections_by_type、section_scores 以及 token_budget_trimming.section_budget 的持久化读面。"
+      "refId": "plugin-phase-1",
+      "message": "完成 Phase 1：扩展 runtime config 插件提醒配置，新增 packages/contracts/src/plugins.ts 与 apps/server/src/plugins/contracts.ts，补齐 PluginArtifact/Installation/ActivationSession/EnableAcknowledgement Prisma 基线与迁移脚本，并通过 yidhras-server typecheck。"
     },
     {
-      "at": "2026-04-13T17:58:33.562Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/prompt-workflow-深化计划-b任务特定策略与-section-级预算.plan.md"
-    },
-    {
-      "at": "2026-04-13T18:15:07.950Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/prompt-workflow-深化计划-b任务特定策略与-section-级预算.plan.md"
-    },
-    {
-      "at": "2026-04-13T18:15:46.916Z",
-      "type": "updated",
-      "message": "已完成 Prompt Workflow 深化计划 B：task-specific ranking、section-level budget、persisted trace 回归与文档边界均已同步收口。"
-    },
-    {
-      "at": "2026-04-13T18:15:46.916Z",
+      "at": "2026-04-16T11:07:11.833Z",
       "type": "milestone_recorded",
-      "refId": "pwdb-phase-e",
-      "message": "记录里程碑：完成 Prompt Workflow 深化计划 B"
+      "refId": "PG2",
+      "message": "记录里程碑：完成 pack-local 插件 Phase 1 基线"
     },
     {
-      "at": "2026-04-13T18:16:15.836Z",
+      "at": "2026-04-16T11:11:10.508Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-16T11:11:10.525Z",
       "type": "milestone_recorded",
-      "refId": "pwdb-phase-e",
-      "message": "记录里程碑：完成 Prompt Workflow 深化计划 B"
+      "refId": "PG3",
+      "message": "记录里程碑：完成 pack-local 插件 Phase 2 管理主线"
     },
     {
-      "at": "2026-04-14T01:50:19.322Z",
-      "type": "updated",
-      "message": "完成 Death Note world-pack 语义闭环：补齐误导调查、联合观察、公开案情更新、执行后压力反馈与角色分化 rule_based 决策。"
-    },
-    {
-      "at": "2026-04-14T02:36:15.900Z",
+      "at": "2026-04-16T11:16:43.519Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
     },
     {
-      "at": "2026-04-14T03:00:38.845Z",
+      "at": "2026-04-16T11:16:43.542Z",
       "type": "updated",
-      "refId": "plan-phase-1",
-      "message": "完成第一轮 memory writer 接线：overlay store 支持 get/update/archive，决策后写入 decision reflection，执行后写入 execution postmortem overlay 与 reflection memory block，并将 mutation 纳入 trace metadata/context snapshot。"
+      "refId": "plugin-phase-3",
+      "message": "完成 Phase 3：新增 apps/server/src/plugins/discovery.ts，并在 runtime activation 中接入 world pack plugins 目录扫描、YAML manifest 解析、pack 兼容性校验、artifact 注册与 pack-local installation 建立；同 checksum 工件复用已有 artifact，工件变化触发 upgrade_pending_confirmation；server typecheck 已通过。"
     },
     {
-      "at": "2026-04-14T03:00:38.852Z",
+      "at": "2026-04-16T11:16:43.632Z",
+      "type": "milestone_recorded",
+      "refId": "PG4",
+      "message": "记录里程碑：完成 pack-local 插件 Phase 3 导入发现"
+    },
+    {
+      "at": "2026-04-16T11:22:44.921Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
     },
     {
-      "at": "2026-04-14T03:06:30.678Z",
+      "at": "2026-04-16T11:22:44.957Z",
+      "type": "updated",
+      "refId": "plugin-phase-4",
+      "message": "完成 Phase 4：新增 app/services/plugins.ts 与 app/routes/plugins.ts，提供 pack plugin 列表、导入确认、启用、禁用 API；启用路径接入 context.getPluginEnableWarningConfig() 与 PLUGIN_ENABLE_ACK_REQUIRED 校验；server typecheck 已通过。"
+    },
+    {
+      "at": "2026-04-16T11:22:44.966Z",
+      "type": "milestone_recorded",
+      "refId": "PG5",
+      "message": "记录里程碑：完成 pack-local 插件 Phase 4 启用治理"
+    },
+    {
+      "at": "2026-04-16T14:37:13.225Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
     },
     {
-      "at": "2026-04-14T03:06:30.829Z",
-      "type": "updated",
-      "refId": "plan-phase-2",
-      "message": "新增 listRecentOverlayFollowupSignals / listRecentMemoryBlockFollowupSignals，并把 overlay_change_followup / memory_change_followup 合流进 agent scheduler 的 event-driven candidate 路径与 observability reason 枚举。"
+      "at": "2026-04-16T14:37:13.518Z",
+      "type": "milestone_recorded",
+      "refId": "PG6",
+      "message": "记录里程碑：完成 pack-local 插件 Phase 5 server host"
     },
     {
-      "at": "2026-04-14T03:38:01.735Z",
+      "at": "2026-04-17T03:48:32.490Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
     },
     {
-      "at": "2026-04-14T03:38:01.910Z",
-      "type": "updated",
-      "refId": "plan-phase-3",
-      "message": "新增 MemoryCompactionState 与 compaction_service，默认 summary/compaction 阈值均为 5 轮，并允许通过 world pack ai.memory_loop 覆盖；在 action dispatcher 后接入后台压缩执行与写回。"
+      "at": "2026-04-17T03:48:32.536Z",
+      "type": "milestone_recorded",
+      "refId": "PG7",
+      "message": "记录里程碑：完成 pack-local 插件 Phase 6 web runtime"
     },
     {
-      "at": "2026-04-14T03:44:36.352Z",
+      "at": "2026-04-17T04:09:12.321Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
     },
     {
-      "at": "2026-04-14T03:44:36.443Z",
+      "at": "2026-04-17T04:09:12.753Z",
       "type": "updated",
-      "refId": "plan-phase-4",
-      "message": "death_note.yaml 已增加记录类语义与 invocation rules：record_private_reflection、update_target_dossier、revise_judgement_plan、record_execution_postmortem；action dispatcher runner 也已把这些 narrativized 语义接到 server-side memory writer。"
+      "refId": "plugin-phase-7",
+      "message": "完成 Phase 7：新增 apps/web/pages/plugins.vue 与 usePluginManagementPage，提供插件列表、详情、风险级别与 acknowledgement 提示；同时扩展 shell workspace/navigation 支持 Plugin Management 页面，web typecheck 已通过。"
     },
     {
-      "at": "2026-04-14T04:00:13.595Z",
+      "at": "2026-04-17T04:09:13.428Z",
+      "type": "milestone_recorded",
+      "refId": "PG8",
+      "message": "记录里程碑：完成 pack-local 插件 Phase 7 管理界面"
+    },
+    {
+      "at": "2026-04-17T04:13:53.423Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
     },
     {
-      "at": "2026-04-14T04:00:13.745Z",
+      "at": "2026-04-17T04:13:53.450Z",
       "type": "updated",
-      "refId": "plan-phase-5",
-      "message": "rule_based Death Note provider 已增加 reflection 分支与 dossier/plan 更新分支；并补充单元测试验证 notebook side postmortem、investigator dossier 更新等行为。"
+      "refId": "plugin-phase-8",
+      "message": "完成 Phase 8：新增 server plugin_service 单测与 web plugin.runtime.store 单测，验证服务与前端运行态读面；已通过 yidhras-server / web typecheck，并同步 docs/API.md、docs/ARCH.md、docs/WORLD_PACK.md 说明。"
     },
     {
-      "at": "2026-04-14T04:39:52.589Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/death-note-reflection-memory-loop-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-14T04:39:52.745Z",
-      "type": "updated",
-      "refId": "plan-phase-6",
-      "message": "已增强 inference workflow snapshot / agent overview 对 memory mutations 的读面，并新增 tests/integration/death-note-memory-loop.spec.ts；同时补上 MemoryCompactionState 的 Prisma migration，闭环测试已通过。"
+      "at": "2026-04-17T04:13:53.474Z",
+      "type": "milestone_recorded",
+      "refId": "PG9",
+      "message": "记录里程碑：完成 pack-local 插件系统实施收口"
     }
   ],
   "stats": {
-    "milestonesTotal": 5,
-    "milestonesCompleted": 5,
-    "todosTotal": 6,
-    "todosCompleted": 6,
+    "milestonesTotal": 13,
+    "milestonesCompleted": 13,
+    "todosTotal": 8,
+    "todosCompleted": 8,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-14T04:39:52.745Z",
-    "bodyHash": "sha256:95efb42d916e469e201710e238487200ffd25587f053821dffefc93143f73e14"
+    "generatedAt": "2026-04-17T04:13:53.474Z",
+    "bodyHash": "sha256:2d9c91ba90aade8a6d0ea3bbbf30327c764eaedba1c28a31223446d4afc509ca"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

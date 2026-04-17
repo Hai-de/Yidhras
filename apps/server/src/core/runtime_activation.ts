@@ -1,3 +1,5 @@
+import path from 'path';
+
 import type { PrismaClient } from '@prisma/client';
 
 import { ChronosEngine } from '../clock/engine.js';
@@ -5,6 +7,7 @@ import type { CalendarConfig } from '../clock/types.js';
 import { installPackRuntime } from '../kernel/install/install_pack.js';
 import type { PackManifestLoader, WorldPack } from '../packs/manifest/loader.js';
 import { materializePackRuntimeCoreModels } from '../packs/runtime/materializer.js';
+import { discoverPackLocalPlugins, type PluginDiscoveryResult } from '../plugins/discovery.js';
 import { notifications } from '../utils/notifications.js';
 import type { RuntimeSpeedPolicy } from './runtime_speed.js';
 import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
@@ -14,11 +17,13 @@ export interface ActivateWorldPackRuntimeOptions {
   loader: Pick<PackManifestLoader, 'loadPack'>;
   prisma: PrismaClient;
   runtimeSpeed: RuntimeSpeedPolicy;
+  packsDir: string;
 }
 
 export interface ActivatedWorldPackRuntime {
   pack: WorldPack;
   clock: ChronosEngine;
+  discoveredPlugins: PluginDiscoveryResult;
 }
 
 const configureRuntimeSpeedFromPack = (runtimeSpeed: RuntimeSpeedPolicy, pack: WorldPack): void => {
@@ -77,7 +82,8 @@ export const activateWorldPackRuntime = async ({
   packFolderName,
   loader,
   prisma,
-  runtimeSpeed
+  runtimeSpeed,
+  packsDir
 }: ActivateWorldPackRuntimeOptions): Promise<ActivatedWorldPackRuntime> => {
   const pack = loader.loadPack(packFolderName);
   const runtimeConfig = getWorldPackRuntimeConfig(pack);
@@ -94,10 +100,17 @@ export const activateWorldPackRuntime = async ({
     prisma
   });
 
+  const discoveredPlugins = await discoverPackLocalPlugins({
+    prismaContext: { prisma },
+    pack,
+    packRootDir: path.join(packsDir, packFolderName)
+  });
+
   validateActivatedTickBounds(pack, clock);
 
   return {
     pack,
-    clock
+    clock,
+    discoveredPlugins
   };
 };

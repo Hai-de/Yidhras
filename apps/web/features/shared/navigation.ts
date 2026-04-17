@@ -1,6 +1,6 @@
 import { useRouter } from 'vue-router'
 
-export type OperatorSourcePage = 'social' | 'timeline' | 'graph' | 'overview' | 'workflow' | 'agent' | 'scheduler'
+export type OperatorSourcePage = 'social' | 'timeline' | 'graph' | 'overview' | 'workflow' | 'agent' | 'scheduler' | 'plugins'
 
 export interface OperatorNavigationSourceContext {
   sourcePage: OperatorSourcePage

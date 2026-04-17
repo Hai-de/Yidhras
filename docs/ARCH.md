@@ -19,6 +19,11 @@
   - authority grants
   - mediator bindings
   - rule execution records
+- **kernel-side plugin governance records**
+  - `PluginArtifact`
+  - `PluginInstallation`
+  - `PluginActivationSession`
+  - `PluginEnableAcknowledgement`
 
 ## Inference / Workflow 主线
 
@@ -104,6 +109,22 @@
   - `overlay_nodes_mutated`
   - `memory_blocks`
   - reserved directive arrays
+
+### Pack-local plugin runtime
+
+- pack-local plugin discovery / storage / lifecycle 位于：
+  - `apps/server/src/plugins/discovery.ts`
+  - `apps/server/src/plugins/store.ts`
+  - `apps/server/src/plugins/service.ts`
+  - `apps/server/src/plugins/runtime.ts`
+- 插件治理记录持久化在 kernel Prisma，而不是 pack runtime sqlite
+- 当前只支持 `pack_local` scope；`global` 仅保留领域模型预留位
+- 显式 enable 受 `plugins.enable_warning.*` 配置与 acknowledgement 约束
+- server-side 当前已接入的受控扩展点包括：
+  - context source adapters
+  - prompt workflow step executors
+  - pack-local API routes
+- web-side 当前已具备 runtime manifest 读面与 panel host，但尚未完成通用 bundle sandbox / dynamic route loader
 
 ### Prompt Workflow Runtime
 

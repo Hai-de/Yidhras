@@ -218,6 +218,7 @@ const activityItems = [
   { id: 'workflow', label: 'Workflow Inspector', shortLabel: 'WF' },
   { id: 'timeline', label: 'Narrative Timeline', shortLabel: 'TL' },
   { id: 'graph', label: 'Graph View', shortLabel: 'GR' },
+  { id: 'plugins', label: 'Plugin Management', shortLabel: 'PL' },
   { id: 'agents', label: 'Agent Detail', shortLabel: 'AG' }
 ] as const satisfies ReadonlyArray<{
   id: OperatorWorkspaceId
@@ -241,6 +242,7 @@ const resolveWorkspaceIdFromPath = (path: string): OperatorWorkspaceId => {
   if (path.startsWith('/workflow')) return 'workflow'
   if (path.startsWith('/timeline')) return 'timeline'
   if (path.startsWith('/graph')) return 'graph'
+  if (path.startsWith('/plugins')) return 'plugins'
   if (path.startsWith('/agents')) return 'agents'
   return 'overview'
 }
@@ -423,6 +425,11 @@ const handleWorkspaceSelect = async (workspaceId: string) => {
 
   if (workspaceId === 'agents') {
     await router.push('/agents')
+    return
+  }
+
+  if (workspaceId === 'plugins') {
+    await router.push('/plugins')
     return
   }
 

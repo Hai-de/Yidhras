@@ -125,6 +125,12 @@
         empty-message="No dropped intents found in latest audit window."
       />
     </div>
+
+    <PluginPanelHost
+      target="operator.pack_overview"
+      title="Plugin Panels"
+      subtitle="Pack-local web plugin contributions registered for the overview workspace."
+    />
   </div>
 </template>
 
@@ -147,6 +153,7 @@ import OverviewListCard from '../features/overview/components/OverviewListCard.v
 import OverviewMetricCard from '../features/overview/components/OverviewMetricCard.vue'
 import SchedulerSummaryCard from '../features/overview/components/SchedulerSummaryCard.vue'
 import SchedulerTrendsCard from '../features/overview/components/SchedulerTrendsCard.vue'
+import PluginPanelHost from '../features/plugins/components/PluginPanelHost.vue'
 import { useOverviewPage } from '../features/overview/composables/useOverviewPage'
 import MetricPill from '../features/shared/components/MetricPill.vue'
 import WorkspaceEmptyState from '../features/shared/components/WorkspaceEmptyState.vue'

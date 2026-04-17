@@ -462,6 +462,84 @@ model MemoryCompactionState {
   @@index([pack_id, updated_at_tick])
 }
 
+model PluginArtifact {
+  artifact_id       String @id
+  plugin_id         String
+  version           String
+  manifest_version  String
+  source_type       String
+  source_pack_id    String?
+  source_path       String
+  checksum          String @unique
+  manifest_json     Json
+  imported_at       BigInt
+
+  installations     PluginInstallation[]
+
+  @@index([plugin_id, version])
+  @@index([source_pack_id, plugin_id])
+}
+
+model PluginInstallation {
+  installation_id        String @id
+  plugin_id              String
+  artifact_id            String
+  version                String
+  scope_type             String
+  scope_ref              String?
+  lifecycle_state        String
+  requested_capabilities String
+  granted_capabilities   String
+  trust_mode             String
+  failure_policy         String @default("fail_open")
+  confirmed_at           BigInt?
+  enabled_at             BigInt?
+  disabled_at            BigInt?
+  last_error             String?
+
+  artifact               PluginArtifact                @relation(fields: [artifact_id], references: [artifact_id])
+  activation_sessions    PluginActivationSession[]
+  acknowledgements       PluginEnableAcknowledgement[]
+
+  @@unique([plugin_id, scope_type, scope_ref])
+  @@index([scope_type, scope_ref, lifecycle_state])
+}
+
+model PluginActivationSession {
+  activation_id       String @id
+  installation_id     String
+  pack_id             String
+  channel             String
+  result              String
+  started_at          BigInt
+  finished_at         BigInt?
+  loaded_server       Boolean @default(false)
+  loaded_web_manifest Boolean @default(false)
+  error_message       String?
+
+  installation        PluginInstallation @relation(fields: [installation_id], references: [installation_id])
+
+  @@index([installation_id, started_at])
+  @@index([pack_id, started_at])
+}
+
+model PluginEnableAcknowledgement {
+  acknowledgement_id  String @id
+  installation_id     String
+  pack_id             String
+  channel             String
+  reminder_text_hash  String
+  acknowledged        Boolean
+  actor_id            String?
+  actor_label         String?
+  created_at          BigInt
+
+  installation        PluginInstallation @relation(fields: [installation_id], references: [installation_id])
+
+  @@index([installation_id, created_at])
+  @@index([pack_id, created_at])
+}
+
 model ScenarioEntityState {
   id         String @id
   pack_id    String

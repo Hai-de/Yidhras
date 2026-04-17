@@ -6,6 +6,7 @@ import type { PromptFragment } from '../../inference/prompt_fragments.js';
 import type { PromptProcessor } from '../../inference/prompt_processors.js';
 import type { InferenceContext, PromptProcessingTrace } from '../../inference/types.js';
 import type { ContextPromptAssemblySummary } from '../types.js';
+import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import { resolvePromptFragmentPlacement, sortPromptFragmentsBase } from './placement_resolution.js';
 import { selectPromptWorkflowProfile } from './profiles.js';
 import { createPromptWorkflowStepRegistry, type PromptWorkflowStepExecutor } from './registry.js';
@@ -266,7 +267,10 @@ const buildNoopExecutor = (
   };
 };
 
-const buildExecutorRegistry = (legacySteps: ContextOrchestratorStep[]) => {
+const buildExecutorRegistry = (
+  legacySteps: ContextOrchestratorStep[],
+  pluginExecutors: PromptWorkflowStepExecutor[] = []
+) => {
   const processorByStage = new Map(legacySteps.map(step => [step.stage, step.processor]));
 
   const memoryInjector = processorByStage.get('memory_injection') ?? createMemoryInjectorPromptProcessor();
@@ -336,7 +340,7 @@ const buildExecutorRegistry = (legacySteps: ContextOrchestratorStep[]) => {
     }),
     buildNoopExecutor('bundle_finalize'),
     buildNoopExecutor('ai_message_projection')
-  ]);
+  ].concat(pluginExecutors));
 };
 
 const toLegacyStageNote = (kind: PromptWorkflowStepKind): Record<string, unknown> => {
@@ -500,7 +504,8 @@ export const runPromptWorkflow = async (
     }
   });
 
-  const registry = buildExecutorRegistry(legacySteps);
+  const pluginExecutors = pluginRuntimeRegistry.getPromptWorkflowStepExecutors(context.world_pack.id);
+  const registry = buildExecutorRegistry(legacySteps, pluginExecutors);
   const initialFragments = state.fragments;
   const fragmentStepTraces: NonNullable<PromptProcessingTrace['steps']> = [];
   const processorNames: string[] = [];

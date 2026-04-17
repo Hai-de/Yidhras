@@ -14,6 +14,8 @@ import { registerIdentityRoutes } from './app/routes/identity.js';
 import { registerInferenceRoutes } from './app/routes/inference.js';
 import { registerNarrativeRoutes } from './app/routes/narrative.js';
 import { registerOverviewRoutes } from './app/routes/overview.js';
+import { registerPluginRoutes } from './app/routes/plugins.js';
+import { registerPluginRuntimeWebRoutes } from './app/routes/plugin_runtime_web.js';
 import { registerRelationalRoutes } from './app/routes/relational.js';
 import { registerSchedulerRoutes } from './app/routes/scheduler.js';
 import { registerSocialRoutes } from './app/routes/social.js';
@@ -28,6 +30,7 @@ import {
 } from './app/runtime/startup.js';
 import { ensureSchedulerBootstrapOwnership, resetDevelopmentRuntimeState } from './app/services/system.js';
 import {
+  getRuntimeConfig,
   getAppPort,
   getPreferredWorldPack,
   getStartupPolicy,
@@ -104,6 +107,10 @@ const appContext: AppContext = {
     runtimeLoopDiagnostics = next;
   },
   getSqliteRuntimePragmas: () => sim.getSqliteRuntimePragmaSnapshot(),
+  getPluginEnableWarningConfig: () => ({
+    enabled: getRuntimeConfig().plugins.enable_warning.enabled,
+    require_acknowledgement: getRuntimeConfig().plugins.enable_warning.require_acknowledgement
+  }),
   assertRuntimeReady
 };
 
@@ -148,6 +155,12 @@ const registerRoutes: RouteRegistrar = (application, context) => {
     parseOptionalTick
   });
   registerAccessPolicyRoutes(application, context, {
+    asyncHandler
+  });
+  registerPluginRoutes(application, context, {
+    asyncHandler
+  });
+  registerPluginRuntimeWebRoutes(application, context, {
     asyncHandler
   });
   registerSchedulerRoutes(application, context, {

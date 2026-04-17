@@ -23,6 +23,21 @@
   - 说明：清空当前系统通知队列
   - 返回：`{ success: true, data: { acknowledged: true } }`
 
+## 1.1 Pack-local 插件治理接口
+
+- **GET `/api/packs/:packId/plugins`**
+  - 说明：列出当前 active pack 的 pack-local plugin installations
+  - 返回：`{ success: true, data: { pack_id, items: PluginSummary[] } }`
+- **POST `/api/packs/:packId/plugins/:installationId/confirm`**
+  - 说明：确认导入一个插件 installation，并可提交 granted capabilities
+- **POST `/api/packs/:packId/plugins/:installationId/enable`**
+  - 说明：显式启用一个插件；当 `plugins.enable_warning.require_acknowledgement=true` 时，body 必须提供 `acknowledgement`
+  - 失败代码：`PLUGIN_ENABLE_ACK_REQUIRED`、`PLUGIN_ENABLE_INVALID_STATE`
+- **POST `/api/packs/:packId/plugins/:installationId/disable`**
+  - 说明：显式禁用一个插件 installation
+- **GET `/api/packs/:packId/plugins/runtime/web`**
+  - 说明：读取当前 active pack 的已启用 web plugin runtime manifest，用于前端动态面板/路由宿主
+
 ## 2. 虚拟时间轴 (Chronos Layer)
 
 - **GET `/api/clock`**

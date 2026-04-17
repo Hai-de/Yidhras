@@ -14,6 +14,7 @@ import { buildLegacyMemoryContextPack } from './compat.js';
 import { createContextOverlayStore } from './overlay/store.js';
 import type { ContextOverlayStore } from './overlay/types.js';
 import { applyPolicyDecisionsToSelection, evaluateContextPolicies } from './policy_engine.js';
+import { pluginRuntimeRegistry } from '../plugins/runtime.js';
 import { buildContextNodesFromSources, createDefaultContextSourceAdapters } from './source_registry.js';
 import type { ContextMemoryBlockDiagnostics, ContextOverlayLoadedNode, ContextRun, ContextSelectionResult } from './types.js';
 
@@ -73,7 +74,11 @@ export const createContextService = ({
         resolved_agent_id: input.resolved_agent_id
       });
 
-      const adapters = createDefaultContextSourceAdapters({ context, overlayStore, longMemoryBlockStore });
+      const pluginAdapters = input.pack_id ? pluginRuntimeRegistry.getContextSourceAdapters(input.pack_id) : [];
+      const adapters = [
+        ...createDefaultContextSourceAdapters({ context, overlayStore, longMemoryBlockStore }),
+        ...pluginAdapters
+      ];
       const built = await buildContextNodesFromSources(adapters, {
         tick: input.tick,
         actor_ref: input.actor_ref,

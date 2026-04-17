@@ -52,6 +52,10 @@ export interface AppContext {
   getRuntimeLoopDiagnostics?(): RuntimeLoopDiagnostics;
   setRuntimeLoopDiagnostics?(next: RuntimeLoopDiagnostics): void;
   getSqliteRuntimePragmas?(): SqliteRuntimePragmaSnapshot | null;
+  getPluginEnableWarningConfig?(): {
+    enabled: boolean;
+    require_acknowledgement: boolean;
+  };
   assertRuntimeReady(feature: string): void;
 }
 

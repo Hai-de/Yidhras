@@ -35,6 +35,7 @@ const workspaceTitleMap = {
   workflow: 'Workflow Inspector',
   timeline: 'Narrative Timeline',
   graph: 'Graph View',
+  plugins: 'Plugin Management',
   agents: 'Agent Detail'
 } as const
 

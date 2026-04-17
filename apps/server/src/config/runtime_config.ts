@@ -48,6 +48,12 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
     plugins_dir: 'data/plugins',
     ai_models_config: 'apps/server/config/ai_models.yaml'
   },
+  plugins: {
+    enable_warning: {
+      enabled: true,
+      require_acknowledgement: true
+    }
+  },
   world: {
     preferred_pack: 'death_note',
     bootstrap: {
@@ -140,6 +146,11 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     process.env.STARTUP_FAIL_ON_MISSING_WORLD_PACK_DIR
   );
   const failOnNoWorldPack = parseBooleanEnv('STARTUP_FAIL_ON_NO_WORLD_PACK', process.env.STARTUP_FAIL_ON_NO_WORLD_PACK);
+  const pluginEnableWarningEnabled = parseBooleanEnv('PLUGIN_ENABLE_WARNING_ENABLED', process.env.PLUGIN_ENABLE_WARNING_ENABLED);
+  const pluginEnableWarningRequireAcknowledgement = parseBooleanEnv(
+    'PLUGIN_ENABLE_WARNING_REQUIRE_ACKNOWLEDGEMENT',
+    process.env.PLUGIN_ENABLE_WARNING_REQUIRE_ACKNOWLEDGEMENT
+  );
 
   const overrides: Record<string, unknown> = {
     app: {
@@ -155,6 +166,17 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     overrides.paths = {
       ...(worldPacksDir !== undefined ? { world_packs_dir: worldPacksDir } : {}),
       ...(aiModelsConfigPath !== undefined ? { ai_models_config: aiModelsConfigPath } : {})
+    };
+  }
+
+  if (pluginEnableWarningEnabled !== undefined || pluginEnableWarningRequireAcknowledgement !== undefined) {
+    overrides.plugins = {
+      enable_warning: {
+        ...(pluginEnableWarningEnabled !== undefined ? { enabled: pluginEnableWarningEnabled } : {}),
+        ...(pluginEnableWarningRequireAcknowledgement !== undefined
+          ? { require_acknowledgement: pluginEnableWarningRequireAcknowledgement }
+          : {})
+      }
     };
   }
 
@@ -301,7 +323,9 @@ export const buildRuntimeConfigSnapshot = (): Record<string, string | boolean | 
     preferred_world_pack: config.world.preferred_pack,
     world_packs_dir: getWorldPacksDir(),
     ai_models_config: getAiModelsConfigPath(),
+    plugin_enable_warning_enabled: String(config.plugins.enable_warning.enabled),
     bootstrap_enabled: String(bootstrap.enabled),
+    plugin_enable_warning_require_acknowledgement: String(config.plugins.enable_warning.require_acknowledgement),
     bootstrap_target_pack_dir: bootstrap.targetPackDirName,
     bootstrap_template_file: bootstrap.templateFilePath,
     startup_allow_degraded_mode: String(config.startup.allow_degraded_mode)

@@ -133,6 +133,7 @@ metadata:
 │  ├─ setting.md
 │  ├─ rules.md
 │  └─ release-notes.md
+├─ plugins/                 # 可选，pack-local 插件工件目录
 └─ examples/                # 可选
    └─ overrides.example.yaml
 ```
@@ -151,6 +152,8 @@ metadata:
   - 存放非代码、非配置的展示素材
 - `docs/`
   - 存放超出 README 范围的详细说明文档
+- `plugins/`
+  - 存放 pack-local 插件工件；不会因随 pack 分发而自动启用
 - `examples/`
   - 存放覆盖配置（override）示例、调用示例或配置片段
 
@@ -226,6 +229,15 @@ README.md 应明确区分：
 
 ## 使用方式
 说明将 pack 放入 `data/world_packs/<pack>` 并启动的方法。
+
+## 插件
+- 若 pack 携带 `plugins/` 目录，运行时会扫描 `plugin.manifest.yaml` / `plugin.manifest.yml`
+- 扫描到的插件会进入统一插件管理器，默认创建为 `pending_confirmation`
+- 导入确认 != 启用；显式 enable 前仍需 acknowledgement（除非部署者关闭 `plugins.enable_warning`）
+- 当前只支持 `pack-local` 插件，不开放 global 安装面
+- 推荐插件目录结构：
+  - `plugins/<plugin-dir>/plugin.manifest.yaml`
+  - `plugins/<plugin-dir>/src/` 或 `plugins/<plugin-dir>/dist/`
 
 ## 设计边界
 说明哪些行为由 pack 声明控制，哪些仍由平台或 kernel 控制。

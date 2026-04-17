@@ -14,6 +14,7 @@ import {
 import AgentSchedulerCard from '../../features/agents/components/AgentSchedulerCard.vue'
 import AgentSummaryCard from '../../features/agents/components/AgentSummaryCard.vue'
 import { useAgentPage } from '../../features/agents/composables/useAgentPage'
+import PluginPanelHost from '../../features/plugins/components/PluginPanelHost.vue'
 import SourceContextBanner from '../../features/shared/components/SourceContextBanner.vue'
 import WorkspacePageHeader from '../../features/shared/components/WorkspacePageHeader.vue'
 
@@ -155,5 +156,11 @@ const agentFreshness = computed(() => {
         </div>
       </AppPanel>
     </div>
+
+    <PluginPanelHost
+      target="operator.entity_overview"
+      title="Plugin Entity Panels"
+      subtitle="Pack-local web plugin contributions registered for the entity overview workspace."
+    />
   </div>
 </template>
