@@ -1,17 +1,17 @@
 # Yidhras (伊德海拉)
 
-Yidhras 是以 world pack 驱动的叙事模拟项目，被设计用于模拟社会情报流转，散播，代理人链路。
+Yidhras 是以 world pack 驱动的叙事模拟项目，被设计用于模拟社会情报流转、散播与代理人链路。
 
-> 本文件只保留仓库概览、启动方式、常用命令与文档导航。更细的接口、架构和业务规则见 `docs/`。
+> 本文件只保留仓库入口所需的最小信息：项目概览、启动方式、高频命令与文档导航。更具体的命令矩阵、接口契约、架构边界和专题说明请进入 `docs/`。
 
 ## 仓库结构
 
 - `apps/server`：TypeScript + Express + Prisma + SQLite 后端
 - `apps/web`：Nuxt 4 + Vue 3 + Pinia 前端
-- `packages/contracts`：前后端共享 transport / contract 定义
-- `docs/`：接口、架构、逻辑与主题文档
-- `TODO.md`：当前优先级与里程碑
-- `记录.md`：验证记录与历史快照
+- `packages/contracts`：前后端共享 contracts / transport schema
+- `docs/`：稳定参考文档、操作手册与导航
+- `.limcode/`：设计、计划、评审等过程资产
+- `TODO.md`：当前 backlog 与优先级
 
 ## 环境要求
 
@@ -29,10 +29,11 @@ pnpm install
 ### 2. 准备运行时
 
 ```bash
-pnpm --filter yidhras-server prepare:runtime
+pnpm prepare:runtime
 ```
 
-该命令会完成数据库迁移、运行时初始化和 identity seed。
+说明：
+- 该命令会完成数据库迁移、运行时初始化和 identity seed。
 
 ### 3. 启动开发环境
 
@@ -52,8 +53,8 @@ start-dev.bat
 也可以分别启动：
 
 ```bash
-pnpm --filter yidhras-server dev
-pnpm --filter web dev
+pnpm dev:server
+pnpm dev:web
 ```
 
 ### 4. 默认地址
@@ -67,64 +68,59 @@ pnpm --filter web dev
 pnpm --filter yidhras-server reset:dev-db
 ```
 
-## 常用命令
+## 高频命令
 
 - 工作区构建：`pnpm build`
 - 工作区 lint：`pnpm lint`
-- 工作区 typecheck：`pnpm typecheck`
+- 工作区类型检查：`pnpm typecheck`
 - 工作区测试：`pnpm test`
 - 工作区单测：`pnpm test:unit`
-- 后端集成测试：`pnpm --filter yidhras-server test:integration`
-- 后端 E2E：`pnpm --filter yidhras-server test:e2e`
-- 后端冒烟：`pnpm --filter yidhras-server smoke`
-- 前端单测：`pnpm --filter web test:unit`
-- 新建世界包骨架：`pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"`
-- 新建并设置为默认包：`pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name" --set-preferred`
-- 插件治理 CLI：`pnpm --filter yidhras-server plugin -- <list|confirm|enable|disable> [--pack <packId>] [--installation <id>] [--grant a,b] [--acknowledge-plugin-risk] [--non-interactive]`
+- 运行时准备：`pnpm prepare:runtime`
+- 新建 world pack：`pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"`
+- Server 冒烟：`pnpm smoke:server`
 
-### Plugin CLI 示例
+更多命令、单测入口、Server/Web 分项命令与插件 CLI 入口，见：
 
-- 查看当前 pack 插件：`pnpm --filter yidhras-server plugin -- list --pack my_pack`
-- 查看单个插件详情：`pnpm --filter yidhras-server plugin -- show --plugin plugin.alpha --pack my_pack`
-- 确认并授予 manifest 请求能力：`pnpm --filter yidhras-server plugin -- confirm --plugin plugin.alpha --pack my_pack --grant requested`
-- 非交互启用 trusted plugin：`pnpm --filter yidhras-server plugin -- enable --plugin plugin.alpha --pack my_pack --yes --non-interactive`
-- 重新扫描 pack-local 插件目录：`pnpm --filter yidhras-server plugin -- rescan --pack my_pack`
-- 查看插件 activation / acknowledgement 日志：`pnpm --filter yidhras-server plugin -- logs --plugin plugin.alpha --pack my_pack --limit 10`
-- 按状态/能力过滤插件列表：`pnpm --filter yidhras-server plugin -- list --pack my_pack --state enabled --capability server.api_route.register`
-- 诊断为什么当前不能启用：`pnpm --filter yidhras-server plugin -- why-not-enable --installation <installation-id> --pack my_pack --non-interactive`
-- 插件 web runtime 定向验证（server integration）：`pnpm --filter yidhras-server exec vitest run --config vitest.integration.config.ts tests/integration/plugin_runtime_web.spec.ts tests/integration/plugin_runtime_refresh.spec.ts`
-- 插件 web runtime 定向验证（server e2e）：`pnpm --filter yidhras-server exec vitest run --config vitest.e2e.config.ts tests/e2e/plugin-runtime-web.spec.ts tests/e2e/plugin-runtime-startup-gap.spec.ts`
-- 插件 web runtime 定向验证（web unit）：`pnpm --filter web test:unit -- tests/unit/plugin.runtime.store.spec.ts tests/unit/plugin.runtime.bootstrap.spec.ts`
-- pack-local 插件 route host：`/packs/:packId/plugins/:pluginId/*`
+- `docs/guides/COMMANDS.md`
+- `docs/guides/PLUGIN_OPERATIONS.md`
 
 ## 文档导航
 
-### 仓库入口
+### 入口文档
 
-- `README.md`：项目概览、启动方式、命令入口
-- `AGENTS.md`：协作约定、工程规则、开发命令
-- `TODO.md`：当前优先级与里程碑
-- `记录.md`：验证证据与验收记录
+- `README.md`：仓库入口、最小启动方式、高频命令
+- `docs/INDEX.md`：文档总导航、文档分层、事实源规则
+- `AGENTS.md`：协作规则、工程约束、文档更新原则
+- `TODO.md`：当前 backlog 与优先级
 
-### 详细文档
+### 稳定参考
 
-- `docs/INDEX.md`：详细文档导航
-- `docs/API.md`：当前对外接口契约与错误码
-- `docs/ARCH.md`：稳定架构边界与模块职责
-- `docs/LOGIC.md`：当前业务规则与领域语义
-- `docs/WORLD_PACK.md`：world pack 项目化、README 标配与发布规范
+- `docs/API.md`：公共接口契约与错误码
+- `docs/ARCH.md`：架构边界、模块职责、宿主关系
+- `docs/LOGIC.md`：业务规则、执行主线、领域语义
+- `docs/WORLD_PACK.md`：world pack 项目化与发布规范
 - `docs/THEME.md`：前端主题系统说明
-- `docs/ENHANCEMENTS.md`：延后处理的增强项
-- `apps/web/README.md`：前端应用说明与约束
+- `docs/ENHANCEMENTS.md`：延期增强项收纳池
+- `apps/web/README.md`：前端应用范围、结构与约束
 
-## 当前实现概览
+### 操作手册
 
-- 服务端包含 runtime、world pack 加载、scheduler、inference / workflow、audit 与 read-model API。
-- 前端包含 overview、workflow、scheduler、graph、social、timeline、agents 页面。
-- operator 壳层当前通过 `/api/status`、`/api/clock/formatted`、`/api/system/notifications` 与 `/api/system/notifications/clear` 暴露运行态与通知读面。
-- world pack 当前除了基础 `id/name/version` 外，也支持 `authors/license/homepage/repository/tags/compatibility` 等发布元数据。
-- 内部 AI 执行链为 `AiTaskService -> RouteResolver -> ModelGateway -> provider adapters`，当前默认提供 `mock` 与 `openai` 适配器。
-- `/api/inference/*` 的公开契约当前仍以 `mock | rule_based` 为准；`model_routed` 仍属于内部能力。
-- AI 调用观测已通过 `AiInvocationRecord` 落库，并提供 `GET /api/inference/ai-invocations` 与 `GET /api/inference/ai-invocations/:id` 只读查询。
-- pack-local 插件 web runtime 当前已具备 canonical web asset route、浏览器侧动态 import、panel render boundary 与 pack-local route host。
-- 当前 plugin server-side pack route 仍存在 startup mounting gap；已通过 e2e 固化现状，后续可继续补 startup runtime refresh 与 route 挂载时机。
+- `docs/guides/COMMANDS.md`：仓库、Server、Web、测试、脚手架命令
+- `docs/guides/PLUGIN_OPERATIONS.md`：pack-local plugin 的 CLI / GUI / API 操作说明
+
+### 过程资产
+
+- `.limcode/design/`：设计草案
+- `.limcode/plans/`：执行计划
+- `.limcode/review/`：评审记录与结论
+
+## 阅读建议
+
+如果你是：
+
+- **第一次进入仓库**：先看本文件，再看 `docs/INDEX.md`
+- **想启动项目**：看本文件的“快速开始”与 `docs/guides/COMMANDS.md`
+- **想理解接口**：看 `docs/API.md`
+- **想理解架构边界**：看 `docs/ARCH.md`
+- **想理解业务语义**：看 `docs/LOGIC.md`
+- **想操作插件治理**：看 `docs/guides/PLUGIN_OPERATIONS.md`

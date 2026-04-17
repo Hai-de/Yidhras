@@ -1,9 +1,8 @@
-
 # World Pack 项目化与发布规范
 
-本文档定义 Yidhras world pack 作为一个独立项目单元的组织、描述与发布标准。
+本文档旨在为 Yidhras world pack 作为独立项目单元提供组织、描述与发布方面的推荐标准。
 
-本规范不替代运行时合约（runtime contract）；运行时实际读取的配置源文件仍为 `config.yaml`、`config.yml`、`pack.yaml` 或 `pack.yml`。然而，从作者协作、发布交付、版本管理与二次分发等环节考量，一个 world pack 不应仅包含一份 YAML 配置，而需具备基本的项目说明与配套资产。
+本规范不替代运行时合约（runtime contract）；运行时实际读取的配置源文件仍为 `config.yaml`、`config.yml`、`pack.yaml` 或 `pack.yml`。不过，从作者协作、发布交付、版本管理与二次分发等环节考量，建议一个 world pack 不仅包含一份 YAML 配置，还应具备基本的项目说明与配套资产。
 
 > 说明：当前运行时直接消费 pack 配置文件；README、附加文档、素材目录等内容主要面向作者、发布者、协作者及使用者。
 
@@ -13,7 +12,7 @@
 
 将 world pack 从“运行时可加载的配置单元”提升为“可被识别、维护、交付、复用与审阅的项目单元”。
 
-一个可供发布的 world pack 至少应明确以下信息：
+为了便于发布与协作，建议 world pack 明确以下信息：
 
 1. 该包所定义的世界类型。
 2. 模拟的主题、规则体系与叙事张力。
@@ -75,7 +74,7 @@ metadata:
 
 ### 2.1 运行时最小要求
 
-当前运行时至少需要以下文件之一：
+当前运行时识别以下文件之一作为配置入口：
 
 - `config.yaml`
 - `config.yml`
@@ -99,10 +98,10 @@ metadata:
 
 ### 2.2 项目化发布最小要求
 
-将 world pack 作为项目单元进行发布时，建议至少包含：
+将 world pack 作为项目单元进行发布时，建议包含以下文件：
 
 - `config.yaml`：运行时配置与正式合约文件
-- `README.md`：项目说明文件（视为必备）
+- `README.md`：项目说明文件（推荐必备）
 - `CHANGELOG.md`：版本变更记录（推荐提供）
 - `assets/`：插图、封面、图标等外部素材目录（按需）
 - `docs/`：扩展说明文档目录（按需）
@@ -163,7 +162,7 @@ metadata:
 
 ### 4.1 必要性说明
 
-若缺少 README.md，外部使用者需直接阅读 `config.yaml` 以了解 pack 信息。此情况存在以下问题：
+如果未提供 README.md，使用者通常需要通过直接阅读 `config.yaml` 来获取 pack 信息，这可能带来一些不便：
 
 1. YAML 格式更适合机器解析，不适合作为项目说明入口。
 2. 发布者的设计意图、题材背景、使用方式难以被快速理解。
@@ -171,11 +170,11 @@ metadata:
 4. 协作者难以在不完全阅读合约内容的前提下参与维护。
 5. 缺少版本升级、兼容性变更、注意事项的稳定记录位置。
 
-因此，README.md 应作为 world pack 的面向人类的说明性契约。
+因此，README.md 适合作为 world pack 面向人类读者的说明性入口。
 
 ### 4.2 内容要求
 
-README.md 至少应包含以下章节：
+建议 README.md 涵盖以下章节内容：
 
 1. **Pack 名称与一句话简介**
 2. **题材 / 世界背景前提**
@@ -190,13 +189,13 @@ README.md 至少应包含以下章节：
 
 ### 4.3 能力边界说明
 
-README.md 应明确区分：
+README.md 宜明确区分：
 
 - **已实现**的 pack 级能力
 - **计划支持**的能力
 - **仍由 kernel 管理**、pack 不可声明的能力
 
-避免在 README.md 中将尚未在 pack schema 或 loader 中开放的功能描述为可由 pack 作者直接声明的能力。
+推荐避免在 README.md 中将尚未在 pack schema 或 loader 中开放的功能描述为可由 pack 作者直接声明的能力。
 
 ---
 
@@ -231,14 +230,18 @@ README.md 应明确区分：
 说明将 pack 放入 `data/world_packs/<pack>` 并启动的方法。
 
 ## 插件
-- 若 pack 携带 `plugins/` 目录，运行时会扫描 `plugin.manifest.yaml` / `plugin.manifest.yml`
-- 扫描到的插件会进入统一插件管理器，默认创建为 `pending_confirmation`
-- 导入确认 != 启用；显式 enable 前仍需 acknowledgement（除非部署者关闭 `plugins.enable_warning`）
-- 当前只支持 `pack-local` 插件，不开放 global 安装面
-- 已启用插件的 web entrypoint 会被 server 收敛为 canonical 同源 asset route，而不是直接裸透传 `dist` 字段
-- 浏览器侧当前已通过动态 import 加载 `web_bundle_url`，并在 pack-local route host `/packs/:packId/plugins/:pluginId/*` 下装载 route contribution
-- 推荐插件 web bundle 默认导出一个 runtime module，对外暴露 `panels[]` 与 `routes[]` 两类 contribution
-- 单个插件 panel/route 渲染失败不会拖垮宿主页面，当前会进入独立 render boundary/fallback UI
+- 如果 pack 目录内包含 `plugins/` 子目录，运行时在扫描时会查找其中的 `plugin.manifest.yaml` 或 `plugin.manifest.yml` 文件。
+- 扫描到的插件会进入统一插件管理器，默认创建为 `pending_confirmation`。
+- 导入确认（import confirmation）不等同于启用；当前 `/plugins` GUI 和 CLI 都要求先 confirm import，再进入 enable 流程。
+- confirm import 时可选择授予全部或部分 `requested_capabilities`；未授予的 capability 不会进入 installation 的 `granted_capabilities`。
+- 显式启用前仍需进行确认（acknowledgement），除非部署者通过 `plugins.enable_warning.enabled=false` 或 `plugins.enable_warning.require_acknowledgement=false` 放宽约束。
+- 当前仅支持 `pack-local` 插件，不开放全局安装面。
+- 已启用插件的 Web 入口点会被服务器收敛为规范化的同源资源路由，而非直接透传 `dist` 字段。
+- 浏览器侧当前通过动态 import 加载 `web_bundle_url`，并在 pack-local 路由宿主 `/packs/:packId/plugins/:pluginId/*` 下挂载路由贡献（route contribution）。
+- 推荐插件 Web bundle 默认导出一个运行时模块，对外暴露 `panels[]` 与 `routes[]` 两类贡献。
+- 单个插件 panel/route 渲染失败不会影响宿主页面整体稳定性，当前会进入独立的渲染边界/回退界面。
+- `/api/packs/:packId/plugins` 当前会返回 `enable_warning` 快照，包含 canonical warning text/hash；GUI enable acknowledgement 会提交这个 hash，后端也会校验其是否与当前 warning text 保持一致。
+- canonical warning text 仍由 `PLUGIN_ENABLE_WARNING_TEXT` 定义；GUI 只是消费 runtime snapshot，不自行复制另一份文案来源。
 - 推荐插件目录结构：
   - `plugins/<plugin-dir>/plugin.manifest.yaml`
   - `plugins/<plugin-dir>/src/` 或 `plugins/<plugin-dir>/dist/`
@@ -289,7 +292,7 @@ README.md 应明确区分：
 
 ### 6.4 assets/
 
-若 pack 用于分发页面、作品页或商店式展示，素材目录应包含：
+若 pack 用于分发页面、作品页或商店式展示，素材目录建议包含：
 
 - 封面图像
 - 图标
@@ -309,7 +312,7 @@ README.md 应明确区分：
 
 - `apps/server/templates/world-pack/`
 
-该目录应放置由仓库正式维护的默认模板，例如：
+该目录可放置由仓库正式维护的默认模板，例如：
 
 - `death_note.yaml`
 - `death_note.README.md`
@@ -331,7 +334,7 @@ README.md 应明确区分：
 
 - `data/world_packs/<pack-dir>/`
 
-该目录应以项目单元形式存在，至少包含：
+该目录建议以项目单元形式存在，至少包含：
 
 - `config.yaml`
 - `README.md`

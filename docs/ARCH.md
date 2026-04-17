@@ -1,408 +1,219 @@
 # 系统架构 / System Architecture
 
-## Kernel persistence boundaries
+本文档用于描述 Yidhras 的**系统分层、模块边界、宿主关系与职责划分**。
 
-内核持久化当前分为两类：
+> 不在这里展开：
+> - 公共 HTTP contract：看 `API.md`
+> - 业务执行语义：看 `LOGIC.md`
+> - Prompt Workflow / Plugin Runtime / AI Gateway 的高耦合专题细节：看 `docs/capabilities/`
 
-- **kernel-side Prisma / SQLite**
-  - `Agent`
-  - `Post`
-  - `Event`
-  - `InferenceTrace`
-  - `ActionIntent`
-  - `DecisionJob`
-  - `ContextOverlayEntry`
-  - `MemoryBlock / MemoryBlockBehavior / MemoryBlockRuntimeState / MemoryBlockDeletionAudit`
-- **pack-local runtime SQLite**
-  - pack world entities
-  - pack entity states
-  - authority grants
-  - mediator bindings
-  - rule execution records
-- **kernel-side plugin governance records**
+## 1. 顶层分层
+
+当前系统可粗分为以下几层：
+
+- **Transport / App layer**
+  - Express routes、HTTP envelope、query/body parsing、frontend API consumption
+- **Application services / Read models**
+  - orchestration、aggregation、operator-facing snapshots、workflow queries
+- **Runtime / Domain execution**
+  - scheduler、simulation loop、action dispatch、invocation / enforcement、inference orchestration
+- **Pack runtime**
+  - world entities、entity states、authority grants、mediator bindings、rule execution records
+- **Kernel persistence / governance**
+  - workflow persistence、social / audit evidence、plugin governance、memory overlay / memory blocks
+
+## 2. 持久化宿主边界
+
+### 2.1 Kernel-side Prisma / SQLite
+
+以下对象当前由 kernel-side 持久化宿主承载：
+
+- `Agent`
+- `Post`
+- `Event`
+- `InferenceTrace`
+- `ActionIntent`
+- `DecisionJob`
+- `ContextOverlayEntry`
+- `MemoryBlock / MemoryBlockBehavior / MemoryBlockRuntimeState / MemoryBlockDeletionAudit`
+- `AiInvocationRecord`
+- 插件治理记录：
   - `PluginArtifact`
   - `PluginInstallation`
   - `PluginActivationSession`
   - `PluginEnableAcknowledgement`
 
-## Inference / Workflow 主线
+### 2.2 Pack-local runtime SQLite
 
-当前主线为：
+以下对象当前由 pack-local runtime sqlite 承载：
 
-1. `buildInferenceContext()` 组装运行时上下文
-2. `ContextService.buildContextRun()` 收口 context node / policy / diagnostics
-3. `buildPromptBundle()` 调用 Prompt Workflow Runtime 完成 fragment / section / placement 编排
-4. provider 输出 normalized decision / semantic intent
-5. `Intent Grounder` 将开放语义映射为 capability、kernel action 或 narrativized fallback
-6. `InferenceTrace / ActionIntent / DecisionJob` 写入 kernel Prisma
+- pack world entities
+- pack entity states
+- authority grants
+- mediator bindings
+- rule execution records
 
-### Death Note pack 语义闭环
+### 2.3 边界含义
 
-当前 `world-death-note` 已不再只是“拿到笔记 / 形成杀意”的静态样板，而是具备最小可重复语义循环：
+这意味着当前系统明确区分：
 
-- notebook side：
-  - `claim_notebook`
-  - `understand_notebook_power`
-  - `form_judgement_intent`
-  - `gather_target_intel`
-  - `choose_target`
-  - `judge_target`
-  - 在案件压力升高时切换到 `raise_false_suspicion`
-- investigator side：
-  - `investigate_death_cluster`
-  - `share_case_intel`
-  - `request_joint_observation`
-  - `publish_case_update`
-- execution 后会通过 objective events 发出 `post_execution_pressure_feedback / investigation_pressure_escalated / case_update_published`，再由 scheduler follow-up 驱动下一轮 actor 再思考。
+- **world governance core** -> pack runtime
+- **workflow / social / audit / observability / plugin governance / memory working layer** -> kernel side
 
-## Context Module
+`Event` 当前属于跨边界共享证据宿主：
 
-当前 inference runtime 包含 Context Module。相关代码位于：
+- 产生端可来自 objective enforcement
+- 消费端横跨 audit / memory / workflow / projection
+- 它不是纯 pack-owned narrative source-of-truth
+
+## 3. 组合根与应用层
+
+### 3.1 Server 组合根
+
+- `apps/server/src/index.ts`：composition root
+- `apps/server/src/app/create_app.ts`：Express middleware 与 route registration 装配入口
+- `apps/server/src/app/routes/*.ts`：transport-level routes，保持薄层
+- `apps/server/src/app/services/*.ts`：应用服务、聚合、read-model assembly
+
+### 3.2 Runtime / scheduler 层
+
+- `apps/server/src/app/runtime/*.ts`
+  - runtime loop
+  - scheduler
+  - job runner
+  - action dispatcher runner
+  - lease / ownership / rebalance
+
+关键约束：
+
+- scheduler 是 partition-aware / multi-worker
+- lease 与 cursor state 以 partition 为作用域
+- runtime loop 在 `simulation_loop.ts` 中串行化
+- runtime readiness 通过 `AppContext.assertRuntimeReady(feature)` 统一门控
+
+### 3.3 Core simulation 层
+
+- `apps/server/src/core/simulation.ts`
+
+负责：
+
+- Prisma init
+- SQLite pragmas
+- world-pack loading
+- clock
+- narrative resolver
+- dynamics
+- runtime speed
+- graph access
+
+约束：
+- 不把 `SimulationManager` 继续扩张为通用 app-service bucket
+- 新的 query / orchestration 逻辑应放进更聚焦的模块
+
+## 4. Workflow / inference 边界
+
+### 4.1 Inference workflow facade
+
+- `apps/server/src/app/services/inference_workflow.ts`
+
+进一步职责拆分到：
+
+- `inference_workflow/parsers.ts`
+- `inference_workflow/repository.ts`
+- `inference_workflow/snapshots.ts`
+- `inference_workflow/results.ts`
+- `inference_workflow/workflow_query.ts`
+- `inference_workflow/ai_invocations.ts`
+
+### 4.2 边界约束
+
+当前保持以下分离：
+
+- decision generation
+- workflow persistence
+- action dispatch
+- inference observability
+
+`ActionIntent` / `InferenceTrace` / `DecisionJob` 仍宿主于 kernel-side Prisma，而不是 pack runtime。
+
+## 5. Context / memory / overlay 边界
+
+### 5.1 Context Module
+
+当前 inference runtime 包含 Context Module，相关实现位于：
 
 - `apps/server/src/context/types.ts`
 - `apps/server/src/context/service.ts`
 - `apps/server/src/context/source_registry.ts`
-- `apps/server/src/context/workflow/orchestrator.ts`
-- `apps/server/src/context/workflow/runtime.ts`
-- `apps/server/src/context/workflow/types.ts`
-- `apps/server/src/context/workflow/profiles.ts`
-- `apps/server/src/context/workflow/placement_resolution.ts`
-- `apps/server/src/context/workflow/section_drafts.ts`
+- `apps/server/src/context/workflow/*`
 
-当前职责：
+它的系统职责是：
 
-- 从 legacy memory selection 与 runtime state snapshots 收集统一 `ContextNode`
-- materialize `ContextRun`
-- 为既有 prompt 消费方暴露兼容 `memory_context`
-- 将 context selection / orchestration evidence 持久化到 `InferenceTrace.context_snapshot`
+- 从多源 materialize `ContextNode`
+- 产出 `ContextRun`
+- 为既有 prompt 消费方暴露 compatibility `memory_context`
+- 将 context selection / orchestration evidence 写入 `InferenceTrace.context_snapshot`
 
-### policy / overlay / memory block 相关实现
+### 5.2 Overlay / Memory Block
 
-- node-level policy governance 由 `ContextService` 与 `Context Policy Engine` 处理
-- fragment-level `policy_filter` 仅保留为 runtime 内的兼容/兜底机制
-- overlay 作为 kernel-side working-layer object 存在：
-  - `apps/server/src/context/overlay/types.ts`
-  - `apps/server/src/context/overlay/store.ts`
-  - `apps/server/src/context/sources/overlay.ts`
-- `ContextOverlayEntry` 持久化在 kernel Prisma 中，再 re-materialize 为 `ContextNode(source_kind='overlay', visibility.level='writable_overlay')`
+- overlay 是 **kernel-side working-layer object**
+- `ContextOverlayEntry` 持久化在 kernel Prisma，再 re-materialize 为 `ContextNode`
 - overlay 不作为 pack runtime source-of-truth
-- Memory Block Runtime 也作为 kernel-side memory subsystem 存在：
-  - `apps/server/src/memory/blocks/types.ts`
-  - `apps/server/src/memory/blocks/store.ts`
-  - `apps/server/src/memory/blocks/trigger_engine.ts`
-  - `apps/server/src/memory/blocks/evaluation_context.ts`
-  - `apps/server/src/memory/blocks/materializer.ts`
-  - `apps/server/src/context/sources/memory_blocks.ts`
-- `MemoryBlock` 通过：
-  - store 读取候选块
-  - trigger engine 评估 active/delayed/retained/cooling/inactive
-  - runtime state 更新
-  - materialize 为 `ContextNode`
-  - 再经 Prompt Workflow Runtime 进入 `PromptFragment`
-- `recent trace / intent / event` 仅在权限裁剪后进入 memory block evaluation context
-- 当前 diagnostics 已输出：
-  - `policy_decisions`
-  - `blocked_nodes`
-  - `locked_nodes`
-  - `visibility_denials`
-  - `overlay_nodes_loaded`
-  - `overlay_nodes_mutated`
-  - `memory_blocks`
-  - reserved directive arrays
-
-### Pack-local plugin runtime
-
-- pack-local plugin discovery / storage / lifecycle 位于：
-  - `apps/server/src/plugins/discovery.ts`
-  - `apps/server/src/plugins/store.ts`
-  - `apps/server/src/plugins/service.ts`
-  - `apps/server/src/plugins/runtime.ts`
-- 插件治理记录持久化在 kernel Prisma，而不是 pack runtime sqlite
-- 当前只支持 `pack_local` scope；`global` 仅保留领域模型预留位
-- 显式 enable 受 `plugins.enable_warning.*` 配置与 acknowledgement 约束
-- web runtime snapshot 由 `apps/server/src/app/services/plugin_runtime_web.ts` 提供，并把 manifest 中的 `entrypoints.web.dist` 收敛为 canonical 同源 asset route
-- plugin web asset 通过 `GET /api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*` 暴露，并校验 installation enabled / scope / path boundary
-- server-side 当前已接入的受控扩展点包括：
-  - context source adapters
-  - prompt workflow step executors
-  - pack-local API routes
-- web-side 当前已具备：
-  - runtime manifest 读面
-  - 浏览器侧动态 bundle loader
-  - plugin runtime store load state
-  - panel render boundary
-  - pack-local route host（`/packs/:packId/plugins/:pluginId/*`）
-- 当前 plugin server-side pack route 仍存在 startup mounting gap：`createApp()` 早于 `sim.init(...)`，route mounting 生命周期还需后续继续收口
-
-### Prompt Workflow Runtime
-
-当前 Prompt Workflow 已不再只是固定 processor 数组，而是具备正式 runtime 外壳。
-
-当前已落地的核心组件包括：
-
-- `PromptWorkflowProfile`
-- `PromptWorkflowStepSpec`
-- `PromptWorkflowState`
-- `PromptWorkflowDiagnostics`
-- step registry / executors
-- placement resolution
-- section drafts
-
-当前内置 profiles：
-
-- `agent-decision-default`
-- `context-summary-default`
-- `memory-compaction-default`
-
-当前 runtime 已具备 task-aware 入口：
-
-- `buildPromptBundle(context, { task_type })`
-- `buildAiTaskPromptBundleFromInferenceContext(...)`
-- `buildAiTaskRequestFromInferenceContext(...)`
-
-其中：
-
-- `agent_decision` 仍对应当前 inference 主链默认 profile
-- `context_summary` 会命中 `context-summary-default`
-- `memory_compaction` 会命中 `memory-compaction-default`
-
-这意味着 Prompt Workflow 已不再只是“agent decision 专用 prompt pipeline”，而是一个可按 task type 切换 profile 的正式 runtime。
-
-### 当前 runtime 分层
-
-当前主线已演进为：
-
-```text
-ContextRun / ContextNode
-  -> PromptWorkflowState
-  -> grouped_nodes
-  -> PromptSectionDraft
-  -> PromptFragment
-  -> PromptBundle
-  -> AiMessages / ModelGatewayRequest
-```
-
-当前已稳定落地的 runtime 行为：
-
-- profile-driven step 选择
-- `placement_resolution`
-- `node_grouping`
-- `fragment_assembly`
-- workflow metadata 透传
-
-### task-aware section-driven 差异
-
-当前 runtime 已开始在 `section_drafts` 与 trimming 层体现任务差异：
+- Memory Block Runtime 也属于 kernel-side memory subsystem
 
-- `agent_decision`
-  - 保持较完整的 system / role / world / memory / output contract 结构
-  - 对应 `standard` task policy
-- `context_summary`
-  - 倾向 recent evidence / memory summary 优先
-  - 对应 `evidence_first` task policy
-  - `minimal` section policy 下会移除 `output_contract`
-  - 当已经存在 `context_snapshot` 或 memory sections 时，会进一步压低/移除 `role_context` 与 `world_context`
-- `memory_compaction`
-  - 倾向 memory_long_term / memory_summary / memory_short_term 优先
-  - 对应 `memory_focused` task policy
-  - `minimal` section policy 下会移除 `output_contract / role_context / world_context`
-  - 当已经存在 memory sections 时，会进一步移除 `context_snapshot`
+这意味着：
 
-当前这些差异主要落在：
+- pack runtime 管世界治理状态
+- kernel memory subsystem 管工作层上下文与长期记忆物化
 
-- `buildSectionDraftsFromFragments(...)` 的 task-aware ordering / pruning
-- `token_budget_trim` 的 task-aware slot priority
-- `section_summary` diagnostics 中的 `task_type / section_policy / grouped_node_keys / sections_by_type / section_policies`
+## 6. Prompt Workflow / AI Gateway / Plugin Runtime 的专题化边界
 
-同时，当前 `PromptSectionDraft.metadata.task_policy` 已会记录：
+以下主题已从 ARCH 主体中抽离为 capability 文档，以减少与 LOGIC / API 的重叠：
 
-- `task_type`
-- `section_policy`
-- `policy_name`
-- `priority`
-- `ranking_score`
-- `score_components`
-- `score_reasons`
-
-并且 `section_summary.section_scores` 已会把这些 ranking 结果聚合为稳定读面，便于 persisted trace / replay / smoke e2e 直接读取。
-
-这样后续 trace / bundle metadata 不仅能看到“结果是什么”，也能看到“为何采用该 section 策略”。
-
-### placement / diagnostics
-
-当前 placement 已支持：
-
-- `prepend`
-- `append`
-- `before_anchor`
-- `after_anchor`
-
-以及 anchor：
+- Prompt Workflow Runtime -> `docs/capabilities/PROMPT_WORKFLOW.md`
+- AI Gateway / Invocation Observability -> `docs/capabilities/AI_GATEWAY.md`
+- Pack-local Plugin Runtime -> `docs/capabilities/PLUGIN_RUNTIME.md`
 
-- `slot_start`
-- `slot_end`
-- `source`
-- `tag`
-- `fragment_id`
-
-当前 workflow diagnostics 已稳定输出：
+在 ARCH 中只保留它们的边界性结论：
 
-- `profile_id / profile_version`
-- `task_type`
-- `selected_step_keys`
-- `step_traces`
-- `placement_summary`
-- `section_summary`
-- `compatibility`
+### 6.1 Prompt Workflow Runtime
 
-其中 `token_budget_trimming` 现已扩展为更可解释的读面，除 `budget / used / trimmed_fragment_ids` 外，还包括：
+架构结论：
 
-- `task_type`
-- `kept_fragment_ids`
-- `always_kept_fragment_ids`
-- `kept_optional_fragment_ids`
-- `slot_priority`
-- `optional_fragment_scores`
-- `trimmed_by_slot`
-- `trimmed_sources`
-- `section_summary`
-
-同时，当前 `token_budget_trimming` 已开始暴露 `section_budget`：
-
-- `mode`
-- `total_budget`
-- `allocated_budget`
-- `allocations`
-- `kept_section_ids`
-- `dropped_section_ids`
-
-当前这一层表示 **section-level token budget 的第一轮接线**：
-
-- runtime 已能基于 `section_scores` 生成 section budget allocation
-- trimming 已会把 section keep/drop 结果写回 diagnostics
-- 但它仍不是精确 tokenizer 级预算器，也还不是最终复杂的多轮 section rebalancer
-
-当前以下读面都已暴露 task-aware workflow 信息：
-
-- `PromptBundle.metadata.workflow_task_type / workflow_profile_id / workflow_step_keys`
-- `PromptBundle.metadata.workflow_section_summary / workflow_placement_summary`
-- `InferenceTrace.context_snapshot.prompt_workflow`
-- `InferenceTrace.context_snapshot.prompt_processing_trace`
-
-其中 `PromptProcessingTrace` 现已包含结构化 `prompt_workflow` 快照，优先作为 runtime → trace → bundle / snapshot 的统一工作流读面，而不是继续主要依赖 legacy trace 字段回推。
-
-### Compatibility 边界
-
-当前仍保留：
-
-- `memory_context`
-- legacy `PromptProcessor`
-- legacy prompt trace 字段
-
-但它们当前的角色已收敛为：
-
-- compatibility projection
-- fallback execution bridge
-- trace bridge
-
-而不是新的 source-of-truth。
-
-### Long memory / prompt workflow
-
-当前 long memory 不再只是 noop 约定：
-
-- kernel Prisma 已持久化：
-  - `MemoryBlock`
-  - `MemoryBlockBehavior`
-  - `MemoryBlockRuntimeState`
-  - `MemoryBlockDeletionAudit`
-- compatibility 层 `LongTermMemoryStore` 仍保留，但 Prisma 实现已从 `MemoryBlock` 映射回 `MemoryEntry`
-- `PromptFragment` 当前已可携带：
-  - `anchor`
-  - `placement_mode`
-  - `depth`
-  - `order`
-- Prompt Workflow Runtime 已统一处理：
-  - slot order
-  - placement anchor
-  - depth / order
-  - fallback reason
-
-### 边界
-
-- 当前实现仍为线性 runtime，不是通用 DAG workflow engine
-- overlay 不绕过 source-of-truth，也不替代 pack runtime state
-- `ContextDirective` 目前仅保留 schema / trace reservation，执行仍关闭
-- 当前 Memory Block 仍未引入 embedding / semantic retrieval / graph memory
-- `memory_context` 仍保留，但已明确属于 compatibility projection
-
-## Unified AI task / gateway
-
-服务端已形成内部 AI 执行层：
-
-- `apps/server/src/ai/task_service.ts`
-- `apps/server/src/ai/route_resolver.ts`
-- `apps/server/src/ai/gateway.ts`
-- `apps/server/src/ai/providers/mock.ts`
-- `apps/server/src/ai/providers/openai.ts`
-
-当前分层：
-
-- `AiTaskService`
-- `RouteResolver`
-- `ModelGateway`
-- provider adapters
-
-当前约束：
-
-- kernel-side canonical AI contract 由服务端内部类型维护
-- world pack 只能通过声明式 `pack.ai` 覆盖：
-  - prompt organization
-  - output schema
-  - parse/decoder behavior
-  - route hints
-- 当前 workflow metadata 也会进入：
-  - AI messages metadata
-  - `AiTaskRequest.metadata`
-  - `ModelGatewayRequest.metadata`
-- `AiInvocationTrace`
-- world pack 不能直接写 raw provider payload
-- world pack 不能注入任意可执行 parser/composer 代码
-- 更复杂的行为应通过 server-side registered extension 实现
-
-当前 AI task / gateway 观测面已可直接看到：
-
-- `workflow_task_type`
-- `workflow_profile_id / workflow_profile_version`
-- `workflow_step_keys`
-- `workflow_section_summary`
-- `workflow_placement_summary`
-- `processing_trace`
-
-当前默认 registry 提供 OpenAI provider / model / route，`ModelGateway` 默认注册 `mock` 与 `openai` adapters。缺少 `OPENAI_API_KEY` 时不会影响 `mock / rule_based` 主线启动。
-
-## AI invocation observability
-
-kernel-side Prisma 包含 `AiInvocationRecord`，记录：
-
-- provider / model / route
-- fallback / attempted models
-- usage / safety / latency
-- request / response audit payload（按 audit level 控制）
-- 与 `InferenceTrace.source_inference_id` 的关联
-
-## Projection 层
-
-当前后端已具备：
+- 它是 inference pipeline 中的正式 runtime 外壳
+- 负责 `ContextRun / ContextNode -> PromptBundle / request` 的组织层
+- 仍是线性 runtime，不是通用 DAG engine
+- 保留 compatibility bridges，但不再把 legacy path 视为 source-of-truth
+
+### 6.2 Unified AI task / gateway
+
+架构结论：
+
+- 服务端已形成内部 AI 执行层：`AiTaskService -> RouteResolver -> ModelGateway -> provider adapters`
+- 公开 inference contract 仍与内部 gateway path 分离
+- world pack 对 AI 的影响是 declarative 的，而不是直接 provider control
+- `AiInvocationRecord` 作为 kernel-side observability host 存在
+
+### 6.3 Pack-local plugin runtime
+
+架构结论：
+
+- 插件治理记录宿主在 kernel side，而不是 pack runtime sqlite
+- runtime manifest、同源 web 资产路由、route host 已形成受控承接边界
+- 当前正式范围仍是 `pack_local`
+
+## 7. Projection 与 read model 边界
+
+当前后端已形成的主要 projection / read model：
 
 - entity overview projection
 - pack narrative timeline projection
 - operator overview projection
 - global projection index
 
-### Pack Projection Contract
+### 7.1 Pack projection contract
 
-在当前单 active-pack 运行模式下：
+在当前单 active-pack 模式下：
 
 - `/api/packs/:packId/overview`
 - `/api/packs/:packId/projections/timeline`
@@ -410,47 +221,49 @@ kernel-side Prisma 包含 `AiInvocationRecord`，记录：
 都要求：
 
 - 请求的 `packId` 必须与当前 active pack 一致
-- 若不一致，返回 `409 / PACK_ROUTE_ACTIVE_PACK_MISMATCH`
+- 不一致时返回 `409 / PACK_ROUTE_ACTIVE_PACK_MISMATCH`
 
-语义 grounding 的可见性目前通过以下读面暴露：
+### 7.2 Access-policy subsystem
 
-- workflow / audit metadata 中的 `semantic_intent` 与 `intent_grounding`
-- narrativized fallback 产生的 `history` event 在 pack timeline 中可见
-- entity / agent overview 可见聚合后的相关证据
+- `/api/access-policy/*` 是独立 access / projection policy 子系统
+- 它不属于 unified governance canonical API 的主线接口
+- 它负责显式 policy 写入与评估
 
-### Access-Policy Subsystem Contract
+## 8. Operator handoff 边界
 
-- `/api/access-policy/*`
-  - access / projection policy 的独立子系统接口
-  - 不属于 unified governance canonical API
-  - 负责 projection access / write policy 的显式管理与评估
+后端当前已具备以下高级视图所需证据面：
 
-### Operator 高级视图后端合同
+- authority inspector
+- rule execution timeline
+- perception diff
 
-后端已具备 Authority Inspector / Rule Execution Timeline / Perception Diff 所需的基础证据面：
+后端负责：
 
-- `authority_context`
-- `perception_context`
-- `mediator_bindings`
-- `recent_rule_executions`
-- pack narrative timeline 中的 `rule_execution` / `event` bridge 数据
+- authority / perception / mediator provenance / rule execution evidence 输出
+- pack / entity / rule 相关 projection contract 稳定化
+- handoff 字段与示例说明
 
-scheduler / event 协作路径会消费以下 event bridge metadata：
+前端负责：
 
-- `followup_actor_ids`
-- `impact_data.semantic_intent.target_ref` 中的语义目标提示
+- 页面 UI
+- 布局与可视化
+- 状态管理
+- 导航与交互组织
 
-AI 调用观测的只读接口为：
+## 9. 当前稳定边界结论
 
-- `GET /api/inference/ai-invocations`
-- `GET /api/inference/ai-invocations/:id`
+当前可视为稳定的系统边界包括：
 
-这些接口将 `AiInvocationRecord` 暴露为只读观测面，不改变公开 inference 执行契约。
+1. world governance core 继续 pack-owned
+2. workflow / social / audit / observability 继续 kernel-hosted
+3. `Event` 作为跨 pack-governance 与 kernel observability 的共享证据宿主存在
+4. Prompt Workflow、AI Gateway、Plugin Runtime 均已形成独立专题能力，但仍服务于更高层系统分层
+5. 当前实现仍是受控演进体系，而不是完全开放式平台
 
-另有：
+## 10. 相关文档
 
-- `apps/server/src/app/services/operator_contracts.ts`
-
-用于整理前端 handoff 所依赖的后端合同。
-
-Operator 高级视图（Authority Inspector / Rule Execution Timeline / Perception Diff）的前端页面、交互、布局、状态管理与可视化属于前端实现范围；后端仅负责相应 evidence / contract / projection 能力。
+- 公共接口：`API.md`
+- 业务语义：`LOGIC.md`
+- Prompt Workflow：`docs/capabilities/PROMPT_WORKFLOW.md`
+- AI Gateway：`docs/capabilities/AI_GATEWAY.md`
+- Plugin Runtime：`docs/capabilities/PLUGIN_RUNTIME.md`

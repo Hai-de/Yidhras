@@ -1,15 +1,24 @@
 # API 说明
 
-> 通用说明
-- agent / graph / relational / scheduler / social / audit / inference 相关接口当前均走共享 contracts + Zod 边界解析
+本文档描述当前对外 / 公共可依赖的 HTTP contract、主要读写接口与错误码参考。
+
+> 不在这里展开：
+> - 模块分层与宿主关系：看 `ARCH.md`
+> - 业务执行语义：看 `LOGIC.md`
+> - Prompt Workflow / AI Gateway / Plugin Runtime 的专题化说明：看 `docs/capabilities/`
+
+## 通用说明
+
+- agent / graph / relational / scheduler / social / audit / inference 相关接口走共享 contracts + Zod 边界解析
 - 若 query / params 不满足约束（非法数字、非法枚举、空白必填 params 等），当前实现返回 `400`
+- 除非特别注明，否则以下接口均以当前公开 contract 为准，而不是描述内部实现细节
 
 ## 1. 基础信息 (System)
 
 - **GET `/api/status`**
   - 说明：获取系统运行状态、健康级别、当前加载的 world-pack 元数据
   - 返回：`{ success: true, data: { status, runtime_ready, runtime_speed, scheduler, health_level, world_pack, has_error, startup_errors } }`
-  - `world_pack` 当前除 `id/name/version` 外，也可能包含 `description/authors/license/homepage/repository/tags/compatibility`
+  - `world_pack` 可能包含：`id / name / version / description / authors / license / homepage / repository / tags / compatibility`
 - **POST `/api/runtime/speed`**
   - 说明：覆盖或清除运行时步进速度
   - 参数：`{ action: "override", step_ticks: string|number }` 或 `{ action: "clear" }`
@@ -23,50 +32,56 @@
   - 说明：清空当前系统通知队列
   - 返回：`{ success: true, data: { acknowledged: true } }`
 
-## 1.1 Pack-local 插件治理接口
+## 2. Pack-local 插件治理接口
 
 - **GET `/api/packs/:packId/plugins`**
   - 说明：列出当前 active pack 的 pack-local plugin installations
-  - 返回：`{ success: true, data: { pack_id, items: PluginSummary[] } }`
+  - 返回：`{ success: true, data: { pack_id, items: PluginSummary[], enable_warning } }`
+  - `enable_warning` 包含：
+    - `enabled`
+    - `require_acknowledgement`
+    - `reminder_text`
+    - `reminder_text_hash`
 - **POST `/api/packs/:packId/plugins/:installationId/confirm`**
   - 说明：确认导入一个插件 installation，并可提交 granted capabilities
+  - body：`{ granted_capabilities?: string[] }`
 - **POST `/api/packs/:packId/plugins/:installationId/enable`**
   - 说明：显式启用一个插件；当 `plugins.enable_warning.require_acknowledgement=true` 时，body 必须提供 `acknowledgement`
-  - 失败代码：`PLUGIN_ENABLE_ACK_REQUIRED`、`PLUGIN_ENABLE_INVALID_STATE`
+  - body：`{ acknowledgement: { reminder_text_hash, actor_id?, actor_label? } }`
+  - 失败代码：`PLUGIN_ENABLE_ACK_REQUIRED`、`PLUGIN_ENABLE_ACK_INVALID`、`PLUGIN_ENABLE_INVALID_STATE`
 - **POST `/api/packs/:packId/plugins/:installationId/disable`**
   - 说明：显式禁用一个插件 installation
 - **GET `/api/packs/:packId/plugins/runtime/web`**
   - 说明：读取当前 active pack 的已启用 web plugin runtime manifest，用于前端动态面板/路由宿主
-  - 当前每个 plugin item 还会返回：
-    - `web_bundle_url`：canonical 同源 bundle / asset route
-    - `runtime_module`：当前浏览器动态模块合同（`browser_esm` / `default` / `panels` / `routes`）
 - **GET `/api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`**
-  - 说明：访问已启用 pack-local plugin 的同源 web 资产（bundle / route 相关静态文件）
-  - 约束：只允许 `enabled` installation，且 asset path 必须落在当前 plugin 暴露的 runtime root 内
+  - 说明：访问已启用 pack-local plugin 的同源 web 资产
   - 失败代码：`PLUGIN_WEB_ASSET_NOT_ENABLED`、`PLUGIN_WEB_ASSET_FORBIDDEN`、`PLUGIN_WEB_ASSET_NOT_FOUND`、`PLUGIN_WEB_ENTRYPOINT_NOT_FOUND`
 
-## 2. 虚拟时间轴 (Chronos Layer)
+更详细的治理与运行时说明：
+- `docs/guides/PLUGIN_OPERATIONS.md`
+- `docs/capabilities/PLUGIN_RUNTIME.md`
+
+## 3. 虚拟时间轴 (Chronos Layer)
 
 - **GET `/api/clock`**
   - 说明：获取原始虚拟时钟
-  - 当前后端实现已通过 runtime facade `SimulationManager.getCurrentTick()` 暴露 tick，而不是要求调用层直接访问内部 `clock` 字段
   - 返回：`{ success: true, data: { absolute_ticks: string, calendars: [] } }`
 - **GET `/api/clock/formatted`**
-  - 说明：获取包含历法格式化结果的时钟数据；当前后端实现通过 runtime facade `SimulationManager.getAllTimes()` 提供历法视图
+  - 说明：获取包含历法格式化结果的时钟数据
 - **POST `/api/clock/control`**
   - 说明：控制模拟时钟
   - 参数：`{ action: "pause" | "resume" }`
 
-## 3. 社交层 (L1: Social Layer)
+## 4. 社交层 (L1: Social Layer)
 
 - **GET `/api/social/feed`**
-  - 说明：获取公共信息流；返回结果会经过当前 identity 上下文的字段可读性过滤
+  - 说明：获取公共信息流
   - 参数：`?limit=20&author_id=<agent_id>&agent_id=<agent_id>&circle_id=<circle_id>&source_action_intent_id=<intent_id>&from_tick=<tick>&to_tick=<tick>&keyword=<text>&signal_min=<0..1>&signal_max=<0..1>&cursor=<opaque_cursor>&sort=latest|signal`
 - **POST `/api/social/post`**
   - 说明：以当前 identity 上下文发布动态
   - 参数：`{ content: string }`
 
-## 4. 关系层 (L2: Relational Layer)
+## 5. 关系层 (L2: Relational Layer)
 
 - **GET `/api/relational/graph`**
 - **GET `/api/relational/circles`**
@@ -74,29 +89,18 @@
 - **GET `/api/atmosphere/nodes`**
 - **GET `/api/graph/view`**
 
-这些接口仍保留当前行为，不是本轮 world-pack unified governance framework 的主要变化点。
+## 6. 审计与调度观察接口
 
-## 5. 审计与调度观察接口
-
-### Audit
+### 6.1 Audit
 
 - **GET `/api/audit/feed`**
   - 说明：统一查询 workflow / post / relationship adjustment / snr adjustment / event 的最小审计时间线
 - **GET `/api/audit/entries/:kind/:id`**
   - 说明：查询单条 unified audit entry 详情
 
-Current workflow audit payload may include semantic grounding fields when the source workflow came from Intent Grounder resolution:
+### 6.2 Scheduler
 
-- `semantic_intent`
-- `intent_grounding`
-- `semantic_outcome`
-- `objective_effect_applied`
-
-This is the current API-level observability path for narrativized failure.
-
-### Scheduler
-
-当前 scheduler 接口族保持不变，仍包括：
+当前 scheduler 读接口包括：
 
 - `GET /api/runtime/scheduler/runs`
 - `GET /api/runtime/scheduler/summary`
@@ -112,46 +116,55 @@ This is the current API-level observability path for narrativized failure.
 - `GET /api/agent/:id/scheduler`
 - `GET /api/agent/:id/scheduler/projection`
 
-## 6. 叙事与投影接口
+## 7. 叙事与投影接口
 
-### Canonical pack narrative projection endpoint
+### 7.1 Canonical pack narrative projection endpoint
 
 - **GET `/api/packs/:packId/projections/timeline`**
   - 说明：返回 pack 级 narrative projection
   - 返回：`{ success: true, data: { pack: { id, name, version }, timeline: TimelineEntry[] } }`
-  - `TimelineEntry` 当前至少包含：
-    - `id: string`
+  - `TimelineEntry` 至少包含：
+    - `id`
     - `kind: "event" | "rule_execution"`
-    - `created_at: string`
-    - `title: string`
-    - `description: string`
-    - `refs: Record<string, string | null>`
-    - `data: Record<string, unknown>`
-  - 说明：这是当前唯一的 narrative timeline API
-  - 当前补充约束：pack runtime 的 `rule_execution` 证据来自 pack-local `runtime.sqlite`
-  - 当前 `Event` 仍为 kernel-hosted shared evidence bridge；其 pack-scoped 过滤/关联契约仍在继续完善
-  - 当前 packId 语义：在单 active-pack 模式下，请求的 `packId` 必须与当前 active pack 一致；不一致时返回 `409 / PACK_ROUTE_ACTIVE_PACK_MISMATCH`
-  - Current Death Note usage also relies on timeline visibility for:
-    - `history` events emitted by objective rules
-    - narrativized failed attempts produced by Intent Grounder fallback
-    - execution feedback events such as `post_execution_pressure_feedback`
-    - investigation escalation events such as `investigation_pressure_escalated`
-    - public pressure / briefing events such as `case_update_published`
+    - `created_at`
+    - `title`
+    - `description`
+    - `refs`
+    - `data`
 
-## 7. Agent / Entity 读取接口
+### 7.2 Pack overview
 
-### 7.1 Agent context
+- **GET `/api/packs/:packId/overview`**
+  - 说明：返回 pack overview projection 摘要
+  - 返回至少包含：
+    - `pack_id`
+    - `entity_count`
+    - `entity_state_count`
+    - `authority_grant_count`
+    - `mediator_binding_count`
+    - `rule_execution_count`
+    - `latest_rule_execution`
+
+### 7.3 当前稳定约束
+
+- `/api/packs/:packId/projections/timeline` 是当前 canonical narrative timeline API
+- `/api/packs/:packId/overview` 与 `/api/packs/:packId/projections/timeline` 在单 active-pack 模式下要求 `packId` 与当前 active pack 一致
+- 不一致时返回：`PACK_ROUTE_ACTIVE_PACK_MISMATCH`
+
+## 8. Agent / Entity 读取接口
+
+### 8.1 Agent context
 
 - **GET `/api/agent/:id/context`**
   - 说明：获取特定 Agent 的认知上下文
   - 返回：`{ success: true, data: { identity, variables } }`
 
-### 7.2 Canonical entity overview endpoint
+### 8.2 Canonical entity overview endpoint
 
 - **GET `/api/entities/:id/overview`**
   - 说明：当前 canonical entity-centric overview 路由
   - 参数：`?limit=10`
-  - 当前返回结构包含：
+  - 返回结构包含：
     - `profile`
     - `binding_summary`
     - `relationship_summary`
@@ -164,36 +177,25 @@ This is the current API-level observability path for narrativized failure.
     - `snr`
     - `memory`
     - `context_governance`
-  - 当前说明：entity overview 会聚合 audit/workflow/projection evidence，因此 narrativized failure 与 related pack events 可经现有字段观察，而不需要单独新增 endpoint
-  - 当前 `memory.summary` 轻量暴露最近一次 trace 中的：
-    - `latest_memory_context`
-    - `latest_memory_selection`
-    - `latest_prompt_processing_trace`
-  - 当前 `memory.latest_blocks` 轻量暴露最近一次 trace 中的：
-    - `evaluated`
-    - `inserted`
-    - `delayed`
-    - `cooling`
-    - `retained`
-    - `inactive`
-  - 当前 `context_governance` 轻量暴露最近一次 trace 中的：
-    - `latest_policy`（policy decisions / blocked / locked / visibility denials）
-    - `overlay`（count / latest_items / latest_mutations）
-    - `memory_blocks`（与 memory.latest_blocks 同源的最近 memory block diagnostics）
 
-### 7.4 Agent SNR logs
+### 8.3 Agent SNR logs
 
 - **GET `/api/agent/:id/snr/logs`**
   - 说明：查询指定 Agent 的 SNR 调整日志
   - 参数：`?limit=20`
 
-## 8. Overview 聚合接口
+### 8.4 当前稳定约束
 
-### 8.1 Operator overview summary
+- `/api/entities/:id/overview` 是当前 canonical entity overview 读面
+- `/api/agent/:id/overview` 已退出默认调用面
+
+## 9. Overview 聚合接口
+
+### 9.1 Operator overview summary
 
 - **GET `/api/overview/summary`**
   - 说明：为 operator / overview 首屏提供聚合摘要
-  - 当前返回结构至少包含：
+  - 返回结构至少包含：
     - `runtime`
     - `world_time`
     - `active_agent_count`
@@ -206,34 +208,17 @@ This is the current API-level observability path for narrativized failure.
     - `operator_projection`
     - `global_projection_index`
 
-### 8.2 Pack overview
+## 10. 推理与工作流接口
 
-- **GET `/api/packs/:packId/overview`**
-  - 说明：返回当前 pack overview projection 摘要
-  - 当前返回至少包含：
-    - `pack_id`
-    - `entity_count`
-    - `entity_state_count`
-    - `authority_grant_count`
-    - `mediator_binding_count`
-    - `rule_execution_count`
-    - `latest_rule_execution`
-  - 当前补充约束：pack runtime core counts 基于 pack-local `runtime.sqlite` engine-owned tables 读取
-  - 当前说明：接口表面已 pack 化；在单 active-pack 模式下，`packId` 必须与当前 active pack 一致
-
-## 9. 推理与工作流接口
-
-### 9.1 Inference debug endpoints
+### 10.1 Inference endpoints
 
 - **POST `/api/inference/preview`**
   - 说明：预览推理上下文与结构化 prompt 结果
   - 输入：`{ agent_id?: string, identity_id?: string, strategy?: "mock"|"rule_based", attributes?: Record<string, unknown>, idempotency_key?: string }`
-  - 边界说明：公共 HTTP contract 仍只保证 `mock | rule_based`；内部虽然已存在 `model_routed` 能力，但尚未作为稳定 public contract 正式开放
 - **POST `/api/inference/run`**
   - 说明：手动触发一次推理并返回标准化 decision
-  - 边界说明：与 preview 相同，当前 public docs 仍只承诺 `mock | rule_based`
 
-### 9.2 Workflow endpoints
+### 10.2 Workflow endpoints
 
 - **GET `/api/inference/jobs`**
 - **POST `/api/inference/jobs`**
@@ -245,6 +230,9 @@ This is the current API-level observability path for narrativized failure.
 - **GET `/api/inference/traces/:id/job`**
 - **GET `/api/inference/traces/:id/workflow`**
 - **GET `/api/inference/jobs/:id/workflow`**
+
+### 10.3 AI invocation observability
+
 - **GET `/api/inference/ai-invocations`**
   - 说明：分页列出 kernel-side `AiInvocationRecord` 观测记录
   - 输入：`{ status?: "completed"|"failed"|"blocked"|"timeout", provider?: string, model?: string, task_type?: string, source_inference_id?: string, route_id?: string, has_error?: "true"|"false", from_created_at?: string, to_created_at?: string, cursor?: string, limit?: string }`
@@ -252,134 +240,19 @@ This is the current API-level observability path for narrativized failure.
 - **GET `/api/inference/ai-invocations/:id`**
   - 说明：读取单条 `AiInvocationRecord` 详情
 
-### 9.3 Execution semantics note
+### 10.4 当前稳定边界
 
-说明：
+- 当前公开 inference strategy 仍只稳定承诺：
+  - `mock`
+  - `rule_based`
+- `model_routed` 仍视为内部 / 受控能力
+- `GET /api/inference/ai-invocations*` 是公开的只读 observability surface，不改变 `/api/inference/*` 的执行 contract
 
-- `ActionIntent` 仍是持久化工作流中的外显对象
-- pack 世界规则执行当前主要通过 `InvocationRequest -> enforcement engine` 完成
-- `ActionIntent` / `InferenceTrace` / `DecisionJob` 当前仍保留在 kernel-side Prisma，而不是 pack runtime
+更详细说明：
+- `docs/capabilities/AI_GATEWAY.md`
+- `docs/capabilities/PROMPT_WORKFLOW.md`
 
-### 9.4 Semantic intent grounding note
-
-Current public inference strategy surface remains unchanged:
-
-- `mock`
-- `rule_based`
-
-There is currently no public `semantic_intent` strategy. Instead:
-
-- providers may emit intermediate `action_type='semantic_intent'`
-- the server-side Intent Grounder resolves it before final `ActionIntentDraft` persistence
-- grounding uses active-pack `rules.invocation`
-
-### 9.4.1 Context / memory trace note
-
-当前 `InferenceTrace.context_snapshot` 已包含：
-
-- `context_module`
-- `context_debug`
-- `context_run`
-- `memory_context`
-- `memory_selection`
-- `prompt_processing_trace`
-- `memory_blocks`
-- `overlay_nodes_loaded / overlay_nodes_mutated`
-
-其中 memory block 相关字段当前主要用于：
-
-- 调试 long memory trigger / retention / cooldown / delay
-- entity overview / workflow snapshot 的轻量观察
-- 后续 memory block 可视化或调试界面复用
-
-### 9.4.2 Internal multi-model gateway note
-
-Current server runtime already includes an internal multi-model AI gateway path:
-
-- internal strategy support includes `model_routed`
-- `gateway_backed` inference provider can route `agent_decision` through `AiTaskService -> RouteResolver -> ModelGateway -> provider adapter`
-- default built-in rollout is OpenAI-first
-
-But current public API boundary remains:
-
-- `/api/inference/*` external contract is still documented as `mock | rule_based`
-- `model_routed` should currently be treated as internal/controlled capability
-- world-pack `pack.ai` only declaratively influences prompt/output/parse/route hints
-- pack config does **not** directly control raw OpenAI/provider protocol payloads
-
-Current read-only observability surface that is now public:
-
-- `GET /api/inference/ai-invocations`
-- `GET /api/inference/ai-invocations/:id`
-
-### 9.4.3 AI invocation evidence note
-
-When inference is executed through the internal gateway path, trace metadata may include:
-
-- `ai_invocation_id`
-
-This id links the workflow-side `InferenceTrace` to kernel-side `AiInvocationRecord` evidence.
-
-Current public read-only query APIs are:
-
-- `GET /api/inference/ai-invocations`
-- `GET /api/inference/ai-invocations/:id`
-
-These endpoints expose observability evidence only; they do not change the external execution contract of `/api/inference/*`.
-
-### 9.5 Context Module MVP note
-
-Current inference workflow now also persists a first-stage Context Module trace.
-
-Current `GET /api/inference/traces/:id` response may include, inside `context_snapshot`:
-
-- `context_run`
-- `context_module`
-- `context_debug`
-- `memory_context`
-- `memory_selection`
-- `prompt_processing_trace`
-- `prompt_assembly`
-
-Current policy / overlay observability fields may additionally appear in `context_snapshot`, `context_module`, and `context_debug`:
-
-- `policy_decisions`
-- `blocked_nodes`
-- `locked_nodes`
-- `visibility_denials`
-- `overlay_nodes_loaded`
-- `overlay_nodes_mutated`
-- `submitted_directives`
-- `approved_directives`
-- `denied_directives`
-
-Current intended usage:
-
-- `context_run` / `context_module` = structured context selection + orchestration summary
-- `context_debug` = compact debug-oriented selected-node preview and assembly trace
-- `memory_context` = legacy compatibility surface for current prompt/memory consumers
-
-Current important boundary notes:
-
-- `memory_context` remains a compatibility projection, not the canonical upstream abstraction
-- policy authority is now node-level / working-set level, not primarily fragment-level
-- overlay nodes are kernel-side working-layer context objects, not pack runtime source-of-truth
-- directive fields are currently **schema + trace reservation only**; no public API enables directive execution in this stage
-
-Current grounding result classes are:
-
-- `exact`
-- `translated`
-- `narrativized`
-- `blocked`
-
-Current narrativized fallback contract:
-
-- world workflow may still complete technically
-- semantic failure is expressed through metadata such as `semantic_outcome='failed_attempt'`
-- a `history` event remains queryable through audit/timeline/entity overview surfaces
-
-## 10. 身份与 Access-Policy 接口
+## 11. 身份与 Access-Policy 接口
 
 - **POST `/api/identity/register`**
 - **POST `/api/identity/bind`**
@@ -389,42 +262,25 @@ Current narrativized fallback contract:
 - **POST `/api/access-policy`**
 - **POST `/api/access-policy/evaluate`**
 
-说明：
+当前稳定边界：
 
-- `/api/access-policy/*` 当前已作为独立 access-policy 子系统宿主
-- 它们负责 access / projection policy 的显式写入与评估
-- 它们不属于 world-pack governance framework 的核心接口，但也不再被视为 compat/debug surface
-- 当前响应不再附带 debug-surface warning meta
+- `/api/access-policy/*` 是独立 access-policy 子系统
+- 它们不属于 world-pack governance 主接口
 
-## 11. Operator 高级视图后端合同
+## 12. Operator 高级视图后端合同
 
 当前后端已经具备下列高级视图所需的核心证据面；前端页面与交互属于前端实现范围。
 
-### 11.1 Authority Inspector backend contract
+### 12.1 Authority Inspector backend contract
 
-可直接复用/组合以下后端证据：
+可直接复用 / 组合以下后端证据：
 
 - `buildInferenceContextV2(...).authority_context`
 - `buildInferenceContextV2(...).world_rule_context.mediator_bindings`
 - `resolveAuthorityForSubject(...)`
 - `resolveMediatorBindingsForPack(...)`
 
-核心字段包括：
-
-- `resolved_capabilities[]`
-  - `capability_key`
-  - `grant_type`
-  - `source_entity_id`
-  - `mediated_by_entity_id`
-  - `target_selector`
-  - `conditions`
-  - `priority`
-  - `provenance.authority_id`
-  - `provenance.matched_via`
-- `blocked_authority_ids[]`
-- `mediator_bindings[]`
-
-### 11.2 Rule Execution Timeline backend contract
+### 12.2 Rule Execution Timeline backend contract
 
 可直接复用：
 
@@ -432,44 +288,19 @@ Current narrativized fallback contract:
 - `listPackNarrativeTimelineProjection(...).timeline` 中的 `kind='rule_execution'`
 - pack-local `rule_execution_records`
 
-核心字段包括：
-
-- `id`
-- `rule_id`
-- `capability_key`
-- `mediator_id`
-- `subject_entity_id`
-- `target_entity_id`
-- `execution_status`
-- `created_at`
-- `payload_json`
-- `emitted_events_json`
-
-### 11.3 Perception Diff backend contract
+### 12.3 Perception Diff backend contract
 
 可直接复用：
 
 - `buildInferenceContextV2(...).perception_context`
 - `resolvePerceptionForSubject(...)`
 
-核心字段包括：
-
-- `visible_state_entries[]`
-  - `entity_id`
-  - `state_namespace`
-  - `state_json`
-- `hidden_state_entries[]`
-  - `entity_id`
-  - `state_namespace`
-  - `visible`
-  - `reason`
-
-### 11.4 前后端交接边界
+### 12.4 前后端交接边界
 
 后端负责：
 
 - authority / perception / mediator provenance / rule execution evidence 输出
-- pack/entity/rule 相关 projection contract 稳定化
+- pack / entity / rule 相关 projection contract 稳定化
 - handoff 字段与示例说明
 
 前端负责：
@@ -478,33 +309,6 @@ Current narrativized fallback contract:
 - Rule Execution Timeline 页面 UI
 - Perception Diff 页面 UI
 - 筛选器、布局、导航、交互状态与可视化表达
-
-## 12. 当前边界说明
-
-以下约束需要在调用方与维护文档中保持明确：
-
-1. `/api/packs/:packId/projections/timeline` 是当前唯一的 narrative timeline 接口
-2. `/api/entities/:id/overview` 是当前唯一 canonical entity overview 接口
-3. `/api/access-policy/*` 属于独立 access-policy 子系统，而不是 world-pack governance 主接口
-4. world-pack schema 当前不再接受 legacy `scenario / actions / decision_rules / event_templates`
-5. 当前 ownership matrix 已明确：
-   - world governance core -> pack runtime
-   - `Post / ActionIntent / InferenceTrace / DecisionJob / relationship evidence` -> kernel-side Prisma
-   - `Event` -> kernel-side shared evidence host，承担 pack objective enforcement 与 audit/memory/workflow/narrative projection 之间的 bridge
-6. `/api/agent/:id/overview` 已删除；web 默认调用面已统一到 `/api/entities/:id/overview`
-7. 当前未引入正式 `PackOutboxEvent`：
-   - objective enforcement 仍直接写 kernel `Event`
-   - narrative / audit / workflow follow-up 继续基于当前 bridge 与 projection extraction 运作
-8. runtime boundary 的第一轮调整已完成：
-   - activation/bootstrap 细节已从 `SimulationManager.init()` 抽离到独立模块
-   - 生产代码中的 tick / calendar 读取已优先经由 runtime facade，而不是继续直接依赖内部 `clock` 对象
-9. 当前 pack 投影 API 在单 active-pack 模式下运行：
-   - `packId` 必须与当前 active pack 一致
-   - 不一致时返回 `PACK_ROUTE_ACTIVE_PACK_MISMATCH`
-10. Current scheduler event-followup can consume event bridge metadata such as:
-    - `followup_actor_ids`
-    - semantic target hints carried through `impact_data.semantic_intent.target_ref`
-    - this is the current minimum collaboration/event-feedback path used by `world-death-note`
 
 ## 13. 错误代码参考 (Error Codes)
 

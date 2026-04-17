@@ -217,7 +217,13 @@ export const pluginSummarySchema = z.object({
 
 export const pluginListResponseDataSchema = z.object({
   pack_id: nonEmptyStringSchema,
-  items: z.array(pluginSummarySchema)
+  items: z.array(pluginSummarySchema),
+  enable_warning: z.object({
+    enabled: z.boolean(),
+    require_acknowledgement: z.boolean(),
+    reminder_text: nonEmptyStringSchema,
+    reminder_text_hash: nonEmptyStringSchema
+  })
 })
 
 export const pluginOperationAcknowledgementSchema = z.object({
@@ -242,3 +248,4 @@ export type PluginInstallation = z.infer<typeof pluginInstallationSchema>
 export type PluginActivationSession = z.infer<typeof pluginActivationSessionSchema>
 export type PluginEnableAcknowledgement = z.infer<typeof pluginEnableAcknowledgementSchema>
 export type PluginAuditEventCode = z.infer<typeof pluginAuditEventCodeSchema>
+export type PluginListResponseData = z.infer<typeof pluginListResponseDataSchema>

@@ -1,3 +1,5 @@
+import type { PluginListResponseData } from '@yidhras/contracts'
+
 import { requestApiData } from '../../lib/http/client'
 
 export interface PluginSummarySnapshot {
@@ -30,6 +32,19 @@ export interface PackPluginListSnapshot {
   items: PluginSummarySnapshot[]
 }
 
+export interface PluginEnableWarningSnapshot {
+  enabled: boolean
+  require_acknowledgement: boolean
+  reminder_text: string
+  reminder_text_hash: string
+}
+
+export interface PluginOperationAcknowledgementResponse {
+  acknowledged: true
+  pack_id: string
+  installation: PluginSummarySnapshot
+}
+
 export interface PluginWebPanelContribution {
   target: string
   panel_id: string
@@ -60,7 +75,21 @@ export interface ActivePackPluginRuntimeSnapshot {
 
 export const usePluginApi = () => {
   return {
-    listPackPlugins: (packId: string) => requestApiData<PackPluginListSnapshot>(`/api/packs/${packId}/plugins`),
+    listPackPlugins: (packId: string) => requestApiData<PluginListResponseData>(`/api/packs/${packId}/plugins`),
+    confirmPackPluginImport: (packId: string, installationId: string, grantedCapabilities?: string[]) =>
+      requestApiData<PluginOperationAcknowledgementResponse>(`/api/packs/${packId}/plugins/${installationId}/confirm`, {
+        method: 'POST',
+        body: grantedCapabilities ? { granted_capabilities: grantedCapabilities } : {}
+      }),
+    enablePackPlugin: (packId: string, installationId: string, acknowledgement: { reminder_text_hash: string; actor_label?: string }) =>
+      requestApiData<PluginOperationAcknowledgementResponse>(`/api/packs/${packId}/plugins/${installationId}/enable`, {
+        method: 'POST',
+        body: { acknowledgement }
+      }),
+    disablePackPlugin: (packId: string, installationId: string) =>
+      requestApiData<PluginOperationAcknowledgementResponse>(`/api/packs/${packId}/plugins/${installationId}/disable`, {
+        method: 'POST'
+      }),
     getActivePackPluginRuntime: (packId: string) =>
       requestApiData<ActivePackPluginRuntimeSnapshot>(`/api/packs/${packId}/plugins/runtime/web`)
   }

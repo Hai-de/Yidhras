@@ -1,5 +1,12 @@
 # 核心执行逻辑 / Logic
 
+本文档用于说明 Yidhras 中**业务执行主线、状态转移语义、领域规则与可见性语义**。
+
+> 不在这里展开：
+> - 公共 HTTP contract：看 `API.md`
+> - 系统模块分层与宿主关系：看 `ARCH.md`
+> - Prompt Workflow / AI Gateway / Plugin Runtime 的高耦合实现细节：看 `docs/capabilities/`
+
 ## 1. 推理与执行主线
 
 当前 inference / workflow / world enforcement 主线可概括为：
@@ -14,224 +21,176 @@
 5. `ActionDispatcher` / `InvocationDispatcher` / `EnforcementEngine` 落地客观执行
 6. `InferenceTrace.context_snapshot` / workflow / audit / projections 提供可观测证据
 
-## 2. Prompt Workflow Runtime
+语义重点：
 
-当前 prompt 处理主线已从“隐式 processor 串联”提升为一个线性的 **Prompt Workflow Runtime**。
+- provider 不必直接产出最终可执行世界动作
+- server-side grounder 负责把开放语义收束到受控执行路径
+- workflow 的“技术完成”与语义上的“成功完成”不是同一件事
 
-当前默认内置 profile 为：
+## 2. Intent Grounder 语义
 
-- `agent-decision-default`
-- `context-summary-default`
-- `memory-compaction-default`
+`Intent Grounder` 的核心职责，是把开放语义映射为系统可执行或可叙述的结果。
 
-当前 task-aware 入口已支持：
+当前 grounding 结果类别包括：
 
-- `buildPromptBundle(context, { task_type })`
-- `buildAiTaskPromptBundleFromInferenceContext(...)`
-- `buildAiTaskRequestFromInferenceContext(...)`
+- `exact`
+- `translated`
+- `narrativized`
+- `blocked`
 
-其中：
+它们分别意味着：
 
-- `agent_decision` -> `agent-decision-default`
-- `context_summary` -> `context-summary-default`
-- `memory_compaction` -> `memory-compaction-default`
+- `exact`：开放语义可直接映射到既有能力 / 规则路径
+- `translated`：原始意图需要先被翻译成受控执行动作
+- `narrativized`：不直接执行客观动作，而以叙事失败 / 尝试结果落地
+- `blocked`：不允许继续进入执行链
 
-当前 inference 主链仍以 `agent_decision` 为主，但 `context_summary / memory_compaction` 已不再只是预留 profile，而是可命中真实 workflow 入口。
+## 3. Narrativized fallback 语义
 
-当前默认 workflow steps 为：
+narrativized fallback 的关键点是：
 
-1. `legacy_memory_projection`
-2. `node_working_set_filter`
-3. `summary_compaction`
+- workflow 在技术上可能仍然完成
+- 但语义结果表现为失败尝试、未达成或被叙事化处理
+- 相关证据仍然通过现有 surfaces 可见
 
-其中不同任务会使用不同 step 组合：
+当前语义表达方式包括：
 
-- `agent_decision`
-  - `legacy_memory_projection -> node_working_set_filter -> summary_compaction -> token_budget_trim -> placement_resolution -> bundle_finalize`
-- `context_summary`
-  - `legacy_memory_projection -> node_working_set_filter -> summary_compaction -> fragment_assembly -> bundle_finalize`
-- `memory_compaction`
-  - `legacy_memory_projection -> node_working_set_filter -> node_grouping -> summary_compaction -> fragment_assembly -> bundle_finalize`
+- metadata 中的 `semantic_outcome='failed_attempt'`
+- `history` event
+- workflow / audit evidence
+- pack timeline
+- entity overview 聚合读面
 
-说明：
+因此，系统不会把所有未能直接执行的开放语义都粗暴处理为“完全不可见”。
 
-- 当前 runtime 仍复用既有 `PromptProcessor` 作为第一轮 executor
-- 当前 `PromptWorkflowProfile / StepSpec / State / Diagnostics / Registry` 已落地
-- 当前阶段仍是线性 runtime，不支持 DAG、循环节点或用户自定义执行图
-- `memory_context` 仍存在，但其角色已退为 compatibility surface / bridge
-- `PromptBundle` 已携带 workflow metadata：
-  - `workflow_task_type`
-  - `workflow_profile_id`
-  - `workflow_profile_version`
-  - `workflow_step_keys`
-  - `workflow_section_summary`
-  - `workflow_placement_summary`
-  - `processing_trace`
+## 4. Death Note 语义闭环
 
-### 当前 placement 解析语义
+`world-death-note` 当前已形成最小可重复语义循环。
 
-当前 `placement_resolution` 已显式支持：
+### 4.1 notebook side
 
-- `prepend`
-- `append`
-- `before_anchor`
-- `after_anchor`
+- `claim_notebook`
+- `understand_notebook_power`
+- `form_judgement_intent`
+- `gather_target_intel`
+- `choose_target`
+- `judge_target`
+- 在案件压力升高时切换到 `raise_false_suspicion`
 
-以及 anchor：
+### 4.2 investigator side
 
-- `slot_start`
-- `slot_end`
-- `source`
-- `tag`
-- `fragment_id`
+- `investigate_death_cluster`
+- `share_case_intel`
+- `request_joint_observation`
+- `publish_case_update`
 
-当前 diagnostics 已输出：
+### 4.3 反馈回路
 
-- placement summary
-- workflow step traces
-- selected step keys
-- compatibility usage
+execution 后会通过 objective events 发出：
 
-### 当前 section draft 分层
+- `post_execution_pressure_feedback`
+- `investigation_pressure_escalated`
+- `case_update_published`
 
-当前 runtime 已引入：
+这些反馈再通过：
 
-- `grouped_nodes`
-- `PromptSectionDraft`
-- `fragment_assembly`
-- `section_summary`
+- scheduler follow-up
+- short-term memory
+- workflow / audit / projection surfaces
 
-### 当前 task-aware 差异
+进入下一轮 actor 再思考。
 
-当前 `section_drafts` 与 trimming 已开始按 task type 体现不同策略：
+这构成了最小事件驱动语义回流，而不是一次性静态剧情模板。
 
-- `agent_decision`
-  - 保留较完整的 system / role / world / memory / output contract 结构
-  - `section_policy = standard`
-  - `task_policy = standard`
-- `context_summary`
-  - recent evidence / memory summary 更优先
-  - `section_policy = minimal`
-  - `task_policy = evidence_first`
-  - `output_contract` 在最小策略下会被移除
-  - 若已存在 `context_snapshot` 或 memory sections，则会进一步压低/移除 `role_context` 与 `world_context`
-- `memory_compaction`
-  - memory_long_term / memory_summary / memory_short_term 更优先
-  - `section_policy = minimal`
-  - `task_policy = memory_focused`
-  - world / role / output contract 会在最小策略下被移除
-  - 若已存在 memory sections，则 `context_snapshot` 也会被移除
+## 5. Projection / visibility 语义
 
-当前这些差异主要体现在：
+当前系统的 projection / visibility 语义可概括为：
 
-- `buildSectionDraftsFromFragments(...)` 的 task-aware ordering / pruning
-- `fragment_assembly` 之后的 `section_summary`
-- `token_budget_trim` 的 slot priority 调整
+### 5.1 pack projection
 
-当前 `section_summary` 新增了更适合调试与回归的字段：
+pack runtime projection 当前覆盖：
 
-- `sections_by_type`
-- `section_policies`
+- entity overview projection
+- pack narrative timeline projection
 
-同时，draft metadata 中的 `task_policy` 会写入：
+其可见证据包括：
 
-- `task_type`
-- `section_policy`
-- `policy_name`
-- `priority`
-- `ranking_score`
-- `score_components`
-- `score_reasons`
+- entities
+- entity states
+- authority grants
+- mediator bindings
+- rule execution records
+- event timeline
 
-同时，`section_summary` 现在还会输出 `section_scores`，把每个 section 的 `policy_name / ranking_score / score_components / score_reasons` 聚合成稳定读面。
+### 5.2 kernel projection
 
-当前语义为：
+kernel projection 当前覆盖：
 
-```text
-ContextNode / working_set
-  -> grouped_nodes
-  -> PromptSectionDraft
-  -> PromptFragment
-  -> PromptBundle
-```
+- operator overview projection
+- global projection index extraction
 
-### 当前 trimming 读面
+### 5.3 canonical read surfaces
 
-当前 `token_budget_trimming` 已不再只输出最小裁剪结果，而会额外记录：
+当前 canonical 读接口已形成：
 
-- `task_type`
-- `kept_fragment_ids`
-- `always_kept_fragment_ids`
-- `kept_optional_fragment_ids`
-- `slot_priority`
-- `optional_fragment_scores`
-- `section_budget`
-- `trimmed_by_slot`
-- `trimmed_sources`
-- `section_summary`
+- `/api/packs/:packId/overview`
+- `/api/packs/:packId/projections/timeline`
+- `/api/entities/:id/overview`
 
-其中 `section_budget` 当前已包含：
+语义含义：
 
-- `mode`
-- `total_budget`
-- `allocated_budget`
-- `allocations`
-- `kept_section_ids`
-- `dropped_section_ids`
+- narrative timeline 的 pack 读面已经固定到 pack projection surface
+- entity overview 的聚合读面已经固定到 entity-centric surface
+- 旧的 `/api/narrative/timeline` 与 `/api/agent/:id/overview` 已退出主调用面
 
-当前语义是：Prompt Workflow 已开始把 section ranking 接到 budget 分配上，section-level budget 已进入 diagnostics 主线；但它仍属于第一轮预算模型，而不是精确 tokenizer 级预算器或复杂 section rebalance 引擎。
+## 6. Death Note 的可见性保证
 
-这意味着当前 token budget 阶段已经具备 task-aware / section-aware 的基础解释能力，后续如果继续调优，不必再只能从最终 prompt 反推裁剪原因。
+当前 Death Note 相关语义保证包括：
 
-这意味着 prompt 流程不再只有 fragment 一层，而开始具备 node/section/fragment 分层。
+- narrativized failure 在 workflow / audit evidence 中可见
+- 相关 `history` events 在 pack timeline 中可见
+- entity overview 可通过既有聚合读面观察这些事件
+- follow-up actors 可由 emitted event metadata 继续被调度
 
-### 当前 AI task 联动
+这保证了题材语义不是只发生在内部执行链里，而是能进入用户可读取的观测面。
 
-当前 workflow metadata 已继续透传到：
+## 7. Context / memory 的业务语义
 
-- `PromptBundle.metadata`
-- AI messages metadata
-- `AiTaskRequest.metadata`
-- `ModelGatewayRequest.metadata`
-- `AiInvocationTrace`
+### 7.1 Context Module 的业务角色
 
-因此 gateway path 现在也具备 workflow 级可观测性，而不只是最终 prompt 文本观测。
+Context Module 的业务意义不是替代世界状态，而是：
 
-当前重点读面包括：
+- 从多种上下文来源收集候选信息
+- 根据 policy / visibility / working set 规则决定最终上下文
+- 为下游 inference / prompt 流水线提供结构化输入
 
-- `workflow_task_type`
-- `workflow_profile_id / workflow_profile_version`
-- `workflow_step_keys`
-- `workflow_section_summary`
-- `workflow_placement_summary`
-- `processing_trace`
+### 7.2 overlay 语义
 
-## 3. Memory Block Runtime
+overlay 当前是 kernel-side working-layer object，语义上代表：
 
-当前 Memory Block 已形成最小运行时闭环：
+- 临时、工作层、可写入的上下文补充
+- 不是 pack runtime source-of-truth
+- 不直接覆盖世界客观状态
+
+### 7.3 Memory Block 语义
+
+Memory Block Runtime 当前形成最小闭环：
 
 1. `MemoryBlock` 持久化在 kernel Prisma
-2. `LongMemoryBlockStore` 读取候选块
-3. `evaluation_context` 组装：
-   - 当前 actor
-   - pack state
-   - recent trace / intent / event（经权限裁剪）
-4. `trigger_engine` 评估：
-   - `always`
-   - `keyword`
-   - `logic`
-   - `recent_source`
-5. runtime state 更新：
-   - trigger count
-   - active
-   - retain/cooldown/delay
-   - `recent_distance_from_latest_message`
-6. active / retained block materialize 为 `ContextNode`
-7. `memory_injector` 将其映射为 prompt fragments
+2. 读取候选块
+3. 基于 evaluation context 执行触发判断
+4. 更新 runtime state
+5. materialize 为 `ContextNode`
+6. 经由 prompt 相关路径进入下游消费
 
-### 当前逻辑 DSL
+触发语义支持：
 
-已支持：
+- `always`
+- `keyword`
+- `logic`
+- `recent_source`
+
+逻辑 DSL 当前支持：
 
 - `and`
 - `or`
@@ -243,85 +202,18 @@ ContextNode / working_set
 - `contains`
 - `exists`
 
-### 当前 recent-source 读取边界
+### 7.4 recent-source 语义
 
-- 默认按**同一 agent 的历史输出**筛 recent traces/intents/events
-- recent source 进入 trigger 前必须经过 field-level access policy 裁剪
-- 当前 memory resource action：
+当前 recent-source 的业务边界：
+
+- 默认按同一 agent 的历史输出筛 recent traces / intents / events
+- recent source 在进入 trigger 前必须经过 field-level access policy 裁剪
+- 当前 memory resource actions：
   - `read_recent_trace`
   - `read_recent_intent`
   - `read_recent_event`
 
-### 当前 memory block diagnostics
-
-`ContextRun.diagnostics.memory_blocks` 已输出：
-
-- `evaluated`
-- `inserted`
-- `delayed`
-- `cooling`
-- `retained`
-- `inactive`
-
-这些字段也已进入 `InferenceTrace.context_snapshot`。
-
-## 4. Projection / Visibility
-
-当前 pack runtime projection 已覆盖：
-
-- entity overview projection
-- pack narrative timeline projection
-
-可读取的主要证据包括：
-
-- entities
-- entity states
-- authority grants
-- mediator bindings
-- rule execution records
-- event timeline
-
-当前 kernel projection 已覆盖：
-
-- operator overview projection
-- global projection index extraction
-
-### API-level projection surface
-
-当前读接口已经出现 canonical pack/entity endpoint：
-
-- `/api/packs/:packId/overview`
-- `/api/packs/:packId/projections/timeline`
-- `/api/entities/:id/overview`
-
-当前阶段可归纳为：
-
-- canonical pack/entity projection surface 已形成
-- `/api/narrative/timeline` 已退出代码库
-- `/api/agent/:id/overview` 已退出代码库
-
-Current Death Note visibility guarantee:
-
-- narrativized failure is visible in workflow/audit evidence
-- related `history` events are visible in pack timeline
-- entity overview / agent overview can observe those events through existing read-model surfaces
-- follow-up actors can be scheduled from emitted event metadata
-
-Current Death Note semantic loop also includes:
-
-- notebook-side role-aware decision routing
-  - `form_judgement_intent -> gather_target_intel -> choose_target -> judge_target`
-  - when `countermeasure_pressure` or investigation feedback rises, notebook holder can switch to `raise_false_suspicion`
-- investigator-side role-aware decision routing
-  - `investigate_death_cluster -> share_case_intel -> request_joint_observation -> publish_case_update`
-- finer intel / pressure dimensions in pack state
-  - `target_name_confirmed`
-  - `target_face_confirmed`
-  - `target_schedule_known`
-  - `evidence_chain_strength / case_theory_strength / countermeasure_pressure`
-- execution feedback events such as `post_execution_pressure_feedback` and `investigation_pressure_escalated`, which feed back into the next round via scheduler follow-up and short-term memory.
-
-## 5. Context trace observability
+## 8. Context trace observability 语义
 
 当前 `InferenceTrace.context_snapshot` 已增强为同时承载：
 
@@ -334,16 +226,57 @@ Current Death Note semantic loop also includes:
 - `prompt_processing_trace`
 - `memory_blocks`
 
-并且当前 workflow diagnostics 已可通过：
+其业务意义是：
 
-- `context_run.diagnostics.orchestration.prompt_workflow`
-- `PromptBundle.metadata`
-- AI gateway request metadata
+- 不只记录“模型最后看到了什么文本”
+- 还记录“系统为什么选择这些上下文、如何组织、哪些内容被裁剪或保留”
 
-当前 task-aware workflow 的连续读面已覆盖：
+这为调试、回放、验收与后续解释提供了连续读面。
 
-- `PromptBundle.metadata.workflow_task_type / workflow_section_summary / workflow_placement_summary`
-- `InferenceTrace.context_snapshot.prompt_workflow`
-- `InferenceTrace.context_snapshot.prompt_processing_trace`
+## 9. AI task / gateway 的业务语义边界
 
-进行连续观察。
+从业务语义上，应把 AI gateway 理解为：
+
+- 一个内部执行底座
+- 一个将 workflow metadata 与 provider execution 对接的观测层
+- 而不是已正式公开给外部调用方的 provider-specific contract
+
+因此：
+
+- 对外仍只稳定承诺 `mock | rule_based`
+- `model_routed` 目前仍是内部 / 受控能力
+- `AiInvocationRecord` 的公开价值主要在于 observability，而不是把内部路由模型正式公开化
+
+更详细的能力说明见：
+
+- `docs/capabilities/AI_GATEWAY.md`
+
+## 10. Prompt Workflow 与 Plugin Runtime 的专题说明
+
+以下两类高耦合主题已拆到专题文档：
+
+- Prompt Workflow Runtime -> `docs/capabilities/PROMPT_WORKFLOW.md`
+- Pack-local Plugin Runtime -> `docs/capabilities/PLUGIN_RUNTIME.md`
+
+在 Logic 中只保留其业务语义结论：
+
+- Prompt Workflow 决定上下文如何被组织为模型可消费结构
+- Plugin Runtime 决定插件能力如何在受控治理前提下进入系统执行与前端承接
+
+## 11. 当前业务语义结论
+
+当前可以认为稳定成立的业务语义包括：
+
+1. 开放语义必须经由 grounder 收束到受控执行结果
+2. narrativized fallback 是正式语义结果，而不是简单异常分支
+3. 事件 / workflow / projection / audit 共同构成连续可观察语义链
+4. overlay / memory block 属于工作层语义，不替代世界客观状态
+5. canonical pack/entity read surfaces 已形成
+
+## 12. 相关文档
+
+- 系统边界：`ARCH.md`
+- 公共接口：`API.md`
+- Prompt Workflow：`docs/capabilities/PROMPT_WORKFLOW.md`
+- AI Gateway：`docs/capabilities/AI_GATEWAY.md`
+- Plugin Runtime：`docs/capabilities/PLUGIN_RUNTIME.md`

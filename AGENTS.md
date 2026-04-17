@@ -7,8 +7,8 @@ Repository guidance for coding agents working in `Yidhras`.
 - `apps/server`: TypeScript + Express + Prisma + SQLite backend.
 - `apps/web`: Nuxt 4 + Vue 3 + Pinia frontend.
 - `packages/contracts`: shared transport schemas and envelope types.
-- `docs/`: stable reference docs.
-- `data/`: runtime data area created locally at startup; do not treat it as the main source of truth in Git.
+- `docs/`: repository docs, stable references, and operation guides.
+- `data/`: local runtime data area created at startup; do not treat it as the main Git source of truth.
 - Package manager: `pnpm` workspace.
 
 ## 2. Tooling Baseline
@@ -20,61 +20,41 @@ Repository guidance for coding agents working in `Yidhras`.
 - Prisma schema lives at `apps/server/prisma/schema.prisma`.
 - Shared transport-boundary contracts live in `packages/contracts`.
 
-## 3. Commands
+## 3. High-frequency Commands
 
-### Install
+Use these as entry points only. For the full command matrix, always check `docs/guides/COMMANDS.md`.
+
+### Install / Dev
 
 - `pnpm install`
-- `pnpm --filter yidhras-server install`
-- `pnpm --filter web install`
-
-### Dev / Build / Start
-
-- `pnpm --filter yidhras-server dev`
-- `pnpm --filter yidhras-server build`
-- `pnpm --filter yidhras-server start`
-- `pnpm --filter web dev`
-- `pnpm --filter web build`
-- `pnpm --filter web preview`
+- `pnpm prepare:runtime`
+- `pnpm dev:server`
+- `pnpm dev:web`
 - `./start-dev.sh` or `start-dev.bat`
 
 ### Quality
 
 - `pnpm lint`
 - `pnpm typecheck`
-- `pnpm --filter yidhras-server lint`
-- `pnpm --filter yidhras-server typecheck`
-- `pnpm --filter web lint`
-- `pnpm --filter web typecheck`
+- `pnpm test`
+- `pnpm test:unit`
 
-### Tests
+### Common scoped checks
 
-- Workspace:
-  - `pnpm test`
-  - `pnpm test:unit`
-  - `pnpm test:integration`
-  - `pnpm test:e2e`
-- Server:
-  - `pnpm --filter yidhras-server test:unit`
-  - `pnpm --filter yidhras-server test:integration`
-  - `pnpm --filter yidhras-server test:e2e`
-  - `pnpm --filter yidhras-server test:watch`
-  - `pnpm --filter yidhras-server smoke`
-- Web:
-  - `pnpm --filter web test:unit`
-  - `pnpm --filter web test:watch`
+- `pnpm --filter yidhras-server test:integration`
+- `pnpm --filter yidhras-server test:e2e`
+- `pnpm --filter yidhras-server smoke`
+- `pnpm --filter web test:unit`
 
-### Single-spec examples
+### World-pack / plugin entry points
 
-- `pnpm --filter yidhras-server exec vitest run --config vitest.integration.config.ts tests/integration/<file>.spec.ts`
-- `pnpm --filter yidhras-server exec vitest run --config vitest.e2e.config.ts tests/e2e/<file>.spec.ts`
-- `pnpm --filter web exec vitest run --config vitest.config.ts tests/unit/<file>.spec.ts`
+- `pnpm scaffold:world-pack -- --dir <pack-dir> --name "<Pack Name>" --author "<Author>"`
+- `pnpm --filter yidhras-server plugin -- <command>`
 
-### Runtime setup
+For detailed CLI examples, testing entry points, and plugin operations:
 
-- `pnpm --filter yidhras-server prepare:runtime`
-- `pnpm --filter yidhras-server reset:dev-db`
-- Manual/demo scripts live under `apps/server/scripts/manual/*`.
+- `docs/guides/COMMANDS.md`
+- `docs/guides/PLUGIN_OPERATIONS.md`
 
 ## 4. Architecture Anchors
 
@@ -91,12 +71,7 @@ Repository guidance for coding agents working in `Yidhras`.
 ### Workflow / Inference
 
 - `apps/server/src/app/services/inference_workflow.ts` is a facade/export surface.
-- Split responsibilities across:
-  - `inference_workflow/parsers.ts`
-  - `inference_workflow/repository.ts`
-  - `inference_workflow/snapshots.ts`
-  - `inference_workflow/results.ts`
-  - `inference_workflow/workflow_query.ts`
+- Split responsibilities across focused modules under `app/services/inference_workflow/`.
 - Keep decision generation, workflow persistence, and action dispatch as separate concerns.
 - Keep API handlers thin; domain assembly belongs in services.
 - Keep inference route/service boundaries centralized at:
@@ -118,9 +93,8 @@ Repository guidance for coding agents working in `Yidhras`.
 - Pack runtime materialization lives in `apps/server/src/packs/runtime/materializer.ts`.
 - Pack-specific decision rules and actions should flow through existing world-pack modules, not ad-hoc route logic.
 - Treat a publishable world pack as a small project, not only a YAML file.
-- Prefer keeping publish/release metadata in `metadata` (for example: `authors`, `license`, `homepage`, `repository`, `tags`, `compatibility`).
+- Prefer keeping publish/release metadata in `metadata`.
 - Recommended minimum contents for a pack directory: `config.yaml` + `README.md`.
-- Use `pnpm scaffold:world-pack -- --dir <pack-dir> --name "<Pack Name>" --author "<Author>" [--set-preferred] [--set-bootstrap-template] [--disable-bootstrap] [--dry-run]` to create a new pack project skeleton.
 - See `docs/WORLD_PACK.md` for packaging and release guidance.
 
 ### Frontend
@@ -165,16 +139,44 @@ Repository guidance for coding agents working in `Yidhras`.
 
 ## 6. Documentation Boundaries
 
-- `README.md`: entry page only.
-- `TODO.md`: current status and priorities.
-- `docs/记录.md`: verification evidence and acceptance notes.
-- `docs/API.md`: external API contracts and error codes.
-- `docs/ARCH.md`: architecture boundaries and module responsibilities.
-- `docs/LOGIC.md`: business rules and domain semantics.
-- `docs/WORLD_PACK.md`: world-pack packaging, README baseline, and release guidance.
-- `docs/INDEX.md`: document navigation.
-- `apps/web/README.md`: frontend-specific structure and guardrails.
-- `.limcode/design/`, `.limcode/plans/`, `.limcode/review/`: process artifacts, not the primary source of truth.
+Always prefer linking over duplicating the same facts.
 
-Prefer linking over duplicating the same status/details across multiple markdown files.
-If behavior or commands change, update the relevant docs in the same change.
+### Entry documents
+
+- `README.md`: repository entry page only.
+- `docs/INDEX.md`: document navigation, taxonomy, and source-of-truth rules.
+- `AGENTS.md`: agent collaboration rules and engineering constraints.
+- `TODO.md`: current backlog and priorities only.
+
+### Stable references
+
+- `docs/API.md`: external/public API contracts and error codes.
+- `docs/ARCH.md`: architecture boundaries, ownership, module responsibilities.
+- `docs/LOGIC.md`: business rules, execution semantics, domain meaning.
+- `docs/WORLD_PACK.md`: world-pack packaging, README baseline, release guidance.
+- `docs/THEME.md`: frontend theme contract and authoring/debugging guidance.
+- `apps/web/README.md`: frontend-specific scope and structure.
+
+### Operation guides
+
+- `docs/guides/COMMANDS.md`: full command matrix.
+- `docs/guides/PLUGIN_OPERATIONS.md`: plugin governance operations.
+
+### Process artifacts
+
+- `.limcode/design/`, `.limcode/plans/`, `.limcode/review/`: process artifacts, not the primary stable source of truth.
+
+## 7. Documentation Update Rule
+
+When behavior changes, update the most appropriate primary doc in the same change:
+
+- startup / entry flow -> `README.md`
+- commands / test entry points -> `docs/guides/COMMANDS.md`
+- public plugin operation flow -> `docs/guides/PLUGIN_OPERATIONS.md`
+- API contract -> `docs/API.md`
+- architecture boundary -> `docs/ARCH.md`
+- business semantics -> `docs/LOGIC.md`
+- current priorities -> `TODO.md`
+- process reasoning / review / migration notes -> `.limcode/*`
+
+If unsure, update the primary source first and add links elsewhere instead of copying the full content.

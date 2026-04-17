@@ -1,56 +1,24 @@
 # TODO
 
+> 本文件只记录当前 backlog、优先级与最近一段时间的待处理事项。
+> 稳定架构事实看 `docs/ARCH.md`，业务语义看 `docs/LOGIC.md`，接口契约看 `docs/API.md`，设计/计划/评审过程看 `.limcode/`。
 
-## Current Architecture Snapshot / 当前架构概览
+## 当前重点 / Current Focus
 
-当前已形成的核心结构包括：
+### P1 架构与实现跟进
 
-- pack schema：`packs/schema/**`
-- pack manifest loader：`packs/manifest/constitution_loader.ts` + `packs/manifest/loader.ts`
-- pack runtime materializer：`packs/runtime/materializer.ts`
-- pack runtime repositories：`packs/storage/**`
-- authority / perception / inference context assembler：`domain/authority/**`、`domain/perception/**`、`domain/inference/**`
-- invocation / objective enforcement：`domain/invocation/**`、`domain/rule/**`
-- kernel + pack projections：`kernel/projections/**`、`packs/runtime/projections/**`
-
-## Remaining Non-Core Surfaces / 剩余非主线表面
-
-以下内容仍保留，但已不属于 world-pack 输入、运行时兼容桥或治理主线核心：
-
-- `/api/access-policy/*` 的独立 access-policy 子系统接口
-- `apps/server/src/core/simulation.ts` 仍未拆成更细的 runtime manager / pack instance 边界
-
-### Context Module MVP / 当前阶段说明
-
-- 当前完成的是 Context Module MVP + policy/overlay deepening，而不是完整 Prompt Workflow Engine
-- 当前 orchestrator 仍是固定线性阶段：memory injection / policy filter / summary compaction / token budget trim
-- 当前不包含可视化节点编排、插件执行平台、Agent 自主 context directives 执行路径
-- 当前 overlay 属于 kernel-side working-layer object，不属于 pack runtime world governance core
-- 当前 `memory_context` 仍然保留，但仅作为 compatibility surface
-
-- [ ] 同步更多设计/实现细节到 docs/ 与根文档，减少新读者理解 Intent Grounder 与 narrativized failure 的成本
-- [ ] 继续观察 `SimulationManager` / runtime facade 边界，决定是否需要下一轮收口
-- [ ] 评估是否需要进一步补针对 Death Note semantic path 的专门 review 文档
-- [x] 已新增 `AiInvocationRecord` 的查询/read-model/API surface（`/api/inference/ai-invocations*`）
-
-### A. 子系统边界收口
-- [x] 完成 access-policy 子系统独立化，当前正式入口为 `/api/access-policy/*`
-- [ ] 继续推动 `SimulationManager` 向更清晰的 runtime manager / pack instance 边界演进
-
-### B. 文档与契约同步深化
-- [x] 同步 `docs/ARCH.md`
-- [x] 同步 `docs/LOGIC.md`
-- [x] 同步 `docs/API.md`
-- [x] 同步 `TODO.md`
-- [x] 同步 `记录.md`
+- [ ] 继续观察 `SimulationManager` 与 runtime facade 的边界，决定是否需要下一轮收口
+- [ ] 评估是否需要补充更正式的 capability / topic 文档承接 Prompt Workflow、Plugin Runtime、AI Gateway 等横切主题
 - [ ] 如有需要，继续补 shared contracts 对 canonical pack/entity endpoint 的正式 schema
 
-### C. ownership matrix 深化
-- [ ] 评估 `Event / Post / ActionIntent / InferenceTrace / DecisionJob` 是否存在进一步 pack-owned 化的必要
-- [ ] 若引入 `PackOutboxEvent`，明确与当前 projection extraction 的替换关系
-- [ ] 评估 relationship runtime evidence 的最终归属边界
+### P2 评估项
 
-## Notes / 说明
+- [ ] 评估 `Event / Post / ActionIntent / InferenceTrace / DecisionJob` 的长期文档承载方式，避免继续散落在状态文档中
+- [ ] 评估 relationship runtime evidence 的最终文档归属边界
+- [ ] 评估是否需要把历史阶段性结论迁移到 `CHANGELOG.md` 或 `docs/history/`
 
-- 当前文档描述应区分“已实现”和“仍保留的兼容表面”，避免将设计目标写成已完成实现。
-- scheduler、operator console、frontend workspace 等既有能力保持不变，后续工作应避免无关回归。
+## 说明 / Notes
+
+- 本文件不是 changelog，不记录完整已完成清单。
+- 本文件不是架构总览，不长期保存稳定模块说明。
+- 已完成工作的证据、评审与结论，优先进入 `.limcode/review/`、`.limcode/progress.md` 或后续专门历史文档。

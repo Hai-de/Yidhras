@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
-import type { PluginInstallation } from '@yidhras/contracts';
+import type { PluginInstallation, PluginListResponseData } from '@yidhras/contracts';
 
-import { PLUGIN_ENABLE_ACK_REQUIRED_CODE } from '../../plugins/contracts.js';
+import { PLUGIN_ENABLE_ACK_REQUIRED_CODE, PLUGIN_ENABLE_WARNING_TEXT } from '../../plugins/contracts.js';
 import { syncActivePackPluginRuntime } from '../../plugins/runtime.js';
 import { assertPluginEnableAllowed,createPluginManagerService } from '../../plugins/service.js';
 import { createPluginStore } from '../../plugins/store.js';
@@ -21,10 +21,24 @@ const getEnableWarningConfig = (context: AppContext) => {
   };
 };
 
+const getEnableWarningTextHash = async (): Promise<string> => {
+  const { createHash } = await import('node:crypto');
+  return createHash('sha256').update(PLUGIN_ENABLE_WARNING_TEXT).digest('hex');
+};
+
+export const getPackPluginEnableWarningSnapshot = async (context: AppContext) => {
+  const config = getEnableWarningConfig(context);
+  return {
+    ...config,
+    reminder_text: PLUGIN_ENABLE_WARNING_TEXT,
+    reminder_text_hash: await getEnableWarningTextHash()
+  };
+};
+
 export const listPackPluginInstallations = async (
   context: AppContext,
   packId: string
-): Promise<{ pack_id: string; items: PluginInstallation[] }> => {
+): Promise<PluginListResponseData> => {
   const store = createPluginStore({ prisma: context.prisma });
   const items = await store.listInstallationsByScope({
     scope_type: 'pack_local',
@@ -32,6 +46,7 @@ export const listPackPluginInstallations = async (
   });
 
   return {
+    enable_warning: await getPackPluginEnableWarningSnapshot(context),
     pack_id: packId,
     items
   };
@@ -86,6 +101,11 @@ export const enablePackPlugin = async (
   if (warning.enabled && warning.require_acknowledgement) {
     if (!acknowledgement) {
       throw new ApiError(400, PLUGIN_ENABLE_ACK_REQUIRED_CODE, 'Plugin enable acknowledgement is required');
+    }
+
+    const enableWarning = await getPackPluginEnableWarningSnapshot(context);
+    if (acknowledgement.reminder_text_hash !== enableWarning.reminder_text_hash) {
+      throw new ApiError(400, 'PLUGIN_ENABLE_ACK_INVALID', 'Plugin enable acknowledgement hash does not match current warning text');
     }
 
     await manager.recordEnableAcknowledgement({
