@@ -67,28 +67,6 @@ pnpm --filter web dev
 pnpm --filter yidhras-server reset:dev-db
 ```
 
-### 6. 新建一个 world pack 项目骨架
-
-```bash
-pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"
-```
-
-常用可选参数：
-
-- `--id <pack-id>`
-- `--version <semver>`
-- `--description <text>`
-- `--homepage <url>`
-- `--repository <url>`
-- `--license <license>`
-- `--tags <a,b,c>`
-- `--status <draft|stable|template>`
-- `--overwrite`
-- `--set-preferred`（写入 `data/configw/default.yaml` 的 `world.preferred_pack`）
-- `--set-bootstrap-template`（更新 `bootstrap.target_pack_dir/template_file` 指向新 pack）
-- `--disable-bootstrap`（把 `bootstrap.enabled` 写为 `false`）
-- `--dry-run`（只预览文件与配置变更，不落盘）
-
 ## 常用命令
 
 - 工作区构建：`pnpm build`
