@@ -1,18 +1,17 @@
 import {
-  pluginActivationSessionSchema,
-  pluginArtifactSchema,
-  pluginAuditEventCodeSchema,
-  pluginEnableAcknowledgementSchema,
-  pluginInstallationSchema,
-  pluginManifestSchema,
-  pluginRuntimeWarningConfigSchema,
   type PluginActivationSession,
+  pluginActivationSessionSchema,
   type PluginArtifact,
+  pluginArtifactSchema,
   type PluginAuditEventCode,
+  pluginAuditEventCodeSchema,
   type PluginEnableAcknowledgement,
+  pluginEnableAcknowledgementSchema,
   type PluginInstallation,
-  type PluginManifest
-} from '@yidhras/contracts';
+  pluginInstallationSchema,
+  type PluginManifest,
+  pluginManifestSchema,
+  pluginRuntimeWarningConfigSchema} from '@yidhras/contracts';
 
 export const TRUSTED_PLUGIN_TRUST_MODE = 'trusted' as const;
 

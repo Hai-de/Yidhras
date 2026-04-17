@@ -37,6 +37,13 @@
   - 说明：显式禁用一个插件 installation
 - **GET `/api/packs/:packId/plugins/runtime/web`**
   - 说明：读取当前 active pack 的已启用 web plugin runtime manifest，用于前端动态面板/路由宿主
+  - 当前每个 plugin item 还会返回：
+    - `web_bundle_url`：canonical 同源 bundle / asset route
+    - `runtime_module`：当前浏览器动态模块合同（`browser_esm` / `default` / `panels` / `routes`）
+- **GET `/api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`**
+  - 说明：访问已启用 pack-local plugin 的同源 web 资产（bundle / route 相关静态文件）
+  - 约束：只允许 `enabled` installation，且 asset path 必须落在当前 plugin 暴露的 runtime root 内
+  - 失败代码：`PLUGIN_WEB_ASSET_NOT_ENABLED`、`PLUGIN_WEB_ASSET_FORBIDDEN`、`PLUGIN_WEB_ASSET_NOT_FOUND`、`PLUGIN_WEB_ENTRYPOINT_NOT_FOUND`
 
 ## 2. 虚拟时间轴 (Chronos Layer)
 

@@ -1,10 +1,9 @@
+import type { PluginManifest } from '@yidhras/contracts';
 import type { Express, Request, Response } from 'express';
 
 import type { AppContext } from '../app/context.js';
 import type { ContextSourceAdapter } from '../context/source_registry.js';
 import type { PromptWorkflowStepExecutor } from '../context/workflow/registry.js';
-import type { PluginManifest } from '@yidhras/contracts';
-
 import { createPluginStore } from './store.js';
 
 export interface ServerPluginHostApi {
@@ -60,6 +59,7 @@ const createServerPluginHostApi = (runtime: RegisteredServerPluginRuntime): Serv
 
 class PluginRuntimeRegistry {
   private runtimes = new Map<string, RegisteredServerPluginRuntime[]>();
+  private appliedRouteKeys = new Set<string>();
 
   public setRuntimes(packId: string, runtimes: RegisteredServerPluginRuntime[]): void {
     this.runtimes.set(packId, runtimes);
@@ -79,9 +79,15 @@ class PluginRuntimeRegistry {
 
   public applyPackRoutes(packId: string, app: Express, context: AppContext): void {
     for (const runtime of this.listRuntimes(packId)) {
-      for (const register of runtime.pack_routes) {
+      runtime.pack_routes.forEach((register, index) => {
+        const routeKey = `${packId}:${runtime.installation_id}:${String(index)}`;
+        if (this.appliedRouteKeys.has(routeKey)) {
+          return;
+        }
+
         register(app, context);
-      }
+        this.appliedRouteKeys.add(routeKey);
+      });
     }
   }
 }
@@ -179,6 +185,19 @@ const registerManifestContributions = (runtime: RegisteredServerPluginRuntime): 
     );
   }
 }
+
+export const syncActivePackPluginRuntime = async (context: AppContext): Promise<void> => {
+  await refreshActivePackPluginRuntime(context);
+
+  const activePackId = context.sim.getActivePack()?.metadata.id;
+  const app = context.getHttpApp?.() ?? null;
+
+  if (!activePackId || !app) {
+    return;
+  }
+
+  pluginRuntimeRegistry.applyPackRoutes(activePackId, app, context);
+};
 
 export const refreshActivePackPluginRuntime = async (context: AppContext): Promise<void> => {
   const activePack = context.sim.getActivePack();

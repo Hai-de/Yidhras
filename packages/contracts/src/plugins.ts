@@ -60,7 +60,13 @@ export const pluginWebManifestItemSchema = z.object({
   plugin_id: nonEmptyStringSchema,
   pack_id: nonEmptyStringSchema,
   web_bundle_url: z.string().nullable(),
-  contributions: pluginWebContributionsSchema
+  contributions: pluginWebContributionsSchema,
+  runtime_module: z.object({
+    format: z.literal('browser_esm'),
+    export_name: z.literal('default'),
+    panel_export: z.literal('panels'),
+    route_export: z.literal('routes')
+  })
 })
 
 export const pluginEntrypointSchema = z.object({

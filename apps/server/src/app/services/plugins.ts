@@ -2,12 +2,12 @@ import { randomUUID } from 'node:crypto';
 
 import type { PluginInstallation } from '@yidhras/contracts';
 
-import type { AppContext } from '../context.js';
-import { createPluginManagerService, assertPluginEnableAllowed } from '../../plugins/service.js';
-import { refreshActivePackPluginRuntime } from '../../plugins/runtime.js';
+import { PLUGIN_ENABLE_ACK_REQUIRED_CODE } from '../../plugins/contracts.js';
+import { syncActivePackPluginRuntime } from '../../plugins/runtime.js';
+import { assertPluginEnableAllowed,createPluginManagerService } from '../../plugins/service.js';
 import { createPluginStore } from '../../plugins/store.js';
 import { ApiError } from '../../utils/api_error.js';
-import { PLUGIN_ENABLE_ACK_REQUIRED_CODE } from '../../plugins/contracts.js';
+import type { AppContext } from '../context.js';
 
 const createManager = (context: AppContext) => {
   const store = createPluginStore({ prisma: context.prisma });
@@ -59,7 +59,7 @@ export const disablePackPlugin = async (
     installation_id: installationId,
     disabled_at: String(Date.now())
   });
-  await refreshActivePackPluginRuntime(context);
+  await syncActivePackPluginRuntime(context);
   return installation;
 };
 
@@ -107,7 +107,7 @@ export const enablePackPlugin = async (
     enabled_at: String(Date.now())
   });
 
-  await refreshActivePackPluginRuntime(context);
+  await syncActivePackPluginRuntime(context);
 
   return enabledInstallation;
 };

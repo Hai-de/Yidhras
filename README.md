@@ -92,6 +92,10 @@ pnpm --filter yidhras-server reset:dev-db
 - 查看插件 activation / acknowledgement 日志：`pnpm --filter yidhras-server plugin -- logs --plugin plugin.alpha --pack my_pack --limit 10`
 - 按状态/能力过滤插件列表：`pnpm --filter yidhras-server plugin -- list --pack my_pack --state enabled --capability server.api_route.register`
 - 诊断为什么当前不能启用：`pnpm --filter yidhras-server plugin -- why-not-enable --installation <installation-id> --pack my_pack --non-interactive`
+- 插件 web runtime 定向验证（server integration）：`pnpm --filter yidhras-server exec vitest run --config vitest.integration.config.ts tests/integration/plugin_runtime_web.spec.ts tests/integration/plugin_runtime_refresh.spec.ts`
+- 插件 web runtime 定向验证（server e2e）：`pnpm --filter yidhras-server exec vitest run --config vitest.e2e.config.ts tests/e2e/plugin-runtime-web.spec.ts tests/e2e/plugin-runtime-startup-gap.spec.ts`
+- 插件 web runtime 定向验证（web unit）：`pnpm --filter web test:unit -- tests/unit/plugin.runtime.store.spec.ts tests/unit/plugin.runtime.bootstrap.spec.ts`
+- pack-local 插件 route host：`/packs/:packId/plugins/:pluginId/*`
 
 ## 文档导航
 
@@ -122,3 +126,5 @@ pnpm --filter yidhras-server reset:dev-db
 - 内部 AI 执行链为 `AiTaskService -> RouteResolver -> ModelGateway -> provider adapters`，当前默认提供 `mock` 与 `openai` 适配器。
 - `/api/inference/*` 的公开契约当前仍以 `mock | rule_based` 为准；`model_routed` 仍属于内部能力。
 - AI 调用观测已通过 `AiInvocationRecord` 落库，并提供 `GET /api/inference/ai-invocations` 与 `GET /api/inference/ai-invocations/:id` 只读查询。
+- pack-local 插件 web runtime 当前已具备 canonical web asset route、浏览器侧动态 import、panel render boundary 与 pack-local route host。
+- 当前 plugin server-side pack route 仍存在 startup mounting gap；已通过 e2e 固化现状，后续可继续补 startup runtime refresh 与 route 挂载时机。

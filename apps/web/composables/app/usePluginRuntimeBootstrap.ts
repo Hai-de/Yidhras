@@ -1,8 +1,9 @@
 import { storeToRefs } from 'pinia'
 import { watch } from 'vue'
 
-import { useRuntimeStore } from '../../stores/runtime'
+import { getPluginRuntimeLoadErrorMessage,loadPluginRuntimeModule } from '../../features/plugins/runtime/loader'
 import { usePluginRuntimeStore } from '../../stores/plugins'
+import { useRuntimeStore } from '../../stores/runtime'
 import { usePluginApi } from '../api/usePluginApi'
 
 const getErrorMessage = (error: unknown): string => {
@@ -27,6 +28,20 @@ export const usePluginRuntimeBootstrap = () => {
       const snapshot = await pluginApi.getActivePackPluginRuntime(packId)
       pluginRuntimeStore.applyRuntime(snapshot)
       pluginRuntimeStore.setErrorMessage(null)
+
+      for (const plugin of snapshot.plugins) {
+        if (!plugin.web_bundle_url) {
+          continue
+        }
+
+        pluginRuntimeStore.markBundleLoading(plugin)
+        try {
+          const runtimeModule = await loadPluginRuntimeModule(plugin)
+          pluginRuntimeStore.markBundleLoaded(plugin, runtimeModule)
+        } catch (error) {
+          pluginRuntimeStore.markBundleError(plugin, getPluginRuntimeLoadErrorMessage(error))
+        }
+      }
     } catch (error) {
       pluginRuntimeStore.setErrorMessage(getErrorMessage(error))
     } finally {
@@ -34,9 +49,13 @@ export const usePluginRuntimeBootstrap = () => {
     }
   }
 
-  watch(worldPack, () => {
-    void refresh()
-  }, { immediate: true })
+  watch(
+    worldPack,
+    () => {
+      void refresh()
+    },
+    { immediate: true }
+  )
 
   return {
     refresh

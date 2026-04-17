@@ -14,6 +14,10 @@ export interface CreateAppOptions {
 export const createApp = ({ context, registerRoutes }: CreateAppOptions) => {
   const app = express();
 
+  if (context.setHttpApp) {
+    context.setHttpApp(app);
+  }
+
   app.use(cors());
   app.use(express.json());
   app.use(identityInjector());

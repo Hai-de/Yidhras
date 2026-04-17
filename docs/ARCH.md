@@ -120,11 +120,19 @@
 - 插件治理记录持久化在 kernel Prisma，而不是 pack runtime sqlite
 - 当前只支持 `pack_local` scope；`global` 仅保留领域模型预留位
 - 显式 enable 受 `plugins.enable_warning.*` 配置与 acknowledgement 约束
+- web runtime snapshot 由 `apps/server/src/app/services/plugin_runtime_web.ts` 提供，并把 manifest 中的 `entrypoints.web.dist` 收敛为 canonical 同源 asset route
+- plugin web asset 通过 `GET /api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*` 暴露，并校验 installation enabled / scope / path boundary
 - server-side 当前已接入的受控扩展点包括：
   - context source adapters
   - prompt workflow step executors
   - pack-local API routes
-- web-side 当前已具备 runtime manifest 读面与 panel host，但尚未完成通用 bundle sandbox / dynamic route loader
+- web-side 当前已具备：
+  - runtime manifest 读面
+  - 浏览器侧动态 bundle loader
+  - plugin runtime store load state
+  - panel render boundary
+  - pack-local route host（`/packs/:packId/plugins/:pluginId/*`）
+- 当前 plugin server-side pack route 仍存在 startup mounting gap：`createApp()` 早于 `sim.init(...)`，route mounting 生命周期还需后续继续收口
 
 ### Prompt Workflow Runtime
 

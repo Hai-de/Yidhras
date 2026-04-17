@@ -235,6 +235,10 @@ README.md 应明确区分：
 - 扫描到的插件会进入统一插件管理器，默认创建为 `pending_confirmation`
 - 导入确认 != 启用；显式 enable 前仍需 acknowledgement（除非部署者关闭 `plugins.enable_warning`）
 - 当前只支持 `pack-local` 插件，不开放 global 安装面
+- 已启用插件的 web entrypoint 会被 server 收敛为 canonical 同源 asset route，而不是直接裸透传 `dist` 字段
+- 浏览器侧当前已通过动态 import 加载 `web_bundle_url`，并在 pack-local route host `/packs/:packId/plugins/:pluginId/*` 下装载 route contribution
+- 推荐插件 web bundle 默认导出一个 runtime module，对外暴露 `panels[]` 与 `routes[]` 两类 contribution
+- 单个插件 panel/route 渲染失败不会拖垮宿主页面，当前会进入独立 render boundary/fallback UI
 - 推荐插件目录结构：
   - `plugins/<plugin-dir>/plugin.manifest.yaml`
   - `plugins/<plugin-dir>/src/` 或 `plugins/<plugin-dir>/dist/`

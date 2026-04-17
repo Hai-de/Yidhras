@@ -5,8 +5,8 @@ import { createTokenBudgetTrimmerPromptProcessor } from '../../inference/process
 import type { PromptFragment } from '../../inference/prompt_fragments.js';
 import type { PromptProcessor } from '../../inference/prompt_processors.js';
 import type { InferenceContext, PromptProcessingTrace } from '../../inference/types.js';
-import type { ContextPromptAssemblySummary } from '../types.js';
 import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
+import type { ContextPromptAssemblySummary } from '../types.js';
 import { resolvePromptFragmentPlacement, sortPromptFragmentsBase } from './placement_resolution.js';
 import { selectPromptWorkflowProfile } from './profiles.js';
 import { createPromptWorkflowStepRegistry, type PromptWorkflowStepExecutor } from './registry.js';

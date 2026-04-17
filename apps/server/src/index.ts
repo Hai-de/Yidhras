@@ -14,8 +14,8 @@ import { registerIdentityRoutes } from './app/routes/identity.js';
 import { registerInferenceRoutes } from './app/routes/inference.js';
 import { registerNarrativeRoutes } from './app/routes/narrative.js';
 import { registerOverviewRoutes } from './app/routes/overview.js';
-import { registerPluginRoutes } from './app/routes/plugins.js';
 import { registerPluginRuntimeWebRoutes } from './app/routes/plugin_runtime_web.js';
+import { registerPluginRoutes } from './app/routes/plugins.js';
 import { registerRelationalRoutes } from './app/routes/relational.js';
 import { registerSchedulerRoutes } from './app/routes/scheduler.js';
 import { registerSocialRoutes } from './app/routes/social.js';
@@ -30,9 +30,9 @@ import {
 } from './app/runtime/startup.js';
 import { ensureSchedulerBootstrapOwnership, resetDevelopmentRuntimeState } from './app/services/system.js';
 import {
-  getRuntimeConfig,
   getAppPort,
   getPreferredWorldPack,
+  getRuntimeConfig,
   getStartupPolicy,
   getWorldPacksDir,
   logRuntimeConfigSnapshot
@@ -40,6 +40,7 @@ import {
 import { sim } from './core/simulation.js';
 import { createInferenceService } from './inference/service.js';
 import { createPrismaInferenceTraceSink } from './inference/sinks/prisma.js';
+import { syncActivePackPluginRuntime } from './plugins/runtime.js';
 import { ApiError } from './utils/api_error.js';
 import { notifications } from './utils/notifications.js';
 
@@ -78,6 +79,7 @@ let runtimeReady = false;
 let timer: SimulationLoopHandle | null = null;
 let isPaused = false;
 let runtimeLoopDiagnostics: RuntimeLoopDiagnostics = { ...DEFAULT_RUNTIME_LOOP_DIAGNOSTICS };
+let httpApp: import('express').Express | null = null;
 const decisionWorkerId = `decision:${process.pid}:${Date.now()}`;
 const actionDispatcherWorkerId = `dispatcher:${process.pid}:${Date.now()}`;
 const schedulerWorkerId = process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}:${Date.now()}`;
@@ -111,6 +113,10 @@ const appContext: AppContext = {
     enabled: getRuntimeConfig().plugins.enable_warning.enabled,
     require_acknowledgement: getRuntimeConfig().plugins.enable_warning.require_acknowledgement
   }),
+  getHttpApp: () => httpApp,
+  setHttpApp: app => {
+    httpApp = app;
+  },
   assertRuntimeReady
 };
 
@@ -270,6 +276,7 @@ const start = async (): Promise<void> => {
       }
 
       await sim.init(selectedPack);
+      await syncActivePackPluginRuntime(appContext);
       appContext.setRuntimeReady(true);
       notifications.push('info', `Yidhras 系统初始化成功 (pack=${selectedPack}, schedulerPartitions=${schedulerPartitionIds.join(',') || 'none'}, loopIntervalMs=${String(simulationLoopIntervalMs)})`, 'SYS_INIT_OK');
       startSimulation();

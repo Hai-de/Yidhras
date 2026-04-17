@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
+import { buildAiTaskRequestFromInferenceContext } from '../../ai/task_prompt_builder.js';
 import type { AiTaskService } from '../../ai/task_service.js';
 import { createAiTaskService } from '../../ai/task_service.js';
-import { buildAiTaskRequestFromInferenceContext } from '../../ai/task_prompt_builder.js';
 import type { AppContext } from '../../app/context.js';
-import { buildInferenceContext } from '../../inference/context_builder.js';
 import { createContextOverlayStore } from '../../context/overlay/store.js';
+import { buildInferenceContext } from '../../inference/context_builder.js';
 import { createPrismaLongMemoryBlockStore } from '../blocks/store.js';
 import type { LongMemoryBlockStore } from '../blocks/types.js';
 import { createMemoryRecordingService, type MemoryRecordingMutationBundle } from './service.js';

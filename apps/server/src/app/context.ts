@@ -56,6 +56,8 @@ export interface AppContext {
     enabled: boolean;
     require_acknowledgement: boolean;
   };
+  getHttpApp?(): Express | null;
+  setHttpApp?(app: Express): void;
   assertRuntimeReady(feature: string): void;
 }
 

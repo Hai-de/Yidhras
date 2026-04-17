@@ -10,11 +10,11 @@ import { createPrismaLongMemoryBlockStore } from '../memory/blocks/store.js';
 import type { LongMemoryBlockStore } from '../memory/blocks/types.js';
 import { createMemoryService, type MemoryService } from '../memory/service.js';
 import type { MemoryContextPack } from '../memory/types.js';
+import { pluginRuntimeRegistry } from '../plugins/runtime.js';
 import { buildLegacyMemoryContextPack } from './compat.js';
 import { createContextOverlayStore } from './overlay/store.js';
 import type { ContextOverlayStore } from './overlay/types.js';
 import { applyPolicyDecisionsToSelection, evaluateContextPolicies } from './policy_engine.js';
-import { pluginRuntimeRegistry } from '../plugins/runtime.js';
 import { buildContextNodesFromSources, createDefaultContextSourceAdapters } from './source_registry.js';
 import type { ContextMemoryBlockDiagnostics, ContextOverlayLoadedNode, ContextRun, ContextSelectionResult } from './types.js';
 

@@ -4,16 +4,15 @@ import type { PluginActivationSession, PluginEnableAcknowledgement, PluginInstal
 
 import { ApiError } from '../utils/api_error.js';
 import {
-  PLUGIN_ENABLE_ACK_REQUIRED_CODE,
   parsePluginActivationSession,
   parsePluginEnableAcknowledgement,
   parsePluginInstallation,
+  PLUGIN_ENABLE_ACK_REQUIRED_CODE,
   TRUSTED_PLUGIN_TRUST_MODE
 } from './contracts.js';
 import type {
   PluginEnableAcknowledgementCreateInput,
   PluginManagerService,
-  PluginRegistrationResult,
   PluginStore
 } from './types.js';
 

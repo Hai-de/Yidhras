@@ -1,37 +1,34 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-17T04:13:53.474Z
+- Updated At: 2026-04-17T15:45:06.628Z
 - Status: completed
 - Phase: implementation
 
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
-- 当前进度：13/13 个里程碑已完成；最新：PG9
-- 当前焦点：完成 pack-local 插件系统 Phase 8 收口
-- 最新结论：pack-local 插件治理主线已经完整成立，可进入后续增强阶段。
-- 下一步：后续可继续推进 CLI 命令、GUI acknowledgement 弹窗、真实 web bundle 动态加载和更全面的 lint/test 覆盖。
+- 当前进度：16/16 个里程碑已完成；最新：PG12
+- 当前焦点：完成 plugin server-side startup route mounting gap 修复
+- 最新结论：已通过启动后显式 `syncActivePackPluginRuntime(...)`、AppContext http app 注入与 pack route 去重机制修复 plugin server-side startup route mounting gap，并完成相关 integration/e2e/lint/typecheck 验证。
+- 下一步：后续如继续，可优先补 GUI confirm/enable/disable 完整操作流，或扩展带真实 enabled plugin fixture 的 startup route e2e。
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
 - 设计：`.limcode/design/pack-local-plugin-unified-management-design.md`
-- 计划：`.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md`
+- 计划：`.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md`
 - 审查：`.limcode/review/documentation-code-consistency-review.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 补齐插件配置与合同基线：扩展 runtime config/schema、定义 plugin manifest 与持久化模型、明确错误码与审计事件枚举。  `#plugin-phase-1`
-- [x] 实现 kernel-side 插件管理主线：artifact / installation / activation / acknowledgement 的存储、服务与生命周期状态机。  `#plugin-phase-2`
-- [x] 打通 pack-local 发现与导入确认：扫描 world pack plugins 目录、校验/编译工件、创建 pending_confirmation 安装项并支持升级重确认。  `#plugin-phase-3`
-- [x] 实现启用/禁用流程与 trust lecture：覆盖 CLI / API / GUI 所需 acknowledgement 校验、默认提醒配置与审计记录。  `#plugin-phase-4`
-- [x] 实现 server-side plugin host：受控注册 context/prompt/intent/projection/pack-local route 扩展点，并接入 active-pack 生命周期。  `#plugin-phase-5`
-- [x] 实现 web UI plugin runtime：暴露已启用插件清单与 web contribution manifest，按 pack-local 命名空间动态加载 panel/route 并做错误隔离。  `#plugin-phase-6`
-- [x] 补齐 operator/management 界面与只读合同：提供插件列表、详情、确认、启用、禁用、失败状态与 capability 风险展示。  `#plugin-phase-7`
-- [x] 完成测试与文档同步：覆盖 unit/integration/web tests，并更新 ARCH/API/WORLD_PACK/progress。  `#plugin-phase-8`
+- [x] 定义 web 插件浏览器运行时合同与同源 bundle/asset 暴露路径，明确动态 import 与 pack-local route 装载边界。  `#plugin-hardening-phase-1`
+- [x] 实现 web runtime 真正动态 import：加载已启用插件 web bundle、注册 panel/route contribution，并补充错误隔离与缓存/失效处理。  `#plugin-hardening-phase-2`
+- [x] 补齐 server integration 与 e2e 覆盖，验证 discovery→confirm→enable→runtime refresh、web runtime manifest/bundle、pack-local 路由链路。  `#plugin-hardening-phase-3`
+- [x] 执行 workspace 级 lint/import-sort 清理，收口 server/web 相关文件并确保 lint/typecheck/test 基线通过。  `#plugin-hardening-phase-4`
+- [x] 更新 README/API/ARCH/WORLD_PACK/ENHANCEMENTS/progress，明确本轮完成项与继续延期的 CLI 增强项。  `#plugin-hardening-phase-5`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -197,6 +194,40 @@
 - 摘要:
 pack-local 插件系统已完成一轮实现收口：具备统一 plugin artifact / installation / activation / acknowledgement 管理模型，支持 world pack 自带插件发现、导入确认、trust lecture 保护下的启用、server-side host runtime、web runtime manifest 读面，以及 operator /plugins 管理界面。最终已补充关键单测并同步 API / ARCH / WORLD_PACK 文档。
 - 下一步：后续可继续推进 CLI 命令、GUI acknowledgement 弹窗、真实 web bundle 动态加载和更全面的 lint/test 覆盖。
+
+### PG10 · 完成 pack-local 插件 runtime 回归测试基线
+- 状态：completed
+- 记录时间：2026-04-17T15:25:08.153Z
+- 完成时间：2026-04-17T15:25:08.153Z
+- 关联 TODO：plugin-hardening-phase-3
+- 关联文档：
+  - 设计：`.limcode/design/pack-local-plugin-unified-management-design.md`
+  - 计划：`.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md`
+- 摘要:
+已补齐一轮 pack-local 插件 runtime 回归测试：新增 server integration 覆盖 canonical web asset route 与 runtime refresh，新增 server e2e 覆盖 plugin runtime web snapshot 与 startup gap，新增 web unit 覆盖 plugin runtime store 与 bootstrap 动态 import 行为。
+- 下一步：继续执行 server/web workspace lint 与 import-sort 清理，然后同步 README/API/ARCH/WORLD_PACK/ENHANCEMENTS/progress。
+
+### PG11 · 完成 pack-local 插件 runtime 补完与质量收口
+- 状态：completed
+- 记录时间：2026-04-17T15:39:03.396Z
+- 完成时间：2026-04-17T15:39:03.396Z
+- 关联 TODO：plugin-hardening-phase-1, plugin-hardening-phase-2, plugin-hardening-phase-3, plugin-hardening-phase-4, plugin-hardening-phase-5
+- 关联文档：
+  - 设计：`.limcode/design/pack-local-plugin-unified-management-design.md`
+  - 计划：`.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md`
+- 摘要:
+已完成 pack-local 插件 runtime 的动态化与质量收口：server 侧提供 canonical web asset route，web 侧实现动态 bundle import、panel render boundary 与 pack-local route host；同时补齐 server integration/e2e 与 web runtime 单测，并完成 server/web lint、typecheck 收口。README/API/ARCH/WORLD_PACK/ENHANCEMENTS 也已同步，CLI 批量治理与更深 explain 家族增强已明确延期入 backlog。
+- 下一步：后续如继续推进，可优先修复 plugin server-side startup route mounting gap，并继续扩展 pack-local plugin GUI 与 CLI 增强 backlog。
+
+### PG12 · 修复 plugin server-side startup route mounting gap
+- 状态：completed
+- 记录时间：2026-04-17T15:45:06.570Z
+- 完成时间：2026-04-17T15:45:06.570Z
+- 关联文档：
+  - 计划：`.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md`
+- 摘要:
+已为 AppContext 增加 http app 引用注入能力，并在 plugin runtime registry 中加入已应用路由去重；server 启动在 `sim.init(selectedPack)` 后显式执行 `syncActivePackPluginRuntime(...)`，从而在 active pack runtime 就绪后立即刷新 plugin runtime 并挂载 pack-local server routes。相关 integration/e2e/typecheck/lint 已通过。
+- 下一步：如继续推进，建议下一步补 GUI confirm/enable/disable 完整操作流，或为 plugin server-side route startup 行为增加更强的 enabled-plugin fixture 覆盖。
 <!-- LIMCODE_PROGRESS_MILESTONES_END -->
 
 ## 风险与阻塞
@@ -208,26 +239,26 @@ pack-local 插件系统已完成一轮实现收口：具备统一 plugin artifac
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-16T11:07:11.532Z | updated | plugin-phase-1 | 完成 Phase 1：扩展 runtime config 插件提醒配置，新增 packages/contracts/src/plugins.ts 与 apps/server/src/plugins/contracts.ts，补齐 PluginArtifact/Installation/ActivationSession/EnableAcknowledgement Prisma 基线与迁移脚本，并通过 yidhras-server typecheck。
-- 2026-04-16T11:07:11.833Z | milestone_recorded | PG2 | 记录里程碑：完成 pack-local 插件 Phase 1 基线
-- 2026-04-16T11:11:10.508Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
-- 2026-04-16T11:11:10.525Z | milestone_recorded | PG3 | 记录里程碑：完成 pack-local 插件 Phase 2 管理主线
-- 2026-04-16T11:16:43.519Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
-- 2026-04-16T11:16:43.542Z | updated | plugin-phase-3 | 完成 Phase 3：新增 apps/server/src/plugins/discovery.ts，并在 runtime activation 中接入 world pack plugins 目录扫描、YAML manifest 解析、pack 兼容性校验、artifact 注册与 pack-local installation 建立；同 checksum 工件复用已有 artifact，工件变化触发 upgrade_pending_confirmation；server typecheck 已通过。
-- 2026-04-16T11:16:43.632Z | milestone_recorded | PG4 | 记录里程碑：完成 pack-local 插件 Phase 3 导入发现
-- 2026-04-16T11:22:44.921Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
-- 2026-04-16T11:22:44.957Z | updated | plugin-phase-4 | 完成 Phase 4：新增 app/services/plugins.ts 与 app/routes/plugins.ts，提供 pack plugin 列表、导入确认、启用、禁用 API；启用路径接入 context.getPluginEnableWarningConfig() 与 PLUGIN_ENABLE_ACK_REQUIRED 校验；server typecheck 已通过。
-- 2026-04-16T11:22:44.966Z | milestone_recorded | PG5 | 记录里程碑：完成 pack-local 插件 Phase 4 启用治理
-- 2026-04-16T14:37:13.225Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
-- 2026-04-16T14:37:13.518Z | milestone_recorded | PG6 | 记录里程碑：完成 pack-local 插件 Phase 5 server host
-- 2026-04-17T03:48:32.490Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
-- 2026-04-17T03:48:32.536Z | milestone_recorded | PG7 | 记录里程碑：完成 pack-local 插件 Phase 6 web runtime
-- 2026-04-17T04:09:12.321Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
 - 2026-04-17T04:09:12.753Z | updated | plugin-phase-7 | 完成 Phase 7：新增 apps/web/pages/plugins.vue 与 usePluginManagementPage，提供插件列表、详情、风险级别与 acknowledgement 提示；同时扩展 shell workspace/navigation 支持 Plugin Management 页面，web typecheck 已通过。
 - 2026-04-17T04:09:13.428Z | milestone_recorded | PG8 | 记录里程碑：完成 pack-local 插件 Phase 7 管理界面
 - 2026-04-17T04:13:53.423Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md
 - 2026-04-17T04:13:53.450Z | updated | plugin-phase-8 | 完成 Phase 8：新增 server plugin_service 单测与 web plugin.runtime.store 单测，验证服务与前端运行态读面；已通过 yidhras-server / web typecheck，并同步 docs/API.md、docs/ARCH.md、docs/WORLD_PACK.md 说明。
 - 2026-04-17T04:13:53.474Z | milestone_recorded | PG9 | 记录里程碑：完成 pack-local 插件系统实施收口
+- 2026-04-17T14:31:05.592Z | artifact_changed | plan | 同步计划文档：.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md
+- 2026-04-17T14:40:25.461Z | updated | plugin-hardening-phase-1 | 完成 Phase 1：server 侧新增 canonical plugin web asset URL 与同源 asset route，web runtime snapshot 增加 runtime_module contract；前端 runtime store 与 route host 已开始接入动态 import 基线。
+- 2026-04-17T14:40:25.464Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md
+- 2026-04-17T15:04:18.726Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md
+- 2026-04-17T15:04:18.927Z | milestone_recorded | plugin-hardening-phase-2 | 完成 Phase 2：接入前端动态 plugin bundle loader、runtime store load state、panel render boundary 与 pack-local route host；新增 plugin runtime store / bootstrap 单测和 plugin runtime web e2e 基线。
+- 2026-04-17T15:25:08.153Z | milestone_recorded | PG10 | 记录里程碑：完成 pack-local 插件 runtime 回归测试基线
+- 2026-04-17T15:25:08.163Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md
+- 2026-04-17T15:25:08.218Z | updated | plugin-hardening-phase-3 | 完成 Phase 3：补充 plugin_runtime_web / plugin_runtime_refresh integration tests、plugin-runtime-web / plugin-runtime-startup-gap e2e，以及 plugin runtime bootstrap/store web unit tests。
+- 2026-04-17T15:32:55.135Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md
+- 2026-04-17T15:32:55.211Z | updated | plugin-hardening-phase-4 | 完成 Phase 4：server/web workspace lint、typecheck，以及 plugin runtime 定向 integration/e2e/unit tests 全部通过，import-sort 与 unused import 已清理。
+- 2026-04-17T15:39:03.396Z | milestone_recorded | PG11 | 记录里程碑：完成 pack-local 插件 runtime 补完与质量收口
+- 2026-04-17T15:39:03.411Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md
+- 2026-04-17T15:39:03.533Z | milestone_recorded | plugin-hardening-phase-5 | 完成 Phase 5：同步 README/API/ARCH/WORLD_PACK/ENHANCEMENTS，并将 CLI 批量治理与 explain/diagnostics 家族增强延期记录到 backlog；本轮计划全部完成。
+- 2026-04-17T15:45:06.570Z | milestone_recorded | PG12 | 记录里程碑：修复 plugin server-side startup route mounting gap
+- 2026-04-17T15:45:06.628Z | milestone_recorded | 完成 plugin server-side startup route mounting gap 修复：启动后 active pack runtime ready 时会显式刷新 plugin runtime 并挂载 pack-local routes。
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -237,57 +268,42 @@ pack-local 插件系统已完成一轮实现收口：具备统一 plugin artifac
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-10T04:03:06.461Z",
-  "updatedAt": "2026-04-17T04:13:53.474Z",
+  "updatedAt": "2026-04-17T15:45:06.628Z",
   "status": "completed",
   "phase": "implementation",
-  "currentFocus": "完成 pack-local 插件系统 Phase 8 收口",
-  "latestConclusion": "pack-local 插件治理主线已经完整成立，可进入后续增强阶段。",
+  "currentFocus": "完成 plugin server-side startup route mounting gap 修复",
+  "latestConclusion": "已通过启动后显式 `syncActivePackPluginRuntime(...)`、AppContext http app 注入与 pack route 去重机制修复 plugin server-side startup route mounting gap，并完成相关 integration/e2e/lint/typecheck 验证。",
   "currentBlocker": null,
-  "nextAction": "后续可继续推进 CLI 命令、GUI acknowledgement 弹窗、真实 web bundle 动态加载和更全面的 lint/test 覆盖。",
+  "nextAction": "后续如继续，可优先补 GUI confirm/enable/disable 完整操作流，或扩展带真实 enabled plugin fixture 的 startup route e2e。",
   "activeArtifacts": {
     "design": ".limcode/design/pack-local-plugin-unified-management-design.md",
-    "plan": ".limcode/plans/pack-local-plugin-unified-management-implementation.plan.md",
+    "plan": ".limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md",
     "review": ".limcode/review/documentation-code-consistency-review.md"
   },
   "todos": [
     {
-      "id": "plugin-phase-1",
-      "content": "补齐插件配置与合同基线：扩展 runtime config/schema、定义 plugin manifest 与持久化模型、明确错误码与审计事件枚举。",
+      "id": "plugin-hardening-phase-1",
+      "content": "定义 web 插件浏览器运行时合同与同源 bundle/asset 暴露路径，明确动态 import 与 pack-local route 装载边界。",
       "status": "completed"
     },
     {
-      "id": "plugin-phase-2",
-      "content": "实现 kernel-side 插件管理主线：artifact / installation / activation / acknowledgement 的存储、服务与生命周期状态机。",
+      "id": "plugin-hardening-phase-2",
+      "content": "实现 web runtime 真正动态 import：加载已启用插件 web bundle、注册 panel/route contribution，并补充错误隔离与缓存/失效处理。",
       "status": "completed"
     },
     {
-      "id": "plugin-phase-3",
-      "content": "打通 pack-local 发现与导入确认：扫描 world pack plugins 目录、校验/编译工件、创建 pending_confirmation 安装项并支持升级重确认。",
+      "id": "plugin-hardening-phase-3",
+      "content": "补齐 server integration 与 e2e 覆盖，验证 discovery→confirm→enable→runtime refresh、web runtime manifest/bundle、pack-local 路由链路。",
       "status": "completed"
     },
     {
-      "id": "plugin-phase-4",
-      "content": "实现启用/禁用流程与 trust lecture：覆盖 CLI / API / GUI 所需 acknowledgement 校验、默认提醒配置与审计记录。",
+      "id": "plugin-hardening-phase-4",
+      "content": "执行 workspace 级 lint/import-sort 清理，收口 server/web 相关文件并确保 lint/typecheck/test 基线通过。",
       "status": "completed"
     },
     {
-      "id": "plugin-phase-5",
-      "content": "实现 server-side plugin host：受控注册 context/prompt/intent/projection/pack-local route 扩展点，并接入 active-pack 生命周期。",
-      "status": "completed"
-    },
-    {
-      "id": "plugin-phase-6",
-      "content": "实现 web UI plugin runtime：暴露已启用插件清单与 web contribution manifest，按 pack-local 命名空间动态加载 panel/route 并做错误隔离。",
-      "status": "completed"
-    },
-    {
-      "id": "plugin-phase-7",
-      "content": "补齐 operator/management 界面与只读合同：提供插件列表、详情、确认、启用、禁用、失败状态与 capability 风险展示。",
-      "status": "completed"
-    },
-    {
-      "id": "plugin-phase-8",
-      "content": "完成测试与文档同步：覆盖 unit/integration/web tests，并更新 ARCH/API/WORLD_PACK/progress。",
+      "id": "plugin-hardening-phase-5",
+      "content": "更新 README/API/ARCH/WORLD_PACK/ENHANCEMENTS/progress，明确本轮完成项与继续延期的 CLI 增强项。",
       "status": "completed"
     }
   ],
@@ -538,100 +554,62 @@ pack-local 插件系统已完成一轮实现收口：具备统一 plugin artifac
       "completedAt": "2026-04-17T04:13:53.474Z",
       "recordedAt": "2026-04-17T04:13:53.474Z",
       "nextAction": "后续可继续推进 CLI 命令、GUI acknowledgement 弹窗、真实 web bundle 动态加载和更全面的 lint/test 覆盖。"
+    },
+    {
+      "id": "PG10",
+      "title": "完成 pack-local 插件 runtime 回归测试基线",
+      "status": "completed",
+      "summary": "已补齐一轮 pack-local 插件 runtime 回归测试：新增 server integration 覆盖 canonical web asset route 与 runtime refresh，新增 server e2e 覆盖 plugin runtime web snapshot 与 startup gap，新增 web unit 覆盖 plugin runtime store 与 bootstrap 动态 import 行为。",
+      "relatedTodoIds": [
+        "plugin-hardening-phase-3"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/pack-local-plugin-unified-management-design.md",
+        "plan": ".limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md"
+      },
+      "completedAt": "2026-04-17T15:25:08.153Z",
+      "recordedAt": "2026-04-17T15:25:08.153Z",
+      "nextAction": "继续执行 server/web workspace lint 与 import-sort 清理，然后同步 README/API/ARCH/WORLD_PACK/ENHANCEMENTS/progress。"
+    },
+    {
+      "id": "PG11",
+      "title": "完成 pack-local 插件 runtime 补完与质量收口",
+      "status": "completed",
+      "summary": "已完成 pack-local 插件 runtime 的动态化与质量收口：server 侧提供 canonical web asset route，web 侧实现动态 bundle import、panel render boundary 与 pack-local route host；同时补齐 server integration/e2e 与 web runtime 单测，并完成 server/web lint、typecheck 收口。README/API/ARCH/WORLD_PACK/ENHANCEMENTS 也已同步，CLI 批量治理与更深 explain 家族增强已明确延期入 backlog。",
+      "relatedTodoIds": [
+        "plugin-hardening-phase-1",
+        "plugin-hardening-phase-2",
+        "plugin-hardening-phase-3",
+        "plugin-hardening-phase-4",
+        "plugin-hardening-phase-5"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/pack-local-plugin-unified-management-design.md",
+        "plan": ".limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md"
+      },
+      "completedAt": "2026-04-17T15:39:03.396Z",
+      "recordedAt": "2026-04-17T15:39:03.396Z",
+      "nextAction": "后续如继续推进，可优先修复 plugin server-side startup route mounting gap，并继续扩展 pack-local plugin GUI 与 CLI 增强 backlog。"
+    },
+    {
+      "id": "PG12",
+      "title": "修复 plugin server-side startup route mounting gap",
+      "status": "completed",
+      "summary": "已为 AppContext 增加 http app 引用注入能力，并在 plugin runtime registry 中加入已应用路由去重；server 启动在 `sim.init(selectedPack)` 后显式执行 `syncActivePackPluginRuntime(...)`，从而在 active pack runtime 就绪后立即刷新 plugin runtime 并挂载 pack-local server routes。相关 integration/e2e/typecheck/lint 已通过。",
+      "relatedTodoIds": [],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "plan": ".limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md"
+      },
+      "completedAt": "2026-04-17T15:45:06.570Z",
+      "recordedAt": "2026-04-17T15:45:06.570Z",
+      "nextAction": "如继续推进，建议下一步补 GUI confirm/enable/disable 完整操作流，或为 plugin server-side route startup 行为增加更强的 enabled-plugin fixture 覆盖。"
     }
   ],
   "risks": [],
   "log": [
-    {
-      "at": "2026-04-16T11:07:11.532Z",
-      "type": "updated",
-      "refId": "plugin-phase-1",
-      "message": "完成 Phase 1：扩展 runtime config 插件提醒配置，新增 packages/contracts/src/plugins.ts 与 apps/server/src/plugins/contracts.ts，补齐 PluginArtifact/Installation/ActivationSession/EnableAcknowledgement Prisma 基线与迁移脚本，并通过 yidhras-server typecheck。"
-    },
-    {
-      "at": "2026-04-16T11:07:11.833Z",
-      "type": "milestone_recorded",
-      "refId": "PG2",
-      "message": "记录里程碑：完成 pack-local 插件 Phase 1 基线"
-    },
-    {
-      "at": "2026-04-16T11:11:10.508Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-16T11:11:10.525Z",
-      "type": "milestone_recorded",
-      "refId": "PG3",
-      "message": "记录里程碑：完成 pack-local 插件 Phase 2 管理主线"
-    },
-    {
-      "at": "2026-04-16T11:16:43.519Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-16T11:16:43.542Z",
-      "type": "updated",
-      "refId": "plugin-phase-3",
-      "message": "完成 Phase 3：新增 apps/server/src/plugins/discovery.ts，并在 runtime activation 中接入 world pack plugins 目录扫描、YAML manifest 解析、pack 兼容性校验、artifact 注册与 pack-local installation 建立；同 checksum 工件复用已有 artifact，工件变化触发 upgrade_pending_confirmation；server typecheck 已通过。"
-    },
-    {
-      "at": "2026-04-16T11:16:43.632Z",
-      "type": "milestone_recorded",
-      "refId": "PG4",
-      "message": "记录里程碑：完成 pack-local 插件 Phase 3 导入发现"
-    },
-    {
-      "at": "2026-04-16T11:22:44.921Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-16T11:22:44.957Z",
-      "type": "updated",
-      "refId": "plugin-phase-4",
-      "message": "完成 Phase 4：新增 app/services/plugins.ts 与 app/routes/plugins.ts，提供 pack plugin 列表、导入确认、启用、禁用 API；启用路径接入 context.getPluginEnableWarningConfig() 与 PLUGIN_ENABLE_ACK_REQUIRED 校验；server typecheck 已通过。"
-    },
-    {
-      "at": "2026-04-16T11:22:44.966Z",
-      "type": "milestone_recorded",
-      "refId": "PG5",
-      "message": "记录里程碑：完成 pack-local 插件 Phase 4 启用治理"
-    },
-    {
-      "at": "2026-04-16T14:37:13.225Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-16T14:37:13.518Z",
-      "type": "milestone_recorded",
-      "refId": "PG6",
-      "message": "记录里程碑：完成 pack-local 插件 Phase 5 server host"
-    },
-    {
-      "at": "2026-04-17T03:48:32.490Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-17T03:48:32.536Z",
-      "type": "milestone_recorded",
-      "refId": "PG7",
-      "message": "记录里程碑：完成 pack-local 插件 Phase 6 web runtime"
-    },
-    {
-      "at": "2026-04-17T04:09:12.321Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-unified-management-implementation.plan.md"
-    },
     {
       "at": "2026-04-17T04:09:12.753Z",
       "type": "updated",
@@ -661,21 +639,110 @@ pack-local 插件系统已完成一轮实现收口：具备统一 plugin artifac
       "type": "milestone_recorded",
       "refId": "PG9",
       "message": "记录里程碑：完成 pack-local 插件系统实施收口"
+    },
+    {
+      "at": "2026-04-17T14:31:05.592Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md"
+    },
+    {
+      "at": "2026-04-17T14:40:25.461Z",
+      "type": "updated",
+      "refId": "plugin-hardening-phase-1",
+      "message": "完成 Phase 1：server 侧新增 canonical plugin web asset URL 与同源 asset route，web runtime snapshot 增加 runtime_module contract；前端 runtime store 与 route host 已开始接入动态 import 基线。"
+    },
+    {
+      "at": "2026-04-17T14:40:25.464Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md"
+    },
+    {
+      "at": "2026-04-17T15:04:18.726Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md"
+    },
+    {
+      "at": "2026-04-17T15:04:18.927Z",
+      "type": "milestone_recorded",
+      "refId": "plugin-hardening-phase-2",
+      "message": "完成 Phase 2：接入前端动态 plugin bundle loader、runtime store load state、panel render boundary 与 pack-local route host；新增 plugin runtime store / bootstrap 单测和 plugin runtime web e2e 基线。"
+    },
+    {
+      "at": "2026-04-17T15:25:08.153Z",
+      "type": "milestone_recorded",
+      "refId": "PG10",
+      "message": "记录里程碑：完成 pack-local 插件 runtime 回归测试基线"
+    },
+    {
+      "at": "2026-04-17T15:25:08.163Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md"
+    },
+    {
+      "at": "2026-04-17T15:25:08.218Z",
+      "type": "updated",
+      "refId": "plugin-hardening-phase-3",
+      "message": "完成 Phase 3：补充 plugin_runtime_web / plugin_runtime_refresh integration tests、plugin-runtime-web / plugin-runtime-startup-gap e2e，以及 plugin runtime bootstrap/store web unit tests。"
+    },
+    {
+      "at": "2026-04-17T15:32:55.135Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md"
+    },
+    {
+      "at": "2026-04-17T15:32:55.211Z",
+      "type": "updated",
+      "refId": "plugin-hardening-phase-4",
+      "message": "完成 Phase 4：server/web workspace lint、typecheck，以及 plugin runtime 定向 integration/e2e/unit tests 全部通过，import-sort 与 unused import 已清理。"
+    },
+    {
+      "at": "2026-04-17T15:39:03.396Z",
+      "type": "milestone_recorded",
+      "refId": "PG11",
+      "message": "记录里程碑：完成 pack-local 插件 runtime 补完与质量收口"
+    },
+    {
+      "at": "2026-04-17T15:39:03.411Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/pack-local-plugin-runtime-completion-and-quality-hardening.plan.md"
+    },
+    {
+      "at": "2026-04-17T15:39:03.533Z",
+      "type": "milestone_recorded",
+      "refId": "plugin-hardening-phase-5",
+      "message": "完成 Phase 5：同步 README/API/ARCH/WORLD_PACK/ENHANCEMENTS，并将 CLI 批量治理与 explain/diagnostics 家族增强延期记录到 backlog；本轮计划全部完成。"
+    },
+    {
+      "at": "2026-04-17T15:45:06.570Z",
+      "type": "milestone_recorded",
+      "refId": "PG12",
+      "message": "记录里程碑：修复 plugin server-side startup route mounting gap"
+    },
+    {
+      "at": "2026-04-17T15:45:06.628Z",
+      "type": "milestone_recorded",
+      "message": "完成 plugin server-side startup route mounting gap 修复：启动后 active pack runtime ready 时会显式刷新 plugin runtime 并挂载 pack-local routes。"
     }
   ],
   "stats": {
-    "milestonesTotal": 13,
-    "milestonesCompleted": 13,
-    "todosTotal": 8,
-    "todosCompleted": 8,
+    "milestonesTotal": 16,
+    "milestonesCompleted": 16,
+    "todosTotal": 5,
+    "todosCompleted": 5,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-17T04:13:53.474Z",
-    "bodyHash": "sha256:2d9c91ba90aade8a6d0ea3bbbf30327c764eaedba1c28a31223446d4afc509ca"
+    "generatedAt": "2026-04-17T15:45:06.628Z",
+    "bodyHash": "sha256:6c47831d15621f5723119b4369ff73cbff60d3f634c4009d94ff164cf6295c88"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

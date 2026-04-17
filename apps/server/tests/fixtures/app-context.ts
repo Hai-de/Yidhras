@@ -1,6 +1,11 @@
 import type { PrismaClient } from '@prisma/client';
+import type { Express } from 'express';
 
-import type { AppContext, RuntimeLoopDiagnostics, StartupHealth } from '../../src/app/context.js';
+import type { 
+  AppContext, 
+  RuntimeLoopDiagnostics, 
+  StartupHealth 
+} from '../../src/app/context.js';
 import { ChronosEngine } from '../../src/clock/engine.js';
 import type { SimulationManager } from '../../src/core/simulation.js';
 import { DEFAULT_E2E_WORLD_PACK } from '../support/config.js';
@@ -43,6 +48,7 @@ export const createTestAppContext = (
   let runtimeReady = options.runtimeReady ?? true;
   let runtimeLoopDiagnostics = options.runtimeLoopDiagnostics ?? createDefaultRuntimeLoopDiagnostics();
   const clock = new ChronosEngine([], 1000n);
+  let httpApp: Express | null = null;
 
   const sim = {
     prisma,
@@ -87,6 +93,10 @@ export const createTestAppContext = (
       runtimeLoopDiagnostics = next;
     },
     getSqliteRuntimePragmas: () => null,
+    getHttpApp: () => httpApp,
+    setHttpApp: app => {
+      httpApp = app;
+    },
     assertRuntimeReady: () => {}
   };
 };

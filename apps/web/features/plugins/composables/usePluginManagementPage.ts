@@ -1,8 +1,8 @@
 import { computed, ref } from 'vue'
 
-import { usePluginApi, type PluginSummarySnapshot } from '../../../composables/api/usePluginApi'
-import type { OverviewListItemViewModel } from '../../overview/adapters'
+import { type PluginSummarySnapshot,usePluginApi } from '../../../composables/api/usePluginApi'
 import { useRuntimeStore } from '../../../stores/runtime'
+import type { OverviewListItemViewModel } from '../../overview/adapters'
 
 const getErrorMessage = (error: unknown): string => {
   return error instanceof Error ? error.message : 'Unknown plugin management error'

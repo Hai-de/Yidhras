@@ -1,15 +1,14 @@
-import fs from 'fs';
-import path from 'path';
 import { createHash, randomUUID } from 'node:crypto';
 
+import fs from 'fs';
+import path from 'path';
 import YAML from 'yaml';
 
 import type { WorldPack } from '../packs/schema/constitution_schema.js';
 import { ApiError } from '../utils/api_error.js';
 import {
-  PLUGIN_MANIFEST_INVALID_CODE,
-  parsePluginManifest
-} from './contracts.js';
+  parsePluginManifest,
+  PLUGIN_MANIFEST_INVALID_CODE} from './contracts.js';
 import { createPluginManagerService } from './service.js';
 import type { PluginStoreContext } from './store.js';
 import { createPluginStore } from './store.js';

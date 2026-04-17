@@ -142,6 +142,43 @@
 - 延期原因：
   当前阶段优先保证主要流程稳定运行；测试广度补强适合在后续阶段系统推进。
 
+### 10. Plugin CLI 批量治理增强
+- 状态：deferred
+- 优先级：medium
+- 范围：pack-local plugin CLI / operator automation / governance workflow
+- 背景：
+  当前 plugin CLI 已具备：
+  - `list / show / confirm / enable / disable / rescan / logs / why-not-enable`
+  - `--json`
+  - `--state`
+  - `--capability`
+  - interactive / non-interactive acknowledgement 路径
+- 后续增强候选：
+  - `enable --all` / `disable --all`
+  - 更复杂的批量筛选组合
+  - 面向脚本治理的批处理操作
+  - 更完整的 machine-friendly exit code / summary contract
+- 延期原因：
+  当前优先级低于 web runtime 真动态化、integration/e2e 补强与 lint 收口；现有 CLI 已能支撑单 installation 治理闭环。
+
+### 11. Plugin CLI Explain / Diagnostics 家族深化
+- 状态：deferred
+- 优先级：medium
+- 范围：plugin governance diagnostics / operator troubleshooting
+- 背景：
+  当前 CLI 已提供基础诊断命令：
+  - `why-not-enable`
+  - `logs`
+  - `rescan`
+  - `show`
+- 后续增强候选：
+  - `why-not-confirm`
+  - `why-not-disable`
+  - 更深的 show/detail 视图（最新 activation / latest ack / richer runtime diagnostics）
+  - explain family 的更统一输出 contract
+- 延期原因：
+  当前更需要先把 web runtime、自动化回归与整体质量基线收口；更深 explain 家族可在下一轮 operator tooling 增强时系统设计。
+
 ---
 
 ## 二、后端

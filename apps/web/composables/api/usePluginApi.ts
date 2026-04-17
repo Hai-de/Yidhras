@@ -45,6 +45,12 @@ export interface PluginWebManifestSnapshot {
     routes: string[]
     menu_items: string[]
   }
+  runtime_module: {
+    format: 'browser_esm'
+    export_name: 'default'
+    panel_export: 'panels'
+    route_export: 'routes'
+  }
 }
 
 export interface ActivePackPluginRuntimeSnapshot {
