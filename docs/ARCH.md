@@ -124,6 +124,8 @@
 
 - `scheduler.runtime.simulation_loop_interval_ms`
 - `scheduler.lease_ticks`
+- `scheduler.entity_concurrency.*`
+- `scheduler.tick_budget.*`
 - `scheduler.automatic_rebalance.*`
 - `scheduler.runners.decision_job.*`
 - `scheduler.runners.action_dispatcher.*`
@@ -132,7 +134,8 @@
 
 这意味着：
 
-- 调度主循环节奏、lease 生命周期、自动 rebalance 阈值、runner 批量参数、operator 观测默认 limit
+- 调度主循环节奏、lease 生命周期、实体级 single-flight / activation budget、tick 级吞吐预算、
+  runner 批量与并发参数、operator 观测默认 limit
   都属于 **runtime host policy**，应通过 YAML / env 调整；
 - 业务层不再把这些值继续内嵌为新的 ad-hoc 常量。
 

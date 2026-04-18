@@ -105,6 +105,8 @@ pnpm smoke:server
 - `sqlite.*`
 - `scheduler.runtime.*`
 - `scheduler.lease_ticks`
+- `scheduler.entity_concurrency.*`
+- `scheduler.tick_budget.*`
 - `scheduler.automatic_rebalance.*`
 - `scheduler.runners.*`
 - `scheduler.observability.*`
@@ -178,6 +180,16 @@ scheduler:
   runtime:
     simulation_loop_interval_ms: 1000
   lease_ticks: 5
+  entity_concurrency:
+    default_max_active_workflows_per_entity: 1
+    max_entity_activations_per_tick: 1
+    allow_parallel_decision_per_entity: false
+    allow_parallel_action_per_entity: false
+    event_followup_preempts_periodic: true
+  tick_budget:
+    max_created_jobs_per_tick: 32
+    max_executed_decisions_per_tick: 16
+    max_dispatched_actions_per_tick: 16
   automatic_rebalance:
     backlog_limit: 2
     max_recommendations: 1
@@ -185,9 +197,11 @@ scheduler:
   runners:
     decision_job:
       batch_limit: 5
+      concurrency: 2
       lock_ticks: 5
     action_dispatcher:
       batch_limit: 5
+      concurrency: 1
       lock_ticks: 5
   observability:
     default_query_limit: 20
@@ -219,8 +233,15 @@ PORT=3101 \
 SIM_LOOP_INTERVAL_MS=1500 \
 SQLITE_BUSY_TIMEOUT_MS=8000 \
 SCHEDULER_LEASE_TICKS=9 \
+SCHEDULER_DECISION_JOB_CONCURRENCY=4 \
+SCHEDULER_ACTION_DISPATCHER_CONCURRENCY=2 \
+SCHEDULER_ENTITY_MAX_ACTIVATIONS_PER_TICK=1 \
+SCHEDULER_TICK_BUDGET_MAX_CREATED_JOBS=48 \
+SCHEDULER_TICK_BUDGET_MAX_EXECUTED_DECISIONS=24 \
 pnpm --filter yidhras-server dev
 ```
+
+说明：这些参数属于 runtime host policy。默认值偏保守；若世界包开发者或部署者选择不同数据库，应自行根据数据库能力调整 runner concurrency、tick budget、entity single-flight 相关参数。
 
 ### 3.5 World Pack 与手工脚本
 

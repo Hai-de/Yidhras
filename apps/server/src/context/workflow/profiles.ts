@@ -1,5 +1,5 @@
-import type { InferenceStrategy } from '../../inference/types.js';
 import { getRuntimeConfig } from '../../config/runtime_config.js';
+import type { InferenceStrategy } from '../../inference/types.js';
 import type {
   PromptWorkflowProfile,
   PromptWorkflowSelectionInput,

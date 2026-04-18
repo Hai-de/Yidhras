@@ -151,13 +151,16 @@ DATABASE_URL="file:../../../runtime/db/prod.sqlite"
 - `sqlite.synchronous`
 - `scheduler.runtime.simulation_loop_interval_ms`
 - `scheduler.lease_ticks`
+- `scheduler.entity_concurrency.*`
+- `scheduler.tick_budget.*`
 - `scheduler.automatic_rebalance.*`
+- `scheduler.runners.*`
 
 这些字段不改变 Prisma datasource 本身，但会影响：
 
 - server 启动节奏
 - SQLite 锁等待与 checkpoint 行为
-- scheduler 运行和 operator 观测体验
+- scheduler 运行、单实体 single-flight、tick 级吞吐节奏与 operator 观测体验
 
 ---
 
@@ -274,9 +277,21 @@ pnpm --filter yidhras-server init:runtime
 - `sqlite_synchronous`
 - `simulation_loop_interval_ms`
 - `scheduler_lease_ticks`
+- `scheduler_entity_default_max_active_workflows_per_entity`
+- `scheduler_entity_max_activations_per_tick`
+- `scheduler_allow_parallel_decision_per_entity`
+- `scheduler_allow_parallel_action_per_entity`
+- `scheduler_event_followup_preempts_periodic`
+- `scheduler_tick_budget_max_created_jobs`
+- `scheduler_tick_budget_max_executed_decisions`
+- `scheduler_tick_budget_max_dispatched_actions`
 - `scheduler_automatic_rebalance_*`
 - `scheduler_runner_*`
 - `scheduler_default_query_limit`
+
+如果你使用比默认更高吞吐的数据库或更高频事件世界包，可以优先从这些字段入手调优；
+如果你使用更保守或更容易出现写竞争的数据库，应优先下调 runner concurrency、tick budget 与相关 lease / batch 参数。
+平台不限制数据库类型，但部署者需要自行评估数据库能力与这些 runtime host policy 的匹配关系。
 
 ## 5.2 `seed:identity`
 

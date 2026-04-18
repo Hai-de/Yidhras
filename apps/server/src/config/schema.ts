@@ -29,9 +29,28 @@ const SchedulerSignalPolicySchema = z
   })
   .strict();
 
+const SchedulerEntityConcurrencySchema = z
+  .object({
+    default_max_active_workflows_per_entity: PositiveIntSchema,
+    max_entity_activations_per_tick: PositiveIntSchema,
+    allow_parallel_decision_per_entity: z.boolean(),
+    allow_parallel_action_per_entity: z.boolean(),
+    event_followup_preempts_periodic: z.boolean()
+  })
+  .strict();
+
+const SchedulerTickBudgetSchema = z
+  .object({
+    max_created_jobs_per_tick: PositiveIntSchema,
+    max_executed_decisions_per_tick: PositiveIntSchema,
+    max_dispatched_actions_per_tick: PositiveIntSchema
+  })
+  .strict();
+
 const SchedulerRunnerDefaultsSchema = z
   .object({
     batch_limit: PositiveIntSchema,
+    concurrency: PositiveIntSchema,
     lock_ticks: PositiveIntSchema
   })
   .strict();
@@ -133,6 +152,8 @@ export const RuntimeConfigSchema = z
           })
           .strict(),
         lease_ticks: PositiveIntSchema,
+        entity_concurrency: SchedulerEntityConcurrencySchema,
+        tick_budget: SchedulerTickBudgetSchema,
         automatic_rebalance: z
           .object({
             backlog_limit: NonNegativeIntSchema,

@@ -12,11 +12,14 @@ import {
   markActionIntentDropped,
   markActionIntentFailed
 } from '../services/action_dispatcher.js';
+import { hasActiveWorkflowForActor } from './entity_activity_query.js';
+import { runWithConcurrency } from './runner_concurrency.js';
 
 export interface RunActionDispatcherOptions {
   context: AppContext;
   workerId: string;
   limit?: number;
+  concurrency?: number;
   lockTicks?: bigint;
 }
 
@@ -24,14 +27,14 @@ export const runActionDispatcher = async ({
   context,
   workerId,
   limit = getSchedulerRunnerConfig().action_dispatcher.batch_limit,
+  concurrency = getSchedulerRunnerConfig().action_dispatcher.concurrency,
   lockTicks = BigInt(getSchedulerRunnerConfig().action_dispatcher.lock_ticks)
 }: RunActionDispatcherOptions): Promise<number> => {
   const intents = await listDispatchableActionIntents(context, limit);
-  let dispatchedCount = 0;
   const memoryCompactionService = createMemoryCompactionService({ context });
   const memoryRecordingService = createMemoryRecordingService({ context });
 
-  for (const intent of intents) {
+  const results = await runWithConcurrency(intents, concurrency, async intent => {
     let claimedIntent = null;
 
     try {
@@ -41,7 +44,20 @@ export const runActionDispatcher = async ({
         lock_ticks: lockTicks
       });
       if (!claimedIntent) {
-        continue;
+        return 0;
+      }
+
+      const actorRef = claimedIntent.actor_ref;
+      const actorId = actorRef && typeof actorRef === 'object' && !Array.isArray(actorRef) && 'agent_id' in actorRef && typeof actorRef.agent_id === 'string'
+        ? actorRef.agent_id
+        : null;
+      if (actorId) {
+        const hasOtherActiveWorkflow = await hasActiveWorkflowForActor(context, actorId, {
+          excludeActionIntentIds: [claimedIntent.id]
+        });
+        if (hasOtherActiveWorkflow) {
+          return 0;
+        }
       }
 
       assertActionIntentLockOwnership(claimedIntent, workerId, context.sim.getCurrentTick());
@@ -108,7 +124,7 @@ export const runActionDispatcher = async ({
           });
           await memoryCompactionService.runForAgent({ agent_id: latestIntent.actor_agent_id });
         }
-        continue;
+        return 0;
       }
 
       await markActionIntentCompleted(context, claimedIntent.id);
@@ -128,10 +144,10 @@ export const runActionDispatcher = async ({
         });
         await memoryCompactionService.runForAgent({ agent_id: latestIntent.actor_agent_id });
       }
-      dispatchedCount += 1;
+      return 1;
     } catch (err) {
       if (!claimedIntent) {
-        continue;
+        return 0;
       }
 
       const errorCode = err instanceof Error && 'code' in err && typeof err.code === 'string'
@@ -160,8 +176,9 @@ export const runActionDispatcher = async ({
         });
         await memoryCompactionService.runForAgent({ agent_id: latestIntent.actor_agent_id });
       }
+      return 0;
     }
-  }
+  });
 
-  return dispatchedCount;
+  return results.reduce<number>((sum, value) => sum + value, 0);
 };

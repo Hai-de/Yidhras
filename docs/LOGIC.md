@@ -100,6 +100,14 @@ execution 后会通过 objective events 发出：
 
 进入下一轮 actor 再思考。
 
+当前单世界包并发语义补充如下：
+
+- pack 级虚拟时钟仍由 runtime loop 串行推进；
+- 不同实体的 decision / action workflow 可以受控并发执行；
+- 同一实体默认保持 single-flight，不并行推进多条 writer workflow；
+- scheduler 会结合 active workflow、per-tick activation budget 与 periodic cooldown 做前置抑制；
+- runner 在 claim 成功后仍会再次复核同实体是否已有其他 active workflow。
+
 这构成了最小事件驱动语义回流，而不是一次性静态剧情模板。
 
 ## 5. Projection / visibility 语义

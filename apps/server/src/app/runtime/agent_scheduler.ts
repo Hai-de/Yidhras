@@ -1,5 +1,5 @@
+import { getSchedulerAgentConfig, getSchedulerEntityConcurrencyConfig, getSchedulerTickBudgetConfig } from '../../config/runtime_config.js';
 import type { InferenceRequestInput } from '../../inference/types.js';
-import { getSchedulerAgentConfig } from '../../config/runtime_config.js';
 import type { AppContext } from '../context.js';
 import {
   createPendingDecisionJob,
@@ -14,8 +14,10 @@ import {
   listRecentRecoveryWindowActors,
   listRecentRelationshipFollowupSignals,
   listRecentScheduledDecisionJobs,
-  listRecentSnrFollowupSignals} from '../services/inference_workflow.js';
+  listRecentSnrFollowupSignals
+} from '../services/inference_workflow.js';
 import { recordSchedulerRunSnapshot } from '../services/scheduler_observability.js';
+import { listActiveWorkflowActors } from './entity_activity_query.js';
 import {
   acquireSchedulerLease,
   getSchedulerCursor,
@@ -29,20 +31,18 @@ import {
   refreshSchedulerWorkerRuntimeState,
   resolveSchedulerOwnershipSnapshot
 } from './scheduler_ownership.js';
-import {
-  DEFAULT_SCHEDULER_PARTITION_ID,
-  getSchedulerPartitionCount,
-  resolveSchedulerPartitionId
-} from './scheduler_partitioning.js';
-import {
-  applySchedulerAutomaticRebalanceForWorker,
-  evaluateSchedulerAutomaticRebalance
-} from './scheduler_rebalance.js';
+import { DEFAULT_SCHEDULER_PARTITION_ID, getSchedulerPartitionCount, resolveSchedulerPartitionId } from './scheduler_partitioning.js';
+import { applySchedulerAutomaticRebalanceForWorker, evaluateSchedulerAutomaticRebalance } from './scheduler_rebalance.js';
 
-type EventDrivenSchedulerReason = 'event_followup' | 'relationship_change_followup' | 'snr_change_followup' | 'overlay_change_followup' | 'memory_change_followup';
-export type SchedulerReason = 'periodic_tick' | 'bootstrap_seed' | EventDrivenSchedulerReason;
+export type EventDrivenSchedulerReason =
+  | 'event_followup'
+  | 'relationship_change_followup'
+  | 'snr_change_followup'
+  | 'overlay_change_followup'
+  | 'memory_change_followup';
+export type SchedulerReason = EventDrivenSchedulerReason | 'periodic_tick' | 'bootstrap_seed';
 export type SchedulerKind = 'periodic' | 'event_driven';
-type SchedulerRecoveryWindowType = 'replay' | 'retry';
+export type SchedulerRecoveryWindowType = 'replay' | 'retry';
 export type SchedulerSkipReason =
   | 'pending_workflow'
   | 'periodic_cooldown'
@@ -78,7 +78,7 @@ interface SchedulerSignalPolicy {
 
 interface SchedulerRecoverySuppressionPolicy {
   suppress_periodic: boolean;
-  suppress_event_tiers: Array<SchedulerSignalPolicy['suppression_tier']>;
+  suppress_event_tiers: Array<'high' | 'low'>;
 }
 
 export interface AgentSchedulerCandidateDecisionSnapshot {
@@ -103,6 +103,10 @@ interface SchedulerActorReadinessContext {
   recentScheduledTickByAgent: Map<string, bigint>;
   replayRecoveryActors: Set<string>;
   retryRecoveryActors: Set<string>;
+  activeWorkflowActorIds: Set<string>;
+  perTickActivationCounts: Map<string, number>;
+  maxEntityActivationsPerTick: number;
+  entitySingleFlightLimit: number;
 }
 
 interface SchedulerActorReadinessResult {
@@ -291,6 +295,14 @@ const countCoalescedSecondaryReasons = (candidate: SchedulerCandidate): number =
   return candidate.kind === 'event_driven' ? candidate.secondary_reasons.length : 0;
 };
 
+const isAgentInCooldown = (now: bigint, lastScheduledTick: bigint | null, cooldownTicks: bigint): boolean => {
+  if (lastScheduledTick === null) {
+    return false;
+  }
+
+  return now - lastScheduledTick < cooldownTicks;
+};
+
 const evaluateSchedulerActorReadiness = (
   candidate: SchedulerCandidate,
   input: SchedulerActorReadinessContext
@@ -303,8 +315,19 @@ const evaluateSchedulerActorReadiness = (
     };
   }
 
+  const activationCount = input.perTickActivationCounts.get(candidate.agent_id) ?? 0;
+  if (activationCount >= input.maxEntityActivationsPerTick) {
+    return {
+      skipped_reason: 'limit_reached',
+      counts_as_scanned: false,
+      coalesced_secondary_reason_count: countCoalescedSecondaryReasons(candidate)
+    };
+  }
+
   const pendingKey = buildSchedulerCandidateKey(candidate.agent_id, candidate.kind, candidate.primary_reason);
-  const hasPendingWorkflow = input.pendingIntentAgentIds.has(candidate.agent_id) || input.pendingJobKeySet.has(pendingKey);
+  const hasPendingWorkflow = input.pendingIntentAgentIds.has(candidate.agent_id)
+    || input.pendingJobKeySet.has(pendingKey)
+    || (input.entitySingleFlightLimit <= 1 && input.activeWorkflowActorIds.has(candidate.agent_id));
   if (hasPendingWorkflow) {
     return {
       skipped_reason: 'pending_workflow',
@@ -393,7 +416,7 @@ export interface AgentSchedulerRunResult {
   partition_ids?: string[];
 }
 
-interface PartitionSchedulerRunResult extends Omit<AgentSchedulerRunResult, 'scheduler_run_ids' | 'partition_ids'> {
+interface PartitionSchedulerRunResult extends AgentSchedulerRunResult {
   partition_id: string;
 }
 
@@ -435,14 +458,6 @@ const buildScheduledInferenceRequestInput = (
   };
 };
 
-const isAgentInCooldown = (now: bigint, lastScheduledTick: bigint | null, cooldownTicks: bigint): boolean => {
-  if (lastScheduledTick === null) {
-    return false;
-  }
-
-  return now - lastScheduledTick < cooldownTicks;
-};
-
 const createInitialSkipCounts = (): Record<SchedulerSkipReason, number> => ({
   pending_workflow: 0,
   periodic_cooldown: 0,
@@ -473,28 +488,27 @@ const createEmptyPartitionRunResult = (partitionId: string): PartitionSchedulerR
 const aggregatePartitionRunResults = (results: PartitionSchedulerRunResult[]): AgentSchedulerRunResult => {
   const skipCounts = createInitialSkipCounts();
   for (const result of results) {
-    for (const [reason, count] of Object.entries(result.skipped_by_reason) as Array<[SchedulerSkipReason, number]>) {
-      skipCounts[reason] += count;
+    for (const reason of Object.keys(skipCounts) as SchedulerSkipReason[]) {
+      skipCounts[reason] += result.skipped_by_reason[reason];
     }
   }
 
   const schedulerRunIds = results
     .map(result => result.scheduler_run_id)
     .filter((value): value is string => typeof value === 'string');
-
   const partitionIds = results.map(result => result.partition_id);
 
   return {
-    scanned_count: results.reduce((sum, item) => sum + item.scanned_count, 0),
-    eligible_count: results.reduce((sum, item) => sum + item.eligible_count, 0),
-    created_count: results.reduce((sum, item) => sum + item.created_count, 0),
-    skipped_pending_count: results.reduce((sum, item) => sum + item.skipped_pending_count, 0),
-    skipped_cooldown_count: results.reduce((sum, item) => sum + item.skipped_cooldown_count, 0),
-    created_periodic_count: results.reduce((sum, item) => sum + item.created_periodic_count, 0),
-    created_event_driven_count: results.reduce((sum, item) => sum + item.created_event_driven_count, 0),
-    signals_detected_count: results.reduce((sum, item) => sum + item.signals_detected_count, 0),
-    scheduled_for_future_count: results.reduce((sum, item) => sum + item.scheduled_for_future_count, 0),
-    skipped_existing_idempotency_count: results.reduce((sum, item) => sum + item.skipped_existing_idempotency_count, 0),
+    scanned_count: results.reduce((sum, result) => sum + result.scanned_count, 0),
+    eligible_count: results.reduce((sum, result) => sum + result.eligible_count, 0),
+    created_count: results.reduce((sum, result) => sum + result.created_count, 0),
+    skipped_pending_count: results.reduce((sum, result) => sum + result.skipped_pending_count, 0),
+    skipped_cooldown_count: results.reduce((sum, result) => sum + result.skipped_cooldown_count, 0),
+    created_periodic_count: results.reduce((sum, result) => sum + result.created_periodic_count, 0),
+    created_event_driven_count: results.reduce((sum, result) => sum + result.created_event_driven_count, 0),
+    signals_detected_count: results.reduce((sum, result) => sum + result.signals_detected_count, 0),
+    scheduled_for_future_count: results.reduce((sum, result) => sum + result.scheduled_for_future_count, 0),
+    skipped_existing_idempotency_count: results.reduce((sum, result) => sum + result.skipped_existing_idempotency_count, 0),
     skipped_by_reason: skipCounts,
     scheduler_run_id: schedulerRunIds[0],
     scheduler_run_ids: schedulerRunIds,
@@ -610,10 +624,11 @@ const runAgentSchedulerForPartition = async ({
   );
   const candidates = sortSchedulerCandidates([...eventDrivenCandidates, ...periodicCandidates]);
 
-  const [pendingJobAgentIds, pendingIntentAgentIds, recentScheduledTickByAgent] = await Promise.all([
+  const [pendingJobAgentIds, pendingIntentAgentIds, recentScheduledTickByAgent, activeWorkflowActorIds] = await Promise.all([
     listPendingSchedulerDecisionJobs(context, agentIds),
     listPendingSchedulerActionIntents(context, agentIds),
-    listRecentScheduledDecisionJobs(context, agentIds)
+    listRecentScheduledDecisionJobs(context, agentIds),
+    listActiveWorkflowActors(context, agentIds)
   ]);
 
   const pendingJobKeySet = new Set(
@@ -627,6 +642,14 @@ const runAgentSchedulerForPartition = async ({
     ])
   );
 
+  const entityConcurrencyConfig = getSchedulerEntityConcurrencyConfig();
+  const tickBudgetConfig = getSchedulerTickBudgetConfig();
+  const entitySingleFlightLimit = entityConcurrencyConfig.default_max_active_workflows_per_entity;
+  const maxEntityActivationsPerTick = entityConcurrencyConfig.max_entity_activations_per_tick;
+  const maxCreatedJobsForPartition = Math.min(limit, tickBudgetConfig.max_created_jobs_per_tick);
+  const effectiveMaxCandidates = Math.min(getSchedulerAgentConfig().max_candidates, tickBudgetConfig.max_created_jobs_per_tick);
+  const perTickActivationCounts = new Map<string, number>();
+
   let scannedCount = 0;
   let eligibleCount = 0;
   let createdCount = 0;
@@ -638,6 +661,15 @@ const runAgentSchedulerForPartition = async ({
   let skippedExistingIdempotencyCount = 0;
 
   for (const candidate of candidates) {
+    if (createdCount >= maxCreatedJobsForPartition) {
+      skipCounts.limit_reached += 1;
+      candidateDecisions.push(buildCandidateDecisionSnapshot(candidate, partitionId, {
+        skippedReason: 'limit_reached',
+        createdJobId: null
+      }));
+      continue;
+    }
+
     if (!(await isWorkerAllowedToOperateSchedulerPartition(context, { partitionId, workerId }))) {
       break;
     }
@@ -657,12 +689,16 @@ const runAgentSchedulerForPartition = async ({
       now,
       cooldownTicks,
       scannedCount,
-      maxCandidates: getSchedulerAgentConfig().max_candidates,
+      maxCandidates: effectiveMaxCandidates,
       pendingIntentAgentIds,
       pendingJobKeySet,
       recentScheduledTickByAgent,
       replayRecoveryActors,
-      retryRecoveryActors
+      retryRecoveryActors,
+      activeWorkflowActorIds,
+      perTickActivationCounts,
+      maxEntityActivationsPerTick,
+      entitySingleFlightLimit
     });
 
     if (readiness.coalesced_secondary_reason_count > 0) {
@@ -732,6 +768,8 @@ const runAgentSchedulerForPartition = async ({
       job_source: 'scheduler',
       scheduled_for_tick: candidate.scheduled_for_tick
     });
+    activeWorkflowActorIds.add(candidate.agent_id);
+    perTickActivationCounts.set(candidate.agent_id, (perTickActivationCounts.get(candidate.agent_id) ?? 0) + 1);
     candidateDecisions.push(buildCandidateDecisionSnapshot(candidate, partitionId, {
       skippedReason: null,
       createdJobId: createdJob.id

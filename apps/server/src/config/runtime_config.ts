@@ -79,6 +79,18 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
       simulation_loop_interval_ms: 1000
     },
     lease_ticks: 5,
+    entity_concurrency: {
+      default_max_active_workflows_per_entity: 1,
+      max_entity_activations_per_tick: 1,
+      allow_parallel_decision_per_entity: false,
+      allow_parallel_action_per_entity: false,
+      event_followup_preempts_periodic: true
+    },
+    tick_budget: {
+      max_created_jobs_per_tick: 32,
+      max_executed_decisions_per_tick: 16,
+      max_dispatched_actions_per_tick: 16
+    },
     automatic_rebalance: {
       backlog_limit: 2,
       max_recommendations: 1,
@@ -87,10 +99,12 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
     runners: {
       decision_job: {
         batch_limit: 5,
+        concurrency: 2,
         lock_ticks: 5
       },
       action_dispatcher: {
         batch_limit: 5,
+        concurrency: 1,
         lock_ticks: 5
       }
     },
@@ -240,10 +254,20 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   const schedulerAutomaticRebalanceMaxApply = parseIntegerEnv('SCHEDULER_AUTOMATIC_REBALANCE_MAX_APPLY', process.env.SCHEDULER_AUTOMATIC_REBALANCE_MAX_APPLY);
   const schedulerAgentLimit = parseIntegerEnv('SCHEDULER_AGENT_LIMIT', process.env.SCHEDULER_AGENT_LIMIT);
   const schedulerAgentCooldownTicks = parseIntegerEnv('SCHEDULER_AGENT_COOLDOWN_TICKS', process.env.SCHEDULER_AGENT_COOLDOWN_TICKS);
+  const schedulerEntityDefaultMaxActiveWorkflows = parseIntegerEnv('SCHEDULER_ENTITY_DEFAULT_MAX_ACTIVE_WORKFLOWS_PER_ENTITY', process.env.SCHEDULER_ENTITY_DEFAULT_MAX_ACTIVE_WORKFLOWS_PER_ENTITY);
+  const schedulerEntityMaxActivationsPerTick = parseIntegerEnv('SCHEDULER_ENTITY_MAX_ACTIVATIONS_PER_TICK', process.env.SCHEDULER_ENTITY_MAX_ACTIVATIONS_PER_TICK);
+  const schedulerAllowParallelDecisionPerEntity = parseBooleanEnv('SCHEDULER_ALLOW_PARALLEL_DECISION_PER_ENTITY', process.env.SCHEDULER_ALLOW_PARALLEL_DECISION_PER_ENTITY);
+  const schedulerAllowParallelActionPerEntity = parseBooleanEnv('SCHEDULER_ALLOW_PARALLEL_ACTION_PER_ENTITY', process.env.SCHEDULER_ALLOW_PARALLEL_ACTION_PER_ENTITY);
+  const schedulerEventFollowupPreemptsPeriodic = parseBooleanEnv('SCHEDULER_EVENT_FOLLOWUP_PREEMPTS_PERIODIC', process.env.SCHEDULER_EVENT_FOLLOWUP_PREEMPTS_PERIODIC);
   const schedulerDecisionJobBatchLimit = parseIntegerEnv('SCHEDULER_DECISION_JOB_BATCH_LIMIT', process.env.SCHEDULER_DECISION_JOB_BATCH_LIMIT);
+  const schedulerDecisionJobConcurrency = parseIntegerEnv('SCHEDULER_DECISION_JOB_CONCURRENCY', process.env.SCHEDULER_DECISION_JOB_CONCURRENCY);
   const schedulerDecisionJobLockTicks = parseIntegerEnv('SCHEDULER_DECISION_JOB_LOCK_TICKS', process.env.SCHEDULER_DECISION_JOB_LOCK_TICKS);
   const schedulerActionDispatcherBatchLimit = parseIntegerEnv('SCHEDULER_ACTION_DISPATCHER_BATCH_LIMIT', process.env.SCHEDULER_ACTION_DISPATCHER_BATCH_LIMIT);
+  const schedulerActionDispatcherConcurrency = parseIntegerEnv('SCHEDULER_ACTION_DISPATCHER_CONCURRENCY', process.env.SCHEDULER_ACTION_DISPATCHER_CONCURRENCY);
   const schedulerActionDispatcherLockTicks = parseIntegerEnv('SCHEDULER_ACTION_DISPATCHER_LOCK_TICKS', process.env.SCHEDULER_ACTION_DISPATCHER_LOCK_TICKS);
+  const schedulerTickBudgetCreatedJobs = parseIntegerEnv('SCHEDULER_TICK_BUDGET_MAX_CREATED_JOBS', process.env.SCHEDULER_TICK_BUDGET_MAX_CREATED_JOBS);
+  const schedulerTickBudgetExecutedDecisions = parseIntegerEnv('SCHEDULER_TICK_BUDGET_MAX_EXECUTED_DECISIONS', process.env.SCHEDULER_TICK_BUDGET_MAX_EXECUTED_DECISIONS);
+  const schedulerTickBudgetDispatchedActions = parseIntegerEnv('SCHEDULER_TICK_BUDGET_MAX_DISPATCHED_ACTIONS', process.env.SCHEDULER_TICK_BUDGET_MAX_DISPATCHED_ACTIONS);
   const schedulerDefaultQueryLimit = parseIntegerEnv('SCHEDULER_DEFAULT_QUERY_LIMIT', process.env.SCHEDULER_DEFAULT_QUERY_LIMIT);
   const schedulerMaxQueryLimit = parseIntegerEnv('SCHEDULER_MAX_QUERY_LIMIT', process.env.SCHEDULER_MAX_QUERY_LIMIT);
   const schedulerSummaryDefaultSampleRuns = parseIntegerEnv('SCHEDULER_SUMMARY_DEFAULT_SAMPLE_RUNS', process.env.SCHEDULER_SUMMARY_DEFAULT_SAMPLE_RUNS);
@@ -338,10 +362,20 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     || schedulerAutomaticRebalanceMaxApply !== undefined
     || schedulerAgentLimit !== undefined
     || schedulerAgentCooldownTicks !== undefined
+    || schedulerEntityDefaultMaxActiveWorkflows !== undefined
+    || schedulerEntityMaxActivationsPerTick !== undefined
+    || schedulerAllowParallelDecisionPerEntity !== undefined
+    || schedulerAllowParallelActionPerEntity !== undefined
+    || schedulerEventFollowupPreemptsPeriodic !== undefined
     || schedulerDecisionJobBatchLimit !== undefined
+    || schedulerDecisionJobConcurrency !== undefined
     || schedulerDecisionJobLockTicks !== undefined
     || schedulerActionDispatcherBatchLimit !== undefined
+    || schedulerActionDispatcherConcurrency !== undefined
     || schedulerActionDispatcherLockTicks !== undefined
+    || schedulerTickBudgetCreatedJobs !== undefined
+    || schedulerTickBudgetExecutedDecisions !== undefined
+    || schedulerTickBudgetDispatchedActions !== undefined
     || schedulerDefaultQueryLimit !== undefined
     || schedulerMaxQueryLimit !== undefined
     || schedulerSummaryDefaultSampleRuns !== undefined
@@ -354,6 +388,18 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
         ...(simulationLoopIntervalMs !== undefined ? { simulation_loop_interval_ms: simulationLoopIntervalMs } : {})
       },
       ...(schedulerLeaseTicks !== undefined ? { lease_ticks: schedulerLeaseTicks } : {}),
+      entity_concurrency: {
+        ...(schedulerEntityDefaultMaxActiveWorkflows !== undefined ? { default_max_active_workflows_per_entity: schedulerEntityDefaultMaxActiveWorkflows } : {}),
+        ...(schedulerEntityMaxActivationsPerTick !== undefined ? { max_entity_activations_per_tick: schedulerEntityMaxActivationsPerTick } : {}),
+        ...(schedulerAllowParallelDecisionPerEntity !== undefined ? { allow_parallel_decision_per_entity: schedulerAllowParallelDecisionPerEntity } : {}),
+        ...(schedulerAllowParallelActionPerEntity !== undefined ? { allow_parallel_action_per_entity: schedulerAllowParallelActionPerEntity } : {}),
+        ...(schedulerEventFollowupPreemptsPeriodic !== undefined ? { event_followup_preempts_periodic: schedulerEventFollowupPreemptsPeriodic } : {})
+      },
+      tick_budget: {
+        ...(schedulerTickBudgetCreatedJobs !== undefined ? { max_created_jobs_per_tick: schedulerTickBudgetCreatedJobs } : {}),
+        ...(schedulerTickBudgetExecutedDecisions !== undefined ? { max_executed_decisions_per_tick: schedulerTickBudgetExecutedDecisions } : {}),
+        ...(schedulerTickBudgetDispatchedActions !== undefined ? { max_dispatched_actions_per_tick: schedulerTickBudgetDispatchedActions } : {})
+      },
       automatic_rebalance: {
         ...(schedulerAutomaticRebalanceBacklogLimit !== undefined ? { backlog_limit: schedulerAutomaticRebalanceBacklogLimit } : {}),
         ...(schedulerAutomaticRebalanceMaxRecommendations !== undefined ? { max_recommendations: schedulerAutomaticRebalanceMaxRecommendations } : {}),
@@ -362,10 +408,12 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
       runners: {
         decision_job: {
           ...(schedulerDecisionJobBatchLimit !== undefined ? { batch_limit: schedulerDecisionJobBatchLimit } : {}),
+          ...(schedulerDecisionJobConcurrency !== undefined ? { concurrency: schedulerDecisionJobConcurrency } : {}),
           ...(schedulerDecisionJobLockTicks !== undefined ? { lock_ticks: schedulerDecisionJobLockTicks } : {})
         },
         action_dispatcher: {
           ...(schedulerActionDispatcherBatchLimit !== undefined ? { batch_limit: schedulerActionDispatcherBatchLimit } : {}),
+          ...(schedulerActionDispatcherConcurrency !== undefined ? { concurrency: schedulerActionDispatcherConcurrency } : {}),
           ...(schedulerActionDispatcherLockTicks !== undefined ? { lock_ticks: schedulerActionDispatcherLockTicks } : {})
         }
       },
@@ -483,6 +531,14 @@ export const getSchedulerRunnerConfig = (): RuntimeConfig['scheduler']['runners'
   return getRuntimeConfig().scheduler.runners;
 };
 
+export const getSchedulerEntityConcurrencyConfig = (): RuntimeConfig['scheduler']['entity_concurrency'] => {
+  return getRuntimeConfig().scheduler.entity_concurrency;
+};
+
+export const getSchedulerTickBudgetConfig = (): RuntimeConfig['scheduler']['tick_budget'] => {
+  return getRuntimeConfig().scheduler.tick_budget;
+};
+
 export const getSchedulerAgentConfig = (): RuntimeConfig['scheduler']['agent'] => {
   return getRuntimeConfig().scheduler.agent;
 };
@@ -544,12 +600,22 @@ export const buildRuntimeConfigSnapshot = (): Record<string, string | boolean | 
     bootstrap_target_pack_dir: bootstrap.targetPackDirName,
     simulation_loop_interval_ms: String(config.scheduler.runtime.simulation_loop_interval_ms),
     scheduler_lease_ticks: String(config.scheduler.lease_ticks),
+    scheduler_entity_default_max_active_workflows_per_entity: String(config.scheduler.entity_concurrency.default_max_active_workflows_per_entity),
+    scheduler_entity_max_activations_per_tick: String(config.scheduler.entity_concurrency.max_entity_activations_per_tick),
+    scheduler_allow_parallel_decision_per_entity: String(config.scheduler.entity_concurrency.allow_parallel_decision_per_entity),
+    scheduler_allow_parallel_action_per_entity: String(config.scheduler.entity_concurrency.allow_parallel_action_per_entity),
+    scheduler_event_followup_preempts_periodic: String(config.scheduler.entity_concurrency.event_followup_preempts_periodic),
+    scheduler_tick_budget_max_created_jobs: String(config.scheduler.tick_budget.max_created_jobs_per_tick),
+    scheduler_tick_budget_max_executed_decisions: String(config.scheduler.tick_budget.max_executed_decisions_per_tick),
+    scheduler_tick_budget_max_dispatched_actions: String(config.scheduler.tick_budget.max_dispatched_actions_per_tick),
     scheduler_automatic_rebalance_backlog_limit: String(config.scheduler.automatic_rebalance.backlog_limit),
     scheduler_automatic_rebalance_max_recommendations: String(config.scheduler.automatic_rebalance.max_recommendations),
     scheduler_automatic_rebalance_max_apply: String(config.scheduler.automatic_rebalance.max_apply),
     scheduler_runner_decision_job_batch_limit: String(config.scheduler.runners.decision_job.batch_limit),
+    scheduler_runner_decision_job_concurrency: String(config.scheduler.runners.decision_job.concurrency),
     scheduler_runner_decision_job_lock_ticks: String(config.scheduler.runners.decision_job.lock_ticks),
     scheduler_runner_action_dispatcher_batch_limit: String(config.scheduler.runners.action_dispatcher.batch_limit),
+    scheduler_runner_action_dispatcher_concurrency: String(config.scheduler.runners.action_dispatcher.concurrency),
     scheduler_runner_action_dispatcher_lock_ticks: String(config.scheduler.runners.action_dispatcher.lock_ticks),
     scheduler_default_query_limit: String(config.scheduler.observability.default_query_limit),
     scheduler_max_query_limit: String(config.scheduler.observability.max_query_limit),
