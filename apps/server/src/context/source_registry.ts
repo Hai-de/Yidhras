@@ -136,6 +136,17 @@ const createMemoryBlockSourceAdapter = (
     return {
       nodes: result.nodes,
       diagnostics: {
+        engine_owner: result.evaluation_metadata?.provider?.startsWith('rust') ? 'rust_sidecar' : 'ts_host',
+        engine_mode: result.evaluation_metadata?.provider ?? 'ts',
+        ignored_features: {
+          trigger_rate_ignored_count: result.ignored_feature_counts?.trigger_rate_ignored_count ?? 0
+        },
+        parity_diff: result.evaluation_metadata && result.evaluation_metadata.parity_status === 'diff'
+          ? {
+              mismatch_count: result.evaluation_metadata.parity_diff_count,
+              sample_ids: result.evaluations.slice(0, 5).map(item => item.memory_id)
+            }
+          : undefined,
         memory_blocks: {
           evaluated: result.evaluations,
           inserted: result.evaluations.filter(item => item.status === 'active').map(item => item.memory_id),

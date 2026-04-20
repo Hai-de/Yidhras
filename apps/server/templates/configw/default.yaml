@@ -75,6 +75,11 @@ scheduler:
     limit: 5
     cooldown_ticks: 3
     max_candidates: 20
+    decision_kernel:
+      mode: "ts"
+      timeout_ms: 500
+      binary_path: "apps/server/rust/scheduler_decision_sidecar/target/debug/scheduler_decision_sidecar"
+      auto_restart: true
     signal_policy:
       event_followup:
         priority_score: 30
@@ -108,6 +113,12 @@ scheduler:
       retry:
         suppress_periodic: true
         suppress_event_tiers: ["low"]
+  memory:
+    trigger_engine:
+      mode: "rust_primary"
+      timeout_ms: 500
+      binary_path: "apps/server/rust/memory_trigger_sidecar/target/debug/memory_trigger_sidecar"
+      auto_restart: true
 
 prompt_workflow:
   profiles:

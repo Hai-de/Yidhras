@@ -130,6 +130,12 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
       limit: 5,
       cooldown_ticks: 3,
       max_candidates: 20,
+      decision_kernel: {
+        mode: 'ts',
+        timeout_ms: 500,
+        binary_path: 'apps/server/rust/scheduler_decision_sidecar/target/debug/scheduler_decision_sidecar',
+        auto_restart: true
+      },
       signal_policy: {
         event_followup: {
           priority_score: 30,
@@ -165,6 +171,14 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
       recovery_suppression: {
         replay: { suppress_periodic: true, suppress_event_tiers: ['low'] },
         retry: { suppress_periodic: true, suppress_event_tiers: ['low'] }
+      }
+    },
+    memory: {
+      trigger_engine: {
+        mode: 'rust_primary',
+        timeout_ms: 500,
+        binary_path: 'apps/server/rust/memory_trigger_sidecar/target/debug/memory_trigger_sidecar',
+        auto_restart: true
       }
     }
   },
@@ -268,6 +282,14 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   const schedulerAutomaticRebalanceMaxApply = parseIntegerEnv('SCHEDULER_AUTOMATIC_REBALANCE_MAX_APPLY', process.env.SCHEDULER_AUTOMATIC_REBALANCE_MAX_APPLY);
   const schedulerAgentLimit = parseIntegerEnv('SCHEDULER_AGENT_LIMIT', process.env.SCHEDULER_AGENT_LIMIT);
   const schedulerAgentCooldownTicks = parseIntegerEnv('SCHEDULER_AGENT_COOLDOWN_TICKS', process.env.SCHEDULER_AGENT_COOLDOWN_TICKS);
+  const schedulerAgentDecisionKernelMode = parseOptionalStringEnv(process.env.SCHEDULER_AGENT_DECISION_KERNEL_MODE);
+  const schedulerAgentDecisionKernelTimeoutMs = parseIntegerEnv('SCHEDULER_AGENT_DECISION_KERNEL_TIMEOUT_MS', process.env.SCHEDULER_AGENT_DECISION_KERNEL_TIMEOUT_MS);
+  const schedulerAgentDecisionKernelBinaryPath = parseOptionalStringEnv(process.env.SCHEDULER_AGENT_DECISION_KERNEL_BINARY_PATH);
+  const schedulerAgentDecisionKernelAutoRestart = parseBooleanEnv('SCHEDULER_AGENT_DECISION_KERNEL_AUTO_RESTART', process.env.SCHEDULER_AGENT_DECISION_KERNEL_AUTO_RESTART);
+  const memoryTriggerEngineMode = parseOptionalStringEnv(process.env.MEMORY_TRIGGER_ENGINE_MODE);
+  const memoryTriggerEngineTimeoutMs = parseIntegerEnv('MEMORY_TRIGGER_ENGINE_TIMEOUT_MS', process.env.MEMORY_TRIGGER_ENGINE_TIMEOUT_MS);
+  const memoryTriggerEngineBinaryPath = parseOptionalStringEnv(process.env.MEMORY_TRIGGER_ENGINE_BINARY_PATH);
+  const memoryTriggerEngineAutoRestart = parseBooleanEnv('MEMORY_TRIGGER_ENGINE_AUTO_RESTART', process.env.MEMORY_TRIGGER_ENGINE_AUTO_RESTART);
   const schedulerEntityDefaultMaxActiveWorkflows = parseIntegerEnv('SCHEDULER_ENTITY_DEFAULT_MAX_ACTIVE_WORKFLOWS_PER_ENTITY', process.env.SCHEDULER_ENTITY_DEFAULT_MAX_ACTIVE_WORKFLOWS_PER_ENTITY);
   const schedulerEntityMaxActivationsPerTick = parseIntegerEnv('SCHEDULER_ENTITY_MAX_ACTIVATIONS_PER_TICK', process.env.SCHEDULER_ENTITY_MAX_ACTIVATIONS_PER_TICK);
   const schedulerAllowParallelDecisionPerEntity = parseBooleanEnv('SCHEDULER_ALLOW_PARALLEL_DECISION_PER_ENTITY', process.env.SCHEDULER_ALLOW_PARALLEL_DECISION_PER_ENTITY);
@@ -416,6 +438,10 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     || schedulerAutomaticRebalanceMaxApply !== undefined
     || schedulerAgentLimit !== undefined
     || schedulerAgentCooldownTicks !== undefined
+    || schedulerAgentDecisionKernelMode !== undefined
+    || schedulerAgentDecisionKernelTimeoutMs !== undefined
+    || schedulerAgentDecisionKernelBinaryPath !== undefined
+    || schedulerAgentDecisionKernelAutoRestart !== undefined
     || schedulerEntityDefaultMaxActiveWorkflows !== undefined
     || schedulerEntityMaxActivationsPerTick !== undefined
     || schedulerAllowParallelDecisionPerEntity !== undefined
@@ -436,6 +462,10 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     || schedulerSummaryMaxSampleRuns !== undefined
     || schedulerOperatorDefaultRecentLimit !== undefined
     || schedulerOperatorMaxRecentLimit !== undefined
+    || memoryTriggerEngineMode !== undefined
+    || memoryTriggerEngineTimeoutMs !== undefined
+    || memoryTriggerEngineBinaryPath !== undefined
+    || memoryTriggerEngineAutoRestart !== undefined
   ) {
     overrides.scheduler = {
       runtime: {
@@ -491,7 +521,21 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
       },
       agent: {
         ...(schedulerAgentLimit !== undefined ? { limit: schedulerAgentLimit } : {}),
-        ...(schedulerAgentCooldownTicks !== undefined ? { cooldown_ticks: schedulerAgentCooldownTicks } : {})
+        ...(schedulerAgentCooldownTicks !== undefined ? { cooldown_ticks: schedulerAgentCooldownTicks } : {}),
+        decision_kernel: {
+          ...(schedulerAgentDecisionKernelMode !== undefined ? { mode: schedulerAgentDecisionKernelMode } : {}),
+          ...(schedulerAgentDecisionKernelTimeoutMs !== undefined ? { timeout_ms: schedulerAgentDecisionKernelTimeoutMs } : {}),
+          ...(schedulerAgentDecisionKernelBinaryPath !== undefined ? { binary_path: schedulerAgentDecisionKernelBinaryPath } : {}),
+          ...(schedulerAgentDecisionKernelAutoRestart !== undefined ? { auto_restart: schedulerAgentDecisionKernelAutoRestart } : {})
+        }
+      },
+      memory: {
+        trigger_engine: {
+          ...(memoryTriggerEngineMode !== undefined ? { mode: memoryTriggerEngineMode } : {}),
+          ...(memoryTriggerEngineTimeoutMs !== undefined ? { timeout_ms: memoryTriggerEngineTimeoutMs } : {}),
+          ...(memoryTriggerEngineBinaryPath !== undefined ? { binary_path: memoryTriggerEngineBinaryPath } : {}),
+          ...(memoryTriggerEngineAutoRestart !== undefined ? { auto_restart: memoryTriggerEngineAutoRestart } : {})
+        }
       }
     };
   }
@@ -597,6 +641,14 @@ export const getSchedulerAgentConfig = (): RuntimeConfig['scheduler']['agent'] =
   return getRuntimeConfig().scheduler.agent;
 };
 
+export const getSchedulerDecisionKernelConfig = (): RuntimeConfig['scheduler']['agent']['decision_kernel'] => {
+  return getRuntimeConfig().scheduler.agent.decision_kernel;
+};
+
+export const getMemoryTriggerEngineConfig = (): RuntimeConfig['scheduler']['memory']['trigger_engine'] => {
+  return getRuntimeConfig().scheduler.memory.trigger_engine;
+};
+
 export const getExperimentalMultiPackRuntimeConfig = (): RuntimeConfig['features']['experimental']['multi_pack_runtime'] => {
   return getRuntimeConfig().features.experimental.multi_pack_runtime;
 };
@@ -697,6 +749,14 @@ export const buildRuntimeConfigSnapshot = (): Record<string, string | boolean | 
     scheduler_agent_limit: String(config.scheduler.agent.limit),
     scheduler_agent_cooldown_ticks: String(config.scheduler.agent.cooldown_ticks),
     scheduler_agent_max_candidates: String(config.scheduler.agent.max_candidates),
+    scheduler_agent_decision_kernel_mode: config.scheduler.agent.decision_kernel.mode,
+    scheduler_agent_decision_kernel_timeout_ms: String(config.scheduler.agent.decision_kernel.timeout_ms),
+    scheduler_agent_decision_kernel_binary_path: config.scheduler.agent.decision_kernel.binary_path,
+    scheduler_agent_decision_kernel_auto_restart: String(config.scheduler.agent.decision_kernel.auto_restart),
+    memory_trigger_engine_mode: config.scheduler.memory.trigger_engine.mode,
+    memory_trigger_engine_timeout_ms: String(config.scheduler.memory.trigger_engine.timeout_ms),
+    memory_trigger_engine_binary_path: config.scheduler.memory.trigger_engine.binary_path,
+    memory_trigger_engine_auto_restart: String(config.scheduler.memory.trigger_engine.auto_restart),
     bootstrap_template_file: bootstrap.templateFilePath,
     prompt_workflow_agent_decision_budget: String(config.prompt_workflow.profiles.agent_decision_default.token_budget),
     runtime_multi_pack_max_loaded_packs: String(config.runtime.multi_pack.max_loaded_packs),
@@ -707,7 +767,7 @@ export const buildRuntimeConfigSnapshot = (): Record<string, string | boolean | 
     experimental_multi_pack_runtime_operator_api_enabled: String(config.features.experimental.multi_pack_runtime.operator_api_enabled),
     experimental_multi_pack_runtime_ui_enabled: String(config.features.experimental.multi_pack_runtime.ui_enabled)
   };
-};;
+};
 
 export const logRuntimeConfigSnapshot = (logger: (message: string) => void = console.log): void => {
   if (runtimeConfigSnapshotLogged) {

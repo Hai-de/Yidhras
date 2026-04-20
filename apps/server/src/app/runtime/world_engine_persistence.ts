@@ -1,24 +1,42 @@
-import type {
+import {
   PreparedWorldStep,
+  WORLD_ENGINE_PROTOCOL_VERSION,
   WorldEngineCommitResult,
+  type WorldStateDeltaOperation,
   WorldStepAbortRequest,
   WorldStepCommitRequest,
-  WorldStepPrepareRequest
-} from '@yidhras/contracts';
-import { WORLD_ENGINE_PROTOCOL_VERSION } from '@yidhras/contracts';
+  WorldStepPrepareRequest} from '@yidhras/contracts';
 
+import type { PackRuntimeEntityStateRecord, PackRuntimeRuleExecutionRecord } from '../../packs/runtime/core_models.js';
+import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage/entity_state_repo.js';
+import { recordPackRuleExecution } from '../../packs/storage/rule_execution_repo.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import type { WorldEnginePort } from './world_engine_ports.js';
+
+export interface PackRuntimeCoreDeltaPersistenceResult {
+  persisted_revision: string;
+  applied_operations: WorldStateDeltaOperation['op'][];
+  persisted_entity_states: PackRuntimeEntityStateRecord[];
+  persisted_rule_execution_records: PackRuntimeRuleExecutionRecord[];
+  clock_delta: {
+    previous_tick: string | null;
+    next_tick: string | null;
+    previous_revision: string | null;
+    next_revision: string | null;
+  } | null;
+  observability: Array<{
+    code: 'WORLD_CORE_DELTA_APPLIED' | 'WORLD_CORE_DELTA_ABORTED';
+    attributes: Record<string, unknown>;
+  }>;
+}
 
 export interface WorldEnginePersistencePort {
   persistPreparedStep(input: {
     context: AppContext;
     prepared: PreparedWorldStep;
     correlationId?: string;
-  }): Promise<{
-    persisted_revision: string;
-  }>;
+  }): Promise<PackRuntimeCoreDeltaPersistenceResult>;
 }
 
 export interface WorldEngineSingleFlightState {
@@ -83,12 +101,181 @@ const assertSingleFlightAvailable = (packId: string): void => {
   });
 };
 
+const buildPackEntityStateId = (packId: string, entityId: string, namespace: string): string => {
+  return `${packId}:state:${entityId}:${namespace}`;
+};
+
+const parseBigIntLike = (value: unknown, field: string): bigint => {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new ApiError(500, 'HOST_PERSIST_FAILED', `Missing ${field} for world engine core delta apply`, {
+      field,
+      value
+    });
+  }
+
+  try {
+    return BigInt(value);
+  } catch {
+    throw new ApiError(500, 'HOST_PERSIST_FAILED', `Invalid bigint string for ${field}`, {
+      field,
+      value
+    });
+  }
+};
+
+const applyPreparedWorldStateDelta = async (input: {
+  context: AppContext;
+  prepared: PreparedWorldStep;
+}): Promise<PackRuntimeCoreDeltaPersistenceResult> => {
+  const appliedOperations: WorldStateDeltaOperation['op'][] = [];
+  const persistedEntityStates: PackRuntimeEntityStateRecord[] = [];
+  const persistedRuleExecutionRecords: PackRuntimeRuleExecutionRecord[] = [];
+  let clockDelta: PackRuntimeCoreDeltaPersistenceResult['clock_delta'] = null;
+  let mutatedNamespaceRefs: string[] = [];
+
+  for (const operation of input.prepared.state_delta.operations) {
+    switch (operation.op) {
+      case 'upsert_entity_state': {
+        const entityId = operation.target_ref?.trim() ?? '';
+        const namespace = operation.namespace?.trim() ?? '';
+        const nextState = operation.payload.next;
+        if (entityId.length === 0 || namespace.length === 0 || !nextState || typeof nextState !== 'object' || Array.isArray(nextState)) {
+          throw new ApiError(500, 'HOST_PERSIST_FAILED', 'Invalid upsert_entity_state payload for Host delta apply', {
+            operation
+          });
+        }
+
+        const existingStates = await listPackEntityStates(input.prepared.pack_id);
+        const existing = existingStates.find(item => item.entity_id === entityId && item.state_namespace === namespace) ?? null;
+        const persisted = await upsertPackEntityState({
+          id: existing?.id ?? buildPackEntityStateId(input.prepared.pack_id, entityId, namespace),
+          pack_id: input.prepared.pack_id,
+          entity_id: entityId,
+          state_namespace: namespace,
+          state_json: nextState as Record<string, unknown>,
+          now: parseBigIntLike(input.prepared.next_revision, 'prepared.next_revision')
+        });
+        persistedEntityStates.push(persisted);
+        appliedOperations.push(operation.op);
+        mutatedNamespaceRefs = Array.from(new Set([...mutatedNamespaceRefs, `${entityId}/${namespace}`]));
+        break;
+      }
+      case 'append_rule_execution': {
+        const nextRecord = operation.payload.next;
+        if (!nextRecord || typeof nextRecord !== 'object' || Array.isArray(nextRecord)) {
+          throw new ApiError(500, 'HOST_PERSIST_FAILED', 'Invalid append_rule_execution payload for Host delta apply', {
+            operation
+          });
+        }
+
+        const recordObject = nextRecord as Record<string, unknown>;
+        const recordId = typeof recordObject.id === 'string' ? recordObject.id.trim() : '';
+        const payloadJson = recordObject.payload_json;
+        if (recordId.length === 0) {
+          throw new ApiError(500, 'HOST_PERSIST_FAILED', 'append_rule_execution requires payload.next.id', {
+            operation
+          });
+        }
+
+        const persisted = await recordPackRuleExecution({
+          id: recordId,
+          pack_id: input.prepared.pack_id,
+          rule_id: 'world_step.advance_clock',
+          capability_key: null,
+          mediator_id: null,
+          subject_entity_id: '__world__',
+          target_entity_id: '__world__',
+          execution_status: 'applied',
+          payload_json: payloadJson && typeof payloadJson === 'object' && !Array.isArray(payloadJson)
+            ? (payloadJson as Record<string, unknown>)
+            : null,
+          emitted_events_json: input.prepared.emitted_events,
+          now: parseBigIntLike(input.prepared.next_revision, 'prepared.next_revision')
+        });
+        persistedRuleExecutionRecords.push(persisted);
+        appliedOperations.push(operation.op);
+        mutatedNamespaceRefs = Array.from(new Set([...mutatedNamespaceRefs, 'rule_execution_records']));
+        break;
+      }
+      case 'set_clock': {
+        const nextClock = operation.payload.next;
+        if (!nextClock || typeof nextClock !== 'object' || Array.isArray(nextClock)) {
+          throw new ApiError(500, 'HOST_PERSIST_FAILED', 'Invalid set_clock payload for Host delta apply', {
+            operation
+          });
+        }
+
+        const clockObject = nextClock as Record<string, unknown>;
+        clockDelta = {
+          previous_tick: typeof clockObject.previous_tick === 'string' ? clockObject.previous_tick : null,
+          next_tick: typeof clockObject.next_tick === 'string' ? clockObject.next_tick : null,
+          previous_revision: typeof clockObject.previous_revision === 'string' ? clockObject.previous_revision : null,
+          next_revision: typeof clockObject.next_revision === 'string' ? clockObject.next_revision : null
+        };
+        appliedOperations.push(operation.op);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  return {
+    persisted_revision: input.prepared.next_revision,
+    applied_operations: appliedOperations,
+    persisted_entity_states: persistedEntityStates,
+    persisted_rule_execution_records: persistedRuleExecutionRecords,
+    clock_delta: clockDelta,
+    observability: [{
+      code: 'WORLD_CORE_DELTA_APPLIED',
+      attributes: {
+        pack_id: input.prepared.pack_id,
+        prepared_token: input.prepared.prepared_token,
+        applied_operations: appliedOperations,
+        persisted_entity_state_count: persistedEntityStates.length,
+        persisted_rule_execution_record_count: persistedRuleExecutionRecords.length,
+        mutated_namespace_refs: mutatedNamespaceRefs,
+        persisted_revision: input.prepared.next_revision
+      }
+    }]
+  };
+};
+
 export const createDefaultWorldEnginePersistencePort = (): WorldEnginePersistencePort => {
   return {
-    async persistPreparedStep({ prepared }) {
-      return {
-        persisted_revision: prepared.next_revision
-      };
+    async persistPreparedStep({ context, prepared }) {
+      try {
+        return await applyPreparedWorldStateDelta({
+          context,
+          prepared
+        });
+      } catch (error) {
+        const errorWithDetails = error instanceof ApiError
+          ? error
+          : new ApiError(
+              500,
+              'HOST_PERSIST_FAILED',
+              error instanceof Error ? error.message : String(error),
+              {
+                cause: error instanceof Error ? error.message : String(error)
+              }
+            );
+
+        errorWithDetails.details = {
+          ...(errorWithDetails.details && typeof errorWithDetails.details === 'object' ? errorWithDetails.details : {}),
+          observability: [{
+            code: 'WORLD_CORE_DELTA_ABORTED',
+            attributes: {
+              pack_id: prepared.pack_id,
+              prepared_token: prepared.prepared_token,
+              failed_operation_count: prepared.state_delta.operations.length,
+              reason: errorWithDetails.message
+            }
+          }]
+        };
+
+        throw errorWithDetails;
+      }
     }
   };
 };

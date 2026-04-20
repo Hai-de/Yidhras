@@ -260,8 +260,15 @@
 - Phase 1B 已完成后，sidecar 现已具备 **Host snapshot hydrate -> Rust session/query -> prepare/commit/abort -> failure recovery** 的正式闭环：
   - `world.pack.load` 会消费 Host 组装的 pack runtime core snapshot，而不再只创建空 session
   - `world.state.query` 已能从 Rust session 返回 `pack_summary / world_entities / entity_state / authority_grants / mediator_bindings / rule_execution_summary` allowlist 数据
-  - `world.step.prepare` 已具备 prepared-state、`set_clock` delta、最小 event/observability 骨架与 single-flight 约束
-  - `world.step.commit` / `world.step.abort` 已与 Host-managed persistence、abort/tainted 恢复路径对齐
+  - `world.step.prepare` 已不再只是 clock-only 骨架，而会同时 staged：
+    - `__world__/world` entity state upsert
+    - `rule_execution_records` append
+    - `set_clock` delta
+  - prepared step metadata 现已正式包含 `pack_id / reason / base-next tick-revision / mutated_entity_ids / mutated_namespace_refs / delta_operation_count`
+  - sidecar observability 现已补齐 `WORLD_CORE_DELTA_BUILT` 与 `WORLD_PREPARED_STATE_SUMMARY`
+  - Host 默认 persistence 已具备 Pack Runtime Core delta apply layer，可正式解释 `upsert_entity_state / append_rule_execution / set_clock`
+  - Host apply observability 现已补齐 `WORLD_CORE_DELTA_APPLIED` 与 `WORLD_CORE_DELTA_ABORTED`
+  - `world.step.commit` / `world.step.abort` 继续与 Host-managed persistence、abort/tainted 恢复路径对齐
 - `objective_enforcement` 已在 Phase 1 的 A 收口后成为 **Rust-owned 的真实规则执行路径**：
   - sidecar 负责 objective rule matching、template rendering、mutation / emitted event 规划
   - Host 继续负责 authority validation / mediator validation / persistence / event bridge / execution record

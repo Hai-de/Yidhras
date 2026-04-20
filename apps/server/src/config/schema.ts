@@ -47,6 +47,26 @@ const SchedulerSignalPolicySchema = z
   })
   .strict();
 
+const SidecarRuntimeSchema = z
+  .object({
+    mode: z.enum(['ts', 'rust_shadow', 'rust_primary']),
+    timeout_ms: PositiveIntSchema,
+    binary_path: NonEmptyStringSchema,
+    auto_restart: z.boolean()
+  })
+  .strict();
+
+const SchedulerDecisionKernelRuntimeSchema = SidecarRuntimeSchema;
+
+const MemoryTriggerEngineRuntimeSchema = z
+  .object({
+    mode: z.enum(['ts', 'rust_shadow', 'rust_primary']),
+    timeout_ms: PositiveIntSchema,
+    binary_path: NonEmptyStringSchema,
+    auto_restart: z.boolean()
+  })
+  .strict();
+
 const SchedulerEntityConcurrencySchema = z
   .object({
     default_max_active_workflows_per_entity: PositiveIntSchema,
@@ -193,6 +213,7 @@ export const RuntimeConfigSchema = z
             limit: PositiveIntSchema,
             cooldown_ticks: PositiveIntSchema,
             max_candidates: PositiveIntSchema,
+            decision_kernel: SchedulerDecisionKernelRuntimeSchema,
             signal_policy: z
               .object({
                 event_followup: SchedulerSignalPolicySchema,
@@ -208,6 +229,11 @@ export const RuntimeConfigSchema = z
                 retry: SchedulerRecoverySuppressionSchema
               })
               .strict()
+          })
+          .strict(),
+        memory: z
+          .object({
+            trigger_engine: MemoryTriggerEngineRuntimeSchema
           })
           .strict()
       })

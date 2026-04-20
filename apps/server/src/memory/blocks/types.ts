@@ -211,3 +211,52 @@ export interface MemoryEvaluationContext {
     event?: MemoryRecentSourceRecord[];
   };
 }
+
+export type MemoryTriggerEngineMode = 'ts' | 'rust_shadow' | 'rust_primary';
+
+export interface MemoryTriggerIgnoredFeaturesRecord {
+  trigger_rate_present: boolean;
+  trigger_rate_ignored: boolean;
+}
+
+export interface MemoryTriggerIgnoredFeaturesSummary {
+  trigger_rate_present_count: number;
+  trigger_rate_ignored: boolean;
+}
+
+export interface MemoryTriggerSourceRecordResult {
+  memory_id: string;
+  evaluation: MemoryActivationEvaluation;
+  next_runtime_state: MemoryRuntimeState;
+  should_materialize: boolean;
+  materialize_reason: 'active' | 'retained' | null;
+  ignored_features?: MemoryTriggerIgnoredFeaturesRecord | null;
+}
+
+export interface MemoryTriggerSourceDiagnostics {
+  candidate_count: number;
+  materialized_count: number;
+  status_counts: Record<'active' | 'retained' | 'delayed' | 'cooling' | 'inactive', number>;
+  ignored_features: MemoryTriggerIgnoredFeaturesSummary;
+}
+
+export interface MemoryTriggerSourceEvaluateInput {
+  protocol_version: string;
+  request_id?: string | null;
+  evaluation_context: MemoryEvaluationContext;
+  candidates: MemoryBlockRecord[];
+}
+
+export interface MemoryTriggerSourceEvaluateResult {
+  protocol_version: string;
+  records: MemoryTriggerSourceRecordResult[];
+  diagnostics: MemoryTriggerSourceDiagnostics;
+}
+
+export interface MemoryTriggerEngineEvaluationMetadata {
+  provider: MemoryTriggerEngineMode | 'rust_fallback_to_ts';
+  fallback: boolean;
+  fallback_reason: string | null;
+  parity_status: 'match' | 'diff' | 'skipped';
+  parity_diff_count: number;
+}

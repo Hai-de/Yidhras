@@ -322,27 +322,33 @@
 - 优先级：medium
 - 范围：Rust world engine / sidecar prepare-commit step / world state transition semantics
 - 背景：
-  当前 Phase 1C 已进一步完成 richer `state_delta`、`world.step.prepared` emitted event、`WORLD_STEP_PREPARED/COMMITTED/ABORTED` diagnostics，以及 `__world__/world` runtime_step state upsert，并已验证与 Host-managed persistence / runtime loop / failure recovery 兼容；但 step 语义仍主要围绕 world-level clock advance 与 runtime_step tracing，尚未扩展到更丰富的领域状态推进与更深 query-before/after observability。
+  当前 Pack Runtime Core ownership deepening 已进一步完成：
+  - richer `state_delta` metadata baseline
+  - `WORLD_CORE_DELTA_BUILT / APPLIED / ABORTED / WORLD_PREPARED_STATE_SUMMARY` diagnostics
+  - `__world__/world` entity state upsert
+  - `rule_execution_records` append
+  - Host delta apply layer 对 `upsert_entity_state / append_rule_execution / set_clock` 的正式解释
+  并已验证与 Host-managed persistence / runtime loop / failure recovery 兼容；但 step 语义仍主要围绕 world-level clock advance 与 runtime_step tracing，尚未扩展到更丰富的领域对象演化与更深 query-before/after observability。
 - 后续增强候选：
-  - 让 `prepareStep` 基于 Rust session 产出超出 `__world__/world` runtime_step 的更真实领域 state transition
+  - 让 `prepareStep` 进一步产出超出 `__world__/world` + `rule_execution_records` 的更多 Pack Runtime Core mutation（如 authority / mediator / world entity 变更）
   - 为 `emitted_events` 增加更贴近真实世界推进结果的领域事件映射，而不只保留 step lifecycle event
-  - 为 `observability` 增加更细的 query-before/after summary、delta size 与受影响 state namespace 诊断
-  - 视需要评估 commit/abort response contract 是否要正式吸收当前 sidecar 内部 observability 扩展字段
+  - 为 `observability` 增加更细的 query-before/after summary、delta size、受影响 state namespace 与 Host apply attribution 诊断
+  - 视需要评估 commit/abort response contract 是否要正式吸收当前 Host/sidecar observability 扩展字段
 - 延期原因：
-  当前 Phase 1C 的目标已经完成 step semantics 与 observability 的第一轮深化；上述增强项属于下一轮继续打磨 world engine 语义厚度的候选，不阻塞本阶段关闭。
+  当前 Pack Runtime Core ownership deepening 已完成第一轮 ownership / delta / apply / observability 收口；上述增强项属于下一轮继续打磨 engine semantics 厚度的候选，不阻塞本阶段关闭。
 
 ### 11. Rust world engine 下一类 rule family 提名与迁移评估
 - 状态：deferred
 - 优先级：medium
 - 范围：Rust world engine roadmap / rule family sequencing
 - 背景：
-  当前 `objective_enforcement` 已在 Phase 1A 收口，Phase 1C 又完成了 richer step semantics / observability 的第一轮补强。是否继续扩大 Rust 覆盖面，下一步仍应从“提名哪一类真实 rule family 最值得迁移”开始，而不是无边界扩张。
+  当前 `objective_enforcement` 已在 Phase 1A 收口，Pack Runtime Core ownership deepening 也已完成第一轮 delta/apply/observability 收口。是否继续扩大 Rust 覆盖面，下一步仍应从“提名哪一类真实 rule family 最值得迁移”开始，而不是无边界扩张。
 - 后续增强候选：
   - 评估 active-pack 真实业务中下一类最值得 Rust 化的 rule family
   - 为候选 rule family 建立 TS-vs-sidecar parity fixture 与边界审计
-  - 先以 bounded continuation step 方式单独立项，而不是并入既有 Phase 1C
+  - 先以 bounded continuation step 方式单独立项，而不是并入既有 Pack Runtime Core 收尾阶段
 - 延期原因：
-  该决策属于下一阶段路线选择，不应混入当前 Phase 1C 的收尾与已完成结论。
+  该决策属于下一阶段路线选择，不应混入当前 Pack Runtime Core 收尾与已完成结论。
 
 ---
 

@@ -52,6 +52,16 @@ const createPreparedObservability = (token: string): WorldEngineObservationRecor
     kind: 'diagnostic',
     code: 'WORLD_STEP_PREPARED',
     attributes: { prepared_token: token }
+  },
+  {
+    kind: 'diagnostic',
+    code: 'WORLD_CORE_DELTA_BUILT',
+    attributes: {
+      prepared_token: token,
+      delta_operation_count: 2,
+      mutated_entity_ids: ['__world__'],
+      mutated_namespace_refs: ['__world__/world']
+    }
   }
 ];
 
@@ -73,20 +83,41 @@ const createPreparedStep = (input: {
         target_ref: '__world__',
         namespace: 'world',
         payload: {
-          state_json: { runtime_step: { prepared_token: input.token, transition_kind: 'clock_advance' } },
-          previous_state: {}
+          next: { runtime_step: { prepared_token: input.token, transition_kind: 'clock_advance' } },
+          previous: {},
+          reason: 'runtime_loop'
+        }
+      },
+      {
+        op: 'append_rule_execution',
+        target_ref: '__world__',
+        namespace: 'rule_execution_records',
+        payload: {
+          next: { id: `world-step:${input.token}`, payload_json: { prepared_token: input.token, transition_kind: 'clock_advance' } },
+          reason: 'runtime_loop'
         }
       },
       {
         op: 'set_clock',
-        payload: { previous_tick: '0', next_tick: input.nextTick, previous_revision: '0', next_revision: input.nextRevision }
+        payload: { next: { previous_tick: '0', next_tick: input.nextTick, previous_revision: '0', next_revision: input.nextRevision }, reason: 'runtime_loop' }
       }
     ],
-    metadata: { source: 'test', mutated_entity_ids: ['__world__'] }
+    metadata: {
+      source: 'test',
+      pack_id: input.packId,
+      reason: 'runtime_loop',
+      base_tick: '0',
+      next_tick: input.nextTick,
+      base_revision: '0',
+      next_revision: input.nextRevision,
+      mutated_entity_ids: ['__world__'],
+      mutated_namespace_refs: ['__world__/world', 'rule_execution_records'],
+      delta_operation_count: 3
+    }
   },
   emitted_events: [createPreparedEvent(input.packId, input.token, input.nextTick)],
   observability: createPreparedObservability(input.token),
-  summary: { applied_rule_count: 0, event_count: 1, mutated_entity_count: 1 }
+  summary: { applied_rule_count: 0, event_count: 1, mutated_entity_count: 2 }
 });
 
 const createCommitResult = (packId: string, token: string, revision: string): WorldEngineCommitResult => ({
@@ -95,7 +126,7 @@ const createCommitResult = (packId: string, token: string, revision: string): Wo
   prepared_token: token,
   committed_revision: revision,
   committed_tick: revision,
-  summary: { applied_rule_count: 0, event_count: 1, mutated_entity_count: 1 }
+  summary: { applied_rule_count: 0, event_count: 1, mutated_entity_count: 2 }
 });
 
 
@@ -132,6 +163,10 @@ describe('world engine persistence orchestration', () => {
       persisted_revision: '1',
       prepared_token: 'prepared-1'
     }));
+    const persistenceCall = (worldEngine.commitPreparedStep as ReturnType<typeof vi.fn>).mock.calls[0]?.[0];
+    expect(persistenceCall).toMatchObject({
+      persisted_revision: '1'
+    });
     expect(worldEngine.abortPreparedStep).not.toHaveBeenCalled();
   });
 
@@ -203,5 +238,103 @@ describe('world engine persistence orchestration', () => {
 
     expect(listTaintedWorldEnginePackIds()).toContain('world-death-note');
     clearTaintedWorldEnginePackId('world-death-note');
+  });
+
+  it('applies Pack Runtime Core delta ops through the default persistence layer', async () => {
+    const existingStates = new Map<string, { id: string; entity_id: string; state_namespace: string; state_json: Record<string, unknown> }>();
+    const recordedExecutions: Array<{ id: string; rule_id: string; execution_status: string }> = [];
+
+    const context = createMinimalContext();
+
+    const persistence = createDefaultWorldEnginePersistencePort();
+
+    const entityStateRepo = await import('../../../src/packs/storage/entity_state_repo.js');
+    const ruleExecutionRepo = await import('../../../src/packs/storage/rule_execution_repo.js');
+
+    const listSpy = vi.spyOn(entityStateRepo, 'listPackEntityStates').mockImplementation(async () => {
+      return Array.from(existingStates.values()).map(item => ({
+        ...item,
+        pack_id: 'world-death-note',
+        created_at: 0n,
+        updated_at: 0n
+      }));
+    });
+    const upsertSpy = vi.spyOn(entityStateRepo, 'upsertPackEntityState').mockImplementation(async input => {
+      existingStates.set(`${input.entity_id}:${input.state_namespace}`, {
+        id: input.id,
+        entity_id: input.entity_id,
+        state_namespace: input.state_namespace,
+        state_json: input.state_json
+      });
+      return {
+        id: input.id,
+        pack_id: input.pack_id,
+        entity_id: input.entity_id,
+        state_namespace: input.state_namespace,
+        state_json: input.state_json,
+        created_at: input.now,
+        updated_at: input.now
+      };
+    });
+    const recordSpy = vi.spyOn(ruleExecutionRepo, 'recordPackRuleExecution').mockImplementation(async input => {
+      recordedExecutions.push({ id: input.id, rule_id: input.rule_id, execution_status: input.execution_status });
+      return {
+        id: input.id,
+        pack_id: input.pack_id,
+        rule_id: input.rule_id,
+        capability_key: input.capability_key ?? null,
+        mediator_id: input.mediator_id ?? null,
+        subject_entity_id: input.subject_entity_id ?? null,
+        target_entity_id: input.target_entity_id ?? null,
+        execution_status: input.execution_status,
+        payload_json: input.payload_json ?? null,
+        emitted_events_json: input.emitted_events_json ?? [],
+        created_at: input.now,
+        updated_at: input.now
+      };
+    });
+
+    const result = await persistence.persistPreparedStep({
+      context,
+      prepared: createPreparedStep({ packId: 'world-death-note', token: 'prepared-4', nextRevision: '4', nextTick: '4' })
+    });
+
+    expect(result.applied_operations).toContain('upsert_entity_state');
+    expect(result.applied_operations).toContain('append_rule_execution');
+    expect(result.applied_operations).toContain('set_clock');
+    expect(result.persisted_entity_states).toHaveLength(1);
+    expect(result.persisted_rule_execution_records).toHaveLength(1);
+    expect(result.clock_delta?.next_tick).toBe('4');
+    expect(result.observability).toEqual([
+      expect.objectContaining({
+        code: 'WORLD_CORE_DELTA_APPLIED',
+        attributes: expect.objectContaining({
+          applied_operations: ['upsert_entity_state', 'append_rule_execution', 'set_clock']
+        })
+      })
+    ]);
+    expect(listSpy).toHaveBeenCalled();
+    expect(upsertSpy).toHaveBeenCalled();
+    expect(recordSpy).toHaveBeenCalled();
+    expect(recordedExecutions).toEqual([{ id: 'world-step:prepared-4', rule_id: 'world_step.advance_clock', execution_status: 'applied' }]);
+
+    listSpy.mockRestore();
+    upsertSpy.mockRestore();
+    recordSpy.mockRestore();
+  });
+
+  it('annotates apply failures with WORLD_CORE_DELTA_ABORTED observability', async () => {
+    const persistence = createDefaultWorldEnginePersistencePort();
+    const entityStateRepo = await import('../../../src/packs/storage/entity_state_repo.js');
+    const listSpy = vi.spyOn(entityStateRepo, 'listPackEntityStates').mockRejectedValueOnce(new Error('sqlite unavailable'));
+
+    const persistFailure = persistence.persistPreparedStep({
+      context: createMinimalContext(),
+      prepared: createPreparedStep({ packId: 'world-death-note', token: 'prepared-5', nextRevision: '5', nextTick: '5' })
+    });
+    await expect(persistFailure).rejects.toBeInstanceOf(Error);
+    await expect(persistFailure).rejects.toHaveProperty('details.observability.0.code', 'WORLD_CORE_DELTA_ABORTED');
+
+    listSpy.mockRestore();
   });
 });

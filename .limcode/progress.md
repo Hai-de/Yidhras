@@ -1,35 +1,36 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-20T18:31:05.021Z
-- Status: active
+- Updated At: 2026-04-20T22:17:34.326Z
+- Status: completed
 - Phase: implementation
 
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
-- 当前进度：12/12 个里程碑已完成；最新：PG10
-- 当前焦点：Rust world engine Phase 1C 已完成，当前等待决定下一轮是继续加深 engine semantics，还是提名下一类 rule family。
-- 最新结论：Phase 1C 已完成：richer delta/event/observability、Host compatibility、failure recovery 与验证矩阵均已收口。
-- 下一步：决定下一阶段方向；当前不需要再继续扩展 Phase 1C。
+- 当前进度：14/14 个里程碑已完成；最新：PG12
+- 当前焦点：Memory Block / Context Trigger Engine Rust 迁移收束完成
+- 最新结论：TODO、设计、计划与项目进度已同步到 Memory Block / Context Trigger Engine Rust 迁移完成状态。
+- 下一步：等待后续新任务；如继续推进，可转入完整 Memory Block Runtime Rust ownership 深化。
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/rust-world-engine-phase1-boundary-and-sidecar-design.md`
-- 计划：`.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md`
-- 审查：`.limcode/review/multi-pack-runtime-experimental-assessment.md`
+- 设计：`.limcode/design/memory-block-context-trigger-engine-rust-migration-design.md`
+- 计划：`.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md`
+- 审查：`.limcode/review/memory-block-context-trigger-engine-review.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 冻结 Phase 1C 范围：只增强 Rust sidecar prepare/commit/abort 的真实世界语义与 observability，不扩展到 objective_enforcement 之外的下一类 rule family，也不混入基础设施硬化。  `#rust-c-plan-p1-scope-freeze`
-- [x] 审计当前 Phase 1B step 骨架与真实世界推进语义之间的差距，明确 session 内哪些状态变化应进入 prepareStep 的 delta/event/summary/observability。  `#rust-c-plan-p2-step-semantics-audit`
-- [x] 设计并实现更真实的 PreparedWorldStep 语义：扩展 state_delta、summary 与 session before/after 关系，使 prepare/commit 能表达超出 set_clock 的世界推进结果。  `#rust-c-plan-p3-richer-delta-and-summary`
-- [x] 为 Rust sidecar step 增强 emitted_events 与 observability：提供更可归因的 step diagnostics、影响实体信息与 transition reason，而不是仅保留最小骨架。  `#rust-c-plan-p4-event-and-observability`
-- [x] 验证 Host-managed persistence、PackHostApi query、runtime loop 与 sidecar step 增强后的兼容性，确认 richer step 语义不会破坏 single-flight、abort/tainted 与现有宿主边界。  `#rust-c-plan-p5-host-parity-and-runtime-loop-validation`
-- [x] 完成 Phase 1C 的 unit/integration/parity/failure-recovery 验证矩阵，并把仍不阻塞闭环的后续优化继续沉淀到 docs/ENHANCEMENTS.md。  `#rust-c-plan-p6-closeout-and-enhancements`
+- [x] 搭建 memory_trigger_sidecar crate、stdio JSON-RPC 协议骨架与握手/健康检查  `#plan-memory-trigger-sidecar-scaffold`
+- [x] 迁移 Rust DTO、logic DSL、trigger primitives 与语义测试  `#plan-rust-models-and-logic-dsl`
+- [x] 实现 Rust source evaluate 内核：evaluation、status、next runtime state、should_materialize、ignored_features 聚合  `#plan-rust-source-kernel`
+- [x] 实现 rust_shadow 对跑、diff 观测与 rust_primary fallback 策略  `#plan-shadow-parity-and-fallback`
+- [x] 将 context/sources/memory_blocks.ts 改造成 thin shell，并接入 Rust 结果持久化/materialization/diagnostics  `#plan-ts-memory-block-source-integration`
+- [x] 新增 TS sidecar client 与 memory_trigger_engine feature flag（ts/rust_shadow/rust_primary）  `#plan-ts-sidecar-client-and-flag`
+- [x] 补齐单元/集成测试，完成 parity 验收并切换到 rust_primary  `#plan-validation-and-cutover`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -178,6 +179,30 @@
 - 摘要:
 已完成 Phase 1C：Rust sidecar `prepare/commit/abort` 现已支持 richer `state_delta`、`world.step.prepared` emitted event、`WORLD_STEP_PREPARED/COMMITTED/ABORTED` 结构化 diagnostics，以及 `__world__/world` runtime_step state upsert。并验证 Host-managed persistence、runtime loop、failure recovery、single-flight、PackHostApi query 与 richer step output 兼容，未破坏现有宿主边界。
 - 下一步：下一轮再决定是继续加深 world engine 语义厚度，还是提名 objective_enforcement 之外的下一类 rule family。
+
+### PG11 · Rust World Engine / Pack Runtime Core ownership deepening 完成
+- 状态：completed
+- 记录时间：2026-04-20T19:53:14.527Z
+- 完成时间：2026-04-20T19:52:00.000Z
+- 关联 TODO：pack-core-plan-m1-contract-freeze, pack-core-plan-m2-rust-session-mutation, pack-core-plan-m3-host-delta-apply, pack-core-plan-m4-query-observability, pack-core-plan-m5-validation-closeout
+- 关联文档：
+  - 设计：`.limcode/design/rust-world-engine-pack-runtime-core-ownership-deepening-design.md`
+  - 计划：`.limcode/plans/rust-world-engine-pack-runtime-core-ownership-deepening-implementation.plan.md`
+- 摘要:
+已完成 Pack Runtime Core ownership deepening：冻结 delta taxonomy / metadata / query selector 基线；Rust sidecar prepared state 现可同时表达 entity_state upsert 与 rule_execution append 两类 core mutation；Host 默认 persistence 已具备正式 delta apply layer，可解释 upsert_entity_state / append_rule_execution / set_clock；并补齐 WORLD_CORE_DELTA_BUILT / APPLIED / ABORTED / WORLD_PREPARED_STATE_SUMMARY 诊断与对应 unit/integration/cargo/typecheck/lint 验证。
+- 下一步：下一轮应在“继续加深 engine semantics”与“提名 objective 之外的新 rule family”之间做选择；当前建议优先评估 active-pack 真实业务最缺的 rule family 候选，再单独立项。
+
+### PG12 · Memory Block / Context Trigger Engine Rust 迁移完成
+- 状态：completed
+- 记录时间：2026-04-20T22:17:19.075Z
+- 完成时间：2026-04-20T22:17:19.075Z
+- 关联 TODO：plan-memory-trigger-sidecar-scaffold, plan-rust-models-and-logic-dsl, plan-rust-source-kernel, plan-shadow-parity-and-fallback, plan-ts-memory-block-source-integration, plan-ts-sidecar-client-and-flag, plan-validation-and-cutover
+- 关联文档：
+  - 设计：`.limcode/design/memory-block-context-trigger-engine-rust-migration-design.md`
+  - 计划：`.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md`
+- 摘要:
+已完成独立 memory_trigger_sidecar、Rust trigger/source kernel、TS sidecar client、runtime config 与 memory_blocks source thin-shell 接线；并通过 TS/Rust 单元测试、模式/fallback 测试与真实 sidecar parity 测试。当前默认配置已切换为 rust_primary。
+- 下一步：如无额外回归问题，可进入后续 Memory Block Runtime 完整 Rust ownership 深化或清理增强项。
 <!-- LIMCODE_PROGRESS_MILESTONES_END -->
 
 ## 风险与阻塞
@@ -189,26 +214,26 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-20T17:04:22.134Z | updated | rust-b-plan-p6-validation-closeout | 已完成针对性验证第一轮：cargo test、runtime unit tests、server typecheck 与相关 eslint 均通过。
-- 2026-04-20T17:16:59.850Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-b-real-session-and-step-implementation.plan.md
-- 2026-04-20T17:16:59.920Z | milestone_recorded | PG9 | 记录里程碑：Rust world engine Phase 1B 完成：real session/query/prepare-commit 验证通过
-- 2026-04-20T17:16:59.930Z | updated | rust-b-plan-p6-validation-closeout | 已完成验证矩阵：新增 sidecar runtime loop integration 与 failure recovery integration，并通过 unit/integration/cargo test/typecheck/lint。
-- 2026-04-20T17:43:41.816Z | artifact_changed | docs-sync | 已同步 TODO.md、docs/ARCH.md、docs/capabilities/PLUGIN_RUNTIME.md、docs/capabilities/PROMPT_WORKFLOW.md 与 docs/ENHANCEMENTS.md，使其与 Rust world engine Phase 1B 完成状态对齐。
-- 2026-04-20T18:00:23.049Z | artifact_changed | plan | 同步计划文档：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
-- 2026-04-20T18:05:32.767Z | updated | rust-c-plan-p1-scope-freeze | 开始执行 Phase 1C，当前先冻结范围：只推进 sidecar step semantics 与 observability，不扩展到下一类 rule family 或基础设施硬化。
-- 2026-04-20T18:05:43.451Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
-- 2026-04-20T18:07:42.415Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
-- 2026-04-20T18:07:51.074Z | updated | rust-c-plan-p2-step-semantics-audit | 已完成第一轮审计：contracts 已允许 richer delta op/event/observation，但 Rust sidecar 仍只返回 set_clock + 空 events/observability + 占位 summary；TS compat adapter 也保持最小骨架，说明本轮可优先在 Rust sidecar 内补强而不破坏 Host owner 边界。
-- 2026-04-20T18:10:49.766Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
-- 2026-04-20T18:15:02.574Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
-- 2026-04-20T18:15:09.832Z | updated | rust-c-plan-p3-richer-delta-and-summary | 已完成 P3：Rust sidecar step 现会把 runtime_step 写入 `__world__/world` state，并返回 richer delta metadata 与非占位 mutated_entity_count；相关 sidecar client/runtime loop 测试已通过。
-- 2026-04-20T18:21:49.175Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
-- 2026-04-20T18:21:56.000Z | updated | rust-c-plan-p4-event-and-observability | 已完成 P4：Rust sidecar prepare/commit/abort 已新增 emitted_events 与 structured observability，覆盖 prepared/committed/aborted 三类 transition diagnostics；相关 tests 已通过。
-- 2026-04-20T18:24:44.807Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
-- 2026-04-20T18:25:01.142Z | updated | rust-c-plan-p5-host-parity-and-runtime-loop-validation | 已完成 P5：world_engine_persistence、failure recovery integration、runtime loop integration 与 sidecar client tests 在 richer step output 下全部通过，确认 Host owner 边界与 abort/tainted 语义未退化。
-- 2026-04-20T18:30:03.028Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
-- 2026-04-20T18:30:55.199Z | milestone_recorded | PG10 | 记录里程碑：Rust world engine Phase 1C 完成：step semantics 与 observability 第一轮深化通过验证
-- 2026-04-20T18:31:05.021Z | updated | rust-c-plan-p6-closeout-and-enhancements | 已完成 P6：vitest、tsc、eslint、cargo test 均已通过，并同步更新 docs/ENHANCEMENTS.md 中的后续增强候选。
+- 2026-04-20T21:18:59.827Z | artifact_changed | review | 同步审查里程碑：M1
+- 2026-04-20T21:19:14.190Z | artifact_changed | review | 同步审查结论：.limcode/review/scheduler-core-decision-kernel-rust-migration-review.md
+- 2026-04-20T21:22:25.450Z | artifact_changed | review | 同步审查文档：.limcode/review/memory-block-context-trigger-engine-review.md
+- 2026-04-20T21:23:04.924Z | artifact_changed | review | 同步审查里程碑：M1
+- 2026-04-20T21:23:29.882Z | artifact_changed | review | 同步审查里程碑：M2
+- 2026-04-20T21:23:36.977Z | artifact_changed | review | 同步审查结论：.limcode/review/memory-block-context-trigger-engine-review.md
+- 2026-04-20T21:41:50.697Z | artifact_changed | design | 同步设计文档：.limcode/design/memory-block-context-trigger-engine-rust-migration-design.md
+- 2026-04-20T21:43:56.680Z | artifact_changed | plan | 同步计划文档：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
+- 2026-04-20T21:44:51.559Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
+- 2026-04-20T21:47:01.325Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
+- 2026-04-20T21:47:14.644Z | artifact_changed | plan-memory-trigger-sidecar-scaffold | 新增 apps/server/rust/memory_trigger_sidecar crate，完成 stdio JSON-RPC 骨架、handshake/health/source.evaluate stub，并通过 cargo check。
+- 2026-04-20T21:55:31.662Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
+- 2026-04-20T22:02:58.193Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
+- 2026-04-20T22:03:12.677Z | artifact_changed | plan-ts-memory-block-source-integration | 已新增 memory trigger TS sidecar client、provider 模式路由与 runtime config，memory_blocks source 已改为经 provider 执行并写回 runtime state/materialization/diagnostics。
+- 2026-04-20T22:09:10.238Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
+- 2026-04-20T22:09:23.344Z | updated | plan-validation-and-cutover | 新增 memory_trigger_engine_provider、context_memory_blocks_source_rust_modes 与 runtime_config 扩展测试；验证 ts/rust_shadow/rust_primary fallback 与 trigger_rate ignored diagnostics。
+- 2026-04-20T22:12:22.504Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
+- 2026-04-20T22:12:36.791Z | milestone_recorded | plan-validation-and-cutover | 真实 Rust sidecar parity 测试通过，当前计划内 Memory Trigger / Context Source Rust 迁移实现与验证工作全部完成。
+- 2026-04-20T22:17:19.075Z | milestone_recorded | PG12 | 记录里程碑：Memory Block / Context Trigger Engine Rust 迁移完成
+- 2026-04-20T22:17:34.326Z | updated | PG12 | 已根据用户完成 TODO.md 的标记，同步项目级 progress 与里程碑，确认 Memory Block / Context Trigger Engine Rust 迁移已收束。
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -218,47 +243,52 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-17T21:05:29.611Z",
-  "updatedAt": "2026-04-20T18:31:05.021Z",
-  "status": "active",
+  "updatedAt": "2026-04-20T22:17:34.326Z",
+  "status": "completed",
   "phase": "implementation",
-  "currentFocus": "Rust world engine Phase 1C 已完成，当前等待决定下一轮是继续加深 engine semantics，还是提名下一类 rule family。",
-  "latestConclusion": "Phase 1C 已完成：richer delta/event/observability、Host compatibility、failure recovery 与验证矩阵均已收口。",
+  "currentFocus": "Memory Block / Context Trigger Engine Rust 迁移收束完成",
+  "latestConclusion": "TODO、设计、计划与项目进度已同步到 Memory Block / Context Trigger Engine Rust 迁移完成状态。",
   "currentBlocker": null,
-  "nextAction": "决定下一阶段方向；当前不需要再继续扩展 Phase 1C。",
+  "nextAction": "等待后续新任务；如继续推进，可转入完整 Memory Block Runtime Rust ownership 深化。",
   "activeArtifacts": {
-    "design": ".limcode/design/rust-world-engine-phase1-boundary-and-sidecar-design.md",
-    "plan": ".limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md",
-    "review": ".limcode/review/multi-pack-runtime-experimental-assessment.md"
+    "design": ".limcode/design/memory-block-context-trigger-engine-rust-migration-design.md",
+    "plan": ".limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md",
+    "review": ".limcode/review/memory-block-context-trigger-engine-review.md"
   },
   "todos": [
     {
-      "id": "rust-c-plan-p1-scope-freeze",
-      "content": "冻结 Phase 1C 范围：只增强 Rust sidecar prepare/commit/abort 的真实世界语义与 observability，不扩展到 objective_enforcement 之外的下一类 rule family，也不混入基础设施硬化。",
+      "id": "plan-memory-trigger-sidecar-scaffold",
+      "content": "搭建 memory_trigger_sidecar crate、stdio JSON-RPC 协议骨架与握手/健康检查",
       "status": "completed"
     },
     {
-      "id": "rust-c-plan-p2-step-semantics-audit",
-      "content": "审计当前 Phase 1B step 骨架与真实世界推进语义之间的差距，明确 session 内哪些状态变化应进入 prepareStep 的 delta/event/summary/observability。",
+      "id": "plan-rust-models-and-logic-dsl",
+      "content": "迁移 Rust DTO、logic DSL、trigger primitives 与语义测试",
       "status": "completed"
     },
     {
-      "id": "rust-c-plan-p3-richer-delta-and-summary",
-      "content": "设计并实现更真实的 PreparedWorldStep 语义：扩展 state_delta、summary 与 session before/after 关系，使 prepare/commit 能表达超出 set_clock 的世界推进结果。",
+      "id": "plan-rust-source-kernel",
+      "content": "实现 Rust source evaluate 内核：evaluation、status、next runtime state、should_materialize、ignored_features 聚合",
       "status": "completed"
     },
     {
-      "id": "rust-c-plan-p4-event-and-observability",
-      "content": "为 Rust sidecar step 增强 emitted_events 与 observability：提供更可归因的 step diagnostics、影响实体信息与 transition reason，而不是仅保留最小骨架。",
+      "id": "plan-shadow-parity-and-fallback",
+      "content": "实现 rust_shadow 对跑、diff 观测与 rust_primary fallback 策略",
       "status": "completed"
     },
     {
-      "id": "rust-c-plan-p5-host-parity-and-runtime-loop-validation",
-      "content": "验证 Host-managed persistence、PackHostApi query、runtime loop 与 sidecar step 增强后的兼容性，确认 richer step 语义不会破坏 single-flight、abort/tainted 与现有宿主边界。",
+      "id": "plan-ts-memory-block-source-integration",
+      "content": "将 context/sources/memory_blocks.ts 改造成 thin shell，并接入 Rust 结果持久化/materialization/diagnostics",
       "status": "completed"
     },
     {
-      "id": "rust-c-plan-p6-closeout-and-enhancements",
-      "content": "完成 Phase 1C 的 unit/integration/parity/failure-recovery 验证矩阵，并把仍不阻塞闭环的后续优化继续沉淀到 docs/ENHANCEMENTS.md。",
+      "id": "plan-ts-sidecar-client-and-flag",
+      "content": "新增 TS sidecar client 与 memory_trigger_engine feature flag（ts/rust_shadow/rust_primary）",
+      "status": "completed"
+    },
+    {
+      "id": "plan-validation-and-cutover",
+      "content": "补齐单元/集成测试，完成 parity 验收并切换到 rust_primary",
       "status": "completed"
     }
   ],
@@ -499,144 +529,188 @@
       "completedAt": "2026-04-20T18:30:00.000Z",
       "recordedAt": "2026-04-20T18:30:55.199Z",
       "nextAction": "下一轮再决定是继续加深 world engine 语义厚度，还是提名 objective_enforcement 之外的下一类 rule family。"
+    },
+    {
+      "id": "PG11",
+      "title": "Rust World Engine / Pack Runtime Core ownership deepening 完成",
+      "status": "completed",
+      "summary": "已完成 Pack Runtime Core ownership deepening：冻结 delta taxonomy / metadata / query selector 基线；Rust sidecar prepared state 现可同时表达 entity_state upsert 与 rule_execution append 两类 core mutation；Host 默认 persistence 已具备正式 delta apply layer，可解释 upsert_entity_state / append_rule_execution / set_clock；并补齐 WORLD_CORE_DELTA_BUILT / APPLIED / ABORTED / WORLD_PREPARED_STATE_SUMMARY 诊断与对应 unit/integration/cargo/typecheck/lint 验证。",
+      "relatedTodoIds": [
+        "pack-core-plan-m1-contract-freeze",
+        "pack-core-plan-m2-rust-session-mutation",
+        "pack-core-plan-m3-host-delta-apply",
+        "pack-core-plan-m4-query-observability",
+        "pack-core-plan-m5-validation-closeout"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/rust-world-engine-pack-runtime-core-ownership-deepening-design.md",
+        "plan": ".limcode/plans/rust-world-engine-pack-runtime-core-ownership-deepening-implementation.plan.md"
+      },
+      "completedAt": "2026-04-20T19:52:00.000Z",
+      "recordedAt": "2026-04-20T19:53:14.527Z",
+      "nextAction": "下一轮应在“继续加深 engine semantics”与“提名 objective 之外的新 rule family”之间做选择；当前建议优先评估 active-pack 真实业务最缺的 rule family 候选，再单独立项。"
+    },
+    {
+      "id": "PG12",
+      "title": "Memory Block / Context Trigger Engine Rust 迁移完成",
+      "status": "completed",
+      "summary": "已完成独立 memory_trigger_sidecar、Rust trigger/source kernel、TS sidecar client、runtime config 与 memory_blocks source thin-shell 接线；并通过 TS/Rust 单元测试、模式/fallback 测试与真实 sidecar parity 测试。当前默认配置已切换为 rust_primary。",
+      "relatedTodoIds": [
+        "plan-memory-trigger-sidecar-scaffold",
+        "plan-rust-models-and-logic-dsl",
+        "plan-rust-source-kernel",
+        "plan-shadow-parity-and-fallback",
+        "plan-ts-memory-block-source-integration",
+        "plan-ts-sidecar-client-and-flag",
+        "plan-validation-and-cutover"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/memory-block-context-trigger-engine-rust-migration-design.md",
+        "plan": ".limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
+      },
+      "completedAt": "2026-04-20T22:17:19.075Z",
+      "recordedAt": "2026-04-20T22:17:19.075Z",
+      "nextAction": "如无额外回归问题，可进入后续 Memory Block Runtime 完整 Rust ownership 深化或清理增强项。"
     }
   ],
   "risks": [],
   "log": [
     {
-      "at": "2026-04-20T17:04:22.134Z",
-      "type": "updated",
-      "refId": "rust-b-plan-p6-validation-closeout",
-      "message": "已完成针对性验证第一轮：cargo test、runtime unit tests、server typecheck 与相关 eslint 均通过。"
+      "at": "2026-04-20T21:18:59.827Z",
+      "type": "artifact_changed",
+      "refId": "review",
+      "message": "同步审查里程碑：M1"
     },
     {
-      "at": "2026-04-20T17:16:59.850Z",
+      "at": "2026-04-20T21:19:14.190Z",
+      "type": "artifact_changed",
+      "refId": "review",
+      "message": "同步审查结论：.limcode/review/scheduler-core-decision-kernel-rust-migration-review.md"
+    },
+    {
+      "at": "2026-04-20T21:22:25.450Z",
+      "type": "artifact_changed",
+      "refId": "review",
+      "message": "同步审查文档：.limcode/review/memory-block-context-trigger-engine-review.md"
+    },
+    {
+      "at": "2026-04-20T21:23:04.924Z",
+      "type": "artifact_changed",
+      "refId": "review",
+      "message": "同步审查里程碑：M1"
+    },
+    {
+      "at": "2026-04-20T21:23:29.882Z",
+      "type": "artifact_changed",
+      "refId": "review",
+      "message": "同步审查里程碑：M2"
+    },
+    {
+      "at": "2026-04-20T21:23:36.977Z",
+      "type": "artifact_changed",
+      "refId": "review",
+      "message": "同步审查结论：.limcode/review/memory-block-context-trigger-engine-review.md"
+    },
+    {
+      "at": "2026-04-20T21:41:50.697Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/memory-block-context-trigger-engine-rust-migration-design.md"
+    },
+    {
+      "at": "2026-04-20T21:43:56.680Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-b-real-session-and-step-implementation.plan.md"
+      "message": "同步计划文档：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
     },
     {
-      "at": "2026-04-20T17:16:59.920Z",
+      "at": "2026-04-20T21:44:51.559Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-20T21:47:01.325Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-20T21:47:14.644Z",
+      "type": "artifact_changed",
+      "refId": "plan-memory-trigger-sidecar-scaffold",
+      "message": "新增 apps/server/rust/memory_trigger_sidecar crate，完成 stdio JSON-RPC 骨架、handshake/health/source.evaluate stub，并通过 cargo check。"
+    },
+    {
+      "at": "2026-04-20T21:55:31.662Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-20T22:02:58.193Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-20T22:03:12.677Z",
+      "type": "artifact_changed",
+      "refId": "plan-ts-memory-block-source-integration",
+      "message": "已新增 memory trigger TS sidecar client、provider 模式路由与 runtime config，memory_blocks source 已改为经 provider 执行并写回 runtime state/materialization/diagnostics。"
+    },
+    {
+      "at": "2026-04-20T22:09:10.238Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-20T22:09:23.344Z",
+      "type": "updated",
+      "refId": "plan-validation-and-cutover",
+      "message": "新增 memory_trigger_engine_provider、context_memory_blocks_source_rust_modes 与 runtime_config 扩展测试；验证 ts/rust_shadow/rust_primary fallback 与 trigger_rate ignored diagnostics。"
+    },
+    {
+      "at": "2026-04-20T22:12:22.504Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-20T22:12:36.791Z",
       "type": "milestone_recorded",
-      "refId": "PG9",
-      "message": "记录里程碑：Rust world engine Phase 1B 完成：real session/query/prepare-commit 验证通过"
+      "refId": "plan-validation-and-cutover",
+      "message": "真实 Rust sidecar parity 测试通过，当前计划内 Memory Trigger / Context Source Rust 迁移实现与验证工作全部完成。"
     },
     {
-      "at": "2026-04-20T17:16:59.930Z",
-      "type": "updated",
-      "refId": "rust-b-plan-p6-validation-closeout",
-      "message": "已完成验证矩阵：新增 sidecar runtime loop integration 与 failure recovery integration，并通过 unit/integration/cargo test/typecheck/lint。"
-    },
-    {
-      "at": "2026-04-20T17:43:41.816Z",
-      "type": "artifact_changed",
-      "refId": "docs-sync",
-      "message": "已同步 TODO.md、docs/ARCH.md、docs/capabilities/PLUGIN_RUNTIME.md、docs/capabilities/PROMPT_WORKFLOW.md 与 docs/ENHANCEMENTS.md，使其与 Rust world engine Phase 1B 完成状态对齐。"
-    },
-    {
-      "at": "2026-04-20T18:00:23.049Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
-    },
-    {
-      "at": "2026-04-20T18:05:32.767Z",
-      "type": "updated",
-      "refId": "rust-c-plan-p1-scope-freeze",
-      "message": "开始执行 Phase 1C，当前先冻结范围：只推进 sidecar step semantics 与 observability，不扩展到下一类 rule family 或基础设施硬化。"
-    },
-    {
-      "at": "2026-04-20T18:05:43.451Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
-    },
-    {
-      "at": "2026-04-20T18:07:42.415Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
-    },
-    {
-      "at": "2026-04-20T18:07:51.074Z",
-      "type": "updated",
-      "refId": "rust-c-plan-p2-step-semantics-audit",
-      "message": "已完成第一轮审计：contracts 已允许 richer delta op/event/observation，但 Rust sidecar 仍只返回 set_clock + 空 events/observability + 占位 summary；TS compat adapter 也保持最小骨架，说明本轮可优先在 Rust sidecar 内补强而不破坏 Host owner 边界。"
-    },
-    {
-      "at": "2026-04-20T18:10:49.766Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
-    },
-    {
-      "at": "2026-04-20T18:15:02.574Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
-    },
-    {
-      "at": "2026-04-20T18:15:09.832Z",
-      "type": "updated",
-      "refId": "rust-c-plan-p3-richer-delta-and-summary",
-      "message": "已完成 P3：Rust sidecar step 现会把 runtime_step 写入 `__world__/world` state，并返回 richer delta metadata 与非占位 mutated_entity_count；相关 sidecar client/runtime loop 测试已通过。"
-    },
-    {
-      "at": "2026-04-20T18:21:49.175Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
-    },
-    {
-      "at": "2026-04-20T18:21:56.000Z",
-      "type": "updated",
-      "refId": "rust-c-plan-p4-event-and-observability",
-      "message": "已完成 P4：Rust sidecar prepare/commit/abort 已新增 emitted_events 与 structured observability，覆盖 prepared/committed/aborted 三类 transition diagnostics；相关 tests 已通过。"
-    },
-    {
-      "at": "2026-04-20T18:24:44.807Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
-    },
-    {
-      "at": "2026-04-20T18:25:01.142Z",
-      "type": "updated",
-      "refId": "rust-c-plan-p5-host-parity-and-runtime-loop-validation",
-      "message": "已完成 P5：world_engine_persistence、failure recovery integration、runtime loop integration 与 sidecar client tests 在 richer step output 下全部通过，确认 Host owner 边界与 abort/tainted 语义未退化。"
-    },
-    {
-      "at": "2026-04-20T18:30:03.028Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
-    },
-    {
-      "at": "2026-04-20T18:30:55.199Z",
+      "at": "2026-04-20T22:17:19.075Z",
       "type": "milestone_recorded",
-      "refId": "PG10",
-      "message": "记录里程碑：Rust world engine Phase 1C 完成：step semantics 与 observability 第一轮深化通过验证"
+      "refId": "PG12",
+      "message": "记录里程碑：Memory Block / Context Trigger Engine Rust 迁移完成"
     },
     {
-      "at": "2026-04-20T18:31:05.021Z",
+      "at": "2026-04-20T22:17:34.326Z",
       "type": "updated",
-      "refId": "rust-c-plan-p6-closeout-and-enhancements",
-      "message": "已完成 P6：vitest、tsc、eslint、cargo test 均已通过，并同步更新 docs/ENHANCEMENTS.md 中的后续增强候选。"
+      "refId": "PG12",
+      "message": "已根据用户完成 TODO.md 的标记，同步项目级 progress 与里程碑，确认 Memory Block / Context Trigger Engine Rust 迁移已收束。"
     }
   ],
   "stats": {
-    "milestonesTotal": 12,
-    "milestonesCompleted": 12,
-    "todosTotal": 6,
-    "todosCompleted": 6,
+    "milestonesTotal": 14,
+    "milestonesCompleted": 14,
+    "todosTotal": 7,
+    "todosCompleted": 7,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-20T18:31:05.021Z",
-    "bodyHash": "sha256:63563d1ae83cbc8c868d4c39094c1e8539d81e6535e0db0b75df1134d9ed31b7"
+    "generatedAt": "2026-04-20T22:17:34.326Z",
+    "bodyHash": "sha256:74f8f6da5571196c88fcca4b2235885821708568ab1badfa23bce31883967472"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

@@ -12,6 +12,7 @@ import {
   getSchedulerEntityConcurrencyConfig,
   getSchedulerLeaseTicks,
   getSchedulerObservabilityConfig,
+  getMemoryTriggerEngineConfig,
   getSchedulerRunnerConfig,
   getSchedulerTickBudgetConfig,
   getSimulationLoopIntervalMs,
@@ -155,6 +156,12 @@ const defaultYamlBase = [
   '      retry:',
   '        suppress_periodic: false',
   '        suppress_event_tiers: ["high", "low"]',
+  '  memory:',
+  '    trigger_engine:',
+  '      mode: "rust_shadow"',
+  '      timeout_ms: 700',
+  '      binary_path: "apps/server/rust/memory_trigger_sidecar/target/debug/memory_trigger_sidecar"',
+  '      auto_restart: false',
   'prompt_workflow:',
   '  profiles:',
   '    agent_decision_default:',
@@ -214,6 +221,10 @@ afterEach(async () => {
   delete process.env.SCHEDULER_SUMMARY_MAX_SAMPLE_RUNS;
   delete process.env.SCHEDULER_OPERATOR_DEFAULT_RECENT_LIMIT;
   delete process.env.SCHEDULER_OPERATOR_MAX_RECENT_LIMIT;
+  delete process.env.MEMORY_TRIGGER_ENGINE_MODE;
+  delete process.env.MEMORY_TRIGGER_ENGINE_TIMEOUT_MS;
+  delete process.env.MEMORY_TRIGGER_ENGINE_BINARY_PATH;
+  delete process.env.MEMORY_TRIGGER_ENGINE_AUTO_RESTART;
   delete process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED;
   delete process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED;
   delete process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_UI_ENABLED;
@@ -285,6 +296,12 @@ describe('runtime config YAML migration', () => {
       cooldown_ticks: 4,
       max_candidates: 33
     });
+    expect(getMemoryTriggerEngineConfig()).toEqual({
+      mode: 'rust_shadow',
+      timeout_ms: 700,
+      binary_path: 'apps/server/rust/memory_trigger_sidecar/target/debug/memory_trigger_sidecar',
+      auto_restart: false
+    });
     expect(getRuntimeMultiPackConfig()).toMatchObject({
       max_loaded_packs: 2,
       start_mode: 'manual',
@@ -340,6 +357,10 @@ describe('runtime config YAML migration', () => {
     process.env.SCHEDULER_SUMMARY_MAX_SAMPLE_RUNS = '131';
     process.env.SCHEDULER_OPERATOR_DEFAULT_RECENT_LIMIT = '8';
     process.env.SCHEDULER_OPERATOR_MAX_RECENT_LIMIT = '28';
+    process.env.MEMORY_TRIGGER_ENGINE_MODE = 'rust_primary';
+    process.env.MEMORY_TRIGGER_ENGINE_TIMEOUT_MS = '900';
+    process.env.MEMORY_TRIGGER_ENGINE_BINARY_PATH = 'custom/memory-trigger';
+    process.env.MEMORY_TRIGGER_ENGINE_AUTO_RESTART = 'true';
     process.env.SCHEDULER_AGENT_LIMIT = '11';
     process.env.SCHEDULER_AGENT_COOLDOWN_TICKS = '6';
     process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED = 'true';
@@ -383,6 +404,12 @@ describe('runtime config YAML migration', () => {
     });
     expect(getSchedulerAgentConfig().limit).toBe(11);
     expect(getSchedulerAgentConfig().cooldown_ticks).toBe(6);
+    expect(getMemoryTriggerEngineConfig()).toEqual({
+      mode: 'rust_primary',
+      timeout_ms: 900,
+      binary_path: 'custom/memory-trigger',
+      auto_restart: true
+    });
     expect(getRuntimeMultiPackConfig()).toMatchObject({
       max_loaded_packs: 4,
       start_mode: 'bootstrap_list',

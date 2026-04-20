@@ -133,6 +133,20 @@ const assertPackAvailable = (context: AppContext, packId: string): { packId: str
   });
 };
 
+const applyQueryLimit = <T>(items: T[], limit?: number): T[] => {
+  if (typeof limit !== 'number' || !Number.isFinite(limit) || limit <= 0) {
+    return items;
+  }
+  return items.slice(0, limit);
+};
+
+const getSelectorIds = (query: WorldStateQuery): string[] | null => {
+  if (!Array.isArray(query.selector.ids) || query.selector.ids.length === 0) {
+    return null;
+  }
+  return query.selector.ids.map(item => item.trim()).filter(item => item.length > 0);
+};
+
 const resolveQueryStateData = async (context: AppContext, packId: string, query: WorldStateQuery) => {
   switch (query.query_name) {
     case 'pack_summary':
@@ -140,7 +154,26 @@ const resolveQueryStateData = async (context: AppContext, packId: string, query:
         summary: getPackSummary(context, packId)
       };
     case 'world_entities': {
-      const items = await listPackWorldEntities(packId);
+      const selectorIds = getSelectorIds(query);
+      const items = applyQueryLimit(
+        (await listPackWorldEntities(packId)).filter(item => {
+          if (selectorIds && !selectorIds.includes(item.id)) {
+            return false;
+          }
+          if (typeof query.selector.entity_kind === 'string' && query.selector.entity_kind.trim().length > 0) {
+            if (item.entity_kind !== query.selector.entity_kind.trim()) {
+              return false;
+            }
+          }
+          if (typeof query.selector.entity_type === 'string' && query.selector.entity_type.trim().length > 0) {
+            if (item.entity_type !== query.selector.entity_type.trim()) {
+              return false;
+            }
+          }
+          return true;
+        }),
+        query.limit
+      );
       return {
         items,
         total_count: items.length
@@ -165,21 +198,96 @@ const resolveQueryStateData = async (context: AppContext, packId: string, query:
       };
     }
     case 'authority_grants': {
-      const items = await listPackAuthorityGrants(packId);
+      const items = applyQueryLimit(
+        (await listPackAuthorityGrants(packId)).filter(item => {
+          if (typeof query.selector.source_entity_id === 'string' && query.selector.source_entity_id.trim().length > 0) {
+            if (item.source_entity_id !== query.selector.source_entity_id.trim()) {
+              return false;
+            }
+          }
+          if (typeof query.selector.capability_key === 'string' && query.selector.capability_key.trim().length > 0) {
+            if (item.capability_key !== query.selector.capability_key.trim()) {
+              return false;
+            }
+          }
+          if (typeof query.selector.mediated_by_entity_id === 'string' && query.selector.mediated_by_entity_id.trim().length > 0) {
+            if (item.mediated_by_entity_id !== query.selector.mediated_by_entity_id.trim()) {
+              return false;
+            }
+          }
+          if (typeof query.selector.status === 'string' && query.selector.status.trim().length > 0) {
+            if (item.status !== query.selector.status.trim()) {
+              return false;
+            }
+          }
+          return true;
+        }),
+        query.limit
+      );
       return {
         items,
         total_count: items.length
       };
     }
     case 'mediator_bindings': {
-      const items = await listPackMediatorBindings(packId);
+      const items = applyQueryLimit(
+        (await listPackMediatorBindings(packId)).filter(item => {
+          if (typeof query.selector.mediator_id === 'string' && query.selector.mediator_id.trim().length > 0) {
+            if (item.mediator_id !== query.selector.mediator_id.trim()) {
+              return false;
+            }
+          }
+          if (typeof query.selector.subject_entity_id === 'string' && query.selector.subject_entity_id.trim().length > 0) {
+            if (item.subject_entity_id !== query.selector.subject_entity_id.trim()) {
+              return false;
+            }
+          }
+          if (typeof query.selector.binding_kind === 'string' && query.selector.binding_kind.trim().length > 0) {
+            if (item.binding_kind !== query.selector.binding_kind.trim()) {
+              return false;
+            }
+          }
+          if (typeof query.selector.status === 'string' && query.selector.status.trim().length > 0) {
+            if (item.status !== query.selector.status.trim()) {
+              return false;
+            }
+          }
+          return true;
+        }),
+        query.limit
+      );
       return {
         items,
         total_count: items.length
       };
     }
     case 'rule_execution_summary': {
-      const items = await listPackRuleExecutionRecords(packId);
+      const items = applyQueryLimit(
+        (await listPackRuleExecutionRecords(packId)).filter(item => {
+          if (typeof query.selector.rule_id === 'string' && query.selector.rule_id.trim().length > 0) {
+            if (item.rule_id !== query.selector.rule_id.trim()) {
+              return false;
+            }
+          }
+          if (typeof query.selector.subject_entity_id === 'string' && query.selector.subject_entity_id.trim().length > 0) {
+            if (item.subject_entity_id !== query.selector.subject_entity_id.trim()) {
+              return false;
+            }
+          }
+          if (typeof query.selector.target_entity_id === 'string' && query.selector.target_entity_id.trim().length > 0) {
+            if (item.target_entity_id !== query.selector.target_entity_id.trim()) {
+              return false;
+            }
+          }
+          if (typeof query.selector.execution_status === 'string' && query.selector.execution_status.trim().length > 0) {
+            if (item.execution_status !== query.selector.execution_status.trim()) {
+              return false;
+            }
+          }
+          return true;
+        }),
+        query.limit
+      );
       return {
         items,
         total_count: items.length
@@ -289,8 +397,16 @@ export const createTsWorldEngineAdapter = (context: AppContext): WorldEnginePort
         state_delta: {
           operations: [],
           metadata: {
+            pack_id: packId,
             adapter: 'ts_compat',
-            reason: input.reason
+            reason: input.reason,
+            base_tick: currentTick.toString(),
+            next_tick: nextTick,
+            base_revision: baseRevision,
+            next_revision: nextRevision,
+            mutated_entity_ids: [],
+            mutated_namespace_refs: [],
+            delta_operation_count: 0
           }
         },
         emitted_events: [],

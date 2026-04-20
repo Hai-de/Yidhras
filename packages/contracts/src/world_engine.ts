@@ -46,6 +46,16 @@ export const worldEngineErrorCodeSchema = z.enum([
 ])
 export const worldEngineObservationKindSchema = z.enum(['log', 'metric', 'counter', 'histogram', 'diagnostic'])
 export const worldEngineObservationLevelSchema = z.enum(['debug', 'info', 'warning', 'error'])
+export const worldEngineObservationCodeSchema = z.enum([
+  'WORLD_STEP_PREPARED',
+  'WORLD_STEP_COMMITTED',
+  'WORLD_STEP_ABORTED',
+  'WORLD_CORE_DELTA_BUILT',
+  'WORLD_CORE_DELTA_APPLIED',
+  'WORLD_CORE_DELTA_ABORTED',
+  'WORLD_QUERY_ALLOWLIST_FILTERED',
+  'WORLD_PREPARED_STATE_SUMMARY'
+])
 
 export const worldPackClockSnapshotSchema = z.object({
   current_tick: nonNegativeBigIntStringSchema,
@@ -118,6 +128,24 @@ export const worldRuleExecutionRecordSnapshotSchema = z.object({
   created_at: nonNegativeBigIntStringSchema,
   updated_at: nonNegativeBigIntStringSchema
 })
+const worldStateDeltaOperationPayloadSchema = z.object({
+  next: z.unknown().optional(),
+  previous: z.unknown().optional(),
+  reason: nonEmptyStringSchema.optional()
+}).catchall(z.unknown()).default({})
+
+const worldStateDeltaMetadataSchema = z.object({
+  pack_id: nonEmptyStringSchema.optional(),
+  reason: nonEmptyStringSchema.optional(),
+  base_tick: nonNegativeBigIntStringSchema.optional(),
+  next_tick: nonNegativeBigIntStringSchema.optional(),
+  base_revision: nonNegativeBigIntStringSchema.optional(),
+  next_revision: nonNegativeBigIntStringSchema.optional(),
+  mutated_entity_ids: z.array(nonEmptyStringSchema).optional(),
+  mutated_namespace_refs: z.array(nonEmptyStringSchema).optional(),
+  delta_operation_count: z.number().int().nonnegative().optional()
+}).catchall(z.unknown())
+
 export const worldStateDeltaOperationSchema = z.object({
   op: z.enum([
     'upsert_world_entity',
@@ -130,12 +158,12 @@ export const worldStateDeltaOperationSchema = z.object({
   ]),
   target_ref: nonEmptyStringSchema.optional(),
   namespace: nonEmptyStringSchema.optional(),
-  payload: stringRecordSchema.default({})
+  payload: worldStateDeltaOperationPayloadSchema
 })
 
 export const worldStateDeltaSchema = z.object({
   operations: z.array(worldStateDeltaOperationSchema),
-  metadata: stringRecordSchema.optional()
+  metadata: worldStateDeltaMetadataSchema.optional()
 })
 
 export const worldDomainEventSchema = z.object({
@@ -156,7 +184,7 @@ export const worldEngineObservationRecordSchema = z.object({
   pack_id: nonEmptyStringSchema.optional(),
   kind: worldEngineObservationKindSchema,
   level: worldEngineObservationLevelSchema.optional(),
-  code: nonEmptyStringSchema,
+  code: worldEngineObservationCodeSchema,
   message: z.string().optional(),
   value: z.number().finite().optional(),
   unit: nonEmptyStringSchema.optional(),
@@ -263,9 +291,27 @@ export const worldOperationAcknowledgementSchema = worldEngineProtocolEnvelopeSc
   message: z.string().optional()
 })
 
+const worldStateQuerySelectorSchema = z.object({
+  ids: z.array(nonEmptyStringSchema).optional(),
+  entity_kind: nonEmptyStringSchema.optional(),
+  entity_type: nonEmptyStringSchema.optional(),
+  entity_id: nonEmptyStringSchema.optional(),
+  state_namespace: nonEmptyStringSchema.optional(),
+  source_entity_id: nonEmptyStringSchema.optional(),
+  capability_key: nonEmptyStringSchema.optional(),
+  mediated_by_entity_id: nonEmptyStringSchema.optional(),
+  status: nonEmptyStringSchema.optional(),
+  mediator_id: nonEmptyStringSchema.optional(),
+  subject_entity_id: nonEmptyStringSchema.optional(),
+  binding_kind: nonEmptyStringSchema.optional(),
+  rule_id: nonEmptyStringSchema.optional(),
+  target_entity_id: nonEmptyStringSchema.optional(),
+  execution_status: nonEmptyStringSchema.optional()
+}).catchall(z.unknown()).default({})
+
 export const worldStateQuerySchema = worldEnginePackRequestSchema.extend({
   query_name: worldEngineQueryNameSchema,
-  selector: stringRecordSchema.default({}),
+  selector: worldStateQuerySelectorSchema,
   projection: stringRecordSchema.optional(),
   cursor: nonEmptyStringSchema.optional(),
   limit: z.number().int().positive().optional()
@@ -420,6 +466,7 @@ export type WorldEngineSessionStatus = z.infer<typeof worldEngineSessionStatusSc
 export type WorldEngineQueryName = z.infer<typeof worldEngineQueryNameSchema>
 export type WorldEngineStepReason = z.infer<typeof worldEngineStepReasonSchema>
 export type WorldEngineErrorCode = z.infer<typeof worldEngineErrorCodeSchema>
+export type WorldEngineObservationCode = z.infer<typeof worldEngineObservationCodeSchema>
 export type WorldPackClockSnapshot = z.infer<typeof worldPackClockSnapshotSchema>
 export type WorldEntitySnapshot = z.infer<typeof worldEntitySnapshotSchema>
 export type WorldEntityStateSnapshot = z.infer<typeof worldEntityStateSnapshotSchema>
@@ -431,6 +478,8 @@ export type WorldPackHydrateSource = z.infer<typeof worldPackHydrateSourceSchema
 export type WorldPackHydrateRequest = z.infer<typeof worldPackHydrateRequestSchema>
 export type WorldPackHydrateSummary = z.infer<typeof worldPackHydrateSummarySchema>
 export type WorldPackHydrateResult = z.infer<typeof worldPackHydrateResultSchema>
+export type WorldStateDeltaOperationPayload = z.infer<typeof worldStateDeltaOperationPayloadSchema>
+export type WorldStateDeltaMetadata = z.infer<typeof worldStateDeltaMetadataSchema>
 export type WorldStateDeltaOperation = z.infer<typeof worldStateDeltaOperationSchema>
 export type WorldStateDelta = z.infer<typeof worldStateDeltaSchema>
 export type WorldDomainEvent = z.infer<typeof worldDomainEventSchema>
@@ -443,6 +492,7 @@ export type WorldPackLoadRequest = z.infer<typeof worldPackLoadRequestSchema>
 export type WorldEngineLoadResult = z.infer<typeof worldEngineLoadResultSchema>
 export type WorldPackUnloadRequest = z.infer<typeof worldPackUnloadRequestSchema>
 export type WorldOperationAcknowledgement = z.infer<typeof worldOperationAcknowledgementSchema>
+export type WorldStateQuerySelector = z.infer<typeof worldStateQuerySelectorSchema>
 export type WorldStateQuery = z.infer<typeof worldStateQuerySchema>
 export type WorldStateQueryResult = z.infer<typeof worldStateQueryResultSchema>
 export type WorldObjectiveRuleInvocation = z.infer<typeof worldObjectiveRuleInvocationSchema>

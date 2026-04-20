@@ -112,8 +112,12 @@ describe('world engine sidecar failure recovery integration', () => {
       step_ticks: '1',
       reason: 'manual'
     });
+    expect(prepared.state_delta.operations).toHaveLength(3);
     expect(prepared.emitted_events).toHaveLength(1);
-    expect(prepared.observability[0]?.code).toBe('WORLD_STEP_PREPARED');
+    expect(prepared.observability.map(item => item.code)).toContain('WORLD_STEP_PREPARED');
+    expect(prepared.observability.map(item => item.code)).toContain('WORLD_CORE_DELTA_BUILT');
+    expect(prepared.observability.map(item => item.code)).toContain('WORLD_PREPARED_STATE_SUMMARY');
+    expect(prepared.summary.mutated_entity_count).toBe(2);
     await sidecar.abortPreparedStep({ protocol_version: 'world_engine/v1alpha1', pack_id: packId, prepared_token: prepared.prepared_token, reason: 'cleanup-after-recovery-check' });
 
     const status = await sidecar.getStatus({ pack_id: packId });

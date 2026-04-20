@@ -61,10 +61,14 @@ describe('PackHostApi read surface integration', () => {
       protocol_version: 'world_engine/v1alpha1',
       pack_id: packId,
       query_name: 'world_entities',
-      selector: {}
+      selector: {
+        entity_kind: 'artifact'
+      },
+      limit: 10
     });
     expect(Array.isArray(entities.data.items)).toBe(true);
     expect((entities.data.items ?? []).length).toBeGreaterThan(0);
+    expect((entities.data.items ?? []).every(item => (item as { entity_kind?: string }).entity_kind === 'artifact')).toBe(true);
 
     const worldState = await hostApi.queryWorldState({
       protocol_version: 'world_engine/v1alpha1',
@@ -79,28 +83,59 @@ describe('PackHostApi read surface integration', () => {
     expect(worldState.data.state_namespace).toBe('world');
     expect(worldState.data.state).not.toBeNull();
 
-    const authorityGrants = await hostApi.queryWorldState({
+    const allAuthorityGrants = await hostApi.queryWorldState({
       protocol_version: 'world_engine/v1alpha1',
       pack_id: packId,
       query_name: 'authority_grants',
       selector: {}
     });
-    expect(Array.isArray(authorityGrants.data.items)).toBe(true);
+    const firstAuthorityGrant = (allAuthorityGrants.data.items ?? [])[0] as { source_entity_id?: string; capability_key?: string } | undefined;
+    expect(firstAuthorityGrant).toBeDefined();
 
-    const mediatorBindings = await hostApi.queryWorldState({
+    const authorityGrants = await hostApi.queryWorldState({
+      protocol_version: 'world_engine/v1alpha1',
+      pack_id: packId,
+      query_name: 'authority_grants',
+      selector: {
+        source_entity_id: firstAuthorityGrant?.source_entity_id ?? '',
+        capability_key: firstAuthorityGrant?.capability_key ?? ''
+      },
+      limit: 5
+    });
+    expect(Array.isArray(authorityGrants.data.items)).toBe(true);
+    expect((authorityGrants.data.items ?? []).every(item => (item as { source_entity_id?: string }).source_entity_id === firstAuthorityGrant?.source_entity_id)).toBe(true);
+
+    const allMediatorBindings = await hostApi.queryWorldState({
       protocol_version: 'world_engine/v1alpha1',
       pack_id: packId,
       query_name: 'mediator_bindings',
       selector: {}
     });
+    const firstMediatorBinding = (allMediatorBindings.data.items ?? [])[0] as { mediator_id?: string; binding_kind?: string } | undefined;
+    expect(firstMediatorBinding).toBeDefined();
+
+    const mediatorBindings = await hostApi.queryWorldState({
+      protocol_version: 'world_engine/v1alpha1',
+      pack_id: packId,
+      query_name: 'mediator_bindings',
+      selector: {
+        mediator_id: firstMediatorBinding?.mediator_id ?? '',
+        binding_kind: firstMediatorBinding?.binding_kind ?? ''
+      }
+    });
     expect(Array.isArray(mediatorBindings.data.items)).toBe(true);
+    expect((mediatorBindings.data.items ?? []).every(item => (item as { mediator_id?: string }).mediator_id === firstMediatorBinding?.mediator_id)).toBe(true);
 
     const ruleExecutionSummary = await hostApi.queryWorldState({
       protocol_version: 'world_engine/v1alpha1',
       pack_id: packId,
       query_name: 'rule_execution_summary',
-      selector: {}
+      selector: {
+        execution_status: 'applied'
+      },
+      limit: 3
     });
     expect(Array.isArray(ruleExecutionSummary.data.items)).toBe(true);
+    expect((ruleExecutionSummary.data.items ?? []).every(item => (item as { execution_status?: string }).execution_status === 'applied')).toBe(true);
   });
 });

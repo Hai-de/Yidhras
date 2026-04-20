@@ -106,7 +106,18 @@ describe('world engine sidecar runtime loop integration', () => {
       worldEngine: sidecar,
       persistence: {
         persistPreparedStep: async ({ prepared }) => ({
-          persisted_revision: prepared.next_revision
+          persisted_revision: prepared.next_revision,
+          applied_operations: prepared.state_delta.operations.map(item => item.op),
+          persisted_entity_states: [],
+          persisted_rule_execution_records: [],
+          clock_delta: null,
+          observability: [{
+            code: 'WORLD_CORE_DELTA_APPLIED',
+            attributes: {
+              pack_id: prepared.pack_id,
+              prepared_token: prepared.prepared_token
+            }
+          }]
         })
       },
       prepareInput: {
@@ -125,12 +136,19 @@ describe('world engine sidecar runtime loop integration', () => {
       step_ticks: '1',
       reason: 'manual'
     });
+    expect(prepared.state_delta.operations).toHaveLength(3);
     expect(prepared.emitted_events).toHaveLength(1);
-    expect(prepared.observability).toHaveLength(1);
+    expect(prepared.observability.map(item => item.code)).toContain('WORLD_CORE_DELTA_BUILT');
+    expect(prepared.observability.map(item => item.code)).toContain('WORLD_PREPARED_STATE_SUMMARY');
+    expect(prepared.state_delta.operations[1]).toMatchObject({
+      op: 'append_rule_execution',
+      namespace: 'rule_execution_records'
+    });
+    expect(prepared.summary.mutated_entity_count).toBe(2);
     await sidecar.abortPreparedStep({ protocol_version: 'world_engine/v1alpha1', pack_id: packId, prepared_token: prepared.prepared_token, reason: 'cleanup-after-observability-check' });
 
     expect(committed.summary.event_count).toBeGreaterThanOrEqual(0);
-    expect(committed.summary.mutated_entity_count).toBe(1);
+    expect(committed.summary.mutated_entity_count).toBe(2);
 
     const afterSummary = packSummary(
       (
@@ -162,5 +180,17 @@ describe('world engine sidecar runtime loop integration', () => {
     expect((worldStateResult?.data.state as Record<string, unknown>).runtime_step).toMatchObject({ transition_kind: 'clock_advance' });
     expect(worldStateResult?.data.state).not.toBeNull();
     expect(typeof worldStateResult?.data.state).toBe('object');
+
+    const ruleExecutionSummary = await context.packHostApi?.queryWorldState({
+      protocol_version: 'world_engine/v1alpha1',
+      pack_id: packId,
+      query_name: 'rule_execution_summary',
+      selector: {
+        rule_id: 'world_step.advance_clock',
+        execution_status: 'applied'
+      }
+    });
+    expect(Array.isArray(ruleExecutionSummary?.data.items)).toBe(true);
+    expect((ruleExecutionSummary?.data.items ?? []).length).toBeGreaterThan(0);
   });
 });

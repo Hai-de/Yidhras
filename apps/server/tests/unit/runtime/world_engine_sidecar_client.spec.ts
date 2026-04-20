@@ -154,26 +154,56 @@ class InMemoryStubTransport implements WorldEngineSidecarTransport {
                 target_ref: '__world__',
                 namespace: 'world',
                 payload: {
-                  state_json: {
+                  next: {
                     runtime_step: {
                       prepared_token: token,
                       transition_kind: 'clock_advance'
                     }
                   },
-                  previous_state: {}
+                  previous: {},
+                  reason: String(params.reason ?? 'manual')
+                }
+              },
+              {
+                op: 'append_rule_execution',
+                target_ref: '__world__',
+                namespace: 'rule_execution_records',
+                payload: {
+                  next: {
+                    id: `world-step:${token}`,
+                    payload_json: {
+                      prepared_token: token,
+                      transition_kind: 'clock_advance'
+                    }
+                  },
+                  reason: String(params.reason ?? 'manual')
                 }
               },
               {
                 op: 'set_clock',
                 payload: {
-                  previous_tick: session.tick,
-                  next_tick: nextTick,
-                  previous_revision: session.revision,
-                  next_revision: nextTick
+                  next: {
+                    previous_tick: session.tick,
+                    next_tick: nextTick,
+                    previous_revision: session.revision,
+                    next_revision: nextTick
+                  },
+                  reason: String(params.reason ?? 'manual')
                 }
               }
             ],
-            metadata: { adapter: 'in-memory-stub', mutated_entity_ids: ['__world__'] }
+            metadata: {
+              pack_id: packId,
+              adapter: 'in-memory-stub',
+              reason: String(params.reason ?? 'manual'),
+              base_tick: session.tick,
+              next_tick: nextTick,
+              base_revision: session.revision,
+              next_revision: nextTick,
+              mutated_entity_ids: ['__world__'],
+              mutated_namespace_refs: ['__world__/world', 'rule_execution_records'],
+              delta_operation_count: 3
+            }
           },
           emitted_events: [
             {
@@ -201,12 +231,23 @@ class InMemoryStubTransport implements WorldEngineSidecarTransport {
               level: 'info',
               code: 'WORLD_STEP_PREPARED',
               attributes: { affected_entity_ids: ['__world__'], emitted_event_count: 1 }
+            },
+            {
+              kind: 'diagnostic',
+              level: 'info',
+              code: 'WORLD_CORE_DELTA_BUILT',
+              attributes: {
+                delta_operation_count: 3,
+                mutated_entity_ids: ['__world__'],
+                mutated_namespace_refs: ['__world__/world', 'rule_execution_records'],
+                mutated_core_collections: ['entity_states', 'rule_execution_records']
+              }
             }
           ],
           summary: {
             applied_rule_count: 0,
             event_count: 0,
-            mutated_entity_count: 1
+            mutated_entity_count: 2
           }
         });
       }
@@ -225,7 +266,7 @@ class InMemoryStubTransport implements WorldEngineSidecarTransport {
           summary: {
             applied_rule_count: 0,
             event_count: 0,
-            mutated_entity_count: 1
+            mutated_entity_count: 2
           }
         });
       }
@@ -304,15 +345,28 @@ describe('WorldEngineSidecarClient', () => {
     });
     expect(prepared.pack_id).toBe('world-death-note');
     expect(prepared.next_tick).toBe('1');
-    expect(prepared.state_delta.operations).toHaveLength(2);
+    expect(prepared.state_delta.operations).toHaveLength(3);
     expect(prepared.emitted_events).toHaveLength(1);
     expect(prepared.emitted_events[0]).toMatchObject({
       event_type: 'world.step.prepared',
       entity_id: '__world__'
     });
-    expect(prepared.observability).toHaveLength(1);
+    expect(prepared.observability).toHaveLength(2);
+    expect(prepared.state_delta.metadata).toMatchObject({
+      pack_id: 'world-death-note',
+      reason: 'manual',
+      mutated_entity_ids: ['__world__'],
+      mutated_namespace_refs: ['__world__/world', 'rule_execution_records'],
+      delta_operation_count: 3
+    });
+    expect(prepared.state_delta.operations[1]).toMatchObject({
+      op: 'append_rule_execution',
+      namespace: 'rule_execution_records'
+    });
+    expect(prepared.observability.map(item => item.code)).toContain('WORLD_STEP_PREPARED');
+    expect(prepared.observability.map(item => item.code)).toContain('WORLD_CORE_DELTA_BUILT');
     expect(prepared.observability[0]?.code).toBe('WORLD_STEP_PREPARED');
-    expect(prepared.summary.mutated_entity_count).toBe(1);
+    expect(prepared.summary.mutated_entity_count).toBe(2);
 
     const committed = await client.commitPreparedStep({
       protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
@@ -321,7 +375,7 @@ describe('WorldEngineSidecarClient', () => {
       persisted_revision: prepared.next_revision
     });
     expect(committed.committed_tick).toBe('1');
-    expect(committed.summary.mutated_entity_count).toBe(1);
+    expect(committed.summary.mutated_entity_count).toBe(2);
 
     const secondPrepared = await client.prepareStep({
       protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,

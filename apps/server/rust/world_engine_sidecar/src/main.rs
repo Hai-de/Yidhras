@@ -38,6 +38,12 @@ struct PreparedStepSummary {
 }
 
 #[derive(Debug, Clone)]
+struct PreparedStepArtifacts {
+    rule_execution_record: Value,
+    next_world_state: Value,
+}
+
+#[derive(Debug, Clone)]
 struct PreparedSessionState {
     token: String,
     next_tick: String,
@@ -50,6 +56,7 @@ struct PreparedSessionState {
     authority_grants: Vec<Value>,
     mediator_bindings: Vec<Value>,
     rule_execution_records: Vec<Value>,
+    artifacts: PreparedStepArtifacts,
 }
 
 #[derive(Debug, Clone)]
@@ -248,6 +255,51 @@ fn parse_u64_or_default(value: &str, default: u64) -> u64 {
     value.parse::<u64>().unwrap_or(default)
 }
 
+fn append_rule_execution_record(
+    rule_execution_records: &[Value],
+    pack_id: &str,
+    record_id: &str,
+    next_revision: &str,
+    payload_json: &Value,
+    emitted_events_json: &[Value],
+) -> Vec<Value> {
+    let mut next_records = rule_execution_records.to_vec();
+    next_records.push(json!({
+        "id": record_id,
+        "pack_id": pack_id,
+        "rule_id": "world_step.advance_clock",
+        "capability_key": Value::Null,
+        "mediator_id": Value::Null,
+        "subject_entity_id": "__world__",
+        "target_entity_id": "__world__",
+        "execution_status": "applied",
+        "payload_json": payload_json,
+        "emitted_events_json": emitted_events_json,
+        "created_at": next_revision,
+        "updated_at": next_revision
+    }));
+    next_records
+}
+
+fn build_world_step_execution_record(
+    token: &str,
+    reason: &str,
+    base_tick: &str,
+    next_tick: &str,
+    base_revision: &str,
+    next_revision: &str,
+) -> Value {
+    json!({
+        "prepared_token": token,
+        "reason": reason,
+        "transition_kind": "clock_advance",
+        "base_tick": base_tick,
+        "next_tick": next_tick,
+        "base_revision": base_revision,
+        "next_revision": next_revision
+    })
+}
+
 fn build_prepared_step_event(
     pack_id: &str,
     token: &str,
@@ -286,6 +338,7 @@ fn build_prepared_step_observability(
     next_revision: &str,
     event_count: usize,
     mutated_entity_count: usize,
+    delta_operation_count: usize,
 ) -> Vec<Value> {
     vec![
         json!({
@@ -308,6 +361,45 @@ fn build_prepared_step_observability(
                 "affected_entity_ids": ["__world__"],
                 "affected_entity_count": mutated_entity_count,
                 "emitted_event_count": event_count
+            }
+        }),
+        json!({
+            "record_id": format!("obs:{}:core-delta-built", token),
+            "pack_id": pack_id,
+            "kind": "diagnostic",
+            "level": "info",
+            "code": "WORLD_CORE_DELTA_BUILT",
+            "message": "Built prepared Pack Runtime Core delta",
+            "recorded_at_tick": next_tick,
+            "attributes": {
+                "prepared_token": token,
+                "reason": reason,
+                "base_tick": base_tick,
+                "next_tick": next_tick,
+                "base_revision": base_revision,
+                "next_revision": next_revision,
+                "delta_operation_count": delta_operation_count,
+                "mutated_entity_ids": ["__world__"],
+                "mutated_namespace_refs": ["__world__/world", "rule_execution_records"],
+                "mutated_core_collections": ["entity_states", "rule_execution_records"],
+                "appended_rule_execution_id": format!("world-step:{}", token)
+            }
+        }),
+        json!({
+            "record_id": format!("obs:{}:prepared-state-summary", token),
+            "pack_id": pack_id,
+            "kind": "diagnostic",
+            "level": "info",
+            "code": "WORLD_PREPARED_STATE_SUMMARY",
+            "message": "Prepared state summary for Pack Runtime Core",
+            "recorded_at_tick": next_tick,
+            "attributes": {
+                "prepared_token": token,
+                "mutated_entity_count": mutated_entity_count,
+                "event_count": event_count,
+                "delta_operation_count": delta_operation_count,
+                "mutated_entity_ids": ["__world__"],
+                "mutated_namespace_refs": ["__world__/world", "rule_execution_records"]
             }
         })
     ]
@@ -1003,11 +1095,20 @@ fn handle_request(state: &mut AppState, request: RpcRequest) -> RpcResponse {
             let next_revision = (current_revision_number + step_ticks_number).to_string();
             let previous_world_state = find_entity_state(session, "__world__", "world")
                 .and_then(|item| item.get("state_json").cloned());
+            let reason = params.get("reason").and_then(Value::as_str).unwrap_or("runtime_loop");
             let next_world_state = build_runtime_step_state(
                 previous_world_state.as_ref(),
                 &token,
                 params.get("reason").and_then(Value::as_str).unwrap_or("runtime_loop"),
                 &step_ticks,
+                &session.current_tick,
+                &next_tick,
+                &session.current_revision,
+                &next_revision,
+            );
+            let rule_execution_payload = build_world_step_execution_record(
+                &token,
+                reason,
                 &session.current_tick,
                 &next_tick,
                 &session.current_revision,
@@ -1021,7 +1122,7 @@ fn handle_request(state: &mut AppState, request: RpcRequest) -> RpcResponse {
                 &next_revision,
                 &next_world_state,
             );
-            let reason = params.get("reason").and_then(Value::as_str).unwrap_or("runtime_loop");
+            let rule_execution_record_id = format!("world-step:{}", token);
             let emitted_events = vec![build_prepared_step_event(
                 &pack_id,
                 &token,
@@ -1029,6 +1130,14 @@ fn handle_request(state: &mut AppState, request: RpcRequest) -> RpcResponse {
                 &next_tick,
                 &next_revision,
             )];
+            let next_rule_execution_records = append_rule_execution_record(
+                &session.rule_execution_records,
+                &pack_id,
+                &rule_execution_record_id,
+                &next_revision,
+                &rule_execution_payload,
+                &emitted_events,
+            );
             let observability = build_prepared_step_observability(
                 &pack_id,
                 &token,
@@ -1039,9 +1148,10 @@ fn handle_request(state: &mut AppState, request: RpcRequest) -> RpcResponse {
                 &session.current_revision,
                 &next_revision,
                 emitted_events.len(),
-                1,
+                2,
+                3,
             );
-            let summary = build_prepared_step_summary(emitted_events.len(), 1);
+            let summary = build_prepared_step_summary(emitted_events.len(), 2);
             let prepared_state = PreparedSessionState {
                 token: token.clone(),
                 next_tick: next_tick.clone(),
@@ -1053,7 +1163,14 @@ fn handle_request(state: &mut AppState, request: RpcRequest) -> RpcResponse {
                 entity_states: next_entity_states,
                 authority_grants: session.authority_grants.clone(),
                 mediator_bindings: session.mediator_bindings.clone(),
-                rule_execution_records: session.rule_execution_records.clone(),
+                rule_execution_records: next_rule_execution_records,
+                artifacts: PreparedStepArtifacts {
+                    rule_execution_record: json!({
+                        "id": rule_execution_record_id,
+                        "payload_json": rule_execution_payload,
+                    }),
+                    next_world_state: next_world_state.clone(),
+                },
             };
             session.pending_prepared_token = Some(token.clone());
             session.prepared_state = Some(prepared_state.clone());
@@ -1073,17 +1190,30 @@ fn handle_request(state: &mut AppState, request: RpcRequest) -> RpcResponse {
                                 "target_ref": "__world__",
                                 "namespace": "world",
                                 "payload": {
-                                    "state_json": next_world_state,
-                                    "previous_state": previous_world_state.unwrap_or_else(|| json!({}))
+                                    "next": prepared_state.artifacts.next_world_state,
+                                    "previous": previous_world_state.unwrap_or_else(|| json!({})),
+                                    "reason": reason
+                                }
+                            },
+                            {
+                                "op": "append_rule_execution",
+                                "target_ref": "__world__",
+                                "namespace": "rule_execution_records",
+                                "payload": {
+                                    "next": prepared_state.artifacts.rule_execution_record,
+                                    "reason": reason
                                 }
                             },
                             {
                                 "op": "set_clock",
                                 "payload": {
-                                    "previous_tick": session.current_tick,
-                                    "next_tick": prepared_state.next_tick,
-                                    "previous_revision": session.current_revision,
-                                    "next_revision": prepared_state.next_revision
+                                    "next": {
+                                        "previous_tick": session.current_tick,
+                                        "next_tick": prepared_state.next_tick,
+                                        "previous_revision": session.current_revision,
+                                        "next_revision": prepared_state.next_revision
+                                    },
+                                    "reason": reason
                                 }
                             }
                         ],
@@ -1095,7 +1225,10 @@ fn handle_request(state: &mut AppState, request: RpcRequest) -> RpcResponse {
                             "next_tick": prepared_state.next_tick,
                             "base_revision": session.current_revision,
                             "next_revision": prepared_state.next_revision,
-                            "mutated_entity_ids": ["__world__"]
+                            "mutated_entity_ids": ["__world__"],
+                            "mutated_namespace_refs": ["__world__/world", "rule_execution_records"],
+                            "delta_operation_count": 3,
+                            "mutated_core_collections": ["entity_states", "rule_execution_records"]
                         }
                     },
                     "emitted_events": emitted_events,
