@@ -39,6 +39,12 @@ pnpm prepare:runtime
 
 ### 3. 启动开发环境
 
+直接启动整个工作区开发环境：
+
+```bash
+pnpm dev
+```
+
 #### Linux / macOS
 
 ```bash
@@ -52,7 +58,11 @@ chmod +x start-dev.sh
 start-dev.bat
 ```
 
-也可以分别启动：
+说明：
+
+- `pnpm dev` 会并行启动 server + web；
+- `start-dev.sh` / `start-dev.bat` 仍然保留，适合需要在启动前自动执行 `prepare:runtime`，或配合 `--reset-db` 使用的场景；
+- 如果你只想单独启动某一侧，也可以分别执行：
 
 ```bash
 pnpm dev:server
@@ -73,10 +83,12 @@ pnpm --filter yidhras-server reset:dev-db
 ## 高频命令
 
 - 工作区构建：`pnpm build`
+- 工作区开发：`pnpm dev`
 - 工作区 lint：`pnpm lint`
 - 工作区类型检查：`pnpm typecheck`
-- 工作区测试：`pnpm test`
+- 工作区完整测试：`pnpm test`
 - 工作区单测：`pnpm test:unit`
+- 工作区单测 watch：`pnpm test:unit:watch`
 - 运行时准备：`pnpm prepare:runtime`
 - 新建 world pack：`pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"`
 - Server 冒烟：`pnpm smoke:server`

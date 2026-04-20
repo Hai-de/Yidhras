@@ -57,9 +57,10 @@ NUXT_PUBLIC_API_BASE=http://localhost:3001 pnpm --filter web dev
 ```bash
 pnpm --filter web lint
 pnpm --filter web typecheck
+pnpm --filter web test
 pnpm --filter web test:unit
+pnpm --filter web test:unit:watch
 ```
-
 ## 构建与预览
 
 ```bash

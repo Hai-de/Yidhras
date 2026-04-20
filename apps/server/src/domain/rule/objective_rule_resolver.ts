@@ -23,6 +23,7 @@ export interface ObjectiveRulePlan {
   capability_key: string | null;
   mediator_id: string | null;
   target_entity_id: string | null;
+  diagnostics?: Record<string, unknown> | null;
   bridge_mode: 'objective_rule';
   mutations: ObjectiveMutationEffect[];
   emitted_events: ObjectiveEventEffect[];
@@ -277,6 +278,14 @@ const resolveObjectiveRulePlanFromRules = async (
       capability_key: invocation.capability_key,
       mediator_id: effectiveMediatorId,
       target_entity_id: targetEntityId,
+      diagnostics: {
+        matched_rule_id: rule.id,
+        no_match_reason: null,
+        evaluated_rule_count: objectiveRules.length,
+        rendered_template_count: 0,
+        mutation_count: mutations.length,
+        emitted_event_count: emitted_events.length
+      },
       bridge_mode: 'objective_rule',
       mutations,
       emitted_events

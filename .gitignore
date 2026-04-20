@@ -119,6 +119,9 @@ Desktop.ini
 # Linux
 *~
 
+# Rust 构建输出
+target/
+
 # Backup files
 *.bak
 *.backup

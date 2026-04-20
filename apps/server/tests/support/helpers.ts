@@ -146,7 +146,7 @@ export const startServer = async (options: StartServerOptions): Promise<RunningS
     await ensureRuntimePrepared(options.prepareTimeoutMs ?? 120000);
   }
 
-  const child = spawn('npm', ['run', 'serve:e2e'], {
+  const child = spawn('npm', ['run', 'serve:test-server'], {
     cwd: process.cwd(),
     env: {
       ...process.env,

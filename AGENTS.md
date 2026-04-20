@@ -28,9 +28,14 @@ Use these as entry points only. For the full command matrix, always check `docs/
 
 - `pnpm install`
 - `pnpm prepare:runtime`
+- `pnpm dev`
 - `pnpm dev:server`
 - `pnpm dev:web`
 - `./start-dev.sh` or `start-dev.bat`
+
+Notes:
+- `pnpm dev` starts workspace server + web dev processes together.
+- `start-dev.*` remains the wrapper that can prepare runtime and optionally reset the dev DB before startup.
 
 ### Quality
 
@@ -38,11 +43,14 @@ Use these as entry points only. For the full command matrix, always check `docs/
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm test:unit`
+- `pnpm test:unit:watch`
 
 ### Common scoped checks
 
+- `pnpm --filter yidhras-server test`
 - `pnpm --filter yidhras-server test:integration`
 - `pnpm --filter yidhras-server test:e2e`
+- `pnpm --filter yidhras-server test:integration:watch`
 - `pnpm --filter yidhras-server smoke`
 - `pnpm --filter web test:unit`
 

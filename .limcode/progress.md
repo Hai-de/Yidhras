@@ -1,38 +1,35 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-20T10:19:50.557Z
+- Updated At: 2026-04-20T18:31:05.021Z
 - Status: active
 - Phase: implementation
 
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
-- 当前进度：8/8 个里程碑已完成；最新：PG6
-- 当前焦点：模块化优先边界收口已完成；当前剩余问题是 agent-scheduler integration 中既有回归失败，需作为独立后续修复项跟进。
-- 最新结论：server runtime 模块化优先收口已完成：SimulationManager 已收缩为 thin facade，runtime bootstrap / pack catalog / active-pack runtime / runtime registry / runtime kernel / context-memory ports 均已落地；…
-- 当前阻塞：tests/integration/agent-scheduler.spec.ts 仍存在一处既有集成失败（replay/retry periodic suppression 断言未满足），需单独分析调度行为语义，不应在本轮模块化收口中混修。
-- 下一步：如继续开发，应单独开一轮针对 agent scheduler suppression 语义的修复与回归分析。
+- 当前进度：12/12 个里程碑已完成；最新：PG10
+- 当前焦点：Rust world engine Phase 1C 已完成，当前等待决定下一轮是继续加深 engine semantics，还是提名下一类 rule family。
+- 最新结论：Phase 1C 已完成：richer delta/event/observability、Host compatibility、failure recovery 与验证矩阵均已收口。
+- 下一步：决定下一阶段方向；当前不需要再继续扩展 Phase 1C。
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/server-runtime-modularization-first-boundary-design.md`
-- 计划：`.limcode/plans/server-runtime-modularization-first-implementation.plan.md`
+- 设计：`.limcode/design/rust-world-engine-phase1-boundary-and-sidecar-design.md`
+- 计划：`.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md`
 - 审查：`.limcode/review/multi-pack-runtime-experimental-assessment.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 冻结模块边界与接口命名：补 PackRuntimeLocator / PackRuntimeControl / PackRuntimeObservation / RuntimeKernelFacade / PackRuntimeLookupPort 等契约草案，并明确迁移守则（新代码禁止扩张 context.sim）  `#plan-m1-boundary-freeze`
-- [x] 拆出 PackRuntimeRegistryService 与 ActivePackRuntimeFacade，让 SimulationManager 收缩为 thin facade，同时保持 stable single active-pack contract 不变  `#plan-m2-runtime-registry-active-pack`
-- [x] 拆出 RuntimeDatabaseBootstrap 与 PackCatalogService，收口 SimulationManager 的数据库准备与 pack catalog 职责，并补最小单测  `#plan-m2-simulation-bootstrap-catalog`
-- [x] 为 AppContext 增加窄接口入口（runtimeBootstrap / activePackRuntime / packCatalog / packRuntimeLocator / runtimeKernel / pluginHost 等），并开始把上层 service/route 从 context.sim 迁移出去  `#plan-m3-app-context-migration`
-- [x] 实现 PackScopeResolver 与 PackRuntimeLookupPort，收口 plugin runtime web / projection / asset resolve 对 pack runtime 的依赖，移除对 runtime internal object 的直接绑定  `#plan-m4-plugin-scope-resolver`
-- [x] 补 ContextAssemblyPort 与 MemoryRuntimePort，统一 workflow / scheduler / plugin runtime 的 context/memory 读取路径  `#plan-m5-context-memory-ports`
-- [x] 补 RuntimeKernelFacade、SchedulerObservationPort、SchedulerControlPort，并收口 operator/read-model 对 scheduler/runtime loop 的访问面  `#plan-m5-runtime-kernel-ports`
-- [x] 补 unit/integration/e2e 回归测试与文档同步（ARCH.md、PLUGIN_RUNTIME.md），验证 stable contract 不回退且为后续 Rust world engine 预留 Host API 边界  `#plan-m6-regression-doc-sync`
+- [x] 冻结 Phase 1C 范围：只增强 Rust sidecar prepare/commit/abort 的真实世界语义与 observability，不扩展到 objective_enforcement 之外的下一类 rule family，也不混入基础设施硬化。  `#rust-c-plan-p1-scope-freeze`
+- [x] 审计当前 Phase 1B step 骨架与真实世界推进语义之间的差距，明确 session 内哪些状态变化应进入 prepareStep 的 delta/event/summary/observability。  `#rust-c-plan-p2-step-semantics-audit`
+- [x] 设计并实现更真实的 PreparedWorldStep 语义：扩展 state_delta、summary 与 session before/after 关系，使 prepare/commit 能表达超出 set_clock 的世界推进结果。  `#rust-c-plan-p3-richer-delta-and-summary`
+- [x] 为 Rust sidecar step 增强 emitted_events 与 observability：提供更可归因的 step diagnostics、影响实体信息与 transition reason，而不是仅保留最小骨架。  `#rust-c-plan-p4-event-and-observability`
+- [x] 验证 Host-managed persistence、PackHostApi query、runtime loop 与 sidecar step 增强后的兼容性，确认 richer step 语义不会破坏 single-flight、abort/tainted 与现有宿主边界。  `#rust-c-plan-p5-host-parity-and-runtime-loop-validation`
+- [x] 完成 Phase 1C 的 unit/integration/parity/failure-recovery 验证矩阵，并把仍不阻塞闭环的后续优化继续沉淀到 docs/ENHANCEMENTS.md。  `#rust-c-plan-p6-closeout-and-enhancements`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -133,6 +130,54 @@
 - 摘要:
 在不破坏当前单 active-pack 稳定模式的前提下，为 scheduler lease/cursor 引入 pack-scoped partition scope 支持。新增 `multi_pack_scheduler_scope.ts` 的解析辅助能力，并将 `scheduler_lease.ts` 扩展为可接受形如 `pack_id::p0` 的 scoped partition id；这样不同 pack 可以独立持有相同 partition id 的 lease/cursor 记录而不互相覆盖。新增集成测试 `tests/integration/scheduler-pack-scope.spec.ts` 验证 pack-scoped lease/cursor/release 行为，并通过 lint、typecheck 与相关 integration tests。
 - 下一步：继续 Phase 5B/5C 交界：把 ownership/status 读面与 experimental operator API 接到新的 pack-local runtime 与 scheduler scope。
+
+### PG7 · Rust world engine Phase 1 边界与 sidecar 基础链路完成
+- 状态：completed
+- 记录时间：2026-04-20T12:46:10.603Z
+- 完成时间：2026-04-20T12:46:10.603Z
+- 关联 TODO：rust-plan-m1-baseline-contract, rust-plan-m2-host-port-adapter, rust-plan-m3-runtime-loop-migration, rust-plan-m4-sidecar-stub-transport, rust-plan-m5-host-persistence-orchestration, rust-plan-m6-plugin-doc-regression
+- 关联文档：
+  - 设计：`.limcode/design/rust-world-engine-phase1-boundary-and-sidecar-design.md`
+  - 计划：`.limcode/plans/rust-world-engine-phase1-boundary-and-sidecar-implementation.plan.md`
+- 摘要:
+已完成 world engine contracts、宿主侧 WorldEnginePort / PackHostApi、runtime loop 迁移、Rust sidecar JSON-RPC stub、Host-managed persistence 与 tainted/single-flight 机制，并同步 ARCH / PLUGIN_RUNTIME 文档与针对性 unit tests。
+- 下一步：若继续推进，可评估把更多真实 world rule execution 从 TsWorldEngineAdapter 迁入 Rust sidecar，并为 PackHostApi 扩展更稳定的只读查询面。
+
+### PG8 · PG8 · Rust world engine A 完成：objective_enforcement parity 与收尾验证完成
+- 状态：completed
+- 记录时间：2026-04-20T15:17:58.461Z
+- 完成时间：2026-04-20T15:17:58.461Z
+- 关联 TODO：rust-a-plan-p1-scope-decision, rust-a-plan-p2-parity-audit, rust-a-plan-p3-parity-implementation, rust-a-plan-p4-breadth-boundary-hardening, rust-a-plan-p5-observability-and-failure-attribution, rust-a-plan-p6-validation-and-closeout
+- 关联文档：
+  - 设计：`.limcode/design/rust-world-engine-phase1-boundary-and-sidecar-design.md`
+  - 计划：`.limcode/plans/rust-world-engine-phase1-a-completion-sequencing-and-validation.plan.md`
+- 摘要:
+完成 A 的 objective_enforcement Rust sidecar 迁移收口：补齐 objective execution parity、representative scenario 覆盖、explicit no-fallback policy、structured sidecar diagnostics，并通过 unit/integration 验证矩阵。A 现可在 Phase 1 内以 objective_enforcement parity 作为完成标准关闭；同时已将非阻塞后续增强项记录到 docs/ENHANCEMENTS.md。
+- 下一步：如继续推进 Rust world engine，可在下一轮选择是否扩展到 objective_enforcement 之外的下一类 rule family；否则当前可将 A 视为在 Phase 1 范围内完成。
+
+### PG9 · Rust world engine Phase 1B 完成：real session/query/prepare-commit 验证通过
+- 状态：completed
+- 记录时间：2026-04-20T17:16:59.920Z
+- 完成时间：2026-04-20T17:00:00.000Z
+- 关联 TODO：rust-b-plan-p1-scope-freeze, rust-b-plan-p2-snapshot-contract, rust-b-plan-p3-host-snapshot-loader, rust-b-plan-p4-rust-query-runtime, rust-b-plan-p5-real-prepare-commit, rust-b-plan-p6-validation-closeout
+- 关联文档：
+  - 设计：`.limcode/design/rust-world-engine-phase1-boundary-and-sidecar-design.md`
+  - 计划：`.limcode/plans/rust-world-engine-phase1-b-real-session-and-step-implementation.plan.md`
+- 摘要:
+已完成 Phase 1B：Host snapshot/hydrate、Rust session state、allowlist query、prepare/commit/abort step 编排与验证矩阵全部收口。新增 sidecar runtime loop integration 与 failure recovery integration 测试，并通过 unit/integration、cargo test、server typecheck 与 eslint 验证。
+- 下一步：如继续推进，可评估是否为 active-pack 真实业务提名下一类 rule family，或继续增强 sidecar step 的真实世界语义与更细 observability。
+
+### PG10 · Rust world engine Phase 1C 完成：step semantics 与 observability 第一轮深化通过验证
+- 状态：completed
+- 记录时间：2026-04-20T18:30:55.199Z
+- 完成时间：2026-04-20T18:30:00.000Z
+- 关联 TODO：rust-c-plan-p1-scope-freeze, rust-c-plan-p2-step-semantics-audit, rust-c-plan-p3-richer-delta-and-summary, rust-c-plan-p4-event-and-observability, rust-c-plan-p5-host-parity-and-runtime-loop-validation, rust-c-plan-p6-closeout-and-enhancements
+- 关联文档：
+  - 设计：`.limcode/design/rust-world-engine-phase1-boundary-and-sidecar-design.md`
+  - 计划：`.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md`
+- 摘要:
+已完成 Phase 1C：Rust sidecar `prepare/commit/abort` 现已支持 richer `state_delta`、`world.step.prepared` emitted event、`WORLD_STEP_PREPARED/COMMITTED/ABORTED` 结构化 diagnostics，以及 `__world__/world` runtime_step state upsert。并验证 Host-managed persistence、runtime loop、failure recovery、single-flight、PackHostApi query 与 richer step output 兼容，未破坏现有宿主边界。
+- 下一步：下一轮再决定是继续加深 world engine 语义厚度，还是提名 objective_enforcement 之外的下一类 rule family。
 <!-- LIMCODE_PROGRESS_MILESTONES_END -->
 
 ## 风险与阻塞
@@ -144,26 +189,26 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-20T09:09:28.610Z | updated | plan-m2-simulation-bootstrap-catalog | 已完成 RuntimeDatabaseBootstrap 与 PackCatalogService 拆分，并在 SimulationManager 中开始委托数据库准备与 pack catalog 能力。
-- 2026-04-20T09:09:28.610Z | updated | plan-m3-app-context-migration | 已在 AppContext/index.ts 接入 runtimeBootstrap 与 packCatalog 首批窄接口，继续迁移更多 context.sim 调用点。
-- 2026-04-20T09:15:59.802Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md
-- 2026-04-20T09:16:28.687Z | updated | plan-m3-app-context-migration | 已完成首轮 AppContext 窄接口迁移：experimental multi-pack、plugin runtime web、experimental projection、plugin service 已接入 helper。
-- 2026-04-20T09:16:28.687Z | updated | plan-m4-plugin-scope-resolver | 开始继续收口 PackRuntimeLookupPort / scope resolver，逐步替换 plugin/runtime/projection 对 context.sim 内部对象的直接依赖。
-- 2026-04-20T09:24:07.170Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md
-- 2026-04-20T09:24:39.249Z | updated | plan-m4-plugin-scope-resolver | 已完成 PackScopeResolver，plugin runtime web 与 experimental runtime routes 已统一通过 scope resolver / lookup port 做 pack scope 校验。
-- 2026-04-20T09:24:39.249Z | updated | plan-m2-runtime-registry-active-pack | 开始进入 PackRuntimeRegistryService / ActivePackRuntimeFacade 拆分，让 SimulationManager 进一步收缩为 thin facade。
-- 2026-04-20T09:31:21.742Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md
-- 2026-04-20T09:31:47.919Z | updated | plan-m2-runtime-registry-active-pack | 已完成 PackRuntimeRegistryService 与 ActivePackRuntimeFacade 拆分，SimulationManager 已进一步收缩为 thin facade。
-- 2026-04-20T09:31:47.919Z | updated | plan-m5-runtime-kernel-ports | 开始进入 runtime kernel ports 收口，准备补 RuntimeKernelFacade / SchedulerObservationPort / SchedulerControlPort。
-- 2026-04-20T09:51:02.473Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md
-- 2026-04-20T09:51:26.348Z | updated | plan-m5-runtime-kernel-ports | 已完成 runtime kernel ports 收口：新增 runtime kernel service，并在 system、scheduler routes、experimental scheduler runtime 中接入。
-- 2026-04-20T09:51:26.348Z | updated | plan-m5-context-memory-ports | 开始进入 context/memory ports 收口，准备统一 workflow / scheduler / plugin runtime 的上下文与内存读取路径。
-- 2026-04-20T10:04:52.646Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md
-- 2026-04-20T10:05:10.768Z | updated | plan-m5-context-memory-ports | 已完成 context/memory ports 收口：新增 port 工厂并接入 AppContext，inference context builder、memory compaction、memory block store 已开始通过正式端口访问。
-- 2026-04-20T10:05:10.768Z | updated | plan-m6-regression-doc-sync | 开始执行最终回归测试与文档同步，确认模块边界收口后稳定 contract 不回退。
-- 2026-04-20T10:19:27.947Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md
-- 2026-04-20T10:19:50.557Z | updated | plan-m6-regression-doc-sync | 已完成 lint/typecheck/关键 unit tests 与文档同步；发现 agent-scheduler integration 仍有一处既有失败，留待独立后续修复。
-- 2026-04-20T10:19:50.557Z | milestone_recorded | server-runtime-modularization-first | server runtime 模块化优先边界收口实现完成，核心 ports/facades 已落地并完成文档同步。
+- 2026-04-20T17:04:22.134Z | updated | rust-b-plan-p6-validation-closeout | 已完成针对性验证第一轮：cargo test、runtime unit tests、server typecheck 与相关 eslint 均通过。
+- 2026-04-20T17:16:59.850Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-b-real-session-and-step-implementation.plan.md
+- 2026-04-20T17:16:59.920Z | milestone_recorded | PG9 | 记录里程碑：Rust world engine Phase 1B 完成：real session/query/prepare-commit 验证通过
+- 2026-04-20T17:16:59.930Z | updated | rust-b-plan-p6-validation-closeout | 已完成验证矩阵：新增 sidecar runtime loop integration 与 failure recovery integration，并通过 unit/integration/cargo test/typecheck/lint。
+- 2026-04-20T17:43:41.816Z | artifact_changed | docs-sync | 已同步 TODO.md、docs/ARCH.md、docs/capabilities/PLUGIN_RUNTIME.md、docs/capabilities/PROMPT_WORKFLOW.md 与 docs/ENHANCEMENTS.md，使其与 Rust world engine Phase 1B 完成状态对齐。
+- 2026-04-20T18:00:23.049Z | artifact_changed | plan | 同步计划文档：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
+- 2026-04-20T18:05:32.767Z | updated | rust-c-plan-p1-scope-freeze | 开始执行 Phase 1C，当前先冻结范围：只推进 sidecar step semantics 与 observability，不扩展到下一类 rule family 或基础设施硬化。
+- 2026-04-20T18:05:43.451Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
+- 2026-04-20T18:07:42.415Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
+- 2026-04-20T18:07:51.074Z | updated | rust-c-plan-p2-step-semantics-audit | 已完成第一轮审计：contracts 已允许 richer delta op/event/observation，但 Rust sidecar 仍只返回 set_clock + 空 events/observability + 占位 summary；TS compat adapter 也保持最小骨架，说明本轮可优先在 Rust sidecar 内补强而不破坏 Host owner 边界。
+- 2026-04-20T18:10:49.766Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
+- 2026-04-20T18:15:02.574Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
+- 2026-04-20T18:15:09.832Z | updated | rust-c-plan-p3-richer-delta-and-summary | 已完成 P3：Rust sidecar step 现会把 runtime_step 写入 `__world__/world` state，并返回 richer delta metadata 与非占位 mutated_entity_count；相关 sidecar client/runtime loop 测试已通过。
+- 2026-04-20T18:21:49.175Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
+- 2026-04-20T18:21:56.000Z | updated | rust-c-plan-p4-event-and-observability | 已完成 P4：Rust sidecar prepare/commit/abort 已新增 emitted_events 与 structured observability，覆盖 prepared/committed/aborted 三类 transition diagnostics；相关 tests 已通过。
+- 2026-04-20T18:24:44.807Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
+- 2026-04-20T18:25:01.142Z | updated | rust-c-plan-p5-host-parity-and-runtime-loop-validation | 已完成 P5：world_engine_persistence、failure recovery integration、runtime loop integration 与 sidecar client tests 在 richer step output 下全部通过，确认 Host owner 边界与 abort/tainted 语义未退化。
+- 2026-04-20T18:30:03.028Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md
+- 2026-04-20T18:30:55.199Z | milestone_recorded | PG10 | 记录里程碑：Rust world engine Phase 1C 完成：step semantics 与 observability 第一轮深化通过验证
+- 2026-04-20T18:31:05.021Z | updated | rust-c-plan-p6-closeout-and-enhancements | 已完成 P6：vitest、tsc、eslint、cargo test 均已通过，并同步更新 docs/ENHANCEMENTS.md 中的后续增强候选。
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -173,57 +218,47 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-17T21:05:29.611Z",
-  "updatedAt": "2026-04-20T10:19:50.557Z",
+  "updatedAt": "2026-04-20T18:31:05.021Z",
   "status": "active",
   "phase": "implementation",
-  "currentFocus": "模块化优先边界收口已完成；当前剩余问题是 agent-scheduler integration 中既有回归失败，需作为独立后续修复项跟进。",
-  "latestConclusion": "server runtime 模块化优先收口已完成：SimulationManager 已收缩为 thin facade，runtime bootstrap / pack catalog / active-pack runtime / runtime registry / runtime kernel / context-memory ports 均已落地；typecheck、关键 unit tests、文档同步已完成。",
-  "currentBlocker": "tests/integration/agent-scheduler.spec.ts 仍存在一处既有集成失败（replay/retry periodic suppression 断言未满足），需单独分析调度行为语义，不应在本轮模块化收口中混修。",
-  "nextAction": "如继续开发，应单独开一轮针对 agent scheduler suppression 语义的修复与回归分析。",
+  "currentFocus": "Rust world engine Phase 1C 已完成，当前等待决定下一轮是继续加深 engine semantics，还是提名下一类 rule family。",
+  "latestConclusion": "Phase 1C 已完成：richer delta/event/observability、Host compatibility、failure recovery 与验证矩阵均已收口。",
+  "currentBlocker": null,
+  "nextAction": "决定下一阶段方向；当前不需要再继续扩展 Phase 1C。",
   "activeArtifacts": {
-    "design": ".limcode/design/server-runtime-modularization-first-boundary-design.md",
-    "plan": ".limcode/plans/server-runtime-modularization-first-implementation.plan.md",
+    "design": ".limcode/design/rust-world-engine-phase1-boundary-and-sidecar-design.md",
+    "plan": ".limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md",
     "review": ".limcode/review/multi-pack-runtime-experimental-assessment.md"
   },
   "todos": [
     {
-      "id": "plan-m1-boundary-freeze",
-      "content": "冻结模块边界与接口命名：补 PackRuntimeLocator / PackRuntimeControl / PackRuntimeObservation / RuntimeKernelFacade / PackRuntimeLookupPort 等契约草案，并明确迁移守则（新代码禁止扩张 context.sim）",
+      "id": "rust-c-plan-p1-scope-freeze",
+      "content": "冻结 Phase 1C 范围：只增强 Rust sidecar prepare/commit/abort 的真实世界语义与 observability，不扩展到 objective_enforcement 之外的下一类 rule family，也不混入基础设施硬化。",
       "status": "completed"
     },
     {
-      "id": "plan-m2-runtime-registry-active-pack",
-      "content": "拆出 PackRuntimeRegistryService 与 ActivePackRuntimeFacade，让 SimulationManager 收缩为 thin facade，同时保持 stable single active-pack contract 不变",
+      "id": "rust-c-plan-p2-step-semantics-audit",
+      "content": "审计当前 Phase 1B step 骨架与真实世界推进语义之间的差距，明确 session 内哪些状态变化应进入 prepareStep 的 delta/event/summary/observability。",
       "status": "completed"
     },
     {
-      "id": "plan-m2-simulation-bootstrap-catalog",
-      "content": "拆出 RuntimeDatabaseBootstrap 与 PackCatalogService，收口 SimulationManager 的数据库准备与 pack catalog 职责，并补最小单测",
+      "id": "rust-c-plan-p3-richer-delta-and-summary",
+      "content": "设计并实现更真实的 PreparedWorldStep 语义：扩展 state_delta、summary 与 session before/after 关系，使 prepare/commit 能表达超出 set_clock 的世界推进结果。",
       "status": "completed"
     },
     {
-      "id": "plan-m3-app-context-migration",
-      "content": "为 AppContext 增加窄接口入口（runtimeBootstrap / activePackRuntime / packCatalog / packRuntimeLocator / runtimeKernel / pluginHost 等），并开始把上层 service/route 从 context.sim 迁移出去",
+      "id": "rust-c-plan-p4-event-and-observability",
+      "content": "为 Rust sidecar step 增强 emitted_events 与 observability：提供更可归因的 step diagnostics、影响实体信息与 transition reason，而不是仅保留最小骨架。",
       "status": "completed"
     },
     {
-      "id": "plan-m4-plugin-scope-resolver",
-      "content": "实现 PackScopeResolver 与 PackRuntimeLookupPort，收口 plugin runtime web / projection / asset resolve 对 pack runtime 的依赖，移除对 runtime internal object 的直接绑定",
+      "id": "rust-c-plan-p5-host-parity-and-runtime-loop-validation",
+      "content": "验证 Host-managed persistence、PackHostApi query、runtime loop 与 sidecar step 增强后的兼容性，确认 richer step 语义不会破坏 single-flight、abort/tainted 与现有宿主边界。",
       "status": "completed"
     },
     {
-      "id": "plan-m5-context-memory-ports",
-      "content": "补 ContextAssemblyPort 与 MemoryRuntimePort，统一 workflow / scheduler / plugin runtime 的 context/memory 读取路径",
-      "status": "completed"
-    },
-    {
-      "id": "plan-m5-runtime-kernel-ports",
-      "content": "补 RuntimeKernelFacade、SchedulerObservationPort、SchedulerControlPort，并收口 operator/read-model 对 scheduler/runtime loop 的访问面",
-      "status": "completed"
-    },
-    {
-      "id": "plan-m6-regression-doc-sync",
-      "content": "补 unit/integration/e2e 回归测试与文档同步（ARCH.md、PLUGIN_RUNTIME.md），验证 stable contract 不回退且为后续 Rust world engine 预留 Host API 边界",
+      "id": "rust-c-plan-p6-closeout-and-enhancements",
+      "content": "完成 Phase 1C 的 unit/integration/parity/failure-recovery 验证矩阵，并把仍不阻塞闭环的后续优化继续沉淀到 docs/ENHANCEMENTS.md。",
       "status": "completed"
     }
   ],
@@ -376,144 +411,232 @@
       "completedAt": "2026-04-18T10:13:47.885Z",
       "recordedAt": "2026-04-18T10:13:47.885Z",
       "nextAction": "继续 Phase 5B/5C 交界：把 ownership/status 读面与 experimental operator API 接到新的 pack-local runtime 与 scheduler scope。"
+    },
+    {
+      "id": "PG7",
+      "title": "Rust world engine Phase 1 边界与 sidecar 基础链路完成",
+      "status": "completed",
+      "summary": "已完成 world engine contracts、宿主侧 WorldEnginePort / PackHostApi、runtime loop 迁移、Rust sidecar JSON-RPC stub、Host-managed persistence 与 tainted/single-flight 机制，并同步 ARCH / PLUGIN_RUNTIME 文档与针对性 unit tests。",
+      "relatedTodoIds": [
+        "rust-plan-m1-baseline-contract",
+        "rust-plan-m2-host-port-adapter",
+        "rust-plan-m3-runtime-loop-migration",
+        "rust-plan-m4-sidecar-stub-transport",
+        "rust-plan-m5-host-persistence-orchestration",
+        "rust-plan-m6-plugin-doc-regression"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/rust-world-engine-phase1-boundary-and-sidecar-design.md",
+        "plan": ".limcode/plans/rust-world-engine-phase1-boundary-and-sidecar-implementation.plan.md"
+      },
+      "completedAt": "2026-04-20T12:46:10.603Z",
+      "recordedAt": "2026-04-20T12:46:10.603Z",
+      "nextAction": "若继续推进，可评估把更多真实 world rule execution 从 TsWorldEngineAdapter 迁入 Rust sidecar，并为 PackHostApi 扩展更稳定的只读查询面。"
+    },
+    {
+      "id": "PG8",
+      "title": "PG8 · Rust world engine A 完成：objective_enforcement parity 与收尾验证完成",
+      "status": "completed",
+      "summary": "完成 A 的 objective_enforcement Rust sidecar 迁移收口：补齐 objective execution parity、representative scenario 覆盖、explicit no-fallback policy、structured sidecar diagnostics，并通过 unit/integration 验证矩阵。A 现可在 Phase 1 内以 objective_enforcement parity 作为完成标准关闭；同时已将非阻塞后续增强项记录到 docs/ENHANCEMENTS.md。",
+      "relatedTodoIds": [
+        "rust-a-plan-p1-scope-decision",
+        "rust-a-plan-p2-parity-audit",
+        "rust-a-plan-p3-parity-implementation",
+        "rust-a-plan-p4-breadth-boundary-hardening",
+        "rust-a-plan-p5-observability-and-failure-attribution",
+        "rust-a-plan-p6-validation-and-closeout"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/rust-world-engine-phase1-boundary-and-sidecar-design.md",
+        "plan": ".limcode/plans/rust-world-engine-phase1-a-completion-sequencing-and-validation.plan.md"
+      },
+      "completedAt": "2026-04-20T15:17:58.461Z",
+      "recordedAt": "2026-04-20T15:17:58.461Z",
+      "nextAction": "如继续推进 Rust world engine，可在下一轮选择是否扩展到 objective_enforcement 之外的下一类 rule family；否则当前可将 A 视为在 Phase 1 范围内完成。"
+    },
+    {
+      "id": "PG9",
+      "title": "Rust world engine Phase 1B 完成：real session/query/prepare-commit 验证通过",
+      "status": "completed",
+      "summary": "已完成 Phase 1B：Host snapshot/hydrate、Rust session state、allowlist query、prepare/commit/abort step 编排与验证矩阵全部收口。新增 sidecar runtime loop integration 与 failure recovery integration 测试，并通过 unit/integration、cargo test、server typecheck 与 eslint 验证。",
+      "relatedTodoIds": [
+        "rust-b-plan-p1-scope-freeze",
+        "rust-b-plan-p2-snapshot-contract",
+        "rust-b-plan-p3-host-snapshot-loader",
+        "rust-b-plan-p4-rust-query-runtime",
+        "rust-b-plan-p5-real-prepare-commit",
+        "rust-b-plan-p6-validation-closeout"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/rust-world-engine-phase1-boundary-and-sidecar-design.md",
+        "plan": ".limcode/plans/rust-world-engine-phase1-b-real-session-and-step-implementation.plan.md"
+      },
+      "completedAt": "2026-04-20T17:00:00.000Z",
+      "recordedAt": "2026-04-20T17:16:59.920Z",
+      "nextAction": "如继续推进，可评估是否为 active-pack 真实业务提名下一类 rule family，或继续增强 sidecar step 的真实世界语义与更细 observability。"
+    },
+    {
+      "id": "PG10",
+      "title": "Rust world engine Phase 1C 完成：step semantics 与 observability 第一轮深化通过验证",
+      "status": "completed",
+      "summary": "已完成 Phase 1C：Rust sidecar `prepare/commit/abort` 现已支持 richer `state_delta`、`world.step.prepared` emitted event、`WORLD_STEP_PREPARED/COMMITTED/ABORTED` 结构化 diagnostics，以及 `__world__/world` runtime_step state upsert。并验证 Host-managed persistence、runtime loop、failure recovery、single-flight、PackHostApi query 与 richer step output 兼容，未破坏现有宿主边界。",
+      "relatedTodoIds": [
+        "rust-c-plan-p1-scope-freeze",
+        "rust-c-plan-p2-step-semantics-audit",
+        "rust-c-plan-p3-richer-delta-and-summary",
+        "rust-c-plan-p4-event-and-observability",
+        "rust-c-plan-p5-host-parity-and-runtime-loop-validation",
+        "rust-c-plan-p6-closeout-and-enhancements"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/rust-world-engine-phase1-boundary-and-sidecar-design.md",
+        "plan": ".limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
+      },
+      "completedAt": "2026-04-20T18:30:00.000Z",
+      "recordedAt": "2026-04-20T18:30:55.199Z",
+      "nextAction": "下一轮再决定是继续加深 world engine 语义厚度，还是提名 objective_enforcement 之外的下一类 rule family。"
     }
   ],
   "risks": [],
   "log": [
     {
-      "at": "2026-04-20T09:09:28.610Z",
+      "at": "2026-04-20T17:04:22.134Z",
       "type": "updated",
-      "refId": "plan-m2-simulation-bootstrap-catalog",
-      "message": "已完成 RuntimeDatabaseBootstrap 与 PackCatalogService 拆分，并在 SimulationManager 中开始委托数据库准备与 pack catalog 能力。"
+      "refId": "rust-b-plan-p6-validation-closeout",
+      "message": "已完成针对性验证第一轮：cargo test、runtime unit tests、server typecheck 与相关 eslint 均通过。"
     },
     {
-      "at": "2026-04-20T09:09:28.610Z",
-      "type": "updated",
-      "refId": "plan-m3-app-context-migration",
-      "message": "已在 AppContext/index.ts 接入 runtimeBootstrap 与 packCatalog 首批窄接口，继续迁移更多 context.sim 调用点。"
-    },
-    {
-      "at": "2026-04-20T09:15:59.802Z",
+      "at": "2026-04-20T17:16:59.850Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-b-real-session-and-step-implementation.plan.md"
     },
     {
-      "at": "2026-04-20T09:16:28.687Z",
-      "type": "updated",
-      "refId": "plan-m3-app-context-migration",
-      "message": "已完成首轮 AppContext 窄接口迁移：experimental multi-pack、plugin runtime web、experimental projection、plugin service 已接入 helper。"
-    },
-    {
-      "at": "2026-04-20T09:16:28.687Z",
-      "type": "updated",
-      "refId": "plan-m4-plugin-scope-resolver",
-      "message": "开始继续收口 PackRuntimeLookupPort / scope resolver，逐步替换 plugin/runtime/projection 对 context.sim 内部对象的直接依赖。"
-    },
-    {
-      "at": "2026-04-20T09:24:07.170Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-20T09:24:39.249Z",
-      "type": "updated",
-      "refId": "plan-m4-plugin-scope-resolver",
-      "message": "已完成 PackScopeResolver，plugin runtime web 与 experimental runtime routes 已统一通过 scope resolver / lookup port 做 pack scope 校验。"
-    },
-    {
-      "at": "2026-04-20T09:24:39.249Z",
-      "type": "updated",
-      "refId": "plan-m2-runtime-registry-active-pack",
-      "message": "开始进入 PackRuntimeRegistryService / ActivePackRuntimeFacade 拆分，让 SimulationManager 进一步收缩为 thin facade。"
-    },
-    {
-      "at": "2026-04-20T09:31:21.742Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-20T09:31:47.919Z",
-      "type": "updated",
-      "refId": "plan-m2-runtime-registry-active-pack",
-      "message": "已完成 PackRuntimeRegistryService 与 ActivePackRuntimeFacade 拆分，SimulationManager 已进一步收缩为 thin facade。"
-    },
-    {
-      "at": "2026-04-20T09:31:47.919Z",
-      "type": "updated",
-      "refId": "plan-m5-runtime-kernel-ports",
-      "message": "开始进入 runtime kernel ports 收口，准备补 RuntimeKernelFacade / SchedulerObservationPort / SchedulerControlPort。"
-    },
-    {
-      "at": "2026-04-20T09:51:02.473Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-20T09:51:26.348Z",
-      "type": "updated",
-      "refId": "plan-m5-runtime-kernel-ports",
-      "message": "已完成 runtime kernel ports 收口：新增 runtime kernel service，并在 system、scheduler routes、experimental scheduler runtime 中接入。"
-    },
-    {
-      "at": "2026-04-20T09:51:26.348Z",
-      "type": "updated",
-      "refId": "plan-m5-context-memory-ports",
-      "message": "开始进入 context/memory ports 收口，准备统一 workflow / scheduler / plugin runtime 的上下文与内存读取路径。"
-    },
-    {
-      "at": "2026-04-20T10:04:52.646Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-20T10:05:10.768Z",
-      "type": "updated",
-      "refId": "plan-m5-context-memory-ports",
-      "message": "已完成 context/memory ports 收口：新增 port 工厂并接入 AppContext，inference context builder、memory compaction、memory block store 已开始通过正式端口访问。"
-    },
-    {
-      "at": "2026-04-20T10:05:10.768Z",
-      "type": "updated",
-      "refId": "plan-m6-regression-doc-sync",
-      "message": "开始执行最终回归测试与文档同步，确认模块边界收口后稳定 contract 不回退。"
-    },
-    {
-      "at": "2026-04-20T10:19:27.947Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-20T10:19:50.557Z",
-      "type": "updated",
-      "refId": "plan-m6-regression-doc-sync",
-      "message": "已完成 lint/typecheck/关键 unit tests 与文档同步；发现 agent-scheduler integration 仍有一处既有失败，留待独立后续修复。"
-    },
-    {
-      "at": "2026-04-20T10:19:50.557Z",
+      "at": "2026-04-20T17:16:59.920Z",
       "type": "milestone_recorded",
-      "refId": "server-runtime-modularization-first",
-      "message": "server runtime 模块化优先边界收口实现完成，核心 ports/facades 已落地并完成文档同步。"
+      "refId": "PG9",
+      "message": "记录里程碑：Rust world engine Phase 1B 完成：real session/query/prepare-commit 验证通过"
+    },
+    {
+      "at": "2026-04-20T17:16:59.930Z",
+      "type": "updated",
+      "refId": "rust-b-plan-p6-validation-closeout",
+      "message": "已完成验证矩阵：新增 sidecar runtime loop integration 与 failure recovery integration，并通过 unit/integration/cargo test/typecheck/lint。"
+    },
+    {
+      "at": "2026-04-20T17:43:41.816Z",
+      "type": "artifact_changed",
+      "refId": "docs-sync",
+      "message": "已同步 TODO.md、docs/ARCH.md、docs/capabilities/PLUGIN_RUNTIME.md、docs/capabilities/PROMPT_WORKFLOW.md 与 docs/ENHANCEMENTS.md，使其与 Rust world engine Phase 1B 完成状态对齐。"
+    },
+    {
+      "at": "2026-04-20T18:00:23.049Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
+    },
+    {
+      "at": "2026-04-20T18:05:32.767Z",
+      "type": "updated",
+      "refId": "rust-c-plan-p1-scope-freeze",
+      "message": "开始执行 Phase 1C，当前先冻结范围：只推进 sidecar step semantics 与 observability，不扩展到下一类 rule family 或基础设施硬化。"
+    },
+    {
+      "at": "2026-04-20T18:05:43.451Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
+    },
+    {
+      "at": "2026-04-20T18:07:42.415Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
+    },
+    {
+      "at": "2026-04-20T18:07:51.074Z",
+      "type": "updated",
+      "refId": "rust-c-plan-p2-step-semantics-audit",
+      "message": "已完成第一轮审计：contracts 已允许 richer delta op/event/observation，但 Rust sidecar 仍只返回 set_clock + 空 events/observability + 占位 summary；TS compat adapter 也保持最小骨架，说明本轮可优先在 Rust sidecar 内补强而不破坏 Host owner 边界。"
+    },
+    {
+      "at": "2026-04-20T18:10:49.766Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
+    },
+    {
+      "at": "2026-04-20T18:15:02.574Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
+    },
+    {
+      "at": "2026-04-20T18:15:09.832Z",
+      "type": "updated",
+      "refId": "rust-c-plan-p3-richer-delta-and-summary",
+      "message": "已完成 P3：Rust sidecar step 现会把 runtime_step 写入 `__world__/world` state，并返回 richer delta metadata 与非占位 mutated_entity_count；相关 sidecar client/runtime loop 测试已通过。"
+    },
+    {
+      "at": "2026-04-20T18:21:49.175Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
+    },
+    {
+      "at": "2026-04-20T18:21:56.000Z",
+      "type": "updated",
+      "refId": "rust-c-plan-p4-event-and-observability",
+      "message": "已完成 P4：Rust sidecar prepare/commit/abort 已新增 emitted_events 与 structured observability，覆盖 prepared/committed/aborted 三类 transition diagnostics；相关 tests 已通过。"
+    },
+    {
+      "at": "2026-04-20T18:24:44.807Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
+    },
+    {
+      "at": "2026-04-20T18:25:01.142Z",
+      "type": "updated",
+      "refId": "rust-c-plan-p5-host-parity-and-runtime-loop-validation",
+      "message": "已完成 P5：world_engine_persistence、failure recovery integration、runtime loop integration 与 sidecar client tests 在 richer step output 下全部通过，确认 Host owner 边界与 abort/tainted 语义未退化。"
+    },
+    {
+      "at": "2026-04-20T18:30:03.028Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/rust-world-engine-phase1-c-step-semantics-and-observability.plan.md"
+    },
+    {
+      "at": "2026-04-20T18:30:55.199Z",
+      "type": "milestone_recorded",
+      "refId": "PG10",
+      "message": "记录里程碑：Rust world engine Phase 1C 完成：step semantics 与 observability 第一轮深化通过验证"
+    },
+    {
+      "at": "2026-04-20T18:31:05.021Z",
+      "type": "updated",
+      "refId": "rust-c-plan-p6-closeout-and-enhancements",
+      "message": "已完成 P6：vitest、tsc、eslint、cargo test 均已通过，并同步更新 docs/ENHANCEMENTS.md 中的后续增强候选。"
     }
   ],
   "stats": {
-    "milestonesTotal": 8,
-    "milestonesCompleted": 8,
-    "todosTotal": 8,
-    "todosCompleted": 8,
+    "milestonesTotal": 12,
+    "milestonesCompleted": 12,
+    "todosTotal": 6,
+    "todosCompleted": 6,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-20T10:19:50.557Z",
-    "bodyHash": "sha256:d4b2147c265b11c623bdfd72a964e6dfe8dcda16aba45308e78f74dd68877348"
+    "generatedAt": "2026-04-20T18:31:05.021Z",
+    "bodyHash": "sha256:63563d1ae83cbc8c868d4c39094c1e8539d81e6535e0db0b75df1134d9ed31b7"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

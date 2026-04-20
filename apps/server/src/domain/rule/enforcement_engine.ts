@@ -1,3 +1,9 @@
+import {
+  WORLD_ENGINE_PROTOCOL_VERSION,
+  type WorldRuleExecuteObjectiveResult,
+  worldRuleExecuteObjectiveResultSchema
+} from '@yidhras/contracts';
+
 import type { AppContext } from '../../app/context.js';
 import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage/entity_state_repo.js';
 import { ApiError } from '../../utils/api_error.js';
@@ -5,6 +11,7 @@ import { resolveAuthorityForSubject, resolveMediatorBindingsForPack } from '../a
 import type { InvocationRequest } from '../invocation/invocation_dispatcher.js';
 import { createObjectiveRuleExecutionRecord } from './execution_recorder.js';
 import { resolveObjectiveRulePlan } from './objective_rule_resolver.js';
+import { buildSidecarObjectiveExecutionRequest, toObjectiveRulePlanFromSidecarResult } from './sidecar_objective_execution.js';
 
 export interface InvocationEnforcementResult {
   rule_execution_id: string;
@@ -223,16 +230,42 @@ export const enforceInvocationRequest = async (
   invocation: InvocationRequest
 ): Promise<InvocationEnforcementResult> => {
   const now = invocation.created_at;
+
+  const normalizeObjectiveRuleSidecarResult = (value: unknown): WorldRuleExecuteObjectiveResult => {
+    return worldRuleExecuteObjectiveResultSchema.parse({
+      protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
+      ...(isRecord(value) ? value : {})
+    });
+  };
+
+  const resolvePlan = async (
+    capabilityGrant: Awaited<ReturnType<typeof resolveEffectiveCapabilityGrant>>,
+    mediatorId: string | null
+  ) => {
+    if (typeof context.worldEngine?.executeObjectiveRule === 'function') {
+      const sidecarRequest = await buildSidecarObjectiveExecutionRequest(context, {
+        invocation,
+        effectiveMediatorId: mediatorId
+      });
+      const sidecarResult = normalizeObjectiveRuleSidecarResult(
+        await context.worldEngine.executeObjectiveRule(sidecarRequest)
+      );
+      return toObjectiveRulePlanFromSidecarResult(sidecarResult);
+    }
+
+    return resolveObjectiveRulePlan(context, {
+      invocation,
+      capabilityGrant,
+      mediatorId
+    });
+  };
+
   try {
     const capabilityGrant = await resolveEffectiveCapabilityGrant(context, invocation);
     const mediatorId = resolveEffectiveMediatorId(invocation, capabilityGrant);
     await validateMediatorBinding(context, invocation.pack_id, mediatorId);
 
-    const plan = await resolveObjectiveRulePlan(context, {
-      invocation,
-      capabilityGrant,
-      mediatorId
-    });
+    const plan = await resolvePlan(capabilityGrant, mediatorId);
 
     for (const mutation of plan.mutations) {
       await applyMutationEffect({
@@ -263,6 +296,7 @@ export const enforceInvocationRequest = async (
         source_action_intent_id: invocation.source_action_intent_id,
         source_inference_id: invocation.source_inference_id,
         invocation_type: invocation.invocation_type,
+        sidecar_diagnostics: plan.diagnostics ?? null,
         bridge_mode: plan.bridge_mode,
         mutation_count: plan.mutations.length
       },
@@ -290,6 +324,7 @@ export const enforceInvocationRequest = async (
         source_action_intent_id: invocation.source_action_intent_id,
         source_inference_id: invocation.source_inference_id,
         invocation_type: invocation.invocation_type,
+        sidecar_diagnostics: error instanceof ApiError ? error.details ?? null : null,
         error_message: error instanceof Error ? error.message : String(error)
       },
       emitted_events_json: [],

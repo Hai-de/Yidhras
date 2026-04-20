@@ -10,6 +10,7 @@ import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
 import type { WorldPack } from '../../packs/manifest/loader.js';
 import type { RuntimeDatabaseBootstrap } from '../runtime/runtime_bootstrap.js';
 import type { RuntimeKernelFacade } from '../runtime/runtime_kernel_ports.js';
+import type { PackHostApi, WorldEnginePort } from '../runtime/world_engine_ports.js';
 import type { ContextAssemblyPort, MemoryRuntimePort } from './context_memory_ports.js';
 
 export interface ActivePackRuntimeFacade {
@@ -55,6 +56,8 @@ export interface AppContextPorts {
   packRuntimeControl?: PackRuntimeControl;
   packRuntimeLookup?: PackRuntimeLookupPort;
   runtimeKernel?: RuntimeKernelFacade;
+  worldEngine?: WorldEnginePort;
+  packHostApi?: PackHostApi;
   pluginHost?: PluginHostPort;
   contextAssembly?: ContextAssemblyPort;
   memoryRuntime?: MemoryRuntimePort;
@@ -164,4 +167,30 @@ export const getPackRuntimeLookupPort = (input: {
       };
     }
   };
+};
+
+export const getWorldEnginePort = (input: {
+  worldEngine?: WorldEnginePort;
+  fallback: WorldEnginePort;
+}): WorldEnginePort => {
+  return input.worldEngine ?? input.fallback;
+};
+
+export const getPackHostApi = (input: {
+  packHostApi?: PackHostApi;
+  fallback: PackHostApi;
+}): PackHostApi => {
+  return input.packHostApi ?? input.fallback;
+};
+
+export const hasWorldEnginePort = (context: AppContextPorts): context is AppContextPorts & {
+  worldEngine: WorldEnginePort;
+} => {
+  return Boolean(context.worldEngine);
+};
+
+export const hasPackHostApi = (context: AppContextPorts): context is AppContextPorts & {
+  packHostApi: PackHostApi;
+} => {
+  return Boolean(context.packHostApi);
 };

@@ -31,8 +31,8 @@ pnpm dev:web
 ```
 
 说明：
-- `pnpm dev` 只提示你分别启动前后端；
-- 真正常用的是：
+- `pnpm dev`：并行启动 workspace 下的 server + web 开发进程；
+- 如只需单独启动某一侧，可使用：
   - `pnpm dev:server`
   - `pnpm dev:web`
 - 也可使用仓库脚本：
@@ -54,15 +54,19 @@ pnpm test
 pnpm test:unit
 pnpm test:integration
 pnpm test:e2e
-pnpm test:watch
+pnpm test:unit:watch
+pnpm test:integration:watch
+pnpm test:e2e:watch
 ```
 
 说明：
-- `pnpm test`：运行 web + server 的默认测试入口
-- `pnpm test:unit`：运行工作区单测入口
-- `pnpm test:integration`：当前主要指 server integration
-- `pnpm test:e2e`：当前主要指 server e2e
-- `pnpm test:watch`：并行 watch web + server 测试
+- `pnpm test`：运行 workspace 完整测试入口（web unit + server unit/integration/e2e）
+- `pnpm test:unit`：运行 workspace 单测入口（web unit + server unit）
+- `pnpm test:integration`：运行 server integration
+- `pnpm test:e2e`：运行 server e2e
+- `pnpm test:unit:watch`：并行 watch web unit + server unit
+- `pnpm test:integration:watch`：watch server integration
+- `pnpm test:e2e:watch`：watch server e2e
 
 ### 2.5 运行时准备与脚手架
 
@@ -152,9 +156,13 @@ pnpm --filter yidhras-server test
 pnpm --filter yidhras-server test:unit
 pnpm --filter yidhras-server test:integration
 pnpm --filter yidhras-server test:e2e
-pnpm --filter yidhras-server test:watch
+pnpm --filter yidhras-server test:unit:watch
+pnpm --filter yidhras-server test:integration:watch
+pnpm --filter yidhras-server test:e2e:watch
 pnpm --filter yidhras-server smoke
 ```
+
+说明：`pnpm --filter yidhras-server test` 会顺序执行 `test:unit`、`test:integration`、`test:e2e`。
 
 ### 3.4 运行时与数据库
 
@@ -339,11 +347,11 @@ pnpm --filter web lint
 pnpm --filter web typecheck
 pnpm --filter web test
 pnpm --filter web test:unit
-pnpm --filter web test:watch
+pnpm --filter web test:unit:watch
 ```
 
 说明：
-- 当前 `test` 与 `test:unit` 都指向 web 的 vitest 单测入口。
+- `test` 是 `test:unit` 的明确别名；`test:unit:watch` 用于 web unit watch。
 
 ## 5. 单文件 / 定向测试命令
 

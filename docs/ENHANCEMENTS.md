@@ -285,6 +285,67 @@
 
 ---
 
+### 8. Rust world engine objective execution 后续增强项
+- 状态：deferred
+- 优先级：medium
+- 范围：Rust world engine / sidecar objective rule execution / host-side diagnostics
+- 背景：
+  当前 Phase 1 的 A 已经把 `objective_enforcement` 作为 Rust-owned 的真实规则执行路径打通，并具备：
+  - sidecar-vs-TS parity 基线
+  - explicit no-fallback policy regression coverage
+  - 结构化 sidecar diagnostics 持久化到 execution record
+  但这一轮收尾后，仍有一批不阻塞主闭环、适合后续继续增强的事项。
+- 后续增强候选：
+  - 将 sidecar diagnostics 从当前计数/匹配摘要扩展到更细的 rule mismatch 分类（如 capability mismatch / mediator mismatch / target.kind mismatch）
+  - 为 template rendering 增加更细的 render trace / debug summary，而不只保留聚合计数
+  - 把 sidecar 启动方式从开发期 `cargo run` 进一步收敛为更稳定的预编译 binary / cache / CI-ready 启动策略
+  - 为 objective execution parity 构建可复用 fixture harness，减少 TS-vs-sidecar 双路径测试中的样板代码
+  - 若后续 Phase 1 或下一阶段需要扩大 Rust 覆盖面，再评估是否在 objective_enforcement 之外继续引入下一类 rule family
+- 延期原因：
+  当前主目标已经是完成 A 的 objective_enforcement parity 与闭环验证；上述事项可以提高可观测性、开发体验与后续扩展性，但不阻塞当前 A 收口。
+
+### 9. Rust sidecar 本地工具链噪音治理
+- 状态：deferred
+- 优先级：low
+- 范围：Rust sidecar local developer ergonomics / cargo environment
+- 背景：
+  当前单测与本地 sidecar 启动过程中会看到来自本机 cargo 配置的 deprecation warning（如 `~/.cargo/config` 提示迁移到 `config.toml`）。这不影响当前功能正确性，但会污染测试输出与开发体验。
+- 后续增强候选：
+  - 在开发文档中补充 Rust toolchain 本地环境整理建议
+  - 为 CI / local sidecar 启动增加更稳定、可控的 cargo 环境约束
+  - 如有必要，为 sidecar 启动增加更安静的输出治理策略
+- 延期原因：
+  该问题属于本地工具链与体验层治理，不影响当前 objective execution 功能闭环与验证通过。
+
+### 10. Rust world engine sidecar step 真实语义深化
+- 状态：deferred
+- 优先级：medium
+- 范围：Rust world engine / sidecar prepare-commit step / world state transition semantics
+- 背景：
+  当前 Phase 1C 已进一步完成 richer `state_delta`、`world.step.prepared` emitted event、`WORLD_STEP_PREPARED/COMMITTED/ABORTED` diagnostics，以及 `__world__/world` runtime_step state upsert，并已验证与 Host-managed persistence / runtime loop / failure recovery 兼容；但 step 语义仍主要围绕 world-level clock advance 与 runtime_step tracing，尚未扩展到更丰富的领域状态推进与更深 query-before/after observability。
+- 后续增强候选：
+  - 让 `prepareStep` 基于 Rust session 产出超出 `__world__/world` runtime_step 的更真实领域 state transition
+  - 为 `emitted_events` 增加更贴近真实世界推进结果的领域事件映射，而不只保留 step lifecycle event
+  - 为 `observability` 增加更细的 query-before/after summary、delta size 与受影响 state namespace 诊断
+  - 视需要评估 commit/abort response contract 是否要正式吸收当前 sidecar 内部 observability 扩展字段
+- 延期原因：
+  当前 Phase 1C 的目标已经完成 step semantics 与 observability 的第一轮深化；上述增强项属于下一轮继续打磨 world engine 语义厚度的候选，不阻塞本阶段关闭。
+
+### 11. Rust world engine 下一类 rule family 提名与迁移评估
+- 状态：deferred
+- 优先级：medium
+- 范围：Rust world engine roadmap / rule family sequencing
+- 背景：
+  当前 `objective_enforcement` 已在 Phase 1A 收口，Phase 1C 又完成了 richer step semantics / observability 的第一轮补强。是否继续扩大 Rust 覆盖面，下一步仍应从“提名哪一类真实 rule family 最值得迁移”开始，而不是无边界扩张。
+- 后续增强候选：
+  - 评估 active-pack 真实业务中下一类最值得 Rust 化的 rule family
+  - 为候选 rule family 建立 TS-vs-sidecar parity fixture 与边界审计
+  - 先以 bounded continuation step 方式单独立项，而不是并入既有 Phase 1C
+- 延期原因：
+  该决策属于下一阶段路线选择，不应混入当前 Phase 1C 的收尾与已完成结论。
+
+---
+
 ## 三、文档与流程
 
 ### 1. 文档之间的导航与索引增强

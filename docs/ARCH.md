@@ -222,6 +222,57 @@
 - stable `/api/status` 不会立即变成多 pack 数组形态
 - stable canonical pack routes 也不会因为 experimental mode 自动解除 active-pack guard
 
+### 3.3.2 Rust world engine Phase 1 宿主边界
+
+当前已开始为 Rust world engine 第一阶段建立正式宿主边界，但仍保持 **Node/TS host 为运行编排 owner**：
+
+- `WorldEnginePort`
+  - world pack load/unload
+  - `prepareStep(...)` / `commitPreparedStep(...)` / `abortPreparedStep(...)`
+  - `queryState(...)` / `getStatus(...)` / `getHealth()`
+- `PackHostApi`
+  - `getPackSummary(...)`
+  - `getCurrentTick(...)`
+  - `queryWorldState(...)`
+- `executeWorldEnginePreparedStep(...)`
+  - 宿主侧 Host-managed persistence 编排入口
+- `WorldEngineSidecarClient`
+  - 本地 `stdio + JSON-RPC` sidecar transport client
+
+当前边界结论：
+
+- runtime loop 的世界推进主路径已经从 `context.sim.step(...)` 迁出，改走 `WorldEnginePort`
+- `SimulationManager` 继续保留为兼容 facade，但不再是 runtime loop 的世界推进主入口
+- `PackHostApi` 只暴露**受控读面**，不暴露 `prepare/commit/abort/load/unload` 这类内核控制能力
+- plugin host / workflow host 若需要读取世界态，应优先消费 `PackHostApi` / lookup port，而不是直接依赖 raw sidecar client
+- sidecar 第一阶段采用 **本地 `stdio_jsonrpc`**，当前 Rust sidecar 已打通：
+  - `world.protocol.handshake`
+  - `world.health.get`
+  - `world.pack.load`
+  - `world.pack.unload`
+  - `world.state.query`
+  - `world.rule.execute_objective`
+  - `world.status.get`
+  - `world.step.prepare`
+  - `world.step.commit`
+  - `world.step.abort`
+- 宿主侧已补 `Host-managed persistence`、pack-scoped single-flight 与 tainted session 恢复路径
+- Phase 1B 已完成后，sidecar 现已具备 **Host snapshot hydrate -> Rust session/query -> prepare/commit/abort -> failure recovery** 的正式闭环：
+  - `world.pack.load` 会消费 Host 组装的 pack runtime core snapshot，而不再只创建空 session
+  - `world.state.query` 已能从 Rust session 返回 `pack_summary / world_entities / entity_state / authority_grants / mediator_bindings / rule_execution_summary` allowlist 数据
+  - `world.step.prepare` 已具备 prepared-state、`set_clock` delta、最小 event/observability 骨架与 single-flight 约束
+  - `world.step.commit` / `world.step.abort` 已与 Host-managed persistence、abort/tainted 恢复路径对齐
+- `objective_enforcement` 已在 Phase 1 的 A 收口后成为 **Rust-owned 的真实规则执行路径**：
+  - sidecar 负责 objective rule matching、template rendering、mutation / emitted event 规划
+  - Host 继续负责 authority validation / mediator validation / persistence / event bridge / execution record
+  - no-match 不会静默回退到 TS resolver，而会按显式失败处理
+  - execution record payload 现会保留 `sidecar_diagnostics`（如 `matched_rule_id`、`no_match_reason`、`evaluated_rule_count`、`rendered_template_count`、`mutation_count`、`emitted_event_count`）
+
+这意味着：
+
+- Rust 第一阶段是 **world engine 内核替换面**，不是平台整体迁移；
+- runtime orchestration、scheduler、plugin host、workflow host、AI gateway 仍由 Node/TS host 持有。 
+
 ## 4. Workflow / inference 边界
 
 ### 4.1 Inference workflow facade

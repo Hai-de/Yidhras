@@ -13,7 +13,7 @@ const resolveWorkspaceDatabaseFiles = (workspaceRoot: string): string[] => {
 };
 
 const assertNoRunningDevServer = (): void => {
-  const psResult = spawnSync('bash', ['-lc', "ps -ef | grep -E 'tsx .*src/index.ts|pnpm --filter yidhras-server dev|npm run serve:e2e' | grep -v grep"], {
+  const psResult = spawnSync('bash', ['-lc', "ps -ef | grep -E 'tsx .*src/index.ts|pnpm --filter yidhras-server dev|npm run serve:test-server' | grep -v grep"], {
     encoding: 'utf-8'
   });
 

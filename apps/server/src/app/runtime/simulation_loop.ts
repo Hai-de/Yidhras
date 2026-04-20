@@ -1,12 +1,67 @@
+import { WORLD_ENGINE_PROTOCOL_VERSION } from '@yidhras/contracts';
+
 import type { InferenceService } from '../../inference/service.js';
+import { ApiError } from '../../utils/api_error.js';
 import type { AppContext, RuntimeLoopDiagnostics } from '../context.js';
 import { getErrorMessage } from '../http/errors.js';
 import { runActionDispatcher } from './action_dispatcher_runner.js';
 import { runAgentScheduler } from './agent_scheduler.js';
 import { runDecisionJobRunner } from './job_runner.js';
+import {
+  createDefaultWorldEnginePersistencePort,
+  executeWorldEnginePreparedStep
+} from './world_engine_persistence.js';
+import { createTsWorldEngineAdapter } from './world_engine_ports.js';
+
+const getActiveRuntimeFacade = (context: AppContext) => context.activePackRuntime ?? context.sim;
+
+const getActivePackId = (context: AppContext): string => {
+  const packId = getActiveRuntimeFacade(context).getActivePack()?.metadata.id?.trim();
+  if (!packId) {
+    throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for runtime loop world-engine step');
+  }
+
+  return packId;
+};
+
+const getWorldEngine = (context: AppContext) => {
+  return context.worldEngine ?? createTsWorldEngineAdapter(context);
+};
+
+const getActiveCurrentTick = async (context: AppContext): Promise<bigint> => {
+  const activePackId = getActivePackId(context);
+  const packHostApi = context.packHostApi;
+  const tick = packHostApi
+    ? await packHostApi.getCurrentTick({ pack_id: activePackId })
+    : getActiveRuntimeFacade(context).getCurrentTick().toString();
+
+  if (!tick) {
+    throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'Active pack tick is not available for runtime loop housekeeping', {
+      pack_id: activePackId
+    });
+  }
+
+  return BigInt(tick);
+};
+
+const stepWorldEngine = async (context: AppContext): Promise<void> => {
+  const activeRuntime = getActiveRuntimeFacade(context);
+  const packId = getActivePackId(context);
+  await executeWorldEnginePreparedStep({
+    context,
+    worldEngine: getWorldEngine(context),
+    persistence: createDefaultWorldEnginePersistencePort(),
+    prepareInput: {
+      protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
+      pack_id: packId,
+      step_ticks: activeRuntime.getStepTicks().toString(),
+      reason: 'runtime_loop'
+    }
+  });
+};
 
 export const expireIdentityBindings = async (context: AppContext): Promise<void> => {
-  const now = context.sim.getCurrentTick();
+  const now = await getActiveCurrentTick(context);
   await context.prisma.identityNodeBinding.updateMany({
     where: {
       AND: [
@@ -147,7 +202,7 @@ export const startSimulationLoop = ({
 
     try {
       await expireIdentityBindings(context);
-      await context.sim.step(context.sim.getStepTicks());
+      await stepWorldEngine(context);
 
       const injectedDelayMs = getSimulationLoopTestDelayMs();
       if (injectedDelayMs > 0) {

@@ -11,8 +11,12 @@
 - `pnpm --filter yidhras-server test:unit`
 - `pnpm --filter yidhras-server test:integration`
 - `pnpm --filter yidhras-server test:e2e`
-- `pnpm --filter yidhras-server test:watch`
+- `pnpm --filter yidhras-server test:unit:watch`
+- `pnpm --filter yidhras-server test:integration:watch`
+- `pnpm --filter yidhras-server test:e2e:watch`
 - `pnpm --filter yidhras-server smoke`
+
+其中 `test` 为 server 完整测试入口，会顺序执行 `test:unit`、`test:integration`、`test:e2e`。
 
 ## 单文件执行
 

@@ -24,6 +24,7 @@ import { registerSocialRoutes } from './app/routes/social.js';
 import { registerSystemRoutes } from './app/routes/system.js';
 import { createRuntimeKernelService } from './app/runtime/runtime_kernel_service.js';
 import { resolveOwnedSchedulerPartitionIds } from './app/runtime/scheduler_partitioning.js';
+import { WorldEngineSidecarClient } from './app/runtime/sidecar/world_engine_sidecar_client.js';
 import { type SimulationLoopHandle, startSimulationLoop } from './app/runtime/simulation_loop.js';
 import {
   createRuntimeReadyGuard,
@@ -31,6 +32,8 @@ import {
   runStartupPreflight,
   selectStartupWorldPack
 } from './app/runtime/startup.js';
+import { createPackHostApi, createTsWorldEngineAdapter } from './app/runtime/world_engine_ports.js';
+import { buildWorldPackHydrateRequest } from './app/runtime/world_engine_snapshot.js';
 import { getRuntimeBootstrap } from './app/services/app_context_ports.js';
 import {
   createContextAssemblyPort,
@@ -121,6 +124,10 @@ const appContext: AppContext = {
 appContext.runtimeKernel = createRuntimeKernelService(appContext);
 appContext.contextAssembly = createContextAssemblyPort(appContext);
 appContext.memoryRuntime = createMemoryRuntimePort(appContext);
+appContext.worldEngine = process.env.WORLD_ENGINE_USE_SIDECAR === '1'
+  ? new WorldEngineSidecarClient()
+  : createTsWorldEngineAdapter(appContext);
+appContext.packHostApi = createPackHostApi(appContext);
 
 const inferenceService = createInferenceService({
   context: appContext,
@@ -284,6 +291,15 @@ const start = async (): Promise<void> => {
       }
 
       await sim.init(selectedPack);
+      if (appContext.worldEngine instanceof WorldEngineSidecarClient) {
+        const activePackId = sim.getActivePack()?.metadata.id ?? selectedPack;
+        await appContext.worldEngine.loadPack({
+          pack_id: activePackId,
+          pack_ref: selectedPack,
+          mode: 'active',
+          hydrate: await buildWorldPackHydrateRequest(appContext, activePackId)
+        });
+      }
       await syncActivePackPluginRuntime(appContext);
       appContext.setRuntimeReady(true);
       notifications.push('info', `Yidhras 系统初始化成功 (pack=${selectedPack}, schedulerPartitions=${schedulerPartitionIds.join(',') || 'none'}, loopIntervalMs=${String(simulationLoopIntervalMs)})`, 'SYS_INIT_OK');

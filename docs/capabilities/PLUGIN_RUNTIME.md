@@ -199,12 +199,20 @@ CLI 与 GUI 复用同一组治理语义：
 - pack scope resolve 统一通过 `PackRuntimeLookupPort` / `PackScopeResolver`
 - pack runtime web surface 与 projection scope 不再各自发明一套 lookup 逻辑
 - 后续若引入 Rust world engine，plugin host 应通过 Host API / lookup port 与之交互
+- 第一阶段新增的宿主读面是 `PackHostApi`
+  - `getPackSummary(...)`
+  - `getCurrentTick(...)`
+  - `queryWorldState(...)`
+- `PackHostApi` 是 **host-mediated read surface**，不是 sidecar transport 透出
 
 这意味着：
 
 - plugin host / workflow host / scheduler 不是第一阶段 Rust 迁移目标
 - 插件侧扩展点继续留在 Node/TS 宿主
 - world engine 只替换 pack runtime / world rule execution 内核，而不吞掉 plugin host
+- Phase 1B 已完成后，这一约束继续成立：即使 sidecar 已具备 Host snapshot hydrate、Rust session/query 与 prepare/commit/abort 闭环，插件层仍只应读取 Host API，而不是依赖 sidecar 内部协议细节
+- 插件与 workflow 不应直接持有 `WorldEnginePort`、`WorldEngineSidecarClient`、prepared token 或 raw JSON-RPC transport
+- 若未来插件需要更多世界态读能力，应继续加在 Host API 上，而不是让插件直接越过宿主边界
 
 ### Web-side 当前已具备
 
