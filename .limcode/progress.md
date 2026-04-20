@@ -1,34 +1,38 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-20T07:57:34.858Z
-- Status: completed
+- Updated At: 2026-04-20T10:19:50.557Z
+- Status: active
 - Phase: implementation
 
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
 - 当前进度：8/8 个里程碑已完成；最新：PG6
-- 当前焦点：Phase 5 experimental multi-pack runtime registry implementation fully completed; stable single active-pack contracts pre…
-- 最新结论：Phase 5A-5E are complete. The implementation now includes a conservative experimental PackRuntimeRegistry / PackRuntimeHandle / PackRuntimeHost model, pack-local scheduler/plugin/p…
-- 下一步：Start a final Phase 5 review/summary pass or move on to the next milestone after experimental multi-pack runtime registry.
+- 当前焦点：模块化优先边界收口已完成；当前剩余问题是 agent-scheduler integration 中既有回归失败，需作为独立后续修复项跟进。
+- 最新结论：server runtime 模块化优先收口已完成：SimulationManager 已收缩为 thin facade，runtime bootstrap / pack catalog / active-pack runtime / runtime registry / runtime kernel / context-memory ports 均已落地；…
+- 当前阻塞：tests/integration/agent-scheduler.spec.ts 仍存在一处既有集成失败（replay/retry periodic suppression 断言未满足），需单独分析调度行为语义，不应在本轮模块化收口中混修。
+- 下一步：如继续开发，应单独开一轮针对 agent scheduler suppression 语义的修复与回归分析。
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/experimental-multi-pack-runtime-registry-design.md`
-- 计划：`.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md`
+- 设计：`.limcode/design/server-runtime-modularization-first-boundary-design.md`
+- 计划：`.limcode/plans/server-runtime-modularization-first-implementation.plan.md`
 - 审查：`.limcode/review/multi-pack-runtime-experimental-assessment.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 建立 experimental multi-pack runtime registry 基础：feature flag、runtime config、PackRuntimeRegistry / PackRuntimeHandle / PackRuntimeHost 骨架  `#phase5a-runtime-registry-foundation`
-- [x] 落 pack-local 隔离基础：clock、runtime speed、scheduler scope、startup/health 模型与 `(pack_id, partition_id)` 调度作用域  `#phase5b-pack-local-isolation`
-- [x] 提供 experimental operator/test-only API：pack runtime load/unload/list/status/clock/scheduler 观察面  `#phase5c-experimental-operator-api`
-- [x] 补 pack-local plugin runtime / projection / route scope 兼容层，确保不破坏当前单 active-pack 稳定 contract  `#phase5d-plugin-projection-compat`
-- [x] 补实验性测试、文档与启用说明，明确默认关闭、风险边界与试用反馈路径  `#phase5e-tests-docs-rollout`
+- [x] 冻结模块边界与接口命名：补 PackRuntimeLocator / PackRuntimeControl / PackRuntimeObservation / RuntimeKernelFacade / PackRuntimeLookupPort 等契约草案，并明确迁移守则（新代码禁止扩张 context.sim）  `#plan-m1-boundary-freeze`
+- [x] 拆出 PackRuntimeRegistryService 与 ActivePackRuntimeFacade，让 SimulationManager 收缩为 thin facade，同时保持 stable single active-pack contract 不变  `#plan-m2-runtime-registry-active-pack`
+- [x] 拆出 RuntimeDatabaseBootstrap 与 PackCatalogService，收口 SimulationManager 的数据库准备与 pack catalog 职责，并补最小单测  `#plan-m2-simulation-bootstrap-catalog`
+- [x] 为 AppContext 增加窄接口入口（runtimeBootstrap / activePackRuntime / packCatalog / packRuntimeLocator / runtimeKernel / pluginHost 等），并开始把上层 service/route 从 context.sim 迁移出去  `#plan-m3-app-context-migration`
+- [x] 实现 PackScopeResolver 与 PackRuntimeLookupPort，收口 plugin runtime web / projection / asset resolve 对 pack runtime 的依赖，移除对 runtime internal object 的直接绑定  `#plan-m4-plugin-scope-resolver`
+- [x] 补 ContextAssemblyPort 与 MemoryRuntimePort，统一 workflow / scheduler / plugin runtime 的 context/memory 读取路径  `#plan-m5-context-memory-ports`
+- [x] 补 RuntimeKernelFacade、SchedulerObservationPort、SchedulerControlPort，并收口 operator/read-model 对 scheduler/runtime loop 的访问面  `#plan-m5-runtime-kernel-ports`
+- [x] 补 unit/integration/e2e 回归测试与文档同步（ARCH.md、PLUGIN_RUNTIME.md），验证 stable contract 不回退且为后续 Rust world engine 预留 Host API 边界  `#plan-m6-regression-doc-sync`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -140,26 +144,26 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-18T09:20:58.806Z | artifact_changed | review | 同步审查文档：.limcode/review/multi-pack-runtime-experimental-assessment.md
-- 2026-04-18T09:21:17.218Z | artifact_changed | experimental-multi-pack-runtime-registry-design | 开始创建第五阶段 experimental multi-pack runtime registry 设计文档。
-- 2026-04-18T09:22:28.547Z | artifact_changed | review | 同步审查里程碑：M1
-- 2026-04-18T09:25:13.964Z | artifact_changed | design | 同步设计文档：.limcode/design/experimental-multi-pack-runtime-registry-design.md
-- 2026-04-18T09:29:00.426Z | artifact_changed | plan | 同步计划文档：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md
-- 2026-04-18T09:34:48.279Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md
-- 2026-04-18T09:35:05.766Z | updated | phase5a-runtime-registry-foundation | 开始执行 Phase 5A，先为 experimental multi-pack runtime registry 增加 feature flag、runtime config 与基础抽象骨架。
-- 2026-04-18T09:46:02.487Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md
-- 2026-04-18T09:46:22.221Z | milestone_recorded | PG5 | 记录里程碑：Phase 5A：experimental multi-pack runtime registry 基础骨架完成
-- 2026-04-18T10:05:47.023Z | updated | phase5b-pack-local-isolation | 扩展 PackRuntimeInstance 与 experimental multi-pack runtime service，补 system health vs per-pack runtime health split、pack-local runtime speed/clock snapshot，并通过 lint 与 unit tests。
-- 2026-04-18T10:13:47.885Z | milestone_recorded | PG6 | 记录里程碑：Phase 5B：scheduler lease/cursor 已接入 pack-scoped partition scope
-- 2026-04-18T10:18:16.888Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md
-- 2026-04-18T10:18:34.275Z | updated | phase5c-experimental-operator-api | 开始接入 experimental operator/test-only runtime API，先开放 registry list、system health、per-pack status 与 clock 只读接口，并增加默认关闭/显式开启的 e2e 验证。
-- 2026-04-18T10:29:28.556Z | updated | phase5c-experimental-operator-api | experimental operator API 已支持显式 load/unload，以及 pack-scoped scheduler summary/ownership/workers/operator 只读接口，并通过 e2e、lint、typecheck 验证。
-- 2026-04-20T07:04:58.294Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md
-- 2026-04-20T07:05:46.344Z | updated | phase5d-plugin-projection-compat | 按当前决策收口 Phase 5C，剩余增强项留给 docs/ENHANCEMENTS.md；正式开始 Phase 5D，进入 plugin runtime / projection / route scope 兼容层。
-- 2026-04-20T07:57:14.559Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md
-- 2026-04-20T07:57:34.858Z | updated | phase5d-plugin-projection-compat | Phase 5D completed: added conservative experimental pack-local plugin runtime / projection / route compatibility surfaces while preserving stable active-pack guards and canonical contracts.
-- 2026-04-20T07:57:34.858Z | updated | phase5e-tests-docs-rollout | Phase 5E completed: synced focused regression coverage and rollout documentation across API, architecture, plugin runtime, commands, and DB operations guidance.
-- 2026-04-20T07:57:34.858Z | milestone_recorded | phase5-complete | Phase 5 experimental multi-pack runtime registry finished with all plan todos completed and stable single-pack behavior preserved by default.
+- 2026-04-20T09:09:28.610Z | updated | plan-m2-simulation-bootstrap-catalog | 已完成 RuntimeDatabaseBootstrap 与 PackCatalogService 拆分，并在 SimulationManager 中开始委托数据库准备与 pack catalog 能力。
+- 2026-04-20T09:09:28.610Z | updated | plan-m3-app-context-migration | 已在 AppContext/index.ts 接入 runtimeBootstrap 与 packCatalog 首批窄接口，继续迁移更多 context.sim 调用点。
+- 2026-04-20T09:15:59.802Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md
+- 2026-04-20T09:16:28.687Z | updated | plan-m3-app-context-migration | 已完成首轮 AppContext 窄接口迁移：experimental multi-pack、plugin runtime web、experimental projection、plugin service 已接入 helper。
+- 2026-04-20T09:16:28.687Z | updated | plan-m4-plugin-scope-resolver | 开始继续收口 PackRuntimeLookupPort / scope resolver，逐步替换 plugin/runtime/projection 对 context.sim 内部对象的直接依赖。
+- 2026-04-20T09:24:07.170Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md
+- 2026-04-20T09:24:39.249Z | updated | plan-m4-plugin-scope-resolver | 已完成 PackScopeResolver，plugin runtime web 与 experimental runtime routes 已统一通过 scope resolver / lookup port 做 pack scope 校验。
+- 2026-04-20T09:24:39.249Z | updated | plan-m2-runtime-registry-active-pack | 开始进入 PackRuntimeRegistryService / ActivePackRuntimeFacade 拆分，让 SimulationManager 进一步收缩为 thin facade。
+- 2026-04-20T09:31:21.742Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md
+- 2026-04-20T09:31:47.919Z | updated | plan-m2-runtime-registry-active-pack | 已完成 PackRuntimeRegistryService 与 ActivePackRuntimeFacade 拆分，SimulationManager 已进一步收缩为 thin facade。
+- 2026-04-20T09:31:47.919Z | updated | plan-m5-runtime-kernel-ports | 开始进入 runtime kernel ports 收口，准备补 RuntimeKernelFacade / SchedulerObservationPort / SchedulerControlPort。
+- 2026-04-20T09:51:02.473Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md
+- 2026-04-20T09:51:26.348Z | updated | plan-m5-runtime-kernel-ports | 已完成 runtime kernel ports 收口：新增 runtime kernel service，并在 system、scheduler routes、experimental scheduler runtime 中接入。
+- 2026-04-20T09:51:26.348Z | updated | plan-m5-context-memory-ports | 开始进入 context/memory ports 收口，准备统一 workflow / scheduler / plugin runtime 的上下文与内存读取路径。
+- 2026-04-20T10:04:52.646Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md
+- 2026-04-20T10:05:10.768Z | updated | plan-m5-context-memory-ports | 已完成 context/memory ports 收口：新增 port 工厂并接入 AppContext，inference context builder、memory compaction、memory block store 已开始通过正式端口访问。
+- 2026-04-20T10:05:10.768Z | updated | plan-m6-regression-doc-sync | 开始执行最终回归测试与文档同步，确认模块边界收口后稳定 contract 不回退。
+- 2026-04-20T10:19:27.947Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md
+- 2026-04-20T10:19:50.557Z | updated | plan-m6-regression-doc-sync | 已完成 lint/typecheck/关键 unit tests 与文档同步；发现 agent-scheduler integration 仍有一处既有失败，留待独立后续修复。
+- 2026-04-20T10:19:50.557Z | milestone_recorded | server-runtime-modularization-first | server runtime 模块化优先边界收口实现完成，核心 ports/facades 已落地并完成文档同步。
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -169,42 +173,57 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-17T21:05:29.611Z",
-  "updatedAt": "2026-04-20T07:57:34.858Z",
-  "status": "completed",
+  "updatedAt": "2026-04-20T10:19:50.557Z",
+  "status": "active",
   "phase": "implementation",
-  "currentFocus": "Phase 5 experimental multi-pack runtime registry implementation fully completed; stable single active-pack contracts preserved while experimental multi-pack remains default-off and operator/test-only.",
-  "latestConclusion": "Phase 5A-5E are complete. The implementation now includes a conservative experimental PackRuntimeRegistry / PackRuntimeHandle / PackRuntimeHost model, pack-local scheduler/plugin/projection compatibility paths, experimental operator and projection APIs, focused regression coverage, and rollout documentation without weakening stable `/api/status`, `/api/packs/:packId/overview`, `/api/packs/:packId/projections/timeline`, or `PACK_ROUTE_ACTIVE_PACK_MISMATCH`.",
-  "currentBlocker": null,
-  "nextAction": "Start a final Phase 5 review/summary pass or move on to the next milestone after experimental multi-pack runtime registry.",
+  "currentFocus": "模块化优先边界收口已完成；当前剩余问题是 agent-scheduler integration 中既有回归失败，需作为独立后续修复项跟进。",
+  "latestConclusion": "server runtime 模块化优先收口已完成：SimulationManager 已收缩为 thin facade，runtime bootstrap / pack catalog / active-pack runtime / runtime registry / runtime kernel / context-memory ports 均已落地；typecheck、关键 unit tests、文档同步已完成。",
+  "currentBlocker": "tests/integration/agent-scheduler.spec.ts 仍存在一处既有集成失败（replay/retry periodic suppression 断言未满足），需单独分析调度行为语义，不应在本轮模块化收口中混修。",
+  "nextAction": "如继续开发，应单独开一轮针对 agent scheduler suppression 语义的修复与回归分析。",
   "activeArtifacts": {
-    "design": ".limcode/design/experimental-multi-pack-runtime-registry-design.md",
-    "plan": ".limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md",
+    "design": ".limcode/design/server-runtime-modularization-first-boundary-design.md",
+    "plan": ".limcode/plans/server-runtime-modularization-first-implementation.plan.md",
     "review": ".limcode/review/multi-pack-runtime-experimental-assessment.md"
   },
   "todos": [
     {
-      "id": "phase5a-runtime-registry-foundation",
-      "content": "建立 experimental multi-pack runtime registry 基础：feature flag、runtime config、PackRuntimeRegistry / PackRuntimeHandle / PackRuntimeHost 骨架",
+      "id": "plan-m1-boundary-freeze",
+      "content": "冻结模块边界与接口命名：补 PackRuntimeLocator / PackRuntimeControl / PackRuntimeObservation / RuntimeKernelFacade / PackRuntimeLookupPort 等契约草案，并明确迁移守则（新代码禁止扩张 context.sim）",
       "status": "completed"
     },
     {
-      "id": "phase5b-pack-local-isolation",
-      "content": "落 pack-local 隔离基础：clock、runtime speed、scheduler scope、startup/health 模型与 `(pack_id, partition_id)` 调度作用域",
+      "id": "plan-m2-runtime-registry-active-pack",
+      "content": "拆出 PackRuntimeRegistryService 与 ActivePackRuntimeFacade，让 SimulationManager 收缩为 thin facade，同时保持 stable single active-pack contract 不变",
       "status": "completed"
     },
     {
-      "id": "phase5c-experimental-operator-api",
-      "content": "提供 experimental operator/test-only API：pack runtime load/unload/list/status/clock/scheduler 观察面",
+      "id": "plan-m2-simulation-bootstrap-catalog",
+      "content": "拆出 RuntimeDatabaseBootstrap 与 PackCatalogService，收口 SimulationManager 的数据库准备与 pack catalog 职责，并补最小单测",
       "status": "completed"
     },
     {
-      "id": "phase5d-plugin-projection-compat",
-      "content": "补 pack-local plugin runtime / projection / route scope 兼容层，确保不破坏当前单 active-pack 稳定 contract",
+      "id": "plan-m3-app-context-migration",
+      "content": "为 AppContext 增加窄接口入口（runtimeBootstrap / activePackRuntime / packCatalog / packRuntimeLocator / runtimeKernel / pluginHost 等），并开始把上层 service/route 从 context.sim 迁移出去",
       "status": "completed"
     },
     {
-      "id": "phase5e-tests-docs-rollout",
-      "content": "补实验性测试、文档与启用说明，明确默认关闭、风险边界与试用反馈路径",
+      "id": "plan-m4-plugin-scope-resolver",
+      "content": "实现 PackScopeResolver 与 PackRuntimeLookupPort，收口 plugin runtime web / projection / asset resolve 对 pack runtime 的依赖，移除对 runtime internal object 的直接绑定",
+      "status": "completed"
+    },
+    {
+      "id": "plan-m5-context-memory-ports",
+      "content": "补 ContextAssemblyPort 与 MemoryRuntimePort，统一 workflow / scheduler / plugin runtime 的 context/memory 读取路径",
+      "status": "completed"
+    },
+    {
+      "id": "plan-m5-runtime-kernel-ports",
+      "content": "补 RuntimeKernelFacade、SchedulerObservationPort、SchedulerControlPort，并收口 operator/read-model 对 scheduler/runtime loop 的访问面",
+      "status": "completed"
+    },
+    {
+      "id": "plan-m6-regression-doc-sync",
+      "content": "补 unit/integration/e2e 回归测试与文档同步（ARCH.md、PLUGIN_RUNTIME.md），验证 stable contract 不回退且为后续 Rust world engine 预留 Host API 边界",
       "status": "completed"
     }
   ],
@@ -362,139 +381,139 @@
   "risks": [],
   "log": [
     {
-      "at": "2026-04-18T09:20:58.806Z",
-      "type": "artifact_changed",
-      "refId": "review",
-      "message": "同步审查文档：.limcode/review/multi-pack-runtime-experimental-assessment.md"
-    },
-    {
-      "at": "2026-04-18T09:21:17.218Z",
-      "type": "artifact_changed",
-      "refId": "experimental-multi-pack-runtime-registry-design",
-      "message": "开始创建第五阶段 experimental multi-pack runtime registry 设计文档。"
-    },
-    {
-      "at": "2026-04-18T09:22:28.547Z",
-      "type": "artifact_changed",
-      "refId": "review",
-      "message": "同步审查里程碑：M1"
-    },
-    {
-      "at": "2026-04-18T09:25:13.964Z",
-      "type": "artifact_changed",
-      "refId": "design",
-      "message": "同步设计文档：.limcode/design/experimental-multi-pack-runtime-registry-design.md"
-    },
-    {
-      "at": "2026-04-18T09:29:00.426Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-18T09:34:48.279Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-18T09:35:05.766Z",
+      "at": "2026-04-20T09:09:28.610Z",
       "type": "updated",
-      "refId": "phase5a-runtime-registry-foundation",
-      "message": "开始执行 Phase 5A，先为 experimental multi-pack runtime registry 增加 feature flag、runtime config 与基础抽象骨架。"
+      "refId": "plan-m2-simulation-bootstrap-catalog",
+      "message": "已完成 RuntimeDatabaseBootstrap 与 PackCatalogService 拆分，并在 SimulationManager 中开始委托数据库准备与 pack catalog 能力。"
     },
     {
-      "at": "2026-04-18T09:46:02.487Z",
+      "at": "2026-04-20T09:09:28.610Z",
+      "type": "updated",
+      "refId": "plan-m3-app-context-migration",
+      "message": "已在 AppContext/index.ts 接入 runtimeBootstrap 与 packCatalog 首批窄接口，继续迁移更多 context.sim 调用点。"
+    },
+    {
+      "at": "2026-04-20T09:15:59.802Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md"
     },
     {
-      "at": "2026-04-18T09:46:22.221Z",
+      "at": "2026-04-20T09:16:28.687Z",
+      "type": "updated",
+      "refId": "plan-m3-app-context-migration",
+      "message": "已完成首轮 AppContext 窄接口迁移：experimental multi-pack、plugin runtime web、experimental projection、plugin service 已接入 helper。"
+    },
+    {
+      "at": "2026-04-20T09:16:28.687Z",
+      "type": "updated",
+      "refId": "plan-m4-plugin-scope-resolver",
+      "message": "开始继续收口 PackRuntimeLookupPort / scope resolver，逐步替换 plugin/runtime/projection 对 context.sim 内部对象的直接依赖。"
+    },
+    {
+      "at": "2026-04-20T09:24:07.170Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-20T09:24:39.249Z",
+      "type": "updated",
+      "refId": "plan-m4-plugin-scope-resolver",
+      "message": "已完成 PackScopeResolver，plugin runtime web 与 experimental runtime routes 已统一通过 scope resolver / lookup port 做 pack scope 校验。"
+    },
+    {
+      "at": "2026-04-20T09:24:39.249Z",
+      "type": "updated",
+      "refId": "plan-m2-runtime-registry-active-pack",
+      "message": "开始进入 PackRuntimeRegistryService / ActivePackRuntimeFacade 拆分，让 SimulationManager 进一步收缩为 thin facade。"
+    },
+    {
+      "at": "2026-04-20T09:31:21.742Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-20T09:31:47.919Z",
+      "type": "updated",
+      "refId": "plan-m2-runtime-registry-active-pack",
+      "message": "已完成 PackRuntimeRegistryService 与 ActivePackRuntimeFacade 拆分，SimulationManager 已进一步收缩为 thin facade。"
+    },
+    {
+      "at": "2026-04-20T09:31:47.919Z",
+      "type": "updated",
+      "refId": "plan-m5-runtime-kernel-ports",
+      "message": "开始进入 runtime kernel ports 收口，准备补 RuntimeKernelFacade / SchedulerObservationPort / SchedulerControlPort。"
+    },
+    {
+      "at": "2026-04-20T09:51:02.473Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-20T09:51:26.348Z",
+      "type": "updated",
+      "refId": "plan-m5-runtime-kernel-ports",
+      "message": "已完成 runtime kernel ports 收口：新增 runtime kernel service，并在 system、scheduler routes、experimental scheduler runtime 中接入。"
+    },
+    {
+      "at": "2026-04-20T09:51:26.348Z",
+      "type": "updated",
+      "refId": "plan-m5-context-memory-ports",
+      "message": "开始进入 context/memory ports 收口，准备统一 workflow / scheduler / plugin runtime 的上下文与内存读取路径。"
+    },
+    {
+      "at": "2026-04-20T10:04:52.646Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-20T10:05:10.768Z",
+      "type": "updated",
+      "refId": "plan-m5-context-memory-ports",
+      "message": "已完成 context/memory ports 收口：新增 port 工厂并接入 AppContext，inference context builder、memory compaction、memory block store 已开始通过正式端口访问。"
+    },
+    {
+      "at": "2026-04-20T10:05:10.768Z",
+      "type": "updated",
+      "refId": "plan-m6-regression-doc-sync",
+      "message": "开始执行最终回归测试与文档同步，确认模块边界收口后稳定 contract 不回退。"
+    },
+    {
+      "at": "2026-04-20T10:19:27.947Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/server-runtime-modularization-first-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-20T10:19:50.557Z",
+      "type": "updated",
+      "refId": "plan-m6-regression-doc-sync",
+      "message": "已完成 lint/typecheck/关键 unit tests 与文档同步；发现 agent-scheduler integration 仍有一处既有失败，留待独立后续修复。"
+    },
+    {
+      "at": "2026-04-20T10:19:50.557Z",
       "type": "milestone_recorded",
-      "refId": "PG5",
-      "message": "记录里程碑：Phase 5A：experimental multi-pack runtime registry 基础骨架完成"
-    },
-    {
-      "at": "2026-04-18T10:05:47.023Z",
-      "type": "updated",
-      "refId": "phase5b-pack-local-isolation",
-      "message": "扩展 PackRuntimeInstance 与 experimental multi-pack runtime service，补 system health vs per-pack runtime health split、pack-local runtime speed/clock snapshot，并通过 lint 与 unit tests。"
-    },
-    {
-      "at": "2026-04-18T10:13:47.885Z",
-      "type": "milestone_recorded",
-      "refId": "PG6",
-      "message": "记录里程碑：Phase 5B：scheduler lease/cursor 已接入 pack-scoped partition scope"
-    },
-    {
-      "at": "2026-04-18T10:18:16.888Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-18T10:18:34.275Z",
-      "type": "updated",
-      "refId": "phase5c-experimental-operator-api",
-      "message": "开始接入 experimental operator/test-only runtime API，先开放 registry list、system health、per-pack status 与 clock 只读接口，并增加默认关闭/显式开启的 e2e 验证。"
-    },
-    {
-      "at": "2026-04-18T10:29:28.556Z",
-      "type": "updated",
-      "refId": "phase5c-experimental-operator-api",
-      "message": "experimental operator API 已支持显式 load/unload，以及 pack-scoped scheduler summary/ownership/workers/operator 只读接口，并通过 e2e、lint、typecheck 验证。"
-    },
-    {
-      "at": "2026-04-20T07:04:58.294Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-20T07:05:46.344Z",
-      "type": "updated",
-      "refId": "phase5d-plugin-projection-compat",
-      "message": "按当前决策收口 Phase 5C，剩余增强项留给 docs/ENHANCEMENTS.md；正式开始 Phase 5D，进入 plugin runtime / projection / route scope 兼容层。"
-    },
-    {
-      "at": "2026-04-20T07:57:14.559Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-20T07:57:34.858Z",
-      "type": "updated",
-      "refId": "phase5d-plugin-projection-compat",
-      "message": "Phase 5D completed: added conservative experimental pack-local plugin runtime / projection / route compatibility surfaces while preserving stable active-pack guards and canonical contracts."
-    },
-    {
-      "at": "2026-04-20T07:57:34.858Z",
-      "type": "updated",
-      "refId": "phase5e-tests-docs-rollout",
-      "message": "Phase 5E completed: synced focused regression coverage and rollout documentation across API, architecture, plugin runtime, commands, and DB operations guidance."
-    },
-    {
-      "at": "2026-04-20T07:57:34.858Z",
-      "type": "milestone_recorded",
-      "refId": "phase5-complete",
-      "message": "Phase 5 experimental multi-pack runtime registry finished with all plan todos completed and stable single-pack behavior preserved by default."
+      "refId": "server-runtime-modularization-first",
+      "message": "server runtime 模块化优先边界收口实现完成，核心 ports/facades 已落地并完成文档同步。"
     }
   ],
   "stats": {
     "milestonesTotal": 8,
     "milestonesCompleted": 8,
-    "todosTotal": 5,
-    "todosCompleted": 5,
+    "todosTotal": 8,
+    "todosCompleted": 8,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-20T07:57:34.858Z",
-    "bodyHash": "sha256:de8437d14f4294a0c3758a7ef4ad978dc2a0a46b5101ad39f18b2a39dc54bde8"
+    "generatedAt": "2026-04-20T10:19:50.557Z",
+    "bodyHash": "sha256:d4b2147c265b11c623bdfd72a964e6dfe8dcda16aba45308e78f74dd68877348"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { resolvePackProjectionTarget } from '../../packs/runtime/projections/active_pack_projection_guard.js';
 import { createPluginStore } from '../../plugins/store.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
+import { assertPackScope } from './pack_scope_resolver.js';
 
 type PluginRuntimeWebSurface = 'stable' | 'experimental';
 
@@ -104,49 +104,13 @@ export const buildExperimentalPluginWebAssetUrl = (input: {
   return `/api/experimental/runtime/packs/${encodeURIComponent(input.pack_id)}/plugins/${encodeURIComponent(input.plugin_id)}/runtime/web/${encodeURIComponent(input.installation_id)}/${input.asset_path}`;
 };
 
-const assertStablePackRuntimeScope = (
-  context: AppContext,
-  packId: string,
-  feature: string
-): string => {
-  const { resolvedPackId } = resolvePackProjectionTarget(context, {
-    requestedPackId: packId,
-    feature
-  });
-
-  if (!resolvedPackId) {
-    throw new ApiError(503, 'WORLD_PACK_NOT_READY', `World pack not ready for ${feature}`);
-  }
-
-  return resolvedPackId;
-};
-
-const assertExperimentalPackRuntimeScope = (
-  context: AppContext,
-  packId: string,
-  feature: string
-): string => {
-  const normalizedPackId = packId.trim();
-  const handle = context.sim.getPackRuntimeHandle(normalizedPackId);
-  if (!handle) {
-    throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', `Experimental pack runtime not found for ${feature}`, {
-      pack_id: normalizedPackId,
-      feature
-    });
-  }
-
-  return normalizedPackId;
-};
-
 const resolvePackRuntimeWebScope = (
   context: AppContext,
   packId: string,
   feature: string,
   surface: PluginRuntimeWebSurface
 ): string => {
-  return surface === 'experimental'
-    ? assertExperimentalPackRuntimeScope(context, packId, feature)
-    : assertStablePackRuntimeScope(context, packId, feature);
+  return assertPackScope(context, packId, surface === 'experimental' ? 'experimental' : 'stable', feature);
 };
 
 const buildPluginWebAssetRuntimeUrl = (surface: PluginRuntimeWebSurface, input: {

@@ -15,19 +15,16 @@ import type { Express, NextFunction, Request, Response } from 'express';
 import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseParams, parseQuery } from '../http/zod.js';
+import { createRuntimeKernelService } from '../runtime/runtime_kernel_service.js';
 import {
   getLatestSchedulerRunReadModel,
-  getSchedulerOperatorProjection,
   getSchedulerRunReadModelById,
-  getSchedulerSummarySnapshot,
   getSchedulerTrendsSnapshot,
   listAgentSchedulerDecisions,
   listSchedulerDecisions,
-  listSchedulerOwnershipAssignments,
   listSchedulerOwnershipMigrations,
   listSchedulerRebalanceRecommendations,
-  listSchedulerRuns,
-  listSchedulerWorkers,
+  listSchedulerRuns
 } from '../services/scheduler_observability.js';
 
 export interface SchedulerRouteDependencies {
@@ -82,7 +79,8 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler summary');
       const query = parseQuery(schedulerSummaryQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
-      const summary = await getSchedulerSummarySnapshot(context, {
+      const runtimeKernel = createRuntimeKernelService(context);
+      const summary = await runtimeKernel.getSummary?.({
         sampleRuns: query.sample_runs
       });
       jsonOk(res, toJsonSafe(summary));
@@ -106,7 +104,8 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler operator projection');
       const query = parseQuery(schedulerOperatorQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
-      const projection = await getSchedulerOperatorProjection(context, {
+      const runtimeKernel = createRuntimeKernelService(context);
+      const projection = await runtimeKernel.getOperatorProjection?.({
         sampleRuns: query.sample_runs,
         recentLimit: query.recent_limit
       });
@@ -119,7 +118,8 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler ownership projection');
       const query = parseQuery(schedulerOwnershipQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
-      const result = await listSchedulerOwnershipAssignments(context, {
+      const runtimeKernel = createRuntimeKernelService(context);
+      const result = await runtimeKernel.getOwnershipAssignments?.({
         worker_id: query.worker_id,
         partition_id: query.partition_id,
         status: query.status
@@ -148,7 +148,8 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler worker runtime states');
       const query = parseQuery(schedulerWorkersQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
-      const result = await listSchedulerWorkers(context, {
+      const runtimeKernel = createRuntimeKernelService(context);
+      const result = await runtimeKernel.getWorkers?.({
         worker_id: query.worker_id,
         status: query.status
       });

@@ -22,14 +22,20 @@ import { registerRelationalRoutes } from './app/routes/relational.js';
 import { registerSchedulerRoutes } from './app/routes/scheduler.js';
 import { registerSocialRoutes } from './app/routes/social.js';
 import { registerSystemRoutes } from './app/routes/system.js';
+import { createRuntimeKernelService } from './app/runtime/runtime_kernel_service.js';
 import { resolveOwnedSchedulerPartitionIds } from './app/runtime/scheduler_partitioning.js';
-import { type SimulationLoopHandle,startSimulationLoop } from './app/runtime/simulation_loop.js';
+import { type SimulationLoopHandle, startSimulationLoop } from './app/runtime/simulation_loop.js';
 import {
   createRuntimeReadyGuard,
   createStartupHealth,
   runStartupPreflight,
   selectStartupWorldPack
 } from './app/runtime/startup.js';
+import { getRuntimeBootstrap } from './app/services/app_context_ports.js';
+import {
+  createContextAssemblyPort,
+  createMemoryRuntimePort
+} from './app/services/context_memory_ports.js';
 import { ensureSchedulerBootstrapOwnership, resetDevelopmentRuntimeState } from './app/services/system.js';
 import {
   getAppPort,
@@ -83,6 +89,9 @@ const assertRuntimeReady = createRuntimeReadyGuard({
 const appContext: AppContext = {
   prisma: sim.prisma,
   sim,
+  runtimeBootstrap: sim,
+  activePackRuntime: sim,
+  packCatalog: sim,
   notifications,
   startupHealth,
   getRuntimeReady: () => runtimeReady,
@@ -97,7 +106,7 @@ const appContext: AppContext = {
   setRuntimeLoopDiagnostics: next => {
     runtimeLoopDiagnostics = next;
   },
-  getSqliteRuntimePragmas: () => sim.getSqliteRuntimePragmaSnapshot(),
+  getSqliteRuntimePragmas: () => getRuntimeBootstrap({ runtimeBootstrap: appContext.runtimeBootstrap, sim }).getSqliteRuntimePragmaSnapshot(),
   getPluginEnableWarningConfig: () => ({
     enabled: getRuntimeConfig().plugins.enable_warning.enabled,
     require_acknowledgement: getRuntimeConfig().plugins.enable_warning.require_acknowledgement
@@ -108,6 +117,10 @@ const appContext: AppContext = {
   },
   assertRuntimeReady
 };
+
+appContext.runtimeKernel = createRuntimeKernelService(appContext);
+appContext.contextAssembly = createContextAssemblyPort(appContext);
+appContext.memoryRuntime = createMemoryRuntimePort(appContext);
 
 const inferenceService = createInferenceService({
   context: appContext,
@@ -237,7 +250,7 @@ const startSimulation = (): void => {
 const start = async (): Promise<void> => {
   logRuntimeConfigSnapshot();
 
-  await sim.prepareDatabase();
+  await getRuntimeBootstrap({ runtimeBootstrap: appContext.runtimeBootstrap, sim }).prepareDatabase();
 
   await runStartupPreflight({
     startupHealth,

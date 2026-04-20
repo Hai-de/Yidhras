@@ -4,6 +4,7 @@ import { isExperimentalMultiPackOperatorApiEnabled } from '../../config/runtime_
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
+import { getPackRuntimeLookupPort } from '../services/app_context_ports.js';
 import {
   buildExperimentalPackRuntimeRegistrySnapshot,
   buildExperimentalSystemHealthSnapshot,
@@ -17,6 +18,7 @@ import {
   getExperimentalPackSchedulerSummaryProjection,
   getExperimentalPackSchedulerWorkersProjection
 } from '../services/experimental_scheduler_runtime.js';
+import { assertPackScope } from '../services/pack_scope_resolver.js';
 
 export interface ExperimentalRuntimeRouteDependencies {
   asyncHandler(
@@ -81,8 +83,13 @@ const translateExperimentalUnloadError = (packId: string, error: unknown): never
 };
 
 const requireExperimentalPackHandle = (context: AppContext, packId: string) => {
+  assertPackScope(context, packId, 'experimental', 'experimental runtime pack handle');
+  const summary = getPackRuntimeLookupPort({
+    packRuntimeLookup: context.packRuntimeLookup,
+    sim: context.sim
+  }).getPackRuntimeSummary(packId);
   const handle = context.sim.getPackRuntimeHandle(packId);
-  if (!handle) {
+  if (!summary || !handle) {
     throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', 'Experimental runtime pack not found', {
       pack_id: packId
     });

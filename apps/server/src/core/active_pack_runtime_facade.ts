@@ -1,0 +1,154 @@
+import type { RuntimeDatabaseBootstrap } from '../app/runtime/runtime_bootstrap.js';
+import type { ActivePackRuntimeFacade } from '../app/services/app_context_ports.js';
+import { ChronosEngine } from '../clock/engine.js';
+import { renderNarrativeTemplate } from '../narrative/resolver.js';
+import {
+  createPromptVariableContext,
+  createPromptVariableLayer,
+  normalizePromptVariableRecord
+} from '../narrative/variable_context.js';
+import { type PackManifestLoader, type WorldPack } from '../packs/manifest/loader.js';
+import type { PermissionContext } from '../permission/types.js';
+import { PackRuntimeInstance } from './pack_runtime_instance.js';
+import type { PackRuntimeRegistry } from './pack_runtime_registry.js';
+import { activateWorldPackRuntime } from './runtime_activation.js';
+import { type RuntimeSpeedPolicy, type RuntimeSpeedSnapshot } from './runtime_speed.js';
+
+export interface DefaultActivePackRuntimeFacadeOptions {
+  loader: Pick<PackManifestLoader, 'loadPack'>;
+  prisma: Parameters<typeof activateWorldPackRuntime>[0]['prisma'];
+  packsDir: string;
+  runtimeSpeed: RuntimeSpeedPolicy;
+  runtimeBootstrap: RuntimeDatabaseBootstrap;
+  runtimeRegistry: Pick<PackRuntimeRegistry, 'register'>;
+}
+
+export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
+  private readonly loader: Pick<PackManifestLoader, 'loadPack'>;
+  private readonly prisma: Parameters<typeof activateWorldPackRuntime>[0]['prisma'];
+  private readonly packsDir: string;
+  private readonly runtimeSpeed: RuntimeSpeedPolicy;
+  private readonly runtimeBootstrap: RuntimeDatabaseBootstrap;
+  private readonly runtimeRegistry: Pick<PackRuntimeRegistry, 'register'>;
+  private activePack?: WorldPack;
+  private clock: ChronosEngine;
+
+  constructor(options: DefaultActivePackRuntimeFacadeOptions) {
+    this.loader = options.loader;
+    this.prisma = options.prisma;
+    this.packsDir = options.packsDir;
+    this.runtimeSpeed = options.runtimeSpeed;
+    this.runtimeBootstrap = options.runtimeBootstrap;
+    this.runtimeRegistry = options.runtimeRegistry;
+    this.clock = new ChronosEngine([], 0n);
+  }
+
+  public async init(packFolderName: string): Promise<void> {
+    await this.runtimeBootstrap.prepareDatabase();
+
+    const activated = await activateWorldPackRuntime({
+      packFolderName,
+      loader: this.loader,
+      prisma: this.prisma,
+      packsDir: this.packsDir,
+      runtimeSpeed: this.runtimeSpeed
+    });
+
+    this.activePack = activated.pack;
+    this.clock = activated.clock;
+
+    this.runtimeRegistry.register(
+      activated.pack.metadata.id,
+      new PackRuntimeInstance({
+        pack: activated.pack,
+        packFolderName,
+        clock: activated.clock,
+        runtimeSpeed: this.runtimeSpeed,
+        initialStatus: 'running'
+      })
+    );
+
+    console.log(`[SimulationManager] Initialized with pack: ${activated.pack.metadata.name}`);
+  }
+
+  public getActivePack(): WorldPack | undefined {
+    return this.activePack;
+  }
+
+  public getClock(): ChronosEngine {
+    return this.clock;
+  }
+
+  public resolvePackVariables(template: string, permission?: PermissionContext): string {
+    const pack = this.activePack;
+    const variableContext = createPromptVariableContext({
+      layers: [
+        createPromptVariableLayer({
+          namespace: 'pack',
+          values: normalizePromptVariableRecord({
+            metadata: pack?.metadata ?? null,
+            variables: pack?.variables ?? {}
+          }),
+          alias_values: normalizePromptVariableRecord({
+            ...(pack?.variables ?? {}),
+            world_name: pack?.metadata.name ?? '',
+            pack_name: pack?.metadata.name ?? '',
+            pack_id: pack?.metadata.id ?? ''
+          }),
+          metadata: {
+            source_label: 'simulation-active-pack',
+            trusted: true
+          }
+        }),
+        createPromptVariableLayer({
+          namespace: 'runtime',
+          values: normalizePromptVariableRecord({
+            current_tick: this.getCurrentTick().toString()
+          }),
+          alias_values: normalizePromptVariableRecord({
+            current_tick: this.getCurrentTick().toString()
+          }),
+          metadata: {
+            source_label: 'simulation-runtime',
+            trusted: true
+          }
+        })
+      ]
+    });
+
+    return renderNarrativeTemplate({
+      template,
+      variableContext,
+      permission,
+      templateSource: 'simulation.resolvePackVariables'
+    }).text;
+  }
+
+  public getStepTicks(): bigint {
+    return this.runtimeSpeed.getEffectiveStepTicks();
+  }
+
+  public getRuntimeSpeedSnapshot(): RuntimeSpeedSnapshot {
+    return this.runtimeSpeed.getSnapshot();
+  }
+
+  public setRuntimeSpeedOverride(stepTicks: bigint): void {
+    this.runtimeSpeed.setOverrideStepTicks(stepTicks);
+  }
+
+  public clearRuntimeSpeedOverride(): void {
+    this.runtimeSpeed.clearOverride();
+  }
+
+  public getCurrentTick(): bigint {
+    return this.clock.getTicks();
+  }
+
+  public getAllTimes() {
+    return this.clock.getAllTimes();
+  }
+
+  public async step(amount: bigint = 1n): Promise<void> {
+    this.clock.tick(amount);
+  }
+}

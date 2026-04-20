@@ -1,12 +1,18 @@
 import { buildPackEntityOverviewProjection } from '../../packs/runtime/projections/entity_overview_service.js';
 import type { AppContext } from '../context.js';
+import { getPackRuntimeLookupPort } from './app_context_ports.js';
 import { getPackNarrativeTimelineProjection } from './narrative.js';
 import { getPackOverviewProjectionSummary } from './overview.js';
 import { listPackPluginInstallations } from './plugins.js';
 
 const requireExperimentalPackHandle = (context: AppContext, packId: string) => {
+  const lookup = getPackRuntimeLookupPort({
+    packRuntimeLookup: context.packRuntimeLookup,
+    sim: context.sim
+  });
+  const summary = lookup.getPackRuntimeSummary(packId);
   const handle = context.sim.getPackRuntimeHandle(packId);
-  if (!handle) {
+  if (!summary || !handle) {
     throw new Error(`experimental runtime pack not found: ${packId}`);
   }
 

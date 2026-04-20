@@ -4,6 +4,7 @@ import type { Express } from 'express';
 import type { SimulationManager } from '../core/simulation.js';
 import type { SqliteRuntimePragmaSnapshot } from '../db/sqlite_runtime.js';
 import type { NotificationLevel, SystemMessage } from '../utils/notifications.js';
+import type { AppContextPorts } from './services/app_context_ports.js';
 
 export type HealthLevel = 'ok' | 'degraded' | 'fail';
 
@@ -40,7 +41,7 @@ export interface RuntimeLoopDiagnostics {
   last_error_message: string | null;
 }
 
-export interface AppContext {
+export interface AppContext extends AppContextPorts {
   prisma: PrismaClient;
   sim: SimulationManager;
   notifications: NotificationStore;

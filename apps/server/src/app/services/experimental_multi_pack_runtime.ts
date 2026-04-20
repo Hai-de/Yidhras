@@ -4,6 +4,11 @@ import type { PackRuntimeHost } from '../../core/pack_runtime_host.js';
 import type { PackRuntimeRegistry } from '../../core/pack_runtime_registry.js';
 import { syncExperimentalPackPluginRuntime } from '../../plugins/runtime.js';
 import type { AppContext } from '../context.js';
+import {
+  getPackRuntimeControl,
+  getPackRuntimeLookupPort,
+  getPackRuntimeObservation
+} from './app_context_ports.js';
 
 export interface ExperimentalPackRuntimeRegistrySnapshot {
   loaded_pack_ids: string[];
@@ -54,20 +59,25 @@ export const getExperimentalPackRuntimeStatusSnapshot = (
   context: AppContext,
   packId: string
 ): PackRuntimeStatusSnapshot | null => {
-  const handle = context.sim.getPackRuntimeHandle(packId);
-  if (!handle) {
+  const observation = getPackRuntimeObservation({
+    packRuntimeObservation: context.packRuntimeObservation,
+    sim: context.sim
+  });
+  const snapshot = observation.getStatus(packId);
+  if (!snapshot) {
     return null;
   }
 
+  const runtimeReadyPackId = getPackRuntimeLookupPort({
+    packRuntimeLookup: context.packRuntimeLookup,
+    sim: context.sim
+  }).getActivePackId();
+
   return {
-    pack_id: handle.pack_id,
-    pack_folder_name: handle.pack_folder_name,
-    health_status: handle.getHealthSnapshot().status,
-    current_tick: handle.getClockSnapshot().current_tick,
-    runtime_speed: handle.getRuntimeSpeedSnapshot(),
+    ...snapshot,
     startup_level: context.startupHealth.level,
-    runtime_ready: context.sim.getActivePack()?.metadata.id === packId && context.getRuntimeReady(),
-    message: handle.getHealthSnapshot().message ?? null
+    runtime_ready: runtimeReadyPackId === packId && context.getRuntimeReady(),
+    message: snapshot.message ?? null
   };
 };
 
@@ -75,7 +85,10 @@ export const loadExperimentalPackRuntime = async (
   context: AppContext,
   packRef: string
 ): Promise<{ handle: PackRuntimeHandle; loaded: boolean; already_loaded: boolean }> => {
-  const result = await context.sim.loadExperimentalPackRuntime(packRef);
+  const result = await getPackRuntimeControl({
+    packRuntimeControl: context.packRuntimeControl,
+    sim: context.sim
+  }).load(packRef);
   await syncExperimentalPackPluginRuntime(context, result.handle.pack_id);
   return result;
 };
@@ -86,7 +99,10 @@ export const unloadExperimentalPackRuntime = async (
 ): Promise<{ acknowledged: true; unloaded: boolean }> => {
   return {
     acknowledged: true,
-    unloaded: await context.sim.unloadExperimentalPackRuntime(packId)
+    unloaded: await getPackRuntimeControl({
+      packRuntimeControl: context.packRuntimeControl,
+      sim: context.sim
+    }).unload(packId)
   };
 };
 

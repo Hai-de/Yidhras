@@ -324,18 +324,6 @@ const evaluateSchedulerActorReadiness = (
     };
   }
 
-  const pendingKey = buildSchedulerCandidateKey(candidate.agent_id, candidate.kind, candidate.primary_reason);
-  const hasPendingWorkflow = input.pendingIntentAgentIds.has(candidate.agent_id)
-    || input.pendingJobKeySet.has(pendingKey)
-    || (input.entitySingleFlightLimit <= 1 && input.activeWorkflowActorIds.has(candidate.agent_id));
-  if (hasPendingWorkflow) {
-    return {
-      skipped_reason: 'pending_workflow',
-      counts_as_scanned: true,
-      coalesced_secondary_reason_count: 0
-    };
-  }
-
   const coalescedSecondaryReasonCount = countCoalescedSecondaryReasons(candidate);
   if (input.replayRecoveryActors.has(candidate.agent_id) && shouldSuppressCandidateForRecoveryWindow(candidate, 'replay')) {
     return {
@@ -350,6 +338,18 @@ const evaluateSchedulerActorReadiness = (
       skipped_reason: getRecoverySuppressionSkipReason('retry', candidate.kind),
       counts_as_scanned: true,
       coalesced_secondary_reason_count: coalescedSecondaryReasonCount
+    };
+  }
+
+  const pendingKey = buildSchedulerCandidateKey(candidate.agent_id, candidate.kind, candidate.primary_reason);
+  const hasPendingWorkflow = input.pendingIntentAgentIds.has(candidate.agent_id)
+    || input.pendingJobKeySet.has(pendingKey)
+    || (input.entitySingleFlightLimit <= 1 && input.activeWorkflowActorIds.has(candidate.agent_id));
+  if (hasPendingWorkflow) {
+    return {
+      skipped_reason: 'pending_workflow',
+      counts_as_scanned: true,
+      coalesced_secondary_reason_count: 0
     };
   }
 

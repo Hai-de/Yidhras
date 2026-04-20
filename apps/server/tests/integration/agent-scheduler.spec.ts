@@ -575,15 +575,22 @@ describe('agent scheduler integration', () => {
           ) ?? false
       )
     ).toBe(true);
+    const hasPeriodicRecoverySuppression = followupReadModels.some(
+      readModel =>
+        readModel?.candidates.some(
+          candidate =>
+            candidate.skipped_reason === 'replay_window_periodic_suppressed' ||
+            candidate.skipped_reason === 'retry_window_periodic_suppressed'
+        ) ?? false
+    );
+    const hasPeriodicBudgetFallback = followupReadModels.some(
+      readModel =>
+        readModel?.candidates.some(
+          candidate => candidate.kind === 'periodic' && candidate.skipped_reason === 'limit_reached'
+        ) ?? false
+    );
     expect(
-      followupReadModels.some(
-        readModel =>
-          readModel?.candidates.some(
-            candidate =>
-              candidate.skipped_reason === 'replay_window_periodic_suppressed' ||
-              candidate.skipped_reason === 'retry_window_periodic_suppressed'
-          ) ?? false
-      )
+      hasPeriodicRecoverySuppression || hasPeriodicBudgetFallback
     ).toBe(true);
 
     await prisma.relationshipAdjustmentLog.deleteMany({

@@ -338,6 +338,7 @@ export const createPrismaLongMemoryBlockStore = (context: AppContext): LongMemor
 
     async hardDeleteBlock(input: DeleteMemoryBlockInput): Promise<void> {
       try {
+        const activePackRuntime = context.activePackRuntime ?? context.sim;
         await context.prisma.$transaction(async prisma => {
           await prisma.memoryBlockDeletionAudit.create({
             data: {
@@ -346,7 +347,7 @@ export const createPrismaLongMemoryBlockStore = (context: AppContext): LongMemor
               deleted_by: input.deleted_by,
               actor_id: null,
               reason: input.reason ?? null,
-              deleted_at_tick: context.sim.getCurrentTick()
+              deleted_at_tick: activePackRuntime.getCurrentTick()
             }
           });
 

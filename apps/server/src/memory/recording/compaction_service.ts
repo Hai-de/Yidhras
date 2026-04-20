@@ -1,9 +1,8 @@
-import { randomUUID } from 'node:crypto';
-
 import { buildAiTaskRequestFromInferenceContext } from '../../ai/task_prompt_builder.js';
 import type { AiTaskService } from '../../ai/task_service.js';
 import { createAiTaskService } from '../../ai/task_service.js';
 import type { AppContext } from '../../app/context.js';
+import { getActivePackRuntimeFacade } from '../../app/services/app_context_ports.js';
 import { createContextOverlayStore } from '../../context/overlay/store.js';
 import { buildInferenceContext } from '../../inference/context_builder.js';
 import { createPrismaLongMemoryBlockStore } from '../blocks/store.js';
@@ -74,13 +73,17 @@ export const createMemoryCompactionService = ({
     },
 
     async runForAgent(input) {
-      const pack = context.sim.getActivePack();
+      const activePackRuntime = getActivePackRuntimeFacade({
+        activePackRuntime: context.activePackRuntime,
+        sim: context.sim
+      });
+      const pack = activePackRuntime.getActivePack();
       if (!pack) {
         return null;
       }
 
       const thresholds = this.getThresholdsForPack(pack.ai ?? null);
-      const now = context.sim.getCurrentTick();
+      const now = activePackRuntime.getCurrentTick();
       const state = await context.prisma.memoryCompactionState.upsert({
         where: { agent_id: input.agent_id },
         update: {
@@ -221,29 +224,7 @@ export const createMemoryCompactionService = ({
         const result = await aiTaskService.runTask<Record<string, unknown>>(request, {
           packAiConfig: inferenceContext.world_ai ?? null
         });
-        compactionText = typeof result.output.summary === 'string' ? result.output.summary : null;
-        if (compactionText) {
-          const reflectionMutation = await recordingService.recordExecutionReflection({
-            actor_id: input.agent_id,
-            pack_id: pack.metadata.id,
-            tick: now.toString(),
-            source_inference_id: request.metadata?.inference_id ?? inferenceContext.inference_id,
-            source_action_intent_id: `memory-compaction:${randomUUID()}`,
-            intent_type: 'memory_compaction',
-            outcome: 'completed',
-            reason: compactionText,
-            metadata: {
-              record_kind: 'memory_compaction',
-              task_id: result.task_id,
-              ai_invocation_id: result.invocation.invocation_id,
-              output: result.output
-            },
-            event_summaries: []
-          });
-          aggregatedMutations.overlay_mutations.push(...reflectionMutation.overlay_mutations);
-          aggregatedMutations.memory_block_mutations.push(...reflectionMutation.memory_block_mutations);
-          aggregatedMutations.trace_memory_mutations.records.push(...reflectionMutation.trace_memory_mutations.records);
-        }
+        compactionText = typeof result.output.compaction === 'string' ? result.output.compaction : null;
       }
 
       const updatedState = await context.prisma.memoryCompactionState.update({
@@ -270,7 +251,17 @@ export const createMemoryCompactionService = ({
           context_summary: shouldRunSummary,
           memory_compaction: shouldRunCompaction
         },
-        mutations: aggregatedMutations
+        mutations: {
+          ...aggregatedMutations,
+          ...(summaryText || compactionText ? await recordingService.recordPrivateReflection({
+            actor_id: input.agent_id,
+            pack_id: pack.metadata.id,
+            tick: now.toString(),
+            source_inference_id: inferenceContext.inference_id,
+            reasoning: [summaryText, compactionText].filter(Boolean).join('\n\n') || null,
+            tags: ['memory_compaction']
+          }) : emptyMutations())
+        }
       };
     }
   };

@@ -103,6 +103,7 @@ CLI 与 GUI 复用同一组治理语义：
 
 - 继续绑定当前 active pack
 - 不因 experimental multi-pack runtime 打开而自动放宽作用域
+- stable surface 的 pack 解析继续受 active-pack guard 控制
 
 ### Experimental pack-local surface
 
@@ -114,6 +115,7 @@ CLI 与 GUI 复用同一组治理语义：
 - 仅在 `features.experimental.multi_pack_runtime.enabled=true`
 - 且 `features.experimental.multi_pack_runtime.operator_api_enabled=true` 时可用
 - 目标 pack 必须已经进入 experimental runtime registry
+- experimental surface 的 pack 解析通过统一 `PackRuntimeLookupPort` / `PackScopeResolver` 校验
 
 当前 web runtime snapshot 由：
 
@@ -188,6 +190,21 @@ CLI 与 GUI 复用同一组治理语义：
 - `refreshPackPluginRuntime(context, packId)`
 - `syncExperimentalPackPluginRuntime(context, packId)`
 - 按 pack-local scope 刷新 experiment-loaded pack 的 plugin runtime registry
+
+### Host 边界当前约束
+
+当前 plugin runtime 继续由 **Node/TS host** 承接，而不是进入 Rust world engine：
+
+- plugin host 不直接依赖 Rust / TS world engine internal object
+- pack scope resolve 统一通过 `PackRuntimeLookupPort` / `PackScopeResolver`
+- pack runtime web surface 与 projection scope 不再各自发明一套 lookup 逻辑
+- 后续若引入 Rust world engine，plugin host 应通过 Host API / lookup port 与之交互
+
+这意味着：
+
+- plugin host / workflow host / scheduler 不是第一阶段 Rust 迁移目标
+- 插件侧扩展点继续留在 Node/TS 宿主
+- world engine 只替换 pack runtime / world rule execution 内核，而不吞掉 plugin host
 
 ### Web-side 当前已具备
 

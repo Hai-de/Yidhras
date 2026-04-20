@@ -1,9 +1,10 @@
 import type { AppContext } from '../context.js';
-import {
-  getSchedulerOperatorProjection,
-  getSchedulerSummarySnapshot,
-  listSchedulerOwnershipAssignments,
-  listSchedulerWorkers
+import { createRuntimeKernelService } from '../runtime/runtime_kernel_service.js';
+import type {
+  SchedulerOperatorProjection,
+  SchedulerOwnershipAssignmentsResult,
+  SchedulerSummarySnapshot,
+  SchedulerWorkersResult
 } from './scheduler_observability.js';
 
 const buildPackScopedPartitionId = (packId: string, partitionId: string): string => {
@@ -21,10 +22,11 @@ export const getExperimentalPackSchedulerOwnershipProjection = async (
   context: AppContext,
   packId: string
 ) => {
-  const result = await listSchedulerOwnershipAssignments(context);
+  const runtimeKernel = createRuntimeKernelService(context);
+  const result = await runtimeKernel.getOwnershipAssignments?.({}) as SchedulerOwnershipAssignmentsResult | undefined;
   return {
-    items: mapScopedPartitions(packId, result.items),
-    summary: result.summary
+    items: mapScopedPartitions(packId, result?.items ?? []),
+    summary: result?.summary ?? null
   };
 };
 
@@ -32,7 +34,8 @@ export const getExperimentalPackSchedulerWorkersProjection = async (
   context: AppContext,
   _packId: string
 ) => {
-  return listSchedulerWorkers(context);
+  const runtimeKernel = createRuntimeKernelService(context);
+  return (await runtimeKernel.getWorkers?.({}) as SchedulerWorkersResult | undefined) ?? { items: [], summary: null };
 };
 
 export const getExperimentalPackSchedulerSummaryProjection = async (
@@ -40,7 +43,8 @@ export const getExperimentalPackSchedulerSummaryProjection = async (
   _packId: string,
   input?: { sampleRuns?: number }
 ) => {
-  return getSchedulerSummarySnapshot(context, input);
+  const runtimeKernel = createRuntimeKernelService(context);
+  return (await runtimeKernel.getSummary?.(input) as SchedulerSummarySnapshot | undefined) ?? null;
 };
 
 export const getExperimentalPackSchedulerOperatorProjection = async (
@@ -48,24 +52,25 @@ export const getExperimentalPackSchedulerOperatorProjection = async (
   packId: string,
   input?: { sampleRuns?: number; recentLimit?: number }
 ) => {
-  const projection = await getSchedulerOperatorProjection(context, input);
+  const runtimeKernel = createRuntimeKernelService(context);
+  const projection = await runtimeKernel.getOperatorProjection?.(input) as SchedulerOperatorProjection | undefined;
   return {
     ...projection,
     ownership: {
-      ...projection.ownership,
-      assignments: mapScopedPartitions(packId, projection.ownership.assignments)
+      ...projection?.ownership,
+      assignments: mapScopedPartitions(packId, projection?.ownership?.assignments ?? [])
     },
-    recent_runs: mapScopedPartitions(packId, projection.recent_runs),
-    recent_decisions: mapScopedPartitions(packId, projection.recent_decisions),
+    recent_runs: mapScopedPartitions(packId, projection?.recent_runs ?? []),
+    recent_decisions: mapScopedPartitions(packId, projection?.recent_decisions ?? []),
     highlights: {
-      ...projection.highlights,
-      latest_partition_id: projection.highlights.latest_partition_id === null
+      ...projection?.highlights,
+      latest_partition_id: projection?.highlights?.latest_partition_id === null || projection?.highlights?.latest_partition_id === undefined
         ? null
         : buildPackScopedPartitionId(packId, projection.highlights.latest_partition_id),
-      latest_migration_partition_id: projection.highlights.latest_migration_partition_id === null
+      latest_migration_partition_id: projection?.highlights?.latest_migration_partition_id === null || projection?.highlights?.latest_migration_partition_id === undefined
         ? null
         : buildPackScopedPartitionId(packId, projection.highlights.latest_migration_partition_id),
-      latest_rebalance_partition_id: projection.highlights.latest_rebalance_partition_id === null
+      latest_rebalance_partition_id: projection?.highlights?.latest_rebalance_partition_id === null || projection?.highlights?.latest_rebalance_partition_id === undefined
         ? null
         : buildPackScopedPartitionId(packId, projection.highlights.latest_rebalance_partition_id)
     }

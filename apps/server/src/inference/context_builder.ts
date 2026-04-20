@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { AccessPolicyService } from '../access_policy/service.js';
 import type { AppContext } from '../app/context.js';
 import { getAgentContextSnapshot } from '../app/services/agent.js';
+import { getActivePackRuntimeFacade } from '../app/services/app_context_ports.js';
+import { createContextAssemblyPort } from '../app/services/context_memory_ports.js';
 import { getLatestEventEvidenceRecord } from '../app/services/event_evidence_repository.js';
 import { createContextService } from '../context/service.js';
 import { IdentityService } from '../identity/service.js';
@@ -476,7 +478,11 @@ export const buildInferenceContext = async (
 ): Promise<InferenceContext> => {
   context.assertRuntimeReady('inference context');
 
-  const pack = context.sim.getActivePack();
+  const activePackRuntime = getActivePackRuntimeFacade({
+    activePackRuntime: context.activePackRuntime,
+    sim: context.sim
+  });
+  const pack = activePackRuntime.getActivePack();
   if (!pack) {
     throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for inference context', {
       startup_level: context.startupHealth.level,
@@ -499,15 +505,15 @@ export const buildInferenceContext = async (
   const packRuntime = buildPackRuntimeContract(context);
   const policySummary = await buildPolicySummary(context, resolvedActor.identity, attributes);
   const transmissionProfile = buildTransmissionProfile(resolvedActor.actorRef, agentSnapshot, policySummary, attributes);
-  const contextService = createContextService({
-    context,
-    memoryService: createMemoryService({ context })
+  const contextAssembly = context.contextAssembly ?? createContextAssemblyPort(context);
+  const fallbackContextService = createContextService({
+    context, memoryService: createMemoryService({ context })
   });
-  const contextResult = await contextService.buildContextRun({
+  const contextResult = await (contextAssembly.buildContextRun ?? fallbackContextService.buildContextRun)({
     actor_ref: resolvedActor.actorRef as unknown as Record<string, unknown>,
     identity: resolvedActor.identity,
     resolved_agent_id: resolvedActor.resolvedAgentId,
-    tick: context.sim.getCurrentTick(),
+    tick: activePackRuntime.getCurrentTick(),
     policy_summary: policySummary,
     pack_state: packState,
     pack_id: pack.metadata.id
@@ -524,7 +530,7 @@ export const buildInferenceContext = async (
     binding_ref: resolvedActor.bindingRef,
     resolved_agent_id: resolvedActor.resolvedAgentId,
     agent_snapshot: agentSnapshot,
-    tick: context.sim.getCurrentTick(),
+    tick: activePackRuntime.getCurrentTick(),
     strategy,
     attributes,
     world_pack: {

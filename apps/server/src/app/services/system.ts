@@ -1,8 +1,8 @@
 import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
 import type { SqliteRuntimePragmaSnapshot } from '../../db/sqlite_runtime.js';
 import type { SystemMessage } from '../../utils/notifications.js';
-import type { AppContext,RuntimeLoopDiagnostics } from '../context.js';
-import { reconcileSchedulerBootstrapAssignments, resolveSchedulerOwnershipSnapshot } from '../runtime/scheduler_ownership.js';
+import type { AppContext, RuntimeLoopDiagnostics } from '../context.js';
+import { createRuntimeKernelService } from '../runtime/runtime_kernel_service.js';
 
 const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
   status: 'idle',
@@ -104,7 +104,11 @@ export const ensureSchedulerBootstrapOwnership = async (
     schedulerPartitionIds?: string[];
   }
 ): Promise<void> => {
-  await reconcileSchedulerBootstrapAssignments(context, options.schedulerWorkerId, options.schedulerPartitionIds);
+  const runtimeKernel = createRuntimeKernelService(context);
+  await runtimeKernel.reconcileBootstrapOwnership({
+    schedulerWorkerId: options.schedulerWorkerId,
+    schedulerPartitionIds: options.schedulerPartitionIds
+  });
 };
 
 export const resetDevelopmentRuntimeState = async (context: AppContext): Promise<DevRuntimeResetSummary | null> => {
@@ -156,11 +160,12 @@ export const getRuntimeStatusSnapshot = async (
 ): Promise<RuntimeStatusSnapshot> => {
   const pack = context.sim.getActivePack();
   const schedulerWorkerId = options?.schedulerWorkerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
-  const ownershipSnapshot = await resolveSchedulerOwnershipSnapshot(context, {
+  const runtimeKernel = createRuntimeKernelService(context);
+  const ownershipSnapshot = await runtimeKernel.getOwnershipSnapshot({
     workerId: schedulerWorkerId,
-    bootstrapPartitionIds: options?.schedulerPartitionIds
+    partitionIds: options?.schedulerPartitionIds
   });
-  const runtimeLoop = context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
+  const runtimeLoop = runtimeKernel.getLoopDiagnostics() ?? context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
 
   return {
     status: context.getPaused() ? 'paused' : 'running',

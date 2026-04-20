@@ -139,20 +139,47 @@
   都属于 **runtime host policy**，应通过 YAML / env 调整；
 - 业务层不再把这些值继续内嵌为新的 ad-hoc 常量。
 
+### 3.2.1 Runtime Kernel 正式边界
+
+在“模块化优先 / Modularization First”阶段之后，runtime kernel 已开始以正式 port 收口：
+
+- `RuntimeKernelFacade`
+  - runtime pause/resume、loop diagnostics、kernel health snapshot
+- `SchedulerObservationPort`
+  - ownership / workers / summary / operator projection 等读面
+- `SchedulerControlPort`
+  - bootstrap ownership reconcile 等控制面
+- `createRuntimeKernelService(context)`
+  - 当前 Node/TS 宿主内的 runtime kernel service 实现
+
+这意味着：
+
+- system status、scheduler routes、experimental scheduler runtime 不应继续直接依赖底层 scheduler helper；
+- 上层应优先通过 runtime kernel service / port 访问 runtime kernel 与 scheduler 观察面；
+- scheduler 的所有权依旧明确属于 **runtime kernel**，而不是 pack runtime。
+
 ### 3.3 Core simulation 层
 
 - `apps/server/src/core/simulation.ts`
 
 负责：
 
-- Prisma init
-- SQLite pragmas
-- world-pack loading
-- clock
-- narrative resolver
-- dynamics
-- runtime speed
-- graph access
+- 作为 **兼容 facade / thin facade**
+- 组合 runtime bootstrap、pack catalog、active-pack runtime、pack runtime registry service
+- 对旧调用面继续暴露稳定兼容入口
+
+不再建议把它视为新的职责承载中心。
+
+当前已拆出的职责包括：
+
+- `PrismaRuntimeDatabaseBootstrap`
+  - SQLite pragma apply / snapshot、数据库 bootstrap
+- `DefaultPackCatalogService`
+  - world pack catalog、pack id / folder 解析
+- `DefaultActivePackRuntimeFacade`
+  - stable single active-pack runtime、tick / runtime speed / variable resolve
+- `DefaultPackRuntimeRegistryService`
+  - experimental runtime registry、status/load/unload、host register/unregister
 
 另外，SQLite runtime pragma 也已纳入 runtime host config：
 
@@ -184,8 +211,10 @@
   - 对外暴露 pack-local clock / runtime speed / health 等只读句柄
 - `PackRuntimeHost`
   - 作为 pack-local runtime 宿主
+- `PackRuntimeLookupPort` / `PackScopeResolver`
+  - 负责 pack scope lookup、stable/experimental 作用域校验与 Host API 预留面
 - `SimulationManager`
-  - 继续作为 stable single active-pack facade
+  - 仅作为兼容 facade，而不是 registry implementation owner
 
 这意味着：
 
@@ -237,6 +266,25 @@
 - 为既有 prompt 消费方暴露 compatibility `memory_context`
 - 将 context selection / orchestration evidence 写入 `InferenceTrace.context_snapshot`
 
+### 5.1.1 Context / Memory 正式接口
+
+在模块化收口后，context / memory 已开始通过正式 port 接入：
+
+- `ContextAssemblyPort`
+  - `buildContextRun(...)`
+- `MemoryRuntimePort`
+  - `buildMemoryContext(...)`
+- `createContextAssemblyPort(context)`
+- `createMemoryRuntimePort(context)`
+
+当前 inference context builder、memory compaction、memory block 删除审计等路径已开始优先通过：
+
+- `context.contextAssembly`
+- `context.memoryRuntime`
+- `context.activePackRuntime`
+
+访问，而不是继续直接依赖 `context.sim`。
+
 ### 5.2 Overlay / Memory Block
 
 - overlay 是 **kernel-side working-layer object**
@@ -259,123 +307,21 @@
 
 在 ARCH 中只保留它们的边界性结论：
 
-### 6.1 Prompt Workflow Runtime
+### 6.1 Prompt Workflow
 
-架构结论：
+- workflow persistence 留在 kernel side
+- runtime step execution 不应穿透 pack runtime internal object
+- workflow orchestration 应消费 inference/context/runtime host contracts，而不是直接依赖世界内核实现细节
 
-- 它是 inference pipeline 中的正式 runtime 外壳
-- 负责 `ContextRun / ContextNode -> PromptBundle / request` 的组织层
-- 仍是线性 runtime，不是通用 DAG engine
-- 保留 compatibility bridges，但不再把 legacy path 视为 source-of-truth
+### 6.2 AI Gateway
 
-当前 prompt workflow 中已经外置到 runtime config 的部分，是**适合部署者 / 运营调参的默认值**，例如：
+- model/provider routing 属于 host-side orchestration
+- invocation observability、audit、retry/recovery 仍留在 Node/TS host
+- Rust world engine 若引入，不承接 AI gateway 本体
 
-- `prompt_workflow.profiles.agent_decision_default.*`
-- `prompt_workflow.profiles.context_summary_default.*`
-- `prompt_workflow.profiles.memory_compaction_default.*`
+### 6.3 Plugin Runtime
 
-而 step graph / executor registry / orchestration 主体仍留在代码中，避免把整个 workflow runtime 直接变成自由形态配置系统。
-
-### 6.2 Unified AI task / gateway
-
-架构结论：
-
-- 服务端已形成内部 AI 执行层：`AiTaskService -> RouteResolver -> ModelGateway -> provider adapters`
-- 公开 inference contract 仍与内部 gateway path 分离
-- world pack 对 AI 的影响是 declarative 的，而不是直接 provider control
-- `AiInvocationRecord` 作为 kernel-side observability host 存在
-
-### 6.3 Pack-local plugin runtime
-
-架构结论：
-
-- 插件治理记录宿主在 kernel side，而不是 pack runtime sqlite
-- runtime manifest、同源 web 资产路由、route host 已形成受控承接边界
-- 当前正式范围仍是 `pack_local`
-
-## 7. Projection 与 read model 边界
-
-当前后端已形成的主要 projection / read model：
-
-- entity overview projection
-- pack narrative timeline projection
-- operator overview projection
-- global projection index
-
-### 7.1 Pack projection contract
-
-在当前单 active-pack 模式下：
-
-- `/api/packs/:packId/overview`
-- `/api/packs/:packId/projections/timeline`
-
-都要求：
-
-- 请求的 `packId` 必须与当前 active pack 一致
-- 不一致时返回 `409 / PACK_ROUTE_ACTIVE_PACK_MISMATCH`
-
-### 7.1.1 Experimental projection / route compatibility path
-
-为了支持 experimental multi-pack runtime，本阶段采用的是 **parallel experimental surfaces**，而不是直接修改 stable canonical routes：
-
-- stable canonical routes：
-  - `/api/packs/:packId/overview`
-  - `/api/packs/:packId/projections/timeline`
-  - `/api/packs/:packId/plugins/runtime/web`
-  - 继续绑定 active-pack scope
-- experimental routes：
-  - `/api/experimental/runtime/packs/:packId/*`
-  - `/api/experimental/packs/:packId/*`
-  - 只面向 experiment-loaded pack runtime
-
-设计结论：
-
-- stable contract 不因 experimental mode 自动扩张
-- `PACK_ROUTE_ACTIVE_PACK_MISMATCH` 继续作为稳定边界的一部分
-- plugin runtime、projection、route scope 的 pack-local 兼容，优先通过 experimental surfaces 旁路引入
-
-### 7.2 Access-policy subsystem
-
-- `/api/access-policy/*` 是独立 access / projection policy 子系统
-- 它不属于 unified governance canonical API 的主线接口
-- 它负责显式 policy 写入与评估
-
-## 8. Operator handoff 边界
-
-后端当前已具备以下高级视图所需证据面：
-
-- authority inspector
-- rule execution timeline
-- perception diff
-
-后端负责：
-
-- authority / perception / mediator provenance / rule execution evidence 输出
-- pack / entity / rule 相关 projection contract 稳定化
-- handoff 字段与示例说明
-
-前端负责：
-
-- 页面 UI
-- 布局与可视化
-- 状态管理
-- 导航与交互组织
-
-## 9. 当前稳定边界结论
-
-当前可视为稳定的系统边界包括：
-
-1. world governance core 继续 pack-owned
-2. workflow / social / audit / observability 继续 kernel-hosted
-3. `Event` 作为跨 pack-governance 与 kernel observability 的共享证据宿主存在
-4. Prompt Workflow、AI Gateway、Plugin Runtime 均已形成独立专题能力，但仍服务于更高层系统分层
-5. 当前实现仍是受控演进体系，而不是完全开放式平台
-6. experimental multi-pack runtime registry 只是旁路试验能力，不是默认平台化运行模型
-
-## 10. 相关文档
-
-- 公共接口：`API.md`
-- 业务语义：`LOGIC.md`
-- Prompt Workflow：`docs/capabilities/PROMPT_WORKFLOW.md`
-- AI Gateway：`docs/capabilities/AI_GATEWAY.md`
-- Plugin Runtime：`docs/capabilities/PLUGIN_RUNTIME.md`
+- plugin host 当前继续留在 Node/TS
+- plugin runtime scope 已通过 `PackRuntimeLookupPort` / `PackScopeResolver` 收口
+- stable active-pack plugin runtime surface 不因 experimental multi-pack 自动放宽
+- 后续若引入 Rust world engine，plugin host 通过 Host API / lookup port 与其交互，而不是直接持有内核对象
