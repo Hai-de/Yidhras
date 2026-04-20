@@ -258,189 +258,57 @@
   当前系统已经具备 retry、replay、intent class、replay-aware suppression 与 `scheduled_for_tick` 等基础能力，可支撑当前阶段的工作流闭环。
 - 后续增强候选：
   - richer replay orchestration
-  - 更 durable 的 job scheduling 语义
-  - windowed / not-before / not-after 风格的调度约束
-  - 更清晰的 replay-derived scheduling linkage
+  - delayed retries / scheduled workflows
+  - operator-facing durable job diagnostics
+  - 更细的 recovery policy 与可观测性
 - 延期原因：
-  当前优先保证流程可运行；继续扩展 orchestration 语义会增加实现范围。
+  当前主线仍然是先稳定现有 workflow + scheduler contract，再考虑更复杂的 orchestration 能力。
 
-### 7. Automatic Rebalance 策略与 Operator-Forced Workflow 语义深化
+### 7. Experimental multi-pack runtime operator API 强化项
 - 状态：deferred
 - 优先级：medium
-- 范围：scheduler ownership / rebalance / operator control plane
+- 范围：experimental runtime registry / operator api / multi-pack runtime ergonomics
 - 背景：
-  当前 scheduler 已经具备 partition ownership、migration、worker runtime state 与 automatic rebalance baseline，也已有相应读接口与前端观察面。
+  当前 Phase 5C 已经具备 conservative experimental operator/test-only API：
+  - runtime pack list
+  - per-pack status / clock
+  - scheduler summary / ownership / workers / operator
+  - explicit load / unload
+  并且已经有 feature gate、容量限制与基础错误码。
 - 后续增强候选：
-  - 更丰富的 rebalance guardrails
-  - recommendation policy 深化
-  - recommendation -> apply linkage 收口
-  - 更明确的 operator-forced workflow semantics
+  - 更细的 load/unload result contract 与 idempotency summary
+  - 更完整的 pack runtime lifecycle state reason / diagnostics
+  - per-pack scheduler filter params 与 richer scheduler-specific experimental contracts
+  - dedicated operator docs / examples / CLI helpers
 - 延期原因：
-  这些能力更偏生产级调度治理与人工干预语义；现有基础能力已可满足当前阶段的展示与验证。
-
-### 8. Memory Core 分层读模型与 Retrieval / Aggregation
-- 状态：deferred
-- 优先级：medium
-- 范围：memory core / agent overview / retrieval
-- 背景：
-  当前已经有 MemoryTrace persistence、recent trace read 与 agent overview memory summary，可支持当前阶段对记忆能力的基本展示。
-- 后续增强候选：
-  - 更长期 / 分层 memory read model
-  - retrieval / aggregation 能力
-  - 更适合 prompt / overview 消费的 memory condensation
-- 延期原因：
-  这些增强更偏行为质量提升与长期演化，不是打通 demo 主流程的必要前提。
-
-### 9. Audit / Review Operator 视图深化
-- 状态：deferred
-- 优先级：medium
-- 范围：audit feed / detail / related-record aggregation / operator observability
-- 背景：
-  当前统一 audit feed、detail read、基础过滤、cursor、workflow related-record aggregation 与 replay-lineage detail 已经具备，可满足当前阶段的基础观察需求。
-- 后续增强候选：
-  - 更完整的 operator 视图
-  - 更强的跨对象关联观测
-  - 与 scheduler / workflow / graph / social 的更顺滑交叉定位
-- 延期原因：
-  当前已有读面已经能承担 demo 的“可看见、可追踪”需求；进一步增强主要优化定位速度与解释深度。
-
-### 10. Mutation 写路径规范化与 Delta-Capable World Actions
-- 状态：deferred
-- 优先级：medium
-- 范围：mutation semantics / workflow writes / world actions
-- 背景：
-  当前 `relationship_adjustment` 与 `snr_adjustment` 已经提供 resolved-intent detail shape，足够支撑现阶段工作流结果的最小解释。
-- 后续增强候选：
-  - 更广的写路径规范化
-  - future delta-capable world actions
-  - 更统一的 mutation result / intent projection 约定
-- 延期原因：
-  这些属于下一层领域写模型演进；在当前阶段优先落地会扩大实现范围。
-
-### 11. AiInvocationRecord 的 operator / debug 视图接入
-- 状态：deferred
-- 优先级：medium
-- 范围：workflow detail / trace detail / operator workspace / debug read model
-- 背景：
-  当前服务端已经具备 `AiInvocationRecord` 持久化与只读查询接口：
-  - `GET /api/inference/ai-invocations`
-  - `GET /api/inference/ai-invocations/:id`
-  - 并且 `InferenceTrace.trace_metadata.ai_invocation_id` 已可回链到具体 invocation 证据。
-  但这些能力目前主要停留在后端 observability surface，尚未深度接入 operator / workflow / trace 视图。
-- 后续增强候选：
-  - workflow detail 中直接展示关联的 provider/model/route/attempts
-  - trace detail 中增加 ai invocation drill-down 与回跳
-  - operator workspace 中增加 AI 调用热点、失败热点与 fallback 热点观察面
-  - 基于 `audit_level` 的 request/response 证据展示分级
-- 延期原因：
-  当前后端最小读面已经足够支撑调试与验收，是否继续下钻应等待前端消费需求与 operator 视图形态更明确后再推进。
-
-### 12. AI Invocation 的 summary / analytics 聚合接口深化
-- 状态：deferred
-- 优先级：medium
-- 范围：AI observability aggregation / operator analytics / read-model API
-- 背景：
-  当前 `AiInvocationRecord` 已具备列表与详情读取，但仍以 item-level query 为主，聚合分析能力尚未形成正式接口。
-- 后续增强候选：
-  - 增加更细过滤：`task_id` / `finish_reason` / `fallback_used` / `audit_level`
-  - provider/model/task_type 维度的窗口统计
-  - success / fail / blocked / timeout 趋势摘要
-  - usage / token / latency / estimated cost 聚合
-  - 供 operator/workspace 直接消费的 summary endpoint，而不是完全由前端二次聚合
-- 延期原因：
-  当前最小列表/详情查询已满足本轮目标；进一步聚合会扩大 operator observability 与 API 设计范围，适合在后续专门立项时推进。
-
+  当前 experimental API 已足够支撑 operator / test-only 试验；继续强化属于 Phase 5C 的非阻塞增强项，暂不优先于 Phase 5D/5E。
 
 ---
 
-## 三、前后端联动
+## 三、文档与流程
 
-### 1. Shell 与后端诊断能力的联动深化
-- 状态：deferred
-- 优先级：medium
-- 范围：frontend shell + backend observability
-- 背景：
-  当前前端 shell 已承载较多运行态信息展示职责，但许多交互仍偏“静态呈现”或“轻量跳转”，后续可以继续深化与后端诊断接口的联动。
-- 后续增强候选：
-  - Dock / workspace 面板直接消费更细粒度诊断流
-  - 状态条与诊断状态之间建立更明确的映射关系
-  - 前端 drill-down 与后端问题定位上下文自动串联
-- 延期原因：
-  需要等待前后端主干接口更加稳定，否则容易频繁返工。
-
-### 2. 调试链路中的上下文透传与回跳增强
+### 1. 文档之间的导航与索引增强
 - 状态：deferred
 - 优先级：low
-- 范围：source context / route linking / debug navigation
+- 范围：design / plans / docs index / capability docs
 - 背景：
-  当前已经有 source context、recent targets、跨 workspace 跳转等基础能力，后续仍可增强上下文保真度。
+  文档数量逐渐增加后，未来可能需要更清晰的导航、交叉引用与分层索引。
 - 后续增强候选：
-  - 更精细的来源链记录
-  - 前端视图与后端对象 ID、trace、job 的联动跳转规范
-  - 页面刷新后上下文恢复一致性增强
+  - 核心文档之间的推荐阅读顺序
+  - capability 与实现计划的交叉链接
+  - 面向新贡献者的阅读入口整理
 - 延期原因：
-  当前能力已足够支撑主链路使用，进一步增强主要提升调试效率。
+  当前文档体系仍可用，等规模进一步扩大后再统一整理更合适。
 
-### 3. 主干成熟后的增强项回收机制
-- 状态：planned
-- 优先级：medium
-- 范围：process / docs / implementation planning
-- 背景：
-  当前增强项被刻意延后是合理的，但后续需要一个明确机制来避免文档长期沉积无人处理。
-- 建议机制：
-  - 每个阶段性里程碑结束后，统一回顾本文档
-  - 从三大块中各挑 1~2 项进入正式计划
-  - 一旦转正，补充对应设计/计划/评审文档并在此处标记状态
-- 延期原因：
-  当前先建立收纳池与分类方法，后续再制度化执行。
-
----
-
-## 四、内容与数据包
-
-### 1. World-Pack Schema Contract 与 Validation Checklist
-- 状态：deferred
-- 优先级：medium
-- 范围：world-pack contract / validation / docs
-- 背景：
-  当前项目已经有可运行的 world-pack baseline 与 configw/bootstrap 链路，可支持当前阶段的启动和展示。
-- 后续增强候选：
-  - formalize world-pack schema contract
-  - validation checklist
-  - 作者侧约束与错误说明文档
-- 延期原因：
-  当前阶段继续复用现有 pack baseline 更直接；正式契约化更适合在内容体系更稳定后推进。
-
-### 2. Pack-Level Metadata / Registry / Docs Tooling
+### 2. Phase 闭环完成后的归档与总结模板
 - 状态：deferred
 - 优先级：low
-- 范围：content packaging / registry / docs tooling
+- 范围：review / progress / milestone log
 - 背景：
-  当前 world-pack 使用方式仍以项目内置模板和本地运行数据目录为主，尚未进入需要多 pack 资产治理的阶段。
+  当前已有 progress 与 review 机制，但后续如果阶段性工作持续增多，可能需要更标准化的“完成总结模板”。
 - 后续增强候选：
-  - pack-level metadata
-  - registry
-  - docs tooling / discoverability tooling
+  - 阶段完成总结模板
+  - review finding 跟踪模板
+  - progress milestone 归档模板
 - 延期原因：
-  这些项对资产规模化管理有价值，但不影响当前阶段的单 pack 运行闭环。
-
-### 3. Provider-Owned Presentation / Theme / Data Authoring 示例与校验路径
-- 状态：deferred
-- 优先级：low
-- 范围：provider workflow / theme authoring / data authoring / validation
-- 背景：
-  当前 provider-owned 主题入口、示例 theme 与基础 runtime 解析链路已经存在，但内容作者工作流仍然是最小形态。
-- 后续增强候选：
-  - 更完整的 presentation / theme / data authoring 示例
-  - provider authoring validation path
-  - 面向内容作者的操作说明与校验反馈
-- 延期原因：
-  当前优先保证已有 pack 的运行链路稳定，而不是一次性补齐全部内容生产工具链。
-
----
-
-## 状态约定
-
-- `deferred`：明确记录，但当前不进入本轮开发。
-- `planned`：已确认未来会处理，但尚未进入正式计划文档。
-- `in_progress`：已进入实际实现阶段。
+  当前仍处于快速推进阶段，先保持轻量记录方式更灵活。

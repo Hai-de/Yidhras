@@ -92,6 +92,29 @@ CLI 与 GUI 复用同一组治理语义：
 
 ## 6. Web runtime
 
+当前 plugin runtime web surface 分为两层：
+
+### Stable active-pack surface
+
+- `GET /api/packs/:packId/plugins/runtime/web`
+- `GET /api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`
+
+约束：
+
+- 继续绑定当前 active pack
+- 不因 experimental multi-pack runtime 打开而自动放宽作用域
+
+### Experimental pack-local surface
+
+- `GET /api/experimental/runtime/packs/:packId/plugins/runtime/web`
+- `GET /api/experimental/runtime/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`
+
+约束：
+
+- 仅在 `features.experimental.multi_pack_runtime.enabled=true`
+- 且 `features.experimental.multi_pack_runtime.operator_api_enabled=true` 时可用
+- 目标 pack 必须已经进入 experimental runtime registry
+
 当前 web runtime snapshot 由：
 
 - `apps/server/src/app/services/plugin_runtime_web.ts`
@@ -101,8 +124,10 @@ CLI 与 GUI 复用同一组治理语义：
 其作用包括：
 
 - 读取 active pack 下已启用插件的 web runtime manifest
+- 或在 experimental surface 下读取某个 loaded pack runtime 的已启用插件 manifest
 - 将 manifest 中的 `entrypoints.web.dist` 收敛为 canonical 同源 asset route
 - 为前端提供 browser-side dynamic import 所需的信息
+- 并保持 stable / experimental route namespace 分层
 
 当前每个 plugin item 典型会暴露：
 
@@ -127,6 +152,20 @@ CLI 与 GUI 复用同一组治理语义：
 
 - `/packs/:packId/plugins/:pluginId/*`
 
+在 experimental multi-pack runtime 下，需要特别区分：
+
+- stable `web_bundle_url`
+  - 指向 `/api/packs/:packId/plugins/.../runtime/web/...`
+  - 仍只对应 active pack scope
+- experimental `web_bundle_url`
+  - 指向 `/api/experimental/runtime/packs/:packId/plugins/.../runtime/web/...`
+  - 对应 experiment-loaded pack scope
+
+这样做的目的，是避免：
+
+- active-pack stable contract 被静默放宽
+- pack A/B 的 web runtime URL 与 asset host 混用
+
 这使插件 web runtime 既能被浏览器加载，又能维持同源与路径边界控制。
 
 ## 8. Server-side / Web-side 承接边界
@@ -143,6 +182,12 @@ CLI 与 GUI 复用同一组治理语义：
 - `sim.init(selectedPack)` 后执行 `syncActivePackPluginRuntime(...)`
 - registry refresh 与 pack-local route mounting 走统一同步入口
 - route 挂载带去重，避免 enable / disable / startup 多次同步时重复注册
+
+当前 experimental multi-pack runtime 补充了：
+
+- `refreshPackPluginRuntime(context, packId)`
+- `syncExperimentalPackPluginRuntime(context, packId)`
+- 按 pack-local scope 刷新 experiment-loaded pack 的 plugin runtime registry
 
 ### Web-side 当前已具备
 
@@ -168,6 +213,10 @@ CLI 与 GUI 复用同一组治理语义：
 - plugin runtime module contract 校验仍偏轻量
 - sandbox / isolation 能力仍不算强
 - 当前范围仍以 `pack_local` 为正式边界
+- experimental multi-pack plugin runtime 仍是 operator / test-only
+- 当前不会把 stable active-pack plugin runtime surface 直接升级为任意 loaded pack 可读
+- server-side pack route registration 仍以保守兼容为主，而不是完整平台化插件容器
+- 更深的 multi-pack operator ergonomics 已记录在 `docs/ENHANCEMENTS.md`
 
 ## 10. 相关文档
 

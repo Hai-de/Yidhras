@@ -158,6 +158,16 @@ DATABASE_URL="file:../../../runtime/db/prod.sqlite"
 
 这些字段不改变 Prisma datasource 本身，但会影响：
 
+- experimental multi-pack runtime 是否开启
+- experimental operator/test-only pack runtime registry 是否可用
+- experiment-loaded pack runtime 数量上限
+- experimental runtime 默认启动策略（例如 `manual`）
+
+当前与 Phase 5 相关的 runtime config / env override 还包括：
+
+- `features.experimental.multi_pack_runtime.*`
+- `runtime.multi_pack.*`
+
 - server 启动节奏
 - SQLite 锁等待与 checkpoint 行为
 - scheduler 运行、单实体 single-flight、tick 级吞吐节奏与 operator 观测体验
@@ -292,6 +302,30 @@ pnpm --filter yidhras-server init:runtime
 如果你使用比默认更高吞吐的数据库或更高频事件世界包，可以优先从这些字段入手调优；
 如果你使用更保守或更容易出现写竞争的数据库，应优先下调 runner concurrency、tick budget 与相关 lease / batch 参数。
 平台不限制数据库类型，但部署者需要自行评估数据库能力与这些 runtime host policy 的匹配关系。
+
+针对 experimental multi-pack runtime，当前建议：
+
+- 保持默认关闭，除非你明确在做 operator / test-only 试验
+- `runtime.multi_pack.start_mode` 优先使用 `manual`
+- `runtime.multi_pack.max_loaded_packs` 先保持小值（例如 `2`）
+- 不要把它当作 stable production rollout 的默认模式
+
+原因：
+
+- 当前 stable `/api/status` 仍以单 `world_pack` 返回为主
+- stable `/api/packs/:packId/overview`
+- stable `/api/packs/:packId/projections/timeline`
+- `PACK_ROUTE_ACTIVE_PACK_MISMATCH`
+
+都仍围绕 single active-pack stable contract 设计。
+
+experimental multi-pack runtime 只是旁路试验能力，主要用于：
+
+- runtime registry load / unload
+- per-pack runtime status / clock / scheduler 观察
+- experimental projection / plugin runtime compatibility 验证
+
+而不是当前默认数据库/运行时部署形态。
 
 ## 5.2 `seed:identity`
 

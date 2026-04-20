@@ -5,7 +5,7 @@ import { pluginRuntimeRegistry,refreshActivePackPluginRuntime } from '../../src/
 import { createPluginStore } from '../../src/plugins/store.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 
-const REMINDER_HASH = '7d49285e1f5f5893e35c1c8b3446c97f5d0b3d4c0f3d8c7f60ef7e0df63951a4';
+const REMINDER_HASH = '03ee763729f5fe81f03478a3b0f487ff6c8dfc779f7e9b8d88a6d016dc17edfb';
 
 describe('plugin runtime refresh integration', () => {
   it('refreshes plugin runtime registry after confirm -> enable -> disable', async () => {

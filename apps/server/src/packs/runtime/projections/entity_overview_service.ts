@@ -59,37 +59,37 @@ export interface PackEntityProjectionSnapshot {
   }>;
 }
 
+export interface PackProjectionMetadataSnapshot {
+  id: string;
+  name: string;
+  version: string;
+}
+
 const extractEntityIdFromWorldEntityRecordId = (packId: string, recordId: string): string => {
   const prefix = `${packId}:entity:`;
   return recordId.startsWith(prefix) ? recordId.slice(prefix.length) : recordId;
 };
 
-export const getPackEntityOverviewProjection = async (
+export const buildPackEntityOverviewProjection = async (
   context: AppContext,
-  packId?: string
-): Promise<PackEntityProjectionSnapshot> => {
-  const { activePack, resolvedPackId } = resolvePackProjectionTarget(context, {
-    requestedPackId: packId,
-    feature: 'pack entity overview projection'
-  });
-
-  if (!activePack || !resolvedPackId) {
-    throw new Error('World pack not ready for pack entity overview projection');
+  input: {
+    packId: string;
+    pack: PackProjectionMetadataSnapshot;
   }
-
+): Promise<PackEntityProjectionSnapshot> => {
   const [entities, entityStates, authorities, mediatorBindings, ruleExecutions] = await Promise.all([
-    listPackWorldEntities(resolvedPackId),
-    listPackEntityStates(resolvedPackId),
-    listPackAuthorityGrants(resolvedPackId),
-    listPackMediatorBindings(resolvedPackId),
-    listPackRuleExecutionRecords(resolvedPackId)
+    listPackWorldEntities(input.packId),
+    listPackEntityStates(input.packId),
+    listPackAuthorityGrants(input.packId),
+    listPackMediatorBindings(input.packId),
+    listPackRuleExecutionRecords(input.packId)
   ]);
 
   return {
     pack: {
-      id: activePack.metadata.id,
-      name: activePack.metadata.name,
-      version: activePack.metadata.version
+      id: input.pack.id,
+      name: input.pack.name,
+      version: input.pack.version
     },
     summary: {
       entity_count: entities.length,
@@ -100,7 +100,7 @@ export const getPackEntityOverviewProjection = async (
       rule_execution_count: ruleExecutions.length
     },
     entities: entities.map(entity => {
-      const entityId = extractEntityIdFromWorldEntityRecordId(resolvedPackId, entity.id);
+      const entityId = extractEntityIdFromWorldEntityRecordId(input.packId, entity.id);
       return {
         id: entityId,
         entity_kind: entity.entity_kind,
@@ -145,4 +145,27 @@ export const getPackEntityOverviewProjection = async (
         created_at: record.created_at.toString()
       }))
   };
+};
+
+export const getPackEntityOverviewProjection = async (
+  context: AppContext,
+  packId?: string
+): Promise<PackEntityProjectionSnapshot> => {
+  const { activePack, resolvedPackId } = resolvePackProjectionTarget(context, {
+    requestedPackId: packId,
+    feature: 'pack entity overview projection'
+  });
+
+  if (!activePack || !resolvedPackId) {
+    throw new Error('World pack not ready for pack entity overview projection');
+  }
+
+  return buildPackEntityOverviewProjection(context, {
+    packId: resolvedPackId,
+    pack: {
+      id: activePack.metadata.id,
+      name: activePack.metadata.name,
+      version: activePack.metadata.version
+    },
+  });
 };

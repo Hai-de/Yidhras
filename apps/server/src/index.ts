@@ -9,6 +9,8 @@ import { registerAccessPolicyRoutes } from './app/routes/access_policy.js';
 import { registerAgentRoutes } from './app/routes/agent.js';
 import { registerAuditRoutes } from './app/routes/audit.js';
 import { registerClockRoutes } from './app/routes/clock.js';
+import { registerExperimentalPackProjectionRoutes } from './app/routes/experimental_pack_projection.js';
+import { registerExperimentalRuntimeRoutes } from './app/routes/experimental_runtime.js';
 import { registerGraphRoutes } from './app/routes/graph.js';
 import { registerIdentityRoutes } from './app/routes/identity.js';
 import { registerInferenceRoutes } from './app/routes/inference.js';
@@ -127,6 +129,12 @@ const registerRoutes: RouteRegistrar = (application, context) => {
     parsePositiveStepTicks,
     toJsonSafe,
     getErrorMessage
+  });
+  registerExperimentalRuntimeRoutes(application, context, {
+    asyncHandler
+  });
+  registerExperimentalPackProjectionRoutes(application, context, {
+    asyncHandler
   });
   registerSocialRoutes(application, context, {
     asyncHandler

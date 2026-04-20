@@ -111,6 +111,19 @@ pnpm smoke:server
 - `scheduler.runners.*`
 - `scheduler.observability.*`
 - `prompt_workflow.profiles.*`
+- `features.experimental.multi_pack_runtime.enabled`
+- `features.experimental.multi_pack_runtime.operator_api_enabled`
+- `features.experimental.multi_pack_runtime.ui_enabled`
+- `runtime.multi_pack.max_loaded_packs`
+- `runtime.multi_pack.start_mode`
+- `runtime.multi_pack.bootstrap_packs`
+
+说明：
+
+- experimental multi-pack runtime 默认关闭
+- 当前只推荐用于 operator / test-only 试验
+- 稳定模式仍以 single active-pack runtime 为中心
+- 不建议把它当作当前默认运行模型
 
 ## 3. Server 命令
 
@@ -242,6 +255,49 @@ pnpm --filter yidhras-server dev
 ```
 
 说明：这些参数属于 runtime host policy。默认值偏保守；若世界包开发者或部署者选择不同数据库，应自行根据数据库能力调整 runner concurrency、tick budget、entity single-flight 相关参数。
+
+### 3.5.3 Experimental multi-pack runtime 启动示例
+
+临时通过 env 打开：
+
+```bash
+EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED=true \
+EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED=true \
+pnpm --filter yidhras-server dev
+```
+
+或在 `data/configw/default.yaml` / `data/configw/local.yaml` 中显式设置：
+
+```yaml
+features:
+  experimental:
+    multi_pack_runtime:
+      enabled: true
+      operator_api_enabled: true
+      ui_enabled: false
+
+runtime:
+  multi_pack:
+    max_loaded_packs: 2
+    start_mode: manual
+    bootstrap_packs: []
+```
+
+当前相关 env override 包括：
+
+- `EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED`
+- `EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED`
+- `EXPERIMENTAL_MULTI_PACK_RUNTIME_UI_ENABLED`
+- `RUNTIME_MULTI_PACK_MAX_LOADED_PACKS`
+- `RUNTIME_MULTI_PACK_START_MODE`
+- `RUNTIME_MULTI_PACK_BOOTSTRAP_PACKS`
+
+试验建议：
+
+- 默认保持 `start_mode=manual`
+- 保守设置 `max_loaded_packs`
+- 先通过 experimental API 显式 load / unload runtime
+- 不要把 stable `/api/packs/:packId/*` 当作 multi-pack 读面
 
 ### 3.5 World Pack 与手工脚本
 

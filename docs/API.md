@@ -13,6 +13,29 @@
 - 若 query / params 不满足约束（非法数字、非法枚举、空白必填 params 等），当前实现返回 `400`
 - 除非特别注明，否则以下接口均以当前公开 contract 为准，而不是描述内部实现细节
 
+## 0. Stable vs Experimental multi-pack runtime boundary
+
+当前 Phase 5 将 multi-pack runtime 明确定义为：
+
+- **experimental**
+- **default off**
+- **operator / test-only**
+
+也就是说：
+
+- 当前稳定 contract 仍以 **single active-pack runtime** 为中心
+- `/api/status` 继续返回单个 `world_pack`
+- `/api/packs/:packId/overview` 与 `/api/packs/:packId/projections/timeline` 继续要求 `packId === active pack`
+- `PACK_ROUTE_ACTIVE_PACK_MISMATCH` 继续成立
+
+只有在显式打开以下开关后，experimental surfaces 才可用：
+
+- `features.experimental.multi_pack_runtime.enabled`
+- `features.experimental.multi_pack_runtime.operator_api_enabled`
+- env overrides：
+  - `EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED`
+  - `EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED`
+
 ## 1. 基础信息 (System)
 
 - **GET `/api/status`**
@@ -20,6 +43,7 @@
   - 返回：`{ success: true, data: { status, runtime_ready, runtime_speed, scheduler, health_level, world_pack, has_error, startup_errors } }`
   - `world_pack` 可能包含：`id / name / version / description / authors / license / homepage / repository / tags / compatibility`
 - **POST `/api/runtime/speed`**
+  - 稳定边界：只作用于当前 stable active-pack runtime
   - 说明：覆盖或清除运行时步进速度
   - 参数：`{ action: "override", step_ticks: string|number }` 或 `{ action: "clear" }`
 - **GET `/api/health`**
@@ -56,6 +80,20 @@
 - **GET `/api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`**
   - 说明：访问已启用 pack-local plugin 的同源 web 资产
   - 失败代码：`PLUGIN_WEB_ASSET_NOT_ENABLED`、`PLUGIN_WEB_ASSET_FORBIDDEN`、`PLUGIN_WEB_ASSET_NOT_FOUND`、`PLUGIN_WEB_ENTRYPOINT_NOT_FOUND`
+
+### 2.1 Experimental plugin runtime web surfaces
+
+以下接口仅在 experimental multi-pack runtime operator API 打开时可用：
+
+- **GET `/api/experimental/runtime/packs/:packId/plugins/runtime/web`**
+  - 说明：读取某个 **experimentally loaded** pack runtime 的 web plugin runtime snapshot
+- **GET `/api/experimental/runtime/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`**
+  - 说明：访问某个 **experimentally loaded** pack runtime 下已启用插件的同源 web 资产
+
+稳定与实验接口分层原则：
+
+- `/api/packs/:packId/plugins/runtime/web` 继续走 stable active-pack scope
+- `/api/experimental/runtime/packs/:packId/plugins/runtime/web` 才允许读取 experiment-loaded pack scope
 
 更详细的治理与运行时说明：
 - `docs/guides/PLUGIN_OPERATIONS.md`
@@ -118,6 +156,32 @@
 
 ## 7. 叙事与投影接口
 
+### 7.0 Experimental runtime registry / projection read surfaces
+
+以下接口属于 **experimental multi-pack runtime registry** 的 operator/test-only 读写面：
+
+- `GET /api/experimental/runtime/system/health`
+- `GET /api/experimental/runtime/packs`
+- `GET /api/experimental/runtime/packs/:packId/status`
+- `GET /api/experimental/runtime/packs/:packId/clock`
+- `GET /api/experimental/runtime/packs/:packId/scheduler/summary`
+- `GET /api/experimental/runtime/packs/:packId/scheduler/ownership`
+- `GET /api/experimental/runtime/packs/:packId/scheduler/workers`
+- `GET /api/experimental/runtime/packs/:packId/scheduler/operator`
+- `POST /api/experimental/runtime/packs/:packId/load`
+- `POST /api/experimental/runtime/packs/:packId/unload`
+- `GET /api/experimental/packs/:packId/overview`
+- `GET /api/experimental/packs/:packId/projections/timeline`
+- `GET /api/experimental/packs/:packId/projections/entities`
+- `GET /api/experimental/packs/:packId/entities/:id/overview`
+- `GET /api/experimental/packs/:packId/plugins`
+
+约束：
+
+- 这些接口 **不替代** 当前 canonical stable API
+- 这些接口只面向 operator / test-only 试验，不承诺短期稳定 contract
+- `:packId` 需要先进入 experimental runtime registry（显式 load 或已存在于 loaded set）
+
 ### 7.1 Canonical pack narrative projection endpoint
 
 - **GET `/api/packs/:packId/projections/timeline`**
@@ -150,6 +214,8 @@
 - `/api/packs/:packId/projections/timeline` 是当前 canonical narrative timeline API
 - `/api/packs/:packId/overview` 与 `/api/packs/:packId/projections/timeline` 在单 active-pack 模式下要求 `packId` 与当前 active pack 一致
 - 不一致时返回：`PACK_ROUTE_ACTIVE_PACK_MISMATCH`
+- experimental pack-local reads 必须改走 `/api/experimental/...`
+- 当前阶段不把 stable canonical routes 直接升级为“任意 loaded pack 可读”
 
 ## 8. Agent / Entity 读取接口
 

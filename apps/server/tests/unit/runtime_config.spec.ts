@@ -4,7 +4,9 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  getExperimentalMultiPackRuntimeConfig,
   getRuntimeConfig,
+  getRuntimeMultiPackConfig,
   getSchedulerAgentConfig,
   getSchedulerAutomaticRebalanceConfig,
   getSchedulerEntityConcurrencyConfig,
@@ -14,6 +16,8 @@ import {
   getSchedulerTickBudgetConfig,
   getSimulationLoopIntervalMs,
   getSqliteRuntimeConfig,
+  isExperimentalMultiPackOperatorApiEnabled,
+  isExperimentalMultiPackRuntimeEnabled,
   resetRuntimeConfigCache
 } from '../../src/config/runtime_config.js';
 
@@ -165,9 +169,19 @@ const defaultYamlBase = [
   '      token_budget: 1900',
   '      section_policy: "minimal"',
   '      compatibility_mode: "bridge_only"',
+  'runtime:',
+  '  multi_pack:',
+  '    max_loaded_packs: 2',
+  '    start_mode: "manual"',
+  '    bootstrap_packs: ["death_note", "test_pack"]',
   'features:',
   '  inference_trace: true',
-  '  notifications: true'
+  '  notifications: true',
+  '  experimental:',
+  '    multi_pack_runtime:',
+  '      enabled: false',
+  '      operator_api_enabled: false',
+  '      ui_enabled: false'
 ].join('\n') + '\n';
 
 afterEach(async () => {
@@ -200,6 +214,12 @@ afterEach(async () => {
   delete process.env.SCHEDULER_SUMMARY_MAX_SAMPLE_RUNS;
   delete process.env.SCHEDULER_OPERATOR_DEFAULT_RECENT_LIMIT;
   delete process.env.SCHEDULER_OPERATOR_MAX_RECENT_LIMIT;
+  delete process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED;
+  delete process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED;
+  delete process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_UI_ENABLED;
+  delete process.env.RUNTIME_MULTI_PACK_MAX_LOADED_PACKS;
+  delete process.env.RUNTIME_MULTI_PACK_START_MODE;
+  delete process.env.RUNTIME_MULTI_PACK_BOOTSTRAP_PACKS;
   delete process.env.SQLITE_BUSY_TIMEOUT_MS;
   delete process.env.SQLITE_WAL_AUTOCHECKPOINT_PAGES;
   delete process.env.SQLITE_SYNCHRONOUS;
@@ -211,7 +231,7 @@ afterEach(async () => {
 });
 
 describe('runtime config YAML migration', () => {
-  it('loads scheduler runtime and prompt workflow defaults from YAML', async () => {
+  it('loads scheduler runtime, prompt workflow defaults, and experimental multi-pack settings from YAML', async () => {
     const rootDir = await createWorkspace({
       'data/configw/default.yaml': defaultYamlBase
     });
@@ -265,6 +285,18 @@ describe('runtime config YAML migration', () => {
       cooldown_ticks: 4,
       max_candidates: 33
     });
+    expect(getRuntimeMultiPackConfig()).toMatchObject({
+      max_loaded_packs: 2,
+      start_mode: 'manual',
+      bootstrap_packs: ['death_note', 'test_pack']
+    });
+    expect(getExperimentalMultiPackRuntimeConfig()).toMatchObject({
+      enabled: false,
+      operator_api_enabled: false,
+      ui_enabled: false
+    });
+    expect(isExperimentalMultiPackRuntimeEnabled()).toBe(false);
+    expect(isExperimentalMultiPackOperatorApiEnabled()).toBe(false);
     expect(config.prompt_workflow.profiles.agent_decision_default).toMatchObject({
       token_budget: 2600,
       section_policy: 'expanded',
@@ -274,7 +306,7 @@ describe('runtime config YAML migration', () => {
     expect(config.scheduler.agent.recovery_suppression.retry.suppress_periodic).toBe(false);
   });
 
-  it('allows env to override migrated scheduler YAML values', async () => {
+  it('allows env to override migrated scheduler YAML values and experimental multi-pack settings', async () => {
     const rootDir = await createWorkspace({
       'data/configw/default.yaml': defaultYamlBase
     });
@@ -310,6 +342,12 @@ describe('runtime config YAML migration', () => {
     process.env.SCHEDULER_OPERATOR_MAX_RECENT_LIMIT = '28';
     process.env.SCHEDULER_AGENT_LIMIT = '11';
     process.env.SCHEDULER_AGENT_COOLDOWN_TICKS = '6';
+    process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED = 'true';
+    process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED = 'true';
+    process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_UI_ENABLED = 'false';
+    process.env.RUNTIME_MULTI_PACK_MAX_LOADED_PACKS = '4';
+    process.env.RUNTIME_MULTI_PACK_START_MODE = 'bootstrap_list';
+    process.env.RUNTIME_MULTI_PACK_BOOTSTRAP_PACKS = 'death_note,test_pack';
 
     expect(getSqliteRuntimeConfig()).toMatchObject({ busy_timeout_ms: 8000, wal_autocheckpoint_pages: 1200, synchronous: 'FULL' });
     expect(getSimulationLoopIntervalMs()).toBe(2500);
@@ -345,5 +383,17 @@ describe('runtime config YAML migration', () => {
     });
     expect(getSchedulerAgentConfig().limit).toBe(11);
     expect(getSchedulerAgentConfig().cooldown_ticks).toBe(6);
+    expect(getRuntimeMultiPackConfig()).toMatchObject({
+      max_loaded_packs: 4,
+      start_mode: 'bootstrap_list',
+      bootstrap_packs: ['death_note', 'test_pack']
+    });
+    expect(getExperimentalMultiPackRuntimeConfig()).toMatchObject({
+      enabled: true,
+      operator_api_enabled: true,
+      ui_enabled: false
+    });
+    expect(isExperimentalMultiPackRuntimeEnabled()).toBe(true);
+    expect(isExperimentalMultiPackOperatorApiEnabled()).toBe(true);
   });
 });

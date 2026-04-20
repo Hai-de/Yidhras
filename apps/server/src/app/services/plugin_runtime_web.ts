@@ -1,9 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { resolvePackProjectionTarget } from '../../packs/runtime/projections/active_pack_projection_guard.js';
 import { createPluginStore } from '../../plugins/store.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
+
+type PluginRuntimeWebSurface = 'stable' | 'experimental';
 
 export interface ActivePackPluginRuntimeWebSnapshot {
   pack_id: string;
@@ -92,14 +95,81 @@ export const buildPluginWebAssetUrl = (input: {
   return `/api/packs/${encodeURIComponent(input.pack_id)}/plugins/${encodeURIComponent(input.plugin_id)}/runtime/web/${encodeURIComponent(input.installation_id)}/${input.asset_path}`;
 };
 
-export const getActivePackPluginRuntimeWebSnapshot = async (
+export const buildExperimentalPluginWebAssetUrl = (input: {
+  pack_id: string;
+  plugin_id: string;
+  installation_id: string;
+  asset_path: string;
+}): string => {
+  return `/api/experimental/runtime/packs/${encodeURIComponent(input.pack_id)}/plugins/${encodeURIComponent(input.plugin_id)}/runtime/web/${encodeURIComponent(input.installation_id)}/${input.asset_path}`;
+};
+
+const assertStablePackRuntimeScope = (
   context: AppContext,
-  packId: string
+  packId: string,
+  feature: string
+): string => {
+  const { resolvedPackId } = resolvePackProjectionTarget(context, {
+    requestedPackId: packId,
+    feature
+  });
+
+  if (!resolvedPackId) {
+    throw new ApiError(503, 'WORLD_PACK_NOT_READY', `World pack not ready for ${feature}`);
+  }
+
+  return resolvedPackId;
+};
+
+const assertExperimentalPackRuntimeScope = (
+  context: AppContext,
+  packId: string,
+  feature: string
+): string => {
+  const normalizedPackId = packId.trim();
+  const handle = context.sim.getPackRuntimeHandle(normalizedPackId);
+  if (!handle) {
+    throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', `Experimental pack runtime not found for ${feature}`, {
+      pack_id: normalizedPackId,
+      feature
+    });
+  }
+
+  return normalizedPackId;
+};
+
+const resolvePackRuntimeWebScope = (
+  context: AppContext,
+  packId: string,
+  feature: string,
+  surface: PluginRuntimeWebSurface
+): string => {
+  return surface === 'experimental'
+    ? assertExperimentalPackRuntimeScope(context, packId, feature)
+    : assertStablePackRuntimeScope(context, packId, feature);
+};
+
+const buildPluginWebAssetRuntimeUrl = (surface: PluginRuntimeWebSurface, input: {
+  pack_id: string;
+  plugin_id: string;
+  installation_id: string;
+  asset_path: string;
+}): string => {
+  return surface === 'experimental'
+    ? buildExperimentalPluginWebAssetUrl(input)
+    : buildPluginWebAssetUrl(input);
+};
+
+const getPackPluginRuntimeWebSnapshot = async (
+  context: AppContext,
+  packId: string,
+  surface: PluginRuntimeWebSurface
 ): Promise<ActivePackPluginRuntimeWebSnapshot> => {
+  const scopedPackId = resolvePackRuntimeWebScope(context, packId, 'plugin runtime web snapshot', surface);
   const store = createPluginStore({ prisma: context.prisma });
   const installations = await store.listInstallationsByScope({
     scope_type: 'pack_local',
-    scope_ref: packId
+    scope_ref: scopedPackId
   });
 
   const plugins = [] as ActivePackPluginRuntimeWebSnapshot['plugins'];
@@ -120,10 +190,10 @@ export const getActivePackPluginRuntimeWebSnapshot = async (
     plugins.push({
       installation_id: installation.installation_id,
       plugin_id: installation.plugin_id,
-      pack_id: packId,
+      pack_id: scopedPackId,
       web_bundle_url: webEntrypoint
-        ? buildPluginWebAssetUrl({
-            pack_id: packId,
+        ? buildPluginWebAssetRuntimeUrl(surface, {
+            pack_id: scopedPackId,
             plugin_id: installation.plugin_id,
             installation_id: installation.installation_id,
             asset_path: webEntrypoint
@@ -144,20 +214,37 @@ export const getActivePackPluginRuntimeWebSnapshot = async (
   }
 
   return {
-    pack_id: packId,
+    pack_id: scopedPackId,
     plugins
   };
 };
 
-export const resolveEnabledPluginWebAsset = async (
+export const getActivePackPluginRuntimeWebSnapshot = async (
+  context: AppContext,
+  packId: string
+): Promise<ActivePackPluginRuntimeWebSnapshot> => getPackPluginRuntimeWebSnapshot(context, packId, 'stable');
+
+export const getExperimentalPackPluginRuntimeWebSnapshot = async (
+  context: AppContext,
+  packId: string
+): Promise<ActivePackPluginRuntimeWebSnapshot> => getPackPluginRuntimeWebSnapshot(context, packId, 'experimental');
+
+const resolvePluginWebAssetWithScope = async (
   context: AppContext,
   input: {
     pack_id: string;
     plugin_id: string;
     installation_id: string;
     asset_path: string;
-  }
+  },
+  surface: PluginRuntimeWebSurface
 ): Promise<ResolvedPluginWebAsset> => {
+  const scopedPackId = resolvePackRuntimeWebScope(
+    context,
+    input.pack_id,
+    'plugin runtime web asset',
+    surface
+  );
   const store = createPluginStore({ prisma: context.prisma });
   const installation = await store.getInstallationById(input.installation_id);
 
@@ -167,7 +254,7 @@ export const resolveEnabledPluginWebAsset = async (
     });
   }
 
-  if (installation.scope_ref !== input.pack_id || installation.plugin_id !== input.plugin_id) {
+  if (installation.scope_ref !== scopedPackId || installation.plugin_id !== input.plugin_id) {
     throw new ApiError(404, 'PLUGIN_WEB_ASSET_NOT_FOUND', 'Plugin web asset not found for the requested pack-local scope');
   }
 
@@ -226,3 +313,23 @@ export const resolveEnabledPluginWebAsset = async (
     relative_path: normalizedAssetPath
   };
 };
+
+export const resolveEnabledPluginWebAsset = async (
+  context: AppContext,
+  input: {
+    pack_id: string;
+    plugin_id: string;
+    installation_id: string;
+    asset_path: string;
+  }
+): Promise<ResolvedPluginWebAsset> => resolvePluginWebAssetWithScope(context, input, 'stable');
+
+export const resolveExperimentalEnabledPluginWebAsset = async (
+  context: AppContext,
+  input: {
+    pack_id: string;
+    plugin_id: string;
+    installation_id: string;
+    asset_path: string;
+  }
+): Promise<ResolvedPluginWebAsset> => resolvePluginWebAssetWithScope(context, input, 'experimental');

@@ -1,32 +1,34 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-18T09:05:02.279Z
-- Status: active
+- Updated At: 2026-04-20T07:57:34.858Z
+- Status: completed
 - Phase: implementation
 
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
-- 当前进度：6/6 个里程碑已完成；最新：PG4
-- 当前焦点：Phase C：补强 scheduler readiness 与 runner claim 后复核，落实实体级 single-flight / activity budget
-- 最新结论：单世界包内的多实体并发请求已经形成正式配置、执行与文档闭环，可以在保守默认值下运行，并由部署者按数据库能力自行调优。
-- 下一步：回看 TODO.md 的第四阶段条目，必要时同步勾选或继续评估第五阶段多世界包同时运行的前置条件。
+- 当前进度：8/8 个里程碑已完成；最新：PG6
+- 当前焦点：Phase 5 experimental multi-pack runtime registry implementation fully completed; stable single active-pack contracts pre…
+- 最新结论：Phase 5A-5E are complete. The implementation now includes a conservative experimental PackRuntimeRegistry / PackRuntimeHandle / PackRuntimeHost model, pack-local scheduler/plugin/p…
+- 下一步：Start a final Phase 5 review/summary pass or move on to the next milestone after experimental multi-pack runtime registry.
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/single-pack-multi-entity-concurrent-request-design.md`
-- 计划：`.limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md`
+- 设计：`.limcode/design/experimental-multi-pack-runtime-registry-design.md`
+- 计划：`.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md`
+- 审查：`.limcode/review/multi-pack-runtime-experimental-assessment.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 补 runtime config contract：新增 entity_concurrency / tick_budget / runner concurrency 配置、schema 与默认值  `#plan-phase-a-config-contract`
-- [x] 将 decision job runner 与 action dispatcher runner 改为受限并发池，保持 claim/lock/ownership 契约不变  `#plan-phase-b-runner-concurrency`
-- [x] 补强 scheduler readiness 与 runner claim 后复核，正式落实实体级 single-flight / activity budget  `#plan-phase-c-single-flight`
-- [x] 补充并发相关 observability、测试与部署调优文档  `#plan-phase-d-observability-docs`
+- [x] 建立 experimental multi-pack runtime registry 基础：feature flag、runtime config、PackRuntimeRegistry / PackRuntimeHandle / PackRuntimeHost 骨架  `#phase5a-runtime-registry-foundation`
+- [x] 落 pack-local 隔离基础：clock、runtime speed、scheduler scope、startup/health 模型与 `(pack_id, partition_id)` 调度作用域  `#phase5b-pack-local-isolation`
+- [x] 提供 experimental operator/test-only API：pack runtime load/unload/list/status/clock/scheduler 观察面  `#phase5c-experimental-operator-api`
+- [x] 补 pack-local plugin runtime / projection / route scope 兼容层，确保不破坏当前单 active-pack 稳定 contract  `#phase5d-plugin-projection-compat`
+- [x] 补实验性测试、文档与启用说明，明确默认关闭、风险边界与试用反馈路径  `#phase5e-tests-docs-rollout`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -103,6 +105,30 @@
 - 摘要:
 已完成单 active pack 前提下的多实体受控并发落地：runtime config 已新增 entity_concurrency / tick_budget / runner concurrency；decision job runner 与 action dispatcher runner 已改为受限并发池；scheduler readiness 与 runner claim 后复核已落实实体级 single-flight；并已补充测试、架构与部署调优文档，并通过 lint、typecheck、unit 与 integration 验证。
 - 下一步：回看 TODO.md 的第四阶段条目，必要时同步勾选或继续评估第五阶段多世界包同时运行的前置条件。
+
+### PG5 · Phase 5A：experimental multi-pack runtime registry 基础骨架完成
+- 状态：completed
+- 记录时间：2026-04-18T09:46:22.221Z
+- 完成时间：2026-04-18T09:46:22.221Z
+- 关联 TODO：phase5a-runtime-registry-foundation
+- 关联文档：
+  - 设计：`.limcode/design/experimental-multi-pack-runtime-registry-design.md`
+  - 计划：`.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md`
+- 摘要:
+已完成 experimental multi-pack runtime registry 的第一阶段：扩展 runtime config schema 与默认值，加入 experimental multi-pack feature flag / runtime.multi_pack 配置、env override、snapshot getter；建立 PackRuntimeRegistry / PackRuntimeHandle / PackRuntimeHost / pack runtime health 基础抽象，并在 SimulationManager 中接入最小 registry facade；补充 runtime_config 与 pack_runtime_registry 单测验证。
+- 下一步：进入 Phase 5B，开始拆 pack-local clock、runtime speed 与 `(pack_id, partition_id)` scheduler scope。
+
+### PG6 · Phase 5B：scheduler lease/cursor 已接入 pack-scoped partition scope
+- 状态：completed
+- 记录时间：2026-04-18T10:13:47.885Z
+- 完成时间：2026-04-18T10:13:47.885Z
+- 关联 TODO：phase5b-pack-local-isolation
+- 关联文档：
+  - 设计：`.limcode/design/experimental-multi-pack-runtime-registry-design.md`
+  - 计划：`.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md`
+- 摘要:
+在不破坏当前单 active-pack 稳定模式的前提下，为 scheduler lease/cursor 引入 pack-scoped partition scope 支持。新增 `multi_pack_scheduler_scope.ts` 的解析辅助能力，并将 `scheduler_lease.ts` 扩展为可接受形如 `pack_id::p0` 的 scoped partition id；这样不同 pack 可以独立持有相同 partition id 的 lease/cursor 记录而不互相覆盖。新增集成测试 `tests/integration/scheduler-pack-scope.spec.ts` 验证 pack-scoped lease/cursor/release 行为，并通过 lint、typecheck 与相关 integration tests。
+- 下一步：继续 Phase 5B/5C 交界：把 ownership/status 读面与 experimental operator API 接到新的 pack-local runtime 与 scheduler scope。
 <!-- LIMCODE_PROGRESS_MILESTONES_END -->
 
 ## 风险与阻塞
@@ -114,26 +140,26 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-17T22:25:37.111Z | updated | 进入 Phase 2B，开始在统一渲染器上扩展 default / if / each 受控宏能力。
-- 2026-04-17T22:33:30.445Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/world-pack-prompt-macro-variable-formalization-implementation.plan.md
-- 2026-04-17T22:33:38.734Z | milestone_recorded | phase2b-macro-runtime | 记录里程碑：第二阶段 Phase 2B 宏能力与测试完成
-- 2026-04-17T22:38:36.556Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/world-pack-prompt-macro-variable-formalization-implementation.plan.md
-- 2026-04-17T22:38:52.272Z | artifact_changed | docs | 已更新 Prompt Workflow / World Pack 文档，补充变量命名空间、宏语法与上手说明。
-- 2026-04-17T22:38:52.272Z | milestone_recorded | phase2c-docs-templates | 完成第二阶段文档与模板收口：使用文档可指导作者与使用者上手，death_note 模板已切换到 namespaced 写法。
-- 2026-04-17T22:41:27.345Z | updated | 开始开发环境下的第二阶段额外收尾：允许进行更大规模的裸 key 模板占位符替换，以继续减少技术债。
-- 2026-04-17T22:46:40.822Z | updated | 完成开发环境额外清理：大规模替换残留裸 key 模板占位符与旧 invocation 占位符写法，进一步压缩后续变量系统技术债。
-- 2026-04-18T07:58:09.941Z | artifact_changed | design | 同步设计文档：.limcode/design/single-pack-multi-entity-concurrent-request-design.md
-- 2026-04-18T08:31:35.157Z | artifact_changed | plan | 同步计划文档：.limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md
-- 2026-04-18T08:35:04.968Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md
-- 2026-04-18T08:35:13.877Z | updated | plan-phase-a-config-contract | 开始执行 Phase A，准备扩展 runtime config schema、默认值与示例配置。
-- 2026-04-18T08:40:58.809Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md
-- 2026-04-18T08:41:07.845Z | milestone_recorded | PG2 | 记录里程碑：Phase A：runtime config contract 完成
-- 2026-04-18T08:44:31.335Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md
-- 2026-04-18T08:44:41.554Z | updated | plan-phase-b-runner-concurrency | 完成 Phase B：新增通用受限并发池，并将 decision job runner / action dispatcher runner 改造为配置驱动的并发执行。
-- 2026-04-18T08:58:17.533Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md
-- 2026-04-18T08:58:26.400Z | milestone_recorded | PG3 | 记录里程碑：Phase C：实体级 single-flight 与 activity budget 落地
-- 2026-04-18T09:04:52.041Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md
-- 2026-04-18T09:05:02.279Z | milestone_recorded | PG4 | 记录里程碑：单世界包多实体并发请求第四阶段完成
+- 2026-04-18T09:20:58.806Z | artifact_changed | review | 同步审查文档：.limcode/review/multi-pack-runtime-experimental-assessment.md
+- 2026-04-18T09:21:17.218Z | artifact_changed | experimental-multi-pack-runtime-registry-design | 开始创建第五阶段 experimental multi-pack runtime registry 设计文档。
+- 2026-04-18T09:22:28.547Z | artifact_changed | review | 同步审查里程碑：M1
+- 2026-04-18T09:25:13.964Z | artifact_changed | design | 同步设计文档：.limcode/design/experimental-multi-pack-runtime-registry-design.md
+- 2026-04-18T09:29:00.426Z | artifact_changed | plan | 同步计划文档：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md
+- 2026-04-18T09:34:48.279Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md
+- 2026-04-18T09:35:05.766Z | updated | phase5a-runtime-registry-foundation | 开始执行 Phase 5A，先为 experimental multi-pack runtime registry 增加 feature flag、runtime config 与基础抽象骨架。
+- 2026-04-18T09:46:02.487Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md
+- 2026-04-18T09:46:22.221Z | milestone_recorded | PG5 | 记录里程碑：Phase 5A：experimental multi-pack runtime registry 基础骨架完成
+- 2026-04-18T10:05:47.023Z | updated | phase5b-pack-local-isolation | 扩展 PackRuntimeInstance 与 experimental multi-pack runtime service，补 system health vs per-pack runtime health split、pack-local runtime speed/clock snapshot，并通过 lint 与 unit tests。
+- 2026-04-18T10:13:47.885Z | milestone_recorded | PG6 | 记录里程碑：Phase 5B：scheduler lease/cursor 已接入 pack-scoped partition scope
+- 2026-04-18T10:18:16.888Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md
+- 2026-04-18T10:18:34.275Z | updated | phase5c-experimental-operator-api | 开始接入 experimental operator/test-only runtime API，先开放 registry list、system health、per-pack status 与 clock 只读接口，并增加默认关闭/显式开启的 e2e 验证。
+- 2026-04-18T10:29:28.556Z | updated | phase5c-experimental-operator-api | experimental operator API 已支持显式 load/unload，以及 pack-scoped scheduler summary/ownership/workers/operator 只读接口，并通过 e2e、lint、typecheck 验证。
+- 2026-04-20T07:04:58.294Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md
+- 2026-04-20T07:05:46.344Z | updated | phase5d-plugin-projection-compat | 按当前决策收口 Phase 5C，剩余增强项留给 docs/ENHANCEMENTS.md；正式开始 Phase 5D，进入 plugin runtime / projection / route scope 兼容层。
+- 2026-04-20T07:57:14.559Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md
+- 2026-04-20T07:57:34.858Z | updated | phase5d-plugin-projection-compat | Phase 5D completed: added conservative experimental pack-local plugin runtime / projection / route compatibility surfaces while preserving stable active-pack guards and canonical contracts.
+- 2026-04-20T07:57:34.858Z | updated | phase5e-tests-docs-rollout | Phase 5E completed: synced focused regression coverage and rollout documentation across API, architecture, plugin runtime, commands, and DB operations guidance.
+- 2026-04-20T07:57:34.858Z | milestone_recorded | phase5-complete | Phase 5 experimental multi-pack runtime registry finished with all plan todos completed and stable single-pack behavior preserved by default.
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -143,36 +169,42 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-17T21:05:29.611Z",
-  "updatedAt": "2026-04-18T09:05:02.279Z",
-  "status": "active",
+  "updatedAt": "2026-04-20T07:57:34.858Z",
+  "status": "completed",
   "phase": "implementation",
-  "currentFocus": "Phase C：补强 scheduler readiness 与 runner claim 后复核，落实实体级 single-flight / activity budget",
-  "latestConclusion": "单世界包内的多实体并发请求已经形成正式配置、执行与文档闭环，可以在保守默认值下运行，并由部署者按数据库能力自行调优。",
+  "currentFocus": "Phase 5 experimental multi-pack runtime registry implementation fully completed; stable single active-pack contracts preserved while experimental multi-pack remains default-off and operator/test-only.",
+  "latestConclusion": "Phase 5A-5E are complete. The implementation now includes a conservative experimental PackRuntimeRegistry / PackRuntimeHandle / PackRuntimeHost model, pack-local scheduler/plugin/projection compatibility paths, experimental operator and projection APIs, focused regression coverage, and rollout documentation without weakening stable `/api/status`, `/api/packs/:packId/overview`, `/api/packs/:packId/projections/timeline`, or `PACK_ROUTE_ACTIVE_PACK_MISMATCH`.",
   "currentBlocker": null,
-  "nextAction": "回看 TODO.md 的第四阶段条目，必要时同步勾选或继续评估第五阶段多世界包同时运行的前置条件。",
+  "nextAction": "Start a final Phase 5 review/summary pass or move on to the next milestone after experimental multi-pack runtime registry.",
   "activeArtifacts": {
-    "design": ".limcode/design/single-pack-multi-entity-concurrent-request-design.md",
-    "plan": ".limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md"
+    "design": ".limcode/design/experimental-multi-pack-runtime-registry-design.md",
+    "plan": ".limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md",
+    "review": ".limcode/review/multi-pack-runtime-experimental-assessment.md"
   },
   "todos": [
     {
-      "id": "plan-phase-a-config-contract",
-      "content": "补 runtime config contract：新增 entity_concurrency / tick_budget / runner concurrency 配置、schema 与默认值",
+      "id": "phase5a-runtime-registry-foundation",
+      "content": "建立 experimental multi-pack runtime registry 基础：feature flag、runtime config、PackRuntimeRegistry / PackRuntimeHandle / PackRuntimeHost 骨架",
       "status": "completed"
     },
     {
-      "id": "plan-phase-b-runner-concurrency",
-      "content": "将 decision job runner 与 action dispatcher runner 改为受限并发池，保持 claim/lock/ownership 契约不变",
+      "id": "phase5b-pack-local-isolation",
+      "content": "落 pack-local 隔离基础：clock、runtime speed、scheduler scope、startup/health 模型与 `(pack_id, partition_id)` 调度作用域",
       "status": "completed"
     },
     {
-      "id": "plan-phase-c-single-flight",
-      "content": "补强 scheduler readiness 与 runner claim 后复核，正式落实实体级 single-flight / activity budget",
+      "id": "phase5c-experimental-operator-api",
+      "content": "提供 experimental operator/test-only API：pack runtime load/unload/list/status/clock/scheduler 观察面",
       "status": "completed"
     },
     {
-      "id": "plan-phase-d-observability-docs",
-      "content": "补充并发相关 observability、测试与部署调优文档",
+      "id": "phase5d-plugin-projection-compat",
+      "content": "补 pack-local plugin runtime / projection / route scope 兼容层，确保不破坏当前单 active-pack 稳定 contract",
+      "status": "completed"
+    },
+    {
+      "id": "phase5e-tests-docs-rollout",
+      "content": "补实验性测试、文档与启用说明，明确默认关闭、风险边界与试用反馈路径",
       "status": "completed"
     }
   ],
@@ -291,141 +323,178 @@
       "completedAt": "2026-04-18T09:05:02.279Z",
       "recordedAt": "2026-04-18T09:05:02.279Z",
       "nextAction": "回看 TODO.md 的第四阶段条目，必要时同步勾选或继续评估第五阶段多世界包同时运行的前置条件。"
+    },
+    {
+      "id": "PG5",
+      "title": "Phase 5A：experimental multi-pack runtime registry 基础骨架完成",
+      "status": "completed",
+      "summary": "已完成 experimental multi-pack runtime registry 的第一阶段：扩展 runtime config schema 与默认值，加入 experimental multi-pack feature flag / runtime.multi_pack 配置、env override、snapshot getter；建立 PackRuntimeRegistry / PackRuntimeHandle / PackRuntimeHost / pack runtime health 基础抽象，并在 SimulationManager 中接入最小 registry facade；补充 runtime_config 与 pack_runtime_registry 单测验证。",
+      "relatedTodoIds": [
+        "phase5a-runtime-registry-foundation"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/experimental-multi-pack-runtime-registry-design.md",
+        "plan": ".limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
+      },
+      "completedAt": "2026-04-18T09:46:22.221Z",
+      "recordedAt": "2026-04-18T09:46:22.221Z",
+      "nextAction": "进入 Phase 5B，开始拆 pack-local clock、runtime speed 与 `(pack_id, partition_id)` scheduler scope。"
+    },
+    {
+      "id": "PG6",
+      "title": "Phase 5B：scheduler lease/cursor 已接入 pack-scoped partition scope",
+      "status": "completed",
+      "summary": "在不破坏当前单 active-pack 稳定模式的前提下，为 scheduler lease/cursor 引入 pack-scoped partition scope 支持。新增 `multi_pack_scheduler_scope.ts` 的解析辅助能力，并将 `scheduler_lease.ts` 扩展为可接受形如 `pack_id::p0` 的 scoped partition id；这样不同 pack 可以独立持有相同 partition id 的 lease/cursor 记录而不互相覆盖。新增集成测试 `tests/integration/scheduler-pack-scope.spec.ts` 验证 pack-scoped lease/cursor/release 行为，并通过 lint、typecheck 与相关 integration tests。",
+      "relatedTodoIds": [
+        "phase5b-pack-local-isolation"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/experimental-multi-pack-runtime-registry-design.md",
+        "plan": ".limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
+      },
+      "completedAt": "2026-04-18T10:13:47.885Z",
+      "recordedAt": "2026-04-18T10:13:47.885Z",
+      "nextAction": "继续 Phase 5B/5C 交界：把 ownership/status 读面与 experimental operator API 接到新的 pack-local runtime 与 scheduler scope。"
     }
   ],
   "risks": [],
   "log": [
     {
-      "at": "2026-04-17T22:25:37.111Z",
-      "type": "updated",
-      "message": "进入 Phase 2B，开始在统一渲染器上扩展 default / if / each 受控宏能力。"
-    },
-    {
-      "at": "2026-04-17T22:33:30.445Z",
+      "at": "2026-04-18T09:20:58.806Z",
       "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/world-pack-prompt-macro-variable-formalization-implementation.plan.md"
+      "refId": "review",
+      "message": "同步审查文档：.limcode/review/multi-pack-runtime-experimental-assessment.md"
     },
     {
-      "at": "2026-04-17T22:33:38.734Z",
-      "type": "milestone_recorded",
-      "refId": "phase2b-macro-runtime",
-      "message": "记录里程碑：第二阶段 Phase 2B 宏能力与测试完成"
-    },
-    {
-      "at": "2026-04-17T22:38:36.556Z",
+      "at": "2026-04-18T09:21:17.218Z",
       "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/world-pack-prompt-macro-variable-formalization-implementation.plan.md"
+      "refId": "experimental-multi-pack-runtime-registry-design",
+      "message": "开始创建第五阶段 experimental multi-pack runtime registry 设计文档。"
     },
     {
-      "at": "2026-04-17T22:38:52.272Z",
+      "at": "2026-04-18T09:22:28.547Z",
       "type": "artifact_changed",
-      "refId": "docs",
-      "message": "已更新 Prompt Workflow / World Pack 文档，补充变量命名空间、宏语法与上手说明。"
+      "refId": "review",
+      "message": "同步审查里程碑：M1"
     },
     {
-      "at": "2026-04-17T22:38:52.272Z",
-      "type": "milestone_recorded",
-      "refId": "phase2c-docs-templates",
-      "message": "完成第二阶段文档与模板收口：使用文档可指导作者与使用者上手，death_note 模板已切换到 namespaced 写法。"
-    },
-    {
-      "at": "2026-04-17T22:41:27.345Z",
-      "type": "updated",
-      "message": "开始开发环境下的第二阶段额外收尾：允许进行更大规模的裸 key 模板占位符替换，以继续减少技术债。"
-    },
-    {
-      "at": "2026-04-17T22:46:40.822Z",
-      "type": "updated",
-      "message": "完成开发环境额外清理：大规模替换残留裸 key 模板占位符与旧 invocation 占位符写法，进一步压缩后续变量系统技术债。"
-    },
-    {
-      "at": "2026-04-18T07:58:09.941Z",
+      "at": "2026-04-18T09:25:13.964Z",
       "type": "artifact_changed",
       "refId": "design",
-      "message": "同步设计文档：.limcode/design/single-pack-multi-entity-concurrent-request-design.md"
+      "message": "同步设计文档：.limcode/design/experimental-multi-pack-runtime-registry-design.md"
     },
     {
-      "at": "2026-04-18T08:31:35.157Z",
+      "at": "2026-04-18T09:29:00.426Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md"
+      "message": "同步计划文档：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
     },
     {
-      "at": "2026-04-18T08:35:04.968Z",
+      "at": "2026-04-18T09:34:48.279Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
     },
     {
-      "at": "2026-04-18T08:35:13.877Z",
+      "at": "2026-04-18T09:35:05.766Z",
       "type": "updated",
-      "refId": "plan-phase-a-config-contract",
-      "message": "开始执行 Phase A，准备扩展 runtime config schema、默认值与示例配置。"
+      "refId": "phase5a-runtime-registry-foundation",
+      "message": "开始执行 Phase 5A，先为 experimental multi-pack runtime registry 增加 feature flag、runtime config 与基础抽象骨架。"
     },
     {
-      "at": "2026-04-18T08:40:58.809Z",
+      "at": "2026-04-18T09:46:02.487Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
     },
     {
-      "at": "2026-04-18T08:41:07.845Z",
+      "at": "2026-04-18T09:46:22.221Z",
       "type": "milestone_recorded",
-      "refId": "PG2",
-      "message": "记录里程碑：Phase A：runtime config contract 完成"
+      "refId": "PG5",
+      "message": "记录里程碑：Phase 5A：experimental multi-pack runtime registry 基础骨架完成"
     },
     {
-      "at": "2026-04-18T08:44:31.335Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-18T08:44:41.554Z",
+      "at": "2026-04-18T10:05:47.023Z",
       "type": "updated",
-      "refId": "plan-phase-b-runner-concurrency",
-      "message": "完成 Phase B：新增通用受限并发池，并将 decision job runner / action dispatcher runner 改造为配置驱动的并发执行。"
+      "refId": "phase5b-pack-local-isolation",
+      "message": "扩展 PackRuntimeInstance 与 experimental multi-pack runtime service，补 system health vs per-pack runtime health split、pack-local runtime speed/clock snapshot，并通过 lint 与 unit tests。"
     },
     {
-      "at": "2026-04-18T08:58:17.533Z",
+      "at": "2026-04-18T10:13:47.885Z",
+      "type": "milestone_recorded",
+      "refId": "PG6",
+      "message": "记录里程碑：Phase 5B：scheduler lease/cursor 已接入 pack-scoped partition scope"
+    },
+    {
+      "at": "2026-04-18T10:18:16.888Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
     },
     {
-      "at": "2026-04-18T08:58:26.400Z",
-      "type": "milestone_recorded",
-      "refId": "PG3",
-      "message": "记录里程碑：Phase C：实体级 single-flight 与 activity budget 落地"
+      "at": "2026-04-18T10:18:34.275Z",
+      "type": "updated",
+      "refId": "phase5c-experimental-operator-api",
+      "message": "开始接入 experimental operator/test-only runtime API，先开放 registry list、system health、per-pack status 与 clock 只读接口，并增加默认关闭/显式开启的 e2e 验证。"
     },
     {
-      "at": "2026-04-18T09:04:52.041Z",
+      "at": "2026-04-18T10:29:28.556Z",
+      "type": "updated",
+      "refId": "phase5c-experimental-operator-api",
+      "message": "experimental operator API 已支持显式 load/unload，以及 pack-scoped scheduler summary/ownership/workers/operator 只读接口，并通过 e2e、lint、typecheck 验证。"
+    },
+    {
+      "at": "2026-04-20T07:04:58.294Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/single-pack-multi-entity-concurrent-request-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
     },
     {
-      "at": "2026-04-18T09:05:02.279Z",
+      "at": "2026-04-20T07:05:46.344Z",
+      "type": "updated",
+      "refId": "phase5d-plugin-projection-compat",
+      "message": "按当前决策收口 Phase 5C，剩余增强项留给 docs/ENHANCEMENTS.md；正式开始 Phase 5D，进入 plugin runtime / projection / route scope 兼容层。"
+    },
+    {
+      "at": "2026-04-20T07:57:14.559Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/experimental-multi-pack-runtime-registry-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-20T07:57:34.858Z",
+      "type": "updated",
+      "refId": "phase5d-plugin-projection-compat",
+      "message": "Phase 5D completed: added conservative experimental pack-local plugin runtime / projection / route compatibility surfaces while preserving stable active-pack guards and canonical contracts."
+    },
+    {
+      "at": "2026-04-20T07:57:34.858Z",
+      "type": "updated",
+      "refId": "phase5e-tests-docs-rollout",
+      "message": "Phase 5E completed: synced focused regression coverage and rollout documentation across API, architecture, plugin runtime, commands, and DB operations guidance."
+    },
+    {
+      "at": "2026-04-20T07:57:34.858Z",
       "type": "milestone_recorded",
-      "refId": "PG4",
-      "message": "记录里程碑：单世界包多实体并发请求第四阶段完成"
+      "refId": "phase5-complete",
+      "message": "Phase 5 experimental multi-pack runtime registry finished with all plan todos completed and stable single-pack behavior preserved by default."
     }
   ],
   "stats": {
-    "milestonesTotal": 6,
-    "milestonesCompleted": 6,
-    "todosTotal": 4,
-    "todosCompleted": 4,
+    "milestonesTotal": 8,
+    "milestonesCompleted": 8,
+    "todosTotal": 5,
+    "todosCompleted": 5,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-18T09:05:02.279Z",
-    "bodyHash": "sha256:dcb05ee7e094f7e2df60696ee9e6f27523706214b4cc4cdba7d6fecd3d77f73c"
+    "generatedAt": "2026-04-20T07:57:34.858Z",
+    "bodyHash": "sha256:de8437d14f4294a0c3758a7ef4ad978dc2a0a46b5101ad39f18b2a39dc54bde8"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

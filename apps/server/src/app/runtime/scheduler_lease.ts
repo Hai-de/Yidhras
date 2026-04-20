@@ -1,5 +1,6 @@
 import { getSchedulerLeaseTicks } from '../../config/runtime_config.js';
 import type { AppContext } from '../context.js';
+import { buildPackScopedSchedulerCursorKey, buildPackScopedSchedulerLeaseKey, parsePackScopedSchedulerPartitionId } from './multi_pack_scheduler_scope.js';
 import {
   deleteSchedulerLeaseRecordByHolder,
   getSchedulerCursorRecord,
@@ -39,12 +40,47 @@ const normalizePartitionId = (partitionId: string | undefined): string => {
   return normalized;
 };
 
+const normalizePartitionScope = (partitionId: string | undefined): { rawPartitionId: string; storagePartitionId: string; packId: string | null } => {
+  const incoming = typeof partitionId === 'string' ? partitionId.trim() : '';
+
+  if (incoming.includes('::')) {
+    const parsed = parsePackScopedSchedulerPartitionId(incoming);
+    return {
+      rawPartitionId: parsed.partition_id,
+      storagePartitionId: parsed.scoped_partition_id,
+      packId: parsed.pack_id
+    };
+  }
+
+  const normalized = normalizePartitionId(partitionId);
+
+  if (!normalized.includes('::')) {
+    return {
+      rawPartitionId: normalized,
+      storagePartitionId: normalized,
+      packId: null
+    };
+  }
+
+  return {
+    rawPartitionId: normalized,
+    storagePartitionId: normalized,
+    packId: null
+  };
+};
+
 export const buildSchedulerLeaseKey = (partitionId = DEFAULT_SCHEDULER_PARTITION_ID): string => {
-  return `${SCHEDULER_LEASE_KEY_PREFIX}:${normalizePartitionId(partitionId)}`;
+  const scope = normalizePartitionScope(partitionId);
+  return scope.packId
+    ? `${SCHEDULER_LEASE_KEY_PREFIX}:${buildPackScopedSchedulerLeaseKey(scope.packId, scope.rawPartitionId)}`
+    : `${SCHEDULER_LEASE_KEY_PREFIX}:${scope.storagePartitionId}`;
 };
 
 export const buildSchedulerCursorKey = (partitionId = DEFAULT_SCHEDULER_PARTITION_ID): string => {
-  return `${SCHEDULER_CURSOR_KEY_PREFIX}:${normalizePartitionId(partitionId)}`;
+  const scope = normalizePartitionScope(partitionId);
+  return scope.packId
+    ? `${SCHEDULER_CURSOR_KEY_PREFIX}:${buildPackScopedSchedulerCursorKey(scope.packId, scope.rawPartitionId)}`
+    : `${SCHEDULER_CURSOR_KEY_PREFIX}:${scope.storagePartitionId}`;
 };
 
 export const acquireSchedulerLease = async (
@@ -56,14 +92,14 @@ export const acquireSchedulerLease = async (
     leaseTicks?: bigint;
   }
 ): Promise<SchedulerLeaseAcquireResult> => {
-  const partitionId = normalizePartitionId(input.partitionId);
+  const partitionScope = normalizePartitionScope(input.partitionId);
   const now = input.now ?? context.sim.getCurrentTick();
   const leaseTicks = input.leaseTicks ?? getSchedulerLeaseTicks();
   const expiresAt = now + leaseTicks;
-  const key = buildSchedulerLeaseKey(partitionId);
+  const key = buildSchedulerLeaseKey(partitionScope.storagePartitionId);
   const existing = await upsertSchedulerLeaseRecord(context, {
     key,
-    partition_id: partitionId,
+    partition_id: partitionScope.storagePartitionId,
     holder: input.workerId,
     acquired_at: now,
     expires_at: expiresAt,
@@ -75,7 +111,7 @@ export const acquireSchedulerLease = async (
       acquired: true,
       holder: input.workerId,
       expires_at: expiresAt,
-      partition_id: partitionId,
+      partition_id: partitionScope.storagePartitionId,
       key: existing.key
     };
   }
@@ -85,13 +121,13 @@ export const acquireSchedulerLease = async (
       acquired: false,
       holder: existing.holder,
       expires_at: existing.expires_at,
-      partition_id: partitionId,
+      partition_id: partitionScope.storagePartitionId,
       key: existing.key
     };
   }
 
   const updatedLease = await updateSchedulerLeaseRecordIfClaimable(context, {
-    partition_id: partitionId,
+    partition_id: partitionScope.storagePartitionId,
     holder: input.workerId,
     acquired_at: existing.holder === input.workerId ? existing.acquired_at : now,
     expires_at: expiresAt,
@@ -101,14 +137,14 @@ export const acquireSchedulerLease = async (
   });
 
   if (updatedLease.count === 0) {
-    const latestLease = await getSchedulerLeaseRecord(context, partitionId);
+    const latestLease = await getSchedulerLeaseRecord(context, partitionScope.storagePartitionId);
 
     if (!latestLease) {
       return {
         acquired: false,
         holder: null,
         expires_at: null,
-        partition_id: partitionId,
+        partition_id: partitionScope.storagePartitionId,
         key
       };
     }
@@ -117,7 +153,7 @@ export const acquireSchedulerLease = async (
       acquired: latestLease.holder === input.workerId,
       holder: latestLease.holder,
       expires_at: latestLease.expires_at,
-      partition_id: partitionId,
+      partition_id: latestLease.partition_id,
       key: latestLease.key
     };
   }
@@ -126,7 +162,7 @@ export const acquireSchedulerLease = async (
     acquired: true,
     holder: input.workerId,
     expires_at: expiresAt,
-    partition_id: partitionId,
+    partition_id: partitionScope.storagePartitionId,
     key: existing.key
   };
 };
@@ -148,9 +184,9 @@ export const releaseSchedulerLease = async (
   workerId: string,
   partitionId?: string
 ): Promise<boolean> => {
-  const normalizedPartitionId = normalizePartitionId(partitionId);
+  const partitionScope = normalizePartitionScope(partitionId);
   const releaseResult = await deleteSchedulerLeaseRecordByHolder(context, {
-    partition_id: normalizedPartitionId,
+    partition_id: partitionScope.storagePartitionId,
     holder: workerId
   });
 
@@ -170,12 +206,12 @@ export const updateSchedulerCursor = async (
     now?: bigint;
   }
 ): Promise<void> => {
-  const partitionId = normalizePartitionId(input.partitionId);
-  const key = buildSchedulerCursorKey(partitionId);
+  const partitionScope = normalizePartitionScope(input.partitionId);
+  const key = buildSchedulerCursorKey(partitionScope.storagePartitionId);
   const now = input.now ?? context.sim.getCurrentTick();
   await upsertSchedulerCursorRecord(context, {
     key,
-    partition_id: partitionId,
+    partition_id: partitionScope.storagePartitionId,
     last_scanned_tick: input.lastScannedTick,
     last_signal_tick: input.lastSignalTick,
     updated_at: now
@@ -186,8 +222,8 @@ export const getSchedulerCursor = async (
   context: AppContext,
   partitionId?: string
 ): Promise<{ partition_id: string; last_scanned_tick: bigint; last_signal_tick: bigint } | null> => {
-  const normalizedPartitionId = normalizePartitionId(partitionId);
-  const cursor = await getSchedulerCursorRecord(context, normalizedPartitionId);
+  const partitionScope = normalizePartitionScope(partitionId);
+  const cursor = await getSchedulerCursorRecord(context, partitionScope.storagePartitionId);
 
   if (!cursor) {
     return null;

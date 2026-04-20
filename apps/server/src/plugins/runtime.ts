@@ -65,6 +65,15 @@ class PluginRuntimeRegistry {
     this.runtimes.set(packId, runtimes);
   }
 
+  public clearRuntimes(packId: string): void {
+    this.runtimes.delete(packId);
+    for (const routeKey of Array.from(this.appliedRouteKeys)) {
+      if (routeKey.startsWith(`${packId}:`)) {
+        this.appliedRouteKeys.delete(routeKey);
+      }
+    }
+  }
+
   public listRuntimes(packId: string): RegisteredServerPluginRuntime[] {
     return this.runtimes.get(packId) ?? [];
   }
@@ -187,16 +196,33 @@ const registerManifestContributions = (runtime: RegisteredServerPluginRuntime): 
 }
 
 export const syncActivePackPluginRuntime = async (context: AppContext): Promise<void> => {
-  await refreshActivePackPluginRuntime(context);
-
   const activePackId = context.sim.getActivePack()?.metadata.id;
-  const app = context.getHttpApp?.() ?? null;
+  if (!activePackId) {
+    return;
+  }
 
-  if (!activePackId || !app) {
+  await refreshPackPluginRuntime(context, activePackId);
+
+  const app = context.getHttpApp?.() ?? null;
+  if (!app) {
     return;
   }
 
   pluginRuntimeRegistry.applyPackRoutes(activePackId, app, context);
+};
+
+export const syncExperimentalPackPluginRuntime = async (
+  context: AppContext,
+  packId: string
+): Promise<void> => {
+  await refreshPackPluginRuntime(context, packId);
+
+  const app = context.getHttpApp?.() ?? null;
+  if (!app) {
+    return;
+  }
+
+  pluginRuntimeRegistry.applyPackRoutes(packId, app, context);
 };
 
 export const refreshActivePackPluginRuntime = async (context: AppContext): Promise<void> => {
@@ -205,10 +231,22 @@ export const refreshActivePackPluginRuntime = async (context: AppContext): Promi
     return;
   }
 
+  await refreshPackPluginRuntime(context, activePack.metadata.id);
+};
+
+export const refreshPackPluginRuntime = async (
+  context: AppContext,
+  packId: string
+): Promise<void> => {
+  const normalizedPackId = packId.trim();
+  if (normalizedPackId.length === 0) {
+    return;
+  }
+
   const store = createPluginStore({ prisma: context.prisma });
   const installations = await store.listInstallationsByScope({
     scope_type: 'pack_local',
-    scope_ref: activePack.metadata.id
+    scope_ref: normalizedPackId
   });
 
   const runtimes: RegisteredServerPluginRuntime[] = [];
@@ -227,7 +265,7 @@ export const refreshActivePackPluginRuntime = async (context: AppContext): Promi
     const runtime = createRuntimeForManifest({
       installation_id: installation.installation_id,
       plugin_id: installation.plugin_id,
-      pack_id: activePack.metadata.id,
+      pack_id: normalizedPackId,
       manifest,
       granted_capabilities: installation.granted_capabilities
     });
@@ -235,5 +273,6 @@ export const refreshActivePackPluginRuntime = async (context: AppContext): Promi
     runtimes.push(runtime);
   }
 
-  pluginRuntimeRegistry.setRuntimes(activePack.metadata.id, runtimes);
+  pluginRuntimeRegistry.clearRuntimes(normalizedPackId);
+  pluginRuntimeRegistry.setRuntimes(normalizedPackId, runtimes);
 };

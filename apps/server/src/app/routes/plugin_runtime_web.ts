@@ -8,8 +8,9 @@ import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseParams } from '../http/zod.js';
 import {
   getActivePackPluginRuntimeWebSnapshot,
-  resolveEnabledPluginWebAsset
-} from '../services/plugin_runtime_web.js';
+  getExperimentalPackPluginRuntimeWebSnapshot,
+  resolveEnabledPluginWebAsset,
+  resolveExperimentalEnabledPluginWebAsset} from '../services/plugin_runtime_web.js';
 
 export interface PluginRuntimeWebRouteDependencies {
   asyncHandler(
@@ -51,6 +52,46 @@ export const registerPluginRuntimeWebRoutes = (
       const snapshot = await getActivePackPluginRuntimeWebSnapshot(context, params.packId);
       activePackPluginRuntimeDataSchema.parse(toJsonSafe(snapshot));
       jsonOk(res, toJsonSafe(snapshot));
+    })
+  );
+
+  app.get(
+    '/api/experimental/runtime/packs/:packId/plugins/runtime/web',
+    deps.asyncHandler(async (req, res) => {
+      const params = parseParams(pluginPackParamsSchema, req.params, 'PLUGIN_QUERY_INVALID');
+      const snapshot = await getExperimentalPackPluginRuntimeWebSnapshot(context, params.packId);
+      activePackPluginRuntimeDataSchema.parse(toJsonSafe(snapshot));
+      jsonOk(res, toJsonSafe(snapshot));
+    })
+  );
+
+  app.get(
+    '/api/experimental/runtime/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*',
+    deps.asyncHandler(async (req, res) => {
+      const params = parseParams(
+        pluginWebAssetParamsSchema,
+        {
+          packId: req.params.packId,
+          pluginId: req.params.pluginId,
+          installationId: req.params.installationId
+        },
+        'PLUGIN_QUERY_INVALID'
+      );
+      const wildcardAssetPath = typeof req.params[0] === 'string' ? req.params[0] : '';
+      const asset = await resolveExperimentalEnabledPluginWebAsset(context, {
+        pack_id: params.packId,
+        plugin_id: params.pluginId,
+        installation_id: params.installationId,
+        asset_path: wildcardAssetPath
+      });
+
+      const contentType = getContentType(asset.relative_path);
+      if (contentType) {
+        res.type(contentType);
+      }
+
+      res.setHeader('Cache-Control', 'private, max-age=60');
+      res.sendFile(asset.absolute_path);
     })
   );
 

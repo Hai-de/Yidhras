@@ -175,9 +175,23 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
       memory_compaction_default: { token_budget: 1800, section_policy: 'minimal', compatibility_mode: 'bridge_only' }
     }
   },
+  runtime: {
+    multi_pack: {
+      max_loaded_packs: 2,
+      start_mode: 'manual',
+      bootstrap_packs: []
+    }
+  },
   features: {
     inference_trace: true,
-    notifications: true
+    notifications: true,
+    experimental: {
+      multi_pack_runtime: {
+        enabled: false,
+        operator_api_enabled: false,
+        ui_enabled: false
+      }
+    }
   }
 };
 
@@ -281,6 +295,15 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   );
   const failOnNoWorldPack = parseBooleanEnv('STARTUP_FAIL_ON_NO_WORLD_PACK', process.env.STARTUP_FAIL_ON_NO_WORLD_PACK);
   const pluginEnableWarningEnabled = parseBooleanEnv('PLUGIN_ENABLE_WARNING_ENABLED', process.env.PLUGIN_ENABLE_WARNING_ENABLED);
+  const experimentalMultiPackEnabled = parseBooleanEnv('EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED', process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED);
+  const experimentalMultiPackOperatorApiEnabled = parseBooleanEnv('EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED', process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED);
+  const experimentalMultiPackUiEnabled = parseBooleanEnv('EXPERIMENTAL_MULTI_PACK_RUNTIME_UI_ENABLED', process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_UI_ENABLED);
+  const runtimeMultiPackMaxLoadedPacks = parseIntegerEnv('RUNTIME_MULTI_PACK_MAX_LOADED_PACKS', process.env.RUNTIME_MULTI_PACK_MAX_LOADED_PACKS);
+  const runtimeMultiPackStartMode = parseOptionalStringEnv(process.env.RUNTIME_MULTI_PACK_START_MODE);
+  const runtimeMultiPackBootstrapPacks = parseOptionalStringEnv(process.env.RUNTIME_MULTI_PACK_BOOTSTRAP_PACKS)
+    ?.split(',')
+    .map(value => value.trim())
+    .filter(value => value.length > 0);
   const pluginEnableWarningRequireAcknowledgement = parseBooleanEnv(
     'PLUGIN_ENABLE_WARNING_REQUIRE_ACKNOWLEDGEMENT',
     process.env.PLUGIN_ENABLE_WARNING_REQUIRE_ACKNOWLEDGEMENT
@@ -289,6 +312,9 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   const overrides: Record<string, unknown> = {
     app: {
       env: activeEnv
+    },
+    features: {
+      experimental: {}
     }
   };
 
@@ -313,6 +339,20 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     };
   }
 
+  if (
+    runtimeMultiPackMaxLoadedPacks !== undefined
+    || runtimeMultiPackStartMode !== undefined
+    || runtimeMultiPackBootstrapPacks !== undefined
+  ) {
+    overrides.runtime = {
+      multi_pack: {
+        ...(runtimeMultiPackMaxLoadedPacks !== undefined ? { max_loaded_packs: runtimeMultiPackMaxLoadedPacks } : {}),
+        ...(runtimeMultiPackStartMode !== undefined ? { start_mode: runtimeMultiPackStartMode } : {}),
+        ...(runtimeMultiPackBootstrapPacks !== undefined ? { bootstrap_packs: runtimeMultiPackBootstrapPacks } : {})
+      }
+    };
+  }
+
   if (pluginEnableWarningEnabled !== undefined || pluginEnableWarningRequireAcknowledgement !== undefined) {
     overrides.plugins = {
       enable_warning: {
@@ -320,6 +360,20 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
         ...(pluginEnableWarningRequireAcknowledgement !== undefined
           ? { require_acknowledgement: pluginEnableWarningRequireAcknowledgement }
           : {})
+      }
+    };
+  }
+
+  if (
+    experimentalMultiPackEnabled !== undefined
+    || experimentalMultiPackOperatorApiEnabled !== undefined
+    || experimentalMultiPackUiEnabled !== undefined
+  ) {
+    (overrides.features as Record<string, unknown>).experimental = {
+      multi_pack_runtime: {
+        ...(experimentalMultiPackEnabled !== undefined ? { enabled: experimentalMultiPackEnabled } : {}),
+        ...(experimentalMultiPackOperatorApiEnabled !== undefined ? { operator_api_enabled: experimentalMultiPackOperatorApiEnabled } : {}),
+        ...(experimentalMultiPackUiEnabled !== undefined ? { ui_enabled: experimentalMultiPackUiEnabled } : {})
       }
     };
   }
@@ -543,6 +597,23 @@ export const getSchedulerAgentConfig = (): RuntimeConfig['scheduler']['agent'] =
   return getRuntimeConfig().scheduler.agent;
 };
 
+export const getExperimentalMultiPackRuntimeConfig = (): RuntimeConfig['features']['experimental']['multi_pack_runtime'] => {
+  return getRuntimeConfig().features.experimental.multi_pack_runtime;
+};
+
+export const getRuntimeMultiPackConfig = (): RuntimeConfig['runtime']['multi_pack'] => {
+  return getRuntimeConfig().runtime.multi_pack;
+};
+
+export const isExperimentalMultiPackRuntimeEnabled = (): boolean => {
+  return getExperimentalMultiPackRuntimeConfig().enabled;
+};
+
+export const isExperimentalMultiPackOperatorApiEnabled = (): boolean => {
+  const config = getExperimentalMultiPackRuntimeConfig();
+  return config.enabled && config.operator_api_enabled;
+};
+
 export const getWorldPacksDir = (): string => {
   return resolveWorkspacePath(getRuntimeConfig().paths.world_packs_dir);
 };
@@ -628,9 +699,15 @@ export const buildRuntimeConfigSnapshot = (): Record<string, string | boolean | 
     scheduler_agent_max_candidates: String(config.scheduler.agent.max_candidates),
     bootstrap_template_file: bootstrap.templateFilePath,
     prompt_workflow_agent_decision_budget: String(config.prompt_workflow.profiles.agent_decision_default.token_budget),
-    startup_allow_degraded_mode: String(config.startup.allow_degraded_mode)
+    runtime_multi_pack_max_loaded_packs: String(config.runtime.multi_pack.max_loaded_packs),
+    runtime_multi_pack_start_mode: config.runtime.multi_pack.start_mode,
+    runtime_multi_pack_bootstrap_packs: config.runtime.multi_pack.bootstrap_packs,
+    startup_allow_degraded_mode: String(config.startup.allow_degraded_mode),
+    experimental_multi_pack_runtime_enabled: String(config.features.experimental.multi_pack_runtime.enabled),
+    experimental_multi_pack_runtime_operator_api_enabled: String(config.features.experimental.multi_pack_runtime.operator_api_enabled),
+    experimental_multi_pack_runtime_ui_enabled: String(config.features.experimental.multi_pack_runtime.ui_enabled)
   };
-};
+};;
 
 export const logRuntimeConfigSnapshot = (logger: (message: string) => void = console.log): void => {
   if (runtimeConfigSnapshotLogged) {

@@ -12,6 +12,24 @@ const PositiveIntSchema = z.number().int().positive();
 const NonNegativeIntSchema = z.number().int().min(0);
 const SqliteSynchronousSchema = z.enum(['OFF', 'NORMAL', 'FULL', 'EXTRA']);
 
+const MultiPackRuntimeStartModeSchema = z.enum(['manual', 'bootstrap_list']);
+
+const ExperimentalMultiPackRuntimeSchema = z
+  .object({
+    enabled: z.boolean(),
+    operator_api_enabled: z.boolean(),
+    ui_enabled: z.boolean()
+  })
+  .strict();
+
+const RuntimeMultiPackSchema = z
+  .object({
+    max_loaded_packs: PositiveIntSchema,
+    start_mode: MultiPackRuntimeStartModeSchema,
+    bootstrap_packs: z.array(NonEmptyStringSchema)
+  })
+  .strict();
+
 const PromptWorkflowProfileDefaultsSchema = z
   .object({
     token_budget: PositiveIntSchema,
@@ -205,10 +223,20 @@ export const RuntimeConfigSchema = z
           .strict()
       })
       .strict(),
+    runtime: z
+      .object({
+        multi_pack: RuntimeMultiPackSchema
+      })
+      .strict(),
     features: z
       .object({
         inference_trace: z.boolean(),
-        notifications: z.boolean()
+        notifications: z.boolean(),
+        experimental: z
+          .object({
+            multi_pack_runtime: ExperimentalMultiPackRuntimeSchema
+          })
+          .strict()
       })
       .strict()
   })

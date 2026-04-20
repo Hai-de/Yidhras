@@ -165,7 +165,33 @@
 
 约束：
 - 不把 `SimulationManager` 继续扩张为通用 app-service bucket
+- 不把它改造成新的“大一统多 pack 容器”
 - 新的 query / orchestration 逻辑应放进更聚焦的模块
+
+### 3.3.1 Experimental multi-pack runtime registry boundary
+
+当前 Phase 5 已引入 **experimental multi-pack runtime registry**，但它的定位是保守的：
+
+- **default off**
+- **experimental**
+- **operator / test-only**
+
+当前推荐的职责分层是：
+
+- `PackRuntimeRegistry`
+  - 负责 loaded pack runtime 集合、lookup、capacity limit、load/unload 生命周期
+- `PackRuntimeHandle`
+  - 对外暴露 pack-local clock / runtime speed / health 等只读句柄
+- `PackRuntimeHost`
+  - 作为 pack-local runtime 宿主
+- `SimulationManager`
+  - 继续作为 stable single active-pack facade
+
+这意味着：
+
+- multi-pack 不是当前默认 runtime model
+- stable `/api/status` 不会立即变成多 pack 数组形态
+- stable canonical pack routes 也不会因为 experimental mode 自动解除 active-pack guard
 
 ## 4. Workflow / inference 边界
 
@@ -288,6 +314,26 @@
 - 请求的 `packId` 必须与当前 active pack 一致
 - 不一致时返回 `409 / PACK_ROUTE_ACTIVE_PACK_MISMATCH`
 
+### 7.1.1 Experimental projection / route compatibility path
+
+为了支持 experimental multi-pack runtime，本阶段采用的是 **parallel experimental surfaces**，而不是直接修改 stable canonical routes：
+
+- stable canonical routes：
+  - `/api/packs/:packId/overview`
+  - `/api/packs/:packId/projections/timeline`
+  - `/api/packs/:packId/plugins/runtime/web`
+  - 继续绑定 active-pack scope
+- experimental routes：
+  - `/api/experimental/runtime/packs/:packId/*`
+  - `/api/experimental/packs/:packId/*`
+  - 只面向 experiment-loaded pack runtime
+
+设计结论：
+
+- stable contract 不因 experimental mode 自动扩张
+- `PACK_ROUTE_ACTIVE_PACK_MISMATCH` 继续作为稳定边界的一部分
+- plugin runtime、projection、route scope 的 pack-local 兼容，优先通过 experimental surfaces 旁路引入
+
 ### 7.2 Access-policy subsystem
 
 - `/api/access-policy/*` 是独立 access / projection policy 子系统
@@ -324,6 +370,7 @@
 3. `Event` 作为跨 pack-governance 与 kernel observability 的共享证据宿主存在
 4. Prompt Workflow、AI Gateway、Plugin Runtime 均已形成独立专题能力，但仍服务于更高层系统分层
 5. 当前实现仍是受控演进体系，而不是完全开放式平台
+6. experimental multi-pack runtime registry 只是旁路试验能力，不是默认平台化运行模型
 
 ## 10. 相关文档
 

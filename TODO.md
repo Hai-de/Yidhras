@@ -35,10 +35,10 @@
   - [X] 梳理 scheduler、job runner、ownership / lease、冲突控制与幂等要求
   - [X] 设计实体并发的分区、锁、重试、失败恢复与观测指标
 
-- [ ] **第五阶段：多世界包同时运行**
-  - [ ] 在完成前四阶段后，再评估 `SimulationManager` 从单 active pack 升级为多 pack runtime registry
-  - [ ] 梳理 pack 级 clock、runtime speed、plugin runtime、projection、route context 的隔离要求
-  - [ ] 逐步改造前后端对“单 active pack”前提的依赖，避免一次性全栈返工
+- [x] **第五阶段：多世界包同时运行（这个阶段默认experimental / 默认关闭 / 先 operator / test-only）**
+  - [x]  `SimulationManager` 从单 active pack 升级为多 pack runtime registry是实验性功能！！！
+  - [x] 梳理 pack 级 clock、runtime speed、plugin runtime、projection、route context 的隔离要求
+  - [x] 逐步改造前后端对“单 active pack”前提的依赖，避免一次性全栈返工
 
 ### P1 架构与实现跟进
 

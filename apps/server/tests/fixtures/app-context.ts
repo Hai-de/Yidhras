@@ -8,8 +8,8 @@ import type {
 } from '../../src/app/context.js';
 import { ChronosEngine } from '../../src/clock/engine.js';
 import type { SimulationManager } from '../../src/core/simulation.js';
-import { DEFAULT_E2E_WORLD_PACK } from '../support/config.js';
 import { notifications } from '../../src/utils/notifications.js';
+import { DEFAULT_E2E_WORLD_PACK } from '../support/config.js';
 
 export interface CreateTestAppContextOptions {
   paused?: boolean;
@@ -72,7 +72,10 @@ export const createTestAppContext = (
     }),
     getSqliteRuntimePragmaSnapshot: () => null,
     setRuntimeSpeedOverride: () => {},
-    clearRuntimeSpeedOverride: () => {}
+    clearRuntimeSpeedOverride: () => {},
+    isExperimentalMultiPackRuntimeEnabled: () => false,
+    loadExperimentalPackRuntime: async () => ({ handle: null, loaded: false, already_loaded: false }),
+    getPackRuntimeHandle: () => null
   } as unknown as SimulationManager;
 
   return {
