@@ -246,6 +246,17 @@ describe('prompt workflow section drafts', () => {
       world_prompts: {},
       world_ai: null,
       visible_variables: {},
+      variable_context: {
+        layers: [],
+        alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
+        strict_namespace: false
+      },
+      variable_context_summary: {
+        namespaces: [],
+        alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
+        strict_namespace: false,
+        layer_count: 0
+      },
       policy_summary: {
         social_post_read_allowed: true,
         social_post_readable_fields: ['id', 'content'],

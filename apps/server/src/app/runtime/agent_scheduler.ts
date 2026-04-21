@@ -19,10 +19,6 @@ import {
 import { recordSchedulerRunSnapshot } from '../services/scheduler_observability.js';
 import { listActiveWorkflowActors } from './entity_activity_query.js';
 import { createEmptySchedulerRunResult } from './scheduler_decision_kernel.js';
-import {
-  createSchedulerDecisionKernelProvider,
-  type SchedulerDecisionKernelEvaluationMetadata
-} from './scheduler_decision_kernel_provider.js';
 import type {
   AgentSchedulerCandidateDecisionSnapshot,
   AgentSchedulerRunResult,
@@ -37,6 +33,10 @@ import type {
   SchedulerSignalPolicy,
   SchedulerSkipReason
 } from './scheduler_decision_kernel_port.js';
+import {
+  createSchedulerDecisionKernelProvider,
+  type SchedulerDecisionKernelEvaluationMetadata
+} from './scheduler_decision_kernel_provider.js';
 import {
   acquireSchedulerLease,
   getSchedulerCursor,

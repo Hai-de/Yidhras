@@ -66,8 +66,14 @@ const resolveTransmissionDropChanceByPolicy = (
   }
 };
 
-const isDeathNotePack = (context: Parameters<InferenceProvider['run']>[0]): boolean => {
-  return context.world_pack.id === 'world-death-note';
+const resolveRuleBasedProfile = (context: Parameters<InferenceProvider['run']>[0]): string | null => {
+  const taskMetadata = context.world_ai?.tasks?.agent_decision?.metadata;
+  if (!taskMetadata || typeof taskMetadata !== 'object' || Array.isArray(taskMetadata)) {
+    return null;
+  }
+
+  const profile = (taskMetadata as Record<string, unknown>).rule_based_profile;
+  return typeof profile === 'string' && profile.trim().length > 0 ? profile.trim() : null;
 };
 
 const toNumber = (value: unknown, fallback = 0): number => {
@@ -78,14 +84,14 @@ const toNullableString = (value: unknown): string | null => {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 };
 
-const getDeathNoteRoles = (context: Parameters<InferenceProvider['run']>[0]): string[] => {
+const getNotebookInvestigationReferenceRoles = (context: Parameters<InferenceProvider['run']>[0]): string[] => {
   const actorStateRoles = Array.isArray(context.pack_state.actor_state?.roles)
     ? context.pack_state.actor_state?.roles.filter((role): role is string => typeof role === 'string' && role.trim().length > 0)
     : [];
   return Array.from(new Set([...context.pack_state.actor_roles, ...actorStateRoles]));
 };
 
-const buildDeathNoteSemanticDecision = (
+const buildReferenceProfileSemanticDecision = (
   context: Parameters<InferenceProvider['run']>[0],
   input: {
     semanticIntentKind: string;
@@ -106,7 +112,8 @@ const buildDeathNoteSemanticDecision = (
   delay_hint_ticks: '1',
   reasoning: input.reasoning,
   meta: {
-    provider_mode: 'rule_based_death_note',
+    provider_mode: 'rule_based_profile',
+    rule_based_profile: 'notebook_investigation_reference_v1',
     semantic_intent: {
       kind: input.semanticIntentKind,
       text: input.reasoning,
@@ -121,7 +128,7 @@ const buildDeathNoteSemanticDecision = (
   }
 });
 
-const buildDeathNoteObserverDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
+const buildReferenceProfileObserverDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
   const latestSemanticType = context.pack_state.latest_event?.semantic_type ?? 'none';
 
   return {
@@ -142,7 +149,8 @@ const buildDeathNoteObserverDecision = (context: Parameters<InferenceProvider['r
     delay_hint_ticks: '1',
     reasoning: `${context.actor_display_name} 目前更倾向于观察案件升级与人类反应，而不是直接采取客观行动。`,
     meta: {
-      provider_mode: 'rule_based_death_note_observer',
+      provider_mode: 'rule_based_profile_observer',
+      rule_based_profile: 'notebook_investigation_reference_v1',
       transmission_delay_ticks: '1',
       transmission_policy: 'reliable',
       transmission_drop_chance: 0,
@@ -151,7 +159,7 @@ const buildDeathNoteObserverDecision = (context: Parameters<InferenceProvider['r
   };
 };
 
-const buildDeathNoteReflectionDecision = (
+const buildReferenceProfileReflectionDecision = (
   context: Parameters<InferenceProvider['run']>[0],
   input: {
     semanticIntentKind: 'record_private_reflection' | 'update_target_dossier' | 'revise_judgement_plan' | 'record_execution_postmortem';
@@ -159,7 +167,7 @@ const buildDeathNoteReflectionDecision = (
     reasoning: string;
   }
 ) => {
-  return buildDeathNoteSemanticDecision(context, {
+  return buildReferenceProfileSemanticDecision(context, {
     semanticIntentKind: input.semanticIntentKind,
     targetRef: input.targetRef ?? null,
     reasoning: input.reasoning,
@@ -174,7 +182,7 @@ const buildDeathNoteReflectionDecision = (
   });
 };
 
-const buildDeathNoteNotebookDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
+const buildReferenceProfileNotebookDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
   const actorState = context.pack_state.actor_state ?? {};
   const worldState = context.pack_state.world_state ?? {};
   const currentTargetId = toNullableString(actorState.current_target_id);
@@ -199,21 +207,21 @@ const buildDeathNoteNotebookDecision = (context: Parameters<InferenceProvider['r
     : investigatorTargetRef;
 
   if (!holderArtifact && !notebookClaimed) {
-    return buildDeathNoteSemanticDecision(context, {
+    return buildReferenceProfileSemanticDecision(context, {
       semanticIntentKind: 'claim_notebook',
       reasoning: `${context.actor_display_name} 决定先确保自己持有死亡笔记。`
     });
   }
 
   if (!knowsNotebookPower) {
-    return buildDeathNoteSemanticDecision(context, {
+    return buildReferenceProfileSemanticDecision(context, {
       semanticIntentKind: 'understand_notebook_power',
       reasoning: `${context.actor_display_name} 需要先确认死亡笔记究竟具备什么规则效力。`
     });
   }
 
   if (latestSemanticType === 'post_execution_pressure_feedback' && lastReflectionKind !== 'execution_postmortem') {
-    return buildDeathNoteReflectionDecision(context, {
+    return buildReferenceProfileReflectionDecision(context, {
       semanticIntentKind: 'record_execution_postmortem',
       targetRef: currentTargetId ? { entity_id: currentTargetId, kind: 'actor', agent_id: currentTargetId } : resolvedTargetRef,
       reasoning: `${context.actor_display_name} 需要先复盘最近一次行动带来的压力反馈，再决定是否继续推进裁决链。`
@@ -233,7 +241,7 @@ const buildDeathNoteNotebookDecision = (context: Parameters<InferenceProvider['r
     (judgementStrategyPhase === 'target_selection' || latestSemanticType === 'target_intel_collected') &&
     lastReflectionKind !== 'update_target_dossier'
   ) {
-    return buildDeathNoteReflectionDecision(context, {
+    return buildReferenceProfileReflectionDecision(context, {
       semanticIntentKind: 'update_target_dossier',
       targetRef: resolvedTargetRef,
       reasoning: `${context.actor_display_name} 准备把现有目标的姓名、长相与可利用时机整理进 dossier，避免后续判断失真。`
@@ -241,7 +249,7 @@ const buildDeathNoteNotebookDecision = (context: Parameters<InferenceProvider['r
   }
 
   if (!murderousIntent && shouldCounterInvestigate) {
-    return buildDeathNoteSemanticDecision(context, {
+    return buildReferenceProfileSemanticDecision(context, {
       semanticIntentKind: 'raise_false_suspicion',
       targetRef: investigatorTargetRef,
       reasoning: `${context.actor_display_name} 判断外部调查压力正在逼近自己，需要主动制造误导线索来转移视线。`
@@ -249,7 +257,7 @@ const buildDeathNoteNotebookDecision = (context: Parameters<InferenceProvider['r
   }
 
   if (!murderousIntent && lastExecutionOutcome === 'intent_reaffirmed' && lastReflectionKind !== 'revise_judgement_plan') {
-    return buildDeathNoteReflectionDecision(context, {
+    return buildReferenceProfileReflectionDecision(context, {
       semanticIntentKind: 'revise_judgement_plan',
       targetRef: resolvedTargetRef,
       reasoning: `${context.actor_display_name} 想先修正本轮裁决计划与执行顺序，再进入正式行动。`
@@ -257,14 +265,14 @@ const buildDeathNoteNotebookDecision = (context: Parameters<InferenceProvider['r
   }
 
   if (!murderousIntent) {
-    return buildDeathNoteSemanticDecision(context, {
+    return buildReferenceProfileSemanticDecision(context, {
       semanticIntentKind: 'form_judgement_intent',
       reasoning: `${context.actor_display_name} 开始重新思考是否要利用死亡笔记推进下一轮裁决。`
     });
   }
 
   if (!knownTargetId || !targetEligible || !targetNameConfirmed || !targetFaceConfirmed) {
-    return buildDeathNoteSemanticDecision(context, {
+    return buildReferenceProfileSemanticDecision(context, {
       semanticIntentKind: 'gather_target_intel',
       proposedMethod: 'covert_background_check',
       targetRef: investigatorTargetRef,
@@ -273,7 +281,7 @@ const buildDeathNoteNotebookDecision = (context: Parameters<InferenceProvider['r
   }
 
   if (shouldCounterInvestigate && latestSemanticType !== 'false_suspicion_raised') {
-    return buildDeathNoteSemanticDecision(context, {
+    return buildReferenceProfileSemanticDecision(context, {
       semanticIntentKind: 'raise_false_suspicion',
       targetRef: investigatorTargetRef,
       reasoning: `${context.actor_display_name} 意识到调查热度正在上升，必须先投放假线索稳住局面。`
@@ -281,14 +289,14 @@ const buildDeathNoteNotebookDecision = (context: Parameters<InferenceProvider['r
   }
 
   if (!currentTargetId) {
-    return buildDeathNoteSemanticDecision(context, {
+    return buildReferenceProfileSemanticDecision(context, {
       semanticIntentKind: 'choose_target',
       targetRef: resolvedTargetRef,
       reasoning: `${context.actor_display_name} 已经满足前置条件，准备正式锁定裁决目标。`
     });
   }
 
-  return buildDeathNoteSemanticDecision(context, {
+  return buildReferenceProfileSemanticDecision(context, {
     semanticIntentKind: 'judge_target',
     desiredEffect: 'kill',
     targetRef: { entity_id: currentTargetId, kind: 'actor', agent_id: currentTargetId },
@@ -296,7 +304,7 @@ const buildDeathNoteNotebookDecision = (context: Parameters<InferenceProvider['r
   });
 };
 
-const buildDeathNoteInvestigatorDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
+const buildReferenceProfileInvestigatorDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
   const actorState = context.pack_state.actor_state ?? {};
   const worldState = context.pack_state.world_state ?? {};
   const evidenceChainStrength = toNumber(actorState.evidence_chain_strength, 0);
@@ -316,7 +324,7 @@ const buildDeathNoteInvestigatorDecision = (context: Parameters<InferenceProvide
     latestSemanticType === 'post_execution_pressure_feedback' ||
     evidenceChainStrength < 0.55
   ) {
-    return buildDeathNoteSemanticDecision(context, {
+    return buildReferenceProfileSemanticDecision(context, {
       semanticIntentKind: 'investigate_death_cluster',
       targetRef: defaultSuspectRef,
       reasoning: `${context.actor_display_name} 认为异常死亡模式已经具备连续性，必须立即扩大调查并锁定潜在执行者。`
@@ -330,7 +338,7 @@ const buildDeathNoteInvestigatorDecision = (context: Parameters<InferenceProvide
     latestCaseUpdateKind !== 'intel_shared' &&
     latestSemanticType !== 'case_intel_shared'
   ) {
-    return buildDeathNoteReflectionDecision(context, {
+    return buildReferenceProfileReflectionDecision(context, {
       semanticIntentKind: 'update_target_dossier',
       targetRef: defaultSuspectRef,
       reasoning: `${context.actor_display_name} 准备先把现有嫌疑链、证据强度与推断缺口整理进 dossier，避免协作时信息失焦。`
@@ -338,7 +346,7 @@ const buildDeathNoteInvestigatorDecision = (context: Parameters<InferenceProvide
   }
 
   if (evidenceChainStrength >= 0.55 && latestCaseUpdateKind !== 'intel_shared' && lastReflectionKind === 'update_target_dossier') {
-    return buildDeathNoteSemanticDecision(context, {
+    return buildReferenceProfileSemanticDecision(context, {
       semanticIntentKind: 'share_case_intel',
       targetRef: collaborationTargetRef,
       reasoning: `${context.actor_display_name} 已掌握一批可共享的线索，准备先把情报扩散到协作观察链。`
@@ -346,7 +354,7 @@ const buildDeathNoteInvestigatorDecision = (context: Parameters<InferenceProvide
   }
 
   if (investigationHeat >= 2 && countermeasurePressure >= 2 && latestCaseUpdateKind !== 'intel_shared' && lastReflectionKind === 'update_target_dossier') {
-    return buildDeathNoteReflectionDecision(context, {
+    return buildReferenceProfileReflectionDecision(context, {
       semanticIntentKind: 'revise_judgement_plan',
       targetRef: defaultSuspectRef,
       reasoning: `${context.actor_display_name} 需要先修正调查计划与协同顺序，再决定下一步公开或联合行动。`
@@ -357,7 +365,7 @@ const buildDeathNoteInvestigatorDecision = (context: Parameters<InferenceProvide
     (latestCaseUpdateKind === 'intel_shared' || countermeasurePressure >= 2 || caseTheoryStrength >= 0.65) &&
     investigationFocus !== 'joint_observation'
   ) {
-    return buildDeathNoteSemanticDecision(context, {
+    return buildReferenceProfileSemanticDecision(context, {
       semanticIntentKind: 'request_joint_observation',
       targetRef: collaborationTargetRef,
       reasoning: `${context.actor_display_name} 需要更多外部观察位来比对异常死亡与可疑行为的同步变化。`
@@ -365,31 +373,31 @@ const buildDeathNoteInvestigatorDecision = (context: Parameters<InferenceProvide
   }
 
   if (investigationHeat >= 2 && latestCaseUpdateKind !== 'public_case_update') {
-    return buildDeathNoteSemanticDecision(context, {
+    return buildReferenceProfileSemanticDecision(context, {
       semanticIntentKind: 'publish_case_update',
       reasoning: `${context.actor_display_name} 判断案件已经进入必须公开通报的阶段，需要通过正式更新提升世界层面的压迫感。`
     });
   }
 
-  return buildDeathNoteSemanticDecision(context, {
+  return buildReferenceProfileSemanticDecision(context, {
     semanticIntentKind: 'investigate_death_cluster',
     targetRef: defaultSuspectRef,
     reasoning: `${context.actor_display_name} 继续围绕现有可疑主体推进调查与验证。`
   });
 };
 
-const buildDeathNoteRuleBasedDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
-  const roles = getDeathNoteRoles(context);
+const buildReferenceProfileRuleBasedDecision = (context: Parameters<InferenceProvider['run']>[0]) => {
+  const roles = getNotebookInvestigationReferenceRoles(context);
 
   if (roles.includes('investigator')) {
-    return buildDeathNoteInvestigatorDecision(context);
+    return buildReferenceProfileInvestigatorDecision(context);
   }
 
   if (roles.includes('observer') || roles.includes('shinigami')) {
-    return buildDeathNoteObserverDecision(context);
+    return buildReferenceProfileObserverDecision(context);
   }
 
-  return buildDeathNoteNotebookDecision(context);
+  return buildReferenceProfileNotebookDecision(context);
 };
 
 export const createRuleBasedInferenceProvider = (): InferenceProvider => {
@@ -397,8 +405,9 @@ export const createRuleBasedInferenceProvider = (): InferenceProvider => {
     name: 'rule_based',
     strategies: ['rule_based'],
     async run(context) {
-      if (isDeathNotePack(context)) {
-        return buildDeathNoteRuleBasedDecision(context);
+      const ruleBasedProfile = resolveRuleBasedProfile(context);
+      if (ruleBasedProfile === 'notebook_investigation_reference_v1') {
+        return buildReferenceProfileRuleBasedDecision(context);
       }
 
       const transmissionPolicy = normalizeTransmissionPolicy(

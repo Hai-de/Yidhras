@@ -72,7 +72,7 @@ const buildInferenceContext = (): InferenceContext => ({
     selected_node_ids: ['mem-short-1', 'mem-short-2', 'mem-short-3', 'mem-short-4', 'mem-short-5', 'mem-long-1', 'mem-summary-1', 'memory-block-1'],
     nodes: [],
     diagnostics: {
-      source_adapter_names: ['legacy-memory-selection', 'runtime-state-snapshots', 'memory-block-runtime'],
+      source_adapter_names: ['memory-selection', 'runtime-state-snapshots', 'memory-block-runtime'],
       node_count: 8,
       node_counts_by_type: {
         recent_trace: 3,
@@ -285,7 +285,7 @@ describe('context orchestrator', () => {
       workflow_profile_id: 'agent-decision-default',
       workflow_profile_version: '1',
       workflow_step_keys: [
-        'legacy_memory_projection',
+        'memory_projection',
         'node_working_set_filter',
         'summary_compaction',
         'token_budget_trim',
@@ -297,7 +297,7 @@ describe('context orchestrator', () => {
         profile_id: 'agent-decision-default',
         profile_version: '1',
         selected_step_keys: [
-          'legacy_memory_projection',
+          'memory_projection',
           'node_working_set_filter',
           'summary_compaction',
           'token_budget_trim',
@@ -346,7 +346,7 @@ describe('context orchestrator', () => {
 
     expect(context.context_run.diagnostics.orchestration).toMatchObject({
       step_keys: [
-        'legacy_memory_projection',
+        'memory_projection',
         'node_working_set_filter',
         'summary_compaction',
         'token_budget_trim',
@@ -366,7 +366,7 @@ describe('context orchestrator', () => {
         profile_id: 'agent-decision-default',
         profile_version: '1',
         selected_step_keys: [
-          'legacy_memory_projection',
+          'memory_projection',
           'node_working_set_filter',
           'summary_compaction',
           'token_budget_trim',
@@ -398,7 +398,7 @@ describe('context orchestrator', () => {
       (context.context_run.diagnostics.orchestration as Record<string, unknown>).prompt_workflow
     ).toBeTruthy();
     expect(bundle.metadata.workflow_step_keys).toEqual([
-      'legacy_memory_projection',
+      'memory_projection',
       'node_working_set_filter',
       'summary_compaction',
       'token_budget_trim',
@@ -416,7 +416,7 @@ describe('context orchestrator', () => {
     expect(contextSummaryBundle.metadata.workflow_task_type).toBe('context_summary');
     expect(contextSummaryBundle.metadata.workflow_profile_id).toBe('context-summary-default');
     expect(contextSummaryBundle.metadata.workflow_step_keys).toEqual([
-      'legacy_memory_projection',
+      'memory_projection',
       'node_working_set_filter',
       'summary_compaction',
       'fragment_assembly',
@@ -440,7 +440,7 @@ describe('context orchestrator', () => {
     expect(memoryCompactionBundle.metadata.workflow_task_type).toBe('memory_compaction');
     expect(memoryCompactionBundle.metadata.workflow_profile_id).toBe('memory-compaction-default');
     expect(memoryCompactionBundle.metadata.workflow_step_keys).toEqual([
-      'legacy_memory_projection',
+      'memory_projection',
       'node_working_set_filter',
       'node_grouping',
       'summary_compaction',

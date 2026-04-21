@@ -280,6 +280,25 @@
 - Rust 第一阶段是 **world engine 内核替换面**，不是平台整体迁移；
 - runtime orchestration、scheduler、plugin host、workflow host、AI gateway 仍由 Node/TS host 持有。 
 
+### 3.3.3 Rust 迁移状态矩阵（当前事实）
+
+下表只记录**当前真实默认状态**，用于帮助新开发者快速判断哪些模块已经切到 Rust 主路径、哪些仍处于兼容期。
+
+| 领域 | 当前默认执行路径 | 当前配置形态 | TS 兼容面现状 | 宿主 / Sidecar 分工 | 当前结论 |
+|------|------------------|--------------|---------------|---------------------|----------|
+| World Engine runtime loop / step | `WorldEngineSidecarClient` | `world_engine.timeout_ms` / `world_engine.binary_path` / `world_engine.auto_restart` | `createLegacyTsWorldEngineAdapter` / `createTsWorldEngineAdapter` 已物理删除；`WORLD_ENGINE_MODE` 与 `world_engine.mode` 已移除；`WORLD_ENGINE_USE_SIDECAR` 仅保留 warning-only deprecated compat，不再改变行为 | Host 持有 runtime orchestration、Host-managed persistence、PackHostApi；Rust sidecar 持有 session hydrate / query / prepare / commit / abort | **已完成 sidecar-only 收口** |
+| World Engine objective enforcement | Rust sidecar objective execution | 跟随 world engine sidecar 路径，无独立 TS 默认模式 | TS resolver 不再作为 no-match fallback；parity 测试保留为验证手段，不再是生产双写路径 | Sidecar 负责 matching / template rendering / mutation planning；Host 负责 authority / mediator validation、persistence、event bridge、execution record | **已切到 Rust-owned 真实执行路径** |
+| Scheduler decision kernel | `rust_primary` | `scheduler.agent.decision_kernel.mode` 仍保留 `ts` / `rust_shadow` / `rust_primary` 三元模式 | TS 与 shadow 路径仍存在，主要用于 fallback / diff / 调试 | Host 保持 scheduler orchestration、runner、ownership、observability；Rust sidecar 承担 decision kernel 计算 | **默认已切 Rust，但仍处于受控兼容期** |
+| Memory trigger engine | `rust_primary` | `scheduler.memory.trigger_engine.mode` 仍保留 `ts` / `rust_shadow` / `rust_primary` 三元模式 | TS 与 shadow 路径仍存在；`trigger_rate` 尚属 Rust 已知缺口并通过 diagnostics 显式标注 | Host 负责 memory block runtime、source assembly、state writeback；Rust sidecar 负责 trigger evaluation | **默认已切 Rust，但仍保留兼容 / diff 通道** |
+| Sidecar build / startup governance | binary-first + cargo fallback | `check:rust` / `build:rust` 已接入 `package.json` 与 CI | `cargo run` 仍保留开发态 fallback，但不再作为唯一治理路径 | Host 负责 binary path 解析、进程管理、timeout / auto restart；Rust sidecar 提供 stdio JSON-RPC 服务 | **已进入受控治理状态** |
+
+补充判断：
+
+- **已经完成单轨收口的领域**：world engine。
+- **已经默认切 Rust、但尚未删除 TS/shadow 兼容层的领域**：scheduler decision kernel、memory trigger engine。
+- **仍由 Node/TS host 持有所有权的能力**：runtime orchestration、scheduler runtime、plugin host、workflow host、AI gateway、Host-managed persistence。
+- **后续文档更新原则**：若某字段 / 模式 / adapter 已被物理删除，应优先同步本矩阵，再更新实现细节段落，避免文档继续保留过期开关。
+
 ## 4. Workflow / inference 边界
 
 ### 4.1 Inference workflow facade

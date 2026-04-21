@@ -7,6 +7,7 @@ import type { ContextMemoryBlockMutationRecord, ContextOverlayMutationRecord } f
 import type { InferenceMemoryMutationRecord, InferenceMemoryMutationSnapshot } from '../../inference/types.js';
 import { createPrismaLongMemoryBlockStore } from '../blocks/store.js';
 import type { LongMemoryBlockStore, MemoryBehavior, MemoryBlock, MemoryBlockKind, MemoryBlockRecord } from '../blocks/types.js';
+import { upsertDeclaredPackCollectionRecord } from '../../packs/storage/pack_collection_repo.js';
 
 const toNullableString = (value: unknown): string | null => {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
@@ -129,6 +130,7 @@ export interface MemoryRecordingService {
   recordDecisionReflection(input: DecisionReflectionInput): Promise<MemoryRecordingMutationBundle>;
   recordExecutionReflection(input: ExecutionReflectionInput): Promise<MemoryRecordingMutationBundle>;
   recordPrivateReflection(input: DecisionReflectionInput): Promise<MemoryRecordingMutationBundle>;
+  reviseJudgementPlan(input: DecisionReflectionInput): Promise<MemoryRecordingMutationBundle>;
   updateTargetDossier(input: DecisionReflectionInput): Promise<MemoryRecordingMutationBundle>;
 }
 
@@ -244,6 +246,86 @@ export const createMemoryRecordingService = ({
       });
     },
 
+    async reviseJudgementPlan(input) {
+      const reasoning = buildDecisionReflectionText(input);
+      if (!reasoning) {
+        return emptyMutationBundle();
+      }
+
+      const overlayEntry = await overlayStore.createEntry({
+        actor_id: input.actor_id,
+        pack_id: input.pack_id,
+        overlay_type: 'self_note',
+        title: `计划修订 @ ${input.tick}`,
+        content_text: reasoning,
+        content_structured: buildOverlayStructuredContent({
+          record_kind: 'revise_judgement_plan',
+          source_inference_id: input.source_inference_id,
+          semantic_intent_kind: input.semantic_intent_kind ?? null,
+          target_ref: input.target_ref ?? null,
+          metadata: input.metadata ?? null
+        }),
+        tags: mergeTags(
+          ['memory_record', 'judgement_plan', 'plan_revision'],
+          input.semantic_intent_kind ? [`semantic:${input.semantic_intent_kind}`] : [],
+          input.tags
+        ),
+        created_by: 'system',
+        persistence_mode: 'persistent',
+        created_at_tick: input.tick,
+        updated_at_tick: input.tick
+      });
+
+      await upsertDeclaredPackCollectionRecord(input.pack_id, 'judgement_plans', {
+        id: overlayEntry.id,
+        owner_actor_id: input.actor_id,
+        target_entity_id: typeof input.target_ref?.entity_id === 'string' ? input.target_ref.entity_id : null,
+        phase: typeof input.metadata?.phase === 'string' ? input.metadata.phase : input.semantic_intent_kind ?? 'revise_judgement_plan',
+        risk_score: typeof input.metadata?.risk_score === 'number' ? input.metadata.risk_score : null,
+        content: buildOverlayStructuredContent({
+          record_kind: 'revise_judgement_plan',
+          source_inference_id: input.source_inference_id,
+          semantic_intent_kind: input.semantic_intent_kind ?? null,
+          target_ref: input.target_ref ?? null,
+          metadata: { reasoning, ...(input.metadata ?? {}) }
+        })
+      });
+
+      const memoryRecord = await longMemoryBlockStore.upsertBlock(buildMemoryBlockInput({
+        actor_id: input.actor_id,
+        pack_id: input.pack_id,
+        tick: input.tick,
+        kind: 'plan',
+        title: `执行计划修订 ${input.tick}`,
+        content_text: reasoning,
+        content_structured: buildOverlayStructuredContent({
+          record_kind: 'revise_judgement_plan',
+          source_inference_id: input.source_inference_id,
+          semantic_intent_kind: input.semantic_intent_kind ?? null,
+          target_ref: input.target_ref ?? null,
+          metadata: input.metadata ?? null
+        }),
+        tags: mergeTags(
+          ['memory_record', 'judgement_plan', 'plan_revision'],
+          input.semantic_intent_kind ? [`semantic:${input.semantic_intent_kind}`] : [],
+          input.tags
+        ),
+        keywords: mergeTags(['judgement_plan', 'plan_revision'], input.semantic_intent_kind ? [input.semantic_intent_kind] : []),
+        source_ref: { source_kind: 'overlay', source_id: overlayEntry.id }
+      }));
+
+      return {
+        overlay_mutations: [toOverlayMutationRecord(overlayEntry, 'created')],
+        memory_block_mutations: [toMemoryBlockMutationRecord(memoryRecord.block, 'created')],
+        trace_memory_mutations: {
+          records: [
+            toInferenceMutationRecordFromOverlay(overlayEntry, 'created'),
+            toInferenceMutationRecordFromMemoryBlock(memoryRecord.block, 'created')
+          ]
+        }
+      };
+    },
+
     async updateTargetDossier(input) {
       return this.recordDecisionReflection({
         ...input,
@@ -304,6 +386,16 @@ export const createMemoryRecordingService = ({
             updated_at_tick: input.tick
           });
 
+      if (overlayType === 'target_dossier') {
+        await upsertDeclaredPackCollectionRecord(input.pack_id, 'target_dossiers', {
+          id: entry.id,
+          owner_actor_id: input.actor_id,
+          target_entity_id: typeof input.target_ref?.entity_id === 'string' ? input.target_ref.entity_id : null,
+          confidence: typeof input.metadata?.confidence === 'number' ? input.metadata.confidence : null,
+          content: { reasoning, structured }
+        });
+      }
+
       return {
         overlay_mutations: [toOverlayMutationRecord(entry, input.existing_overlay_id ? 'updated' : 'created')],
         memory_block_mutations: [],
@@ -358,6 +450,15 @@ export const createMemoryRecordingService = ({
           source_kind: 'intent',
           source_id: input.source_action_intent_id
         }
+      });
+      await upsertDeclaredPackCollectionRecord(input.pack_id, 'investigation_threads', {
+        id: overlayEntry.id,
+        owner_actor_id: input.actor_id,
+        subject_entity_id: typeof input.target_ref?.entity_id === 'string' ? input.target_ref.entity_id : input.actor_id,
+        evidence_strength: typeof input.metadata?.evidence_strength === 'number'
+          ? input.metadata.evidence_strength
+          : input.outcome === 'completed' ? 0.7 : input.outcome === 'dropped' ? 0.3 : 0.5,
+        content: buildExecutionReflectionSummary(input)
       });
       const memoryRecord: MemoryBlockRecord = await longMemoryBlockStore.upsertBlock(memoryBlockInput);
 

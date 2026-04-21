@@ -218,4 +218,112 @@ describe('death note memory loop integration', () => {
       schedulerResult.created_event_driven_count > 0 || schedulerResult.signals_detected_count > 0
     ).toBe(true);
   });
+
+  it('records revise_judgement_plan as overlay and plan memory block during action dispatch', async () => {
+    const now = context.sim.getCurrentTick();
+    const inferenceId = `revise-plan-trace-${Date.now()}`;
+    const intentId = `revise-plan-intent-${Date.now()}`;
+
+    await context.prisma.inferenceTrace.create({
+      data: {
+        id: inferenceId,
+        kind: 'final',
+        strategy: 'rule_based',
+        provider: 'rule_based',
+        actor_ref: {
+          identity_id: 'agent-001',
+          identity_type: 'agent',
+          role: 'active',
+          agent_id: 'agent-001',
+          atmosphere_node_id: null
+        } as Prisma.InputJsonValue,
+        input: { agent_id: 'agent-001', strategy: 'rule_based' } as Prisma.InputJsonValue,
+        context_snapshot: {} as Prisma.InputJsonValue,
+        prompt_bundle: {} as Prisma.InputJsonValue,
+        trace_metadata: {
+          memory_mutations: {
+            records: [{ kind: 'overlay', action: 'created', source: 'judgement_plan' }]
+          }
+        } as Prisma.InputJsonValue,
+        decision: {
+          action_type: 'semantic_intent',
+          target_ref: { entity_id: 'agent-002', kind: 'actor', agent_id: 'agent-002' },
+          payload: { semantic_intent_kind: 'revise_judgement_plan' }
+        } as Prisma.InputJsonValue,
+        created_at: now,
+        updated_at: now
+      }
+    });
+
+    await context.prisma.actionIntent.create({
+      data: {
+        id: intentId,
+        source_inference_id: inferenceId,
+        intent_type: 'trigger_event',
+        actor_ref: {
+          identity_id: 'agent-001', role: 'active', agent_id: 'agent-001', atmosphere_node_id: null
+        } as Prisma.InputJsonValue,
+        target_ref: { entity_id: 'agent-002', kind: 'actor', agent_id: 'agent-002' } as Prisma.InputJsonValue,
+        payload: {
+          event_type: 'history',
+          title: '夜神月重新修订了当前计划',
+          description: '夜神月对下一步行动顺序、风险和时机判断做了新的内部规划。',
+          impact_data: { semantic_type: 'judgement_plan_revised' }
+        } as Prisma.InputJsonValue,
+        status: 'pending',
+        scheduled_after_ticks: null,
+        scheduled_for_tick: null,
+        transmission_delay_ticks: null,
+        transmission_policy: 'reliable',
+        transmission_drop_chance: 0,
+        drop_reason: null,
+        dispatch_error_code: null,
+        dispatch_error_message: null,
+        locked_by: null,
+        locked_at: null,
+        lock_expires_at: null,
+        created_at: now,
+        updated_at: now
+      }
+    });
+
+    const dispatchedCount = await runActionDispatcher({
+      context,
+      workerId: 'revise-plan-test-dispatcher',
+      limit: 10
+    });
+
+    expect(dispatchedCount).toBeGreaterThanOrEqual(0);
+
+    const overlays = await context.prisma.contextOverlayEntry.findMany({
+      where: { actor_id: 'agent-001' },
+      orderBy: { created_at_tick: 'desc' }
+    });
+    const memoryBlocks = await context.prisma.memoryBlock.findMany({
+      where: { owner_agent_id: 'agent-001' },
+      orderBy: { created_at_tick: 'desc' }
+    });
+
+    const planOverlay = overlays.find(entry => {
+      const structured = isRecord(entry.content_structured) ? entry.content_structured : null;
+      return structured?.record_kind === 'revise_judgement_plan';
+    });
+    const planMemory = memoryBlocks.find(block => {
+      const structured = isRecord(block.content_structured) ? block.content_structured : null;
+      return block.kind === 'plan' && structured?.record_kind === 'revise_judgement_plan';
+    });
+
+    expect(planOverlay).toBeTruthy();
+    expect(planOverlay?.title).toContain('计划修订');
+    expect(planOverlay?.persistence_mode).toBe('persistent');
+    expect(planOverlay?.tags).toContain('judgement_plan');
+
+    expect(planMemory).toBeTruthy();
+    expect(planMemory?.title).toContain('执行计划修订');
+    expect(planMemory?.kind).toBe('plan');
+    expect(planMemory?.tags).toContain('plan_revision');
+
+    const actionIntent = await context.prisma.actionIntent.findUnique({ where: { id: intentId } });
+    expect(actionIntent?.status).toBe('completed');
+  });
 });

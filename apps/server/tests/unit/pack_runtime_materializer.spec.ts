@@ -64,8 +64,35 @@ describe('pack runtime materializer', () => {
             grants: [{ capability_key: 'invoke.death_rule' }]
           }
         ],
-        domains: [],
-        institutions: []
+        domains: [
+          {
+            id: 'domain-investigation',
+            label: '调查域',
+            kind: 'domain',
+            state: {
+              visibility: 'restricted'
+            }
+          }
+        ],
+        institutions: [
+          {
+            id: 'institution-npa-taskforce',
+            label: '基拉对策本部',
+            kind: 'institution',
+            state: {
+              alert_stage: 'routine',
+              coordination_level: 0
+            }
+          },
+          {
+            id: 'institution-public-media',
+            label: '公共媒体系统',
+            kind: 'institution',
+            state: {
+              amplification_level: 0
+            }
+          }
+        ]
       },
       identities: [
         {
@@ -141,9 +168,66 @@ describe('pack runtime materializer', () => {
     expect(worldEntities.some(item => item.entity_kind === 'mediator')).toBe(true);
     expect(worldEntities.some(item => item.id === 'world-test-pack:entity:__world__')).toBe(true);
     expect(worldEntities.some(item => item.id === 'world-test-pack:entity:identity-light-human')).toBe(true);
+    expect(worldEntities.some(item => item.id === 'world-test-pack:entity:domain-investigation' && item.entity_kind === 'domain')).toBe(true);
+    expect(worldEntities.some(item => item.id === 'world-test-pack:entity:institution-npa-taskforce' && item.entity_kind === 'institution')).toBe(true);
+    expect(worldEntities.some(item => item.id === 'world-test-pack:entity:institution-public-media' && item.entity_kind === 'institution')).toBe(true);
     expect(entityStates.some(item => item.entity_id === 'actor-light' && item.state_namespace === 'core')).toBe(true);
     expect(entityStates.some(item => item.entity_id === '__world__' && item.state_namespace === 'world')).toBe(true);
+    expect(entityStates.some(item => item.entity_id === 'domain-investigation' && item.state_namespace === 'domain')).toBe(true);
+    expect(entityStates.some(item => item.entity_id === 'institution-npa-taskforce' && item.state_namespace === 'core')).toBe(true);
     expect(authorityGrants[0]?.capability_key).toBe('invoke.death_rule');
     expect(mediatorBindings[0]?.subject_entity_id).toBe('artifact-death-note');
+  });
+
+  it('keeps declared pack storage collections when materializing install metadata for death note style models', async () => {
+    const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test' });
+    createdRoots.push(environment.rootDir);
+    process.env.WORKSPACE_ROOT = environment.rootDir;
+
+    const pack = parseWorldPackConstitution({
+      metadata: {
+        id: 'world-storage-pack',
+        name: '存储测试世界',
+        version: '1.0.0'
+      },
+      storage: {
+        strategy: 'isolated_pack_db',
+        runtime_db_file: 'runtime.sqlite',
+        pack_collections: [
+          {
+            key: 'target_dossiers',
+            kind: 'table',
+            primary_key: 'id',
+            fields: [
+              { key: 'id', type: 'string', required: true },
+              { key: 'owner_actor_id', type: 'entity_ref', required: true },
+              { key: 'target_entity_id', type: 'entity_ref', required: true },
+              { key: 'content', type: 'json', required: true }
+            ],
+            indexes: [['owner_actor_id', 'target_entity_id']]
+          },
+          {
+            key: 'judgement_plans',
+            kind: 'table',
+            primary_key: 'id',
+            fields: [
+              { key: 'id', type: 'string', required: true },
+              { key: 'owner_actor_id', type: 'entity_ref', required: true },
+              { key: 'phase', type: 'string' },
+              { key: 'content', type: 'json', required: true }
+            ],
+            indexes: [['owner_actor_id', 'phase']]
+          }
+        ],
+        install: {
+          compile_on_activate: true,
+          allow_pack_collections: true,
+          allow_raw_sql: false
+        }
+      }
+    });
+
+    const summary = await installPackRuntime(pack);
+    expect(summary.packCollections).toEqual(['target_dossiers', 'judgement_plans']);
   });
 });

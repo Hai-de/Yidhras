@@ -11,9 +11,17 @@ import {
   createDefaultWorldEnginePersistencePort,
   executeWorldEnginePreparedStep
 } from './world_engine_persistence.js';
-import { createTsWorldEngineAdapter } from './world_engine_ports.js';
 
-const getActiveRuntimeFacade = (context: AppContext) => context.activePackRuntime ?? context.sim;
+const getActiveRuntimeFacade = (context: AppContext) => {
+  if (context.activePackRuntime) {
+    return context.activePackRuntime;
+  }
+
+  throw new ApiError(503, 'ACTIVE_PACK_RUNTIME_NOT_READY', 'activePackRuntime is required for simulation loop execution', {
+    feature: 'simulation_loop',
+    fallback_blocked: true
+  });
+};
 
 const getActivePackId = (context: AppContext): string => {
   const packId = getActiveRuntimeFacade(context).getActivePack()?.metadata.id?.trim();
@@ -25,7 +33,11 @@ const getActivePackId = (context: AppContext): string => {
 };
 
 const getWorldEngine = (context: AppContext) => {
-  return context.worldEngine ?? createTsWorldEngineAdapter(context);
+  if (!context.worldEngine) {
+    throw new ApiError(503, 'WORLD_ENGINE_NOT_READY', 'World engine is not available for simulation loop step');
+  }
+
+  return context.worldEngine;
 };
 
 const getActiveCurrentTick = async (context: AppContext): Promise<bigint> => {

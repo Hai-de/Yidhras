@@ -2,6 +2,7 @@ import fs from 'fs';
 
 import type { WorldPackStorage, WorldPackStorageCollectionDefinition } from '../schema/storage_schema.js';
 import { asMutablePlanRecord, type PersistedStoragePlan,readPersistedStoragePlan, writePersistedStoragePlan } from './internal/plan_store.js';
+import { ensureDeclaredPackCollectionTables } from './pack_collection_repo.js';
 import {
   ensurePackRuntimeSqliteStorage,
   packRuntimeAuthorityGrantTableSpec,
@@ -86,6 +87,7 @@ export class PackStorageEngine {
     const existingPlan = readPersistedStoragePlan(storagePlanPath);
     await ensurePackRuntimeSqliteStorage(location.runtimeDbPath);
     await migrateLegacyEngineOwnedCollections(location.runtimeDbPath, existingPlan);
+    await ensureDeclaredPackCollectionTables(location.runtimeDbPath, storage.pack_collections);
 
     writePersistedStoragePlan(storagePlanPath, toPersistedStoragePlan(storage, storage.pack_collections));
 

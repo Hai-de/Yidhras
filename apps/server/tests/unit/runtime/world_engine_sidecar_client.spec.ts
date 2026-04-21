@@ -1,10 +1,20 @@
+import { spawn } from 'node:child_process';
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
 import { WORLD_ENGINE_PROTOCOL_VERSION } from '@yidhras/contracts';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  createWorldEngineSidecarClient,
   WorldEngineSidecarClient,
   type WorldEngineSidecarTransport
 } from '../../../src/app/runtime/sidecar/world_engine_sidecar_client.js';
+
+vi.mock('node:child_process', () => ({
+  spawn: vi.fn()
+}));
 
 class InMemoryStubTransport implements WorldEngineSidecarTransport {
   private started = false;
@@ -114,7 +124,6 @@ class InMemoryStubTransport implements WorldEngineSidecarTransport {
           capability_key: 'invoke.claim_book',
           mediator_id: null,
           target_entity_id: 'artifact-book',
-          bridge_mode: 'objective_rule',
           mutations: [
             {
               entity_id: 'artifact-book',
@@ -299,6 +308,56 @@ class InMemoryStubTransport implements WorldEngineSidecarTransport {
   }
 }
 
+const createMockSpawnedProcess = () => {
+  let stdoutDataHandler: ((chunk: string) => void) | undefined;
+
+  const stdout = {
+    setEncoding: vi.fn(),
+    on: vi.fn((event: string, handler: (chunk: string) => void) => {
+      if (event === 'data') {
+        stdoutDataHandler = handler;
+      }
+    })
+  };
+  const stderr = {
+    setEncoding: vi.fn(),
+    on: vi.fn()
+  };
+  const stdin = {
+    write: vi.fn((payload: string, callback?: (error?: Error | null) => void) => {
+      callback?.(null);
+      const request = JSON.parse(payload.trim()) as { id: string; method: string };
+      if (request.method === 'world.protocol.handshake') {
+        stdoutDataHandler?.(`${JSON.stringify({
+          jsonrpc: '2.0',
+          id: request.id,
+          result: {
+            protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
+            accepted: true,
+            transport: 'stdio_jsonrpc',
+            engine_instance_id: 'spawned-stub',
+            supported_methods: ['world.protocol.handshake', 'world.health.get'],
+            engine_capabilities: ['stub']
+          }
+        })}\n`);
+      }
+      return true;
+    })
+  };
+
+  return { stdout, stderr, stdin, on: vi.fn(), kill: vi.fn() };
+};
+
+const createdRoots: string[] = [];
+
+afterEach(async () => {
+  vi.clearAllMocks();
+  const { rm } = await import('node:fs/promises');
+  for (const root of createdRoots.splice(0, createdRoots.length)) {
+    await rm(root, { force: true, recursive: true });
+  }
+});
+
 describe('WorldEngineSidecarClient', () => {
   let client: WorldEngineSidecarClient;
 
@@ -441,9 +500,61 @@ describe('WorldEngineSidecarClient', () => {
     });
 
     expect(result.rule_id).toBe('stub-objective-rule');
-    expect(result.bridge_mode).toBe('objective_rule');
     expect(result.mutations).toHaveLength(1);
     expect(result.mutations[0]?.entity_id).toBe('artifact-book');
     expect(result.diagnostics.matched_rule_id).toBe('stub-objective-rule');
+  });
+
+  it('uses explicit binary path when configured', async () => {
+    const rootDir = await mkdtemp(path.join(os.tmpdir(), 'world-engine-sidecar-binary-'));
+    createdRoots.push(rootDir);
+    const binaryPath = path.join(rootDir, 'world_engine_sidecar');
+    await writeFile(binaryPath, '#!/bin/sh\nexit 0\n', 'utf8');
+
+    const child = createMockSpawnedProcess();
+    vi.mocked(spawn).mockReturnValue(child as never);
+
+    const sidecar = createWorldEngineSidecarClient({
+      binaryPath,
+      timeoutMs: 1200,
+      autoRestart: false
+    });
+
+    await sidecar.start();
+
+    expect(spawn).toHaveBeenCalledWith(binaryPath, [], {
+      cwd: path.dirname(binaryPath),
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+  });
+
+  it('falls back to cargo run when binary path is empty', async () => {
+    const child = createMockSpawnedProcess();
+    vi.mocked(spawn).mockReturnValue(child as never);
+
+    const sidecar = createWorldEngineSidecarClient({
+      binaryPath: '',
+      timeoutMs: 900,
+      autoRestart: true
+    });
+
+    await sidecar.start();
+
+    expect(spawn).toHaveBeenCalledWith('cargo', ['run', '--quiet'], expect.objectContaining({
+      stdio: ['pipe', 'pipe', 'pipe']
+    }));
+  });
+
+  it('accepts constructor options without breaking transport injection style', async () => {
+    const transport = new InMemoryStubTransport();
+    const injectedClient = new WorldEngineSidecarClient(transport);
+    const optionsClient = new WorldEngineSidecarClient({
+      binaryPath: '',
+      timeoutMs: 500,
+      autoRestart: true
+    });
+
+    expect(injectedClient).toBeInstanceOf(WorldEngineSidecarClient);
+    expect(optionsClient).toBeInstanceOf(WorldEngineSidecarClient);
   });
 });

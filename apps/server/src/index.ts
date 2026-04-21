@@ -24,7 +24,10 @@ import { registerSocialRoutes } from './app/routes/social.js';
 import { registerSystemRoutes } from './app/routes/system.js';
 import { createRuntimeKernelService } from './app/runtime/runtime_kernel_service.js';
 import { resolveOwnedSchedulerPartitionIds } from './app/runtime/scheduler_partitioning.js';
-import { WorldEngineSidecarClient } from './app/runtime/sidecar/world_engine_sidecar_client.js';
+import {
+  createWorldEngineSidecarClient,
+  WorldEngineSidecarClient
+} from './app/runtime/sidecar/world_engine_sidecar_client.js';
 import { type SimulationLoopHandle, startSimulationLoop } from './app/runtime/simulation_loop.js';
 import {
   createRuntimeReadyGuard,
@@ -32,7 +35,8 @@ import {
   runStartupPreflight,
   selectStartupWorldPack
 } from './app/runtime/startup.js';
-import { createPackHostApi, createTsWorldEngineAdapter } from './app/runtime/world_engine_ports.js';
+import { createWorldEngineStepCoordinator } from './app/runtime/world_engine_persistence.js';
+import { createPackHostApi } from './app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from './app/runtime/world_engine_snapshot.js';
 import { getRuntimeBootstrap } from './app/services/app_context_ports.js';
 import {
@@ -46,6 +50,7 @@ import {
   getRuntimeConfig,
   getSimulationLoopIntervalMs,
   getStartupPolicy,
+  getWorldEngineConfig,
   getWorldPacksDir,
   logRuntimeConfigSnapshot
 } from './config/runtime_config.js';
@@ -118,15 +123,19 @@ const appContext: AppContext = {
   setHttpApp: app => {
     httpApp = app;
   },
+  worldEngineStepCoordinator: createWorldEngineStepCoordinator(),
   assertRuntimeReady
 };
 
 appContext.runtimeKernel = createRuntimeKernelService(appContext);
 appContext.contextAssembly = createContextAssemblyPort(appContext);
 appContext.memoryRuntime = createMemoryRuntimePort(appContext);
-appContext.worldEngine = process.env.WORLD_ENGINE_USE_SIDECAR === '1'
-  ? new WorldEngineSidecarClient()
-  : createTsWorldEngineAdapter(appContext);
+const worldEngineConfig = getWorldEngineConfig();
+appContext.worldEngine = createWorldEngineSidecarClient({
+  binaryPath: worldEngineConfig.binary_path,
+  timeoutMs: worldEngineConfig.timeout_ms,
+  autoRestart: worldEngineConfig.auto_restart
+});
 appContext.packHostApi = createPackHostApi(appContext);
 
 const inferenceService = createInferenceService({

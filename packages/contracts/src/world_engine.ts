@@ -429,7 +429,6 @@ export const worldRuleExecuteObjectiveResultSchema = worldEngineProtocolEnvelope
   capability_key: nonEmptyStringSchema.nullable(),
   mediator_id: nonEmptyStringSchema.nullable(),
   target_entity_id: nonEmptyStringSchema.nullable(),
-  bridge_mode: z.literal('objective_rule'),
   mutations: z.array(worldObjectiveMutationEffectSchema),
   emitted_events: z.array(worldObjectiveEventEffectSchema),
   diagnostics: worldObjectiveExecutionDiagnosticsSchema

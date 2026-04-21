@@ -2,8 +2,10 @@ import fs from 'fs';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
+import type { WorldEnginePort } from '../../src/app/runtime/world_engine_ports.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 import { dispatchInvocationFromActionIntent } from '../../src/domain/invocation/invocation_dispatcher.js';
+import { resolveObjectiveRulePlan } from '../../src/domain/rule/objective_rule_resolver.js';
 import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
 import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
 import { materializePackRuntimeCoreModels } from '../../src/packs/runtime/materializer.js';
@@ -22,7 +24,7 @@ afterEach(() => {
 });
 
 const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, now = 1000n): AppContext => {
-  return {
+  const context: AppContext = {
     prisma: {} as AppContext['prisma'],
     sim: {
       getActivePack(): typeof pack {
@@ -74,6 +76,44 @@ const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, n
       // noop
     }
   };
+
+  const mockWorldEngine: WorldEnginePort = {
+    async executeObjectiveRule(request) {
+      const invocation = {
+        id: request.invocation.id,
+        pack_id: request.invocation.pack_id,
+        source_action_intent_id: request.invocation.source_action_intent_id,
+        source_inference_id: request.invocation.source_inference_id,
+        invocation_type: request.invocation.invocation_type,
+        capability_key: request.invocation.capability_key,
+        subject_entity_id: request.invocation.subject_entity_id,
+        target_ref: request.invocation.target_ref,
+        payload: request.invocation.payload,
+        mediator_id: request.invocation.mediator_id,
+        actor_ref: request.invocation.actor_ref,
+        created_at: BigInt(request.invocation.created_at)
+      };
+      const plan = await resolveObjectiveRulePlan(context, {
+        invocation,
+        capabilityGrant: null,
+        mediatorId: request.effective_mediator_id
+      });
+      return {
+        pack_id: request.pack_id,
+        rule_id: plan.rule_id,
+        capability_key: plan.capability_key,
+        mediator_id: plan.mediator_id,
+        target_entity_id: plan.target_entity_id,
+        mutations: plan.mutations,
+        emitted_events: plan.emitted_events,
+        diagnostics: plan.diagnostics
+      };
+    }
+  } as unknown as WorldEnginePort;
+
+  context.worldEngine = mockWorldEngine;
+
+  return context;
 };
 
 describe('objective enforcement engine', () => {

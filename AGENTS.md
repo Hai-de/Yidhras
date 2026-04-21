@@ -5,186 +5,169 @@ Repository guidance for coding agents working in `Yidhras`.
 ## 1. Workspace
 
 - `apps/server`: TypeScript + Express + Prisma + SQLite backend.
-- `apps/web`: Nuxt 4 + Vue 3 + Pinia frontend.
-- `packages/contracts`: shared transport schemas and envelope types.
-- `docs/`: repository docs, stable references, and operation guides.
-- `data/`: local runtime data area created at startup; do not treat it as the main Git source of truth.
-- Package manager: `pnpm` workspace.
+- `apps/web`: Nuxt 4 + Vue 3 + Pinia frontend (CSR-only, `ssr: false`).
+- `packages/contracts`: shared transport schemas and envelope types. **No build step** — exports `.ts` source directly via `package.json` `exports`. Always use `.js` extensions in re-exports.
+- `docs/`: stable references and operation guides.
+- `data/`: runtime data area created at startup; gitignored. Not a Git source of truth.
+- Package manager: `pnpm` workspace (`pnpm@10.33.0`). Node.js 18+.
 
-## 2. Tooling Baseline
+## 2. Style & Lint Rules (non-obvious)
 
-- Node.js 18+ and `pnpm` 10+.
-- Server TypeScript is strict and uses `NodeNext` ESM.
-- In `apps/server`, keep `.js` extensions in relative TS imports.
-- Frontend runs CSR-only (`apps/web/nuxt.config.ts`, `ssr: false`).
-- Prisma schema lives at `apps/server/prisma/schema.prisma`.
-- Shared transport-boundary contracts live in `packages/contracts`.
+### Prettier — different semicolon policy per app
 
-## 3. High-frequency Commands
+- **server**: semicolons **required** (`semi: true`).
+- **web**: semicolons **forbidden** (`semi: false`).
 
-Use these as entry points only. For the full command matrix, always check `docs/guides/COMMANDS.md`.
+Both use `singleQuote: true`, `trailingComma: "none"`, `printWidth: 100`.
 
-### Install / Dev
+### ESLint — enforced across both apps
 
-- `pnpm install`
-- `pnpm prepare:runtime`
-- `pnpm dev`
-- `pnpm dev:server`
-- `pnpm dev:web`
-- `./start-dev.sh` or `start-dev.bat`
+- `simple-import-sort/imports` and `simple-import-sort/exports` are **errors** — imports and exports are auto-sorted.
+- `@typescript-eslint/no-explicit-any` is **error** — do not use `any` unless unavoidable; if so, explain inline.
+- `@typescript-eslint/no-unused-vars` allows prefixing with `_` (`argsIgnorePattern: '^_'`).
+- **Server-only**: `no-restricted-syntax` enforces `.js` extensions on all relative imports/exports. Missing `.js` is a lint error.
+- **Web-only**: Nuxt `#imports` and `~/` are exempted from import resolution; `vue/multi-word-component-names` is off.
 
-Notes:
-- `pnpm dev` starts workspace server + web dev processes together.
-- `start-dev.*` remains the wrapper that can prepare runtime and optionally reset the dev DB before startup.
+### Type system
+
+- Server: `strict: true`, `module: NodeNext`, `moduleResolution: NodeNext`.
+- Web: `strict: true`, type-checking via `nuxt typecheck`.
+- BigInt over HTTP must remain string-based; convert to `BigInt` only for computation.
+- Keep Zod schemas at the transport boundary; business rules go in services/domain.
+
+## 3. Commands
+
+### Dev
+
+```
+pnpm install
+pnpm prepare:runtime          # migrate DB + init runtime + seed identity
+pnpm dev                       # concurrently starts server + web
+pnpm dev:server                # server only
+pnpm dev:web                   # web only
+./start-dev.sh [--reset-db]    # wrapper: prepare:runtime + reset DB optionally + start both
+```
+
+- Default ports: Web `:3000`, Server `:3001`.
+- `DATABASE_URL` in `apps/server/.env` defaults to `file:../../../data/yidhras.sqlite` (relative to server package root).
 
 ### Quality
 
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm test`
-- `pnpm test:unit`
-- `pnpm test:unit:watch`
+```
+pnpm lint
+pnpm typecheck
+pnpm test                       # runs server unit + integration + e2e, plus web unit
+pnpm test:unit                  # web unit + server unit
+pnpm test:unit:watch
+```
 
-### Common scoped checks
+### Server-only tests
 
-- `pnpm --filter yidhras-server test`
-- `pnpm --filter yidhras-server test:integration`
-- `pnpm --filter yidhras-server test:e2e`
-- `pnpm --filter yidhras-server test:integration:watch`
-- `pnpm --filter yidhras-server smoke`
-- `pnpm --filter web test:unit`
+```
+pnpm --filter yidhras-server test              # unit → integration → e2e sequentially
+pnpm --filter yidhras-server test:unit
+pnpm --filter yidhras-server test:integration
+pnpm --filter yidhras-server test:e2e
+pnpm --filter yidhras-server test:integration:watch
+pnpm --filter yidhras-server smoke             # startup + key endpoint e2e only
+```
 
-### World-pack / plugin entry points
+### Single test file (non-obvious — must specify config)
 
-- `pnpm scaffold:world-pack -- --dir <pack-dir> --name "<Pack Name>" --author "<Author>"`
-- `pnpm --filter yidhras-server plugin -- <command>`
+```bash
+pnpm --filter yidhras-server exec vitest run --config vitest.integration.config.ts tests/integration/<file>.spec.ts
+pnpm --filter yidhras-server exec vitest run --config vitest.e2e.config.ts tests/e2e/<file>.spec.ts
+```
 
-For detailed CLI examples, testing entry points, and plugin operations:
+### Other
 
-- `docs/guides/COMMANDS.md`
-- `docs/guides/PLUGIN_OPERATIONS.md`
+```
+pnpm --filter yidhras-server reset:dev-db        # wipe and re-seed local dev DB
+pnpm scaffold:world-pack -- --dir <dir> --name "<Name>" --author "<Author>"
+pnpm --filter yidhras-server plugin -- <command>
+```
 
-## 4. Architecture Anchors
+### CI baseline
 
-### Server
+- `server-tests.yml`: runs `test:integration` on push/PR touching `apps/server/**` or `packages/contracts/**`.
+- `server-smoke.yml`: runs `prepare:runtime` then e2e smoke tests (startup + endpoints), same trigger paths.
+- `test:e2e` is not in the default CI gate; it's for local/manual verification.
 
-- `apps/server/src/index.ts` is the composition root.
-- `apps/server/src/app/create_app.ts` wires Express middleware and route registration.
-- `apps/server/src/app/routes/*.ts` should remain transport-level and thin.
-- `apps/server/src/app/services/*.ts` hold orchestration and read-model assembly.
-- `apps/server/src/app/runtime/*.ts` holds runtime loop, scheduler, job runner, dispatcher, lease, ownership, and rebalance logic.
-- `apps/server/src/core/simulation.ts` owns runtime core concerns: Prisma init, SQLite pragmas, world-pack loading, clock, narrative resolver, dynamics, runtime speed, and graph access.
-- Do not turn `SimulationManager` into a generic app-service bucket; put new query/orchestration logic in focused modules.
+## 4. Test Isolation
 
-### Workflow / Inference
+- **unit**: default parallelism.
+- **integration**: `fileParallelism: false` (serial).
+- **e2e**: `fileParallelism: false`; uses `tests/helpers/runtime.ts` to spin up isolated temp DBs per session via `DATABASE_URL` override. Do not promote integration/e2e to parallel until temp-db isolation is universal.
+- Test directories: `tests/unit/`, `tests/integration/`, `tests/e2e/`. Support modules in `tests/support/`, helpers in `tests/helpers/`, fixtures in `tests/fixtures/`.
+- Vitest workspace config at repo root (`vitest.workspace.ts`) merges all sub-configs.
 
-- `apps/server/src/app/services/inference_workflow.ts` is a facade/export surface.
-- Split responsibilities across focused modules under `app/services/inference_workflow/`.
-- Keep decision generation, workflow persistence, and action dispatch as separate concerns.
-- Keep API handlers thin; domain assembly belongs in services.
-- Keep inference route/service boundaries centralized at:
-  - `apps/server/src/app/routes/inference.ts`
-  - `apps/server/src/inference/service.ts`
+## 5. Architecture Anchors
 
-### Scheduler / Runtime constraints
+### Server entrypoints
 
-- Scheduler is partition-aware and multi-worker.
-- Lease and cursor state are partition-scoped.
-- Runtime loop is serialized in `apps/server/src/app/runtime/simulation_loop.ts`.
-- Runtime readiness is gated through `AppContext.assertRuntimeReady(feature)`.
-- Request tracing is provided by `requestIdMiddleware()` and `X-Request-Id`.
+- Composition root: `apps/server/src/index.ts`.
+- Express wiring: `apps/server/src/app/create_app.ts`.
+- Routes in `src/app/routes/*.ts` — transport-level and thin; domain logic belongs in services.
+- Services in `src/app/services/*.ts` — orchestration and read-model assembly.
+
+### Runtime / simulation
+
+- `src/core/simulation.ts` owns: Prisma init, SQLite pragmas, world-pack loading, clock, narrative resolver, dynamics, runtime speed, graph access. **Do not turn `SimulationManager` into a generic bucket.**
+- Runtime loop: `src/app/runtime/simulation_loop.ts` — serialized.
+- Runtime readiness: `AppContext.assertRuntimeReady(feature)`.
+- `src/app/context.ts` defines `AppContext` — the shared runtime state shell.
+
+### Inference / workflow
+
+- `src/app/services/inference_workflow.ts` is a facade; actual logic is split into focused modules under `src/app/services/inference_workflow/`.
+- Route boundary: `src/app/routes/inference.ts` → `src/inference/service.ts`.
+
+### Config
+
+- Runtime config is YAML-layered: built-in defaults → `data/configw/default.yaml` → `data/configw/local.yaml` (gitignored). See `src/config/runtime_config.ts`.
+
+### Scheduler
+
+- Partition-aware, multi-worker. Lease and cursor state are partition-scoped.
 
 ### World packs
 
-- World packs are file-driven and loaded through `apps/server/src/packs/manifest/loader.ts`.
-- World-pack schema lives in `apps/server/src/packs/schema/constitution_schema.ts` and `apps/server/src/packs/manifest/constitution_loader.ts`.
-- Pack runtime materialization lives in `apps/server/src/packs/runtime/materializer.ts`.
-- Pack-specific decision rules and actions should flow through existing world-pack modules, not ad-hoc route logic.
-- Treat a publishable world pack as a small project, not only a YAML file.
-- Prefer keeping publish/release metadata in `metadata`.
-- Recommended minimum contents for a pack directory: `config.yaml` + `README.md`.
-- See `docs/WORLD_PACK.md` for packaging and release guidance.
+- Loaded through `src/packs/manifest/loader.ts`.
+- Schema: `src/packs/schema/constitution_schema.ts`, `src/packs/manifest/constitution_loader.ts`.
+- Runtime materialization: `src/packs/runtime/materializer.ts`.
+- Pack-specific logic must flow through world-pack modules, not ad-hoc route logic.
+- Minimum pack contents: `config.yaml` + `README.md`.
 
 ### Frontend
 
-- `apps/web/pages/*.vue` define page-level routes.
-- `apps/web/features/**` contain feature UI, adapters, composables, and route-state helpers.
-- Prefer route-backed state for page location/filter context; stores should mainly hold fetch state or ephemeral UI state.
-- Graph rendering stays in `features/graph/*` and uses `ClientOnly + GraphCanvas + Cytoscape`.
-- Theme application lives in `apps/web/plugins/theme.ts`; shared semantic UI lives in `apps/web/components/ui/*`.
+- Pages: `apps/web/pages/*.vue`.
+- Features: `apps/web/features/**` — UI, adapters, composables, route-state helpers.
+- Prefer route-backed state for page context; stores hold fetch state or ephemeral UI state.
+- Graph rendering: `features/graph/*`, uses `ClientOnly + GraphCanvas + Cytoscape`.
+- Theme: `apps/web/plugins/theme.ts`; semantic UI in `components/ui/*`.
 
-## 5. Coding Rules
+## 6. Coding Conventions
 
-### General
-
-- Prefer TypeScript for new backend/frontend logic.
-- Match local style before introducing new style.
-- Keep functions small and intent-revealing.
-- Avoid dead abstractions and broad rewrites.
-- Make focused, minimal diffs.
-
-### Types / API contracts
-
-- Avoid `any` unless unavoidable; if used, explain why inline.
-- Prefer explicit types for payloads and store state.
-- BigInt over HTTP must remain string-based.
-- Convert string → `BigInt` only where computation is required.
-- Keep Zod/contracts at the transport boundary; keep business rules in services/domain logic.
-
-### Imports / formatting
-
-- In `apps/server`, use relative imports with `.js` extension.
-- Remove unused imports.
-- Avoid formatting-only churn.
+- In `apps/server`, use relative imports **with `.js` extension**. Enforced by ESLint `no-restricted-syntax`.
+- Remove unused imports; avoid formatting-only churn.
 - Keep comments only when they explain non-obvious behavior.
+- Keep success/error HTTP envelopes stable; don't expose internals.
+- Preserve inference/workflow stage-specific failure info in logs.
 
-### Error handling
+## 7. Documentation Boundaries
 
-- Keep success/error envelopes stable.
-- Do not expose sensitive internals in HTTP responses.
-- Keep logs actionable and scoped.
-- Preserve stage-specific failure information for workflow/inference paths.
+Prefer linking over duplicating.
 
-## 6. Documentation Boundaries
+- `README.md` — repository entry, startup, high-frequency commands.
+- `docs/INDEX.md` — doc navigation and source-of-truth rules.
+- `AGENTS.md` — this file.
+- `docs/API.md` — public API contracts and error codes.
+- `docs/ARCH.md` — architecture boundaries and module ownership.
+- `docs/LOGIC.md` — business rules and domain semantics.
+- `docs/WORLD_PACK.md` — world-pack packaging and release guidance.
+- `docs/THEME.md` — frontend theme contract.
+- `docs/guides/COMMANDS.md` — full command matrix.
+- `docs/guides/DB_OPERATIONS.md` — DB migration, init, path changes.
+- `docs/guides/PLUGIN_OPERATIONS.md` — plugin governance operations.
 
-Always prefer linking over duplicating the same facts.
-
-### Entry documents
-
-- `README.md`: repository entry page only.
-- `docs/INDEX.md`: document navigation, taxonomy, and source-of-truth rules.
-- `AGENTS.md`: agent collaboration rules and engineering constraints.
-- `TODO.md`: current backlog and priorities only.
-
-### Stable references
-
-- `docs/API.md`: external/public API contracts and error codes.
-- `docs/ARCH.md`: architecture boundaries, ownership, module responsibilities.
-- `docs/LOGIC.md`: business rules, execution semantics, domain meaning.
-- `docs/WORLD_PACK.md`: world-pack packaging, README baseline, release guidance.
-- `docs/THEME.md`: frontend theme contract and authoring/debugging guidance.
-- `apps/web/README.md`: frontend-specific scope and structure.
-
-### Operation guides
-
-- `docs/guides/COMMANDS.md`: full command matrix.
-- `docs/guides/PLUGIN_OPERATIONS.md`: plugin governance operations.
-
-### Process artifacts
-
-- `.limcode/design/`, `.limcode/plans/`, `.limcode/review/`: process artifacts, not the primary stable source of truth.
-
-## 7. Documentation Update Rule
-
-When behavior changes, update the most appropriate primary doc in the same change:
-
-- startup / entry flow -> `README.md`
-- commands / test entry points -> `docs/guides/COMMANDS.md`
-- public plugin operation flow -> `docs/guides/PLUGIN_OPERATIONS.md`
-- API contract -> `docs/API.md`
-- architecture boundary -> `docs/ARCH.md`
-- business semantics -> `docs/LOGIC.md`
-- current priorities -> `TODO.md`
-- process reasoning / review / migration notes -> `.limcode/*`
-
-If unsure, update the primary source first and add links elsewhere instead of copying the full content.
+When behavior changes, update the most appropriate primary doc in the same change.

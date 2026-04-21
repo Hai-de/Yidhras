@@ -134,7 +134,102 @@ const buildProjectionTestContext = (
     },
     assertRuntimeReady() {
       // noop
-    }
+    },
+    worldEngine: {
+      async loadPack() {
+        return {
+          protocol_version: 'world_engine/v1alpha1',
+          pack_id: pack.metadata.id,
+          loaded: true,
+          current_tick: '1000',
+          current_revision: '0'
+        };
+      },
+      async unloadPack() {},
+      async prepareStep() {
+        return {
+          protocol_version: 'world_engine/v1alpha1',
+          pack_id: pack.metadata.id,
+          prepared_token: 'mock-token',
+          base_revision: '0',
+          next_revision: '1',
+          next_tick: '1001',
+          summary: {
+            step_ticks: '1',
+            operation_count: 0,
+            delta_operations: [],
+            rule_execution_records: [],
+            observation_records: []
+          }
+        };
+      },
+      async commitPreparedStep() {
+        return {
+          protocol_version: 'world_engine/v1alpha1',
+          pack_id: pack.metadata.id,
+          prepared_token: 'mock-token',
+          committed_revision: '1',
+          committed_tick: '1001',
+          summary: {
+            step_ticks: '1',
+            operation_count: 0,
+            delta_operations: [],
+            rule_execution_records: [],
+            observation_records: []
+          }
+        };
+      },
+      async abortPreparedStep() {},
+      async queryState() {
+        return {
+          protocol_version: 'world_engine/v1alpha1',
+          pack_id: pack.metadata.id,
+          data: {}
+        };
+      },
+      async getStatus() {
+        return {
+          protocol_version: 'world_engine/v1alpha1',
+          pack_id: pack.metadata.id,
+          loaded: true,
+          current_tick: '1000',
+          current_revision: '0'
+        };
+      },
+      async getHealth() {
+        return {
+          protocol_version: 'world_engine/v1alpha1',
+          status: 'ready',
+          transport: 'mock',
+          uptime_ms: 0
+        };
+      },
+      async executeObjectiveRule(input) {
+        return {
+          protocol_version: 'world_engine/v1alpha1',
+          pack_id: input.pack_id,
+          rule_id: 'judgement-enforcement',
+          capability_key: 'invoke.judgement',
+          mediator_id: input.effective_mediator_id,
+          target_entity_id: 'agent-target',
+          mutations: [
+            {
+              entity_id: 'agent-target',
+              state_namespace: 'default',
+              state_patch: { life_status: 'sealed' }
+            }
+          ],
+          emitted_events: [],
+          diagnostics: {
+            matched_rule_id: 'judgement-enforcement',
+            evaluated_rule_count: 1,
+            rendered_template_count: 0,
+            mutation_count: 1,
+            emitted_event_count: 0
+          }
+        };
+      }
+    } as unknown as AppContext['worldEngine']
   };
 };
 

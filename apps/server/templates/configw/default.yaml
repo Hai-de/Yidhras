@@ -122,9 +122,9 @@ scheduler:
 
 prompt_workflow:
   profiles:
-    agent_decision_default: { token_budget: 2200, section_policy: "standard", compatibility_mode: "full" }
-    context_summary_default: { token_budget: 1600, section_policy: "minimal", compatibility_mode: "bridge_only" }
-    memory_compaction_default: { token_budget: 1800, section_policy: "minimal", compatibility_mode: "bridge_only" }
+    agent_decision_default: { token_budget: 2200, section_policy: "standard" }
+    context_summary_default: { token_budget: 1600, section_policy: "minimal" }
+    memory_compaction_default: { token_budget: 1800, section_policy: "minimal" }
 
 runtime:
   multi_pack:

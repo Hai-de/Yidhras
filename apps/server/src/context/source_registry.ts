@@ -7,8 +7,8 @@ import type {
 import type { LongMemoryBlockStore } from '../memory/blocks/types.js';
 import type { MemorySelectionResult } from '../memory/types.js';
 import type { ContextOverlayStore } from './overlay/types.js';
-import { buildContextNodesFromMemorySelection } from './sources/legacy_memory.js';
 import { buildContextNodesFromMemoryBlocks } from './sources/memory_blocks.js';
+import { buildContextNodesFromMemorySelection } from './sources/memory_selection.js';
 import { buildContextNodesFromOverlayEntries } from './sources/overlay.js';
 import { buildRuntimeStateContextNodes } from './sources/runtime_state.js';
 import type { ContextNode } from './types.js';
@@ -61,8 +61,8 @@ const toInferenceActorRef = (actorRef: Record<string, unknown> | null, resolvedA
   };
 };
 
-const createLegacyMemorySourceAdapter = (): ContextSourceAdapter => ({
-  name: 'legacy-memory-selection',
+const createMemorySelectionSourceAdapter = (): ContextSourceAdapter => ({
+  name: 'memory-selection',
   buildNodes(input) {
     return buildContextNodesFromMemorySelection(input.memory_selection);
   }
@@ -162,7 +162,7 @@ const createMemoryBlockSourceAdapter = (
 
 export const createDefaultContextSourceAdapters = (options: CreateContextSourceAdaptersOptions = {}): ContextSourceAdapter[] => {
   return [
-    createLegacyMemorySourceAdapter(),
+    createMemorySelectionSourceAdapter(),
     createRuntimeStateSourceAdapter(),
     ...(options.longMemoryBlockStore && options.context ? [createMemoryBlockSourceAdapter(options.context, options.longMemoryBlockStore)] : []),
     ...(options.overlayStore ? [createOverlaySourceAdapter(options.overlayStore)] : [])

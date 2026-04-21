@@ -77,6 +77,18 @@ export const runActionDispatcher = async ({
             tags: ['semantic_record']
           });
         }
+        if (latestIntent?.semantic_intent_kind === 'revise_judgement_plan') {
+          await memoryRecordingService.reviseJudgementPlan({
+            actor_id: latestIntent.actor_agent_id,
+            pack_id: context.sim.getActivePack()?.metadata.id ?? 'unknown-pack',
+            tick: context.sim.getCurrentTick().toString(),
+            source_inference_id: latestIntent.source_inference_id,
+            reasoning: latestEvent,
+            semantic_intent_kind: latestIntent.semantic_intent_kind,
+            target_ref: latestIntent.target_ref,
+            tags: ['semantic_record']
+          });
+        }
         if (latestIntent?.semantic_intent_kind === 'update_target_dossier') {
           await memoryRecordingService.updateTargetDossier({
             actor_id: latestIntent.actor_agent_id,

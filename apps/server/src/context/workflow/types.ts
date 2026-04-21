@@ -10,7 +10,6 @@ import type {
   InferenceStrategy,
   PromptBundle
 } from '../../inference/types.js';
-import type { MemoryContextPack } from '../../memory/types.js';
 import type { ContextNode, ContextRun } from '../types.js';
 
 export type PromptWorkflowTaskType =
@@ -21,10 +20,9 @@ export type PromptWorkflowTaskType =
   | (string & {});
 
 export type PromptWorkflowSectionPolicy = 'minimal' | 'standard' | 'expanded';
-export type PromptWorkflowCompatibilityMode = 'full' | 'bridge_only' | 'off';
 
 export type PromptWorkflowStepKind =
-  | 'legacy_memory_projection'
+  | 'memory_projection'
   | 'node_working_set_filter'
   | 'node_grouping'
   | 'summary_compaction'
@@ -55,7 +53,6 @@ export interface PromptWorkflowProfile {
   defaults?: {
     token_budget?: number;
     section_policy?: PromptWorkflowSectionPolicy;
-    compatibility_mode?: PromptWorkflowCompatibilityMode;
   };
   steps: PromptWorkflowStepSpec[];
 }
@@ -144,8 +141,6 @@ export interface PromptWorkflowDiagnostics {
   section_budget?: PromptWorkflowSectionBudgetSummary;
   placement_summary?: PromptWorkflowPlacementSummary;
   compatibility?: {
-    mode: PromptWorkflowCompatibilityMode;
-    legacy_memory_context_used: boolean;
     legacy_processors_used: string[];
   };
 }
@@ -164,10 +159,7 @@ export interface PromptWorkflowState {
   fragments: PromptFragment[];
   prompt_bundle: PromptBundle | null;
   ai_messages?: AiMessage[];
-  compatibility: {
-    mode: PromptWorkflowCompatibilityMode;
-    legacy_memory_context?: MemoryContextPack | null;
-  };
+  compatibility: Record<string, never>;
   diagnostics: PromptWorkflowDiagnostics;
 }
 
@@ -183,17 +175,12 @@ export interface PromptWorkflowRunOptions {
   profile_id?: string | null;
 }
 
-export const createPromptWorkflowDiagnostics = (
-  profile: PromptWorkflowProfile,
-  compatibilityMode: PromptWorkflowCompatibilityMode
-): PromptWorkflowDiagnostics => ({
+export const createPromptWorkflowDiagnostics = (profile: PromptWorkflowProfile): PromptWorkflowDiagnostics => ({
   profile_id: profile.id,
   profile_version: profile.version,
   selected_step_keys: profile.steps.filter(step => step.enabled !== false).map(step => step.key),
   step_traces: [],
   compatibility: {
-    mode: compatibilityMode,
-    legacy_memory_context_used: false,
     legacy_processors_used: []
   }
 });
@@ -206,13 +193,8 @@ export const createInitialPromptWorkflowState = (input: {
   pack_id: string;
   profile: PromptWorkflowProfile;
   fragments?: PromptFragment[];
-  compatibility?: {
-    mode?: PromptWorkflowCompatibilityMode;
-    legacy_memory_context?: MemoryContextPack | null;
-  };
+  compatibility?: Record<string, never>;
 }): PromptWorkflowState => {
-  const compatibilityMode = input.compatibility?.mode ?? input.profile.defaults?.compatibility_mode ?? 'full';
-
   return {
     context_run: input.context_run,
     actor_ref: input.actor_ref,
@@ -226,10 +208,7 @@ export const createInitialPromptWorkflowState = (input: {
     section_drafts: [],
     fragments: input.fragments ?? [],
     prompt_bundle: null,
-    compatibility: {
-      mode: compatibilityMode,
-      legacy_memory_context: input.compatibility?.legacy_memory_context ?? null
-    },
-    diagnostics: createPromptWorkflowDiagnostics(input.profile, compatibilityMode)
+    compatibility: {},
+    diagnostics: createPromptWorkflowDiagnostics(input.profile)
   };
 };

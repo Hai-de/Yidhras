@@ -82,7 +82,6 @@ export const toObjectiveRulePlanFromSidecarResult = (result: WorldRuleExecuteObj
     mediator_id: result.mediator_id,
     target_entity_id: result.target_entity_id,
     diagnostics: result.diagnostics as WorldObjectiveExecutionDiagnostics,
-    bridge_mode: result.bridge_mode,
     mutations: result.mutations,
     emitted_events: result.emitted_events
   };

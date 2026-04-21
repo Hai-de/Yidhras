@@ -4,7 +4,8 @@ import { assertErrorEnvelope, assertRecord, assertSuccessEnvelopeData } from '..
 import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { isRecord, requestJson, sleep, summarizeResponse } from '../helpers/server.js';
 
-const ACTIVE_PACK_ROUTE_NAME = 'world-death-note';
+const DEATH_NOTE_ACTIVE_PACK_ID = 'world-death-note';
+const DEATH_NOTE_PACK_REF = 'death_note';
 
 const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
   return JSON.stringify({
@@ -43,7 +44,7 @@ const pollReplayJob = async (
 
 describe('trigger event e2e', () => {
   it('creates history/system events and fails invalid event types through workflow replay', async () => {
-    await withIsolatedTestServer({ defaultPort: 3110 }, async server => {
+    await withIsolatedTestServer({ defaultPort: 3110, activePackRef: DEATH_NOTE_PACK_REF }, async server => {
       const statusResponse = await requestJson(server.baseUrl, '/api/status');
       expect(statusResponse.status).toBe(200);
       const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');
@@ -89,8 +90,7 @@ describe('trigger event e2e', () => {
         'active trigger_event replay poll'
       );
       expect(isRecord(activeReplay.job)).toBe(true);
-
-      const packTimelineResponse = await requestJson(server.baseUrl, `/api/packs/${ACTIVE_PACK_ROUTE_NAME}/projections/timeline`);
+      const packTimelineResponse = await requestJson(server.baseUrl, `/api/packs/${DEATH_NOTE_ACTIVE_PACK_ID}/projections/timeline`);
       expect(packTimelineResponse.status).toBe(200);
       const packTimelineData = assertSuccessEnvelopeData(packTimelineResponse.body, 'pack timeline envelope') as { timeline: unknown[] };
       expect(Array.isArray(packTimelineData.timeline)).toBe(true);
@@ -130,7 +130,7 @@ describe('trigger event e2e', () => {
         'system trigger_event replay poll'
       );
 
-      const packTimelineAfterSystemResponse = await requestJson(server.baseUrl, `/api/packs/${ACTIVE_PACK_ROUTE_NAME}/projections/timeline`);
+      const packTimelineAfterSystemResponse = await requestJson(server.baseUrl, `/api/packs/${DEATH_NOTE_ACTIVE_PACK_ID}/projections/timeline`);
       expect(packTimelineAfterSystemResponse.status).toBe(200);
       const packTimelineAfterSystemData = assertSuccessEnvelopeData(
         packTimelineAfterSystemResponse.body,
@@ -230,7 +230,7 @@ describe('trigger event e2e', () => {
         })
       ).toBe(true);
 
-      const packTimelineAfterRitualResponse = await requestJson(server.baseUrl, `/api/packs/${ACTIVE_PACK_ROUTE_NAME}/projections/timeline`);
+      const packTimelineAfterRitualResponse = await requestJson(server.baseUrl, `/api/packs/${DEATH_NOTE_ACTIVE_PACK_ID}/projections/timeline`);
       expect(packTimelineAfterRitualResponse.status).toBe(200);
       const packTimelineAfterRitualData = assertSuccessEnvelopeData(
         packTimelineAfterRitualResponse.body,

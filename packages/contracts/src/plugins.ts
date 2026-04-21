@@ -41,7 +41,10 @@ export const pluginServerContributionsSchema = z.object({
   prompt_workflow_steps: z.array(nonEmptyStringSchema).default([]),
   intent_grounders: z.array(nonEmptyStringSchema).default([]),
   pack_projections: z.array(nonEmptyStringSchema).default([]),
-  api_routes: z.array(nonEmptyStringSchema).default([])
+  api_routes: z.array(nonEmptyStringSchema).default([]),
+  step_contributors: z.array(nonEmptyStringSchema).default([]),
+  rule_contributors: z.array(nonEmptyStringSchema).default([]),
+  query_contributors: z.array(nonEmptyStringSchema).default([])
 })
 
 export const pluginWebPanelContributionSchema = z.object({
@@ -106,7 +109,10 @@ export const pluginManifestSchema = z.object({
       prompt_workflow_steps: [],
       intent_grounders: [],
       pack_projections: [],
-      api_routes: []
+      api_routes: [],
+      step_contributors: [],
+      rule_contributors: [],
+      query_contributors: []
     }),
     web: pluginWebContributionsSchema.default({
       panels: [],

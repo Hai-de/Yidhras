@@ -1,10 +1,12 @@
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   getExperimentalMultiPackRuntimeConfig,
+  getMemoryTriggerEngineConfig,
   getRuntimeConfig,
   getRuntimeMultiPackConfig,
   getSchedulerAgentConfig,
@@ -12,11 +14,11 @@ import {
   getSchedulerEntityConcurrencyConfig,
   getSchedulerLeaseTicks,
   getSchedulerObservabilityConfig,
-  getMemoryTriggerEngineConfig,
   getSchedulerRunnerConfig,
   getSchedulerTickBudgetConfig,
   getSimulationLoopIntervalMs,
   getSqliteRuntimeConfig,
+  getWorldEngineConfig,
   isExperimentalMultiPackOperatorApiEnabled,
   isExperimentalMultiPackRuntimeEnabled,
   resetRuntimeConfigCache
@@ -36,9 +38,9 @@ const createWorkspace = async (files: Record<string, string>): Promise<string> =
 
   await writeWorkspaceFile(rootDir, 'pnpm-workspace.yaml', 'packages: []\n');
   await writeWorkspaceFile(rootDir, 'apps/server/config/ai_models.yaml', 'version: 1\nproviders: []\nmodels: []\nroutes: []\n');
-  await writeWorkspaceFile(rootDir, 'apps/server/templates/world-pack/death_note.yaml', 'metadata:\n  id: death_note\n');
-  await writeWorkspaceFile(rootDir, 'apps/server/templates/world-pack/death_note.README.md', '# death_note\n');
-  await writeWorkspaceFile(rootDir, 'apps/server/templates/world-pack/death_note.CHANGELOG.md', '# changelog\n');
+  await writeWorkspaceFile(rootDir, 'apps/server/templates/world-pack/example_pack.yaml', 'metadata:\n  id: world-example-pack\n');
+  await writeWorkspaceFile(rootDir, 'apps/server/templates/world-pack/example_pack.README.md', '# example pack\n');
+  await writeWorkspaceFile(rootDir, 'apps/server/templates/world-pack/example_pack.CHANGELOG.md', '# changelog\n');
   await writeWorkspaceFile(rootDir, 'apps/server/templates/configw/default.yaml', 'config_version: 1\n');
   await writeWorkspaceFile(rootDir, 'apps/server/templates/configw/development.yaml', 'app:\n  env: "development"\n');
   await writeWorkspaceFile(rootDir, 'apps/server/templates/configw/production.yaml', 'app:\n  env: "production"\n');
@@ -67,11 +69,11 @@ const defaultYamlBase = [
   '    enabled: true',
   '    require_acknowledgement: true',
   'world:',
-  '  preferred_pack: "death_note"',
+  '  preferred_pack: "example_pack"',
   '  bootstrap:',
   '    enabled: false',
-  '    target_pack_dir: "death_note"',
-  '    template_file: "data/configw/templates/world-pack/death_note.yaml"',
+  '    target_pack_dir: "example_pack"',
+  '    template_file: "data/configw/templates/world-pack/example_pack.yaml"',
   '    overwrite: false',
   'startup:',
   '  allow_degraded_mode: true',
@@ -162,20 +164,21 @@ const defaultYamlBase = [
   '      timeout_ms: 700',
   '      binary_path: "apps/server/rust/memory_trigger_sidecar/target/debug/memory_trigger_sidecar"',
   '      auto_restart: false',
+  'world_engine:',
+  '  timeout_ms: 1200',
+  '  binary_path: "apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar"',
+  '  auto_restart: false',
   'prompt_workflow:',
   '  profiles:',
   '    agent_decision_default:',
   '      token_budget: 2600',
   '      section_policy: "expanded"',
-  '      compatibility_mode: "full"',
   '    context_summary_default:',
   '      token_budget: 1700',
   '      section_policy: "minimal"',
-  '      compatibility_mode: "bridge_only"',
   '    memory_compaction_default:',
   '      token_budget: 1900',
   '      section_policy: "minimal"',
-  '      compatibility_mode: "bridge_only"',
   'runtime:',
   '  multi_pack:',
   '    max_loaded_packs: 2',
@@ -228,6 +231,10 @@ afterEach(async () => {
   delete process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED;
   delete process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED;
   delete process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_UI_ENABLED;
+  delete process.env.WORLD_ENGINE_USE_SIDECAR;
+  delete process.env.WORLD_ENGINE_TIMEOUT_MS;
+  delete process.env.WORLD_ENGINE_BINARY_PATH;
+  delete process.env.WORLD_ENGINE_AUTO_RESTART;
   delete process.env.RUNTIME_MULTI_PACK_MAX_LOADED_PACKS;
   delete process.env.RUNTIME_MULTI_PACK_START_MODE;
   delete process.env.RUNTIME_MULTI_PACK_BOOTSTRAP_PACKS;
@@ -302,6 +309,11 @@ describe('runtime config YAML migration', () => {
       binary_path: 'apps/server/rust/memory_trigger_sidecar/target/debug/memory_trigger_sidecar',
       auto_restart: false
     });
+    expect(getWorldEngineConfig()).toEqual({
+      timeout_ms: 1200,
+      binary_path: 'apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar',
+      auto_restart: false
+    });
     expect(getRuntimeMultiPackConfig()).toMatchObject({
       max_loaded_packs: 2,
       start_mode: 'manual',
@@ -316,14 +328,37 @@ describe('runtime config YAML migration', () => {
     expect(isExperimentalMultiPackOperatorApiEnabled()).toBe(false);
     expect(config.prompt_workflow.profiles.agent_decision_default).toMatchObject({
       token_budget: 2600,
-      section_policy: 'expanded',
-      compatibility_mode: 'full'
+      section_policy: 'expanded'
     });
     expect(config.scheduler.agent.signal_policy.event_followup.delay_ticks).toBe(2);
     expect(config.scheduler.agent.recovery_suppression.retry.suppress_periodic).toBe(false);
   });
 
-  it('allows env to override migrated scheduler YAML values and experimental multi-pack settings', async () => {
+  it('keeps WORLD_ENGINE_USE_SIDECAR as deprecated warning only and does not alter world engine mode', async () => {
+    const rootDir = await createWorkspace({
+      'data/configw/default.yaml': defaultYamlBase
+    });
+
+    process.env.WORKSPACE_ROOT = rootDir;
+    process.env.WORLD_ENGINE_USE_SIDECAR = '1';
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    expect(getWorldEngineConfig()).toEqual({
+      timeout_ms: 1200,
+      binary_path: 'apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar',
+      auto_restart: false
+    });
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('WORLD_ENGINE_USE_SIDECAR 已废弃')
+    );
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('world engine 现仅支持 Rust sidecar')
+    );
+
+    warnSpy.mockRestore();
+  });
+
+  it('allows env to override migrated scheduler YAML values and world engine runtime settings', async () => {
     const rootDir = await createWorkspace({
       'data/configw/default.yaml': defaultYamlBase
     });
@@ -366,6 +401,9 @@ describe('runtime config YAML migration', () => {
     process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED = 'true';
     process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED = 'true';
     process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_UI_ENABLED = 'false';
+    process.env.WORLD_ENGINE_TIMEOUT_MS = '1300';
+    process.env.WORLD_ENGINE_BINARY_PATH = 'custom/world-engine';
+    process.env.WORLD_ENGINE_AUTO_RESTART = 'false';
     process.env.RUNTIME_MULTI_PACK_MAX_LOADED_PACKS = '4';
     process.env.RUNTIME_MULTI_PACK_START_MODE = 'bootstrap_list';
     process.env.RUNTIME_MULTI_PACK_BOOTSTRAP_PACKS = 'death_note,test_pack';
@@ -409,6 +447,11 @@ describe('runtime config YAML migration', () => {
       timeout_ms: 900,
       binary_path: 'custom/memory-trigger',
       auto_restart: true
+    });
+    expect(getWorldEngineConfig()).toEqual({
+      timeout_ms: 1300,
+      binary_path: 'custom/world-engine',
+      auto_restart: false
     });
     expect(getRuntimeMultiPackConfig()).toMatchObject({
       max_loaded_packs: 4,

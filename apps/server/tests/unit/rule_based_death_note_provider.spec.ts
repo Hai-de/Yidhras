@@ -57,8 +57,25 @@ const buildInferenceContext = (input?: {
     version: '0.5.0'
   },
   world_prompts: {},
-  world_ai: null,
+  world_ai: {
+    tasks: {
+      agent_decision: {
+        metadata: { rule_based_profile: 'notebook_investigation_reference_v1' }
+      }
+    }
+  },
   visible_variables: {},
+  variable_context: {
+    layers: [],
+    alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
+    strict_namespace: false
+  },
+  variable_context_summary: {
+    namespaces: [],
+    alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
+    strict_namespace: false,
+    layer_count: 0
+  },
   policy_summary: {
     social_post_read_allowed: true,
     social_post_readable_fields: ['id', 'content'],
@@ -260,6 +277,36 @@ describe('rule based inference provider for death note world-pack', () => {
 
     expect(result.action_type).toBe('semantic_intent');
     expect(payload.semantic_intent_kind).toBe('update_target_dossier');
+  });
+
+  it('lets notebook holder revise plan before re-entering an execution chain after intent reaffirmation', async () => {
+    const result = await provider.run(
+      buildInferenceContext({
+        actorRoles: ['notebook_candidate', 'planner'],
+        actorState: {
+          murderous_intent: false,
+          knows_notebook_power: true,
+          current_target_id: null,
+          known_target_id: null,
+          target_judgement_eligibility: false,
+          target_name_confirmed: false,
+          target_face_confirmed: false,
+          last_execution_outcome: 'intent_reaffirmed',
+          last_reflection_kind: null,
+          judgement_strategy_phase: 'case_assessment'
+        },
+        worldState: {
+          countermeasure_pressure: 0,
+          last_case_update_kind: null
+        }
+      }),
+      promptBundle
+    );
+    const payload = result.payload as Record<string, unknown>;
+
+    expect(result.action_type).toBe('semantic_intent');
+    expect(payload.semantic_intent_kind).toBe('revise_judgement_plan');
+    expect(result.target_ref).toMatchObject({ entity_id: 'agent-002' });
   });
 
   it('keeps shinigami-like observer on a narrative observation track', async () => {

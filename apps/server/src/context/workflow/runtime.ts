@@ -81,7 +81,6 @@ const summarizeState = (state: PromptWorkflowState): Record<string, unknown> => 
     grouped_node_bucket_count: Object.keys(state.grouped_nodes).length,
     fragment_count: state.fragments.length,
     section_draft_count: state.section_drafts.length,
-    compatibility_mode: state.compatibility.mode,
     profile_id: state.profile.id,
     profile_version: state.profile.version
   };
@@ -163,7 +162,6 @@ const buildProcessingTrace = (input: {
     workflow_profile_id: input.workflow_state.profile.id,
     workflow_profile_version: input.workflow_state.profile.version,
     workflow_step_keys: input.workflow_state.diagnostics.selected_step_keys,
-    workflow_compatibility_mode: input.workflow_state.compatibility.mode,
     workflow_step_traces: input.workflow_state.diagnostics.step_traces,
     steps: input.step_traces,
     fragments: input.final_fragments.map(fragment => ({
@@ -258,8 +256,7 @@ const buildProcessorExecutor = (input: {
             profile_version: state.profile.version,
             profile_defaults: {
               token_budget: state.profile.defaults?.token_budget,
-              section_policy: state.profile.defaults?.section_policy,
-              compatibility_mode: state.profile.defaults?.compatibility_mode
+              section_policy: state.profile.defaults?.section_policy
             },
             selected_step_keys: state.diagnostics.selected_step_keys,
             prompt_workflow: context.context_run.diagnostics.orchestration?.prompt_workflow as PromptProcessingTrace['prompt_workflow'] ?? null,
@@ -309,7 +306,7 @@ const buildExecutorRegistry = (
   const tokenBudgetTrimmer = processorByStage.get('token_budget_trim') ?? createTokenBudgetTrimmerPromptProcessor();
 
   return createPromptWorkflowStepRegistry([
-    buildProcessorExecutor({ kind: 'legacy_memory_projection', processor: memoryInjector }),
+    buildProcessorExecutor({ kind: 'memory_projection', processor: memoryInjector }),
     buildProcessorExecutor({ kind: 'node_working_set_filter', processor: policyFilter }),
     buildNoopExecutor('node_grouping', state => {
       const groupedNodes = buildGroupedNodes(state.working_set);
@@ -375,7 +372,7 @@ const buildExecutorRegistry = (
 
 const toLegacyStageNote = (kind: PromptWorkflowStepKind): Record<string, unknown> => {
   switch (kind) {
-    case 'legacy_memory_projection':
+    case 'memory_projection':
       return {
         context_orchestrator_stage: 'memory_injection'
       };
@@ -398,7 +395,7 @@ const toLegacyStageNote = (kind: PromptWorkflowStepKind): Record<string, unknown
 
 const inferProcessorName = (kind: PromptWorkflowStepKind, specKey: string): string => {
   switch (kind) {
-    case 'legacy_memory_projection':
+    case 'memory_projection':
       return 'memory-injector';
     case 'node_working_set_filter':
       return 'policy-filter';
@@ -528,10 +525,7 @@ export const runPromptWorkflow = async (
     pack_id: context.world_pack.id,
     profile,
     fragments: sortFragments(fragments),
-    compatibility: {
-      mode: profile.defaults?.compatibility_mode ?? 'full',
-      legacy_memory_context: context.memory_context
-    }
+    compatibility: {}
   });
 
   const pluginExecutors = pluginRuntimeRegistry.getPromptWorkflowStepExecutors(context.world_pack.id);
@@ -553,7 +547,6 @@ export const runPromptWorkflow = async (
   }
 
   if (state.diagnostics.compatibility) {
-    state.diagnostics.compatibility.legacy_memory_context_used = state.compatibility.mode !== 'off' && context.memory_context !== null;
     state.diagnostics.compatibility.legacy_processors_used = Array.from(new Set(processorNames.filter(name => !name.startsWith('prompt-workflow:'))));
   }
 

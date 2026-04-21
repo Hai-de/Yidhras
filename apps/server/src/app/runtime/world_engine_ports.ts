@@ -44,23 +44,13 @@ export interface WorldEnginePort {
   queryState(input: WorldStateQuery): Promise<WorldStateQueryResult>;
   getStatus(input: { pack_id: string; correlation_id?: string }): Promise<WorldEnginePackStatus>;
   getHealth(): Promise<WorldEngineHealthSnapshot>;
-  executeObjectiveRule?(input: WorldRuleExecuteObjectiveRequest): Promise<WorldRuleExecuteObjectiveResult>;
+  executeObjectiveRule(input: WorldRuleExecuteObjectiveRequest): Promise<WorldRuleExecuteObjectiveResult>;
 }
 
 export interface PackHostApi {
   getPackSummary(input: { pack_id: string }): Promise<PackRuntimeSummary | null>;
   getCurrentTick(input: { pack_id: string }): Promise<string | null>;
   queryWorldState(input: WorldStateQuery): Promise<WorldStateQueryResult>;
-}
-
-interface PendingPreparedStep {
-  token: string;
-  packId: string;
-  stepTicks: bigint;
-  baseRevision: string;
-  nextRevision: string;
-  nextTick: string;
-  summary: PreparedWorldStep['summary'];
 }
 
 const normalizePackId = (packId: string): string => {
@@ -71,10 +61,24 @@ const normalizePackId = (packId: string): string => {
   return normalized;
 };
 
-const getActiveRuntimeFacade = (context: AppContext) => context.activePackRuntime ?? context.sim;
+const getActiveRuntimeFacade = (context: AppContext, feature: string) => {
+  if (context.activePackRuntime) {
+    return context.activePackRuntime;
+  }
+
+  throw new ApiError(
+    503,
+    'ACTIVE_PACK_RUNTIME_NOT_READY',
+    'activePackRuntime is required for world engine host operations',
+    {
+      feature,
+      fallback_blocked: true
+    }
+  );
+};
 
 const getActivePackId = (context: AppContext): string | null => {
-  return getActiveRuntimeFacade(context).getActivePack()?.metadata.id ?? null;
+  return getActiveRuntimeFacade(context, 'world_engine_ports.getActivePackId').getActivePack()?.metadata.id ?? null;
 };
 
 const getActiveCurrentTick = (context: AppContext): string | null => {
@@ -83,7 +87,7 @@ const getActiveCurrentTick = (context: AppContext): string | null => {
     return null;
   }
 
-  return getActiveRuntimeFacade(context).getCurrentTick().toString();
+  return getActiveRuntimeFacade(context, 'world_engine_ports.getActiveCurrentTick').getCurrentTick().toString();
 };
 
 const getExperimentalRuntimeSummary = (context: AppContext, packId: string): PackRuntimeSummary | null => {
@@ -115,22 +119,6 @@ const getPackSummary = (context: AppContext, packId: string): PackRuntimeSummary
   }
 
   return getExperimentalRuntimeSummary(context, normalizedPackId);
-};
-
-const assertPackAvailable = (context: AppContext, packId: string): { packId: string; mode: WorldEnginePackMode } => {
-  const normalizedPackId = normalizePackId(packId);
-  const activePackId = getActivePackId(context);
-  if (activePackId === normalizedPackId) {
-    return { packId: normalizedPackId, mode: 'active' };
-  }
-
-  if (context.sim.getPackRuntimeHandle(normalizedPackId)) {
-    return { packId: normalizedPackId, mode: 'experimental' };
-  }
-
-  throw new ApiError(404, 'PACK_NOT_LOADED', 'World engine pack session is not loaded', {
-    pack_id: normalizedPackId
-  });
 };
 
 const applyQueryLimit = <T>(items: T[], limit?: number): T[] => {
@@ -296,157 +284,17 @@ const resolveQueryStateData = async (context: AppContext, packId: string, query:
   }
 };
 
-export const createTsWorldEngineAdapter = (context: AppContext): WorldEnginePort => {
-  const pendingPreparedSteps = new Map<string, PendingPreparedStep>();
-
+export const createPackHostApi = (context: AppContext): PackHostApi => {
   return {
-    async loadPack(input) {
-      const packId = normalizePackId(input.pack_id);
-      const requestedMode = input.mode ?? 'active';
-
-      if (requestedMode === 'active') {
-        const packRef = input.pack_ref?.trim() || packId;
-        void input.hydrate;
-        await getActiveRuntimeFacade(context).init(packRef);
-        const activePackId = getActivePackId(context);
-        if (!activePackId || activePackId !== packId) {
-          throw new ApiError(409, 'PACK_SCOPE_DENIED', 'Loaded active pack does not match requested pack_id', {
-            requested_pack_id: packId,
-            active_pack_id: activePackId
-          });
-        }
-
-        return {
-          protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
-          pack_id: activePackId,
-          mode: 'active',
-          session_status: 'ready',
-          hydrated_from_persistence: true,
-          current_tick: getActiveCurrentTick(context),
-          current_revision: getActiveCurrentTick(context)
-        };
-      }
-
-      const packRef = input.pack_ref?.trim() || packId;
-      const result = await context.sim.loadExperimentalPackRuntime(packRef);
-      return {
-        protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
-        pack_id: result.handle.pack_id,
-        mode: 'experimental',
-        session_status: 'ready',
-        hydrated_from_persistence: result.loaded || result.already_loaded,
-        current_tick: result.handle.getClockSnapshot().current_tick,
-        current_revision: result.handle.getClockSnapshot().current_tick
-      };
+    async getPackSummary(input) {
+      return getPackSummary(context, input.pack_id);
     },
 
-    async unloadPack(input) {
-      const packId = normalizePackId(input.pack_id);
-      if (getActivePackId(context) === packId) {
-        throw new ApiError(409, 'PACK_SCOPE_DENIED', 'Active pack session cannot be unloaded from the TS adapter', {
-          pack_id: packId
-        });
-      }
-
-      await context.sim.unloadExperimentalPackRuntime(packId);
+    async getCurrentTick(input) {
+      return getPackSummary(context, input.pack_id)?.current_tick ?? null;
     },
 
-    async prepareStep(input) {
-      const packId = normalizePackId(input.pack_id);
-      const availability = assertPackAvailable(context, packId);
-      if (availability.mode !== 'active') {
-        throw new ApiError(409, 'PACK_SCOPE_DENIED', 'TS world engine adapter only supports prepareStep on the active pack', {
-          pack_id: packId,
-          mode: availability.mode
-        });
-      }
-
-      if (pendingPreparedSteps.has(packId)) {
-        throw new ApiError(409, 'PREPARED_STEP_CONFLICT', 'A prepared step is already in flight for this pack', {
-          pack_id: packId
-        });
-      }
-
-      const stepTicks = BigInt(input.step_ticks);
-      const currentTick = getActiveRuntimeFacade(context).getCurrentTick();
-      const baseRevision = input.base_revision ?? currentTick.toString();
-      const nextTick = (currentTick + stepTicks).toString();
-      const nextRevision = nextTick;
-      const token = `ts-prepared:${packId}:${Date.now()}`;
-      const pending: PendingPreparedStep = {
-        token,
-        packId,
-        stepTicks,
-        baseRevision,
-        nextRevision,
-        nextTick,
-        summary: {
-          applied_rule_count: 0,
-          event_count: 0,
-          mutated_entity_count: 0
-        }
-      };
-      pendingPreparedSteps.set(packId, pending);
-
-      return {
-        prepared_token: token,
-        pack_id: packId,
-        base_revision: baseRevision,
-        next_revision: nextRevision,
-        next_tick: nextTick,
-        state_delta: {
-          operations: [],
-          metadata: {
-            pack_id: packId,
-            adapter: 'ts_compat',
-            reason: input.reason,
-            base_tick: currentTick.toString(),
-            next_tick: nextTick,
-            base_revision: baseRevision,
-            next_revision: nextRevision,
-            mutated_entity_ids: [],
-            mutated_namespace_refs: [],
-            delta_operation_count: 0
-          }
-        },
-        emitted_events: [],
-        observability: [],
-        summary: pending.summary
-      };
-    },
-
-    async commitPreparedStep(input) {
-      const pending = Array.from(pendingPreparedSteps.values()).find(candidate => candidate.token === input.prepared_token);
-      if (!pending) {
-        throw new ApiError(404, 'PREPARED_STEP_NOT_FOUND', 'Prepared step token not found', {
-          prepared_token: input.prepared_token
-        });
-      }
-
-      await getActiveRuntimeFacade(context).step(pending.stepTicks);
-      pendingPreparedSteps.delete(pending.packId);
-      const committedTick = getActiveRuntimeFacade(context).getCurrentTick().toString();
-
-      return {
-        protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
-        pack_id: pending.packId,
-        prepared_token: pending.token,
-        committed_revision: input.persisted_revision,
-        committed_tick: committedTick,
-        summary: pending.summary
-      };
-    },
-
-    async abortPreparedStep(input) {
-      const pending = Array.from(pendingPreparedSteps.values()).find(candidate => candidate.token === input.prepared_token);
-      if (!pending) {
-        return;
-      }
-
-      pendingPreparedSteps.delete(pending.packId);
-    },
-
-    async queryState(input) {
+    async queryWorldState(input) {
       const packId = normalizePackId(input.pack_id);
       const data = await resolveQueryStateData(context, packId, input);
       const summary = getPackSummary(context, packId);
@@ -461,74 +309,6 @@ export const createTsWorldEngineAdapter = (context: AppContext): WorldEnginePort
         next_cursor: null,
         warnings: []
       };
-    },
-
-    async getStatus(input) {
-      const packId = normalizePackId(input.pack_id);
-      const summary = getPackSummary(context, packId);
-      if (!summary) {
-        return {
-          protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
-          pack_id: packId,
-          mode: 'experimental',
-          session_status: 'not_loaded',
-          runtime_ready: false,
-          current_tick: null,
-          current_revision: null,
-          pending_prepared_token: null,
-          message: 'Pack session is not loaded'
-        };
-      }
-
-      return {
-        protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
-        pack_id: packId,
-        mode: getActivePackId(context) === packId ? 'active' : 'experimental',
-        session_status: 'ready',
-        runtime_ready: summary.runtime_ready ?? false,
-        current_tick: summary.current_tick ?? null,
-        current_revision: summary.current_tick ?? null,
-        pending_prepared_token: pendingPreparedSteps.get(packId)?.token ?? null,
-        message: null
-      };
-    },
-
-    async getHealth() {
-      const activePackId = getActivePackId(context);
-      const experimentalPackIds = context.sim.listLoadedPackRuntimeIds();
-      const loadedPackIds = activePackId
-        ? Array.from(new Set([activePackId, ...experimentalPackIds]))
-        : experimentalPackIds;
-
-      return {
-        protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
-        transport: 'stdio_jsonrpc',
-        engine_status: context.getRuntimeReady() ? 'ready' : 'degraded',
-        engine_instance_id: 'ts-world-engine-adapter',
-        uptime_ms: 0,
-        loaded_pack_ids: loadedPackIds,
-        tainted_pack_ids: [],
-        last_error_code: null,
-        message: 'TS compatibility adapter'
-      };
-    }
-  };
-};
-
-export const createPackHostApi = (context: AppContext): PackHostApi => {
-  const worldEngine = context.worldEngine ?? createTsWorldEngineAdapter(context);
-
-  return {
-    async getPackSummary(input) {
-      return getPackSummary(context, input.pack_id);
-    },
-
-    async getCurrentTick(input) {
-      return getPackSummary(context, input.pack_id)?.current_tick ?? null;
-    },
-
-    async queryWorldState(input) {
-      return worldEngine.queryState(input);
     }
   };
 };

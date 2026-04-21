@@ -2,12 +2,11 @@ import fs from 'fs';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
+import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
+import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
 import { countSqliteEngineOwnedRecords } from '../../src/packs/storage/internal/sqlite_engine_owned_store.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
-
-import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
 
 const createdRoots: string[] = [];
 
@@ -47,6 +46,30 @@ describe('pack runtime install', () => {
               { key: 'target_entity_id', type: 'entity_ref', required: true },
               { key: 'status', type: 'string', required: true }
             ]
+          },
+          {
+            key: 'judgement_plans',
+            kind: 'table',
+            primary_key: 'id',
+            fields: [
+              { key: 'id', type: 'string', required: true },
+              { key: 'owner_actor_id', type: 'entity_ref', required: true },
+              { key: 'phase', type: 'string' },
+              { key: 'content', type: 'json', required: true }
+            ],
+            indexes: [['owner_actor_id', 'phase']]
+          },
+          {
+            key: 'investigation_threads',
+            kind: 'table',
+            primary_key: 'id',
+            fields: [
+              { key: 'id', type: 'string', required: true },
+              { key: 'owner_actor_id', type: 'entity_ref', required: true },
+              { key: 'subject_entity_id', type: 'entity_ref', required: true },
+              { key: 'content', type: 'json', required: true }
+            ],
+            indexes: [['owner_actor_id', 'subject_entity_id']]
           }
         ],
         install: {
@@ -63,7 +86,7 @@ describe('pack runtime install', () => {
     expect(summary.runtimeDbCreated).toBe(true);
     expect(fs.existsSync(summary.runtimeDbPath)).toBe(true);
     expect(fs.existsSync(`${summary.runtimeDbPath}.storage-plan.json`)).toBe(true);
-    expect(summary.packCollections).toEqual(['death_rule_targets']);
+    expect(summary.packCollections).toEqual(['death_rule_targets', 'judgement_plans', 'investigation_threads']);
     await expect(countSqliteEngineOwnedRecords(summary.runtimeDbPath, 'world_entities')).resolves.toBe(0);
     await expect(countSqliteEngineOwnedRecords(summary.runtimeDbPath, 'authority_grants')).resolves.toBe(0);
   });

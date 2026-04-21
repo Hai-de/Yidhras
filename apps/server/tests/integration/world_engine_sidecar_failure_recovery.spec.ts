@@ -3,9 +3,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AppContext } from '../../src/app/context.js';
 import { WorldEngineSidecarClient } from '../../src/app/runtime/sidecar/world_engine_sidecar_client.js';
 import {
-  clearTaintedWorldEnginePackId,
-  executeWorldEnginePreparedStep,
-  listTaintedWorldEnginePackIds
+  createWorldEngineStepCoordinator,
+  executeWorldEnginePreparedStep
 } from '../../src/app/runtime/world_engine_persistence.js';
 import { createPackHostApi } from '../../src/app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from '../../src/app/runtime/world_engine_snapshot.js';
@@ -54,6 +53,7 @@ describe('world engine sidecar failure recovery integration', () => {
       setRuntimeReady: () => {},
       getPaused: () => false,
       setPaused: () => {},
+      worldEngineStepCoordinator: createWorldEngineStepCoordinator(),
       assertRuntimeReady: () => {}
     } as unknown as AppContext;
 
@@ -82,11 +82,11 @@ describe('world engine sidecar failure recovery integration', () => {
     if (originalAppEnv === undefined) delete process.env.APP_ENV;
     else process.env.APP_ENV = originalAppEnv;
     await cleanup?.();
-    clearTaintedWorldEnginePackId(packId);
+    context.worldEngineStepCoordinator?.clearTaintedPackId(packId);
   });
 
   it('aborts the prepared step when host persistence fails and keeps the pack untainted', async () => {
-    clearTaintedWorldEnginePackId(packId);
+    context.worldEngineStepCoordinator?.clearTaintedPackId(packId);
 
     await expect(executeWorldEnginePreparedStep({
       context,
@@ -104,7 +104,7 @@ describe('world engine sidecar failure recovery integration', () => {
       }
     })).rejects.toThrow('persist failed');
 
-    expect(listTaintedWorldEnginePackIds()).not.toContain(packId);
+    expect(context.worldEngineStepCoordinator?.listTaintedPackIds()).not.toContain(packId);
 
     const prepared = await sidecar.prepareStep({
       protocol_version: 'world_engine/v1alpha1',
@@ -125,7 +125,7 @@ describe('world engine sidecar failure recovery integration', () => {
   });
 
   it('marks the pack tainted when abort also fails', async () => {
-    clearTaintedWorldEnginePackId(packId);
+    context.worldEngineStepCoordinator?.clearTaintedPackId(packId);
 
     const abortSpy = vi.spyOn(sidecar, 'abortPreparedStep').mockRejectedValueOnce(new Error('abort failed'));
 
@@ -145,8 +145,8 @@ describe('world engine sidecar failure recovery integration', () => {
       }
     })).rejects.toThrow('persist failed');
 
-    expect(listTaintedWorldEnginePackIds()).toContain(packId);
+    expect(context.worldEngineStepCoordinator?.listTaintedPackIds()).toContain(packId);
     abortSpy.mockRestore();
-    clearTaintedWorldEnginePackId(packId);
+    context.worldEngineStepCoordinator?.clearTaintedPackId(packId);
   });
 });

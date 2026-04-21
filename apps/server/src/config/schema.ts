@@ -33,8 +33,7 @@ const RuntimeMultiPackSchema = z
 const PromptWorkflowProfileDefaultsSchema = z
   .object({
     token_budget: PositiveIntSchema,
-    section_policy: z.enum(['minimal', 'standard', 'expanded']),
-    compatibility_mode: z.enum(['full', 'bridge_only', 'off'])
+    section_policy: z.enum(['minimal', 'standard', 'expanded'])
   })
   .strict();
 
@@ -57,6 +56,14 @@ const SidecarRuntimeSchema = z
   .strict();
 
 const SchedulerDecisionKernelRuntimeSchema = SidecarRuntimeSchema;
+
+const WorldEngineRuntimeSchema = z
+  .object({
+    timeout_ms: PositiveIntSchema,
+    binary_path: NonEmptyStringSchema,
+    auto_restart: z.boolean()
+  })
+  .strict();
 
 const MemoryTriggerEngineRuntimeSchema = z
   .object({
@@ -167,6 +174,7 @@ export const RuntimeConfigSchema = z
           .strict()
       })
       .strict(),
+    world_engine: WorldEngineRuntimeSchema,
     startup: z
       .object({
         allow_degraded_mode: z.boolean(),

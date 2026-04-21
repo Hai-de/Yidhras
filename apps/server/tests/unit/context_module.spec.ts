@@ -321,7 +321,7 @@ describe('context module service', () => {
 
     expect(result.context_run.nodes.length).toBeGreaterThan(selection.short_term.length + selection.long_term.length + selection.summaries.length);
     expect(result.context_run.diagnostics.source_adapter_names).toEqual([
-      'legacy-memory-selection',
+      'memory-selection',
       'runtime-state-snapshots',
       'memory-block-runtime',
       'context-overlay-store'
@@ -364,11 +364,7 @@ describe('context module service', () => {
     expect(policyNode?.visibility.level).toBe('visible_fixed');
 
     expect(result.context_run.diagnostics.selected_node_summaries?.some(summary => summary.node_type === 'policy_summary')).toBe(true);
-    expect(result.context_run.diagnostics.compatibility).toEqual({
-      legacy_memory_selected_count: 4,
-      legacy_memory_dropped_count: 1,
-      legacy_memory_context_selection_count: 5
-    });
+    expect(result.context_run.diagnostics.compatibility).toBeUndefined();
 
     const actorStateNode = result.context_run.nodes.find(node => node.node_type === 'pack_actor_state_snapshot');
     expect(actorStateNode?.content.structured?.murderous_intent).toBe(true);

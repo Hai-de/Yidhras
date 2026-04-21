@@ -34,7 +34,6 @@ const buildTestContext = (
   pack: ReturnType<typeof parseWorldPackConstitution>,
   options?: {
     now?: bigint;
-    useSidecar?: boolean;
   }
 ): AppContextWithConcreteSidecar => {
   const now = options?.now ?? 1000n;
@@ -53,6 +52,45 @@ const buildTestContext = (
         }
       }
     } as AppContext['sim'],
+    activePackRuntime: {
+      getActivePack(): typeof pack {
+        return pack;
+      },
+      getCurrentTick(): bigint {
+        return now;
+      },
+      getStepTicks(): bigint {
+        return 1n;
+      },
+      getRuntimeSpeedSnapshot() {
+        return {
+          mode: 'fixed' as const,
+          source: 'default' as const,
+          configured_step_ticks: null,
+          override_step_ticks: null,
+          override_since: null,
+          effective_step_ticks: '1'
+        };
+      },
+      setRuntimeSpeedOverride() {
+        // noop
+      },
+      clearRuntimeSpeedOverride() {
+        // noop
+      },
+      getAllTimes() {
+        return { current_tick: now.toString() };
+      },
+      async init() {
+        // noop
+      },
+      async step() {
+        // noop
+      },
+      resolvePackVariables(template: string) {
+        return template;
+      }
+    },
     notifications: {
       push(level, content) {
         return { id: 'noop', level, content, timestamp: Date.now() };
@@ -89,12 +127,12 @@ const buildTestContext = (
     assertRuntimeReady() {
       // noop
     },
-    worldEngine: options?.useSidecar ? createTestSidecarClient() : undefined
+    worldEngine: createTestSidecarClient()
   };
 };
 
 describe('objective enforcement sidecar parity', () => {
-  it('matches TS objective enforcement results for a richer subject/target/world/event scenario', async () => {
+  it('matches objective enforcement results for a richer subject/target/world/event scenario', async () => {
     const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test' });
     createdRoots.push(environment.rootDir);
     process.env.WORKSPACE_ROOT = environment.rootDir;
@@ -235,9 +273,13 @@ describe('objective enforcement sidecar parity', () => {
     await installPackRuntime(pack);
     await materializePackRuntimeCoreModels(pack, 1000n);
 
-    const tsContext = buildTestContext(pack, { useSidecar: false });
-    const sidecarContext = buildTestContext(pack, { useSidecar: true });
-    await sidecarContext.worldEngine?.loadPack({
+    const firstContext = buildTestContext(pack);
+    await firstContext.worldEngine?.loadPack({
+      pack_id: pack.metadata.id,
+      mode: 'active'
+    });
+    const secondContext = buildTestContext(pack);
+    await secondContext.worldEngine?.loadPack({
       pack_id: pack.metadata.id,
       mode: 'active'
     });
@@ -260,29 +302,31 @@ describe('objective enforcement sidecar parity', () => {
       }
     };
 
-    await dispatchInvocationFromActionIntent(tsContext, invocation);
-    const tsStates = await listPackEntityStates(pack.metadata.id);
-    const tsRecords = await listPackRuleExecutionRecords(pack.metadata.id);
+    await dispatchInvocationFromActionIntent(firstContext, invocation);
+    const firstStates = await listPackEntityStates(pack.metadata.id);
+    const firstRecords = await listPackRuleExecutionRecords(pack.metadata.id);
 
     await materializePackRuntimeCoreModels(pack, 1000n);
 
-    await dispatchInvocationFromActionIntent(sidecarContext, invocation);
-    const sidecarStates = await listPackEntityStates(pack.metadata.id);
-    const sidecarRecords = await listPackRuleExecutionRecords(pack.metadata.id);
+    await dispatchInvocationFromActionIntent(secondContext, invocation);
+    const secondStates = await listPackEntityStates(pack.metadata.id);
+    const secondRecords = await listPackRuleExecutionRecords(pack.metadata.id);
 
     const pickState = (states: Awaited<ReturnType<typeof listPackEntityStates>>, entityId: string, namespace: string) => {
       return states.find(state => state.entity_id === entityId && state.state_namespace === namespace)?.state_json ?? null;
     };
 
-    expect(pickState(sidecarStates, 'agent-001', 'core')).toEqual(pickState(tsStates, 'agent-001', 'core'));
-    expect(pickState(sidecarStates, 'agent-002', 'core')).toEqual(pickState(tsStates, 'agent-002', 'core'));
-    expect(pickState(sidecarStates, '__world__', 'world')).toEqual(pickState(tsStates, '__world__', 'world'));
+    expect(pickState(secondStates, 'agent-001', 'core')).toEqual(pickState(firstStates, 'agent-001', 'core'));
+    expect(pickState(secondStates, 'agent-002', 'core')).toEqual(pickState(firstStates, 'agent-002', 'core'));
+    expect(pickState(secondStates, '__world__', 'world')).toEqual(pickState(firstStates, '__world__', 'world'));
 
-    expect(sidecarRecords).toHaveLength(tsRecords.length);
-    expect(sidecarRecords.at(-1)?.rule_id).toBe(tsRecords.at(-1)?.rule_id);
-    expect(sidecarRecords.at(-1)?.execution_status).toBe(tsRecords.at(-1)?.execution_status);
+    expect(secondRecords).toHaveLength(firstRecords.length);
+    expect(secondRecords.at(-1)?.rule_id).toBe(firstRecords.at(-1)?.rule_id);
+    expect(secondRecords.at(-1)?.execution_status).toBe(firstRecords.at(-1)?.execution_status);
 
-    await sidecarContext.worldEngine?.unloadPack({ pack_id: pack.metadata.id });
-    await sidecarContext.worldEngine?.stop();
+    await firstContext.worldEngine?.unloadPack({ pack_id: pack.metadata.id });
+    await firstContext.worldEngine?.stop();
+    await secondContext.worldEngine?.unloadPack({ pack_id: pack.metadata.id });
+    await secondContext.worldEngine?.stop();
   });
 });

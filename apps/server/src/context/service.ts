@@ -11,7 +11,7 @@ import type { LongMemoryBlockStore } from '../memory/blocks/types.js';
 import { createMemoryService, type MemoryService } from '../memory/service.js';
 import type { MemoryContextPack } from '../memory/types.js';
 import { pluginRuntimeRegistry } from '../plugins/runtime.js';
-import { buildLegacyMemoryContextPack } from './compat.js';
+import { buildMemoryContextPack } from './compat.js';
 import { createContextOverlayStore } from './overlay/store.js';
 import type { ContextOverlayStore } from './overlay/types.js';
 import { applyPolicyDecisionsToSelection, evaluateContextPolicies } from './policy_engine.js';
@@ -157,20 +157,12 @@ export const createContextService = ({
         }
       };
 
-      const legacyMemoryContext = buildLegacyMemoryContextPack(contextRun);
-      contextRun.diagnostics.compatibility = {
-        legacy_memory_selected_count:
-          memoryResult.selection.short_term.length +
-          memoryResult.selection.long_term.length +
-          memoryResult.selection.summaries.length,
-        legacy_memory_dropped_count: memoryResult.selection.dropped.length,
-        legacy_memory_context_selection_count: legacyMemoryContext.diagnostics.selected_count
-      };
+      const memoryContext = buildMemoryContextPack(contextRun);
 
       return {
         context_run: contextRun,
         selection: policySelection,
-        memory_context: legacyMemoryContext
+        memory_context: memoryContext
       };
     }
   };

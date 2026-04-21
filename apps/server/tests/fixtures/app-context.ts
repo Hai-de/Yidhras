@@ -1,11 +1,12 @@
 import type { PrismaClient } from '@prisma/client';
 import type { Express } from 'express';
 
-import type { 
-  AppContext, 
-  RuntimeLoopDiagnostics, 
-  StartupHealth 
+import type {
+  AppContext,
+  RuntimeLoopDiagnostics,
+  StartupHealth
 } from '../../src/app/context.js';
+import { createWorldEngineStepCoordinator } from '../../src/app/runtime/world_engine_persistence.js';
 import { ChronosEngine } from '../../src/clock/engine.js';
 import type { SimulationManager } from '../../src/core/simulation.js';
 import { notifications } from '../../src/utils/notifications.js';
@@ -100,6 +101,7 @@ export const createTestAppContext = (
     setHttpApp: app => {
       httpApp = app;
     },
+    worldEngineStepCoordinator: createWorldEngineStepCoordinator(),
     assertRuntimeReady: () => {}
   };
 };

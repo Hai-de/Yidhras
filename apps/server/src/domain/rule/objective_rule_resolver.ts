@@ -24,7 +24,6 @@ export interface ObjectiveRulePlan {
   mediator_id: string | null;
   target_entity_id: string | null;
   diagnostics?: Record<string, unknown> | null;
-  bridge_mode: 'objective_rule';
   mutations: ObjectiveMutationEffect[];
   emitted_events: ObjectiveEventEffect[];
 }
@@ -286,7 +285,6 @@ const resolveObjectiveRulePlanFromRules = async (
         mutation_count: mutations.length,
         emitted_event_count: emitted_events.length
       },
-      bridge_mode: 'objective_rule',
       mutations,
       emitted_events
     };

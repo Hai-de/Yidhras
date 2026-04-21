@@ -8,6 +8,8 @@
     "prepare:runtime": "pnpm exec prisma migrate deploy && pnpm run init:runtime && pnpm run seed:identity",
     "reset:dev-db": "tsx src/init/reset_dev_db.ts",
     "postinstall": "pnpm exec prisma generate",
+    "check:rust": "cargo check --manifest-path rust/world_engine_sidecar/Cargo.toml && cargo check --manifest-path rust/scheduler_decision_sidecar/Cargo.toml && cargo check --manifest-path rust/memory_trigger_sidecar/Cargo.toml",
+    "build:rust": "cargo build --manifest-path rust/world_engine_sidecar/Cargo.toml && cargo build --manifest-path rust/scheduler_decision_sidecar/Cargo.toml && cargo build --manifest-path rust/memory_trigger_sidecar/Cargo.toml",
     "build": "tsc",
     "test": "pnpm run test:unit && pnpm run test:integration && pnpm run test:e2e",
     "test:unit": "vitest run --config vitest.unit.config.ts",

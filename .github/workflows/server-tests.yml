@@ -43,5 +43,8 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check Rust sidecars
+        run: pnpm --filter yidhras-server check:rust
+
       - name: Run server integration tests
         run: pnpm --filter yidhras-server test:integration

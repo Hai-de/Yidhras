@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
+import { WorldEngineSidecarClient } from '../../src/app/runtime/sidecar/world_engine_sidecar_client.js';
 import { createPackHostApi } from '../../src/app/runtime/world_engine_ports.js';
 import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
 import { PackManifestLoader } from '../../src/packs/manifest/loader.js';
@@ -12,6 +13,7 @@ describe('PackHostApi read surface integration', () => {
   let cleanup: (() => Promise<void>) | null = null;
   let context: AppContext;
   let packId = 'world-death-note';
+  let sidecar: WorldEngineSidecarClient;
 
   beforeAll(async () => {
     const environment = await createIsolatedRuntimeEnvironment();
@@ -20,12 +22,43 @@ describe('PackHostApi read surface integration', () => {
 
     const prisma = createPrismaClientForEnvironment(environment);
     context = createTestAppContext(prisma);
+    sidecar = new WorldEngineSidecarClient();
+    process.env.WORKSPACE_ROOT = environment.rootDir;
+    process.env.WORLD_PACKS_DIR = environment.worldPacksDir;
+    process.env.DATABASE_URL = environment.databaseUrl;
+    process.env.APP_ENV = environment.envOverrides.APP_ENV;
+    await context.sim.init?.('death_note');
+
+    context.worldEngine = sidecar as unknown as AppContext['worldEngine'];
 
     const loader = new PackManifestLoader(environment.worldPacksDir);
     const pack = loader.loadPack('death_note');
     packId = pack.metadata.id;
+    context.activePackRuntime = {
+      async init() {
+        // noop
+      },
+      getActivePack() {
+        return pack;
+      },
+      resolvePackVariables(template: string) {
+        return template;
+      },
+      getStepTicks: () => 1n,
+      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, configured_step_ticks: null, override_step_ticks: null, override_since: null, effective_step_ticks: '1' }),
+      setRuntimeSpeedOverride: () => {},
+      clearRuntimeSpeedOverride: () => {},
+      getCurrentTick: () => 1000n,
+      getAllTimes: () => ({ current_tick: '1000' }),
+      step: async () => {}
+    };
     await installPackRuntime(pack);
     await materializePackRuntimeCoreModels(pack, 1000n);
+    await sidecar.loadPack({
+      pack_id: packId,
+      pack_ref: 'death_note',
+      mode: 'active'
+    });
   });
 
   beforeEach(async () => {
@@ -50,6 +83,8 @@ describe('PackHostApi read surface integration', () => {
   });
 
   afterAll(async () => {
+    await sidecar?.unloadPack({ pack_id: packId });
+    await sidecar?.stop();
     await context.prisma.$disconnect();
     await cleanup?.();
   });
@@ -69,6 +104,28 @@ describe('PackHostApi read surface integration', () => {
     expect(Array.isArray(entities.data.items)).toBe(true);
     expect((entities.data.items ?? []).length).toBeGreaterThan(0);
     expect((entities.data.items ?? []).every(item => (item as { entity_kind?: string }).entity_kind === 'artifact')).toBe(true);
+
+    const domains = await hostApi.queryWorldState({
+      protocol_version: 'world_engine/v1alpha1',
+      pack_id: packId,
+      query_name: 'world_entities',
+      selector: {
+        entity_kind: 'domain'
+      },
+      limit: 10
+    });
+    expect((domains.data.items ?? []).some(item => (item as { id?: string }).id === `${packId}:entity:domain-investigation`)).toBe(true);
+
+    const institutions = await hostApi.queryWorldState({
+      protocol_version: 'world_engine/v1alpha1',
+      pack_id: packId,
+      query_name: 'world_entities',
+      selector: {
+        entity_kind: 'institution'
+      },
+      limit: 10
+    });
+    expect((institutions.data.items ?? []).some(item => (item as { id?: string }).id === `${packId}:entity:institution-npa-taskforce`)).toBe(true);
 
     const worldState = await hostApi.queryWorldState({
       protocol_version: 'world_engine/v1alpha1',

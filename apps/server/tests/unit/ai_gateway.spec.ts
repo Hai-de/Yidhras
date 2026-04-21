@@ -38,7 +38,7 @@ const createAgentDecisionTaskRequest = (): AiTaskRequest => ({
         workflow_task_type: 'agent_decision',
         workflow_profile_id: 'agent-decision-default',
         workflow_profile_version: '1',
-        workflow_step_keys: ['legacy_memory_projection', 'placement_resolution'],
+        workflow_step_keys: ['memory_projection', 'placement_resolution'],
         processing_trace: {
           processor_names: ['memory-injector', 'prompt-workflow:placement_resolution'],
           fragment_count_before: 4,
@@ -46,13 +46,13 @@ const createAgentDecisionTaskRequest = (): AiTaskRequest => ({
           workflow_task_type: 'agent_decision',
           workflow_profile_id: 'agent-decision-default',
           workflow_profile_version: '1',
-          workflow_step_keys: ['legacy_memory_projection', 'placement_resolution'],
+          workflow_step_keys: ['memory_projection', 'placement_resolution'],
           fragments: [],
           prompt_workflow: {
             task_type: 'agent_decision',
             profile_id: 'agent-decision-default',
             profile_version: '1',
-            selected_step_keys: ['legacy_memory_projection', 'placement_resolution'],
+            selected_step_keys: ['memory_projection', 'placement_resolution'],
             section_summary: {
               total_sections: 2
             },
@@ -74,7 +74,7 @@ const createAgentDecisionTaskRequest = (): AiTaskRequest => ({
     workflow_task_type: 'agent_decision',
     workflow_profile_id: 'agent-decision-default',
     workflow_profile_version: '1',
-    workflow_step_keys: ['legacy_memory_projection', 'placement_resolution']
+    workflow_step_keys: ['memory_projection', 'placement_resolution']
   }
 });
 
@@ -238,8 +238,59 @@ describe('ai gateway unit', () => {
       attributes: {},
       world_pack: { id: 'world-death-note', name: '死亡笔记', version: '0.4.0' },
       world_prompts: {},
-      world_ai: null,
+      world_ai: {
+        memory_loop: {
+          summary_every_n_rounds: 5,
+          compaction_every_n_rounds: 5
+        },
+        tasks: {
+          intent_grounding_assist: {
+            prompt: {
+              preset: 'death_note_intent_grounding_v1',
+              include_sections: ['pack_rules', 'recent_events']
+            },
+            metadata: {
+              fallback_policy: 'prefer_existing_capability_or_narrativized'
+            }
+          },
+          context_summary: {
+            prompt: {
+              preset: 'death_note_context_summary_v1'
+            },
+            metadata: {
+              summary_axes: ['investigation_heat', 'evidence_chain_strength']
+            }
+          },
+          memory_compaction: {
+            prompt: {
+              preset: 'death_note_memory_compaction_v1'
+            },
+            metadata: {
+              retention_bias: ['target_identity_confirmation', 'execution_postmortem']
+            }
+          },
+          classification: {
+            prompt: {
+              preset: 'death_note_classification_v1'
+            },
+            metadata: {
+              labels: ['execution_window', 'false_lead', 'pressure_escalation']
+            }
+          }
+        }
+      },
       visible_variables: {},
+      variable_context: {
+        layers: [],
+        alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
+        strict_namespace: false
+      },
+      variable_context_summary: {
+        namespaces: [],
+        alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
+        strict_namespace: false,
+        layer_count: 0
+      },
       policy_summary: {
         social_post_read_allowed: true,
         social_post_readable_fields: ['id', 'content'],
@@ -280,6 +331,42 @@ describe('ai gateway unit', () => {
       section_scores: expect.any(Array),
       section_policies: ['memory_focused']
     });
+  });
+
+  it('resolves death note pack ai task overrides for grounding/summary/compaction/classification', () => {
+    const packAiConfig = {
+      memory_loop: {
+        summary_every_n_rounds: 5,
+        compaction_every_n_rounds: 5
+      },
+      tasks: {
+        intent_grounding_assist: {
+          prompt: { preset: 'death_note_intent_grounding_v1' },
+          metadata: { fallback_policy: 'prefer_existing_capability_or_narrativized' }
+        },
+        context_summary: {
+          prompt: { preset: 'death_note_context_summary_v1' },
+          metadata: { summary_axes: ['investigation_heat', 'evidence_chain_strength'] }
+        },
+        memory_compaction: {
+          prompt: { preset: 'death_note_memory_compaction_v1' },
+          metadata: { retention_bias: ['target_identity_confirmation', 'execution_postmortem'] }
+        },
+        classification: {
+          prompt: { preset: 'death_note_classification_v1' },
+          metadata: { labels: ['execution_window', 'false_lead', 'pressure_escalation'] }
+        }
+      }
+    } as const;
+
+    expect(resolveAiTaskConfig({ taskType: 'intent_grounding_assist', packAiConfig }).prompt.preset).toBe('death_note_intent_grounding_v1');
+    expect(resolveAiTaskConfig({ taskType: 'intent_grounding_assist', packAiConfig }).metadata).toMatchObject({ fallback_policy: 'prefer_existing_capability_or_narrativized' });
+    expect(resolveAiTaskConfig({ taskType: 'context_summary', packAiConfig }).prompt.preset).toBe('death_note_context_summary_v1');
+    expect(resolveAiTaskConfig({ taskType: 'context_summary', packAiConfig }).metadata).toMatchObject({ summary_axes: ['investigation_heat', 'evidence_chain_strength'] });
+    expect(resolveAiTaskConfig({ taskType: 'memory_compaction', packAiConfig }).prompt.preset).toBe('death_note_memory_compaction_v1');
+    expect(resolveAiTaskConfig({ taskType: 'memory_compaction', packAiConfig }).metadata).toMatchObject({ retention_bias: ['target_identity_confirmation', 'execution_postmortem'] });
+    expect(resolveAiTaskConfig({ taskType: 'classification', packAiConfig }).prompt.preset).toBe('death_note_classification_v1');
+    expect(resolveAiTaskConfig({ taskType: 'classification', packAiConfig }).metadata).toMatchObject({ labels: ['execution_window', 'false_lead', 'pressure_escalation'] });
   });
 
   it('resolves pack-aware route and prioritizes explicit model hint without failing when the hinted model is absent from route candidates', () => {
@@ -348,7 +435,7 @@ describe('ai gateway unit', () => {
       workflow_task_type: 'agent_decision',
       workflow_profile_id: 'agent-decision-default',
       workflow_profile_version: '1',
-      workflow_step_keys: ['legacy_memory_projection', 'placement_resolution'],
+      workflow_step_keys: ['memory_projection', 'placement_resolution'],
       workflow_section_summary: {
         total_sections: 2
       },

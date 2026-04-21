@@ -63,52 +63,28 @@ narrativized fallback 的关键点是：
 
 因此，系统不会把所有未能直接执行的开放语义都粗暴处理为“完全不可见”。
 
-## 4. Death Note 语义闭环
+## 4. 事件驱动 world-pack 语义闭环
 
-`world-death-note` 当前已形成最小可重复语义循环。
+一个具备 capability、objective enforcement 与事件反馈机制的 world-pack，可以形成最小可重复语义循环。
 
-### 4.1 notebook side
+典型闭环结构如下：
 
-- `claim_notebook`
-- `understand_notebook_power`
-- `form_judgement_intent`
-- `gather_target_intel`
-- `choose_target`
-- `judge_target`
-- 在案件压力升高时切换到 `raise_false_suspicion`
+1. actor 先形成开放语义意图或 capability-driven decision
+2. intent grounder / dispatcher / enforcement engine 负责把它收束到受控执行路径
+3. objective execution 产生世界状态变化与 emitted events
+4. emitted events 再通过 scheduler follow-up、memory、workflow evidence 与 projections 回流到下一轮 actor 推理
 
-### 4.2 investigator side
+这意味着系统支持的是一种**事件驱动的连续语义回流**，而不是一次性的静态剧情模板。
 
-- `investigate_death_cluster`
-- `share_case_intel`
-- `request_joint_observation`
-- `publish_case_update`
+在单 world-pack 并发语义下，当前补充边界如下：
 
-### 4.3 反馈回路
+- pack 级虚拟时钟仍由 runtime loop 串行推进
+- 不同实体的 decision / action workflow 可以受控并发执行
+- 同一实体默认保持 single-flight，不并行推进多条 writer workflow
+- scheduler 会结合 active workflow、per-tick activation budget 与 periodic cooldown 做前置抑制
+- runner 在 claim 成功后仍会再次复核同实体是否已有其他 active workflow
 
-execution 后会通过 objective events 发出：
-
-- `post_execution_pressure_feedback`
-- `investigation_pressure_escalated`
-- `case_update_published`
-
-这些反馈再通过：
-
-- scheduler follow-up
-- short-term memory
-- workflow / audit / projection surfaces
-
-进入下一轮 actor 再思考。
-
-当前单世界包并发语义补充如下：
-
-- pack 级虚拟时钟仍由 runtime loop 串行推进；
-- 不同实体的 decision / action workflow 可以受控并发执行；
-- 同一实体默认保持 single-flight，不并行推进多条 writer workflow；
-- scheduler 会结合 active workflow、per-tick activation budget 与 periodic cooldown 做前置抑制；
-- runner 在 claim 成功后仍会再次复核同实体是否已有其他 active workflow。
-
-这构成了最小事件驱动语义回流，而不是一次性静态剧情模板。
+如果某个具体 world-pack 已形成特定题材下的完整闭环，应把这类 pack-specific 语义说明收口在该包目录内，而不是在项目逻辑文档中展开。
 
 ## 5. Projection / visibility 语义
 
@@ -151,20 +127,11 @@ kernel projection 当前覆盖：
 - entity overview 的聚合读面已经固定到 entity-centric surface
 - 旧的 `/api/narrative/timeline` 与 `/api/agent/:id/overview` 已退出主调用面
 
-## 6. Death Note 的可见性保证
+具体世界包如何利用这些可见性读面，应由对应 pack 的文档说明，而不是在项目级逻辑文档中绑定到某个单独题材。
 
-当前 Death Note 相关语义保证包括：
+## 6. Context / memory 的业务语义
 
-- narrativized failure 在 workflow / audit evidence 中可见
-- 相关 `history` events 在 pack timeline 中可见
-- entity overview 可通过既有聚合读面观察这些事件
-- follow-up actors 可由 emitted event metadata 继续被调度
-
-这保证了题材语义不是只发生在内部执行链里，而是能进入用户可读取的观测面。
-
-## 7. Context / memory 的业务语义
-
-### 7.1 Context Module 的业务角色
+### 6.1 Context Module 的业务角色
 
 Context Module 的业务意义不是替代世界状态，而是：
 
@@ -172,7 +139,7 @@ Context Module 的业务意义不是替代世界状态，而是：
 - 根据 policy / visibility / working set 规则决定最终上下文
 - 为下游 inference / prompt 流水线提供结构化输入
 
-### 7.2 overlay 语义
+### 6.2 overlay 语义
 
 overlay 当前是 kernel-side working-layer object，语义上代表：
 
@@ -180,7 +147,7 @@ overlay 当前是 kernel-side working-layer object，语义上代表：
 - 不是 pack runtime source-of-truth
 - 不直接覆盖世界客观状态
 
-### 7.3 Memory Block 语义
+### 6.3 Memory Block 语义
 
 Memory Block Runtime 当前形成最小闭环：
 
@@ -210,7 +177,7 @@ Memory Block Runtime 当前形成最小闭环：
 - `contains`
 - `exists`
 
-### 7.4 recent-source 语义
+### 6.4 recent-source 语义
 
 当前 recent-source 的业务边界：
 
@@ -221,7 +188,7 @@ Memory Block Runtime 当前形成最小闭环：
   - `read_recent_intent`
   - `read_recent_event`
 
-## 8. Context trace observability 语义
+## 7. Context trace observability 语义
 
 当前 `InferenceTrace.context_snapshot` 已增强为同时承载：
 
@@ -241,7 +208,7 @@ Memory Block Runtime 当前形成最小闭环：
 
 这为调试、回放、验收与后续解释提供了连续读面。
 
-## 9. AI task / gateway 的业务语义边界
+## 8. AI task / gateway 的业务语义边界
 
 从业务语义上，应把 AI gateway 理解为：
 
@@ -259,7 +226,7 @@ Memory Block Runtime 当前形成最小闭环：
 
 - `docs/capabilities/AI_GATEWAY.md`
 
-## 10. Prompt Workflow 与 Plugin Runtime 的专题说明
+## 9. Prompt Workflow 与 Plugin Runtime 的专题说明
 
 以下两类高耦合主题已拆到专题文档：
 
@@ -271,7 +238,7 @@ Memory Block Runtime 当前形成最小闭环：
 - Prompt Workflow 决定上下文如何被组织为模型可消费结构
 - Plugin Runtime 决定插件能力如何在受控治理前提下进入系统执行与前端承接
 
-## 11. 当前业务语义结论
+## 10. 当前业务语义结论
 
 当前可以认为稳定成立的业务语义包括：
 
@@ -281,7 +248,7 @@ Memory Block Runtime 当前形成最小闭环：
 4. overlay / memory block 属于工作层语义，不替代世界客观状态
 5. canonical pack/entity read surfaces 已形成
 
-## 12. 相关文档
+## 11. 相关文档
 
 - 系统边界：`ARCH.md`
 - 公共接口：`API.md`

@@ -1,0 +1,82 @@
+metadata:
+  id: "world-example-pack"
+  name: "Example World"
+  version: "1.0.0"
+  description: "一个用于演示通用 world-pack 合约的中性示例世界。"
+  authors:
+    - name: "Yidhras Team"
+      role: "bundled example maintainer"
+  license: "SEE LICENSE IN ROOT PROJECT"
+  homepage: "https://github.com/aimana/Yidhras"
+  repository: "https://github.com/aimana/Yidhras"
+  tags: ["example", "reference", "world-pack"]
+  compatibility:
+    yidhras: ">=0.5.0"
+    schema_version: "world-pack/v1"
+    notes: "用于说明通用 world-pack contract，不代表宿主内建世界。"
+  published_at: "2026-04-21"
+  status: "template"
+
+variables:
+  locale: "generic_reference"
+
+prompts:
+  global_prefix: |
+    你处于 {{ pack.metadata.name }} 中。
+    这是一个用于说明通用 world-pack contract 的中性参考世界。
+
+simulation_time:
+  initial_tick: 0
+  min_tick: 0
+  step_ticks: 1
+
+time_systems:
+  - id: "default_clock"
+    name: "默认时钟"
+    is_primary: true
+    tick_rate: 1000
+    units:
+      - name: "second"
+        ratio: 1
+      - name: "minute"
+        ratio: 60
+      - name: "hour"
+        ratio: 60
+      - name: "day"
+        ratio: 24
+
+entities:
+  actors:
+    - id: "actor-001"
+      label: "示例主体"
+      kind: "actor"
+      state:
+        status: "ready"
+  artifacts: []
+  mediators: []
+  domains: []
+  institutions: []
+
+bootstrap:
+  initial_states:
+    - entity_id: "__world__"
+      state_namespace: "world"
+      state_json:
+        phase: "bootstrap"
+  initial_events: []
+
+identities:
+  - id: "actor-001"
+    subject_entity_id: "actor-001"
+    type: "agent"
+
+authorities: []
+
+rules:
+  perception: []
+  capability_resolution: []
+  invocation: []
+  objective_enforcement: []
+  projection: []
+
+capabilities: []

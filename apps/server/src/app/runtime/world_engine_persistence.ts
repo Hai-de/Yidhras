@@ -47,58 +47,86 @@ export interface WorldEngineSingleFlightState {
   reason?: string;
 }
 
-const singleFlightStates = new Map<string, WorldEngineSingleFlightState>();
-const taintedPackIds = new Set<string>();
+export class WorldEngineStepCoordinator {
+  private singleFlightStates = new Map<string, WorldEngineSingleFlightState>();
+  private taintedPackIds = new Set<string>();
+
+  listTaintedPackIds(): string[] {
+    return Array.from(this.taintedPackIds.values());
+  }
+
+  clearTaintedPackId(packId: string): void {
+    this.taintedPackIds.delete(packId.trim());
+  }
+
+  setSingleFlightState(state: WorldEngineSingleFlightState): void {
+    this.singleFlightStates.set(state.pack_id, state);
+  }
+
+  clearSingleFlightState(packId: string): void {
+    this.singleFlightStates.delete(packId);
+  }
+
+  markTainted(packId: string, reason: string): void {
+    this.taintedPackIds.add(packId);
+    this.setSingleFlightState({
+      pack_id: packId,
+      prepared_token: this.singleFlightStates.get(packId)?.prepared_token ?? 'unknown',
+      status: 'tainted',
+      updated_at: Date.now(),
+      reason
+    });
+  }
+
+  assertNotTainted(packId: string): void {
+    if (!this.taintedPackIds.has(packId)) {
+      return;
+    }
+
+    throw new ApiError(409, 'TAINTED_SESSION', 'World engine pack session is tainted and must be reloaded before continuing', {
+      pack_id: packId
+    });
+  }
+
+  assertSingleFlightAvailable(packId: string): void {
+    const existing = this.singleFlightStates.get(packId);
+    if (!existing) {
+      return;
+    }
+
+    throw new ApiError(409, 'PREPARED_STEP_CONFLICT', 'A world engine prepared step is already in flight for this pack', {
+      pack_id: packId,
+      prepared_token: existing.prepared_token,
+      status: existing.status,
+      reason: existing.reason ?? null
+    });
+  }
+}
+
+const defaultCoordinator = new WorldEngineStepCoordinator();
+
+export const createWorldEngineStepCoordinator = (): WorldEngineStepCoordinator => {
+  return new WorldEngineStepCoordinator();
+};
+
+const getContextCoordinator = (context: AppContext): WorldEngineStepCoordinator => {
+  if (context.worldEngineStepCoordinator) {
+    return context.worldEngineStepCoordinator;
+  }
+
+  throw new ApiError(
+    500,
+    'WORLD_ENGINE_COORDINATOR_NOT_READY',
+    'World engine step coordinator is not configured on AppContext'
+  );
+};
 
 export const listTaintedWorldEnginePackIds = (): string[] => {
-  return Array.from(taintedPackIds.values());
+  return defaultCoordinator.listTaintedPackIds();
 };
 
 export const clearTaintedWorldEnginePackId = (packId: string): void => {
-  taintedPackIds.delete(packId.trim());
-};
-
-const setSingleFlightState = (state: WorldEngineSingleFlightState): void => {
-  singleFlightStates.set(state.pack_id, state);
-};
-
-const clearSingleFlightState = (packId: string): void => {
-  singleFlightStates.delete(packId);
-};
-
-const markTainted = (packId: string, reason: string): void => {
-  taintedPackIds.add(packId);
-  setSingleFlightState({
-    pack_id: packId,
-    prepared_token: singleFlightStates.get(packId)?.prepared_token ?? 'unknown',
-    status: 'tainted',
-    updated_at: Date.now(),
-    reason
-  });
-};
-
-const assertNotTainted = (packId: string): void => {
-  if (!taintedPackIds.has(packId)) {
-    return;
-  }
-
-  throw new ApiError(409, 'TAINTED_SESSION', 'World engine pack session is tainted and must be reloaded before continuing', {
-    pack_id: packId
-  });
-};
-
-const assertSingleFlightAvailable = (packId: string): void => {
-  const existing = singleFlightStates.get(packId);
-  if (!existing) {
-    return;
-  }
-
-  throw new ApiError(409, 'PREPARED_STEP_CONFLICT', 'A world engine prepared step is already in flight for this pack', {
-    pack_id: packId,
-    prepared_token: existing.prepared_token,
-    status: existing.status,
-    reason: existing.reason ?? null
-  });
+  defaultCoordinator.clearTaintedPackId(packId);
 };
 
 const buildPackEntityStateId = (packId: string, entityId: string, namespace: string): string => {
@@ -285,16 +313,18 @@ export const executeWorldEnginePreparedStep = async (input: {
   worldEngine: WorldEnginePort;
   persistence: WorldEnginePersistencePort;
   prepareInput: WorldStepPrepareRequest;
+  coordinator?: WorldEngineStepCoordinator;
 }): Promise<WorldEngineCommitResult> => {
+  const coordinator = input.coordinator ?? getContextCoordinator(input.context);
   const packId = input.prepareInput.pack_id.trim();
-  assertNotTainted(packId);
-  assertSingleFlightAvailable(packId);
+  coordinator.assertNotTainted(packId);
+  coordinator.assertSingleFlightAvailable(packId);
 
   let prepared: PreparedWorldStep | null = null;
 
   try {
     prepared = await input.worldEngine.prepareStep(input.prepareInput);
-    setSingleFlightState({
+    coordinator.setSingleFlightState({
       pack_id: packId,
       prepared_token: prepared.prepared_token,
       status: 'persisting',
@@ -307,7 +337,7 @@ export const executeWorldEnginePreparedStep = async (input: {
       correlationId: input.prepareInput.correlation_id
     });
 
-    setSingleFlightState({
+    coordinator.setSingleFlightState({
       pack_id: packId,
       prepared_token: prepared.prepared_token,
       status: 'committing',
@@ -324,8 +354,8 @@ export const executeWorldEnginePreparedStep = async (input: {
     };
 
     const committed = await input.worldEngine.commitPreparedStep(commitInput);
-    clearSingleFlightState(packId);
-    clearTaintedWorldEnginePackId(packId);
+    coordinator.clearSingleFlightState(packId);
+    coordinator.clearTaintedPackId(packId);
     return committed;
   } catch (error) {
     if (prepared) {
@@ -339,12 +369,12 @@ export const executeWorldEnginePreparedStep = async (input: {
           reason: error instanceof Error ? error.message : String(error)
         };
         await input.worldEngine.abortPreparedStep(abortInput);
-        clearSingleFlightState(packId);
+        coordinator.clearSingleFlightState(packId);
       } catch (abortError) {
-        markTainted(packId, abortError instanceof Error ? abortError.message : String(abortError));
+        coordinator.markTainted(packId, abortError instanceof Error ? abortError.message : String(abortError));
       }
     } else {
-      clearSingleFlightState(packId);
+      coordinator.clearSingleFlightState(packId);
     }
 
     throw error;

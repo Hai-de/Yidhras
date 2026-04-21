@@ -55,13 +55,18 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
     }
   },
   world: {
-    preferred_pack: 'death_note',
+    preferred_pack: 'example_pack',
     bootstrap: {
       enabled: true,
-      target_pack_dir: 'death_note',
-      template_file: 'data/configw/templates/world-pack/death_note.yaml',
+      target_pack_dir: 'example_pack',
+      template_file: 'data/configw/templates/world-pack/example_pack.yaml',
       overwrite: false
     }
+  },
+  world_engine: {
+    timeout_ms: 500,
+    binary_path: 'apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar',
+    auto_restart: true
   },
   startup: {
     allow_degraded_mode: true,
@@ -131,7 +136,7 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
       cooldown_ticks: 3,
       max_candidates: 20,
       decision_kernel: {
-        mode: 'ts',
+        mode: 'rust_primary',
         timeout_ms: 500,
         binary_path: 'apps/server/rust/scheduler_decision_sidecar/target/debug/scheduler_decision_sidecar',
         auto_restart: true
@@ -184,9 +189,9 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
   },
   prompt_workflow: {
     profiles: {
-      agent_decision_default: { token_budget: 2200, section_policy: 'standard', compatibility_mode: 'full' },
-      context_summary_default: { token_budget: 1600, section_policy: 'minimal', compatibility_mode: 'bridge_only' },
-      memory_compaction_default: { token_budget: 1800, section_policy: 'minimal', compatibility_mode: 'bridge_only' }
+      agent_decision_default: { token_budget: 2200, section_policy: 'standard' },
+      context_summary_default: { token_budget: 1600, section_policy: 'minimal' },
+      memory_compaction_default: { token_budget: 1800, section_policy: 'minimal' }
     }
   },
   runtime: {
@@ -211,6 +216,14 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
 
 let runtimeConfigCache: RuntimeConfigCache | null = null;
 let runtimeConfigSnapshotLogged = false;
+
+const warnWorldEngineUseSidecarDeprecated = (input: {
+  activeEnv: string;
+}): void => {
+  console.warn(
+    `[runtime_config] 环境变量 WORLD_ENGINE_USE_SIDECAR 已废弃（env=${input.activeEnv}）；world engine 现仅支持 Rust sidecar，请改用 WORLD_ENGINE_TIMEOUT_MS / WORLD_ENGINE_BINARY_PATH / WORLD_ENGINE_AUTO_RESTART 等显式参数。`
+  );
+};
 
 const parseOptionalStringEnv = (value: string | undefined): string | undefined => {
   if (value === undefined) {
@@ -290,6 +303,10 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   const memoryTriggerEngineTimeoutMs = parseIntegerEnv('MEMORY_TRIGGER_ENGINE_TIMEOUT_MS', process.env.MEMORY_TRIGGER_ENGINE_TIMEOUT_MS);
   const memoryTriggerEngineBinaryPath = parseOptionalStringEnv(process.env.MEMORY_TRIGGER_ENGINE_BINARY_PATH);
   const memoryTriggerEngineAutoRestart = parseBooleanEnv('MEMORY_TRIGGER_ENGINE_AUTO_RESTART', process.env.MEMORY_TRIGGER_ENGINE_AUTO_RESTART);
+  const worldEngineUseSidecar = parseBooleanEnv('WORLD_ENGINE_USE_SIDECAR', process.env.WORLD_ENGINE_USE_SIDECAR);
+  const worldEngineTimeoutMs = parseIntegerEnv('WORLD_ENGINE_TIMEOUT_MS', process.env.WORLD_ENGINE_TIMEOUT_MS);
+  const worldEngineBinaryPath = parseOptionalStringEnv(process.env.WORLD_ENGINE_BINARY_PATH);
+  const worldEngineAutoRestart = parseBooleanEnv('WORLD_ENGINE_AUTO_RESTART', process.env.WORLD_ENGINE_AUTO_RESTART);
   const schedulerEntityDefaultMaxActiveWorkflows = parseIntegerEnv('SCHEDULER_ENTITY_DEFAULT_MAX_ACTIVE_WORKFLOWS_PER_ENTITY', process.env.SCHEDULER_ENTITY_DEFAULT_MAX_ACTIVE_WORKFLOWS_PER_ENTITY);
   const schedulerEntityMaxActivationsPerTick = parseIntegerEnv('SCHEDULER_ENTITY_MAX_ACTIVATIONS_PER_TICK', process.env.SCHEDULER_ENTITY_MAX_ACTIVATIONS_PER_TICK);
   const schedulerAllowParallelDecisionPerEntity = parseBooleanEnv('SCHEDULER_ALLOW_PARALLEL_DECISION_PER_ENTITY', process.env.SCHEDULER_ALLOW_PARALLEL_DECISION_PER_ENTITY);
@@ -540,6 +557,25 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     };
   }
 
+  if (
+    worldEngineUseSidecar !== undefined
+    || worldEngineTimeoutMs !== undefined
+    || worldEngineBinaryPath !== undefined
+    || worldEngineAutoRestart !== undefined
+  ) {
+    if (worldEngineUseSidecar !== undefined) {
+      warnWorldEngineUseSidecarDeprecated({
+        activeEnv
+      });
+    }
+
+    overrides.world_engine = {
+      ...(worldEngineTimeoutMs !== undefined ? { timeout_ms: worldEngineTimeoutMs } : {}),
+      ...(worldEngineBinaryPath !== undefined ? { binary_path: worldEngineBinaryPath } : {}),
+      ...(worldEngineAutoRestart !== undefined ? { auto_restart: worldEngineAutoRestart } : {})
+    };
+  }
+
   return overrides;
 };
 
@@ -647,6 +683,10 @@ export const getSchedulerDecisionKernelConfig = (): RuntimeConfig['scheduler']['
 
 export const getMemoryTriggerEngineConfig = (): RuntimeConfig['scheduler']['memory']['trigger_engine'] => {
   return getRuntimeConfig().scheduler.memory.trigger_engine;
+};
+
+export const getWorldEngineConfig = (): RuntimeConfig['world_engine'] => {
+  return getRuntimeConfig().world_engine;
 };
 
 export const getExperimentalMultiPackRuntimeConfig = (): RuntimeConfig['features']['experimental']['multi_pack_runtime'] => {
@@ -757,6 +797,9 @@ export const buildRuntimeConfigSnapshot = (): Record<string, string | boolean | 
     memory_trigger_engine_timeout_ms: String(config.scheduler.memory.trigger_engine.timeout_ms),
     memory_trigger_engine_binary_path: config.scheduler.memory.trigger_engine.binary_path,
     memory_trigger_engine_auto_restart: String(config.scheduler.memory.trigger_engine.auto_restart),
+    world_engine_timeout_ms: String(config.world_engine.timeout_ms),
+    world_engine_binary_path: config.world_engine.binary_path,
+    world_engine_auto_restart: String(config.world_engine.auto_restart),
     bootstrap_template_file: bootstrap.templateFilePath,
     prompt_workflow_agent_decision_budget: String(config.prompt_workflow.profiles.agent_decision_default.token_budget),
     runtime_multi_pack_max_loaded_packs: String(config.runtime.multi_pack.max_loaded_packs),

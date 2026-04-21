@@ -9,10 +9,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { AppContext } from '../../../src/app/context.js';
 import {
-  clearTaintedWorldEnginePackId,
   createDefaultWorldEnginePersistencePort,
-  executeWorldEnginePreparedStep,
-  listTaintedWorldEnginePackIds
+  createWorldEngineStepCoordinator,
+  executeWorldEnginePreparedStep
 } from '../../../src/app/runtime/world_engine_persistence.js';
 import type { WorldEnginePort } from '../../../src/app/runtime/world_engine_ports.js';
 
@@ -34,6 +33,7 @@ const createMinimalContext = (): AppContext => ({
   setRuntimeReady: vi.fn(),
   getPaused: () => false,
   setPaused: vi.fn(),
+  worldEngineStepCoordinator: createWorldEngineStepCoordinator(),
   assertRuntimeReady: vi.fn()
 }) as unknown as AppContext;
 
@@ -129,7 +129,6 @@ const createCommitResult = (packId: string, token: string, revision: string): Wo
   summary: { applied_rule_count: 0, event_count: 1, mutated_entity_count: 2 }
 });
 
-
 describe('world engine persistence orchestration', () => {
   it('commits prepared step after host persistence succeeds', async () => {
     const worldEngine: WorldEnginePort = {
@@ -142,7 +141,8 @@ describe('world engine persistence orchestration', () => {
       commitPreparedStep: vi.fn(async input =>
         createCommitResult(input.pack_id, input.prepared_token, input.persisted_revision)
       ),
-      abortPreparedStep: vi.fn(async () => undefined)
+      abortPreparedStep: vi.fn(async () => undefined),
+      executeObjectiveRule: vi.fn() as never
     };
 
     const result = await executeWorldEnginePreparedStep({
@@ -179,7 +179,8 @@ describe('world engine persistence orchestration', () => {
       getHealth: vi.fn() as never,
       prepareStep: vi.fn(async input => createPreparedStep({ packId: input.pack_id, token: 'prepared-2', nextRevision: '2', nextTick: '2' })),
       commitPreparedStep: vi.fn() as never,
-      abortPreparedStep: vi.fn(async () => undefined)
+      abortPreparedStep: vi.fn(async () => undefined),
+      executeObjectiveRule: vi.fn() as never
     };
 
     await expect(executeWorldEnginePreparedStep({
@@ -205,8 +206,6 @@ describe('world engine persistence orchestration', () => {
   });
 
   it('marks pack as tainted when abort also fails', async () => {
-    clearTaintedWorldEnginePackId('world-death-note');
-
     const worldEngine: WorldEnginePort = {
       loadPack: vi.fn() as never,
       unloadPack: vi.fn() as never,
@@ -217,11 +216,13 @@ describe('world engine persistence orchestration', () => {
       commitPreparedStep: vi.fn() as never,
       abortPreparedStep: vi.fn(async () => {
         throw new Error('abort failed');
-      })
+      }),
+      executeObjectiveRule: vi.fn() as never
     };
 
+    const context = createMinimalContext();
     await expect(executeWorldEnginePreparedStep({
-      context: createMinimalContext(),
+      context,
       worldEngine,
       persistence: {
         persistPreparedStep: vi.fn(async () => {
@@ -236,8 +237,80 @@ describe('world engine persistence orchestration', () => {
       }
     })).rejects.toThrow('persist failed');
 
-    expect(listTaintedWorldEnginePackIds()).toContain('world-death-note');
-    clearTaintedWorldEnginePackId('world-death-note');
+    expect(context.worldEngineStepCoordinator?.listTaintedPackIds()).toContain('world-death-note');
+    expect((worldEngine.abortPreparedStep as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the coordinator injected on AppContext when explicit coordinator is absent', async () => {
+    const context = createMinimalContext();
+    const coordinator = context.worldEngineStepCoordinator;
+    const worldEngine: WorldEnginePort = {
+      loadPack: vi.fn() as never,
+      unloadPack: vi.fn() as never,
+      queryState: vi.fn() as never,
+      getStatus: vi.fn() as never,
+      getHealth: vi.fn() as never,
+      prepareStep: vi.fn(async input => createPreparedStep({ packId: input.pack_id, token: 'prepared-context', nextRevision: '6', nextTick: '6' })),
+      commitPreparedStep: vi.fn(async input => createCommitResult(input.pack_id, input.prepared_token, input.persisted_revision)),
+      abortPreparedStep: vi.fn(async () => undefined),
+      executeObjectiveRule: vi.fn() as never
+    };
+
+    const result = await executeWorldEnginePreparedStep({
+      context,
+      worldEngine,
+      persistence: {
+        persistPreparedStep: vi.fn(async ({ prepared }) => ({
+          persisted_revision: prepared.next_revision,
+          applied_operations: prepared.state_delta.operations.map(item => item.op),
+          persisted_entity_states: [],
+          persisted_rule_execution_records: [],
+          clock_delta: null,
+          observability: []
+        }))
+      },
+      prepareInput: {
+        protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
+        pack_id: 'world-death-note',
+        step_ticks: '1',
+        reason: 'runtime_loop'
+      }
+    });
+
+    expect(result.committed_tick).toBe('6');
+    expect(coordinator?.listTaintedPackIds()).toEqual([]);
+  });
+
+  it('throws when AppContext does not provide a world engine step coordinator', async () => {
+    const contextWithoutCoordinator = {
+      ...createMinimalContext(),
+      worldEngineStepCoordinator: undefined
+    } as AppContext;
+    const worldEngine: WorldEnginePort = {
+      loadPack: vi.fn() as never,
+      unloadPack: vi.fn() as never,
+      queryState: vi.fn() as never,
+      getStatus: vi.fn() as never,
+      getHealth: vi.fn() as never,
+      prepareStep: vi.fn() as never,
+      commitPreparedStep: vi.fn() as never,
+      abortPreparedStep: vi.fn() as never,
+      executeObjectiveRule: vi.fn() as never
+    };
+
+    await expect(executeWorldEnginePreparedStep({
+      context: contextWithoutCoordinator,
+      worldEngine,
+      persistence: {
+        persistPreparedStep: vi.fn() as never
+      },
+      prepareInput: {
+        protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
+        pack_id: 'world-death-note',
+        step_ticks: '1',
+        reason: 'runtime_loop'
+      }
+    })).rejects.toThrow('World engine step coordinator is not configured on AppContext');
   });
 
   it('applies Pack Runtime Core delta ops through the default persistence layer', async () => {

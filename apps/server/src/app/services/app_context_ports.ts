@@ -67,14 +67,24 @@ export const getActivePackRuntimeFacade = (input: {
   activePackRuntime?: ActivePackRuntimeFacade;
   sim: ActivePackRuntimeFacade;
 }): ActivePackRuntimeFacade => {
-  return input.activePackRuntime ?? input.sim;
+  if (input.activePackRuntime) {
+    return input.activePackRuntime;
+  }
+
+  console.warn('[app_context_ports] Fallback to sim for activePackRuntime');
+  return input.sim;
 };
 
 export const getRuntimeBootstrap = (input: {
   runtimeBootstrap?: RuntimeDatabaseBootstrap;
   sim: RuntimeDatabaseBootstrap;
 }): RuntimeDatabaseBootstrap => {
-  return input.runtimeBootstrap ?? input.sim;
+  if (input.runtimeBootstrap) {
+    return input.runtimeBootstrap;
+  }
+
+  console.warn('[app_context_ports] Fallback to sim for runtimeBootstrap');
+  return input.sim;
 };
 
 export const getPackRuntimeObservation = (input: {

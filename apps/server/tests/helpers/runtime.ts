@@ -11,8 +11,14 @@ import { withTestServer } from './server.js';
 
 const helpersDirectory = dirname(fileURLToPath(import.meta.url));
 const serverRoot = resolve(helpersDirectory, '../..');
-const versionManagedWorldPackTemplatePath = join(serverRoot, 'templates', 'world-pack', 'death_note.yaml');
-const defaultWorldPackDirName = 'death_note';
+const bundledWorldPackTemplatePaths = {
+  death_note: join(serverRoot, 'templates', 'world-pack', 'death_note.yaml'),
+  example_pack: join(serverRoot, 'templates', 'world-pack', 'example_pack.yaml')
+} as const;
+
+const DEFAULT_SEEDED_PACK_REFS = ['death_note'] as const;
+
+type SeededPackRef = keyof typeof bundledWorldPackTemplatePaths;
 
 export interface IsolatedRuntimeEnvironment {
   rootDir: string;
@@ -27,12 +33,16 @@ export interface CreateIsolatedRuntimeEnvironmentOptions {
   appEnv?: string;
   databaseFileName?: string;
   envOverrides?: Record<string, string>;
+  seededPackRefs?: SeededPackRef[];
+  activePackRef?: string;
 }
 
 export interface IsolatedTestServerOptions extends Omit<TestServerOptions, 'prepareRuntime'> {
   appEnv?: string;
   databaseFileName?: string;
   prepareRuntime?: boolean;
+  seededPackRefs?: SeededPackRef[];
+  activePackRef?: string;
 }
 
 const runServerCommand = async (
@@ -76,13 +86,26 @@ const runServerCommand = async (
   });
 };
 
-const seedDefaultWorldPack = async (worldPacksDir: string): Promise<void> => {
-  const targetPackDir = join(worldPacksDir, defaultWorldPackDirName);
-  await mkdir(targetPackDir, { recursive: true });
-  await copyFile(
-    versionManagedWorldPackTemplatePath,
-    join(targetPackDir, 'config.yaml')
-  );
+const normalizeSeededPackRefs = (seededPackRefs?: SeededPackRef[]): SeededPackRef[] => {
+  return seededPackRefs && seededPackRefs.length > 0
+    ? seededPackRefs
+    : [...DEFAULT_SEEDED_PACK_REFS];
+};
+
+const seedBundledWorldPacks = async (worldPacksDir: string, seededPackRefs?: SeededPackRef[]): Promise<void> => {
+  for (const packRef of normalizeSeededPackRefs(seededPackRefs)) {
+    const templatePath = bundledWorldPackTemplatePaths[packRef];
+    if (!templatePath) {
+      throw new Error(`Unsupported seeded pack ref: ${packRef}`);
+    }
+
+    const targetPackDir = join(worldPacksDir, packRef);
+    await mkdir(targetPackDir, { recursive: true });
+    await copyFile(
+      templatePath,
+      join(targetPackDir, 'config.yaml')
+    );
+  }
 };
 
 export const createIsolatedRuntimeEnvironment = async (
@@ -96,7 +119,7 @@ export const createIsolatedRuntimeEnvironment = async (
 
   await mkdir(join(runtimeDir, 'db'), { recursive: true });
   await mkdir(worldPacksDir, { recursive: true });
-  await seedDefaultWorldPack(worldPacksDir);
+  await seedBundledWorldPacks(worldPacksDir, options.seededPackRefs);
 
   const databaseUrl = `file:${databasePath}`;
   const envOverrides: Record<string, string> = {
@@ -105,6 +128,8 @@ export const createIsolatedRuntimeEnvironment = async (
     DEV_RUNTIME_RESET_ON_START: '0',
     NODE_ENV: 'test',
     WORLD_BOOTSTRAP_ENABLED: 'false',
+    WORKSPACE_ROOT: rootDir,
+    ...(options.activePackRef ? { WORLD_PACK: options.activePackRef } : {}),
     WORLD_PACKS_DIR: worldPacksDir,
     ...(options.envOverrides ?? {})
   };
@@ -152,6 +177,8 @@ export const withIsolatedTestServer = async <T>(
   const environment = await createIsolatedRuntimeEnvironment({
     appEnv: options.appEnv,
     databaseFileName: options.databaseFileName,
+    seededPackRefs: options.seededPackRefs,
+    activePackRef: options.activePackRef,
     envOverrides: options.envOverrides
   });
 

@@ -275,7 +275,6 @@ export interface PromptProcessingTrace {
   workflow_profile_id?: string | null;
   workflow_profile_version?: string | null;
   workflow_step_keys?: string[];
-  workflow_compatibility_mode?: 'full' | 'bridge_only' | 'off';
   workflow_step_traces?: PromptWorkflowStepTraceSnapshot[];
   prompt_workflow?: PromptWorkflowSnapshot | null;
   steps?: Array<{

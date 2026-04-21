@@ -2,6 +2,11 @@ import type { PluginManifest } from '@yidhras/contracts';
 import type { Express, Request, Response } from 'express';
 
 import type { AppContext } from '../app/context.js';
+import type {
+  QueryContributor,
+  RuleContributor,
+  StepContributor
+} from '../app/runtime/world_engine_contributors.js';
 import type { ContextSourceAdapter } from '../context/source_registry.js';
 import type { PromptWorkflowStepExecutor } from '../context/workflow/registry.js';
 import { createPluginStore } from './store.js';
@@ -10,6 +15,9 @@ export interface ServerPluginHostApi {
   registerContextSource(adapter: ContextSourceAdapter, capabilityKey?: string): void;
   registerPromptWorkflowStep(executor: PromptWorkflowStepExecutor, capabilityKey?: string): void;
   registerPackRoute(register: (app: Express, context: AppContext) => void, capabilityKey?: string): void;
+  registerStepContributor(contributor: StepContributor, capabilityKey?: string): void;
+  registerRuleContributor(contributor: RuleContributor, capabilityKey?: string): void;
+  registerQueryContributor(contributor: QueryContributor, capabilityKey?: string): void;
 }
 
 export interface RegisteredServerPluginRuntime {
@@ -21,6 +29,9 @@ export interface RegisteredServerPluginRuntime {
   context_sources: ContextSourceAdapter[];
   prompt_workflow_steps: PromptWorkflowStepExecutor[];
   pack_routes: Array<(app: Express, context: AppContext) => void>;
+  step_contributors: StepContributor[];
+  rule_contributors: RuleContributor[];
+  query_contributors: QueryContributor[];
 }
 
 const hasCapability = (grantedCapabilities: string[], capabilityKey: string | undefined): boolean => {
@@ -53,6 +64,27 @@ const createServerPluginHostApi = (runtime: RegisteredServerPluginRuntime): Serv
       }
 
       runtime.pack_routes.push(register);
+    },
+    registerStepContributor(contributor, capabilityKey) {
+      if (!hasCapability(runtime.granted_capabilities, capabilityKey)) {
+        return;
+      }
+
+      runtime.step_contributors.push(contributor);
+    },
+    registerRuleContributor(contributor, capabilityKey) {
+      if (!hasCapability(runtime.granted_capabilities, capabilityKey)) {
+        return;
+      }
+
+      runtime.rule_contributors.push(contributor);
+    },
+    registerQueryContributor(contributor, capabilityKey) {
+      if (!hasCapability(runtime.granted_capabilities, capabilityKey)) {
+        return;
+      }
+
+      runtime.query_contributors.push(contributor);
     }
   };
 };
@@ -84,6 +116,18 @@ class PluginRuntimeRegistry {
 
   public getPromptWorkflowStepExecutors(packId: string): PromptWorkflowStepExecutor[] {
     return this.listRuntimes(packId).flatMap(runtime => runtime.prompt_workflow_steps);
+  }
+
+  public getStepContributors(packId: string): StepContributor[] {
+    return this.listRuntimes(packId).flatMap(runtime => runtime.step_contributors);
+  }
+
+  public getRuleContributors(packId: string): RuleContributor[] {
+    return this.listRuntimes(packId).flatMap(runtime => runtime.rule_contributors);
+  }
+
+  public getQueryContributors(packId: string): QueryContributor[] {
+    return this.listRuntimes(packId).flatMap(runtime => runtime.query_contributors);
   }
 
   public applyPackRoutes(packId: string, app: Express, context: AppContext): void {
@@ -118,7 +162,10 @@ const createRuntimeForManifest = (input: {
     granted_capabilities: input.granted_capabilities,
     context_sources: [],
     prompt_workflow_steps: [],
-    pack_routes: []
+    pack_routes: [],
+    step_contributors: [],
+    rule_contributors: [],
+    query_contributors: []
   };
 };
 

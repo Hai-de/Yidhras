@@ -62,7 +62,7 @@ const toDroppedEntry = (entry: ContextDroppedNode) => ({
   reason: entry.reason
 });
 
-export const buildLegacyMemoryContextPack = (contextRun: ContextRun): MemoryContextPack => {
+export const buildMemoryContextPack = (contextRun: ContextRun): MemoryContextPack => {
   const selectedEntries = contextRun.nodes
     .filter(node => node.source_kind !== 'overlay')
     .map(toMemoryEntry)

@@ -20,7 +20,7 @@ const buildBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => {
       },
       defaults: { ...config.prompt_workflow.profiles.agent_decision_default },
       steps: [
-        { key: 'legacy_memory_projection', kind: 'legacy_memory_projection', produces: ['compatibility.legacy_memory_context'] },
+        { key: 'memory_projection', kind: 'memory_projection' },
         { key: 'node_working_set_filter', kind: 'node_working_set_filter', requires: ['selected_nodes'], produces: ['working_set'] },
         { key: 'summary_compaction', kind: 'summary_compaction', requires: ['working_set', 'fragments'], produces: ['fragments'] },
         { key: 'token_budget_trim', kind: 'token_budget_trim', requires: ['fragments'], produces: ['fragments'] },
@@ -37,7 +37,7 @@ const buildBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => {
       },
       defaults: { ...config.prompt_workflow.profiles.context_summary_default },
       steps: [
-        { key: 'legacy_memory_projection', kind: 'legacy_memory_projection' },
+        { key: 'memory_projection', kind: 'memory_projection' },
         { key: 'node_working_set_filter', kind: 'node_working_set_filter' },
         { key: 'summary_compaction', kind: 'summary_compaction' },
         { key: 'fragment_assembly', kind: 'fragment_assembly' },
@@ -54,7 +54,7 @@ const buildBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => {
       },
       defaults: { ...config.prompt_workflow.profiles.memory_compaction_default },
       steps: [
-        { key: 'legacy_memory_projection', kind: 'legacy_memory_projection' },
+        { key: 'memory_projection', kind: 'memory_projection' },
         { key: 'node_working_set_filter', kind: 'node_working_set_filter' },
         { key: 'node_grouping', kind: 'node_grouping' },
         { key: 'summary_compaction', kind: 'summary_compaction' },

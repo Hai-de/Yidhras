@@ -2,9 +2,13 @@
 
 本文档旨在为 Yidhras world pack 作为独立项目单元提供组织、描述与发布方面的推荐标准。
 
+Yidhras 核心只定义 world-pack 框架、合约与运行边界，不内建任何特定世界观语义。具体世界包只应作为该框架上的内容实现，不能反向成为项目级规范中心。
+
 本规范不替代运行时合约（runtime contract）；运行时实际读取的配置源文件仍为 `config.yaml`、`config.yml`、`pack.yaml` 或 `pack.yml`。不过，从作者协作、发布交付、版本管理与二次分发等环节考量，建议一个 world pack 不仅包含一份 YAML 配置，还应具备基本的项目说明与配套资产。
 
 > 说明：当前运行时直接消费 pack 配置文件；README、附加文档、素材目录等内容主要面向作者、发布者、协作者及使用者。
+>
+> 说明：项目级文档只说明通用 world-pack 规范；某个具体包的世界观、语义动作、AI 策略与设计取舍应优先收口在该包目录内。
 
 ---
 
@@ -42,21 +46,21 @@
 
 ```yaml
 metadata:
-  id: "world-death-note"
-  name: "死亡笔记"
-  version: "0.5.0"
-  description: "一个围绕规则媒介、侦查对抗、舆论震荡与执行资格传播展开的现代悬疑世界。"
+  id: "world-example-pack"
+  name: "Example World"
+  version: "1.0.0"
+  description: "一个用于说明 world-pack 项目化元数据结构的中性示例世界。"
   authors:
-    - name: "Yidhras Team"
-      role: "default pack maintainer"
+    - name: "Example Maintainer"
+      role: "pack maintainer"
   license: "MIT"
   homepage: "https://example.com/world-pack"
   repository: "https://example.com/repo/world-pack"
-  tags: ["thriller", "investigation", "supernatural"]
+  tags: ["example", "reference", "world-pack"]
   compatibility:
     yidhras: ">=0.5.0"
     schema_version: "world-pack/v1"
-    notes: "适合作为 mediator/capability/objective-enforcement 参考实现。"
+    notes: "仅作为元数据结构示例，不代表任何特定题材或内建世界。"
   published_at: "2026-04-14"
   status: "stable"
 ```
@@ -458,11 +462,14 @@ README.md 宜明确区分：
 
 该目录可放置由仓库正式维护的默认模板，例如：
 
-- `death_note.yaml`
-- `death_note.README.md`
-- `death_note.CHANGELOG.md`
+- `pack.config.template.yaml`
 - `pack.README.template.md`
 - `pack.CHANGELOG.template.md`
+- `example-pack.yaml`
+- `example-pack.README.md`
+- `example-pack.CHANGELOG.md`
+
+其中 bundled example template 可以是 `death_note`，也可以是其它参考包；它们是示例资源，而不是项目核心默认世界。
 
 ### 7.2 运行时脚手架镜像
 
@@ -470,7 +477,7 @@ README.md 宜明确区分：
 
 - `data/configw/templates/world-pack/`
 
-该目录为启动时会被脚手架（scaffold）复制至本地运行目录的模板镜像。
+该目录为启动时会被脚手架（scaffold）复制至本地运行目录的模板镜像。镜像资源可以包含 bundled example pack，但这不意味着运行时首选世界必须绑定到某个具体包。
 
 ### 7.3 实际 pack 目录
 
@@ -530,10 +537,13 @@ pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"
 - 生成 `examples/overrides.example.yaml`
 - 生成后立即对 `config.yaml` 执行 schema 校验，确保其为可解析的 world pack
 
-## 8. Death Note 作为参考实现
+## 8. 参考实现与 bundled example
 
-当前仓库中的 `death_note` world pack 可作为首批符合项目化规范的参考实现：
+当前仓库可以包含一个或多个 bundled example world pack，用来展示完整 contract 的一种实现方式。它们的定位是参考实例，不是宿主核心默认语义。
 
-- 运行时合约文件：`data/world_packs/death_note/config.yaml`
-- 模板来源：`apps/server/templates/world-pack/death_note.yaml`
-- 补充 README.md 后，该 pack 将从 YAML 模板扩展为可阅读、可说明、可发布的 pack 项目单元。
+- 例如 `death_note` 可以作为参考实例：
+  - 运行时合约文件：`data/world_packs/death_note/config.yaml`
+  - 模板来源：`apps/server/templates/world-pack/death_note.yaml`
+  - 包内说明建议收口在：`data/world_packs/death_note/README.md`、`CHANGELOG.md`、`DESIGN.md`
+
+项目级文档只应说明 world-pack 的通用规范；具体包的世界观、题材语义、动作链与设计取舍，应以该包目录中的文档为准。

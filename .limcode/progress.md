@@ -1,36 +1,34 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-20T22:17:34.326Z
-- Status: completed
+- Updated At: 2026-04-21T23:33:37.514Z
+- Status: active
 - Phase: implementation
 
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
-- 当前进度：14/14 个里程碑已完成；最新：PG12
-- 当前焦点：Memory Block / Context Trigger Engine Rust 迁移收束完成
-- 最新结论：TODO、设计、计划与项目进度已同步到 Memory Block / Context Trigger Engine Rust 迁移完成状态。
-- 下一步：等待后续新任务；如继续推进，可转入完整 Memory Block Runtime Rust ownership 深化。
+- 当前进度：18/18 个里程碑已完成；最新：PG16
+- 当前焦点：完成 death_note 去特判治理并把 runtime 默认语义从示例包解耦
+- 最新结论：death_note 现在已经从项目核心默认语义和 rule-based 核心特判中解耦，回到了作为参考 world-pack 的位置。
+- 下一步：下一步可继续清理测试与辅助资源中的 death_note 命名技术债，或评估把当前 reference profile 启发式进一步下沉为更通用的可插拔扩展能力。
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/memory-block-context-trigger-engine-rust-migration-design.md`
-- 计划：`.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md`
-- 审查：`.limcode/review/memory-block-context-trigger-engine-review.md`
+- 设计：`.limcode/design/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-design.md`
+- 计划：`.limcode/plans/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-implementation.plan.md`
+- 审查：`.limcode/review/rust-migration-compatibility-debt-assessment.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 搭建 memory_trigger_sidecar crate、stdio JSON-RPC 协议骨架与握手/健康检查  `#plan-memory-trigger-sidecar-scaffold`
-- [x] 迁移 Rust DTO、logic DSL、trigger primitives 与语义测试  `#plan-rust-models-and-logic-dsl`
-- [x] 实现 Rust source evaluate 内核：evaluation、status、next runtime state、should_materialize、ignored_features 聚合  `#plan-rust-source-kernel`
-- [x] 实现 rust_shadow 对跑、diff 观测与 rust_primary fallback 策略  `#plan-shadow-parity-and-fallback`
-- [x] 将 context/sources/memory_blocks.ts 改造成 thin shell，并接入 Rust 结果持久化/materialization/diagnostics  `#plan-ts-memory-block-source-integration`
-- [x] 新增 TS sidecar client 与 memory_trigger_engine feature flag（ts/rust_shadow/rust_primary）  `#plan-ts-sidecar-client-and-flag`
-- [x] 补齐单元/集成测试，完成 parity 验收并切换到 rust_primary  `#plan-validation-and-cutover`
+- [ ] 为 helper 保留兼容模式，避免一次性打碎旧 e2e 启动假设  `#phase-a-compat-mode`
+- [ ] 扩展 tests/helpers/runtime.ts，支持显式 activePackRef 与 seededPackRefs  `#phase-a-helper-api`
+- [ ] 迁移第一批强依赖 active death_note 的 e2e 为显式 active-pack 模式  `#phase-b-scenario-e2e-migration`
+- [ ] 验证迁移后的 e2e 在显式 active-pack 模式下稳定通过  `#phase-c-validation`
+- [ ] 整理第二批通用测试与命名技术债的后续迁移清单  `#phase-d-followup-audit`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -203,6 +201,53 @@
 - 摘要:
 已完成独立 memory_trigger_sidecar、Rust trigger/source kernel、TS sidecar client、runtime config 与 memory_blocks source thin-shell 接线；并通过 TS/Rust 单元测试、模式/fallback 测试与真实 sidecar parity 测试。当前默认配置已切换为 rust_primary。
 - 下一步：如无额外回归问题，可进入后续 Memory Block Runtime 完整 Rust ownership 深化或清理增强项。
+
+### PG13 · Death Note 世界包 Phase A 闭环完成
+- 状态：completed
+- 记录时间：2026-04-21T22:00:18.388Z
+- 完成时间：2026-04-21T22:00:18.388Z
+- 关联 TODO：phase-a-pack-contract, phase-a-runtime-support
+- 关联文档：
+  - 设计：`.limcode/design/death-note-world-pack-content-expansion-design.md`
+  - 计划：`.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md`
+- 摘要:
+已完成 death_note 正式 pack 的 Phase A：补齐正式 pack 的 memory_loop、认知状态字段、世界状态字段与最小 invocation 扩展；为 revise_judgement_plan 增加 runtime 记录承接，落地 self_note overlay 与 plan memory block；同步模板文件，并补充 world pack schema、rule-based provider 与 death-note memory loop 的针对性测试，相关 unit/integration 验证已通过。
+- 下一步：进入 Phase B，先扩展 pack.ai.tasks / memory_loop 的对应配置与验证，再补 institutions / domains 与 objective side effects。
+
+### PG14 · Death Note 世界包 Phase B 完成
+- 状态：completed
+- 记录时间：2026-04-21T22:11:40.455Z
+- 完成时间：2026-04-21T22:11:40.455Z
+- 关联 TODO：phase-b-ai-memory, phase-b-governance-entities, validation-and-docs
+- 关联文档：
+  - 设计：`.limcode/design/death-note-world-pack-content-expansion-design.md`
+  - 计划：`.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md`
+- 摘要:
+已完成 Death Note 世界包 Phase B：补入 pack-level AI task / memory_loop 配置，加入最小 institutions 与 domains，并细化 collect_target_intel、raise_false_suspicion、publish_case_update 的 objective side effects。同步模板与文档，并通过 world_pack_schema、ai_gateway、prompt_workflow_sections、pack_runtime_materializer、world_engine_pack_host_api_read_surface、death-note-memory-loop 等针对性 unit/integration 验证。
+- 下一步：进入 Phase C，评估并按门禁引入 target_dossiers / judgement_plans / investigation_threads 等 storage.pack_collections 初始模型。
+
+### PG15 · Death Note 世界包内容扩展主线完成
+- 状态：completed
+- 记录时间：2026-04-21T22:16:58.304Z
+- 完成时间：2026-04-21T22:16:58.304Z
+- 关联 TODO：phase-a-pack-contract, phase-a-runtime-support, phase-b-ai-memory, phase-b-governance-entities, phase-c-storage-gate, validation-and-docs
+- 关联文档：
+  - 设计：`.limcode/design/death-note-world-pack-content-expansion-design.md`
+  - 计划：`.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md`
+- 摘要:
+已完成 Death Note 世界包内容扩展计划全部阶段：Phase A 补齐正式 pack 的认知状态字段与 invocation，并为 revise_judgement_plan 落地 runtime 记录承接；Phase B 完成 pack-level AI task / memory_loop 扩展、institutions / domains 建模与 objective side effects 细化；Phase C 按门禁引入 target_dossiers、judgement_plans、investigation_threads 三类 pack storage collections，并通过 world_pack_schema、ai_gateway、prompt_workflow_sections、death-note-memory-loop、pack_runtime_install、pack_runtime_materializer、world_engine_pack_host_api_read_surface 等测试验证。
+- 下一步：若继续迭代，应把新引入的 pack storage collections 从声明模型推进到真实写入链、projection 消费与 operator 可观测面。
+
+### PG16 · Death Note 去特判与默认语义解耦完成
+- 状态：completed
+- 记录时间：2026-04-21T23:11:07.830Z
+- 完成时间：2026-04-21T23:11:07.830Z
+- 关联文档：
+  - 设计：`.limcode/design/world-pack-boundary-convergence-and-death-note-doc-migration-design.md`
+  - 计划：`.limcode/plans/world-pack-boundary-convergence-and-death-note-doc-migration-implementation.plan.md`
+- 摘要:
+已完成 death_note 与宿主核心的关键边界治理：rule_based provider 不再按 world-death-note 直接分支，而是改由 pack.ai.tasks.agent_decision.metadata.rule_based_profile 驱动；death_note pack 与模板已声明 notebook_investigation_reference_v1；runtime_config 与 runtime_scaffold 的默认绑定已从 death_note 切换为中性 example_pack bundled example 模板；同时新增 example_pack 的 YAML/README/CHANGELOG 模板资源，并通过 rule_based_death_note_provider、runtime_config、world_pack_schema 等针对性单测验证。
+- 下一步：下一步可继续清理测试与辅助资源中的 death_note 命名技术债，或评估把当前 reference profile 启发式进一步下沉为更通用的可插拔扩展能力。
 <!-- LIMCODE_PROGRESS_MILESTONES_END -->
 
 ## 风险与阻塞
@@ -214,26 +259,26 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-20T21:18:59.827Z | artifact_changed | review | 同步审查里程碑：M1
-- 2026-04-20T21:19:14.190Z | artifact_changed | review | 同步审查结论：.limcode/review/scheduler-core-decision-kernel-rust-migration-review.md
-- 2026-04-20T21:22:25.450Z | artifact_changed | review | 同步审查文档：.limcode/review/memory-block-context-trigger-engine-review.md
-- 2026-04-20T21:23:04.924Z | artifact_changed | review | 同步审查里程碑：M1
-- 2026-04-20T21:23:29.882Z | artifact_changed | review | 同步审查里程碑：M2
-- 2026-04-20T21:23:36.977Z | artifact_changed | review | 同步审查结论：.limcode/review/memory-block-context-trigger-engine-review.md
-- 2026-04-20T21:41:50.697Z | artifact_changed | design | 同步设计文档：.limcode/design/memory-block-context-trigger-engine-rust-migration-design.md
-- 2026-04-20T21:43:56.680Z | artifact_changed | plan | 同步计划文档：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
-- 2026-04-20T21:44:51.559Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
-- 2026-04-20T21:47:01.325Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
-- 2026-04-20T21:47:14.644Z | artifact_changed | plan-memory-trigger-sidecar-scaffold | 新增 apps/server/rust/memory_trigger_sidecar crate，完成 stdio JSON-RPC 骨架、handshake/health/source.evaluate stub，并通过 cargo check。
-- 2026-04-20T21:55:31.662Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
-- 2026-04-20T22:02:58.193Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
-- 2026-04-20T22:03:12.677Z | artifact_changed | plan-ts-memory-block-source-integration | 已新增 memory trigger TS sidecar client、provider 模式路由与 runtime config，memory_blocks source 已改为经 provider 执行并写回 runtime state/materialization/diagnostics。
-- 2026-04-20T22:09:10.238Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
-- 2026-04-20T22:09:23.344Z | updated | plan-validation-and-cutover | 新增 memory_trigger_engine_provider、context_memory_blocks_source_rust_modes 与 runtime_config 扩展测试；验证 ts/rust_shadow/rust_primary fallback 与 trigger_rate ignored diagnostics。
-- 2026-04-20T22:12:22.504Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md
-- 2026-04-20T22:12:36.791Z | milestone_recorded | plan-validation-and-cutover | 真实 Rust sidecar parity 测试通过，当前计划内 Memory Trigger / Context Source Rust 迁移实现与验证工作全部完成。
-- 2026-04-20T22:17:19.075Z | milestone_recorded | PG12 | 记录里程碑：Memory Block / Context Trigger Engine Rust 迁移完成
-- 2026-04-20T22:17:34.326Z | updated | PG12 | 已根据用户完成 TODO.md 的标记，同步项目级 progress 与里程碑，确认 Memory Block / Context Trigger Engine Rust 迁移已收束。
+- 2026-04-21T22:00:18.388Z | milestone_recorded | PG13 | 记录里程碑：Death Note 世界包 Phase A 闭环完成
+- 2026-04-21T22:06:44.305Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md
+- 2026-04-21T22:06:55.675Z | updated | phase-b-ai-memory | 完成 Death Note 世界包 AI task / memory_loop 配置扩展，已同步 README/CHANGELOG，并通过针对性 unit/integration 验证。
+- 2026-04-21T22:11:30.904Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md
+- 2026-04-21T22:11:40.455Z | milestone_recorded | PG14 | 记录里程碑：Death Note 世界包 Phase B 完成
+- 2026-04-21T22:16:31.738Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md
+- 2026-04-21T22:16:44.769Z | updated | phase-c-storage-gate | 完成 Death Note 世界包 Phase C：引入三类 pack_collections，并通过 schema、install 与 materializer 验证门禁。
+- 2026-04-21T22:16:58.304Z | milestone_recorded | PG15 | 记录里程碑：Death Note 世界包内容扩展主线完成
+- 2026-04-21T22:38:11.681Z | updated | phase-d-pack-storage-write-chain | 已新增 pack_collection_repo，并在 memory recording service 中把 reviseJudgementPlan / updateTargetDossier / recordExecutionReflection 分别桥接到 judgement_plans / target_dossiers / investigation_threads。
+- 2026-04-21T22:38:11.681Z | updated | phase-d-pack-storage-tests | 已补 pack_collection_repo、memory_recording_pack_collection_bridge、pack_runtime_install、pack_runtime_materializer 的针对性测试并通过验证。
+- 2026-04-21T22:48:36.208Z | artifact_changed | design | 同步设计文档：.limcode/design/world-pack-boundary-convergence-and-death-note-doc-migration-design.md
+- 2026-04-21T22:51:42.122Z | artifact_changed | plan | 同步计划文档：.limcode/plans/world-pack-boundary-convergence-and-death-note-doc-migration-implementation.plan.md
+- 2026-04-21T22:58:26.647Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/world-pack-boundary-convergence-and-death-note-doc-migration-implementation.plan.md
+- 2026-04-21T22:58:33.801Z | updated | world-pack-boundary-convergence-docs | 完成 WORLD_PACK 与 LOGIC 的项目级去中心化改写，并新增 death_note/DESIGN.md 以承接包专属设计说明与边界治理清单。
+- 2026-04-21T23:10:55.769Z | updated | phase-3-rule-based-detachment | rule_based provider 已从 world-death-note 直连分支改为 rule_based_profile 配置驱动，并由 death_note pack 自身声明 notebook_investigation_reference_v1。
+- 2026-04-21T23:10:55.769Z | updated | phase-3-runtime-default-decoupling | runtime_config 与 runtime_scaffold 的默认绑定已从 death_note 切换到中性 example_pack bundled example 模板。
+- 2026-04-21T23:10:55.769Z | updated | phase-3-regression-validation | 已通过 rule_based_death_note_provider、runtime_config、world_pack_schema 三组针对性单测，确认去特判后示例包与通用框架仍可运行。
+- 2026-04-21T23:11:07.830Z | milestone_recorded | PG16 | 记录里程碑：Death Note 去特判与默认语义解耦完成
+- 2026-04-21T23:31:36.383Z | artifact_changed | design | 同步设计文档：.limcode/design/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-design.md
+- 2026-04-21T23:33:37.514Z | artifact_changed | plan | 同步计划文档：.limcode/plans/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-implementation.plan.md
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -243,53 +288,43 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-17T21:05:29.611Z",
-  "updatedAt": "2026-04-20T22:17:34.326Z",
-  "status": "completed",
+  "updatedAt": "2026-04-21T23:33:37.514Z",
+  "status": "active",
   "phase": "implementation",
-  "currentFocus": "Memory Block / Context Trigger Engine Rust 迁移收束完成",
-  "latestConclusion": "TODO、设计、计划与项目进度已同步到 Memory Block / Context Trigger Engine Rust 迁移完成状态。",
+  "currentFocus": "完成 death_note 去特判治理并把 runtime 默认语义从示例包解耦",
+  "latestConclusion": "death_note 现在已经从项目核心默认语义和 rule-based 核心特判中解耦，回到了作为参考 world-pack 的位置。",
   "currentBlocker": null,
-  "nextAction": "等待后续新任务；如继续推进，可转入完整 Memory Block Runtime Rust ownership 深化。",
+  "nextAction": "下一步可继续清理测试与辅助资源中的 death_note 命名技术债，或评估把当前 reference profile 启发式进一步下沉为更通用的可插拔扩展能力。",
   "activeArtifacts": {
-    "design": ".limcode/design/memory-block-context-trigger-engine-rust-migration-design.md",
-    "plan": ".limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md",
-    "review": ".limcode/review/memory-block-context-trigger-engine-review.md"
+    "design": ".limcode/design/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-design.md",
+    "plan": ".limcode/plans/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-implementation.plan.md",
+    "review": ".limcode/review/rust-migration-compatibility-debt-assessment.md"
   },
   "todos": [
     {
-      "id": "plan-memory-trigger-sidecar-scaffold",
-      "content": "搭建 memory_trigger_sidecar crate、stdio JSON-RPC 协议骨架与握手/健康检查",
-      "status": "completed"
+      "id": "phase-a-compat-mode",
+      "content": "为 helper 保留兼容模式，避免一次性打碎旧 e2e 启动假设",
+      "status": "pending"
     },
     {
-      "id": "plan-rust-models-and-logic-dsl",
-      "content": "迁移 Rust DTO、logic DSL、trigger primitives 与语义测试",
-      "status": "completed"
+      "id": "phase-a-helper-api",
+      "content": "扩展 tests/helpers/runtime.ts，支持显式 activePackRef 与 seededPackRefs",
+      "status": "pending"
     },
     {
-      "id": "plan-rust-source-kernel",
-      "content": "实现 Rust source evaluate 内核：evaluation、status、next runtime state、should_materialize、ignored_features 聚合",
-      "status": "completed"
+      "id": "phase-b-scenario-e2e-migration",
+      "content": "迁移第一批强依赖 active death_note 的 e2e 为显式 active-pack 模式",
+      "status": "pending"
     },
     {
-      "id": "plan-shadow-parity-and-fallback",
-      "content": "实现 rust_shadow 对跑、diff 观测与 rust_primary fallback 策略",
-      "status": "completed"
+      "id": "phase-c-validation",
+      "content": "验证迁移后的 e2e 在显式 active-pack 模式下稳定通过",
+      "status": "pending"
     },
     {
-      "id": "plan-ts-memory-block-source-integration",
-      "content": "将 context/sources/memory_blocks.ts 改造成 thin shell，并接入 Rust 结果持久化/materialization/diagnostics",
-      "status": "completed"
-    },
-    {
-      "id": "plan-ts-sidecar-client-and-flag",
-      "content": "新增 TS sidecar client 与 memory_trigger_engine feature flag（ts/rust_shadow/rust_primary）",
-      "status": "completed"
-    },
-    {
-      "id": "plan-validation-and-cutover",
-      "content": "补齐单元/集成测试，完成 parity 验收并切换到 rust_primary",
-      "status": "completed"
+      "id": "phase-d-followup-audit",
+      "content": "整理第二批通用测试与命名技术债的后续迁移清单",
+      "status": "pending"
     }
   ],
   "milestones": [
@@ -573,144 +608,218 @@
       "completedAt": "2026-04-20T22:17:19.075Z",
       "recordedAt": "2026-04-20T22:17:19.075Z",
       "nextAction": "如无额外回归问题，可进入后续 Memory Block Runtime 完整 Rust ownership 深化或清理增强项。"
+    },
+    {
+      "id": "PG13",
+      "title": "Death Note 世界包 Phase A 闭环完成",
+      "status": "completed",
+      "summary": "已完成 death_note 正式 pack 的 Phase A：补齐正式 pack 的 memory_loop、认知状态字段、世界状态字段与最小 invocation 扩展；为 revise_judgement_plan 增加 runtime 记录承接，落地 self_note overlay 与 plan memory block；同步模板文件，并补充 world pack schema、rule-based provider 与 death-note memory loop 的针对性测试，相关 unit/integration 验证已通过。",
+      "relatedTodoIds": [
+        "phase-a-pack-contract",
+        "phase-a-runtime-support"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/death-note-world-pack-content-expansion-design.md",
+        "plan": ".limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md"
+      },
+      "completedAt": "2026-04-21T22:00:18.388Z",
+      "recordedAt": "2026-04-21T22:00:18.388Z",
+      "nextAction": "进入 Phase B，先扩展 pack.ai.tasks / memory_loop 的对应配置与验证，再补 institutions / domains 与 objective side effects。"
+    },
+    {
+      "id": "PG14",
+      "title": "Death Note 世界包 Phase B 完成",
+      "status": "completed",
+      "summary": "已完成 Death Note 世界包 Phase B：补入 pack-level AI task / memory_loop 配置，加入最小 institutions 与 domains，并细化 collect_target_intel、raise_false_suspicion、publish_case_update 的 objective side effects。同步模板与文档，并通过 world_pack_schema、ai_gateway、prompt_workflow_sections、pack_runtime_materializer、world_engine_pack_host_api_read_surface、death-note-memory-loop 等针对性 unit/integration 验证。",
+      "relatedTodoIds": [
+        "phase-b-ai-memory",
+        "phase-b-governance-entities",
+        "validation-and-docs"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/death-note-world-pack-content-expansion-design.md",
+        "plan": ".limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md"
+      },
+      "completedAt": "2026-04-21T22:11:40.455Z",
+      "recordedAt": "2026-04-21T22:11:40.455Z",
+      "nextAction": "进入 Phase C，评估并按门禁引入 target_dossiers / judgement_plans / investigation_threads 等 storage.pack_collections 初始模型。"
+    },
+    {
+      "id": "PG15",
+      "title": "Death Note 世界包内容扩展主线完成",
+      "status": "completed",
+      "summary": "已完成 Death Note 世界包内容扩展计划全部阶段：Phase A 补齐正式 pack 的认知状态字段与 invocation，并为 revise_judgement_plan 落地 runtime 记录承接；Phase B 完成 pack-level AI task / memory_loop 扩展、institutions / domains 建模与 objective side effects 细化；Phase C 按门禁引入 target_dossiers、judgement_plans、investigation_threads 三类 pack storage collections，并通过 world_pack_schema、ai_gateway、prompt_workflow_sections、death-note-memory-loop、pack_runtime_install、pack_runtime_materializer、world_engine_pack_host_api_read_surface 等测试验证。",
+      "relatedTodoIds": [
+        "phase-a-pack-contract",
+        "phase-a-runtime-support",
+        "phase-b-ai-memory",
+        "phase-b-governance-entities",
+        "phase-c-storage-gate",
+        "validation-and-docs"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/death-note-world-pack-content-expansion-design.md",
+        "plan": ".limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md"
+      },
+      "completedAt": "2026-04-21T22:16:58.304Z",
+      "recordedAt": "2026-04-21T22:16:58.304Z",
+      "nextAction": "若继续迭代，应把新引入的 pack storage collections 从声明模型推进到真实写入链、projection 消费与 operator 可观测面。"
+    },
+    {
+      "id": "PG16",
+      "title": "Death Note 去特判与默认语义解耦完成",
+      "status": "completed",
+      "summary": "已完成 death_note 与宿主核心的关键边界治理：rule_based provider 不再按 world-death-note 直接分支，而是改由 pack.ai.tasks.agent_decision.metadata.rule_based_profile 驱动；death_note pack 与模板已声明 notebook_investigation_reference_v1；runtime_config 与 runtime_scaffold 的默认绑定已从 death_note 切换为中性 example_pack bundled example 模板；同时新增 example_pack 的 YAML/README/CHANGELOG 模板资源，并通过 rule_based_death_note_provider、runtime_config、world_pack_schema 等针对性单测验证。",
+      "relatedTodoIds": [],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/world-pack-boundary-convergence-and-death-note-doc-migration-design.md",
+        "plan": ".limcode/plans/world-pack-boundary-convergence-and-death-note-doc-migration-implementation.plan.md"
+      },
+      "completedAt": "2026-04-21T23:11:07.830Z",
+      "recordedAt": "2026-04-21T23:11:07.830Z",
+      "nextAction": "下一步可继续清理测试与辅助资源中的 death_note 命名技术债，或评估把当前 reference profile 启发式进一步下沉为更通用的可插拔扩展能力。"
     }
   ],
   "risks": [],
   "log": [
     {
-      "at": "2026-04-20T21:18:59.827Z",
-      "type": "artifact_changed",
-      "refId": "review",
-      "message": "同步审查里程碑：M1"
+      "at": "2026-04-21T22:00:18.388Z",
+      "type": "milestone_recorded",
+      "refId": "PG13",
+      "message": "记录里程碑：Death Note 世界包 Phase A 闭环完成"
     },
     {
-      "at": "2026-04-20T21:19:14.190Z",
+      "at": "2026-04-21T22:06:44.305Z",
       "type": "artifact_changed",
-      "refId": "review",
-      "message": "同步审查结论：.limcode/review/scheduler-core-decision-kernel-rust-migration-review.md"
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md"
     },
     {
-      "at": "2026-04-20T21:22:25.450Z",
-      "type": "artifact_changed",
-      "refId": "review",
-      "message": "同步审查文档：.limcode/review/memory-block-context-trigger-engine-review.md"
+      "at": "2026-04-21T22:06:55.675Z",
+      "type": "updated",
+      "refId": "phase-b-ai-memory",
+      "message": "完成 Death Note 世界包 AI task / memory_loop 配置扩展，已同步 README/CHANGELOG，并通过针对性 unit/integration 验证。"
     },
     {
-      "at": "2026-04-20T21:23:04.924Z",
+      "at": "2026-04-21T22:11:30.904Z",
       "type": "artifact_changed",
-      "refId": "review",
-      "message": "同步审查里程碑：M1"
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md"
     },
     {
-      "at": "2026-04-20T21:23:29.882Z",
-      "type": "artifact_changed",
-      "refId": "review",
-      "message": "同步审查里程碑：M2"
+      "at": "2026-04-21T22:11:40.455Z",
+      "type": "milestone_recorded",
+      "refId": "PG14",
+      "message": "记录里程碑：Death Note 世界包 Phase B 完成"
     },
     {
-      "at": "2026-04-20T21:23:36.977Z",
+      "at": "2026-04-21T22:16:31.738Z",
       "type": "artifact_changed",
-      "refId": "review",
-      "message": "同步审查结论：.limcode/review/memory-block-context-trigger-engine-review.md"
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md"
     },
     {
-      "at": "2026-04-20T21:41:50.697Z",
+      "at": "2026-04-21T22:16:44.769Z",
+      "type": "updated",
+      "refId": "phase-c-storage-gate",
+      "message": "完成 Death Note 世界包 Phase C：引入三类 pack_collections，并通过 schema、install 与 materializer 验证门禁。"
+    },
+    {
+      "at": "2026-04-21T22:16:58.304Z",
+      "type": "milestone_recorded",
+      "refId": "PG15",
+      "message": "记录里程碑：Death Note 世界包内容扩展主线完成"
+    },
+    {
+      "at": "2026-04-21T22:38:11.681Z",
+      "type": "updated",
+      "refId": "phase-d-pack-storage-write-chain",
+      "message": "已新增 pack_collection_repo，并在 memory recording service 中把 reviseJudgementPlan / updateTargetDossier / recordExecutionReflection 分别桥接到 judgement_plans / target_dossiers / investigation_threads。"
+    },
+    {
+      "at": "2026-04-21T22:38:11.681Z",
+      "type": "updated",
+      "refId": "phase-d-pack-storage-tests",
+      "message": "已补 pack_collection_repo、memory_recording_pack_collection_bridge、pack_runtime_install、pack_runtime_materializer 的针对性测试并通过验证。"
+    },
+    {
+      "at": "2026-04-21T22:48:36.208Z",
       "type": "artifact_changed",
       "refId": "design",
-      "message": "同步设计文档：.limcode/design/memory-block-context-trigger-engine-rust-migration-design.md"
+      "message": "同步设计文档：.limcode/design/world-pack-boundary-convergence-and-death-note-doc-migration-design.md"
     },
     {
-      "at": "2026-04-20T21:43:56.680Z",
+      "at": "2026-04-21T22:51:42.122Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
+      "message": "同步计划文档：.limcode/plans/world-pack-boundary-convergence-and-death-note-doc-migration-implementation.plan.md"
     },
     {
-      "at": "2026-04-20T21:44:51.559Z",
+      "at": "2026-04-21T22:58:26.647Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/world-pack-boundary-convergence-and-death-note-doc-migration-implementation.plan.md"
     },
     {
-      "at": "2026-04-20T21:47:01.325Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-20T21:47:14.644Z",
-      "type": "artifact_changed",
-      "refId": "plan-memory-trigger-sidecar-scaffold",
-      "message": "新增 apps/server/rust/memory_trigger_sidecar crate，完成 stdio JSON-RPC 骨架、handshake/health/source.evaluate stub，并通过 cargo check。"
-    },
-    {
-      "at": "2026-04-20T21:55:31.662Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-20T22:02:58.193Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-20T22:03:12.677Z",
-      "type": "artifact_changed",
-      "refId": "plan-ts-memory-block-source-integration",
-      "message": "已新增 memory trigger TS sidecar client、provider 模式路由与 runtime config，memory_blocks source 已改为经 provider 执行并写回 runtime state/materialization/diagnostics。"
-    },
-    {
-      "at": "2026-04-20T22:09:10.238Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-20T22:09:23.344Z",
+      "at": "2026-04-21T22:58:33.801Z",
       "type": "updated",
-      "refId": "plan-validation-and-cutover",
-      "message": "新增 memory_trigger_engine_provider、context_memory_blocks_source_rust_modes 与 runtime_config 扩展测试；验证 ts/rust_shadow/rust_primary fallback 与 trigger_rate ignored diagnostics。"
+      "refId": "world-pack-boundary-convergence-docs",
+      "message": "完成 WORLD_PACK 与 LOGIC 的项目级去中心化改写，并新增 death_note/DESIGN.md 以承接包专属设计说明与边界治理清单。"
     },
     {
-      "at": "2026-04-20T22:12:22.504Z",
+      "at": "2026-04-21T23:10:55.769Z",
+      "type": "updated",
+      "refId": "phase-3-rule-based-detachment",
+      "message": "rule_based provider 已从 world-death-note 直连分支改为 rule_based_profile 配置驱动，并由 death_note pack 自身声明 notebook_investigation_reference_v1。"
+    },
+    {
+      "at": "2026-04-21T23:10:55.769Z",
+      "type": "updated",
+      "refId": "phase-3-runtime-default-decoupling",
+      "message": "runtime_config 与 runtime_scaffold 的默认绑定已从 death_note 切换到中性 example_pack bundled example 模板。"
+    },
+    {
+      "at": "2026-04-21T23:10:55.769Z",
+      "type": "updated",
+      "refId": "phase-3-regression-validation",
+      "message": "已通过 rule_based_death_note_provider、runtime_config、world_pack_schema 三组针对性单测，确认去特判后示例包与通用框架仍可运行。"
+    },
+    {
+      "at": "2026-04-21T23:11:07.830Z",
+      "type": "milestone_recorded",
+      "refId": "PG16",
+      "message": "记录里程碑：Death Note 去特判与默认语义解耦完成"
+    },
+    {
+      "at": "2026-04-21T23:31:36.383Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-design.md"
+    },
+    {
+      "at": "2026-04-21T23:33:37.514Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-20T22:12:36.791Z",
-      "type": "milestone_recorded",
-      "refId": "plan-validation-and-cutover",
-      "message": "真实 Rust sidecar parity 测试通过，当前计划内 Memory Trigger / Context Source Rust 迁移实现与验证工作全部完成。"
-    },
-    {
-      "at": "2026-04-20T22:17:19.075Z",
-      "type": "milestone_recorded",
-      "refId": "PG12",
-      "message": "记录里程碑：Memory Block / Context Trigger Engine Rust 迁移完成"
-    },
-    {
-      "at": "2026-04-20T22:17:34.326Z",
-      "type": "updated",
-      "refId": "PG12",
-      "message": "已根据用户完成 TODO.md 的标记，同步项目级 progress 与里程碑，确认 Memory Block / Context Trigger Engine Rust 迁移已收束。"
+      "message": "同步计划文档：.limcode/plans/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-implementation.plan.md"
     }
   ],
   "stats": {
-    "milestonesTotal": 14,
-    "milestonesCompleted": 14,
-    "todosTotal": 7,
-    "todosCompleted": 7,
+    "milestonesTotal": 18,
+    "milestonesCompleted": 18,
+    "todosTotal": 5,
+    "todosCompleted": 0,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-20T22:17:34.326Z",
-    "bodyHash": "sha256:74f8f6da5571196c88fcca4b2235885821708568ab1badfa23bce31883967472"
+    "generatedAt": "2026-04-21T23:33:37.514Z",
+    "bodyHash": "sha256:45727008833938eeea82314dea437cb4a7323c675f768c6bab51b9684351860e"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->
