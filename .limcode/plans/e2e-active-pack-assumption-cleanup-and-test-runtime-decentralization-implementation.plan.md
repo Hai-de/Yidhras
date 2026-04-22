@@ -5,11 +5,11 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-- [ ] 为 helper 保留兼容模式，避免一次性打碎旧 e2e 启动假设  `#phase-a-compat-mode`
-- [ ] 扩展 tests/helpers/runtime.ts，支持显式 activePackRef 与 seededPackRefs  `#phase-a-helper-api`
-- [ ] 迁移第一批强依赖 active death_note 的 e2e 为显式 active-pack 模式  `#phase-b-scenario-e2e-migration`
-- [ ] 验证迁移后的 e2e 在显式 active-pack 模式下稳定通过  `#phase-c-validation`
-- [ ] 整理第二批通用测试与命名技术债的后续迁移清单  `#phase-d-followup-audit`
+- [x] 为 helper 保留兼容模式，避免一次性打碎旧 e2e 启动假设  `#phase-a-compat-mode`
+- [x] 扩展 tests/helpers/runtime.ts，支持显式 activePackRef 与 seededPackRefs  `#phase-a-helper-api`
+- [x] 迁移第一批强依赖 active death_note 的 e2e 为显式 active-pack 模式  `#phase-b-scenario-e2e-migration`
+- [x] 验证迁移后的 e2e 在显式 active-pack 模式下稳定通过  `#phase-c-validation`
+- [ ] 整理第二批通用测试与命名技术债的后续迁移清单，并记录 trigger-event 场景仍混合依赖 trigger_event dispatch pending 与 semantic_intent 决策收敛假设  `#phase-d-followup-audit`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # E2E Active-Pack 假设清理与测试运行时去中心化实施计划

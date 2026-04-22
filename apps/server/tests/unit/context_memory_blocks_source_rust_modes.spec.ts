@@ -7,6 +7,9 @@ import type { InferencePackStateSnapshot } from '../../src/inference/types.js';
 import type { LongMemoryBlockStore, MemoryBehavior, MemoryBlock, MemoryRuntimeState } from '../../src/memory/blocks/types.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 
+const TEST_PACK_ID = 'world-test-pack';
+
+
 const buildContext = (): AppContext => ({
   prisma: {
     policy: {
@@ -72,7 +75,7 @@ const buildContext = (): AppContext => ({
       world_pack_dir: true,
       world_pack_available: true
     },
-    available_world_packs: ['world-death-note'],
+    available_world_packs: [TEST_PACK_ID],
     errors: []
   },
   getRuntimeReady() {
@@ -97,7 +100,7 @@ const buildLongMemoryBlockStoreStub = (updates: MemoryRuntimeState[] = []): Long
     const block: MemoryBlock = {
       id: 'memory-block-1',
       owner_agent_id: 'agent-001',
-      pack_id: 'world-death-note',
+      pack_id: TEST_PACK_ID,
       kind: 'reflection',
       status: 'active',
       title: 'Long suspicion memo',
@@ -230,7 +233,7 @@ describe('memory blocks source rust modes', () => {
       },
       identity,
       resolved_agent_id: 'agent-001',
-      pack_id: 'world-death-note',
+      pack_id: TEST_PACK_ID,
       tick: 1000n,
       attributes: {},
       pack_state: packState,
@@ -274,7 +277,7 @@ describe('memory blocks source rust modes', () => {
       },
       identity,
       resolved_agent_id: 'agent-001',
-      pack_id: 'world-death-note',
+      pack_id: TEST_PACK_ID,
       tick: 1000n,
       attributes: {},
       pack_state: packState,

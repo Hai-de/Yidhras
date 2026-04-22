@@ -6,7 +6,11 @@ import { requestJson } from '../helpers/server.js';
 
 describe('startup smoke e2e', () => {
   it('exposes coherent health and status snapshots after isolated runtime preparation', async () => {
-    await withIsolatedTestServer({ defaultPort: 3101 }, async server => {
+    await withIsolatedTestServer({
+      defaultPort: 3101,
+      activePackRef: 'example_pack',
+      seededPackRefs: ['example_pack']
+    }, async server => {
       const healthResponse = await requestJson(server.baseUrl, '/api/health');
       expect([200, 503]).toContain(healthResponse.status);
       const healthData = assertSuccessEnvelopeData(healthResponse.body, '/api/health');

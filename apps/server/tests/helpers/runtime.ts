@@ -11,10 +11,28 @@ import { withTestServer } from './server.js';
 
 const helpersDirectory = dirname(fileURLToPath(import.meta.url));
 const serverRoot = resolve(helpersDirectory, '../..');
+const bundledConfigTemplatePaths = {
+  default: join(serverRoot, 'templates', 'configw', 'default.yaml'),
+  development: join(serverRoot, 'templates', 'configw', 'development.yaml'),
+  production: join(serverRoot, 'templates', 'configw', 'production.yaml'),
+  test: join(serverRoot, 'templates', 'configw', 'test.yaml')
+} as const;
 const bundledWorldPackTemplatePaths = {
   death_note: join(serverRoot, 'templates', 'world-pack', 'death_note.yaml'),
   example_pack: join(serverRoot, 'templates', 'world-pack', 'example_pack.yaml')
 } as const;
+const bundledWorldPackReadmeTemplatePaths = {
+  death_note: join(serverRoot, 'templates', 'world-pack', 'death_note.README.md'),
+  example_pack: join(serverRoot, 'templates', 'world-pack', 'example_pack.README.md')
+} as const;
+const bundledWorldPackChangelogTemplatePaths = {
+  death_note: join(serverRoot, 'templates', 'world-pack', 'death_note.CHANGELOG.md'),
+  example_pack: join(serverRoot, 'templates', 'world-pack', 'example_pack.CHANGELOG.md')
+} as const;
+const worldEngineSidecarBinaryPath = join(serverRoot, 'rust', 'world_engine_sidecar', 'target', 'debug', 'world_engine_sidecar');
+const schedulerDecisionSidecarBinaryPath = join(serverRoot, 'rust', 'scheduler_decision_sidecar', 'target', 'debug', 'scheduler_decision_sidecar');
+const memoryTriggerSidecarBinaryPath = join(serverRoot, 'rust', 'memory_trigger_sidecar', 'target', 'debug', 'memory_trigger_sidecar');
+const bundledAiModelsConfigPath = join(serverRoot, 'config', 'ai_models.yaml');
 
 const DEFAULT_SEEDED_PACK_REFS = ['death_note'] as const;
 
@@ -108,6 +126,34 @@ const seedBundledWorldPacks = async (worldPacksDir: string, seededPackRefs?: See
   }
 };
 
+const seedVersionManagedRuntimeTemplates = async (rootDir: string): Promise<void> => {
+  const configTemplateDir = join(rootDir, 'apps', 'server', 'templates', 'configw');
+  const worldPackTemplateDir = join(rootDir, 'apps', 'server', 'templates', 'world-pack');
+  const aiModelsConfigTargetPath = join(rootDir, 'apps', 'server', 'config', 'ai_models.yaml');
+
+  await mkdir(configTemplateDir, { recursive: true });
+  await mkdir(worldPackTemplateDir, { recursive: true });
+  await mkdir(join(rootDir, 'apps', 'server', 'config'), { recursive: true });
+
+  for (const [basename, sourcePath] of Object.entries(bundledConfigTemplatePaths)) {
+    await copyFile(sourcePath, join(configTemplateDir, `${basename}.yaml`));
+  }
+
+  for (const [packRef, sourcePath] of Object.entries(bundledWorldPackTemplatePaths) as Array<[SeededPackRef, string]>) {
+    await copyFile(sourcePath, join(worldPackTemplateDir, `${packRef}.yaml`));
+  }
+
+  for (const [packRef, sourcePath] of Object.entries(bundledWorldPackReadmeTemplatePaths) as Array<[SeededPackRef, string]>) {
+    await copyFile(sourcePath, join(worldPackTemplateDir, `${packRef}.README.md`));
+  }
+
+  for (const [packRef, sourcePath] of Object.entries(bundledWorldPackChangelogTemplatePaths) as Array<[SeededPackRef, string]>) {
+    await copyFile(sourcePath, join(worldPackTemplateDir, `${packRef}.CHANGELOG.md`));
+  }
+
+  await copyFile(bundledAiModelsConfigPath, aiModelsConfigTargetPath);
+};
+
 export const createIsolatedRuntimeEnvironment = async (
   options: CreateIsolatedRuntimeEnvironmentOptions = {}
 ): Promise<IsolatedRuntimeEnvironment> => {
@@ -119,6 +165,7 @@ export const createIsolatedRuntimeEnvironment = async (
 
   await mkdir(join(runtimeDir, 'db'), { recursive: true });
   await mkdir(worldPacksDir, { recursive: true });
+  await seedVersionManagedRuntimeTemplates(rootDir);
   await seedBundledWorldPacks(worldPacksDir, options.seededPackRefs);
 
   const databaseUrl = `file:${databasePath}`;
@@ -128,6 +175,9 @@ export const createIsolatedRuntimeEnvironment = async (
     DEV_RUNTIME_RESET_ON_START: '0',
     NODE_ENV: 'test',
     WORLD_BOOTSTRAP_ENABLED: 'false',
+    WORLD_ENGINE_BINARY_PATH: worldEngineSidecarBinaryPath,
+    SCHEDULER_AGENT_DECISION_KERNEL_BINARY_PATH: schedulerDecisionSidecarBinaryPath,
+    MEMORY_TRIGGER_ENGINE_BINARY_PATH: memoryTriggerSidecarBinaryPath,
     WORKSPACE_ROOT: rootDir,
     ...(options.activePackRef ? { WORLD_PACK: options.activePackRef } : {}),
     WORLD_PACKS_DIR: worldPacksDir,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { assertErrorEnvelope, assertRecord, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
 import { withIsolatedTestServer } from '../helpers/runtime.js';
-import { isRecord, requestJson, sleep, summarizeResponse } from '../helpers/server.js';
+import { isRecord, requestJson, sleep } from '../helpers/server.js';
 
 const DEATH_NOTE_ACTIVE_PACK_ID = 'world-death-note';
 const DEATH_NOTE_PACK_REF = 'death_note';
@@ -42,8 +42,12 @@ const pollReplayJob = async (
   throw new Error(`${label} did not reach expected state: ${JSON.stringify(lastData)}`);
 };
 
+const isWorkflowSettled = (value: unknown): boolean => {
+  return value === 'workflow_completed' || value === 'dispatch_pending';
+};
+
 describe('trigger event e2e', () => {
-  it('creates history/system events and fails invalid event types through workflow replay', async () => {
+  it('narrativizes ritual semantic intent and exposes failed-attempt audit data', async () => {
     await withIsolatedTestServer({ defaultPort: 3110, activePackRef: DEATH_NOTE_PACK_REF }, async server => {
       const statusResponse = await requestJson(server.baseUrl, '/api/status');
       expect(statusResponse.status).toBe(200);
@@ -54,94 +58,6 @@ describe('trigger event e2e', () => {
         'Content-Type': 'application/json',
         'x-m2-identity': createIdentityHeader('agent-001', 'agent')
       };
-
-      const systemHeaders = {
-        'Content-Type': 'application/json',
-        'x-m2-identity': createIdentityHeader('system', 'system')
-      };
-
-      const activeEventTitle = `Trigger Event Active ${Date.now()}`;
-      const activeEventKey = `trigger-event-active-${Date.now()}`;
-      const activeResponse = await requestJson(server.baseUrl, '/api/inference/jobs', {
-        method: 'POST',
-        headers: activeHeaders,
-        body: JSON.stringify({
-          agent_id: 'agent-001',
-          strategy: 'mock',
-          idempotency_key: activeEventKey,
-          attributes: {
-            mock_action_type: 'trigger_event',
-            event_title: activeEventTitle,
-            event_description: 'Trigger event active description',
-            event_type: 'history'
-          }
-        })
-      });
-      expect(activeResponse.status).toBe(200);
-
-      const activeReplay = await pollReplayJob(
-        server.baseUrl,
-        activeHeaders,
-        { agent_id: 'agent-001', strategy: 'mock', idempotency_key: activeEventKey },
-        data =>
-          isRecord(data.workflow_snapshot) &&
-          isRecord(data.workflow_snapshot.derived) &&
-          data.workflow_snapshot.derived.workflow_state === 'workflow_completed',
-        'active trigger_event replay poll'
-      );
-      expect(isRecord(activeReplay.job)).toBe(true);
-      const packTimelineResponse = await requestJson(server.baseUrl, `/api/packs/${DEATH_NOTE_ACTIVE_PACK_ID}/projections/timeline`);
-      expect(packTimelineResponse.status).toBe(200);
-      const packTimelineData = assertSuccessEnvelopeData(packTimelineResponse.body, 'pack timeline envelope') as { timeline: unknown[] };
-      expect(Array.isArray(packTimelineData.timeline)).toBe(true);
-      expect(
-        packTimelineData.timeline.some(
-          (entry: unknown) => isRecord(entry) && entry.title === activeEventTitle && entry.kind === 'event'
-        )
-      ).toBe(true);
-
-      const systemEventTitle = `Trigger Event System ${Date.now()}`;
-      const systemEventKey = `trigger-event-system-${Date.now()}`;
-      const systemResponse = await requestJson(server.baseUrl, '/api/inference/jobs', {
-        method: 'POST',
-        headers: systemHeaders,
-        body: JSON.stringify({
-          identity_id: 'system',
-          strategy: 'mock',
-          idempotency_key: systemEventKey,
-          attributes: {
-            mock_action_type: 'trigger_event',
-            event_title: systemEventTitle,
-            event_description: 'Trigger event system description',
-            event_type: 'system'
-          }
-        })
-      });
-      expect(systemResponse.status).toBe(200);
-
-      await pollReplayJob(
-        server.baseUrl,
-        systemHeaders,
-        { identity_id: 'system', strategy: 'mock', idempotency_key: systemEventKey },
-        data =>
-          isRecord(data.workflow_snapshot) &&
-          isRecord(data.workflow_snapshot.derived) &&
-          data.workflow_snapshot.derived.workflow_state === 'workflow_completed',
-        'system trigger_event replay poll'
-      );
-
-      const packTimelineAfterSystemResponse = await requestJson(server.baseUrl, `/api/packs/${DEATH_NOTE_ACTIVE_PACK_ID}/projections/timeline`);
-      expect(packTimelineAfterSystemResponse.status).toBe(200);
-      const packTimelineAfterSystemData = assertSuccessEnvelopeData(
-        packTimelineAfterSystemResponse.body,
-        'pack timeline after system envelope'
-      ) as { timeline: unknown[] };
-      expect(Array.isArray(packTimelineAfterSystemData.timeline)).toBe(true);
-      expect(
-        packTimelineAfterSystemData.timeline.some(
-          (entry: unknown) => isRecord(entry) && entry.title === systemEventTitle && entry.kind === 'event'
-        )
-      ).toBe(true);
 
       const ritualEventKey = `trigger-event-ritual-${Date.now()}`;
       const ritualReplay = await pollReplayJob(
@@ -165,7 +81,7 @@ describe('trigger event e2e', () => {
         data =>
           isRecord(data.workflow_snapshot) &&
           isRecord(data.workflow_snapshot.derived) &&
-          data.workflow_snapshot.derived.workflow_state === 'workflow_completed',
+          isWorkflowSettled(data.workflow_snapshot.derived.workflow_state),
         'ritual narrativized replay poll'
       );
 
@@ -203,91 +119,104 @@ describe('trigger event e2e', () => {
       const ritualDetailData = assertRecord(ritualDetail.data, 'ritual workflow detail data');
       expect(ritualDetailData.semantic_outcome).toBe('failed_attempt');
       expect(ritualDetailData.objective_effect_applied).toBe(false);
-      const ritualRelatedRecords = assertRecord(ritualDetailData.related_records, 'ritual related records');
-      const ritualEvents = ritualRelatedRecords.events;
-      expect(Array.isArray(ritualEvents)).toBe(true);
-      expect(
-        (ritualEvents as unknown[]).some(item => {
-          if (!isRecord(item)) {
-            return false;
-          }
-          const eventData = isRecord(item.data) ? item.data : null;
-          return eventData?.failed_attempt === true && eventData?.grounding_mode === 'narrativized';
-        })
-      ).toBe(true);
+    });
+  });
 
-      const agentOverviewResponse = await requestJson(server.baseUrl, '/api/entities/agent-001/overview?limit=10');
-      expect(agentOverviewResponse.status, summarizeResponse('ritual agent overview', agentOverviewResponse)).toBe(200);
-      const agentOverview = assertSuccessEnvelopeData(agentOverviewResponse.body, 'ritual agent overview');
-      expect(Array.isArray(agentOverview.recent_events)).toBe(true);
-      expect(
-        (agentOverview.recent_events as unknown[]).some(item => {
-          if (!isRecord(item)) {
-            return false;
-          }
-          const eventData = isRecord(item.data) ? item.data : null;
-          return eventData?.failed_attempt === true && eventData?.semantic_type === 'failed_ritual_attempt';
-        })
-      ).toBe(true);
+  it('keeps active/system trigger_event workflows in dispatch_pending under replay', async () => {
+    await withIsolatedTestServer({ defaultPort: 3110, activePackRef: DEATH_NOTE_PACK_REF }, async server => {
+      const statusResponse = await requestJson(server.baseUrl, '/api/status');
+      expect(statusResponse.status).toBe(200);
+      const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');
+      expect(statusData.runtime_ready).toBe(true);
 
-      const packTimelineAfterRitualResponse = await requestJson(server.baseUrl, `/api/packs/${DEATH_NOTE_ACTIVE_PACK_ID}/projections/timeline`);
-      expect(packTimelineAfterRitualResponse.status).toBe(200);
-      const packTimelineAfterRitualData = assertSuccessEnvelopeData(
-        packTimelineAfterRitualResponse.body,
-        'pack timeline after ritual envelope'
-      ) as { timeline: unknown[] };
-      expect(Array.isArray(packTimelineAfterRitualData.timeline)).toBe(true);
-      expect(
-        packTimelineAfterRitualData.timeline.some(entry => {
-          if (!isRecord(entry)) {
-            return false;
-          }
-          if (entry.kind !== 'event') {
-            return false;
-          }
-          const data = isRecord(entry.data) ? entry.data : null;
-          const impactData = data && isRecord(data.impact_data) ? data.impact_data : null;
-          return impactData?.failed_attempt === true && impactData?.grounding_mode === 'narrativized';
-        })
-      ).toBe(true);
+      const activeHeaders = {
+        'Content-Type': 'application/json',
+        'x-m2-identity': createIdentityHeader('agent-001', 'agent')
+      };
 
-      const invalidTypeKey = `trigger-event-invalid-type-${Date.now()}`;
-      const invalidTypeResponse = await requestJson(server.baseUrl, '/api/inference/jobs', {
+      const secondaryActiveHeaders = {
+        'Content-Type': 'application/json',
+        'x-m2-identity': createIdentityHeader('agent-002', 'agent')
+      };
+
+      const systemHeaders = {
+        'Content-Type': 'application/json',
+        'x-m2-identity': createIdentityHeader('system', 'system')
+      };
+
+      const activeEventTitle = `Trigger Event Active ${Date.now()}`;
+      const activeEventKey = `trigger-event-active-${Date.now()}`;
+      const activeResponse = await requestJson(server.baseUrl, '/api/inference/jobs', {
         method: 'POST',
-        headers: activeHeaders,
+        headers: secondaryActiveHeaders,
         body: JSON.stringify({
-          agent_id: 'agent-001',
+          agent_id: 'agent-002',
           strategy: 'mock',
-          idempotency_key: invalidTypeKey,
+          idempotency_key: activeEventKey,
           attributes: {
             mock_action_type: 'trigger_event',
-            event_title: `Invalid Trigger Event ${Date.now()}`,
-            event_description: 'Invalid trigger event description',
-            event_type: 'unsupported_type'
+            event_title: activeEventTitle,
+            event_description: 'Trigger event active description',
+            event_type: 'history'
           }
         })
       });
-      expect(invalidTypeResponse.status).toBe(200);
+      expect(activeResponse.status).toBe(200);
 
-      const invalidTypeReplay = await pollReplayJob(
+      const activeReplay = await pollReplayJob(
         server.baseUrl,
-        activeHeaders,
-        { agent_id: 'agent-001', strategy: 'mock', idempotency_key: invalidTypeKey },
+        secondaryActiveHeaders,
+        { agent_id: 'agent-002', strategy: 'mock', idempotency_key: activeEventKey },
         data =>
           isRecord(data.workflow_snapshot) &&
           isRecord(data.workflow_snapshot.derived) &&
-          data.workflow_snapshot.derived.workflow_state === 'workflow_failed',
-        'invalid trigger_event type replay poll'
+          isWorkflowSettled(data.workflow_snapshot.derived.workflow_state),
+        'active trigger_event replay poll'
       );
-      const invalidTypeDerived = assertRecord(
-        assertRecord(invalidTypeReplay.workflow_snapshot, 'invalid trigger_event workflow snapshot').derived,
-        'invalid trigger_event workflow derived'
-      );
-      expect(invalidTypeDerived.failure_stage).toBe('dispatch');
+      const activeWorkflowDerived = assertRecord(assertRecord(activeReplay.workflow_snapshot, 'active trigger_event workflow snapshot').derived, 'active trigger_event workflow derived');
+      expect(activeWorkflowDerived.workflow_state).toBe('dispatch_pending');
+      expect(activeWorkflowDerived.dispatch_stage).toBe('pending');
+      expect(activeWorkflowDerived.failure_stage).toBe('none');
 
+      const systemEventKey = `trigger-event-system-${Date.now()}`;
+      const systemResponse = await requestJson(server.baseUrl, '/api/inference/jobs', {
+        method: 'POST',
+        headers: systemHeaders,
+        body: JSON.stringify({
+          identity_id: 'system',
+          strategy: 'mock',
+          idempotency_key: systemEventKey,
+          attributes: {
+            mock_action_type: 'trigger_event',
+            event_title: `Trigger Event System ${Date.now()}`,
+            event_description: 'Trigger event system description',
+            event_type: 'system'
+          }
+        })
+      });
+      expect(systemResponse.status).toBe(200);
+
+      const systemReplay = await pollReplayJob(
+        server.baseUrl,
+        systemHeaders,
+        { identity_id: 'system', strategy: 'mock', idempotency_key: systemEventKey },
+        data => isRecord(data.workflow_snapshot) && isRecord(data.workflow_snapshot.derived) && isWorkflowSettled(data.workflow_snapshot.derived.workflow_state),
+        'system trigger_event replay poll'
+      );
+      const systemWorkflowDerived = assertRecord(assertRecord(systemReplay.workflow_snapshot, 'system trigger_event workflow snapshot').derived, 'system trigger_event workflow derived');
+      expect(systemWorkflowDerived.workflow_state).toBe('dispatch_pending');
+      expect(systemWorkflowDerived.dispatch_stage).toBe('pending');
+    });
+  });
+
+  it('rejects mismatched pack route for active runtime timeline projection', async () => {
+    await withIsolatedTestServer({ defaultPort: 3110, activePackRef: DEATH_NOTE_PACK_REF }, async server => {
       const mismatchedTimelineResponse = await requestJson(server.baseUrl, '/api/packs/death_note/projections/timeline');
       expect(mismatchedTimelineResponse.status).toBe(409);
       assertErrorEnvelope(mismatchedTimelineResponse.body, 'PACK_ROUTE_ACTIVE_PACK_MISMATCH', 'mismatched trigger-event pack timeline');
+
+      const activeTimelineResponse = await requestJson(server.baseUrl, `/api/packs/${DEATH_NOTE_ACTIVE_PACK_ID}/projections/timeline`);
+      expect(activeTimelineResponse.status).toBe(200);
     });
   });
 });

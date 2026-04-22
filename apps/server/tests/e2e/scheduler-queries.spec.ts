@@ -39,7 +39,11 @@ const waitForLatestSchedulerRun = async (baseUrl: string): Promise<Record<string
 
 describe('scheduler queries e2e', () => {
   it('serves scheduler observability endpoints and rejects invalid query shapes', async () => {
-    await withIsolatedTestServer({ defaultPort: 3102 }, async server => {
+    await withIsolatedTestServer({
+      defaultPort: 3102,
+      activePackRef: 'example_pack',
+      seededPackRefs: ['example_pack']
+    }, async server => {
       const latestRunData = await waitForLatestSchedulerRun(server.baseUrl);
       const latestRun = assertRecord(latestRunData.run, 'latest run payload');
       expect(typeof latestRun.partition_id).toBe('string');

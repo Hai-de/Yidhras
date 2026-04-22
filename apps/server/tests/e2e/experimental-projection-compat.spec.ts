@@ -12,6 +12,7 @@ describe('experimental projection compatibility e2e', () => {
     await withIsolatedTestServer(
       {
         defaultPort: 3118,
+        activePackRef: 'death_note',
         envOverrides: {
           EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED: 'true',
           EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED: 'true'

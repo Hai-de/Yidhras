@@ -4,9 +4,13 @@ import { assertRecord, assertStringArrayField, assertSuccessEnvelopeData } from 
 import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { requestJson } from '../helpers/server.js';
 
+const EXAMPLE_PACK_REF = 'example_pack';
+const EXAMPLE_PACK_ID = 'world-example-pack';
+const EXAMPLE_ENTITY_ID = 'actor-001';
+
 describe('experimental runtime operator API e2e', () => {
   it('keeps experimental runtime operator API disabled by default', async () => {
-    await withIsolatedTestServer({ defaultPort: 3111 }, async server => {
+    await withIsolatedTestServer({ defaultPort: 3111, activePackRef: EXAMPLE_PACK_REF, seededPackRefs: [EXAMPLE_PACK_REF] }, async server => {
       const response = await requestJson(server.baseUrl, '/api/experimental/runtime/packs');
       expect(response.status).toBe(404);
       const errorEnvelope = assertRecord(response.body, 'experimental runtime disabled envelope');
@@ -20,6 +24,8 @@ describe('experimental runtime operator API e2e', () => {
     await withIsolatedTestServer(
       {
         defaultPort: 3112,
+        activePackRef: EXAMPLE_PACK_REF,
+        seededPackRefs: [EXAMPLE_PACK_REF],
         envOverrides: {
           EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED: 'true',
           EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED: 'true'
@@ -38,7 +44,7 @@ describe('experimental runtime operator API e2e', () => {
         expect(packsResponse.status).toBe(200);
         const packsData = assertSuccessEnvelopeData(packsResponse.body, 'experimental runtime packs');
 
-        const loadResponse = await requestJson(server.baseUrl, '/api/experimental/runtime/packs/death_note/load', {
+        const loadResponse = await requestJson(server.baseUrl, `/api/experimental/runtime/packs/${EXAMPLE_PACK_REF}/load`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
@@ -49,6 +55,7 @@ describe('experimental runtime operator API e2e', () => {
         expect(typeof loadData.already_loaded).toBe('boolean');
         const loadedPack = assertRecord(loadData.pack, 'experimental runtime load pack');
         expect(typeof loadedPack.pack_id).toBe('string');
+        expect(loadedPack.pack_id).toBe(EXAMPLE_PACK_ID);
 
         const loadMissingResponse = await requestJson(server.baseUrl, '/api/experimental/runtime/packs/not-found-pack/load', {
           method: 'POST',
@@ -59,7 +66,7 @@ describe('experimental runtime operator API e2e', () => {
         const loadMissingError = assertRecord(loadMissingEnvelope.error, 'missing experimental runtime load error');
         expect(loadMissingError.code).toBe('EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND');
 
-        const unloadActiveResponse = await requestJson(server.baseUrl, `/api/experimental/runtime/packs/world-death-note/unload`, {
+        const unloadActiveResponse = await requestJson(server.baseUrl, `/api/experimental/runtime/packs/${EXAMPLE_PACK_ID}/unload`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
@@ -70,14 +77,15 @@ describe('experimental runtime operator API e2e', () => {
 
         const loadedPackIds = assertStringArrayField(packsData, 'loaded_pack_ids', 'experimental runtime packs');
         expect(Array.isArray(packsData.items)).toBe(true);
-        expect(loadedPackIds.length).toBeGreaterThan(0);
+        expect(loadedPackIds).toContain(EXAMPLE_PACK_ID);
 
-        const firstPackId = loadedPackIds[0];
+        const firstPackId = EXAMPLE_PACK_ID;
 
         const statusResponse = await requestJson(server.baseUrl, `/api/experimental/runtime/packs/${String(firstPackId)}/status`);
         expect(statusResponse.status).toBe(200);
         const statusData = assertSuccessEnvelopeData(statusResponse.body, 'experimental pack runtime status');
         expect(statusData.pack_id).toBe(firstPackId);
+        expect(statusData.pack_folder_name).toBe(EXAMPLE_PACK_REF);
         expect(typeof statusData.pack_folder_name).toBe('string');
         expect(typeof statusData.current_tick).toBe('string');
         const runtimeSpeed = assertRecord(statusData.runtime_speed, 'experimental runtime speed');
@@ -129,7 +137,7 @@ describe('experimental runtime operator API e2e', () => {
         expect(experimentalEntityPack.id).toBe(firstPackId);
         expect(Array.isArray(experimentalEntityProjectionData.entities)).toBe(true);
 
-        const experimentalEntityOverviewResponse = await requestJson(server.baseUrl, `/api/experimental/packs/${String(firstPackId)}/entities/agent-001/overview`);
+        const experimentalEntityOverviewResponse = await requestJson(server.baseUrl, `/api/experimental/packs/${String(firstPackId)}/entities/${EXAMPLE_ENTITY_ID}/overview`);
         expect(experimentalEntityOverviewResponse.status).toBe(200);
         const experimentalEntityOverviewData = assertSuccessEnvelopeData(experimentalEntityOverviewResponse.body, 'experimental pack agent overview');
         expect(experimentalEntityOverviewData.pack_id).toBe(firstPackId);

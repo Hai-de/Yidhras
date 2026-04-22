@@ -15,6 +15,8 @@ import {
 } from '../../../src/app/runtime/world_engine_persistence.js';
 import type { WorldEnginePort } from '../../../src/app/runtime/world_engine_ports.js';
 
+const TEST_PACK_ID = 'world-test-pack';
+
 const createMinimalContext = (): AppContext => ({
   prisma: {} as never,
   sim: {} as never,
@@ -26,7 +28,7 @@ const createMinimalContext = (): AppContext => ({
   startupHealth: {
     level: 'ok',
     checks: { db: true, world_pack_dir: true, world_pack_available: true },
-    available_world_packs: ['world-death-note'],
+    available_world_packs: [TEST_PACK_ID],
     errors: []
   },
   getRuntimeReady: () => true,
@@ -151,7 +153,7 @@ describe('world engine persistence orchestration', () => {
       persistence: createDefaultWorldEnginePersistencePort(),
       prepareInput: {
         protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
-        pack_id: 'world-death-note',
+        pack_id: TEST_PACK_ID,
         step_ticks: '1',
         reason: 'runtime_loop'
       }
@@ -193,7 +195,7 @@ describe('world engine persistence orchestration', () => {
       },
       prepareInput: {
         protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
-        pack_id: 'world-death-note',
+        pack_id: TEST_PACK_ID,
         step_ticks: '1',
         reason: 'runtime_loop'
       }
@@ -231,13 +233,13 @@ describe('world engine persistence orchestration', () => {
       },
       prepareInput: {
         protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
-        pack_id: 'world-death-note',
+        pack_id: TEST_PACK_ID,
         step_ticks: '1',
         reason: 'runtime_loop'
       }
     })).rejects.toThrow('persist failed');
 
-    expect(context.worldEngineStepCoordinator?.listTaintedPackIds()).toContain('world-death-note');
+    expect(context.worldEngineStepCoordinator?.listTaintedPackIds()).toContain(TEST_PACK_ID);
     expect((worldEngine.abortPreparedStep as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
   });
 
@@ -271,7 +273,7 @@ describe('world engine persistence orchestration', () => {
       },
       prepareInput: {
         protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
-        pack_id: 'world-death-note',
+        pack_id: TEST_PACK_ID,
         step_ticks: '1',
         reason: 'runtime_loop'
       }
@@ -306,7 +308,7 @@ describe('world engine persistence orchestration', () => {
       },
       prepareInput: {
         protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
-        pack_id: 'world-death-note',
+        pack_id: TEST_PACK_ID,
         step_ticks: '1',
         reason: 'runtime_loop'
       }
@@ -327,7 +329,7 @@ describe('world engine persistence orchestration', () => {
     const listSpy = vi.spyOn(entityStateRepo, 'listPackEntityStates').mockImplementation(async () => {
       return Array.from(existingStates.values()).map(item => ({
         ...item,
-        pack_id: 'world-death-note',
+        pack_id: TEST_PACK_ID,
         created_at: 0n,
         updated_at: 0n
       }));
@@ -369,7 +371,7 @@ describe('world engine persistence orchestration', () => {
 
     const result = await persistence.persistPreparedStep({
       context,
-      prepared: createPreparedStep({ packId: 'world-death-note', token: 'prepared-4', nextRevision: '4', nextTick: '4' })
+      prepared: createPreparedStep({ packId: TEST_PACK_ID, token: 'prepared-4', nextRevision: '4', nextTick: '4' })
     });
 
     expect(result.applied_operations).toContain('upsert_entity_state');
@@ -403,7 +405,7 @@ describe('world engine persistence orchestration', () => {
 
     const persistFailure = persistence.persistPreparedStep({
       context: createMinimalContext(),
-      prepared: createPreparedStep({ packId: 'world-death-note', token: 'prepared-5', nextRevision: '5', nextTick: '5' })
+      prepared: createPreparedStep({ packId: TEST_PACK_ID, token: 'prepared-5', nextRevision: '5', nextTick: '5' })
     });
     await expect(persistFailure).rejects.toBeInstanceOf(Error);
     await expect(persistFailure).rejects.toHaveProperty('details.observability.0.code', 'WORLD_CORE_DELTA_ABORTED');

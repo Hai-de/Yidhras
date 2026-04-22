@@ -8,7 +8,7 @@ const enablePackPluginRuntimeWarningTextHash = '7d49285e1f5f5893e35c1c8b3446c97f
 
 describe('plugin runtime web e2e', () => {
   it('returns canonical runtime web bundle URLs and rejects missing assets for packs without enabled plugins', async () => {
-    await withIsolatedTestServer({ defaultPort: 3110 }, async server => {
+    await withIsolatedTestServer({ defaultPort: 3110, activePackRef: 'death_note' }, async server => {
       const runtimeResponse = await requestJson(server.baseUrl, '/api/packs/world-death-note/plugins/runtime/web');
       expect(runtimeResponse.status).toBe(200);
       const runtimeData = assertSuccessEnvelopeData(runtimeResponse.body, 'plugin runtime web snapshot');

@@ -4,9 +4,11 @@ import type { AppContext } from '../../../src/app/context.js';
 import { buildWorldPackHydrateRequest, buildWorldPackSnapshot } from '../../../src/app/runtime/world_engine_snapshot.js';
 import type { SimulationManager } from '../../../src/core/simulation.js';
 
+const TEST_PACK_ID = 'world-test-pack';
+
 const createContext = (): AppContext => {
   const sim = {
-    getActivePack: () => ({ metadata: { id: 'world-death-note' } }),
+    getActivePack: () => ({ metadata: { id: TEST_PACK_ID } }),
     getCurrentTick: () => 1000n,
     getPackRuntimeHandle: () => null
   } as unknown as SimulationManager;
@@ -16,7 +18,7 @@ const createContext = (): AppContext => {
     sim,
     activePackRuntime: {
       init: vi.fn(async () => undefined),
-      getActivePack: () => ({ metadata: { id: 'world-death-note' } }) as never,
+      getActivePack: () => ({ metadata: { id: TEST_PACK_ID } }) as never,
       resolvePackVariables: vi.fn(() => ''),
       getStepTicks: () => 1n,
       getRuntimeSpeedSnapshot: vi.fn(() => ({
@@ -41,7 +43,7 @@ const createContext = (): AppContext => {
     startupHealth: {
       level: 'ok',
       checks: { db: true, world_pack_dir: true, world_pack_available: true },
-      available_world_packs: ['world-death-note'],
+      available_world_packs: [TEST_PACK_ID],
       errors: []
     },
     getRuntimeReady: () => true,
@@ -56,8 +58,8 @@ describe('world engine snapshot assembly', () => {
   it('builds a host snapshot and hydrate request for an active pack', async () => {
     const context = createContext();
 
-    const snapshot = await buildWorldPackSnapshot(context, 'world-death-note');
-    expect(snapshot.pack_id).toBe('world-death-note');
+    const snapshot = await buildWorldPackSnapshot(context, TEST_PACK_ID);
+    expect(snapshot.pack_id).toBe(TEST_PACK_ID);
     expect(snapshot.clock.current_tick).toBe('1000');
     expect(Array.isArray(snapshot.world_entities)).toBe(true);
     expect(Array.isArray(snapshot.entity_states)).toBe(true);
@@ -65,9 +67,9 @@ describe('world engine snapshot assembly', () => {
     expect(Array.isArray(snapshot.mediator_bindings)).toBe(true);
     expect(Array.isArray(snapshot.rule_execution_records)).toBe(true);
 
-    const hydrate = await buildWorldPackHydrateRequest(context, 'world-death-note');
+    const hydrate = await buildWorldPackHydrateRequest(context, TEST_PACK_ID);
     expect(hydrate.source).toBe('host_snapshot');
-    expect(hydrate.snapshot.pack_id).toBe('world-death-note');
+    expect(hydrate.snapshot.pack_id).toBe(TEST_PACK_ID);
     expect(hydrate.snapshot.clock.current_revision).toBe('1000');
   });
 });

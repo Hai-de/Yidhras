@@ -1,34 +1,34 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-21T23:33:37.514Z
+- Updated At: 2026-04-22T00:45:33.791Z
 - Status: active
 - Phase: implementation
 
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
-- 当前进度：18/18 个里程碑已完成；最新：PG16
-- 当前焦点：完成 death_note 去特判治理并把 runtime 默认语义从示例包解耦
-- 最新结论：death_note 现在已经从项目核心默认语义和 rule-based 核心特判中解耦，回到了作为参考 world-pack 的位置。
-- 下一步：下一步可继续清理测试与辅助资源中的 death_note 命名技术债，或评估把当前 reference profile 启发式进一步下沉为更通用的可插拔扩展能力。
+- 当前进度：19/19 个里程碑已完成；最新：PG17
+- 当前焦点：第二批通用测试与命名技术债第一轮治理已完成，等待是否继续扩面处理中优先级 e2e 与剩余 unit/integration 命名债
+- 最新结论：已完成第二批第一轮治理：高优先级 generic e2e 显式迁移、混合型 e2e 拆分、部分 unit/runtime 默认化命名债清理与验证全部收口。
+- 下一步：如继续推进，优先复核 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e 的 generic 归类，并扩展剩余目录的命名债治理。
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-design.md`
-- 计划：`.limcode/plans/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-implementation.plan.md`
+- 设计：`.limcode/design/第二批通用测试与命名技术债审计.md`
+- 计划：`.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md`
 - 审查：`.limcode/review/rust-migration-compatibility-debt-assessment.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [ ] 为 helper 保留兼容模式，避免一次性打碎旧 e2e 启动假设  `#phase-a-compat-mode`
-- [ ] 扩展 tests/helpers/runtime.ts，支持显式 activePackRef 与 seededPackRefs  `#phase-a-helper-api`
-- [ ] 迁移第一批强依赖 active death_note 的 e2e 为显式 active-pack 模式  `#phase-b-scenario-e2e-migration`
-- [ ] 验证迁移后的 e2e 在显式 active-pack 模式下稳定通过  `#phase-c-validation`
-- [ ] 整理第二批通用测试与命名技术债的后续迁移清单  `#phase-d-followup-audit`
+- [x] 将第二批高优先级 generic e2e 显式迁移到 activePackRef: 'example_pack'，并按需补 seededPackRefs  `#phase-d1-generic-e2e-explicit-pack`
+- [x] 完成第二批 generic e2e 的回归验证，确认不再依赖 death_note 默认 seed/active 语义  `#phase-d1-validation`
+- [x] 拆分 smoke-endpoints、experimental-runtime、experimental-plugin-runtime-web 中的 generic 与 death_note scenario 混合职责  `#phase-d2-hybrid-e2e-split`
+- [x] 汇总剩余例外项、风险与验证结果，形成后续可继续执行的收尾清单  `#phase-d3-closeout-and-doc-sync`
+- [x] 清理 unit/integration 中属于默认化命名债的 world-death-note / death_note 固定值，并保留合法 scenario fixture 命名  `#phase-d3-naming-debt-audit-and-cleanup`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -248,6 +248,18 @@
 - 摘要:
 已完成 death_note 与宿主核心的关键边界治理：rule_based provider 不再按 world-death-note 直接分支，而是改由 pack.ai.tasks.agent_decision.metadata.rule_based_profile 驱动；death_note pack 与模板已声明 notebook_investigation_reference_v1；runtime_config 与 runtime_scaffold 的默认绑定已从 death_note 切换为中性 example_pack bundled example 模板；同时新增 example_pack 的 YAML/README/CHANGELOG 模板资源，并通过 rule_based_death_note_provider、runtime_config、world_pack_schema 等针对性单测验证。
 - 下一步：下一步可继续清理测试与辅助资源中的 death_note 命名技术债，或评估把当前 reference profile 启发式进一步下沉为更通用的可插拔扩展能力。
+
+### PG17 · 第二批通用测试与命名技术债第一轮治理完成
+- 状态：completed
+- 记录时间：2026-04-22T00:45:18.200Z
+- 完成时间：2026-04-22T00:45:26.000Z
+- 关联 TODO：phase-d1-generic-e2e-explicit-pack, phase-d1-validation, phase-d2-hybrid-e2e-split, phase-d3-naming-debt-audit-and-cleanup, phase-d3-closeout-and-doc-sync
+- 关联文档：
+  - 设计：`.limcode/design/第二批通用测试与命名技术债审计.md`
+  - 计划：`.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md`
+- 摘要:
+已完成第二批治理的 D1-D3：5 个高优先级 generic e2e 已显式迁移到 example_pack；smoke-endpoints 已拆分为 generic runtime smoke 与 death_note scenario smoke 两个文件；experimental-runtime 与 experimental-plugin-runtime-web 已明确 generic/scenario 边界；并将部分 unit/runtime 默认化命名债替换为中性测试 pack id，同时保留合法 death_note scenario fixture 命名。
+- 下一步：后续若继续扩面，应审查 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e 是否适合继续 generic 化，并在 unit/integration 中按目录推进剩余 world-death-note 默认化硬编码清理。
 <!-- LIMCODE_PROGRESS_MILESTONES_END -->
 
 ## 风险与阻塞
@@ -259,26 +271,26 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-21T22:00:18.388Z | milestone_recorded | PG13 | 记录里程碑：Death Note 世界包 Phase A 闭环完成
-- 2026-04-21T22:06:44.305Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md
-- 2026-04-21T22:06:55.675Z | updated | phase-b-ai-memory | 完成 Death Note 世界包 AI task / memory_loop 配置扩展，已同步 README/CHANGELOG，并通过针对性 unit/integration 验证。
-- 2026-04-21T22:11:30.904Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md
-- 2026-04-21T22:11:40.455Z | milestone_recorded | PG14 | 记录里程碑：Death Note 世界包 Phase B 完成
-- 2026-04-21T22:16:31.738Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md
-- 2026-04-21T22:16:44.769Z | updated | phase-c-storage-gate | 完成 Death Note 世界包 Phase C：引入三类 pack_collections，并通过 schema、install 与 materializer 验证门禁。
-- 2026-04-21T22:16:58.304Z | milestone_recorded | PG15 | 记录里程碑：Death Note 世界包内容扩展主线完成
-- 2026-04-21T22:38:11.681Z | updated | phase-d-pack-storage-write-chain | 已新增 pack_collection_repo，并在 memory recording service 中把 reviseJudgementPlan / updateTargetDossier / recordExecutionReflection 分别桥接到 judgement_plans / target_dossiers / investigation_threads。
-- 2026-04-21T22:38:11.681Z | updated | phase-d-pack-storage-tests | 已补 pack_collection_repo、memory_recording_pack_collection_bridge、pack_runtime_install、pack_runtime_materializer 的针对性测试并通过验证。
-- 2026-04-21T22:48:36.208Z | artifact_changed | design | 同步设计文档：.limcode/design/world-pack-boundary-convergence-and-death-note-doc-migration-design.md
-- 2026-04-21T22:51:42.122Z | artifact_changed | plan | 同步计划文档：.limcode/plans/world-pack-boundary-convergence-and-death-note-doc-migration-implementation.plan.md
-- 2026-04-21T22:58:26.647Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/world-pack-boundary-convergence-and-death-note-doc-migration-implementation.plan.md
-- 2026-04-21T22:58:33.801Z | updated | world-pack-boundary-convergence-docs | 完成 WORLD_PACK 与 LOGIC 的项目级去中心化改写，并新增 death_note/DESIGN.md 以承接包专属设计说明与边界治理清单。
-- 2026-04-21T23:10:55.769Z | updated | phase-3-rule-based-detachment | rule_based provider 已从 world-death-note 直连分支改为 rule_based_profile 配置驱动，并由 death_note pack 自身声明 notebook_investigation_reference_v1。
-- 2026-04-21T23:10:55.769Z | updated | phase-3-runtime-default-decoupling | runtime_config 与 runtime_scaffold 的默认绑定已从 death_note 切换到中性 example_pack bundled example 模板。
-- 2026-04-21T23:10:55.769Z | updated | phase-3-regression-validation | 已通过 rule_based_death_note_provider、runtime_config、world_pack_schema 三组针对性单测，确认去特判后示例包与通用框架仍可运行。
-- 2026-04-21T23:11:07.830Z | milestone_recorded | PG16 | 记录里程碑：Death Note 去特判与默认语义解耦完成
-- 2026-04-21T23:31:36.383Z | artifact_changed | design | 同步设计文档：.limcode/design/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-design.md
-- 2026-04-21T23:33:37.514Z | artifact_changed | plan | 同步计划文档：.limcode/plans/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-implementation.plan.md
+- 2026-04-21T23:57:20.839Z | updated | phase-c-validation | 再次验证 5 个第一批场景 e2e：world_pack_projection_endpoints、plugin-runtime-startup-gap、plugin-runtime-web、experimental-projection-compat、experimental-runtime 均保持通过。
+- 2026-04-21T23:57:20.839Z | updated | phase-d-followup-audit | 已确认 trigger-event.spec.ts 的残余问题不是 active-pack helper，而是 trigger_event dispatch_pending 与 semantic_intent decision_running 两类收敛假设混叠。
+- 2026-04-22T00:07:36.115Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-implementation.plan.md
+- 2026-04-22T00:07:49.145Z | updated | phase-b-scenario-e2e-migration | trigger-event.spec.ts 已按运行时语义拆分为稳定子场景，第一批 6 个显式 active-pack 目标文件全部迁移完成。
+- 2026-04-22T00:07:49.145Z | updated | phase-c-validation | 已完成 6 文件联合回归：world_pack_projection_endpoints、trigger-event、plugin-runtime-startup-gap、plugin-runtime-web、experimental-projection-compat、experimental-runtime，共 11 个测试全部通过。
+- 2026-04-22T00:16:05.302Z | artifact_changed | design | 同步设计文档：.limcode/design/第二批通用测试与命名技术债审计.md
+- 2026-04-22T00:20:21.515Z | artifact_changed | plan | 同步计划文档：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md
+- 2026-04-22T00:21:16.057Z | artifact_changed | plan | 同步计划文档：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md
+- 2026-04-22T00:21:16.057Z | updated | phase-d1-start | 开始执行第二批通用测试与命名技术债计划，当前优先迁移高优先级 generic e2e 到显式 example_pack。
+- 2026-04-22T00:21:23.542Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md
+- 2026-04-22T00:23:49.914Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md
+- 2026-04-22T00:24:02.577Z | updated | phase-d1-generic-e2e-explicit-pack | 已将 smoke-startup、overview-summary、scheduler-runtime-status、scheduler-queries、access-policy-contracts 五个 generic e2e 显式迁移到 activePackRef/seededPackRefs = example_pack。
+- 2026-04-22T00:24:02.577Z | updated | phase-d1-validation | 已完成上述五个 generic e2e 的逐文件回归验证，确认不再依赖 death_note 默认 seed/active 语义。
+- 2026-04-22T00:42:28.368Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md
+- 2026-04-22T00:42:42.877Z | updated | phase-d2-hybrid-e2e-split | 已将 smoke-endpoints 拆分为 smoke-generic-runtime-endpoints 与 smoke-death-note-scenario-endpoints，并将 experimental-runtime / experimental-plugin-runtime-web 的 generic 与 scenario 边界显式化。
+- 2026-04-22T00:42:42.877Z | updated | phase-d2-validation | 已完成第二批 generic + 混合拆分后的 9 个 e2e 文件联合回归，共 10 个测试通过。
+- 2026-04-22T00:45:06.921Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md
+- 2026-04-22T00:45:18.200Z | milestone_recorded | PG17 | 记录里程碑：第二批通用测试与命名技术债第一轮治理完成
+- 2026-04-22T00:45:33.791Z | updated | phase-d3-naming-debt-audit-and-cleanup | 已将 world_engine_persistence、world_engine_snapshot、context_memory_blocks_source_rust_modes 等 unit/runtime 测试中的默认化 world-death-note 硬编码替换为中性测试 pack id，并保留合法 death_note scenario 命名。
+- 2026-04-22T00:45:33.791Z | milestone_recorded | PG17 | 记录里程碑：第二批通用测试与命名技术债第一轮治理完成
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -288,43 +300,43 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-17T21:05:29.611Z",
-  "updatedAt": "2026-04-21T23:33:37.514Z",
+  "updatedAt": "2026-04-22T00:45:33.791Z",
   "status": "active",
   "phase": "implementation",
-  "currentFocus": "完成 death_note 去特判治理并把 runtime 默认语义从示例包解耦",
-  "latestConclusion": "death_note 现在已经从项目核心默认语义和 rule-based 核心特判中解耦，回到了作为参考 world-pack 的位置。",
+  "currentFocus": "第二批通用测试与命名技术债第一轮治理已完成，等待是否继续扩面处理中优先级 e2e 与剩余 unit/integration 命名债",
+  "latestConclusion": "已完成第二批第一轮治理：高优先级 generic e2e 显式迁移、混合型 e2e 拆分、部分 unit/runtime 默认化命名债清理与验证全部收口。",
   "currentBlocker": null,
-  "nextAction": "下一步可继续清理测试与辅助资源中的 death_note 命名技术债，或评估把当前 reference profile 启发式进一步下沉为更通用的可插拔扩展能力。",
+  "nextAction": "如继续推进，优先复核 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e 的 generic 归类，并扩展剩余目录的命名债治理。",
   "activeArtifacts": {
-    "design": ".limcode/design/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-design.md",
-    "plan": ".limcode/plans/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-implementation.plan.md",
+    "design": ".limcode/design/第二批通用测试与命名技术债审计.md",
+    "plan": ".limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md",
     "review": ".limcode/review/rust-migration-compatibility-debt-assessment.md"
   },
   "todos": [
     {
-      "id": "phase-a-compat-mode",
-      "content": "为 helper 保留兼容模式，避免一次性打碎旧 e2e 启动假设",
-      "status": "pending"
+      "id": "phase-d1-generic-e2e-explicit-pack",
+      "content": "将第二批高优先级 generic e2e 显式迁移到 activePackRef: 'example_pack'，并按需补 seededPackRefs",
+      "status": "completed"
     },
     {
-      "id": "phase-a-helper-api",
-      "content": "扩展 tests/helpers/runtime.ts，支持显式 activePackRef 与 seededPackRefs",
-      "status": "pending"
+      "id": "phase-d1-validation",
+      "content": "完成第二批 generic e2e 的回归验证，确认不再依赖 death_note 默认 seed/active 语义",
+      "status": "completed"
     },
     {
-      "id": "phase-b-scenario-e2e-migration",
-      "content": "迁移第一批强依赖 active death_note 的 e2e 为显式 active-pack 模式",
-      "status": "pending"
+      "id": "phase-d2-hybrid-e2e-split",
+      "content": "拆分 smoke-endpoints、experimental-runtime、experimental-plugin-runtime-web 中的 generic 与 death_note scenario 混合职责",
+      "status": "completed"
     },
     {
-      "id": "phase-c-validation",
-      "content": "验证迁移后的 e2e 在显式 active-pack 模式下稳定通过",
-      "status": "pending"
+      "id": "phase-d3-closeout-and-doc-sync",
+      "content": "汇总剩余例外项、风险与验证结果，形成后续可继续执行的收尾清单",
+      "status": "completed"
     },
     {
-      "id": "phase-d-followup-audit",
-      "content": "整理第二批通用测试与命名技术债的后续迁移清单",
-      "status": "pending"
+      "id": "phase-d3-naming-debt-audit-and-cleanup",
+      "content": "清理 unit/integration 中属于默认化命名债的 world-death-note / death_note 固定值，并保留合法 scenario fixture 命名",
+      "status": "completed"
     }
   ],
   "milestones": [
@@ -682,144 +694,165 @@
       "completedAt": "2026-04-21T23:11:07.830Z",
       "recordedAt": "2026-04-21T23:11:07.830Z",
       "nextAction": "下一步可继续清理测试与辅助资源中的 death_note 命名技术债，或评估把当前 reference profile 启发式进一步下沉为更通用的可插拔扩展能力。"
+    },
+    {
+      "id": "PG17",
+      "title": "第二批通用测试与命名技术债第一轮治理完成",
+      "status": "completed",
+      "summary": "已完成第二批治理的 D1-D3：5 个高优先级 generic e2e 已显式迁移到 example_pack；smoke-endpoints 已拆分为 generic runtime smoke 与 death_note scenario smoke 两个文件；experimental-runtime 与 experimental-plugin-runtime-web 已明确 generic/scenario 边界；并将部分 unit/runtime 默认化命名债替换为中性测试 pack id，同时保留合法 death_note scenario fixture 命名。",
+      "relatedTodoIds": [
+        "phase-d1-generic-e2e-explicit-pack",
+        "phase-d1-validation",
+        "phase-d2-hybrid-e2e-split",
+        "phase-d3-naming-debt-audit-and-cleanup",
+        "phase-d3-closeout-and-doc-sync"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/第二批通用测试与命名技术债审计.md",
+        "plan": ".limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md"
+      },
+      "completedAt": "2026-04-22T00:45:26.000Z",
+      "recordedAt": "2026-04-22T00:45:18.200Z",
+      "nextAction": "后续若继续扩面，应审查 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e 是否适合继续 generic 化，并在 unit/integration 中按目录推进剩余 world-death-note 默认化硬编码清理。"
     }
   ],
   "risks": [],
   "log": [
     {
-      "at": "2026-04-21T22:00:18.388Z",
-      "type": "milestone_recorded",
-      "refId": "PG13",
-      "message": "记录里程碑：Death Note 世界包 Phase A 闭环完成"
+      "at": "2026-04-21T23:57:20.839Z",
+      "type": "updated",
+      "refId": "phase-c-validation",
+      "message": "再次验证 5 个第一批场景 e2e：world_pack_projection_endpoints、plugin-runtime-startup-gap、plugin-runtime-web、experimental-projection-compat、experimental-runtime 均保持通过。"
     },
     {
-      "at": "2026-04-21T22:06:44.305Z",
+      "at": "2026-04-21T23:57:20.839Z",
+      "type": "updated",
+      "refId": "phase-d-followup-audit",
+      "message": "已确认 trigger-event.spec.ts 的残余问题不是 active-pack helper，而是 trigger_event dispatch_pending 与 semantic_intent decision_running 两类收敛假设混叠。"
+    },
+    {
+      "at": "2026-04-22T00:07:36.115Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md"
+      "message": "同步计划 TODO 快照：.limcode/plans/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-implementation.plan.md"
     },
     {
-      "at": "2026-04-21T22:06:55.675Z",
+      "at": "2026-04-22T00:07:49.145Z",
       "type": "updated",
-      "refId": "phase-b-ai-memory",
-      "message": "完成 Death Note 世界包 AI task / memory_loop 配置扩展，已同步 README/CHANGELOG，并通过针对性 unit/integration 验证。"
+      "refId": "phase-b-scenario-e2e-migration",
+      "message": "trigger-event.spec.ts 已按运行时语义拆分为稳定子场景，第一批 6 个显式 active-pack 目标文件全部迁移完成。"
     },
     {
-      "at": "2026-04-21T22:11:30.904Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-21T22:11:40.455Z",
-      "type": "milestone_recorded",
-      "refId": "PG14",
-      "message": "记录里程碑：Death Note 世界包 Phase B 完成"
-    },
-    {
-      "at": "2026-04-21T22:16:31.738Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/death-note-world-pack-content-expansion-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-21T22:16:44.769Z",
+      "at": "2026-04-22T00:07:49.145Z",
       "type": "updated",
-      "refId": "phase-c-storage-gate",
-      "message": "完成 Death Note 世界包 Phase C：引入三类 pack_collections，并通过 schema、install 与 materializer 验证门禁。"
+      "refId": "phase-c-validation",
+      "message": "已完成 6 文件联合回归：world_pack_projection_endpoints、trigger-event、plugin-runtime-startup-gap、plugin-runtime-web、experimental-projection-compat、experimental-runtime，共 11 个测试全部通过。"
     },
     {
-      "at": "2026-04-21T22:16:58.304Z",
-      "type": "milestone_recorded",
-      "refId": "PG15",
-      "message": "记录里程碑：Death Note 世界包内容扩展主线完成"
-    },
-    {
-      "at": "2026-04-21T22:38:11.681Z",
-      "type": "updated",
-      "refId": "phase-d-pack-storage-write-chain",
-      "message": "已新增 pack_collection_repo，并在 memory recording service 中把 reviseJudgementPlan / updateTargetDossier / recordExecutionReflection 分别桥接到 judgement_plans / target_dossiers / investigation_threads。"
-    },
-    {
-      "at": "2026-04-21T22:38:11.681Z",
-      "type": "updated",
-      "refId": "phase-d-pack-storage-tests",
-      "message": "已补 pack_collection_repo、memory_recording_pack_collection_bridge、pack_runtime_install、pack_runtime_materializer 的针对性测试并通过验证。"
-    },
-    {
-      "at": "2026-04-21T22:48:36.208Z",
+      "at": "2026-04-22T00:16:05.302Z",
       "type": "artifact_changed",
       "refId": "design",
-      "message": "同步设计文档：.limcode/design/world-pack-boundary-convergence-and-death-note-doc-migration-design.md"
+      "message": "同步设计文档：.limcode/design/第二批通用测试与命名技术债审计.md"
     },
     {
-      "at": "2026-04-21T22:51:42.122Z",
+      "at": "2026-04-22T00:20:21.515Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/world-pack-boundary-convergence-and-death-note-doc-migration-implementation.plan.md"
+      "message": "同步计划文档：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md"
     },
     {
-      "at": "2026-04-21T22:58:26.647Z",
+      "at": "2026-04-22T00:21:16.057Z",
       "type": "artifact_changed",
       "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/world-pack-boundary-convergence-and-death-note-doc-migration-implementation.plan.md"
+      "message": "同步计划文档：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md"
     },
     {
-      "at": "2026-04-21T22:58:33.801Z",
+      "at": "2026-04-22T00:21:16.057Z",
       "type": "updated",
-      "refId": "world-pack-boundary-convergence-docs",
-      "message": "完成 WORLD_PACK 与 LOGIC 的项目级去中心化改写，并新增 death_note/DESIGN.md 以承接包专属设计说明与边界治理清单。"
+      "refId": "phase-d1-start",
+      "message": "开始执行第二批通用测试与命名技术债计划，当前优先迁移高优先级 generic e2e 到显式 example_pack。"
     },
     {
-      "at": "2026-04-21T23:10:55.769Z",
+      "at": "2026-04-22T00:21:23.542Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md"
+    },
+    {
+      "at": "2026-04-22T00:23:49.914Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md"
+    },
+    {
+      "at": "2026-04-22T00:24:02.577Z",
       "type": "updated",
-      "refId": "phase-3-rule-based-detachment",
-      "message": "rule_based provider 已从 world-death-note 直连分支改为 rule_based_profile 配置驱动，并由 death_note pack 自身声明 notebook_investigation_reference_v1。"
+      "refId": "phase-d1-generic-e2e-explicit-pack",
+      "message": "已将 smoke-startup、overview-summary、scheduler-runtime-status、scheduler-queries、access-policy-contracts 五个 generic e2e 显式迁移到 activePackRef/seededPackRefs = example_pack。"
     },
     {
-      "at": "2026-04-21T23:10:55.769Z",
+      "at": "2026-04-22T00:24:02.577Z",
       "type": "updated",
-      "refId": "phase-3-runtime-default-decoupling",
-      "message": "runtime_config 与 runtime_scaffold 的默认绑定已从 death_note 切换到中性 example_pack bundled example 模板。"
+      "refId": "phase-d1-validation",
+      "message": "已完成上述五个 generic e2e 的逐文件回归验证，确认不再依赖 death_note 默认 seed/active 语义。"
     },
     {
-      "at": "2026-04-21T23:10:55.769Z",
+      "at": "2026-04-22T00:42:28.368Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md"
+    },
+    {
+      "at": "2026-04-22T00:42:42.877Z",
       "type": "updated",
-      "refId": "phase-3-regression-validation",
-      "message": "已通过 rule_based_death_note_provider、runtime_config、world_pack_schema 三组针对性单测，确认去特判后示例包与通用框架仍可运行。"
+      "refId": "phase-d2-hybrid-e2e-split",
+      "message": "已将 smoke-endpoints 拆分为 smoke-generic-runtime-endpoints 与 smoke-death-note-scenario-endpoints，并将 experimental-runtime / experimental-plugin-runtime-web 的 generic 与 scenario 边界显式化。"
     },
     {
-      "at": "2026-04-21T23:11:07.830Z",
+      "at": "2026-04-22T00:42:42.877Z",
+      "type": "updated",
+      "refId": "phase-d2-validation",
+      "message": "已完成第二批 generic + 混合拆分后的 9 个 e2e 文件联合回归，共 10 个测试通过。"
+    },
+    {
+      "at": "2026-04-22T00:45:06.921Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md"
+    },
+    {
+      "at": "2026-04-22T00:45:18.200Z",
       "type": "milestone_recorded",
-      "refId": "PG16",
-      "message": "记录里程碑：Death Note 去特判与默认语义解耦完成"
+      "refId": "PG17",
+      "message": "记录里程碑：第二批通用测试与命名技术债第一轮治理完成"
     },
     {
-      "at": "2026-04-21T23:31:36.383Z",
-      "type": "artifact_changed",
-      "refId": "design",
-      "message": "同步设计文档：.limcode/design/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-design.md"
+      "at": "2026-04-22T00:45:33.791Z",
+      "type": "updated",
+      "refId": "phase-d3-naming-debt-audit-and-cleanup",
+      "message": "已将 world_engine_persistence、world_engine_snapshot、context_memory_blocks_source_rust_modes 等 unit/runtime 测试中的默认化 world-death-note 硬编码替换为中性测试 pack id，并保留合法 death_note scenario 命名。"
     },
     {
-      "at": "2026-04-21T23:33:37.514Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-implementation.plan.md"
+      "at": "2026-04-22T00:45:33.791Z",
+      "type": "milestone_recorded",
+      "refId": "PG17",
+      "message": "记录里程碑：第二批通用测试与命名技术债第一轮治理完成"
     }
   ],
   "stats": {
-    "milestonesTotal": 18,
-    "milestonesCompleted": 18,
+    "milestonesTotal": 19,
+    "milestonesCompleted": 19,
     "todosTotal": 5,
-    "todosCompleted": 0,
+    "todosCompleted": 5,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-21T23:33:37.514Z",
-    "bodyHash": "sha256:45727008833938eeea82314dea437cb4a7323c675f768c6bab51b9684351860e"
+    "generatedAt": "2026-04-22T00:45:33.791Z",
+    "bodyHash": "sha256:ebd4d3a9b308708575ddeb7b61087fa1d63e625fc8c24e8a9b79304d749cb7e5"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

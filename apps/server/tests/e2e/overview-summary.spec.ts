@@ -6,7 +6,11 @@ import { requestJson } from '../helpers/server.js';
 
 describe('overview summary e2e', () => {
   it('returns runtime, world time and audit aggregates for the operator summary page', async () => {
-    await withIsolatedTestServer({ defaultPort: 3104 }, async server => {
+    await withIsolatedTestServer({
+      defaultPort: 3104,
+      activePackRef: 'example_pack',
+      seededPackRefs: ['example_pack']
+    }, async server => {
       const statusResponse = await requestJson(server.baseUrl, '/api/status');
       expect(statusResponse.status).toBe(200);
       const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');

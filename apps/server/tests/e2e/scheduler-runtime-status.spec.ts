@@ -6,7 +6,11 @@ import { requestJson } from '../helpers/server.js';
 
 describe('scheduler runtime status e2e', () => {
   it('reports runtime loop and sqlite diagnostics', async () => {
-    await withIsolatedTestServer({ defaultPort: 3111 }, async server => {
+    await withIsolatedTestServer({
+      defaultPort: 3111,
+      activePackRef: 'example_pack',
+      seededPackRefs: ['example_pack']
+    }, async server => {
       const response = await requestJson(server.baseUrl, '/api/status');
       expect(response.status).toBe(200);
 
