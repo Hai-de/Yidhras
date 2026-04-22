@@ -46,6 +46,12 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T
   }
 };
 
+const AUTH_ERROR_CODES = new Set([
+  'AI_PROVIDER_AUTH_MISSING',
+  'AI_PROVIDER_AUTH_INVALID',
+  'AI_PROVIDER_AUTH_EXPIRED'
+]);
+
 const normalizeThrownError = (err: unknown): NonNullable<ModelGatewayResponse['error']> => {
   if (err instanceof ApiError) {
     const stage = err.code === 'AI_PROVIDER_TIMEOUT'
@@ -53,11 +59,12 @@ const normalizeThrownError = (err: unknown): NonNullable<ModelGatewayResponse['e
       : err.code.startsWith('AI_ROUTE_') || err.code.startsWith('AI_PROVIDER_ADAPTER_')
         ? 'route'
         : 'provider';
+    const retryable = err.status >= 500 && !AUTH_ERROR_CODES.has(err.code);
 
     return {
       code: err.code,
       message: err.message,
-      retryable: err.status >= 500,
+      retryable,
       stage
     };
   }

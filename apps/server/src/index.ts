@@ -22,6 +22,7 @@ import { registerRelationalRoutes } from './app/routes/relational.js';
 import { registerSchedulerRoutes } from './app/routes/scheduler.js';
 import { registerSocialRoutes } from './app/routes/social.js';
 import { registerSystemRoutes } from './app/routes/system.js';
+import { createRuntimeClockProjectionService } from './app/runtime/runtime_clock_projection.js';
 import { createRuntimeKernelService } from './app/runtime/runtime_kernel_service.js';
 import { resolveOwnedSchedulerPartitionIds } from './app/runtime/scheduler_partitioning.js';
 import {
@@ -44,6 +45,7 @@ import {
   createMemoryRuntimePort
 } from './app/services/context_memory_ports.js';
 import { ensureSchedulerBootstrapOwnership, resetDevelopmentRuntimeState } from './app/services/system.js';
+import type { CalendarConfig } from './clock/types.js';
 import {
   getAppPort,
   getPreferredWorldPack,
@@ -124,6 +126,7 @@ const appContext: AppContext = {
     httpApp = app;
   },
   worldEngineStepCoordinator: createWorldEngineStepCoordinator(),
+  runtimeClockProjection: createRuntimeClockProjectionService(),
   assertRuntimeReady
 };
 
@@ -300,8 +303,16 @@ const start = async (): Promise<void> => {
       }
 
       await sim.init(selectedPack);
+      const activePack = sim.getActivePack();
+      const activePackId = activePack?.metadata.id ?? selectedPack;
+      appContext.runtimeClockProjection?.rebuildFromRuntimeSeed({
+        pack_id: activePackId,
+        current_tick: sim.getCurrentTick().toString(),
+        current_revision: sim.getCurrentRevision().toString(),
+        calendars: (activePack?.time_systems ?? []) as unknown as CalendarConfig[]
+      });
+
       if (appContext.worldEngine instanceof WorldEngineSidecarClient) {
-        const activePackId = sim.getActivePack()?.metadata.id ?? selectedPack;
         await appContext.worldEngine.loadPack({
           pack_id: activePackId,
           pack_ref: selectedPack,

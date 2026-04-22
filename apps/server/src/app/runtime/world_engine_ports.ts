@@ -81,6 +81,15 @@ const getActivePackId = (context: AppContext): string | null => {
   return getActiveRuntimeFacade(context, 'world_engine_ports.getActivePackId').getActivePack()?.metadata.id ?? null;
 };
 
+const getProjectedCurrentTick = (context: AppContext, packId: string): string | null => {
+  const projected = context.runtimeClockProjection?.getSnapshot(packId);
+  if (!projected) {
+    return null;
+  }
+
+  return projected.current_tick;
+};
+
 const getActiveCurrentTick = (context: AppContext): string | null => {
   const activePackId = getActivePackId(context);
   if (!activePackId) {
@@ -109,11 +118,12 @@ const getPackSummary = (context: AppContext, packId: string): PackRuntimeSummary
   const normalizedPackId = normalizePackId(packId);
   const activePackId = getActivePackId(context);
   if (activePackId === normalizedPackId) {
+    const projectedTick = getProjectedCurrentTick(context, normalizedPackId);
     return {
       pack_id: normalizedPackId,
       pack_folder_name: null,
       health_status: context.getPaused() ? 'paused' : 'running',
-      current_tick: getActiveCurrentTick(context),
+      current_tick: projectedTick ?? getActiveCurrentTick(context),
       runtime_ready: context.getRuntimeReady()
     };
   }
@@ -304,7 +314,7 @@ export const createPackHostApi = (context: AppContext): PackHostApi => {
         pack_id: packId,
         query_name: input.query_name,
         current_tick: summary?.current_tick ?? null,
-        current_revision: summary?.current_tick ?? null,
+        current_revision: context.activePackRuntime?.getCurrentRevision().toString() ?? null,
         data,
         next_cursor: null,
         warnings: []

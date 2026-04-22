@@ -367,6 +367,24 @@ describe('ai gateway unit', () => {
     expect(resolveAiTaskConfig({ taskType: 'memory_compaction', packAiConfig }).metadata).toMatchObject({ retention_bias: ['target_identity_confirmation', 'execution_postmortem'] });
     expect(resolveAiTaskConfig({ taskType: 'classification', packAiConfig }).prompt.preset).toBe('death_note_classification_v1');
     expect(resolveAiTaskConfig({ taskType: 'classification', packAiConfig }).metadata).toMatchObject({ labels: ['execution_window', 'false_lead', 'pressure_escalation'] });
+    expect(resolveAiTaskConfig({ taskType: 'intent_grounding_assist', packAiConfig }).route.route_id).toBe('default.context_summary');
+    expect(resolveAiTaskConfig({ taskType: 'context_summary', packAiConfig }).route.route_id).toBe('default.context_summary');
+  });
+
+  it('prefers explicit pack task route override for intent grounding assist when provided', () => {
+    const packAiConfig = {
+      tasks: {
+        intent_grounding_assist: {
+          route: {
+            route_id: 'default.context_summary',
+            provider: 'openai',
+            model: 'gpt-4.1-mini'
+          }
+        }
+      }
+    } as const;
+
+    expect(resolveAiTaskConfig({ taskType: 'intent_grounding_assist', packAiConfig }).route.route_id).toBe('default.context_summary');
   });
 
   it('resolves pack-aware route and prioritizes explicit model hint without failing when the hinted model is absent from route candidates', () => {
@@ -389,6 +407,24 @@ describe('ai gateway unit', () => {
     expect(selected.route.route_id).toBe('default.agent_decision');
     expect(selected.primary_model_candidates.length).toBeGreaterThan(0);
     expect(selected.primary_model_candidates[0]?.provider).toBe('openai');
+  });
+
+  it('supports context-summary route for intent grounding assist when no explicit route override is present', () => {
+    const selected = resolveAiRoute({
+      task_type: 'intent_grounding_assist',
+      pack_id: 'world-death-note',
+      response_mode: 'json_schema'
+    });
+
+    expect(selected.route.route_id).toBe('default.context_summary');
+    expect(selected.route.task_types).toContain('intent_grounding_assist');
+  });
+
+  it('supports rerank route resolution through default.context_summary', () => {
+    const selected = resolveAiRoute({ task_type: 'rerank', response_mode: 'json_object' });
+
+    expect(selected.route.route_id).toBe('default.context_summary');
+    expect(selected.route.task_types).toContain('rerank');
   });
 
   it('adapts prompt bundle into structured ai messages and carries workflow metadata', () => {

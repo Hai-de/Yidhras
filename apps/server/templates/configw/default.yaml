@@ -133,6 +133,7 @@ runtime:
     bootstrap_packs: []
 
 features:
+  ai_gateway_enabled: false
   inference_trace: true
   notifications: true
   experimental:

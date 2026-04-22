@@ -2,33 +2,37 @@ import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
+import type {
+  PreparedWorldStep,
+  WorldEngineCommitResult,
+  WorldEngineHealthSnapshot,
+  WorldEngineLoadResult,
+  WorldEnginePackMode,
+  WorldEnginePackStatus,
+  WorldProtocolHandshakeRequest,
+  WorldProtocolHandshakeResponse,
+  WorldRuleExecuteObjectiveRequest,
+  WorldRuleExecuteObjectiveResult,
+  WorldStateQuery,
+  WorldStateQueryResult,
+  WorldStepAbortRequest,
+  WorldStepCommitRequest,
+  WorldStepPrepareRequest
+} from '@yidhras/contracts';
 import {
-  type PreparedWorldStep,
   preparedWorldStepSchema,
   WORLD_ENGINE_PROTOCOL_VERSION,
-  type WorldEngineCommitResult,
   worldEngineCommitResultSchema,
-  type WorldEngineHealthSnapshot,
   worldEngineHealthSnapshotSchema,
-  type WorldEngineLoadResult,
   worldEngineLoadResultSchema,
-  type WorldEnginePackMode,
-  type WorldEnginePackStatus,
   worldEnginePackStatusSchema,
-  type WorldProtocolHandshakeRequest,
   worldProtocolHandshakeRequestSchema,
-  type WorldProtocolHandshakeResponse,
   worldProtocolHandshakeResponseSchema,
-  type WorldRuleExecuteObjectiveRequest,
-  type WorldRuleExecuteObjectiveResult,
   worldRuleExecuteObjectiveResultSchema,
-  type WorldStateQuery,
-  type WorldStateQueryResult,
   worldStateQueryResultSchema,
-  type WorldStepAbortRequest,
-  type WorldStepCommitRequest,
-  type WorldStepPrepareRequest} from '@yidhras/contracts';
+} from '@yidhras/contracts';
 
+import { resolveFromWorkspaceRoot } from '../../../config/loader.js';
 import { ApiError } from '../../../utils/api_error.js';
 import type { WorldEnginePort } from '../world_engine_ports.js';
 
@@ -114,8 +118,9 @@ class ProcessWorldEngineSidecarTransport implements WorldEngineSidecarTransport 
       return;
     }
 
-    const resolvedBinaryPath = this.options.binaryPath.trim().length > 0
-      ? path.resolve(process.cwd(), this.options.binaryPath)
+    const configuredBinaryPath = this.options.binaryPath.trim();
+    const resolvedBinaryPath = configuredBinaryPath.length > 0
+      ? resolveFromWorkspaceRoot(configuredBinaryPath)
       : null;
 
     if (resolvedBinaryPath) {

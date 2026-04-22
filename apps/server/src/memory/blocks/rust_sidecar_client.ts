@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import { getErrorMessage } from '../../app/http/errors.js';
+import { resolveFromWorkspaceRoot } from '../../config/loader.js';
 import { ApiError } from '../../utils/api_error.js';
 import type {
   MemoryTriggerSourceEvaluateInput,
@@ -98,8 +99,9 @@ class ProcessMemoryTriggerSidecarTransport implements MemoryTriggerSidecarTransp
       return;
     }
 
-    const resolvedBinaryPath = this.options.binaryPath.trim().length > 0
-      ? path.resolve(process.cwd(), this.options.binaryPath)
+    const configuredBinaryPath = this.options.binaryPath.trim();
+    const resolvedBinaryPath = configuredBinaryPath.length > 0
+      ? resolveFromWorkspaceRoot(configuredBinaryPath)
       : null;
 
     if (resolvedBinaryPath) {

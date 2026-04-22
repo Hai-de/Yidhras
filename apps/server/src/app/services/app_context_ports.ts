@@ -9,6 +9,10 @@ import type {
 import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
 import type { WorldPack } from '../../packs/manifest/loader.js';
 import type { RuntimeDatabaseBootstrap } from '../runtime/runtime_bootstrap.js';
+import type {
+  ActivePackRuntimeProjectionPort,
+  RuntimeClockProjectionService
+} from '../runtime/runtime_clock_projection.js';
 import type { RuntimeKernelFacade } from '../runtime/runtime_kernel_ports.js';
 import type { PackHostApi, WorldEnginePort } from '../runtime/world_engine_ports.js';
 import type { ContextAssemblyPort, MemoryRuntimePort } from './context_memory_ports.js';
@@ -22,9 +26,12 @@ export interface ActivePackRuntimeFacade {
   setRuntimeSpeedOverride(stepTicks: bigint): void;
   clearRuntimeSpeedOverride(): void;
   getCurrentTick(): bigint;
+  getCurrentRevision(): bigint;
   getAllTimes(): unknown;
   step(amount?: bigint): Promise<void>;
 }
+
+export interface HostRuntimeKernelFacade extends ActivePackRuntimeFacade, ActivePackRuntimeProjectionPort {}
 
 export interface PackCatalogService {
   listAvailablePacks(): string[];
@@ -58,6 +65,7 @@ export interface AppContextPorts {
   runtimeKernel?: RuntimeKernelFacade;
   worldEngine?: WorldEnginePort;
   packHostApi?: PackHostApi;
+  runtimeClockProjection?: RuntimeClockProjectionService;
   pluginHost?: PluginHostPort;
   contextAssembly?: ContextAssemblyPort;
   memoryRuntime?: MemoryRuntimePort;

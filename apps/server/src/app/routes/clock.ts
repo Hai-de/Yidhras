@@ -26,6 +26,23 @@ export const registerClockRoutes = (
   context: AppContext,
   deps: ClockRouteDependencies
 ): void => {
+  const readProjectedClock = () => {
+    const packId = context.activePackRuntime?.getActivePack()?.metadata.id?.trim() ?? '';
+    if (!packId) {
+      return null;
+    }
+
+    const projected = context.runtimeClockProjection?.readFormattedClock(packId);
+    if (projected) {
+      return projected;
+    }
+
+    return {
+      absolute_ticks: context.sim.getCurrentTick().toString(),
+      calendars: deps.toJsonSafe(context.sim.getAllTimes()) as unknown[]
+    };
+  };
+
   app.post('/api/runtime/speed', (req, res) => {
     context.assertRuntimeReady('runtime speed control');
     const body = parseBody(runtimeSpeedOverrideRequestSchema, req.body, 'RUNTIME_SPEED_INVALID');
@@ -54,8 +71,9 @@ export const registerClockRoutes = (
 
   app.get('/api/clock', (_req, res) => {
     context.assertRuntimeReady('clock read');
+    const projected = readProjectedClock();
     jsonOk(res, {
-      absolute_ticks: context.sim.getCurrentTick().toString(),
+      absolute_ticks: projected?.absolute_ticks ?? context.sim.getCurrentTick().toString(),
       calendars: []
     });
   });
@@ -63,9 +81,10 @@ export const registerClockRoutes = (
   app.get('/api/clock/formatted', (_req, res, next) => {
     context.assertRuntimeReady('clock formatted read');
     try {
+      const projected = readProjectedClock();
       jsonOk(res, {
-        absolute_ticks: context.sim.getCurrentTick().toString(),
-        calendars: deps.toJsonSafe(context.sim.getAllTimes())
+        absolute_ticks: projected?.absolute_ticks ?? context.sim.getCurrentTick().toString(),
+        calendars: projected?.calendars ?? deps.toJsonSafe(context.sim.getAllTimes())
       });
     } catch (err: unknown) {
       next(new ApiError(500, 'CLOCK_FORMAT_ERR', `读取格式化时钟失败: ${deps.getErrorMessage(err)}`));

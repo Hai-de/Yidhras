@@ -76,7 +76,6 @@ ai:
   defaults:
     prompt_preset: "default_decision_v1"
     decoder: "default_json_schema"
-    route_id: "default.agent_decision"
     privacy_tier: "trusted_cloud"
   memory_loop:
     summary_every_n_rounds: 5
@@ -95,7 +94,7 @@ ai:
       parse:
         decoder: "default_json_schema"
       route:
-        route_id: "default.agent_decision"
+        route_id: "default.context_summary"
         provider: "openai"
         model: "gpt-4.1-mini"
         latency_tier: "interactive"

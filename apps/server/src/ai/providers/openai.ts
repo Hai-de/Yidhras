@@ -25,16 +25,31 @@ const resolveBaseUrl = (input: AiProviderAdapterRequest): string => {
   return input.model_entry.base_url ?? input.provider_config.base_url ?? OPENAI_BASE_URL;
 };
 
-const resolveApiKey = (input: AiProviderAdapterRequest): string => {
-  const apiKey = getEnv(input.provider_config.api_key_env);
-  if (!apiKey) {
-    throw new ApiError(500, 'AI_PROVIDER_AUTH_MISSING', 'OpenAI API key is not configured', {
-      provider: input.provider_config.provider,
-      api_key_env: input.provider_config.api_key_env ?? null
-    });
-  }
+const resolveApiKey = (input: AiProviderAdapterRequest): string | null => {
+  return getEnv(input.provider_config.api_key_env);
+};
 
-  return apiKey;
+const buildAuthMissingResult = (input: AiProviderAdapterRequest): AiProviderAdapterResult => {
+  return {
+    status: 'failed',
+    finish_reason: 'error',
+    output: {
+      mode: input.request.response_mode
+    },
+    usage: undefined,
+    safety: {
+      blocked: false,
+      reason_code: null,
+      provider_signal: null
+    },
+    raw_ref: undefined,
+    error: {
+      code: 'AI_PROVIDER_AUTH_MISSING',
+      message: 'OpenAI API key is not configured',
+      retryable: false,
+      stage: 'provider'
+    }
+  };
 };
 
 const mapMessageRole = (role: AiMessage['role']): 'system' | 'user' | 'assistant' | 'tool' => {
@@ -329,7 +344,7 @@ const buildChatCompletionsRequestBody = (input: AiProviderAdapterRequest) => {
 };
 
 const buildHeaders = (input: AiProviderAdapterRequest): HeadersInit => {
-  const apiKey = resolveApiKey(input);
+  const apiKey = resolveApiKey(input)!;
   const headers: Record<string, string> = {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
@@ -532,6 +547,10 @@ export const createOpenAiProviderAdapter = (): AiProviderAdapter => {
   return {
     provider: 'openai',
     async execute(input: AiProviderAdapterRequest): Promise<AiProviderAdapterResult> {
+      if (!resolveApiKey(input)) {
+        return buildAuthMissingResult(input);
+      }
+
       const response = await performRequest(input);
       if (!response.ok) {
         const { code, message } = await parseErrorPayload(response);

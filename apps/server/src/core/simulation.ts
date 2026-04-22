@@ -3,8 +3,9 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
 import type { RuntimeDatabaseBootstrap } from '../app/runtime/runtime_bootstrap.js';
+import type { RuntimeClockProjectionSnapshot } from '../app/runtime/runtime_clock_projection.js';
 import type {
-  ActivePackRuntimeFacade,
+  HostRuntimeKernelFacade,
   PackCatalogService
 } from '../app/services/app_context_ports.js';
 import { ChronosEngine } from '../clock/engine.js';
@@ -25,7 +26,7 @@ import { DefaultPackRuntimeRegistryService } from './pack_runtime_registry_servi
 import { PrismaRuntimeDatabaseBootstrap } from './runtime_database_bootstrap.js';
 import { RuntimeSpeedPolicy, type RuntimeSpeedSnapshot } from './runtime_speed.js';
 
-export class SimulationManager implements RuntimeDatabaseBootstrap, ActivePackRuntimeFacade, PackCatalogService {
+export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeKernelFacade, PackCatalogService {
   public prisma: PrismaClient;
   public clock!: ChronosEngine;
 
@@ -113,12 +114,21 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, ActivePackRu
     return this.activePackRuntimeFacade.getCurrentTick();
   }
 
+  public getCurrentRevision(): bigint {
+    return this.activePackRuntimeFacade.getCurrentRevision();
+  }
+
   public getAllTimes() {
     return this.activePackRuntimeFacade.getAllTimes();
   }
 
   public async step(amount: bigint = 1n): Promise<void> {
     await this.activePackRuntimeFacade.step(amount);
+    this.syncClockFromActiveRuntime();
+  }
+
+  public applyClockProjection(snapshot: RuntimeClockProjectionSnapshot): void {
+    this.activePackRuntimeFacade.applyClockProjection(snapshot);
     this.syncClockFromActiveRuntime();
   }
 

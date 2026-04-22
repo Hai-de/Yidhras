@@ -31,6 +31,51 @@ const toOptionalJson = (value: unknown): Prisma.InputJsonValue | typeof Prisma.J
   return toJsonValue(value);
 };
 
+const isForeignKeyViolation = (error: unknown): boolean => {
+  return error instanceof Error && 'code' in error && (error as { code: string }).code === 'P2003';
+};
+
+const buildUpsertPayload = (
+  response: ModelGatewayResponse,
+  trace: AiInvocationTrace | undefined,
+  options: { sourceInferenceId?: string | null } | undefined,
+  latencyMs: number | null,
+  currentTick: bigint,
+  sourceInferenceIdOverride: string | null | undefined = undefined
+) => {
+  const sourceInferenceId = sourceInferenceIdOverride !== undefined
+    ? sourceInferenceIdOverride
+    : options?.sourceInferenceId ?? trace?.source_inference_id ?? null;
+
+  const common = {
+    task_id: response.task_id,
+    task_type: response.task_type,
+    source_inference_id: sourceInferenceId,
+    provider: response.provider,
+    model: response.model,
+    route_id: response.route_id,
+    status: response.status,
+    finish_reason: response.finish_reason,
+    attempted_models_json: toJsonValue(response.attempted_models),
+    fallback_used: response.fallback_used,
+    latency_ms: latencyMs,
+    usage_json: toOptionalJson(response.usage ?? null),
+    safety_json: toOptionalJson(response.safety ?? null),
+    request_json: toRequestJson(trace),
+    response_json: toResponseJson(trace),
+    error_code: response.error?.code ?? null,
+    error_message: response.error?.message ?? null,
+    error_stage: response.error?.stage ?? null,
+    audit_level: trace?.audit_level ?? 'standard'
+  };
+
+  return {
+    where: { id: response.invocation_id },
+    update: { ...common, completed_at: currentTick },
+    create: { ...common, id: response.invocation_id, created_at: currentTick, completed_at: currentTick }
+  };
+};
+
 export const recordAiInvocation = async (
   context: AppContext,
   response: ModelGatewayResponse,
@@ -51,55 +96,19 @@ export const recordAiInvocation = async (
       ? attemptLatencies.reduce((sum, value) => sum + value, 0)
       : null;
 
-  await context.prisma.aiInvocationRecord.upsert({
-    where: {
-      id: response.invocation_id
-    },
-    update: {
-      task_id: response.task_id,
-      task_type: response.task_type,
-      source_inference_id: options?.sourceInferenceId ?? trace?.source_inference_id ?? null,
-      provider: response.provider,
-      model: response.model,
-      route_id: response.route_id,
-      status: response.status,
-      finish_reason: response.finish_reason,
-      attempted_models_json: toJsonValue(response.attempted_models),
-      fallback_used: response.fallback_used,
-      latency_ms: latencyMs,
-      usage_json: toOptionalJson(response.usage ?? null),
-      safety_json: toOptionalJson(response.safety ?? null),
-      request_json: toRequestJson(trace),
-      response_json: toResponseJson(trace),
-      error_code: response.error?.code ?? null,
-      error_message: response.error?.message ?? null,
-      error_stage: response.error?.stage ?? null,
-      audit_level: trace?.audit_level ?? 'standard',
-      completed_at: context.sim.getCurrentTick()
-    },
-    create: {
-      id: response.invocation_id,
-      task_id: response.task_id,
-      task_type: response.task_type,
-      source_inference_id: options?.sourceInferenceId ?? trace?.source_inference_id ?? null,
-      provider: response.provider,
-      model: response.model,
-      route_id: response.route_id,
-      status: response.status,
-      finish_reason: response.finish_reason,
-      attempted_models_json: toJsonValue(response.attempted_models),
-      fallback_used: response.fallback_used,
-      latency_ms: latencyMs,
-      usage_json: toOptionalJson(response.usage ?? null),
-      safety_json: toOptionalJson(response.safety ?? null),
-      request_json: toRequestJson(trace),
-      response_json: toResponseJson(trace),
-      error_code: response.error?.code ?? null,
-      error_message: response.error?.message ?? null,
-      error_stage: response.error?.stage ?? null,
-      audit_level: trace?.audit_level ?? 'standard',
-      created_at: context.sim.getCurrentTick(),
-      completed_at: context.sim.getCurrentTick()
+  const currentTick = context.sim.getCurrentTick();
+
+  try {
+    await context.prisma.aiInvocationRecord.upsert(
+      buildUpsertPayload(response, trace, options, latencyMs, currentTick)
+    );
+  } catch (error: unknown) {
+    if (isForeignKeyViolation(error)) {
+      await context.prisma.aiInvocationRecord.upsert(
+        buildUpsertPayload(response, trace, options, latencyMs, currentTick, null)
+      );
+    } else {
+      throw error;
     }
-  });
+  }
 };

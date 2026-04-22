@@ -2,7 +2,6 @@ import fs from 'fs';
 
 import type { WorldPackStorage, WorldPackStorageCollectionDefinition } from '../schema/storage_schema.js';
 import { asMutablePlanRecord, type PersistedStoragePlan,readPersistedStoragePlan, writePersistedStoragePlan } from './internal/plan_store.js';
-import { ensureDeclaredPackCollectionTables } from './pack_collection_repo.js';
 import {
   ensurePackRuntimeSqliteStorage,
   packRuntimeAuthorityGrantTableSpec,
@@ -13,6 +12,7 @@ import {
   seedSqliteEngineOwnedRecordsIfEmpty,
   type SqliteEngineOwnedTableSpec
 } from './internal/sqlite_engine_owned_store.js';
+import { ensureDeclaredPackCollectionTables } from './pack_collection_repo.js';
 import { ensurePackRuntimeDirectory, type PackRuntimeDatabaseLocation } from './pack_db_locator.js';
 
 export interface PackStorageMaterializeSummary {

@@ -1,6 +1,6 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-22T01:33:38.152Z
+- Updated At: 2026-04-22T09:29:12.033Z
 - Status: active
 - Phase: implementation
 
@@ -8,28 +8,29 @@
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
 - 当前进度：20/20 个里程碑已完成；最新：PG18
-- 当前焦点：第二批通用测试与命名技术债第一轮和第二轮治理均已完成，等待是否继续扩面清理剩余目录
-- 最新结论：已完成第二批继续治理：三个中优先级 e2e 已完成归类与收口，memory/context/world_engine 相关剩余默认化命名债已继续压缩，death_note 的合法 scenario 语义保留边界已明确。
-- 下一步：如继续推进，优先处理 world_engine_sidecar_client、memory_recording_pack_collection_bridge、context_orchestrator 等尚未治理的剩余命名点，并将例外清单继续补齐到更多目录。
+- 当前焦点：Host runtime projection 与迁移状态/退出条件文档已全部收口
+- 最新结论：本轮实施已完成：world engine commit → TS host clock projection 已落地并通过 unit/integration 回归；/api/clock、/api/clock/formatted、packHostApi.getCurrentTick 与 overview.world_time 已优先读取 host projec…
+- 下一步：若继续推进，应单独立项决定哪些 world engine host seams 长期留在 TS，哪些进入 phase2/phase3 Rust ownership。
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/第二批通用测试与命名技术债审计.md`
-- 计划：`.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md`
-- 审查：`.limcode/review/rust-migration-compatibility-debt-assessment.md`
+- 设计：`.limcode/design/rust-ts-host-runtime-kernel-boundary-and-clock-projection-design.md`
+- 计划：`.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md`
+- 审查：`.limcode/review/rust-module-migration-gap-review.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 复核 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e，明确归类为 generic、mixed 或 scenario  `#phase-e1-medium-e2e-classification`
-- [x] 对确认属于 generic 的中优先级 e2e 显式迁移到 example_pack；对 mixed 文件执行拆分  `#phase-e1-medium-e2e-migration`
-- [x] 完成中优先级 e2e 迁移/拆分后的逐文件与聚合回归，确认不再依赖 death_note 默认 seed/active 语义  `#phase-e1-medium-e2e-validation`
-- [x] 记录保留的 death_note scenario fixture/capability/prompt/asset 清单，并同步验证结果、风险与剩余后续项  `#phase-e2-exception-ledger-and-closeout`
-- [x] 扩展扫描 unit/context、memory、world_engine integration 剩余目录中的 world-death-note、death_note、sim.init('death_note') 固定值并分类  `#phase-e2-expanded-naming-debt-audit`
-- [x] 将确认属于默认化命名债的剩余硬编码替换为中性测试 pack、fixture metadata 派生值或共享常量  `#phase-e2-expanded-naming-debt-remediation`
+- [x] 固化 Host Runtime Kernel 边界：确认插件系统、clock observable truth、commit result 的所有权语义  `#p1`
+- [x] 引入 world engine commit 到宿主时钟投影的类型与端口接口  `#p2`
+- [x] 实现 TS host clock projection service，并接入 active runtime facade / simulation manager  `#p3`
+- [x] 收口 /api/clock、/api/clock/formatted、packHostApi.getCurrentTick 等读取路径到统一投影口  `#p4`
+- [x] 补齐 world engine commit → host projection 的测试与回归验证  `#p5`
+- [x] 生成 Rust 模块迁移状态总表，明确 scheduler / memory trigger / world engine 的已迁移核心与 TS 保留原因  `#p6`
+- [x] 补充文档与退出条件：fallback/parity 依赖、world engine host seam、后续 phase2/phase3 缺口  `#p7`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -284,26 +285,26 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-22T00:24:02.577Z | updated | phase-d1-generic-e2e-explicit-pack | 已将 smoke-startup、overview-summary、scheduler-runtime-status、scheduler-queries、access-policy-contracts 五个 generic e2e 显式迁移到 activePackRef/seededPackRefs = example_pack。
-- 2026-04-22T00:24:02.577Z | updated | phase-d1-validation | 已完成上述五个 generic e2e 的逐文件回归验证，确认不再依赖 death_note 默认 seed/active 语义。
-- 2026-04-22T00:42:28.368Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md
-- 2026-04-22T00:42:42.877Z | updated | phase-d2-hybrid-e2e-split | 已将 smoke-endpoints 拆分为 smoke-generic-runtime-endpoints 与 smoke-death-note-scenario-endpoints，并将 experimental-runtime / experimental-plugin-runtime-web 的 generic 与 scenario 边界显式化。
-- 2026-04-22T00:42:42.877Z | updated | phase-d2-validation | 已完成第二批 generic + 混合拆分后的 9 个 e2e 文件联合回归，共 10 个测试通过。
-- 2026-04-22T00:45:06.921Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md
-- 2026-04-22T00:45:18.200Z | milestone_recorded | PG17 | 记录里程碑：第二批通用测试与命名技术债第一轮治理完成
-- 2026-04-22T00:45:33.791Z | updated | phase-d3-naming-debt-audit-and-cleanup | 已将 world_engine_persistence、world_engine_snapshot、context_memory_blocks_source_rust_modes 等 unit/runtime 测试中的默认化 world-death-note 硬编码替换为中性测试 pack id，并保留合法 death_note scenario 命名。
-- 2026-04-22T00:45:33.791Z | milestone_recorded | PG17 | 记录里程碑：第二批通用测试与命名技术债第一轮治理完成
-- 2026-04-22T01:01:56.718Z | artifact_changed | plan | 同步计划文档：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md
-- 2026-04-22T01:03:10.393Z | artifact_changed | plan | 同步计划文档：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md
-- 2026-04-22T01:03:10.393Z | updated | phase-e1-start | 开始执行第二轮继续治理计划，当前先复核三个中优先级 e2e 的 generic/mixed/scenario 归类。
-- 2026-04-22T01:03:21.695Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md
-- 2026-04-22T01:28:26.886Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md
-- 2026-04-22T01:28:49.173Z | updated | phase-e1-medium-e2e | 已完成 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e 的归类与处理，其中后两者通过引入调度基线隔离消除 replay_recovery job 被调度噪音干扰的问题。
-- 2026-04-22T01:28:49.173Z | updated | phase-e1-medium-e2e-validation | 已完成三个中优先级 e2e 的逐文件回归，确认当前归类下可稳定通过。
-- 2026-04-22T01:32:54.434Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md
 - 2026-04-22T01:33:08.888Z | milestone_recorded | PG18 | 记录里程碑：第二批中优先级 e2e 与剩余命名债扩面治理完成
 - 2026-04-22T01:33:38.152Z | updated | phase-e2-expanded-naming-debt-remediation | 已继续清理 memory_block_trigger_engine、memory_block_store、memory_trigger_engine_provider、world_engine_sidecar_runtime_loop、world_engine_sidecar_failure_recovery、world_engine_pack_host_api_read_surface 等测试中的默认化命名债，并保留 authority/perception、plugin/runtime、world engine 集成里的合法 death_note scenario 语义。
 - 2026-04-22T01:33:38.152Z | milestone_recorded | PG18 | 记录里程碑：第二批中优先级 e2e 与剩余命名债扩面治理完成
+- 2026-04-22T07:29:11.915Z | artifact_changed | review | 同步审查文档：.limcode/review/rust-module-migration-gap-review.md
+- 2026-04-22T07:31:52.981Z | artifact_changed | review | 同步审查里程碑：M1
+- 2026-04-22T07:32:17.896Z | artifact_changed | review | 同步审查里程碑：M2
+- 2026-04-22T07:32:52.641Z | artifact_changed | review | 同步审查里程碑：M3
+- 2026-04-22T07:33:15.788Z | artifact_changed | review | 同步审查结论：.limcode/review/rust-module-migration-gap-review.md
+- 2026-04-22T07:50:21.797Z | artifact_changed | design | 同步设计文档：.limcode/design/rust-ts-host-runtime-kernel-boundary-and-clock-projection-design.md
+- 2026-04-22T07:54:31.227Z | artifact_changed | plan | 同步计划文档：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md
+- 2026-04-22T07:55:42.170Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md
+- 2026-04-22T08:10:00.894Z | updated | clock-projection-interfaces | 已新增 runtime_clock_projection 类型与端口，并为 active runtime facade / simulation manager 补齐 revision 与 applyClockProjection 承接能力。
+- 2026-04-22T09:12:27.881Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md
+- 2026-04-22T09:12:49.347Z | updated | clock-projection-first-cut | 已完成 world engine commit → host projection 首轮接线，并新增 world_engine_persistence 与 clock route 的定向单测，验证 host projection 优先读取。
+- 2026-04-22T09:22:42.784Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md
+- 2026-04-22T09:23:15.171Z | updated | clock-projection-regression-closeout | 已通过 world_engine_persistence、clock route、overview projection 单测，以及 world_engine_sidecar runtime_loop/failure_recovery integration，确认 host projection 首轮收口稳定。
+- 2026-04-22T09:26:00.200Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md
+- 2026-04-22T09:28:55.277Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md
+- 2026-04-22T09:29:12.033Z | artifact_changed | design | 新增并补充迁移状态矩阵与退出条件文档：.limcode/design/rust-migration-status-matrix-and-exit-criteria.md
+- 2026-04-22T09:29:12.033Z | milestone_recorded | host-projection-closeout | 完成 Host Runtime Projection 实施收口：代码、测试、迁移状态矩阵与退出条件文档均已同步。
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -313,47 +314,52 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-17T21:05:29.611Z",
-  "updatedAt": "2026-04-22T01:33:38.152Z",
+  "updatedAt": "2026-04-22T09:29:12.033Z",
   "status": "active",
   "phase": "implementation",
-  "currentFocus": "第二批通用测试与命名技术债第一轮和第二轮治理均已完成，等待是否继续扩面清理剩余目录",
-  "latestConclusion": "已完成第二批继续治理：三个中优先级 e2e 已完成归类与收口，memory/context/world_engine 相关剩余默认化命名债已继续压缩，death_note 的合法 scenario 语义保留边界已明确。",
+  "currentFocus": "Host runtime projection 与迁移状态/退出条件文档已全部收口",
+  "latestConclusion": "本轮实施已完成：world engine commit → TS host clock projection 已落地并通过 unit/integration 回归；/api/clock、/api/clock/formatted、packHostApi.getCurrentTick 与 overview.world_time 已优先读取 host projection；同时已补齐 Rust 模块迁移状态矩阵、长期 TS seam、phase2/phase3 候选 seam 与退出条件检查清单。",
   "currentBlocker": null,
-  "nextAction": "如继续推进，优先处理 world_engine_sidecar_client、memory_recording_pack_collection_bridge、context_orchestrator 等尚未治理的剩余命名点，并将例外清单继续补齐到更多目录。",
+  "nextAction": "若继续推进，应单独立项决定哪些 world engine host seams 长期留在 TS，哪些进入 phase2/phase3 Rust ownership。",
   "activeArtifacts": {
-    "design": ".limcode/design/第二批通用测试与命名技术债审计.md",
-    "plan": ".limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md",
-    "review": ".limcode/review/rust-migration-compatibility-debt-assessment.md"
+    "design": ".limcode/design/rust-ts-host-runtime-kernel-boundary-and-clock-projection-design.md",
+    "plan": ".limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md",
+    "review": ".limcode/review/rust-module-migration-gap-review.md"
   },
   "todos": [
     {
-      "id": "phase-e1-medium-e2e-classification",
-      "content": "复核 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e，明确归类为 generic、mixed 或 scenario",
+      "id": "p1",
+      "content": "固化 Host Runtime Kernel 边界：确认插件系统、clock observable truth、commit result 的所有权语义",
       "status": "completed"
     },
     {
-      "id": "phase-e1-medium-e2e-migration",
-      "content": "对确认属于 generic 的中优先级 e2e 显式迁移到 example_pack；对 mixed 文件执行拆分",
+      "id": "p2",
+      "content": "引入 world engine commit 到宿主时钟投影的类型与端口接口",
       "status": "completed"
     },
     {
-      "id": "phase-e1-medium-e2e-validation",
-      "content": "完成中优先级 e2e 迁移/拆分后的逐文件与聚合回归，确认不再依赖 death_note 默认 seed/active 语义",
+      "id": "p3",
+      "content": "实现 TS host clock projection service，并接入 active runtime facade / simulation manager",
       "status": "completed"
     },
     {
-      "id": "phase-e2-exception-ledger-and-closeout",
-      "content": "记录保留的 death_note scenario fixture/capability/prompt/asset 清单，并同步验证结果、风险与剩余后续项",
+      "id": "p4",
+      "content": "收口 /api/clock、/api/clock/formatted、packHostApi.getCurrentTick 等读取路径到统一投影口",
       "status": "completed"
     },
     {
-      "id": "phase-e2-expanded-naming-debt-audit",
-      "content": "扩展扫描 unit/context、memory、world_engine integration 剩余目录中的 world-death-note、death_note、sim.init('death_note') 固定值并分类",
+      "id": "p5",
+      "content": "补齐 world engine commit → host projection 的测试与回归验证",
       "status": "completed"
     },
     {
-      "id": "phase-e2-expanded-naming-debt-remediation",
-      "content": "将确认属于默认化命名债的剩余硬编码替换为中性测试 pack、fixture metadata 派生值或共享常量",
+      "id": "p6",
+      "content": "生成 Rust 模块迁移状态总表，明确 scheduler / memory trigger / world engine 的已迁移核心与 TS 保留原因",
+      "status": "completed"
+    },
+    {
+      "id": "p7",
+      "content": "补充文档与退出条件：fallback/parity 依赖、world engine host seam、后续 phase2/phase3 缺口",
       "status": "completed"
     }
   ],
@@ -760,108 +766,6 @@
   "risks": [],
   "log": [
     {
-      "at": "2026-04-22T00:24:02.577Z",
-      "type": "updated",
-      "refId": "phase-d1-generic-e2e-explicit-pack",
-      "message": "已将 smoke-startup、overview-summary、scheduler-runtime-status、scheduler-queries、access-policy-contracts 五个 generic e2e 显式迁移到 activePackRef/seededPackRefs = example_pack。"
-    },
-    {
-      "at": "2026-04-22T00:24:02.577Z",
-      "type": "updated",
-      "refId": "phase-d1-validation",
-      "message": "已完成上述五个 generic e2e 的逐文件回归验证，确认不再依赖 death_note 默认 seed/active 语义。"
-    },
-    {
-      "at": "2026-04-22T00:42:28.368Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md"
-    },
-    {
-      "at": "2026-04-22T00:42:42.877Z",
-      "type": "updated",
-      "refId": "phase-d2-hybrid-e2e-split",
-      "message": "已将 smoke-endpoints 拆分为 smoke-generic-runtime-endpoints 与 smoke-death-note-scenario-endpoints，并将 experimental-runtime / experimental-plugin-runtime-web 的 generic 与 scenario 边界显式化。"
-    },
-    {
-      "at": "2026-04-22T00:42:42.877Z",
-      "type": "updated",
-      "refId": "phase-d2-validation",
-      "message": "已完成第二批 generic + 混合拆分后的 9 个 e2e 文件联合回归，共 10 个测试通过。"
-    },
-    {
-      "at": "2026-04-22T00:45:06.921Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md"
-    },
-    {
-      "at": "2026-04-22T00:45:18.200Z",
-      "type": "milestone_recorded",
-      "refId": "PG17",
-      "message": "记录里程碑：第二批通用测试与命名技术债第一轮治理完成"
-    },
-    {
-      "at": "2026-04-22T00:45:33.791Z",
-      "type": "updated",
-      "refId": "phase-d3-naming-debt-audit-and-cleanup",
-      "message": "已将 world_engine_persistence、world_engine_snapshot、context_memory_blocks_source_rust_modes 等 unit/runtime 测试中的默认化 world-death-note 硬编码替换为中性测试 pack id，并保留合法 death_note scenario 命名。"
-    },
-    {
-      "at": "2026-04-22T00:45:33.791Z",
-      "type": "milestone_recorded",
-      "refId": "PG17",
-      "message": "记录里程碑：第二批通用测试与命名技术债第一轮治理完成"
-    },
-    {
-      "at": "2026-04-22T01:01:56.718Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md"
-    },
-    {
-      "at": "2026-04-22T01:03:10.393Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md"
-    },
-    {
-      "at": "2026-04-22T01:03:10.393Z",
-      "type": "updated",
-      "refId": "phase-e1-start",
-      "message": "开始执行第二轮继续治理计划，当前先复核三个中优先级 e2e 的 generic/mixed/scenario 归类。"
-    },
-    {
-      "at": "2026-04-22T01:03:21.695Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md"
-    },
-    {
-      "at": "2026-04-22T01:28:26.886Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md"
-    },
-    {
-      "at": "2026-04-22T01:28:49.173Z",
-      "type": "updated",
-      "refId": "phase-e1-medium-e2e",
-      "message": "已完成 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e 的归类与处理，其中后两者通过引入调度基线隔离消除 replay_recovery job 被调度噪音干扰的问题。"
-    },
-    {
-      "at": "2026-04-22T01:28:49.173Z",
-      "type": "updated",
-      "refId": "phase-e1-medium-e2e-validation",
-      "message": "已完成三个中优先级 e2e 的逐文件回归，确认当前归类下可稳定通过。"
-    },
-    {
-      "at": "2026-04-22T01:32:54.434Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md"
-    },
-    {
       "at": "2026-04-22T01:33:08.888Z",
       "type": "milestone_recorded",
       "refId": "PG18",
@@ -878,21 +782,123 @@
       "type": "milestone_recorded",
       "refId": "PG18",
       "message": "记录里程碑：第二批中优先级 e2e 与剩余命名债扩面治理完成"
+    },
+    {
+      "at": "2026-04-22T07:29:11.915Z",
+      "type": "artifact_changed",
+      "refId": "review",
+      "message": "同步审查文档：.limcode/review/rust-module-migration-gap-review.md"
+    },
+    {
+      "at": "2026-04-22T07:31:52.981Z",
+      "type": "artifact_changed",
+      "refId": "review",
+      "message": "同步审查里程碑：M1"
+    },
+    {
+      "at": "2026-04-22T07:32:17.896Z",
+      "type": "artifact_changed",
+      "refId": "review",
+      "message": "同步审查里程碑：M2"
+    },
+    {
+      "at": "2026-04-22T07:32:52.641Z",
+      "type": "artifact_changed",
+      "refId": "review",
+      "message": "同步审查里程碑：M3"
+    },
+    {
+      "at": "2026-04-22T07:33:15.788Z",
+      "type": "artifact_changed",
+      "refId": "review",
+      "message": "同步审查结论：.limcode/review/rust-module-migration-gap-review.md"
+    },
+    {
+      "at": "2026-04-22T07:50:21.797Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/rust-ts-host-runtime-kernel-boundary-and-clock-projection-design.md"
+    },
+    {
+      "at": "2026-04-22T07:54:31.227Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-22T07:55:42.170Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-22T08:10:00.894Z",
+      "type": "updated",
+      "refId": "clock-projection-interfaces",
+      "message": "已新增 runtime_clock_projection 类型与端口，并为 active runtime facade / simulation manager 补齐 revision 与 applyClockProjection 承接能力。"
+    },
+    {
+      "at": "2026-04-22T09:12:27.881Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-22T09:12:49.347Z",
+      "type": "updated",
+      "refId": "clock-projection-first-cut",
+      "message": "已完成 world engine commit → host projection 首轮接线，并新增 world_engine_persistence 与 clock route 的定向单测，验证 host projection 优先读取。"
+    },
+    {
+      "at": "2026-04-22T09:22:42.784Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-22T09:23:15.171Z",
+      "type": "updated",
+      "refId": "clock-projection-regression-closeout",
+      "message": "已通过 world_engine_persistence、clock route、overview projection 单测，以及 world_engine_sidecar runtime_loop/failure_recovery integration，确认 host projection 首轮收口稳定。"
+    },
+    {
+      "at": "2026-04-22T09:26:00.200Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-22T09:28:55.277Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-22T09:29:12.033Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "新增并补充迁移状态矩阵与退出条件文档：.limcode/design/rust-migration-status-matrix-and-exit-criteria.md"
+    },
+    {
+      "at": "2026-04-22T09:29:12.033Z",
+      "type": "milestone_recorded",
+      "refId": "host-projection-closeout",
+      "message": "完成 Host Runtime Projection 实施收口：代码、测试、迁移状态矩阵与退出条件文档均已同步。"
     }
   ],
   "stats": {
     "milestonesTotal": 20,
     "milestonesCompleted": 20,
-    "todosTotal": 6,
-    "todosCompleted": 6,
+    "todosTotal": 7,
+    "todosCompleted": 7,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-22T01:33:38.152Z",
-    "bodyHash": "sha256:187729dc4bf13fe44384053f4142d89d3b4b9271d0a59730ca99c01d7d630bd5"
+    "generatedAt": "2026-04-22T09:29:12.033Z",
+    "bodyHash": "sha256:5d940864e8eff7a671f919e16c239fb69ff1fedbb5803d2352aa7270ca7a249c"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

@@ -12,6 +12,10 @@ import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage
 import { recordPackRuleExecution } from '../../packs/storage/rule_execution_repo.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
+import type {
+  RuntimeClockProjectionSnapshot,
+  WorldEngineCommitProjectionInput
+} from './runtime_clock_projection.js';
 import type { WorldEnginePort } from './world_engine_ports.js';
 
 export interface PackRuntimeCoreDeltaPersistenceResult {
@@ -308,6 +312,30 @@ export const createDefaultWorldEnginePersistencePort = (): WorldEnginePersistenc
   };
 };
 
+const applyCommittedClockProjection = (input: {
+  context: AppContext;
+  packId: string;
+  committed: WorldEngineCommitResult;
+  persisted: PackRuntimeCoreDeltaPersistenceResult;
+}): RuntimeClockProjectionSnapshot | null => {
+  const projectionPort = input.context.runtimeClockProjection;
+  if (!projectionPort) {
+    return null;
+  }
+
+  const projectionInput: WorldEngineCommitProjectionInput = {
+    pack_id: input.packId,
+    committed_tick: input.committed.committed_tick,
+    committed_revision: input.committed.committed_revision,
+    clock_delta: input.persisted.clock_delta,
+    source: 'world_engine_commit'
+  };
+
+  const snapshot = projectionPort.applyWorldEngineCommitProjection(projectionInput);
+  input.context.sim.applyClockProjection(snapshot);
+  return snapshot;
+};
+
 export const executeWorldEnginePreparedStep = async (input: {
   context: AppContext;
   worldEngine: WorldEnginePort;
@@ -354,6 +382,7 @@ export const executeWorldEnginePreparedStep = async (input: {
     };
 
     const committed = await input.worldEngine.commitPreparedStep(commitInput);
+    applyCommittedClockProjection({ context: input.context, packId, committed, persisted });
     coordinator.clearSingleFlightState(packId);
     coordinator.clearTaintedPackId(packId);
     return committed;

@@ -202,6 +202,7 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
     }
   },
   features: {
+    ai_gateway_enabled: false,
     inference_trace: true,
     notifications: true,
     experimental: {
@@ -333,6 +334,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     process.env.STARTUP_FAIL_ON_MISSING_WORLD_PACK_DIR
   );
   const failOnNoWorldPack = parseBooleanEnv('STARTUP_FAIL_ON_NO_WORLD_PACK', process.env.STARTUP_FAIL_ON_NO_WORLD_PACK);
+  const aiGatewayEnabled = parseBooleanEnv('AI_GATEWAY_ENABLED', process.env.AI_GATEWAY_ENABLED);
   const pluginEnableWarningEnabled = parseBooleanEnv('PLUGIN_ENABLE_WARNING_ENABLED', process.env.PLUGIN_ENABLE_WARNING_ENABLED);
   const experimentalMultiPackEnabled = parseBooleanEnv('EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED', process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED);
   const experimentalMultiPackOperatorApiEnabled = parseBooleanEnv('EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED', process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED);
@@ -353,6 +355,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
       env: activeEnv
     },
     features: {
+      ...(aiGatewayEnabled !== undefined ? { ai_gateway_enabled: aiGatewayEnabled } : {}),
       experimental: {}
     }
   };
@@ -806,6 +809,7 @@ export const buildRuntimeConfigSnapshot = (): Record<string, string | boolean | 
     runtime_multi_pack_start_mode: config.runtime.multi_pack.start_mode,
     runtime_multi_pack_bootstrap_packs: config.runtime.multi_pack.bootstrap_packs,
     startup_allow_degraded_mode: String(config.startup.allow_degraded_mode),
+    ai_gateway_enabled: String(config.features.ai_gateway_enabled),
     experimental_multi_pack_runtime_enabled: String(config.features.experimental.multi_pack_runtime.enabled),
     experimental_multi_pack_runtime_operator_api_enabled: String(config.features.experimental.multi_pack_runtime.operator_api_enabled),
     experimental_multi_pack_runtime_ui_enabled: String(config.features.experimental.multi_pack_runtime.ui_enabled)
@@ -824,4 +828,8 @@ export const logRuntimeConfigSnapshot = (logger: (message: string) => void = con
 
   logger(`[configw] ${formatted}`);
   runtimeConfigSnapshotLogged = true;
+};
+
+export const isAiGatewayEnabled = (): boolean => {
+  return getRuntimeConfig().features.ai_gateway_enabled;
 };

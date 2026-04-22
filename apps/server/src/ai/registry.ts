@@ -246,10 +246,11 @@ const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
     },
     {
       route_id: 'default.context_summary',
-      task_types: ['context_summary', 'memory_compaction', 'narrative_projection', 'entity_extraction', 'classification'],
+      task_types: ['intent_grounding_assist', 'context_summary', 'memory_compaction', 'narrative_projection', 'entity_extraction', 'classification', 'rerank'],
       preferred_models: [{ provider: 'openai', model: 'gpt-4.1-mini' }],
       fallback_models: [{ provider: 'openai', model: 'gpt-4.1' }],
       constraints: {
+        require_structured_output: true,
         privacy_tier: 'trusted_cloud'
       },
       defaults: {

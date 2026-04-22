@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -514,18 +514,70 @@ describe('WorldEngineSidecarClient', () => {
     const child = createMockSpawnedProcess();
     vi.mocked(spawn).mockReturnValue(child as never);
 
+    const originalWorkspaceRoot = process.env.WORKSPACE_ROOT;
+    process.env.WORKSPACE_ROOT = rootDir;
+
     const sidecar = createWorldEngineSidecarClient({
-      binaryPath,
+      binaryPath: 'world_engine_sidecar',
       timeoutMs: 1200,
       autoRestart: false
     });
 
-    await sidecar.start();
+    try {
+      await sidecar.start();
 
-    expect(spawn).toHaveBeenCalledWith(binaryPath, [], {
-      cwd: path.dirname(binaryPath),
-      stdio: ['pipe', 'pipe', 'pipe']
+      expect(spawn).toHaveBeenCalledWith(binaryPath, [], {
+        cwd: path.dirname(binaryPath),
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+    } finally {
+      if (originalWorkspaceRoot === undefined) {
+        delete process.env.WORKSPACE_ROOT;
+      } else {
+        process.env.WORKSPACE_ROOT = originalWorkspaceRoot;
+      }
+    }
+  });
+
+  it('resolves configured relative binary path from workspace root instead of process cwd', async () => {
+    const child = createMockSpawnedProcess();
+    vi.mocked(spawn).mockReturnValue(child as never);
+
+    const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'world-engine-sidecar-workspace-'));
+    createdRoots.push(workspaceRoot);
+    const expectedBinaryPath = path.join(
+      workspaceRoot,
+      'apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar'
+    );
+    await mkdir(path.dirname(expectedBinaryPath), { recursive: true });
+    await writeFile(expectedBinaryPath, '#!/bin/sh\nexit 0\n', 'utf8');
+
+    const originalWorkspaceRoot = process.env.WORKSPACE_ROOT;
+    process.env.WORKSPACE_ROOT = workspaceRoot;
+
+    const sidecar = createWorldEngineSidecarClient({
+      binaryPath: 'apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar',
+      timeoutMs: 1200,
+      autoRestart: false
     });
+
+    try {
+      await sidecar.start();
+
+      expect(spawn).toHaveBeenCalledWith(
+        expectedBinaryPath,
+        [],
+        expect.objectContaining({
+          cwd: path.dirname(expectedBinaryPath)
+        })
+      );
+    } finally {
+      if (originalWorkspaceRoot === undefined) {
+        delete process.env.WORKSPACE_ROOT;
+      } else {
+        process.env.WORKSPACE_ROOT = originalWorkspaceRoot;
+      }
+    }
   });
 
   it('falls back to cargo run when binary path is empty', async () => {

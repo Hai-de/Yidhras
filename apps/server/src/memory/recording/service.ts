@@ -5,9 +5,9 @@ import { createContextOverlayStore } from '../../context/overlay/store.js';
 import type { ContextOverlayEntry, ContextOverlayStore, ContextOverlayType } from '../../context/overlay/types.js';
 import type { ContextMemoryBlockMutationRecord, ContextOverlayMutationRecord } from '../../context/types.js';
 import type { InferenceMemoryMutationRecord, InferenceMemoryMutationSnapshot } from '../../inference/types.js';
+import { upsertDeclaredPackCollectionRecord } from '../../packs/storage/pack_collection_repo.js';
 import { createPrismaLongMemoryBlockStore } from '../blocks/store.js';
 import type { LongMemoryBlockStore, MemoryBehavior, MemoryBlock, MemoryBlockKind, MemoryBlockRecord } from '../blocks/types.js';
-import { upsertDeclaredPackCollectionRecord } from '../../packs/storage/pack_collection_repo.js';
 
 const toNullableString = (value: unknown): string | null => {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;

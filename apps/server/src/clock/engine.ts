@@ -23,6 +23,10 @@ export class ChronosEngine {
     return this.absoluteTicks;
   }
 
+  public setTicks(next: bigint): void {
+    this.absoluteTicks = next;
+  }
+
   /**
    * 将绝对滴答转换为所有已配置历法的时间显示
    */

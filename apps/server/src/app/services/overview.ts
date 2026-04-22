@@ -72,8 +72,25 @@ const hasPropagationIntent = (entry: AuditViewEntry): boolean => {
   return intentType === 'post_message';
 };
 
+const readProjectedWorldTime = (context: AppContext): { tick: string; calendars: unknown } => {
+  const packId = context.activePackRuntime?.getActivePack()?.metadata.id?.trim() ?? '';
+  const projected = packId ? context.runtimeClockProjection?.readFormattedClock(packId) : null;
+
+  if (projected) {
+    return {
+      tick: projected.absolute_ticks,
+      calendars: projected.calendars
+    };
+  }
+
+  return {
+    tick: context.sim.getCurrentTick().toString(),
+    calendars: context.getRuntimeReady() ? toJsonSafe(context.sim.getAllTimes()) : []
+  };
+};
+
 export const getOverviewSummary = async (context: AppContext): Promise<OverviewSummarySnapshot> => {
-  const currentTick = context.sim.getCurrentTick();
+  const worldTime = readProjectedWorldTime(context);
 
   const [operatorProjection, globalProjectionIndex, activeAgentCount, notifications, recentAudit, latestEvents, latestPosts] = await Promise.all([
     getOperatorOverviewProjection(context),
@@ -102,10 +119,7 @@ export const getOverviewSummary = async (context: AppContext): Promise<OverviewS
 
   return {
     runtime: operatorProjection.runtime,
-    world_time: {
-      tick: currentTick.toString(),
-      calendars: context.getRuntimeReady() ? toJsonSafe(context.sim.getAllTimes()) : []
-    },
+    world_time: worldTime,
     active_agent_count: activeAgentCount,
     recent_events: latestEvents.entries,
     latest_posts: latestPosts.entries,

@@ -264,6 +264,7 @@ export const RuntimeConfigSchema = z
       .strict(),
     features: z
       .object({
+        ai_gateway_enabled: z.boolean(),
         inference_trace: z.boolean(),
         notifications: z.boolean(),
         experimental: z

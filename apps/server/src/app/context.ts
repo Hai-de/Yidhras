@@ -60,6 +60,7 @@ export interface AppContext extends AppContextPorts {
   getHttpApp?(): Express | null;
   setHttpApp?(app: Express): void;
   worldEngineStepCoordinator?: import('./runtime/world_engine_persistence.js').WorldEngineStepCoordinator;
+  runtimeClockProjection?: import('./runtime/runtime_clock_projection.js').RuntimeClockProjectionService;
   assertRuntimeReady(feature: string): void;
 }
 

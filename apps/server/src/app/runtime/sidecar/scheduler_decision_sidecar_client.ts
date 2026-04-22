@@ -2,6 +2,7 @@ import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
+import { resolveFromWorkspaceRoot } from '../../../config/loader.js';
 import { ApiError } from '../../../utils/api_error.js';
 import type {
   SchedulerDecisionKernelPort,
@@ -95,8 +96,9 @@ class ProcessSchedulerDecisionSidecarTransport implements SchedulerDecisionSidec
       return;
     }
 
-    const resolvedBinaryPath = this.options.binaryPath.trim().length > 0
-      ? path.resolve(process.cwd(), this.options.binaryPath)
+    const configuredBinaryPath = this.options.binaryPath.trim();
+    const resolvedBinaryPath = configuredBinaryPath.length > 0
+      ? resolveFromWorkspaceRoot(configuredBinaryPath)
       : null;
 
     if (resolvedBinaryPath) {

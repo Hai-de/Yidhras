@@ -1,6 +1,8 @@
 import type { RuntimeDatabaseBootstrap } from '../app/runtime/runtime_bootstrap.js';
+import type { RuntimeClockProjectionSnapshot } from '../app/runtime/runtime_clock_projection.js';
 import type { ActivePackRuntimeFacade } from '../app/services/app_context_ports.js';
 import { ChronosEngine } from '../clock/engine.js';
+import type { CalendarConfig } from '../clock/types.js';
 import { renderNarrativeTemplate } from '../narrative/resolver.js';
 import {
   createPromptVariableContext,
@@ -31,6 +33,7 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
   private readonly runtimeBootstrap: RuntimeDatabaseBootstrap;
   private readonly runtimeRegistry: Pick<PackRuntimeRegistry, 'register'>;
   private activePack?: WorldPack;
+  private currentRevision: bigint = 0n;
   private clock: ChronosEngine;
 
   constructor(options: DefaultActivePackRuntimeFacadeOptions) {
@@ -56,13 +59,16 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
 
     this.activePack = activated.pack;
     this.clock = activated.clock;
+    this.currentRevision = activated.clock.getTicks();
+
+    const projectionClock = this.createProjectionClock(this.activePack);
 
     this.runtimeRegistry.register(
       activated.pack.metadata.id,
       new PackRuntimeInstance({
         pack: activated.pack,
         packFolderName,
-        clock: activated.clock,
+        clock: projectionClock,
         runtimeSpeed: this.runtimeSpeed,
         initialStatus: 'running'
       })
@@ -78,6 +84,11 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
   public getClock(): ChronosEngine {
     return this.clock;
   }
+
+  public getCurrentRevision(): bigint {
+    return this.currentRevision;
+  }
+
 
   public resolvePackVariables(template: string, permission?: PermissionContext): string {
     const pack = this.activePack;
@@ -148,7 +159,18 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
     return this.clock.getAllTimes();
   }
 
+  public applyClockProjection(snapshot: RuntimeClockProjectionSnapshot): void {
+    this.clock.setTicks(BigInt(snapshot.current_tick));
+    this.currentRevision = BigInt(snapshot.current_revision);
+  }
+
   public async step(amount: bigint = 1n): Promise<void> {
     this.clock.tick(amount);
+    this.currentRevision = this.clock.getTicks();
+  }
+
+  private createProjectionClock(pack: WorldPack): ChronosEngine {
+    const calendars = (pack.time_systems ?? []) as unknown as CalendarConfig[];
+    return new ChronosEngine(calendars, this.clock.getTicks());
   }
 }

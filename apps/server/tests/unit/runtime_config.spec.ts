@@ -19,6 +19,7 @@ import {
   getSimulationLoopIntervalMs,
   getSqliteRuntimeConfig,
   getWorldEngineConfig,
+  isAiGatewayEnabled,
   isExperimentalMultiPackOperatorApiEnabled,
   isExperimentalMultiPackRuntimeEnabled,
   resetRuntimeConfigCache
@@ -235,6 +236,7 @@ afterEach(async () => {
   delete process.env.WORLD_ENGINE_TIMEOUT_MS;
   delete process.env.WORLD_ENGINE_BINARY_PATH;
   delete process.env.WORLD_ENGINE_AUTO_RESTART;
+  delete process.env.AI_GATEWAY_ENABLED;
   delete process.env.RUNTIME_MULTI_PACK_MAX_LOADED_PACKS;
   delete process.env.RUNTIME_MULTI_PACK_START_MODE;
   delete process.env.RUNTIME_MULTI_PACK_BOOTSTRAP_PACKS;
@@ -324,6 +326,7 @@ describe('runtime config YAML migration', () => {
       operator_api_enabled: false,
       ui_enabled: false
     });
+    expect(isAiGatewayEnabled()).toBe(false);
     expect(isExperimentalMultiPackRuntimeEnabled()).toBe(false);
     expect(isExperimentalMultiPackOperatorApiEnabled()).toBe(false);
     expect(config.prompt_workflow.profiles.agent_decision_default).toMatchObject({
@@ -465,5 +468,26 @@ describe('runtime config YAML migration', () => {
     });
     expect(isExperimentalMultiPackRuntimeEnabled()).toBe(true);
     expect(isExperimentalMultiPackOperatorApiEnabled()).toBe(true);
+  });
+
+  it('allows AI gateway to be re-enabled via environment override', async () => {
+    const rootDir = await createWorkspace({
+      'data/configw/default.yaml': defaultYamlBase
+    });
+
+    process.env.WORKSPACE_ROOT = rootDir;
+    process.env.AI_GATEWAY_ENABLED = 'true';
+
+    expect(isAiGatewayEnabled()).toBe(true);
+  });
+
+  it('defaults AI gateway to disabled when no override is provided', async () => {
+    const rootDir = await createWorkspace({
+      'data/configw/default.yaml': defaultYamlBase
+    });
+
+    process.env.WORKSPACE_ROOT = rootDir;
+
+    expect(isAiGatewayEnabled()).toBe(false);
   });
 });

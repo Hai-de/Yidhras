@@ -2,10 +2,10 @@ import { DatabaseSync } from 'node:sqlite';
 
 import fs from 'fs';
 
-import { resolvePackRuntimeDatabaseLocation } from './pack_db_locator.js';
+import { stringifyJsonSafe, toJsonSafe } from './internal/json.js';
 import type { PersistedStoragePlan } from './internal/plan_store.js';
 import { readPersistedStoragePlan } from './internal/plan_store.js';
-import { stringifyJsonSafe, toJsonSafe } from './internal/json.js';
+import { resolvePackRuntimeDatabaseLocation } from './pack_db_locator.js';
 
 export type PackCollectionRecord = Record<string, unknown>;
 

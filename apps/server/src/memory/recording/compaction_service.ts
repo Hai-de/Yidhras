@@ -2,6 +2,7 @@ import { buildAiTaskRequestFromInferenceContext } from '../../ai/task_prompt_bui
 import type { AiTaskService } from '../../ai/task_service.js';
 import { createAiTaskService } from '../../ai/task_service.js';
 import type { AppContext } from '../../app/context.js';
+import { isAiGatewayEnabled } from '../../config/runtime_config.js';
 import { getActivePackRuntimeFacade } from '../../app/services/app_context_ports.js';
 import { createContextOverlayStore } from '../../context/overlay/store.js';
 import { buildInferenceContext } from '../../inference/context_builder.js';
@@ -83,6 +84,24 @@ export const createMemoryCompactionService = ({
       }
 
       const thresholds = this.getThresholdsForPack(pack.ai ?? null);
+      if (!isAiGatewayEnabled()) {
+        return {
+          actor_id: input.agent_id,
+          thresholds,
+          state: {
+            inference_count_since_summary: 0,
+            inference_count_since_compaction: 0,
+            last_summary_tick: null,
+            last_compaction_tick: null
+          },
+          triggered: {
+            context_summary: false,
+            memory_compaction: false
+          },
+          mutations: emptyMutations()
+        };
+      }
+
       const now = activePackRuntime.getCurrentTick();
       const state = await context.prisma.memoryCompactionState.upsert({
         where: { agent_id: input.agent_id },
@@ -124,7 +143,7 @@ export const createMemoryCompactionService = ({
       const inferenceContext = await buildInferenceContext(context, {
         agent_id: input.agent_id,
         identity_id: input.identity_id ?? input.agent_id,
-        strategy: 'model_routed',
+        strategy: 'rule_based',
         attributes: {
           compaction_run: true,
           compaction_source: 'memory_loop'

@@ -98,7 +98,7 @@ const TASK_DEFINITIONS: Record<AiTaskType, AiTaskDefinition> = {
     default_response_mode: 'json_schema',
     default_prompt_preset: 'default_intent_grounding_v1',
     default_decoder: 'default_json_schema',
-    default_route_id: 'default.agent_decision',
+    default_route_id: 'default.context_summary',
     default_schema: AGENT_DECISION_SCHEMA,
     default_strict: true,
     default_privacy_tier: 'trusted_cloud'
