@@ -6,6 +6,8 @@ import {
   evaluateMemoryBlockActivation
 } from '../../src/memory/blocks/trigger_engine.js';
 
+const TEST_PACK_ID = 'world-test-pack';
+
 describe('memory block trigger engine', () => {
   it('evaluates logic DSL expressions over pack state and recent sources', () => {
     const root = {
@@ -53,7 +55,7 @@ describe('memory block trigger engine', () => {
         atmosphere_node_id: null
       },
       resolved_agent_id: 'agent-001',
-      pack_id: 'world-death-note',
+      pack_id: TEST_PACK_ID,
       current_tick: '100',
       attributes: {
         scheduler_reason: 'event_followup'
@@ -108,7 +110,7 @@ describe('memory block trigger engine', () => {
     const block = {
       id: 'memory-block-logic-001',
       owner_agent_id: 'agent-001',
-      pack_id: 'world-death-note',
+      pack_id: TEST_PACK_ID,
       kind: 'reflection' as const,
       status: 'active' as const,
       title: 'Investigate L carefully',

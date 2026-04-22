@@ -4,6 +4,8 @@ import { createPrismaLongMemoryBlockStore } from '../../src/memory/blocks/store.
 import { createPrismaLongTermMemoryStore } from '../../src/memory/long_term_store.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 
+const TEST_PACK_ID = 'world-test-pack';
+
 describe('memory block stores', () => {
   it('persists memory blocks, runtime state, supports hard delete, and exposes long-term memory entries', async () => {
     const fixture = await createIsolatedAppContextFixture();
@@ -16,7 +18,7 @@ describe('memory block stores', () => {
         block: {
           id: 'memory-block-001',
           owner_agent_id: 'agent-001',
-          pack_id: 'world-death-note',
+          pack_id: TEST_PACK_ID,
           kind: 'reflection',
           status: 'active',
           title: 'L suspicion',
@@ -87,7 +89,7 @@ describe('memory block stores', () => {
 
       const listed = await blockStore.listCandidateBlocks({
         owner_agent_id: 'agent-001',
-        pack_id: 'world-death-note',
+        pack_id: TEST_PACK_ID,
         limit: 10
       });
 
@@ -120,7 +122,7 @@ describe('memory block stores', () => {
 
       const afterDelete = await blockStore.listCandidateBlocks({
         owner_agent_id: 'agent-001',
-        pack_id: 'world-death-note',
+        pack_id: TEST_PACK_ID,
         limit: 10
       });
       expect(afterDelete).toHaveLength(0);

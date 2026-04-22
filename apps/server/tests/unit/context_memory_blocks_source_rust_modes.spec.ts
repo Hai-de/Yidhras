@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
+import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 import { buildContextNodesFromMemoryBlocks } from '../../src/context/sources/memory_blocks.js';
 import type { IdentityContext } from '../../src/identity/types.js';
 import type { InferencePackStateSnapshot } from '../../src/inference/types.js';
 import type { LongMemoryBlockStore, MemoryBehavior, MemoryBlock, MemoryRuntimeState } from '../../src/memory/blocks/types.js';
-import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 
 const TEST_PACK_ID = 'world-test-pack';
-
 
 const buildContext = (): AppContext => ({
   prisma: {

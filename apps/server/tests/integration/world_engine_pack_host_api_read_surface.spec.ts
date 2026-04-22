@@ -9,6 +9,8 @@ import { materializePackRuntimeCoreModels } from '../../src/packs/runtime/materi
 import { createTestAppContext } from '../fixtures/app-context.js';
 import { createIsolatedRuntimeEnvironment, createPrismaClientForEnvironment, migrateIsolatedDatabase } from '../helpers/runtime.js';
 
+const DEATH_NOTE_PACK_REF = 'death_note';
+
 describe('PackHostApi read surface integration', () => {
   let cleanup: (() => Promise<void>) | null = null;
   let context: AppContext;
@@ -16,7 +18,7 @@ describe('PackHostApi read surface integration', () => {
   let sidecar: WorldEngineSidecarClient;
 
   beforeAll(async () => {
-    const environment = await createIsolatedRuntimeEnvironment();
+    const environment = await createIsolatedRuntimeEnvironment({ activePackRef: DEATH_NOTE_PACK_REF, seededPackRefs: [DEATH_NOTE_PACK_REF] });
     cleanup = environment.cleanup;
     await migrateIsolatedDatabase(environment);
 
@@ -32,7 +34,7 @@ describe('PackHostApi read surface integration', () => {
     context.worldEngine = sidecar as unknown as AppContext['worldEngine'];
 
     const loader = new PackManifestLoader(environment.worldPacksDir);
-    const pack = loader.loadPack('death_note');
+    const pack = loader.loadPack(DEATH_NOTE_PACK_REF);
     packId = pack.metadata.id;
     context.activePackRuntime = {
       async init() {
@@ -56,7 +58,7 @@ describe('PackHostApi read surface integration', () => {
     await materializePackRuntimeCoreModels(pack, 1000n);
     await sidecar.loadPack({
       pack_id: packId,
-      pack_ref: 'death_note',
+      pack_ref: DEATH_NOTE_PACK_REF,
       mode: 'active'
     });
   });

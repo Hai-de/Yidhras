@@ -1,34 +1,35 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-22T00:45:33.791Z
+- Updated At: 2026-04-22T01:33:38.152Z
 - Status: active
 - Phase: implementation
 
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
-- 当前进度：19/19 个里程碑已完成；最新：PG17
-- 当前焦点：第二批通用测试与命名技术债第一轮治理已完成，等待是否继续扩面处理中优先级 e2e 与剩余 unit/integration 命名债
-- 最新结论：已完成第二批第一轮治理：高优先级 generic e2e 显式迁移、混合型 e2e 拆分、部分 unit/runtime 默认化命名债清理与验证全部收口。
-- 下一步：如继续推进，优先复核 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e 的 generic 归类，并扩展剩余目录的命名债治理。
+- 当前进度：20/20 个里程碑已完成；最新：PG18
+- 当前焦点：第二批通用测试与命名技术债第一轮和第二轮治理均已完成，等待是否继续扩面清理剩余目录
+- 最新结论：已完成第二批继续治理：三个中优先级 e2e 已完成归类与收口，memory/context/world_engine 相关剩余默认化命名债已继续压缩，death_note 的合法 scenario 语义保留边界已明确。
+- 下一步：如继续推进，优先处理 world_engine_sidecar_client、memory_recording_pack_collection_bridge、context_orchestrator 等尚未治理的剩余命名点，并将例外清单继续补齐到更多目录。
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
 - 设计：`.limcode/design/第二批通用测试与命名技术债审计.md`
-- 计划：`.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md`
+- 计划：`.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md`
 - 审查：`.limcode/review/rust-migration-compatibility-debt-assessment.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 将第二批高优先级 generic e2e 显式迁移到 activePackRef: 'example_pack'，并按需补 seededPackRefs  `#phase-d1-generic-e2e-explicit-pack`
-- [x] 完成第二批 generic e2e 的回归验证，确认不再依赖 death_note 默认 seed/active 语义  `#phase-d1-validation`
-- [x] 拆分 smoke-endpoints、experimental-runtime、experimental-plugin-runtime-web 中的 generic 与 death_note scenario 混合职责  `#phase-d2-hybrid-e2e-split`
-- [x] 汇总剩余例外项、风险与验证结果，形成后续可继续执行的收尾清单  `#phase-d3-closeout-and-doc-sync`
-- [x] 清理 unit/integration 中属于默认化命名债的 world-death-note / death_note 固定值，并保留合法 scenario fixture 命名  `#phase-d3-naming-debt-audit-and-cleanup`
+- [x] 复核 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e，明确归类为 generic、mixed 或 scenario  `#phase-e1-medium-e2e-classification`
+- [x] 对确认属于 generic 的中优先级 e2e 显式迁移到 example_pack；对 mixed 文件执行拆分  `#phase-e1-medium-e2e-migration`
+- [x] 完成中优先级 e2e 迁移/拆分后的逐文件与聚合回归，确认不再依赖 death_note 默认 seed/active 语义  `#phase-e1-medium-e2e-validation`
+- [x] 记录保留的 death_note scenario fixture/capability/prompt/asset 清单，并同步验证结果、风险与剩余后续项  `#phase-e2-exception-ledger-and-closeout`
+- [x] 扩展扫描 unit/context、memory、world_engine integration 剩余目录中的 world-death-note、death_note、sim.init('death_note') 固定值并分类  `#phase-e2-expanded-naming-debt-audit`
+- [x] 将确认属于默认化命名债的剩余硬编码替换为中性测试 pack、fixture metadata 派生值或共享常量  `#phase-e2-expanded-naming-debt-remediation`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -260,6 +261,18 @@
 - 摘要:
 已完成第二批治理的 D1-D3：5 个高优先级 generic e2e 已显式迁移到 example_pack；smoke-endpoints 已拆分为 generic runtime smoke 与 death_note scenario smoke 两个文件；experimental-runtime 与 experimental-plugin-runtime-web 已明确 generic/scenario 边界；并将部分 unit/runtime 默认化命名债替换为中性测试 pack id，同时保留合法 death_note scenario fixture 命名。
 - 下一步：后续若继续扩面，应审查 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e 是否适合继续 generic 化，并在 unit/integration 中按目录推进剩余 world-death-note 默认化硬编码清理。
+
+### PG18 · 第二批中优先级 e2e 与剩余命名债扩面治理完成
+- 状态：completed
+- 记录时间：2026-04-22T01:33:08.888Z
+- 完成时间：2026-04-22T01:33:08.000Z
+- 关联 TODO：phase-e1-medium-e2e-classification, phase-e1-medium-e2e-migration, phase-e1-medium-e2e-validation, phase-e2-expanded-naming-debt-audit, phase-e2-expanded-naming-debt-remediation, phase-e2-exception-ledger-and-closeout
+- 关联文档：
+  - 设计：`.limcode/design/第二批通用测试与命名技术债审计.md`
+  - 计划：`.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md`
+- 摘要:
+已完成第二轮扩面治理：agent-overview 明确保留为 death_note scenario；audit-workflow-lineage 与 workflow-replay 通过引入调度基线隔离稳定验证 replay/lineage 框架合同；并继续清理 memory/context/world_engine 相关测试中的默认化命名债，引入中性测试 pack id 或共享 pack ref 常量，同时保留 authority/perception、world engine integration 与 plugin/runtime 路径中的合法 death_note scenario 语义。
+- 下一步：后续若继续扩面，可继续在尚未触达的 world_engine_sidecar_client、memory_recording_pack_collection_bridge、context_orchestrator 等文件中区分默认化命名债与合法 scenario 命名，并按目录逐步收口。
 <!-- LIMCODE_PROGRESS_MILESTONES_END -->
 
 ## 风险与阻塞
@@ -271,17 +284,6 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-21T23:57:20.839Z | updated | phase-c-validation | 再次验证 5 个第一批场景 e2e：world_pack_projection_endpoints、plugin-runtime-startup-gap、plugin-runtime-web、experimental-projection-compat、experimental-runtime 均保持通过。
-- 2026-04-21T23:57:20.839Z | updated | phase-d-followup-audit | 已确认 trigger-event.spec.ts 的残余问题不是 active-pack helper，而是 trigger_event dispatch_pending 与 semantic_intent decision_running 两类收敛假设混叠。
-- 2026-04-22T00:07:36.115Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-implementation.plan.md
-- 2026-04-22T00:07:49.145Z | updated | phase-b-scenario-e2e-migration | trigger-event.spec.ts 已按运行时语义拆分为稳定子场景，第一批 6 个显式 active-pack 目标文件全部迁移完成。
-- 2026-04-22T00:07:49.145Z | updated | phase-c-validation | 已完成 6 文件联合回归：world_pack_projection_endpoints、trigger-event、plugin-runtime-startup-gap、plugin-runtime-web、experimental-projection-compat、experimental-runtime，共 11 个测试全部通过。
-- 2026-04-22T00:16:05.302Z | artifact_changed | design | 同步设计文档：.limcode/design/第二批通用测试与命名技术债审计.md
-- 2026-04-22T00:20:21.515Z | artifact_changed | plan | 同步计划文档：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md
-- 2026-04-22T00:21:16.057Z | artifact_changed | plan | 同步计划文档：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md
-- 2026-04-22T00:21:16.057Z | updated | phase-d1-start | 开始执行第二批通用测试与命名技术债计划，当前优先迁移高优先级 generic e2e 到显式 example_pack。
-- 2026-04-22T00:21:23.542Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md
-- 2026-04-22T00:23:49.914Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md
 - 2026-04-22T00:24:02.577Z | updated | phase-d1-generic-e2e-explicit-pack | 已将 smoke-startup、overview-summary、scheduler-runtime-status、scheduler-queries、access-policy-contracts 五个 generic e2e 显式迁移到 activePackRef/seededPackRefs = example_pack。
 - 2026-04-22T00:24:02.577Z | updated | phase-d1-validation | 已完成上述五个 generic e2e 的逐文件回归验证，确认不再依赖 death_note 默认 seed/active 语义。
 - 2026-04-22T00:42:28.368Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md
@@ -291,6 +293,17 @@
 - 2026-04-22T00:45:18.200Z | milestone_recorded | PG17 | 记录里程碑：第二批通用测试与命名技术债第一轮治理完成
 - 2026-04-22T00:45:33.791Z | updated | phase-d3-naming-debt-audit-and-cleanup | 已将 world_engine_persistence、world_engine_snapshot、context_memory_blocks_source_rust_modes 等 unit/runtime 测试中的默认化 world-death-note 硬编码替换为中性测试 pack id，并保留合法 death_note scenario 命名。
 - 2026-04-22T00:45:33.791Z | milestone_recorded | PG17 | 记录里程碑：第二批通用测试与命名技术债第一轮治理完成
+- 2026-04-22T01:01:56.718Z | artifact_changed | plan | 同步计划文档：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md
+- 2026-04-22T01:03:10.393Z | artifact_changed | plan | 同步计划文档：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md
+- 2026-04-22T01:03:10.393Z | updated | phase-e1-start | 开始执行第二轮继续治理计划，当前先复核三个中优先级 e2e 的 generic/mixed/scenario 归类。
+- 2026-04-22T01:03:21.695Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md
+- 2026-04-22T01:28:26.886Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md
+- 2026-04-22T01:28:49.173Z | updated | phase-e1-medium-e2e | 已完成 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e 的归类与处理，其中后两者通过引入调度基线隔离消除 replay_recovery job 被调度噪音干扰的问题。
+- 2026-04-22T01:28:49.173Z | updated | phase-e1-medium-e2e-validation | 已完成三个中优先级 e2e 的逐文件回归，确认当前归类下可稳定通过。
+- 2026-04-22T01:32:54.434Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md
+- 2026-04-22T01:33:08.888Z | milestone_recorded | PG18 | 记录里程碑：第二批中优先级 e2e 与剩余命名债扩面治理完成
+- 2026-04-22T01:33:38.152Z | updated | phase-e2-expanded-naming-debt-remediation | 已继续清理 memory_block_trigger_engine、memory_block_store、memory_trigger_engine_provider、world_engine_sidecar_runtime_loop、world_engine_sidecar_failure_recovery、world_engine_pack_host_api_read_surface 等测试中的默认化命名债，并保留 authority/perception、plugin/runtime、world engine 集成里的合法 death_note scenario 语义。
+- 2026-04-22T01:33:38.152Z | milestone_recorded | PG18 | 记录里程碑：第二批中优先级 e2e 与剩余命名债扩面治理完成
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -300,42 +313,47 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-17T21:05:29.611Z",
-  "updatedAt": "2026-04-22T00:45:33.791Z",
+  "updatedAt": "2026-04-22T01:33:38.152Z",
   "status": "active",
   "phase": "implementation",
-  "currentFocus": "第二批通用测试与命名技术债第一轮治理已完成，等待是否继续扩面处理中优先级 e2e 与剩余 unit/integration 命名债",
-  "latestConclusion": "已完成第二批第一轮治理：高优先级 generic e2e 显式迁移、混合型 e2e 拆分、部分 unit/runtime 默认化命名债清理与验证全部收口。",
+  "currentFocus": "第二批通用测试与命名技术债第一轮和第二轮治理均已完成，等待是否继续扩面清理剩余目录",
+  "latestConclusion": "已完成第二批继续治理：三个中优先级 e2e 已完成归类与收口，memory/context/world_engine 相关剩余默认化命名债已继续压缩，death_note 的合法 scenario 语义保留边界已明确。",
   "currentBlocker": null,
-  "nextAction": "如继续推进，优先复核 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e 的 generic 归类，并扩展剩余目录的命名债治理。",
+  "nextAction": "如继续推进，优先处理 world_engine_sidecar_client、memory_recording_pack_collection_bridge、context_orchestrator 等尚未治理的剩余命名点，并将例外清单继续补齐到更多目录。",
   "activeArtifacts": {
     "design": ".limcode/design/第二批通用测试与命名技术债审计.md",
-    "plan": ".limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md",
+    "plan": ".limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md",
     "review": ".limcode/review/rust-migration-compatibility-debt-assessment.md"
   },
   "todos": [
     {
-      "id": "phase-d1-generic-e2e-explicit-pack",
-      "content": "将第二批高优先级 generic e2e 显式迁移到 activePackRef: 'example_pack'，并按需补 seededPackRefs",
+      "id": "phase-e1-medium-e2e-classification",
+      "content": "复核 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e，明确归类为 generic、mixed 或 scenario",
       "status": "completed"
     },
     {
-      "id": "phase-d1-validation",
-      "content": "完成第二批 generic e2e 的回归验证，确认不再依赖 death_note 默认 seed/active 语义",
+      "id": "phase-e1-medium-e2e-migration",
+      "content": "对确认属于 generic 的中优先级 e2e 显式迁移到 example_pack；对 mixed 文件执行拆分",
       "status": "completed"
     },
     {
-      "id": "phase-d2-hybrid-e2e-split",
-      "content": "拆分 smoke-endpoints、experimental-runtime、experimental-plugin-runtime-web 中的 generic 与 death_note scenario 混合职责",
+      "id": "phase-e1-medium-e2e-validation",
+      "content": "完成中优先级 e2e 迁移/拆分后的逐文件与聚合回归，确认不再依赖 death_note 默认 seed/active 语义",
       "status": "completed"
     },
     {
-      "id": "phase-d3-closeout-and-doc-sync",
-      "content": "汇总剩余例外项、风险与验证结果，形成后续可继续执行的收尾清单",
+      "id": "phase-e2-exception-ledger-and-closeout",
+      "content": "记录保留的 death_note scenario fixture/capability/prompt/asset 清单，并同步验证结果、风险与剩余后续项",
       "status": "completed"
     },
     {
-      "id": "phase-d3-naming-debt-audit-and-cleanup",
-      "content": "清理 unit/integration 中属于默认化命名债的 world-death-note / death_note 固定值，并保留合法 scenario fixture 命名",
+      "id": "phase-e2-expanded-naming-debt-audit",
+      "content": "扩展扫描 unit/context、memory、world_engine integration 剩余目录中的 world-death-note、death_note、sim.init('death_note') 固定值并分类",
+      "status": "completed"
+    },
+    {
+      "id": "phase-e2-expanded-naming-debt-remediation",
+      "content": "将确认属于默认化命名债的剩余硬编码替换为中性测试 pack、fixture metadata 派生值或共享常量",
       "status": "completed"
     }
   ],
@@ -715,76 +733,32 @@
       "completedAt": "2026-04-22T00:45:26.000Z",
       "recordedAt": "2026-04-22T00:45:18.200Z",
       "nextAction": "后续若继续扩面，应审查 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e 是否适合继续 generic 化，并在 unit/integration 中按目录推进剩余 world-death-note 默认化硬编码清理。"
+    },
+    {
+      "id": "PG18",
+      "title": "第二批中优先级 e2e 与剩余命名债扩面治理完成",
+      "status": "completed",
+      "summary": "已完成第二轮扩面治理：agent-overview 明确保留为 death_note scenario；audit-workflow-lineage 与 workflow-replay 通过引入调度基线隔离稳定验证 replay/lineage 框架合同；并继续清理 memory/context/world_engine 相关测试中的默认化命名债，引入中性测试 pack id 或共享 pack ref 常量，同时保留 authority/perception、world engine integration 与 plugin/runtime 路径中的合法 death_note scenario 语义。",
+      "relatedTodoIds": [
+        "phase-e1-medium-e2e-classification",
+        "phase-e1-medium-e2e-migration",
+        "phase-e1-medium-e2e-validation",
+        "phase-e2-expanded-naming-debt-audit",
+        "phase-e2-expanded-naming-debt-remediation",
+        "phase-e2-exception-ledger-and-closeout"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/第二批通用测试与命名技术债审计.md",
+        "plan": ".limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md"
+      },
+      "completedAt": "2026-04-22T01:33:08.000Z",
+      "recordedAt": "2026-04-22T01:33:08.888Z",
+      "nextAction": "后续若继续扩面，可继续在尚未触达的 world_engine_sidecar_client、memory_recording_pack_collection_bridge、context_orchestrator 等文件中区分默认化命名债与合法 scenario 命名，并按目录逐步收口。"
     }
   ],
   "risks": [],
   "log": [
-    {
-      "at": "2026-04-21T23:57:20.839Z",
-      "type": "updated",
-      "refId": "phase-c-validation",
-      "message": "再次验证 5 个第一批场景 e2e：world_pack_projection_endpoints、plugin-runtime-startup-gap、plugin-runtime-web、experimental-projection-compat、experimental-runtime 均保持通过。"
-    },
-    {
-      "at": "2026-04-21T23:57:20.839Z",
-      "type": "updated",
-      "refId": "phase-d-followup-audit",
-      "message": "已确认 trigger-event.spec.ts 的残余问题不是 active-pack helper，而是 trigger_event dispatch_pending 与 semantic_intent decision_running 两类收敛假设混叠。"
-    },
-    {
-      "at": "2026-04-22T00:07:36.115Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/e2e-active-pack-assumption-cleanup-and-test-runtime-decentralization-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-22T00:07:49.145Z",
-      "type": "updated",
-      "refId": "phase-b-scenario-e2e-migration",
-      "message": "trigger-event.spec.ts 已按运行时语义拆分为稳定子场景，第一批 6 个显式 active-pack 目标文件全部迁移完成。"
-    },
-    {
-      "at": "2026-04-22T00:07:49.145Z",
-      "type": "updated",
-      "refId": "phase-c-validation",
-      "message": "已完成 6 文件联合回归：world_pack_projection_endpoints、trigger-event、plugin-runtime-startup-gap、plugin-runtime-web、experimental-projection-compat、experimental-runtime，共 11 个测试全部通过。"
-    },
-    {
-      "at": "2026-04-22T00:16:05.302Z",
-      "type": "artifact_changed",
-      "refId": "design",
-      "message": "同步设计文档：.limcode/design/第二批通用测试与命名技术债审计.md"
-    },
-    {
-      "at": "2026-04-22T00:20:21.515Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md"
-    },
-    {
-      "at": "2026-04-22T00:21:16.057Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md"
-    },
-    {
-      "at": "2026-04-22T00:21:16.057Z",
-      "type": "updated",
-      "refId": "phase-d1-start",
-      "message": "开始执行第二批通用测试与命名技术债计划，当前优先迁移高优先级 generic e2e 到显式 example_pack。"
-    },
-    {
-      "at": "2026-04-22T00:21:23.542Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md"
-    },
-    {
-      "at": "2026-04-22T00:23:49.914Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-generic-tests-and-naming-debt-remediation.plan.md"
-    },
     {
       "at": "2026-04-22T00:24:02.577Z",
       "type": "updated",
@@ -838,21 +812,87 @@
       "type": "milestone_recorded",
       "refId": "PG17",
       "message": "记录里程碑：第二批通用测试与命名技术债第一轮治理完成"
+    },
+    {
+      "at": "2026-04-22T01:01:56.718Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md"
+    },
+    {
+      "at": "2026-04-22T01:03:10.393Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md"
+    },
+    {
+      "at": "2026-04-22T01:03:10.393Z",
+      "type": "updated",
+      "refId": "phase-e1-start",
+      "message": "开始执行第二轮继续治理计划，当前先复核三个中优先级 e2e 的 generic/mixed/scenario 归类。"
+    },
+    {
+      "at": "2026-04-22T01:03:21.695Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md"
+    },
+    {
+      "at": "2026-04-22T01:28:26.886Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md"
+    },
+    {
+      "at": "2026-04-22T01:28:49.173Z",
+      "type": "updated",
+      "refId": "phase-e1-medium-e2e",
+      "message": "已完成 agent-overview、audit-workflow-lineage、workflow-replay 三个中优先级 e2e 的归类与处理，其中后两者通过引入调度基线隔离消除 replay_recovery job 被调度噪音干扰的问题。"
+    },
+    {
+      "at": "2026-04-22T01:28:49.173Z",
+      "type": "updated",
+      "refId": "phase-e1-medium-e2e-validation",
+      "message": "已完成三个中优先级 e2e 的逐文件回归，确认当前归类下可稳定通过。"
+    },
+    {
+      "at": "2026-04-22T01:32:54.434Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/second-batch-medium-priority-e2e-and-remaining-naming-debt-remediation.plan.md"
+    },
+    {
+      "at": "2026-04-22T01:33:08.888Z",
+      "type": "milestone_recorded",
+      "refId": "PG18",
+      "message": "记录里程碑：第二批中优先级 e2e 与剩余命名债扩面治理完成"
+    },
+    {
+      "at": "2026-04-22T01:33:38.152Z",
+      "type": "updated",
+      "refId": "phase-e2-expanded-naming-debt-remediation",
+      "message": "已继续清理 memory_block_trigger_engine、memory_block_store、memory_trigger_engine_provider、world_engine_sidecar_runtime_loop、world_engine_sidecar_failure_recovery、world_engine_pack_host_api_read_surface 等测试中的默认化命名债，并保留 authority/perception、plugin/runtime、world engine 集成里的合法 death_note scenario 语义。"
+    },
+    {
+      "at": "2026-04-22T01:33:38.152Z",
+      "type": "milestone_recorded",
+      "refId": "PG18",
+      "message": "记录里程碑：第二批中优先级 e2e 与剩余命名债扩面治理完成"
     }
   ],
   "stats": {
-    "milestonesTotal": 19,
-    "milestonesCompleted": 19,
-    "todosTotal": 5,
-    "todosCompleted": 5,
+    "milestonesTotal": 20,
+    "milestonesCompleted": 20,
+    "todosTotal": 6,
+    "todosCompleted": 6,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-22T00:45:33.791Z",
-    "bodyHash": "sha256:ebd4d3a9b308708575ddeb7b61087fa1d63e625fc8c24e8a9b79304d749cb7e5"
+    "generatedAt": "2026-04-22T01:33:38.152Z",
+    "bodyHash": "sha256:187729dc4bf13fe44384053f4142d89d3b4b9271d0a59730ca99c01d7d630bd5"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

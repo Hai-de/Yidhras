@@ -11,6 +11,9 @@ import { buildWorldPackHydrateRequest } from '../../src/app/runtime/world_engine
 import { sim } from '../../src/core/simulation.js';
 import { createIsolatedRuntimeEnvironment, migrateIsolatedDatabase } from '../helpers/runtime.js';
 
+const DEATH_NOTE_PACK_REF = 'death_note';
+const DEATH_NOTE_PACK_ID = 'world-death-note';
+
 const packSummary = (summary: unknown): Record<string, unknown> => {
   if (!summary || typeof summary !== 'object' || Array.isArray(summary)) {
     throw new Error('summary should be an object');
@@ -22,14 +25,14 @@ describe('world engine sidecar runtime loop integration', () => {
   let cleanup: (() => Promise<void>) | null = null;
   let context: AppContext;
   let sidecar: WorldEngineSidecarClient;
-  const packId = 'world-death-note';
+  const packId = DEATH_NOTE_PACK_ID;
   const originalWorkspaceRoot = process.env.WORKSPACE_ROOT;
   const originalWorldPacksDir = process.env.WORLD_PACKS_DIR;
   const originalDatabaseUrl = process.env.DATABASE_URL;
   const originalAppEnv = process.env.APP_ENV;
 
   beforeAll(async () => {
-    const environment = await createIsolatedRuntimeEnvironment();
+    const environment = await createIsolatedRuntimeEnvironment({ activePackRef: DEATH_NOTE_PACK_REF, seededPackRefs: [DEATH_NOTE_PACK_REF] });
     cleanup = environment.cleanup;
     await migrateIsolatedDatabase(environment);
 
@@ -70,7 +73,7 @@ describe('world engine sidecar runtime loop integration', () => {
 
     await sidecar.loadPack({
       pack_id: packId,
-      pack_ref: 'death_note',
+      pack_ref: DEATH_NOTE_PACK_REF,
       mode: 'active',
       hydrate: await buildWorldPackHydrateRequest(context, packId)
     });

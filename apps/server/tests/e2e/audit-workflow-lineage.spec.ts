@@ -5,8 +5,15 @@ import {
   assertRecord,
   assertSuccessEnvelopeData
 } from '../helpers/envelopes.js';
-import { withIsolatedTestServer } from '../helpers/runtime.js';
-import { isRecord, requestJson, sleep } from '../helpers/server.js';
+import {
+  createIsolatedRuntimeEnvironment,
+  createPrismaClientForEnvironment,
+  prepareIsolatedRuntime
+} from '../helpers/runtime.js';
+import { isRecord, requestJson, sleep, withTestServer } from '../helpers/server.js';
+
+const DEATH_NOTE_PACK_REF = 'death_note';
+const DEATH_NOTE_AGENT_ID = 'agent-001';
 
 const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
   return JSON.stringify({
@@ -16,26 +23,21 @@ const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'syst
   });
 };
 
-const pollReplayJob = async (
+const pollJobUntil = async (
   baseUrl: string,
-  headers: Record<string, string>,
-  body: Record<string, unknown>,
+  jobId: string,
   predicate: (data: Record<string, unknown>) => boolean,
   label: string
 ): Promise<Record<string, unknown>> => {
   let lastData: Record<string, unknown> | null = null;
 
-  for (let attempt = 0; attempt < 24; attempt += 1) {
-    const replayResponse = await requestJson(baseUrl, '/api/inference/jobs', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body)
-    });
-    expect(replayResponse.status).toBe(200);
-    const replayData = assertSuccessEnvelopeData(replayResponse.body, label);
-    lastData = replayData;
-    if (predicate(replayData)) {
-      return replayData;
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const jobResponse = await requestJson(baseUrl, `/api/inference/jobs/${jobId}`);
+    expect(jobResponse.status).toBe(200);
+    const jobData = assertSuccessEnvelopeData(jobResponse.body, label);
+    lastData = jobData;
+    if (predicate(jobData)) {
+      return jobData;
     }
     await sleep(500);
   }
@@ -43,44 +45,80 @@ const pollReplayJob = async (
   throw new Error(`${label} did not reach expected state: ${JSON.stringify(lastData)}`);
 };
 
+const clearSchedulerPendingBaseline = async (
+  prisma: ReturnType<typeof createPrismaClientForEnvironment>,
+  agentId: string
+): Promise<void> => {
+  await prisma.actionIntent.deleteMany({
+    where: {
+      status: {
+        in: ['pending', 'dispatching']
+      },
+      source_inference_id: {
+        startsWith: 'sch:'
+      }
+    }
+  });
+
+  await prisma.decisionJob.deleteMany({
+    where: {
+      status: {
+        in: ['pending', 'running']
+      },
+      idempotency_key: {
+        startsWith: `sch:${agentId}:`
+      }
+    }
+  });
+};
+
 describe('audit workflow lineage e2e', () => {
   it('exposes parent/child workflow lineage through audit workflow detail endpoints', async () => {
-    await withIsolatedTestServer({ defaultPort: 3114 }, async server => {
-      const statusResponse = await requestJson(server.baseUrl, '/api/status');
-      expect(statusResponse.status).toBe(200);
-      const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');
-      expect(statusData.runtime_ready).toBe(true);
+    const environment = await createIsolatedRuntimeEnvironment({
+      activePackRef: DEATH_NOTE_PACK_REF,
+      seededPackRefs: [DEATH_NOTE_PACK_REF]
+    });
+    const prisma = createPrismaClientForEnvironment(environment);
 
-      const headers = {
-        'Content-Type': 'application/json',
-        'x-m2-identity': createIdentityHeader('agent-001', 'agent')
-      };
+    try {
+      await prepareIsolatedRuntime(environment);
 
-      const baseKey = `audit-workflow-lineage-base-${Date.now()}`;
-      const submitResponse = await requestJson(server.baseUrl, '/api/inference/jobs', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          agent_id: 'agent-001',
-          strategy: 'rule_based',
-          idempotency_key: baseKey
-        })
-      });
-      expect(submitResponse.status).toBe(200);
+      await withTestServer({ defaultPort: 3114, envOverrides: environment.envOverrides, prepareRuntime: false }, async server => {
+        const statusResponse = await requestJson(server.baseUrl, '/api/status');
+        expect(statusResponse.status).toBe(200);
+        const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');
+        expect(statusData.runtime_ready).toBe(true);
 
-      const baseReplay = await pollReplayJob(
-        server.baseUrl,
-        headers,
-        { agent_id: 'agent-001', strategy: 'rule_based', idempotency_key: baseKey },
-        data => data.result_source === 'stored_trace' && isRecord(data.job),
-        'base workflow replay poll'
-      );
-      const baseReplayJob = assertRecord(baseReplay.job, 'base replay job');
+        const headers = {
+          'Content-Type': 'application/json',
+          'x-m2-identity': createIdentityHeader(DEATH_NOTE_AGENT_ID, 'agent')
+        };
 
-      const replaySubmitResponse = await requestJson(
-        server.baseUrl,
-        `/api/inference/jobs/${baseReplayJob.id as string}/replay`,
-        {
+        await clearSchedulerPendingBaseline(prisma, DEATH_NOTE_AGENT_ID);
+
+        const baseKey = `audit-workflow-lineage-base-${Date.now()}`;
+        const submitResponse = await requestJson(server.baseUrl, '/api/inference/jobs', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            agent_id: DEATH_NOTE_AGENT_ID,
+            strategy: 'rule_based',
+            idempotency_key: baseKey
+          })
+        });
+        expect(submitResponse.status).toBe(200);
+        const submitData = assertSuccessEnvelopeData(submitResponse.body, 'base workflow submit response');
+        const submittedJob = assertRecord(submitData.job, 'base workflow submit job');
+
+        const settledBaseJob = await pollJobUntil(
+          server.baseUrl,
+          submittedJob.id as string,
+          data => data.status === 'completed',
+          'base workflow completion poll'
+        );
+        expect(settledBaseJob.intent_class).toBe('direct_inference');
+
+        const replaySubmitResponse = await requestJson(server.baseUrl, `/api/inference/jobs/${submittedJob.id as string}/replay`, {
           method: 'POST',
           headers,
           body: JSON.stringify({
@@ -92,47 +130,37 @@ describe('audit workflow lineage e2e', () => {
               }
             }
           })
-        }
-      );
-      expect(replaySubmitResponse.status).toBe(200);
-      const replaySubmitData = assertSuccessEnvelopeData(replaySubmitResponse.body, 'replay submit response');
-      const replayJob = assertRecord(replaySubmitData.job, 'replay submit job');
-      expect(isRecord(replaySubmitData.replay)).toBe(true);
+        });
+        expect(replaySubmitResponse.status).toBe(200);
+        const replaySubmitData = assertSuccessEnvelopeData(replaySubmitResponse.body, 'replay submit response');
+        const replayJob = assertRecord(replaySubmitData.job, 'replay submit job');
+        expect(isRecord(replaySubmitData.replay)).toBe(true);
 
-      const replayJobId = replayJob.id as string;
-      const replayKey = replayJob.idempotency_key as string;
-      const settledReplay = await pollReplayJob(
-        server.baseUrl,
-        headers,
-        { agent_id: 'agent-001', strategy: 'mock', idempotency_key: replayKey },
-        data => data.result_source === 'stored_trace' && isRecord(data.workflow_snapshot),
-        'child replay poll'
-      );
-      expect(isRecord(settledReplay.workflow_snapshot)).toBe(true);
+        const replayJobId = replayJob.id as string;
+        expect(replayJob.intent_class).toBe('replay_recovery');
 
-      const workflowDetailResponse = await requestJson(server.baseUrl, `/api/audit/entries/workflow/${replayJobId}`);
-      expect(workflowDetailResponse.status).toBe(200);
-      const workflowDetail = assertSuccessEnvelopeData(workflowDetailResponse.body, 'workflow detail response');
-      const workflowDetailData = assertRecord(workflowDetail.data, 'workflow detail data');
-      const lineageDetail = assertRecord(workflowDetailData.lineage_detail, 'workflow detail lineage_detail');
-      const parentWorkflow = assertRecord(lineageDetail.parent_workflow, 'workflow detail parent_workflow');
-      const childWorkflows = assertArrayField(lineageDetail, 'child_workflows', 'workflow detail lineage_detail');
-      expect(Array.isArray(childWorkflows)).toBe(true);
-      expect(parentWorkflow.id).toBe(baseReplayJob.id);
+        const workflowDetailResponse = await requestJson(server.baseUrl, `/api/audit/entries/workflow/${replayJobId}`);
+        expect(workflowDetailResponse.status).toBe(200);
+        const workflowDetail = assertSuccessEnvelopeData(workflowDetailResponse.body, 'workflow detail response');
+        const workflowDetailData = assertRecord(workflowDetail.data, 'workflow detail data');
+        const lineageDetail = assertRecord(workflowDetailData.lineage_detail, 'workflow detail lineage_detail');
+        const parentWorkflow = assertRecord(lineageDetail.parent_workflow, 'workflow detail parent_workflow');
+        const childWorkflows = assertArrayField(lineageDetail, 'child_workflows', 'workflow detail lineage_detail');
+        expect(Array.isArray(childWorkflows)).toBe(true);
+        expect(parentWorkflow.id).toBe(submittedJob.id);
 
-      const parentDetailResponse = await requestJson(
-        server.baseUrl,
-        `/api/audit/entries/workflow/${baseReplayJob.id as string}`
-      );
-      expect(parentDetailResponse.status).toBe(200);
-      const parentDetail = assertSuccessEnvelopeData(parentDetailResponse.body, 'parent workflow detail response');
-      const parentDetailData = assertRecord(parentDetail.data, 'parent workflow detail data');
-      const parentLineage = assertRecord(parentDetailData.lineage_detail, 'parent workflow lineage_detail');
-      const parentChildWorkflows = assertArrayField(parentLineage, 'child_workflows', 'parent workflow lineage_detail');
-      expect(Array.isArray(parentChildWorkflows)).toBe(true);
-      expect(
-        parentChildWorkflows.some((item: unknown) => isRecord(item) && item.id === replayJobId)
-      ).toBe(true);
-    });
+        const parentDetailResponse = await requestJson(server.baseUrl, `/api/audit/entries/workflow/${submittedJob.id as string}`);
+        expect(parentDetailResponse.status).toBe(200);
+        const parentDetail = assertSuccessEnvelopeData(parentDetailResponse.body, 'parent workflow detail response');
+        const parentDetailData = assertRecord(parentDetail.data, 'parent workflow detail data');
+        const parentLineage = assertRecord(parentDetailData.lineage_detail, 'parent workflow lineage_detail');
+        const parentChildWorkflows = assertArrayField(parentLineage, 'child_workflows', 'parent workflow lineage_detail');
+        expect(Array.isArray(parentChildWorkflows)).toBe(true);
+        expect(parentChildWorkflows.some((item: unknown) => isRecord(item) && item.id === replayJobId)).toBe(true);
+      });
+    } finally {
+      await prisma.$disconnect();
+      await environment.cleanup();
+    }
   });
 });

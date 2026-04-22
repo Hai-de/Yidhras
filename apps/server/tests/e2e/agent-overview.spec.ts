@@ -4,20 +4,27 @@ import { assertErrorEnvelope, assertRecord, assertSuccessEnvelopeData } from '..
 import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { requestJson } from '../helpers/server.js';
 
+const DEATH_NOTE_PACK_REF = 'death_note';
+const DEATH_NOTE_AGENT_ID = 'agent-001';
+
 describe('agent overview e2e', () => {
   it('returns the overview snapshot for a seeded agent and validates query errors', async () => {
-    await withIsolatedTestServer({ defaultPort: 3105 }, async server => {
+    await withIsolatedTestServer({
+      defaultPort: 3105,
+      activePackRef: DEATH_NOTE_PACK_REF,
+      seededPackRefs: [DEATH_NOTE_PACK_REF]
+    }, async server => {
       const statusResponse = await requestJson(server.baseUrl, '/api/status');
       expect(statusResponse.status).toBe(200);
       const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');
       expect(statusData.runtime_ready).toBe(true);
 
-      const overviewResponse = await requestJson(server.baseUrl, '/api/entities/agent-001/overview?limit=5');
+      const overviewResponse = await requestJson(server.baseUrl, `/api/entities/${DEATH_NOTE_AGENT_ID}/overview?limit=5`);
       expect(overviewResponse.status).toBe(200);
       const overview = assertSuccessEnvelopeData(overviewResponse.body, 'entity overview response');
 
       const profile = assertRecord(overview.profile, 'agent overview profile');
-      expect(profile.id).toBe('agent-001');
+      expect(profile.id).toBe(DEATH_NOTE_AGENT_ID);
       expect(typeof profile.name).toBe('string');
 
       const bindingSummary = assertRecord(overview.binding_summary, 'agent overview binding_summary');
@@ -64,13 +71,13 @@ describe('agent overview e2e', () => {
       expect(Array.isArray(overlay.latest_items)).toBe(true);
       expect(Array.isArray(overlay.latest_mutations)).toBe(true);
 
-      const invalidOverviewLimitResponse = await requestJson(server.baseUrl, '/api/entities/agent-001/overview?limit=abc');
+      const invalidOverviewLimitResponse = await requestJson(server.baseUrl, `/api/entities/${DEATH_NOTE_AGENT_ID}/overview?limit=abc`);
       expect(invalidOverviewLimitResponse.status).toBe(400);
       assertErrorEnvelope(invalidOverviewLimitResponse.body, 'AGENT_QUERY_INVALID', 'invalid agent overview limit');
 
       const invalidSchedulerLimitResponse = await requestJson(
         server.baseUrl,
-        '/api/agent/agent-001/scheduler/projection?limit=abc'
+        `/api/agent/${DEATH_NOTE_AGENT_ID}/scheduler/projection?limit=abc`
       );
       expect(invalidSchedulerLimitResponse.status).toBe(400);
       assertErrorEnvelope(
@@ -79,7 +86,7 @@ describe('agent overview e2e', () => {
         'invalid agent scheduler projection limit'
       );
 
-      const invalidSnrLimitResponse = await requestJson(server.baseUrl, '/api/agent/agent-001/snr/logs?limit=abc');
+      const invalidSnrLimitResponse = await requestJson(server.baseUrl, `/api/agent/${DEATH_NOTE_AGENT_ID}/snr/logs?limit=abc`);
       expect(invalidSnrLimitResponse.status).toBe(400);
       assertErrorEnvelope(invalidSnrLimitResponse.body, 'SNR_LOG_QUERY_INVALID', 'invalid agent snr logs limit');
 

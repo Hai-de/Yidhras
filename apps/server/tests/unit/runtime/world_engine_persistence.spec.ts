@@ -264,7 +264,7 @@ describe('world engine persistence orchestration', () => {
       persistence: {
         persistPreparedStep: vi.fn(async ({ prepared }) => ({
           persisted_revision: prepared.next_revision,
-          applied_operations: prepared.state_delta.operations.map(item => item.op),
+          applied_operations: prepared.state_delta.operations.map((item: { op: string }) => item.op),
           persisted_entity_states: [],
           persisted_rule_execution_records: [],
           clock_delta: null,

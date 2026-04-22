@@ -9,6 +9,9 @@ import { resolvePerceptionForSubject } from '../../src/domain/perception/resolve
 import { notifications } from '../../src/utils/notifications.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 
+const DEATH_NOTE_PACK_REF = 'death_note';
+const DEATH_NOTE_PACK_ID = 'world-death-note';
+
 const createdRoots: string[] = [];
 
 afterEach(async () => {
@@ -22,7 +25,7 @@ afterEach(async () => {
 
 describe('authority/perception/context assembly', () => {
   it('resolves capabilities and pack-state visibility for the current subject', async () => {
-    const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test' });
+    const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test', activePackRef: DEATH_NOTE_PACK_REF, seededPackRefs: [DEATH_NOTE_PACK_REF] });
     createdRoots.push(environment.rootDir);
     process.env.WORKSPACE_ROOT = environment.rootDir;
     process.env.DATABASE_URL = environment.databaseUrl;
@@ -43,7 +46,7 @@ describe('authority/perception/context assembly', () => {
           world_pack_available: true
         },
         errors: [],
-        available_world_packs: ['death_note']
+        available_world_packs: [DEATH_NOTE_PACK_REF]
       },
       getRuntimeReady(): boolean {
         return true;
@@ -69,7 +72,7 @@ describe('authority/perception/context assembly', () => {
     };
 
     const authority = await resolveAuthorityForSubject(appContext, {
-      packId: 'world-death-note',
+      packId: DEATH_NOTE_PACK_ID,
       subjectEntityId: 'agent-001'
     });
     expect(Array.isArray(authority.resolved_capabilities)).toBe(true);
@@ -86,7 +89,7 @@ describe('authority/perception/context assembly', () => {
     expect(inferenceContextV2.base.pack_runtime.invocation_rules?.length).toBeGreaterThan(0);
 
     const perception = await resolvePerceptionForSubject(appContext, {
-      packId: 'world-death-note',
+      packId: DEATH_NOTE_PACK_ID,
       packState: inferenceContextV2.base.pack_state
     });
     expect(perception.visible_state_entries.some(entry => entry.entity_id === '__world__')).toBe(true);

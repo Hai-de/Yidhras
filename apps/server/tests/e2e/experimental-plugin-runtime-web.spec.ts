@@ -25,7 +25,7 @@ describe('experimental plugin runtime web e2e', () => {
         });
         expect(loadResponse.status).toBe(200);
         const loadData = assertSuccessEnvelopeData(loadResponse.body, 'experimental load runtime before plugin web routes');
-        const loadedPackId = String(loadData.handle?.pack_id ?? '');
+        const loadedPackId = String((loadData.handle as { pack_id?: string } | undefined)?.pack_id ?? '');
         expect(loadedPackId.length).toBeGreaterThan(0);
         expect(loadedPackId).toBe(DEATH_NOTE_PACK_ID);
 

@@ -11,6 +11,8 @@ import type {
   MemoryEvaluationContext
 } from '../../src/memory/blocks/types.js';
 
+const TEST_PACK_ID = 'world-test-pack';
+
 const buildContext = (): MemoryEvaluationContext => ({
   actor_ref: {
     identity_id: 'identity-001',
@@ -20,7 +22,7 @@ const buildContext = (): MemoryEvaluationContext => ({
     atmosphere_node_id: null
   },
   resolved_agent_id: 'agent-001',
-  pack_id: 'world-death-note',
+  pack_id: TEST_PACK_ID,
   current_tick: '100',
   attributes: {
     scheduler_reason: 'event_followup'
@@ -66,7 +68,7 @@ const buildCandidate = (): MemoryBlockRecord => {
   const block: MemoryBlock = {
     id: 'memory-block-provider-1',
     owner_agent_id: 'agent-001',
-    pack_id: 'world-death-note',
+    pack_id: TEST_PACK_ID,
     kind: 'reflection',
     status: 'active',
     title: 'Investigate L carefully',
