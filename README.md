@@ -112,6 +112,7 @@ pnpm --filter yidhras-server reset:dev-db
 ### 稳定参考
 
 - `docs/API.md`：公共接口契约与错误码
+- `docs/ARCH_DIAGRAM.md`：系统架构图总览与关键调用流
 - `docs/ARCH.md`：架构边界、模块职责、宿主关系
 - `docs/LOGIC.md`：业务规则、执行主线、领域语义
 - `docs/WORLD_PACK.md`：world pack 项目化与发布规范

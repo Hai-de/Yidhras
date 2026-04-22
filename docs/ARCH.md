@@ -2,6 +2,8 @@
 
 本文档用于描述 Yidhras 的**系统分层、模块边界、宿主关系与职责划分**。
 
+> 如需图形化总览与关键调用流，请看 `ARCH_DIAGRAM.md`
+
 > 不在这里展开：
 > - 公共 HTTP contract：看 `API.md`
 > - 业务执行语义：看 `LOGIC.md`

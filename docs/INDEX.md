@@ -27,6 +27,8 @@
 - `API.md`
   - 用途：公共 HTTP contract、错误码、调用边界
   - 不该写什么：阶段性推进说明、里程碑记录、过细的内部实现过程
+- `ARCH_DIAGRAM.md`
+  - 用途：系统全局结构图、模块关系图、宿主边界图与关键调用流
 - `ARCH.md`
   - 用途：系统分层、模块边界、宿主关系、依赖方向
   - 不该写什么：滚动式开发状态、待办列表、完整操作手册
@@ -86,6 +88,7 @@
 ### 稳定参考
 
 - 接口契约：`API.md`
+- 架构图总览：`ARCH_DIAGRAM.md`
 - 架构边界：`ARCH.md`
 - 业务规则：`LOGIC.md`
 - 主题系统：`THEME.md`
@@ -125,6 +128,7 @@
 
 - 仓库启动与导航 -> `README.md`
 - 公共接口契约 -> `API.md`
+- 系统结构图与调用流 -> `ARCH_DIAGRAM.md`
 - 系统分层与模块边界 -> `ARCH.md`
 - 业务执行语义 -> `LOGIC.md`
 - Prompt Workflow 细节 -> `capabilities/PROMPT_WORKFLOW.md`
@@ -165,6 +169,7 @@
 
 - 改了启动方式 / 仓库入口 -> 更新 `README.md`
 - 改了公共路由 contract / 错误码 -> 更新 `API.md`
+- 改了系统全局结构 / 模块关系图 / 调用流 -> 更新 `ARCH_DIAGRAM.md`
 - 改了模块边界 / 宿主关系 -> 更新 `ARCH.md`
 - 改了业务规则 / 执行语义 -> 更新 `LOGIC.md`
 - 改了 Prompt Workflow 细节 -> 更新 `capabilities/PROMPT_WORKFLOW.md`
@@ -186,6 +191,7 @@
 如果遇到多份文档说法不一致：
 
 - 接口以代码与 `packages/contracts` + `API.md` 为准
+- 系统结构图与关键调用流以 `ARCH_DIAGRAM.md` 为准
 - 架构边界以 `ARCH.md` 为准
 - 业务语义以 `LOGIC.md` 为准
 - 专题高耦合细节以 `capabilities/` 为准
