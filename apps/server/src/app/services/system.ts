@@ -1,3 +1,4 @@
+import { isAiGatewayEnabled } from '../../config/runtime_config.js';
 import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
 import type { SqliteRuntimePragmaSnapshot } from '../../db/sqlite_runtime.js';
 import type { SystemMessage } from '../../utils/notifications.js';
@@ -30,6 +31,9 @@ export interface RuntimeStatusSnapshot {
     worker_runtime_status: string;
     last_heartbeat_at: string | null;
     automatic_rebalance_enabled: boolean;
+  };
+  ai: {
+    gateway_enabled: boolean;
   };
   health_level: AppContext['startupHealth']['level'];
   world_pack:
@@ -182,6 +186,9 @@ export const getRuntimeStatusSnapshot = async (
       worker_runtime_status: ownershipSnapshot.worker_runtime_status,
       last_heartbeat_at: ownershipSnapshot.last_heartbeat_at?.toString() ?? null,
       automatic_rebalance_enabled: ownershipSnapshot.automatic_rebalance_enabled
+    },
+    ai: {
+      gateway_enabled: isAiGatewayEnabled()
     },
     health_level: context.startupHealth.level,
     world_pack: pack

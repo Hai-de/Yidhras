@@ -165,6 +165,7 @@ Prefer linking over duplicating.
 - `docs/ARCH.md` — architecture boundaries and module ownership.
 - `docs/LOGIC.md` — business rules and domain semantics.
 - `docs/WORLD_PACK.md` — world-pack packaging and release guidance.
+- `docs/ENHANCEMENTS.md` — redirect stub; actual backlog at `.limcode/enhancements-backlog.md`.
 - `docs/THEME.md` — frontend theme contract.
 - `docs/guides/COMMANDS.md` — full command matrix.
 - `docs/guides/DB_OPERATIONS.md` — DB migration, init, path changes.

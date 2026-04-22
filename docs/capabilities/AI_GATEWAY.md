@@ -157,4 +157,4 @@ kernel-side Prisma 当前包含 `AiInvocationRecord`，记录例如：
 - 架构边界：`../ARCH.md`
 - 业务语义：`../LOGIC.md`
 - Prompt Workflow：`./PROMPT_WORKFLOW.md`
-- 相关设计资产：`.limcode/design/multi-model-gateway-and-unified-ai-task-contract-design.md`
+- 相关设计资产：`.limcode/archive/historical/design/multi-model-gateway-and-unified-ai-task-contract-design.md`

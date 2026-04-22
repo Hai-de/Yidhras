@@ -193,18 +193,20 @@ pnpm --filter yidhras-server plugin -- why-not-enable --installation <installati
 
 ## 7. acknowledgement 说明
 
-当前 enable warning 语义：
+enable warning 与 acknowledgement 的完整语义（canonical text/hash 维护、ack 提交要求）见 [`PLUGIN_RUNTIME.md`](../capabilities/PLUGIN_RUNTIME.md) 第 5 节。
+
+操作层面要点：
 
 - 系统可能要求在 enable 前提交 acknowledgement
-- GUI 不维护另一套独立 warning 文案，而是直接消费后端下发的 canonical warning text/hash
-- CLI / GUI / API 最终都遵循同一组后端治理规则
+- GUI / CLI 都消费同一份后端下发的 canonical warning text/hash
+- acknowledge 时提交的 `reminder_text_hash` 必须与服务端当前 canonical warning 匹配
 
-如果你在 enable 时失败，优先检查：
+enable 失败时优先检查：
 
-1. 当前 installation 是否已经 confirm
+1. 当前 installation 是否已 confirm
 2. 当前状态是否允许 enable
 3. 是否缺少 acknowledgement
-4. 提交的 `reminder_text_hash` 是否仍与服务端 canonical warning 匹配
+4. `reminder_text_hash` 是否仍与服务端匹配
 
 ## 8. 常见排查路径
 

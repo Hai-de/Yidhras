@@ -38,7 +38,7 @@
 - `WORLD_PACK.md`
   - 用途：world pack 项目化、README 标配、发布规范
 - `ENHANCEMENTS.md`
-  - 用途：明确延期但未废弃的增强项收纳池
+  - 用途：指向延后增强项收纳池的重定向入口；实际内容已迁至 `.limcode/enhancements-backlog.md`
   - 不该写什么：当前迭代 backlog、已完成里程碑复盘
 - `../apps/web/README.md`
   - 用途：前端应用范围、结构与开发约束
@@ -63,13 +63,17 @@
   - 用途：当前 backlog 与优先级
   - 不该写什么：长期稳定架构说明、完整已完成能力清单
 - `../.limcode/design/`
-  - 用途：设计草案
+  - 用途：当前活跃/参考设计草案
 - `../.limcode/plans/`
-  - 用途：执行计划与任务拆解
+  - 用途：当前活跃/参考执行计划与任务拆解
 - `../.limcode/review/`
-  - 用途：评审记录、审查结论、证据归档
+  - 用途：当前活跃/参考评审记录、审查结论、证据归档
+- `../.limcode/archive/`
+  - 用途：已完成过程资产与历史草案归档
+- `../.limcode/README.md`
+  - 用途：说明 `.limcode` 的 active/reference/archive/historical 分层规则
 - `history/INDEX.md`
-  - 用途：人类可读历史归档入口
+  - 用途：人类可读历史归档索引；暂无归档内容，目录已就绪
 
 ## 快速导航
 
@@ -86,7 +90,7 @@
 - 业务规则：`LOGIC.md`
 - 主题系统：`THEME.md`
 - World Pack 规范：`WORLD_PACK.md`
-- 延后增强项：`ENHANCEMENTS.md`
+- 延后增强项：实际内容在 `../.limcode/enhancements-backlog.md`（`ENHANCEMENTS.md` 为重定向入口）
 - 前端应用说明：`../apps/web/README.md`
 
 ### 专题能力
@@ -107,9 +111,11 @@
 
 ### 过程资产
 
-- 设计草案：`../.limcode/design/`
-- 执行计划：`../.limcode/plans/`
-- 评审记录：`../.limcode/review/`
+- 活跃/参考设计：`../.limcode/design/`
+- 活跃/参考计划：`../.limcode/plans/`
+- 活跃/参考评审：`../.limcode/review/`
+- 过程资产归档：`../.limcode/archive/`
+- 归档规则：`../.limcode/README.md`
 
 ## 事实源规则
 
@@ -126,7 +132,9 @@
 - Plugin Runtime 细节 -> `capabilities/PLUGIN_RUNTIME.md`
 - 数据库迁移与更换操作 -> `guides/DB_OPERATIONS.md`
 - 当前 backlog -> `TODO.md`
+- 延后增强项 -> `../.limcode/enhancements-backlog.md`
 - 设计/计划/评审过程 -> `.limcode/`
+- 已完成/历史过程资产 -> `.limcode/archive/`
 - 人类可读历史归档 -> `history/`
 
 其他文档只做摘要与链接，不再复制大段正文。
@@ -165,8 +173,10 @@
 - 改了数据库迁移 / 更换 / 初始化说明 -> 更新 `guides/DB_OPERATIONS.md`
 - 改了主题 contract -> 更新 `THEME.md`
 - 改了 world pack 项目化规范 -> 更新 `WORLD_PACK.md`
+- 新增或调整延后增强项 -> 更新 `../.limcode/enhancements-backlog.md`
 - 改了当前优先级 -> 更新 `TODO.md`
-- 做了设计、计划、评审、迁移说明 -> 更新 `.limcode/` 对应资产
+- 做了仍在推进的设计、计划、评审、迁移说明 -> 更新 `.limcode/` 对应活跃资产
+- 做完并退出活跃层的过程资产 -> 迁入 `.limcode/archive/`，并按需要补 `.limcode/README.md` 说明
 - 需要长期保留的人类可读历史记录 -> 更新 `history/`
 
 如果不确定落点，优先更新主事实源文档，再在入口文档中补链接，而不是反过来复制正文。

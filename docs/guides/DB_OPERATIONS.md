@@ -64,31 +64,11 @@ DATABASE_URL="file:../../../data/yidhras.sqlite"
 
 ## 2.1 必需：`DATABASE_URL`
 
-Prisma 连接数据库所必需。
+Prisma 连接数据库所必需。默认值见 `apps/server/.env`：`file:../../../data/yidhras.sqlite`。
 
-### SQLite 示例
+> 注意：`file:` URL 的相对路径是**相对 Prisma 命令执行目录**来解析的。建议优先使用绝对路径或明确、稳定的相对路径，避免在不同 cwd 下造成“数据库实际落到别处”。
 
-```env
-DATABASE_URL="file:../../../data/yidhras.sqlite"
-```
-
-如果你想把数据库文件换到别的位置，可以改成例如：
-
-```env
-DATABASE_URL="file:/absolute/path/to/yidhras.sqlite"
-```
-
-或：
-
-```env
-DATABASE_URL="file:../../../runtime/db/prod.sqlite"
-```
-
-> 注意：`file:` URL 的相对路径是**相对 Prisma 命令执行目录**来解析的。
-> 在当前仓库的常见使用方式下，建议优先使用：
-> - 绝对路径；或
-> - 明确、稳定的相对路径；
-> 避免在不同 cwd 下造成“数据库实际落到别处”。
+更换数据库文件位置的完整说明见第 8 节。
 
 ## 2.2 常见辅助变量
 
@@ -127,46 +107,11 @@ DATABASE_URL="file:../../../runtime/db/prod.sqlite"
 
 ### `data/configw/*.yaml`
 
-当前 runtime host 级配置继续沿用 `data/configw`：
+配置优先级链的事实源与完整字段说明见 [`ARCH.md`](../ARCH.md) 第 2.4 节。简要结论：**env > yaml > code default**。
 
-- `data/configw/default.yaml`
-- `data/configw/<APP_ENV>.yaml`
-- `data/configw/local.yaml`
+与数据库 / runtime 稳定性直接相关的 config 字段包括路径、SQLite pragma、scheduler 策略等；experimental multi-pack runtime 的配置与启用约束见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。
 
-优先级为：
-
-1. code builtin defaults
-2. `default.yaml`
-3. `<APP_ENV>.yaml`
-4. `local.yaml`
-5. env overrides
-
-也即：**env > yaml > code default**。
-
-其中与数据库 / runtime 稳定性直接相关的字段，已经包括：
-
-- `paths.world_packs_dir`
-- `sqlite.busy_timeout_ms`
-- `sqlite.wal_autocheckpoint_pages`
-- `sqlite.synchronous`
-- `scheduler.runtime.simulation_loop_interval_ms`
-- `scheduler.lease_ticks`
-- `scheduler.entity_concurrency.*`
-- `scheduler.tick_budget.*`
-- `scheduler.automatic_rebalance.*`
-- `scheduler.runners.*`
-
-这些字段不改变 Prisma datasource 本身，但会影响：
-
-- experimental multi-pack runtime 是否开启
-- experimental operator/test-only pack runtime registry 是否可用
-- experiment-loaded pack runtime 数量上限
-- experimental runtime 默认启动策略（例如 `manual`）
-
-当前与 Phase 5 相关的 runtime config / env override 还包括：
-
-- `features.experimental.multi_pack_runtime.*`
-- `runtime.multi_pack.*`
+影响范围简述：
 
 - server 启动节奏
 - SQLite 锁等待与 checkpoint 行为
@@ -176,46 +121,18 @@ DATABASE_URL="file:../../../runtime/db/prod.sqlite"
 
 ## 3. 推荐启动顺序
 
-对于新环境或新机器，推荐按下面顺序执行。
-
-### 3.1 安装依赖
-
-在仓库根目录：
+新环境推荐：
 
 ```bash
 pnpm install
-```
-
-### 3.2 准备数据库与运行时
-
-在仓库根目录：
-
-```bash
 pnpm prepare:runtime
-```
-
-该命令会委托 server 执行：
-
-1. `prisma migrate deploy`
-2. `pnpm run init:runtime`
-3. `pnpm run seed:identity`
-
-对应 server 脚本定义见：
-
-- `apps/server/package.json`
-
-即：
-
-```json
-"prepare:runtime": "pnpm exec prisma migrate deploy && pnpm run init:runtime && pnpm run seed:identity"
-```
-
-### 3.3 启动服务
-
-```bash
 pnpm dev:server
 pnpm dev:web
 ```
+
+`prepare:runtime` 会依次执行 `prisma migrate deploy` → `init:runtime` → `seed:identity`。
+
+更细粒度的命令说明见 [`COMMANDS.md`](./COMMANDS.md) 第 3.4 节。
 
 ---
 
@@ -273,59 +190,16 @@ pnpm --filter yidhras-server init:runtime
 
 职责：
 
-- 确保 runtime config scaffold 存在；
-- 输出 runtime config snapshot（便于确认最终生效值）；
-- 确保 bootstrap world pack 已准备；
-- 输出初始化报告。
+- 确保 runtime config scaffold 存在、bootstrap world pack 已准备；
+- 输出 runtime config snapshot（便于确认最终生效值）与初始化报告。
 
-典型会在 snapshot 中看到的字段包括：
+snapshot 中会包含 `app_port`、`world_packs_dir`、`sqlite_*`、`scheduler_*` 等运行参数。如需调优，参见 [`ARCH.md`](../ARCH.md) 第 2.4 节与 [`COMMANDS.md`](./COMMANDS.md) 第 2.6 节。
 
-- `app_port`
-- `world_packs_dir`
-- `sqlite_busy_timeout_ms`
-- `sqlite_wal_autocheckpoint_pages`
-- `sqlite_synchronous`
-- `simulation_loop_interval_ms`
-- `scheduler_lease_ticks`
-- `scheduler_entity_default_max_active_workflows_per_entity`
-- `scheduler_entity_max_activations_per_tick`
-- `scheduler_allow_parallel_decision_per_entity`
-- `scheduler_allow_parallel_action_per_entity`
-- `scheduler_event_followup_preempts_periodic`
-- `scheduler_tick_budget_max_created_jobs`
-- `scheduler_tick_budget_max_executed_decisions`
-- `scheduler_tick_budget_max_dispatched_actions`
-- `scheduler_automatic_rebalance_*`
-- `scheduler_runner_*`
-- `scheduler_default_query_limit`
+针对 experimental multi-pack runtime，注意事项见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。简要结论：
 
-如果你使用比默认更高吞吐的数据库或更高频事件世界包，可以优先从这些字段入手调优；
-如果你使用更保守或更容易出现写竞争的数据库，应优先下调 runner concurrency、tick budget 与相关 lease / batch 参数。
-平台不限制数据库类型，但部署者需要自行评估数据库能力与这些 runtime host policy 的匹配关系。
-
-针对 experimental multi-pack runtime，当前建议：
-
-- 保持默认关闭，除非你明确在做 operator / test-only 试验
-- `runtime.multi_pack.start_mode` 优先使用 `manual`
-- `runtime.multi_pack.max_loaded_packs` 先保持小值（例如 `2`）
-- 不要把它当作 stable production rollout 的默认模式
-
-原因：
-
-- 当前 stable `/api/status` 仍以单 `world_pack` 返回为主
-- stable `/api/packs/:packId/overview`
-- stable `/api/packs/:packId/projections/timeline`
-- `PACK_ROUTE_ACTIVE_PACK_MISMATCH`
-
-都仍围绕 single active-pack stable contract 设计。
-
-experimental multi-pack runtime 只是旁路试验能力，主要用于：
-
-- runtime registry load / unload
-- per-pack runtime status / clock / scheduler 观察
-- experimental projection / plugin runtime compatibility 验证
-
-而不是当前默认数据库/运行时部署形态。
+- 当前 stable contract 仍以 single active-pack 为中心
+- experimental multi-pack 默认关闭，仅 operator / test-only
+- 不建议在 stable production 环境启用
 
 ## 5.2 `seed:identity`
 

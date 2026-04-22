@@ -15,26 +15,16 @@
 
 ## 0. Stable vs Experimental multi-pack runtime boundary
 
-当前 Phase 5 将 multi-pack runtime 明确定义为：
+当前 multi-pack runtime 为 **experimental / default off / operator test-only**。架构边界与约束详见 [`ARCH.md`](ARCH.md) 第 3.3.1 节。
 
-- **experimental**
-- **default off**
-- **operator / test-only**
-
-也就是说：
+简要结论：
 
 - 当前稳定 contract 仍以 **single active-pack runtime** 为中心
 - `/api/status` 继续返回单个 `world_pack`
-- `/api/packs/:packId/overview` 与 `/api/packs/:packId/projections/timeline` 继续要求 `packId === active pack`
+- `/api/packs/:packId/overview` 与 `/api/packs/:packId/projections/timeline` 要求 `packId === active pack`
 - `PACK_ROUTE_ACTIVE_PACK_MISMATCH` 继续成立
 
-只有在显式打开以下开关后，experimental surfaces 才可用：
-
-- `features.experimental.multi_pack_runtime.enabled`
-- `features.experimental.multi_pack_runtime.operator_api_enabled`
-- env overrides：
-  - `EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED`
-  - `EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED`
+experimental surfaces 需显式启用 `features.experimental.multi_pack_runtime.*`。
 
 ## 1. 基础信息 (System)
 
@@ -73,6 +63,7 @@
   - 说明：显式启用一个插件；当 `plugins.enable_warning.require_acknowledgement=true` 时，body 必须提供 `acknowledgement`
   - body：`{ acknowledgement: { reminder_text_hash, actor_id?, actor_label? } }`
   - 失败代码：`PLUGIN_ENABLE_ACK_REQUIRED`、`PLUGIN_ENABLE_ACK_INVALID`、`PLUGIN_ENABLE_INVALID_STATE`
+  - enable warning 语义与 canonical text/hash 维护规则见 [`PLUGIN_RUNTIME.md`](capabilities/PLUGIN_RUNTIME.md) 第 5 节
 - **POST `/api/packs/:packId/plugins/:installationId/disable`**
   - 说明：显式禁用一个插件 installation
 - **GET `/api/packs/:packId/plugins/runtime/web`**
@@ -308,15 +299,11 @@
 
 ### 10.4 当前稳定边界
 
-- 当前公开 inference strategy 仍只稳定承诺：
-  - `mock`
-  - `rule_based`
-- `model_routed` 仍视为内部 / 受控能力
-- `GET /api/inference/ai-invocations*` 是公开的只读 observability surface，不改变 `/api/inference/*` 的执行 contract
+- 当前公开 inference strategy 只稳定承诺 `mock` 与 `rule_based`
+- `model_routed` 为内部 / 受控能力，不在公共 contract 中承诺
+- `GET /api/inference/ai-invocations*` 为公开只读 observability surface
 
-更详细说明：
-- `docs/capabilities/AI_GATEWAY.md`
-- `docs/capabilities/PROMPT_WORKFLOW.md`
+策略定位与内部 gateway 分层详见 [`AI_GATEWAY.md`](capabilities/AI_GATEWAY.md) 第 5 节。
 
 ## 11. 身份与 Access-Policy 接口
 

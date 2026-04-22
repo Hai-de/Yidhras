@@ -54,6 +54,7 @@ import {
   getStartupPolicy,
   getWorldEngineConfig,
   getWorldPacksDir,
+  isAiGatewayEnabled,
   logRuntimeConfigSnapshot
 } from './config/runtime_config.js';
 import { sim } from './core/simulation.js';
@@ -322,7 +323,12 @@ const start = async (): Promise<void> => {
       }
       await syncActivePackPluginRuntime(appContext);
       appContext.setRuntimeReady(true);
-      notifications.push('info', `Yidhras 系统初始化成功 (pack=${selectedPack}, schedulerPartitions=${schedulerPartitionIds.join(',') || 'none'}, loopIntervalMs=${String(simulationLoopIntervalMs)})`, 'SYS_INIT_OK');
+      notifications.push(
+        'info',
+        `Yidhras 系统初始化成功 (pack=${selectedPack}, schedulerPartitions=${schedulerPartitionIds.join(',') || 'none'}, loopIntervalMs=${String(simulationLoopIntervalMs)}, aiGatewayEnabled=${String(isAiGatewayEnabled())})`,
+        'SYS_INIT_OK',
+        { ai_gateway_enabled: isAiGatewayEnabled() }
+      );
       startSimulation();
     }
   } catch (err: unknown) {
@@ -336,6 +342,7 @@ const start = async (): Promise<void> => {
   app.listen(port, () => {
     console.log(`[Yidhras Server] API full implementation running at http://localhost:${port}`);
     console.log(`[Yidhras Server] Inference module ready (phase=${inferenceService.phase}, ready=${String(inferenceService.ready)})`);
+    console.log(`[Yidhras Server] AI gateway enabled=${String(isAiGatewayEnabled())}`);
     console.log(`[Yidhras Server] Scheduler worker=${schedulerWorkerId} partitions=${schedulerPartitionIds.join(',') || 'none'} loopIntervalMs=${String(simulationLoopIntervalMs)}`);
   });
 };

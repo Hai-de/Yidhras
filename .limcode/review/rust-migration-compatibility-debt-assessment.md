@@ -4,9 +4,9 @@
 > 评估范围：apps/server 中因快速开发迁移至 Rust 迭代过程留下的兼容性债务
 > 更新日期：2026-04-21
 > 关联文档：
-> - `.limcode/design/rust-world-engine-phase1-boundary-and-sidecar-design.md`
-> - `.limcode/design/memory-block-context-trigger-engine-rust-migration-design.md`
-> - `.limcode/review/scheduler-core-decision-kernel-rust-migration-review.md`
+> - `.limcode/archive/design/rust-world-engine-phase1-boundary-and-sidecar-design.md`
+> - `.limcode/archive/design/memory-block-context-trigger-engine-rust-migration-design.md`
+> - `.limcode/archive/review/scheduler-core-decision-kernel-rust-migration-review.md`
 > - `docs/ENHANCEMENTS.md` (Lines 288-338)
 
 ---

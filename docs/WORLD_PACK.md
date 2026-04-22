@@ -118,148 +118,19 @@ metadata:
 - `assets/`、`docs/`：面向展示、协作与长期维护
 
 
-## 2.3 变量与宏模板使用说明
+## 2.3 变量与宏模板
 
-随着 Prompt Workflow 宏 / 变量系统正式化，world pack 作者现在可以在以下位置使用统一模板语法：
+world pack 作者可以在 `variables`、`prompts.*` 及部分 runtime/rule 文本字段中使用 Prompt Workflow 的统一模板语法。
 
-- `variables` 中的可递归字符串值
-- `prompts.*`
-- 某些 runtime / rule / event narrative 文本字段（按具体执行链支持情况）
+-pack 作者视角的关键要点：_
 
-### 2.3.1 推荐写法：优先使用命名空间
+- **优先使用命名空间写法**：`pack.*`、`actor.*`、`runtime.*`、`request.*`、`system.*`、`app.*`、`plugin.<pluginId>.*`
+- **避免裸 key 别名**：旧写法如 `{{ actor_name }}`、`{{ world_name }}` 仅为兼容桥接，不推荐新增
+- **支持受控宏**：基础插值 `{{ ... }}`、默认值 `| default(...)` 、条件块 `{{#if}}`、列表展开 `{{#each}}`
+- **不支持**：任意脚本/JS 表达式/自定义宏函数/通用模板编程
+- **上手建议**：静态信息放 `metadata`/`variables`，取值优先 `pack.metadata.*`/`pack.variables.*`，不稳定字段补 `default(...)`
 
-当前正式推荐使用：
-
-- `system.*`
-- `app.*`
-- `pack.*`
-- `runtime.*`
-- `actor.*`
-- `request.*`
-- `plugin.<pluginId>.*`
-
-例如：
-
-```yaml
-prompts:
-  global_prefix: |
-    你处于 {{ pack.metadata.name }} 的世界中。
-    当前时间刻为 {{ runtime.current_tick }}。
-
-  agent_initial_context: |
-    你当前扮演 {{ actor.display_name }}。
-    当前任务策略为 {{ request.strategy }}。
-```
-
-相比旧写法：
-
-```yaml
-prompts:
-  global_prefix: "你处于 {{ pack.metadata.name }} 的世界中。"
-```
-
-更推荐：
-
-```yaml
-prompts:
-  global_prefix: "你处于 {{ pack.metadata.name }} 的世界中。"
-```
-
-### 2.3.2 兼容 alias 的定位
-
-当前运行时仍保留少量裸 key 写法兼容，例如：
-
-- `{{ actor_name }}`（兼容写法，不推荐继续新增）
-- `{{ world_name }}`（兼容写法，不推荐继续新增）
-
-但这只是 compatibility bridge，不再是推荐主写法。
-
-作者应尽量避免在新 pack 中继续扩写裸 key，因为：
-
-1. 不够直观，容易撞名
-2. 来源层级不够透明
-3. 后续清理时更容易成为技术债
-
-### 2.3.3 当前支持的宏能力
-
-#### 基础插值
-
-```yaml
-variables:
-  city: "东京"
-
-prompts:
-  global_prefix: "故事发生在 {{ pack.variables.city }}。"
-```
-
-#### 默认值
-
-```yaml
-prompts:
-  agent_initial_context: "当前身份称号：{{ actor.profile.title | default(\"unknown\") }}"
-```
-
-#### 条件块
-
-```yaml
-prompts:
-  global_prefix: |
-    {{#if actor.has_bound_artifact}}
-    该主体当前持有关键媒介。
-    {{/if}}
-```
-
-#### 列表展开
-
-```yaml
-prompts:
-  global_prefix: |
-    当前已知持有物：
-    {{#each runtime.owned_artifacts as artifact}}
-    - {{ artifact.id }}
-    {{/each}}
-```
-
-### 2.3.4 当前不支持的能力
-
-本阶段不支持：
-
-- 任意脚本执行
-- JS 表达式
-- 用户自定义宏函数
-- 通用模板编程能力
-
-如果模板需要复杂业务逻辑，应该把逻辑放在服务端 runtime 或 projection 层，而不是继续往模板表达式里堆。
-
-### 2.3.5 作者上手建议
-
-对于第一次编写 world pack 的作者，推荐这样开始：
-
-1. 先把静态信息放进 `metadata` / `variables`
-2. prompt 文本里优先从 `pack.metadata.*` / `pack.variables.*` 取值
-3. 需要依赖主体状态时，再使用 `actor.*`
-4. 需要依赖运行态时，再使用 `runtime.*`
-5. 对不稳定字段统一补 `default(...)`
-6. 不要假设 plugin 变量会自动进入裸 key 空间
-
-一个较稳妥的起步例子：
-
-```yaml
-variables:
-  city: "东京"
-  case_unit: "基拉对策本部"
-
-prompts:
-  global_prefix: |
-    你处于 {{ pack.metadata.name }} 的世界中。
-    当前舞台位于 {{ pack.variables.city }}。
-    调查组织为 {{ pack.variables.case_unit }}。
-
-  agent_initial_context: |
-    你当前扮演 {{ actor.display_name }}。
-    当前 tick 为 {{ runtime.current_tick }}。
-    当前策略为 {{ request.strategy | default("mock") }}。
-```
+完整的命名空间列表、alias fallback 顺序、宏语法详解与诊断方法，见 → [`docs/capabilities/PROMPT_WORKFLOW.md`](capabilities/PROMPT_WORKFLOW.md) 第 7 节
 
 ---
 
@@ -378,18 +249,9 @@ README.md 宜明确区分：
 说明将 pack 放入 `data/world_packs/<pack>` 并启动的方法。
 
 ## 插件
-- 如果 pack 目录内包含 `plugins/` 子目录，运行时在扫描时会查找其中的 `plugin.manifest.yaml` 或 `plugin.manifest.yml` 文件。
-- 扫描到的插件会进入统一插件管理器，默认创建为 `pending_confirmation`。
-- 导入确认（import confirmation）不等同于启用；当前 `/plugins` GUI 和 CLI 都要求先 confirm import，再进入 enable 流程。
-- confirm import 时可选择授予全部或部分 `requested_capabilities`；未授予的 capability 不会进入 installation 的 `granted_capabilities`。
-- 显式启用前仍需进行确认（acknowledgement），除非部署者通过 `plugins.enable_warning.enabled=false` 或 `plugins.enable_warning.require_acknowledgement=false` 放宽约束。
-- 当前仅支持 `pack-local` 插件，不开放全局安装面。
-- 已启用插件的 Web 入口点会被服务器收敛为规范化的同源资源路由，而非直接透传 `dist` 字段。
-- 浏览器侧当前通过动态 import 加载 `web_bundle_url`，并在 pack-local 路由宿主 `/packs/:packId/plugins/:pluginId/*` 下挂载路由贡献（route contribution）。
-- 推荐插件 Web bundle 默认导出一个运行时模块，对外暴露 `panels[]` 与 `routes[]` 两类贡献。
-- 单个插件 panel/route 渲染失败不会影响宿主页面整体稳定性，当前会进入独立的渲染边界/回退界面。
-- `/api/packs/:packId/plugins` 当前会返回 `enable_warning` 快照，包含 canonical warning text/hash；GUI enable acknowledgement 会提交这个 hash，后端也会校验其是否与当前 warning text 保持一致。
-- canonical warning text 仍由 `PLUGIN_ENABLE_WARNING_TEXT` 定义；GUI 只是消费 runtime snapshot，不自行复制另一份文案来源。
+- 如果 pack 目录内包含 `plugins/` 子目录，运行时会扫描其中的 `plugin.manifest.yaml` / `plugin.manifest.yml`。
+- 当前仅支持 pack-local 插件；扫描后创建为 `pending_confirmation`，需先 confirm import 再 enable。
+- 插件治理流程、acknowledgement 语义、Web runtime 与同源路由详见 → [`docs/capabilities/PLUGIN_RUNTIME.md`](capabilities/PLUGIN_RUNTIME.md)。
 - 推荐插件目录结构：
   - `plugins/<plugin-dir>/plugin.manifest.yaml`
   - `plugins/<plugin-dir>/src/` 或 `plugins/<plugin-dir>/dist/`
@@ -500,42 +362,13 @@ README.md 宜明确区分：
 
 ## 7.4 新建 world pack 项目脚手架命令
 
-当前仓库提供基础脚手架命令：
+当前仓库提供基础脚手架命令，完整参数列表与使用说明见 → [`docs/guides/COMMANDS.md`](guides/COMMANDS.md) 第 2.5 节 / 第 3.5 节。
 
 ```bash
 pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"
 ```
 
-该命令将在 `data/world_packs/<pack-dir>/` 下创建：
-
-- `config.yaml`
-- `README.md`
-- `CHANGELOG.md`
-- 空目录：`docs/`、`assets/`、`examples/`
-
-常用参数：
-
-- `--dir`：pack 目录名（必填）
-- `--id`：`metadata.id`
-- `--name`：`metadata.name`
-- `--version`：版本号
-- `--description`：描述文本
-- `--author`：作者（多个作者可用逗号分隔）
-- `--homepage` / `--repository` / `--license`
-- `--tags`：逗号分隔标签
-- `--status`：状态，如 `draft` / `stable` / `template`
-- `--overwrite`：覆盖已存在文件
-- `--set-preferred`：写入 `data/configw/default.yaml` 中的 `world.preferred_pack`
-- `--set-bootstrap-template`：将 `world.bootstrap.target_pack_dir/template_file` 指向新 pack
-- `--disable-bootstrap`：将 `world.bootstrap.enabled` 设为 `false`
-- `--dry-run`：仅输出将创建的文件与将修改的配置，不执行写入
-
-脚手架还将自动完成以下操作：
-
-- 生成 `LICENSE`（占位模板）
-- 生成 `docs/setting.md`
-- 生成 `examples/overrides.example.yaml`
-- 生成后立即对 `config.yaml` 执行 schema 校验，确保其为可解析的 world pack
+该命令将在 `data/world_packs/<pack-dir>/` 下创建 `config.yaml`、`README.md`、`CHANGELOG.md` 及空目录 `docs/`、`assets/`、`examples/`，并对 `config.yaml` 执行 schema 校验。
 
 ## 8. 参考实现与 bundled example
 

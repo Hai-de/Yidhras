@@ -30,6 +30,7 @@ describe('startup smoke e2e', () => {
       const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');
       const runtimeSpeed = assertRecord(statusData.runtime_speed, '/api/status.runtime_speed');
       const scheduler = assertRecord(statusData.scheduler, '/api/status.scheduler');
+      const ai = assertRecord(statusData.ai, '/api/status.ai');
 
       expect(['running', 'paused']).toContain(statusData.status);
       expect(statusData.health_level).toBe(healthData.level);
@@ -37,6 +38,8 @@ describe('startup smoke e2e', () => {
       expect(runtimeSpeed.mode).toBe('fixed');
       expect(['default', 'world_pack', 'override']).toContain(runtimeSpeed.source);
       expect(typeof runtimeSpeed.effective_step_ticks).toBe('string');
+      expect(typeof ai.gateway_enabled).toBe('boolean');
+      expect(ai.gateway_enabled).toBe(false);
       expect(typeof scheduler.worker_id).toBe('string');
       expect(typeof scheduler.partition_count).toBe('number');
       expect(Array.isArray(scheduler.owned_partition_ids)).toBe(true);

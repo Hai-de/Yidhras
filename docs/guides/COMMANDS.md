@@ -84,50 +84,25 @@ pnpm smoke:server
 
 ### 2.6 Runtime 配置与优先级
 
-当前 server 继续沿用既有 `data/configw` runtime config scaffold，不另起一套配置系统。
+当前 server 继续沿用 `data/configw` runtime config scaffold。优先级链与配置边界的事实源见 [`ARCH.md`](../ARCH.md) 第 2.4 节。
 
-- 主配置模板：`apps/server/templates/configw/default.yaml`
-- 工作区实际配置：`data/configw/default.yaml`
-- 可按环境叠加：`data/configw/<env>.yaml`
-- 可选本地覆盖：`data/configw/local.yaml`
-- AI provider / model / route 独立配置：`apps/server/config/ai_models.yaml`
+简要结论：**env > yaml > code default**（详细优先级列表见 ARCH.md）。
 
-当前优先级为：
-
-1. code builtin defaults
-2. `data/configw/default.yaml`
-3. `data/configw/<APP_ENV>.yaml`
-4. `data/configw/local.yaml`
-5. env overrides
-
-也就是说：**env > yaml > code default**。
-
-目前已经迁入 `configw` 的重点运行参数包括：
+当前已迁入 `configw` 的重点运行参数包括：
 
 - `app.port`
 - `world.preferred_pack` / `world.bootstrap.*`
 - `sqlite.*`
-- `scheduler.runtime.*`
-- `scheduler.lease_ticks`
-- `scheduler.entity_concurrency.*`
-- `scheduler.tick_budget.*`
-- `scheduler.automatic_rebalance.*`
-- `scheduler.runners.*`
-- `scheduler.observability.*`
+- `scheduler.*`
 - `prompt_workflow.profiles.*`
-- `features.experimental.multi_pack_runtime.enabled`
-- `features.experimental.multi_pack_runtime.operator_api_enabled`
-- `features.experimental.multi_pack_runtime.ui_enabled`
-- `runtime.multi_pack.max_loaded_packs`
-- `runtime.multi_pack.start_mode`
-- `runtime.multi_pack.bootstrap_packs`
+- `features.experimental.multi_pack_runtime.*`
+- `runtime.multi_pack.*`
 
 说明：
 
-- experimental multi-pack runtime 默认关闭
-- 当前只推荐用于 operator / test-only 试验
+- experimental multi-pack runtime 默认关闭，只推荐 operator / test-only 试验
 - 稳定模式仍以 single active-pack runtime 为中心
-- 不建议把它当作当前默认运行模型
+- 多包 runtime 的架构边界与启用约束见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节
 
 ## 3. Server 命令
 
@@ -186,7 +161,7 @@ pnpm --filter yidhras-server exec prisma migrate deploy
 
 #### 3.5.1 直接改 YAML（推荐）
 
-例如在 `data/configw/default.yaml` 中调整：
+在 `data/configw/default.yaml` 或 `data/configw/local.yaml` 中调整。示例片段：
 
 ```yaml
 app:
@@ -194,77 +169,33 @@ app:
 
 sqlite:
   busy_timeout_ms: 5000
-  wal_autocheckpoint_pages: 1000
   synchronous: "NORMAL"
 
 scheduler:
-  runtime:
-    simulation_loop_interval_ms: 1000
   lease_ticks: 5
   entity_concurrency:
     default_max_active_workflows_per_entity: 1
-    max_entity_activations_per_tick: 1
-    allow_parallel_decision_per_entity: false
-    allow_parallel_action_per_entity: false
-    event_followup_preempts_periodic: true
   tick_budget:
     max_created_jobs_per_tick: 32
-    max_executed_decisions_per_tick: 16
-    max_dispatched_actions_per_tick: 16
-  automatic_rebalance:
-    backlog_limit: 2
-    max_recommendations: 1
-    max_apply: 1
-  runners:
-    decision_job:
-      batch_limit: 5
-      concurrency: 2
-      lock_ticks: 5
-    action_dispatcher:
-      batch_limit: 5
-      concurrency: 1
-      lock_ticks: 5
-  observability:
-    default_query_limit: 20
-    max_query_limit: 100
-    summary:
-      default_sample_runs: 20
-      max_sample_runs: 100
-    trends:
-      default_sample_runs: 20
-      max_sample_runs: 100
-    operator_projection:
-      default_sample_runs: 20
-      max_sample_runs: 100
-      default_recent_limit: 5
-      max_recent_limit: 20
-
-prompt_workflow:
-  profiles:
-    agent_decision_default:
-      token_budget: 2200
-      section_policy: "standard"
-      compatibility_mode: "full"
 ```
+
+完整配置字段与默认值参见 `apps/server/src/config/` 源码和 [`ARCH.md`](../ARCH.md) 第 2.4 节。
 
 #### 3.5.2 临时使用 env 覆盖
 
 ```bash
 PORT=3101 \
-SIM_LOOP_INTERVAL_MS=1500 \
 SQLITE_BUSY_TIMEOUT_MS=8000 \
-SCHEDULER_LEASE_TICKS=9 \
-SCHEDULER_DECISION_JOB_CONCURRENCY=4 \
-SCHEDULER_ACTION_DISPATCHER_CONCURRENCY=2 \
+SCHEDULER_LEASE_TICKS=5 \
 SCHEDULER_ENTITY_MAX_ACTIVATIONS_PER_TICK=1 \
-SCHEDULER_TICK_BUDGET_MAX_CREATED_JOBS=48 \
-SCHEDULER_TICK_BUDGET_MAX_EXECUTED_DECISIONS=24 \
 pnpm --filter yidhras-server dev
 ```
 
-说明：这些参数属于 runtime host policy。默认值偏保守；若世界包开发者或部署者选择不同数据库，应自行根据数据库能力调整 runner concurrency、tick budget、entity single-flight 相关参数。
+说明：env 变量名与 YAML 字段的对应关系遵循 `CONFIG_KEY=VALUE` 约定；完整映射参见 `apps/server/src/config/` 源码。这些参数属于 runtime host policy，默认值偏保守；若世界包开发者或部署者选择不同数据库，应自行根据数据库能力调整 runner concurrency、tick budget、entity single-flight 相关参数。
 
 ### 3.5.3 Experimental multi-pack runtime 启动示例
+
+多包 runtime 当前为 **experimental / default off / operator test-only**。架构边界与约束见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。
 
 临时通过 env 打开：
 
@@ -274,38 +205,11 @@ EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED=true \
 pnpm --filter yidhras-server dev
 ```
 
-或在 `data/configw/default.yaml` / `data/configw/local.yaml` 中显式设置：
-
-```yaml
-features:
-  experimental:
-    multi_pack_runtime:
-      enabled: true
-      operator_api_enabled: true
-      ui_enabled: false
-
-runtime:
-  multi_pack:
-    max_loaded_packs: 2
-    start_mode: manual
-    bootstrap_packs: []
-```
-
-当前相关 env override 包括：
-
-- `EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED`
-- `EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED`
-- `EXPERIMENTAL_MULTI_PACK_RUNTIME_UI_ENABLED`
-- `RUNTIME_MULTI_PACK_MAX_LOADED_PACKS`
-- `RUNTIME_MULTI_PACK_START_MODE`
-- `RUNTIME_MULTI_PACK_BOOTSTRAP_PACKS`
-
-试验建议：
+或在 YAML 中设置 `features.experimental.multi_pack_runtime.*` 与 `runtime.multi_pack.*`。试验建议：
 
 - 默认保持 `start_mode=manual`
 - 保守设置 `max_loaded_packs`
 - 先通过 experimental API 显式 load / unload runtime
-- 不要把 stable `/api/packs/:packId/*` 当作 multi-pack 读面
 
 ### 3.5 World Pack 与手工脚本
 

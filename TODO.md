@@ -23,5 +23,4 @@
 
 - 本文件不是 changelog，不记录完整已完成清单。
 - 本文件不是架构总览，不长期保存稳定模块说明。
-- 已完成工作的证据、评审与结论，优先进入 `.limcode/review/`、`.limcode/progress.md` 或后续专门历史文档。
 - LegacyTsWorldEngineAdapter / createTsWorldEngineAdapter 已物理移除；world engine 已收敛为 sidecar-only 配置与启动装配，相关受影响单元/集成测试、lint 与 typecheck 已完成验证。

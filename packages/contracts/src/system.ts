@@ -48,6 +48,9 @@ export const runtimeStatusDataSchema = z.object({
   runtime_loop: runtimeLoopDiagnosticsSchema,
   sqlite: sqliteRuntimePragmaSchema.nullable(),
   scheduler: schedulerWorkerConfigSchema,
+  ai: z.object({
+    gateway_enabled: z.boolean()
+  }),
   health_level: z.enum(['ok', 'degraded', 'fail']),
 
   

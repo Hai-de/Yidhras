@@ -210,21 +210,7 @@ Memory Block Runtime 当前形成最小闭环：
 
 ## 8. AI task / gateway 的业务语义边界
 
-从业务语义上，应把 AI gateway 理解为：
-
-- 一个内部执行底座
-- 一个将 workflow metadata 与 provider execution 对接的观测层
-- 而不是已正式公开给外部调用方的 provider-specific contract
-
-因此：
-
-- 对外仍只稳定承诺 `mock | rule_based`
-- `model_routed` 目前仍是内部 / 受控能力
-- `AiInvocationRecord` 的公开价值主要在于 observability，而不是把内部路由模型正式公开化
-
-更详细的能力说明见：
-
-- `docs/capabilities/AI_GATEWAY.md`
+从业务语义上，AI gateway 是内部执行底座与观测层，而非正式公开的 provider-specific contract。当前对外只稳定承诺 `mock | rule_based`；`model_routed` 为内部 / 受控能力。完整分层与 public boundary 说明见 → [`AI_GATEWAY.md`](capabilities/AI_GATEWAY.md)
 
 ## 9. Prompt Workflow 与 Plugin Runtime 的专题说明
 

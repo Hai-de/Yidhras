@@ -10,7 +10,7 @@ Yidhras 是以 world pack 驱动的叙事模拟项目，被设计用于模拟研
 - `apps/web`：Nuxt 4 + Vue 3 + Pinia 前端
 - `packages/contracts`：前后端共享 contracts / transport schema
 - `docs/`：稳定参考文档、操作手册与导航
-- `.limcode/`：设计、计划、评审等过程资产
+- `.limcode/`：活跃过程资产与归档历史资产
 - `TODO.md`：当前 backlog 与优先级
 
 ## 环境要求
@@ -127,9 +127,11 @@ pnpm --filter yidhras-server reset:dev-db
 
 ### 过程资产
 
-- `.limcode/design/`：设计草案
-- `.limcode/plans/`：执行计划
-- `.limcode/review/`：评审记录与结论
+- `.limcode/design/`：当前活跃/参考设计
+- `.limcode/plans/`：当前活跃/参考执行计划
+- `.limcode/review/`：当前活跃/参考评审记录
+- `.limcode/archive/`：已完成资产与历史草案归档
+- `.limcode/README.md`：`.limcode` 分层与归档规则
 
 ## 阅读建议
 
