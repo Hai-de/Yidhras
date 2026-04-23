@@ -118,7 +118,7 @@
   - `ts`：纯 TypeScript 实现（`evaluateWithTs`）
   - `rust_primary`：Rust sidecar 为主，出错时 fallback 到 TS（`rust_fallback_to_ts`）
   - `rust_shadow`：双轨运行，TS 结果为准，Rust 结果仅用于 diff
-- **已知缺口**：`trigger_rate` 在 Rust 中未实现，因此 `ignored_features.trigger_rate_ignored: true` 被硬编码（lines 97-99）。
+- **更新状态（2026-04-22）**：`trigger_rate` 已完成收口，现已作为 deterministic admission gate 在 TS/Rust 两侧正式生效；旧 `ignored_features.trigger_rate_*` 语义已退出，改为真实 gate decision diagnostics，并通过 parity / unit / context tests 验证。
 - **当前默认**：`rust_primary`（`runtime_config.ts:184`）
 
 #### 2.4.2 Scheduler Decision Kernel

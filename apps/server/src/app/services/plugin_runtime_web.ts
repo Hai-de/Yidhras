@@ -6,7 +6,7 @@ import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import { assertPackScope } from './pack_scope_resolver.js';
 
-type PluginRuntimeWebSurface = 'stable' | 'experimental';
+export type PluginRuntimeWebSurface = 'stable' | 'experimental';
 
 export interface ActivePackPluginRuntimeWebSnapshot {
   pack_id: string;

@@ -76,11 +76,11 @@ const sortFragments = (fragments: PromptFragment[]): PromptFragment[] => {
 
 const summarizeState = (state: PromptWorkflowState): Record<string, unknown> => {
   return {
-    selected_node_count: state.selected_nodes.length,
-    working_set_count: state.working_set.length,
-    grouped_node_bucket_count: Object.keys(state.grouped_nodes).length,
-    fragment_count: state.fragments.length,
-    section_draft_count: state.section_drafts.length,
+    selected_node_count: state.selected_nodes?.length ?? 0,
+    working_set_count: state.working_set?.length ?? 0,
+    grouped_node_bucket_count: Object.keys(state.grouped_nodes ?? {}).length,
+    fragment_count: state.fragments?.length ?? 0,
+    section_draft_count: state.section_drafts?.length ?? 0,
     profile_id: state.profile.id,
     profile_version: state.profile.version
   };
@@ -345,7 +345,10 @@ const buildExecutorRegistry = (
       const sectionPolicy = state.profile.defaults?.section_policy ?? 'standard';
       const sectionDrafts = buildSectionDraftsFromFragments(state.fragments, {
         task_type: state.task_type,
-        section_policy: sectionPolicy
+        section_policy: sectionPolicy === 'include_only' && (state.include_sections?.length ?? 0) > 0
+          ? 'include_only'
+          : sectionPolicy,
+        include_sections: state.include_sections
       });
       const sectionSummary = buildSectionSummary(sectionDrafts);
       return {
@@ -525,6 +528,7 @@ export const runPromptWorkflow = async (
     pack_id: context.world_pack.id,
     profile,
     fragments: sortFragments(fragments),
+    include_sections: options.include_sections,
     compatibility: {}
   });
 

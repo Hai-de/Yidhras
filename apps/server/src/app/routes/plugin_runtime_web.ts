@@ -6,11 +6,7 @@ import type { Express, NextFunction, Request, Response } from 'express';
 import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseParams } from '../http/zod.js';
-import {
-  getActivePackPluginRuntimeWebSnapshot,
-  getExperimentalPackPluginRuntimeWebSnapshot,
-  resolveEnabledPluginWebAsset,
-  resolveExperimentalEnabledPluginWebAsset} from '../services/plugin_runtime_web.js';
+import { createPackScopedPluginRuntimeService } from '../services/pack_scoped_plugin_runtime_service.js';
 
 export interface PluginRuntimeWebRouteDependencies {
   asyncHandler(
@@ -45,11 +41,16 @@ export const registerPluginRuntimeWebRoutes = (
   context: AppContext,
   deps: PluginRuntimeWebRouteDependencies
 ): void => {
+  const packScopedPluginRuntimeService = createPackScopedPluginRuntimeService(context);
+
   app.get(
     '/api/packs/:packId/plugins/runtime/web',
     deps.asyncHandler(async (req, res) => {
       const params = parseParams(pluginPackParamsSchema, req.params, 'PLUGIN_QUERY_INVALID');
-      const snapshot = await getActivePackPluginRuntimeWebSnapshot(context, params.packId);
+      const snapshot = await packScopedPluginRuntimeService.getRuntimeWebSnapshot({
+        pack_id: params.packId,
+        mode: 'stable'
+      });
       activePackPluginRuntimeDataSchema.parse(toJsonSafe(snapshot));
       jsonOk(res, toJsonSafe(snapshot));
     })
@@ -59,7 +60,10 @@ export const registerPluginRuntimeWebRoutes = (
     '/api/experimental/runtime/packs/:packId/plugins/runtime/web',
     deps.asyncHandler(async (req, res) => {
       const params = parseParams(pluginPackParamsSchema, req.params, 'PLUGIN_QUERY_INVALID');
-      const snapshot = await getExperimentalPackPluginRuntimeWebSnapshot(context, params.packId);
+      const snapshot = await packScopedPluginRuntimeService.getRuntimeWebSnapshot({
+        pack_id: params.packId,
+        mode: 'experimental'
+      });
       activePackPluginRuntimeDataSchema.parse(toJsonSafe(snapshot));
       jsonOk(res, toJsonSafe(snapshot));
     })
@@ -78,11 +82,12 @@ export const registerPluginRuntimeWebRoutes = (
         'PLUGIN_QUERY_INVALID'
       );
       const wildcardAssetPath = typeof req.params[0] === 'string' ? req.params[0] : '';
-      const asset = await resolveExperimentalEnabledPluginWebAsset(context, {
+      const asset = await packScopedPluginRuntimeService.resolveEnabledPluginWebAsset({
         pack_id: params.packId,
         plugin_id: params.pluginId,
         installation_id: params.installationId,
-        asset_path: wildcardAssetPath
+        asset_path: wildcardAssetPath,
+        mode: 'experimental'
       });
 
       const contentType = getContentType(asset.relative_path);
@@ -108,11 +113,12 @@ export const registerPluginRuntimeWebRoutes = (
         'PLUGIN_QUERY_INVALID'
       );
       const wildcardAssetPath = typeof req.params[0] === 'string' ? req.params[0] : '';
-      const asset = await resolveEnabledPluginWebAsset(context, {
+      const asset = await packScopedPluginRuntimeService.resolveEnabledPluginWebAsset({
         pack_id: params.packId,
         plugin_id: params.pluginId,
         installation_id: params.installationId,
-        asset_path: wildcardAssetPath
+        asset_path: wildcardAssetPath,
+        mode: 'stable'
       });
 
       const contentType = getContentType(asset.relative_path);

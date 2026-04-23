@@ -35,6 +35,7 @@ import type { InferenceTraceSink } from './trace_sink.js';
 import type {
   ActionIntentDraft,
   DecisionResult,
+  InferenceContext,
   InferenceJobReplayInput,
   InferenceJobReplaySubmitResult,
   InferenceJobRetryResult,
@@ -46,6 +47,15 @@ import type {
   ProviderDecisionRaw,
   TraceMetadata
 } from './types.js';
+
+const extractIncludeSections = (inferenceContext: InferenceContext): string[] | undefined => {
+  const taskOverride = inferenceContext.world_ai?.tasks?.agent_decision;
+  const promptOverride = taskOverride?.prompt;
+  if (promptOverride && Array.isArray(promptOverride.include_sections) && promptOverride.include_sections.length > 0) {
+    return promptOverride.include_sections;
+  }
+  return undefined;
+};
 
 export interface InferenceService {
   readonly phase: 'workflow_baseline';
@@ -235,7 +245,8 @@ const executeRunInternal = async (
 ): Promise<InferenceRunResult> => {
   const inferenceContext = await buildInferenceContext(context, input);
   const provider = selectProvider(providers, inferenceContext.strategy);
-  const prompt = await buildPromptBundle(inferenceContext, { task_type: 'agent_decision' });
+  const includeSections = extractIncludeSections(inferenceContext);
+  const prompt = await buildPromptBundle(inferenceContext, { task_type: 'agent_decision', include_sections: includeSections });
   const attemptCount = options?.attemptCount ?? 1;
   const maxAttempts = options?.maxAttempts ?? DEFAULT_JOB_MAX_ATTEMPTS;
   const memoryRecordingService = createMemoryRecordingService({ context });
@@ -440,7 +451,8 @@ export const createInferenceService = ({
     async previewInference(input) {
       const inferenceContext = await buildInferenceContext(context, input);
       const provider = selectProvider(resolvedProviders, inferenceContext.strategy);
-      const prompt = await buildPromptBundle(inferenceContext, { task_type: 'agent_decision' });
+      const includeSections = extractIncludeSections(inferenceContext);
+      const prompt = await buildPromptBundle(inferenceContext, { task_type: 'agent_decision', include_sections: includeSections });
       const tick = inferenceContext.tick.toString();
       const metadata = {
         world_pack_id: inferenceContext.world_pack.id,
@@ -515,9 +527,10 @@ export const createInferenceService = ({
 
       if (
         typeof replayInput.overrides?.agent_id === 'string' ||
-        typeof replayInput.overrides?.identity_id === 'string'
+        typeof replayInput.overrides?.identity_id === 'string' ||
+        typeof replayInput.overrides?.actor_entity_id === 'string'
       ) {
-        throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'Replay overrides cannot include agent_id or identity_id');
+        throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'Replay overrides cannot include agent_id, identity_id, or actor_entity_id');
       }
 
       const requestInput = buildReplayRequestInputFromJob(sourceJob);

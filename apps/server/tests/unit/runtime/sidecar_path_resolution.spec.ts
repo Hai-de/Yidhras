@@ -51,9 +51,9 @@ const createMockSpawnedProcess = () => {
             protocol_version: 'memory_trigger/v1alpha1',
             accepted: true,
             transport: 'stdio_jsonrpc',
-            engine_instance_id: 'memory-stub',
+            engine_instance_id: 'memory-trigger-sidecar',
             supported_methods: ['memory_trigger.protocol.handshake', 'memory_trigger.health.get'],
-            engine_capabilities: ['stub']
+            engine_capabilities: ['stdio_jsonrpc', 'source_evaluate']
           }
         })}\n`);
       }

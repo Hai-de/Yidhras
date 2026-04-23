@@ -24,6 +24,14 @@ import { listPackRuleExecutionRecords } from '../../packs/storage/rule_execution
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 
+/**
+ * Host-facing control / compute contract for the world-engine kernel.
+ *
+ * This interface is intentionally owned by the TS host runtime kernel and is
+ * used by orchestration paths such as bootstrap, runtime loop, persistence
+ * coordination and objective execution bridging. It is not a plugin-facing or
+ * route-facing contract.
+ */
 export interface WorldEnginePort {
   loadPack(input: {
     pack_id: string;
@@ -47,6 +55,18 @@ export interface WorldEnginePort {
   executeObjectiveRule(input: WorldRuleExecuteObjectiveRequest): Promise<WorldRuleExecuteObjectiveResult>;
 }
 
+/**
+ * Long-term host-mediated read contract for pack runtime data.
+ *
+ * PackHostApi is the read-plane companion to WorldEnginePort:
+ * - WorldEnginePort = control / compute plane for host orchestration
+ * - PackHostApi = host-owned read plane for plugins, workflow host, routes and
+ *   other upper-layer consumers
+ *
+ * Returned values represent host-accepted / host-projected truth rather than
+ * raw sidecar-internal state. Consumers should extend this contract instead of
+ * depending on raw sidecar transport details.
+ */
 export interface PackHostApi {
   getPackSummary(input: { pack_id: string }): Promise<PackRuntimeSummary | null>;
   getCurrentTick(input: { pack_id: string }): Promise<string | null>;

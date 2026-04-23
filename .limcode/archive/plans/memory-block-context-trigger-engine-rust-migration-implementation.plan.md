@@ -55,8 +55,7 @@
 1. Prisma store Rust 化
 2. `buildMemoryEvaluationContext(...)` Rust 化
 3. `ContextNode` 结构 Rust 化
-4. 完整 Memory Block Runtime Rust ownership 深化
-5. `trigger_rate` 随机/概率执行
+4. `trigger_rate` 随机/概率执行
 
 ---
 

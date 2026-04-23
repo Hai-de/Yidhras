@@ -1,36 +1,36 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-22T12:07:52.975Z
+- Updated At: 2026-04-22T20:37:54.919Z
 - Status: active
-- Phase: maintenance
+- Phase: review
 
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
-- 当前进度：20/20 个里程碑已完成；最新：PG18
-- 当前焦点：.limcode 过程资产已完成 active/archive/historical 分层与引用校正
-- 最新结论：已完成 .limcode 归档治理：completed 资产迁入 .limcode/archive/design|plans|review，historical 草案迁入 .limcode/archive/historical/design；world-pack-post-governance-closure 计划已按历史收尾计划归档，tmp 下重复的 ru…
-- 下一步：后续新增 .limcode 过程资产时，按 .limcode/README.md 规则区分 active/reference 与 archive/historical；若下一轮 activeArtifacts 切换，再同步 progress.md。
+- 当前进度：24/24 个里程碑已完成；最新：public-opinion-crisis-first-cut
+- 当前焦点：public_opinion_crisis runtime actor binding review 已完成，结论集中在宿主主体系统与 pack actor 系统的桥接缺口
+- 最新结论：审查确认：项目对现实题材世界观的基础容纳性成立，但主体级容纳存在系统性缺口。`resolveActor()` 与 `buildPackStateSnapshot()` 只消费宿主 identity/agent/binding，而 `pack.identities` 仅被 materialize 为 pack runtime world entity，不进入宿…
+- 下一步：如需进入下一步，应基于 review 单独设计 `pack actor / pack identity -> inference actor` 的桥接策略，而不是继续扩张 world pack 内容。
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/rust-ts-host-runtime-kernel-boundary-and-clock-projection-design.md`
-- 计划：`.limcode/plans/limcode-process-asset-archive-and-governance-cleanup.plan.md`
-- 审查：`.limcode/review/rust-module-migration-gap-review.md`
+- 设计：`.limcode/archive/design/public-opinion-crisis-world-pack-design.md`
+- 计划：`.limcode/archive/plans/public-opinion-crisis-world-pack-implementation.plan.md`
+- 审查：`.limcode/review/public-opinion-crisis-runtime-actor-binding-review.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 创建 .limcode/archive 目录结构，并冻结 active/reference/completed/historical 四类资产清单  `#p1`
-- [x] 迁移 completed 类 design 资产到 .limcode/archive/design/  `#p2`
-- [x] 迁移 historical 类 design 草案到 .limcode/archive/historical/design/  `#p3`
-- [x] 迁移 completed 类 plans/review 资产到 .limcode/archive/plans/ 与 .limcode/archive/review/  `#p4`
-- [x] 核对 world-pack-post-governance-closure.plan.md 与 tmp/rust-migration-status-matrix-and-exit-criteria.md 的处理结论  `#p5`
-- [x] 更新文档治理说明，使 README/docs/INDEX/必要说明反映新的归档分层规则  `#p6`
-- [x] 验证 activeArtifacts、文档引用与 .limcode 目录可发现性未被破坏  `#p7`
+- [x] 设计现实题材 capability、authority、invocation 与 objective_enforcement 的首版最小闭环  `#plan-capabilities-rules`
+- [x] 规划 README 与 docs 文档，记录迁移映射、状态模型与链路发现  `#plan-docs-migration`
+- [x] 创建世界包目录骨架与最小项目化交付物范围，明确 config/README/CHANGELOG/docs/examples 的首版边界  `#plan-pack-skeleton`
+- [x] 设计 prompts 与 ai.tasks 配置，验证 actor 命名空间替代 <user>、受控模板替代 EJS 的方案  `#plan-prompts-ai`
+- [x] 把草稿重构为 world_state、actor_state、actor_history 及关键扩展对象的首版字段模型  `#plan-state-model`
+- [x] 修正 objective_enforcement invocation_type 与实际 dispatch 链路不一致的问题，并继续验证 loader / prompt bundle / grounding-enforcement 链路，记录需向用户报告的结构性边界  `#plan-validation-checkpoints`
+- [x] 对 public_opinion_crisis 执行真实运行链快速失败验证，优先打通 inference context / prompt workflow / grounding / action dispatch / objective enforcement 并记录第一处结构性失败  `#runtime-fast-fail-validation`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -202,7 +202,7 @@
   - 计划：`.limcode/archive/plans/memory-block-context-trigger-engine-rust-migration-implementation.plan.md`
 - 摘要:
 已完成独立 memory_trigger_sidecar、Rust trigger/source kernel、TS sidecar client、runtime config 与 memory_blocks source thin-shell 接线；并通过 TS/Rust 单元测试、模式/fallback 测试与真实 sidecar parity 测试。当前默认配置已切换为 rust_primary。
-- 下一步：如无额外回归问题，可进入后续 Memory Block Runtime 完整 Rust ownership 深化或清理增强项。
+- 下一步：如无额外回归问题，可深化或清理增强项。
 
 ### PG13 · Death Note 世界包 Phase A 闭环完成
 - 状态：completed
@@ -274,6 +274,56 @@
 - 摘要:
 已完成第二轮扩面治理：agent-overview 明确保留为 death_note scenario；audit-workflow-lineage 与 workflow-replay 通过引入调度基线隔离稳定验证 replay/lineage 框架合同；并继续清理 memory/context/world_engine 相关测试中的默认化命名债，引入中性测试 pack id 或共享 pack ref 常量，同时保留 authority/perception、world engine integration 与 plugin/runtime 路径中的合法 death_note scenario 语义。
 - 下一步：后续若继续扩面，可继续在尚未触达的 world_engine_sidecar_client、memory_recording_pack_collection_bridge、context_orchestrator 等文件中区分默认化命名债与合法 scenario 命名，并按目录逐步收口。
+
+### pack-host-api-contract-first-cut · PackHostApi 长期 host-mediated read contract 首轮收口完成
+- 状态：completed
+- 记录时间：2026-04-22T14:26:33.004Z
+- 完成时间：2026-04-22T14:26:33.004Z
+- 关联 TODO：pack-host-plan-p1, pack-host-plan-p2, pack-host-plan-p3, pack-host-plan-p4, pack-host-plan-p5
+- 关联文档：
+  - 设计：`.limcode/design/pack-host-api-long-term-host-mediated-read-contract-design.md`
+  - 计划：`.limcode/plans/pack-host-api-long-term-host-mediated-read-contract-implementation.plan.md`
+  - 审查：`.limcode/review/rust-module-migration-gap-review.md`
+- 摘要:
+已完成 PackHostApi 专题的首轮实施：盘点了 world engine 当前 PackHostApi 实现与消费面，确认其现实上已是 host-mediated read surface；同步更新 `docs/ARCH.md`、`docs/capabilities/PLUGIN_RUNTIME.md`、Rust migration status matrix、host-runtime-kernel 设计文档与 world-engine review 口径，将 PackHostApi 正式定位为长期 TS host kernel 拥有的 read-plane contract；并在 `world_engine_ports.ts`、`world_engine_sidecar_client.ts` 补充 contract/transport 级注释，同时新增单测验证 PackHostApi 在存在 runtime clock projection 时优先读取 host-projected truth。
+- 下一步：继续完成收尾同步：核对是否还需补 backlog/退出条件说明，并决定是否关闭本轮最后一个 progress/documentation 同步 TODO。
+
+### world-engine-visible-clock-read-cleanup · world engine visible clock read surface cleanup 完成
+- 状态：completed
+- 记录时间：2026-04-22T14:46:09.136Z
+- 完成时间：2026-04-22T14:46:09.136Z
+- 关联文档：
+  - 设计：`.limcode/design/pack-host-api-long-term-host-mediated-read-contract-design.md`
+  - 计划：`.limcode/plans/pack-host-api-long-term-host-mediated-read-contract-implementation.plan.md`
+  - 审查：`.limcode/review/rust-module-migration-gap-review.md`
+- 摘要:
+已完成第二轮 world engine seam/clock cleanup：在既有 PackHostApi 读合同收口基础上，继续强化 host persistence、plugin contributor、query/invocation seam 的 accepted host seam 口径；新增 `readVisibleClockSnapshot(...)` 统一可见时钟读取辅助，将 `clock routes`、`overview summary`、`global projection index` 三类对外/可见读取面统一切到 host projection 优先、sim fallback 次之的路径，减少散落的 `context.sim.getCurrentTick()` 直接读取。并补充 unit tests 覆盖 route/overview/PackHostApi 三类行为，验证 visible read surface 的 host truth 优先语义。
+- 下一步：若继续推进，可对剩余 `context.sim.getCurrentTick()` 用途做系统分层：将外部 visible read、内部 runtime bookkeeping、DB/event timestamp 三类调用分别治理。
+
+### fake-unimplemented-first-cut · 假未实现第一轮清理完成
+- 状态：completed
+- 记录时间：2026-04-22T16:12:28.121Z
+- 完成时间：2026-04-22T16:13:30.000Z
+- 关联 TODO：fake-plan-p1, fake-plan-p2, fake-plan-p3, fake-plan-p4
+- 关联文档：
+  - 设计：`.limcode/design/rust-migration-status-matrix-and-exit-criteria.md`
+  - 计划：`.limcode/plans/fake-unimplemented-cleanup-and-boundary-alignment.plan.md`
+  - 审查：`.limcode/review/rust-module-migration-gap-review.md`
+- 摘要:
+已完成假未实现台账冻结、首批高置信度代码残影清理与过程资产口径收口：memory trigger sidecar handshake 不再自称 stub，NarrativeResolver 错误恢复哨兵改为中性文案，rust-module-migration review 已开始将 world engine 相关项从默认迁移缺口叙事收口为 accepted TS-host-owned seam / fallback debt / optional deepening candidate 分类。
+- 下一步：完成本轮后续分流与收尾同步：把 trigger_rate 等真实缺口继续留在后续专题，不再与假未实现残影混写。
+
+### public-opinion-crisis-first-cut · 舆论危机公关模拟器 world pack 首轮落地与中等链路初步验证完成
+- 状态：completed
+- 记录时间：2026-04-22T20:07:11.505Z
+- 完成时间：2026-04-22T20:05:00+08:00
+- 关联 TODO：plan-pack-skeleton, plan-state-model, plan-prompts-ai, plan-capabilities-rules, plan-docs-migration, plan-validation-checkpoints
+- 关联文档：
+  - 设计：`.limcode/design/public-opinion-crisis-world-pack-design.md`
+  - 计划：`.limcode/plans/public-opinion-crisis-world-pack-implementation.plan.md`
+- 摘要:
+已完成 public_opinion_crisis world pack 首版落地：创建项目骨架、config.yaml、README、CHANGELOG、docs 与 examples；完成 actor/world 语义迁移、AI tasks、capability/authority/invocation/objective_enforcement 最小闭环；已通过 PackManifestLoader 与 parseWorldPackConstitution 级别验证。验证过程中修正了 objective_enforcement 的 invocation_type 对齐问题，并确认 prompt workflow 当前对 context_run 存在较强隐式结构依赖，这一边界已记录到 chain-findings 文档。
+- 下一步：若继续推进，应进入真实运行链路验证，重点检查 inference context 构建、prompt workflow 完整上下文要求，以及 grounding -> action dispatch -> objective enforcement 的实际命中情况。
 <!-- LIMCODE_PROGRESS_MILESTONES_END -->
 
 ## 风险与阻塞
@@ -285,26 +335,26 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-22T07:31:52.981Z | artifact_changed | review | 同步审查里程碑：M1
-- 2026-04-22T07:32:17.896Z | artifact_changed | review | 同步审查里程碑：M2
-- 2026-04-22T07:32:52.641Z | artifact_changed | review | 同步审查里程碑：M3
-- 2026-04-22T07:33:15.788Z | artifact_changed | review | 同步审查结论：.limcode/review/rust-module-migration-gap-review.md
-- 2026-04-22T07:50:21.797Z | artifact_changed | design | 同步设计文档：.limcode/design/rust-ts-host-runtime-kernel-boundary-and-clock-projection-design.md
-- 2026-04-22T07:54:31.227Z | artifact_changed | plan | 同步计划文档：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md
-- 2026-04-22T07:55:42.170Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md
-- 2026-04-22T08:10:00.894Z | updated | clock-projection-interfaces | 已新增 runtime_clock_projection 类型与端口，并为 active runtime facade / simulation manager 补齐 revision 与 applyClockProjection 承接能力。
-- 2026-04-22T09:12:27.881Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md
-- 2026-04-22T09:12:49.347Z | updated | clock-projection-first-cut | 已完成 world engine commit → host projection 首轮接线，并新增 world_engine_persistence 与 clock route 的定向单测，验证 host projection 优先读取。
-- 2026-04-22T09:22:42.784Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md
-- 2026-04-22T09:23:15.171Z | updated | clock-projection-regression-closeout | 已通过 world_engine_persistence、clock route、overview projection 单测，以及 world_engine_sidecar runtime_loop/failure_recovery integration，确认 host projection 首轮收口稳定。
-- 2026-04-22T09:26:00.200Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md
-- 2026-04-22T09:28:55.277Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md
-- 2026-04-22T09:29:12.033Z | artifact_changed | design | 新增并补充迁移状态矩阵与退出条件文档：.limcode/design/rust-migration-status-matrix-and-exit-criteria.md
-- 2026-04-22T09:29:12.033Z | milestone_recorded | host-projection-closeout | 完成 Host Runtime Projection 实施收口：代码、测试、迁移状态矩阵与退出条件文档均已同步。
-- 2026-04-22T12:07:08.847Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/limcode-process-asset-archive-and-governance-cleanup.plan.md
-- 2026-04-22T12:07:52.975Z | artifact_changed | plan | 已完成 .limcode 归档治理实施：活跃计划更新为 .limcode/plans/limcode-process-asset-archive-and-governance-cleanup.plan.md。
-- 2026-04-22T12:07:52.975Z | artifact_changed | design | 已迁移 completed/historical 设计资产到 .limcode/archive/，并保留当前 active/reference 设计在根层。
-- 2026-04-22T12:07:52.975Z | updated | limcode-archive-governance | 已同步 README、docs/INDEX、.limcode/README.md 与 progress/review/capability 关键引用，归档后目录结构与文档导航一致。
+- 2026-04-22T18:57:06.107Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/multi-pack-runtime-pack-scoped-read-surfaces-implementation.plan.md
+- 2026-04-22T18:57:23.117Z | updated | multi-pack-runtime-read-surface-core | 已完成 multi-pack runtime pack-scoped read surface 第一轮代码收口：projection 改为 pack-scoped core + scope adapter，experimental runtime control-plane snapshot 已增强，plugin runtime web/read surface 已统一到 pack-scoped service，并预留 inference/context internal contract。
+- 2026-04-22T19:03:56.295Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/multi-pack-runtime-pack-scoped-read-surfaces-implementation.plan.md
+- 2026-04-22T19:05:24.629Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/multi-pack-runtime-pack-scoped-read-surfaces-implementation.plan.md
+- 2026-04-22T19:05:42.997Z | milestone_recorded | multi-pack-runtime-read-surfaces-complete | 已完成 multi-pack runtime pack-scoped read surfaces 本轮收口：projection/operator/plugin/inference internal contract、测试与文档均已同步完成。
+- 2026-04-22T19:38:01.768Z | artifact_changed | design | 同步设计文档：.limcode/design/public-opinion-crisis-world-pack-design.md
+- 2026-04-22T19:41:50.597Z | artifact_changed | plan | 同步计划文档：.limcode/plans/public-opinion-crisis-world-pack-implementation.plan.md
+- 2026-04-22T19:44:10.591Z | updated | public-opinion-crisis-implementation-start | 开始实现 public_opinion_crisis world pack，先搭建项目骨架并写入最小项目化交付物。
+- 2026-04-22T19:44:10.598Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/public-opinion-crisis-world-pack-implementation.plan.md
+- 2026-04-22T19:56:25.165Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/public-opinion-crisis-world-pack-implementation.plan.md
+- 2026-04-22T19:56:25.179Z | updated | public-opinion-crisis-first-cut | 已完成 public_opinion_crisis world pack 首版落地，并通过 tsx + parseWorldPackConstitution 验证 schema 解析。
+- 2026-04-22T20:07:11.497Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/public-opinion-crisis-world-pack-implementation.plan.md
+- 2026-04-22T20:07:11.505Z | milestone_recorded | public-opinion-crisis-first-cut | 记录里程碑：舆论危机公关模拟器 world pack 首轮落地与中等链路初步验证完成
+- 2026-04-22T20:07:11.521Z | updated | public-opinion-crisis-validation-first-cut | 已完成 public_opinion_crisis 首轮中等链路验证：loader/schema 通过，objective_enforcement invocation_type 已对齐，prompt workflow 对 context_run 的隐式结构依赖已记录。
+- 2026-04-22T20:25:53.976Z | updated | public-opinion-crisis-runtime-fast-fail | 已完成真实运行链快速失败验证：独立端口 inference 已确认运行到 public_opinion_crisis，但 pack actor 与 inference actor 绑定断裂，actor-player 不能直接作为 agent_id，system identity 视角下 actor_state 大量回落默认值。
+- 2026-04-22T20:35:03.661Z | artifact_changed | review | 同步审查文档：.limcode/review/public-opinion-crisis-runtime-actor-binding-review.md
+- 2026-04-22T20:35:38.679Z | artifact_changed | review | 同步审查里程碑：M1
+- 2026-04-22T20:36:22.386Z | artifact_changed | review | 同步审查里程碑：M2
+- 2026-04-22T20:36:37.861Z | artifact_changed | review | 同步审查结论：.limcode/review/public-opinion-crisis-runtime-actor-binding-review.md
+- 2026-04-22T20:37:54.919Z | artifact_changed | review | 完成并收口 runtime actor binding review：.limcode/review/public-opinion-crisis-runtime-actor-binding-review.md
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -314,52 +364,52 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-17T21:05:29.611Z",
-  "updatedAt": "2026-04-22T12:07:52.975Z",
+  "updatedAt": "2026-04-22T20:37:54.919Z",
   "status": "active",
-  "phase": "maintenance",
-  "currentFocus": ".limcode 过程资产已完成 active/archive/historical 分层与引用校正",
-  "latestConclusion": "已完成 .limcode 归档治理：completed 资产迁入 .limcode/archive/design|plans|review，historical 草案迁入 .limcode/archive/historical/design；world-pack-post-governance-closure 计划已按历史收尾计划归档，tmp 下重复的 rust migration matrix 已删除；README、docs/INDEX 与 .limcode/README.md 已补齐归档规则，progress/review/capability 文档中的关键引用已完成校正。",
+  "phase": "review",
+  "currentFocus": "public_opinion_crisis runtime actor binding review 已完成，结论集中在宿主主体系统与 pack actor 系统的桥接缺口",
+  "latestConclusion": "审查确认：项目对现实题材世界观的基础容纳性成立，但主体级容纳存在系统性缺口。`resolveActor()` 与 `buildPackStateSnapshot()` 只消费宿主 identity/agent/binding，而 `pack.identities` 仅被 materialize 为 pack runtime world entity，不进入宿主 identity 体系，导致 pack 作者声明的 actor-player 无法自然成为 inference 当前主体。",
   "currentBlocker": null,
-  "nextAction": "后续新增 .limcode 过程资产时，按 .limcode/README.md 规则区分 active/reference 与 archive/historical；若下一轮 activeArtifacts 切换，再同步 progress.md。",
+  "nextAction": "如需进入下一步，应基于 review 单独设计 `pack actor / pack identity -> inference actor` 的桥接策略，而不是继续扩张 world pack 内容。",
   "activeArtifacts": {
-    "design": ".limcode/design/rust-ts-host-runtime-kernel-boundary-and-clock-projection-design.md",
-    "plan": ".limcode/plans/limcode-process-asset-archive-and-governance-cleanup.plan.md",
-    "review": ".limcode/review/rust-module-migration-gap-review.md"
+    "design": ".limcode/design/public-opinion-crisis-world-pack-design.md",
+    "plan": ".limcode/plans/public-opinion-crisis-world-pack-implementation.plan.md",
+    "review": ".limcode/review/public-opinion-crisis-runtime-actor-binding-review.md"
   },
   "todos": [
     {
-      "id": "p1",
-      "content": "创建 .limcode/archive 目录结构，并冻结 active/reference/completed/historical 四类资产清单",
+      "id": "plan-capabilities-rules",
+      "content": "设计现实题材 capability、authority、invocation 与 objective_enforcement 的首版最小闭环",
       "status": "completed"
     },
     {
-      "id": "p2",
-      "content": "迁移 completed 类 design 资产到 .limcode/archive/design/",
+      "id": "plan-docs-migration",
+      "content": "规划 README 与 docs 文档，记录迁移映射、状态模型与链路发现",
       "status": "completed"
     },
     {
-      "id": "p3",
-      "content": "迁移 historical 类 design 草案到 .limcode/archive/historical/design/",
+      "id": "plan-pack-skeleton",
+      "content": "创建世界包目录骨架与最小项目化交付物范围，明确 config/README/CHANGELOG/docs/examples 的首版边界",
       "status": "completed"
     },
     {
-      "id": "p4",
-      "content": "迁移 completed 类 plans/review 资产到 .limcode/archive/plans/ 与 .limcode/archive/review/",
+      "id": "plan-prompts-ai",
+      "content": "设计 prompts 与 ai.tasks 配置，验证 actor 命名空间替代 <user>、受控模板替代 EJS 的方案",
       "status": "completed"
     },
     {
-      "id": "p5",
-      "content": "核对 world-pack-post-governance-closure.plan.md 与 tmp/rust-migration-status-matrix-and-exit-criteria.md 的处理结论",
+      "id": "plan-state-model",
+      "content": "把草稿重构为 world_state、actor_state、actor_history 及关键扩展对象的首版字段模型",
       "status": "completed"
     },
     {
-      "id": "p6",
-      "content": "更新文档治理说明，使 README/docs/INDEX/必要说明反映新的归档分层规则",
+      "id": "plan-validation-checkpoints",
+      "content": "修正 objective_enforcement invocation_type 与实际 dispatch 链路不一致的问题，并继续验证 loader / prompt bundle / grounding-enforcement 链路，记录需向用户报告的结构性边界",
       "status": "completed"
     },
     {
-      "id": "p7",
-      "content": "验证 activeArtifacts、文档引用与 .limcode 目录可发现性未被破坏",
+      "id": "runtime-fast-fail-validation",
+      "content": "对 public_opinion_crisis 执行真实运行链快速失败验证，优先打通 inference context / prompt workflow / grounding / action dispatch / objective enforcement 并记录第一处结构性失败",
       "status": "completed"
     }
   ],
@@ -643,7 +693,7 @@
       },
       "completedAt": "2026-04-20T22:17:19.075Z",
       "recordedAt": "2026-04-20T22:17:19.075Z",
-      "nextAction": "如无额外回归问题，可进入后续 Memory Block Runtime 完整 Rust ownership 深化或清理增强项。"
+      "nextAction": "如无额外回归问题，可深化或清理增强项。"
     },
     {
       "id": "PG13",
@@ -761,134 +811,215 @@
       "completedAt": "2026-04-22T01:33:08.000Z",
       "recordedAt": "2026-04-22T01:33:08.888Z",
       "nextAction": "后续若继续扩面，可继续在尚未触达的 world_engine_sidecar_client、memory_recording_pack_collection_bridge、context_orchestrator 等文件中区分默认化命名债与合法 scenario 命名，并按目录逐步收口。"
+    },
+    {
+      "id": "pack-host-api-contract-first-cut",
+      "title": "PackHostApi 长期 host-mediated read contract 首轮收口完成",
+      "status": "completed",
+      "summary": "已完成 PackHostApi 专题的首轮实施：盘点了 world engine 当前 PackHostApi 实现与消费面，确认其现实上已是 host-mediated read surface；同步更新 `docs/ARCH.md`、`docs/capabilities/PLUGIN_RUNTIME.md`、Rust migration status matrix、host-runtime-kernel 设计文档与 world-engine review 口径，将 PackHostApi 正式定位为长期 TS host kernel 拥有的 read-plane contract；并在 `world_engine_ports.ts`、`world_engine_sidecar_client.ts` 补充 contract/transport 级注释，同时新增单测验证 PackHostApi 在存在 runtime clock projection 时优先读取 host-projected truth。",
+      "relatedTodoIds": [
+        "pack-host-plan-p1",
+        "pack-host-plan-p2",
+        "pack-host-plan-p3",
+        "pack-host-plan-p4",
+        "pack-host-plan-p5"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/pack-host-api-long-term-host-mediated-read-contract-design.md",
+        "plan": ".limcode/plans/pack-host-api-long-term-host-mediated-read-contract-implementation.plan.md",
+        "review": ".limcode/review/rust-module-migration-gap-review.md"
+      },
+      "completedAt": "2026-04-22T14:26:33.004Z",
+      "recordedAt": "2026-04-22T14:26:33.004Z",
+      "nextAction": "继续完成收尾同步：核对是否还需补 backlog/退出条件说明，并决定是否关闭本轮最后一个 progress/documentation 同步 TODO。"
+    },
+    {
+      "id": "world-engine-visible-clock-read-cleanup",
+      "title": "world engine visible clock read surface cleanup 完成",
+      "status": "completed",
+      "summary": "已完成第二轮 world engine seam/clock cleanup：在既有 PackHostApi 读合同收口基础上，继续强化 host persistence、plugin contributor、query/invocation seam 的 accepted host seam 口径；新增 `readVisibleClockSnapshot(...)` 统一可见时钟读取辅助，将 `clock routes`、`overview summary`、`global projection index` 三类对外/可见读取面统一切到 host projection 优先、sim fallback 次之的路径，减少散落的 `context.sim.getCurrentTick()` 直接读取。并补充 unit tests 覆盖 route/overview/PackHostApi 三类行为，验证 visible read surface 的 host truth 优先语义。",
+      "relatedTodoIds": [],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/pack-host-api-long-term-host-mediated-read-contract-design.md",
+        "plan": ".limcode/plans/pack-host-api-long-term-host-mediated-read-contract-implementation.plan.md",
+        "review": ".limcode/review/rust-module-migration-gap-review.md"
+      },
+      "completedAt": "2026-04-22T14:46:09.136Z",
+      "recordedAt": "2026-04-22T14:46:09.136Z",
+      "nextAction": "若继续推进，可对剩余 `context.sim.getCurrentTick()` 用途做系统分层：将外部 visible read、内部 runtime bookkeeping、DB/event timestamp 三类调用分别治理。"
+    },
+    {
+      "id": "fake-unimplemented-first-cut",
+      "title": "假未实现第一轮清理完成",
+      "status": "completed",
+      "summary": "已完成假未实现台账冻结、首批高置信度代码残影清理与过程资产口径收口：memory trigger sidecar handshake 不再自称 stub，NarrativeResolver 错误恢复哨兵改为中性文案，rust-module-migration review 已开始将 world engine 相关项从默认迁移缺口叙事收口为 accepted TS-host-owned seam / fallback debt / optional deepening candidate 分类。",
+      "relatedTodoIds": [
+        "fake-plan-p1",
+        "fake-plan-p2",
+        "fake-plan-p3",
+        "fake-plan-p4"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/rust-migration-status-matrix-and-exit-criteria.md",
+        "plan": ".limcode/plans/fake-unimplemented-cleanup-and-boundary-alignment.plan.md",
+        "review": ".limcode/review/rust-module-migration-gap-review.md"
+      },
+      "completedAt": "2026-04-22T16:13:30.000Z",
+      "recordedAt": "2026-04-22T16:12:28.121Z",
+      "nextAction": "完成本轮后续分流与收尾同步：把 trigger_rate 等真实缺口继续留在后续专题，不再与假未实现残影混写。"
+    },
+    {
+      "id": "public-opinion-crisis-first-cut",
+      "title": "舆论危机公关模拟器 world pack 首轮落地与中等链路初步验证完成",
+      "status": "completed",
+      "summary": "已完成 public_opinion_crisis world pack 首版落地：创建项目骨架、config.yaml、README、CHANGELOG、docs 与 examples；完成 actor/world 语义迁移、AI tasks、capability/authority/invocation/objective_enforcement 最小闭环；已通过 PackManifestLoader 与 parseWorldPackConstitution 级别验证。验证过程中修正了 objective_enforcement 的 invocation_type 对齐问题，并确认 prompt workflow 当前对 context_run 存在较强隐式结构依赖，这一边界已记录到 chain-findings 文档。",
+      "relatedTodoIds": [
+        "plan-pack-skeleton",
+        "plan-state-model",
+        "plan-prompts-ai",
+        "plan-capabilities-rules",
+        "plan-docs-migration",
+        "plan-validation-checkpoints"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/public-opinion-crisis-world-pack-design.md",
+        "plan": ".limcode/plans/public-opinion-crisis-world-pack-implementation.plan.md"
+      },
+      "completedAt": "2026-04-22T20:05:00+08:00",
+      "recordedAt": "2026-04-22T20:07:11.505Z",
+      "nextAction": "若继续推进，应进入真实运行链路验证，重点检查 inference context 构建、prompt workflow 完整上下文要求，以及 grounding -> action dispatch -> objective enforcement 的实际命中情况。"
     }
   ],
   "risks": [],
   "log": [
     {
-      "at": "2026-04-22T07:31:52.981Z",
+      "at": "2026-04-22T18:57:06.107Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/multi-pack-runtime-pack-scoped-read-surfaces-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-22T18:57:23.117Z",
+      "type": "updated",
+      "refId": "multi-pack-runtime-read-surface-core",
+      "message": "已完成 multi-pack runtime pack-scoped read surface 第一轮代码收口：projection 改为 pack-scoped core + scope adapter，experimental runtime control-plane snapshot 已增强，plugin runtime web/read surface 已统一到 pack-scoped service，并预留 inference/context internal contract。"
+    },
+    {
+      "at": "2026-04-22T19:03:56.295Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/multi-pack-runtime-pack-scoped-read-surfaces-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-22T19:05:24.629Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/multi-pack-runtime-pack-scoped-read-surfaces-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-22T19:05:42.997Z",
+      "type": "milestone_recorded",
+      "refId": "multi-pack-runtime-read-surfaces-complete",
+      "message": "已完成 multi-pack runtime pack-scoped read surfaces 本轮收口：projection/operator/plugin/inference internal contract、测试与文档均已同步完成。"
+    },
+    {
+      "at": "2026-04-22T19:38:01.768Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/public-opinion-crisis-world-pack-design.md"
+    },
+    {
+      "at": "2026-04-22T19:41:50.597Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/public-opinion-crisis-world-pack-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-22T19:44:10.591Z",
+      "type": "updated",
+      "refId": "public-opinion-crisis-implementation-start",
+      "message": "开始实现 public_opinion_crisis world pack，先搭建项目骨架并写入最小项目化交付物。"
+    },
+    {
+      "at": "2026-04-22T19:44:10.598Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/public-opinion-crisis-world-pack-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-22T19:56:25.165Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/public-opinion-crisis-world-pack-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-22T19:56:25.179Z",
+      "type": "updated",
+      "refId": "public-opinion-crisis-first-cut",
+      "message": "已完成 public_opinion_crisis world pack 首版落地，并通过 tsx + parseWorldPackConstitution 验证 schema 解析。"
+    },
+    {
+      "at": "2026-04-22T20:07:11.497Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/public-opinion-crisis-world-pack-implementation.plan.md"
+    },
+    {
+      "at": "2026-04-22T20:07:11.505Z",
+      "type": "milestone_recorded",
+      "refId": "public-opinion-crisis-first-cut",
+      "message": "记录里程碑：舆论危机公关模拟器 world pack 首轮落地与中等链路初步验证完成"
+    },
+    {
+      "at": "2026-04-22T20:07:11.521Z",
+      "type": "updated",
+      "refId": "public-opinion-crisis-validation-first-cut",
+      "message": "已完成 public_opinion_crisis 首轮中等链路验证：loader/schema 通过，objective_enforcement invocation_type 已对齐，prompt workflow 对 context_run 的隐式结构依赖已记录。"
+    },
+    {
+      "at": "2026-04-22T20:25:53.976Z",
+      "type": "updated",
+      "refId": "public-opinion-crisis-runtime-fast-fail",
+      "message": "已完成真实运行链快速失败验证：独立端口 inference 已确认运行到 public_opinion_crisis，但 pack actor 与 inference actor 绑定断裂，actor-player 不能直接作为 agent_id，system identity 视角下 actor_state 大量回落默认值。"
+    },
+    {
+      "at": "2026-04-22T20:35:03.661Z",
+      "type": "artifact_changed",
+      "refId": "review",
+      "message": "同步审查文档：.limcode/review/public-opinion-crisis-runtime-actor-binding-review.md"
+    },
+    {
+      "at": "2026-04-22T20:35:38.679Z",
       "type": "artifact_changed",
       "refId": "review",
       "message": "同步审查里程碑：M1"
     },
     {
-      "at": "2026-04-22T07:32:17.896Z",
+      "at": "2026-04-22T20:36:22.386Z",
       "type": "artifact_changed",
       "refId": "review",
       "message": "同步审查里程碑：M2"
     },
     {
-      "at": "2026-04-22T07:32:52.641Z",
+      "at": "2026-04-22T20:36:37.861Z",
       "type": "artifact_changed",
       "refId": "review",
-      "message": "同步审查里程碑：M3"
+      "message": "同步审查结论：.limcode/review/public-opinion-crisis-runtime-actor-binding-review.md"
     },
     {
-      "at": "2026-04-22T07:33:15.788Z",
+      "at": "2026-04-22T20:37:54.919Z",
       "type": "artifact_changed",
       "refId": "review",
-      "message": "同步审查结论：.limcode/review/rust-module-migration-gap-review.md"
-    },
-    {
-      "at": "2026-04-22T07:50:21.797Z",
-      "type": "artifact_changed",
-      "refId": "design",
-      "message": "同步设计文档：.limcode/design/rust-ts-host-runtime-kernel-boundary-and-clock-projection-design.md"
-    },
-    {
-      "at": "2026-04-22T07:54:31.227Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-22T07:55:42.170Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-22T08:10:00.894Z",
-      "type": "updated",
-      "refId": "clock-projection-interfaces",
-      "message": "已新增 runtime_clock_projection 类型与端口，并为 active runtime facade / simulation manager 补齐 revision 与 applyClockProjection 承接能力。"
-    },
-    {
-      "at": "2026-04-22T09:12:27.881Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-22T09:12:49.347Z",
-      "type": "updated",
-      "refId": "clock-projection-first-cut",
-      "message": "已完成 world engine commit → host projection 首轮接线，并新增 world_engine_persistence 与 clock route 的定向单测，验证 host projection 优先读取。"
-    },
-    {
-      "at": "2026-04-22T09:22:42.784Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-22T09:23:15.171Z",
-      "type": "updated",
-      "refId": "clock-projection-regression-closeout",
-      "message": "已通过 world_engine_persistence、clock route、overview projection 单测，以及 world_engine_sidecar runtime_loop/failure_recovery integration，确认 host projection 首轮收口稳定。"
-    },
-    {
-      "at": "2026-04-22T09:26:00.200Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-22T09:28:55.277Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/rust-ts-host-runtime-kernel-boundary-and-clock-projection-implementation.plan.md"
-    },
-    {
-      "at": "2026-04-22T09:29:12.033Z",
-      "type": "artifact_changed",
-      "refId": "design",
-      "message": "新增并补充迁移状态矩阵与退出条件文档：.limcode/design/rust-migration-status-matrix-and-exit-criteria.md"
-    },
-    {
-      "at": "2026-04-22T09:29:12.033Z",
-      "type": "milestone_recorded",
-      "refId": "host-projection-closeout",
-      "message": "完成 Host Runtime Projection 实施收口：代码、测试、迁移状态矩阵与退出条件文档均已同步。"
-    },
-    {
-      "at": "2026-04-22T12:07:08.847Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/limcode-process-asset-archive-and-governance-cleanup.plan.md"
-    },
-    {
-      "at": "2026-04-22T12:07:52.975Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "已完成 .limcode 归档治理实施：活跃计划更新为 .limcode/plans/limcode-process-asset-archive-and-governance-cleanup.plan.md。"
-    },
-    {
-      "at": "2026-04-22T12:07:52.975Z",
-      "type": "artifact_changed",
-      "refId": "design",
-      "message": "已迁移 completed/historical 设计资产到 .limcode/archive/，并保留当前 active/reference 设计在根层。"
-    },
-    {
-      "at": "2026-04-22T12:07:52.975Z",
-      "type": "updated",
-      "refId": "limcode-archive-governance",
-      "message": "已同步 README、docs/INDEX、.limcode/README.md 与 progress/review/capability 关键引用，归档后目录结构与文档导航一致。"
+      "message": "完成并收口 runtime actor binding review：.limcode/review/public-opinion-crisis-runtime-actor-binding-review.md"
     }
   ],
   "stats": {
-    "milestonesTotal": 20,
-    "milestonesCompleted": 20,
+    "milestonesTotal": 24,
+    "milestonesCompleted": 24,
     "todosTotal": 7,
     "todosCompleted": 7,
     "todosInProgress": 0,
@@ -897,8 +1028,8 @@
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-22T12:07:52.975Z",
-    "bodyHash": "sha256:a112da59ab015556c5266f0ad542903895b3bcf640ae70affc9b740bf0b4a679"
+    "generatedAt": "2026-04-22T20:37:54.919Z",
+    "bodyHash": "sha256:ebd687d18f916deb4363b58fbd5af8caf1687d4b12091be2f984e8fd8d83cb14"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

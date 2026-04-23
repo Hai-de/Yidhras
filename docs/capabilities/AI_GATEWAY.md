@@ -1,5 +1,16 @@
 # AI Gateway / Invocation Observability
 
+When the system sends a prompt to an AI model, the request doesn't go straight to the provider. It passes through a layered internal pipeline: a task-level service decides what kind of AI call is needed, a route resolver picks the right model and provider, and a gateway handles the actual dispatch and response handling. This layered design gives the system control over routing, fallback, rate limits, and observability without exposing those concerns to the caller.
+
+The other side of this subsystem is **knowing what happened after the fact**: every AI invocation leaves a record — which model was used, how long it took, whether it fell back to a different provider, what the token usage was. This observability surface is exposed through `AiInvocationRecord`, a kernel-side persistence model that serves as evidence of what the AI layer did, independent of any specific inference result.
+
+Key concepts:
+
+- **AiTaskService** — the task-aware entry point that accepts a task type and context, then delegates to the appropriate route
+- **RouteResolver** — decides which model and provider to use based on task type, configuration, and route hints from the world pack
+- **ModelGateway** — the dispatch layer that actually calls the provider adapter and handles the request/response lifecycle
+- **AiInvocationRecord** — a kernel-side persistence record of each AI call, capturing provider, model, usage, latency, and audit data; it is evidence, not a public execution contract
+
 本文档集中说明内部 AI task / gateway 执行层，以及 `AiInvocationRecord` 相关观测能力。
 
 ## 1. 文档定位

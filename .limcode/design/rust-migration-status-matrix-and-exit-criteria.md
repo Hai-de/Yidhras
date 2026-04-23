@@ -105,6 +105,8 @@ TS still owns input assembly and output application.
 Rust owns session semantics and commit results.
 TS owns the externally visible runtime kernel.
 
+PackHostApi should be treated as a long-term TS-host-owned read contract rather than a migration-only bridge.
+
 #### Important change already implemented
 The clock seam is now explicitly host-projected:
 
@@ -118,18 +120,10 @@ The clock seam is now explicitly host-projected:
 now prefer host projection instead of stale local-only reads
 
 #### Exit criteria before “world engine migrated” can be claimed
-- Persistence ownership is explicitly decided:
-  - either permanently TS host-apply delta
-  - or fully Rust-owned storage write path
-- Plugin contributor seam is explicitly decided:
-  - either permanently TS-host-owned
-  - or bridged into a Rust-consumable extension protocol
-- Query host seam is explicitly decided:
-  - either permanently TS repository-backed
-  - or migrated behind a Rust-owned contract
-- Invocation side-effect seam is explicitly decided:
-  - either permanently TS enforcement/apply bridge
-  - or migrated behind a Rust-owned contract
+- Persistence ownership is explicitly documented as host-owned or separately re-designed; it must not remain ambiguous.
+- Plugin contributor seam is explicitly classified; if it stays TS-host-owned, it should no longer be described as an unfinished migration gap.
+- Query host seam is explicitly classified; `PackHostApi` should be documented as the long-term host-mediated read contract for upper-layer consumers.
+- Invocation side-effect seam is explicitly classified as host-owned or separately re-designed under a bounded contract.
 - Observable clock ownership remains single-source and documented.
 - No external route/UI path reads a second clock truth.
 
@@ -149,10 +143,12 @@ These should not be treated as accidental leftovers unless a separate design say
 ### Likely temporary migration debt or undecided seams
 These still need explicit decision:
 
-- world engine persistence ownership depth
-- query seam ownership depth
-- invocation side-effect ownership depth
+- whether any part of world engine persistence should ever move beyond the accepted host-owned delta-apply model
+- whether any query path needs deeper Rust participation beyond the PackHostApi host contract
+- whether any invocation side-effect path deserves bounded Rust deepening for clear safety/performance reasons
 - fallback/parity retirement criteria
+
+Plugin contributor lifecycle is not listed here because the default planning assumption should now be TS-host-owned unless a future design explicitly overrides it.
 
 ---
 
@@ -169,7 +165,7 @@ Applied now:
 
 - Scheduler: fully Rust-owned core + TS-host-owned seam + reference/fallback debt
 - Memory trigger: fully Rust-owned evaluator core + TS-host-owned seam + reference/fallback debt
-- World engine: partially Rust-owned session core + multiple TS-host-owned seams + undecided ownership seams
+- World engine: partially Rust-owned session core + multiple TS-host-owned seams + a small set of explicitly undecided or optional deepening seams
 
 ---
 
@@ -194,7 +190,7 @@ Within that architecture:
 ## 6. Recommended next follow-up after this matrix
 
 1. Document which seams are **permanently TS-host-owned**.
-2. Document which seams are **phase2/phase3 Rust migration candidates**.
+2. Document which seams are merely **optional Rust deepening candidates** rather than default migration obligations.
 3. Retire parity/fallback dependencies module by module only after explicit acceptance criteria are met.
 4. Do not describe future work as “remove TS” unless the specific seam owner has been chosen.
 
@@ -218,9 +214,11 @@ This matters because these seams are where pack/plugin capability and external o
 These are still reasonable migration candidates, but only after explicit ownership decisions and contracts:
 
 - deeper world engine persistence ownership
-- query host seam narrowing or Rust-facing query protocol
+- query host seam narrowing or Rust-facing query protocol beyond the long-term PackHostApi host contract
 - invocation side-effect bridge narrowing or Rust-facing apply protocol
 - retirement of TS reference/fallback implementations for scheduler and memory trigger
+
+These should be treated as optional deepening opportunities, not as proof that the current TS-host-owned seam is incomplete by default.
 
 ---
 

@@ -2,12 +2,22 @@
 
 本文档用于描述 Yidhras 的**系统分层、模块边界、宿主关系与职责划分**。
 
-> 如需图形化总览与关键调用流，请看 `ARCH_DIAGRAM.md`
+> 图形化总览与调用流见 `ARCH_DIAGRAM.md` · 公共 HTTP contract 见 `API.md` · 业务执行语义见 `LOGIC.md` · 专题细节见 `docs/capabilities/`
 
-> 不在这里展开：
-> - 公共 HTTP contract：看 `API.md`
-> - 业务执行语义：看 `LOGIC.md`
-> - Prompt Workflow / Plugin Runtime / AI Gateway 的高耦合专题细节：看 `docs/capabilities/`
+## 核心术语
+
+| 术语 | 含义 |
+|------|------|
+| 世界包 (world pack) | 封装世界规则、实体、能力、媒介的数据包，作为模拟的内容单元 |
+| 宿主 (host) | 运行编排、调度、持久化的 Node/TS 进程 |
+| Sidecar (Rust sidecar) | 通过 stdio JSON-RPC 与宿主通信的 Rust 世界引擎进程，负责世界状态计算 |
+| Kernel-side | 宿主持久化层（Prisma/SQLite），存储 workflow、social、audit、memory 等 |
+| Pack-local | 每个 world pack 独有的运行时数据库（runtime SQLite） |
+| WorldEnginePort | TS 宿主持有的世界引擎控制面合约（step/commit/abort/query） |
+| PackHostApi | TS 宿主对外提供的受控读面合约 |
+| Inference workflow | 从上下文组装到模型推理到意图落地的完整链路 |
+| Intent Grounder | 把模型开放语义映射为系统可执行结果的组件 |
+| SimulationManager | 兼容 facade，聚合 runtime bootstrap、pack catalog、active-pack runtime |
 
 ## 1. 顶层分层
 
@@ -224,82 +234,52 @@
 - stable `/api/status` 不会立即变成多 pack 数组形态
 - stable canonical pack routes 也不会因为 experimental mode 自动解除 active-pack guard
 
-### 3.3.2 Rust world engine Phase 1 宿主边界
+当前本轮已进一步收口的实现事实：
 
-当前已开始为 Rust world engine 第一阶段建立正式宿主边界，但仍保持 **Node/TS host 为运行编排 owner**：
+- projection 读面已开始采用 **pack-scoped core service + stable/experimental scope adapter** 分层：
+  - `pack_projection_metadata_resolver.ts`
+  - `pack_projection_scope_adapter.ts`
+  - `pack_narrative_projection_service.ts`
+  - `pack_entity_overview_projection_service.ts`
+- experimental runtime `/api/experimental/runtime/packs` 已增强为 **control-plane snapshot**，可同时表达 active/loaded pack、health、clock、runtime speed 与 scheduler/plugin availability 摘要
+- plugin runtime web/read surface 已统一进入 `PackScopedPluginRuntimeService`，stable 与 experimental 路径共享 pack-scoped service，而不再依赖零散的 active-pack 反推
+- inference/context 当前仍保持 stable active-pack 默认行为，但已预留 `buildInferenceContextForPack(...)` internal contract 作为下一轮 pack-scoped execution 扩展入口
 
-- `WorldEnginePort`
-  - world pack load/unload
-  - `prepareStep(...)` / `commitPreparedStep(...)` / `abortPreparedStep(...)`
-  - `queryState(...)` / `getStatus(...)` / `getHealth()`
-- `PackHostApi`
-  - `getPackSummary(...)`
-  - `getCurrentTick(...)`
-  - `queryWorldState(...)`
-- `executeWorldEnginePreparedStep(...)`
-  - 宿主侧 Host-managed persistence 编排入口
-- `WorldEngineSidecarClient`
-  - 本地 `stdio + JSON-RPC` sidecar transport client
+### 3.3.2 Rust world engine 与 sidecar 边界
 
-当前边界结论：
+世界推进通过 Rust sidecar 执行，Node/TS host 保留运行编排权：
 
-- runtime loop 的世界推进主路径已经从 `context.sim.step(...)` 迁出，改走 `WorldEnginePort`
-- `SimulationManager` 继续保留为兼容 facade，但不再是 runtime loop 的世界推进主入口
-- `PackHostApi` 只暴露**受控读面**，不暴露 `prepare/commit/abort/load/unload` 这类内核控制能力
-- plugin host / workflow host 若需要读取世界态，应优先消费 `PackHostApi` / lookup port，而不是直接依赖 raw sidecar client
-- sidecar 第一阶段采用 **本地 `stdio_jsonrpc`**，当前 Rust sidecar 已打通：
-  - `world.protocol.handshake`
-  - `world.health.get`
-  - `world.pack.load`
-  - `world.pack.unload`
-  - `world.state.query`
-  - `world.rule.execute_objective`
-  - `world.status.get`
-  - `world.step.prepare`
-  - `world.step.commit`
-  - `world.step.abort`
-- 宿主侧已补 `Host-managed persistence`、pack-scoped single-flight 与 tainted session 恢复路径
-- Phase 1B 已完成后，sidecar 现已具备 **Host snapshot hydrate -> Rust session/query -> prepare/commit/abort -> failure recovery** 的正式闭环：
-  - `world.pack.load` 会消费 Host 组装的 pack runtime core snapshot，而不再只创建空 session
-  - `world.state.query` 已能从 Rust session 返回 `pack_summary / world_entities / entity_state / authority_grants / mediator_bindings / rule_execution_summary` allowlist 数据
-  - `world.step.prepare` 已不再只是 clock-only 骨架，而会同时 staged：
-    - `__world__/world` entity state upsert
-    - `rule_execution_records` append
-    - `set_clock` delta
-  - prepared step metadata 现已正式包含 `pack_id / reason / base-next tick-revision / mutated_entity_ids / mutated_namespace_refs / delta_operation_count`
-  - sidecar observability 现已补齐 `WORLD_CORE_DELTA_BUILT` 与 `WORLD_PREPARED_STATE_SUMMARY`
-  - Host 默认 persistence 已具备 Pack Runtime Core delta apply layer，可正式解释 `upsert_entity_state / append_rule_execution / set_clock`
-  - Host apply observability 现已补齐 `WORLD_CORE_DELTA_APPLIED` 与 `WORLD_CORE_DELTA_ABORTED`
-  - `world.step.commit` / `world.step.abort` 继续与 Host-managed persistence、abort/tainted 恢复路径对齐
-- `objective_enforcement` 已在 Phase 1 的 A 收口后成为 **Rust-owned 的真实规则执行路径**：
-  - sidecar 负责 objective rule matching、template rendering、mutation / emitted event 规划
-  - Host 继续负责 authority validation / mediator validation / persistence / event bridge / execution record
-  - no-match 不会静默回退到 TS resolver，而会按显式失败处理
-  - execution record payload 现会保留 `sidecar_diagnostics`（如 `matched_rule_id`、`no_match_reason`、`evaluated_rule_count`、`rendered_template_count`、`mutation_count`、`emitted_event_count`）
+- `WorldEnginePort`：TS host 持有的 control / compute plane contract
+  - world pack load/unload、step prepare/commit/abort、state query、health
+- `PackHostApi`：TS host kernel 持有的 host-mediated read contract
+  - 只暴露受控读面（pack summary、current tick、world state query），不暴露内核控制能力
+  - 长期语义是 host-accepted / host-projected truth，不是 sidecar internal truth
+- `WorldEngineSidecarClient`：本地 stdio + JSON-RPC transport implementation，不是公开 contract
 
-这意味着：
+边界结论：
 
-- Rust 第一阶段是 **world engine 内核替换面**，不是平台整体迁移；
-- runtime orchestration、scheduler、plugin host、workflow host、AI gateway 仍由 Node/TS host 持有。 
+- runtime loop 的世界推进主路径走 `WorldEnginePort`
+- `SimulationManager` 保留为兼容 facade，不再是 runtime loop 的世界推进主入口
+- objective enforcement 是 Rust-owned 真实规则执行路径：sidecar 负责匹配/模板渲染/mutation 规划，host 负责权限校验/持久化/事件桥接
+- plugin host / workflow host 读取世界态应消费 `PackHostApi`，不直接依赖 sidecar protocol
+- Rust sidecar 负责 world engine 内核计算；runtime orchestration、scheduler、plugin host、workflow host、AI gateway、Host-managed persistence 仍由 Node/TS host 持有
+- `PackHostApi` 是 TS control plane 的正式读合同，不是迁移期桥接壳；repository-backed / projection-backed / host-mediated sidecar-assisted reads 均属其可接受实现策略
 
-### 3.3.3 Rust 迁移状态矩阵（当前事实）
+Sidecar 协议覆盖：handshake、health、pack load/unload、state query、objective execution、status、step prepare/commit/abort。
 
-下表只记录**当前真实默认状态**，用于帮助新开发者快速判断哪些模块已经切到 Rust 主路径、哪些仍处于兼容期。
+Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust session → prepare/commit/abort → failure recovery 闭环，包括 entity state upsert、rule execution append、clock delta、tainted session 恢复。
 
-| 领域 | 当前默认执行路径 | 当前配置形态 | TS 兼容面现状 | 宿主 / Sidecar 分工 | 当前结论 |
-|------|------------------|--------------|---------------|---------------------|----------|
-| World Engine runtime loop / step | `WorldEngineSidecarClient` | `world_engine.timeout_ms` / `world_engine.binary_path` / `world_engine.auto_restart` | `createLegacyTsWorldEngineAdapter` / `createTsWorldEngineAdapter` 已物理删除；`WORLD_ENGINE_MODE` 与 `world_engine.mode` 已移除；`WORLD_ENGINE_USE_SIDECAR` 仅保留 warning-only deprecated compat，不再改变行为 | Host 持有 runtime orchestration、Host-managed persistence、PackHostApi；Rust sidecar 持有 session hydrate / query / prepare / commit / abort | **已完成 sidecar-only 收口** |
-| World Engine objective enforcement | Rust sidecar objective execution | 跟随 world engine sidecar 路径，无独立 TS 默认模式 | TS resolver 不再作为 no-match fallback；parity 测试保留为验证手段，不再是生产双写路径 | Sidecar 负责 matching / template rendering / mutation planning；Host 负责 authority / mediator validation、persistence、event bridge、execution record | **已切到 Rust-owned 真实执行路径** |
-| Scheduler decision kernel | `rust_primary` | `scheduler.agent.decision_kernel.mode` 仍保留 `ts` / `rust_shadow` / `rust_primary` 三元模式 | TS 与 shadow 路径仍存在，主要用于 fallback / diff / 调试 | Host 保持 scheduler orchestration、runner、ownership、observability；Rust sidecar 承担 decision kernel 计算 | **默认已切 Rust，但仍处于受控兼容期** |
-| Memory trigger engine | `rust_primary` | `scheduler.memory.trigger_engine.mode` 仍保留 `ts` / `rust_shadow` / `rust_primary` 三元模式 | TS 与 shadow 路径仍存在；`trigger_rate` 尚属 Rust 已知缺口并通过 diagnostics 显式标注 | Host 负责 memory block runtime、source assembly、state writeback；Rust sidecar 负责 trigger evaluation | **默认已切 Rust，但仍保留兼容 / diff 通道** |
-| Sidecar build / startup governance | binary-first + cargo fallback | `check:rust` / `build:rust` 已接入 `package.json` 与 CI | `cargo run` 仍保留开发态 fallback，但不再作为唯一治理路径 | Host 负责 binary path 解析、进程管理、timeout / auto restart；Rust sidecar 提供 stdio JSON-RPC 服务 | **已进入受控治理状态** |
+### 3.3.3 Rust 迁移状态
 
-补充判断：
+各模块当前默认执行路径与兼容层状态详见 `.limcode/design/rust-migration-status-matrix-and-exit-criteria.md`。
 
-- **已经完成单轨收口的领域**：world engine。
-- **已经默认切 Rust、但尚未删除 TS/shadow 兼容层的领域**：scheduler decision kernel、memory trigger engine。
-- **仍由 Node/TS host 持有所有权的能力**：runtime orchestration、scheduler runtime、plugin host、workflow host、AI gateway、Host-managed persistence。
-- **后续文档更新原则**：若某字段 / 模式 / adapter 已被物理删除，应优先同步本矩阵，再更新实现细节段落，避免文档继续保留过期开关。
+简要结论：
+
+- World engine：已完成 sidecar-only 收口
+- Objective enforcement：已切到 Rust-owned 真实执行路径
+- Scheduler decision kernel：默认 Rust，保留 TS/shadow 兼容通道
+- Memory trigger engine：默认 Rust，保留 TS/shadow 兼容通道
+- 仍由 Node/TS host 持有的能力：runtime orchestration、scheduler runtime、plugin host、workflow host、AI gateway、Host-managed persistence
 
 ## 4. Workflow / inference 边界
 

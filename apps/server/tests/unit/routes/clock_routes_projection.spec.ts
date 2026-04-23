@@ -164,4 +164,34 @@ describe('clock routes host projection read path', () => {
       }
     });
   });
+
+  it('falls back to simulation clock when activePackRuntime is absent but sim still has an active pack', () => {
+    const context = createContext();
+    context.runtimeClockProjection = createRuntimeClockProjectionService();
+    context.activePackRuntime = undefined;
+    context.sim = {
+      getCurrentTick: () => 9n,
+      getAllTimes: () => [{ calendar_id: 'sim-only', display: 'sim-only-time', units: {} }],
+      getActivePack: () => ({ metadata: { id: 'world-test-pack' } })
+    } as never;
+    const { app, gets } = createFakeApp();
+
+    registerClockRoutes(app as never, context, {
+      parsePositiveStepTicks: value => BigInt(value as string),
+      toJsonSafe: value => value,
+      getErrorMessage: err => (err instanceof Error ? err.message : String(err))
+    });
+
+    const handler = gets.get('/api/clock/formatted');
+    const { res, body } = createFakeResponse();
+    handler?.({}, res, vi.fn());
+
+    expect(body.value).toEqual({
+      success: true,
+      data: {
+        absolute_ticks: '9',
+        calendars: [{ calendar_id: 'sim-only', display: 'sim-only-time', units: {} }]
+      }
+    });
+  });
 });

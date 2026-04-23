@@ -1,5 +1,16 @@
 # Pack-local Plugin Runtime
 
+Plugins extend what a world pack can do — adding UI panels, custom routes, new capabilities — but they must be discovered, trusted, and governed before they can run. This document describes how that lifecycle works: from discovery to import confirmation, from enable-with-acknowledgement to runtime manifest loading, and how the server and browser sides cooperate to keep the boundary tight.
+
+The core design principle is that **plugin governance is a kernel-side concern**: discovery records, installation state, activation sessions, and enable acknowledgements all live in the kernel database, not inside the pack's own runtime. This means the host always decides whether a plugin is allowed to run, and the pack never gets to bypass that decision.
+
+Key concepts:
+
+- **PluginArtifact / PluginInstallation / PluginActivationSession / PluginEnableAcknowledgement** — the kernel-side persistence models that track what was discovered, what was imported, what's currently active, and whether the operator has acknowledged the enable warning
+- **PackHostApi** — the read-only contract through which plugins and workflows access world state, owned by the TS host kernel; it is not a migration bridge but a long-term host contract
+- **PackRuntimeLookupPort / PackScopeResolver** — the unified scope resolution mechanism that prevents plugin runtime, web routes, and projection logic from each inventing their own lookup
+- **pack-local** — the current formal boundary: a plugin belongs to exactly one pack, and its lifecycle and visibility are scoped accordingly
+
 本文档集中说明 pack-local plugin 的 runtime、治理语义与前后端承接边界。
 
 ## 1. 文档定位
@@ -203,7 +214,8 @@ CLI 与 GUI 复用同一组治理语义：
   - `getPackSummary(...)`
   - `getCurrentTick(...)`
   - `queryWorldState(...)`
-- `PackHostApi` 是 **host-mediated read surface**，不是 sidecar transport 透出
+- `PackHostApi` 是 **host-mediated read surface**，不是 sidecar transport 透出；其长期 owner 是 **TS host kernel**，不是 Rust sidecar
+- `PackHostApi` 的角色是插件/工作流/路由的 **read plane contract**，而不是 world engine control plane 的缩写接口
 
 这意味着：
 
@@ -213,6 +225,8 @@ CLI 与 GUI 复用同一组治理语义：
 - Phase 1B 已完成后，这一约束继续成立：即使 sidecar 已具备 Host snapshot hydrate、Rust session/query 与 prepare/commit/abort 闭环，插件层仍只应读取 Host API，而不是依赖 sidecar 内部协议细节
 - 插件与 workflow 不应直接持有 `WorldEnginePort`、`WorldEngineSidecarClient`、prepared token 或 raw JSON-RPC transport
 - 若未来插件需要更多世界态读能力，应继续加在 Host API 上，而不是让插件直接越过宿主边界
+- plugin extension model 当前应视为 **TS-host-only by default**；是否建立 Rust-consumable contributor bridge 属于单独立项问题，而不是默认 roadmap
+- 因此，`PackHostApi` 不应再被描述为迁移期桥接壳，而应被视为插件系统长期依赖的 host contract 之一
 
 ### Web-side 当前已具备
 
@@ -249,4 +263,4 @@ CLI 与 GUI 复用同一组治理语义：
 - 命令入口：`../guides/COMMANDS.md`
 - API 契约：`../API.md`
 - 架构边界：`../ARCH.md`
-- 相关设计资产：`.limcode/design/pack-local-plugin-unified-management-design.md`
+- 相关设计资产：`.limcode/archive/design/pack-local-plugin-unified-management-design.md`

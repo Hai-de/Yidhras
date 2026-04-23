@@ -38,7 +38,7 @@
 2. 将 `memory_blocks source` 的 **核心 source 执行逻辑** 迁移到 Rust。
 3. 保持当前 Context Module 宿主边界不变：
    - TS host 继续负责 Prisma / store / policy / context integration。
-4. 建立与现有 Rust sidecar 一致的边界模式，为未来 Memory Runtime 深化 Rust ownership 提供模板。
+4. 建立与现有 Rust sidecar 一致的边界模式
 5. 允许先以 parity / shadow 方式落地，再切换到 Rust primary。
 
 ### 2.2 非目标

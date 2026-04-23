@@ -216,6 +216,14 @@ describe('memory trigger sidecar parity', () => {
     expect(rustResult.protocol_version).toBe('memory_trigger/v1alpha1');
     expect(rustResult.records).toEqual(tsResult.result.records);
     expect(rustResult.diagnostics).toEqual(tsResult.result.diagnostics);
+    expect(rustResult.records[0]?.evaluation.reason).toBe('trigger_rate_blocked');
+    expect(rustResult.records[0]?.trigger_rate).toMatchObject({
+      present: true,
+      value: 0.5,
+      applied: true,
+      passed: false
+    });
+    expect(rustResult.diagnostics.trigger_rate.blocked_count).toBeGreaterThanOrEqual(1);
   });
 
   it('supports handshake and health against the real Rust sidecar process', async () => {

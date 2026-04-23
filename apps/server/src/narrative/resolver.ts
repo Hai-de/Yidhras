@@ -247,10 +247,10 @@ export class NarrativeResolver {
     } catch (error) {
       console.error('[NarrativeResolver] Critical Error during resolve:', error);
       return {
-        text: '[ERROR_RECOVERED_STUB]',
+        text: '[TEMPLATE_RENDER_RECOVERED]',
         diagnostics: {
           ...buildEmptyPromptMacroDiagnostics(options.templateSource),
-          output_length: '[ERROR_RECOVERED_STUB]'.length
+          output_length: '[TEMPLATE_RENDER_RECOVERED]'.length
         }
       };
     }

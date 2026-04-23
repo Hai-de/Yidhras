@@ -68,6 +68,7 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
     this.packRuntimeRegistryService = new DefaultPackRuntimeRegistryService({
       registry: this.packRuntimeRegistry,
       packCatalog: this.packCatalogService,
+      prisma: this.prisma,
       getActivePack: () => this.activePackRuntimeFacade.getActivePack(),
       getStartupLevel: () => this.startupHealthLevel()
     });
@@ -90,8 +91,8 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
     return this.activePackRuntimeFacade.getActivePack();
   }
 
-  public resolvePackVariables(template: string, permission?: import('../permission/types.js').PermissionContext): string {
-    return this.activePackRuntimeFacade.resolvePackVariables(template, permission);
+  public resolvePackVariables(template: string, permission?: import('../permission/types.js').PermissionContext, actorState?: Record<string, unknown> | null): string {
+    return this.activePackRuntimeFacade.resolvePackVariables(template, permission, actorState);
   }
 
   public getStepTicks(): bigint {

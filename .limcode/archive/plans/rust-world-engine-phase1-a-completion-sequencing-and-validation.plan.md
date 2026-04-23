@@ -59,7 +59,6 @@ The following are explicitly out of scope for closing A in this plan:
 - scheduler migration or scheduler fixes
 - plugin/runtime/workflow host migration
 - decision runner / action dispatcher migration
-- direct Rust ownership of Prisma / SQLite
 - an unbounded migration of every possible rule family before objective-rule parity is complete
 
 ### 3.3 Scope gate for any further widening

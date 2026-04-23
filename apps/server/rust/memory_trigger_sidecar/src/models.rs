@@ -335,6 +335,7 @@ pub enum MemoryActivationStatusDto {
 pub struct MemoryActivationEvaluationDto {
     pub memory_id: String,
     pub status: MemoryActivationStatusDto,
+    pub trigger_diagnostics: MemoryBlockTriggerDiagnosticsDto,
     pub activation_score: f64,
     pub matched_triggers: Vec<String>,
     #[serde(default)]
@@ -343,10 +344,25 @@ pub struct MemoryActivationEvaluationDto {
     pub recent_distance_from_latest_message: Option<i64>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
-pub struct MemoryTriggerIgnoredFeaturesRecord {
-    pub trigger_rate_present: bool,
-    pub trigger_rate_ignored: bool,
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct MemoryTriggerRateDecisionRecord {
+    pub present: bool,
+    #[serde(default)]
+    pub value: Option<f64>,
+    pub applied: bool,
+    #[serde(default)]
+    pub sample: Option<f64>,
+    #[serde(default)]
+    pub passed: Option<bool>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct MemoryBlockTriggerDiagnosticsDto {
+    pub trigger_rate: MemoryTriggerRateDecisionRecord,
+    pub base_match: bool,
+    pub score_passed: bool,
+    pub fresh_trigger_attempt: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -358,13 +374,14 @@ pub struct MemoryTriggerSourceRecordResult {
     #[serde(default)]
     pub materialize_reason: Option<MemoryActivationStatusDto>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ignored_features: Option<MemoryTriggerIgnoredFeaturesRecord>,
+    pub trigger_rate: Option<MemoryTriggerRateDecisionRecord>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
-pub struct MemoryTriggerIgnoredFeaturesSummary {
-    pub trigger_rate_present_count: usize,
-    pub trigger_rate_ignored: bool,
+pub struct MemoryTriggerRateDecisionSummary {
+    pub present_count: usize,
+    pub applied_count: usize,
+    pub blocked_count: usize,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
@@ -372,7 +389,7 @@ pub struct MemoryTriggerSourceDiagnostics {
     pub candidate_count: usize,
     pub materialized_count: usize,
     pub status_counts: HashMap<String, usize>,
-    pub ignored_features: MemoryTriggerIgnoredFeaturesSummary,
+    pub trigger_rate: MemoryTriggerRateDecisionSummary,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]

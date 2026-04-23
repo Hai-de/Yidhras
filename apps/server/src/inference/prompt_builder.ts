@@ -7,13 +7,20 @@ import type { PromptWorkflowTaskType } from '../context/workflow/types.js';
 import { renderNarrativeTemplate } from '../narrative/resolver.js';
 import type { PromptMacroDiagnostics } from '../narrative/types.js';
 import type { PromptFragment, PromptFragmentSlot } from './prompt_fragments.js';
-import type { InferenceContext, PromptBundle, PromptProcessingTrace } from './types.js';
+import type { InferenceContext, PromptBundle, PromptProcessingTrace, PromptResolvableContext } from './types.js';
+
+type PromptContext = InferenceContext | PromptResolvableContext;
+
+const isFullInferenceContext = (ctx: PromptContext): ctx is InferenceContext => {
+  return 'inference_id' in ctx && ctx.inference_id != null && ctx.context_run != null && ctx.memory_context != null;
+};
 
 const PROMPT_VERSION = 'phase-b-v1';
 
 export interface PromptWorkflowBuildOptions {
   task_type?: PromptWorkflowTaskType;
   profile_id?: string | null;
+  include_sections?: string[];
 }
 
 const resolvePromptWorkflowTaskType = (options?: PromptWorkflowBuildOptions): PromptWorkflowTaskType => {
@@ -48,24 +55,33 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 };
 
-const buildContextPromptPayload = (context: InferenceContext): Record<string, unknown> => {
-  return {
+const buildContextPromptPayload = (context: PromptContext): Record<string, unknown> => {
+  const payload: Record<string, unknown> = {
     actor_ref: context.actor_ref,
     actor_display_name: context.actor_display_name,
-    context_run: context.context_run,
-    binding_ref: context.binding_ref,
     resolved_agent_id: context.resolved_agent_id,
     agent_snapshot: context.agent_snapshot,
-    policy_summary: context.policy_summary,
     attributes: context.attributes,
-    visible_variables: context.visible_variables,
+    visible_variables: 'visible_variables' in context ? context.visible_variables : [],
     variable_context_summary: context.variable_context_summary,
-    memory_context: context.memory_context,
     pack_state: context.pack_state,
     tick: context.tick.toString(),
     world_pack: context.world_pack,
     strategy: context.strategy
   };
+  if (context.context_run) {
+    payload.context_run = context.context_run;
+  }
+  if ('binding_ref' in context) {
+    payload.binding_ref = context.binding_ref;
+  }
+  if (context.memory_context) {
+    payload.memory_context = context.memory_context;
+  }
+  if ('policy_summary' in context) {
+    payload.policy_summary = context.policy_summary;
+  }
+  return payload;
 };
 
 const buildOutputContractPrompt = (): string => {
@@ -100,7 +116,7 @@ const sortFragments = (fragments: PromptFragment[]): PromptFragment[] => {
   return sortPromptFragmentsBase(fragments, SLOT_ORDER);
 };
 
-const readPromptWorkflowMetadata = (context: InferenceContext): {
+const readPromptWorkflowMetadata = (context: PromptContext): {
   workflow_task_type: string | null;
   workflow_profile_id: string | null;
   workflow_profile_version: string | null;
@@ -111,6 +127,13 @@ const readPromptWorkflowMetadata = (context: InferenceContext): {
   workflow_macro_summary?: PromptMacroDiagnostics | null;
   processing_trace?: PromptProcessingTrace;
 } => {
+  if (!context.context_run) {
+    return {
+      workflow_task_type: null,
+      workflow_profile_id: null,
+      workflow_profile_version: null
+    };
+  }
   const orchestration = isRecord(context.context_run.diagnostics.orchestration)
     ? context.context_run.diagnostics.orchestration
     : null;
@@ -118,7 +141,7 @@ const readPromptWorkflowMetadata = (context: InferenceContext): {
     ? orchestration.prompt_workflow
     : null;
   const orchestrationTrace = orchestration?.processing_trace;
-  const legacyTrace = context.memory_context.diagnostics.prompt_processing_trace;
+  const legacyTrace = context.memory_context?.diagnostics?.prompt_processing_trace;
   const processingTrace = isRecord(orchestrationTrace)
     ? (orchestrationTrace as unknown as PromptProcessingTrace)
     : isRecord(legacyTrace)
@@ -236,7 +259,7 @@ const summarizeMacroDiagnostics = (
   };
 };
 
-export const buildPromptFragments = (context: InferenceContext): PromptFragment[] => {
+export const buildPromptFragments = (context: PromptContext): PromptFragment[] => {
   const worldTemplate = context.world_prompts.global_prefix ?? '';
   const roleTemplate = context.world_prompts.agent_initial_context ?? '';
 
@@ -269,13 +292,15 @@ export const buildPromptFragments = (context: InferenceContext): PromptFragment[
     : { text: '', diagnostics: { traces: [], missing_paths: [], restricted_paths: [], blocks: [], alias_fallback_count: 0, namespaces_used: [], output_length: 0 } };
 
   const { variableSummary, macroSummary } = summarizeMacroDiagnostics([worldRender.diagnostics, roleRender.diagnostics]);
-  context.context_run.diagnostics.orchestration = {
-    ...(context.context_run.diagnostics.orchestration ?? {}),
-    variable_resolution: {
-      variable_summary: variableSummary,
-      macro_summary: macroSummary
-    }
-  };
+  if (context.context_run) {
+    context.context_run.diagnostics.orchestration = {
+      ...(context.context_run.diagnostics.orchestration ?? {}),
+      variable_resolution: {
+        variable_summary: variableSummary,
+        macro_summary: macroSummary
+      }
+    };
+  }
 
   const rolePrompt = [
     roleRender.text,
@@ -297,6 +322,10 @@ export const buildPromptFragments = (context: InferenceContext): PromptFragment[
   const contextPrompt = JSON.stringify(buildContextPromptPayload(context), null, 2);
   const outputContractPrompt = buildOutputContractPrompt();
 
+  const memorySelectionCount = context.memory_context
+    ? context.memory_context.short_term.length + context.memory_context.long_term.length + context.memory_context.summaries.length
+    : 0;
+
   return [
     buildFragment('system_core', 100, systemPrompt, 'system.core'),
     buildFragment('role_core', 90, rolePrompt, 'world_prompts.agent_initial_context', {
@@ -306,10 +335,7 @@ export const buildPromptFragments = (context: InferenceContext): PromptFragment[
       prompt_macro_diagnostics: worldRender.diagnostics
     }),
     buildFragment('memory_summary', 70, '', 'memory.summary', {
-      memory_selection_count:
-        context.memory_context.short_term.length +
-        context.memory_context.long_term.length +
-        context.memory_context.summaries.length
+      memory_selection_count: memorySelectionCount
     }),
     buildFragment('post_process', 60, contextPrompt, 'context.snapshot'),
     buildFragment('output_contract', 50, outputContractPrompt, 'output.contract')
@@ -318,7 +344,7 @@ export const buildPromptFragments = (context: InferenceContext): PromptFragment[
 
 export const buildPromptBundleFromFragments = (
   fragments: PromptFragment[],
-  context: InferenceContext
+  context: PromptContext
 ): PromptBundle => {
   const sortedFragments = sortFragments(fragments);
   const workflowMetadata = readPromptWorkflowMetadata(context);
@@ -338,15 +364,17 @@ export const buildPromptBundleFromFragments = (
     resolved_with_anchor: sortedFragments.filter(fragment => fragment.anchor).length,
     fallback_count: 0
   };
-  const variableResolution = isRecord(context.context_run.diagnostics.orchestration?.variable_resolution)
-    ? context.context_run.diagnostics.orchestration?.variable_resolution as Record<string, unknown>
+  const variableResolution = context.context_run && isRecord(context.context_run.diagnostics.orchestration?. variable_resolution)
+    ? context.context_run.diagnostics.orchestration.variable_resolution as Record<string, unknown>
     : null;
 
-  context.context_run.diagnostics.prompt_assembly = buildContextPromptAssemblySummary(sortedFragments);
-  context.context_run.diagnostics.orchestration = {
-    ...(context.context_run.diagnostics.orchestration ?? {}),
-    prompt_assembly: context.context_run.diagnostics.prompt_assembly
-  };
+  if (context.context_run) {
+    context.context_run.diagnostics.prompt_assembly = buildContextPromptAssemblySummary(sortedFragments);
+    context.context_run.diagnostics.orchestration = {
+      ...(context.context_run.diagnostics.orchestration ?? {}),
+      prompt_assembly: context.context_run.diagnostics.prompt_assembly
+    };
+  }
   return {
     system_prompt: buildSlotPrompt(sortedFragments, 'system_core'),
     role_prompt: buildSlotPrompt(sortedFragments, 'role_core'),
@@ -373,8 +401,15 @@ export const buildPromptBundleFromFragments = (
   };
 };
 
-export const buildPromptBundle = async (context: InferenceContext, options: PromptWorkflowBuildOptions = {}): Promise<PromptBundle> => {
+export const buildPromptBundle = async (context: PromptContext, options: PromptWorkflowBuildOptions = {}): Promise<PromptBundle> => {
   const fragments = buildPromptFragments(context);
-  const orchestrated = await runContextOrchestrator(context, fragments, { task_type: resolvePromptWorkflowTaskType(options), profile_id: options.profile_id ?? null });
-  return buildPromptBundleFromFragments(orchestrated.fragments, context);
+  if (isFullInferenceContext(context)) {
+    const orchestrated = await runContextOrchestrator(context, fragments, {
+      task_type: resolvePromptWorkflowTaskType(options),
+      profile_id: options.profile_id ?? null,
+      include_sections: options.include_sections
+    });
+    return buildPromptBundleFromFragments(orchestrated.fragments, context);
+  }
+  return buildPromptBundleFromFragments(fragments, context);
 };

@@ -142,4 +142,5 @@ describe('prompt macro resolver', () => {
     expect(result.text).toBe('Missing=[RESTRICTED_OR_MISSING]');
     expect(result.diagnostics.missing_paths).toContain('actor.unknown_field');
   });
+
 });

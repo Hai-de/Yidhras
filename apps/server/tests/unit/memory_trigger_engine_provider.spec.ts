@@ -151,7 +151,7 @@ const buildCandidate = (): MemoryBlockRecord => {
 };
 
 describe('memory trigger engine provider', () => {
-  it('uses TS provider mode and records ignored trigger_rate metadata', async () => {
+  it('uses TS provider mode and records deterministic trigger_rate gate diagnostics', async () => {
     const provider = createMemoryTriggerEngineProvider({
       mode: 'ts',
       timeoutMs: 100,
@@ -174,16 +174,32 @@ describe('memory trigger engine provider', () => {
     expect(result.result.records).toHaveLength(1);
     expect(result.result.records[0]).toMatchObject({
       memory_id: 'memory-block-provider-1',
-      should_materialize: true,
-      materialize_reason: 'active',
-      ignored_features: {
-        trigger_rate_present: true,
-        trigger_rate_ignored: true
+      should_materialize: false,
+      materialize_reason: null,
+      trigger_rate: {
+        present: true,
+        value: 0.5,
+        applied: true,
+        passed: false
       }
     });
-    expect(result.result.diagnostics.ignored_features).toEqual({
-      trigger_rate_present_count: 1,
-      trigger_rate_ignored: true
+    expect(result.result.records[0]?.evaluation.status).toBe('inactive');
+    expect(result.result.records[0]?.evaluation.reason).toBe('trigger_rate_blocked');
+    expect(result.result.records[0]?.evaluation.trigger_diagnostics).toMatchObject({
+      base_match: true,
+      score_passed: true,
+      fresh_trigger_attempt: true,
+      trigger_rate: {
+        present: true,
+        value: 0.5,
+        applied: true,
+        passed: false
+      }
+    });
+    expect(result.result.diagnostics.trigger_rate).toEqual({
+      present_count: 1,
+      applied_count: 1,
+      blocked_count: 1
     });
   });
 
@@ -203,7 +219,8 @@ describe('memory trigger engine provider', () => {
     expect(result.metadata.provider).toBe('rust_fallback_to_ts');
     expect(result.metadata.fallback).toBe(true);
     expect(result.metadata.fallback_reason).toContain('Memory trigger sidecar binary does not exist');
-    expect(result.result.records[0]?.evaluation.status).toBe('active');
+    expect(result.result.records[0]?.evaluation.status).toBe('inactive');
+    expect(result.result.records[0]?.evaluation.reason).toBe('trigger_rate_blocked');
   });
 
   it('keeps TS result as source of truth and exposes fallback metadata in rust_shadow mode when sidecar is unavailable', async () => {
@@ -222,6 +239,7 @@ describe('memory trigger engine provider', () => {
     expect(result.metadata.provider).toBe('rust_shadow');
     expect(result.metadata.fallback).toBe(true);
     expect(result.metadata.parity_status).toBe('skipped');
-    expect(result.result.records[0]?.evaluation.status).toBe('active');
+    expect(result.result.records[0]?.evaluation.status).toBe('inactive');
+    expect(result.result.records[0]?.evaluation.reason).toBe('trigger_rate_blocked');
   });
 });

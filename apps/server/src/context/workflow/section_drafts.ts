@@ -10,6 +10,12 @@ import type {
   PromptWorkflowTaskType
 } from './types.js';
 
+const PROTECTED_SECTION_TYPES: ReadonlySet<string> = new Set<string>([
+  'system_instruction',
+  'role_context',
+  'world_context'
+]);
+
 interface OriginalFragmentMetadata {
   id: string;
   slot: PromptFragment['slot'];
@@ -237,8 +243,11 @@ const resolveTaskAwareDraftPolicy = (input: {
   drafts: PromptSectionDraft[];
   task_type: PromptWorkflowTaskType;
   section_policy: PromptWorkflowSectionPolicy;
+  include_sections?: string[];
 }): TaskAwareDraftPolicy => {
   const minimal = input.section_policy === 'minimal';
+  const includeOnly = input.section_policy === 'include_only' && (input.include_sections?.length ?? 0) > 0;
+  const includeSet = includeOnly ? new Set<string>(input.include_sections!) : null;
   const hasContextSnapshot = hasAnySectionType(input.drafts, ['context_snapshot']);
   const hasMemorySections = hasAnySectionType(input.drafts, ['memory_summary', 'memory_short_term', 'memory_long_term']);
 
@@ -258,6 +267,10 @@ const resolveTaskAwareDraftPolicy = (input: {
           output_contract: 80
         },
         should_keep: draft => {
+          if (includeOnly) {
+            return PROTECTED_SECTION_TYPES.has(draft.section_type) || (includeSet?.has(draft.section_type) ?? false);
+          }
+
           if (!minimal) {
             return true;
           }
@@ -304,6 +317,10 @@ const resolveTaskAwareDraftPolicy = (input: {
           output_contract: 60
         },
         should_keep: draft => {
+          if (includeOnly) {
+            return PROTECTED_SECTION_TYPES.has(draft.section_type) || (includeSet?.has(draft.section_type) ?? false);
+          }
+
           if (!minimal) {
             return true;
           }
@@ -349,7 +366,13 @@ const resolveTaskAwareDraftPolicy = (input: {
           output_contract: 650,
           context_snapshot: minimal ? 400 : 600
         },
-        should_keep: () => true,
+        should_keep: draft => {
+          if (includeOnly) {
+            return PROTECTED_SECTION_TYPES.has(draft.section_type) || (includeSet?.has(draft.section_type) ?? false);
+          }
+
+          return true;
+        },
         score_draft: draft => buildDraftScore({
           draft,
           policy_name: 'standard',
@@ -375,6 +398,7 @@ const buildTaskAwareDraftOrder = (input: {
   drafts: PromptSectionDraft[];
   task_type: PromptWorkflowTaskType;
   section_policy: PromptWorkflowSectionPolicy;
+  include_sections?: string[];
 }): PromptSectionDraft[] => {
   const taskPolicy = resolveTaskAwareDraftPolicy(input);
   const originalIndexById = new Map(input.drafts.map((draft, index) => [draft.id, index]));
@@ -417,6 +441,7 @@ export const buildSectionDraftsFromFragments = (
   options: {
     task_type?: PromptWorkflowTaskType;
     section_policy?: PromptWorkflowSectionPolicy;
+    include_sections?: string[];
   } = {}
 ): PromptSectionDraft[] => {
   const drafts: PromptSectionDraft[] = fragments.map(fragment => ({
@@ -449,7 +474,8 @@ export const buildSectionDraftsFromFragments = (
   return buildTaskAwareDraftOrder({
     drafts,
     task_type: options.task_type ?? 'agent_decision',
-    section_policy: options.section_policy ?? 'standard'
+    section_policy: options.section_policy ?? 'standard',
+    include_sections: options.include_sections
   });
 };
 

@@ -61,6 +61,13 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
     this.clock = activated.clock;
     this.currentRevision = activated.clock.getTicks();
 
+    if (!this.activePack || !this.activePack.metadata.id) {
+      throw new Error(
+        `[SimulationManager] Pack loaded but metadata.id is missing. ` +
+        `This indicates a silent fallback to an invalid pack state.`
+      );
+    }
+
     const projectionClock = this.createProjectionClock(this.activePack);
 
     this.runtimeRegistry.register(
@@ -90,42 +97,54 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
   }
 
 
-  public resolvePackVariables(template: string, permission?: PermissionContext): string {
+  public resolvePackVariables(template: string, permission?: PermissionContext, actorState?: Record<string, unknown> | null): string {
     const pack = this.activePack;
-    const variableContext = createPromptVariableContext({
-      layers: [
-        createPromptVariableLayer({
-          namespace: 'pack',
-          values: normalizePromptVariableRecord({
-            metadata: pack?.metadata ?? null,
-            variables: pack?.variables ?? {}
-          }),
-          alias_values: normalizePromptVariableRecord({
-            ...(pack?.variables ?? {}),
-            world_name: pack?.metadata.name ?? '',
-            pack_name: pack?.metadata.name ?? '',
-            pack_id: pack?.metadata.id ?? ''
-          }),
-          metadata: {
-            source_label: 'simulation-active-pack',
-            trusted: true
-          }
+    const layers = [
+      createPromptVariableLayer({
+        namespace: 'pack',
+        values: normalizePromptVariableRecord({
+          metadata: pack?.metadata ?? null,
+          variables: pack?.variables ?? {}
         }),
-        createPromptVariableLayer({
-          namespace: 'runtime',
-          values: normalizePromptVariableRecord({
-            current_tick: this.getCurrentTick().toString()
-          }),
-          alias_values: normalizePromptVariableRecord({
-            current_tick: this.getCurrentTick().toString()
-          }),
-          metadata: {
-            source_label: 'simulation-runtime',
-            trusted: true
-          }
-        })
-      ]
-    });
+        alias_values: normalizePromptVariableRecord({
+          ...(pack?.variables ?? {}),
+          world_name: pack?.metadata.name ?? '',
+          pack_name: pack?.metadata.name ?? '',
+          pack_id: pack?.metadata.id ?? ''
+        }),
+        metadata: {
+          source_label: 'simulation-active-pack',
+          trusted: true
+        }
+      }),
+      createPromptVariableLayer({
+        namespace: 'runtime',
+        values: normalizePromptVariableRecord({
+          current_tick: this.getCurrentTick().toString()
+        }),
+        alias_values: normalizePromptVariableRecord({
+          current_tick: this.getCurrentTick().toString()
+        }),
+        metadata: {
+          source_label: 'simulation-runtime',
+          trusted: true
+        }
+      })
+    ];
+
+    if (actorState && Object.keys(actorState).length > 0) {
+      layers.push(createPromptVariableLayer({
+        namespace: 'actor_state',
+        values: normalizePromptVariableRecord(actorState),
+        alias_values: normalizePromptVariableRecord(actorState),
+        metadata: {
+          source_label: 'simulation-actor-state',
+          trusted: true
+        }
+      }));
+    }
+
+    const variableContext = createPromptVariableContext({ layers });
 
     return renderNarrativeTemplate({
       template,

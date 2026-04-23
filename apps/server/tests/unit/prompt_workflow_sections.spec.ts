@@ -311,4 +311,97 @@ describe('prompt workflow section drafts', () => {
       section_policies: ['memory_focused']
     });
   });
+
+  it('filters sections with include_only policy and include_sections list', () => {
+    const fragments: PromptFragment[] = [
+      buildFragment({ id: 'system', slot: 'system_core', priority: 100, content: 'System', source: 'system.core' }),
+      buildFragment({ id: 'role', slot: 'role_core', priority: 90, content: 'Role', source: 'world_prompts.agent_initial_context' }),
+      buildFragment({ id: 'world', slot: 'world_context', priority: 80, content: 'World', source: 'world_prompts.global_prefix' }),
+      buildFragment({ id: 'memory_summary', slot: 'memory_summary', priority: 70, content: 'Summary', source: 'memory.summary' }),
+      buildFragment({ id: 'memory_short', slot: 'memory_short_term', priority: 60, content: 'Short', source: 'memory.short_term' }),
+      buildFragment({ id: 'output', slot: 'output_contract', priority: 50, content: 'Output', source: 'output.contract' }),
+      buildFragment({ id: 'snapshot', slot: 'post_process', priority: 40, content: 'Snapshot', source: 'context.snapshot' })
+    ];
+
+    const drafts = buildSectionDraftsFromFragments(fragments, {
+      task_type: 'agent_decision',
+      section_policy: 'include_only',
+      include_sections: ['memory_summary', 'output_contract']
+    });
+
+    const sectionTypes = drafts.map(draft => draft.section_type);
+
+    expect(sectionTypes).toContain('system_instruction');
+    expect(sectionTypes).toContain('role_context');
+    expect(sectionTypes).toContain('world_context');
+    expect(sectionTypes).toContain('memory_summary');
+    expect(sectionTypes).toContain('output_contract');
+
+    expect(sectionTypes).not.toContain('memory_short_term');
+    expect(sectionTypes).not.toContain('context_snapshot');
+  });
+
+  it('include_only with empty include_sections keeps all sections', () => {
+    const fragments: PromptFragment[] = [
+      buildFragment({ id: 'system', slot: 'system_core', priority: 100, content: 'System', source: 'system.core' }),
+      buildFragment({ id: 'memory', slot: 'memory_summary', priority: 70, content: 'Summary', source: 'memory.summary' }),
+      buildFragment({ id: 'output', slot: 'output_contract', priority: 50, content: 'Output', source: 'output.contract' })
+    ];
+
+    const drafts = buildSectionDraftsFromFragments(fragments, {
+      task_type: 'agent_decision',
+      section_policy: 'include_only',
+      include_sections: []
+    });
+
+    expect(drafts).toHaveLength(3);
+    expect(drafts.map(draft => draft.section_type)).toEqual(expect.arrayContaining(['system_instruction', 'memory_summary', 'output_contract']));
+  });
+
+  it('include_only with context_summary task type filters correctly', () => {
+    const fragments: PromptFragment[] = [
+      buildFragment({ id: 'system', slot: 'system_core', priority: 100, content: 'System', source: 'system.core' }),
+      buildFragment({ id: 'role', slot: 'role_core', priority: 90, content: 'Role', source: 'world_prompts.agent_initial_context' }),
+      buildFragment({ id: 'world', slot: 'world_context', priority: 80, content: 'World', source: 'world_prompts.global_prefix' }),
+      buildFragment({ id: 'evidence', slot: 'memory_short_term', priority: 60, content: 'Short', source: 'memory.short_term' }),
+      buildFragment({ id: 'output', slot: 'output_contract', priority: 50, content: 'Output', source: 'output.contract' })
+    ];
+
+    const drafts = buildSectionDraftsFromFragments(fragments, {
+      task_type: 'context_summary',
+      section_policy: 'include_only',
+      include_sections: ['memory_short_term']
+    });
+
+    const sectionTypes = drafts.map(draft => draft.section_type);
+
+    expect(sectionTypes).toContain('system_instruction');
+    expect(sectionTypes).toContain('role_context');
+    expect(sectionTypes).toContain('world_context');
+    expect(sectionTypes).toContain('memory_short_term');
+
+    expect(sectionTypes).not.toContain('output_contract');
+  });
+
+  it('protected sections are always included even when not in include_sections', () => {
+    const fragments: PromptFragment[] = [
+      buildFragment({ id: 'system', slot: 'system_core', priority: 100, content: 'System', source: 'system.core' }),
+      buildFragment({ id: 'role', slot: 'role_core', priority: 90, content: 'Role', source: 'world_prompts.agent_initial_context' }),
+      buildFragment({ id: 'world', slot: 'world_context', priority: 80, content: 'World', source: 'world_prompts.global_prefix' }),
+      buildFragment({ id: 'memory', slot: 'memory_summary', priority: 70, content: 'Summary', source: 'memory.summary' })
+    ];
+
+    const drafts = buildSectionDraftsFromFragments(fragments, {
+      task_type: 'agent_decision',
+      section_policy: 'include_only',
+      include_sections: ['memory_summary']
+    });
+
+    const sectionTypes = drafts.map(draft => draft.section_type);
+
+    expect(sectionTypes).toContain('system_instruction');
+    expect(sectionTypes).toContain('role_context');
+    expect(sectionTypes).toContain('world_context');
+    expect(sectionTypes).toContain('memory_summary');
+  });
 });

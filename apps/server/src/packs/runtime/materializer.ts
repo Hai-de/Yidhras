@@ -1,3 +1,5 @@
+import type { PrismaClient } from '@prisma/client';
+
 import type { WorldPack } from '../schema/constitution_schema.js';
 import { upsertPackAuthorityGrant } from '../storage/authority_repo.js';
 import { upsertPackWorldEntity } from '../storage/entity_repo.js';
@@ -200,6 +202,15 @@ export const materializePackRuntimeCoreModels = async (
     );
   }
 
+  for (const transform of pack.state_transforms ?? []) {
+    putWorldEntity(
+      createWorldEntityInput(packId, transform.target, 'state_transform', transform.target, now, {
+        entityType: 'state_transform',
+        payload: transform as Record<string, unknown>
+      })
+    );
+  }
+
   for (const worldEntity of worldEntities.values()) {
     await upsertPackWorldEntity(worldEntity);
   }
@@ -218,6 +229,140 @@ export const materializePackRuntimeCoreModels = async (
     world_entity_count: worldEntities.size,
     entity_state_count: entityStates.size,
     authority_grant_count: authorityGrants.size,
-    mediator_binding_count: mediatorBindings.size
+    mediator_binding_count: mediatorBindings.size,
+    state_transform_count: (pack.state_transforms ?? []).length
   };
+};
+
+export interface ActorBridgeSummary {
+  pack_id: string;
+  agent_count: number;
+  identity_count: number;
+  binding_count: number;
+}
+
+const buildBridgedAgentId = (packId: string, actorId: string): string => `${packId}:${actorId}`;
+const buildBridgedIdentityId = (packId: string, identityId: string): string => `${packId}:identity:${identityId}`;
+
+export const materializeActorBridges = async (
+  pack: WorldPack,
+  prisma: PrismaClient,
+  now: bigint
+): Promise<ActorBridgeSummary> => {
+  const packId = pack.metadata.id;
+  const actors = pack.entities?.actors ?? [];
+  const identities = pack.identities ?? [];
+
+  let agentCount = 0;
+  let identityCount = 0;
+  let bindingCount = 0;
+
+  for (const actor of actors) {
+    const agentId = buildBridgedAgentId(packId, actor.id);
+
+    await prisma.agent.upsert({
+      where: { id: agentId },
+      update: { name: actor.label, type: 'active', snr: 1.0, updated_at: now },
+      create: { id: agentId, name: actor.label, type: 'active', snr: 1.0, is_pinned: false, created_at: now, updated_at: now }
+    });
+    agentCount++;
+
+    const matchingIdentities = identities.filter(
+      (identity) => identity.subject_entity_id === actor.id
+    );
+
+    if (matchingIdentities.length === 0) {
+      const defaultIdentityId = buildBridgedIdentityId(packId, actor.id);
+
+      await prisma.identity.upsert({
+        where: { id: defaultIdentityId },
+        update: { name: actor.label, type: 'agent', updated_at: now },
+        create: {
+          id: defaultIdentityId,
+          type: 'agent',
+          name: actor.label,
+          provider: 'pack',
+          status: 'active',
+          created_at: now,
+          updated_at: now
+        }
+      });
+      identityCount++;
+
+      await prisma.identityNodeBinding.upsert({
+        where: {
+          id: `${packId}:binding:${actor.id}`
+        },
+        update: {},
+        create: {
+          id: `${packId}:binding:${actor.id}`,
+          identity_id: defaultIdentityId,
+          agent_id: agentId,
+          atmosphere_node_id: null,
+          role: 'active',
+          status: 'active',
+          created_at: now,
+          updated_at: now
+        }
+      });
+      bindingCount++;
+    }
+
+    for (const identity of matchingIdentities) {
+      const bridgedIdentityId = buildBridgedIdentityId(packId, identity.id);
+
+      await prisma.identity.upsert({
+        where: { id: bridgedIdentityId },
+        update: { name: identity.id, type: identity.type, updated_at: now },
+        create: {
+          id: bridgedIdentityId,
+          type: identity.type,
+          name: identity.id,
+          provider: 'pack',
+          status: 'active',
+          created_at: now,
+          updated_at: now
+        }
+      });
+      identityCount++;
+
+      await prisma.identityNodeBinding.upsert({
+        where: {
+          id: `${packId}:binding:${actor.id}:${identity.id}`
+        },
+        update: {},
+        create: {
+          id: `${packId}:binding:${actor.id}:${identity.id}`,
+          identity_id: bridgedIdentityId,
+          agent_id: agentId,
+          atmosphere_node_id: null,
+          role: 'active',
+          status: 'active',
+          created_at: now,
+          updated_at: now
+        }
+      });
+      bindingCount++;
+    }
+  }
+
+  return { pack_id: packId, agent_count: agentCount, identity_count: identityCount, binding_count: bindingCount };
+};
+
+export const teardownActorBridges = async (packId: string, prisma: PrismaClient): Promise<number> => {
+  const prefix = `${packId}:`;
+  const identityPrefix = `${packId}:identity:`;
+  const bindingPrefix = `${packId}:binding:`;
+
+  const deletedIdentityBindings = await prisma.identityNodeBinding.deleteMany({
+    where: { id: { startsWith: bindingPrefix } }
+  });
+  const deletedIdentities = await prisma.identity.deleteMany({
+    where: { id: { startsWith: identityPrefix } }
+  });
+  const deletedAgents = await prisma.agent.deleteMany({
+    where: { id: { startsWith: prefix } }
+  });
+
+  return deletedAgents.count + deletedIdentities.count + deletedIdentityBindings.count;
 };

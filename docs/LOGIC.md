@@ -2,10 +2,22 @@
 
 本文档用于说明 Yidhras 中**业务执行主线、状态转移语义、领域规则与可见性语义**。
 
-> 不在这里展开：
-> - 公共 HTTP contract：看 `API.md`
-> - 系统模块分层与宿主关系：看 `ARCH.md`
-> - Prompt Workflow / AI Gateway / Plugin Runtime 的高耦合实现细节：看 `docs/capabilities/`
+> 公共 HTTP contract 见 `API.md` · 系统分层与宿主关系见 `ARCH.md` · 专题细节见 `docs/capabilities/`
+
+## 核心术语
+
+| 术语 | 含义 |
+|------|------|
+| Actor | 参与推理的主体（agent 或绑定了 identity 的实体） |
+| Inference | 从上下文组装到模型调用的推理过程 |
+| Intent Grounder | 把模型开放语义映射为系统可执行结果的组件，产出 exact/translated/narrativized/blocked 四类结果 |
+| Narrativized fallback | 语义上表现为失败尝试的正式结果，而非简单异常 |
+| Overlay | 临时、可写入的上下文补充，不是世界状态的 source-of-truth |
+| Memory Block | 可触发（always/keyword/logic/recent-source）的长期记忆片段，触发后物化为上下文节点 |
+| Projection | 数据的只读聚合视图（entity overview、pack timeline 等），面向前端/operator |
+| Canonical read surface | 稳定的公开只读 API 端点，如 `/api/packs/:packId/overview` |
+| Objective enforcement | Rust sidecar 执行的世界规则匹配与状态变更 |
+| Action dispatch | 把 grounded intent 落地为客观执行（社交、关系调整、能力调用等） |
 
 ## 1. 推理与执行主线
 

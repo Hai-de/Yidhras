@@ -487,12 +487,13 @@ export interface HostRuntimeClockQueryPort {
 - query / invocation side effects 仍只存在 TS
 - clock issue 也证明宿主投影层不可缺
 
-### 若未来要真正去掉 TS，还缺什么
-- 明确 persistence ownership
-- 明确 plugin contributor bridge 是否迁到 Rust
-- 明确 query host seam 是否 Rust-owned
-- 明确 invocation side-effect bridge 是否 Rust-owned
-- 统一 clock ownership model
+### 若未来要继续做可选 Rust 深化，需要单独确认什么
+- 当前默认前提应是：`PackHostApi` 作为长期 TS-host-owned host-mediated read contract 保留
+- persistence ownership 是否要超出 host-apply delta 继续下沉
+- plugin contributor bridge 是否真的值得进入 Rust（默认不进入）
+- query host seam 是否需要在 `PackHostApi` 之外继续缩窄为 Rust-facing contract
+- invocation side-effect bridge 是否存在明确性能/安全收益，值得进一步下沉
+- clock ownership model 继续保持 host projection single-source，不作为再次拆 owner 的入口
 
 ---
 
@@ -521,10 +522,6 @@ export interface HostRuntimeClockQueryPort {
 - 会制造第二个可见真相源
 - 重启/恢复语义会更混乱
 
-### 不推荐 B：借修时钟之机推进 world engine 全量 Rust ownership
-问题：
-- 会同时撞上 persistence、plugin bridge、query seam、invocation side effects 四条大边界
-- 成本远高于问题本身
 
 ---
 
@@ -573,6 +570,7 @@ export interface HostRuntimeClockQueryPort {
 
 - Rust sidecar 负责纯核心与提交结果
 - TS host 负责运行时投影、持久化、插件、查询、对外 API
+- `PackHostApi` 负责作为长期 host-mediated read contract，承接插件/workflow/route 等上层读面
 - 当前时钟问题被归类为：
   - **world engine commit 结果未被投影到 TS host observable clock**
 
@@ -581,8 +579,6 @@ export interface HostRuntimeClockQueryPort {
 1. 先 formalize host-owned observable clock 接口
 2. 再修复 world engine commit → host clock projection
 3. 最后统一所有 clock read path
-
-而不是直接把 clock 读取切到 Rust 或顺手推进 world engine 全量 Rust ownership。
 
 ---
 

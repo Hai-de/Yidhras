@@ -2,6 +2,7 @@ import { getOperatorOverviewProjection } from '../../kernel/projections/operator
 import { extractGlobalProjectionIndex } from '../../kernel/projections/projection_extractor.js';
 import type { AppContext } from '../context.js';
 import { toJsonSafe } from '../http/json.js';
+import { readVisibleClockSnapshot } from './app_context_ports.js';
 import type { AuditViewEntry } from './audit.js';
 import { listAuditFeed } from './audit.js';
 
@@ -73,19 +74,11 @@ const hasPropagationIntent = (entry: AuditViewEntry): boolean => {
 };
 
 const readProjectedWorldTime = (context: AppContext): { tick: string; calendars: unknown } => {
-  const packId = context.activePackRuntime?.getActivePack()?.metadata.id?.trim() ?? '';
-  const projected = packId ? context.runtimeClockProjection?.readFormattedClock(packId) : null;
-
-  if (projected) {
-    return {
-      tick: projected.absolute_ticks,
-      calendars: projected.calendars
-    };
-  }
+  const visibleClock = readVisibleClockSnapshot(context);
 
   return {
-    tick: context.sim.getCurrentTick().toString(),
-    calendars: context.getRuntimeReady() ? toJsonSafe(context.sim.getAllTimes()) : []
+    tick: visibleClock.absolute_ticks,
+    calendars: context.getRuntimeReady() ? toJsonSafe(visibleClock.calendars) : []
   };
 };
 

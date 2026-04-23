@@ -15,7 +15,11 @@ export interface MemoryBlockSourceBuildResult {
   nodes: ContextNode[];
   evaluations: MemoryActivationEvaluation[];
   evaluation_metadata?: MemoryTriggerEngineEvaluationMetadata | null;
-  ignored_feature_counts?: { trigger_rate_ignored_count: number } | null;
+  trigger_rate_summary?: {
+    present_count: number;
+    applied_count: number;
+    blocked_count: number;
+  } | null;
 }
 
 export const buildContextNodesFromMemoryBlocks = async (input: {
@@ -93,8 +97,8 @@ export const buildContextNodesFromMemoryBlocks = async (input: {
     nodes,
     evaluations,
     evaluation_metadata: providerResult.metadata,
-    ignored_feature_counts: {
-      trigger_rate_ignored_count: providerResult.result.diagnostics.ignored_features.trigger_rate_present_count
+    trigger_rate_summary: {
+      ...providerResult.result.diagnostics.trigger_rate
     }
   };
 };

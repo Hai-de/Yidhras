@@ -8,6 +8,7 @@ import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import { jsonOk } from '../http/json.js';
 import { parseBody } from '../http/zod.js';
+import { readVisibleClockSnapshot } from '../services/app_context_ports.js';
 import {
   clearRuntimeSpeedOverride,
   overrideRuntimeSpeed,
@@ -27,19 +28,14 @@ export const registerClockRoutes = (
   deps: ClockRouteDependencies
 ): void => {
   const readProjectedClock = () => {
-    const packId = context.activePackRuntime?.getActivePack()?.metadata.id?.trim() ?? '';
-    if (!packId) {
-      return null;
-    }
-
-    const projected = context.runtimeClockProjection?.readFormattedClock(packId);
-    if (projected) {
-      return projected;
-    }
-
+    /**
+     * Clock routes are external visible read surfaces and therefore should
+     * resolve through the host-visible clock helper first.
+     */
+    const snapshot = readVisibleClockSnapshot(context);
     return {
-      absolute_ticks: context.sim.getCurrentTick().toString(),
-      calendars: deps.toJsonSafe(context.sim.getAllTimes()) as unknown[]
+      absolute_ticks: snapshot.absolute_ticks,
+      calendars: deps.toJsonSafe(snapshot.calendars) as unknown[]
     };
   };
 
@@ -73,7 +69,7 @@ export const registerClockRoutes = (
     context.assertRuntimeReady('clock read');
     const projected = readProjectedClock();
     jsonOk(res, {
-      absolute_ticks: projected?.absolute_ticks ?? context.sim.getCurrentTick().toString(),
+      absolute_ticks: projected.absolute_ticks,
       calendars: []
     });
   });
@@ -83,8 +79,8 @@ export const registerClockRoutes = (
     try {
       const projected = readProjectedClock();
       jsonOk(res, {
-        absolute_ticks: projected?.absolute_ticks ?? context.sim.getCurrentTick().toString(),
-        calendars: projected?.calendars ?? deps.toJsonSafe(context.sim.getAllTimes())
+        absolute_ticks: projected.absolute_ticks,
+        calendars: projected.calendars
       });
     } catch (err: unknown) {
       next(new ApiError(500, 'CLOCK_FORMAT_ERR', `读取格式化时钟失败: ${deps.getErrorMessage(err)}`));

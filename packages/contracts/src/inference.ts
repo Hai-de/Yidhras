@@ -9,6 +9,7 @@ export const aiInvocationStatusSchema = z.enum(['completed', 'failed', 'blocked'
 export const inferenceRequestSchema = z.object({
   agent_id: z.string().optional(),
   identity_id: z.string().optional(),
+  actor_entity_id: z.string().optional(),
   strategy: inferenceStrategySchema.optional(),
   attributes: z.record(z.string(), z.unknown()).optional(),
   idempotency_key: z.string().optional()
@@ -22,7 +23,8 @@ export const inferenceJobReplayRequestSchema = z.object({
       strategy: inferenceStrategySchema.optional(),
       attributes: z.record(z.string(), z.unknown()).optional(),
       agent_id: z.string().optional(),
-      identity_id: z.string().optional()
+      identity_id: z.string().optional(),
+      actor_entity_id: z.string().optional()
     })
     .optional()
 })

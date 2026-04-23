@@ -133,6 +133,7 @@ export interface PackRuntimeMaterializeSummary {
   entity_state_count: number;
   authority_grant_count: number;
   mediator_binding_count: number;
+  state_transform_count: number;
 }
 
 export const DEFAULT_PACK_WORLD_ENTITY_ID = '__world__';

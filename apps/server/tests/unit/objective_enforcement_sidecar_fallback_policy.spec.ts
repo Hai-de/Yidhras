@@ -132,10 +132,37 @@ describe('objective enforcement sidecar fallback policy', () => {
             }
           }
         ],
-        mediators: [],
+        mediators: [
+          {
+            id: 'mediator-book',
+            entity_ref: 'artifact-book',
+            mediator_kind: 'artifact_vessel',
+            grants: [{ capability_key: 'invoke.claim_book' }]
+          }
+        ],
         domains: [],
         institutions: []
       },
+      capabilities: [
+        {
+          key: 'invoke.claim_book',
+          category: 'invoke',
+          target_schema: 'artifact'
+        }
+      ],
+      authorities: [
+        {
+          id: 'grant-claim-book',
+          source_entity_id: 'mediator-book',
+          target_selector: {
+            kind: 'direct_entity',
+            entity_id: 'agent-holder'
+          },
+          capability_key: 'invoke.claim_book',
+          grant_type: 'mediated',
+          mediated_by_entity_id: 'mediator-book'
+        }
+      ],
       rules: {
         perception: [],
         capability_resolution: [],
@@ -145,7 +172,7 @@ describe('objective enforcement sidecar fallback policy', () => {
           {
             id: 'claim-book-objective-rule',
             when: {
-              invocation_type: 'claim_book'
+              invocation_type: 'invoke.claim_book'
             },
             then: {
               mutate: {
@@ -168,7 +195,7 @@ describe('objective enforcement sidecar fallback policy', () => {
         executeObjectiveRule: async () => {
           throw new ApiError(500, 'OBJECTIVE_RULE_NOT_FOUND', 'sidecar reported no matching objective rule', {
             pack_id: pack.metadata.id,
-            invocation_type: 'claim_book'
+            invocation_type: 'invoke.claim_book'
           });
         }
       })
@@ -178,7 +205,7 @@ describe('objective enforcement sidecar fallback policy', () => {
       dispatchInvocationFromActionIntent(context, {
         id: 'intent-legacy-claim',
         source_inference_id: 'inference-legacy-claim',
-        intent_type: 'claim_book',
+        intent_type: 'invoke.claim_book',
         actor_ref: {
           identity_id: 'agent-holder',
           role: 'active',
@@ -187,7 +214,8 @@ describe('objective enforcement sidecar fallback policy', () => {
         },
         target_ref: null,
         payload: {
-          artifact_id: 'artifact-book'
+          artifact_id: 'artifact-book',
+          mediator_id: 'mediator-book'
         }
       })
     ).rejects.toMatchObject({
@@ -197,11 +225,11 @@ describe('objective enforcement sidecar fallback policy', () => {
     const executionRecords = await listPackRuleExecutionRecords(pack.metadata.id);
     expect(executionRecords).toHaveLength(1);
     expect(executionRecords[0]?.execution_status).toBe('failed');
-    expect(executionRecords[0]?.rule_id).toBe('failed:claim_book');
+    expect(executionRecords[0]?.rule_id).toBe('failed:invoke.claim_book');
 
     const payload = executionRecords[0]?.payload_json ?? null;
     expect(payload).toMatchObject({
-      invocation_type: 'claim_book',
+      invocation_type: 'invoke.claim_book',
       error_message: 'sidecar reported no matching objective rule'
     });
   });

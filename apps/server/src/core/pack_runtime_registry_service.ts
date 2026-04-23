@@ -1,5 +1,9 @@
+import type { PrismaClient } from '@prisma/client';
+
 import { getRuntimeMultiPackConfig } from '../config/runtime_config.js';
 import type { WorldPack } from '../packs/manifest/loader.js';
+import { teardownActorBridges } from '../packs/runtime/materializer.js';
+import { ApiError } from '../utils/api_error.js';
 import type { DefaultPackCatalogService } from './pack_catalog_service.js';
 import type { PackRuntimeHandle } from './pack_runtime_handle.js';
 import type { PackRuntimeStatusSnapshot } from './pack_runtime_health.js';
@@ -11,6 +15,7 @@ import type { PackRuntimeRegistry } from './pack_runtime_registry.js';
 export interface DefaultPackRuntimeRegistryServiceOptions {
   registry: PackRuntimeRegistry;
   packCatalog: Pick<DefaultPackCatalogService, 'resolvePackByIdOrFolder'>;
+  prisma: PrismaClient;
   getActivePack(): WorldPack | undefined;
   getStartupLevel(): 'ok' | 'degraded' | 'fail';
 }
@@ -18,12 +23,14 @@ export interface DefaultPackRuntimeRegistryServiceOptions {
 export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, PackRuntimeObservation, PackRuntimeControl {
   private readonly registry: PackRuntimeRegistry;
   private readonly packCatalog: Pick<DefaultPackCatalogService, 'resolvePackByIdOrFolder'>;
+  private readonly prisma: PrismaClient;
   private readonly getActivePackRef: () => WorldPack | undefined;
   private readonly getStartupLevelRef: () => 'ok' | 'degraded' | 'fail';
 
   constructor(options: DefaultPackRuntimeRegistryServiceOptions) {
     this.registry = options.registry;
     this.packCatalog = options.packCatalog;
+    this.prisma = options.prisma;
     this.getActivePackRef = options.getActivePack;
     this.getStartupLevelRef = options.getStartupLevel;
   }
@@ -91,7 +98,10 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
   }> {
     const resolved = this.packCatalog.resolvePackByIdOrFolder(packRef);
     if (!resolved) {
-      throw new Error(`experimental runtime pack not found: ${packRef}`);
+      throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', 'Experimental runtime pack not found', {
+        pack_id: packRef,
+        source: 'pack_runtime_registry_service.load'
+      });
     }
 
     const existing = this.registry.getHandle(resolved.pack.metadata.id);
@@ -116,6 +126,16 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     });
     await host.load();
     this.registry.register(resolved.pack.metadata.id, host);
+
+    const verifyHandle = this.registry.getHandle(resolved.pack.metadata.id);
+    if (!verifyHandle) {
+      console.error(
+        `[PackRuntimeRegistryService] Experimental pack registration verification failed: ` +
+        `pack_id=${resolved.pack.metadata.id} was registered but getHandle returned null. ` +
+        `This indicates a registry inconsistency.`
+      );
+    }
+
     return {
       handle: host.getHandle(),
       loaded: true,
@@ -134,6 +154,10 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     }
 
     await host.dispose();
+    const deletedCount = await teardownActorBridges(packId, this.prisma);
+    if (deletedCount > 0) {
+      console.log(`[PackRuntimeRegistryService] Cleaned up ${String(deletedCount)} actor bridge records for unloaded pack ${packId}`);
+    }
     return this.registry.unregister(packId);
   }
 

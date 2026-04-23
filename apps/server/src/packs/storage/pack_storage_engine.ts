@@ -86,10 +86,12 @@ export class PackStorageEngine {
 
     const existingPlan = readPersistedStoragePlan(storagePlanPath);
     await ensurePackRuntimeSqliteStorage(location.runtimeDbPath);
-    await migrateLegacyEngineOwnedCollections(location.runtimeDbPath, existingPlan);
-    await ensureDeclaredPackCollectionTables(location.runtimeDbPath, storage.pack_collections);
+    const persistedPlan = toPersistedStoragePlan(storage, storage.pack_collections);
 
-    writePersistedStoragePlan(storagePlanPath, toPersistedStoragePlan(storage, storage.pack_collections));
+    await migrateLegacyEngineOwnedCollections(location.runtimeDbPath, existingPlan);
+    await ensureDeclaredPackCollectionTables(location.runtimeDbPath, persistedPlan.pack_collections);
+
+    writePersistedStoragePlan(storagePlanPath, persistedPlan);
 
     return {
       location,

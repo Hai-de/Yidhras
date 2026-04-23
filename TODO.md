@@ -6,11 +6,8 @@
 ## 当前重点 / Current Focus
 
 ### 梳理当前代码实现
-
-- [x]  完善并拓展当前世界包的各种内容
-- [ ]  从零开始创建一个世界包，验证整个链路的可实现性
-- [ ]  看看还有什么代码内容是没有实现,只是用来占位的
-- [ ]  实现部分docs/ENHANCEMENTS.md 文件中列出的高价值内容
+- [ ] 切割巨型模块： InferenceContext
+- [ ] 实现部分 docs/ENHANCEMENTS.md 文件中列出的高价值内容
 
 ### 重构整个测试链路
 
@@ -19,8 +16,13 @@
 - [ ]  制造压力性测试，创造各种极端/边缘的环境和条件，观察稳定性
 - [ ]  寻找创造各种能破坏项目的形式，以攻击者的视角寻找安全漏洞，让整个项目快速失败
 
+### 架构缺口（来源：核心链路结构性问题审查）
+
+- [ ]  设计 pack actor / pack identity → inference actor 桥接策略，解决 `resolveActor()` 不认 pack entity 的问题（详见 `.limcode/review/public-opinion-crisis-runtime-actor-binding-review.md`）
+
 ## 说明 / Notes
 
 - 本文件不是 changelog，不记录完整已完成清单。
 - 本文件不是架构总览，不长期保存稳定模块说明。
 - LegacyTsWorldEngineAdapter / createTsWorldEngineAdapter 已物理移除；world engine 已收敛为 sidecar-only 配置与启动装配，相关受影响单元/集成测试、lint 与 typecheck 已完成验证。
+- 早期核心链路结构性问题清单已归档至 `.limcode/archive/historical/core-pipeline-structural-issue-inventory.md`，其中 #5 (invocation_type 前缀对齐) 已解决，#1-4 (pack actor 桥接) 仍开放。

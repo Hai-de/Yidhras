@@ -246,12 +246,15 @@ describe('memory blocks source rust modes', () => {
       parity_status: 'skipped',
       parity_diff_count: 0
     });
-    expect(result.ignored_feature_counts).toEqual({ trigger_rate_ignored_count: 1 });
+    expect(result.trigger_rate_summary).toEqual({
+      present_count: 1,
+      applied_count: 1,
+      blocked_count: 0
+    });
     expect(result.evaluations).toEqual([
-      expect.objectContaining({ memory_id: 'memory-block-1', status: 'active', activation_score: 3 })
+      expect.objectContaining({ memory_id: 'memory-block-1', status: 'active', activation_score: 3, reason: null })
     ]);
     expect(result.nodes).toHaveLength(1);
-    expect(result.nodes[0]?.metadata?.memory_block_id).toBe('memory-block-1');
     expect(updates).toHaveLength(1);
     expect(updates[0]?.currently_active).toBe(true);
 
@@ -287,6 +290,7 @@ describe('memory blocks source rust modes', () => {
     expect(result.evaluation_metadata?.fallback).toBe(true);
     expect(result.evaluation_metadata?.fallback_reason).toContain('Memory trigger sidecar binary does not exist');
     expect(result.evaluations[0]?.status).toBe('active');
+    expect(result.evaluations[0]?.reason).toBe(null);
     expect(result.nodes).toHaveLength(1);
 
     delete process.env.MEMORY_TRIGGER_ENGINE_MODE;

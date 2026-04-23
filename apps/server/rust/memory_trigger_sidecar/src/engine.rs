@@ -1,7 +1,9 @@
 use crate::models::{
-    MemoryActivationEvaluationDto, MemoryActivationStatusDto, MemoryBehaviorDto, MemoryBlockDto,
-    MemoryEvaluationContextDto, MemoryRuntimeStateDto,
+    MemoryActivationEvaluationDto, MemoryActivationStatusDto, MemoryBehaviorDto,
+    MemoryBlockDto, MemoryBlockTriggerDiagnosticsDto, MemoryEvaluationContextDto,
+    MemoryRuntimeStateDto, MemoryTriggerRateDecisionRecord,
 };
+use crate::sampling::{build_trigger_rate_gate_seed, compute_trigger_rate_sample};
 use crate::trigger::compute_matched_triggers;
 
 pub fn create_initial_memory_runtime_state(memory_id: &str) -> MemoryRuntimeStateDto {
@@ -44,6 +46,51 @@ pub fn calculate_activation_score(trigger_matches: &[(String, f64)]) -> f64 {
     trigger_matches.iter().map(|(_, score)| *score).sum()
 }
 
+fn has_pending_delayed_activation(state: &MemoryRuntimeStateDto, now_tick: i128) -> bool {
+    state.delayed_until_tick
+        .as_ref()
+        .and_then(|tick| tick.parse::<i128>().ok())
+        .map(|tick| tick > now_tick)
+        .unwrap_or(false)
+}
+
+fn is_delayed_activation_due(state: &MemoryRuntimeStateDto, now_tick: i128) -> bool {
+    state.delayed_until_tick
+        .as_ref()
+        .and_then(|tick| tick.parse::<i128>().ok())
+        .map(|tick| tick <= now_tick)
+        .unwrap_or(false)
+}
+
+fn evaluate_trigger_rate_gate(
+    block: &MemoryBlockDto,
+    behavior: &MemoryBehaviorDto,
+    state: &MemoryRuntimeStateDto,
+    context: &MemoryEvaluationContextDto,
+    base_match: bool,
+    score_passed: bool,
+    fresh_trigger_attempt: bool,
+) -> MemoryBlockTriggerDiagnosticsDto {
+    let present = behavior.activation.trigger_rate != 1.0;
+    let applied = present && base_match && score_passed && fresh_trigger_attempt;
+
+    let trigger_rate = if !present {
+        MemoryTriggerRateDecisionRecord { present: false, value: None, applied: false, sample: None, passed: None }
+    } else if !applied {
+        MemoryTriggerRateDecisionRecord { present: true, value: Some(behavior.activation.trigger_rate), applied: false, sample: None, passed: None }
+    } else if behavior.activation.trigger_rate <= 0.0 {
+        MemoryTriggerRateDecisionRecord { present: true, value: Some(behavior.activation.trigger_rate), applied: true, sample: None, passed: Some(false) }
+    } else if behavior.activation.trigger_rate >= 1.0 {
+        MemoryTriggerRateDecisionRecord { present: true, value: Some(behavior.activation.trigger_rate), applied: true, sample: None, passed: Some(true) }
+    } else {
+        let seed = build_trigger_rate_gate_seed(block.pack_id.as_deref(), &block.id, &context.current_tick, state.trigger_count);
+        let sample = compute_trigger_rate_sample(&seed);
+        MemoryTriggerRateDecisionRecord { present: true, value: Some(behavior.activation.trigger_rate), applied: true, sample: Some(sample), passed: Some(sample < behavior.activation.trigger_rate) }
+    };
+
+    MemoryBlockTriggerDiagnosticsDto { trigger_rate, base_match, score_passed, fresh_trigger_attempt }
+}
+
 pub fn resolve_status(
     behavior: &MemoryBehaviorDto,
     state: &MemoryRuntimeStateDto,
@@ -64,6 +111,10 @@ pub fn resolve_status(
         .and_then(|tick| tick.parse::<i128>().ok());
     if delayed_until.map(|tick| tick > now_tick).unwrap_or(false) {
         return MemoryActivationStatusDto::Delayed;
+    }
+
+    if delayed_until.map(|tick| tick <= now_tick).unwrap_or(false) && state.currently_active {
+        return MemoryActivationStatusDto::Active;
     }
 
     let retain_until = state
@@ -95,22 +146,51 @@ pub fn evaluate_memory_block_activation(
         .cloned()
         .unwrap_or_else(|| create_initial_memory_runtime_state(&block.id));
     let matched_triggers = compute_matched_triggers(block, behavior, context);
+    let base_match = !matched_triggers.is_empty();
     let activation_score = calculate_activation_score(&matched_triggers);
-    let matched = !matched_triggers.is_empty() && activation_score >= behavior.activation.min_score;
+    let score_passed = activation_score >= behavior.activation.min_score;
     let now_tick = context.current_tick.parse::<i128>().unwrap_or(0);
+    let pending_delayed_activation = has_pending_delayed_activation(&runtime_state, now_tick);
+    let delayed_activation_due = is_delayed_activation_due(&runtime_state, now_tick);
+    let fresh_trigger_attempt = !pending_delayed_activation && !delayed_activation_due;
+    let trigger_diagnostics = evaluate_trigger_rate_gate(
+        block,
+        behavior,
+        &runtime_state,
+        context,
+        base_match,
+        score_passed,
+        fresh_trigger_attempt,
+    );
+    let gate_passed = if trigger_diagnostics.trigger_rate.applied {
+        trigger_diagnostics.trigger_rate.passed == Some(true)
+    } else {
+        true
+    };
+    let matched = if delayed_activation_due {
+        true
+    } else {
+        base_match && score_passed && gate_passed
+    };
     let recent_distance_from_latest_message = resolve_distance_from_latest_message(block, context);
     let status = resolve_status(behavior, &runtime_state, now_tick, matched);
+    let reason = if !base_match {
+        Some("no_trigger_match".to_string())
+    } else if !score_passed {
+        Some("below_min_score".to_string())
+    } else if !gate_passed {
+        Some("trigger_rate_blocked".to_string())
+    } else {
+        None
+    };
 
     MemoryActivationEvaluationDto {
         memory_id: block.id.clone(),
         status,
+        trigger_diagnostics,
         activation_score,
         matched_triggers: matched_triggers.into_iter().map(|(label, _)| label).collect(),
-        reason: if matched {
-            None
-        } else {
-            Some("no_trigger_match".to_string())
-        },
+        reason,
         recent_distance_from_latest_message,
     }
 }
@@ -146,6 +226,7 @@ pub fn apply_memory_activation_to_runtime_state(
         MemoryActivationStatusDto::Active => {
             next.trigger_count = previous.trigger_count + 1;
             next.last_triggered_tick = Some(current_tick.to_string());
+            next.delayed_until_tick = None;
             next.last_inserted_tick = Some(current_tick.to_string());
             next.delayed_until_tick = if behavior.retention.delay_rounds_before_insert > 0 {
                 Some((now + behavior.retention.delay_rounds_before_insert as i128).to_string())

@@ -117,7 +117,7 @@ export const registerExperimentalRuntimeRoutes = (
       assertExperimentalOperatorApiEnabled(context);
       jsonOk(
         res,
-        toJsonSafe(buildExperimentalPackRuntimeRegistrySnapshot(context.sim.getPackRuntimeRegistry()))
+        toJsonSafe(await buildExperimentalPackRuntimeRegistrySnapshot(context))
       );
     })
   );
@@ -156,7 +156,7 @@ export const registerExperimentalRuntimeRoutes = (
     deps.asyncHandler(async (req, res) => {
       assertExperimentalOperatorApiEnabled(context);
       const packId = resolvePackIdParam(req.params.packId);
-      const snapshot = getExperimentalPackRuntimeStatusSnapshot(context, packId);
+      const snapshot = await getExperimentalPackRuntimeStatusSnapshot(context, packId);
       requireExperimentalPackHandle(context, packId);
       jsonOk(res, toJsonSafe(snapshot));
     })

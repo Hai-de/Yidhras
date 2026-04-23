@@ -99,6 +99,13 @@ export interface WorldEngineSidecarClientOptions {
   autoRestart?: boolean;
 }
 
+/**
+ * Transport-level implementation detail for the TS host runtime kernel.
+ *
+ * This abstraction exists so the host can talk to the Rust sidecar under a
+ * bounded protocol. It is not intended to become an upper-layer ABI for
+ * plugins, routes or workflow consumers.
+ */
 export interface WorldEngineSidecarTransport {
   start(): Promise<void>;
   stop(): Promise<void>;

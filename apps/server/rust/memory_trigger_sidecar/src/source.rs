@@ -2,8 +2,7 @@ use crate::engine::{
     apply_memory_activation_to_runtime_state, evaluate_memory_block_activation,
 };
 use crate::models::{
-    MemoryActivationStatusDto, MemoryTriggerIgnoredFeaturesRecord,
-    MemoryTriggerIgnoredFeaturesSummary, MemoryTriggerSourceDiagnostics,
+    MemoryActivationStatusDto, MemoryTriggerRateDecisionSummary, MemoryTriggerSourceDiagnostics,
     MemoryTriggerSourceEvaluateInput, MemoryTriggerSourceEvaluateOutput, MemoryTriggerSourceRecordResult,
 };
 use std::collections::HashMap;
@@ -20,6 +19,8 @@ pub fn evaluate(input: MemoryTriggerSourceEvaluateInput) -> MemoryTriggerSourceE
     ]);
 
     let mut trigger_rate_present_count = 0usize;
+    let mut trigger_rate_applied_count = 0usize;
+    let mut trigger_rate_blocked_count = 0usize;
     let mut materialized_count = 0usize;
 
     let records = input
@@ -39,9 +40,14 @@ pub fn evaluate(input: MemoryTriggerSourceEvaluateInput) -> MemoryTriggerSourceE
                 &input.evaluation_context.current_tick,
             );
 
-            let trigger_rate_present = candidate.behavior.activation.trigger_rate != 1.0;
-            if trigger_rate_present {
+            if evaluation.trigger_diagnostics.trigger_rate.present {
                 trigger_rate_present_count += 1;
+            }
+            if evaluation.trigger_diagnostics.trigger_rate.applied {
+                trigger_rate_applied_count += 1;
+            }
+            if evaluation.trigger_diagnostics.trigger_rate.passed == Some(false) {
+                trigger_rate_blocked_count += 1;
             }
 
             let should_materialize = matches!(
@@ -75,10 +81,7 @@ pub fn evaluate(input: MemoryTriggerSourceEvaluateInput) -> MemoryTriggerSourceE
                 } else {
                     None
                 },
-                ignored_features: Some(MemoryTriggerIgnoredFeaturesRecord {
-                    trigger_rate_present,
-                    trigger_rate_ignored: true,
-                }),
+                trigger_rate: Some(evaluation.trigger_diagnostics.trigger_rate.clone()),
             }
         })
         .collect::<Vec<_>>();
@@ -90,9 +93,10 @@ pub fn evaluate(input: MemoryTriggerSourceEvaluateInput) -> MemoryTriggerSourceE
             candidate_count: input.candidates.len(),
             materialized_count,
             status_counts,
-            ignored_features: MemoryTriggerIgnoredFeaturesSummary {
-                trigger_rate_present_count,
-                trigger_rate_ignored: true,
+            trigger_rate: MemoryTriggerRateDecisionSummary {
+                present_count: trigger_rate_present_count,
+                applied_count: trigger_rate_applied_count,
+                blocked_count: trigger_rate_blocked_count,
             },
         },
     }

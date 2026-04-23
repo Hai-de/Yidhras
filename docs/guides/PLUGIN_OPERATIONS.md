@@ -240,14 +240,9 @@ pnpm --filter yidhras-server plugin -- rescan --pack my_pack
 
 必要时结合 logs 与 GUI 页面重新确认当前 installation 状态。
 
-## 9. 文档边界
+## 9. 相关文档
 
-本手册回答：
-- 插件怎么操作
-- CLI / GUI / API 的治理顺序是什么
-- 遇到问题先查哪里
-
-本手册不负责：
-- 完整 HTTP schema 说明 -> 看 `docs/API.md`
-- runtime 架构、同源资源路由、挂载边界 -> 看 `docs/ARCH.md`
-- 所有仓库命令大全 -> 看 `docs/guides/COMMANDS.md`
+- 命令入口：[`COMMANDS.md`](./COMMANDS.md)
+- HTTP contract：[`API.md`](../API.md)
+- Runtime 架构与边界：[`ARCH.md`](../ARCH.md)
+- 插件 runtime 语义：[`PLUGIN_RUNTIME.md`](../capabilities/PLUGIN_RUNTIME.md)

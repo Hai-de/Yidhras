@@ -1,41 +1,23 @@
-import { buildPackEntityOverviewProjection } from '../../packs/runtime/projections/entity_overview_service.js';
+import { createPackEntityOverviewProjectionService } from '../../packs/runtime/projections/pack_entity_overview_projection_service.js';
+import { createPackNarrativeProjectionService } from '../../packs/runtime/projections/pack_narrative_projection_service.js';
+import { createPackProjectionScopeAdapter } from '../../packs/runtime/projections/pack_projection_scope_adapter.js';
+import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
-import { getPackRuntimeLookupPort } from './app_context_ports.js';
-import { getPackNarrativeTimelineProjection } from './narrative.js';
 import { getPackOverviewProjectionSummary } from './overview.js';
 import { listPackPluginInstallations } from './plugins.js';
 
-const requireExperimentalPackHandle = (context: AppContext, packId: string) => {
-  const lookup = getPackRuntimeLookupPort({
-    packRuntimeLookup: context.packRuntimeLookup,
-    sim: context.sim
-  });
-  const summary = lookup.getPackRuntimeSummary(packId);
-  const handle = context.sim.getPackRuntimeHandle(packId);
-  if (!summary || !handle) {
-    throw new Error(`experimental runtime pack not found: ${packId}`);
-  }
-
-  return handle;
-};
-
-const assertExperimentalPackLoaded = (context: AppContext, packId: string): void => {
-  requireExperimentalPackHandle(context, packId);
+const requireExperimentalPackResolution = async (context: AppContext, packId: string, feature: string) => {
+  const scope = createPackProjectionScopeAdapter(context);
+  return scope.resolveExperimentalPack(packId, feature);
 };
 
 export const getExperimentalPackEntityProjection = async (
   context: AppContext,
   packId: string
 ) => {
-  const handle = requireExperimentalPackHandle(context, packId);
-  return buildPackEntityOverviewProjection(context, {
-    packId: handle.pack_id,
-    pack: {
-      id: handle.pack.metadata.id,
-      name: handle.pack.metadata.name,
-      version: handle.pack.metadata.version
-    }
-  });
+  const resolved = await requireExperimentalPackResolution(context, packId, 'experimental pack entity projection');
+  const service = createPackEntityOverviewProjectionService(context);
+  return service.getProjection(resolved);
 };
 
 export const getExperimentalPackAgentOverview = async (
@@ -67,7 +49,7 @@ export const getExperimentalPackOverviewProjection = async (
   context: AppContext,
   packId: string
 ) => {
-  assertExperimentalPackLoaded(context, packId);
+  await requireExperimentalPackResolution(context, packId, 'experimental pack overview projection');
   return getPackOverviewProjectionSummary(context, packId);
 };
 
@@ -75,14 +57,22 @@ export const getExperimentalPackNarrativeProjection = async (
   context: AppContext,
   packId: string
 ) => {
-  assertExperimentalPackLoaded(context, packId);
-  return getPackNarrativeTimelineProjection(context, packId);
+  const resolved = await requireExperimentalPackResolution(context, packId, 'experimental pack narrative projection');
+  const service = createPackNarrativeProjectionService(context);
+  return service.getProjection(resolved);
 };
 
 export const getExperimentalPackPluginInstallations = async (
   context: AppContext,
   packId: string
 ) => {
-  assertExperimentalPackLoaded(context, packId);
+  await requireExperimentalPackResolution(context, packId, 'experimental pack plugins projection');
   return listPackPluginInstallations(context, packId);
+};
+
+export const translateMissingExperimentalPack = (packId: string, source: string): never => {
+  throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', 'Experimental runtime pack not found', {
+    pack_id: packId,
+    source
+  });
 };

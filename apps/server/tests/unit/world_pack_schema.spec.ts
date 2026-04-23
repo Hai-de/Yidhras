@@ -751,6 +751,90 @@ describe('world pack constitution schema', () => {
     );
   });
 
+  it('rejects bare invocation_type in objective_enforcement rules (requires invoke. prefix)', () => {
+    expect(() =>
+      parseWorldPackConstitution({
+        metadata: {
+          id: 'world-bare-invocation-type',
+          name: '裸 invocation_type 世界',
+          version: '1.0.0'
+        },
+        entities: {
+          actors: [
+            {
+              id: 'agent-1',
+              label: '角色一',
+              kind: 'actor',
+              state: {}
+            }
+          ],
+          artifacts: [],
+          mediators: [],
+          domains: [],
+          institutions: []
+        },
+        rules: {
+          objective_enforcement: [
+            {
+              id: 'bare-invocation-type-rule',
+              when: {
+                invocation_type: 'coordinate_internal_team'
+              },
+              then: {
+                mutate: {
+                  target_state: {
+                    status: 'coordinated'
+                  }
+                }
+              }
+            }
+          ]
+        }
+      })
+    ).toThrow(/must use 'invoke\.' prefix/);
+  });
+
+  it('accepts kernel action invocation types without invoke. prefix in objective_enforcement', () => {
+    const pack = parseWorldPackConstitution({
+      metadata: {
+        id: 'world-kernel-action-pack',
+        name: '内核动作世界',
+        version: '1.0.0'
+      },
+      entities: {
+        actors: [
+          {
+            id: 'agent-1',
+            label: '角色一',
+            kind: 'actor',
+            state: {}
+          }
+        ],
+        artifacts: [],
+        mediators: [],
+        domains: [],
+        institutions: []
+      },
+      rules: {
+        objective_enforcement: [
+          {
+            id: 'trigger-event-rule',
+            when: {
+              invocation_type: 'trigger_event'
+            },
+            then: {
+              mutate: {
+                target_state: {}
+              }
+            }
+          }
+        ]
+      }
+    });
+
+    expect(pack.rules?.objective_enforcement?.[0]?.when?.invocation_type).toBe('trigger_event');
+  });
+
   it('requires structured bootstrap initial_states records', () => {
     expect(() =>
       parseWorldPackConstitution({

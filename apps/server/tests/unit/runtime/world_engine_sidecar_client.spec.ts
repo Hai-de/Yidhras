@@ -462,7 +462,7 @@ describe('WorldEngineSidecarClient', () => {
         pack_id: 'world-bridge-pack',
         source_action_intent_id: 'intent-legacy-claim',
         source_inference_id: 'inference-legacy-claim',
-        invocation_type: 'claim_book',
+        invocation_type: 'invoke.claim_book',
         capability_key: null,
         subject_entity_id: 'agent-holder',
         target_ref: null,
@@ -480,7 +480,7 @@ describe('WorldEngineSidecarClient', () => {
         {
           id: 'claim-book-objective-rule',
           when: {
-            invocation_type: 'claim_book'
+            invocation_type: 'invoke.claim_book'
           },
           then: {
             mutate: {

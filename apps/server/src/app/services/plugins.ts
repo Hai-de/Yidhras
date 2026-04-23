@@ -3,12 +3,11 @@ import { randomUUID } from 'node:crypto';
 import type { PluginInstallation, PluginListResponseData } from '@yidhras/contracts';
 
 import { PLUGIN_ENABLE_ACK_REQUIRED_CODE, PLUGIN_ENABLE_WARNING_TEXT } from '../../plugins/contracts.js';
-import { refreshPackPluginRuntime, syncActivePackPluginRuntime } from '../../plugins/runtime.js';
 import { assertPluginEnableAllowed, createPluginManagerService } from '../../plugins/service.js';
 import { createPluginStore } from '../../plugins/store.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
-import { getPackRuntimeLookupPort } from './app_context_ports.js';
+import { createPackScopedPluginRuntimeService } from './pack_scoped_plugin_runtime_service.js';
 
 const refreshScopedPluginRuntime = async (context: AppContext, packId: string | null | undefined): Promise<void> => {
   const normalizedPackId = typeof packId === 'string' ? packId.trim() : '';
@@ -16,19 +15,7 @@ const refreshScopedPluginRuntime = async (context: AppContext, packId: string | 
     return;
   }
 
-  const lookup = getPackRuntimeLookupPort({
-    packRuntimeLookup: context.packRuntimeLookup,
-    sim: context.sim
-  });
-  const activePackId = lookup.getActivePackId();
-  if (activePackId === normalizedPackId) {
-    await syncActivePackPluginRuntime(context);
-    return;
-  }
-
-  if (lookup.hasPackRuntime(normalizedPackId)) {
-    await refreshPackPluginRuntime(context, normalizedPackId);
-  }
+  await createPackScopedPluginRuntimeService(context).refreshPackRuntime(normalizedPackId);
 };
 
 const createManager = (context: AppContext) => {

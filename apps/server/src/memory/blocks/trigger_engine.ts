@@ -1,7 +1,9 @@
 import { evaluateMemoryLogicExpr } from './logic_dsl.js';
 import { createInitialMemoryRuntimeState } from './runtime_state.js';
+import { evaluateDeterministicTriggerRateGate } from './trigger_rate_gate.js';
 import type {
   MemoryActivationEvaluation,
+  MemoryBlockTriggerDiagnostics,
   MemoryBehavior,
   MemoryBlock,
   MemoryEvaluationContext,
@@ -167,6 +169,44 @@ const computeMatchedTriggers = (
   });
 };
 
+const hasPendingDelayedActivation = (state: MemoryRuntimeState, nowTick: bigint): boolean => {
+  const delayedUntil = state.delayed_until_tick ? BigInt(state.delayed_until_tick) : null;
+  return delayedUntil !== null && delayedUntil > nowTick;
+};
+
+const isDelayedActivationDue = (state: MemoryRuntimeState, nowTick: bigint): boolean => {
+  const delayedUntil = state.delayed_until_tick ? BigInt(state.delayed_until_tick) : null;
+  return delayedUntil !== null && delayedUntil <= nowTick;
+};
+
+const buildTriggerRateDiagnostics = (input: {
+  block: MemoryBlock;
+  behavior: MemoryBehavior;
+  state: MemoryRuntimeState;
+  context: MemoryEvaluationContext;
+  baseMatch: boolean;
+  scorePassed: boolean;
+  freshTriggerAttempt: boolean;
+}): MemoryBlockTriggerDiagnostics => {
+  const present = input.behavior.activation.trigger_rate !== 1;
+  const applied = present && input.baseMatch && input.scorePassed && input.freshTriggerAttempt;
+
+  return {
+    trigger_rate: evaluateDeterministicTriggerRateGate({
+      packId: input.block.pack_id,
+      memoryId: input.block.id,
+      currentTick: input.context.current_tick,
+      previousTriggerCount: input.state.trigger_count,
+      triggerRate: input.behavior.activation.trigger_rate,
+      present,
+      applied
+    }),
+    base_match: input.baseMatch,
+    score_passed: input.scorePassed,
+    fresh_trigger_attempt: input.freshTriggerAttempt
+  };
+};
+
 const resolveStatus = (
   behavior: MemoryBehavior,
   state: MemoryRuntimeState,
@@ -174,6 +214,7 @@ const resolveStatus = (
   matched: boolean
 ): MemoryActivationEvaluation['status'] => {
   const cooldownUntil = state.cooldown_until_tick ? BigInt(state.cooldown_until_tick) : null;
+
   if (cooldownUntil !== null && cooldownUntil > nowTick) {
     return 'cooling';
   }
@@ -181,6 +222,10 @@ const resolveStatus = (
   const delayedUntil = state.delayed_until_tick ? BigInt(state.delayed_until_tick) : null;
   if (delayedUntil !== null && delayedUntil > nowTick) {
     return 'delayed';
+  }
+
+  if (delayedUntil !== null && delayedUntil <= nowTick && state.currently_active) {
+    return 'active';
   }
 
   const retainUntil = state.retain_until_tick ? BigInt(state.retain_until_tick) : null;
@@ -207,18 +252,45 @@ export const evaluateMemoryBlockActivation = (input: {
 }): MemoryActivationEvaluation => {
   const runtimeState = input.state ?? createInitialMemoryRuntimeState(input.block.id);
   const matchedTriggers = computeMatchedTriggers(input.block, input.behavior, input.context);
+  const baseMatch = matchedTriggers.length > 0;
   const activationScore = calculateActivationScore(matchedTriggers);
-  const matched = matchedTriggers.length > 0 && activationScore >= input.behavior.activation.min_score;
+  const scorePassed = activationScore >= input.behavior.activation.min_score;
   const nowTick = BigInt(input.context.current_tick);
+  const pendingDelayedActivation = hasPendingDelayedActivation(runtimeState, nowTick);
+  const delayedActivationDue = isDelayedActivationDue(runtimeState, nowTick);
+  const freshTriggerAttempt = !pendingDelayedActivation && !delayedActivationDue;
+  const triggerDiagnostics = buildTriggerRateDiagnostics({
+    block: input.block,
+    behavior: input.behavior,
+    state: runtimeState,
+    context: input.context,
+    baseMatch,
+    scorePassed,
+    freshTriggerAttempt
+  });
+  const gatePassed = triggerDiagnostics.trigger_rate.applied
+    ? triggerDiagnostics.trigger_rate.passed === true
+    : true;
+  const matched = delayedActivationDue
+    ? true
+    : baseMatch && scorePassed && gatePassed;
   const recentDistance = resolveDistanceFromLatestMessage(input.block, input.context);
   const status = resolveStatus(input.behavior, runtimeState, nowTick, matched);
+  const reason = !baseMatch
+    ? 'no_trigger_match'
+    : !scorePassed
+      ? 'below_min_score'
+      : !gatePassed
+        ? 'trigger_rate_blocked'
+        : null;
 
   return {
     memory_id: input.block.id,
     status,
+    trigger_diagnostics: triggerDiagnostics,
     activation_score: activationScore,
     matched_triggers: matchedTriggers.map(item => item.label),
-    reason: matched ? null : 'no_trigger_match',
+    reason,
     recent_distance_from_latest_message: recentDistance
   };
 };
@@ -242,6 +314,7 @@ export const applyMemoryActivationToRuntimeState = (input: {
 
   if (input.evaluation.status === 'active') {
     next.trigger_count = previous.trigger_count + 1;
+    next.delayed_until_tick = null;
     next.last_triggered_tick = input.currentTick;
     next.last_inserted_tick = input.currentTick;
     next.delayed_until_tick =

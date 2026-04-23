@@ -77,6 +77,8 @@ const resolveSubjectEntityId = (actorRef: Record<string, unknown>): string | nul
   return null;
 };
 
+const KERNEL_INTENT_TYPES = ['trigger_event', 'post_message', 'adjust_relationship', 'adjust_snr'] as const;
+
 const shouldBridgeToInvocation = (context: AppContext, intent: DispatchableActionIntentLike): boolean => {
   const pack = context.sim.getActivePack();
   if (!pack) {
@@ -88,8 +90,9 @@ const shouldBridgeToInvocation = (context: AppContext, intent: DispatchableActio
     return true;
   }
 
+  const enforcementRules = pack.rules?.objective_enforcement ?? [];
   if (
-    (pack.rules?.objective_enforcement ?? []).some(rule => {
+    enforcementRules.some(rule => {
       const when = isRecord(rule.when) ? rule.when : {};
       if (capabilityKey && when.capability === capabilityKey) {
         return true;
@@ -98,6 +101,20 @@ const shouldBridgeToInvocation = (context: AppContext, intent: DispatchableActio
     })
   ) {
     return true;
+  }
+
+  const isKernelAction = KERNEL_INTENT_TYPES.includes(intent.intent_type as (typeof KERNEL_INTENT_TYPES)[number]);
+  if (!isKernelAction && !intent.intent_type.startsWith('invoke.')) {
+    console.warn(
+      `[invocation_dispatcher] intent_type '${intent.intent_type}' is not a kernel action and lacks 'invoke.' prefix. ` +
+      `This intent will not bridge to objective enforcement. ` +
+      `Ensure world pack rules use 'invoke.' prefixed invocation_type values.`
+    );
+  } else if (intent.intent_type.startsWith('invoke.') && !capabilityKey) {
+    console.warn(
+      `[invocation_dispatcher] intent_type '${intent.intent_type}' has 'invoke.' prefix but no matching capability key '${capabilityKey}' ` +
+      `and no matching enforcement rule. The enforcement pipeline may not process this invocation.`
+    );
   }
 
   return false;

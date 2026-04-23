@@ -138,8 +138,10 @@ const createMemoryBlockSourceAdapter = (
       diagnostics: {
         engine_owner: result.evaluation_metadata?.provider?.startsWith('rust') ? 'rust_sidecar' : 'ts_host',
         engine_mode: result.evaluation_metadata?.provider ?? 'ts',
-        ignored_features: {
-          trigger_rate_ignored_count: result.ignored_feature_counts?.trigger_rate_ignored_count ?? 0
+        trigger_rate: result.trigger_rate_summary ?? {
+          present_count: 0,
+          applied_count: 0,
+          blocked_count: 0
         },
         parity_diff: result.evaluation_metadata && result.evaluation_metadata.parity_status === 'diff'
           ? {

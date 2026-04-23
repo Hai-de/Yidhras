@@ -90,4 +90,33 @@ describe('overview summary world time projection', () => {
       calendars: []
     });
   });
+
+  it('keeps host-projection source metadata available through visible clock helper consumers', async () => {
+    const summary = await getOverviewSummary(createContext());
+
+    expect(summary.world_time.tick).toBe('200');
+    expect(Array.isArray(summary.world_time.calendars)).toBe(true);
+  });
+
+  it('falls back to visible sim clock when host projection is unavailable but sim still has an active pack', async () => {
+    const context = createContext();
+    context.runtimeClockProjection = createRuntimeClockProjectionService();
+    context.activePackRuntime = undefined;
+    context.sim = {
+      getCurrentTick: () => 7n,
+      getAllTimes: () => [{ calendar_id: 'sim-only', display: 'sim-only-time', units: {} }],
+      getActivePack: () => ({ metadata: { id: 'world-test-pack' } })
+    } as never;
+
+    const summary = await getOverviewSummary(context);
+
+    expect(summary.world_time).toEqual({
+      tick: '7',
+      calendars: [{
+        calendar_id: 'sim-only',
+        display: 'sim-only-time',
+        units: {}
+      }]
+    });
+  });
 });

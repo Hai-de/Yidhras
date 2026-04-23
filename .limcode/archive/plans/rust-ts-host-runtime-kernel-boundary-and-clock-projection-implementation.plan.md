@@ -279,7 +279,6 @@
 
 - 避免误把“还有没切完的 TS”理解成零散技术债；
 - 明确哪些是阶段性架构选择，哪些才是真正缺口；
-- 为未来是否继续推进 Rust ownership 提供决策底稿。
 
 ---
 
@@ -389,9 +388,7 @@
 
 1. **误把当前问题理解成“让 Rust 直接提供时钟即可”**
    - 会制造新的双真相源。
-2. **误把 world engine 时钟修复当成全量 Rust ownership 改造入口**
-   - 会同时撞上 persistence、plugin bridge、query seam、invocation side effects。
-3. **不先 formalize seam 就直接 patch**
+2. **不先 formalize seam 就直接 patch**
    - 很可能修掉一个 route，却保留多个读取分叉点。
 4. **忽略 pack-scoped 语义**
    - 后续 multi-pack runtime 场景会重新爆雷。

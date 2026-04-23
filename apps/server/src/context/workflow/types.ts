@@ -19,7 +19,13 @@ export type PromptWorkflowTaskType =
   | 'intent_grounding_assist'
   | (string & {});
 
-export type PromptWorkflowSectionPolicy = 'minimal' | 'standard' | 'expanded';
+export type PromptWorkflowSectionPolicy = 'minimal' | 'standard' | 'expanded' | 'include_only';
+
+export const PROTECTED_SECTION_TYPES: readonly PromptSectionDraftType[] = [
+  'system_instruction',
+  'role_context',
+  'world_context'
+] as const;
 
 export type PromptWorkflowStepKind =
   | 'memory_projection'
@@ -152,6 +158,7 @@ export interface PromptWorkflowState {
   strategy: InferenceStrategy;
   pack_id: string;
   profile: PromptWorkflowProfile;
+  include_sections?: string[];
   selected_nodes: ContextNode[];
   working_set: ContextNode[];
   grouped_nodes: Record<string, ContextNode[]>;
@@ -173,6 +180,7 @@ export interface PromptWorkflowSelectionInput {
 export interface PromptWorkflowRunOptions {
   task_type?: PromptWorkflowTaskType;
   profile_id?: string | null;
+  include_sections?: string[];
 }
 
 export const createPromptWorkflowDiagnostics = (profile: PromptWorkflowProfile): PromptWorkflowDiagnostics => ({
@@ -193,8 +201,10 @@ export const createInitialPromptWorkflowState = (input: {
   pack_id: string;
   profile: PromptWorkflowProfile;
   fragments?: PromptFragment[];
+  include_sections?: string[];
   compatibility?: Record<string, never>;
 }): PromptWorkflowState => {
+  const safeNodes = input.context_run?.nodes ?? [];
   return {
     context_run: input.context_run,
     actor_ref: input.actor_ref,
@@ -202,8 +212,9 @@ export const createInitialPromptWorkflowState = (input: {
     strategy: input.strategy,
     pack_id: input.pack_id,
     profile: input.profile,
-    selected_nodes: input.context_run.nodes,
-    working_set: input.context_run.nodes,
+    include_sections: input.include_sections,
+    selected_nodes: safeNodes,
+    working_set: safeNodes,
     grouped_nodes: {},
     section_drafts: [],
     fragments: input.fragments ?? [],

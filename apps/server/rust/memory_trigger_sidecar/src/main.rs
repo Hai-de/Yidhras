@@ -2,6 +2,7 @@ mod engine;
 mod logic_dsl;
 mod models;
 mod protocol;
+mod sampling;
 mod source;
 mod trigger;
 
@@ -34,15 +35,15 @@ fn handle_request(state: &AppState, request: RpcRequest) -> RpcResponse {
                 "protocol_version": PROTOCOL_VERSION,
                 "accepted": true,
                 "transport": "stdio_jsonrpc",
-                "engine_instance_id": "memory-trigger-sidecar-stub",
+                "engine_instance_id": "memory-trigger-sidecar",
                 "supported_methods": [
                     "memory_trigger.protocol.handshake",
                     "memory_trigger.health.get",
                     "memory_trigger.source.evaluate"
                 ],
                 "engine_capabilities": [
-                    "stub",
                     "stdio_jsonrpc",
+                    "source_evaluate",
                     "memory_trigger_source_evaluate"
                 ]
             }),

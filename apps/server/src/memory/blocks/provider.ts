@@ -61,6 +61,8 @@ const evaluateWithTs = (input: MemoryTriggerSourceEvaluateInput): MemoryTriggerS
   };
   let materializedCount = 0;
   let triggerRatePresentCount = 0;
+  let triggerRateAppliedCount = 0;
+  let triggerRateBlockedCount = 0;
 
   const records = input.candidates.map(record => {
     const evaluation = evaluateMemoryBlockActivation({
@@ -83,9 +85,14 @@ const evaluateWithTs = (input: MemoryTriggerSourceEvaluateInput): MemoryTriggerS
     }
     statusCounts[evaluation.status] += 1;
 
-    const triggerRatePresent = record.behavior.activation.trigger_rate !== 1;
-    if (triggerRatePresent) {
+    if (evaluation.trigger_diagnostics.trigger_rate.present) {
       triggerRatePresentCount += 1;
+    }
+    if (evaluation.trigger_diagnostics.trigger_rate.applied) {
+      triggerRateAppliedCount += 1;
+    }
+    if (evaluation.trigger_diagnostics.trigger_rate.passed === false) {
+      triggerRateBlockedCount += 1;
     }
 
     return {
@@ -94,10 +101,7 @@ const evaluateWithTs = (input: MemoryTriggerSourceEvaluateInput): MemoryTriggerS
       next_runtime_state: nextRuntimeState,
       should_materialize: shouldMaterialize,
       materialize_reason: evaluation.status === 'active' || evaluation.status === 'retained' ? evaluation.status : null,
-      ignored_features: {
-        trigger_rate_present: triggerRatePresent,
-        trigger_rate_ignored: true
-      }
+      trigger_rate: evaluation.trigger_diagnostics.trigger_rate
     };
   });
 
@@ -108,9 +112,10 @@ const evaluateWithTs = (input: MemoryTriggerSourceEvaluateInput): MemoryTriggerS
       candidate_count: input.candidates.length,
       materialized_count: materializedCount,
       status_counts: statusCounts,
-      ignored_features: {
-        trigger_rate_present_count: triggerRatePresentCount,
-        trigger_rate_ignored: true
+      trigger_rate: {
+        present_count: triggerRatePresentCount,
+        applied_count: triggerRateAppliedCount,
+        blocked_count: triggerRateBlockedCount
       }
     }
   };

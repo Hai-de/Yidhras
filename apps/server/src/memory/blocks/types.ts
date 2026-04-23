@@ -188,6 +188,7 @@ export interface MemoryRecentSourceRecord {
 export interface MemoryActivationEvaluation {
   memory_id: string;
   status: 'inactive' | 'delayed' | 'active' | 'retained' | 'cooling';
+  trigger_diagnostics: MemoryBlockTriggerDiagnostics;
   activation_score: number;
   matched_triggers: string[];
   reason: string | null;
@@ -214,14 +215,18 @@ export interface MemoryEvaluationContext {
 
 export type MemoryTriggerEngineMode = 'ts' | 'rust_shadow' | 'rust_primary';
 
-export interface MemoryTriggerIgnoredFeaturesRecord {
-  trigger_rate_present: boolean;
-  trigger_rate_ignored: boolean;
+export interface MemoryTriggerRateDecisionRecord {
+  present: boolean;
+  value: number | null;
+  applied: boolean;
+  sample: number | null;
+  passed: boolean | null;
 }
 
-export interface MemoryTriggerIgnoredFeaturesSummary {
-  trigger_rate_present_count: number;
-  trigger_rate_ignored: boolean;
+export interface MemoryTriggerRateDecisionSummary {
+  present_count: number;
+  applied_count: number;
+  blocked_count: number;
 }
 
 export interface MemoryTriggerSourceRecordResult {
@@ -230,14 +235,21 @@ export interface MemoryTriggerSourceRecordResult {
   next_runtime_state: MemoryRuntimeState;
   should_materialize: boolean;
   materialize_reason: 'active' | 'retained' | null;
-  ignored_features?: MemoryTriggerIgnoredFeaturesRecord | null;
+  trigger_rate?: MemoryTriggerRateDecisionRecord | null;
 }
 
 export interface MemoryTriggerSourceDiagnostics {
   candidate_count: number;
   materialized_count: number;
   status_counts: Record<'active' | 'retained' | 'delayed' | 'cooling' | 'inactive', number>;
-  ignored_features: MemoryTriggerIgnoredFeaturesSummary;
+  trigger_rate: MemoryTriggerRateDecisionSummary;
+}
+
+export interface MemoryBlockTriggerDiagnostics {
+  trigger_rate: MemoryTriggerRateDecisionRecord;
+  base_match: boolean;
+  score_passed: boolean;
+  fresh_trigger_attempt: boolean;
 }
 
 export interface MemoryTriggerSourceEvaluateInput {

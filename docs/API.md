@@ -2,10 +2,7 @@
 
 本文档描述当前对外 / 公共可依赖的 HTTP contract、主要读写接口与错误码参考。
 
-> 不在这里展开：
-> - 模块分层与宿主关系：看 `ARCH.md`
-> - 业务执行语义：看 `LOGIC.md`
-> - Prompt Workflow / AI Gateway / Plugin Runtime 的专题化说明：看 `docs/capabilities/`
+> 模块分层与宿主关系见 `ARCH.md` · 业务执行语义见 `LOGIC.md` · 专题细节见 `docs/capabilities/`
 
 ## 通用说明
 
@@ -13,18 +10,17 @@
 - 若 query / params 不满足约束（非法数字、非法枚举、空白必填 params 等），当前实现返回 `400`
 - 除非特别注明，否则以下接口均以当前公开 contract 为准，而不是描述内部实现细节
 
-## 0. Stable vs Experimental multi-pack runtime boundary
+## 0. Stable vs Experimental 边界
 
-当前 multi-pack runtime 为 **experimental / default off / operator test-only**。架构边界与约束详见 [`ARCH.md`](ARCH.md) 第 3.3.1 节。
+multi-pack runtime 为 **experimental / default off / operator test-only**，架构边界详见 [`ARCH.md`](ARCH.md) 第 3.3.1 节。
 
-简要结论：
+稳定的 pack-local 接口规则（适用于本文所有 `/api/packs/:packId/` 路由）：
 
-- 当前稳定 contract 仍以 **single active-pack runtime** 为中心
-- `/api/status` 继续返回单个 `world_pack`
-- `/api/packs/:packId/overview` 与 `/api/packs/:packId/projections/timeline` 要求 `packId === active pack`
-- `PACK_ROUTE_ACTIVE_PACK_MISMATCH` 继续成立
-
-experimental surfaces 需显式启用 `features.experimental.multi_pack_runtime.*`。
+- 稳定 contract 以 **single active-pack runtime** 为中心
+- `/api/packs/:packId/overview` 与 `/api/packs/:packId/projections/timeline` 要求 `packId === active pack`，否则返回 `PACK_ROUTE_ACTIVE_PACK_MISMATCH`
+- `/api/status` 返回单个 `world_pack`
+- experimental surfaces 需显式启用 `features.experimental.multi_pack_runtime.*`
+- experimental `/api/experimental/...` 路由只面向 operator / test-only，不承诺短期稳定 contract
 
 ## 1. 基础信息 (System)
 
@@ -172,6 +168,18 @@ experimental surfaces 需显式启用 `features.experimental.multi_pack_runtime.
 - 这些接口 **不替代** 当前 canonical stable API
 - 这些接口只面向 operator / test-only 试验，不承诺短期稳定 contract
 - `:packId` 需要先进入 experimental runtime registry（显式 load 或已存在于 loaded set）
+- 当前本轮已实现的 contract 收口包括：
+  - stable/experimental projection 路径共享 `pack-scoped core service + scope adapter`，但 stable active-pack guard 保持不变
+  - `GET /api/experimental/runtime/packs` 已增强为 control-plane snapshot，除 loaded pack list 外，还会返回：
+    - `active_pack_id`
+    - `system_health_level`
+    - `runtime_ready`
+    - per-pack `status/current_tick/runtime_speed`
+    - per-pack scheduler/plugin availability 摘要
+  - plugin runtime web routes 已统一到 pack-scoped service：
+    - stable `/api/packs/:packId/plugins/runtime/web` 继续走 active-pack scope
+    - experimental `/api/experimental/runtime/packs/:packId/plugins/runtime/web` 才允许读取 loaded-pack scope
+  - inference/context 当前只新增 internal pack-scoped contract，不新增 public inference multi-pack run API
 
 ### 7.1 Canonical pack narrative projection endpoint
 
@@ -200,14 +208,9 @@ experimental surfaces 需显式启用 `features.experimental.multi_pack_runtime.
     - `rule_execution_count`
     - `latest_rule_execution`
 
-### 7.3 当前稳定约束
+### 7.3 稳定约束
 
-- `/api/packs/:packId/projections/timeline` 是当前 canonical narrative timeline API
-- `/api/packs/:packId/overview` 与 `/api/packs/:packId/projections/timeline` 在单 active-pack 模式下要求 `packId` 与当前 active pack 一致
-- 不一致时返回：`PACK_ROUTE_ACTIVE_PACK_MISMATCH`
-- experimental pack-local reads 必须改走 `/api/experimental/...`
-- 当前阶段不把 stable canonical routes 直接升级为“任意 loaded pack 可读”
-
+见第 0 节边界说明。
 ## 8. Agent / Entity 读取接口
 
 ### 8.1 Agent context

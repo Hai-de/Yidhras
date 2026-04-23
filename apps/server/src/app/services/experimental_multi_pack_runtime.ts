@@ -9,17 +9,16 @@ import {
   getPackRuntimeLookupPort,
   getPackRuntimeObservation
 } from './app_context_ports.js';
+import {
+  buildExperimentalPackRuntimeSnapshot,
+  buildExperimentalRuntimeControlPlaneSnapshot,
+  type ExperimentalPackRuntimeSnapshot,
+  type ExperimentalRuntimeControlPlaneSnapshot
+} from './experimental_runtime_control_plane_service.js';
 
-export interface ExperimentalPackRuntimeRegistrySnapshot {
-  loaded_pack_ids: string[];
-  items: Array<{
-    pack_id: string;
-    current_tick: string;
-    runtime_speed: ReturnType<PackRuntimeHandle['getRuntimeSpeedSnapshot']>;
-    status: 'loaded' | 'running' | 'paused' | 'stopped' | 'failed';
-    message?: string | null;
-  }>;
-}
+export { type ExperimentalPackRuntimeSnapshot, type ExperimentalRuntimeControlPlaneSnapshot } from './experimental_runtime_control_plane_service.js';
+
+export type ExperimentalPackRuntimeRegistrySnapshot = ExperimentalRuntimeControlPlaneSnapshot;
 
 export interface ExperimentalSystemHealthSnapshot {
   system_health_level: AppContext['startupHealth']['level'];
@@ -28,20 +27,10 @@ export interface ExperimentalSystemHealthSnapshot {
   startup_errors: string[];
 }
 
-export const buildExperimentalPackRuntimeRegistrySnapshot = (
-  registry: PackRuntimeRegistry
-): ExperimentalPackRuntimeRegistrySnapshot => {
-  const handles = registry.listHandles();
-  return {
-    loaded_pack_ids: registry.listLoadedPackIds(),
-    items: handles.map(handle => ({
-      pack_id: handle.pack_id,
-      current_tick: handle.getClockSnapshot().current_tick,
-      runtime_speed: handle.getRuntimeSpeedSnapshot(),
-      status: handle.getHealthSnapshot().status,
-      message: handle.getHealthSnapshot().message ?? null
-    }))
-  };
+export const buildExperimentalPackRuntimeRegistrySnapshot = async (
+  context: AppContext
+): Promise<ExperimentalPackRuntimeRegistrySnapshot> => {
+  return buildExperimentalRuntimeControlPlaneSnapshot(context);
 };
 
 export const buildExperimentalSystemHealthSnapshot = (
@@ -55,10 +44,10 @@ export const buildExperimentalSystemHealthSnapshot = (
   };
 };
 
-export const getExperimentalPackRuntimeStatusSnapshot = (
+export const getExperimentalPackRuntimeStatusSnapshot = async (
   context: AppContext,
   packId: string
-): PackRuntimeStatusSnapshot | null => {
+): Promise<PackRuntimeStatusSnapshot & { control_plane?: ExperimentalPackRuntimeSnapshot } | null> => {
   const observation = getPackRuntimeObservation({
     packRuntimeObservation: context.packRuntimeObservation,
     sim: context.sim
@@ -72,12 +61,14 @@ export const getExperimentalPackRuntimeStatusSnapshot = (
     packRuntimeLookup: context.packRuntimeLookup,
     sim: context.sim
   }).getActivePackId();
+  const controlPlane = await buildExperimentalPackRuntimeSnapshot(context, packId);
 
   return {
     ...snapshot,
     startup_level: context.startupHealth.level,
     runtime_ready: runtimeReadyPackId === packId && context.getRuntimeReady(),
-    message: snapshot.message ?? null
+    message: snapshot.message ?? null,
+    control_plane: controlPlane ?? undefined
   };
 };
 

@@ -387,12 +387,33 @@ const worldRuleDefinitionSchema = z
   })
   .strict();
 
+const KERNEL_INTENT_TYPES = ['trigger_event', 'post_message', 'adjust_relationship', 'adjust_snr'] as const;
+
+const objectiveEnforcementWhenSchema = z.record(z.string(), worldPackValueSchema).superRefine((when, ctx) => {
+  if (typeof when.invocation_type === 'string' && when.invocation_type.trim().length > 0) {
+    const value = when.invocation_type as string;
+    if (KERNEL_INTENT_TYPES.includes(value as (typeof KERNEL_INTENT_TYPES)[number])) {
+      return;
+    }
+    if (!value.startsWith('invoke.')) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `invocation_type '${value}' must use 'invoke.' prefix for capability-key matching in the enforcement pipeline. Expected format: 'invoke.${value}'. Kernel actions (${KERNEL_INTENT_TYPES.join(', ')}) are exempt.`
+      });
+    }
+  }
+});
+
+const objectiveEnforcementRuleSchema = worldRuleDefinitionSchema.extend({
+  when: objectiveEnforcementWhenSchema
+});
+
 const rulesSchema = z
   .object({
     perception: z.array(worldRuleDefinitionSchema).default([]),
     capability_resolution: z.array(worldRuleDefinitionSchema).default([]),
     invocation: z.array(worldRuleDefinitionSchema).default([]),
-    objective_enforcement: z.array(worldRuleDefinitionSchema).default([]),
+    objective_enforcement: z.array(objectiveEnforcementRuleSchema).default([]),
     projection: z.array(worldRuleDefinitionSchema).default([])
   })
   .strict()
@@ -420,6 +441,41 @@ const bootstrapSchema = z
   .strict()
   .default({ initial_states: [], initial_events: [] });
 
+const stateTransformRangeSchema = z
+  .object({
+    min: z.number(),
+    max: z.number(),
+    label: nonEmptyStringSchema
+  })
+  .strict();
+
+const stateTransformSchema = z
+  .object({
+    source: nonEmptyStringSchema,
+    ranges: z.array(stateTransformRangeSchema),
+    target: nonEmptyStringSchema
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const ranges = value.ranges;
+    for (const range of ranges) {
+      if (range.min > range.max) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `state_transform range min (${range.min}) must be <= max (${range.max}) for label "${range.label}"`
+        });
+      }
+    }
+    const labels = ranges.map(r => r.label);
+    const uniqueLabels = new Set(labels);
+    if (uniqueLabels.size !== labels.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'state_transform range labels must be unique'
+      });
+    }
+  });
+
 export const worldPackConstitutionSchema = z
   .object({
     metadata: metadataSchema,
@@ -435,7 +491,8 @@ export const worldPackConstitutionSchema = z
     authorities: z.array(authorityDefinitionSchema).optional(),
     rules: rulesSchema.optional(),
     storage: worldPackStorageSchema.optional(),
-    bootstrap: bootstrapSchema.optional()
+    bootstrap: bootstrapSchema.optional(),
+    state_transforms: z.array(stateTransformSchema).optional()
   })
   .superRefine((value, ctx) => {
     if ('actions' in value) {
@@ -489,6 +546,7 @@ export type WorldPackBootstrapInitialState = z.infer<typeof bootstrapInitialStat
 export type WorldPackVariableRecord = Record<string, WorldPackVariableValue>;
 export type WorldPackMetadata = z.infer<typeof metadataSchema>;
 export type WorldPackAiConfig = z.infer<typeof aiPackConfigSchema>;
+export type WorldPackStateTransform = z.infer<typeof stateTransformSchema>;
 export type WorldPack = z.infer<typeof worldPackConstitutionSchema>;
 
 export const parseWorldPackConstitution = (value: unknown, sourceLabel = 'world pack'): WorldPack => {

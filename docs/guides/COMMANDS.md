@@ -84,25 +84,20 @@ pnpm smoke:server
 
 ### 2.6 Runtime 配置与优先级
 
-当前 server 继续沿用 `data/configw` runtime config scaffold。优先级链与配置边界的事实源见 [`ARCH.md`](../ARCH.md) 第 2.4 节。
+配置优先级：**env > yaml > code default**。完整优先级链与字段说明见 [`ARCH.md`](../ARCH.md) 第 2.4 节。
 
-简要结论：**env > yaml > code default**（详细优先级列表见 ARCH.md）。
+常用运行参数（通过 `data/configw/local.yaml` 或 env 覆盖）：
 
-当前已迁入 `configw` 的重点运行参数包括：
+```yaml
+app:
+  port: 3001
+sqlite:
+  busy_timeout_ms: 5000
+scheduler:
+  lease_ticks: 5
+```
 
-- `app.port`
-- `world.preferred_pack` / `world.bootstrap.*`
-- `sqlite.*`
-- `scheduler.*`
-- `prompt_workflow.profiles.*`
-- `features.experimental.multi_pack_runtime.*`
-- `runtime.multi_pack.*`
-
-说明：
-
-- experimental multi-pack runtime 默认关闭，只推荐 operator / test-only 试验
-- 稳定模式仍以 single active-pack runtime 为中心
-- 多包 runtime 的架构边界与启用约束见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节
+experimental multi-pack runtime 默认关闭，仅 operator / test-only；架构边界见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。
 
 ## 3. Server 命令
 
@@ -197,7 +192,7 @@ pnpm --filter yidhras-server dev
 
 多包 runtime 当前为 **experimental / default off / operator test-only**。架构边界与约束见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。
 
-临时通过 env 打开：
+启用方式：
 
 ```bash
 EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED=true \
@@ -205,11 +200,7 @@ EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED=true \
 pnpm --filter yidhras-server dev
 ```
 
-或在 YAML 中设置 `features.experimental.multi_pack_runtime.*` 与 `runtime.multi_pack.*`。试验建议：
-
-- 默认保持 `start_mode=manual`
-- 保守设置 `max_loaded_packs`
-- 先通过 experimental API 显式 load / unload runtime
+或在 YAML 中设置 `features.experimental.multi_pack_runtime.*` 与 `runtime.multi_pack.*`。
 
 ### 3.5 World Pack 与手工脚本
 
@@ -353,23 +344,6 @@ pnpm --filter web typecheck
 pnpm --filter web test:unit
 ```
 
-## 8. 命令维护边界
+## 8. 文档边界
 
-以下文件与本文件存在引用关系：
-
-- `README.md`
-  - 只保留最小启动与高频入口
-- `AGENTS.md`
-  - 只保留给协作代理的高频命令和约束链接
-- `package.json`
-  - 实际脚本定义源
-- `apps/server/package.json`
-  - server 脚本定义源
-- `apps/web/package.json`
-  - web 脚本定义源
-
-若出现不一致，优先级建议为：
-
-1. `package.json` / 子包 `package.json`
-2. 本文件 `docs/guides/COMMANDS.md`
-3. `README.md` / `AGENTS.md` 中的摘要命令
+命令定义以 `package.json` 为准；本文件为命令说明主事实源。命令与文档的分工见 [`INDEX.md`](../INDEX.md)。

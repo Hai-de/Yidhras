@@ -4,6 +4,7 @@ import type { SqliteRuntimePragmaSnapshot } from '../../db/sqlite_runtime.js';
 import type { SystemMessage } from '../../utils/notifications.js';
 import type { AppContext, RuntimeLoopDiagnostics } from '../context.js';
 import { createRuntimeKernelService } from '../runtime/runtime_kernel_service.js';
+import { readVisibleClockSnapshot } from './app_context_ports.js';
 
 const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
   status: 'idle',
@@ -50,6 +51,11 @@ export interface RuntimeStatusSnapshot {
         compatibility?: { yidhras?: string; schema_version?: string; notes?: string };
       }
     | null;
+  world_time: {
+    absolute_ticks: string;
+    calendars: unknown;
+    source: 'host_projection' | 'sim_fallback';
+  };
   has_error: boolean;
   startup_errors: string[];
 }
@@ -164,6 +170,7 @@ export const getRuntimeStatusSnapshot = async (
 ): Promise<RuntimeStatusSnapshot> => {
   const pack = context.sim.getActivePack();
   const schedulerWorkerId = options?.schedulerWorkerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
+  const visibleClock = readVisibleClockSnapshot(context);
   const runtimeKernel = createRuntimeKernelService(context);
   const ownershipSnapshot = await runtimeKernel.getOwnershipSnapshot({
     workerId: schedulerWorkerId,
@@ -205,6 +212,8 @@ export const getRuntimeStatusSnapshot = async (
           ...(pack.metadata.compatibility ? { compatibility: pack.metadata.compatibility } : {})
         }
       : null,
+
+    world_time: visibleClock,
 
     has_error: context.notifications.getMessages().some(message => message.level === 'error'),
     startup_errors: context.startupHealth.errors

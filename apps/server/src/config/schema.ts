@@ -33,7 +33,7 @@ const RuntimeMultiPackSchema = z
 const PromptWorkflowProfileDefaultsSchema = z
   .object({
     token_budget: PositiveIntSchema,
-    section_policy: z.enum(['minimal', 'standard', 'expanded'])
+    section_policy: z.enum(['minimal', 'standard', 'expanded', 'include_only'])
   })
   .strict();
 

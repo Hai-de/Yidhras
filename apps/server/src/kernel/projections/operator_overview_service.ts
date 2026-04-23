@@ -1,11 +1,10 @@
 import type { AppContext } from '../../app/context.js';
 import { getRuntimeStatusSnapshot } from '../../app/services/system.js';
-import { resolvePackProjectionTarget } from '../../packs/runtime/projections/active_pack_projection_guard.js';
-import { listPackAuthorityGrants } from '../../packs/storage/authority_repo.js';
-import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
-import { listPackEntityStates } from '../../packs/storage/entity_state_repo.js';
-import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js';
-import { listPackRuleExecutionRecords } from '../../packs/storage/rule_execution_repo.js';
+import {
+  createPackEntityOverviewProjectionService,
+  type PackEntityProjectionSnapshot
+} from '../../packs/runtime/projections/pack_entity_overview_projection_service.js';
+import { createPackProjectionScopeAdapter } from '../../packs/runtime/projections/pack_projection_scope_adapter.js';
 
 export interface OperatorOverviewProjectionSnapshot {
   runtime: Awaited<ReturnType<typeof getRuntimeStatusSnapshot>>;
@@ -29,18 +28,35 @@ export interface OperatorOverviewProjectionOptions {
   feature?: string;
 }
 
+const toPackOverviewProjectionSummary = (
+  projection: PackEntityProjectionSnapshot
+): OperatorOverviewProjectionSnapshot['pack_projection'] => {
+  const latestRuleExecution = projection.recent_rule_executions[0] ?? null;
+  return {
+    entity_count: projection.summary.entity_count,
+    entity_state_count: projection.entities.reduce((sum, entity) => sum + entity.state.length, 0),
+    authority_grant_count: projection.authorities.length,
+    mediator_binding_count: projection.mediator_bindings.length,
+    rule_execution_count: projection.summary.rule_execution_count,
+    latest_rule_execution: latestRuleExecution
+      ? {
+          id: latestRuleExecution.id,
+          rule_id: latestRuleExecution.rule_id,
+          execution_status: latestRuleExecution.execution_status,
+          created_at: latestRuleExecution.created_at
+        }
+      : null
+  };
+};
+
 export const getOperatorOverviewProjection = async (
   context: AppContext,
   options: OperatorOverviewProjectionOptions = {}
 ): Promise<OperatorOverviewProjectionSnapshot> => {
   const runtime = await getRuntimeStatusSnapshot(context);
-  const { activePack, resolvedPackId } = resolvePackProjectionTarget(context, {
-    requestedPackId: options.packId,
-    feature: options.feature ?? 'operator overview projection',
-    allowMissingActivePack: options.packId === undefined
-  });
+  const activePack = context.sim.getActivePack();
 
-  if (!activePack || !resolvedPackId) {
+  if (!activePack && options.packId === undefined) {
     return {
       runtime,
       pack_projection: {
@@ -54,32 +70,16 @@ export const getOperatorOverviewProjection = async (
     };
   }
 
-  const [entities, entityStates, authorityGrants, mediatorBindings, ruleExecutions] = await Promise.all([
-    listPackWorldEntities(resolvedPackId),
-    listPackEntityStates(resolvedPackId),
-    listPackAuthorityGrants(resolvedPackId),
-    listPackMediatorBindings(resolvedPackId),
-    listPackRuleExecutionRecords(resolvedPackId)
-  ]);
-
-  const latestRuleExecution = [...ruleExecutions].sort((left, right) => Number(right.created_at - left.created_at))[0] ?? null;
+  const scope = createPackProjectionScopeAdapter(context);
+  const resolved = await scope.resolveStablePack(
+    options.packId ?? activePack?.metadata.id ?? '',
+    options.feature ?? 'operator overview projection'
+  );
+  const projectionService = createPackEntityOverviewProjectionService(context);
+  const projection = await projectionService.getProjection(resolved);
 
   return {
     runtime,
-    pack_projection: {
-      entity_count: entities.length,
-      entity_state_count: entityStates.length,
-      authority_grant_count: authorityGrants.length,
-      mediator_binding_count: mediatorBindings.length,
-      rule_execution_count: ruleExecutions.length,
-      latest_rule_execution: latestRuleExecution
-        ? {
-            id: latestRuleExecution.id,
-            rule_id: latestRuleExecution.rule_id,
-            execution_status: latestRuleExecution.execution_status,
-            created_at: latestRuleExecution.created_at.toString()
-          }
-        : null
-    }
+    pack_projection: toPackOverviewProjectionSummary(projection)
   };
 };

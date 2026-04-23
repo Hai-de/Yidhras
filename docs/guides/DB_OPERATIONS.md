@@ -195,12 +195,6 @@ pnpm --filter yidhras-server init:runtime
 
 snapshot 中会包含 `app_port`、`world_packs_dir`、`sqlite_*`、`scheduler_*` 等运行参数。如需调优，参见 [`ARCH.md`](../ARCH.md) 第 2.4 节与 [`COMMANDS.md`](./COMMANDS.md) 第 2.6 节。
 
-针对 experimental multi-pack runtime，注意事项见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。简要结论：
-
-- 当前 stable contract 仍以 single active-pack 为中心
-- experimental multi-pack 默认关闭，仅 operator / test-only
-- 不建议在 stable production 环境启用
-
 ## 5.2 `seed:identity`
 
 命令：
@@ -486,18 +480,9 @@ pnpm --filter yidhras-server start
 
 ---
 
-## 11. 推荐文档跳转
+## 11. 相关文档
 
-如果你需要继续看：
-
-- 命令入口矩阵：`./COMMANDS.md`
-- 架构边界：`../ARCH.md`
-- World Pack 项目化与目录规范：`../WORLD_PACK.md`
-- 文档导航：`../INDEX.md`
-
-建议文档分工：
-
-- `COMMANDS.md`：只保留命令入口与简短说明
-- **本文件**：展开数据库迁移 / 更换 / 初始化 / 排障细节
-
-这样后续维护时，部署者可以直接到这里看数据库问题，而不用在 README、命令手册和架构文档之间来回翻。
+- 命令入口矩阵：[`COMMANDS.md`](./COMMANDS.md)
+- 架构边界与配置优先级：[`ARCH.md`](../ARCH.md)
+- World Pack 规范：[`WORLD_PACK.md`](../WORLD_PACK)
+- 文档导航：[`INDEX.md`](../INDEX.md)

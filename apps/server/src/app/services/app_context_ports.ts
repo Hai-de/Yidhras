@@ -20,7 +20,7 @@ import type { ContextAssemblyPort, MemoryRuntimePort } from './context_memory_po
 export interface ActivePackRuntimeFacade {
   init(packFolderName: string): Promise<void>;
   getActivePack(): WorldPack | undefined;
-  resolvePackVariables(template: string, permission?: unknown): string;
+  resolvePackVariables(template: string, permission?: unknown, actorState?: Record<string, unknown> | null): string;
   getStepTicks(): bigint;
   getRuntimeSpeedSnapshot(): RuntimeSpeedSnapshot;
   setRuntimeSpeedOverride(stepTicks: bigint): void;
@@ -71,6 +71,21 @@ export interface AppContextPorts {
   memoryRuntime?: MemoryRuntimePort;
 }
 
+export interface VisibleClockSnapshot {
+  absolute_ticks: string;
+  calendars: unknown;
+  source: 'host_projection' | 'sim_fallback';
+}
+
+const resolveVisibleClockPackId = (input: {
+  activePackRuntime?: { getActivePack(): WorldPack | undefined };
+  sim: { getActivePack(): WorldPack | undefined };
+}): string | null => {
+  return input.activePackRuntime?.getActivePack()?.metadata.id?.trim()
+    ?? input.sim.getActivePack()?.metadata.id?.trim()
+    ?? null;
+};
+
 export const getActivePackRuntimeFacade = (input: {
   activePackRuntime?: ActivePackRuntimeFacade;
   sim: ActivePackRuntimeFacade;
@@ -79,7 +94,7 @@ export const getActivePackRuntimeFacade = (input: {
     return input.activePackRuntime;
   }
 
-  console.warn('[app_context_ports] Fallback to sim for activePackRuntime');
+  console.error('[app_context_ports] Fallback to sim for activePackRuntime — injected port is missing, which may indicate incomplete AppContext initialization');
   return input.sim;
 };
 
@@ -211,4 +226,34 @@ export const hasPackHostApi = (context: AppContextPorts): context is AppContextP
   packHostApi: PackHostApi;
 } => {
   return Boolean(context.packHostApi);
+};
+
+export const readVisibleClockSnapshot = (input: {
+  activePackRuntime?: { getActivePack(): WorldPack | undefined };
+  runtimeClockProjection?: RuntimeClockProjectionService;
+  sim: {
+    getActivePack(): WorldPack | undefined;
+    getCurrentTick(): bigint;
+    getAllTimes(): unknown;
+  };
+}): VisibleClockSnapshot => {
+  const packId = resolveVisibleClockPackId({
+    activePackRuntime: input.activePackRuntime,
+    sim: input.sim
+  });
+  const projected = packId ? input.runtimeClockProjection?.readFormattedClock(packId) : null;
+
+  if (projected) {
+    return {
+      absolute_ticks: projected.absolute_ticks,
+      calendars: projected.calendars,
+      source: 'host_projection'
+    };
+  }
+
+  return {
+    absolute_ticks: input.sim.getCurrentTick().toString(),
+    calendars: input.sim.getAllTimes(),
+    source: 'sim_fallback'
+  };
 };

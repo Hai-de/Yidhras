@@ -22,6 +22,11 @@ import { DEFAULT_PACK_WORLD_ENTITY_ID } from '../packs/runtime/core_models.js';
 import { listPackEntityStateProjectionRecords } from '../packs/storage/entity_state_projection.js';
 import { ApiError } from '../utils/api_error.js';
 import type {
+  BuildInferenceContextForPackInput,
+  PackRuntimeContractResolver,
+  PackScopedInferenceContextBuilder
+} from './pack_scoped_inference_context_builder.js';
+import type {
   InferenceActorRef,
   InferenceAgentSnapshot,
   InferenceBindingRef,
@@ -143,7 +148,18 @@ const resolveIdentityById = async (context: AppContext, identityId: string): Pro
   return service.fetchIdentity(identityId);
 };
 
-const resolveActor = async (context: AppContext, input: InferenceRequestInput): Promise<ResolvedActor> => {
+const ACTOR_ENTITY_ID_SEPARATOR = ':';
+
+const packEntityIdFromResolvedAgentId = (packId: string, resolvedAgentId: string | null): string | null => {
+  if (!resolvedAgentId) return null;
+  const prefix = `${packId}${ACTOR_ENTITY_ID_SEPARATOR}`;
+  if (resolvedAgentId.startsWith(prefix)) {
+    return resolvedAgentId.slice(prefix.length);
+  }
+  return resolvedAgentId;
+};
+
+const resolveActor = async (context: AppContext, input: InferenceRequestInput, packId?: string): Promise<ResolvedActor> => {
   if (input.agent_id) {
     const agentContext = await getAgentContextSnapshot(context, input.agent_id);
     return {
@@ -216,6 +232,68 @@ const resolveActor = async (context: AppContext, input: InferenceRequestInput): 
       actorDisplayName: identity.name ?? identity.id,
       bindingRef: null,
       resolvedAgentId: null
+    };
+  }
+
+  if (input.actor_entity_id && packId) {
+    const bridgedAgentId = `${packId}${ACTOR_ENTITY_ID_SEPARATOR}${input.actor_entity_id}`;
+    const agent = await context.prisma.agent.findUnique({
+      where: { id: bridgedAgentId }
+    });
+    if (!agent) {
+      throw new ApiError(404, 'ACTOR_ENTITY_NOT_FOUND', 'Pack actor entity not found', {
+        actor_entity_id: input.actor_entity_id,
+        pack_id: packId
+      });
+    }
+
+    const binding = await context.prisma.identityNodeBinding.findFirst({
+      where: {
+        agent_id: bridgedAgentId,
+        status: 'active',
+        role: 'active'
+      },
+      include: { identity: true }
+    });
+
+    const identityContext: IdentityContext = binding
+      ? {
+          id: binding.identity.id,
+          type: binding.identity.type as IdentityContext['type'],
+          name: binding.identity.name,
+          provider: binding.identity.provider ?? undefined,
+          status: binding.identity.status ?? undefined,
+          claims: binding.identity.claims as Record<string, unknown> | null ?? null
+        }
+      : {
+          id: agent.id,
+          type: 'agent',
+          name: agent.name,
+          provider: 'pack',
+          status: 'active',
+          claims: null
+        };
+
+    return {
+      identity: identityContext,
+      actorRef: {
+        identity_id: identityContext.id,
+        identity_type: identityContext.type,
+        role: 'active',
+        agent_id: bridgedAgentId,
+        atmosphere_node_id: null
+      },
+      actorDisplayName: agent.name ?? input.actor_entity_id,
+      bindingRef: binding
+        ? {
+            binding_id: binding.id,
+            role: 'active',
+            status: binding.status,
+            agent_id: binding.agent_id,
+            atmosphere_node_id: binding.atmosphere_node_id
+          }
+        : null,
+      resolvedAgentId: bridgedAgentId
     };
   }
 
@@ -343,13 +421,20 @@ const buildPackStateSnapshot = async (
 ): Promise<InferencePackStateSnapshot> => {
   const rows = await listPackEntityStateProjectionRecords(packId);
 
+  const candidateEntityIds: string[] = [];
+  if (resolvedAgentId) {
+    const packEntityId = packEntityIdFromResolvedAgentId(packId, resolvedAgentId);
+    if (packEntityId) candidateEntityIds.push(packEntityId);
+    if (!candidateEntityIds.includes(resolvedAgentId)) candidateEntityIds.push(resolvedAgentId);
+  }
+
   let actorState: InferencePackStateRecord | null = null;
   let worldState: InferencePackStateRecord | null = null;
   const artifacts: InferencePackArtifactSnapshot[] = [];
 
   for (const row of rows) {
     const state = parsePackStateRecord(row.state_json);
-    if (resolvedAgentId && row.entity_id === resolvedAgentId && row.state_namespace === 'core') {
+    if (candidateEntityIds.length > 0 && candidateEntityIds.includes(row.entity_id) && row.state_namespace === 'core') {
       actorState = state;
       continue;
     }
@@ -419,9 +504,42 @@ const buildPackRuntimeContract = (context: AppContext): InferencePackRuntimeCont
   };
 };
 
+const createPackRuntimeContractResolver = (): PackRuntimeContractResolver => {
+  return {
+    async resolvePackRuntimeContract(
+      context: AppContext,
+      input: {
+        pack_id: string;
+        mode: 'stable' | 'experimental';
+      }
+    ): Promise<InferencePackRuntimeContract> {
+      if (input.mode === 'stable') {
+        const activePack = context.sim.getActivePack();
+        if (!activePack || activePack.metadata.id !== input.pack_id) {
+          return {};
+        }
+        return buildPackRuntimeContract(context);
+      }
+
+      const handle = context.sim.getPackRuntimeHandle(input.pack_id);
+      if (!handle) {
+        return {};
+      }
+
+      return {
+        invocation_rules: (handle.pack.rules?.invocation ?? []).map(rule => ({
+          id: rule.id,
+          when: { ...(rule.when ?? {}) },
+          then: { ...(rule.then ?? {}) }
+        }))
+      };
+    }
+  };
+};
+
 const buildInferenceVariableContext = (input: {
   context: AppContext;
-  pack: NonNullable<ReturnType<AppContext['sim']['getActivePack']>>;
+  pack: { metadata: { id: string; name: string; version: string }; variables?: Record<string, unknown>; prompts?: Record<string, unknown>; ai?: unknown; };
   strategy: InferenceStrategy;
   attributes: Record<string, unknown>;
   resolvedActor: ResolvedActor;
@@ -429,6 +547,7 @@ const buildInferenceVariableContext = (input: {
   packState: InferencePackStateSnapshot;
   packRuntime: InferencePackRuntimeContract;
   requestInput: InferenceRequestInput;
+  currentTick: string;
 }): PromptVariableContext => {
   return createPromptVariableContext({
     layers: [
@@ -452,8 +571,8 @@ const buildInferenceVariableContext = (input: {
       }),
       createPromptVariableLayer({
         namespace: 'runtime',
-        values: normalizePromptVariableRecord({ current_tick: input.context.sim.getCurrentTick().toString(), pack_state: input.packState, pack_runtime: input.packRuntime, world_state: input.packState.world_state, owned_artifacts: input.packState.owned_artifacts, latest_event: input.packState.latest_event }),
-        alias_values: normalizePromptVariableRecord({ current_tick: input.context.sim.getCurrentTick().toString(), world_state: input.packState.world_state, latest_event: input.packState.latest_event, owned_artifacts: input.packState.owned_artifacts }),
+        values: normalizePromptVariableRecord({ current_tick: input.currentTick, pack_state: input.packState, pack_runtime: input.packRuntime, world_state: input.packState.world_state, owned_artifacts: input.packState.owned_artifacts, latest_event: input.packState.latest_event }),
+        alias_values: normalizePromptVariableRecord({ current_tick: input.currentTick, world_state: input.packState.world_state, latest_event: input.packState.latest_event, owned_artifacts: input.packState.owned_artifacts }),
         metadata: { source_label: 'runtime-state', trusted: true }
       }),
       createPromptVariableLayer({
@@ -472,12 +591,129 @@ const buildInferenceVariableContext = (input: {
   });
 };
 
+export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceContextBuilder => {
+  const packRuntimeContractResolver = createPackRuntimeContractResolver();
+
+  return {
+    async buildForPack(context: AppContext, input: BuildInferenceContextForPackInput): Promise<InferenceContext> {
+      context.assertRuntimeReady('inference context');
+
+      const activePackRuntime = getActivePackRuntimeFacade({
+        activePackRuntime: context.activePackRuntime,
+        sim: context.sim
+      });
+      const activePack = activePackRuntime.getActivePack();
+
+      const stablePack = input.mode === 'stable' ? activePack : undefined;
+      const experimentalHandle = input.mode === 'experimental' ? context.sim.getPackRuntimeHandle(input.pack_id) : null;
+      const pack = stablePack && stablePack.metadata.id === input.pack_id
+        ? stablePack
+        : experimentalHandle?.pack;
+
+      if (!pack) {
+        const activePackId = activePack?.metadata.id ?? '(none)';
+        if (input.mode === 'stable') {
+          console.error(
+            `[buildForPack] Pack ID mismatch in stable mode: requested=${input.pack_id}, active=${activePackId}. ` +
+            `Ensure the active pack matches the requested pack_id.`
+          );
+        } else {
+          console.error(
+            `[buildForPack] Pack not found in experimental mode: requested=${input.pack_id}, active=${activePackId}. ` +
+            `Ensure the experimental pack has been loaded via the registry.`
+          );
+        }
+        throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for inference context', {
+          pack_id: input.pack_id,
+          startup_level: context.startupHealth.level,
+          available_world_packs: context.startupHealth.available_world_packs
+        });
+      }
+
+      const currentTick = input.mode === 'experimental'
+        ? experimentalHandle?.getClockSnapshot().current_tick ?? '0'
+        : activePackRuntime.getCurrentTick().toString();
+
+      const strategy = selectStrategy(input);
+      const attributes = normalizeAttributes(input.attributes);
+      const resolvedActor = await resolveActor(context, input, pack.metadata.id);
+
+      let agentSnapshot: InferenceAgentSnapshot | null = null;
+
+      if (resolvedActor.resolvedAgentId) {
+        const agentContext = await getAgentContextSnapshot(context, resolvedActor.resolvedAgentId);
+        agentSnapshot = buildAgentSnapshot(agentContext.identity as Record<string, unknown>);
+      }
+
+      const packState = await buildPackStateSnapshot(context, pack.metadata.id, resolvedActor.resolvedAgentId, attributes);
+      const packRuntime = await packRuntimeContractResolver.resolvePackRuntimeContract(context, {
+        pack_id: input.pack_id,
+        mode: input.mode
+      });
+      const policySummary = await buildPolicySummary(context, resolvedActor.identity, attributes);
+      const transmissionProfile = buildTransmissionProfile(resolvedActor.actorRef, agentSnapshot, policySummary, attributes);
+      const contextAssembly = context.contextAssembly ?? createContextAssemblyPort(context);
+      const fallbackContextService = createContextService({
+        context, memoryService: createMemoryService({ context })
+      });
+      const contextResult = await (contextAssembly.buildContextRun ?? fallbackContextService.buildContextRun)({
+        actor_ref: resolvedActor.actorRef as unknown as Record<string, unknown>,
+        identity: resolvedActor.identity,
+        resolved_agent_id: resolvedActor.resolvedAgentId,
+        tick: BigInt(currentTick),
+        policy_summary: policySummary,
+        pack_state: packState,
+        pack_id: pack.metadata.id
+      });
+      const variableContext = buildInferenceVariableContext({
+        context,
+        pack,
+        strategy,
+        attributes,
+        resolvedActor,
+        agentSnapshot,
+        packState,
+        packRuntime,
+        requestInput: input,
+        currentTick
+      });
+
+      return {
+        inference_id: randomUUID(),
+        actor_ref: resolvedActor.actorRef,
+        actor_display_name: resolvedActor.actorDisplayName,
+        identity: resolvedActor.identity,
+        binding_ref: resolvedActor.bindingRef,
+        resolved_agent_id: resolvedActor.resolvedAgentId,
+        agent_snapshot: agentSnapshot,
+        tick: BigInt(currentTick),
+        strategy,
+        attributes,
+        world_pack: {
+          id: pack.metadata.id,
+          name: pack.metadata.name,
+          version: pack.metadata.version
+        },
+        world_prompts: pack.prompts ?? {},
+        world_ai: pack.ai ?? null,
+        visible_variables: flattenPromptVariableContextToVisibleVariables(variableContext) as VariablePool,
+        variable_context: variableContext,
+        policy_summary: policySummary,
+        transmission_profile: transmissionProfile,
+        context_run: contextResult.context_run,
+        memory_context: contextResult.memory_context,
+        pack_state: packState,
+        pack_runtime: packRuntime,
+        variable_context_summary: createPromptVariableContextSummary(variableContext)
+      };
+    }
+  };
+};
+
 export const buildInferenceContext = async (
   context: AppContext,
   input: InferenceRequestInput
 ): Promise<InferenceContext> => {
-  context.assertRuntimeReady('inference context');
-
   const activePackRuntime = getActivePackRuntimeFacade({
     activePackRuntime: context.activePackRuntime,
     sim: context.sim
@@ -490,64 +726,9 @@ export const buildInferenceContext = async (
     });
   }
 
-  const strategy = selectStrategy(input);
-  const attributes = normalizeAttributes(input.attributes);
-  const resolvedActor = await resolveActor(context, input);
-
-  let agentSnapshot: InferenceAgentSnapshot | null = null;
-
-  if (resolvedActor.resolvedAgentId) {
-    const agentContext = await getAgentContextSnapshot(context, resolvedActor.resolvedAgentId);
-    agentSnapshot = buildAgentSnapshot(agentContext.identity as Record<string, unknown>);
-  }
-
-  const packState = await buildPackStateSnapshot(context, pack.metadata.id, resolvedActor.resolvedAgentId, attributes);
-  const packRuntime = buildPackRuntimeContract(context);
-  const policySummary = await buildPolicySummary(context, resolvedActor.identity, attributes);
-  const transmissionProfile = buildTransmissionProfile(resolvedActor.actorRef, agentSnapshot, policySummary, attributes);
-  const contextAssembly = context.contextAssembly ?? createContextAssemblyPort(context);
-  const fallbackContextService = createContextService({
-    context, memoryService: createMemoryService({ context })
+  return createPackScopedInferenceContextBuilder().buildForPack(context, {
+    ...input,
+    pack_id: pack.metadata.id,
+    mode: 'stable'
   });
-  const contextResult = await (contextAssembly.buildContextRun ?? fallbackContextService.buildContextRun)({
-    actor_ref: resolvedActor.actorRef as unknown as Record<string, unknown>,
-    identity: resolvedActor.identity,
-    resolved_agent_id: resolvedActor.resolvedAgentId,
-    tick: activePackRuntime.getCurrentTick(),
-    policy_summary: policySummary,
-    pack_state: packState,
-    pack_id: pack.metadata.id
-  });
-  const variableContext = buildInferenceVariableContext({
-    context, pack, strategy, attributes, resolvedActor, agentSnapshot, packState, packRuntime, requestInput: input
-  });
-
-  return {
-    inference_id: randomUUID(),
-    actor_ref: resolvedActor.actorRef,
-    actor_display_name: resolvedActor.actorDisplayName,
-    identity: resolvedActor.identity,
-    binding_ref: resolvedActor.bindingRef,
-    resolved_agent_id: resolvedActor.resolvedAgentId,
-    agent_snapshot: agentSnapshot,
-    tick: activePackRuntime.getCurrentTick(),
-    strategy,
-    attributes,
-    world_pack: {
-      id: pack.metadata.id,
-      name: pack.metadata.name,
-      version: pack.metadata.version
-    },
-    world_prompts: pack.prompts ?? {},
-    world_ai: pack.ai ?? null,
-    visible_variables: flattenPromptVariableContextToVisibleVariables(variableContext) as VariablePool,
-    variable_context: variableContext,
-    policy_summary: policySummary,
-    transmission_profile: transmissionProfile,
-    context_run: contextResult.context_run,
-    memory_context: contextResult.memory_context,
-    pack_state: packState,
-    pack_runtime: packRuntime,
-    variable_context_summary: createPromptVariableContextSummary(variableContext)
-  };
 };

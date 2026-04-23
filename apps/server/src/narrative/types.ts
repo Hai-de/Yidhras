@@ -24,6 +24,7 @@ export type PromptVariableNamespace =
   | 'pack'
   | 'runtime'
   | 'actor'
+  | 'actor_state'
   | 'request'
   | `plugin.${string}`;
 

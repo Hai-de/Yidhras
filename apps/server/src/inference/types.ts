@@ -27,6 +27,7 @@ export type InferenceActionIntentStatus = 'pending' | 'dispatching' | 'completed
 export interface InferenceRequestInput {
   agent_id?: string;
   identity_id?: string;
+  actor_entity_id?: string;
   strategy?: string;
   attributes?: Record<string, unknown>;
   idempotency_key?: string;
@@ -79,6 +80,7 @@ export interface InferenceJobReplayInput {
     attributes?: Record<string, unknown>;
     agent_id?: string;
     identity_id?: string;
+    actor_entity_id?: string;
   };
 }
 
@@ -188,28 +190,54 @@ export interface InferencePackRuntimeContract {
   invocation_rules?: InferencePackInvocationRule[];
 }
 
-export interface InferenceContext {
-  inference_id: string;
+/**
+ * Subset of InferenceContext fields needed to resolve the acting identity/agent.
+ * Consumers: resolveActor(), intent_grounder, context_assembler, compaction_service.
+ */
+export interface ActorResolvable {
   actor_ref: InferenceActorRef;
   actor_display_name: string;
   identity: IdentityContext;
   binding_ref: InferenceBindingRef | null;
   resolved_agent_id: string | null;
   agent_snapshot: InferenceAgentSnapshot | null;
+}
+
+/**
+ * Subset of InferenceContext fields needed to resolve pack-level state and runtime contracts.
+ * Consumers: context_assembler, intent_grounder, rule_based provider.
+ */
+export interface PackStateResolvable {
+  pack_state: InferencePackStateSnapshot;
+  pack_runtime: InferencePackRuntimeContract;
+  world_pack: InferenceWorldPackRef;
+}
+
+/**
+ * Minimum context required to render a prompt bundle.
+ * Extends ActorResolvable + PackStateResolvable with prompt-specific fields.
+ * `context_run` and `memory_context` are nullable to support partial (non-inference) usage.
+ */
+export interface PromptResolvableContext extends ActorResolvable, PackStateResolvable {
   tick: bigint;
   strategy: InferenceStrategy;
   attributes: Record<string, unknown>;
-  world_pack: InferenceWorldPackRef;
   world_prompts: Record<string, string>;
-  world_ai?: WorldPackAiConfig | null;
-  visible_variables: VariablePool;
   variable_context: PromptVariableContext;
   variable_context_summary: PromptVariableContextSummary;
+  context_run: ContextRun | null;
+  memory_context: MemoryContextPack | null;
+}
+
+export interface InferenceContext extends PromptResolvableContext {
+  inference_id: string;
+  binding_ref: InferenceBindingRef | null;
+  world_ai?: WorldPackAiConfig | null;
+  visible_variables: VariablePool;
   policy_summary: InferencePolicySummary;
   transmission_profile: InferenceTransmissionProfile;
   context_run: ContextRun;
   memory_context: MemoryContextPack;
-  pack_state: InferencePackStateSnapshot;
   pack_runtime: InferencePackRuntimeContract;
 }
 

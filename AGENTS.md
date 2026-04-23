@@ -159,16 +159,47 @@ pnpm --filter yidhras-server plugin -- <command>
 Prefer linking over duplicating.
 
 - `README.md` — repository entry, startup, high-frequency commands.
-- `docs/INDEX.md` — doc navigation and source-of-truth rules.
+- `docs/INDEX.md` — doc navigation and layer descriptions.
 - `AGENTS.md` — this file.
 - `docs/API.md` — public API contracts and error codes.
 - `docs/ARCH.md` — architecture boundaries and module ownership.
+- `docs/ARCH_DIAGRAM.md` — system structure and call-flow diagrams.
 - `docs/LOGIC.md` — business rules and domain semantics.
 - `docs/WORLD_PACK.md` — world-pack packaging and release guidance.
 - `docs/ENHANCEMENTS.md` — redirect stub; actual backlog at `.limcode/enhancements-backlog.md`.
 - `docs/THEME.md` — frontend theme contract.
+- `docs/capabilities/PROMPT_WORKFLOW.md` — prompt workflow runtime details.
+- `docs/capabilities/AI_GATEWAY.md` — AI gateway and invocation observability.
+- `docs/capabilities/PLUGIN_RUNTIME.md` — pack-local plugin runtime and governance.
 - `docs/guides/COMMANDS.md` — full command matrix.
 - `docs/guides/DB_OPERATIONS.md` — DB migration, init, path changes.
 - `docs/guides/PLUGIN_OPERATIONS.md` — plugin governance operations.
 
 When behavior changes, update the most appropriate primary doc in the same change.
+
+### Source-of-truth rules
+
+1. **One primary source per topic.** Each topic has exactly one document that owns the definitive statement. Other documents only summarise and link, never copy large passages.
+
+2. **Entry docs link, reference docs state facts, process docs record changes.**
+   - Entry docs (`README.md`, `INDEX.md`) answer "where do I look?"
+   - Reference docs (`ARCH.md`, `LOGIC.md`, `API.md`, `capabilities/*`) answer "what is the stable truth?"
+   - Process docs (`.limcode/plans|design|review/`) answer "why did we change this and where are we in the change?"
+   - Historical archives (`.limcode/archive/`, `docs/history/`) answer "how did we get here?"
+
+3. **Separate state from facts.** Stable reference docs should not contain terms like "currently", "this phase", "to be migrated". Content that depends on such temporal framing belongs in `.limcode/` process assets.
+
+4. **Command docs maintained centrally.** High-density command references, CLI examples, and test matrices live in `docs/guides/`, not in `README.md`.
+
+### Governance conclusions (resolution order)
+
+When multiple docs disagree:
+
+1. Code and `packages/contracts` + `API.md` — interface contracts
+2. `ARCH_DIAGRAM.md` — system structure and call flows
+3. `ARCH.md` — architecture boundaries
+4. `LOGIC.md` — business semantics
+5. `capabilities/*` — subsystem-specific detail
+6. `guides/DB_OPERATIONS.md` — deployment and DB operations
+7. Latest `.limcode/review/` / `.limcode/plans/` / `.limcode/progress.md` — in-progress conclusions
+8. `docs/history/` — historical migration and archival records

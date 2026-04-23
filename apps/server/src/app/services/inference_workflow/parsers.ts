@@ -36,6 +36,7 @@ export interface ListInferenceJobsInput {
 const storedRequestInputSchema = z.object({
   agent_id: z.string().optional(),
   identity_id: z.string().optional(),
+  actor_entity_id: z.string().optional(),
   strategy: z.string().optional(),
   attributes: z.record(z.string(), z.unknown()).optional(),
   idempotency_key: z.string().optional()
@@ -48,7 +49,8 @@ const replayInputSchema = z.object({
     strategy: z.enum(['mock', 'rule_based', 'model_routed'] satisfies InferenceStrategy[]).optional(),
     attributes: z.record(z.string(), z.unknown()).optional(),
     agent_id: z.string().optional(),
-    identity_id: z.string().optional()
+    identity_id: z.string().optional(),
+    actor_entity_id: z.string().optional()
   }).optional()
 });
 
