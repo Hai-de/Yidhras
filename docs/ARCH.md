@@ -116,6 +116,33 @@
 - `apps/server/src/app/routes/*.ts`：transport-level routes，保持薄层
 - `apps/server/src/app/services/*.ts`：应用服务、聚合、read-model assembly
 
+### 3.1.1 Operator-Subject 权限中间件链
+
+请求经过以下中间件链，实现三层递进权限过滤：
+
+```
+HTTP Request
+  → CORS / JSON parse
+  → identityInjector（x-m2-identity → req.identity）
+  → operatorAuthMiddleware（Authorization: Bearer → JWT 验证 → req.operator）
+  → PackAccessGuard（L1: Operator↔Pack 绑定检查）
+  → CapabilityGuard（L2: Subject↔Capability 判定）
+  → EnforcementEngine（执行 mutation / invocation）
+  → PolicyFilter（L3: 字段级 ABAC）
+  → 响应
+```
+
+| 层级 | 中间件/模块 | 判定依据 |
+|------|------------|----------|
+| L1: Pack Access | `operator/guard/pack_access.ts` | `OperatorPackBinding` 显式绑定 |
+| L2: Capability | `app/middleware/capability.ts` | `OperatorGrant` + pack authority |
+| L3: Policy | `access_policy/` | `Policy` 字段级 allow/deny |
+
+关键约束：
+- root 操作员也必须有显式 `OperatorPackBinding` 才能访问 Pack，确保审计可追溯
+- 三层是递进过滤：L1 拒绝 → 403 直接返回，不查 L2/L3
+- Agent 自主行为通过 `resolveSubjectForAgentAction()` 解析控制 Operator 后再校验 capability
+
 ### 3.2 Runtime / scheduler 层
 
 - `apps/server/src/app/runtime/*.ts`

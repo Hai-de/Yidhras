@@ -15,6 +15,12 @@ import { registerGraphRoutes } from './app/routes/graph.js';
 import { registerIdentityRoutes } from './app/routes/identity.js';
 import { registerInferenceRoutes } from './app/routes/inference.js';
 import { registerNarrativeRoutes } from './app/routes/narrative.js';
+import { registerAgentBindingRoutes } from './app/routes/operator_agent_bindings.js';
+import { registerOperatorAuditRoutes } from './app/routes/operator_audit.js';
+import { registerOperatorAuthRoutes } from './app/routes/operator_auth.js';
+import { registerGrantRoutes } from './app/routes/operator_grants.js';
+import { registerPackBindingRoutes } from './app/routes/operator_pack_bindings.js';
+import { registerOperatorRoutes } from './app/routes/operators.js';
 import { registerOverviewRoutes } from './app/routes/overview.js';
 import { registerPluginRuntimeWebRoutes } from './app/routes/plugin_runtime_web.js';
 import { registerPluginRoutes } from './app/routes/plugins.js';
@@ -198,6 +204,24 @@ const registerRoutes: RouteRegistrar = (application, context) => {
     asyncHandler
   });
   registerSchedulerRoutes(application, context, {
+    asyncHandler
+  });
+  registerOperatorAuthRoutes(application, context, {
+    asyncHandler
+  });
+  registerOperatorRoutes(application, context, {
+    asyncHandler
+  });
+  registerPackBindingRoutes(application, context, {
+    asyncHandler
+  });
+  registerAgentBindingRoutes(application, context, {
+    asyncHandler
+  });
+  registerGrantRoutes(application, context, {
+    asyncHandler
+  });
+  registerOperatorAuditRoutes(application, context, {
     asyncHandler
   });
 };

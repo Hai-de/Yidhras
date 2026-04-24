@@ -19,5 +19,8 @@
     "prepare:runtime": "pnpm --filter yidhras-server prepare:runtime",
     "scaffold:world-pack": "pnpm --filter yidhras-server scaffold:world-pack",
     "smoke:server": "pnpm --filter yidhras-server smoke"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["bcrypt"]
   }
 }

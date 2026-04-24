@@ -181,6 +181,22 @@
 
 ---
 
+### 6. Operator-Subject 前端认证与管理界面
+
+- 状态：deferred
+- 优先级：medium
+- 范围：`apps/web/stores/operator.ts` / `apps/web/pages/login.vue` / `apps/web/composables/useOperatorGuard.ts` / `apps/web/lib/http/client.ts` / `apps/web/pages/admin/`
+- 来源：`.limcode/plans/operator-subject-unified-authority.plan.md` P5 阶段
+- 背景：
+  Operator-Subject 统一权限的后端 API 与中间件链已全面完成（P0–P4），前端认证与管理 UI 尚未实现。包括：
+  - **P5-1 前端认证层**：Pinia operator store（login/logout/session/refresh）、登录页面、路由守卫（未登录 redirect /login）、HTTP client Bearer 自动附带
+  - **P5-2 Pack 选择界面**：登录后显示已绑定 Pack 列表（调用 `/api/me/bindings`）、pack-scoped session、未绑定时提示申请加入
+  - **P5-3 管理界面**：`/admin/operators.vue`（root 可见 Operator 管理）、`/admin/audit.vue`（审计日志查看）
+- 延期原因：
+  当前阶段聚焦后端权限模型闭环与测试验证；前端界面适合在所有后端 endpoint 稳定、E2E 流程跑通后统一开发，避免前后端联调碎片化。
+
+---
+
 ## 二、后端
 
 ### 1. 可观测性与调试辅助增强

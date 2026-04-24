@@ -1,18 +1,18 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
-const NonEmptyStringSchema = z.string().trim().min(1);
+const NonEmptyStringSchema = z.string().trim().min(1)
 
 const AiModelsConfigPathSchema = z
   .string()
   .trim()
   .min(1)
-  .default('apps/server/config/ai_models.yaml');
+  .default('apps/server/config/ai_models.yaml')
 
-const PositiveIntSchema = z.number().int().positive();
-const NonNegativeIntSchema = z.number().int().min(0);
-const SqliteSynchronousSchema = z.enum(['OFF', 'NORMAL', 'FULL', 'EXTRA']);
+const PositiveIntSchema = z.number().int().positive()
+const NonNegativeIntSchema = z.number().int().min(0)
+const SqliteSynchronousSchema = z.enum(['OFF', 'NORMAL', 'FULL', 'EXTRA'])
 
-const MultiPackRuntimeStartModeSchema = z.enum(['manual', 'bootstrap_list']);
+const MultiPackRuntimeStartModeSchema = z.enum(['manual', 'bootstrap_list'])
 
 const ExperimentalMultiPackRuntimeSchema = z
   .object({
@@ -20,7 +20,7 @@ const ExperimentalMultiPackRuntimeSchema = z
     operator_api_enabled: z.boolean(),
     ui_enabled: z.boolean()
   })
-  .strict();
+  .strict()
 
 const RuntimeMultiPackSchema = z
   .object({
@@ -28,14 +28,14 @@ const RuntimeMultiPackSchema = z
     start_mode: MultiPackRuntimeStartModeSchema,
     bootstrap_packs: z.array(NonEmptyStringSchema)
   })
-  .strict();
+  .strict()
 
 const PromptWorkflowProfileDefaultsSchema = z
   .object({
     token_budget: PositiveIntSchema,
     section_policy: z.enum(['minimal', 'standard', 'expanded', 'include_only'])
   })
-  .strict();
+  .strict()
 
 const SchedulerSignalPolicySchema = z
   .object({
@@ -44,7 +44,7 @@ const SchedulerSignalPolicySchema = z
     coalesce_window_ticks: PositiveIntSchema,
     suppression_tier: z.enum(['high', 'low'])
   })
-  .strict();
+  .strict()
 
 const SidecarRuntimeSchema = z
   .object({
@@ -53,9 +53,9 @@ const SidecarRuntimeSchema = z
     binary_path: NonEmptyStringSchema,
     auto_restart: z.boolean()
   })
-  .strict();
+  .strict()
 
-const SchedulerDecisionKernelRuntimeSchema = SidecarRuntimeSchema;
+const SchedulerDecisionKernelRuntimeSchema = SidecarRuntimeSchema
 
 const WorldEngineRuntimeSchema = z
   .object({
@@ -63,7 +63,7 @@ const WorldEngineRuntimeSchema = z
     binary_path: NonEmptyStringSchema,
     auto_restart: z.boolean()
   })
-  .strict();
+  .strict()
 
 const MemoryTriggerEngineRuntimeSchema = z
   .object({
@@ -72,7 +72,7 @@ const MemoryTriggerEngineRuntimeSchema = z
     binary_path: NonEmptyStringSchema,
     auto_restart: z.boolean()
   })
-  .strict();
+  .strict()
 
 const SchedulerEntityConcurrencySchema = z
   .object({
@@ -82,7 +82,7 @@ const SchedulerEntityConcurrencySchema = z
     allow_parallel_action_per_entity: z.boolean(),
     event_followup_preempts_periodic: z.boolean()
   })
-  .strict();
+  .strict()
 
 const SchedulerTickBudgetSchema = z
   .object({
@@ -90,7 +90,7 @@ const SchedulerTickBudgetSchema = z
     max_executed_decisions_per_tick: PositiveIntSchema,
     max_dispatched_actions_per_tick: PositiveIntSchema
   })
-  .strict();
+  .strict()
 
 const SchedulerRunnerDefaultsSchema = z
   .object({
@@ -98,14 +98,14 @@ const SchedulerRunnerDefaultsSchema = z
     concurrency: PositiveIntSchema,
     lock_ticks: PositiveIntSchema
   })
-  .strict();
+  .strict()
 
 const SchedulerObservabilitySummarySchema = z
   .object({
     default_sample_runs: PositiveIntSchema,
     max_sample_runs: PositiveIntSchema
   })
-  .strict();
+  .strict()
 
 const SchedulerObservabilityOperatorProjectionSchema = z
   .object({
@@ -114,7 +114,7 @@ const SchedulerObservabilityOperatorProjectionSchema = z
     default_recent_limit: PositiveIntSchema,
     max_recent_limit: PositiveIntSchema
   })
-  .strict();
+  .strict()
 
 const SchedulerObservabilitySchema = z
   .object({
@@ -124,14 +124,35 @@ const SchedulerObservabilitySchema = z
     trends: SchedulerObservabilitySummarySchema,
     operator_projection: SchedulerObservabilityOperatorProjectionSchema
   })
-  .strict();
+  .strict()
 
 const SchedulerRecoverySuppressionSchema = z
   .object({
     suppress_periodic: z.boolean(),
     suppress_event_tiers: z.array(z.enum(['high', 'low']))
   })
-  .strict();
+  .strict()
+
+const OperatorAuthConfigSchema = z
+  .object({
+    jwt_secret: z.string().trim().min(16),
+    jwt_expires_in: z.string().trim().min(1),
+    bcrypt_rounds: z.number().int().min(4).max(16)
+  })
+  .strict()
+
+const OperatorRootConfigSchema = z
+  .object({
+    default_password: z.string().trim().min(8)
+  })
+  .strict()
+
+const OperatorConfigSchema = z
+  .object({
+    auth: OperatorAuthConfigSchema,
+    root: OperatorRootConfigSchema
+  })
+  .strict()
 
 export const RuntimeConfigSchema = z
   .object({
@@ -151,6 +172,7 @@ export const RuntimeConfigSchema = z
         ai_models_config: AiModelsConfigPathSchema
       })
       .strict(),
+    operator: OperatorConfigSchema,
     plugins: z
       .object({
         enable_warning: z
@@ -275,6 +297,6 @@ export const RuntimeConfigSchema = z
       })
       .strict()
   })
-  .strict();
+  .strict()
 
-export type RuntimeConfig = z.infer<typeof RuntimeConfigSchema>;
+export type RuntimeConfig = z.infer<typeof RuntimeConfigSchema>

@@ -3,9 +3,9 @@ import { createInitialMemoryRuntimeState } from './runtime_state.js';
 import { evaluateDeterministicTriggerRateGate } from './trigger_rate_gate.js';
 import type {
   MemoryActivationEvaluation,
-  MemoryBlockTriggerDiagnostics,
   MemoryBehavior,
   MemoryBlock,
+  MemoryBlockTriggerDiagnostics,
   MemoryEvaluationContext,
   MemoryKeywordTrigger,
   MemoryRecentSourceTrigger,

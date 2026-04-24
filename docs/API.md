@@ -22,6 +22,8 @@ multi-pack runtime 为 **experimental / default off / operator test-only**，架
 - experimental surfaces 需显式启用 `features.experimental.multi_pack_runtime.*`
 - experimental `/api/experimental/...` 路由只面向 operator / test-only，不承诺短期稳定 contract
 
+
+
 ## 1. 基础信息 (System)
 
 - **GET `/api/status`**
@@ -397,3 +399,63 @@ multi-pack runtime 为 **experimental / default off / operator test-only**，架
 - `EVENT_TYPE_UNSUPPORTED`
 - `WORLD_PACK_NOT_READY`
 - `PACK_ROUTE_ACTIVE_PACK_MISMATCH`
+- `OPERATOR_REQUIRED`
+- `PACK_ACCESS_DENIED`
+- `CAPABILITY_DENIED`
+- `ROOT_REQUIRED`
+- `INVALID_CREDENTIALS`
+- `OPERATOR_DISABLED`
+- `OPERATOR_NOT_FOUND`
+- `BINDING_NOT_FOUND`
+- `BINDING_ALREADY_EXISTS`
+- `GRANT_NOT_FOUND`
+- `GRANT_INVALID`
+- `USERNAME_TAKEN`
+- `SESSION_EXPIRED`
+- `TOKEN_INVALID`
+
+---
+
+## 14. Operator 认证与权限端点
+
+Operator-Subject 统一权限层通过 JWT Bearer Token 认证，所有 operator 端点遵循三层权限递进过滤：Pack Access (L1) → Capability (L2) → Policy (L3)。详见 `ARCH.md` §3.1.1 与 `LOGIC.md` §11。
+
+### 14.1 认证
+
+- **POST `/api/auth/login`** — 用户名+密码 → JWT token。body：`{ username, password, pack_id? }`
+- **POST `/api/auth/logout`** — 注销当前 session（鉴权：Bearer）
+- **GET `/api/auth/session`** — 返回当前 operator + identity 信息（鉴权：Bearer）
+- **POST `/api/auth/refresh`** — 签发新 token（鉴权：Bearer）
+
+### 14.2 Operator CRUD（root 限定）
+
+- **POST `/api/operators`** — 创建 Operator（同步创建 Identity type='user'）
+- **GET `/api/operators`** — Operator 列表
+- **GET `/api/operators/:id`** — Operator 详情（含 pack_bindings）
+- **PATCH `/api/operators/:id`** — 修改状态/密码
+- **DELETE `/api/operators/:id`** — 软删除（status='disabled'）
+
+### 14.3 Pack 绑定
+
+- **POST `/api/packs/:packId/bindings`** — 邀请加入 Pack。body：`{ operator_id, binding_type }`
+- **GET `/api/packs/:packId/bindings`** — 成员列表
+- **PATCH `/api/packs/:packId/bindings/:operatorId`** — 修改角色
+- **DELETE `/api/packs/:packId/bindings/:operatorId`** — 移除成员
+- **GET `/api/me/bindings`** — 当前 Operator 的 Pack 列表
+
+### 14.4 Agent 绑定
+
+- **POST `/api/agents/:agentId/bindings`** — 绑定到 Agent。底层复用 `IdentityNodeBinding`
+- **DELETE `/api/agents/:agentId/bindings/me`** — 解绑
+- **GET `/api/agents/:agentId/operators`** — 控制该 Agent 的 Operators
+
+### 14.5 能力委托
+
+- **POST `/api/packs/:packId/grants`** — 委托 capability（支持 TTL 和 revocable 约束）
+- **GET `/api/packs/:packId/grants`** — 列出当前 Operator 发出的 grants
+- **DELETE `/api/packs/:packId/grants/:grantId`** — 撤销委托（仅 grant owner）
+
+### 14.6 审计
+
+- **GET `/api/audit/logs`** — 审计日志（root 可见全部，支持分页和过滤）
+- **GET `/api/audit/logs/me`** — 当前 Operator 的审计日志

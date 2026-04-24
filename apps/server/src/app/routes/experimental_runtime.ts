@@ -1,29 +1,32 @@
-import type { Express, NextFunction, Request, Response } from 'express';
+import type { Express, NextFunction, Request, Response } from 'express'
 
-import { isExperimentalMultiPackOperatorApiEnabled } from '../../config/runtime_config.js';
-import { ApiError } from '../../utils/api_error.js';
-import type { AppContext } from '../context.js';
-import { jsonOk, toJsonSafe } from '../http/json.js';
-import { getPackRuntimeLookupPort } from '../services/app_context_ports.js';
+import { isExperimentalMultiPackOperatorApiEnabled } from '../../config/runtime_config.js'
+import { OPERATOR_CAPABILITY } from '../../operator/constants.js'
+import { packAccessGuard } from '../../operator/guard/pack_access.js'
+import { ApiError } from '../../utils/api_error.js'
+import type { AppContext } from '../context.js'
+import { jsonOk, toJsonSafe } from '../http/json.js'
+import { capabilityGuard } from '../middleware/capability.js'
+import { getPackRuntimeLookupPort } from '../services/app_context_ports.js'
 import {
   buildExperimentalPackRuntimeRegistrySnapshot,
   buildExperimentalSystemHealthSnapshot,
   getExperimentalPackRuntimeStatusSnapshot,
   loadExperimentalPackRuntime,
   unloadExperimentalPackRuntime
-} from '../services/experimental_multi_pack_runtime.js';
+} from '../services/experimental_multi_pack_runtime.js'
 import {
   getExperimentalPackSchedulerOperatorProjection,
   getExperimentalPackSchedulerOwnershipProjection,
   getExperimentalPackSchedulerSummaryProjection,
   getExperimentalPackSchedulerWorkersProjection
-} from '../services/experimental_scheduler_runtime.js';
-import { assertPackScope } from '../services/pack_scope_resolver.js';
+} from '../services/experimental_scheduler_runtime.js'
+import { assertPackScope } from '../services/pack_scope_resolver.js'
 
 export interface ExperimentalRuntimeRouteDependencies {
   asyncHandler(
     handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void;
+  ): (req: Request, res: Response, next: NextFunction) => void
 }
 
 const assertExperimentalOperatorApiEnabled = (context: AppContext): void => {
@@ -36,138 +39,154 @@ const assertExperimentalOperatorApiEnabled = (context: AppContext): void => {
         experimental_multi_pack_runtime_enabled: context.sim.isExperimentalMultiPackRuntimeEnabled(),
         operator_api_enabled: isExperimentalMultiPackOperatorApiEnabled()
       }
-    );
+    )
   }
-};
+}
 
 const resolvePackIdParam = (value: unknown): string => {
   if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new ApiError(400, 'EXPERIMENTAL_PACK_ID_INVALID', 'Experimental runtime pack id is required');
+    throw new ApiError(400, 'EXPERIMENTAL_PACK_ID_INVALID', 'Experimental runtime pack id is required')
   }
 
-  return value.trim();
-};
+  return value.trim()
+}
 
 const translateExperimentalLoadError = (packId: string, error: unknown): never => {
-  const message = error instanceof Error ? error.message : 'Failed to load experimental runtime pack';
+  const message = error instanceof Error ? error.message : 'Failed to load experimental runtime pack'
 
   if (message.includes('not found')) {
     throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', message, {
       pack_id: packId
-    });
+    })
   }
 
   if (message.includes('max loaded packs exceeded')) {
     throw new ApiError(409, 'EXPERIMENTAL_PACK_RUNTIME_CAPACITY_REACHED', message, {
       pack_id: packId
-    });
+    })
   }
 
   throw new ApiError(409, 'EXPERIMENTAL_PACK_RUNTIME_LOAD_FAILED', message, {
     pack_id: packId
-  });
-};
+  })
+}
 
 const translateExperimentalUnloadError = (packId: string, error: unknown): never => {
-  const message = error instanceof Error ? error.message : 'Failed to unload experimental runtime pack';
+  const message = error instanceof Error ? error.message : 'Failed to unload experimental runtime pack'
 
   if (message.includes('active pack runtime')) {
     throw new ApiError(409, 'EXPERIMENTAL_PACK_RUNTIME_ACTIVE_UNLOAD_FORBIDDEN', message, {
       pack_id: packId
-    });
+    })
   }
 
   throw new ApiError(409, 'EXPERIMENTAL_PACK_RUNTIME_UNLOAD_FAILED', message, {
     pack_id: packId
-  });
-};
+  })
+}
 
 const requireExperimentalPackHandle = (context: AppContext, packId: string) => {
-  assertPackScope(context, packId, 'experimental', 'experimental runtime pack handle');
+  assertPackScope(context, packId, 'experimental', 'experimental runtime pack handle')
   const summary = getPackRuntimeLookupPort({
     packRuntimeLookup: context.packRuntimeLookup,
     sim: context.sim
-  }).getPackRuntimeSummary(packId);
-  const handle = context.sim.getPackRuntimeHandle(packId);
+  }).getPackRuntimeSummary(packId)
+  const handle = context.sim.getPackRuntimeHandle(packId)
   if (!summary || !handle) {
     throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', 'Experimental runtime pack not found', {
       pack_id: packId
-    });
+    })
   }
 
-  return handle;
-};
+  return handle
+}
 
 export const registerExperimentalRuntimeRoutes = (
   app: Express,
   context: AppContext,
   deps: ExperimentalRuntimeRouteDependencies
 ): void => {
+  const packGuard = packAccessGuard(context, { packIdParam: 'packId' })
+  const controlGuard = capabilityGuard(context, OPERATOR_CAPABILITY.INVOKE_SCHEDULER_CONTROL, {
+    packIdParam: 'packId'
+  })
+  const observeGuard = capabilityGuard(context, OPERATOR_CAPABILITY.PERCEIVE_SCHEDULER_OBSERVABILITY, {
+    packIdParam: 'packId'
+  })
+
   app.get(
     '/api/experimental/runtime/system/health',
     deps.asyncHandler(async (_req, res) => {
-      assertExperimentalOperatorApiEnabled(context);
-      jsonOk(res, toJsonSafe(buildExperimentalSystemHealthSnapshot(context)));
+      assertExperimentalOperatorApiEnabled(context)
+      jsonOk(res, toJsonSafe(buildExperimentalSystemHealthSnapshot(context)))
     })
-  );
+  )
 
   app.get(
     '/api/experimental/runtime/packs',
     deps.asyncHandler(async (_req, res) => {
-      assertExperimentalOperatorApiEnabled(context);
+      assertExperimentalOperatorApiEnabled(context)
       jsonOk(
         res,
         toJsonSafe(await buildExperimentalPackRuntimeRegistrySnapshot(context))
-      );
+      )
     })
-  );
+  )
 
   app.post(
     '/api/experimental/runtime/packs/:packId/load',
+    packGuard,
+    controlGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context);
-      const packId = resolvePackIdParam(req.params.packId);
+      assertExperimentalOperatorApiEnabled(context)
+      const packId = resolvePackIdParam(req.params.packId)
 
       try {
-        const result = await loadExperimentalPackRuntime(context, packId);
-        jsonOk(res, toJsonSafe({ acknowledged: true, ...result, pack: result.handle }));
+        const result = await loadExperimentalPackRuntime(context, packId)
+        jsonOk(res, toJsonSafe({ acknowledged: true, ...result, pack: result.handle }))
       } catch (error) {
-        translateExperimentalLoadError(packId, error);
+        translateExperimentalLoadError(packId, error)
       }
     })
-  );
+  )
 
   app.post(
     '/api/experimental/runtime/packs/:packId/unload',
+    packGuard,
+    controlGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context);
-      const packId = resolvePackIdParam(req.params.packId);
+      assertExperimentalOperatorApiEnabled(context)
+      const packId = resolvePackIdParam(req.params.packId)
 
       try {
-        jsonOk(res, toJsonSafe(await unloadExperimentalPackRuntime(context, packId)));
+        jsonOk(res, toJsonSafe(await unloadExperimentalPackRuntime(context, packId)))
       } catch (error) {
-        translateExperimentalUnloadError(packId, error);
+        translateExperimentalUnloadError(packId, error)
       }
     })
-  );
+  )
 
   app.get(
     '/api/experimental/runtime/packs/:packId/status',
+    packGuard,
+    observeGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context);
-      const packId = resolvePackIdParam(req.params.packId);
-      const snapshot = await getExperimentalPackRuntimeStatusSnapshot(context, packId);
-      requireExperimentalPackHandle(context, packId);
-      jsonOk(res, toJsonSafe(snapshot));
+      assertExperimentalOperatorApiEnabled(context)
+      const packId = resolvePackIdParam(req.params.packId)
+      const snapshot = await getExperimentalPackRuntimeStatusSnapshot(context, packId)
+      requireExperimentalPackHandle(context, packId)
+      jsonOk(res, toJsonSafe(snapshot))
     })
-  );
+  )
 
   app.get(
     '/api/experimental/runtime/packs/:packId/clock',
+    packGuard,
+    observeGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context);
-      const packId = resolvePackIdParam(req.params.packId);
-      const handle = requireExperimentalPackHandle(context, packId);
+      assertExperimentalOperatorApiEnabled(context)
+      const packId = resolvePackIdParam(req.params.packId)
+      const handle = requireExperimentalPackHandle(context, packId)
       jsonOk(
         res,
         toJsonSafe({
@@ -175,47 +194,55 @@ export const registerExperimentalRuntimeRoutes = (
           clock: handle.getClockSnapshot(),
           runtime_speed: handle.getRuntimeSpeedSnapshot()
         })
-      );
+      )
     })
-  );
+  )
 
   app.get(
     '/api/experimental/runtime/packs/:packId/scheduler/summary',
+    packGuard,
+    observeGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context);
-      const packId = resolvePackIdParam(req.params.packId);
-      requireExperimentalPackHandle(context, packId);
-      jsonOk(res, toJsonSafe(await getExperimentalPackSchedulerSummaryProjection(context, packId)));
+      assertExperimentalOperatorApiEnabled(context)
+      const packId = resolvePackIdParam(req.params.packId)
+      requireExperimentalPackHandle(context, packId)
+      jsonOk(res, toJsonSafe(await getExperimentalPackSchedulerSummaryProjection(context, packId)))
     })
-  );
+  )
 
   app.get(
     '/api/experimental/runtime/packs/:packId/scheduler/ownership',
+    packGuard,
+    observeGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context);
-      const packId = resolvePackIdParam(req.params.packId);
-      requireExperimentalPackHandle(context, packId);
-      jsonOk(res, toJsonSafe(await getExperimentalPackSchedulerOwnershipProjection(context, packId)));
+      assertExperimentalOperatorApiEnabled(context)
+      const packId = resolvePackIdParam(req.params.packId)
+      requireExperimentalPackHandle(context, packId)
+      jsonOk(res, toJsonSafe(await getExperimentalPackSchedulerOwnershipProjection(context, packId)))
     })
-  );
+  )
 
   app.get(
     '/api/experimental/runtime/packs/:packId/scheduler/workers',
+    packGuard,
+    observeGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context);
-      const packId = resolvePackIdParam(req.params.packId);
-      requireExperimentalPackHandle(context, packId);
-      jsonOk(res, toJsonSafe(await getExperimentalPackSchedulerWorkersProjection(context, packId)));
+      assertExperimentalOperatorApiEnabled(context)
+      const packId = resolvePackIdParam(req.params.packId)
+      requireExperimentalPackHandle(context, packId)
+      jsonOk(res, toJsonSafe(await getExperimentalPackSchedulerWorkersProjection(context, packId)))
     })
-  );
+  )
 
   app.get(
     '/api/experimental/runtime/packs/:packId/scheduler/operator',
+    packGuard,
+    observeGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context);
-      const packId = resolvePackIdParam(req.params.packId);
-      requireExperimentalPackHandle(context, packId);
-      jsonOk(res, toJsonSafe(await getExperimentalPackSchedulerOperatorProjection(context, packId)));
+      assertExperimentalOperatorApiEnabled(context)
+      const packId = resolvePackIdParam(req.params.packId)
+      requireExperimentalPackHandle(context, packId)
+      jsonOk(res, toJsonSafe(await getExperimentalPackSchedulerOperatorProjection(context, packId)))
     })
-  );
+  )
 }

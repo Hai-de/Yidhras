@@ -2,8 +2,8 @@ import { buildAiTaskRequestFromInferenceContext } from '../../ai/task_prompt_bui
 import type { AiTaskService } from '../../ai/task_service.js';
 import { createAiTaskService } from '../../ai/task_service.js';
 import type { AppContext } from '../../app/context.js';
-import { isAiGatewayEnabled } from '../../config/runtime_config.js';
 import { getActivePackRuntimeFacade } from '../../app/services/app_context_ports.js';
+import { isAiGatewayEnabled } from '../../config/runtime_config.js';
 import { createContextOverlayStore } from '../../context/overlay/store.js';
 import { buildInferenceContext } from '../../inference/context_builder.js';
 import { createPrismaLongMemoryBlockStore } from '../blocks/store.js';

@@ -9,13 +9,15 @@ import {
   schedulerSummaryQuerySchema,
   schedulerTrendsQuerySchema,
   schedulerWorkersQuerySchema
-} from '@yidhras/contracts';
-import type { Express, NextFunction, Request, Response } from 'express';
+} from '@yidhras/contracts'
+import type { Express, NextFunction, Request, Response } from 'express'
 
-import type { AppContext } from '../context.js';
-import { jsonOk, toJsonSafe } from '../http/json.js';
-import { parseParams, parseQuery } from '../http/zod.js';
-import { createRuntimeKernelService } from '../runtime/runtime_kernel_service.js';
+import { OPERATOR_CAPABILITY } from '../../operator/constants.js'
+import type { AppContext } from '../context.js'
+import { jsonOk, toJsonSafe } from '../http/json.js'
+import { parseParams, parseQuery } from '../http/zod.js'
+import { capabilityGuard } from '../middleware/capability.js'
+import { createRuntimeKernelService } from '../runtime/runtime_kernel_service.js'
 import {
   getLatestSchedulerRunReadModel,
   getSchedulerRunReadModelById,
@@ -25,13 +27,18 @@ import {
   listSchedulerOwnershipMigrations,
   listSchedulerRebalanceRecommendations,
   listSchedulerRuns
-} from '../services/scheduler_observability.js';
+} from '../services/scheduler_observability.js'
 
 export interface SchedulerRouteDependencies {
   asyncHandler(
     handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void;
+  ): (req: Request, res: Response, next: NextFunction) => void
 }
+
+const observeGuard = (context: AppContext) =>
+  capabilityGuard(context, OPERATOR_CAPABILITY.PERCEIVE_SCHEDULER_OBSERVABILITY, {
+    packIdQuery: 'packId'
+  })
 
 export const registerSchedulerRoutes = (
   app: Express,
@@ -40,18 +47,20 @@ export const registerSchedulerRoutes = (
 ): void => {
   app.get(
     '/api/runtime/scheduler/runs/latest',
+    observeGuard(context),
     deps.asyncHandler(async (_req, res) => {
-      context.assertRuntimeReady('scheduler latest run');
-      const readModel = await getLatestSchedulerRunReadModel(context);
-      jsonOk(res, toJsonSafe(readModel));
+      context.assertRuntimeReady('scheduler latest run')
+      const readModel = await getLatestSchedulerRunReadModel(context)
+      jsonOk(res, toJsonSafe(readModel))
     })
-  );
+  )
 
   app.get(
     '/api/runtime/scheduler/runs',
+    observeGuard(context),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('scheduler runs list');
-      const query = parseQuery(schedulerRunsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
+      context.assertRuntimeReady('scheduler runs list')
+      const query = parseQuery(schedulerRunsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       const result = await listSchedulerRuns(context, {
         limit: query.limit,
         cursor: query.cursor,
@@ -59,7 +68,7 @@ export const registerSchedulerRoutes = (
         to_tick: query.to_tick,
         worker_id: query.worker_id,
         partition_id: query.partition_id
-      });
+      })
       jsonOk(
         res,
         toJsonSafe({
@@ -70,124 +79,133 @@ export const registerSchedulerRoutes = (
         {
           pagination: result.page_info
         }
-      );
+      )
     })
-  );
+  )
 
   app.get(
     '/api/runtime/scheduler/summary',
+    observeGuard(context),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('scheduler summary');
-      const query = parseQuery(schedulerSummaryQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
-      const runtimeKernel = createRuntimeKernelService(context);
+      context.assertRuntimeReady('scheduler summary')
+      const query = parseQuery(schedulerSummaryQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
+      const runtimeKernel = createRuntimeKernelService(context)
       const summary = await runtimeKernel.getSummary?.({
         sampleRuns: query.sample_runs
-      });
-      jsonOk(res, toJsonSafe(summary));
+      })
+      jsonOk(res, toJsonSafe(summary))
     })
-  );
+  )
 
   app.get(
     '/api/runtime/scheduler/trends',
+    observeGuard(context),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('scheduler trends');
-      const query = parseQuery(schedulerTrendsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
+      context.assertRuntimeReady('scheduler trends')
+      const query = parseQuery(schedulerTrendsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       const trends = await getSchedulerTrendsSnapshot(context, {
         sampleRuns: query.sample_runs
-      });
-      jsonOk(res, toJsonSafe(trends));
+      })
+      jsonOk(res, toJsonSafe(trends))
     })
-  );
+  )
 
   app.get(
     '/api/runtime/scheduler/operator',
+    observeGuard(context),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('scheduler operator projection');
-      const query = parseQuery(schedulerOperatorQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
-      const runtimeKernel = createRuntimeKernelService(context);
+      context.assertRuntimeReady('scheduler operator projection')
+      const query = parseQuery(schedulerOperatorQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
+      const runtimeKernel = createRuntimeKernelService(context)
       const projection = await runtimeKernel.getOperatorProjection?.({
         sampleRuns: query.sample_runs,
         recentLimit: query.recent_limit
-      });
-      jsonOk(res, toJsonSafe(projection));
+      })
+      jsonOk(res, toJsonSafe(projection))
     })
-  );
+  )
 
   app.get(
     '/api/runtime/scheduler/ownership',
+    observeGuard(context),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('scheduler ownership projection');
-      const query = parseQuery(schedulerOwnershipQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
-      const runtimeKernel = createRuntimeKernelService(context);
+      context.assertRuntimeReady('scheduler ownership projection')
+      const query = parseQuery(schedulerOwnershipQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
+      const runtimeKernel = createRuntimeKernelService(context)
       const result = await runtimeKernel.getOwnershipAssignments?.({
         worker_id: query.worker_id,
         partition_id: query.partition_id,
         status: query.status
-      });
-      jsonOk(res, toJsonSafe(result));
+      })
+      jsonOk(res, toJsonSafe(result))
     })
-  );
+  )
 
   app.get(
     '/api/runtime/scheduler/migrations',
+    observeGuard(context),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('scheduler ownership migrations');
-      const query = parseQuery(schedulerMigrationsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
+      context.assertRuntimeReady('scheduler ownership migrations')
+      const query = parseQuery(schedulerMigrationsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       const result = await listSchedulerOwnershipMigrations(context, {
         limit: query.limit,
         worker_id: query.worker_id,
         partition_id: query.partition_id,
         status: query.status
-      });
-      jsonOk(res, toJsonSafe(result));
+      })
+      jsonOk(res, toJsonSafe(result))
     })
-  );
+  )
 
   app.get(
     '/api/runtime/scheduler/workers',
+    observeGuard(context),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('scheduler worker runtime states');
-      const query = parseQuery(schedulerWorkersQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
-      const runtimeKernel = createRuntimeKernelService(context);
+      context.assertRuntimeReady('scheduler worker runtime states')
+      const query = parseQuery(schedulerWorkersQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
+      const runtimeKernel = createRuntimeKernelService(context)
       const result = await runtimeKernel.getWorkers?.({
         worker_id: query.worker_id,
         status: query.status
-      });
-      jsonOk(res, toJsonSafe(result));
+      })
+      jsonOk(res, toJsonSafe(result))
     })
-  );
+  )
 
   app.get(
     '/api/runtime/scheduler/rebalance/recommendations',
+    observeGuard(context),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('scheduler rebalance recommendations');
-      const query = parseQuery(schedulerRebalanceRecommendationsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
+      context.assertRuntimeReady('scheduler rebalance recommendations')
+      const query = parseQuery(schedulerRebalanceRecommendationsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       const result = await listSchedulerRebalanceRecommendations(context, {
         limit: query.limit,
         worker_id: query.worker_id,
         partition_id: query.partition_id,
         status: query.status,
         suppress_reason: query.suppress_reason
-      });
-      jsonOk(res, toJsonSafe(result));
+      })
+      jsonOk(res, toJsonSafe(result))
     })
-  );
+  )
 
   app.get(
     '/api/runtime/scheduler/runs/:id',
+    observeGuard(context),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('scheduler run read');
-      const params = parseParams(schedulerRunIdParamsSchema, req.params, 'SCHEDULER_QUERY_INVALID');
-      const readModel = await getSchedulerRunReadModelById(context, params.id);
-      jsonOk(res, toJsonSafe(readModel));
+      context.assertRuntimeReady('scheduler run read')
+      const params = parseParams(schedulerRunIdParamsSchema, req.params, 'SCHEDULER_QUERY_INVALID')
+      const readModel = await getSchedulerRunReadModelById(context, params.id)
+      jsonOk(res, toJsonSafe(readModel))
     })
-  );
+  )
 
   app.get(
     '/api/runtime/scheduler/decisions',
+    observeGuard(context),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('scheduler decisions list');
-      const query = parseQuery(schedulerDecisionsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID');
+      context.assertRuntimeReady('scheduler decisions list')
+      const query = parseQuery(schedulerDecisionsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       const result = await listSchedulerDecisions(context, {
         limit: query.limit,
         cursor: query.cursor,
@@ -198,7 +216,7 @@ export const registerSchedulerRoutes = (
         from_tick: query.from_tick,
         to_tick: query.to_tick,
         partition_id: query.partition_id
-      });
+      })
       jsonOk(
         res,
         toJsonSafe({
@@ -209,16 +227,20 @@ export const registerSchedulerRoutes = (
         {
           pagination: result.page_info
         }
-      );
+      )
     })
-  );
+  )
 
   app.get(
     '/api/agent/:id/scheduler',
+    capabilityGuard(context, OPERATOR_CAPABILITY.PERCEIVE_AGENT_SCHEDULER, {
+      packIdQuery: 'packId',
+      targetAgentIdParam: 'id'
+    }),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('agent scheduler decisions');
-      const decisions = await listAgentSchedulerDecisions(context, req.params.id);
-      jsonOk(res, toJsonSafe(decisions));
+      context.assertRuntimeReady('agent scheduler decisions')
+      const decisions = await listAgentSchedulerDecisions(context, req.params.id)
+      jsonOk(res, toJsonSafe(decisions))
     })
-  );
-};
+  )
+}

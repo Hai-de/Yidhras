@@ -246,7 +246,43 @@ Memory Block Runtime 当前形成最小闭环：
 4. overlay / memory block 属于工作层语义，不替代世界客观状态
 5. canonical pack/entity read surfaces 已形成
 
-## 11. 相关文档
+## 11. Operator-Subject 权限语义
+
+Operator-Subject 统一权限模型将人类操作员作为一等 subject 融入现有 capability/authority 体系。
+
+### 11.1 Pack Access (L1)
+
+Operator 必须通过 `OperatorPackBinding` 显式绑定到 Pack 才能访问其资源。root 操作员不自动拥有所有 Pack 访问权 — 必须有显式绑定记录以确保审计可追溯。
+
+### 11.2 Subject 解析
+
+Operator 操作 Agent 时，系统通过 `resolveSubjectForOperator()` 解析为对应 subject entity：
+
+1. 显式指定 `targetAgentId` → 检查 Operator 是否绑定该 Agent
+2. 若未指定 → 使用 Operator 在该 Pack 中的默认 Agent 绑定
+3. 无任何绑定 → 回退到 Operator 自身的 `identity_id`
+
+Agent 自主行为时，通过 `resolveSubjectForAgentAction()` 查找控制 Operator：若存在 type='user' 的 IdentityNodeBinding → 以 Operator identity 校验 capability；否则以 agent 自身为 subject（纯 NPC）。
+
+### 11.3 OperatorGrant 临时委托
+
+Operator 可将 capability 临时委托给其他 identity（Operator 或 Agent），支持：
+- TTL（`expires_at`）：委托过期后自动失效
+- 不可转授（`revocable`）：默认 true，委托不可被接收方再次转授
+- 作用域（`scope_json`）：限制委托的 target entity 范围
+
+### 11.4 Agent 自主行为权限
+
+Agent 自主产生的 ActionIntent 不再自动视为 root：
+- Scheduler 驱动 Agent 产生 ActionIntent 时，`invocation_dispatcher` 调用 `resolveSubjectForAgentAction` 解析 subject
+- 若 Agent 有控制 Operator → 以 Operator identity 校验 capability
+- 若为纯 NPC → 以 agent 自身为 subject
+- Capability 拒绝时 ActionIntent 状态变为 `dropped`，记录 `drop_reason='CAPABILITY_DENIED'`
+- 同一 tick 内同一 agent 的 subject 解析结果被缓存，避免重复查询 `IdentityNodeBinding`
+
+---
+
+## 12. 相关文档
 
 - 系统边界：`ARCH.md`
 - 公共接口：`API.md`

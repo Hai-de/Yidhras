@@ -5,19 +5,21 @@ import {
   entityIdParamsSchema,
   entityOverviewDataSchema,
   entityOverviewQuerySchema
-} from '@yidhras/contracts';
-import type { Express, NextFunction, Request, Response } from 'express';
+} from '@yidhras/contracts'
+import type { Express, NextFunction, Request, Response } from 'express'
 
-import type { AppContext } from '../context.js';
-import { jsonOk, toJsonSafe } from '../http/json.js';
-import { parseParams, parseQuery } from '../http/zod.js';
-import { getAgentContextSnapshot, getEntityOverview, listSnrAdjustmentLogs } from '../services/agent.js';
-import { getAgentSchedulerProjection } from '../services/scheduler_observability.js';
+import { OPERATOR_CAPABILITY } from '../../operator/constants.js'
+import type { AppContext } from '../context.js'
+import { jsonOk, toJsonSafe } from '../http/json.js'
+import { parseParams, parseQuery } from '../http/zod.js'
+import { capabilityGuard } from '../middleware/capability.js'
+import { getAgentContextSnapshot, getEntityOverview, listSnrAdjustmentLogs } from '../services/agent.js'
+import { getAgentSchedulerProjection } from '../services/scheduler_observability.js'
 
 export interface AgentRouteDependencies {
   asyncHandler(
     handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void;
+  ): (req: Request, res: Response, next: NextFunction) => void
 }
 
 export const registerAgentRoutes = (
@@ -29,66 +31,82 @@ export const registerAgentRoutes = (
     req: Request,
     res: Response,
     options: {
-      runtimeFeature: string;
+      runtimeFeature: string
     }
   ): Promise<void> => {
-    context.assertRuntimeReady(options.runtimeFeature);
-    const params = parseParams(entityIdParamsSchema, req.params, 'AGENT_QUERY_INVALID');
-    const query = parseQuery(entityOverviewQuerySchema, req.query, 'AGENT_QUERY_INVALID');
+    context.assertRuntimeReady(options.runtimeFeature)
+    const params = parseParams(entityIdParamsSchema, req.params, 'AGENT_QUERY_INVALID')
+    const query = parseQuery(entityOverviewQuerySchema, req.query, 'AGENT_QUERY_INVALID')
     const overview = await getEntityOverview(context, params.id, {
       limit: query.limit
-    });
-    entityOverviewDataSchema.parse(overview);
+    })
+    entityOverviewDataSchema.parse(overview)
 
-    jsonOk(res, toJsonSafe(overview));
-  };
+    jsonOk(res, toJsonSafe(overview))
+  }
 
   app.get(
     '/api/agent/:id/context',
+    capabilityGuard(context, OPERATOR_CAPABILITY.PERCEIVE_AGENT_CONTEXT, {
+      packIdQuery: 'packId',
+      targetAgentIdParam: 'id'
+    }),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('agent context');
-      const params = parseParams(agentIdParamsSchema, req.params, 'AGENT_QUERY_INVALID');
-      const snapshot = await getAgentContextSnapshot(context, params.id);
+      context.assertRuntimeReady('agent context')
+      const params = parseParams(agentIdParamsSchema, req.params, 'AGENT_QUERY_INVALID')
+      const snapshot = await getAgentContextSnapshot(context, params.id)
 
-      jsonOk(res, toJsonSafe(snapshot));
+      jsonOk(res, toJsonSafe(snapshot))
     })
-  );
+  )
 
   app.get(
     '/api/entities/:id/overview',
+    capabilityGuard(context, OPERATOR_CAPABILITY.PERCEIVE_ENTITY_OVERVIEW, {
+      packIdQuery: 'packId',
+      targetAgentIdParam: 'id'
+    }),
     deps.asyncHandler(async (req, res) => {
       await sendEntityOverview(req, res, {
         runtimeFeature: 'entity overview'
-      });
+      })
     })
-  );
+  )
 
   app.get(
     '/api/agent/:id/scheduler/projection',
+    capabilityGuard(context, OPERATOR_CAPABILITY.PERCEIVE_AGENT_SCHEDULER, {
+      packIdQuery: 'packId',
+      targetAgentIdParam: 'id'
+    }),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('agent scheduler projection');
-      const params = parseParams(agentIdParamsSchema, req.params, 'AGENT_QUERY_INVALID');
-      const query = parseQuery(agentSchedulerProjectionQuerySchema, req.query, 'AGENT_QUERY_INVALID');
+      context.assertRuntimeReady('agent scheduler projection')
+      const params = parseParams(agentIdParamsSchema, req.params, 'AGENT_QUERY_INVALID')
+      const query = parseQuery(agentSchedulerProjectionQuerySchema, req.query, 'AGENT_QUERY_INVALID')
       const projection = await getAgentSchedulerProjection(context, params.id, {
         limit: query.limit
-      });
+      })
 
-      jsonOk(res, toJsonSafe(projection));
+      jsonOk(res, toJsonSafe(projection))
     })
-  );
+  )
 
   app.get(
     '/api/agent/:id/snr/logs',
+    capabilityGuard(context, OPERATOR_CAPABILITY.PERCEIVE_AGENT_LOGS, {
+      packIdQuery: 'packId',
+      targetAgentIdParam: 'id'
+    }),
     deps.asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('agent snr adjustment logs');
-      const params = parseParams(agentIdParamsSchema, req.params, 'SNR_LOG_QUERY_INVALID');
-      const query = parseQuery(agentSnrLogsQuerySchema, req.query, 'SNR_LOG_QUERY_INVALID');
+      context.assertRuntimeReady('agent snr adjustment logs')
+      const params = parseParams(agentIdParamsSchema, req.params, 'SNR_LOG_QUERY_INVALID')
+      const query = parseQuery(agentSnrLogsQuerySchema, req.query, 'SNR_LOG_QUERY_INVALID')
       const logs = await listSnrAdjustmentLogs(context, {
         agent_id: params.id,
         limit: query.limit
-      });
+      })
 
-      jsonOk(res, toJsonSafe(logs));
+      jsonOk(res, toJsonSafe(logs))
     })
-  );
-};
+  )
+}

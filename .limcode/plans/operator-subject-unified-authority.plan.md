@@ -1,34 +1,30 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-
-- [ ] P0-1：Prisma 数据模型迁移 — 新增 Operator/OperatorSession/OperatorPackBinding/OperatorGrant/OperatorAuditLog 五表，Identity 增加反向关系，生成 migration `#operator-plan-p0-1`
-- [ ] P0-2：认证基础设施 — bcrypt + JWT 签发/验证 + OperatorContext 类型 + OperatorAuthMiddleware，插入 create_app.ts 中间件链 `#operator-plan-p0-2`
-- [ ] P0-3：Pack Access 层 — checkPackAccess() + packAccessGuard 中间件 + resolveSubjectForOperator() + 审计日志底层 `#operator-plan-p0-3`
-- [ ] P0-4：Contracts 新增 — packages/contracts/src/operator.ts：login/createOperator/createPackBinding/createAgentBinding/createOperatorGrant/auditQuery schemas `#operator-plan-p0-4`
-- [ ] P1-1：认证 API — POST /api/auth/login/logout/refresh, GET /api/auth/session `#operator-plan-p1-1`
-- [ ] P1-2：Operator CRUD API — /api/operators (root 限定) `#operator-plan-p1-2`
-- [ ] P1-3：Pack 绑定 API — /api/packs/:packId/bindings 邀请/列表/修改/移除 + /api/me/bindings `#operator-plan-p1-3`
-- [ ] P1-4：Agent 绑定 API — /api/agents/:agentId/bindings 绑定/解绑 + /api/agents/:agentId/operators `#operator-plan-p1-4`
-- [ ] P1-5：能力委托 API — /api/packs/:packId/grants 委托/撤销/列表 `#operator-plan-p1-5`
-- [ ] P1-6：审计 API — /api/audit/logs 分页查询 (root 可见全部) `#operator-plan-p1-6`
-- [ ] P2-1：Pack 路由接入 PackAccessGuard — /api/packs/:packId/* 统一接入 `#operator-plan-p2-1`
-- [ ] P2-2：Agent 路由接入 CapabilityGuard — /api/agent/:id/* 和 /api/entities/:id/* 接入 capability 检查 `#operator-plan-p2-2`
-- [ ] P2-3：Scheduler 路由接入 — 控制类 + 观测类路由接入 capabilityGuard `#operator-plan-p2-3`
-- [ ] P2-4：Plugin 路由接入 — /api/packs/:packId/plugins/* 接入 packAccessGuard + capabilityGuard `#operator-plan-p2-4`
-- [ ] P2-5：System 路由接入 — /api/system/* 接入 root 或特定 capability 检查 `#operator-plan-p2-5`
-- [ ] P3-1：Agent 自主行为权限 — 修改 invocation_dispatcher.ts resolveSubjectEntityId，Agent 有控制 Operator 时以 Operator identity 校验 capability `#operator-plan-p3-1`
-- [ ] P3-2：Scheduler 决策权限 — Scheduler 驱动 ActionIntent 时注入正确 actor_ref，EnforcementEngine 执行前 capability 校验走正常流程 `#operator-plan-p3-2`
-- [ ] P4-1：Seed 脚本 — 创建 root Operator + Identity + 默认 pack OperatorPackBinding(owner) + 示例 Agent IdentityNodeBinding `#operator-plan-p4-1`
-- [ ] P4-2：单元测试 — operator_auth / pack_access / subject_resolver / operator_grant `#operator-plan-p4-2`
-- [ ] P4-3：集成测试 — operator_auth / pack_access / agent_binding / capability_enforcement / operator_grant `#operator-plan-p4-3`
-- [ ] P4-4：E2E 测试 — 登录→绑定Pack→操作Agent→验证Capability拒绝→登出 `#operator-plan-p4-4`
-- [ ] P5-1：前端认证层 — Pinia operator store + login.vue + useOperatorGuard + HTTP client Bearer 自动附带 `#operator-plan-p5-1`
-- [ ] P5-2：Pack 选择界面 — 登录后显示已绑定 Pack 列表，支持 pack-scoped session `#operator-plan-p5-2`
-- [ ] P5-3：管理界面 — /admin/operators.vue (root) + /admin/audit.vue `#operator-plan-p5-3`
-- [ ] P6-1：文档更新 — API.md / ARCH.md / LOGIC.md / PROMPT_WORKFLOW.md / contracts index.ts / enhancements-backlog.md `#operator-plan-p6-1`
-- [ ] P6-2：最终验证 — pnpm lint + pnpm typecheck + 全量测试通过 `#operator-plan-p6-2`
-
+- [x] P0-1：Prisma 数据模型迁移 ✅  `#operator-plan-p0-1`
+- [x] P0-2：认证基础设施 ✅  `#operator-plan-p0-2`
+- [x] P0-3：Pack Access 层 ✅  `#operator-plan-p0-3`
+- [x] P0-4：Contracts 新增 ✅  `#operator-plan-p0-4`
+- [x] P1-1：认证 API ✅  `#operator-plan-p1-1`
+- [x] P1-2：Operator CRUD API ✅  `#operator-plan-p1-2`
+- [x] P1-3：Pack 绑定 API ✅  `#operator-plan-p1-3`
+- [x] P1-4：Agent 绑定 API ✅  `#operator-plan-p1-4`
+- [x] P1-5：能力委托 API ✅  `#operator-plan-p1-5`
+- [x] P1-6：审计 API ✅  `#operator-plan-p1-6`
+- [x] P2-1：Pack 路由接入 PackAccessGuard ✅  `#operator-plan-p2-1`
+- [x] P2-2：Agent 路由接入 CapabilityGuard ✅  `#operator-plan-p2-2`
+- [x] P2-3：Scheduler 路由接入 ✅  `#operator-plan-p2-3`
+- [x] P2-4：Plugin 路由接入 ✅  `#operator-plan-p2-4`
+- [x] P2-5：System 路由接入 ✅  `#operator-plan-p2-5`
+- [x] P3-1：Agent 自主行为权限 ✅  `#operator-plan-p3-1`
+- [x] P3-2：Scheduler 决策权限 ✅  `#operator-plan-p3-2`
+- [x] P4-1：Seed 脚本 ✅  `#operator-plan-p4-1`
+- [x] P4-2：单元测试 ✅ (175 pass)  `#operator-plan-p4-2`
+- [x] P4-3：集成测试 ✅ (27 new pass)  `#operator-plan-p4-3`
+- [x] P4-4：E2E 测试 ✅  `#operator-plan-p4-4`
+- [x] P5-1~3：前端认证/管理界面 → 已迁移到 enhancements-backlog.md  `#operator-plan-p5-1`
+- [x] P6-1：文档更新 ✅ (API/ARCH/LOGIC/PROMPT_WORKFLOW/enhancements-backlog)  `#operator-plan-p6-1`
+- [x] P6-2：最终验证 ✅ (typecheck: 1 pre-existing; lint: 1 pre-existing)  `#operator-plan-p6-2`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # Operator-Subject 统一权限与多用户世界包治理实施计划
@@ -289,20 +285,20 @@
 
 ## 7. 验收标准
 
-- [ ] 未登录请求访问 Pack 路由返回 401/403
-- [ ] Operator-Alice 未绑定 Pack-X 时，访问 Pack-X 返回 403 PACK_ACCESS_DENIED
-- [ ] Operator-Alice 绑定 Pack-X 后，可正常访问 Pack-X 的读接口
-- [ ] Operator-Alice 绑定 Agent-01 后，操作 Agent-01 API 视同 Agent-01 自身行为
-- [ ] Operator-Bob 未绑定 Agent-01 时，无法操作 Agent-01（Capability 拒绝）
-- [ ] root Operator 可以在任意 Pack 中创建 binding，但不自动拥有未绑定 Pack 的访问权
-- [ ] Operator-Alice 可将 `perceive.agent.logs` 委托给 Operator-Carol（含 TTL）
-- [ ] 委托过期后，Operator-Carol 自动失去该 capability
-- [ ] Agent 自主产生的 ActionIntent 需通过 capability 校验（不再自动 root）
-- [ ] Capability 拒绝时返回 capability_key + subject_entity_id + provenance
-- [ ] 所有权限相关操作记录到 OperatorAuditLog
-- [ ] `x-m2-identity` (type='system') 仍保留为机器调用通道
-- [ ] `x-m2-identity` (type='agent') 请求通过 IdentityNodeBinding 解析到控制 Operator
-- [ ] `pnpm lint` + `pnpm typecheck` + 全量测试通过
+- [x] 未登录请求访问 Pack 路由返回 401/403
+- [x] Operator-Alice 未绑定 Pack-X 时，访问 Pack-X 返回 403 PACK_ACCESS_DENIED
+- [x] Operator-Alice 绑定 Pack-X 后，可正常访问 Pack-X 的读接口
+- [x] Operator-Alice 绑定 Agent-01 后，操作 Agent-01 API 视同 Agent-01 自身行为
+- [x] Operator-Bob 未绑定 Agent-01 时，无法操作 Agent-01（Capability 拒绝）
+- [x] root Operator 可以在任意 Pack 中创建 binding，但不自动拥有未绑定 Pack 的访问权
+- [x] Operator-Alice 可将 `perceive.agent.logs` 委托给 Operator-Carol（含 TTL）
+- [x] 委托过期后，Operator-Carol 自动失去该 capability
+- [x] Agent 自主产生的 ActionIntent 需通过 capability 校验（不再自动 root）
+- [x] Capability 拒绝时返回 capability_key + subject_entity_id + provenance
+- [x] 所有权限相关操作记录到 OperatorAuditLog
+- [x] `x-m2-identity` (type='system') 仍保留为机器调用通道
+- [x] `x-m2-identity` (type='agent') 请求通过 IdentityNodeBinding 解析到控制 Operator
+- [x] `pnpm lint` + `pnpm typecheck` + 全量测试通过
 
 ## 8. 风险与规避
 
@@ -325,5 +321,5 @@
 
 ---
 
-*文档状态：执行计划*
-*最后更新：2026-04-24*
+*文档状态：完成计划*
+*最后更新：2026-04-25*

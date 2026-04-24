@@ -191,6 +191,8 @@ model Identity {
 
   policies   Policy[]
   bindings   IdentityNodeBinding[]
+
+  operator    Operator?
 }
 
 model IdentityNodeBinding {
@@ -670,4 +672,86 @@ model SchedulerRebalanceRecommendation {
 
   @@index([status, created_at])
   @@index([partition_id, created_at])
+}
+
+// --- Operator Layer ---
+
+model Operator {
+  id            String   @id @default(uuid())
+  identity_id   String   @unique
+  username      String   @unique
+  password_hash String
+  is_root       Boolean  @default(false)
+  status        String   @default("active") // active | disabled | suspended
+  display_name  String?
+  created_at    BigInt
+  updated_at    BigInt
+
+  identity      Identity            @relation(fields: [identity_id], references: [id])
+  sessions      OperatorSession[]
+  pack_bindings OperatorPackBinding[]
+  grants_given  OperatorGrant[]     @relation("GrantGiver")
+  audit_logs    OperatorAuditLog[]
+}
+
+model OperatorSession {
+  id          String  @id @default(uuid())
+  operator_id String
+  token_hash  String  // SHA-256(JWT)，用于注销时定位
+  pack_id     String? // nullable = global session；有值 = pack-scoped session
+  expires_at  BigInt
+  created_at  BigInt
+
+  operator    Operator @relation(fields: [operator_id], references: [id])
+
+  @@index([operator_id, expires_at])
+  @@index([token_hash])
+}
+
+model OperatorPackBinding {
+  id           String  @id @default(uuid())
+  operator_id  String
+  pack_id      String
+  binding_type String  @default("member") // owner | admin | member | spectator
+  bound_at     BigInt
+  bound_by     String? // 邀请者 operator_id
+  created_at   BigInt
+
+  operator     Operator @relation(fields: [operator_id], references: [id])
+
+  @@unique([operator_id, pack_id])
+  @@index([pack_id, binding_type])
+}
+
+model OperatorGrant {
+  id                    String  @id @default(uuid())
+  giver_operator_id     String
+  receiver_identity_id  String  // Identity.id（可以是另一个 Operator，也可以是 Agent）
+  pack_id               String
+  capability_key        String
+  scope_json            Json?   // 约束：如 { "target_entity_ids": ["e1", "e2"] }
+  revocable             Boolean @default(true)
+  expires_at            BigInt?
+  created_at            BigInt
+
+  giver                 Operator @relation("GrantGiver", fields: [giver_operator_id], references: [id])
+
+  @@index([receiver_identity_id, pack_id])
+  @@index([giver_operator_id, pack_id])
+}
+
+model OperatorAuditLog {
+  id          String  @id @default(uuid())
+  operator_id String?
+  pack_id     String?
+  action      String  // login | logout | bind_pack | unbind_pack | grant_capability | revoke_grant | capability_denied | pack_access_denied
+  target_id   String? // 被操作对象 id
+  detail_json Json?   // 上下文快照
+  client_ip   String?
+  created_at  BigInt
+
+  operator    Operator? @relation(fields: [operator_id], references: [id])
+
+  @@index([operator_id, created_at])
+  @@index([pack_id, action, created_at])
 }
