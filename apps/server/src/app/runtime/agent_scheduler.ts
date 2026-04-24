@@ -209,12 +209,8 @@ const aggregatePartitionRunResults = (results: PartitionSchedulerRunResult[]): A
     decision_kernel_provider: results[0]?.decision_kernel_provider,
     decision_kernel_fallback: results.some(result => result.decision_kernel_fallback === true),
     decision_kernel_fallback_reason: results.find(result => typeof result.decision_kernel_fallback_reason === 'string')?.decision_kernel_fallback_reason ?? null,
-    decision_kernel_parity_status: results.some(result => result.decision_kernel_parity_status === 'diff')
-      ? 'diff'
-      : results.some(result => result.decision_kernel_parity_status === 'match')
-        ? 'match'
-        : 'skipped',
-    decision_kernel_parity_diff_count: results.reduce((sum, result) => sum + (result.decision_kernel_parity_diff_count ?? 0), 0),
+    decision_kernel_parity_status: 'skipped' as const,
+    decision_kernel_parity_diff_count: 0 as const,
     scheduler_run_id: schedulerRunIds[0],
     scheduler_run_ids: schedulerRunIds,
     partition_ids: partitionIds
@@ -453,7 +449,6 @@ const runAgentSchedulerForPartition = async ({
 
   const kernelConfig = getSchedulerDecisionKernelConfig();
   const schedulerKernel = createSchedulerDecisionKernelProvider({
-    mode: kernelConfig.mode,
     timeoutMs: kernelConfig.timeout_ms,
     binaryPath: kernelConfig.binary_path,
     autoRestart: kernelConfig.auto_restart

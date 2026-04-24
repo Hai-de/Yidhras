@@ -670,6 +670,19 @@ bootstrap:
 - `packId` 不匹配时显式返回 `PACK_ROUTE_ACTIVE_PACK_MISMATCH`
 - objective enforcement / trigger_event 已补齐 `Event.impact_data.pack_id` 等 bridge metadata
 
+#### E. Pack Actor / Inference 主体桥接（2026-04-23 完成）
+
+已完成 pack actor 与宿主 inference identity/agent/binding 体系的正式桥接：
+
+- `materializeActorBridges()` 为每个 `entities.actors[]` 自动创建 namespaced Agent（`${packId}:${actor.id}`）、默认 Identity 与 Binding；若 `pack.identities[]` 中存在匹配的 `subject_entity_id`，则额外创建命名 Identity 与 Binding
+- `resolveActor()` 新增 Priority 3 分支，支持通过 `actor_entity_id + packId` 自动桥接为 `${packId}:${actor_entity_id}` 的 agent ID
+- `buildPackStateSnapshot()` 支持从 bridged agent ID 反向剥离 pack prefix，正确匹配 pack-local entity state
+- `operator_contracts.ts` 改为使用 `actor_entity_id` 而非 raw `agent_id` 传入 inference 上下文
+- schema 增加 cross-validation：`identities[].subject_entity_id` 必须引用有效的 `entities.actors[].id`
+- `InferenceActorRef` 新增 `entity_kind` 字段，保留 pack 声明的 actor kind（如 `persona`、`relay`）
+
+这意味着 pack 作者声明的 actor 现在可以自然成为 inference 当前主体，其 `actor_state` 可稳定进入 role prompt。
+
 ### 11.2 当前仍值得继续推进的长期问题
 
 1. `SimulationManager` 是否继续拆分为更清晰的 runtime bootstrapper / runtime facade / pack instance boundary？

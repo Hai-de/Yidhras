@@ -151,61 +151,8 @@ const buildCandidate = (): MemoryBlockRecord => {
 };
 
 describe('memory trigger engine provider', () => {
-  it('uses TS provider mode and records deterministic trigger_rate gate diagnostics', async () => {
+  it('falls back to TS with deprecation warning when rust_primary sidecar is unavailable', async () => {
     const provider = createMemoryTriggerEngineProvider({
-      mode: 'ts',
-      timeoutMs: 100,
-      binaryPath: '',
-      autoRestart: true
-    });
-
-    const result = await provider.evaluateWithMetadata(buildMemoryTriggerSourceEvaluateInput({
-      evaluation_context: buildContext(),
-      candidates: [buildCandidate()]
-    }));
-
-    expect(result.metadata).toEqual({
-      provider: 'ts',
-      fallback: false,
-      fallback_reason: null,
-      parity_status: 'skipped',
-      parity_diff_count: 0
-    });
-    expect(result.result.records).toHaveLength(1);
-    expect(result.result.records[0]).toMatchObject({
-      memory_id: 'memory-block-provider-1',
-      should_materialize: false,
-      materialize_reason: null,
-      trigger_rate: {
-        present: true,
-        value: 0.5,
-        applied: true,
-        passed: false
-      }
-    });
-    expect(result.result.records[0]?.evaluation.status).toBe('inactive');
-    expect(result.result.records[0]?.evaluation.reason).toBe('trigger_rate_blocked');
-    expect(result.result.records[0]?.evaluation.trigger_diagnostics).toMatchObject({
-      base_match: true,
-      score_passed: true,
-      fresh_trigger_attempt: true,
-      trigger_rate: {
-        present: true,
-        value: 0.5,
-        applied: true,
-        passed: false
-      }
-    });
-    expect(result.result.diagnostics.trigger_rate).toEqual({
-      present_count: 1,
-      applied_count: 1,
-      blocked_count: 1
-    });
-  });
-
-  it('falls back to TS when rust_primary sidecar is unavailable', async () => {
-    const provider = createMemoryTriggerEngineProvider({
-      mode: 'rust_primary',
       timeoutMs: 100,
       binaryPath: 'apps/server/rust/memory_trigger_sidecar/target/debug/does-not-exist',
       autoRestart: true
@@ -219,26 +166,8 @@ describe('memory trigger engine provider', () => {
     expect(result.metadata.provider).toBe('rust_fallback_to_ts');
     expect(result.metadata.fallback).toBe(true);
     expect(result.metadata.fallback_reason).toContain('Memory trigger sidecar binary does not exist');
-    expect(result.result.records[0]?.evaluation.status).toBe('inactive');
-    expect(result.result.records[0]?.evaluation.reason).toBe('trigger_rate_blocked');
-  });
-
-  it('keeps TS result as source of truth and exposes fallback metadata in rust_shadow mode when sidecar is unavailable', async () => {
-    const provider = createMemoryTriggerEngineProvider({
-      mode: 'rust_shadow',
-      timeoutMs: 100,
-      binaryPath: 'apps/server/rust/memory_trigger_sidecar/target/debug/does-not-exist',
-      autoRestart: true
-    });
-
-    const result = await provider.evaluateWithMetadata(buildMemoryTriggerSourceEvaluateInput({
-      evaluation_context: buildContext(),
-      candidates: [buildCandidate()]
-    }));
-
-    expect(result.metadata.provider).toBe('rust_shadow');
-    expect(result.metadata.fallback).toBe(true);
     expect(result.metadata.parity_status).toBe('skipped');
+    expect(result.metadata.parity_diff_count).toBe(0);
     expect(result.result.records[0]?.evaluation.status).toBe('inactive');
     expect(result.result.records[0]?.evaluation.reason).toBe('trigger_rate_blocked');
   });

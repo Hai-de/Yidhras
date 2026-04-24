@@ -48,7 +48,7 @@ const SchedulerSignalPolicySchema = z
 
 const SidecarRuntimeSchema = z
   .object({
-    mode: z.enum(['ts', 'rust_shadow', 'rust_primary']),
+    mode: z.enum(['rust_primary']),
     timeout_ms: PositiveIntSchema,
     binary_path: NonEmptyStringSchema,
     auto_restart: z.boolean()
@@ -67,7 +67,7 @@ const WorldEngineRuntimeSchema = z
 
 const MemoryTriggerEngineRuntimeSchema = z
   .object({
-    mode: z.enum(['ts', 'rust_shadow', 'rust_primary']),
+    mode: z.enum(['rust_primary']),
     timeout_ms: PositiveIntSchema,
     binary_path: NonEmptyStringSchema,
     auto_restart: z.boolean()

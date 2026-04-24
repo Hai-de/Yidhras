@@ -20,8 +20,8 @@ It is derived from:
 
 | Module | Rust-owned core | TS-host-owned responsibilities | Why TS still cannot be removed | Current status |
 |---|---|---|---|---|
-| Scheduler decision kernel | `scheduler.kernel.evaluate` core: candidate merge, cooldown/recovery suppression, sorting, job draft generation | lease, ownership, partition cursor, idempotency dedupe, DB job materialization, run snapshot, observability | `rust_primary` fallback still drops to TS; `rust_shadow` still uses TS as parity baseline; scheduler runtime side effects still live in TS | **Partially migrated: Rust core + TS runtime ownership** |
-| Memory trigger engine | trigger evaluation, activation score, status resolve, runtime-state transition calculation, source evaluate result assembly | evaluation context assembly, candidate block fetch, runtime-state persistence writeback, context-node materialization | `rust_primary` fallback still drops to TS evaluator; `rust_shadow` still uses TS as parity baseline; upstream/downstream context seam still lives in TS | **Partially migrated: Rust evaluator + TS orchestration/materialization** |
+| Scheduler decision kernel | `scheduler.kernel.evaluate` core: candidate merge, cooldown/recovery suppression, sorting, job draft generation | lease, ownership, partition cursor, idempotency dedupe, DB job materialization, run snapshot, observability | TS reference implementation remains as `@deprecated` fallback only; no `rust_shadow` parity mode; scheduler runtime side effects still live in TS | **Rust core + TS runtime ownership + deprecated fallback** |
+| Memory trigger engine | trigger evaluation, activation score, status resolve, runtime-state transition calculation, source evaluate result assembly | evaluation context assembly, candidate block fetch, runtime-state persistence writeback, context-node materialization | TS reference implementation remains as `@deprecated` fallback only; no `rust_shadow` parity mode; upstream/downstream context seam still lives in TS | **Rust evaluator + TS orchestration/materialization + deprecated fallback** |
 | World engine | pack session load/unload, session query handling, prepare/commit/abort core, objective rule execution skeleton | host persistence, observable clock projection, runtime loop orchestration, plugin contributor registry, query host seam, invocation side effects | plugin system remains TS-host-owned; host persistence remains TS-owned; query/invocation bridges remain TS-owned; external observable clock is now explicitly TS-host-projected | **Least complete: Rust session core + TS host runtime kernel** |
 
 ---
@@ -46,9 +46,9 @@ Rust owns the pure decision kernel.
 TS still owns runtime consequences and production safety rails.
 
 #### Exit criteria before TS reference can be removed
-- Rust kernel parity diff remains stable for a sustained window.
-- `rust_shadow` no longer depends on TS as the mandatory baseline.
-- `rust_primary` no longer requires production fallback to TS for expected failure classes.
+- ~~Rust kernel parity diff remains stable for a sustained window.~~ `rust_shadow` 已删除，parity diff 不再计算。
+- ~~`rust_shadow` no longer depends on TS as the mandatory baseline.~~ `rust_shadow` 已删除。
+- `rust_primary` fallback to TS is reduced to zero for a sustained window, or team explicitly decides to keep deprecated fallback permanently.
 - Team decides whether scheduler runtime ownership itself remains in TS permanently or migrates further.
 
 ---
@@ -73,9 +73,9 @@ Rust owns evaluator logic.
 TS still owns input assembly and output application.
 
 #### Exit criteria before TS reference can be removed
-- Rust evaluator parity diff remains stable for a sustained window.
-- `rust_shadow` no longer requires TS evaluator as baseline.
-- `rust_primary` fallback can be reduced or removed.
+- ~~Rust evaluator parity diff remains stable for a sustained window.~~ `rust_shadow` 已删除，parity diff 不再计算。
+- ~~`rust_shadow` no longer requires TS evaluator as baseline.~~ `rust_shadow` 已删除。
+- `rust_primary` fallback to TS is reduced to zero for a sustained window, or team explicitly decides to keep deprecated fallback permanently.
 - Input preparation seam is either explicitly declared permanently TS-owned or migrated behind a stable contract.
 - Result application/materialization seam is either explicitly declared permanently TS-owned or migrated behind a stable contract.
 
@@ -146,7 +146,7 @@ These still need explicit decision:
 - whether any part of world engine persistence should ever move beyond the accepted host-owned delta-apply model
 - whether any query path needs deeper Rust participation beyond the PackHostApi host contract
 - whether any invocation side-effect path deserves bounded Rust deepening for clear safety/performance reasons
-- fallback/parity retirement criteria
+- ~~fallback/parity retirement criteria~~ **已解决**：scheduler 和 memory trigger 的 `ts`/`rust_shadow` 模式已于 2026-04-23 移除
 
 Plugin contributor lifecycle is not listed here because the default planning assumption should now be TS-host-owned unless a future design explicitly overrides it.
 
@@ -163,8 +163,8 @@ Use these labels when discussing migration status:
 
 Applied now:
 
-- Scheduler: fully Rust-owned core + TS-host-owned seam + reference/fallback debt
-- Memory trigger: fully Rust-owned evaluator core + TS-host-owned seam + reference/fallback debt
+- Scheduler: fully Rust-owned core + TS-host-owned seam + **deprecated fallback only** (`rust_primary` 唯一模式，TS fallback 保留但打印 warn)
+- Memory trigger: fully Rust-owned evaluator core + TS-host-owned seam + **deprecated fallback only** (`rust_primary` 唯一模式，TS fallback 保留但打印 warn)
 - World engine: partially Rust-owned session core + multiple TS-host-owned seams + a small set of explicitly undecided or optional deepening seams
 
 ---
@@ -180,7 +180,7 @@ The accurate description is:
 
 Within that architecture:
 
-- scheduler and memory trigger have already migrated their pure cores
+- scheduler and memory trigger have already migrated their pure cores; `ts`/`rust_shadow` modes removed on 2026-04-23
 - world engine still depends heavily on TS host runtime ownership
 - plugin capability is a structural reason TS remains necessary
 - host clock projection is now an explicit part of the TS runtime kernel, not an accidental compatibility shim

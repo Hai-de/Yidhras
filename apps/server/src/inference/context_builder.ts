@@ -10,7 +10,7 @@ import { createContextService } from '../context/service.js';
 import { IdentityService } from '../identity/service.js';
 import type { IdentityContext } from '../identity/types.js';
 import { createMemoryService } from '../memory/service.js';
-import type { PromptVariableContext, VariablePool } from '../narrative/types.js';
+import type { PromptVariableContext, PromptVariableNamespace, VariablePool } from '../narrative/types.js';
 import {
   createPromptVariableContext,
   createPromptVariableContextSummary,
@@ -21,6 +21,8 @@ import {
 import { DEFAULT_PACK_WORLD_ENTITY_ID } from '../packs/runtime/core_models.js';
 import { listPackEntityStateProjectionRecords } from '../packs/storage/entity_state_projection.js';
 import { ApiError } from '../utils/api_error.js';
+import { getInferenceContextConfig } from './context_config.js';
+import { resolveConfigValues } from './context_config_resolver.js';
 import type {
   BuildInferenceContextForPackInput,
   PackRuntimeContractResolver,
@@ -65,11 +67,12 @@ interface BindingRecord {
 }
 
 interface ResolvedActor {
+  actor_ref: InferenceActorRef;
+  actor_display_name: string;
   identity: IdentityContext;
-  actorRef: InferenceActorRef;
-  actorDisplayName: string;
-  bindingRef: InferenceBindingRef | null;
-  resolvedAgentId: string | null;
+  binding_ref: InferenceBindingRef | null;
+  resolved_agent_id: string | null;
+  agent_snapshot: InferenceAgentSnapshot | null;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
@@ -148,9 +151,9 @@ const resolveIdentityById = async (context: AppContext, identityId: string): Pro
   return service.fetchIdentity(identityId);
 };
 
-const ACTOR_ENTITY_ID_SEPARATOR = ':';
+export const ACTOR_ENTITY_ID_SEPARATOR = ':';
 
-const packEntityIdFromResolvedAgentId = (packId: string, resolvedAgentId: string | null): string | null => {
+export const packEntityIdFromResolvedAgentId = (packId: string, resolvedAgentId: string | null): string | null => {
   if (!resolvedAgentId) return null;
   const prefix = `${packId}${ACTOR_ENTITY_ID_SEPARATOR}`;
   if (resolvedAgentId.startsWith(prefix)) {
@@ -164,16 +167,17 @@ const resolveActor = async (context: AppContext, input: InferenceRequestInput, p
     const agentContext = await getAgentContextSnapshot(context, input.agent_id);
     return {
       identity: agentContext.identity as IdentityContext,
-      actorRef: {
+      actor_ref: {
         identity_id: agentContext.identity.id,
         identity_type: agentContext.identity.type as IdentityContext['type'],
         role: 'active',
         agent_id: input.agent_id,
         atmosphere_node_id: null
       },
-      actorDisplayName: agentContext.identity.name ?? input.agent_id,
-      bindingRef: null,
-      resolvedAgentId: input.agent_id
+      actor_display_name: agentContext.identity.name ?? input.agent_id,
+      binding_ref: null,
+      resolved_agent_id: input.agent_id,
+      agent_snapshot: buildAgentSnapshot(agentContext.identity as Record<string, unknown>)
     };
   }
 
@@ -189,49 +193,53 @@ const resolveActor = async (context: AppContext, input: InferenceRequestInput, p
     const binding = bindings[0] ?? null;
 
     if (binding?.agent_id) {
+      const boundAgentContext = await getAgentContextSnapshot(context, binding.agent_id);
       return {
         identity,
-        actorRef: {
+        actor_ref: {
           identity_id: identity.id,
           identity_type: identity.type,
           role: binding.role === 'atmosphere' ? 'atmosphere' : 'active',
           agent_id: binding.agent_id,
           atmosphere_node_id: binding.atmosphere_node_id
         },
-        actorDisplayName: identity.name ?? binding.agent_id,
-        bindingRef: toBindingRef(binding),
-        resolvedAgentId: binding.agent_id
+        actor_display_name: identity.name ?? binding.agent_id,
+        binding_ref: toBindingRef(binding),
+        resolved_agent_id: binding.agent_id,
+        agent_snapshot: buildAgentSnapshot(boundAgentContext.identity as Record<string, unknown>)
       };
     }
 
     if (binding?.atmosphere_node) {
       return {
         identity,
-        actorRef: {
+        actor_ref: {
           identity_id: identity.id,
           identity_type: identity.type,
           role: 'atmosphere',
           agent_id: null,
           atmosphere_node_id: binding.atmosphere_node.id
         },
-        actorDisplayName: binding.atmosphere_node.name,
-        bindingRef: toBindingRef(binding),
-        resolvedAgentId: null
+        actor_display_name: binding.atmosphere_node.name,
+        binding_ref: toBindingRef(binding),
+        resolved_agent_id: null,
+        agent_snapshot: null
       };
     }
 
     return {
       identity,
-      actorRef: {
+      actor_ref: {
         identity_id: identity.id,
         identity_type: identity.type,
         role: 'active',
         agent_id: null,
         atmosphere_node_id: null
       },
-      actorDisplayName: identity.name ?? identity.id,
-      bindingRef: null,
-      resolvedAgentId: null
+      actor_display_name: identity.name ?? identity.id,
+      binding_ref: null,
+      resolved_agent_id: null,
+      agent_snapshot: null
     };
   }
 
@@ -246,6 +254,10 @@ const resolveActor = async (context: AppContext, input: InferenceRequestInput, p
         pack_id: packId
       });
     }
+
+    const activePack = context.sim.getActivePack();
+    const actorDef = activePack?.entities?.actors?.find(a => a.id === input.actor_entity_id);
+    const entityKind = actorDef?.kind ?? 'actor';
 
     const binding = await context.prisma.identityNodeBinding.findFirst({
       where: {
@@ -266,7 +278,7 @@ const resolveActor = async (context: AppContext, input: InferenceRequestInput, p
           claims: binding.identity.claims as Record<string, unknown> | null ?? null
         }
       : {
-          id: agent.id,
+          id: `${packId}:identity:${input.actor_entity_id}`,
           type: 'agent',
           name: agent.name,
           provider: 'pack',
@@ -276,15 +288,16 @@ const resolveActor = async (context: AppContext, input: InferenceRequestInput, p
 
     return {
       identity: identityContext,
-      actorRef: {
+      actor_ref: {
         identity_id: identityContext.id,
         identity_type: identityContext.type,
+        entity_kind: entityKind,
         role: 'active',
         agent_id: bridgedAgentId,
         atmosphere_node_id: null
       },
-      actorDisplayName: agent.name ?? input.actor_entity_id,
-      bindingRef: binding
+      actor_display_name: agent.name ?? input.actor_entity_id,
+      binding_ref: binding
         ? {
             binding_id: binding.id,
             role: 'active',
@@ -293,7 +306,14 @@ const resolveActor = async (context: AppContext, input: InferenceRequestInput, p
             atmosphere_node_id: binding.atmosphere_node_id
           }
         : null,
-      resolvedAgentId: bridgedAgentId
+      resolved_agent_id: bridgedAgentId,
+      agent_snapshot: {
+        id: agent.id,
+        name: agent.name ?? '',
+        type: agent.type,
+        snr: agent.snr,
+        is_pinned: agent.is_pinned
+      }
     };
   }
 
@@ -304,16 +324,17 @@ const resolveActor = async (context: AppContext, input: InferenceRequestInput, p
 
   return {
     identity: systemIdentity,
-    actorRef: {
+    actor_ref: {
       identity_id: systemIdentity.id,
       identity_type: systemIdentity.type,
       role: 'active',
       agent_id: null,
       atmosphere_node_id: null
     },
-    actorDisplayName: systemIdentity.name ?? 'system',
-    bindingRef: null,
-    resolvedAgentId: null
+    actor_display_name: systemIdentity.name ?? 'system',
+    binding_ref: null,
+    resolved_agent_id: null,
+    agent_snapshot: null
   };
 };
 
@@ -333,30 +354,47 @@ const buildPolicySummary = async (
   attributes: Record<string, unknown>
 ): Promise<InferencePolicySummary> => {
   const service = createAccessPolicyService(context);
-  const readResult = await service.evaluateFields(
+  const config = getInferenceContextConfig().policy_summary;
+  const evaluations = config?.evaluations ?? [
     {
-      identity,
       resource: 'social_post',
       action: 'read',
-      attributes
+      fields: ['id', 'author_id', 'content', 'created_at', 'content.private.preview', 'content.private.raw']
     },
-    ['id', 'author_id', 'content', 'created_at', 'content.private.preview', 'content.private.raw']
-  );
-  const writeResult = await service.evaluateFields(
     {
-      identity,
       resource: 'social_post',
       action: 'write',
-      attributes
-    },
-    ['content']
-  );
+      fields: ['content']
+    }
+  ];
+
+  const results: Record<string, { allowed: boolean; fields: string[] }> = {};
+
+  for (const evaluation of evaluations) {
+    const result = await service.evaluateFields(
+      {
+        identity,
+        resource: evaluation.resource,
+        action: evaluation.action,
+        attributes
+      },
+      evaluation.fields
+    );
+    const key = `${evaluation.resource}_${evaluation.action}`;
+    results[key] = {
+      allowed: result.allowedFields.size > 0,
+      fields: Array.from(result.allowedFields)
+    };
+  }
+
+  const read = results['social_post_read'];
+  const write = results['social_post_write'];
 
   return {
-    social_post_read_allowed: readResult.allowedFields.size > 0,
-    social_post_readable_fields: Array.from(readResult.allowedFields),
-    social_post_write_allowed: writeResult.allowedFields.has('content'),
-    social_post_writable_fields: Array.from(writeResult.allowedFields)
+    social_post_read_allowed: read?.allowed ?? false,
+    social_post_readable_fields: read?.fields ?? [],
+    social_post_write_allowed: write?.allowed ?? false,
+    social_post_writable_fields: write?.fields ?? []
   };
 };
 
@@ -366,6 +404,16 @@ const buildTransmissionProfile = (
   policySummary: InferencePolicySummary,
   attributes: Record<string, unknown>
 ): InferenceTransmissionProfile => {
+  const tpConfig = getInferenceContextConfig().transmission_profile;
+  const snrFallback = tpConfig?.defaults?.snr_fallback ?? 0.5;
+  const fragileSnr = tpConfig?.thresholds?.fragile_snr ?? 0.3;
+  const fragileDrop = tpConfig?.drop_chances?.fragile ?? 0.35;
+  const bestEffortDrop = tpConfig?.drop_chances?.best_effort ?? 0.15;
+  const reliableDrop = tpConfig?.drop_chances?.reliable ?? 0.0;
+  const readRestrictedBase = tpConfig?.policies?.read_restricted_base ?? 'best_effort';
+  const lowSnrBase = tpConfig?.policies?.low_snr_base ?? 'fragile';
+  const defaultBase = tpConfig?.policies?.default_base ?? 'reliable';
+
   const explicitPolicy = typeof attributes.transmission_policy === 'string' ? attributes.transmission_policy : null;
   const explicitDropChance = typeof attributes.transmission_drop_chance === 'number' ? attributes.transmission_drop_chance : null;
   const explicitDelayTicks =
@@ -383,16 +431,24 @@ const buildTransmissionProfile = (
     };
   }
 
-  const actorSNR = agentSnapshot?.snr ?? 0.5;
+  const actorSNR = agentSnapshot?.snr ?? snrFallback;
   const readRestricted = !policySummary.social_post_read_allowed;
-  const basePolicy = readRestricted ? 'best_effort' : actorSNR < 0.3 ? 'fragile' : 'reliable';
-  const dropChance = explicitDropChance ?? (basePolicy === 'fragile' ? 0.35 : basePolicy === 'best_effort' ? 0.15 : 0);
+  const resolvedBasePolicy = readRestricted
+    ? readRestrictedBase
+    : actorSNR < fragileSnr
+      ? lowSnrBase
+      : defaultBase;
+  const resolvedPolicy: InferenceTransmissionProfile['policy'] =
+    explicitPolicy === 'reliable' || explicitPolicy === 'best_effort' || explicitPolicy === 'fragile'
+      ? explicitPolicy
+      : resolvedBasePolicy;
+
+  const dropChance =
+    explicitDropChance ??
+    (resolvedPolicy === 'fragile' ? fragileDrop : resolvedPolicy === 'best_effort' ? bestEffortDrop : reliableDrop);
 
   return {
-    policy:
-      explicitPolicy === 'reliable' || explicitPolicy === 'best_effort' || explicitPolicy === 'fragile'
-        ? explicitPolicy
-        : basePolicy,
+    policy: resolvedPolicy,
     drop_reason: null,
     delay_ticks: explicitDelayTicks ?? '1',
     drop_chance: dropChance,
@@ -543,52 +599,116 @@ const buildInferenceVariableContext = (input: {
   strategy: InferenceStrategy;
   attributes: Record<string, unknown>;
   resolvedActor: ResolvedActor;
-  agentSnapshot: InferenceAgentSnapshot | null;
   packState: InferencePackStateSnapshot;
   packRuntime: InferencePackRuntimeContract;
   requestInput: InferenceRequestInput;
   currentTick: string;
 }): PromptVariableContext => {
-  return createPromptVariableContext({
-    layers: [
-      createPromptVariableLayer({
-        namespace: 'system',
-        values: normalizePromptVariableRecord({ name: 'Yidhras', timezone: 'Asia/Shanghai' }),
-        alias_values: normalizePromptVariableRecord({ system_name: 'Yidhras', timezone: 'Asia/Shanghai' }),
-        metadata: { source_label: 'system-defaults', trusted: true }
-      }),
-      createPromptVariableLayer({
-        namespace: 'app',
-        values: normalizePromptVariableRecord({ startup_health: input.context.startupHealth }),
-        alias_values: normalizePromptVariableRecord({ startup_level: input.context.startupHealth.level }),
-        metadata: { source_label: 'app-context', trusted: true }
-      }),
-      createPromptVariableLayer({
-        namespace: 'pack',
-        values: normalizePromptVariableRecord({ metadata: input.pack.metadata, variables: input.pack.variables ?? {}, prompts: input.pack.prompts ?? {}, ai: input.pack.ai ?? null }),
-        alias_values: normalizePromptVariableRecord({ ...(input.pack.variables ?? {}), world_name: input.pack.metadata.name, pack_id: input.pack.metadata.id, pack_name: input.pack.metadata.name }),
-        metadata: { source_label: 'world-pack', trusted: true }
-      }),
-      createPromptVariableLayer({
-        namespace: 'runtime',
-        values: normalizePromptVariableRecord({ current_tick: input.currentTick, pack_state: input.packState, pack_runtime: input.packRuntime, world_state: input.packState.world_state, owned_artifacts: input.packState.owned_artifacts, latest_event: input.packState.latest_event }),
-        alias_values: normalizePromptVariableRecord({ current_tick: input.currentTick, world_state: input.packState.world_state, latest_event: input.packState.latest_event, owned_artifacts: input.packState.owned_artifacts }),
-        metadata: { source_label: 'runtime-state', trusted: true }
-      }),
-      createPromptVariableLayer({
-        namespace: 'actor',
-        values: normalizePromptVariableRecord({ identity_id: input.resolvedActor.identity.id, identity_type: input.resolvedActor.identity.type, display_name: input.resolvedActor.actorDisplayName, role: input.resolvedActor.actorRef.role, binding_ref: input.resolvedActor.bindingRef, agent_id: input.resolvedActor.resolvedAgentId, agent_snapshot: input.agentSnapshot }),
-        alias_values: normalizePromptVariableRecord({ actor_name: input.resolvedActor.actorDisplayName, actor_role: input.resolvedActor.actorRef.role, actor_id: input.resolvedActor.resolvedAgentId ?? input.resolvedActor.identity.id, identity_id: input.resolvedActor.identity.id }),
-        metadata: { source_label: 'resolved-actor', trusted: true }
-      }),
-      createPromptVariableLayer({
-        namespace: 'request',
-        values: normalizePromptVariableRecord({ task_type: 'agent_decision', strategy: input.strategy, attributes: input.attributes, agent_id: input.requestInput.agent_id ?? null, identity_id: input.requestInput.identity_id ?? null, idempotency_key: input.requestInput.idempotency_key ?? null }),
-        alias_values: normalizePromptVariableRecord({ strategy: input.strategy, task_type: 'agent_decision', request_agent_id: input.requestInput.agent_id ?? null, request_identity_id: input.requestInput.identity_id ?? null }),
-        metadata: { source_label: 'inference-request', mutable: true, trusted: true }
-      })
-    ]
-  });
+  const config = getInferenceContextConfig().variable_context;
+  const runtimeObjects: Record<string, unknown> = {
+    app: { startup_health: input.context.startupHealth },
+    pack: {
+      metadata: input.pack.metadata,
+      variables: input.pack.variables ?? {},
+      prompts: input.pack.prompts ?? {},
+      ai: input.pack.ai ?? null
+    },
+    runtime: {
+      current_tick: input.currentTick,
+      pack_state: input.packState,
+      pack_runtime: input.packRuntime
+    },
+    actor: {
+      identity: input.resolvedActor.identity,
+      display_name: input.resolvedActor.actor_display_name,
+      role: input.resolvedActor.actor_ref.role,
+      binding_ref: input.resolvedActor.binding_ref,
+      agent_id: input.resolvedActor.resolved_agent_id,
+      agent_snapshot: input.resolvedActor.agent_snapshot
+    },
+    request: {
+      strategy: input.strategy,
+      attributes: input.attributes,
+      agent_id: input.requestInput.agent_id ?? null,
+      identity_id: input.requestInput.identity_id ?? null,
+      idempotency_key: input.requestInput.idempotency_key ?? null
+    }
+  };
+
+  const configuredLayers = config?.layers;
+  const layerOrder = config?.alias_precedence ?? ['system', 'app', 'pack', 'runtime', 'actor', 'request'];
+
+  const layers = layerOrder
+    .map((namespace) => {
+      const layerConfig = configuredLayers?.[namespace];
+      if (!layerConfig) return null;
+      if (layerConfig.enabled === false) return null;
+
+      const values = resolveConfigValues(layerConfig.values, runtimeObjects);
+      const aliasValues = layerConfig.alias_values
+        ? resolveConfigValues(layerConfig.alias_values, runtimeObjects)
+        : {};
+
+      const isMutable = namespace === 'request';
+      const isRequest = namespace === 'request';
+
+      return createPromptVariableLayer({
+        namespace: namespace as PromptVariableNamespace,
+        values: normalizePromptVariableRecord(values),
+        alias_values: normalizePromptVariableRecord(aliasValues),
+        metadata: {
+          source_label: isRequest ? 'inference-request' : `${namespace}-config`,
+          ...(isMutable ? { mutable: true } : {}),
+          trusted: true
+        }
+      });
+    })
+    .filter((layer): layer is NonNullable<typeof layer> => layer !== null);
+
+  if (layers.length === 0) {
+    return createPromptVariableContext({
+      layers: [
+        createPromptVariableLayer({
+          namespace: 'system',
+          values: normalizePromptVariableRecord({ name: 'Yidhras', timezone: 'Asia/Shanghai' }),
+          alias_values: normalizePromptVariableRecord({ system_name: 'Yidhras', timezone: 'Asia/Shanghai' }),
+          metadata: { source_label: 'system-defaults', trusted: true }
+        }),
+        createPromptVariableLayer({
+          namespace: 'app',
+          values: normalizePromptVariableRecord({ startup_health: input.context.startupHealth }),
+          alias_values: normalizePromptVariableRecord({ startup_level: input.context.startupHealth.level }),
+          metadata: { source_label: 'app-context', trusted: true }
+        }),
+        createPromptVariableLayer({
+          namespace: 'pack',
+          values: normalizePromptVariableRecord({ metadata: input.pack.metadata, variables: input.pack.variables ?? {}, prompts: input.pack.prompts ?? {}, ai: input.pack.ai ?? null }),
+          alias_values: normalizePromptVariableRecord({ ...(input.pack.variables ?? {}), world_name: input.pack.metadata.name, pack_id: input.pack.metadata.id, pack_name: input.pack.metadata.name }),
+          metadata: { source_label: 'world-pack', trusted: true }
+        }),
+        createPromptVariableLayer({
+          namespace: 'runtime',
+          values: normalizePromptVariableRecord({ current_tick: input.currentTick, pack_state: input.packState, pack_runtime: input.packRuntime, world_state: input.packState.world_state, owned_artifacts: input.packState.owned_artifacts, latest_event: input.packState.latest_event }),
+          alias_values: normalizePromptVariableRecord({ current_tick: input.currentTick, world_state: input.packState.world_state, latest_event: input.packState.latest_event, owned_artifacts: input.packState.owned_artifacts }),
+          metadata: { source_label: 'runtime-state', trusted: true }
+        }),
+        createPromptVariableLayer({
+          namespace: 'actor',
+          values: normalizePromptVariableRecord({ identity_id: input.resolvedActor.identity.id, identity_type: input.resolvedActor.identity.type, display_name: input.resolvedActor.actor_display_name, role: input.resolvedActor.actor_ref.role, binding_ref: input.resolvedActor.binding_ref, agent_id: input.resolvedActor.resolved_agent_id, agent_snapshot: input.resolvedActor.agent_snapshot }),
+          alias_values: normalizePromptVariableRecord({ actor_name: input.resolvedActor.actor_display_name, actor_role: input.resolvedActor.actor_ref.role, actor_id: input.resolvedActor.resolved_agent_id ?? input.resolvedActor.identity.id, identity_id: input.resolvedActor.identity.id }),
+          metadata: { source_label: 'resolved-actor', trusted: true }
+        }),
+        createPromptVariableLayer({
+          namespace: 'request',
+          values: normalizePromptVariableRecord({ task_type: 'agent_decision', strategy: input.strategy, attributes: input.attributes, agent_id: input.requestInput.agent_id ?? null, identity_id: input.requestInput.identity_id ?? null, idempotency_key: input.requestInput.idempotency_key ?? null }),
+          alias_values: normalizePromptVariableRecord({ strategy: input.strategy, task_type: 'agent_decision', request_agent_id: input.requestInput.agent_id ?? null, request_identity_id: input.requestInput.identity_id ?? null }),
+          metadata: { source_label: 'inference-request', mutable: true, trusted: true }
+        })
+      ]
+    });
+  }
+
+  return createPromptVariableContext({ layers });
 };
 
 export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceContextBuilder => {
@@ -638,28 +758,21 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
       const attributes = normalizeAttributes(input.attributes);
       const resolvedActor = await resolveActor(context, input, pack.metadata.id);
 
-      let agentSnapshot: InferenceAgentSnapshot | null = null;
-
-      if (resolvedActor.resolvedAgentId) {
-        const agentContext = await getAgentContextSnapshot(context, resolvedActor.resolvedAgentId);
-        agentSnapshot = buildAgentSnapshot(agentContext.identity as Record<string, unknown>);
-      }
-
-      const packState = await buildPackStateSnapshot(context, pack.metadata.id, resolvedActor.resolvedAgentId, attributes);
+      const packState = await buildPackStateSnapshot(context, pack.metadata.id, resolvedActor.resolved_agent_id, attributes);
       const packRuntime = await packRuntimeContractResolver.resolvePackRuntimeContract(context, {
         pack_id: input.pack_id,
         mode: input.mode
       });
       const policySummary = await buildPolicySummary(context, resolvedActor.identity, attributes);
-      const transmissionProfile = buildTransmissionProfile(resolvedActor.actorRef, agentSnapshot, policySummary, attributes);
+      const transmissionProfile = buildTransmissionProfile(resolvedActor.actor_ref, resolvedActor.agent_snapshot, policySummary, attributes);
       const contextAssembly = context.contextAssembly ?? createContextAssemblyPort(context);
       const fallbackContextService = createContextService({
         context, memoryService: createMemoryService({ context })
       });
       const contextResult = await (contextAssembly.buildContextRun ?? fallbackContextService.buildContextRun)({
-        actor_ref: resolvedActor.actorRef as unknown as Record<string, unknown>,
+        actor_ref: resolvedActor.actor_ref as unknown as Record<string, unknown>,
         identity: resolvedActor.identity,
-        resolved_agent_id: resolvedActor.resolvedAgentId,
+        resolved_agent_id: resolvedActor.resolved_agent_id,
         tick: BigInt(currentTick),
         policy_summary: policySummary,
         pack_state: packState,
@@ -671,7 +784,6 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         strategy,
         attributes,
         resolvedActor,
-        agentSnapshot,
         packState,
         packRuntime,
         requestInput: input,
@@ -680,12 +792,12 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
 
       return {
         inference_id: randomUUID(),
-        actor_ref: resolvedActor.actorRef,
-        actor_display_name: resolvedActor.actorDisplayName,
+        actor_ref: resolvedActor.actor_ref,
+        actor_display_name: resolvedActor.actor_display_name,
         identity: resolvedActor.identity,
-        binding_ref: resolvedActor.bindingRef,
-        resolved_agent_id: resolvedActor.resolvedAgentId,
-        agent_snapshot: agentSnapshot,
+        binding_ref: resolvedActor.binding_ref,
+        resolved_agent_id: resolvedActor.resolved_agent_id,
+        agent_snapshot: resolvedActor.agent_snapshot,
         tick: BigInt(currentTick),
         strategy,
         attributes,

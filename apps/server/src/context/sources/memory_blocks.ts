@@ -61,7 +61,6 @@ export const buildContextNodesFromMemoryBlocks = async (input: {
 
   const engineConfig = getMemoryTriggerEngineConfig();
   const provider = createMemoryTriggerEngineProvider({
-    mode: engineConfig.mode,
     timeoutMs: engineConfig.timeout_ms,
     binaryPath: engineConfig.binary_path,
     autoRestart: engineConfig.auto_restart

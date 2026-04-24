@@ -64,7 +64,7 @@ export const getOperatorAdvancedContracts = async (
 ): Promise<OperatorAdvancedContractsSnapshot> => {
   const { metadata } = resolvePackMetadata(context);
   const inferenceContext = await buildInferenceContextV2(context, {
-    agent_id: subjectEntityId,
+    actor_entity_id: subjectEntityId,
     strategy: 'mock'
   });
   const packProjection = await getPackEntityOverviewProjection(context, metadata.id);

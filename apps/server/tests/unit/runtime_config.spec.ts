@@ -161,7 +161,7 @@ const defaultYamlBase = [
   '        suppress_event_tiers: ["high", "low"]',
   '  memory:',
   '    trigger_engine:',
-  '      mode: "rust_shadow"',
+  '      mode: "rust_primary"',
   '      timeout_ms: 700',
   '      binary_path: "apps/server/rust/memory_trigger_sidecar/target/debug/memory_trigger_sidecar"',
   '      auto_restart: false',
@@ -306,7 +306,7 @@ describe('runtime config YAML migration', () => {
       max_candidates: 33
     });
     expect(getMemoryTriggerEngineConfig()).toEqual({
-      mode: 'rust_shadow',
+      mode: 'rust_primary',
       timeout_ms: 700,
       binary_path: 'apps/server/rust/memory_trigger_sidecar/target/debug/memory_trigger_sidecar',
       auto_restart: false

@@ -269,6 +269,12 @@ const toJobDraft = (candidate: SchedulerCandidate): SchedulerKernelJobDraft => (
   job_source: 'scheduler'
 });
 
+/**
+ * @deprecated TS fallback for the scheduler decision kernel.
+ * Provided solely as a safety net when the Rust sidecar fails.
+ * Not maintained for feature development — will be removed in a future release.
+ * Do NOT add new features or behavioral changes to this function.
+ */
 export const evaluateSchedulerDecisionKernel = (
   input: SchedulerKernelEvaluateInput
 ): SchedulerKernelEvaluateOutput => {
@@ -427,6 +433,11 @@ export const evaluateSchedulerDecisionKernel = (
   };
 };
 
+/**
+ * @deprecated TS fallback for the scheduler decision kernel.
+ * Provided solely as a safety net when the Rust sidecar fails.
+ * Not maintained for feature development — will be removed in a future release.
+ */
 export const createTsSchedulerDecisionKernel = (): SchedulerDecisionKernelPort => ({
   async evaluate(input) {
     return evaluateSchedulerDecisionKernel(input);

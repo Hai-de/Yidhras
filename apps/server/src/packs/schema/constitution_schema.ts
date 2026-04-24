@@ -507,6 +507,26 @@ export const worldPackConstitutionSchema = z
         message: 'Legacy field decision_rules is no longer accepted; migrate to unified rules.* definitions'
       });
     }
+
+    const entityIds = new Set<string>();
+    if (value.entities) {
+      for (const actor of value.entities.actors ?? []) {
+        entityIds.add(actor.id);
+      }
+    }
+
+    if (value.identities) {
+      for (const identity of value.identities) {
+        if (!entityIds.has(identity.subject_entity_id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `identity "${identity.id}" references unknown actor "${identity.subject_entity_id}" in subject_entity_id`,
+            path: ['identities']
+          });
+        }
+      }
+    }
+
     if ('scenario' in value) {
       const scenarioValue = isRecord(value.scenario) ? value.scenario : null;
       if (scenarioValue && 'agents' in scenarioValue) {

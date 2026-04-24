@@ -1,5 +1,5 @@
 import type { AppContext } from '../../app/context.js';
-import type { DecisionResult, InferenceContext } from '../../inference/types.js';
+import type { ActorResolvable, DecisionResult, InferenceContext, PackStateResolvable } from '../../inference/types.js';
 import { resolveAuthorityForSubject } from '../authority/resolver.js';
 
 export type IntentGroundingResolutionMode = 'exact' | 'translated' | 'narrativized' | 'blocked';
@@ -58,7 +58,7 @@ const buildSemanticIntentFromDecision = (decision: DecisionResult): SemanticInte
   };
 };
 
-const getWorldPackInvocationRules = (context: InferenceContext): InvocationRuleRecord[] => {
+const getWorldPackInvocationRules = (context: PackStateResolvable): InvocationRuleRecord[] => {
   const runtimeRules = (context.pack_runtime as Record<string, unknown> | null)?.invocation_rules;
   if (!Array.isArray(runtimeRules)) {
     return [];
@@ -104,7 +104,7 @@ const matchesSemanticIntent = (rule: InvocationRuleRecord, semanticIntent: Seman
 
 const hasCapability = async (
   context: AppContext,
-  inferenceContext: InferenceContext,
+  actorContext: ActorResolvable & PackStateResolvable,
   capabilityKey: string | null
 ): Promise<boolean> => {
   if (!capabilityKey) {
@@ -112,8 +112,8 @@ const hasCapability = async (
   }
 
   const authority = await resolveAuthorityForSubject(context, {
-    packId: inferenceContext.world_pack.id,
-    subjectEntityId: inferenceContext.resolved_agent_id
+    packId: actorContext.world_pack.id,
+    subjectEntityId: actorContext.resolved_agent_id
   });
   return authority.resolved_capabilities.some(item => item.capability_key === capabilityKey);
 };

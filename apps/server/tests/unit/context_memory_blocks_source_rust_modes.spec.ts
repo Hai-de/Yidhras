@@ -216,55 +216,8 @@ const packState: InferencePackStateSnapshot = {
 };
 
 describe('memory blocks source rust modes', () => {
-  it('uses TS mode and returns active memory block nodes with engine metadata', async () => {
+  it('falls back to TS with deprecation warning when rust_primary sidecar is unavailable', async () => {
     resetRuntimeConfigCache();
-    process.env.MEMORY_TRIGGER_ENGINE_MODE = 'ts';
-    const updates: MemoryRuntimeState[] = [];
-
-    const result = await buildContextNodesFromMemoryBlocks({
-      context: buildContext(),
-      actor_ref: {
-        identity_id: 'identity-001',
-        identity_type: 'user',
-        role: 'active',
-        agent_id: 'agent-001',
-        atmosphere_node_id: null
-      },
-      identity,
-      resolved_agent_id: 'agent-001',
-      pack_id: TEST_PACK_ID,
-      tick: 1000n,
-      attributes: {},
-      pack_state: packState,
-      longMemoryBlockStore: buildLongMemoryBlockStoreStub(updates)
-    });
-
-    expect(result.evaluation_metadata).toEqual({
-      provider: 'ts',
-      fallback: false,
-      fallback_reason: null,
-      parity_status: 'skipped',
-      parity_diff_count: 0
-    });
-    expect(result.trigger_rate_summary).toEqual({
-      present_count: 1,
-      applied_count: 1,
-      blocked_count: 0
-    });
-    expect(result.evaluations).toEqual([
-      expect.objectContaining({ memory_id: 'memory-block-1', status: 'active', activation_score: 3, reason: null })
-    ]);
-    expect(result.nodes).toHaveLength(1);
-    expect(updates).toHaveLength(1);
-    expect(updates[0]?.currently_active).toBe(true);
-
-    delete process.env.MEMORY_TRIGGER_ENGINE_MODE;
-    resetRuntimeConfigCache();
-  });
-
-  it('falls back to TS metadata when rust_primary sidecar is unavailable', async () => {
-    resetRuntimeConfigCache();
-    process.env.MEMORY_TRIGGER_ENGINE_MODE = 'rust_primary';
     process.env.MEMORY_TRIGGER_ENGINE_BINARY_PATH = 'apps/server/rust/memory_trigger_sidecar/target/debug/does-not-exist';
     const updates: MemoryRuntimeState[] = [];
 
@@ -289,11 +242,12 @@ describe('memory blocks source rust modes', () => {
     expect(result.evaluation_metadata?.provider).toBe('rust_fallback_to_ts');
     expect(result.evaluation_metadata?.fallback).toBe(true);
     expect(result.evaluation_metadata?.fallback_reason).toContain('Memory trigger sidecar binary does not exist');
+    expect(result.evaluation_metadata?.parity_status).toBe('skipped');
+    expect(result.evaluation_metadata?.parity_diff_count).toBe(0);
     expect(result.evaluations[0]?.status).toBe('active');
     expect(result.evaluations[0]?.reason).toBe(null);
     expect(result.nodes).toHaveLength(1);
 
-    delete process.env.MEMORY_TRIGGER_ENGINE_MODE;
     delete process.env.MEMORY_TRIGGER_ENGINE_BINARY_PATH;
     resetRuntimeConfigCache();
   });

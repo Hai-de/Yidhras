@@ -1,4 +1,5 @@
 import type { AppContext } from '../../app/context.js';
+import { packEntityIdFromResolvedAgentId } from '../../inference/context_builder.js';
 import { listPackAuthorityGrants } from '../../packs/storage/authority_repo.js';
 import { listPackEntityStates } from '../../packs/storage/entity_state_repo.js';
 import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js';
@@ -58,7 +59,12 @@ const findActorState = async (context: AppContext, packId: string, subjectEntity
     return null;
   }
   const states = await listPackEntityStates(packId);
-  const actorState = states.find(state => state.entity_id === subjectEntityId && state.state_namespace === 'core') ?? null;
+  const candidateIds = [subjectEntityId];
+  const packEntityId = packEntityIdFromResolvedAgentId(packId, subjectEntityId);
+  if (packEntityId && packEntityId !== subjectEntityId) {
+    candidateIds.push(packEntityId);
+  }
+  const actorState = states.find(state => candidateIds.includes(state.entity_id) && state.state_namespace === 'core') ?? null;
   return actorState?.state_json ?? null;
 };
 
@@ -77,8 +83,16 @@ const resolveTargetSelectorMatch = async (
     return null;
   }
 
+  const candidateEntityIds = [subjectEntityId];
+  const packEntityId = packEntityIdFromResolvedAgentId(packId, subjectEntityId);
+  if (packEntityId && packEntityId !== subjectEntityId) {
+    candidateEntityIds.push(packEntityId);
+  }
+
   if (kind === 'direct_entity') {
-    return targetSelector.entity_id === subjectEntityId ? 'direct_actor_ref' : null;
+    const targetEntityId = typeof targetSelector.entity_id === 'string' ? targetSelector.entity_id : null;
+    if (!targetEntityId) return null;
+    return candidateEntityIds.includes(targetEntityId) ? 'direct_actor_ref' : null;
   }
 
   if (kind === 'holder_of' && typeof targetSelector.entity_id === 'string') {
@@ -86,7 +100,9 @@ const resolveTargetSelectorMatch = async (
     const targetState = states.find(
       state => state.entity_id === targetSelector.entity_id && state.state_namespace === 'core'
     );
-    return targetState?.state_json.holder_agent_id === subjectEntityId ? 'holder_of' : null;
+    const holderId = targetState?.state_json?.holder_agent_id;
+    if (typeof holderId !== 'string') return null;
+    return candidateEntityIds.includes(holderId) ? 'holder_of' : null;
   }
 
   if (kind === 'subject_entity' && typeof targetSelector.identity_id === 'string') {

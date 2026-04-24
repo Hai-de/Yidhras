@@ -3,13 +3,11 @@ import { applyMemoryActivationToRuntimeState, evaluateMemoryBlockActivation } fr
 import type {
   MemoryBlockRecord,
   MemoryTriggerEngineEvaluationMetadata,
-  MemoryTriggerEngineMode,
   MemoryTriggerSourceEvaluateInput,
   MemoryTriggerSourceEvaluateResult
 } from './types.js';
 
 export interface MemoryTriggerEngineProviderOptions {
-  mode: MemoryTriggerEngineMode;
   timeoutMs: number;
   binaryPath: string;
   autoRestart: boolean;
@@ -20,37 +18,12 @@ export interface MemoryTriggerEngineEvaluationResult {
   metadata: MemoryTriggerEngineEvaluationMetadata;
 }
 
-const canonicalize = (value: unknown): unknown => {
-  if (Array.isArray(value)) {
-    return value.map(item => canonicalize(item));
-  }
-
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, nested]) => [key, canonicalize(nested)])
-    );
-  }
-
-  return value;
-};
-
-const isCanonicalEqual = (left: unknown, right: unknown): boolean => {
-  return JSON.stringify(canonicalize(left)) === JSON.stringify(canonicalize(right));
-};
-
-const countOutputDiffs = (left: MemoryTriggerSourceEvaluateResult, right: MemoryTriggerSourceEvaluateResult): number => {
-  let diffCount = 0;
-  if (!isCanonicalEqual(left.diagnostics, right.diagnostics)) {
-    diffCount += 1;
-  }
-  if (!isCanonicalEqual(left.records, right.records)) {
-    diffCount += 1;
-  }
-  return diffCount;
-};
-
+/**
+ * @deprecated TS fallback for the memory trigger engine.
+ * Provided solely as a safety net when the Rust sidecar fails.
+ * Not maintained for feature development — will be removed in a future release.
+ * Do NOT add new features or behavioral changes to this function.
+ */
 const evaluateWithTs = (input: MemoryTriggerSourceEvaluateInput): MemoryTriggerSourceEvaluateResult => {
   const statusCounts: MemoryTriggerSourceEvaluateResult['diagnostics']['status_counts'] = {
     active: 0,
@@ -121,20 +94,10 @@ const evaluateWithTs = (input: MemoryTriggerSourceEvaluateInput): MemoryTriggerS
   };
 };
 
-class TsMemoryTriggerEngineProvider {
-  public async evaluateWithMetadata(input: MemoryTriggerSourceEvaluateInput): Promise<MemoryTriggerEngineEvaluationResult> {
-    return {
-      result: evaluateWithTs(input),
-      metadata: {
-        provider: 'ts',
-        fallback: false,
-        fallback_reason: null,
-        parity_status: 'skipped',
-        parity_diff_count: 0
-      }
-    };
-  }
-}
+const TS_FALLBACK_DEPRECATION_WARNING =
+  '[DEPRECATED] Memory trigger engine fell back to TS implementation. ' +
+  'The TS fallback is not maintained and may be removed in a future release. ' +
+  'Investigate the Rust sidecar error that triggered this fallback.';
 
 class RustPrimaryMemoryTriggerEngineProvider {
   private readonly rustEngine;
@@ -160,51 +123,11 @@ class RustPrimaryMemoryTriggerEngineProvider {
         }
       };
     } catch (error) {
+      console.warn(TS_FALLBACK_DEPRECATION_WARNING);
       return {
         result: evaluateWithTs(input),
         metadata: {
           provider: 'rust_fallback_to_ts',
-          fallback: true,
-          fallback_reason: error instanceof Error ? error.message : String(error),
-          parity_status: 'skipped',
-          parity_diff_count: 0
-        }
-      };
-    }
-  }
-}
-
-class RustShadowMemoryTriggerEngineProvider {
-  private readonly rustEngine;
-
-  constructor(private readonly options: MemoryTriggerEngineProviderOptions) {
-    this.rustEngine = createMemoryTriggerSidecarClient({
-      binaryPath: options.binaryPath,
-      timeoutMs: options.timeoutMs,
-      autoRestart: options.autoRestart
-    });
-  }
-
-  public async evaluateWithMetadata(input: MemoryTriggerSourceEvaluateInput): Promise<MemoryTriggerEngineEvaluationResult> {
-    const tsResult = evaluateWithTs(input);
-    try {
-      const rustResult = await this.rustEngine.evaluateSource(input);
-      const diffCount = countOutputDiffs(tsResult, rustResult);
-      return {
-        result: tsResult,
-        metadata: {
-          provider: 'rust_shadow',
-          fallback: false,
-          fallback_reason: null,
-          parity_status: diffCount === 0 ? 'match' : 'diff',
-          parity_diff_count: diffCount
-        }
-      };
-    } catch (error) {
-      return {
-        result: tsResult,
-        metadata: {
-          provider: 'rust_shadow',
           fallback: true,
           fallback_reason: error instanceof Error ? error.message : String(error),
           parity_status: 'skipped',
@@ -222,15 +145,7 @@ export interface MemoryTriggerEngineProvider {
 export const createMemoryTriggerEngineProvider = (
   options: MemoryTriggerEngineProviderOptions
 ): MemoryTriggerEngineProvider => {
-  switch (options.mode) {
-    case 'rust_primary':
-      return new RustPrimaryMemoryTriggerEngineProvider(options);
-    case 'rust_shadow':
-      return new RustShadowMemoryTriggerEngineProvider(options);
-    case 'ts':
-    default:
-      return new TsMemoryTriggerEngineProvider();
-  }
+  return new RustPrimaryMemoryTriggerEngineProvider(options);
 };
 
 export const buildMemoryTriggerSourceEvaluateInput = (input: {

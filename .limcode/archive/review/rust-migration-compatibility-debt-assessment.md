@@ -109,30 +109,42 @@
 
 ---
 
-### 2.4 三元模式（ts / rust_shadow / rust_primary）（🟡 中）
+### 2.4 三元模式（ts / rust_shadow / rust_primary）（🟢 已解决）
+
+> **2026-04-23 更新**：`ts` 与 `rust_shadow` 模式已从 scheduler 和 memory trigger 中物理移除。当前唯一支持的模式为 `rust_primary`，TS 参考实现保留为 `@deprecated` fallback，仅在 Rust sidecar 不可用时触发并打印 `console.warn`  deprecation 日志。
 
 #### 2.4.1 Memory Trigger Engine
 
-- **位置**：`apps/server/src/memory/blocks/provider.ts:119-229`
-- **状态**：
+- **位置**：`apps/server/src/memory/blocks/provider.ts`
+- **原状态**：
   - `ts`：纯 TypeScript 实现（`evaluateWithTs`）
   - `rust_primary`：Rust sidecar 为主，出错时 fallback 到 TS（`rust_fallback_to_ts`）
   - `rust_shadow`：双轨运行，TS 结果为准，Rust 结果仅用于 diff
-- **更新状态（2026-04-22）**：`trigger_rate` 已完成收口，现已作为 deterministic admission gate 在 TS/Rust 两侧正式生效；旧 `ignored_features.trigger_rate_*` 语义已退出，改为真实 gate decision diagnostics，并通过 parity / unit / context tests 验证。
-- **当前默认**：`rust_primary`（`runtime_config.ts:184`）
+- **更新状态（2026-04-23）**：
+  - `TsMemoryTriggerEngineProvider` 与 `RustShadowMemoryTriggerEngineProvider` 已物理删除；
+  - `canonicalize` / `isCanonicalEqual` / `countOutputDiffs` 已删除；
+  - `evaluateWithTs` 保留为私有 deprecated fallback；
+  - `createMemoryTriggerEngineProvider()` 不再接受 `mode` 参数，始终创建 `RustPrimaryMemoryTriggerEngineProvider`；
+  - fallback 触发时打印 `TS_FALLBACK_DEPRECATION_WARNING`。
+- **当前默认**：`rust_primary`（唯一有效值）
 
 #### 2.4.2 Scheduler Decision Kernel
 
-- **位置**：`apps/server/src/app/runtime/scheduler_decision_kernel_provider.ts:75-200`
-- **状态**：与 memory trigger 同构的三元模式
-- **原默认**：`ts`
-- **更新状态（2026-04-21）**：默认值已切为 `rust_primary`（`runtime_config.ts:140`），因此“这是唯一仍默认 TS 的核心组件”这一判断已过期。
-- **当前判断**：阻断因素已从“默认仍为 TS”转为“需要继续观察 rust_primary 在真实流量下是否长期稳定”。
+- **位置**：`apps/server/src/app/runtime/scheduler_decision_kernel_provider.ts`
+- **原状态**：与 memory trigger 同构的三元模式
+- **更新状态（2026-04-23）**：
+  - `TsSchedulerDecisionKernelProvider` 与 `RustShadowSchedulerDecisionKernelProvider` 已物理删除；
+  - `getSchedulerDecisionKernelParityPreview` 已删除；
+  - `evaluateSchedulerDecisionKernel` 标记为 `@deprecated`；
+  - `createSchedulerDecisionKernelProvider()` 不再接受 `mode` 参数，始终创建 `RustPrimarySchedulerDecisionKernelProvider`；
+  - fallback 触发时打印 deprecation warning。
+- **当前默认**：`rust_primary`（唯一有效值）
 
 #### 2.4.3 `canonicalize` / `isCanonicalEqual`
 
-- **位置**：`apps/server/src/memory/blocks/provider.ts:23-41`
+- **位置**：原 `apps/server/src/memory/blocks/provider.ts:23-41` 与 `scheduler_decision_kernel_provider.ts`
 - **问题**：纯为 parity diff 存在的深度比较函数，无业务语义，仅在 `rust_shadow` 模式下使用。
+- **更新状态（2026-04-23）**：已随 `rust_shadow` 模式一起物理删除。
 
 ---
 
@@ -272,10 +284,10 @@
 
 | 行动项 | 前提条件 | 预计改动量 | 当前状态 |
 |--------|---------|-----------|-----------|
-| Memory Trigger：默认锁定 `rust_primary`，移除 `ts` 和 `rust_shadow` 的 Provider 类 | Rust sidecar 连续 2 周无 fallback 触发 | 中 | 🟡 默认已是 `rust_primary`，移除 Provider 仍待后续 |
-| Scheduler Kernel：完成 Rust 实现验证后，默认切换为 `rust_primary` | 需先补充 scheduler kernel Rust 侧的缺失功能 | 大 | ✅ 默认已切为 `rust_primary` |
+| Memory Trigger：默认锁定 `rust_primary`，移除 `ts` 和 `rust_shadow` 的 Provider 类 | Rust sidecar 连续 2 周无 fallback 触发 | 中 | ✅ 已完成（2026-04-23），Provider 类与 parity 代码已物理删除 |
+| Scheduler Kernel：完成 Rust 实现验证后，默认切换为 `rust_primary` | 需先补充 scheduler kernel Rust 侧的缺失功能 | 大 | ✅ 已完成（2026-04-23），TS/shadow Provider 已物理删除 |
 | World Engine：当 Rust sidecar 覆盖全部 `mutated_core_collections` 后，移除 `LegacyWorldEngineAdapter` | 需完成 `docs/ENHANCEMENTS.md:320-338` 中的语义深化 | 大 | ✅ 已完成，legacy world engine adapter 已物理删除 |
-| 移除 `canonicalize`/`isCanonicalEqual` | shadow 模式移除后 | 小 | ⚪ 未开始 |
+| 移除 `canonicalize`/`isCanonicalEqual` | shadow 模式移除后 | 小 | ✅ 已完成（2026-04-23），随 shadow 模式一起删除 |
 
 #### 阶段四：清理兼容标记（长期）
 
@@ -293,7 +305,7 @@
 | 风险 | 影响 | 缓解措施 | 当前状态 |
 |------|------|---------|-----------|
 | 直接移除 `TsWorldEngineAdapter` 导致本地开发无法启动（若无 Rust 工具链） | 高 | 已通过 sidecar binary path 优先 + `check:rust` / `build:rust` / CI 接线降低风险；开发态仍可用 cargo fallback，但不再有 TS world engine 兜底 | 🟡 持续观测开发环境体验 |
-| `rust_primary` 模式存在未发现的边界 case | 高 | 在切换默认模式前，强制要求 shadow 模式运行一段时间，收集 diff 日志 | 🟡 仍成立 |
+| `rust_primary` 模式存在未发现的边界 case | 高 | TS fallback 已标记为 @deprecated 并打印 warn；若发现边界 case，优先修复 Rust sidecar 而非回退到 TS | 🟡 持续观测，fallback 保留为最后手段 |
 | `singleFlightStates` 全局状态在并发测试中污染 | 中 | 阶段二封装为注入服务后自然解决；在此之前保持 `fileParallelism: false` | ✅ 当前主路径已解决 |
 | DTO 手动维护导致契约漂移 | 中 | 短期接受；长期引入 JSON Schema 或 protobuf 作为单一真相源 | ⚪ 仍待长期处理 |
 | scheduler decision kernel Rust 化未完成 | 高 | 需先完成 Rust 实现，才能进入阶段三 | ❌ 此条已过期；当前默认已切为 `rust_primary`，应转为“持续观测 rust_primary 稳定性” |
@@ -319,8 +331,19 @@
 - **中等优先级**：继续观察 `rust_primary` 默认模式在 scheduler / memory / world engine 周边的长期稳定性。
 - **长期主题**：DTO 单一真相源、兼容标记字段清理、遗留 source adapter 彻底移除。
 
+### 2026-04-23 补充更新
+
+本轮进一步完成 scheduler / memory trigger 的 TS/shadow 模式清理：
+
+- `ts` 与 `rust_shadow` 模式已从 config schema、provider factory、types、tests、call sites 中物理移除；
+- 唯一有效模式为 `rust_primary`；TS 参考实现保留为 `@deprecated` private fallback，触发时打印 deprecation warning；
+- `canonicalize` / `isCanonicalEqual` / `countOutputDiffs` / `getSchedulerDecisionKernelParityPreview` 已删除；
+- `source_registry.ts` fallback 默认值从 `'ts'` 改为 `'rust_primary'`；
+- `agent_scheduler.ts` / `memory_blocks.ts` 调用面不再传递 `mode` 参数；
+- 相关 tests 已更新，typecheck / lint / unit tests / integration tests 已通过。
+
 ### 当前最关键的后续动作
 
-1. **在 `docs/ARCH.md` 或 `docs/ENHANCEMENTS.md` 中更新 Rust 迁移状态矩阵**，让新开发者一目了然各组件当前默认模式与剩余 legacy 边界。
+1. ~~在 `docs/ARCH.md` 或 `docs/ENHANCEMENTS.md` 中更新 Rust 迁移状态矩阵~~ ✅ 已完成同步。
 2. **继续审计 `default_step_contributor.ts` / `world_engine_contributors.ts` / plugin runtime contributor API**，判断它们是 sidecar host contract 还是仅为已删除 TS adapter 服务的遗留层。
 3. **将本轮实现结果同步到项目级 progress / TODO 快照**，保持文档与代码状态一致。

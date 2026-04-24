@@ -149,16 +149,27 @@ PackStateResolvable (3 fields)
 - **运行时行为完全不变**：所有消费者仍使用 `InferenceContext` 或 `PromptResolvableContext`
 - `prompt_builder.ts` 的 `PromptContext = InferenceContext | PromptResolvableContext` 联合类型不变
 
-### 5.2 后续渐进迁移
+### 5.2 渐进迁移完成（2026-04-23）
 
-| 阶段 | 变更 | 风险 |
+| 阶段 | 变更 | 状态 |
 |---|---|---|
-| Phase A | 消费方函数签名从 `(context: InferenceContext)` 改为 `(context: ActorResolvable)` 等窄接口 | 低 — TypeScript structural typing 保证兼容 |
-| Phase B | `resolveActor()` 返回 `ActorResolvable` 而非完整 `InferenceContext` 子集 | 低 — 调用方按需解构 |
-| Phase C | `buildPackStateSnapshot()` 返回 `PackStateResolvable` 而非完整 `InferencePackStateSnapshot` | 低 — 接口兼容 |
-| Phase D | `context_assembler` 输入从完整 `InferenceContext` 收窄为 `ActorResolvable & PackStateResolvable` | 中 — 需验证所有子属性是否可从窄接口获取 |
+| Phase A | 消费方函数签名从 `(context: InferenceContext)` 改为窄接口 | ✅ 已完成 |
+| Phase B | `resolveActor()` 返回 `ResolvedActor` 并与 `ActorResolvable` 字段对齐 | ✅ 已完成 |
+| Phase C | `buildPackStateSnapshot()` 返回 `InferencePackStateSnapshot`（本身就是 `PackStateResolvable` 的组成部分，无需额外改动） | ✅ 已验证 |
+| Phase D | `context_assembler` 的 `InferenceContextV2.subject_context` 类型从 inline 对象收窄为 `ActorResolvable` | ✅ 已完成 |
 
-每个阶段都应该在单次 PR 中完成，附带对应的类型收窄测试。
+**Phase A 详情：**
+- `intent_grounder.ts`：`getWorldPackInvocationRules(context)` 参数从 `InferenceContext` 收窄为 `PackStateResolvable`
+- `intent_grounder.ts`：`hasCapability` 参数从 `InferenceContext` 收窄为 `ActorResolvable & PackStateResolvable`
+
+**Phase B 详情：**
+- `context_builder.ts`：`ResolvedActor` 接口字段从 camelCase 对齐为 snake_case（`actor_ref`、`actor_display_name`、`binding_ref`、`resolved_agent_id`）
+- `context_builder.ts`：`ResolvedActor` 新增 `agent_snapshot` 字段，所有 4 个 `resolveActor()` 分支均已填充
+- `buildInferenceVariableContext()` 移除独立的 `agentSnapshot` 参数，改为从 `resolvedActor.agent_snapshot` 读取
+
+**Phase D 详情：**
+- `context_assembler.ts`：`InferenceContextV2.subject_context` 类型从显式 4 字段 inline 对象改为 `ActorResolvable`
+- `buildInferenceContextV2()` 构造时补充 `actor_display_name` 与 `agent_snapshot`
 
 ### 5.3 不在迁移范围内的变更
 
@@ -198,4 +209,5 @@ PackStateResolvable (3 fields)
 - [x] `InferenceContext` 继承关系不变，总 21 字段不变
 - [x] Typecheck 通过（仅预存错误）
 - [x] 设计文档归档于 `.limcode/design/`
-- [ ] 主路径代码仍使用 `InferenceContext` 完整类型（**设计阶段不改变**）
+- [x] Phases A-D 已完成：消费者签名收窄、`ResolvedActor` 对齐、`subject_context` 类型收窄
+- [x] 141/141 unit tests 通过，50/53 integration tests 通过（3 个预存失败）

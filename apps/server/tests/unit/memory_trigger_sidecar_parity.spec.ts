@@ -204,7 +204,6 @@ describe('memory trigger sidecar parity', () => {
     });
 
     const tsProvider = createMemoryTriggerEngineProvider({
-      mode: 'ts',
       timeoutMs: 5000,
       binaryPath: '',
       autoRestart: true

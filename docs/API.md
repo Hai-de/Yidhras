@@ -274,7 +274,11 @@ multi-pack runtime 为 **experimental / default off / operator test-only**，架
 
 - **POST `/api/inference/preview`**
   - 说明：预览推理上下文与结构化 prompt 结果
-  - 输入：`{ agent_id?: string, identity_id?: string, strategy?: "mock"|"rule_based", attributes?: Record<string, unknown>, idempotency_key?: string }`
+  - 输入：`{ agent_id?: string, identity_id?: string, actor_entity_id?: string, strategy?: "mock"|"rule_based", attributes?: Record<string, unknown>, idempotency_key?: string }`
+    - `agent_id`：直接指定宿主 runtime agent ID（如 `"agent-001"` 或 `"my-pack:guard-001"`）
+    - `identity_id`：直接指定 Prisma identity ID（如 `"my-pack:identity:guard-001"`）
+    - `actor_entity_id`：指定 pack-local actor entity ID（如 `"guard-001"`），运行时自动桥接为 `"${packId}:${actor_entity_id}"` 的 agent ID
+    - 优先级：`agent_id` > `identity_id` > `actor_entity_id` > system fallback
 - **POST `/api/inference/run`**
   - 说明：手动触发一次推理并返回标准化 decision
 

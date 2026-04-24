@@ -277,8 +277,8 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 
 - World engine：已完成 sidecar-only 收口
 - Objective enforcement：已切到 Rust-owned 真实执行路径
-- Scheduler decision kernel：默认 Rust，保留 TS/shadow 兼容通道
-- Memory trigger engine：默认 Rust，保留 TS/shadow 兼容通道
+- Scheduler decision kernel：Rust sidecar 唯一执行路径；TS 参考实现已标记为 @deprecated，仅在 Rust sidecar 不可用时触发 fallback 并打印 deprecation warning
+- Memory trigger engine：Rust sidecar 唯一执行路径；TS 参考实现已标记为 @deprecated，仅在 Rust sidecar 不可用时触发 fallback 并打印 deprecation warning
 - 仍由 Node/TS host 持有的能力：runtime orchestration、scheduler runtime、plugin host、workflow host、AI gateway、Host-managed persistence
 
 ## 4. Workflow / inference 边界

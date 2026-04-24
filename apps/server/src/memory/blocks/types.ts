@@ -213,7 +213,7 @@ export interface MemoryEvaluationContext {
   };
 }
 
-export type MemoryTriggerEngineMode = 'ts' | 'rust_shadow' | 'rust_primary';
+export type MemoryTriggerEngineMode = 'rust_primary';
 
 export interface MemoryTriggerRateDecisionRecord {
   present: boolean;
@@ -269,6 +269,6 @@ export interface MemoryTriggerEngineEvaluationMetadata {
   provider: MemoryTriggerEngineMode | 'rust_fallback_to_ts';
   fallback: boolean;
   fallback_reason: string | null;
-  parity_status: 'match' | 'diff' | 'skipped';
-  parity_diff_count: number;
+  parity_status: 'skipped';
+  parity_diff_count: 0;
 }

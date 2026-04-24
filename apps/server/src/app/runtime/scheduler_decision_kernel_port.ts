@@ -128,11 +128,11 @@ export interface AgentSchedulerCandidateDecisionSnapshot {
 }
 
 export interface SchedulerDecisionKernelObservability {
-  decision_kernel_provider?: 'ts' | 'rust_shadow' | 'rust_primary' | 'rust_fallback_to_ts';
+  decision_kernel_provider?: 'rust_primary' | 'rust_fallback_to_ts';
   decision_kernel_fallback?: boolean;
   decision_kernel_fallback_reason?: string | null;
-  decision_kernel_parity_status?: 'match' | 'diff' | 'skipped';
-  decision_kernel_parity_diff_count?: number;
+  decision_kernel_parity_status?: 'skipped';
+  decision_kernel_parity_diff_count?: 0;
 }
 
 export interface AgentSchedulerRunResult extends SchedulerKernelRunSummary, SchedulerDecisionKernelObservability {

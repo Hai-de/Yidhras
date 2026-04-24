@@ -122,6 +122,7 @@ export interface InferenceBindingRef {
 export interface InferenceActorRef {
   identity_id: string;
   identity_type: IdentityContext['type'];
+  entity_kind?: string;
   role: InferenceActorRole;
   agent_id: string | null;
   atmosphere_node_id: string | null;

@@ -6,23 +6,21 @@
 ## 当前重点 / Current Focus
 
 ### 梳理当前代码实现
-- [ ] 切割巨型模块： InferenceContext
+- [x] 拆分模块 InferenceContext，让其使用接口的显性依赖被明确，让其能如同世界包的配置文件一样分发具体配置
+- [ ] ai网关模块配置化
+- [ ] 提示词组装（Prompt Bundle）重构，6 个Slots过于原始人！目前需要的是自由插槽数量，这意味着，在这部分需要允许配置文件自由增减插槽数量，所谓6 个固定槽位只能所谓默认问配置文件提供，且这些槽位应当允许被“宏变量”指代，这个提示词组装部位需要引入权限管理模块，允许特定的ai能自由配置提示词插槽
 - [ ] 实现部分 docs/ENHANCEMENTS.md 文件中列出的高价值内容
-
-### 重构整个测试链路
+- [ ] 移除TS fallback
+### 重构整个测试链路 
 
 - [ ]  长期整个单元测试文件存在测试面不足，写完对应代码就写测试，没有考虑后期迭代导致的维护性问题
 - [ ]  寻找基准测试，通过更多视角察觉之前忽略的视角
 - [ ]  制造压力性测试，创造各种极端/边缘的环境和条件，观察稳定性
 - [ ]  寻找创造各种能破坏项目的形式，以攻击者的视角寻找安全漏洞，让整个项目快速失败
 
-### 架构缺口（来源：核心链路结构性问题审查）
 
-- [ ]  设计 pack actor / pack identity → inference actor 桥接策略，解决 `resolveActor()` 不认 pack entity 的问题（详见 `.limcode/review/public-opinion-crisis-runtime-actor-binding-review.md`）
 
 ## 说明 / Notes
 
 - 本文件不是 changelog，不记录完整已完成清单。
 - 本文件不是架构总览，不长期保存稳定模块说明。
-- LegacyTsWorldEngineAdapter / createTsWorldEngineAdapter 已物理移除；world engine 已收敛为 sidecar-only 配置与启动装配，相关受影响单元/集成测试、lint 与 typecheck 已完成验证。
-- 早期核心链路结构性问题清单已归档至 `.limcode/archive/historical/core-pipeline-structural-issue-inventory.md`，其中 #5 (invocation_type 前缀对齐) 已解决，#1-4 (pack actor 桥接) 仍开放。

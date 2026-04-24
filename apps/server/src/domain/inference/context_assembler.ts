@@ -1,17 +1,12 @@
 import type { AppContext } from '../../app/context.js';
 import { buildInferenceContext } from '../../inference/context_builder.js';
-import type { InferenceContext } from '../../inference/types.js';
+import type { ActorResolvable, InferenceContext } from '../../inference/types.js';
 import { resolveAuthorityForSubject, resolveMediatorBindingsForPack } from '../authority/resolver.js';
 import { resolvePerceptionForSubject } from '../perception/resolver.js';
 
 export interface InferenceContextV2 {
   base: InferenceContext;
-  subject_context: {
-    actor_ref: InferenceContext['actor_ref'];
-    identity: InferenceContext['identity'];
-    binding_ref: InferenceContext['binding_ref'];
-    resolved_agent_id: string | null;
-  };
+  subject_context: ActorResolvable;
   authority_context: Awaited<ReturnType<typeof resolveAuthorityForSubject>>;
   perception_context: Awaited<ReturnType<typeof resolvePerceptionForSubject>>;
   world_rule_context: {
@@ -42,9 +37,11 @@ export const buildInferenceContextV2 = async (
     base,
     subject_context: {
       actor_ref: base.actor_ref,
+      actor_display_name: base.actor_display_name,
       identity: base.identity,
       binding_ref: base.binding_ref,
-      resolved_agent_id: base.resolved_agent_id
+      resolved_agent_id: base.resolved_agent_id,
+      agent_snapshot: base.agent_snapshot
     },
     authority_context: authorityContext,
     perception_context: perceptionContext,
