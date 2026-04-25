@@ -8,13 +8,12 @@ import {
   buildMemoryTriggerSourceEvaluateInput,
   createMemoryTriggerEngineProvider
 } from '../../memory/blocks/provider.js';
-import type { LongMemoryBlockStore, MemoryActivationEvaluation, MemoryTriggerEngineEvaluationMetadata } from '../../memory/blocks/types.js';
+import type { LongMemoryBlockStore, MemoryActivationEvaluation } from '../../memory/blocks/types.js';
 import type { ContextNode } from '../types.js';
 
 export interface MemoryBlockSourceBuildResult {
   nodes: ContextNode[];
   evaluations: MemoryActivationEvaluation[];
-  evaluation_metadata?: MemoryTriggerEngineEvaluationMetadata | null;
   trigger_rate_summary?: {
     present_count: number;
     applied_count: number;
@@ -59,6 +58,14 @@ export const buildContextNodesFromMemoryBlocks = async (input: {
     limit: input.limit ?? 20
   });
 
+  if (records.length === 0) {
+    return {
+      nodes: [],
+      evaluations: [],
+      trigger_rate_summary: null
+    };
+  }
+
   const engineConfig = getMemoryTriggerEngineConfig();
   const provider = createMemoryTriggerEngineProvider({
     timeoutMs: engineConfig.timeout_ms,
@@ -66,10 +73,22 @@ export const buildContextNodesFromMemoryBlocks = async (input: {
     autoRestart: engineConfig.auto_restart
   });
 
-  const providerResult = await provider.evaluateWithMetadata(buildMemoryTriggerSourceEvaluateInput({
-    evaluation_context: evaluationContext,
-    candidates: records
-  }));
+  let providerResult;
+  try {
+    providerResult = await provider.evaluateWithMetadata(buildMemoryTriggerSourceEvaluateInput({
+      evaluation_context: evaluationContext,
+      candidates: records
+    }));
+  } catch (error) {
+    console.warn(
+      `[memory_blocks] Rust sidecar unavailable, skipping memory block evaluation: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return {
+      nodes: [],
+      evaluations: [],
+      trigger_rate_summary: null
+    };
+  }
 
   for (const recordResult of providerResult.result.records) {
     await input.longMemoryBlockStore.updateRuntimeState(recordResult.next_runtime_state);
@@ -95,7 +114,6 @@ export const buildContextNodesFromMemoryBlocks = async (input: {
   return {
     nodes,
     evaluations,
-    evaluation_metadata: providerResult.metadata,
     trigger_rate_summary: {
       ...providerResult.result.diagnostics.trigger_rate
     }

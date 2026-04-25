@@ -4,6 +4,7 @@ import { createPolicyFilterPromptProcessor } from '../../inference/processors/po
 import { createTokenBudgetTrimmerPromptProcessor } from '../../inference/processors/token_budget_trimmer.js';
 import type { PromptFragment } from '../../inference/prompt_fragments.js';
 import type { PromptProcessor } from '../../inference/prompt_processors.js';
+import type { PromptTree } from '../../inference/prompt_tree.js';
 import type { InferenceContext, PromptProcessingTrace } from '../../inference/types.js';
 import type { PromptMacroDiagnostics } from '../../narrative/types.js';
 import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
@@ -511,7 +512,8 @@ export const runPromptWorkflow = async (
   context: InferenceContext,
   fragments: PromptFragment[],
   options: PromptWorkflowRunOptions = {},
-  legacySteps: ContextOrchestratorStep[] = buildDefaultLegacySteps()
+  legacySteps: ContextOrchestratorStep[] = buildDefaultLegacySteps(),
+  tree?: PromptTree
 ): Promise<ContextOrchestratorRunResult> => {
   const selectionInput: PromptWorkflowSelectionInput = {
     task_type: options.task_type ?? 'agent_decision',
@@ -529,6 +531,7 @@ export const runPromptWorkflow = async (
     profile,
     fragments: sortFragments(fragments),
     include_sections: options.include_sections,
+    tree,
     compatibility: {}
   });
 

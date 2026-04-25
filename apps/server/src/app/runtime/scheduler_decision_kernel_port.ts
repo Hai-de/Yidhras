@@ -127,16 +127,36 @@ export interface AgentSchedulerCandidateDecisionSnapshot {
   created_job_id: string | null;
 }
 
-export interface SchedulerDecisionKernelObservability {
-  decision_kernel_provider?: 'rust_primary' | 'rust_fallback_to_ts';
-  decision_kernel_fallback?: boolean;
-  decision_kernel_fallback_reason?: string | null;
-  decision_kernel_parity_status?: 'skipped';
-  decision_kernel_parity_diff_count?: 0;
-}
-
-export interface AgentSchedulerRunResult extends SchedulerKernelRunSummary, SchedulerDecisionKernelObservability {
+export interface AgentSchedulerRunResult extends SchedulerKernelRunSummary {
   scheduler_run_id?: string;
   scheduler_run_ids?: string[];
   partition_ids?: string[];
 }
+
+export const createInitialSkipCounts = (): Record<SchedulerSkipReason, number> => ({
+  pending_workflow: 0,
+  periodic_cooldown: 0,
+  event_coalesced: 0,
+  existing_same_idempotency: 0,
+  replay_window_periodic_suppressed: 0,
+  replay_window_event_suppressed: 0,
+  retry_window_periodic_suppressed: 0,
+  retry_window_event_suppressed: 0,
+  limit_reached: 0
+});
+
+export const createEmptySchedulerRunResult = (partitionId: string): AgentSchedulerRunResult & { partition_id: string } => ({
+  partition_id: partitionId,
+  scanned_count: 0,
+  eligible_count: 0,
+  created_count: 0,
+  skipped_pending_count: 0,
+  skipped_cooldown_count: 0,
+  created_periodic_count: 0,
+  created_event_driven_count: 0,
+  signals_detected_count: 0,
+  scheduled_for_future_count: 0,
+  skipped_existing_idempotency_count: 0,
+  skipped_by_reason: createInitialSkipCounts()
+});
+

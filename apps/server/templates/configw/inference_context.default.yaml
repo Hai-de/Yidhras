@@ -1,0 +1,118 @@
+# InferenceContext 默认配置模板
+# 放置于 data/configw/inference_context.yaml 以激活自定义配置
+# 所有字段均为可选；未提供的字段使用内置默认值
+
+config_version: 1
+
+variable_context:
+  # 变量命名空间解析的严格模式
+  # strict_namespace: false
+
+  # 别名回退的优先级顺序
+  # alias_precedence: [system, app, pack, runtime, actor, request]
+
+  layers:
+    system:
+      enabled: true
+      values:
+        name: Yidhras
+        timezone: Asia/Shanghai
+      alias_values:
+        system_name: "{{name}}"
+        timezone: "{{timezone}}"
+
+    app:
+      enabled: true
+      values:
+        startup_health: "{{app.startup_health}}"
+      alias_values:
+        startup_level: "{{app.startup_health.level}}"
+
+    pack:
+      enabled: true
+      values:
+        metadata: "{{pack.metadata}}"
+        variables: "{{pack.variables}}"
+        prompts: "{{pack.prompts}}"
+        ai: "{{pack.ai}}"
+      alias_values:
+        world_name: "{{pack.metadata.name}}"
+        pack_id: "{{pack.metadata.id}}"
+        pack_name: "{{pack.metadata.name}}"
+
+    runtime:
+      enabled: true
+      values:
+        current_tick: "{{runtime.current_tick}}"
+        pack_state: "{{runtime.pack_state}}"
+        pack_runtime: "{{runtime.pack_runtime}}"
+        world_state: "{{runtime.pack_state.world_state}}"
+        owned_artifacts: "{{runtime.pack_state.owned_artifacts}}"
+        latest_event: "{{runtime.pack_state.latest_event}}"
+      alias_values:
+        current_tick: "{{runtime.current_tick}}"
+        world_state: "{{runtime.pack_state.world_state}}"
+        latest_event: "{{runtime.pack_state.latest_event}}"
+        owned_artifacts: "{{runtime.pack_state.owned_artifacts}}"
+
+    actor:
+      enabled: true
+      values:
+        identity_id: "{{actor.identity.id}}"
+        identity_type: "{{actor.identity.type}}"
+        display_name: "{{actor.display_name}}"
+        role: "{{actor.role}}"
+        binding_ref: "{{actor.binding_ref}}"
+        agent_id: "{{actor.agent_id}}"
+        agent_snapshot: "{{actor.agent_snapshot}}"
+      alias_values:
+        actor_name: "{{actor.display_name}}"
+        actor_role: "{{actor.role}}"
+        actor_id: "{{actor.agent_id ?? actor.identity.id}}"
+        identity_id: "{{actor.identity.id}}"
+
+    request:
+      enabled: true
+      values:
+        task_type: agent_decision
+        strategy: "{{request.strategy}}"
+        attributes: "{{request.attributes}}"
+        agent_id: "{{request.agent_id}}"
+        identity_id: "{{request.identity_id}}"
+        idempotency_key: "{{request.idempotency_key}}"
+      alias_values:
+        strategy: "{{request.strategy}}"
+        task_type: agent_decision
+        request_agent_id: "{{request.agent_id}}"
+        request_identity_id: "{{request.identity_id}}"
+
+transmission_profile:
+  defaults:
+    snr_fallback: 0.5
+    delay_ticks_fallback: "1"
+  thresholds:
+    fragile_snr: 0.3
+  drop_chances:
+    fragile: 0.35
+    best_effort: 0.15
+    reliable: 0.0
+  policies:
+    read_restricted_base: best_effort
+    low_snr_base: fragile
+    default_base: reliable
+
+policy_summary:
+  evaluations:
+    - resource: social_post
+      action: read
+      fields:
+        - id
+        - author_id
+        - content
+        - created_at
+        - content.private.preview
+        - content.private.raw
+    - resource: social_post
+      action: write
+      fields:
+        - content

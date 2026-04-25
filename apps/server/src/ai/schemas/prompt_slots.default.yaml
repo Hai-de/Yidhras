@@ -1,0 +1,81 @@
+version: 1
+slots:
+  system_core:
+    display_name: "系统核心指令"
+    description: "推理服务的系统级指令与身份声明"
+    default_priority: 100
+    default_template: |
+      你是 Yidhras 推理服务，运行在 workflow baseline。
+      当前策略: {{ request.strategy }}
+    message_role: system
+    include_in_combined: true
+    combined_heading: "System Prompt"
+    enabled: true
+
+  system_policy:
+    display_name: "系统策略"
+    description: "访问控制与策略约束"
+    default_priority: 95
+    message_role: system
+    include_in_combined: true
+    combined_heading: "System Policy Prompt"
+    enabled: true
+    permissions:
+      read: []
+      write: []
+      adjust: []
+      visible: true
+      visible_to: []
+
+  role_core:
+    display_name: "角色核心"
+    description: "当前 Actor 的角色定义与上下文"
+    default_priority: 90
+    default_template: |
+      角色: {{ actor.display_name }}
+      角色类型: {{ actor.role }}
+      所属 Agent: {{ actor.agent_id | default("none") }}
+    message_role: developer
+    include_in_combined: true
+    combined_heading: "Role Prompt"
+    enabled: true
+
+  world_context:
+    display_name: "世界上下文"
+    description: "World Pack 提供的世界观与规则说明"
+    default_priority: 80
+    template_context: world_prompts
+    message_role: system
+    include_in_combined: true
+    combined_heading: "World Prompt"
+    enabled: true
+
+  memory_summary:
+    display_name: "记忆摘要"
+    description: "短期/长期记忆的摘要注入"
+    default_priority: 70
+    message_role: user
+    include_in_combined: true
+    combined_heading: "Memory Summary Prompt"
+    enabled: true
+
+  output_contract:
+    display_name: "输出契约"
+    description: "预期输出格式与约束"
+    default_priority: 50
+    default_template: |
+      返回归一化的 decision 对象。
+      字段: action_type, target_ref, payload, confidence, delay_hint_ticks, reasoning, meta
+    message_role: user
+    include_in_combined: true
+    combined_heading: "Output Contract Prompt"
+    enabled: true
+
+  post_process:
+    display_name: "上下文快照"
+    description: "当前推理上下文的 JSON 快照"
+    default_priority: 60
+    message_role: user
+    include_in_combined: true
+    combined_heading: "Post Process Prompt"
+    enabled: true

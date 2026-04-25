@@ -192,6 +192,7 @@ export interface AiTaskRequest {
   prompt_context: {
     messages?: AiMessage[];
     prompt_bundle?: AiTaskPromptBundleSnapshot | null;
+    prompt_bundle_v2?: unknown | null;
   };
   output_contract?: {
     mode: AiResponseMode;

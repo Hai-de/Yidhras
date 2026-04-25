@@ -1,3 +1,4 @@
+import { getPromptSlotRegistry } from '../ai/registry.js';
 import { type AiTaskService,createAiTaskService } from '../ai/task_service.js';
 import type { AppContext } from '../app/context.js';
 import { toJsonSafe } from '../app/http/json.js';
@@ -21,11 +22,15 @@ import {
   releaseDecisionJobLock,
   updateDecisionJobState
 } from '../app/services/inference_workflow.js';
+import { getRuntimeConfig } from '../config/runtime_config.js';
 import { groundDecisionIntent } from '../domain/invocation/intent_grounder.js';
 import { createMemoryRecordingService } from '../memory/recording/service.js';
 import { ApiError } from '../utils/api_error.js';
 import { buildInferenceContext } from './context_builder.js';
 import { buildPromptBundle } from './prompt_builder.js';
+import { buildPromptBundleV2,buildPromptTree } from './prompt_builder_v2.js';
+import { toLegacyPromptBundle } from './prompt_bundle_v2.js';
+import { applyPermissionFilter } from './prompt_permissions.js';
 import type { InferenceProvider } from './provider.js';
 import { createGatewayBackedInferenceProvider } from './providers/gateway_backed.js';
 import { createMockInferenceProvider } from './providers/mock.js';
@@ -246,7 +251,17 @@ const executeRunInternal = async (
   const inferenceContext = await buildInferenceContext(context, input);
   const provider = selectProvider(providers, inferenceContext.strategy);
   const includeSections = extractIncludeSections(inferenceContext);
-  const prompt = await buildPromptBundle(inferenceContext, { task_type: 'agent_decision', include_sections: includeSections });
+  const runtimeConfig = getRuntimeConfig();
+  let prompt;
+  if (runtimeConfig.features?.experimental?.prompt_bundle_v2) {
+    const registry = getPromptSlotRegistry();
+    const tree = buildPromptTree(inferenceContext, registry.slots);
+    applyPermissionFilter(tree, inferenceContext);
+    const v2 = buildPromptBundleV2(tree, inferenceContext);
+    prompt = toLegacyPromptBundle(v2);
+  } else {
+    prompt = await buildPromptBundle(inferenceContext, { task_type: 'agent_decision', include_sections: includeSections });
+  }
   const attemptCount = options?.attemptCount ?? 1;
   const maxAttempts = options?.maxAttempts ?? DEFAULT_JOB_MAX_ATTEMPTS;
   const memoryRecordingService = createMemoryRecordingService({ context });

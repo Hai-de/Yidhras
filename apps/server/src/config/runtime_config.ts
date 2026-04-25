@@ -199,9 +199,9 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
   },
   prompt_workflow: {
     profiles: {
-      agent_decision_default: { token_budget: 2200, section_policy: 'standard' },
-      context_summary_default: { token_budget: 1600, section_policy: 'minimal' },
-      memory_compaction_default: { token_budget: 1800, section_policy: 'minimal' }
+      agent_decision_default: { token_budget: 2200, section_policy: 'standard', safety_margin_tokens: 80 },
+      context_summary_default: { token_budget: 1600, section_policy: 'minimal', safety_margin_tokens: 60 },
+      memory_compaction_default: { token_budget: 1800, section_policy: 'minimal', safety_margin_tokens: 60 }
     }
   },
   runtime: {
@@ -216,6 +216,8 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
     inference_trace: true,
     notifications: true,
     experimental: {
+      prompt_bundle_v2: false,
+      prompt_slot_permissions: false,
       multi_pack_runtime: {
         enabled: false,
         operator_api_enabled: false,

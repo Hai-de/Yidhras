@@ -142,6 +142,25 @@
 - 延期原因：
   当前阶段优先保证主要流程稳定运行；测试广度补强适合在后续阶段系统推进。
 
+### 9.1 Vue 组件渲染测试引入（@vue/test-utils）
+- 状态：deferred
+- 优先级：medium
+- 范围：web component tests / @vue/test-utils / happy-dom / jsdom
+- 来源：`.limcode/plans/测试链路定向改造计划.plan.md` Phase 3.3 (T12)
+- 背景：
+  当前 web 端测试均为 `environment: 'node'` 下的 Pinia store / composable 单测，
+  尚未覆盖 Vue 组件的实际渲染行为。需要引入 @vue/test-utils + happy-dom/jsdom
+  来做关键 UI 组件的渲染测试。
+- 后续增强候选：
+  - 引入 `@vue/test-utils` + `happy-dom` 作为 web vitest 的 environment
+  - 覆盖边缘状态（loading、empty、error）的渲染
+  - Props 产生正确渲染
+  - 用户交互触发正确的事件
+  - 优先覆盖共享基础组件和关键页面组件
+- 延期原因：
+  需要配置 Nuxt + jsdom 的 test environment 适配；当前阶段优先补齐 server 侧测试盲区与
+  Pinia store 测试深度，组件渲染测试适合在整体测试基础设施稳定后独立推进。
+
 ### 10. Plugin CLI 批量治理增强
 - 状态：deferred
 - 优先级：medium
@@ -280,6 +299,30 @@
 - 延期原因：
   当前主线仍然是先稳定现有 workflow + scheduler contract，再考虑更复杂的 orchestration 能力。
 
+### 6.1 HTTP 端点压力测试（k6/artillery）
+- 状态：deferred
+- 优先级：medium
+- 范围：HTTP load testing / k6 / artillery / stress scenarios
+- 来源：`.limcode/plans/测试链路定向改造计划.plan.md` Phase 4.3 (T15)
+- 背景：
+  当前测试链路已完成 coverage 基线、AI gateway 盲区补齐、benchmark（vitest bench）
+  与属性测试（fast-check），但缺少对 HTTP 端点在上限并发/极限负载下的稳定性验证。
+  TODO.md 明确要求"制造压力性测试，创造各种极端/边缘的环境和条件，观察稳定性"。
+- 后续增强候选：
+  - 选用 k6 或 artillery 作为压力测试框架
+  - 测试 `/api/health`、`/api/status`、`/api/runtime/scheduler/*` 在高并发下的
+    响应时间分布（p50/p95/p99）、错误率和吞吐量
+  - 设计递增负载场景（ramp-up → soak → spike）
+  - 集成到 CI smoke 管线中作为可选 stage
+- 关键约束：
+  - 需要启动真实 server 实例（复用 E2E 隔离环境）
+  - 压力测试对 CI runner 资源要求较高，建议作为 nightly/on-demand job
+  - 需要先确认 k6/artillery 的 Node.js 集成方式与授权模型
+- 延期原因：
+  需要额外工具链配置与 CI runner 资源评估；当前阶段优先完成 server 端测试覆盖、
+  benchmark 基线与属性测试引入，压力测试适合作为后续独立质量工程 milestone。
+
+
 ### 7. Experimental multi-pack runtime operator API 强化项
 - 状态：deferred
 - 优先级：medium
@@ -365,6 +408,106 @@
   - 先以 bounded continuation step 方式单独立项，而不是并入既有 Pack Runtime Core 收尾阶段
 - 延期原因：
   该决策属于下一阶段路线选择，不应混入当前 Pack Runtime Core 收尾与已完成结论。
+
+
+### 12. Prompt 系统延后增强项
+
+以下事项已完成需求对齐与接口预留，待后续 Phase 单独实现。
+
+#### 12.1 HuggingFace tokenizers WASM 适配器
+
+- 状态：deferred
+- 优先级：medium
+- 范围：`inference/tokenizers/` / `prompt_tokenizer.ts`
+- 背景：
+  当前已通过 `PromptTokenizer` 接口 + `TiktokenTokenizerAdapter` 实现了精确 token 计数。
+  `PromptTokenizer` 接口预留了扩展点，后续可新增 HuggingFace WASM adapter 覆盖非 OpenAI 模型（LLaMA、Mistral、Qwen 等）。
+- 实现方案：
+  - 实现 `HuggingFaceTokenizerAdapter implements PromptTokenizer`
+  - 通过 `@huggingface/tokenizers` WASM 加载对应模型的 `tokenizer.json`
+  - 按 `AiModelRegistryEntry.tokenizer` 字段选择 adapter（tiktoken vs WASM）
+  - WASM 异步加载需单例缓存避免重复初始化
+- 关键约束：
+  - WASM binary ~2MB，首次加载有延迟；需预加载或 lazy init
+  - 不同模型 tokenizer.json 不同，需按 model 缓存实例
+- 延期原因：
+  当前项目内置默认仅 OpenAI 模型，tiktoken 已覆盖核心需求。
+
+#### 12.2 Rust sidecar 宏展开 / token 计数
+
+- 状态：deferred
+- 优先级：low
+- 范围：`narrative/resolver.ts` / Rust sidecar / JSON-RPC
+- 背景：
+  当前宏展开（`{{ }}`、`#if`、`#each`、`default()`）在 TS 中执行，性能可接受。
+  若未来出现超长模板（> 4KB）或高并发场景，可将展开 + token 计数移入 Rust sidecar。
+- 实现方案：
+  - 定义 JSON-RPC 契约：`{ template, variable_context } → { rendered, diagnostics }`
+  - Rust 侧从零实现模板 parser（自定义 DSL）
+  - 设置阈值：短模板 TS 处理，长模板（> 4KB）调 Rust
+- 关键约束：
+  - sidecar IPC 开销可能在短模板场景超过计算收益
+  - 当前已有 3 个 Rust sidecar，增加第 4 个需评估运维复杂度
+- 延期原因：
+  TS 性能当前足够；Rust parser 开发周期长。
+
+#### 12.3 SectionDraft 合并到 PromptTree
+
+- 状态：deferred
+- 优先级：medium
+- 范围：`context/workflow/section_drafts.ts` / `prompt_fragment_v2.ts` / `prompt_tree.ts`
+- 背景：
+  `PromptSectionDraft` 和 `PromptTree` 是两套独立数据结构，在 `fragment_assembly` step 中互相转换。
+  合并后可直接在树节点上做 section 级别的 task-aware scoring，消除 O(n) 转换开销。
+- 实现方案：
+  - Phase A：`PromptFragmentV2` 新增 `section_id` / `section_type` 字段
+  - Phase B：task-aware draft policy（standard/evidence_first/memory_focused）改为树遍历 + 节点标记
+  - Phase C：移除 `SectionDraft` 中间层（591 行代码）
+- 关键约束：
+  - `PromptSectionDraftType`（9 种）和 `PromptFragmentSlot`（9 种）是正交概念
+  - 迁移需保证 scoring 等价位 → 先写等价性测试
+  - 影响面大，回归风险高 → 先加字段兼容，不删旧代码
+- 延期原因：
+  需要 Phase 1-4 全部稳定后再推进，避免在变动期引入更多复杂度。
+
+#### 12.4 ProcessingTrace 树形化
+
+- 状态：deferred
+- 优先级：medium
+- 范围：`inference/types.ts`（`PromptProcessingTrace`）/ `prompt_tree.ts`
+- 背景：
+  当前 `PromptProcessingTrace.fragments` 是扁平数组。树形化后可在 trace 中反映
+  `permission_denied`、嵌套 Fragment 等 V2 信息，提升调试体验。
+- 实现方案：
+  - `fragments` 数组元素新增 `children?: FragmentTrace[]`（递归）
+  - 新增 `permission_denied` / `denied_reason` 字段
+  - 保持扁平 trace + 新增可选 `tree_snapshot` 字段（向下兼容）
+  - step_traces 改为 diff-based：只记录 `added/removed/modified fragment_ids`
+- 关键约束：
+  - ProcessingTrace 被序列化到 Prisma JSON 字段 → 树结构增加深度
+  - 下游消费者（InferenceTrace / operator 面板）可能依赖扁平结构
+- 延期原因：
+  依赖 SectionDraft 合并后稳定的树结构。
+
+#### 12.5 Plugin 运行时注入 slot 权限
+
+- 状态：deferred
+- 优先级：low
+- 范围：`plugins/` / `prompt_permissions.ts` / YAML slot 配置
+- 背景：
+  当前权限完全由 YAML 配置声明（`permissions.read/write/adjust/visible`）。
+  Plugin 无法在运行时声明"我可以往 slot X 注入内容"。
+- 实现方案：
+  - Plugin manifest 中声明 `prompt_permissions: [{ slot, operations: ['write'] }]`
+  - Plugin runtime 注入 fragment 时校验：对比插件声明 vs slot 的 `write` allowlist
+  - 不在白名单 → 拒绝 + audit log
+  - 权限冲突解决：YAML 优先（`write: []` 可覆盖插件的 write 声明）
+  - 权限缓存（slot_id + plugin_id → allow/deny），仅在插件安装/卸载时刷新
+- 关键约束：
+  - 插件可声明 `write: [*]` 注入任意 slot → 需 operator 审批 + 签名校验
+  - 权限校验每推理增加开销 → 缓存缓解
+- 延期原因：
+  依赖插件生态成熟度；当前 YAML 声明已覆盖核心场景，Plugin API 尚未达到需要 slot 级权限控制的规模。
 
 ---
 

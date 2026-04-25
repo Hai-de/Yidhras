@@ -136,8 +136,8 @@ const createMemoryBlockSourceAdapter = (
     return {
       nodes: result.nodes,
       diagnostics: {
-        engine_owner: result.evaluation_metadata?.provider?.startsWith('rust') ? 'rust_sidecar' : 'ts_host',
-        engine_mode: result.evaluation_metadata?.provider ?? 'rust_primary',
+        engine_owner: 'rust_sidecar',
+        engine_mode: 'rust_primary',
         trigger_rate: result.trigger_rate_summary ?? {
           present_count: 0,
           applied_count: 0,

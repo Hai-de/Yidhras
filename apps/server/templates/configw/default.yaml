@@ -76,8 +76,7 @@ scheduler:
     cooldown_ticks: 3
     max_candidates: 20
     decision_kernel:
-      mode: "ts"
-      timeout_ms: 500
+      mode: "rust_primary"
       binary_path: "apps/server/rust/scheduler_decision_sidecar/target/debug/scheduler_decision_sidecar"
       auto_restart: true
     signal_policy:

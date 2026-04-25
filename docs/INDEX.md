@@ -36,6 +36,7 @@
 | 文档 | 定位 |
 |------|------|
 | [capabilities/PROMPT_WORKFLOW.md](capabilities/PROMPT_WORKFLOW.md) | Prompt Workflow Runtime：prompt 组装管道、profile、section draft |
+| [capabilities/PROMPT_SLOT_CONFIGURATION.md](capabilities/PROMPT_SLOT_CONFIGURATION.md) | Prompt Slot 配置指南：声明式 YAML slot 定义、模板语法、自定义 slot |
 | [capabilities/AI_GATEWAY.md](capabilities/AI_GATEWAY.md) | AI Gateway：任务路由、模型调度、调用观测 |
 | [capabilities/PLUGIN_RUNTIME.md](capabilities/PLUGIN_RUNTIME.md) | Plugin Runtime：pack-local 插件生命周期、治理、前后端承接 |
 

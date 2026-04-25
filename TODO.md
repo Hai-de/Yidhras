@@ -6,17 +6,20 @@
 ## 当前重点 / Current Focus
 
 ### 梳理当前代码实现
-- [x] 拆分模块 InferenceContext，让其使用接口的显性依赖被明确，让其能如同世界包的配置文件一样分发具体配置
-- [ ] ai网关模块配置化
-- [ ] 提示词组装（Prompt Bundle）重构，6 个Slots过于原始人！目前需要的是自由插槽数量，这意味着，在这部分需要允许配置文件自由增减插槽数量，所谓6 个固定槽位只能所谓默认问配置文件提供，且这些槽位应当允许被“宏变量”指代，这个提示词组装部位需要引入权限管理模块，允许特定的ai能自由配置提示词插槽
 - [ ] 实现部分 docs/ENHANCEMENTS.md 文件中列出的高价值内容
-- [ ] 移除TS fallback
-### 重构整个测试链路 
 
-- [ ]  长期整个单元测试文件存在测试面不足，写完对应代码就写测试，没有考虑后期迭代导致的维护性问题
-- [ ]  寻找基准测试，通过更多视角察觉之前忽略的视角
-- [ ]  制造压力性测试，创造各种极端/边缘的环境和条件，观察稳定性
-- [ ]  寻找创造各种能破坏项目的形式，以攻击者的视角寻找安全漏洞，让整个项目快速失败
+### AI 网关模块盲点修复 (基于代码审计发现)
+- [ ] 清理死代码：确认并删除 `ai_invocation_query.ts`（未被任何文件引用，与 `ai_invocations.ts` 重复 ~335 行）
+- [ ] 清理空目录：`ai/schemas/` 目录为空，填充或移除
+- [ ] 补全 `model_routed` 公共 contract：`inferenceStrategySchema` 目前只允许 `mock|rule_based`，gateway 路径无法通过公开 API 触发（确认设计意图或修复）
+- [ ] 启用 tool calling 入口：`task_service.ts` 中硬编码 `tools:[]` + `tool_policy:{mode:'disabled'}`，需要提供开启路径
+- [ ] 评估 streaming/SSE 需求：gateway 当前零流式支持，所有调用均为 req→full response
+- [ ] 增加观测写入降级策略：`context` 为 null 时调用记录静默丢失，至少应输出 warn 日志；Prisma 写入失败不应阻断 gateway 响应
+- [ ] 引入熔断器/速率限制/指数退避：当前仅简单 `retry_limit`，无 circuit breaker、rate limiter、backoff
+- [ ] 注册表热加载：`resetAiRegistryCache()` 存在但无 file watcher 调用，修改 `ai_models.yaml` 需重启
+- [ ] 补充测试覆盖：`registry.ts`（YAML 加载/合并）、`task_decoder.ts`（schema 校验/alias/unwrap）、`observability.ts`（Prisma 写入）、OpenAI adapter 集成测试、HTTP 路由契约测试
+- [ ] 梳理三层 AI 目录边界：`domain/inference/`（仅 1 文件）、`inference/`、`ai/` 三者关系需文档化或重构
+- [ ] 删除旧 `token_budget_trimmer`
 
 
 

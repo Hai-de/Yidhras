@@ -13,6 +13,17 @@ export default defineConfig({
     restoreMocks: true,
     passWithNoTests: true,
     hookTimeout: 120_000,
-    testTimeout: 120_000
+    testTimeout: 120_000,
+    coverage: {
+      provider: 'v8',
+      reportsDirectory: './coverage',
+      reporter: ['text', 'lcov'],
+      thresholds: {
+        lines: 60,
+        branches: 45,
+        functions: 50,
+        statements: 60
+      }
+    }
   }
 });

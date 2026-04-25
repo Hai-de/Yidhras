@@ -18,7 +18,6 @@ import {
 } from '../services/inference_workflow.js';
 import { recordSchedulerRunSnapshot } from '../services/scheduler_observability.js';
 import { listActiveWorkflowActors } from './entity_activity_query.js';
-import { createEmptySchedulerRunResult } from './scheduler_decision_kernel.js';
 import type {
   AgentSchedulerCandidateDecisionSnapshot,
   AgentSchedulerRunResult,
@@ -33,9 +32,9 @@ import type {
   SchedulerSignalPolicy,
   SchedulerSkipReason
 } from './scheduler_decision_kernel_port.js';
+import { createEmptySchedulerRunResult } from './scheduler_decision_kernel_port.js';
 import {
   createSchedulerDecisionKernelProvider,
-  type SchedulerDecisionKernelEvaluationMetadata
 } from './scheduler_decision_kernel_provider.js';
 import {
   acquireSchedulerLease,
@@ -206,11 +205,6 @@ const aggregatePartitionRunResults = (results: PartitionSchedulerRunResult[]): A
     scheduled_for_future_count: results.reduce((sum, result) => sum + result.scheduled_for_future_count, 0),
     skipped_existing_idempotency_count: results.reduce((sum, result) => sum + result.skipped_existing_idempotency_count, 0),
     skipped_by_reason: skipCounts,
-    decision_kernel_provider: results[0]?.decision_kernel_provider,
-    decision_kernel_fallback: results.some(result => result.decision_kernel_fallback === true),
-    decision_kernel_fallback_reason: results.find(result => typeof result.decision_kernel_fallback_reason === 'string')?.decision_kernel_fallback_reason ?? null,
-    decision_kernel_parity_status: 'skipped' as const,
-    decision_kernel_parity_diff_count: 0 as const,
     scheduler_run_id: schedulerRunIds[0],
     scheduler_run_ids: schedulerRunIds,
     partition_ids: partitionIds
@@ -298,23 +292,6 @@ const buildSchedulerKernelInput = (input: {
   signal_policy: getDefaultSchedulerSignalPolicy(),
   recovery_suppression: getDefaultSchedulerRecoverySuppressionPolicy()
 });
-
-const attachKernelMetadataToSummary = (
-  summary: PartitionSchedulerRunResult,
-  metadata: SchedulerDecisionKernelEvaluationMetadata
-): PartitionSchedulerRunResult => {
-  return {
-    ...summary,
-    skipped_by_reason: {
-      ...summary.skipped_by_reason
-    },
-    decision_kernel_provider: metadata.provider,
-    decision_kernel_fallback: metadata.fallback,
-    decision_kernel_fallback_reason: metadata.fallback_reason,
-    decision_kernel_parity_status: metadata.parity_status,
-    decision_kernel_parity_diff_count: metadata.parity_diff_count
-  };
-};
 
 const runAgentSchedulerForPartition = async ({
   context,
@@ -473,14 +450,12 @@ const runAgentSchedulerForPartition = async ({
     maxEntityActivationsPerTick,
     entitySingleFlightLimit
   });
-  const { output: kernelOutput, metadata } = await schedulerKernel.evaluateWithMetadata(kernelInput);
+  const { output: kernelOutput } = await schedulerKernel.evaluateWithMetadata(kernelInput);
   candidateDecisions.push(...toCandidateDecisionSnapshots(agents, kernelOutput.candidate_decisions));
-
-  let summary: PartitionSchedulerRunResult = {
+  const summary: PartitionSchedulerRunResult = {
     partition_id: partitionId,
     ...kernelOutput.summary
   };
-  summary = attachKernelMetadataToSummary(summary, metadata);
 
   for (const draft of kernelOutput.job_drafts) {
     const decisionSnapshot = findCandidateDecisionSnapshot(candidateDecisions, draft);

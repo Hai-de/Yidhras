@@ -431,3 +431,84 @@ export const listAiRoutePolicies = (taskType?: string): AiRoutePolicy[] => {
 
   return routes.filter(route => route.task_types.includes(taskType as AiRoutePolicy['task_types'][number]));
 };
+
+const promptSlotConfigSchema = z
+  .object({
+    id: nonEmptyStringSchema,
+    display_name: nonEmptyStringSchema,
+    description: nonEmptyStringSchema.optional(),
+    default_priority: z.number().int().min(0),
+    default_template: nonEmptyStringSchema.nullish(),
+    template_context: z.enum(['inference', 'world_prompts', 'pack_state', 'none']).optional(),
+    message_role: z.enum(['system', 'developer', 'user']).optional(),
+    include_in_combined: z.boolean(),
+    combined_heading: nonEmptyStringSchema.nullish(),
+    permissions: z
+      .object({
+        read: z.array(nonEmptyStringSchema).optional(),
+        write: z.array(nonEmptyStringSchema).optional(),
+        adjust: z.array(nonEmptyStringSchema).optional(),
+        visible: z.boolean(),
+        visible_to: z.array(nonEmptyStringSchema).optional()
+      })
+      .strict()
+      .nullish(),
+    enabled: z.boolean(),
+    metadata: z.record(z.string(), z.unknown()).optional()
+  })
+  .strict();
+
+export type ParsedPromptSlotConfig = z.infer<typeof promptSlotConfigSchema>;
+
+const promptSlotRegistrySchema = z
+  .object({
+    version: z.number().int().positive().default(1),
+    slots: z.record(z.string(), promptSlotConfigSchema).default({})
+  })
+  .strict();
+
+interface PromptSlotRegistryCache {
+  config: { version: number; slots: Record<string, ParsedPromptSlotConfig> };
+  metadata: { workspaceRoot: string; configPath: string; loadedFromFile: boolean };
+}
+
+const BUILTIN_PROMPT_SLOTS_PATH = 'apps/server/src/ai/schemas/prompt_slots.default.yaml';
+
+let promptSlotRegistryCache: PromptSlotRegistryCache | null = null;
+
+const loadPromptSlotRegistry = (): PromptSlotRegistryCache => {
+  const workspaceRoot = resolveWorkspaceRoot();
+  const configPath = getAiModelsConfigPath();
+  const defaultPath = `${workspaceRoot}/${BUILTIN_PROMPT_SLOTS_PATH}`;
+  const defaultRaw = readYamlFileIfExists(defaultPath);
+  const defaultParsed = promptSlotRegistrySchema.parse(defaultRaw);
+  const overrideRaw = readYamlFileIfExists(configPath.replace('ai_models.yaml', 'prompt_slots.yaml'));
+  const hasOverride = Object.keys(overrideRaw).length > 0;
+  const merged = hasOverride
+    ? promptSlotRegistrySchema.parse(deepMerge(defaultParsed as unknown as Record<string, unknown>, overrideRaw))
+    : defaultParsed;
+  return {
+    config: merged as { version: number; slots: Record<string, ParsedPromptSlotConfig> },
+    metadata: { workspaceRoot, configPath, loadedFromFile: hasOverride }
+  };
+};
+
+const getPromptSlotRegistryCache = (): PromptSlotRegistryCache => {
+  if (!promptSlotRegistryCache) {
+    promptSlotRegistryCache = loadPromptSlotRegistry();
+  }
+  return promptSlotRegistryCache;
+};
+
+export const resetPromptSlotRegistryCache = (): void => {
+  promptSlotRegistryCache = null;
+};
+
+export const getPromptSlotRegistry = (): { version: number; slots: Record<string, ParsedPromptSlotConfig> } => {
+  return getPromptSlotRegistryCache().config;
+};
+
+export const getPromptSlotRegistryMetadata = (): PromptSlotRegistryCache['metadata'] => {
+  return getPromptSlotRegistryCache().metadata;
+};
+

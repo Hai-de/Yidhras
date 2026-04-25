@@ -1,0 +1,29 @@
+# InferenceContext 部署级配置示例：开发环境
+# 文件名：dev.yaml
+# 使用方式：YIDHRAS_DEPLOYMENT_ID=dev
+#
+# 部署级配置文件只写需要覆盖的字段，其余全部继承自 site-level（inference_context.yaml）和内置默认值。
+# Schema 与站点级配置文件完全一致。
+
+config_version: 1
+
+# 开发环境：更宽松的传输策略，降低丢包率以方便调试
+transmission_profile:
+  defaults:
+    snr_fallback: 0.8          # 未获取到 SNR 时假设信号良好
+  drop_chances:
+    fragile: 0.1               # 弱信号丢包率从默认 0.35 降到 0.1
+    best_effort: 0.05          # 尽力而为丢包率从默认 0.15 降到 0.05
+  thresholds:
+    fragile_snr: 0.15          # 更低的 fragile 判定阈值（仅 <0.15 才视为弱信号）
+
+# 开发环境：使用更宽松的策略规则
+#   read_restricted_base: reliable  — 即使读取受限也走可靠策略
+#   low_snr_base: best_effort        — 弱信号也不直接丢包
+
+variable_context:
+  layers:
+    request:
+      enabled: true
+      values:
+        task_type: agent_decision_debug

@@ -23,6 +23,7 @@ import { listPackEntityStateProjectionRecords } from '../packs/storage/entity_st
 import { ApiError } from '../utils/api_error.js';
 import { getInferenceContextConfig } from './context_config.js';
 import { resolveConfigValues } from './context_config_resolver.js';
+import type { InferenceContextConfig } from './context_config_schema.js';
 import type {
   BuildInferenceContextForPackInput,
   PackRuntimeContractResolver,
@@ -351,11 +352,12 @@ const buildAgentSnapshot = (identity: Record<string, unknown>): InferenceAgentSn
 const buildPolicySummary = async (
   context: AppContext,
   identity: IdentityContext,
-  attributes: Record<string, unknown>
+  attributes: Record<string, unknown>,
+  config?: InferenceContextConfig
 ): Promise<InferencePolicySummary> => {
   const service = createAccessPolicyService(context);
-  const config = getInferenceContextConfig().policy_summary;
-  const evaluations = config?.evaluations ?? [
+  const resolvedConfig = config ?? getInferenceContextConfig();
+  const evaluations = resolvedConfig.policy_summary?.evaluations ?? [
     {
       resource: 'social_post',
       action: 'read',
@@ -402,9 +404,10 @@ const buildTransmissionProfile = (
   actorRef: InferenceActorRef,
   agentSnapshot: InferenceAgentSnapshot | null,
   policySummary: InferencePolicySummary,
-  attributes: Record<string, unknown>
+  attributes: Record<string, unknown>,
+  config?: InferenceContextConfig
 ): InferenceTransmissionProfile => {
-  const tpConfig = getInferenceContextConfig().transmission_profile;
+  const tpConfig = (config ?? getInferenceContextConfig()).transmission_profile;
   const snrFallback = tpConfig?.defaults?.snr_fallback ?? 0.5;
   const fragileSnr = tpConfig?.thresholds?.fragile_snr ?? 0.3;
   const fragileDrop = tpConfig?.drop_chances?.fragile ?? 0.35;
@@ -603,8 +606,9 @@ const buildInferenceVariableContext = (input: {
   packRuntime: InferencePackRuntimeContract;
   requestInput: InferenceRequestInput;
   currentTick: string;
+  config?: InferenceContextConfig;
 }): PromptVariableContext => {
-  const config = getInferenceContextConfig().variable_context;
+  const resolvedConfig = (input.config ?? getInferenceContextConfig()).variable_context;
   const runtimeObjects: Record<string, unknown> = {
     app: { startup_health: input.context.startupHealth },
     pack: {
@@ -635,8 +639,8 @@ const buildInferenceVariableContext = (input: {
     }
   };
 
-  const configuredLayers = config?.layers;
-  const layerOrder = config?.alias_precedence ?? ['system', 'app', 'pack', 'runtime', 'actor', 'request'];
+  const configuredLayers = resolvedConfig?.layers;
+  const layerOrder = resolvedConfig?.alias_precedence ?? ['system', 'app', 'pack', 'runtime', 'actor', 'request'];
 
   const layers = layerOrder
     .map((namespace) => {
@@ -758,13 +762,27 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
       const attributes = normalizeAttributes(input.attributes);
       const resolvedActor = await resolveActor(context, input, pack.metadata.id);
 
+      const deploymentId = process.env.YIDHRAS_DEPLOYMENT_ID?.trim() || undefined;
+      const config = getInferenceContextConfig(deploymentId);
+
       const packState = await buildPackStateSnapshot(context, pack.metadata.id, resolvedActor.resolved_agent_id, attributes);
       const packRuntime = await packRuntimeContractResolver.resolvePackRuntimeContract(context, {
         pack_id: input.pack_id,
         mode: input.mode
       });
-      const policySummary = await buildPolicySummary(context, resolvedActor.identity, attributes);
-      const transmissionProfile = buildTransmissionProfile(resolvedActor.actor_ref, resolvedActor.agent_snapshot, policySummary, attributes);
+      const policySummary = await buildPolicySummary(
+        context,
+        resolvedActor.identity,
+        attributes,
+        config
+      );
+      const transmissionProfile = buildTransmissionProfile(
+        resolvedActor.actor_ref,
+        resolvedActor.agent_snapshot,
+        policySummary,
+        attributes,
+        config
+      );
       const contextAssembly = context.contextAssembly ?? createContextAssemblyPort(context);
       const fallbackContextService = createContextService({
         context, memoryService: createMemoryService({ context })
@@ -787,7 +805,8 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         packState,
         packRuntime,
         requestInput: input,
-        currentTick
+        currentTick,
+        config
       });
 
       return {

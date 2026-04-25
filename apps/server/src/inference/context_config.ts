@@ -1,7 +1,8 @@
 import path from 'path';
 
 import { readYamlFileIfExists, resolveWorkspaceRoot } from '../config/loader.js';
-import { deepMergeAll } from '../config/merge.js';
+import { deepMerge } from '../config/merge.js';
+import { ApiError } from '../utils/api_error.js';
 import {
   type InferenceContextConfig,
   inferenceContextConfigSchema
@@ -9,6 +10,8 @@ import {
 
 const CONFIG_BASENAME = 'inference_context.yaml';
 const CONFIG_DIR_RELATIVE_PATH = path.join('data', 'configw');
+const DEPLOYMENT_CONFIG_DIRNAME = 'inference_context.d';
+const DEPLOYMENT_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
 const BUILTIN_DEFAULTS: InferenceContextConfig = {
   config_version: 1,
@@ -144,12 +147,13 @@ const BUILTIN_DEFAULTS: InferenceContextConfig = {
   }
 };
 
-interface InferenceContextConfigCache {
+interface ConfigCacheEntry {
   config: InferenceContextConfig;
   loadedFile: string | null;
 }
 
-let configCache: InferenceContextConfigCache | null = null;
+let globalCache: ConfigCacheEntry | null = null;
+const deploymentCaches = new Map<string, ConfigCacheEntry>();
 
 const parseNumberEnv = (name: string, value: string | undefined): number | undefined => {
   if (value === undefined) {
@@ -237,17 +241,28 @@ const buildEnvironmentOverrides = (): Record<string, unknown> => {
   return overrides;
 };
 
-const loadInferenceContextConfig = (): InferenceContextConfigCache => {
+const validateDeploymentId = (id: string): void => {
+  if (!DEPLOYMENT_ID_PATTERN.test(id)) {
+    throw new ApiError(400, 'ICC_INVALID_DEPLOYMENT_ID', 'deployment_id contains illegal characters', {
+      deployment_id: id,
+      allowed_pattern: '^[a-zA-Z0-9_-]+$'
+    });
+  }
+};
+
+const getDeploymentConfigPath = (deploymentId: string, workspaceRoot: string): string => {
+  return path.join(workspaceRoot, CONFIG_DIR_RELATIVE_PATH, DEPLOYMENT_CONFIG_DIRNAME, `${deploymentId}.yaml`);
+};
+
+const loadGlobalConfig = (): ConfigCacheEntry => {
   const workspaceRoot = resolveWorkspaceRoot();
   const configDir = path.join(workspaceRoot, CONFIG_DIR_RELATIVE_PATH);
   const configFilePath = path.join(configDir, CONFIG_BASENAME);
 
   const fileOverride = readYamlFileIfExists(configFilePath);
-  const envOverrides = buildEnvironmentOverrides();
-  const merged = deepMergeAll(
+  const merged = deepMerge(
     BUILTIN_DEFAULTS as unknown as Record<string, unknown>,
-    fileOverride,
-    envOverrides
+    fileOverride
   );
 
   const parsed = inferenceContextConfigSchema.parse(merged);
@@ -258,23 +273,86 @@ const loadInferenceContextConfig = (): InferenceContextConfigCache => {
   };
 };
 
-const getCache = (): InferenceContextConfigCache => {
-  if (!configCache) {
-    configCache = loadInferenceContextConfig();
+const getGlobalCache = (): ConfigCacheEntry => {
+  if (!globalCache) {
+    globalCache = loadGlobalConfig();
   }
-  return configCache;
+  return globalCache;
 };
 
-export const getInferenceContextConfig = (): InferenceContextConfig => {
-  return getCache().config;
+const buildFinalConfig = (baseConfig: InferenceContextConfig): InferenceContextConfig => {
+  const envOverrides = buildEnvironmentOverrides();
+  if (Object.keys(envOverrides).length === 0) {
+    return baseConfig;
+  }
+  const merged = deepMerge(
+    baseConfig as unknown as Record<string, unknown>,
+    envOverrides
+  );
+  return inferenceContextConfigSchema.parse(merged);
 };
 
-export const resetInferenceContextConfigCache = (): void => {
-  configCache = null;
+const loadDeploymentConfig = (deploymentId: string): ConfigCacheEntry => {
+  validateDeploymentId(deploymentId);
+
+  const globalEntry = getGlobalCache();
+  const workspaceRoot = resolveWorkspaceRoot();
+  const deploymentConfigPath = getDeploymentConfigPath(deploymentId, workspaceRoot);
+
+  const deploymentOverride = readYamlFileIfExists(deploymentConfigPath);
+
+  let merged: Record<string, unknown>;
+  if (Object.keys(deploymentOverride).length === 0) {
+    merged = globalEntry.config as unknown as Record<string, unknown>;
+  } else {
+    merged = deepMerge(
+      globalEntry.config as unknown as Record<string, unknown>,
+      deploymentOverride
+    );
+  }
+
+  const parsed = inferenceContextConfigSchema.parse(merged);
+
+  return {
+    config: parsed,
+    loadedFile: Object.keys(deploymentOverride).length > 0 ? deploymentConfigPath : globalEntry.loadedFile
+  };
 };
 
-export const getInferenceContextConfigLoadedFile = (): string | null => {
-  return getCache().loadedFile;
+export const getInferenceContextConfig = (deploymentId?: string): InferenceContextConfig => {
+  if (!deploymentId) {
+    return buildFinalConfig(getGlobalCache().config);
+  }
+
+  const cached = deploymentCaches.get(deploymentId);
+  const entry = cached ?? loadDeploymentConfig(deploymentId);
+  if (!cached) deploymentCaches.set(deploymentId, entry);
+
+  return buildFinalConfig(entry.config);
+};
+
+export const resetInferenceContextConfigCache = (deploymentId?: string): void => {
+  if (deploymentId) {
+    deploymentCaches.delete(deploymentId);
+  } else {
+    globalCache = null;
+    deploymentCaches.clear();
+  }
+};
+
+export const getInferenceContextConfigLoadedFile = (deploymentId?: string): string | null => {
+  if (!deploymentId) {
+    return getGlobalCache().loadedFile;
+  }
+
+  const cached = deploymentCaches.get(deploymentId);
+  if (cached) {
+    return cached.loadedFile;
+  }
+
+  const entry = loadDeploymentConfig(deploymentId);
+  deploymentCaches.set(deploymentId, entry);
+  return entry.loadedFile;
 };
 
 export const buildInferenceContextConfigSnapshot = (): Record<string, unknown> => {

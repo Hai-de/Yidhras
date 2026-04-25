@@ -265,10 +265,6 @@ export interface MemoryTriggerSourceEvaluateResult {
   diagnostics: MemoryTriggerSourceDiagnostics;
 }
 
-export interface MemoryTriggerEngineEvaluationMetadata {
-  provider: MemoryTriggerEngineMode | 'rust_fallback_to_ts';
-  fallback: boolean;
-  fallback_reason: string | null;
-  parity_status: 'skipped';
-  parity_diff_count: 0;
-}
+export type MemoryTriggerEngineEvaluationMetadata = {
+  provider: MemoryTriggerEngineMode;
+};

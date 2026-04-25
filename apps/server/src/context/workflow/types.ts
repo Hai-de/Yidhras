@@ -5,6 +5,7 @@ import type {
   PromptFragmentPlacementMode,
   PromptFragmentSlot
 } from '../../inference/prompt_fragments.js';
+import type { PromptTree } from '../../inference/prompt_tree.js';
 import type {
   InferenceActorRef,
   InferenceStrategy,
@@ -59,6 +60,7 @@ export interface PromptWorkflowProfile {
   defaults?: {
     token_budget?: number;
     section_policy?: PromptWorkflowSectionPolicy;
+    safety_margin_tokens?: number;
   };
   steps: PromptWorkflowStepSpec[];
 }
@@ -166,6 +168,7 @@ export interface PromptWorkflowState {
   fragments: PromptFragment[];
   prompt_bundle: PromptBundle | null;
   ai_messages?: AiMessage[];
+  tree?: PromptTree;
   compatibility: Record<string, never>;
   diagnostics: PromptWorkflowDiagnostics;
 }
@@ -201,6 +204,7 @@ export const createInitialPromptWorkflowState = (input: {
   pack_id: string;
   profile: PromptWorkflowProfile;
   fragments?: PromptFragment[];
+  tree?: PromptTree;
   include_sections?: string[];
   compatibility?: Record<string, never>;
 }): PromptWorkflowState => {
@@ -218,6 +222,7 @@ export const createInitialPromptWorkflowState = (input: {
     grouped_nodes: {},
     section_drafts: [],
     fragments: input.fragments ?? [],
+    tree: input.tree,
     prompt_bundle: null,
     compatibility: {},
     diagnostics: createPromptWorkflowDiagnostics(input.profile)

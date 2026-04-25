@@ -1,0 +1,31 @@
+# InferenceContext 部署级配置示例：生产环境
+# 文件名：prod.yaml
+# 使用方式：YIDHRAS_DEPLOYMENT_ID=prod
+#
+# 生产环境：更严格的传输策略，提高丢包率以模拟真实网络环境
+
+config_version: 1
+
+transmission_profile:
+  defaults:
+    snr_fallback: 0.3          # 未获取到 SNR 时假设信号弱（更保守）
+  drop_chances:
+    fragile: 0.45              # 弱信号丢包率略高于默认值
+    best_effort: 0.2           # 尽力而为丢包率略高于默认值
+  thresholds:
+    fragile_snr: 0.4           # 更高的 fragile 判定阈值（<0.4 即视为弱信号）
+  policies:
+    read_restricted_base: fragile      # 读取受限时直接标记为 fragile
+    low_snr_base: fragile              # 低 SNR 时直接标记为 fragile
+
+policy_summary:
+  evaluations:
+    - resource: social_post
+      action: read
+      fields:
+        - id
+        - created_at                   # 生产环境仅暴露必要字段
+    - resource: social_post
+      action: write
+      fields:
+        - content                      # 仅写入 content 字段

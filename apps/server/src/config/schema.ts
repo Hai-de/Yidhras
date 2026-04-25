@@ -33,6 +33,7 @@ const RuntimeMultiPackSchema = z
 const PromptWorkflowProfileDefaultsSchema = z
   .object({
     token_budget: PositiveIntSchema,
+    safety_margin_tokens: z.number().int().nonnegative().optional(),
     section_policy: z.enum(['minimal', 'standard', 'expanded', 'include_only'])
   })
   .strict()
@@ -291,7 +292,9 @@ export const RuntimeConfigSchema = z
         notifications: z.boolean(),
         experimental: z
           .object({
-            multi_pack_runtime: ExperimentalMultiPackRuntimeSchema
+            multi_pack_runtime: ExperimentalMultiPackRuntimeSchema,
+            prompt_bundle_v2: z.boolean().optional().default(false),
+            prompt_slot_permissions: z.boolean().optional().default(false)
           })
           .strict()
       })

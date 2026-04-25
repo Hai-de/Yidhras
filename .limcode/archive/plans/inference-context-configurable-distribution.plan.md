@@ -10,10 +10,10 @@
 - [x] P1-2：默认配置文件模板 — 提供 `data/configw/templates/inference_context.default.yaml`，文档化所有可配置项  `#icc-plan-p1-2`
 - [x] P1-3：单元测试覆盖 — 测试配置加载、合并、缺省回退、Schema 校验失败场景  `#icc-plan-p1-3`
 - [x] P1-4：集成验证 — 运行 `pnpm typecheck` + server 单元测试，确认运行时行为不变  `#icc-plan-p1-4`
-- [ ] P2-1：部署级配置基础设施 — 扩展 `context_config.ts` 支持 `getInferenceContextConfig(deploymentId?)`、per-deployment 缓存、`inference_context.d/{id}.yaml` 加载  `#icc-plan-p2-1`
-- [ ] P2-2：`context_builder.ts` 接入 deployment_id — `buildForPack` 读取 `YIDHRAS_DEPLOYMENT_ID` 并显式传递给下游配置消费函数  `#icc-plan-p2-2`
-- [ ] P2-3：部署级配置单元测试 — 覆盖加载、合并、缓存隔离、缺省回退、环境变量仍覆盖部署级  `#icc-plan-p2-3`
-- [ ] P2-4：集成验证 — 运行 `pnpm typecheck` + server 单元测试  `#icc-plan-p2-4`
+- [x] P2-1：部署级配置基础设施 — 扩展 `context_config.ts` 支持 `getInferenceContextConfig(deploymentId?)`、per-deployment 缓存、`inference_context.d/{id}.yaml` 加载  `#icc-plan-p2-1`
+- [x] P2-2：`context_builder.ts` 接入 deployment_id — `buildForPack` 读取 `YIDHRAS_DEPLOYMENT_ID` 并显式传递给下游配置消费函数  `#icc-plan-p2-2`
+- [x] P2-3：部署级配置单元测试 — 覆盖加载、合并、缓存隔离、缺省回退、环境变量仍覆盖部署级  `#icc-plan-p2-3`
+- [x] P2-4：集成验证 — 运行 `pnpm typecheck` + server 单元测试  `#icc-plan-p2-4`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # InferenceContext 配置化分发计划
@@ -637,14 +637,14 @@ variable_context:
 
 ### 验收标准
 
-- [ ] 提供 `data/configw/inference_context.d/{id}.yaml` 并设置 `YIDHRAS_DEPLOYMENT_ID={id}` 后，InferenceContext 组装使用该部署级配置
-- [ ] 无部署级配置文件时，100% 回退到站点级配置（行为与 Phase 1 一致）
-- [ ] 不设置 `YIDHRAS_DEPLOYMENT_ID` 时，100% 回退到 Phase 1 行为
-- [ ] 多个 `deployment_id` 的配置缓存相互隔离，清除一个不影响其他
-- [ ] 环境变量（`ICC_*`）仍能覆盖部署级配置（L4 优先级保持最高）
-- [ ] 非法 `deployment_id`（如 `../../../etc/passwd`）被安全拒绝，不引发文件遍历
-- [ ] `pnpm typecheck` 通过
-- [ ] server 单元测试全部通过（或仅预存失败）
+- [x] 提供 `data/configw/inference_context.d/{id}.yaml` 并设置 `YIDHRAS_DEPLOYMENT_ID={id}` 后，InferenceContext 组装使用该部署级配置
+- [x] 无部署级配置文件时，100% 回退到站点级配置（行为与 Phase 1 一致）
+- [x] 不设置 `YIDHRAS_DEPLOYMENT_ID` 时，100% 回退到 Phase 1 行为
+- [x] 多个 `deployment_id` 的配置缓存相互隔离，清除一个不影响其他
+- [x] 环境变量（`ICC_*`）仍能覆盖部署级配置（L4 优先级保持最高）
+- [x] 非法 `deployment_id`（如 `../../../etc/passwd`）被安全拒绝，不引发文件遍历
+- [x] `pnpm typecheck` 通过
+- [x] server 单元测试全部通过（或仅预存失败）
 
 ### 风险与规避
 

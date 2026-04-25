@@ -1,5 +1,6 @@
-import { buildAiTaskRequestFromInferenceContext } from '../../ai/task_prompt_builder.js';
+import { buildAiTaskRequestFromInferenceContext, buildAiTaskRequestFromInferenceContextV2 } from '../../ai/task_prompt_builder.js';
 import { type AiTaskService, createAiTaskService } from '../../ai/task_service.js';
+import { getRuntimeConfig } from '../../config/runtime_config.js';
 import type { InferenceProvider } from '../provider.js';
 import type { InferenceContext, PromptBundle, ProviderDecisionRaw } from '../types.js';
 
@@ -26,10 +27,17 @@ export const createGatewayBackedInferenceProvider = ({
     name: 'gateway_backed',
     strategies: ['model_routed'],
     async run(context: InferenceContext, prompt: PromptBundle): Promise<ProviderDecisionRaw> {
-      const request = await buildAiTaskRequestFromInferenceContext(context, {
-        task_type: 'agent_decision',
-        prompt_bundle: prompt
-      });
+      const config = getRuntimeConfig();
+      const useV2 = config.features?.experimental?.prompt_bundle_v2 === true;
+
+      const request = useV2
+        ? await buildAiTaskRequestFromInferenceContextV2(context, {
+            task_type: 'agent_decision'
+          })
+        : await buildAiTaskRequestFromInferenceContext(context, {
+            task_type: 'agent_decision',
+            prompt_bundle: prompt
+          });
 
       try {
         const result = await aiTaskService.runTask<Record<string, unknown>>(request, {
