@@ -8,9 +8,8 @@ import {
   buildSectionDraftsFromFragments,
   buildSectionSummary
 } from '../../src/context/workflow/section_drafts.js';
-import { buildPromptBundle } from '../../src/inference/prompt_builder.js';
 import type { PromptFragment } from '../../src/inference/prompt_fragments.js';
-import type { InferenceContext } from '../../src/inference/types.js';
+
 
 const buildNode = (input: Partial<ContextNode> & Pick<ContextNode, 'id' | 'node_type' | 'scope' | 'source_kind' | 'source_ref' | 'content' | 'tags' | 'importance' | 'salience' | 'created_at' | 'visibility' | 'mutability' | 'placement_policy' | 'provenance'>): ContextNode => ({
   ...input
@@ -230,87 +229,6 @@ describe('prompt workflow section drafts', () => {
     expect(budgetSummary.allocations[0]?.ranking_score).toBeGreaterThan(budgetSummary.allocations[1]?.ranking_score ?? 0);
   });
 
-  it('records task-aware section summaries in prompt bundle metadata', async () => {
-    const context = {
-      inference_id: 'ctx-section-aware-001',
-      actor_ref: { identity_id: 'agent-001', identity_type: 'agent', role: 'active', agent_id: 'agent-001', atmosphere_node_id: null },
-      actor_display_name: '夜神月',
-      identity: { id: 'agent-001', type: 'agent', name: '夜神月', provider: null, status: null, claims: null },
-      binding_ref: null,
-      resolved_agent_id: 'agent-001',
-      agent_snapshot: null,
-      tick: 1000n,
-      strategy: 'mock',
-      attributes: {},
-      world_pack: { id: 'world-death-note', name: '死亡笔记', version: '0.4.0' },
-      world_prompts: {},
-      world_ai: null,
-      visible_variables: {},
-      variable_context: {
-        layers: [],
-        alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
-        strict_namespace: false
-      },
-      variable_context_summary: {
-        namespaces: [],
-        alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
-        strict_namespace: false,
-        layer_count: 0
-      },
-      policy_summary: {
-        social_post_read_allowed: true,
-        social_post_readable_fields: ['id', 'content'],
-        social_post_write_allowed: true,
-        social_post_writable_fields: ['content']
-      },
-      transmission_profile: { policy: 'reliable', drop_reason: null, delay_ticks: '1', drop_chance: 0, derived_from: ['test'] },
-      context_run: {
-        id: 'context-run-sections-1',
-        created_at_tick: '1000',
-        selected_node_ids: [],
-        nodes: [],
-        diagnostics: { source_adapter_names: [], node_count: 0, node_counts_by_type: {}, selected_node_ids: [], dropped_nodes: [] }
-      },
-      memory_context: {
-        short_term: [],
-        long_term: [],
-        summaries: [],
-        diagnostics: {
-          selected_count: 0,
-          skipped_count: 0,
-          memory_selection: { selected_entry_ids: [], dropped: [] }
-        }
-      },
-      pack_state: { actor_roles: [], actor_state: null, owned_artifacts: [], world_state: null, latest_event: null },
-      pack_runtime: { invocation_rules: [] }
-    } satisfies InferenceContext;
-
-    const summaryBundle = await buildPromptBundle(context, { task_type: 'context_summary' });
-    const summaryPromptWorkflow = summaryBundle.metadata.processing_trace as Record<string, unknown> | undefined;
-    expect(summaryBundle.metadata.workflow_task_type).toBe('context_summary');
-    expect(summaryPromptWorkflow?.workflow_task_type).toBe('context_summary');
-    expect(Array.isArray(summaryBundle.metadata.processing_trace?.workflow_step_keys)).toBe(true);
-    expect(summaryBundle.metadata.processing_trace?.workflow_step_keys).toEqual(expect.arrayContaining(['fragment_assembly', 'token_budget_trim']));
-    expect(summaryBundle.metadata.workflow_section_summary).toMatchObject({
-      task_type: 'context_summary',
-      section_policy: 'minimal',
-      section_scores: expect.any(Array),
-      section_policies: ['evidence_first']
-    });
-
-    const memoryBundle = await buildPromptBundle(context, { task_type: 'memory_compaction' });
-    const promptWorkflow = (memoryBundle.metadata.processing_trace as Record<string, unknown> | undefined);
-    expect(memoryBundle.metadata.workflow_task_type).toBe('memory_compaction');
-    expect(promptWorkflow?.workflow_task_type).toBe('memory_compaction');
-    expect(Array.isArray(memoryBundle.metadata.processing_trace?.workflow_step_keys)).toBe(true);
-    expect(memoryBundle.metadata.processing_trace?.workflow_step_keys).toEqual(expect.arrayContaining(['fragment_assembly', 'token_budget_trim']));
-    expect(memoryBundle.metadata.workflow_section_summary).toMatchObject({
-      task_type: 'memory_compaction',
-      section_policy: 'minimal',
-      section_scores: expect.any(Array),
-      section_policies: ['memory_focused']
-    });
-  });
 
   it('filters sections with include_only policy and include_sections list', () => {
     const fragments: PromptFragment[] = [

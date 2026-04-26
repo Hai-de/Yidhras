@@ -1,5 +1,7 @@
 import type { AppContext } from '../app/context.js';
 import { ApiError } from '../utils/api_error.js';
+import type { CircuitBreaker, RateLimiter } from './elasticity/index.js';
+import { createCircuitBreaker, createExponentialBackoff, createRateLimiter, DEFAULT_BACKOFF_CONFIG } from './elasticity/index.js';
 import { recordAiInvocation } from './observability.js';
 import { createMockAiProviderAdapter } from './providers/mock.js';
 import { createOpenAiProviderAdapter } from './providers/openai.js';
@@ -269,6 +271,16 @@ export const createModelGateway = ({
       let lastFailure: ModelGatewayResponse | null = null;
       const attemptedModels: string[] = [];
       const attempts: AiInvocationAttemptRecord[] = [];
+      const cbMap = new Map<string, CircuitBreaker>();
+      const rlMap = new Map<string, RateLimiter>();
+      const backoff = createExponentialBackoff(DEFAULT_BACKOFF_CONFIG);
+      const getOrCreate = <T>(map: Map<string, T>, key: string, factory: (key: string) => T): T => {
+        const existing = map.get(key);
+        if (existing) return existing;
+        const created = factory(key);
+        map.set(key, created);
+        return created;
+      };
 
       for (const candidate of candidates) {
         attemptedModels.push(`${candidate.provider}:${candidate.model}`);
@@ -316,6 +328,34 @@ export const createModelGateway = ({
           continue;
         }
 
+        const cb = getOrCreate(cbMap, candidate.provider, createCircuitBreaker);
+        if (!cb.allowRequest()) {
+          attempts.push(buildAttemptRecord(candidate, 'failed', 'error', {
+            errorCode: 'AI_CIRCUIT_OPEN',
+            errorStage: 'route'
+          }));
+          lastFailure = buildFailureResponse(input, candidate, [...attemptedModels], [...attempts], {
+            code: 'AI_CIRCUIT_OPEN',
+            message: `Circuit breaker is open for provider ${candidate.provider}`,
+            retryable: false,
+            stage: 'route'
+          }, auditLevel);
+          continue;
+        }
+
+        const rl = getOrCreate(rlMap, candidate.provider, createRateLimiter);
+        try {
+          await rl.acquire();
+        } catch (err) {
+          const rlError = normalizeThrownError(err);
+          attempts.push(buildAttemptRecord(candidate, 'failed', 'error', {
+            errorCode: rlError.code,
+            errorStage: 'route'
+          }));
+          lastFailure = buildFailureResponse(input, candidate, [...attemptedModels], [...attempts], rlError, auditLevel);
+          continue;
+        }
+
         for (let attempt = 0; attempt <= retryLimit; attempt += 1) {
           try {
             const startedAt = Date.now();
@@ -351,13 +391,18 @@ export const createModelGateway = ({
             });
 
             if (finalized.status === 'completed') {
+              cb.recordSuccess();
+              rl.release();
               return finalized;
             }
 
+            cb.recordFailure();
+            rl.release();
             lastFailure = finalized;
             if (!finalized.error?.retryable || finalized.status === 'blocked') {
               break;
             }
+            await backoff.wait(attempt + 1);
           } catch (err) {
             const normalizedError = normalizeThrownError(err);
             const status = err instanceof ApiError && err.code === 'AI_PROVIDER_TIMEOUT' ? 'timeout' : 'failed';
@@ -379,9 +424,12 @@ export const createModelGateway = ({
               sourceInferenceId: lastFailure.trace?.source_inference_id ?? null
             });
 
+            cb.recordFailure();
+            rl.release();
             if (!lastFailure.error?.retryable) {
               break;
             }
+            await backoff.wait(attempt + 1);
           }
         }
 

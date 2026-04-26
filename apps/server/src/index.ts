@@ -1,3 +1,4 @@
+import { startAiRegistryWatcher } from './ai/registry_watcher.js';
 import { createInferenceProviders } from './app/composition/inference.js';
 import type { AppContext, RouteRegistrar, RuntimeLoopDiagnostics } from './app/context.js';
 import { createApp } from './app/create_app.js';
@@ -54,6 +55,7 @@ import {
 import { ensureSchedulerBootstrapOwnership, resetDevelopmentRuntimeState } from './app/services/system.js';
 import type { CalendarConfig } from './clock/types.js';
 import {
+  getAiModelsConfigPath,
   getAppPort,
   getPreferredWorldPack,
   getRuntimeConfig,
@@ -62,7 +64,8 @@ import {
   getWorldEngineConfig,
   getWorldPacksDir,
   isAiGatewayEnabled,
-  logRuntimeConfigSnapshot
+  logRuntimeConfigSnapshot,
+  resolveWorkspacePath
 } from './config/runtime_config.js';
 import { sim } from './core/simulation.js';
 import { createInferenceService } from './inference/service.js';
@@ -371,6 +374,17 @@ const start = async (): Promise<void> => {
     console.log(`[Yidhras Server] AI gateway enabled=${String(isAiGatewayEnabled())}`);
     console.log(`[Yidhras Server] Scheduler worker=${schedulerWorkerId} partitions=${schedulerPartitionIds.join(',') || 'none'} loopIntervalMs=${String(simulationLoopIntervalMs)}`);
   });
+
+  const registryWatcher = startAiRegistryWatcher({
+    aiModelsConfigPath: getAiModelsConfigPath(),
+    promptSlotsDefaultPath: resolveWorkspacePath(
+      'apps/server/src/ai/schemas/prompt_slots.default.yaml',
+    ),
+  });
+
+  const cleanup = () => { registryWatcher.close(); };
+  process.on('SIGINT', cleanup);
+  process.on('SIGTERM', cleanup);
 };
 
 void start();

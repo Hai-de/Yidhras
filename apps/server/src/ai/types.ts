@@ -290,6 +290,20 @@ export interface AiRouteDefaults {
   retry_limit?: number;
   allow_fallback?: boolean;
   audit_level?: AiAuditLevel;
+  /** 熔断器配置（预留，暂不暴露到 YAML schema） */
+  circuit_breaker?: {
+    failure_threshold?: number;
+    recovery_timeout_ms?: number;
+  };
+  /** 速率限制配置（预留，暂不暴露到 YAML schema） */
+  rate_limit?: {
+    max_concurrent?: number;
+  };
+  /** 退避策略配置（预留，暂不暴露到 YAML schema） */
+  backoff?: {
+    base_delay_ms?: number;
+    max_delay_ms?: number;
+  };
 }
 
 export interface AiRoutePolicy {

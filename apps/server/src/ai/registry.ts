@@ -115,7 +115,7 @@ const aiRoutePolicySchema = z
   })
   .strict();
 
-const aiRegistryConfigSchema = z
+export const aiRegistryConfigSchema = z
   .object({
     version: z.number().int().positive().default(1),
     providers: z.array(aiProviderConfigSchema).default([]),
@@ -135,7 +135,7 @@ interface AiRegistryCache {
   metadata: AiRegistryMetadata;
 }
 
-const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
+export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
   version: 1,
   providers: [
     {
@@ -356,7 +356,7 @@ const mergeRoutePolicies = (base: AiRoutePolicy[], overrides: AiRoutePolicy[]): 
   return Array.from(mergedByRouteId.values());
 };
 
-const mergeAiRegistryConfig = (base: AiRegistryConfig, override: AiRegistryConfig): AiRegistryConfig => {
+export const mergeAiRegistryConfig = (base: AiRegistryConfig, override: AiRegistryConfig): AiRegistryConfig => {
   return {
     version: override.version,
     providers: mergeProviderConfigs(base.providers, override.providers),
@@ -460,7 +460,7 @@ const promptSlotConfigSchema = z
 
 export type ParsedPromptSlotConfig = z.infer<typeof promptSlotConfigSchema>;
 
-const promptSlotRegistrySchema = z
+export const promptSlotRegistrySchema = z
   .object({
     version: z.number().int().positive().default(1),
     slots: z.record(z.string(), promptSlotConfigSchema).default({})
@@ -472,7 +472,7 @@ interface PromptSlotRegistryCache {
   metadata: { workspaceRoot: string; configPath: string; loadedFromFile: boolean };
 }
 
-const BUILTIN_PROMPT_SLOTS_PATH = 'apps/server/src/ai/schemas/prompt_slots.default.yaml';
+export const BUILTIN_PROMPT_SLOTS_PATH = 'apps/server/src/ai/schemas/prompt_slots.default.yaml';
 
 let promptSlotRegistryCache: PromptSlotRegistryCache | null = null;
 

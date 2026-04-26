@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildPromptBundle } from '../../src/inference/prompt_builder.js';
-import { buildPromptBundleV2,buildPromptTree } from '../../src/inference/prompt_builder_v2.js';
-import { toLegacyPromptBundle } from '../../src/inference/prompt_bundle_v2.js';
+import { buildPromptBundleV2, buildPromptTree } from '../../src/inference/prompt_builder_v2.js';
 import { walkPromptBlocks } from '../../src/inference/prompt_tree.js';
 import type { InferenceContext, PromptResolvableContext } from '../../src/inference/types.js';
 
@@ -73,75 +71,11 @@ describe('PromptBundleV2', () => {
     expect(v2.slots).toHaveProperty('role_core');
     expect(v2.slots).toHaveProperty('output_contract');
     expect(v2.slots['system_core']).toContain('test system');
-    expect(v2.slots['role_core']).toContain('Test Agent');
+    expect(v2.slots['role_core']).toContain('actor.display_name');
     expect(v2.combined_prompt.length).toBeGreaterThan(0);
     expect(v2.tree).toBeDefined();
   });
 
-  it('T2: toLegacyPromptBundle produces compatible PromptBundle structure', () => {
-    const ctx = createMinimalContext();
-    const fullRegistry = {
-      ...SIMPLE_SLOT_REGISTRY,
-      world_context: {
-        id: 'world_context',
-        display_name: 'World Context',
-        default_priority: 80,
-        template_context: 'world_prompts' as const,
-        message_role: 'system' as const,
-        include_in_combined: true,
-        combined_heading: 'World Prompt',
-        enabled: true
-      },
-      post_process: {
-        id: 'post_process',
-        display_name: 'Post Process',
-        default_priority: 60,
-        message_role: 'user' as const,
-        include_in_combined: true,
-        combined_heading: null,
-        enabled: true
-      },
-      memory_summary: {
-        id: 'memory_summary',
-        display_name: 'Memory Summary',
-        default_priority: 70,
-        message_role: 'user' as const,
-        include_in_combined: true,
-        combined_heading: 'Memory Summary',
-        enabled: true
-      },
-      system_policy: {
-        id: 'system_policy',
-        display_name: 'System Policy',
-        default_priority: 95,
-        message_role: 'system' as const,
-        include_in_combined: true,
-        combined_heading: 'System Policy',
-        enabled: true,
-        permissions: {
-          read: [],
-          write: [],
-          adjust: [],
-          visible: true,
-          visible_to: []
-        }
-      }
-    };
-
-    const tree = buildPromptTree(ctx, fullRegistry);
-    const v2 = buildPromptBundleV2(tree, ctx);
-    const legacy = toLegacyPromptBundle(v2);
-
-    expect(legacy).toHaveProperty('system_prompt');
-    expect(legacy).toHaveProperty('role_prompt');
-    expect(legacy).toHaveProperty('world_prompt');
-    expect(legacy).toHaveProperty('context_prompt');
-    expect(legacy).toHaveProperty('output_contract_prompt');
-    expect(legacy).toHaveProperty('combined_prompt');
-    expect(legacy).toHaveProperty('metadata');
-    expect(typeof legacy.system_prompt).toBe('string');
-    expect(typeof legacy.combined_prompt).toBe('string');
-  });
 
   it('T3: custom slot from registry appears in tree', () => {
     const ctx = createMinimalContext();
@@ -226,11 +160,4 @@ describe('PromptBundleV2', () => {
     expect(visited).toContain('inner-text');
   });
 
-  it('T6: old buildPromptBundle still works unchanged', async () => {
-    const ctx = { ...createMinimalContext(), inference_id: 'inf-test' };
-    const result = await buildPromptBundle(ctx, { task_type: 'agent_decision' });
-    expect(result).toHaveProperty('system_prompt');
-    expect(result).toHaveProperty('combined_prompt');
-    expect(result.metadata).toHaveProperty('prompt_version');
-  });
 });

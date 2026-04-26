@@ -144,10 +144,10 @@ describe('recordAiInvocation', () => {
     expect(secondPayload?.source_inference_id).toBeNull();
   });
 
-  it('throws on non-P2003 errors without retry', async () => {
+  it('does not throw on non-P2003 errors (resilience: catch+log)', async () => {
     const upsert = vi.fn<UpsertFn>().mockRejectedValue(new Error('connection lost'));
     const context = createMockAppContext({ upsert });
-    await expect(recordAiInvocation(context, createCompletedResponse())).rejects.toThrow('connection lost');
+    await recordAiInvocation(context, createCompletedResponse());
     expect(upsert).toHaveBeenCalledTimes(1);
   });
 
@@ -208,5 +208,22 @@ describe('recordAiInvocation', () => {
     const create = getCreatePayload(upsert);
     expect(create?.created_at).toBe(9999n);
     expect(create?.completed_at).toBe(9999n);
+  });
+
+  it('warns and returns early when context is null (resilience)', async () => {
+    const response = createCompletedResponse();
+    await expect(recordAiInvocation(null, response)).resolves.toBeUndefined();
+  });
+
+  it('warns and returns early when context is undefined (resilience)', async () => {
+    const response = createCompletedResponse();
+    await expect(recordAiInvocation(undefined, response)).resolves.toBeUndefined();
+  });
+
+  it('does not throw when Prisma upsert fails (resilience: catch+log)', async () => {
+    const upsert = vi.fn<UpsertFn>().mockRejectedValue(new Error('DB write failure'));
+    const context = createMockAppContext({ upsert });
+    await recordAiInvocation(context, createCompletedResponse());
+    expect(upsert).toHaveBeenCalledTimes(1);
   });
 });

@@ -136,7 +136,7 @@ describe('contracts — inference', () => {
     it('inferenceStrategySchema accepts mock and rule_based', () => {
       expect(contracts.inferenceStrategySchema.safeParse('mock').success).toBe(true);
       expect(contracts.inferenceStrategySchema.safeParse('rule_based').success).toBe(true);
-      expect(contracts.inferenceStrategySchema.safeParse('model_routed').success).toBe(false);
+      expect(contracts.inferenceStrategySchema.safeParse('model_routed').success).toBe(true);
     });
 
     it('aiInvocationStatusSchema accepts valid statuses', () => {
