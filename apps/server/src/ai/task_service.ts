@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import type { AppContext } from '../app/context.js';
 import type { PromptBundleV2 } from '../inference/prompt_bundle_v2.js';
 import { ApiError } from '../utils/api_error.js';
-import { adaptPromptBundleToAiMessages } from './adapters/prompt_bundle_adapter.js';
 import { adaptPromptTreeToAiMessages } from './adapters/prompt_tree_adapter.js';
 import { createModelGateway, type ModelGateway } from './gateway.js';
 import { decodeAiTaskOutput } from './task_decoder.js';
@@ -117,12 +116,7 @@ export const createAiTaskService = ({
               request.prompt_context.prompt_bundle_v2 as PromptBundleV2,
               taskConfig
             )
-          : request.prompt_context.prompt_bundle
-            ? adaptPromptBundleToAiMessages({
-                promptBundle: request.prompt_context.prompt_bundle,
-                taskConfig
-              })
-            : null);
+          : null);
 
       if (!messages || messages.length === 0) {
         throw new ApiError(400, 'AI_TASK_MESSAGES_EMPTY', 'AI task request does not contain messages or prompt bundle content', {

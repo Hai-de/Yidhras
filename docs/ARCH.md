@@ -405,6 +405,26 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 - invocation observability、audit、retry/recovery 仍留在 Node/TS host
 - Rust world engine 若引入，不承接 AI gateway 本体
 
+**目录边界（2025-06 重构后）**：
+
+| 目录 | 职责 |
+|------|------|
+| `ai/` | AI 网关层：gateway、task_service、route_resolver、observability、providers（含 gateway_backed）、adapters、schemas |
+| `inference/` | 推理流水线：context_builder、prompt builders、processors、tokenizers、types（inference 专用） |
+| `packages/contracts/src/ai_shared.ts` | AI/inference 共享类型契约：PromptBundleMetadata、PromptBundle、PromptWorkflowSnapshot 等 |
+
+`ai/` 和 `inference/` 之间不再有物理循环依赖：共享类型通过 contracts 包中介，`gateway_backed` 已移至 `ai/providers/`。
+
+**目录边界（2025-06 重构后）**：
+
+| 目录 | 职责 |
+|------|------|
+| `ai/` | AI 网关层：gateway、task_service、route_resolver、observability、providers（含 gateway_backed）、adapters、schemas |
+| `inference/` | 推理流水线：context_builder、prompt builders、processors、tokenizers、types（inference 专用） |
+| `packages/contracts/src/ai_shared.ts` | AI/inference 共享类型契约：PromptBundleMetadata、PromptBundle、PromptWorkflowSnapshot 等 |
+
+`ai/` 和 `inference/` 之间不再有物理循环依赖：共享类型通过 contracts 包中介，`gateway_backed` 已移至 `ai/providers/`。
+
 ### 6.3 Plugin Runtime
 
 - plugin host 当前继续留在 Node/TS

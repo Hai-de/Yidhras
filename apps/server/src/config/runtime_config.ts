@@ -216,7 +216,6 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
     inference_trace: true,
     notifications: true,
     experimental: {
-      prompt_bundle_v2: false,
       prompt_slot_permissions: false,
       multi_pack_runtime: {
         enabled: false,

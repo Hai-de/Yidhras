@@ -77,12 +77,21 @@ const buildUpsertPayload = (
 };
 
 export const recordAiInvocation = async (
-  context: AppContext,
+  context: AppContext | null | undefined,
   response: ModelGatewayResponse,
   options?: {
     sourceInferenceId?: string | null;
   }
 ): Promise<void> => {
+  if (!context) {
+    console.warn('[ai:observability] recordAiInvocation called without context, invocation not persisted', {
+      invocation_id: response.invocation_id,
+      task_type: response.task_type,
+      status: response.status
+    });
+    return;
+  }
+
   const trace = response.trace;
   const attemptLatencies = Array.isArray(trace?.attempts)
     ? trace.attempts
@@ -104,11 +113,19 @@ export const recordAiInvocation = async (
     );
   } catch (error: unknown) {
     if (isForeignKeyViolation(error)) {
-      await context.prisma.aiInvocationRecord.upsert(
-        buildUpsertPayload(response, trace, options, latencyMs, currentTick, null)
-      );
+      try {
+        await context.prisma.aiInvocationRecord.upsert(
+          buildUpsertPayload(response, trace, options, latencyMs, currentTick, null)
+        );
+      } catch (innerError: unknown) {
+        console.error('[ai:observability] Failed to persist AI invocation record (FK fallback)', innerError, {
+          invocation_id: response.invocation_id
+        });
+      }
     } else {
-      throw error;
+      console.error('[ai:observability] Failed to persist AI invocation record', error, {
+        invocation_id: response.invocation_id
+      });
     }
   }
 };

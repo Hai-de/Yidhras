@@ -1,6 +1,6 @@
-import { buildInferenceContextV2 } from '../../domain/inference/context_assembler.js';
 import { getPackEntityOverviewProjection } from '../../packs/runtime/projections/entity_overview_service.js';
 import type { AppContext } from '../context.js';
+import { buildInferenceContextV2 } from './context_assembler.js';
 
 export interface OperatorAuthorityInspectorSnapshot {
   pack: {

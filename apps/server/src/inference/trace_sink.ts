@@ -1,3 +1,4 @@
+import type { PromptBundleV2 } from './prompt_bundle_v2.js';
 import type {
   ActionIntentDraft,
   DecisionResult,
@@ -21,7 +22,7 @@ export interface InferenceTraceEvent {
   actor_ref: InferenceActorRef;
   input: InferenceRequestInput;
   context: InferenceContext;
-  prompt: PromptBundle;
+  prompt: PromptBundle | PromptBundleV2;
   trace_metadata: TraceMetadata;
   decision?: DecisionResult;
   semantic_intent?: SemanticIntentResult;

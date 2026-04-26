@@ -1,8 +1,8 @@
-import { buildAiTaskRequestFromInferenceContext, buildAiTaskRequestFromInferenceContextV2 } from '../../ai/task_prompt_builder.js';
-import { type AiTaskService, createAiTaskService } from '../../ai/task_service.js';
-import { getRuntimeConfig } from '../../config/runtime_config.js';
-import type { InferenceProvider } from '../provider.js';
-import type { InferenceContext, PromptBundle, ProviderDecisionRaw } from '../types.js';
+import type { PromptBundleV2 } from '../../inference/prompt_bundle_v2.js';
+import type { InferenceProvider } from '../../inference/provider.js';
+import type { InferenceContext, ProviderDecisionRaw } from '../../inference/types.js';
+import { buildAiTaskRequestFromInferenceContextV2 } from '../task_prompt_builder.js';
+import type { AiTaskService } from '../task_service.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -17,27 +17,19 @@ const FALLBACK_DECISION: ProviderDecisionRaw = {
 };
 
 export interface CreateGatewayBackedInferenceProviderOptions {
-  aiTaskService?: AiTaskService;
+  aiTaskService: AiTaskService;
 }
 
 export const createGatewayBackedInferenceProvider = ({
-  aiTaskService = createAiTaskService()
-}: CreateGatewayBackedInferenceProviderOptions = {}): InferenceProvider => {
+  aiTaskService
+}: CreateGatewayBackedInferenceProviderOptions): InferenceProvider => {
   return {
     name: 'gateway_backed',
     strategies: ['model_routed'],
-    async run(context: InferenceContext, prompt: PromptBundle): Promise<ProviderDecisionRaw> {
-      const config = getRuntimeConfig();
-      const useV2 = config.features?.experimental?.prompt_bundle_v2 === true;
-
-      const request = useV2
-        ? await buildAiTaskRequestFromInferenceContextV2(context, {
-            task_type: 'agent_decision'
-          })
-        : await buildAiTaskRequestFromInferenceContext(context, {
-            task_type: 'agent_decision',
-            prompt_bundle: prompt
-          });
+    async run(context: InferenceContext, _prompt: PromptBundleV2): Promise<ProviderDecisionRaw> {
+      const request = await buildAiTaskRequestFromInferenceContextV2(context, {
+        task_type: 'agent_decision'
+      });
 
       try {
         const result = await aiTaskService.runTask<Record<string, unknown>>(request, {

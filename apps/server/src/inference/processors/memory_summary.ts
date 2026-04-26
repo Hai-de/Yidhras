@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
 import type { PromptFragment } from '../prompt_fragments.js';
-import type { PromptProcessor } from '../prompt_processors.js';
+import type { PromptProcessor, PromptTreeProcessor, PromptTreeProcessorInput } from '../prompt_processors.js';
+import type { PromptTree } from '../prompt_tree.js';
 import type { PromptProcessingTrace } from '../types.js';
+import { flattenTreeToPromptFragments, mergeFlatFragmentsIntoTree } from './memory_injector.js';
 
 const SHORT_TERM_SLOT = 'memory_short_term' as const;
 const SUMMARY_SLOT = 'memory_summary' as const;
@@ -74,3 +76,18 @@ export const createMemorySummaryPromptProcessor = (): PromptProcessor => {
     }
   };
 };
+
+// ── Tree-aware adapter (V2) ──
+
+export const createMemorySummaryTreeProcessor = (): PromptTreeProcessor => {
+  const flat = createMemorySummaryPromptProcessor();
+  return {
+    name: 'memory-summary-tree',
+    async process(input: PromptTreeProcessorInput): Promise<PromptTree> {
+      const flatFragments = flattenTreeToPromptFragments(input.tree);
+      const result = await flat.process({ context: input.context, fragments: flatFragments, workflow: input.workflow });
+      return mergeFlatFragmentsIntoTree(input.tree, result);
+    }
+  };
+};
+

@@ -1,5 +1,7 @@
 import type { PromptFragment } from '../prompt_fragments.js';
-import type { PromptProcessor } from '../prompt_processors.js';
+import type { PromptProcessor, PromptTreeProcessor, PromptTreeProcessorInput } from '../prompt_processors.js';
+import type { PromptTree } from '../prompt_tree.js';
+import { flattenTreeToPromptFragments, mergeFlatFragmentsIntoTree } from './memory_injector.js';
 
 const isMemoryFragment = (fragment: PromptFragment): boolean => {
   return (
@@ -94,3 +96,18 @@ export const createPolicyFilterPromptProcessor = (): PromptProcessor => {
     }
   };
 };
+
+// ── Tree-aware adapter (V2) ──
+
+export const createPolicyFilterTreeProcessor = (): PromptTreeProcessor => {
+  const flat = createPolicyFilterPromptProcessor();
+  return {
+    name: 'policy-filter-tree',
+    async process(input: PromptTreeProcessorInput): Promise<PromptTree> {
+      const flatFragments = flattenTreeToPromptFragments(input.tree);
+      const result = await flat.process({ context: input.context, fragments: flatFragments, workflow: input.workflow });
+      return mergeFlatFragmentsIntoTree(input.tree, result);
+    }
+  };
+};
+

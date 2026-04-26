@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
+import { buildInferenceContextV2 } from '../../src/app/services/context_assembler.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 import { sim } from '../../src/core/simulation.js';
 import { resolveAuthorityForSubject } from '../../src/domain/authority/resolver.js';
-import { buildInferenceContextV2 } from '../../src/domain/inference/context_assembler.js';
 import { resolvePerceptionForSubject } from '../../src/domain/perception/resolver.js';
 import { notifications } from '../../src/utils/notifications.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';

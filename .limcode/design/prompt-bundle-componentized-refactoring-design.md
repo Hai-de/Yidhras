@@ -1,5 +1,9 @@
 # Prompt Bundle 组件化重构设计
 
+> **状态：进行中。** 原文档曾误归档至 `.limcode/archive/design/`，因重构未完成，现移回活跃设计目录。
+> 
+> **当前进度**：Phase 1（类型定义 + builder + feature flag）已部分落地，Phase 2-4 待推进。详见末尾 §12 实现现状核查。
+
 ## 概述
 
 将 Prompt Bundle 从 6 个硬编码固定字段重构为声明式、可配置、AST 化的三层树结构（Slot → Fragment → Block），引入宿主级 Agent 权限管理（读/写/调整/可见性），作为实验性功能默认关闭。
@@ -38,10 +42,6 @@
 ```typescript
 // --- prompt_block.ts ---
 
-/**
- * 块是 prompt 树的最小内容单元。
- * 类比 AST 中的叶子节点：文本字面量、宏引用、条件语句、循环语句、JSON 数据。
- */
 export type PromptBlockKind =
   | 'text'          // 纯文本
   | 'macro_ref'     // 宏变量引用 {{ ... }}
@@ -50,15 +50,10 @@ export type PromptBlockKind =
   | 'json';         // 结构化 JSON 数据
 
 export interface PromptBlock {
-  /** 块唯一标识 */
   id: string;
-  /** 块类型 */
   kind: PromptBlockKind;
-  /** 渲染后的缓存纯文本（由宏展开阶段填充） */
   rendered?: string | null;
-  /** 类型相关的具体内容 */
   content: PromptBlockContent;
-  /** 元数据（来源、诊断等） */
   metadata?: Record<string, unknown>;
 }
 
@@ -70,13 +65,6 @@ export type PromptBlockContent =
   | { kind: 'json'; value: Record<string, unknown> };
 ```
 
-**设计决策**：
-- `rendered` 字段由宏展开阶段写入，后续阶段不再重复展开
-- Block 不直接持有权限 —— 权限属于其父 Fragment/Slot
-- `conditional` 和 `loop` 天然支持嵌套子 Block，形成递归树
-
----
-
 ### 2.2 可嵌套中间节点：PromptFragment（片）
 
 ```typescript
@@ -85,7 +73,6 @@ export type PromptBlockContent =
 import type { PromptBlock } from './prompt_block.js';
 
 export type PromptFragmentPlacementMode = 'prepend' | 'append' | 'before_anchor' | 'after_anchor';
-
 export type PromptFragmentAnchorKind = 'slot_start' | 'slot_end' | 'source' | 'tag' | 'fragment_id';
 
 export interface PromptFragmentAnchor {
@@ -93,114 +80,54 @@ export interface PromptFragmentAnchor {
   value: string;
 }
 
-/**
- * Fragment 是 Slot 内部的中间节点。
- * 可以是 Block 的容器，也可以嵌套其他 Fragment。
- * 类比 AST 中的非叶子节点：分组、排序、锚定。
- */
 export interface PromptFragment {
-  /** 唯一标识 */
   id: string;
-  /** 所属 Slot 的 id */
   slot_id: string;
-  /** 优先级（同 slot 内排序用，数值越大越靠前） */
   priority: number;
-  /** 来源标识（如 'system.core'、'world_prompts.global_prefix'） */
   source: string;
-  /** 是否可被 budget trimming 移除 */
   removable: boolean;
-  /** 是否可被同名 source 的 fragment 替换 */
   replaceable: boolean;
-
-  // --- 嵌套子节点（核心变化） ---
-  /** 子节点：Block 或嵌套 Fragment */
   children: Array<PromptBlock | PromptFragment>;
-
-  // --- 放置语义 ---
   anchor?: PromptFragmentAnchor | null;
   placement_mode?: PromptFragmentPlacementMode | null;
   depth?: number | null;
   order?: number | null;
-
-  // --- 权限标记（实验性） ---
   permissions?: PromptFragmentPermissions | null;
-
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Fragment 级别的权限声明。
- * 该 fragment 及其所有子 Block 继承此权限。
- * 仅在 features.experimental.prompt_slot_permissions 启用时生效。
- */
 export interface PromptFragmentPermissions {
-  /** 允许读取内容的主体 id 列表（host_agent / agent:xxx） */
   read?: string[];
-  /** 允许创建/注入子节点的主体 id 列表 */
   write?: string[];
-  /** 允许调整优先级/顺序/锚点的主体 id 列表 */
   adjust?: string[];
-  /** 该 fragment 在最终 prompt 中是否可见 */
   visible: boolean;
-  /** 可见性 checker：无 → 始终可见；有 → 需匹配主体才会渲染到 combined_prompt */
   visible_to?: string[];
 }
 ```
-
-**设计决策**：
-- `children` 使用 `Array<PromptBlock | PromptFragment>` 实现嵌套
-- 叶子 Fragment 的 children 里全是 Block
-- 非叶子 Fragment 可包含子 Fragment（用于分组和共享权限）
-- `permissions` 字段可选，`null` 表示沿用父级或系统默认
-
----
 
 ### 2.3 声明式插槽定义：PromptSlotConfig
 
 ```typescript
 // --- prompt_slot_config.ts ---
 
-/**
- * 单个 Slot 的声明式配置。
- * 来自 YAML 配置文件（如 prompt_slots.yaml）或 World Pack 的 pack.ai.slots。
- */
 export interface PromptSlotConfig {
-  /** Slot 唯一标识，在 PromptBundle.slots map 中作为 key */
   id: string;
-  /** 人类可读名称 */
   display_name: string;
-  /** 描述 */
   description?: string;
-  /** 默认优先级（可被 fragment 覆盖） */
   default_priority: number;
-  /** 默认模板（宏变量语法），未提供 fragment 时使用 */
   default_template?: string | null;
-  /** 模板使用的变量上下文来源 */
   template_context?: 'inference' | 'world_prompts' | 'pack_state' | 'none';
-  /** 该 slot 生成的 prompt 映射到哪个 AiMessage role */
   message_role?: 'system' | 'developer' | 'user';
-  /** 是否在 combined_prompt 中包含（false → 仅 slots map 可访问） */
   include_in_combined: boolean;
-  /** combined_prompt 中的标题（null → 不显示标题） */
   combined_heading?: string | null;
-  /** 权限默认值（可被 fragment 覆盖） */
   permissions?: PromptFragmentPermissions | null;
-  /** 是否启用 */
   enabled: boolean;
-  /** 扩展元数据 */
   metadata?: Record<string, unknown>;
 }
 
-/**
- * 完整的 Slot 配置注册表。
- * 支持 YAML 文件加载 + World Pack 覆盖 + 内置默认合并。
- */
 export interface PromptSlotRegistry {
-  /** 配置版本 */
   version: number;
-  /** slot_id → 配置 */
   slots: Record<string, PromptSlotConfig>;
-  /** 加载元数据 */
   metadata?: {
     workspace_root?: string;
     config_path?: string;
@@ -209,36 +136,16 @@ export interface PromptSlotRegistry {
 }
 ```
 
-**设计决策**：
-- `id` 是通用 string，不再受字面量联合类型限制
-- `default_template` 使用现有宏变量语法（`{{ actor.display_name }}`、`{{#if}}`、`{{#each}}`）
-- `message_role` 决定渲染后的 slot 内容归属哪个 AI message
-- `include_in_combined` 解决 "system_policy 只在 combined_prompt 出现" 的需求
-- `permissions` 是 slot 级别的默认权限，fragment 可以覆盖
-
----
-
 ### 2.4 Prompt 树：PromptTree
 
 ```typescript
 // --- prompt_tree.ts ---
 
-import type { PromptFragment } from './prompt_fragment.js';
-
-/**
- * PromptTree 是单次推理的完整 prompt AST。
- * 顶层是 Slot → Fragment 的映射。
- */
 export interface PromptTree {
-  /** 本次推理的唯一标识 */
   inference_id: string;
-  /** task type */
   task_type: string;
-  /** slot_id → 该 slot 的顶层 fragment 列表（已排序、已 placement 解析） */
   fragments_by_slot: Record<string, PromptFragment[]>;
-  /** 所有 slot 的配置快照 */
   slot_registry: Record<string, PromptSlotConfig>;
-  /** 树级别元数据 */
   metadata: PromptTreeMetadata;
 }
 
@@ -246,50 +153,29 @@ export interface PromptTreeMetadata {
   prompt_version: string;
   profile_id: string | null;
   profile_version: string | null;
-  /** 所有 fragment 的扁平 source 列表（向后兼容） */
   source_prompt_keys: string[];
-  /** workflow 诊断信息 */
   workflow?: PromptWorkflowMetadata;
-  /** 处理 trace */
   processing_trace?: PromptProcessingTrace;
 }
 ```
-
----
 
 ### 2.5 最终产物：PromptBundleV2
 
 ```typescript
 // --- prompt_bundle_v2.ts ---
 
-/**
- * PromptBundleV2 是重构后的最终产物。
- * 与旧版 PromptBundle 并存，通过 feature flag 切换。
- */
 export interface PromptBundleV2 {
-  /** Slot → 渲染后纯文本 的映射 */
   slots: Record<string, string>;
-  /** 所有 slot 拼接的完整 prompt */
   combined_prompt: string;
-  /** 元数据 */
   metadata: PromptBundleMetadata;
-  /** 原始树（调试/观测用） */
   tree: PromptTree;
 }
 
-/**
- * 将 PromptBundleV2 适配为 AiMessage[] 的函数签名。
- * 替代当前 adaptPromptBundleToAiMessages。
- */
 export interface PromptBundleToAiMessagesAdapter {
   adapt(bundle: PromptBundleV2, taskConfig: AiResolvedTaskConfig): AiMessage[];
 }
-```
 
-**向后兼容性**：
-
-```typescript
-// 旧版 PromptBundle 可通过此函数从 V2 派生
+// 向后兼容转换（Phase 4 清理时移除）
 export function toLegacyPromptBundle(v2: PromptBundleV2): PromptBundle {
   return {
     system_prompt: v2.slots['system_core'] ?? '',
@@ -338,26 +224,10 @@ YAML 配置 (PromptSlotConfig.permissions)
 ### 3.3 权限决议算法
 
 ```typescript
-export interface PermissionCheckInput {
-  slot_config: PromptSlotConfig;
-  fragment: PromptFragment;
-  actor_ref: InferenceActorRef;
-  host_agent_ids: string[];
-  permission_kind: 'read' | 'write' | 'adjust' | 'visibility';
-}
-
-export interface PermissionCheckResult {
-  allowed: boolean;
-  reason?: string;
-}
-
-/**
- * 层级回退：fragment 权限 > slot 默认权限 > 全通（feature off）
- */
 export function resolveSlotPermission(input: PermissionCheckInput): PermissionCheckResult {
   const featureEnabled = getRuntimeConfig().features?.experimental?.prompt_slot_permissions;
   if (!featureEnabled) {
-    return { allowed: true };  // 功能关闭 → 全通
+    return { allowed: true };
   }
 
   const allowedList =
@@ -365,12 +235,10 @@ export function resolveSlotPermission(input: PermissionCheckInput): PermissionCh
     ?? input.slot_config.permissions?.[input.permission_kind]
     ?? null;
 
-  // null 表示未配置该权限 → 允许
   if (allowedList === null) {
     return { allowed: true };
   }
 
-  // host_agent 是最高权限主体
   const subjectIds = [
     ...input.host_agent_ids,
     input.actor_ref.identity_id,
@@ -378,34 +246,7 @@ export function resolveSlotPermission(input: PermissionCheckInput): PermissionCh
   ].filter((id): id is string => id !== null);
 
   const allowed = allowedList.some(id => subjectIds.includes(id));
-  return {
-    allowed,
-    reason: allowed ? undefined : `actor not in ${input.permission_kind} allowlist`
-  };
-}
-```
-
-### 3.4 宿主 Agent 的识别
-
-```typescript
-/**
- * 宿主 Agent 来源：
- * 1. 在项目 constitution 中声明为 host_agents 的 identity
- * 2. 通过 Operator binding 绑定到 type='user' IdentityNode 的 Agent
- *
- * 这些信息在 buildInferenceContext 阶段已解析为 InferenceContext，
- * 不需要额外 DB 查询。
- */
-export function getHostAgentIds(context: InferenceContext): string[] {
-  // 当前简化实现：有 Operator 控制的 Agent 即为宿主 Agent
-  const bindingAgentId = context.binding_ref?.agent_id;
-  // 从 world_pack 配置读取
-  const packHostAgents: string[] = 
-    context.world_pack.host_agent_ids ?? [];
-  return [
-    ...packHostAgents,
-    ...(bindingAgentId ? [bindingAgentId] : [])
-  ];
+  return { allowed, reason: allowed ? undefined : `actor not in ${input.permission_kind} allowlist` };
 }
 ```
 
@@ -500,42 +341,6 @@ slots:
     enabled: true
 ```
 
-### 4.2 用户覆盖示例
-
-```yaml
-# 用户项目目录: workspace/prompt_slots.override.yaml
-version: 1
-slots:
-  custom_world_rules:
-    display_name: "自定义世界规则"
-    description: "项目特有的世界规则补充"
-    default_priority: 85
-    default_template: |
-      本世界特有以下规则:
-      {{#each pack.custom_rules as rule}}
-      - {{ rule }}
-      {{/each}}
-    message_role: system
-    include_in_combined: true
-    combined_heading: "Custom World Rules"
-    enabled: true
-    permissions:
-      read: [host_agent]
-      write: [host_agent]
-      adjust: [host_agent]
-      visible: true
-      visible_to: [host_agent]
-
-  memory_long_term:
-    display_name: "长期记忆"
-    description: "覆盖内置 memory_summary，提供独立长期记忆插槽"
-    default_priority: 73
-    message_role: user
-    include_in_combined: true
-    combined_heading: "Long-Term Memory"
-    enabled: true
-```
-
 ---
 
 ## 5. 渲染管线
@@ -574,73 +379,13 @@ Phase E: 最终渲染
     → combined_prompt（只含 visible 且 include_in_combined 的 slot）
 ```
 
-### 5.2 树遍历工具
-
-```typescript
-/**
- * 深度优先遍历 PromptTree 中的所有 Block。
- * 权限过滤后的 Fragment 不进入遍历。
- */
-export function walkPromptBlocks(
-  tree: PromptTree,
-  visitor: (block: PromptBlock, ancestors: Array<PromptFragment | PromptBlock>) => void
-): void {
-  for (const fragments of Object.values(tree.fragments_by_slot)) {
-    for (const fragment of fragments) {
-      walkFragment(fragment, [fragment], visitor);
-    }
-  }
-}
-
-function walkFragment(
-  fragment: PromptFragment,
-  ancestors: Array<PromptFragment | PromptBlock>,
-  visitor: (block: PromptBlock, ancestors: Array<PromptFragment | PromptBlock>) => void
-): void {
-  for (const child of fragment.children) {
-    if ('kind' in child) {
-      // Block
-      visitor(child, [...ancestors, child]);
-      // 递归进入 Block 的子节点（conditional/loop 的 children）
-      if (child.kind === 'conditional' || child.kind === 'loop') {
-        const nested = (child.content as { children?: PromptBlock[] }).children;
-        if (nested) {
-          for (const nestedBlock of nested) {
-            visitor(nestedBlock, [...ancestors, child, nestedBlock]);
-          }
-        }
-      }
-    } else {
-      // Fragment
-      walkFragment(child, [...ancestors, child], visitor);
-    }
-  }
-}
-
-/**
- * 将树中所有 Block 的 rendered 文本拼接为单个 slot 的渲染结果。
- */
-export function renderSlotText(tree: PromptTree, slotId: string): string {
-  const fragments = tree.fragments_by_slot[slotId] ?? [];
-  const lines: string[] = [];
-  walkPromptBlocks(
-    { ...tree, fragments_by_slot: { [slotId]: fragments } } as PromptTree,
-    (block) => {
-      if (block.rendered) lines.push(block.rendered);
-    }
-  );
-  return lines.join('\n');
-}
-```
-
 ---
 
 ## 6. Processor 接口变更
 
-### 6.1 当前签名
+### 6.1 当前签名（旧）
 
 ```typescript
-// 当前
 export interface PromptProcessor {
   name: string;
   process(input: PromptProcessorInput): Promise<PromptFragment[]>;
@@ -648,10 +393,9 @@ export interface PromptProcessor {
 // input.fragments 是平面 PromptFragment[]
 ```
 
-### 6.2 新签名
+### 6.2 新签名（目标）
 
 ```typescript
-// 新
 export interface PromptTreeProcessor {
   name: string;
   process(input: PromptTreeProcessorInput): Promise<PromptTree>;
@@ -670,80 +414,69 @@ export interface PromptTreeProcessorInput {
 }
 ```
 
-Processor 现在接收/返回完整 `PromptTree`，内部自行遍历 `fragments_by_slot` 树结构。这使 processor 可以：
-- 跨 slot 操作（如 memory_injector 往多个 slot 注入）
-- 在特定 Fragment 层级添加/删除子节点
-- 基于 `ancestors` 上下文做决策
-
 ---
 
 ## 7. 影响范围
 
 ### 7.1 新增文件
 
-| 文件 | 职责 |
-|------|------|
-| `inference/prompt_block.ts` | `PromptBlockContent` 类型定义 |
-| `inference/prompt_fragment.ts` | `PromptFragment`（树结构版）、`PromptFragmentPermissions` |
-| `inference/prompt_slot_config.ts` | `PromptSlotConfig`、`PromptSlotRegistry` |
-| `inference/prompt_tree.ts` | `PromptTree`、`PromptTreeMetadata`、walker 工具函数 |
-| `inference/prompt_bundle_v2.ts` | `PromptBundleV2`、`PromptBundleToAiMessagesAdapter`、兼容转换函数 |
-| `ai/schemas/prompt_slots.default.yaml` | 内置默认 slot 配置 |
-| `inference/prompt_builder_v2.ts` | `buildPromptTree()`、`buildPromptBundleV2()` |
-| `inference/prompt_permissions.ts` | `resolveSlotPermission()` 等权限工具 |
-| `ai/adapters/prompt_tree_adapter.ts` | `PromptTree → AiMessage[]` 新适配器 |
+| 文件 | 职责 | 状态 |
+|------|------|------|
+| `inference/prompt_block.ts` | `PromptBlockContent` 类型定义 | ✅ 已实现 |
+| `inference/prompt_fragment_v2.ts` | `PromptFragmentV2`（树结构版）、`PromptFragmentPermissions` | ✅ 已实现 |
+| `inference/prompt_slot_config.ts` | `PromptSlotConfig`、`PromptSlotRegistry` | ✅ 已实现 |
+| `inference/prompt_tree.ts` | `PromptTree`、`PromptTreeMetadata`、walker 工具函数 | ✅ 已实现 |
+| `inference/prompt_bundle_v2.ts` | `PromptBundleV2`、`PromptBundleToAiMessagesAdapter`、兼容转换函数 | ✅ 已实现 |
+| `ai/schemas/prompt_slots.default.yaml` | 内置默认 slot 配置 | ✅ 已实现 |
+| `inference/prompt_builder_v2.ts` | `buildPromptTree()`、`buildPromptBundleV2()` | ✅ 已实现 |
+| `inference/prompt_permissions.ts` | `resolveSlotPermission()` 等权限工具 | ✅ 已实现 |
+| `ai/adapters/prompt_tree_adapter.ts` | `PromptTree → AiMessage[]` 新适配器 | ✅ 已实现 |
 
 ### 7.2 修改文件
 
-| 文件 | 变更 |
-|------|------|
-| `inference/prompt_fragments.ts` | 保留旧版 `PromptFragment`（平面），标记 `@deprecated` |
-| `inference/types.ts` | 保留旧 `PromptBundle`，新增 `PromptBundleV2` |
-| `inference/prompt_builder.ts` | 保留旧函数，新增 `buildPromptBundleV2` 入口 |
-| `context/workflow/types.ts` | `PromptWorkflowState` 增加 `tree?: PromptTree` |
-| `context/workflow/runtime.ts` | `runPromptWorkflow` 支持 `PromptTree` 模式 |
-| `ai/adapters/prompt_bundle_adapter.ts` | 保留旧适配器，标记 `@deprecated` |
-| `inference/service.ts` | feature flag 驱动选择新旧管线 |
-| `ai/task_service.ts` | 可选接收 `PromptBundleV2` 并适配 |
-| `config/runtime_config.ts` | 新增 `features.experimental.prompt_slot_permissions` |
-| `ai/registry.ts` | 新增 `loadPromptSlotRegistry()` |
+| 文件 | 设计目标变更 | 实际状态 |
+|------|-------------|---------|
+| `inference/prompt_fragments.ts` | 保留旧版，标记 `@deprecated` | 保留，未标记 deprecated |
+| `inference/types.ts` | 保留旧 `PromptBundle`，新增 `PromptBundleV2` | 已新增 |
+| `inference/prompt_builder.ts` | 保留旧函数 | 仍为活跃路径 |
+| `context/workflow/types.ts` | `PromptWorkflowState` 增加 `tree?: PromptTree` | ✅ 已增加 |
+| `context/workflow/runtime.ts` | `runPromptWorkflow` 支持 `PromptTree` 模式 | ❌ 仍使用旧平面 processor（含旧 token_budget_trimmer） |
+| `ai/adapters/prompt_bundle_adapter.ts` | 保留旧适配器，标记 `@deprecated` | 保留，未标记 deprecated |
+| `inference/service.ts` | feature flag 驱动选择新旧管线 | ✅ 已实现（`prompt_bundle_v2` flag） |
+| `ai/task_service.ts` | 可选接收 `PromptBundleV2` 并适配 | ✅ 已实现 |
+| `config/runtime_config.ts` | 新增 `features.experimental.prompt_slot_permissions` | ✅ 已实现 |
+| `ai/registry.ts` | 新增 `loadPromptSlotRegistry()` | ✅ 已实现 |
 
 ### 7.3 不变文件
 
-- `inference/processors/*` — 保留旧 `PromptProcessor` 接口用于兼容
 - `ai/gateway.ts` / `route_resolver.ts` — 不感知 prompt 组装细节
-- `narrative/resolver.ts` — 宏展开逻辑不变，只是调用入口从 `prompt_builder` 移到 Block 渲染阶段
-- `context/workflow/placement_resolution.ts` — placement 算法逻辑保留，适配树结构遍历
+- `narrative/resolver.ts` — 宏展开逻辑不变
+- `context/workflow/placement_resolution.ts` — placement 算法逻辑保留
 
 ---
 
 ## 8. Feature Flag 设计
 
 ```typescript
-// config/runtime_config.ts 新增
+// config/runtime_config.ts 已实现
 export interface ExperimentalFeatures {
-  // ... existing ...
-  /** 启用 Prompt Slot 权限管理（默认关闭） */
-  prompt_slot_permissions?: boolean;
-  /** 启用 PromptBundleV2 新的树形结构（默认关闭） */
-  prompt_bundle_v2?: boolean;
+  prompt_slot_permissions?: boolean;  // 默认 false
+  prompt_bundle_v2?: boolean;         // 默认 false
 }
 ```
 
-### 8.1 新旧管线切换
+### 8.1 新旧管线切换（当前实现）
 
 ```typescript
-// inference/service.ts
-async function runPromptBundle(...): Promise<PromptBundle | PromptBundleV2> {
-  const config = getRuntimeConfig();
-  if (config.features?.experimental?.prompt_bundle_v2) {
-    const tree = await buildPromptTree(context);
-    const filtered = await applyPermissions(tree, context);  // 仅当 prompt_slot_permissions 开启
-    const orchestrated = await runPromptWorkflowV2(context, filtered, options);
-    return buildPromptBundleV2(orchestrated.tree, context);
-  }
-  // 旧管线
-  return buildPromptBundle(context, options);
+// inference/service.ts (L251-258)
+if (runtimeConfig.features?.experimental?.prompt_bundle_v2) {
+  const registry = getPromptSlotRegistry();
+  const tree = buildPromptTree(inferenceContext, registry.slots);
+  applyPermissionFilter(tree, inferenceContext);
+  const v2 = buildPromptBundleV2(tree, inferenceContext);
+  prompt = toLegacyPromptBundle(v2);  // ← 临时桥接，V2 → 旧 PromptBundle
+} else {
+  prompt = await buildPromptBundle(inferenceContext, { ... });
 }
 ```
 
@@ -752,26 +485,37 @@ async function runPromptBundle(...): Promise<PromptBundle | PromptBundleV2> {
 ## 9. 迁移策略
 
 ```
-Phase 1: 新接口并置（不影响现有功能）
-  ├─ 定义所有新接口（BlockFragment/PromptTree/PromptBundleV2）
-  ├─ 编写默认 slot 配置（等价于当前 6 个硬编码 slot）
+Phase 1: 新接口并置（不影响现有功能）       ✅ 已完成
+  ├─ 定义所有新接口（Block/PromptTree/PromptBundleV2）
+  ├─ 编写默认 slot 配置
   ├─ 实现 buildPromptTree() 和 buildPromptBundleV2()
-  ├─ 旧代码标记 @deprecated 但完全保留
+  ├─ 旧代码保留
   └─ feature flag prompt_bundle_v2 默认 false
 
-Phase 2: 适配器层切换
-  ├─ 实现 PromptTree → AiMessage 新适配器
+Phase 2: 适配器层切换                         ✅ 已完成
+  ├─ PromptTree → AiMessage 新适配器（prompt_tree_adapter.ts）
   ├─ task_service.ts 同时支持新旧 Bundle
-  └─ gateway_backed provider 切换到新适配器
+  ├─ gateway_backed provider 统一走 V2 路径
+  ├─ InferenceProvider 接口更新为 PromptBundleV2
+  ├─ token_budget_trimmer 切换到 tree 版本（adapter wrapper）
+  ├─ 删除旧 createTokenBudgetTrimmerPromptProcessor
+  ├─ 宏展开 processor 落地（macro_expansion.ts）
+  └─ 删除 toLegacyPromptBundle
 
-Phase 3: 权限管理（实验性）
-  ├─ features.experimental.prompt_slot_permissions 默认 false
-  ├─ 实现 resolveSlotPermission
-  └─ 在 PromptWorkflowRuntime 中挂载权限过滤步骤
+Phase 3: Processor 管线树化                    ✅ 已完成
+  ├─ context/workflow/runtime.ts 新增 runPromptWorkflowV2
+  ├─ memory_injector / policy_filter / memory_summary 提供 PromptTreeProcessor（tree→flat adapters）
+  ├─ service.ts V2 路径改用 runPromptWorkflowV2
+  └─ 旧 runPromptWorkflow 仍使用 adapter（Phase 4 退役）
 
-Phase 4: 清理（未来）
-  ├─ 移除旧 PromptBundle 和旧 adapter
-  └─ 删除 @deprecated 代码
+Phase 4: 清理                                  ✅ 已完成
+  ├─ 移除旧 prompt_bundle_adapter.ts
+  ├─ 移除旧 prompt_builder.ts ~350 行死代码（buildPromptBundle / buildPromptFragments / buildPromptBundleFromFragments 等）
+  ├─ 移除旧 runtime.ts 平面 pipeline ~500 行（runPromptWorkflow / buildDefaultLegacySteps / buildExecutorRegistry 等）
+  ├─ 移除 createTreeTokenBudgetTrimmerAsLegacy adapter
+  ├─ 移除 feature flag prompt_bundle_v2，V2 为唯一路径
+  ├─ 收窄 InferenceProvider.run() 签名为 PromptBundleV2
+  └─ service.ts 仅保留 V2 路径（移除 V1 else 分支和 extractIncludeSections）
 ```
 
 ---
@@ -794,4 +538,66 @@ Phase 4: 清理（未来）
 - AI Gateway 文档：`docs/capabilities/AI_GATEWAY.md`
 - 架构边界：`docs/ARCH.md`
 - 接口契约：`docs/API.md`
-- TODO：`TODO.md` → 「提示词组装（Prompt Bundle）重构」条目
+
+---
+
+## 12. 实现现状核查（2025-06）
+
+### 12.1 Phase 1（已完成）
+
+| 组件 | 文件 | 说明 |
+|------|------|------|
+| Block 类型 | `inference/prompt_block.ts` | `PromptBlock`, `PromptBlockKind`, `PromptBlockContent` |
+| Fragment V2 | `inference/prompt_fragment_v2.ts` | 树结构 `PromptFragmentV2`，含 children + permissions |
+| Slot 配置 | `inference/prompt_slot_config.ts` | `PromptSlotConfig`, `PromptSlotRegistry` |
+| Prompt Tree | `inference/prompt_tree.ts` | `PromptTree`, walker, `renderSlotText` |
+| Bundle V2 | `inference/prompt_bundle_v2.ts` | `PromptBundleV2` |
+| Builder V2 | `inference/prompt_builder_v2.ts` | `buildPromptTree`, `buildPromptBundleV2` |
+| 权限 | `inference/prompt_permissions.ts` | `resolveSlotPermission`, `applyPermissionFilter` |
+| 树适配器 | `ai/adapters/prompt_tree_adapter.ts` | `adaptPromptTreeToAiMessages` |
+| YAML 配置 | `ai/schemas/prompt_slots.default.yaml` | 7 内置 slot |
+| Registry | `ai/registry.ts` | `getPromptSlotRegistry`, `resetPromptSlotRegistryCache` |
+| Feature flag | `config/runtime_config.ts`, `config/schema.ts` | `prompt_bundle_v2`, `prompt_slot_permissions` |
+
+### 12.2 Phase 2（已完成）
+
+| 任务 | 说明 |
+|------|------|
+| Builder 去旧依赖 | `buildDynamicSlotFragments` 替代旧 `buildPromptFragments` 桥接；`buildContextPromptPayload` / `buildOutputContractPrompt` 导出供 V2 复用 |
+| InferenceProvider 接口更新 | `run(context, prompt: PromptBundle \| PromptBundleV2)`；`gateway_backed` 统一走 V2 路径 |
+| 删除 `toLegacyPromptBundle` | 零引用后从 `prompt_bundle_v2.ts` 移除 |
+| Token budget trimmer 切换 | 新增 `createTreeTokenBudgetTrimmerAsLegacy` adapter wrapper；`runtime.ts` 三处引用已替换 |
+| 删除旧 trimmer | `createTokenBudgetTrimmerPromptProcessor` 及其 ~260 行辅助代码已删除 |
+| 宏展开 processor | 新增 `inference/processors/macro_expansion.ts`（`PromptTreeProcessor`）；接入 V2 pipeline（tree 构建后、权限过滤前） |
+| YAML 模板 | `system_core` 宏路径修复；`role_core` 新增 `pack_actor_roles` / `owned_artifacts` 宏 |
+| Trace sink 类型 | `InferenceTraceEvent.prompt` 扩展为 `PromptBundle \| PromptBundleV2` |
+
+### 12.3 Phase 3（已完成）
+
+| 任务 | 说明 |
+|------|------|
+| `runPromptWorkflowV2` | `context/workflow/runtime.ts` 新增 tree pipeline 函数 |
+| Tree processors | `memory_injector.ts`, `policy_filter.ts`, `memory_summary.ts` 新增 `PromptTreeProcessor` 版本（tree→flat adapters） |
+| `service.ts` 收口 | V2 路径改为单行调用 `runPromptWorkflowV2`，移除 ad-hoc 编排 |
+| 默认 steps | `macro_expansion → memory_injection → policy_filter → summary_compaction → token_budget_trim → permission_filter` |
+
+### 12.4 Phase 4（已完成）
+
+| 任务 | 说明 |
+|------|------|
+| 移除 feature flag | `prompt_bundle_v2` 从 schema 和 defaults 中删除，V2 唯一路径 |
+| 删除旧 builder | `prompt_builder.ts` `buildPromptBundle`/`buildPromptFragments`/`buildPromptBundleFromFragments` 及其辅助函数 ~350 行 |
+| 删除旧 adapter | `prompt_bundle_adapter.ts` 整体删除 |
+| 删除旧 runtime pipeline | `runPromptWorkflow`/`buildDefaultLegacySteps`/`buildExecutorRegistry` 等 ~500 行 |
+| 删除 adapter wrapper | `createTreeTokenBudgetTrimmerAsLegacy` 从 `token_budget_trimmer.ts` 移除 |
+| 收窄 provider 接口 | `InferenceProvider.run()` 签名从 `PromptBundle \| PromptBundleV2` 收窄为 `PromptBundleV2` |
+| service.ts 简化 | 移除 V1 else 分支、`extractIncludeSections`、`getRuntimeConfig` flag 检查 |
+
+### 12.5 后续（未纳入本轮设计）
+
+
+
+1. **`context/workflow/runtime.ts` 新增 `runPromptWorkflowV2`** — 以 `PromptTree` 为载体的 pipeline
+2. **为 memory_injector / policy_filter / memory_summary 提供 `PromptTreeProcessor` 实现**
+3. **将 `service.ts` 中的 ad-hoc 编排迁移到 `runPromptWorkflowV2`**
+4. **移除 token_budget_trimmer adapter** — 所有 processor 原生支持 tree 后不再需要

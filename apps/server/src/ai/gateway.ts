@@ -346,11 +346,9 @@ export const createModelGateway = ({
               auditLevel
             );
 
-            if (context) {
-              await recordAiInvocation(context, finalized, {
-                sourceInferenceId: finalized.trace?.source_inference_id ?? null
-              });
-            }
+            await recordAiInvocation(context, finalized, {
+              sourceInferenceId: finalized.trace?.source_inference_id ?? null
+            });
 
             if (finalized.status === 'completed') {
               return finalized;
@@ -377,11 +375,9 @@ export const createModelGateway = ({
               status
             );
 
-            if (context) {
-              await recordAiInvocation(context, lastFailure, {
-                sourceInferenceId: lastFailure.trace?.source_inference_id ?? null
-              });
-            }
+            await recordAiInvocation(context, lastFailure, {
+              sourceInferenceId: lastFailure.trace?.source_inference_id ?? null
+            });
 
             if (!lastFailure.error?.retryable) {
               break;
@@ -413,11 +409,9 @@ export const createModelGateway = ({
           auditLevel
         );
 
-      if (context) {
-        await recordAiInvocation(context, finalFailure, {
-          sourceInferenceId: finalFailure.trace?.source_inference_id ?? null
-        });
-      }
+      await recordAiInvocation(context, finalFailure, {
+        sourceInferenceId: finalFailure.trace?.source_inference_id ?? null
+      });
 
       return finalFailure;
     }

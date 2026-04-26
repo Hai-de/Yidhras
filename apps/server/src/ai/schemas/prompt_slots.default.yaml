@@ -6,7 +6,7 @@ slots:
     default_priority: 100
     default_template: |
       你是 Yidhras 推理服务，运行在 workflow baseline。
-      当前策略: {{ request.strategy }}
+      当前策略: {{ strategy }}
     message_role: system
     include_in_combined: true
     combined_heading: "System Prompt"
@@ -32,9 +32,11 @@ slots:
     description: "当前 Actor 的角色定义与上下文"
     default_priority: 90
     default_template: |
-      角色: {{ actor.display_name }}
-      角色类型: {{ actor.role }}
-      所属 Agent: {{ actor.agent_id | default("none") }}
+      角色: {{ actor_name }}
+      角色类型: {{ actor_role }}
+      所属 Agent: {{ actor_agent_id | default("none") }}
+      Pack 内角色: {{ pack_actor_roles | default("none") }}
+      持有物品: {{ owned_artifacts | default("none") }}
     message_role: developer
     include_in_combined: true
     combined_heading: "Role Prompt"

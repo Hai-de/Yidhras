@@ -1,10 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
 import type { PromptBlock } from './prompt_block.js';
-import { buildPromptFragments } from './prompt_builder.js';
+import { buildContextPromptPayload, buildOutputContractPrompt } from './prompt_builder.js';
 import type { PromptBundleV2 } from './prompt_bundle_v2.js';
 import type { PromptFragmentV2 } from './prompt_fragment_v2.js';
-import type { PromptFragment } from './prompt_fragments.js';
 import type { PromptSlotConfig } from './prompt_slot_config.js';
 import { type PromptTree,renderSlotText } from './prompt_tree.js';
 import type { InferenceContext, PromptBundleMetadata, PromptProcessingTrace, PromptResolvableContext } from './types.js';
@@ -24,23 +23,6 @@ function buildTextBlock(text: string, meta?: Record<string, unknown>): PromptBlo
   };
 }
 
-function buildOldFragmentAsV2(fragment: PromptFragment): PromptFragmentV2 {
-  return {
-    id: fragment.id,
-    slot_id: fragment.slot,
-    priority: fragment.priority,
-    source: fragment.source,
-    removable: fragment.removable ?? true,
-    replaceable: fragment.replaceable ?? true,
-    children: [buildTextBlock(fragment.content, { migrated_from: 'legacy_fragment' })],
-    anchor: fragment.anchor ?? null,
-    placement_mode: fragment.placement_mode ?? null,
-    depth: fragment.depth ?? null,
-    order: fragment.order ?? null,
-    metadata: fragment.metadata
-  };
-}
-
 function resolveTemplate(config: PromptSlotConfig, context: PromptContext): string | null {
   if (config.default_template) {
     return config.default_template;
@@ -49,6 +31,83 @@ function resolveTemplate(config: PromptSlotConfig, context: PromptContext): stri
     return context.world_prompts.global_prefix ?? null;
   }
   return null;
+}
+
+/**
+ * Build V2 fragments for slots whose content is dynamically generated
+ * at inference time (not expressible as static YAML templates).
+ */
+function buildDynamicSlotFragments(
+  context: PromptContext,
+  slotRegistry: Record<string, ParsedPromptSlotConfig>
+): Record<string, PromptFragmentV2[]> {
+  const result: Record<string, PromptFragmentV2[]> = {};
+
+  // post_process: JSON snapshot of inference context
+  if (slotRegistry['post_process']?.enabled) {
+    const payload = buildContextPromptPayload(context);
+    const jsonSnapshot = JSON.stringify(payload, null, 2);
+    if (jsonSnapshot.trim().length > 0) {
+      result['post_process'] = [{
+        id: randomUUID(),
+        slot_id: 'post_process',
+        priority: slotRegistry['post_process']!.default_priority,
+        source: 'context.snapshot',
+        removable: true,
+        replaceable: true,
+        children: [buildTextBlock(jsonSnapshot, { source: 'context.snapshot' })],
+        anchor: null,
+        placement_mode: null,
+        depth: null,
+        order: null,
+        metadata: {}
+      }];
+    }
+  }
+
+  // memory_summary: placeholder (content injected later by memory_injector processor)
+  if (slotRegistry['memory_summary']?.enabled) {
+    const memorySelectionCount = context.memory_context
+      ? context.memory_context.short_term.length + context.memory_context.long_term.length + context.memory_context.summaries.length
+      : 0;
+    result['memory_summary'] = [{
+      id: randomUUID(),
+      slot_id: 'memory_summary',
+      priority: slotRegistry['memory_summary']!.default_priority,
+      source: 'memory.summary',
+      removable: true,
+      replaceable: true,
+      children: [buildTextBlock('', { memory_selection_count: memorySelectionCount })],
+      anchor: null,
+      placement_mode: null,
+      depth: null,
+      order: null,
+      metadata: { memory_selection_count: memorySelectionCount }
+    }];
+  }
+
+  // output_contract: use YAML template if defined, otherwise dynamic fallback
+  if (slotRegistry['output_contract']?.enabled && !slotRegistry['output_contract']?.default_template) {
+    const outputContract = buildOutputContractPrompt();
+    if (outputContract.trim().length > 0) {
+      result['output_contract'] = [{
+        id: randomUUID(),
+        slot_id: 'output_contract',
+        priority: slotRegistry['output_contract']!.default_priority,
+        source: 'output.contract',
+        removable: false,
+        replaceable: true,
+        children: [buildTextBlock(outputContract, { source: 'output.contract' })],
+        anchor: null,
+        placement_mode: null,
+        depth: null,
+        order: null,
+        metadata: {}
+      }];
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -102,17 +161,14 @@ export function buildPromptTree(
     sourceKeys.push(`slot_config:${slotConfig.id}`);
   }
 
-  // Compatibility bridge: merge old prompt fragments
-  const oldFragments = buildPromptFragments(context);
-  for (const oldFragment of oldFragments) {
-    const slotId = oldFragment.slot;
+  // Merge dynamically generated slot content (post_process, memory_summary, etc.)
+  const dynamicFragments = buildDynamicSlotFragments(context, slotRegistry);
+  for (const [slotId, fragments] of Object.entries(dynamicFragments)) {
     if (!fragmentsBySlot[slotId]) {
       fragmentsBySlot[slotId] = [];
     }
-    if (oldFragment.content.trim().length > 0) {
-      fragmentsBySlot[slotId]!.push(buildOldFragmentAsV2(oldFragment));
-    }
-    sourceKeys.push(oldFragment.source);
+    fragmentsBySlot[slotId]!.push(...fragments);
+    sourceKeys.push(...fragments.map(f => f.source));
   }
 
   return {

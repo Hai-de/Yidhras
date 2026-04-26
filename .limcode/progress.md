@@ -1,6 +1,6 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-25T20:59:54.849Z
+- Updated At: 2026-04-26T01:48:48.013Z
 - Status: active
 - Phase: implementation
 
@@ -17,21 +17,18 @@
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
 - 设计：`.limcode/design/prompt-bundle-componentized-refactoring-design.md`
-- 计划：`.limcode/plans/测试链路定向改造计划.plan.md`
+- 计划：`.limcode/plans/prompt-bundle-组件化重构-phase-3-processor-管线树化.plan.md`
 - 审查：`.limcode/review/测试链路重构评估.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 巨型测试拆分  `#FIX1-FIX2`
-- [ ] E2E 拆分 (cancelled)  `#FIX3` (cancelled)
-- [x] Phase 1: coverage + CI  `#T1-T3`
-- [x] Phase 2: AI gateway tests + contracts  `#T4-T6,T9`
-- [ ] OpenAI adapter + route contracts (skip)  `#T7-T8` (cancelled)
-- [x] Web store 增强  `#T10`
-- [ ] @vue/test-utils + 压力测试 + 属性测试 (deferred)  `#T12,T15-T16`
-- [x] Scheduler + Inference benchmark  `#T13-T14`
+- [x] runtime.ts 新增 runPromptWorkflowV2（PromptTree 载体）  `#p3-1`
+- [x] memory_injector/policy_filter/memory_summary 提供 PromptTreeProcessor  `#p3-2`
+- [x] service.ts V2 路径改用 runPromptWorkflowV2  `#p3-3`
+- [ ] 移除 token_budget_trimmer adapter wrapper（推迟到 Phase 4）  `#p3-4` (cancelled)
+- [x] 更新设计文档 §12 标记 Phase 3 完成  `#p3-5`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -49,14 +46,6 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-25T14:25:29.672Z | artifact_changed | design | 同步设计文档：.limcode/design/prompt-bundle-componentized-refactoring-design.md
-- 2026-04-25T14:42:20.480Z | artifact_changed | plan | 同步计划文档：.limcode/plans/prompt-bundle-componentized-refactoring-phase1.md
-- 2026-04-25T15:04:26.489Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/prompt-bundle-componentized-refactoring-phase1.md
-- 2026-04-25T15:50:36.549Z | artifact_changed | plan | 同步计划文档：.limcode/plans/prompt-bundle-componentized-refactoring-phase2.md
-- 2026-04-25T16:35:52.293Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/prompt-bundle-componentized-refactoring-phase2.md
-- 2026-04-25T17:23:10.076Z | artifact_changed | plan | 同步计划文档：.limcode/plans/prompt-bundle-componentized-refactoring-phase3.md
-- 2026-04-25T18:27:56.899Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/prompt-bundle-componentized-refactoring-phase4.md
-- 2026-04-25T19:05:50.705Z | artifact_changed | plan | 同步计划文档：.limcode/plans/移除-ts-fallback-rust-sidecar-失败时硬报错.plan.md
 - 2026-04-25T19:39:54.129Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/移除-ts-fallback-rust-sidecar-失败时硬报错.plan.md
 - 2026-04-25T19:40:04.212Z | milestone_recorded | 移除 TS fallback 完成：9 文件删除、8 文件修改。scheduler 和 memory trigger 的 Rust sidecar 失败时包装抛错，不再静默降级。Unit tests 48/48 通过，typecheck 无新增错误。计划: .limcode/plans/移除-ts-fallback-rust-sidecar-失败时硬报错.plan.md
 - 2026-04-25T19:44:50.432Z | artifact_changed | review | 同步审查文档：.limcode/review/测试链路重构评估.md
@@ -69,6 +58,14 @@
 - 2026-04-25T20:15:56.290Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/测试链路定向改造计划.plan.md
 - 2026-04-25T20:25:48.584Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/测试链路定向改造计划.plan.md
 - 2026-04-25T20:46:48.395Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/测试链路定向改造计划.plan.md
+- 2026-04-25T22:00:30.329Z | artifact_changed | design | 同步设计文档：.limcode/design/ai-three-layer-directory-refactoring.md
+- 2026-04-25T22:02:47.159Z | artifact_changed | plan | 同步计划文档：.limcode/plans/plan.plan.md
+- 2026-04-25T23:31:02.938Z | artifact_changed | design | 同步设计文档：.limcode/design/ai-tool-calling-enablement.md
+- 2026-04-26T00:38:00.535Z | artifact_changed | design | 同步设计文档：.limcode/design/prompt-bundle-componentized-refactoring-design.md
+- 2026-04-26T00:39:29.363Z | artifact_changed | plan | 同步计划文档：.limcode/plans/prompt-bundle-组件化重构-phase-2-推进.plan.md
+- 2026-04-26T00:53:31.081Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/prompt-bundle-组件化重构-phase-2-推进.plan.md
+- 2026-04-26T01:42:43.193Z | artifact_changed | plan | 同步计划文档：.limcode/plans/prompt-bundle-组件化重构-phase-3-processor-管线树化.plan.md
+- 2026-04-26T01:48:48.013Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/prompt-bundle-组件化重构-phase-3-processor-管线树化.plan.md
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -78,7 +75,7 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-24T15:27:52.689Z",
-  "updatedAt": "2026-04-25T20:59:54.849Z",
+  "updatedAt": "2026-04-26T01:48:48.013Z",
   "status": "active",
   "phase": "implementation",
   "currentFocus": "测试链路定向改造计划收尾 — T12/T15 已移入 enhancements-backlog",
@@ -87,102 +84,39 @@
   "nextAction": "无阻塞项。长期可选：从 enhancements-backlog 中按优先级提取 T12 或 T15",
   "activeArtifacts": {
     "design": ".limcode/design/prompt-bundle-componentized-refactoring-design.md",
-    "plan": ".limcode/plans/测试链路定向改造计划.plan.md",
+    "plan": ".limcode/plans/prompt-bundle-组件化重构-phase-3-processor-管线树化.plan.md",
     "review": ".limcode/review/测试链路重构评估.md"
   },
   "todos": [
     {
-      "id": "FIX1-FIX2",
-      "content": "巨型测试拆分",
+      "id": "p3-1",
+      "content": "runtime.ts 新增 runPromptWorkflowV2（PromptTree 载体）",
       "status": "completed"
     },
     {
-      "id": "FIX3",
-      "content": "E2E 拆分 (cancelled)",
+      "id": "p3-2",
+      "content": "memory_injector/policy_filter/memory_summary 提供 PromptTreeProcessor",
+      "status": "completed"
+    },
+    {
+      "id": "p3-3",
+      "content": "service.ts V2 路径改用 runPromptWorkflowV2",
+      "status": "completed"
+    },
+    {
+      "id": "p3-4",
+      "content": "移除 token_budget_trimmer adapter wrapper（推迟到 Phase 4）",
       "status": "cancelled"
     },
     {
-      "id": "T1-T3",
-      "content": "Phase 1: coverage + CI",
-      "status": "completed"
-    },
-    {
-      "id": "T4-T6,T9",
-      "content": "Phase 2: AI gateway tests + contracts",
-      "status": "completed"
-    },
-    {
-      "id": "T7-T8",
-      "content": "OpenAI adapter + route contracts (skip)",
-      "status": "cancelled"
-    },
-    {
-      "id": "T10",
-      "content": "Web store 增强",
-      "status": "completed"
-    },
-    {
-      "id": "T12,T15-T16",
-      "content": "@vue/test-utils + 压力测试 + 属性测试 (deferred)",
-      "status": "pending"
-    },
-    {
-      "id": "T13-T14",
-      "content": "Scheduler + Inference benchmark",
+      "id": "p3-5",
+      "content": "更新设计文档 §12 标记 Phase 3 完成",
       "status": "completed"
     }
   ],
   "milestones": [],
   "risks": [],
   "log": [
-    {
-      "at": "2026-04-25T14:25:29.672Z",
-      "type": "artifact_changed",
-      "refId": "design",
-      "message": "同步设计文档：.limcode/design/prompt-bundle-componentized-refactoring-design.md"
-    },
-    {
-      "at": "2026-04-25T14:42:20.480Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/prompt-bundle-componentized-refactoring-phase1.md"
-    },
-    {
-      "at": "2026-04-25T15:04:26.489Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/prompt-bundle-componentized-refactoring-phase1.md"
-    },
-    {
-      "at": "2026-04-25T15:50:36.549Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/prompt-bundle-componentized-refactoring-phase2.md"
-    },
-    {
-      "at": "2026-04-25T16:35:52.293Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/prompt-bundle-componentized-refactoring-phase2.md"
-    },
-    {
-      "at": "2026-04-25T17:23:10.076Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/prompt-bundle-componentized-refactoring-phase3.md"
-    },
-    {
-      "at": "2026-04-25T18:27:56.899Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/prompt-bundle-componentized-refactoring-phase4.md"
-    },
-    {
-      "at": "2026-04-25T19:05:50.705Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/移除-ts-fallback-rust-sidecar-失败时硬报错.plan.md"
-    },
     {
       "at": "2026-04-25T19:39:54.129Z",
       "type": "artifact_changed",
@@ -253,21 +187,69 @@
       "type": "artifact_changed",
       "refId": "plan",
       "message": "同步计划 TODO 快照：.limcode/plans/测试链路定向改造计划.plan.md"
+    },
+    {
+      "at": "2026-04-25T22:00:30.329Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/ai-three-layer-directory-refactoring.md"
+    },
+    {
+      "at": "2026-04-25T22:02:47.159Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/plan.plan.md"
+    },
+    {
+      "at": "2026-04-25T23:31:02.938Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/ai-tool-calling-enablement.md"
+    },
+    {
+      "at": "2026-04-26T00:38:00.535Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/prompt-bundle-componentized-refactoring-design.md"
+    },
+    {
+      "at": "2026-04-26T00:39:29.363Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/prompt-bundle-组件化重构-phase-2-推进.plan.md"
+    },
+    {
+      "at": "2026-04-26T00:53:31.081Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/prompt-bundle-组件化重构-phase-2-推进.plan.md"
+    },
+    {
+      "at": "2026-04-26T01:42:43.193Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/prompt-bundle-组件化重构-phase-3-processor-管线树化.plan.md"
+    },
+    {
+      "at": "2026-04-26T01:48:48.013Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/prompt-bundle-组件化重构-phase-3-processor-管线树化.plan.md"
     }
   ],
   "stats": {
     "milestonesTotal": 0,
     "milestonesCompleted": 0,
-    "todosTotal": 8,
-    "todosCompleted": 5,
+    "todosTotal": 5,
+    "todosCompleted": 4,
     "todosInProgress": 0,
-    "todosCancelled": 2,
+    "todosCancelled": 1,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-25T20:59:54.849Z",
-    "bodyHash": "sha256:d8c5183ef00b13e5ab19e5bdae2be83d96fda96acbf068e264efbbc9cc3965ac"
+    "generatedAt": "2026-04-26T01:48:48.013Z",
+    "bodyHash": "sha256:2ecd9114e8946f86fd56c79957c38ab36cc2184f04bfaa958479e904aa8f3817"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

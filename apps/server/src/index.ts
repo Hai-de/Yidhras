@@ -1,3 +1,4 @@
+import { createInferenceProviders } from './app/composition/inference.js';
 import type { AppContext, RouteRegistrar, RuntimeLoopDiagnostics } from './app/context.js';
 import { createApp } from './app/create_app.js';
 import { asyncHandler } from './app/http/async_handler.js';
@@ -150,6 +151,7 @@ appContext.packHostApi = createPackHostApi(appContext);
 
 const inferenceService = createInferenceService({
   context: appContext,
+  providers: createInferenceProviders({ context: appContext }),
   traceSink: createPrismaInferenceTraceSink(appContext)
 });
 

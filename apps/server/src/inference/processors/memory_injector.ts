@@ -5,7 +5,7 @@ import type {
   PromptFragmentAnchor,
   PromptFragmentPlacementMode
 } from '../prompt_fragments.js';
-import type { PromptProcessor } from '../prompt_processors.js';
+import type { PromptProcessor, PromptTreeProcessor, PromptTreeProcessorInput } from '../prompt_processors.js';
 
 const buildMemoryFragment = (
   slot: 'memory_short_term' | 'memory_long_term' | 'memory_summary',
@@ -155,3 +155,107 @@ export const createMemoryInjectorPromptProcessor = (): PromptProcessor => {
     }
   };
 };
+
+// ── Tree-aware adapter (V2) ──
+
+import type { PromptBlock } from '../prompt_block.js';
+import type { PromptFragmentV2 } from '../prompt_fragment_v2.js';
+import type { PromptTree } from '../prompt_tree.js';
+
+/**
+ * Tree-native wrapper: flattens tree → old processor → rebuilds tree.
+ * Temporary bridge until full tree-native implementation in later phase.
+ */
+export const createMemoryInjectorTreeProcessor = (): PromptTreeProcessor => {
+  const flat = createMemoryInjectorPromptProcessor();
+  return {
+    name: 'memory-injector-tree',
+    async process(input: PromptTreeProcessorInput): Promise<PromptTree> {
+      const flatFragments = flattenTreeToPromptFragments(input.tree);
+      const result = await flat.process({ context: input.context, fragments: flatFragments, workflow: input.workflow });
+      return mergeFlatFragmentsIntoTree(input.tree, result);
+    }
+  };
+};
+
+export function flattenTreeToPromptFragments(tree: PromptTree): Array<import('../prompt_fragments.js').PromptFragment> {
+  const result: Array<import('../prompt_fragments.js').PromptFragment> = [];
+  for (const fragments of Object.values(tree.fragments_by_slot)) {
+    for (const f of fragments) {
+      const text = collectBlockText(f.children);
+      result.push({
+        id: f.id,
+        slot: f.slot_id as import('../prompt_fragments.js').PromptFragmentSlot,
+        priority: f.priority,
+        content: text,
+        source: f.source,
+        removable: f.removable,
+        replaceable: f.replaceable,
+        anchor: f.anchor,
+        placement_mode: f.placement_mode,
+        depth: f.depth,
+        order: f.order,
+        metadata: f.metadata
+      });
+    }
+  }
+  return result;
+}
+
+function collectBlockText(nodes: PromptTree['fragments_by_slot'][string][number]['children']): string {
+  const parts: string[] = [];
+  for (const node of nodes) {
+    if ('kind' in node && node.kind === 'text' && node.content.kind === 'text') {
+      if (node.rendered) parts.push(node.rendered);
+      else parts.push(node.content.text);
+    }
+  }
+  return parts.join('\n');
+}
+
+export function mergeFlatFragmentsIntoTree(tree: PromptTree, fragments: Array<import('../prompt_fragments.js').PromptFragment>): PromptTree {
+  const keptIds = new Set(fragments.map(f => f.id));
+  const newById = new Map(fragments.map(f => [f.id, f]));
+
+  const nextBySlot: Record<string, PromptFragmentV2[]> = {};
+  for (const [slotId, existing] of Object.entries(tree.fragments_by_slot)) {
+    nextBySlot[slotId] = [];
+    for (const f of existing) {
+      if (!keptIds.has(f.id)) continue;
+      const updated = newById.get(f.id);
+      if (updated && updated.content !== collectBlockText(f.children)) {
+        // content changed: update the text block
+        const block: PromptBlock = { id: f.id, kind: 'text', content: { kind: 'text', text: updated.content }, rendered: updated.content };
+        nextBySlot[slotId]!.push({ ...f, children: [block] });
+      } else {
+        nextBySlot[slotId]!.push(f);
+      }
+    }
+  }
+
+  // Add new fragments that don't exist in tree
+  for (const f of fragments) {
+    const slotId = f.slot;
+    if (!keptIds.has(f.id) || !tree.fragments_by_slot[slotId]?.some(existing => existing.id === f.id)) {
+      if (!nextBySlot[slotId]) nextBySlot[slotId] = [];
+      const block: PromptBlock = { id: f.id, kind: 'text', content: { kind: 'text', text: f.content }, rendered: f.content };
+      nextBySlot[slotId]!.push({
+        id: f.id,
+        slot_id: f.slot,
+        priority: f.priority,
+        source: f.source,
+        removable: f.removable ?? true,
+        replaceable: f.replaceable ?? true,
+        children: [block],
+        anchor: f.anchor ?? null,
+        placement_mode: f.placement_mode ?? null,
+        depth: f.depth ?? null,
+        order: f.order ?? null,
+        metadata: f.metadata
+      });
+    }
+  }
+
+  return { ...tree, fragments_by_slot: nextBySlot };
+}
+

@@ -1,14 +1,14 @@
+import type { PromptBundle } from '@yidhras/contracts';
+
 import type { ContextRun } from '../context/types.js';
 import type { IdentityContext } from '../identity/types.js';
 import type { MemoryContextPack } from '../memory/types.js';
 import type {
-  PromptMacroDiagnostics,
   PromptVariableContext,
   PromptVariableContextSummary,
   VariablePool
 } from '../narrative/types.js';
 import type { WorldPackAiConfig, WorldPackValue } from '../packs/schema/constitution_schema.js';
-import type { PromptFragment } from './prompt_fragments.js';
 
 export type InferenceStrategy = 'mock' | 'rule_based' | 'model_routed';
 export type InferenceActorRole = 'active' | 'atmosphere';
@@ -257,125 +257,18 @@ export interface InferenceMemoryMutationSnapshot {
   records: InferenceMemoryMutationRecord[];
 }
 
-export interface PromptWorkflowStepTraceSnapshot {
-  key: string;
-  kind: string;
-  status: 'completed' | 'skipped' | 'failed';
-  before: Record<string, unknown>;
-  after: Record<string, unknown>;
-  notes?: Record<string, unknown>;
-}
+// ── Re-exported from contracts (canonical versions) ──
+// These types are shared between ai/ and inference/.
+export type {
+  PromptBundle,
+  PromptBundleMetadata,
+  PromptProcessingTrace,
+  PromptWorkflowMetadata,
+  PromptWorkflowPlacementSummarySnapshot,
+  PromptWorkflowSnapshot,
+  PromptWorkflowStepTraceSnapshot
+} from '@yidhras/contracts';
 
-export interface PromptWorkflowPlacementSummarySnapshot {
-  total_fragments: number;
-  resolved_with_anchor: number;
-  fallback_count: number;
-}
-
-export interface PromptWorkflowSnapshot {
-  task_type: string | null;
-  profile_id: string | null;
-  profile_version: string | null;
-  selected_step_keys: string[];
-  step_traces?: PromptWorkflowStepTraceSnapshot[];
-  compatibility?: Record<string, unknown> | null;
-  placement_summary?: PromptWorkflowPlacementSummarySnapshot | null;
-  variable_summary?: Record<string, unknown> | null;
-  macro_summary?: PromptMacroDiagnostics | null;
-  section_summary?: Record<string, unknown> | null;
-}
-
-export interface PromptWorkflowMetadata {
-  workflow_task_type?: string | null;
-  workflow_profile_id?: string | null;
-  workflow_profile_version?: string | null;
-  workflow_step_keys?: string[];
-  workflow_section_summary?: Record<string, unknown>;
-  workflow_placement_summary?: Record<string, unknown>;
-  workflow_variable_summary?: Record<string, unknown>;
-  workflow_macro_summary?: PromptMacroDiagnostics;
-}
-
-export interface PromptProcessingTrace {
-  processor_names: string[];
-  fragment_count_before: number;
-  fragment_count_after: number;
-  workflow_task_type?: string | null;
-  workflow_profile_id?: string | null;
-  workflow_profile_version?: string | null;
-  workflow_step_keys?: string[];
-  workflow_step_traces?: PromptWorkflowStepTraceSnapshot[];
-  prompt_workflow?: PromptWorkflowSnapshot | null;
-  steps?: Array<{
-    processor_name: string;
-    fragment_count_before: number;
-    fragment_count_after: number;
-    added_fragment_ids?: string[];
-    removed_fragment_ids?: string[];
-    notes?: Record<string, unknown>;
-  }>;
-  fragments: Array<{
-    id: string;
-    slot: PromptFragment['slot'];
-    source: string;
-    priority: number;
-    metadata?: Record<string, unknown>;
-  }>;
-  summary_compaction?: {
-    summarized_fragment_ids: string[];
-    summary_fragment_id: string;
-  } | null;
-  policy_filtering?: {
-    filtered_fragment_ids: string[];
-    reasons: Record<string, string>;
-  } | null;
-  token_budget_trimming?: {
-    task_type?: string | null;
-    budget: number;
-    used: number;
-    trimmed_fragment_ids: string[];
-    kept_fragment_ids?: string[];
-    always_kept_fragment_ids?: string[];
-    kept_optional_fragment_ids?: string[];
-    slot_priority?: Partial<Record<PromptFragment['slot'], number>>;
-    optional_fragment_scores?: Array<{ fragment_id: string; slot: PromptFragment['slot']; score: number; estimated_cost: number; kept: boolean }>;
-    trimmed_by_slot?: Partial<Record<PromptFragment['slot'], string[]>>;
-    section_budget?: {
-      mode: 'fragment_only' | 'section_level';
-      total_budget: number;
-      allocated_budget: number;
-      allocations: Array<{
-        section_id: string;
-        section_type: string;
-        slot: PromptFragment['slot'];
-        budget_share: number;
-        budget_tokens: number;
-        ranking_score: number;
-        kept: boolean;
-      }>;
-      kept_section_ids: string[];
-      dropped_section_ids: string[];
-    } | null;
-    trimmed_sources?: string[];
-    section_summary?: Record<string, unknown> | null;
-  } | null;
-}
-
-export interface PromptBundleMetadata extends PromptWorkflowMetadata {
-  prompt_version: string | null;
-  source_prompt_keys: string[];
-  processing_trace?: PromptProcessingTrace;
-}
-
-export interface PromptBundle {
-  system_prompt: string;
-  role_prompt: string;
-  world_prompt: string;
-  context_prompt: string;
-  output_contract_prompt: string;
-  combined_prompt: string;
-  metadata: PromptBundleMetadata;
-}
 
 export interface ProviderDecisionRaw {
   action_type?: unknown;

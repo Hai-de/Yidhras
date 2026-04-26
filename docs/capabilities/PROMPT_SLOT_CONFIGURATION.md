@@ -3,7 +3,7 @@
 Prompt Bundle V2 将原先硬编码的 6 个固定 prompt 字段替换为声明式 YAML 驱动的 Slot 配置系统。你可以通过配置文件自由增减 prompt 插槽，控制每个 slot 的优先级、模板内容、消息角色和可见性。
 
 > 设计文档：`.limcode/design/prompt-bundle-componentized-refactoring-design.md`
-> 实施计划：`.limcode/plans/prompt-bundle-componentized-refactoring-phase1.md`
+> 实施计划：`.limcode/plans/prompt-bundle-组件化重构-phase-2-推进.plan.md`
 
 ## 1. 功能状态
 
@@ -14,11 +14,15 @@ Prompt Bundle V2 当前通过 feature flag 控制，**默认关闭**：
 features:
   experimental:
     prompt_bundle_v2: true       # 启用新的 Slot 系统
-    prompt_slot_permissions: false  # 启用 Slot 权限管理（Phase 3，尚未实现）
+    prompt_slot_permissions: false  # 启用 Slot 权限管理（实验性，默认关闭）
 ```
 
-- `prompt_bundle_v2: false` → 系统使用旧版 6 字段 PromptBundle，行为不变
-- `prompt_bundle_v2: true` → 系统使用新版 Slot 配置驱动的 PromptBundleV2
+**当前实现状态**：Phase 1（类型体系 + builder）和 Phase 2（provider 接口 + token_budget_trimmer 迁移 + 宏展开）已完成。开启 `prompt_bundle_v2` 后：
+
+- 模板中的 `{{ }}` 宏变量会被自动展开（`macro_expansion.ts`）
+- `system_core`、`role_core`、`world_context` 等 slot 按 YAML 配置生成
+- 权限过滤（`applyPermissionFilter`）在宏展开后执行
+- 旧 6 字段 `PromptBundle` 仍通过旧管线可用（V1 路径不变）
 
 ## 2. 核心概念
 

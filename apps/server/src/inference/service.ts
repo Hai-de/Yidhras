@@ -1,5 +1,4 @@
 import { getPromptSlotRegistry } from '../ai/registry.js';
-import { type AiTaskService,createAiTaskService } from '../ai/task_service.js';
 import type { AppContext } from '../app/context.js';
 import { toJsonSafe } from '../app/http/json.js';
 import {
@@ -22,19 +21,13 @@ import {
   releaseDecisionJobLock,
   updateDecisionJobState
 } from '../app/services/inference_workflow.js';
-import { getRuntimeConfig } from '../config/runtime_config.js';
+import { runPromptWorkflowV2 } from '../context/workflow/runtime.js';
 import { groundDecisionIntent } from '../domain/invocation/intent_grounder.js';
 import { createMemoryRecordingService } from '../memory/recording/service.js';
 import { ApiError } from '../utils/api_error.js';
 import { buildInferenceContext } from './context_builder.js';
-import { buildPromptBundle } from './prompt_builder.js';
-import { buildPromptBundleV2,buildPromptTree } from './prompt_builder_v2.js';
-import { toLegacyPromptBundle } from './prompt_bundle_v2.js';
-import { applyPermissionFilter } from './prompt_permissions.js';
+import { buildPromptBundleV2, buildPromptTree } from './prompt_builder_v2.js';
 import type { InferenceProvider } from './provider.js';
-import { createGatewayBackedInferenceProvider } from './providers/gateway_backed.js';
-import { createMockInferenceProvider } from './providers/mock.js';
-import { createRuleBasedInferenceProvider } from './providers/rule_based.js';
 import { createNoopInferenceTraceSink } from './sinks/noop.js';
 import type { InferenceTraceSink } from './trace_sink.js';
 import type {
@@ -53,14 +46,6 @@ import type {
   TraceMetadata
 } from './types.js';
 
-const extractIncludeSections = (inferenceContext: InferenceContext): string[] | undefined => {
-  const taskOverride = inferenceContext.world_ai?.tasks?.agent_decision;
-  const promptOverride = taskOverride?.prompt;
-  if (promptOverride && Array.isArray(promptOverride.include_sections) && promptOverride.include_sections.length > 0) {
-    return promptOverride.include_sections;
-  }
-  return undefined;
-};
 
 export interface InferenceService {
   readonly phase: 'workflow_baseline';
@@ -76,9 +61,8 @@ export interface InferenceService {
 
 export interface CreateInferenceServiceOptions {
   context: AppContext;
-  providers?: InferenceProvider[];
+  providers: InferenceProvider[];
   traceSink?: InferenceTraceSink;
-  aiTaskService?: AiTaskService;
 }
 
 const DEFAULT_JOB_MAX_ATTEMPTS = 3;
@@ -250,18 +234,10 @@ const executeRunInternal = async (
 ): Promise<InferenceRunResult> => {
   const inferenceContext = await buildInferenceContext(context, input);
   const provider = selectProvider(providers, inferenceContext.strategy);
-  const includeSections = extractIncludeSections(inferenceContext);
-  const runtimeConfig = getRuntimeConfig();
-  let prompt;
-  if (runtimeConfig.features?.experimental?.prompt_bundle_v2) {
-    const registry = getPromptSlotRegistry();
-    const tree = buildPromptTree(inferenceContext, registry.slots);
-    applyPermissionFilter(tree, inferenceContext);
-    const v2 = buildPromptBundleV2(tree, inferenceContext);
-    prompt = toLegacyPromptBundle(v2);
-  } else {
-    prompt = await buildPromptBundle(inferenceContext, { task_type: 'agent_decision', include_sections: includeSections });
-  }
+  const registry = getPromptSlotRegistry();
+  const tree = buildPromptTree(inferenceContext, registry.slots);
+  const { tree: processed } = await runPromptWorkflowV2({ tree, context: inferenceContext });
+  const prompt = buildPromptBundleV2(processed, inferenceContext);
   const attemptCount = options?.attemptCount ?? 1;
   const maxAttempts = options?.maxAttempts ?? DEFAULT_JOB_MAX_ATTEMPTS;
   const memoryRecordingService = createMemoryRecordingService({ context });
@@ -451,23 +427,18 @@ const executeRunInternal = async (
 export const createInferenceService = ({
   context,
   providers,
-  traceSink = createNoopInferenceTraceSink(),
-  aiTaskService = createAiTaskService({ context })
+  traceSink = createNoopInferenceTraceSink()
 }: CreateInferenceServiceOptions): InferenceService => {
-  const resolvedProviders = providers ?? [
-    createMockInferenceProvider(),
-    createRuleBasedInferenceProvider(),
-    createGatewayBackedInferenceProvider({ aiTaskService })
-  ];
-
   const service: InferenceService = {
     phase: 'workflow_baseline',
     ready: true,
     async previewInference(input) {
       const inferenceContext = await buildInferenceContext(context, input);
-      const provider = selectProvider(resolvedProviders, inferenceContext.strategy);
-      const includeSections = extractIncludeSections(inferenceContext);
-      const prompt = await buildPromptBundle(inferenceContext, { task_type: 'agent_decision', include_sections: includeSections });
+      const provider = selectProvider(providers, inferenceContext.strategy);
+      const registry = getPromptSlotRegistry();
+      const tree = buildPromptTree(inferenceContext, registry.slots);
+      const { tree: processed } = await runPromptWorkflowV2({ tree, context: inferenceContext });
+      const prompt = buildPromptBundleV2(processed, inferenceContext);
       const tick = inferenceContext.tick.toString();
       const metadata = {
         world_pack_id: inferenceContext.world_pack.id,
@@ -507,7 +478,7 @@ export const createInferenceService = ({
       };
     },
     async runInference(input) {
-      return executeRunInternal(service, traceSink, context, resolvedProviders, input);
+      return executeRunInternal(service, traceSink, context, providers, input);
     },
     async submitInferenceJob(input) {
       if (!hasIdempotencyKey(input)) {
@@ -644,7 +615,7 @@ export const createInferenceService = ({
 
       const requestInput = getDecisionJobRequestInput(job);
       try {
-        const result = await executeRunInternal(service, traceSink, context, resolvedProviders, requestInput, {
+        const result = await executeRunInternal(service, traceSink, context, providers, requestInput, {
           jobId: job.id,
           attemptCount: job.attempt_count,
           maxAttempts: job.max_attempts

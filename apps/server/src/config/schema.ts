@@ -293,7 +293,6 @@ export const RuntimeConfigSchema = z
         experimental: z
           .object({
             multi_pack_runtime: ExperimentalMultiPackRuntimeSchema,
-            prompt_bundle_v2: z.boolean().optional().default(false),
             prompt_slot_permissions: z.boolean().optional().default(false)
           })
           .strict()
