@@ -6,6 +6,9 @@ import {
   PACK_BINDING_TYPE,
   ROOT_OPERATOR_USERNAME
 } from '../operator/constants.js'
+import { createLogger } from '../utils/logger.js'
+
+const logger = createLogger('seed-operator')
 
 const prisma = new PrismaClient()
 
@@ -29,7 +32,7 @@ async function main() {
     }
   })
 
-  console.log(`[operator-seed] Identity created: ${identity.id}`)
+  logger.info(`Identity created: ${identity.id}`)
 
   // 2. 创建 root Operator
   const passwordHash = await hashPassword(rootPassword, DEFAULT_BCRYPT_ROUNDS)
@@ -53,7 +56,7 @@ async function main() {
     }
   })
 
-  console.log(`[operator-seed] Operator created: ${operator.id} (${operator.username})`)
+  logger.info(`Operator created: ${operator.id} (${operator.username})`)
 
   // 3. 为默认 pack 创建 root 的 OperatorPackBinding
   const existingBinding = await prisma.operatorPackBinding.findUnique({
@@ -77,9 +80,9 @@ async function main() {
       }
     })
 
-    console.log(`[operator-seed] PackBinding created: ${operator.id} -> ${defaultPackId} (owner)`)
+    logger.info(`PackBinding created: ${operator.id} -> ${defaultPackId} (owner)`)
   } else {
-    console.log(`[operator-seed] PackBinding already exists: ${operator.id} -> ${defaultPackId}`)
+    logger.info(`PackBinding already exists: ${operator.id} -> ${defaultPackId}`)
   }
 
   // 4. 为示例 Agent 创建 root 的 IdentityNodeBinding
@@ -104,17 +107,17 @@ async function main() {
       }
     })
 
-    console.log(`[operator-seed] AgentBinding created: ${identity.id} -> ${defaultAgentId} (active)`)
+    logger.info(`AgentBinding created: ${identity.id} -> ${defaultAgentId} (active)`)
   } else {
-    console.log(`[operator-seed] AgentBinding already exists: ${identity.id} -> ${defaultAgentId}`)
+    logger.info(`AgentBinding already exists: ${identity.id} -> ${defaultAgentId}`)
   }
 
-  console.log('[operator-seed] Operator seed complete')
+  logger.info('Operator seed complete')
 }
 
 main()
   .catch(e => {
-    console.error('[operator-seed] Error:', e)
+    logger.error('Operator seed error', { error: e instanceof Error ? e.message : String(e) })
     process.exit(1)
   })
   .finally(async () => {

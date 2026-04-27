@@ -125,6 +125,7 @@ const buildInferenceJobsWhere = (filters: ParsedInferenceJobsFilters): Prisma.De
     ...(filters.job_type ? { job_type: filters.job_type } : {}),
     ...(filters.action_intent_id ? { action_intent_id: filters.action_intent_id } : {}),
     ...(filters.has_error === null ? {} : filters.has_error ? { last_error: { not: null } } : { last_error: null }),
+    ...(filters.pack_ids ? { pack_id: { in: filters.pack_ids } } : {}),
     ...(filters.from_created_at !== null || filters.to_created_at !== null
       ? {
           created_at: {

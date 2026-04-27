@@ -2,10 +2,13 @@ import { DatabaseSync } from 'node:sqlite';
 
 import fs from 'fs';
 
+import { createLogger } from '../../utils/logger.js';
 import { stringifyJsonSafe, toJsonSafe } from './internal/json.js';
 import type { PersistedStoragePlan } from './internal/plan_store.js';
 import { readPersistedStoragePlan } from './internal/plan_store.js';
 import { resolvePackRuntimeDatabaseLocation } from './pack_db_locator.js';
+
+const logger = createLogger('pack-collection-repo');
 
 export type PackCollectionRecord = Record<string, unknown>;
 
@@ -14,10 +17,6 @@ type PersistedPackCollectionFieldDefinition = PersistedPackCollectionDefinition[
 
 type SqlitePrimitive = string | number | null;
 type SqliteRow = Record<string, unknown>;
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const parseJsonString = (value: string): unknown => {
   try {
@@ -231,13 +230,13 @@ export const upsertDeclaredPackCollectionRecord = async (
 ): Promise<PackCollectionRecord | null> => {
   const location = resolvePackRuntimeDatabaseLocation(packId);
   if (!fs.existsSync(location.runtimeDbPath)) {
-    console.warn(`[pack_collection_repo] runtime db missing for pack=${packId} path=${location.runtimeDbPath}`);
+    logger.warn(`runtime db missing for pack=${packId} path=${location.runtimeDbPath}`);
     return null;
   }
 
   const collection = readCollectionDefinition(location.runtimeDbPath, collectionKey);
   if (!collection) {
-    console.warn(`[pack_collection_repo] collection declaration missing for pack=${packId} collection=${collectionKey} path=${location.runtimeDbPath}`);
+    logger.warn(`collection declaration missing for pack=${packId} collection=${collectionKey} path=${location.runtimeDbPath}`);
     return null;
   }
 
@@ -260,13 +259,13 @@ export const listDeclaredPackCollectionRecords = async (
 ): Promise<PackCollectionRecord[]> => {
   const location = resolvePackRuntimeDatabaseLocation(packId);
   if (!fs.existsSync(location.runtimeDbPath)) {
-    console.warn(`[pack_collection_repo] runtime db missing while listing pack=${packId} path=${location.runtimeDbPath}`);
+    logger.warn(`runtime db missing while listing pack=${packId} path=${location.runtimeDbPath}`);
     return [];
   }
 
   const collection = readCollectionDefinition(location.runtimeDbPath, collectionKey);
   if (!collection) {
-    console.warn(`[pack_collection_repo] collection declaration missing while listing pack=${packId} collection=${collectionKey} path=${location.runtimeDbPath}`);
+    logger.warn(`collection declaration missing while listing pack=${packId} collection=${collectionKey} path=${location.runtimeDbPath}`);
     return [];
   }
 

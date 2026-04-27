@@ -31,6 +31,7 @@ export interface ListInferenceJobsInput {
   limit?: number;
   has_error?: boolean;
   action_intent_id?: string;
+  pack_ids?: string[] | null;
 }
 
 const storedRequestInputSchema = z.object({
@@ -201,6 +202,7 @@ export const parseInferenceJobsFilters = (input: ListInferenceJobsInput): Parsed
     cursor: parseInferenceJobsCursor(input.cursor),
     limit: parseInferenceJobListLimit(input.limit),
     has_error: typeof input.has_error === 'boolean' ? input.has_error : null,
-    action_intent_id: parseOptionalFilterId(input.action_intent_id)
+    action_intent_id: parseOptionalFilterId(input.action_intent_id),
+    pack_ids: Array.isArray(input.pack_ids) && input.pack_ids.length > 0 ? input.pack_ids : null
   };
 };

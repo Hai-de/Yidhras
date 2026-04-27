@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { readYamlFileIfExists, resolveWorkspaceRoot } from '../config/loader.js';
+import { loadConfigYaml, readYamlFileIfExists, resolveWorkspaceRoot } from '../config/loader.js';
 import { deepMerge } from '../config/merge.js';
 import { ApiError } from '../utils/api_error.js';
 import {
@@ -259,17 +259,16 @@ const loadGlobalConfig = (): ConfigCacheEntry => {
   const configDir = path.join(workspaceRoot, CONFIG_DIR_RELATIVE_PATH);
   const configFilePath = path.join(configDir, CONFIG_BASENAME);
 
-  const fileOverride = readYamlFileIfExists(configFilePath);
-  const merged = deepMerge(
-    BUILTIN_DEFAULTS as unknown as Record<string, unknown>,
-    fileOverride
-  );
-
-  const parsed = inferenceContextConfigSchema.parse(merged);
+  const parsed = loadConfigYaml({
+    filePath: configFilePath,
+    validate: raw => inferenceContextConfigSchema.parse(
+      deepMerge(BUILTIN_DEFAULTS as unknown as Record<string, unknown>, raw)
+    )
+  });
 
   return {
     config: parsed,
-    loadedFile: Object.keys(fileOverride).length > 0 ? configFilePath : null
+    loadedFile: Object.keys(readYamlFileIfExists(configFilePath)).length > 0 ? configFilePath : null
   };
 };
 

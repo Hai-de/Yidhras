@@ -2,6 +2,9 @@ import fs from 'fs';
 import path from 'path';
 
 import { resolveFromWorkspaceRoot, resolveWorkspaceRoot } from '../config/loader.js';
+import { createLogger } from '../utils/logger.js';
+
+const log = createLogger('runtime-scaffold');
 
 const CONFIG_DIR_RELATIVE_PATH = path.join('data', 'configw');
 const VERSION_MANAGED_CONFIG_TEMPLATE_DIR_RELATIVE_PATH = path.join('apps', 'server', 'templates', 'configw');
@@ -91,7 +94,7 @@ export const ensureRuntimeConfigScaffold = (
 
 export const logRuntimeConfigScaffoldResult = (
   result: RuntimeConfigScaffoldResult,
-  logger: (message: string) => void = console.log
+  logger: (message: string) => void = log.info
 ): void => {
   logger(
     `[init:configw] config_dir=${result.configDir} | created=${result.createdFiles.length} | existing=${result.existingFiles.length}`

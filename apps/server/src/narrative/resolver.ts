@@ -1,4 +1,5 @@
 import { AccessLevel, InformationMetadata, PermissionContext } from '../permission/types.js';
+import { createLogger } from '../utils/logger.js';
 import type {
   PromptMacroBlockTrace,
   PromptMacroRenderResult,
@@ -17,6 +18,8 @@ import {
   normalizePromptVariableRecord,
   previewPromptVariableValue
 } from './variable_context.js';
+
+const logger = createLogger('narrative-resolver');
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -202,7 +205,7 @@ export class NarrativeResolver {
   ): PromptMacroRenderResult {
     try {
       if (this.ILLEGAL_PATTERN.test(template)) {
-        console.warn(`[NarrativeResolver] Illegal pattern found in template: ${template}`);
+        logger.warn(`Illegal pattern found in template: ${template}`);
         return {
           text: '[INVALID_TEMPLATE_CONTENT]',
           diagnostics: {
@@ -245,7 +248,7 @@ export class NarrativeResolver {
         0
       );
     } catch (error) {
-      console.error('[NarrativeResolver] Critical Error during resolve:', error);
+      logger.error('Critical Error during resolve', { error: error instanceof Error ? error.message : String(error) });
       return {
         text: '[TEMPLATE_RENDER_RECOVERED]',
         diagnostics: {
@@ -284,7 +287,7 @@ export class NarrativeResolver {
 
   private recursiveRender(template: string, input: RenderInput, depth: number): PromptMacroRenderResult {
     if (depth >= this.MAX_RECURSION_DEPTH) {
-      console.warn('[NarrativeResolver] Max recursion depth reached.');
+      logger.warn('Max recursion depth reached.');
       return {
         text: template,
         diagnostics: {

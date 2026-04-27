@@ -56,6 +56,11 @@ export const registerPackBindingRoutes = (
   app.get(
     '/api/packs/:packId/bindings',
     deps.asyncHandler(async (req, res) => {
+      const operator = (req as OperatorRequest).operator
+      if (!operator) {
+        throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
+      }
+
       const bindings = await listPackBindings(context, req.params.packId)
       jsonOk(res, toJsonSafe(bindings))
     })

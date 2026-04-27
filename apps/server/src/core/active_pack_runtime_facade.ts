@@ -11,10 +11,13 @@ import {
 } from '../narrative/variable_context.js';
 import { type PackManifestLoader, type WorldPack } from '../packs/manifest/loader.js';
 import type { PermissionContext } from '../permission/types.js';
+import { createLogger } from '../utils/logger.js';
 import { PackRuntimeInstance } from './pack_runtime_instance.js';
 import type { PackRuntimeRegistry } from './pack_runtime_registry.js';
-import { activateWorldPackRuntime } from './runtime_activation.js';
+import { activateWorldPackRuntime, type ActivateWorldPackRuntimeOptions } from './runtime_activation.js';
 import { type RuntimeSpeedPolicy, type RuntimeSpeedSnapshot } from './runtime_speed.js';
+
+const logger = createLogger('active-pack-runtime-facade');
 
 export interface DefaultActivePackRuntimeFacadeOptions {
   loader: Pick<PackManifestLoader, 'loadPack'>;
@@ -23,6 +26,7 @@ export interface DefaultActivePackRuntimeFacadeOptions {
   runtimeSpeed: RuntimeSpeedPolicy;
   runtimeBootstrap: RuntimeDatabaseBootstrap;
   runtimeRegistry: Pick<PackRuntimeRegistry, 'register'>;
+  notifications: ActivateWorldPackRuntimeOptions['notifications'];
 }
 
 export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
@@ -32,6 +36,7 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
   private readonly runtimeSpeed: RuntimeSpeedPolicy;
   private readonly runtimeBootstrap: RuntimeDatabaseBootstrap;
   private readonly runtimeRegistry: Pick<PackRuntimeRegistry, 'register'>;
+  private readonly notifications: DefaultActivePackRuntimeFacadeOptions['notifications'];
   private activePack?: WorldPack;
   private currentRevision: bigint = 0n;
   private clock: ChronosEngine;
@@ -43,7 +48,8 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
     this.runtimeSpeed = options.runtimeSpeed;
     this.runtimeBootstrap = options.runtimeBootstrap;
     this.runtimeRegistry = options.runtimeRegistry;
-    this.clock = new ChronosEngine([], 0n);
+    this.notifications = options.notifications;
+    this.clock = new ChronosEngine({ calendarConfigs: [], initialTicks: 0n });
   }
 
   public async init(packFolderName: string): Promise<void> {
@@ -54,7 +60,8 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
       loader: this.loader,
       prisma: this.prisma,
       packsDir: this.packsDir,
-      runtimeSpeed: this.runtimeSpeed
+      runtimeSpeed: this.runtimeSpeed,
+      notifications: this.notifications
     });
 
     this.activePack = activated.pack;
@@ -81,7 +88,7 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
       })
     );
 
-    console.log(`[SimulationManager] Initialized with pack: ${activated.pack.metadata.name}`);
+    logger.info(`Initialized with pack: ${activated.pack.metadata.name}`);
   }
 
   public getActivePack(): WorldPack | undefined {
@@ -190,6 +197,6 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
 
   private createProjectionClock(pack: WorldPack): ChronosEngine {
     const calendars = (pack.time_systems ?? []) as unknown as CalendarConfig[];
-    return new ChronosEngine(calendars, this.clock.getTicks());
+    return new ChronosEngine({ calendarConfigs: calendars, initialTicks: this.clock.getTicks() });
   }
 }

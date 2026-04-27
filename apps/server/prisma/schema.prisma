@@ -202,6 +202,7 @@ model IdentityNodeBinding {
   atmosphere_node_id  String?
   role                String
   status              String   @default("active")
+  pack_id             String?
   expires_at          BigInt?
   created_at          BigInt
   updated_at          BigInt
@@ -319,6 +320,7 @@ model DecisionJob {
   lock_expires_at     BigInt?
   scheduled_for_tick  BigInt?
   intent_class        String          @default("direct_inference")
+  pack_id             String?
   created_at          BigInt
   updated_at          BigInt
   completed_at        BigInt?

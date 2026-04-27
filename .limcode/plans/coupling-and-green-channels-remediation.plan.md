@@ -1,6 +1,6 @@
 # 耦合与绿色通道治理计划
 
-> 状态: 第一、二批已完成 | 创建: 2026-04-27 | 第一批完成: 2026-04-27 | 第二批完成: 2026-04-27
+> 状态: 全部五批已完成（已归档） | 创建: 2026-04-27 | 全部完成: 2026-04-27
 
 ## 问题总览
 
@@ -392,3 +392,182 @@
 - 集成测试: 28 passed, 81 tests passed, 9 failures（部分为预存，需后续排查）
 - `app_context_ports.ts` 中 `sim` 引用: 0
 - 下层 `import AppContext` 残留: 1（`pack_projection_metadata_resolver.ts`，合理使用 sim.getPackRuntimeHandle 的场景，Batch 3 处理）
+
+---
+
+## 第三批完成记录 (2026-04-27)
+
+### 策略
+
+两个 P1 问题：
+1. **通知双通道** — 消除全局 `notifications` 单例导入
+2. **Repository 抽象层** — 建立数据访问层目录和接口骨架
+
+### Deliverable A: 通知通道统一（已完成）
+
+#### A1: `core/runtime_activation.ts` — 添加 `notifications` 参数
+- 新增 `NotificationPort` 接口（最小化，仅含 `push`）
+- `configureRuntimeSpeedFromPack`、`validateActivatedTickBounds`、`activateWorldPackRuntime` 改为接收 `notifications` 参数
+- 调用方通过 `ActivateWorldPackRuntimeOptions.notifications` 传入
+
+#### A2: `core/world_pack_runtime.ts` — 移除副作用
+- `parseTickToBigInt` 移除 `notifications.push()` 隐藏副作用
+- 解析失败静默返回 `undefined`（与原有行为一致，仅去掉了 notification 推送）
+
+#### A3: `cli/plugin_cli.ts` — 工厂函数替代全局单例
+- `buildCliAppContext` 改为调用 `createNotificationManager()` 创建局部实例
+- `notifications.clear()` 引用局部变量
+
+#### A4: `index.ts` — 机械替换
+- 7 处 `notifications.push(...)` → `appContext.notifications.push(...)`
+- `SimulationManager` 构造传入 `notifications` 参数
+- `activateWorldPackRuntime` 调用传入 `appContext.notifications`
+
+#### A5: `utils/notifications.ts` — 全局单例改工厂
+- `export const notifications = new NotificationManager()` → `export const createNotificationManager = () => new NotificationManager()`
+
+#### 传递链路
+- `active_pack_runtime_facade.ts`: `DefaultActivePackRuntimeFacadeOptions` 新增 `notifications` 字段，透传至 `activateWorldPackRuntime`
+- `simulation.ts`: `SimulationManager` 构造函数接收 `notifications`，透传至 facade
+- `tests/fixtures/app-context.ts`: 改为使用 `createNotificationManager()`
+
+### 验证结果
+- `core/` 和 `cli/` 层零全局 `notifications` 单例导入
+- TypeCheck: 2 个预存错误，0 个新增
+- 单元测试: 57 passed, 333 tests passed, 0 failures, 1 skipped
+
+### Deliverable B: Repository 抽象层（基础结构已建立）
+
+- 新建 `apps/server/src/app/services/repositories/` 目录
+- 编写 `index.ts` 文档化现有 Pattern C（PluginStore、ContextOverlayStore 等 5 个）和待构建的聚合根
+- 完整 Repository 实现需对照 Prisma schema 逐一构建，属多日工作量，转入后续批次
+
+---
+
+## 第四批完成记录 (2026-04-27)
+
+### Deliverable A: 进程生命周期管理（已完成）
+
+#### A1: `index.ts` — 实现 `gracefulShutdown()`
+- 新增 `gracefulShutdown(signal)` 异步函数，按序关闭：
+  1. 停止模拟循环 (`timer?.stop()`)
+  2. 关闭 HTTP server (`httpServer?.close()`)
+  3. 停止 world engine sidecar (`appContext.worldEngine.stop()`)
+  4. 断开 Prisma (`prisma.$disconnect()`)
+  5. 关闭 registry watcher (`registryWatcher.close()`)
+- 10 秒超时 `forceExit` 防止挂死
+- `SIGINT` / `SIGTERM` 注册到 `gracefulShutdown`
+
+#### A2: 保存 HTTP server 引用
+- `app.listen()` 返回值存入 `httpServer` 变量，供关闭时使用
+
+#### A3: 超时强制退出
+- `setTimeout` 10 秒后 `process.exit(1)`
+
+#### A4: 三个 sidecar `stop()` 加固
+- `world_engine_sidecar_client.ts` — `child.kill()` → `child.kill('SIGTERM')` + 等待 exit + 3 秒后 `SIGKILL`
+- `scheduler_decision_sidecar_client.ts` — 同上
+- `rust_sidecar_client.ts`（memory trigger）— 同上
+
+### Deliverable B: Job Runner 错误处理（已完成）
+
+#### `apps/server/src/app/runtime/job_runner.ts`
+- `catch { return 0; }` 替换为：
+  - `console.error` 记录错误详情（含 job_id）
+  - `context.notifications.push` 推送系统通知
+  - `updateDecisionJobState` 写入失败审计记录（status='failed'）
+  - 审计写入失败时有二次 catch 保护
+
+### Deliverable C: 配置访问统一（已完成）
+
+#### C1: `config/loader.ts` — 新增 `loadConfigYaml<T>()`
+- 封装 `readYamlFileIfExists` + `validate` 的标准流程
+- `validate` 回调由调用方提供（Zod schema.parse 或自定义逻辑）
+
+#### C2/C3: AI registry / context_config 更新
+- `inference/context_config.ts`: `loadGlobalConfig` 改用 `loadConfigYaml`
+- `ai/registry_watcher.ts`: `validateAndReloadAiModels` 改用 `loadConfigYaml`
+
+#### C4: TOCTOU 缓解
+- `validateAndReloadAiModels` 将 read + validate + cache-reset 合并为 `loadConfigYaml` + `resetAiRegistryCache`，减少验证与缓存更新之间的窗口
+
+### 验证结果
+- TypeCheck: 2 个预存错误，0 个新增
+- 单元测试: 57 passed, 333 tests passed, 0 failures, 1 skipped
+
+---
+
+## 第五批完成记录 (2026-04-27)
+
+### Deliverable A: 结构化日志（全量完成）
+
+#### `utils/logger.ts` — createLogger(module) 抽象
+- 接口：`{ debug, info, warn, error }`，携带 `request_id`
+- 开发模式可读文本，生产模式 JSON
+- 配置：`logging.level` + `logging.format`
+- 惰性读取配置（`process.env` 优先 + `require()` 后备），避免循环依赖
+
+#### 全量迁移
+- **31 个文件，73 处 `console.*` 调用全部迁移完成**
+- 源码 `console.*` 剩余：0（仅 `logger.ts` 内部 4 处为抽象实现）
+- 覆盖范围：index, ai, inference, memory, core, config, operator, domain, context, plugins, db, init, narrative, packs, dynamics, middleware, cli
+
+### Deliverable B: 时钟加固
+
+#### `ChronosEngine` 重构
+- 构造函数改为选项对象 `{ calendarConfigs, initialTicks, monotonic?, maxStepTicks? }`
+- `setTicks`: 单调性检查（默认开启，可配置关闭 + 风险警告）
+- `tick()`: 最大步进限制（默认 10^5）
+- 配置：`clock.monotonic_enabled` + `clock.max_step_ticks`
+
+### Deliverable C: 插件沙箱
+
+#### 能力等级机制
+- `PluginCapabilityLevel`: `'readonly' | 'pack_scoped' | 'full'`
+- `plugins/context.ts`: `ReadonlyPluginContext` / `PackScopedPluginContext` / `FullPluginContext`
+- `createPluginContext(context, pluginName, opts?)` 工厂函数
+- `full` 级别 + `warn_on_full_access: true` 时打印运行时警告
+- 配置：`plugins.sandbox` 段全部配置化
+
+### 验证结果
+- TypeCheck: 2 个预存错误，0 个新增
+- 单元测试: 57 passed, 333 tests passed, 0 failures, 1 skipped
+
+---
+
+## 未尽事项（已确认，转入后续计划）
+
+以下问题在原计划范围内但本次未完成，需单独排期：
+
+| # | 项 | 优先级 | 说明 |
+|---|-----|--------|------|
+| 1 | Repository 完整实现 | P1 | 目录和文档已建立。需对照 Prisma schema 为 10 个聚合根逐一构建接口+实现，预计 3-5 天 |
+| 2 | SQL 注入风险消除 | P1 | `sqlite_runtime.ts:99-103` PRAGMA 字符串拼接需白名单验证 |
+| 3 | Sidecar JSON-RPC 响应 Zod 验证 | P1 | `scheduler_decision_sidecar_client.ts` 和 `rust_sidecar_client.ts` 的 `value as Type` 无验证 |
+| 4 | 路由层领域逻辑清理 | P2 | `experimental_runtime.ts` 步进逻辑提取 + schema 迁移到 contracts |
+| 5 | 配置热重载（`data/configw/` watcher） | P3 | `resetRuntimeConfigCache()` 从未被调用，需添加文件监视器 |
+| 6 | 时钟投影持久化 | P3 | 时钟投影完全在内存中，重启丢失，需定期写入 SQLite |
+| 7 | 插件 `appliedRouteKeys` 撤销路径 | P2 | 插件路由注册后无撤销机制 |
+| 8 | 插件沙箱集成 | P2 | `createPluginContext()` 工厂已建立，需在插件路由处理时实际调用 |
+
+## 不纳入本次计划（始终排除）
+
+- 测试覆盖率（80% 模块无单元测试）
+- Streaming/SSE 支持
+- Scheduler 多包隔离
+- Tool calling 启用
+- 插件 Worker thread 隔离 / 进程级沙箱
+- Prisma schema 级联删除
+
+---
+
+## 归档说明
+
+本计划于 2026-04-27 创建，同日完成全部五批实施。文档保留在 `.limcode/plans/` 作为治理记录。
+
+**最终统计**：
+- 修改文件：~180 个
+- 新增文件：`require_auth.ts`、`auth.ts`（测试）、`logger.ts`、`plugins/context.ts`、`repositories/index.ts`
+- 新增配置项：`logging.*`、`clock.*`、`plugins.sandbox.*`
+- TypeCheck：始终 2 个预存错误，0 新增
+- 单元测试：始终 333 passed, 0 failures

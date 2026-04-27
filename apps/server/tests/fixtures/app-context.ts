@@ -9,7 +9,7 @@ import type {
 import { createWorldEngineStepCoordinator } from '../../src/app/runtime/world_engine_persistence.js';
 import { ChronosEngine } from '../../src/clock/engine.js';
 import type { SimulationManager } from '../../src/core/simulation.js';
-import { notifications } from '../../src/utils/notifications.js';
+import { createNotificationManager } from '../../src/utils/notifications.js';
 import { DEFAULT_E2E_WORLD_PACK } from '../support/config.js';
 
 export interface CreateTestAppContextOptions {
@@ -48,7 +48,7 @@ export const createTestAppContext = (
   let paused = options.paused ?? false;
   let runtimeReady = options.runtimeReady ?? true;
   let runtimeLoopDiagnostics = options.runtimeLoopDiagnostics ?? createDefaultRuntimeLoopDiagnostics();
-  const clock = new ChronosEngine([], 1000n);
+  const clock = new ChronosEngine({ calendarConfigs: [], initialTicks: 1000n });
   let httpApp: Express | null = null;
 
   const sim = {
@@ -85,7 +85,7 @@ export const createTestAppContext = (
     sim,
     clock: sim as unknown as AppContext['clock'],
     activePack: sim as unknown as AppContext['activePack'],
-    notifications,
+    notifications: createNotificationManager(),
     startupHealth: options.startupHealth ?? createDefaultStartupHealth(),
     getRuntimeReady: () => runtimeReady,
     setRuntimeReady: ready => {

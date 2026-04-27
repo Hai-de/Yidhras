@@ -320,6 +320,7 @@ export const createPendingDecisionJob = async (
       status: 'pending',
       idempotency_key: input.idempotency_key,
       intent_class: input.intent_class ?? 'direct_inference',
+      pack_id: input.request_input.pack_id ?? null,
       attempt_count: 0,
       max_attempts: input.max_attempts ?? 3,
       request_input: toJsonSafe({
@@ -368,6 +369,7 @@ export const createReplayDecisionJob = async (
       status: 'pending',
       idempotency_key: input.idempotency_key,
       intent_class: 'replay_recovery',
+      pack_id: input.request_input.pack_id ?? null,
       attempt_count: 0,
       max_attempts: input.max_attempts ?? input.source_job.max_attempts,
       request_input: toJsonSafe({

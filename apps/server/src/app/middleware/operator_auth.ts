@@ -38,6 +38,22 @@ export const operatorAuthMiddleware = (context: AppContext) => {
       return
     }
 
+    // 如果 session 关联了 pack，验证 operator 仍持有该 pack 的有效绑定
+    if (session.packId) {
+      const packBinding = await context.prisma.operatorPackBinding.findUnique({
+        where: {
+          operator_id_pack_id: {
+            operator_id: payload.sub,
+            pack_id: session.packId
+          }
+        }
+      })
+      if (!packBinding) {
+        next()
+        return
+      }
+    }
+
     // 查 Operator 状态
     const operator = await context.prisma.operator.findUnique({
       where: { id: payload.sub }

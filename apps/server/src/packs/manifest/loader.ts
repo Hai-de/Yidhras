@@ -2,8 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import * as YAML from 'yaml';
 
+import { createLogger } from '../../utils/logger.js';
 import type { SimulationTimeConfig, WorldPack } from './constitution_loader.js';
 import { parseWorldPackConstitution } from './constitution_loader.js';
+
+const logger = createLogger('pack-manifest-loader');
 
 export class PackManifestLoader {
   private packs: Map<string, WorldPack> = new Map();
@@ -38,10 +41,10 @@ export class PackManifestLoader {
       this.packs.set(folderName, parsed);
       this.packs.set(parsed.metadata.id, parsed);
 
-      console.log(`[PackManifestLoader] Loaded pack: ${parsed.metadata.name} (${parsed.metadata.id})`);
+      logger.info(`Loaded pack: ${parsed.metadata.name} (${parsed.metadata.id})`);
       return parsed;
     } catch (err) {
-      console.error(`[PackManifestLoader] Error parsing ${packPath}:`, err);
+      logger.error(`Error parsing ${packPath}`, { error: err instanceof Error ? err.message : String(err) });
       throw err;
     }
   }

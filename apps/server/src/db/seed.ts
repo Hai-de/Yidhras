@@ -2,10 +2,14 @@ import 'dotenv/config';
 
 import { PrismaClient } from '@prisma/client';
 
+import { createLogger } from '../utils/logger.js';
+
+const logger = createLogger('seed');
+
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('--- 开始注入种子数据 ---');
+  logger.info('开始注入种子数据');
 
   const now = 0n;
 
@@ -77,12 +81,12 @@ async function main() {
     ]
   });
 
-  console.log('--- 种子数据注入完成 ---');
+  logger.info('种子数据注入完成');
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    logger.error('Seed error', { error: e instanceof Error ? e.message : String(e) });
     process.exit(1);
   })
   .finally(async () => {

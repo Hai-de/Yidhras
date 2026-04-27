@@ -5,6 +5,9 @@ import * as YAML from 'yaml';
 import { resolveFromWorkspaceRoot, resolveWorkspaceRoot } from '../config/loader.js';
 import { getWorldPacksDir } from '../config/runtime_config.js';
 import { parseWorldPackConstitution } from '../packs/manifest/constitution_loader.js';
+import { createLogger } from '../utils/logger.js';
+
+const log = createLogger('world-pack-scaffold');
 
 const TEMPLATE_DIR_RELATIVE_PATH = path.join('apps', 'server', 'templates', 'world-pack');
 const DEFAULT_CONFIG_TEMPLATE_BASENAME = 'pack.yaml.template';
@@ -356,7 +359,7 @@ export const scaffoldWorldPackProject = (
 
 export const logWorldPackProjectScaffoldResult = (
   result: WorldPackProjectScaffoldResult,
-  logger: (message: string) => void = console.log
+  logger: (message: string) => void = log.info
 ): void => {
   const mode = result.dryRun ? 'dry-run' : 'write';
   logger(

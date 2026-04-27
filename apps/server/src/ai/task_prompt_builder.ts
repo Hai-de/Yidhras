@@ -37,7 +37,7 @@ export interface BuildAiTaskRequestFromInferenceOptions {
   pack_id?: string | null;
   actor_ref?: AiTaskRequest['actor_ref'];
   input?: Record<string, unknown>;
-  prompt_bundle?: PromptBundle;
+  prompt_bundle?: PromptBundleV2;
   output_contract?: AiTaskRequest['output_contract'];
   route_hints?: AiTaskRequest['route_hints'];
   metadata?: Record<string, unknown>;

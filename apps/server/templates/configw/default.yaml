@@ -24,6 +24,19 @@ plugins:
     enabled: true
     require_acknowledgement: true
 
+  # 插件沙箱能力等级。
+  # - readonly: 只读 pack 信息 + 通知推送，无 Prisma/模拟控制
+  # - pack_scoped: 同上 + 当前 pack 数据读写 + HTTP 上下文
+  # - full: 等同完整 AppContext（默认，向后兼容）
+  # warn_on_full_access 为 true 时，full 级别插件注册时打印风险警告。
+  sandbox:
+    capability_level: "full"
+    max_manifest_size_bytes: 1048576
+    max_manifest_depth: 20
+    max_routes: 16
+    max_context_sources: 32
+    warn_on_full_access: true
+
 world:
   preferred_pack: "death_note"
   bootstrap:
@@ -41,6 +54,23 @@ sqlite:
   busy_timeout_ms: 5000
   wal_autocheckpoint_pages: 1000
   synchronous: "NORMAL"
+
+# 结构化日志配置。
+# level: debug | info | warn | error（默认 info）
+# format: text（开发模式，人类可读）| json（生产模式，结构化输出）
+logging:
+  level: "info"
+  format: "text"
+
+# 时钟系统安全策略。
+# monotonic_enabled: 禁止时间倒流（默认开启）。
+#   关闭风险：可能导致事件因果混乱、状态不一致。
+#   如需关闭，请确保你完全理解时间倒流的后果。
+# max_step_ticks: 单次 tick() 调用最大步进量（默认 100000）。
+#   防止误操作导致模拟时间跳跃过大。
+clock:
+  monotonic_enabled: true
+  max_step_ticks: 100000
 
 world_engine:
   timeout_ms: 500

@@ -5,7 +5,9 @@ import { ChronosEngine } from '../clock/engine.js';
 import type { CalendarConfig } from '../clock/types.js';
 import type { PackManifestLoader, WorldPack } from '../packs/manifest/loader.js';
 import { discoverPackLocalPlugins, type PluginDiscoveryResult } from '../plugins/discovery.js';
-import { notifications } from '../utils/notifications.js';
+export interface NotificationPort {
+  push(level: string, content: string, code?: string, details?: Record<string, unknown>): unknown;
+}
 import { materializePackRuntime } from './pack_materializer.js';
 import type { RuntimeSpeedPolicy } from './runtime_speed.js';
 import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
@@ -16,6 +18,7 @@ export interface ActivateWorldPackRuntimeOptions {
   prisma: PrismaClient;
   runtimeSpeed: RuntimeSpeedPolicy;
   packsDir: string;
+  notifications: NotificationPort;
 }
 
 export interface ActivatedWorldPackRuntime {
@@ -24,7 +27,7 @@ export interface ActivatedWorldPackRuntime {
   discoveredPlugins: PluginDiscoveryResult;
 }
 
-const configureRuntimeSpeedFromPack = (runtimeSpeed: RuntimeSpeedPolicy, pack: WorldPack): void => {
+const configureRuntimeSpeedFromPack = (runtimeSpeed: RuntimeSpeedPolicy, pack: WorldPack, notifications: NotificationPort): void => {
   const runtimeConfig = getWorldPackRuntimeConfig(pack);
 
   if (runtimeConfig.configuredStepTicks !== undefined && runtimeConfig.configuredStepTicks > 0n) {
@@ -49,13 +52,13 @@ const resolvePackClock = async (input: {
   });
 
   if (lastEvent) {
-    return new ChronosEngine(calendars, lastEvent.tick);
+    return new ChronosEngine({ calendarConfigs: calendars, initialTicks: lastEvent.tick });
   }
 
-  return new ChronosEngine(calendars, initialTick);
+  return new ChronosEngine({ calendarConfigs: calendars, initialTicks: initialTick });
 };
 
-const validateActivatedTickBounds = (pack: WorldPack, clock: ChronosEngine): void => {
+const validateActivatedTickBounds = (pack: WorldPack, clock: ChronosEngine, notifications: NotificationPort): void => {
   const runtimeConfig = getWorldPackRuntimeConfig(pack);
   const currentTick = clock.getTicks();
 
@@ -81,13 +84,14 @@ export const activateWorldPackRuntime = async ({
   loader,
   prisma,
   runtimeSpeed,
-  packsDir
+  packsDir,
+  notifications
 }: ActivateWorldPackRuntimeOptions): Promise<ActivatedWorldPackRuntime> => {
   const pack = loader.loadPack(packFolderName);
   const runtimeConfig = getWorldPackRuntimeConfig(pack);
   const calendars = (pack.time_systems ?? []) as unknown as CalendarConfig[];
 
-  configureRuntimeSpeedFromPack(runtimeSpeed, pack);
+  configureRuntimeSpeedFromPack(runtimeSpeed, pack, notifications);
 
   await materializePackRuntime({ pack, prisma, initialTick: runtimeConfig.initialTick });
 
@@ -103,7 +107,7 @@ export const activateWorldPackRuntime = async ({
     packRootDir: path.join(packsDir, packFolderName)
   });
 
-  validateActivatedTickBounds(pack, clock);
+  validateActivatedTickBounds(pack, clock, notifications);
 
   return {
     pack,

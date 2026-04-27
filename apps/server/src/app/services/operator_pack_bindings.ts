@@ -161,3 +161,14 @@ export const listMyPackBindings = async (
     orderBy: { created_at: 'desc' }
   })
 }
+
+export const getOperatorPackIds = async (
+  context: AppContext,
+  operatorId: string
+): Promise<string[]> => {
+  const bindings = await context.prisma.operatorPackBinding.findMany({
+    where: { operator_id: operatorId },
+    select: { pack_id: true }
+  })
+  return bindings.map(b => b.pack_id)
+}

@@ -9,7 +9,10 @@ import {
   createMemoryTriggerEngineProvider
 } from '../../memory/blocks/provider.js';
 import type { LongMemoryBlockStore, MemoryActivationEvaluation } from '../../memory/blocks/types.js';
+import { createLogger } from '../../utils/logger.js';
 import type { ContextNode } from '../types.js';
+
+const logger = createLogger('context-memory-blocks');
 
 export interface MemoryBlockSourceBuildResult {
   nodes: ContextNode[];
@@ -80,8 +83,8 @@ export const buildContextNodesFromMemoryBlocks = async (input: {
       candidates: records
     }));
   } catch (error) {
-    console.warn(
-      `[memory_blocks] Rust sidecar unavailable, skipping memory block evaluation: ${error instanceof Error ? error.message : String(error)}`
+    logger.warn(
+      `Rust sidecar unavailable, skipping memory block evaluation: ${error instanceof Error ? error.message : String(error)}`
     );
     return {
       nodes: [],

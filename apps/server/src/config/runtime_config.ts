@@ -1,9 +1,12 @@
 import path from 'path'
 
 import { ensureRuntimeConfigScaffold } from '../init/runtime_scaffold.js'
+import { createLogger } from '../utils/logger.js'
 import { readYamlFileIfExists, resolveFromWorkspaceRoot, resolveWorkspaceRoot } from './loader.js'
 import { deepMergeAll } from './merge.js'
 import { type RuntimeConfig, RuntimeConfigSchema } from './schema.js'
+
+const logger = createLogger('runtime-config')
 
 export interface RuntimeConfigMetadata {
   workspaceRoot: string
@@ -62,6 +65,14 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
     enable_warning: {
       enabled: true,
       require_acknowledgement: true
+    },
+    sandbox: {
+      capability_level: 'full',
+      max_manifest_size_bytes: 1048576,
+      max_manifest_depth: 20,
+      max_routes: 16,
+      max_context_sources: 32,
+      warn_on_full_access: true
     }
   },
   world: {
@@ -87,6 +98,14 @@ const BUILTIN_DEFAULTS: RuntimeConfig = {
     busy_timeout_ms: 5000,
     wal_autocheckpoint_pages: 1000,
     synchronous: 'NORMAL'
+  },
+  logging: {
+    level: 'info',
+    format: 'text'
+  },
+  clock: {
+    monotonic_enabled: true,
+    max_step_ticks: 100000
   },
   scheduler: {
     enabled: true,
@@ -232,8 +251,8 @@ let runtimeConfigSnapshotLogged = false
 const warnWorldEngineUseSidecarDeprecated = (input: {
   activeEnv: string
 }): void => {
-  console.warn(
-    `[runtime_config] 环境变量 WORLD_ENGINE_USE_SIDECAR 已废弃（env=${input.activeEnv}）；world engine 现仅支持 Rust sidecar，请改用 WORLD_ENGINE_TIMEOUT_MS / WORLD_ENGINE_BINARY_PATH / WORLD_ENGINE_AUTO_RESTART 等显式参数。`
+  logger.warn(
+    `环境变量 WORLD_ENGINE_USE_SIDECAR 已废弃（env=${input.activeEnv}）；world engine 现仅支持 Rust sidecar，请改用 WORLD_ENGINE_TIMEOUT_MS / WORLD_ENGINE_BINARY_PATH / WORLD_ENGINE_AUTO_RESTART 等显式参数。`
   )
 }
 
@@ -859,7 +878,7 @@ export const buildRuntimeConfigSnapshot = (): Record<string, string | boolean | 
   }
 }
 
-export const logRuntimeConfigSnapshot = (logger: (message: string) => void = console.log): void => {
+export const logRuntimeConfigSnapshot = (logFn: (message: string) => void = (msg) => { logger.info(msg); }): void => {
   if (runtimeConfigSnapshotLogged) {
     return
   }
@@ -869,7 +888,7 @@ export const logRuntimeConfigSnapshot = (logger: (message: string) => void = con
     .map(([key, value]) => `${key}=${Array.isArray(value) ? value.join(',') : value}`)
     .join(' | ')
 
-  logger(`[configw] ${formatted}`)
+  logFn(formatted)
   runtimeConfigSnapshotLogged = true
 }
 

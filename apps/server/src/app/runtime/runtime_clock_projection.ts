@@ -126,7 +126,7 @@ export class InMemoryRuntimeClockProjectionService
     const generation = (this.snapshots.get(input.pack_id)?.generation ?? 0) + 1;
     const currentTick = parseBigIntString(input.current_tick, 'current_tick');
     const currentRevision = input.current_revision?.trim() || input.current_tick;
-    const engine = new ChronosEngine(input.calendars, currentTick);
+    const engine = new ChronosEngine({ calendarConfigs: input.calendars, initialTicks: currentTick });
     const snapshot: RuntimeClockProjectionSnapshot = {
       pack_id: input.pack_id,
       current_tick: input.current_tick,
@@ -151,7 +151,7 @@ export class InMemoryRuntimeClockProjectionService
     const generation = (this.snapshots.get(input.pack_id)?.generation ?? 0) + 1;
     const currentTick = resolveProjectedTick(input);
     const currentRevision = resolveProjectedRevision(input);
-    const engine = new ChronosEngine(calendars, parseBigIntString(currentTick, 'projected_tick'));
+    const engine = new ChronosEngine({ calendarConfigs: calendars, initialTicks: parseBigIntString(currentTick, 'projected_tick') });
     const snapshot: RuntimeClockProjectionSnapshot = {
       pack_id: input.pack_id,
       current_tick: currentTick,

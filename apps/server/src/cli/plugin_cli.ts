@@ -24,7 +24,10 @@ import {
 } from '../plugins/discovery.js';
 import { createPluginStore } from '../plugins/store.js';
 import type { PluginRegistrationResult } from '../plugins/types.js';
-import { notifications } from '../utils/notifications.js';
+import { createLogger } from '../utils/logger.js';
+import { createNotificationManager } from '../utils/notifications.js';
+
+const logger = createLogger('plugin-cli');
 
 export type PluginCliCommand =
   | 'list'
@@ -211,10 +214,10 @@ const defaultDependencies: PluginCliDependencies = {
     return Boolean(process.stdin.isTTY && process.stderr.isTTY);
   },
   stdout(message: string) {
-    console.log(message);
+    logger.info(message);
   },
   stderr(message: string) {
-    console.error(message);
+    logger.error(message);
   }
 };
 
@@ -575,7 +578,8 @@ const resolvePackSelection = (requestedPack?: string): PackSelection => {
 const buildCliAppContext = async (packId: string): Promise<PluginCliContext> => {
   const prisma = new PrismaClient();
   await prisma.$connect();
-  notifications.clear();
+  const notifs = createNotificationManager();
+  notifs.clear();
 
   const startupHealth: StartupHealth = {
     level: 'ok',
@@ -592,7 +596,7 @@ const buildCliAppContext = async (packId: string): Promise<PluginCliContext> => 
 
   const sim = {
     prisma,
-    clock: new ChronosEngine([], 0n),
+    clock: new ChronosEngine({ calendarConfigs: [], initialTicks: 0n }),
     getCurrentTick: () => 0n,
     getAllTimes: () => [],
     getStepTicks: () => 1n,
@@ -623,7 +627,7 @@ const buildCliAppContext = async (packId: string): Promise<PluginCliContext> => 
     sim,
     clock: sim as unknown as AppContext['clock'],
     activePack: sim as unknown as AppContext['activePack'],
-    notifications,
+    notifications: notifs,
     startupHealth,
     getRuntimeReady: () => runtimeReady,
     setRuntimeReady: ready => {
@@ -1236,7 +1240,7 @@ export const shouldRunPluginCli = (argv: string[] = process.argv): boolean => {
 if (shouldRunPluginCli()) {
   void runPluginCli(process.argv.slice(2)).catch(error => {
     const metadata = getRuntimeConfigMetadata();
-    console.error(`[plugin-cli] ${metadata.activeEnv} ${error instanceof Error ? error.message : String(error)}`);
+    logger.error(`${metadata.activeEnv} ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;
   });
 }

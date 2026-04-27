@@ -9,7 +9,7 @@ import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
 const buildPackRuntimeClock = (pack: WorldPack): ChronosEngine => {
   const calendars = (pack.time_systems ?? []) as unknown as CalendarConfig[];
   const runtimeConfig = getWorldPackRuntimeConfig(pack);
-  return new ChronosEngine(calendars, runtimeConfig.initialTick);
+  return new ChronosEngine({ calendarConfigs: calendars, initialTicks: runtimeConfig.initialTick });
 };
 
 const configureRuntimeSpeedFromPack = (runtimeSpeed: RuntimeSpeedPolicy, pack: WorldPack): void => {

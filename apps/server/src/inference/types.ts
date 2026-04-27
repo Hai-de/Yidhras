@@ -31,6 +31,7 @@ export interface InferenceRequestInput {
   strategy?: string;
   attributes?: Record<string, unknown>;
   idempotency_key?: string;
+  pack_id?: string | null;
 }
 
 export type InferenceJobIntentClass = 'direct_inference' | 'scheduler_periodic' | 'scheduler_event_followup' | 'replay_recovery' | 'retry_recovery' | 'operator_forced';

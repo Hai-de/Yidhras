@@ -1,6 +1,9 @@
 import type { RuntimeConfigMetadata } from '../config/runtime_config.js';
+import { createLogger } from '../utils/logger.js';
 import type { RuntimeConfigScaffoldResult } from './runtime_scaffold.js';
 import type { WorldPackBootstrapResult } from './world_pack_bootstrap.js';
+
+const log = createLogger('init-report');
 
 export interface InitReport {
   kind: 'configw' | 'world_pack' | 'runtime';
@@ -82,7 +85,7 @@ export const buildWorldPackBootstrapReport = (
 
 export const printInitReport = (
   report: InitReport,
-  logger: (message: string) => void = console.log
+  logger: (message: string) => void = log.info
 ): void => {
   logger(`[init-report] ${JSON.stringify(report)}`);
 };

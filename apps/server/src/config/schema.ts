@@ -181,6 +181,16 @@ export const RuntimeConfigSchema = z
             enabled: z.boolean(),
             require_acknowledgement: z.boolean()
           })
+          .strict(),
+        sandbox: z
+          .object({
+            capability_level: z.enum(['readonly', 'pack_scoped', 'full']),
+            max_manifest_size_bytes: z.number().int().positive(),
+            max_manifest_depth: z.number().int().positive(),
+            max_routes: z.number().int().positive(),
+            max_context_sources: z.number().int().positive(),
+            warn_on_full_access: z.boolean()
+          })
           .strict()
       })
       .strict(),
@@ -210,6 +220,18 @@ export const RuntimeConfigSchema = z
         busy_timeout_ms: PositiveIntSchema,
         wal_autocheckpoint_pages: PositiveIntSchema,
         synchronous: SqliteSynchronousSchema
+      })
+      .strict(),
+    logging: z
+      .object({
+        level: z.enum(['debug', 'info', 'warn', 'error']),
+        format: z.enum(['text', 'json'])
+      })
+      .strict(),
+    clock: z
+      .object({
+        monotonic_enabled: z.boolean(),
+        max_step_ticks: PositiveIntSchema
       })
       .strict(),
     scheduler: z

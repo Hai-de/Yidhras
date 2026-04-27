@@ -1,5 +1,8 @@
+import { createLogger } from '../utils/logger.js';
 import { AlgorithmConfig,DynamicsCalculator } from './algorithms.js';
 import { NodeValueState, ValueChangeReason, ValueUpdateResult } from './types.js';
+
+const logger = createLogger('dynamics-manager');
 
 export class ValueDynamicsManager {
   private states: Map<string, NodeValueState> = new Map();
@@ -53,7 +56,7 @@ export class ValueDynamicsManager {
 
     // 1. 如果是贬值且节点已被钉住，则拦停贬值
     if (rawDelta < 0 && state.is_pinned) {
-      console.log(`[ValueDynamics] Depreciation blocked for pinned node: ${nodeId}`);
+      logger.info(`Depreciation blocked for pinned node: ${nodeId}`);
       return { node_id: nodeId, old_snr: oldSnr, new_snr: oldSnr, delta: 0, reason };
     }
 

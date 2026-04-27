@@ -2,7 +2,10 @@ import type { AppInfrastructure } from '../../app/context.js'
 import { logOperatorAudit } from '../../operator/audit/logger.js'
 import { AUDIT_ACTION } from '../../operator/constants.js'
 import { resolveSubjectForAgentAction } from '../../operator/guard/subject_resolver.js'
+import { createLogger } from '../../utils/logger.js'
 import { enforceInvocationRequest } from '../rule/enforcement_engine.js'
+
+const logger = createLogger('invocation-dispatcher')
 
 /**
  * 请求级 subject 解析缓存。
@@ -146,14 +149,14 @@ const shouldBridgeToInvocation = (context: AppInfrastructure, intent: Dispatchab
 
   const isKernelAction = KERNEL_INTENT_TYPES.includes(intent.intent_type as (typeof KERNEL_INTENT_TYPES)[number])
   if (!isKernelAction && !intent.intent_type.startsWith('invoke.')) {
-    console.warn(
-      `[invocation_dispatcher] intent_type '${intent.intent_type}' is not a kernel action and lacks 'invoke.' prefix. ` +
+    logger.warn(
+      `intent_type '${intent.intent_type}' is not a kernel action and lacks 'invoke.' prefix. ` +
       `This intent will not bridge to objective enforcement. ` +
       `Ensure world pack rules use 'invoke.' prefixed invocation_type values.`
     )
   } else if (intent.intent_type.startsWith('invoke.') && !capabilityKey) {
-    console.warn(
-      `[invocation_dispatcher] intent_type '${intent.intent_type}' has 'invoke.' prefix but no matching capability key '${capabilityKey}' ` +
+    logger.warn(
+      `intent_type '${intent.intent_type}' has 'invoke.' prefix but no matching capability key '${capabilityKey}' ` +
       `and no matching enforcement rule. The enforcement pipeline may not process this invocation.`
     )
   }

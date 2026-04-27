@@ -1,18 +1,35 @@
 import { CalendarConfig, TimeFormatted, TimeUnit } from './types.js';
 
-export class ChronosEngine {
-  private absoluteTicks: bigint = 0n; // 核心绝对计数器 (BigInt)
-  private calendars: CalendarConfig[] = [];
+export interface ChronosEngineOptions {
+  calendarConfigs: CalendarConfig[];
+  initialTicks?: bigint;
+  monotonic?: boolean;
+  maxStepTicks?: bigint;
+}
 
-  constructor(calendars: CalendarConfig[], initialTicks: bigint = 0n) {
-    this.calendars = calendars;
-    this.absoluteTicks = initialTicks;
+export class ChronosEngine {
+  private absoluteTicks: bigint = 0n;
+  private calendars: CalendarConfig[] = [];
+  private readonly monotonic: boolean;
+  private readonly maxStepTicks: bigint;
+
+  constructor(options: ChronosEngineOptions) {
+    this.calendars = options.calendarConfigs;
+    this.absoluteTicks = options.initialTicks ?? 0n;
+    this.monotonic = options.monotonic ?? true;
+    this.maxStepTicks = options.maxStepTicks ?? 100000n;
   }
 
   /**
    * 增加滴答 (Tick)
    */
   public tick(amount: bigint = 1n): void {
+    if (amount > this.maxStepTicks) {
+      throw new Error(
+        `[ChronosEngine] 单次步进量 ${amount.toString()} 超过最大限制 ${this.maxStepTicks.toString()}。` +
+        `如需更大步进，请调整 clock.max_step_ticks 配置。`
+      );
+    }
     this.absoluteTicks += amount;
   }
 
@@ -23,7 +40,17 @@ export class ChronosEngine {
     return this.absoluteTicks;
   }
 
+  /**
+   * 设置绝对滴答。
+   * 当 monotonic 启用时拒绝时间倒流。
+   */
   public setTicks(next: bigint): void {
+    if (this.monotonic && next < this.absoluteTicks) {
+      throw new Error(
+        `[ChronosEngine] 拒绝时间倒流: 当前 ${this.absoluteTicks.toString()} → 请求 ${next.toString()}。` +
+        `如需允许时间倒流，请在配置中设置 clock.monotonic_enabled: false（风险自负：可能导致事件因果混乱）。`
+      );
+    }
     this.absoluteTicks = next;
   }
 

@@ -4,6 +4,9 @@ import path from 'path';
 import { getWorldBootstrapConfig, getWorldPacksDir } from '../config/runtime_config.js';
 import { type InstalledPackRuntimeSummary,installPackRuntime } from '../kernel/install/install_pack.js';
 import { PackManifestLoader } from '../packs/manifest/loader.js';
+import { createLogger } from '../utils/logger.js';
+
+const log = createLogger('world-pack-bootstrap');
 
 const DEFAULT_PACK_CONFIG_FILE = 'config.yaml';
 
@@ -81,7 +84,7 @@ export const ensureBootstrapWorldPack = async (): Promise<WorldPackBootstrapResu
 
 export const logWorldPackBootstrapResult = (
   result: WorldPackBootstrapResult,
-  logger: (message: string) => void = console.log
+  logger: (message: string) => void = log.info
 ): void => {
   switch (result.status) {
     case 'disabled':

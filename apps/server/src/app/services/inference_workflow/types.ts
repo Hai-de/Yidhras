@@ -114,6 +114,7 @@ export interface ParsedInferenceJobsFilters {
   limit: number;
   has_error: boolean | null;
   action_intent_id: string | null;
+  pack_ids: string[] | null;
 }
 
 export const RUNNABLE_JOB_STATUSES = ['pending', 'running'] as const;

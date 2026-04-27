@@ -1,9 +1,8 @@
 import type { WorldPack } from '../packs/manifest/constitution_loader.js';
-import { notifications } from '../utils/notifications.js';
 
 export const parseTickToBigInt = (
   value: string | number | undefined,
-  fieldName: string
+  _fieldName: string
 ): bigint | undefined => {
   if (value === undefined || value === null) {
     return undefined;
@@ -12,7 +11,6 @@ export const parseTickToBigInt = (
   try {
     return BigInt(value);
   } catch {
-    notifications.push('warning', `世界包字段 ${fieldName} 无法解析为 BigInt，已忽略该配置`, 'PACK_TIME_PARSE_WARN');
     return undefined;
   }
 };

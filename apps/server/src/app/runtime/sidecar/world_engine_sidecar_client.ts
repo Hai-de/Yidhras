@@ -2,6 +2,11 @@ import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
+import { createLogger } from '../../../utils/logger.js';
+import { getErrorMessage } from '../../http/errors.js';
+
+const logger = createLogger('world-engine-sidecar');
+
 import type {
   PreparedWorldStep,
   WorldEngineCommitResult,
@@ -157,7 +162,7 @@ class ProcessWorldEngineSidecarTransport implements WorldEngineSidecarTransport 
     this.child.stderr.on('data', chunk => {
       const message = chunk.toString().trim();
       if (message.length > 0) {
-        console.warn('[world-engine-sidecar]', message);
+        logger.warn(message);
       }
     });
     this.child.on('exit', () => {
@@ -189,7 +194,20 @@ class ProcessWorldEngineSidecarTransport implements WorldEngineSidecarTransport 
 
     const child = this.child;
     this.child = null;
-    child.kill();
+
+    child.kill('SIGTERM');
+
+    await new Promise<void>((resolve) => {
+      const forceKill = setTimeout(() => {
+        try { child.kill('SIGKILL'); } catch { /* 进程已退出 */ }
+        resolve();
+      }, 3000);
+
+      child.on('exit', () => {
+        clearTimeout(forceKill);
+        resolve();
+      });
+    });
   }
 
   public async send<T>(method: string, params: Record<string, unknown>, parse: (value: unknown) => T): Promise<T> {
@@ -253,7 +271,7 @@ class ProcessWorldEngineSidecarTransport implements WorldEngineSidecarTransport 
     try {
       parsed = JSON.parse(line) as JsonRpcResponse<unknown>;
     } catch (error) {
-      console.error('[world-engine-sidecar] invalid JSON response', error, line);
+      logger.error('invalid JSON response', { error: getErrorMessage(error), line: line.slice(0, 200) });
       return;
     }
 

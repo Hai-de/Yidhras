@@ -5,6 +5,9 @@ import {
   applySqliteRuntimePragmas,
   type SqliteRuntimePragmaSnapshot
 } from '../db/sqlite_runtime.js';
+import { createLogger } from '../utils/logger.js';
+
+const logger = createLogger('runtime-database-bootstrap');
 
 export interface PrismaRuntimeDatabaseBootstrapOptions {
   prisma: PrismaClient;
@@ -21,7 +24,7 @@ export class PrismaRuntimeDatabaseBootstrap implements RuntimeDatabaseBootstrap 
   constructor(options: PrismaRuntimeDatabaseBootstrapOptions) {
     this.prisma = options.prisma;
     this.applyPragmas = options.applyPragmas ?? applySqliteRuntimePragmas;
-    this.log = options.log ?? console.log;
+    this.log = options.log ?? ((msg: string) => { logger.info(msg); });
   }
 
   public async prepareDatabase(): Promise<SqliteRuntimePragmaSnapshot> {
@@ -31,7 +34,7 @@ export class PrismaRuntimeDatabaseBootstrap implements RuntimeDatabaseBootstrap 
 
     this.sqliteRuntimePragmas = await this.applyPragmas(this.prisma);
     this.log(
-      `[SimulationManager] SQLite pragmas journal_mode=${this.sqliteRuntimePragmas.journal_mode} busy_timeout=${String(
+      `SQLite pragmas journal_mode=${this.sqliteRuntimePragmas.journal_mode} busy_timeout=${String(
         this.sqliteRuntimePragmas.busy_timeout
       )} synchronous=${this.sqliteRuntimePragmas.synchronous} foreign_keys=${String(
         this.sqliteRuntimePragmas.foreign_keys

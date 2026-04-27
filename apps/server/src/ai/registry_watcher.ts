@@ -1,8 +1,9 @@
 import fs from 'fs';
 import { ZodError } from 'zod';
 
-import { readYamlFileIfExists } from '../config/loader.js';
+import { loadConfigYaml, readYamlFileIfExists } from '../config/loader.js';
 import { deepMerge } from '../config/merge.js';
+import { createLogger } from '../utils/logger.js';
 import {
   aiRegistryConfigSchema,
   BUILTIN_AI_REGISTRY_CONFIG,
@@ -10,6 +11,8 @@ import {
   resetAiRegistryCache,
   resetPromptSlotRegistryCache,
 } from './registry.js';
+
+const logger = createLogger('ai-registry-watcher');
 
 export interface AiRegistryWatcherOptions {
   aiModelsConfigPath: string;
@@ -21,8 +24,6 @@ export interface AiRegistryWatcher {
 }
 
 const DEBOUNCE_MS = 300;
-
-const PREFIX = '[ai_registry]';
 
 const extractErrorMessage = (err: unknown): string => {
   if (err instanceof ZodError) {
@@ -67,20 +68,19 @@ const validateAndReloadAiModels = (filePath: string): void => {
       return;
     }
 
-    const parsedOverride = aiRegistryConfigSchema.parse({
-      version: BUILTIN_AI_REGISTRY_CONFIG.version,
-      ...rawConfig,
+    const parsedOverride = loadConfigYaml({
+      filePath,
+      validate: raw => aiRegistryConfigSchema.parse({
+        version: BUILTIN_AI_REGISTRY_CONFIG.version,
+        ...raw
+      })
     });
-
-    // mergeAiRegistryConfig validates the merge result implicitly through its logic.
-    // We parse the override with schema first (above), then merge.
-    // The merge function operates on already-validated structures.
 
     resetAiRegistryCache();
     const summary = formatSummary(parsedOverride, 'ai_models');
-    console.log(`${PREFIX} ${resolveFileName(filePath)} 变更，重新加载成功\n  ${summary}`);
+    logger.info(`${resolveFileName(filePath)} 变更，重新加载成功\n  ${summary}`);
   } catch (err) {
-    console.warn(`${PREFIX} ${resolveFileName(filePath)} 校验失败，保留旧配置\n  ${extractErrorMessage(err)}`);
+    logger.warn(`${resolveFileName(filePath)} 校验失败，保留旧配置`, { error: extractErrorMessage(err) });
   }
 };
 
@@ -100,9 +100,9 @@ const validateAndReloadPromptSlots = (filePath: string, defaultPath: string): vo
 
     resetPromptSlotRegistryCache();
     const summary = formatSummary(rawOverride, 'prompt_slots');
-    console.log(`${PREFIX} ${resolveFileName(filePath)} 变更，重新加载成功\n  ${summary}`);
+    logger.info(`${resolveFileName(filePath)} 变更，重新加载成功\n  ${summary}`);
   } catch (err) {
-    console.warn(`${PREFIX} ${resolveFileName(filePath)} 校验失败，保留旧配置\n  ${extractErrorMessage(err)}`);
+    logger.warn(`${resolveFileName(filePath)} 校验失败，保留旧配置`, { error: extractErrorMessage(err) });
   }
 };
 
@@ -133,10 +133,10 @@ export const startAiRegistryWatcher = (options: AiRegistryWatcherOptions): AiReg
       watchers.push(watcher);
 
       watcher.on('error', (err) => {
-        console.warn(`${PREFIX} 文件监听异常 ${resolveFileName(filePath)}: ${err instanceof Error ? err.message : String(err)}`);
+        logger.warn(`文件监听异常 ${resolveFileName(filePath)}`, { error: err instanceof Error ? err.message : String(err) });
       });
     } catch (err) {
-      console.warn(`${PREFIX} 无法监听文件 ${resolveFileName(filePath)}: ${err instanceof Error ? err.message : String(err)}`);
+      logger.warn(`无法监听文件 ${resolveFileName(filePath)}`, { error: err instanceof Error ? err.message : String(err) });
     }
   };
 
@@ -150,9 +150,10 @@ export const startAiRegistryWatcher = (options: AiRegistryWatcherOptions): AiReg
     validateAndReloadPromptSlots(promptSlotsPath, options.promptSlotsDefaultPath);
   });
 
-  console.log(
-    `${PREFIX} 热加载已启动\n  ai_models: ${resolveFileName(options.aiModelsConfigPath)}\n  prompt_slots: ${resolveFileName(promptSlotsPath)}`,
-  );
+  logger.info('热加载已启动', {
+    ai_models: resolveFileName(options.aiModelsConfigPath),
+    prompt_slots: resolveFileName(promptSlotsPath)
+  });
 
   return {
     close() {
@@ -170,7 +171,7 @@ export const startAiRegistryWatcher = (options: AiRegistryWatcherOptions): AiReg
       }
       watchers.length = 0;
 
-      console.log(`${PREFIX} 热加载已停止`);
+      logger.info('热加载已停止');
     },
   };
 };

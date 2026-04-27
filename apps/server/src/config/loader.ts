@@ -59,3 +59,18 @@ export const readYamlFileIfExists = (filePath: string): Record<string, unknown> 
 
   return parsed;
 };
+
+/**
+ * 统一的 YAML 配置加载器。
+ *
+ * 封装 readYamlFileIfExists + validate 的标准流程，
+ * 供 runtime_config / ai/registry / inference/context_config 使用。
+ * 合并逻辑由调用方通过 defaults 参数控制，保留各域特定的 deepMerge 策略。
+ */
+export const loadConfigYaml = <T>(options: {
+  filePath: string;
+  validate: (raw: Record<string, unknown>) => T;
+}): T => {
+  const raw = readYamlFileIfExists(options.filePath);
+  return options.validate(raw);
+};

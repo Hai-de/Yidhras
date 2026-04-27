@@ -3,6 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { resolveWorkspaceRoot } from '../config/loader.js';
+import { createLogger } from '../utils/logger.js';
+
+const logger = createLogger('reset-dev-db');
 
 const DATABASE_FILE_BASENAME = 'yidhras.sqlite';
 const DATABASE_SIDE_CAR_SUFFIXES = ['', '-wal', '-shm'];
@@ -30,12 +33,12 @@ const removeDatabaseFiles = (files: string[]): void => {
     }
 
     fs.rmSync(filePath, { force: true });
-    console.log(`[reset_dev_db] removed ${filePath}`);
+    logger.info(`removed ${filePath}`);
   }
 };
 
 const runWorkspaceCommand = (workspaceRoot: string, command: string, args: string[]): void => {
-  console.log(`[reset_dev_db] running: ${command} ${args.join(' ')}`);
+  logger.info(`running: ${command} ${args.join(' ')}`);
   const result = spawnSync(command, args, {
     cwd: workspaceRoot,
     stdio: 'inherit',
@@ -57,7 +60,7 @@ const main = (): void => {
   runWorkspaceCommand(workspaceRoot, 'pnpm', ['--filter', 'yidhras-server', 'run', 'init:runtime']);
   runWorkspaceCommand(workspaceRoot, 'pnpm', ['--filter', 'yidhras-server', 'run', 'seed:identity']);
 
-  console.log('[reset_dev_db] development database reset complete');
+  logger.info('development database reset complete');
 };
 
 main();

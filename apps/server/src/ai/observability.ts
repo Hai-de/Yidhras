@@ -1,7 +1,11 @@
 import { Prisma } from '@prisma/client';
 
 import type { AppInfrastructure } from '../app/context.js';
+import { getErrorMessage } from '../app/http/errors.js';
+import { createLogger } from '../utils/logger.js';
 import type { AiInvocationTrace, ModelGatewayResponse } from './types.js';
+
+const logger = createLogger('ai-observability');
 
 const toJsonValue = (value: unknown): Prisma.InputJsonValue => {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -84,7 +88,7 @@ export const recordAiInvocation = async (
   }
 ): Promise<void> => {
   if (!context) {
-    console.warn('[ai:observability] recordAiInvocation called without context, invocation not persisted', {
+    logger.warn('recordAiInvocation called without context, invocation not persisted', {
       invocation_id: response.invocation_id,
       task_type: response.task_type,
       status: response.status
@@ -118,12 +122,14 @@ export const recordAiInvocation = async (
           buildUpsertPayload(response, trace, options, latencyMs, currentTick, null)
         );
       } catch (innerError: unknown) {
-        console.error('[ai:observability] Failed to persist AI invocation record (FK fallback)', innerError, {
+        logger.error('Failed to persist AI invocation record (FK fallback)', {
+          error: getErrorMessage(innerError),
           invocation_id: response.invocation_id
         });
       }
     } else {
-      console.error('[ai:observability] Failed to persist AI invocation record', error, {
+      logger.error('Failed to persist AI invocation record', {
+        error: getErrorMessage(error),
         invocation_id: response.invocation_id
       });
     }

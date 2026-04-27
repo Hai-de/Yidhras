@@ -9,6 +9,9 @@ import { teardownActorBridges } from '../packs/runtime/materializer.js';
 import { resolvePackRuntimeDatabaseLocation } from '../packs/storage/pack_db_locator.js';
 import { pluginRuntimeRegistry } from '../plugins/runtime.js';
 import { ApiError } from '../utils/api_error.js';
+import { createLogger } from '../utils/logger.js';
+
+const logger = createLogger('pack-runtime-registry');
 import type { DefaultPackCatalogService } from './pack_catalog_service.js';
 import { materializePackRuntime } from './pack_materializer.js';
 import type { PackRuntimeHandle } from './pack_runtime_handle.js';
@@ -134,7 +137,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     });
 
     const calendars = (resolved.pack.time_systems ?? []) as unknown as CalendarConfig[];
-    const clock = new ChronosEngine(calendars, runtimeConfig.initialTick);
+    const clock = new ChronosEngine({ calendarConfigs: calendars, initialTicks: runtimeConfig.initialTick });
     const runtimeSpeed = new RuntimeSpeedPolicy(runtimeConfig.configuredStepTicks ?? 1n);
 
     const host = new PackRuntimeInstance({
@@ -150,8 +153,8 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
 
     const verifyHandle = this.registry.getHandle(resolved.pack.metadata.id);
     if (!verifyHandle) {
-      console.error(
-        `[PackRuntimeRegistryService] Experimental pack registration verification failed: ` +
+      logger.error(
+        `Experimental pack registration verification failed: ` +
         `pack_id=${resolved.pack.metadata.id} was registered but getHandle returned null. ` +
         `This indicates a registry inconsistency.`
       );
@@ -177,7 +180,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     await host.dispose();
     const deletedCount = await teardownActorBridges(packId, this.prisma);
     if (deletedCount > 0) {
-      console.log(`[PackRuntimeRegistryService] Cleaned up ${String(deletedCount)} actor bridge records for unloaded pack ${packId}`);
+      logger.info(`Cleaned up ${String(deletedCount)} actor bridge records for unloaded pack ${packId}`);
     }
 
     const location = resolvePackRuntimeDatabaseLocation(packId);
@@ -186,7 +189,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
 
     if (fs.existsSync(runtimeDbPath)) {
       fs.rmSync(runtimeDbPath, { force: true });
-      console.log(`[PackRuntimeRegistryService] Removed runtime database for unloaded pack ${packId}: ${runtimeDbPath}`);
+      logger.info(`Removed runtime database for unloaded pack ${packId}: ${runtimeDbPath}`);
     }
     if (fs.existsSync(storagePlanPath)) {
       fs.rmSync(storagePlanPath, { force: true });

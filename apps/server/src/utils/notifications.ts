@@ -1,3 +1,7 @@
+import { createLogger } from './logger.js';
+
+const logger = createLogger('notifications');
+
 export type NotificationLevel = 'info' | 'warning' | 'error';
 
 export interface SystemMessage {
@@ -32,13 +36,23 @@ class NotificationManager {
     };
 
     this.messages.unshift(msg);
-    
+
     // 限制队列长度
     if (this.messages.length > this.MAX_MESSAGES) {
       this.messages.pop();
     }
 
-    console.log(`[SystemNotification] [${level.toUpperCase()}] ${content}`);
+    switch (level) {
+      case 'error':
+        logger.error(content);
+        break;
+      case 'warning':
+        logger.warn(content);
+        break;
+      default:
+        logger.info(content);
+        break;
+    }
     return msg;
   }
 
@@ -57,4 +71,4 @@ class NotificationManager {
   }
 }
 
-export const notifications = new NotificationManager();
+export const createNotificationManager = (): NotificationManager => new NotificationManager();

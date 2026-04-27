@@ -2,6 +2,10 @@ import 'dotenv/config';
 
 import { PrismaClient } from '@prisma/client';
 
+import { createLogger } from '../utils/logger.js';
+
+const logger = createLogger('seed-identity');
+
 const prisma = new PrismaClient();
 
 type PolicySeed = {
@@ -145,7 +149,7 @@ const ensureIdentityBinding = async (binding: IdentityBindingSeed) => {
 };
 
 async function main() {
-  console.log('--- 开始注入身份与策略 ---');
+  logger.info('开始注入身份与策略');
 
   await ensureIdentity('system', 'system', 'System');
   await ensureIdentity('user-001', 'user', 'User-001');
@@ -225,12 +229,12 @@ async function main() {
     await ensureIdentityBinding(binding);
   }
 
-  console.log('--- 身份与策略注入完成 ---');
+  logger.info('身份与策略注入完成');
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    logger.error('Identity seed error', { error: e instanceof Error ? e.message : String(e) });
     process.exit(1);
   })
   .finally(async () => {

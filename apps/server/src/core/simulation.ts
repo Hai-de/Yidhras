@@ -8,16 +8,17 @@ import type {
   HostRuntimeKernelFacade,
   PackCatalogService
 } from '../app/services/app_context_ports.js';
-import type { ActivePackProvider } from './active_pack_provider.js';
-import type { ClockProvider } from './clock_provider.js';
 import { ChronosEngine } from '../clock/engine.js';
 import {
+  getRuntimeConfig,
   getWorldPacksDir,
   isExperimentalMultiPackRuntimeEnabled
 } from '../config/runtime_config.js';
 import type { SqliteRuntimePragmaSnapshot } from '../db/sqlite_runtime.js';
 import { PackManifestLoader, type WorldPack } from '../packs/manifest/loader.js';
-import { DefaultActivePackRuntimeFacade } from './active_pack_runtime_facade.js';
+import type { ActivePackProvider } from './active_pack_provider.js';
+import { DefaultActivePackRuntimeFacade, type DefaultActivePackRuntimeFacadeOptions } from './active_pack_runtime_facade.js';
+import type { ClockProvider } from './clock_provider.js';
 import { getGraphData } from './graph_data.js';
 import { DefaultPackCatalogService } from './pack_catalog_service.js';
 import type { PackRuntimeHandle } from './pack_runtime_handle.js';
@@ -42,12 +43,17 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
   private readonly activePackRuntimeFacade: DefaultActivePackRuntimeFacade;
   private readonly packRuntimeRegistryService: DefaultPackRuntimeRegistryService;
 
-  constructor(options: { prisma: PrismaClient }) {
+  constructor(options: { prisma: PrismaClient; notifications: DefaultActivePackRuntimeFacadeOptions['notifications'] }) {
     this.packsDir = getWorldPacksDir();
 
     this.prisma = options.prisma;
     this.loader = new PackManifestLoader(this.packsDir);
-    this.clock = new ChronosEngine([], 0n);
+    this.clock = new ChronosEngine({
+      calendarConfigs: [],
+      initialTicks: 0n,
+      monotonic: getRuntimeConfig().clock.monotonic_enabled,
+      maxStepTicks: BigInt(getRuntimeConfig().clock.max_step_ticks)
+    });
     this.runtimeSpeed = new RuntimeSpeedPolicy(1n);
     this.packRuntimeRegistry = new InMemoryPackRuntimeRegistry();
     this.experimentalPackRuntimeEnabled = isExperimentalMultiPackRuntimeEnabled();
@@ -60,7 +66,8 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
       packsDir: this.packsDir,
       runtimeSpeed: this.runtimeSpeed,
       runtimeBootstrap: this.runtimeBootstrap,
-      runtimeRegistry: this.packRuntimeRegistry
+      runtimeRegistry: this.packRuntimeRegistry,
+      notifications: options.notifications
     });
     this.packCatalogService = new DefaultPackCatalogService({
       packsDir: this.packsDir,

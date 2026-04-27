@@ -1,8 +1,11 @@
 import type { NextFunction, Request, Response } from 'express';
 
 import { ApiError } from '../../utils/api_error.js';
+import { createLogger } from '../../utils/logger.js';
 import type { AppContext } from '../context.js';
 import { getErrorMessage } from '../http/errors.js';
+
+const logger = createLogger('error-handler');
 
 export const createGlobalErrorMiddleware = (context: AppContext) => {
   return (err: unknown, _req: Request, res: Response, _next: NextFunction) => {
@@ -14,10 +17,10 @@ export const createGlobalErrorMiddleware = (context: AppContext) => {
     const details = isApiError ? err.details : undefined;
 
     if (status >= 500) {
-      console.error(`[Global Error Middleware] [${requestId}]`, err);
+      logger.error(`[${requestId}] ${message}`, { error: message, code });
       context.notifications.push('error', `API 异常(${code}): ${message}`, code);
     } else {
-      console.warn(`[API Warning] [${requestId}] ${code}: ${message}`);
+      logger.warn(`[${requestId}] ${code}: ${message}`);
       context.notifications.push('warning', `API 请求异常(${code}): ${message}`, code);
     }
 

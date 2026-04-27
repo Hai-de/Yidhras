@@ -43,7 +43,7 @@ const toExperimentalRuntimeSpeedSnapshot = (snapshot: {
 });
 
 const readEnabledPluginCount = async (context: AppContext, packId: string): Promise<number> => {
-  if (!(context.prisma as Record<string, unknown>)?.pluginInstallation) {
+  if (!(context.prisma as unknown as Record<string, unknown>)?.pluginInstallation) {
     return 0;
   }
 

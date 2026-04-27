@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto';
 
 import { AccessPolicyService } from '../access_policy/service.js';
 import type { AppContext, AppInfrastructure } from '../app/context.js';
+import { getAgentContextSnapshot } from '../app/services/agent.js';
 import type { AppContextPorts } from '../app/services/app_context_ports.js';
 import { createContextAssemblyPort } from '../app/services/context_memory_ports.js';
-import { getAgentContextSnapshot } from '../app/services/agent.js';
 import { getLatestEventEvidenceRecord } from '../app/services/event_evidence_repository.js';
 import { IdentityService } from '../identity/service.js';
 import type { IdentityContext } from '../identity/types.js';
@@ -19,7 +19,10 @@ import {
 import { DEFAULT_PACK_WORLD_ENTITY_ID } from '../packs/runtime/core_models.js';
 import { listPackEntityStateProjectionRecords } from '../packs/storage/entity_state_projection.js';
 import { ApiError } from '../utils/api_error.js';
+import { createLogger } from '../utils/logger.js';
 import { getInferenceContextConfig } from './context_config.js';
+
+const logger = createLogger('inference-context-builder');
 import { resolveConfigValues } from './context_config_resolver.js';
 import type { InferenceContextConfig } from './context_config_schema.js';
 import type {
@@ -733,13 +736,13 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
       if (!pack) {
         const activePackId = activePack?.metadata.id ?? '(none)';
         if (input.mode === 'stable') {
-          console.error(
-            `[buildForPack] Pack ID mismatch in stable mode: requested=${input.pack_id}, active=${activePackId}. ` +
+          logger.error(
+            `Pack ID mismatch in stable mode: requested=${input.pack_id}, active=${activePackId}. ` +
             `Ensure the active pack matches the requested pack_id.`
           );
         } else {
-          console.error(
-            `[buildForPack] Pack not found in experimental mode: requested=${input.pack_id}, active=${activePackId}. ` +
+          logger.error(
+            `Pack not found in experimental mode: requested=${input.pack_id}, active=${activePackId}. ` +
             `Ensure the experimental pack has been loaded via the registry.`
           );
         }

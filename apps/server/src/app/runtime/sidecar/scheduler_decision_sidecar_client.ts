@@ -4,6 +4,9 @@ import path from 'node:path';
 
 import { resolveFromWorkspaceRoot } from '../../../config/loader.js';
 import { ApiError } from '../../../utils/api_error.js';
+import { createLogger } from '../../../utils/logger.js';
+
+const logger = createLogger('scheduler-decision-sidecar');
 import type {
   SchedulerDecisionKernelPort,
   SchedulerKernelEvaluateInput,
@@ -128,7 +131,7 @@ class ProcessSchedulerDecisionSidecarTransport implements SchedulerDecisionSidec
     this.child.stderr.on('data', chunk => {
       const message = chunk.toString().trim();
       if (message.length > 0) {
-        console.warn('[scheduler-decision-sidecar]', message);
+        logger.warn(message);
       }
     });
     this.child.on('exit', () => {
@@ -160,7 +163,20 @@ class ProcessSchedulerDecisionSidecarTransport implements SchedulerDecisionSidec
 
     const child = this.child;
     this.child = null;
-    child.kill();
+
+    child.kill('SIGTERM');
+
+    await new Promise<void>((resolve) => {
+      const forceKill = setTimeout(() => {
+        try { child.kill('SIGKILL'); } catch { /* 进程已退出 */ }
+        resolve();
+      }, 3000);
+
+      child.on('exit', () => {
+        clearTimeout(forceKill);
+        resolve();
+      });
+    });
   }
 
   public async send<T>(method: string, params: Record<string, unknown>, parse: (value: unknown) => T): Promise<T> {
@@ -224,7 +240,7 @@ class ProcessSchedulerDecisionSidecarTransport implements SchedulerDecisionSidec
     try {
       parsed = JSON.parse(line) as JsonRpcResponse<unknown>;
     } catch (error) {
-      console.error('[scheduler-decision-sidecar] invalid JSON response', error, line);
+      logger.error('invalid JSON response', { error: getErrorMessage(error), line: line.slice(0, 200) });
       return;
     }
 

@@ -71,10 +71,14 @@ import { createInferenceService } from './inference/service.js';
 import { createPrismaInferenceTraceSink } from './inference/sinks/prisma.js';
 import { syncActivePackPluginRuntime } from './plugins/runtime.js';
 import { ApiError } from './utils/api_error.js';
-import { notifications } from './utils/notifications.js';
+import { createLogger, setLoggerRuntimeConfig } from './utils/logger.js';
+import { createNotificationManager } from './utils/notifications.js';
+
+const logger = createLogger('yidhras-server');
 
 const prisma = new PrismaClient();
-const sim = new SimulationManager({ prisma });
+const notifications = createNotificationManager();
+const sim = new SimulationManager({ prisma, notifications });
 
 const port = getAppPort();
 const worldPacksDir = getWorldPacksDir();
@@ -96,6 +100,7 @@ const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
 let runtimeReady = false;
 let timer: SimulationLoopHandle | null = null;
 let isPaused = false;
+let httpServer: ReturnType<typeof app.listen> | null = null;
 let runtimeLoopDiagnostics: RuntimeLoopDiagnostics = { ...DEFAULT_RUNTIME_LOOP_DIAGNOSTICS };
 let httpApp: import('express').Express | null = null;
 const decisionWorkerId = `decision:${process.pid}:${Date.now()}`;
@@ -285,7 +290,7 @@ const handleSimulationStepError = (err: unknown): void => {
     sqlite_synchronous: sqlitePragmas?.synchronous ?? null
   };
 
-  notifications.push(
+  appContext.notifications.push(
     'error',
     isDatabaseTimeoutError(message)
       ? `模拟步进失败（数据库锁竞争或查询超时）: ${message}`
@@ -325,6 +330,7 @@ const startSimulation = (): void => {
 
 const start = async (): Promise<void> => {
   validateProductionSecrets();
+  setLoggerRuntimeConfig(getRuntimeConfig().logging);
   logRuntimeConfigSnapshot();
 
   await getRuntimeBootstrap({ runtimeBootstrap: appContext.runtimeBootstrap }).prepareDatabase();
@@ -340,7 +346,7 @@ const start = async (): Promise<void> => {
   try {
     const resetSummary = await resetDevelopmentRuntimeState(appContext);
     if (resetSummary) {
-      notifications.push('info', '开发环境 runtime 观测数据已清理', 'DEV_RUNTIME_RESET', toJsonSafe(resetSummary) as Record<string, unknown>);
+      appContext.notifications.push('info', '开发环境 runtime 观测数据已清理', 'DEV_RUNTIME_RESET', toJsonSafe(resetSummary) as Record<string, unknown>);
     }
 
     await ensureSchedulerBootstrapOwnership(appContext, {
@@ -350,10 +356,10 @@ const start = async (): Promise<void> => {
 
     if (startupHealth.level === 'fail') {
       appContext.setRuntimeReady(false);
-      notifications.push('error', `系统启动健康检查失败: ${startupHealth.errors.join('; ')}`, 'SYS_PRECHECK_FAIL');
+      appContext.notifications.push('error', `系统启动健康检查失败: ${startupHealth.errors.join('; ')}`, 'SYS_PRECHECK_FAIL');
     } else if (!startupHealth.checks.world_pack_available) {
       appContext.setRuntimeReady(false);
-      notifications.push('warning', '世界包为空，系统以降级模式启动。请先导入 world pack。', 'WORLD_PACK_EMPTY');
+      appContext.notifications.push('warning', '世界包为空，系统以降级模式启动。请先导入 world pack。', 'WORLD_PACK_EMPTY');
     } else {
       const selectedPack = selectStartupWorldPack(startupHealth.available_world_packs, preferredWorldPack);
       if (!selectedPack) {
@@ -380,7 +386,7 @@ const start = async (): Promise<void> => {
       }
       await syncActivePackPluginRuntime(appContext);
       appContext.setRuntimeReady(true);
-      notifications.push(
+      appContext.notifications.push(
         'info',
         `Yidhras 系统初始化成功 (pack=${selectedPack}, schedulerPartitions=${schedulerPartitionIds.join(',') || 'none'}, loopIntervalMs=${String(simulationLoopIntervalMs)}, aiGatewayEnabled=${String(isAiGatewayEnabled())})`,
         'SYS_INIT_OK',
@@ -392,15 +398,15 @@ const start = async (): Promise<void> => {
     appContext.setRuntimeReady(false);
     startupHealth.level = 'degraded';
     startupHealth.errors.push(`simulation init failed: ${getErrorMessage(err)}`);
-    console.error('[Yidhras Server] Init Error:', err);
-    notifications.push('error', `系统初始化失败，已降级运行: ${getErrorMessage(err)}`, 'SYS_INIT_FAIL');
+    logger.error('Init Error', { error: getErrorMessage(err) });
+    appContext.notifications.push('error', `系统初始化失败，已降级运行: ${getErrorMessage(err)}`, 'SYS_INIT_FAIL');
   }
 
-  app.listen(port, () => {
-    console.log(`[Yidhras Server] API full implementation running at http://localhost:${port}`);
-    console.log(`[Yidhras Server] Inference module ready (phase=${inferenceService.phase}, ready=${String(inferenceService.ready)})`);
-    console.log(`[Yidhras Server] AI gateway enabled=${String(isAiGatewayEnabled())}`);
-    console.log(`[Yidhras Server] Scheduler worker=${schedulerWorkerId} partitions=${schedulerPartitionIds.join(',') || 'none'} loopIntervalMs=${String(simulationLoopIntervalMs)}`);
+  httpServer = app.listen(port, () => {
+    logger.info(`API full implementation running at http://localhost:${port}`);
+    logger.info(`Inference module ready (phase=${inferenceService.phase}, ready=${String(inferenceService.ready)})`);
+    logger.info(`AI gateway enabled=${String(isAiGatewayEnabled())}`);
+    logger.info(`Scheduler worker=${schedulerWorkerId} partitions=${schedulerPartitionIds.join(',') || 'none'} loopIntervalMs=${String(simulationLoopIntervalMs)}`);
   });
 
   const registryWatcher = startAiRegistryWatcher({
@@ -410,9 +416,45 @@ const start = async (): Promise<void> => {
     ),
   });
 
-  const cleanup = () => { registryWatcher.close(); };
-  process.on('SIGINT', cleanup);
-  process.on('SIGTERM', cleanup);
+  const gracefulShutdown = async (signal: string): Promise<void> => {
+    logger.info(`收到 ${signal} 信号，开始优雅关闭...`);
+
+    const forceExit = setTimeout(() => {
+      logger.error('优雅关闭超时（10 秒），强制退出');
+      process.exit(1);
+    }, 10_000);
+
+    try {
+      timer?.stop();
+      appContext.setRuntimeLoopDiagnostics?.({
+        ...(appContext.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS),
+        status: 'stopped'
+      });
+
+      httpServer?.close();
+
+      if (appContext.worldEngine && typeof (appContext.worldEngine as WorldEngineSidecarClient).stop === 'function') {
+        await (appContext.worldEngine as WorldEngineSidecarClient).stop();
+      }
+
+      await prisma.$disconnect();
+      logger.info('Prisma 已断开连接');
+
+      registryWatcher.close();
+      logger.info('Registry watcher 已关闭');
+
+      clearTimeout(forceExit);
+      logger.info('优雅关闭完成');
+      process.exit(0);
+    } catch (err) {
+      logger.error('关闭过程出错', { error: getErrorMessage(err) });
+      clearTimeout(forceExit);
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGINT', () => { void gracefulShutdown('SIGINT'); });
+  process.on('SIGTERM', () => { void gracefulShutdown('SIGTERM'); });
 };
 
 void start();

@@ -1,5 +1,3 @@
-import type { PackRuntimeHandle } from '../../core/pack_runtime_handle.js';
-import type { PackRuntimeStatusSnapshot } from '../../core/pack_runtime_health.js';
 import type {
   PackRuntimeControl,
   PackRuntimeLookupPort,
