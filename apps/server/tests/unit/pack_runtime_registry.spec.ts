@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { AppContext } from '../../src/app/context.js';
 import {
   buildExperimentalPackRuntimeRegistrySnapshot,
   buildExperimentalSystemHealthSnapshot,
   getExperimentalPackRuntimeStatusSnapshot,
   registerExperimentalPackRuntimeHost
 } from '../../src/app/services/experimental_multi_pack_runtime.js';
-import type { AppContext } from '../../src/app/context.js';
 import type { PackRuntimeHandle } from '../../src/core/pack_runtime_handle.js';
 import { InMemoryPackRuntimeRegistry } from '../../src/core/pack_runtime_registry.js';
 

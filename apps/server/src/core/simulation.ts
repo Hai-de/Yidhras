@@ -8,6 +8,8 @@ import type {
   HostRuntimeKernelFacade,
   PackCatalogService
 } from '../app/services/app_context_ports.js';
+import type { ActivePackProvider } from './active_pack_provider.js';
+import type { ClockProvider } from './clock_provider.js';
 import { ChronosEngine } from '../clock/engine.js';
 import {
   getWorldPacksDir,
@@ -26,8 +28,8 @@ import { DefaultPackRuntimeRegistryService } from './pack_runtime_registry_servi
 import { PrismaRuntimeDatabaseBootstrap } from './runtime_database_bootstrap.js';
 import { RuntimeSpeedPolicy, type RuntimeSpeedSnapshot } from './runtime_speed.js';
 
-export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeKernelFacade, PackCatalogService {
-  public prisma: PrismaClient;
+export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeKernelFacade, PackCatalogService, ClockProvider, ActivePackProvider {
+  private prisma: PrismaClient;
   public clock!: ChronosEngine;
 
   private readonly loader: PackManifestLoader;
@@ -40,10 +42,10 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
   private readonly activePackRuntimeFacade: DefaultActivePackRuntimeFacade;
   private readonly packRuntimeRegistryService: DefaultPackRuntimeRegistryService;
 
-  constructor() {
+  constructor(options: { prisma: PrismaClient }) {
     this.packsDir = getWorldPacksDir();
 
-    this.prisma = new PrismaClient();
+    this.prisma = options.prisma;
     this.loader = new PackManifestLoader(this.packsDir);
     this.clock = new ChronosEngine([], 0n);
     this.runtimeSpeed = new RuntimeSpeedPolicy(1n);
@@ -202,5 +204,3 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
     this.clock = this.activePackRuntimeFacade.getClock();
   }
 }
-
-export const sim = new SimulationManager();

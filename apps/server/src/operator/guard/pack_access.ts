@@ -1,6 +1,6 @@
 import type { NextFunction,Response } from 'express'
 
-import type { AppContext } from '../../app/context.js'
+import type { AppInfrastructure } from '../../app/context.js'
 import { ApiError } from '../../utils/api_error.js'
 import { logOperatorAudit } from '../audit/logger.js'
 import type { OperatorRequest } from '../auth/types.js'
@@ -13,7 +13,7 @@ import {
 import type { PackAccessGuardOptions,PackAccessResult } from './types.js'
 
 export const checkPackAccess = async (
-  context: AppContext,
+  context: AppInfrastructure,
   operatorId: string,
   packId: string
 ): Promise<PackAccessResult> => {
@@ -39,7 +39,7 @@ export const checkPackAccess = async (
 const bindingTypeRank: Record<string, number> = PACK_BINDING_TYPE_LEVEL
 
 export const packAccessGuard = (
-  context: AppContext,
+  context: AppInfrastructure,
   options: PackAccessGuardOptions = {}
 ) => {
   return async (

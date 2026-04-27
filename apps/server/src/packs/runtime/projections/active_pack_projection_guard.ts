@@ -1,4 +1,4 @@
-import type { AppContext } from '../../../app/context.js';
+import type { AppInfrastructure } from '../../../app/context.js';
 import { ApiError } from '../../../utils/api_error.js';
 import type { WorldPack } from '../../manifest/loader.js';
 
@@ -8,14 +8,14 @@ export interface ResolvedPackProjectionTarget {
 }
 
 export const resolvePackProjectionTarget = (
-  context: AppContext,
+  context: AppInfrastructure,
   input: {
     requestedPackId?: string;
     feature: string;
     allowMissingActivePack?: boolean;
   }
 ): ResolvedPackProjectionTarget => {
-  const activePack = context.sim.getActivePack() ?? null;
+  const activePack = context.activePack.getActivePack() ?? null;
   const requestedPackId = typeof input.requestedPackId === 'string' && input.requestedPackId.trim().length > 0
     ? input.requestedPackId.trim()
     : undefined;

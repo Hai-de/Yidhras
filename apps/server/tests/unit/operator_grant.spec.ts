@@ -11,6 +11,9 @@ describe('operator grant capability check', () => {
   beforeEach(() => {
     mockOperatorFindUnique = vi.fn()
     mockGrantFindFirst = vi.fn()
+    const sim = {
+      getCurrentTick: () => 1000n
+    } as AppContext['sim']
     context = {
       prisma: {
         operator: {
@@ -20,9 +23,9 @@ describe('operator grant capability check', () => {
           findFirst: mockGrantFindFirst
         }
       } as unknown as AppContext['prisma'],
-      sim: {
-        getCurrentTick: () => 1000n
-      }
+      sim,
+      clock: sim as AppContext['clock'],
+      activePack: sim as AppContext['activePack']
     } as AppContext
   })
 

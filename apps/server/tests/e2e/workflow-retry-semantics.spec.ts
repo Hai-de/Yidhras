@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 
+import { getRootAuthHeadersWithIdentity } from '../helpers/auth.js';
 import { assertRecord, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
 import {
   createIsolatedRuntimeEnvironment,
@@ -9,13 +10,7 @@ import {
 } from '../helpers/runtime.js';
 import { isRecord, requestJson, sleep, withTestServer } from '../helpers/server.js';
 
-const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
-  return JSON.stringify({
-    id: identityId,
-    type,
-    name: identityId
-  });
-};
+
 
 const assertRecordField = (value: unknown, fieldName: string, label: string): Record<string, unknown> => {
   const record = assertRecord(value, label);
@@ -66,7 +61,7 @@ describe('workflow retry semantics e2e', () => {
 
           const headers = {
             'Content-Type': 'application/json',
-            'x-m2-identity': createIdentityHeader('agent-001', 'agent')
+            ...(await getRootAuthHeadersWithIdentity(server.baseUrl, 'agent-001', 'agent'))
           };
 
           const retryJobKey = `workflow-retry-${Date.now()}`;

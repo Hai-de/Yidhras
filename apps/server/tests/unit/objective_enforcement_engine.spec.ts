@@ -39,6 +39,27 @@ const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, n
         }
       }
     } as AppContext['sim'],
+    clock: {
+      getCurrentTick(): bigint {
+        return now;
+      },
+      getAllTimes() {
+        return [];
+      },
+      tick() {},
+      setTicks() {},
+      getTicks() {
+        return now;
+      }
+    },
+    activePack: {
+      getActivePack(): typeof pack {
+        return pack;
+      },
+      getCurrentRevision() {
+        return now;
+      }
+    },
     notifications: {
       push(level, content) {
         return { id: 'noop', level, content, timestamp: Date.now() };

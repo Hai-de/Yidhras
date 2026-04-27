@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { AppContext } from '../app/context.js';
+import type { AppInfrastructure } from '../app/context.js';
 import type { PromptBundleV2 } from '../inference/prompt_bundle_v2.js';
 import { ApiError } from '../utils/api_error.js';
 import { adaptPromptTreeToAiMessages } from './adapters/prompt_tree_adapter.js';
@@ -27,7 +27,7 @@ export interface AiTaskService {
 
 export interface CreateAiTaskServiceOptions {
   gateway?: ModelGateway;
-  context?: AppContext;
+  context?: AppInfrastructure;
 }
 
 const buildInlineOverrideFromRequest = (request: AiTaskRequest): AiTaskOverride | null => {

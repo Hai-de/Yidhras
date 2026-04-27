@@ -31,8 +31,7 @@ export const createPackScopeResolver = (context: AppContext): PackScopeResolver 
 
       const normalizedPackId = normalizeRequestedPackId(packId);
       const lookup = getPackRuntimeLookupPort({
-        packRuntimeLookup: context.packRuntimeLookup,
-        sim: context.sim
+        packRuntimeLookup: context.packRuntimeLookup
       });
       if (!lookup.hasPackRuntime(normalizedPackId)) {
         throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', `Experimental pack runtime not found for ${feature}`, {

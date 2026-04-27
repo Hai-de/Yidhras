@@ -1,4 +1,4 @@
-import type { AppContext } from '../../app/context.js';
+import type { AppInfrastructure } from '../../app/context.js';
 import type { IdentityContext } from '../../identity/types.js';
 import type { InferenceActorRef, InferencePackStateSnapshot } from '../../inference/types.js';
 import type {
@@ -14,7 +14,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 };
 
 const getAllowedFields = async (
-  context: AppContext,
+  context: AppInfrastructure,
   identity: IdentityContext,
   action: 'read_recent_trace' | 'read_recent_intent' | 'read_recent_event',
   fields: string[],
@@ -102,7 +102,7 @@ const pickAllowedFields = (record: Record<string, unknown>, allowedFields: Set<s
 };
 
 const buildTraceRecentRecord = async (input: {
-  context: AppContext;
+  context: AppInfrastructure;
   identity: IdentityContext;
   actor_ref: InferenceActorRef;
   resolved_agent_id: string | null;
@@ -156,7 +156,7 @@ const buildTraceRecentRecord = async (input: {
 };
 
 const buildIntentRecentRecord = async (input: {
-  context: AppContext;
+  context: AppInfrastructure;
   identity: IdentityContext;
   actor_ref: InferenceActorRef;
   resolved_agent_id: string | null;
@@ -209,7 +209,7 @@ const buildIntentRecentRecord = async (input: {
 };
 
 const buildEventRecentRecord = async (input: {
-  context: AppContext;
+  context: AppInfrastructure;
   identity: IdentityContext;
   actor_ref: InferenceActorRef;
   resolved_agent_id: string | null;
@@ -298,7 +298,7 @@ const toPackStateSnapshot = (packState: InferencePackStateSnapshot): MemoryEvalu
 };
 
 export const buildMemoryEvaluationContext = async (input: {
-  context: AppContext;
+  context: AppInfrastructure;
   actor_ref: InferenceActorRef;
   identity: IdentityContext;
   resolved_agent_id: string | null;

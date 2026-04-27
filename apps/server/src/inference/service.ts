@@ -1,5 +1,5 @@
 import { getPromptSlotRegistry } from '../ai/registry.js';
-import type { AppContext } from '../app/context.js';
+import type { AppInfrastructure } from '../app/context.js';
 import { toJsonSafe } from '../app/http/json.js';
 import {
   assertDecisionJobLockOwnership,
@@ -60,7 +60,7 @@ export interface InferenceService {
 }
 
 export interface CreateInferenceServiceOptions {
-  context: AppContext;
+  context: AppInfrastructure;
   providers: InferenceProvider[];
   traceSink?: InferenceTraceSink;
 }
@@ -223,7 +223,7 @@ const classifyFailure = (err: unknown): {
 const executeRunInternal = async (
   service: InferenceService,
   traceSink: InferenceTraceSink,
-  context: AppContext,
+  context: AppInfrastructure,
   providers: InferenceProvider[],
   input: InferenceRequestInput,
   options?: {
@@ -249,7 +249,7 @@ const executeRunInternal = async (
     const failure = classifyFailure(err);
 
     if (options?.jobId) {
-      const currentTick = context.sim.getCurrentTick();
+      const currentTick = context.clock.getCurrentTick();
       const existingJob = await getDecisionJobById(context, options.jobId);
       const retryExhausted = existingJob.attempt_count >= existingJob.max_attempts;
       await updateDecisionJobState(context, {
@@ -284,7 +284,7 @@ const executeRunInternal = async (
   } catch (err) {
     if (options?.jobId) {
       const failure = classifyFailure(err);
-      const currentTick = context.sim.getCurrentTick();
+      const currentTick = context.clock.getCurrentTick();
       const existingJob = await getDecisionJobById(context, options.jobId);
       const retryExhausted = existingJob.attempt_count >= existingJob.max_attempts;
       await updateDecisionJobState(context, {
@@ -572,7 +572,7 @@ export const createInferenceService = ({
         last_error: null,
         last_error_code: null,
         last_error_stage: null,
-        next_retry_at: context.sim.getCurrentTick(),
+        next_retry_at: context.clock.getCurrentTick(),
         locked_by: null,
         locked_at: null,
         lock_expires_at: null,
@@ -601,7 +601,7 @@ export const createInferenceService = ({
     },
     async executeDecisionJob(jobId, options) {
       const job = await getDecisionJobById(context, jobId);
-      const now = context.sim.getCurrentTick();
+      const now = context.clock.getCurrentTick();
 
       if (job.status !== 'running') {
         return null;

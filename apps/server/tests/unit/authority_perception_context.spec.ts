@@ -3,11 +3,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { AppContext } from '../../src/app/context.js';
 import { buildInferenceContextV2 } from '../../src/app/services/context_assembler.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
-import { sim } from '../../src/core/simulation.js';
+import { SimulationManager } from '../../src/core/simulation.js';
 import { resolveAuthorityForSubject } from '../../src/domain/authority/resolver.js';
 import { resolvePerceptionForSubject } from '../../src/domain/perception/resolver.js';
 import { notifications } from '../../src/utils/notifications.js';
-import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
+import {
+  createIsolatedRuntimeEnvironment,
+  createPrismaClientForEnvironment,
+  prepareIsolatedRuntime
+} from '../helpers/runtime.js';
 
 const DEATH_NOTE_PACK_REF = 'death_note';
 const DEATH_NOTE_PACK_ID = 'world-death-note';
@@ -20,7 +24,6 @@ afterEach(async () => {
   delete process.env.WORLD_PACKS_DIR;
   delete process.env.DATABASE_URL;
   createdRoots.splice(0, createdRoots.length);
-  await sim.prisma.$disconnect();
 });
 
 describe('authority/perception/context assembly', () => {
@@ -31,12 +34,19 @@ describe('authority/perception/context assembly', () => {
     process.env.DATABASE_URL = environment.databaseUrl;
     process.env.WORLD_PACKS_DIR = environment.worldPacksDir;
 
+    await prepareIsolatedRuntime(environment);
+
+    const prisma = createPrismaClientForEnvironment(environment);
+    const sim = new SimulationManager({ prisma });
+
     await sim.prepareDatabase();
     await sim.init('death_note');
 
     const appContext: AppContext & { identity?: { id: string; type: 'agent'; name: string } } = {
       sim,
-      prisma: sim.prisma,
+      clock: sim as AppContext['clock'],
+      activePack: sim as AppContext['activePack'],
+      prisma,
       notifications,
       startupHealth: {
         level: 'ok',
@@ -93,5 +103,7 @@ describe('authority/perception/context assembly', () => {
       packState: inferenceContextV2.base.pack_state
     });
     expect(perception.visible_state_entries.some(entry => entry.entity_id === '__world__')).toBe(true);
+
+    await prisma.$disconnect();
   });
 });

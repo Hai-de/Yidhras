@@ -1,4 +1,4 @@
-import type { AppContext } from '../../app/context.js';
+import type { AppInfrastructure } from '../../app/context.js';
 import { getMemoryTriggerEngineConfig } from '../../config/runtime_config.js';
 import type { IdentityContext } from '../../identity/types.js';
 import type { InferenceActorRef,InferencePackStateSnapshot  } from '../../inference/types.js';
@@ -22,7 +22,7 @@ export interface MemoryBlockSourceBuildResult {
 }
 
 export const buildContextNodesFromMemoryBlocks = async (input: {
-  context: AppContext;
+  context: AppInfrastructure;
   actor_ref: InferenceActorRef;
   identity: IdentityContext;
   resolved_agent_id: string | null;

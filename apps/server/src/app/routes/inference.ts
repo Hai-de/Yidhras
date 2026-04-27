@@ -12,6 +12,7 @@ import type { InferenceService } from '../../inference/service.js';
 import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseBody, parseParams, parseQuery } from '../http/zod.js';
+import { requireAuth } from '../middleware/require_auth.js';
 import {
   getActionIntentByInferenceId,
   getAiInvocationById,
@@ -38,6 +39,7 @@ export const registerInferenceRoutes = (
 ): void => {
   app.post(
     '/api/inference/preview',
+    requireAuth(),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference preview');
       const input = parseBody(inferenceRequestSchema, req.body, 'INFERENCE_INPUT_INVALID');
@@ -49,6 +51,7 @@ export const registerInferenceRoutes = (
 
   app.post(
     '/api/inference/run',
+    requireAuth(),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference run');
       const input = parseBody(inferenceRequestSchema, req.body, 'INFERENCE_INPUT_INVALID');
@@ -135,6 +138,7 @@ export const registerInferenceRoutes = (
 
   app.post(
     '/api/inference/jobs',
+    requireAuth(),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference job submit');
       const input = parseBody(inferenceRequestSchema, req.body, 'INFERENCE_INPUT_INVALID');
@@ -146,6 +150,7 @@ export const registerInferenceRoutes = (
 
   app.post(
     '/api/inference/jobs/:id/retry',
+    requireAuth(),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference job retry');
       const params = parseParams(inferenceJobIdParamsSchema, req.params, 'INFERENCE_INPUT_INVALID');
@@ -157,6 +162,7 @@ export const registerInferenceRoutes = (
 
   app.post(
     '/api/inference/jobs/:id/replay',
+    requireAuth(),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference job replay');
       const params = parseParams(inferenceJobIdParamsSchema, req.params, 'INFERENCE_INPUT_INVALID');

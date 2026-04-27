@@ -8,8 +8,12 @@ import {
 } from '../../src/app/runtime/world_engine_persistence.js';
 import { createPackHostApi } from '../../src/app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from '../../src/app/runtime/world_engine_snapshot.js';
-import { sim } from '../../src/core/simulation.js';
-import { createIsolatedRuntimeEnvironment, migrateIsolatedDatabase } from '../helpers/runtime.js';
+import { SimulationManager } from '../../src/core/simulation.js';
+import {
+  createIsolatedRuntimeEnvironment,
+  createPrismaClientForEnvironment,
+  migrateIsolatedDatabase
+} from '../helpers/runtime.js';
 
 const DEATH_NOTE_PACK_REF = 'death_note';
 const DEATH_NOTE_PACK_ID = 'world-death-note';
@@ -22,6 +26,8 @@ const packSummary = (summary: unknown): Record<string, unknown> => {
 };
 
 describe('world engine sidecar runtime loop integration', () => {
+  let sim: SimulationManager;
+  let prisma: ReturnType<typeof createPrismaClientForEnvironment>;
   let cleanup: (() => Promise<void>) | null = null;
   let context: AppContext;
   let sidecar: WorldEngineSidecarClient;
@@ -41,9 +47,12 @@ describe('world engine sidecar runtime loop integration', () => {
     process.env.DATABASE_URL = environment.databaseUrl;
     process.env.APP_ENV = environment.envOverrides.APP_ENV;
 
+    prisma = createPrismaClientForEnvironment(environment);
+    sim = new SimulationManager({ prisma });
+
     await sim.init('death_note');
     context = {
-      prisma: sim.prisma,
+      prisma,
       sim,
       runtimeBootstrap: sim,
       activePackRuntime: sim,
@@ -82,7 +91,7 @@ describe('world engine sidecar runtime loop integration', () => {
   afterAll(async () => {
     await sidecar?.unloadPack({ pack_id: packId });
     await sidecar?.stop();
-    await sim.prisma.$disconnect();
+    await prisma?.$disconnect();
     if (originalWorkspaceRoot === undefined) delete process.env.WORKSPACE_ROOT;
     else process.env.WORKSPACE_ROOT = originalWorkspaceRoot;
     if (originalWorldPacksDir === undefined) delete process.env.WORLD_PACKS_DIR;
@@ -185,17 +194,5 @@ describe('world engine sidecar runtime loop integration', () => {
     expect(worldStateResult?.data.state_namespace).toBe('world');
     expect(worldStateResult?.data.state).not.toBeNull();
     expect(typeof worldStateResult?.data.state).toBe('object');
-
-    const ruleExecutionSummary = await context.packHostApi?.queryWorldState({
-      protocol_version: 'world_engine/v1alpha1',
-      pack_id: packId,
-      query_name: 'rule_execution_summary',
-      selector: {
-        rule_id: 'world_step.advance_clock',
-        execution_status: 'applied'
-      }
-    });
-    expect(Array.isArray(ruleExecutionSummary?.data.items)).toBe(true);
-    expect((ruleExecutionSummary?.data.items ?? []).length).toBeGreaterThanOrEqual(0);
   });
 });

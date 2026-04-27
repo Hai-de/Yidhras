@@ -2,7 +2,6 @@ import type { PackRuntimeHandle } from '../../core/pack_runtime_handle.js';
 import type { PackRuntimeStatusSnapshot } from '../../core/pack_runtime_health.js';
 import type {
   PackRuntimeControl,
-  PackRuntimeLocator,
   PackRuntimeLookupPort,
   PackRuntimeObservation
 } from '../../core/pack_runtime_ports.js';
@@ -13,9 +12,8 @@ import type {
   ActivePackRuntimeProjectionPort,
   RuntimeClockProjectionService
 } from '../runtime/runtime_clock_projection.js';
-import type { RuntimeKernelFacade } from '../runtime/runtime_kernel_ports.js';
 import type { PackHostApi, WorldEnginePort } from '../runtime/world_engine_ports.js';
-import type { ContextAssemblyPort, MemoryRuntimePort } from './context_memory_ports.js';
+import type { ContextAssemblyPort } from './context_memory_ports.js';
 
 export interface ActivePackRuntimeFacade {
   init(packFolderName: string): Promise<void>;
@@ -57,163 +55,98 @@ export interface PluginHostPort {
 export interface AppContextPorts {
   runtimeBootstrap?: RuntimeDatabaseBootstrap;
   activePackRuntime?: ActivePackRuntimeFacade;
-  packCatalog?: PackCatalogService;
-  packRuntimeLocator?: PackRuntimeLocator;
   packRuntimeObservation?: PackRuntimeObservation;
   packRuntimeControl?: PackRuntimeControl;
   packRuntimeLookup?: PackRuntimeLookupPort;
-  runtimeKernel?: RuntimeKernelFacade;
   worldEngine?: WorldEnginePort;
   packHostApi?: PackHostApi;
   runtimeClockProjection?: RuntimeClockProjectionService;
-  pluginHost?: PluginHostPort;
   contextAssembly?: ContextAssemblyPort;
-  memoryRuntime?: MemoryRuntimePort;
 }
 
 export interface VisibleClockSnapshot {
   absolute_ticks: string;
   calendars: unknown;
-  source: 'host_projection' | 'sim_fallback';
+  source: 'host_projection' | 'clock_fallback';
 }
 
 const resolveVisibleClockPackId = (input: {
   activePackRuntime?: { getActivePack(): WorldPack | undefined };
-  sim: { getActivePack(): WorldPack | undefined };
+  activePack?: { getActivePack(): WorldPack | undefined };
 }): string | null => {
   return input.activePackRuntime?.getActivePack()?.metadata.id?.trim()
-    ?? input.sim.getActivePack()?.metadata.id?.trim()
+    ?? input.activePack?.getActivePack()?.metadata.id?.trim()
     ?? null;
 };
 
 export const getActivePackRuntimeFacade = (input: {
   activePackRuntime?: ActivePackRuntimeFacade;
-  sim: ActivePackRuntimeFacade;
 }): ActivePackRuntimeFacade => {
   if (input.activePackRuntime) {
     return input.activePackRuntime;
   }
 
-  console.error('[app_context_ports] Fallback to sim for activePackRuntime — injected port is missing, which may indicate incomplete AppContext initialization');
-  return input.sim;
+  throw new Error('[app_context_ports] activePackRuntime port is required but not provided');
 };
 
 export const getRuntimeBootstrap = (input: {
   runtimeBootstrap?: RuntimeDatabaseBootstrap;
-  sim: RuntimeDatabaseBootstrap;
 }): RuntimeDatabaseBootstrap => {
   if (input.runtimeBootstrap) {
     return input.runtimeBootstrap;
   }
 
-  console.warn('[app_context_ports] Fallback to sim for runtimeBootstrap');
-  return input.sim;
+  throw new Error('[app_context_ports] runtimeBootstrap port is required but not provided');
 };
 
 export const getPackRuntimeObservation = (input: {
   packRuntimeObservation?: PackRuntimeObservation;
-  sim: {
-    getPackRuntimeHandle(packId: string): PackRuntimeHandle | null;
-    getPackRuntimeStatusSnapshot(packId: string): PackRuntimeStatusSnapshot | null;
-  };
 }): PackRuntimeObservation => {
   if (input.packRuntimeObservation) {
     return input.packRuntimeObservation;
   }
 
-  return {
-    getStatus: packId => {
-      if (typeof input.sim.getPackRuntimeStatusSnapshot === 'function') {
-        return input.sim.getPackRuntimeStatusSnapshot(packId);
-      }
-
-      const handle = input.sim.getPackRuntimeHandle(packId);
-      if (!handle) {
-        return null;
-      }
-
-      return {
-        pack_id: handle.pack_id,
-        pack_folder_name: handle.pack_folder_name,
-        health_status: handle.getHealthSnapshot().status,
-        current_tick: handle.getClockSnapshot().current_tick,
-        runtime_speed: handle.getRuntimeSpeedSnapshot(),
-        startup_level: 'degraded' as const,
-        runtime_ready: false,
-        message: handle.getHealthSnapshot().message ?? null
-      };
-    },
-    listStatuses: () => [],
-    getClockSnapshot: packId => input.sim.getPackRuntimeHandle(packId)?.getClockSnapshot() ?? null,
-    getRuntimeSpeedSnapshot: packId => input.sim.getPackRuntimeHandle(packId)?.getRuntimeSpeedSnapshot() ?? null
-  };
+  throw new Error('[app_context_ports] packRuntimeObservation port is required but not provided');
 };
 
 export const getPackRuntimeControl = (input: {
   packRuntimeControl?: PackRuntimeControl;
-  sim: {
-    loadExperimentalPackRuntime(packRef: string): Promise<{
-      handle: PackRuntimeHandle;
-      loaded: boolean;
-      already_loaded: boolean;
-    }>;
-    unloadExperimentalPackRuntime(packId: string): Promise<boolean>;
-  };
 }): PackRuntimeControl => {
   if (input.packRuntimeControl) {
     return input.packRuntimeControl;
   }
 
-  return {
-    load: packRef => input.sim.loadExperimentalPackRuntime(packRef),
-    unload: packId => input.sim.unloadExperimentalPackRuntime(packId)
-  };
+  throw new Error('[app_context_ports] packRuntimeControl port is required but not provided');
 };
 
 export const getPackRuntimeLookupPort = (input: {
   packRuntimeLookup?: PackRuntimeLookupPort;
-  sim: {
-    getActivePack(): WorldPack | undefined;
-    getPackRuntimeHandle(packId: string): PackRuntimeHandle | null;
-  };
 }): PackRuntimeLookupPort => {
   if (input.packRuntimeLookup) {
     return input.packRuntimeLookup;
   }
 
-  return {
-    getActivePackId: () => input.sim.getActivePack()?.metadata.id ?? null,
-    hasPackRuntime: packId => input.sim.getPackRuntimeHandle(packId) !== null,
-    assertPackScope: (packId, _mode, _feature) => packId.trim(),
-    getPackRuntimeSummary: packId => {
-      const handle = input.sim.getPackRuntimeHandle(packId);
-      if (!handle) {
-        return null;
-      }
-
-      return {
-        pack_id: handle.pack_id,
-        pack_folder_name: handle.pack_folder_name,
-        health_status: handle.getHealthSnapshot().status,
-        current_tick: handle.getClockSnapshot().current_tick,
-        runtime_ready: input.sim.getActivePack()?.metadata.id === handle.pack_id
-      };
-    }
-  };
+  throw new Error('[app_context_ports] packRuntimeLookup port is required but not provided');
 };
 
 export const getWorldEnginePort = (input: {
   worldEngine?: WorldEnginePort;
-  fallback: WorldEnginePort;
 }): WorldEnginePort => {
-  return input.worldEngine ?? input.fallback;
+  if (input.worldEngine) {
+    return input.worldEngine;
+  }
+
+  throw new Error('[app_context_ports] worldEngine port is required but not provided');
 };
 
 export const getPackHostApi = (input: {
   packHostApi?: PackHostApi;
-  fallback: PackHostApi;
 }): PackHostApi => {
-  return input.packHostApi ?? input.fallback;
+  if (input.packHostApi) {
+    return input.packHostApi;
+  }
+
+  throw new Error('[app_context_ports] packHostApi port is required but not provided');
 };
 
 export const hasWorldEnginePort = (context: AppContextPorts): context is AppContextPorts & {
@@ -229,17 +162,14 @@ export const hasPackHostApi = (context: AppContextPorts): context is AppContextP
 };
 
 export const readVisibleClockSnapshot = (input: {
+  clock: { getCurrentTick(): bigint };
+  activePack?: { getActivePack(): WorldPack | undefined };
   activePackRuntime?: { getActivePack(): WorldPack | undefined };
   runtimeClockProjection?: RuntimeClockProjectionService;
-  sim: {
-    getActivePack(): WorldPack | undefined;
-    getCurrentTick(): bigint;
-    getAllTimes(): unknown;
-  };
 }): VisibleClockSnapshot => {
   const packId = resolveVisibleClockPackId({
     activePackRuntime: input.activePackRuntime,
-    sim: input.sim
+    activePack: input.activePack
   });
   const projected = packId ? input.runtimeClockProjection?.readFormattedClock(packId) : null;
 
@@ -252,8 +182,8 @@ export const readVisibleClockSnapshot = (input: {
   }
 
   return {
-    absolute_ticks: input.sim.getCurrentTick().toString(),
-    calendars: input.sim.getAllTimes(),
-    source: 'sim_fallback'
+    absolute_ticks: input.clock.getCurrentTick().toString(),
+    calendars: [],
+    source: 'clock_fallback'
   };
 };

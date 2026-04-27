@@ -1,4 +1,4 @@
-import type { AppContext } from '../../../app/context.js';
+import type { AppContext, AppInfrastructure } from '../../../app/context.js';
 import { assertPackScope } from '../../../app/services/pack_scope_resolver.js';
 import { ApiError } from '../../../utils/api_error.js';
 import type { WorldPack } from '../../manifest/loader.js';
@@ -27,14 +27,15 @@ const toPackProjectionMetadataSnapshot = (pack: WorldPack): PackProjectionMetada
 });
 
 export const createPackProjectionMetadataResolver = (
-  context: AppContext
+  context: AppInfrastructure
 ): PackProjectionMetadataResolver => {
+  const ctx = context as unknown as AppContext;
   return {
     async resolve(packId: string, mode: PackProjectionScopeMode, feature: string): Promise<PackProjectionResolution> {
-      const resolvedPackId = assertPackScope(context, packId, mode, feature);
+      const resolvedPackId = assertPackScope(ctx, packId, mode, feature);
 
       if (mode === 'stable') {
-        const activePack = context.sim.getActivePack();
+        const activePack = context.activePack.getActivePack();
         if (!activePack || activePack.metadata.id !== resolvedPackId) {
           throw new ApiError(503, 'WORLD_PACK_NOT_READY', `World pack not ready for ${feature}`, {
             pack_id: resolvedPackId,
@@ -48,7 +49,7 @@ export const createPackProjectionMetadataResolver = (
         };
       }
 
-      const handle = context.sim.getPackRuntimeHandle(resolvedPackId);
+      const handle = ctx.sim.getPackRuntimeHandle(resolvedPackId);
       if (!handle) {
         throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', `Experimental pack runtime not found for ${feature}`, {
           pack_id: resolvedPackId,

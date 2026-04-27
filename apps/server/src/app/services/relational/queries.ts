@@ -18,7 +18,7 @@ export const listAtmosphereNodes = async (
 ) => {
   const ownerId = typeof input.owner_id === 'string' ? input.owner_id.trim() : '';
   const includeExpired = input.include_expired === true;
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
 
   return context.prisma.atmosphereNode.findMany({
     where: {

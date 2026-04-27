@@ -1,4 +1,4 @@
-import type { AppContext } from '../app/context.js';
+import type { AppInfrastructure } from '../app/context.js';
 import type { IdentityContext, IdentityType } from '../identity/types.js';
 import type {
   InferenceActorRef,
@@ -35,7 +35,7 @@ export interface ContextSourceAdapter {
 }
 
 export interface CreateContextSourceAdaptersOptions {
-  context?: AppContext;
+  context?: AppInfrastructure;
   overlayStore?: ContextOverlayStore | null;
   longMemoryBlockStore?: LongMemoryBlockStore | null;
 }
@@ -99,7 +99,7 @@ const createOverlaySourceAdapter = (overlayStore: ContextOverlayStore): ContextS
 });
 
 const createMemoryBlockSourceAdapter = (
-  context: AppContext,
+  context: AppInfrastructure,
   longMemoryBlockStore: LongMemoryBlockStore
 ): ContextSourceAdapter => ({
   name: 'memory-block-runtime',

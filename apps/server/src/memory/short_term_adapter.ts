@@ -1,4 +1,4 @@
-import type { AppContext } from '../app/context.js';
+import type { AppInfrastructure } from '../app/context.js';
 import type { InferenceActorRef } from '../inference/types.js';
 import type { MemoryEntry } from './types.js';
 
@@ -205,7 +205,7 @@ const filterJobForActor = <T extends { source_inference: { actor_ref: unknown } 
 };
 
 export const buildShortTermMemory = async (
-  context: AppContext,
+  context: AppInfrastructure,
   input: BuildShortTermMemoryInput
 ): Promise<MemoryEntry[]> => {
   const limit = input.limit ?? DEFAULT_LIMIT;

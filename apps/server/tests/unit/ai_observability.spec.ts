@@ -24,11 +24,14 @@ const createMockAppContext = (overrides?: {
 }): AppContext => {
   const upsertFn: UpsertFn = overrides?.upsert ?? vi.fn<UpsertFn>();
 
+  const clock = { getCurrentTick: () => overrides?.tick ?? 1000n, getAllTimes: () => [], tick: () => {}, setTicks: () => {}, getTicks: () => overrides?.tick ?? 1000n };
   return {
     prisma: {
       aiInvocationRecord: { upsert: upsertFn }
     } as unknown as AppContext['prisma'],
     sim: { getCurrentTick: () => overrides?.tick ?? 1000n } as AppContext['sim'],
+    clock: clock as AppContext['clock'],
+    activePack: { getActivePack: () => undefined, getCurrentRevision: () => 0n } as AppContext['activePack'],
     notifications: { push: vi.fn(), getMessages: vi.fn(() => []), clear: vi.fn() },
     startupHealth: {
       level: 'ok' as const,

@@ -1,4 +1,4 @@
-import type { AppContext } from '../app/context.js';
+import type { AppInfrastructure } from '../app/context.js';
 import type { InferenceContext, InferencePackRuntimeContract, InferenceRequestInput } from './types.js';
 
 export interface BuildInferenceContextForPackInput extends InferenceRequestInput {
@@ -8,7 +8,7 @@ export interface BuildInferenceContextForPackInput extends InferenceRequestInput
 
 export interface PackRuntimeContractResolver {
   resolvePackRuntimeContract(
-    context: AppContext,
+    context: AppInfrastructure,
     input: {
       pack_id: string;
       mode: 'stable' | 'experimental';
@@ -17,5 +17,5 @@ export interface PackRuntimeContractResolver {
 }
 
 export interface PackScopedInferenceContextBuilder {
-  buildForPack(context: AppContext, input: BuildInferenceContextForPackInput): Promise<InferenceContext>;
+  buildForPack(context: AppInfrastructure, input: BuildInferenceContextForPackInput): Promise<InferenceContext>;
 }

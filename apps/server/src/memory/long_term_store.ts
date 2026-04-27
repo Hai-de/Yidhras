@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 
-import type { AppContext } from '../app/context.js';
+import type { AppInfrastructure } from '../app/context.js';
 import { getErrorMessage } from '../app/http/errors.js';
 import { toJsonSafe } from '../app/http/json.js';
 import type {
@@ -89,7 +89,7 @@ export const createNoopLongTermMemoryStore = (): LongTermMemoryStore => {
   };
 };
 
-export const createPrismaLongTermMemoryStore = (context: AppContext): LongTermMemoryStore => {
+export const createPrismaLongTermMemoryStore = (context: AppInfrastructure): LongTermMemoryStore => {
   return {
     async search(input: LongTermMemorySearchInput): Promise<MemoryEntry[]> {
       const agentId = input.actor_ref.agent_id;

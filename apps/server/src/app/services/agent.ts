@@ -2,7 +2,8 @@ import type { ContextOverlayType } from '../../context/overlay/types.js';
 import { getPackEntityOverviewProjection } from '../../packs/runtime/projections/entity_overview_service.js';
 import { PermissionContext } from '../../permission/types.js';
 import { ApiError } from '../../utils/api_error.js';
-import type { AppContext } from '../context.js';
+import type { AppContext, AppInfrastructure } from '../context.js';
+import type { AppContextPorts } from './app_context_ports.js';
 import type { AuditViewEntry } from './audit.js';
 import { listAuditFeed } from './audit.js';
 import { listInferenceJobs } from './inference_workflow.js';
@@ -235,7 +236,7 @@ const toAuditEntries = (entries: AuditViewEntry[], kind: AuditViewEntry['kind'])
   return entries.filter(entry => entry.kind === kind);
 };
 
-export const getAgentContextSnapshot = async (context: AppContext, agentId: string) => {
+export const getAgentContextSnapshot = async (context: AppInfrastructure & Pick<AppContextPorts, 'activePackRuntime'>, agentId: string) => {
   const agent = await context.prisma.agent.findUnique({
     where: { id: agentId },
     include: { circle_memberships: { include: { circle: true } } }
@@ -246,7 +247,7 @@ export const getAgentContextSnapshot = async (context: AppContext, agentId: stri
   }
 
   const permission = buildPermissionContext(agent);
-  const resolvedVariables = context.sim.resolvePackVariables(JSON.stringify(context.sim.getActivePack()?.variables || {}), permission);
+  const resolvedVariables = context.activePackRuntime?.resolvePackVariables(JSON.stringify(context.activePack.getActivePack()?.variables || {}), permission) ?? JSON.stringify({});
 
   return {
     identity: agent,

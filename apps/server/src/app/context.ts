@@ -1,6 +1,8 @@
 import type { PrismaClient } from '@prisma/client';
 import type { Express } from 'express';
 
+import type { ActivePackProvider } from '../core/active_pack_provider.js';
+import type { ClockProvider } from '../core/clock_provider.js';
 import type { SimulationManager } from '../core/simulation.js';
 import type { SqliteRuntimePragmaSnapshot } from '../db/sqlite_runtime.js';
 import type { NotificationLevel, SystemMessage } from '../utils/notifications.js';
@@ -41,11 +43,29 @@ export interface RuntimeLoopDiagnostics {
   last_error_message: string | null;
 }
 
-export interface AppContext extends AppContextPorts {
-  prisma: PrismaClient;
-  sim: SimulationManager;
-  notifications: NotificationStore;
-  startupHealth: StartupHealth;
+export interface ClockSource {
+  readonly clock: ClockProvider;
+}
+
+export interface ActivePackSource {
+  readonly activePack: ActivePackProvider;
+}
+
+export interface RuntimeSource extends ClockSource, ActivePackSource {}
+
+export interface AppInfrastructure extends RuntimeSource {
+  readonly prisma: PrismaClient;
+  readonly notifications: NotificationStore;
+  readonly startupHealth: StartupHealth;
+  assertRuntimeReady(feature: string): void;
+}
+
+export interface AppContext extends AppInfrastructure, AppContextPorts {
+  /**
+   * @deprecated Use focused ports (clock, activePack, activePackRuntime, etc.)
+   * instead of reaching into sim directly. Will be removed in Batch 3.
+   */
+  readonly sim: SimulationManager;
   getRuntimeReady(): boolean;
   setRuntimeReady(ready: boolean): void;
   getPaused(): boolean;
@@ -61,7 +81,6 @@ export interface AppContext extends AppContextPorts {
   setHttpApp?(app: Express): void;
   worldEngineStepCoordinator?: import('./runtime/world_engine_persistence.js').WorldEngineStepCoordinator;
   runtimeClockProjection?: import('./runtime/runtime_clock_projection.js').RuntimeClockProjectionService;
-  assertRuntimeReady(feature: string): void;
 }
 
 export type RouteRegistrar = (app: Express, context: AppContext) => void;

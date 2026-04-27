@@ -1,6 +1,6 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 
-import type { AppContext } from '../app/context.js';
+import type { AppInfrastructure } from '../app/context.js';
 import type { IdentityContext } from '../identity/types.js';
 import { ApiError } from '../utils/api_error.js';
 import { evaluateFieldPolicies, resolveAllowedFields, resolveFieldDecision } from './policy_engine.js';
@@ -178,12 +178,12 @@ export const requireAccessPolicyIdentity = (identity: IdentityContext | undefine
   return identity;
 };
 
-const createAccessPolicyService = (context: AppContext): AccessPolicyService => {
+const createAccessPolicyService = (context: AppInfrastructure): AccessPolicyService => {
   return new AccessPolicyService(context.prisma);
 };
 
 const createPolicyAccessContext = (
-  context: AppContext,
+  context: AppInfrastructure,
   identity: IdentityContext | undefined,
   input: PolicyAccessInput
 ): PolicyAccessContext => {
@@ -199,7 +199,7 @@ const createPolicyAccessContext = (
 };
 
 export const createAccessPolicy = async (
-  context: AppContext,
+  context: AppInfrastructure,
   input: CreatePolicyInput
 ) => {
   const { effect, subject_id, subject_type, resource, action, field, conditions, priority } = input;
@@ -212,7 +212,7 @@ export const createAccessPolicy = async (
     throw new ApiError(400, 'POLICY_INVALID', 'effect must be allow or deny');
   }
 
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
 
   return context.prisma.policy.create({
     data: {
@@ -234,7 +234,7 @@ export const createAccessPolicy = async (
 };
 
 export const filterReadableFieldsByAccessPolicy = async <T extends Record<string, unknown>>(
-  context: AppContext,
+  context: AppInfrastructure,
   identity: IdentityContext | undefined,
   input: PolicyAccessInput,
   record: T
@@ -245,7 +245,7 @@ export const filterReadableFieldsByAccessPolicy = async <T extends Record<string
 };
 
 export const assertWriteAllowedByAccessPolicy = async (
-  context: AppContext,
+  context: AppInfrastructure,
   identity: IdentityContext | undefined,
   input: PolicyAccessInput,
   payload: Record<string, unknown>
@@ -256,7 +256,7 @@ export const assertWriteAllowedByAccessPolicy = async (
 };
 
 export const evaluateAccessPolicy = async (
-  context: AppContext,
+  context: AppInfrastructure,
   identity: IdentityContext | undefined,
   input: EvaluatePolicyInput
 ) => {

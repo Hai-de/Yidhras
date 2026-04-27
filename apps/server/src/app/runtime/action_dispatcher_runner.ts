@@ -60,7 +60,7 @@ export const runActionDispatcher = async ({
         }
       }
 
-      assertActionIntentLockOwnership(claimedIntent, workerId, context.sim.getCurrentTick());
+      assertActionIntentLockOwnership(claimedIntent, workerId, context.clock.getCurrentTick());
 
       const result = await dispatchActionIntent(context, claimedIntent);
       if (claimedIntent.intent_type === 'trigger_event') {
@@ -69,8 +69,8 @@ export const runActionDispatcher = async ({
         if (latestIntent?.semantic_intent_kind === 'record_private_reflection') {
           await memoryRecordingService.recordPrivateReflection({
             actor_id: latestIntent.actor_agent_id,
-            pack_id: context.sim.getActivePack()?.metadata.id ?? 'unknown-pack',
-            tick: context.sim.getCurrentTick().toString(),
+            pack_id: context.activePack.getActivePack()?.metadata.id ?? 'unknown-pack',
+            tick: context.clock.getCurrentTick().toString(),
             source_inference_id: latestIntent.source_inference_id,
             reasoning: latestEvent,
             semantic_intent_kind: latestIntent.semantic_intent_kind,
@@ -80,8 +80,8 @@ export const runActionDispatcher = async ({
         if (latestIntent?.semantic_intent_kind === 'revise_judgement_plan') {
           await memoryRecordingService.reviseJudgementPlan({
             actor_id: latestIntent.actor_agent_id,
-            pack_id: context.sim.getActivePack()?.metadata.id ?? 'unknown-pack',
-            tick: context.sim.getCurrentTick().toString(),
+            pack_id: context.activePack.getActivePack()?.metadata.id ?? 'unknown-pack',
+            tick: context.clock.getCurrentTick().toString(),
             source_inference_id: latestIntent.source_inference_id,
             reasoning: latestEvent,
             semantic_intent_kind: latestIntent.semantic_intent_kind,
@@ -92,8 +92,8 @@ export const runActionDispatcher = async ({
         if (latestIntent?.semantic_intent_kind === 'update_target_dossier') {
           await memoryRecordingService.updateTargetDossier({
             actor_id: latestIntent.actor_agent_id,
-            pack_id: context.sim.getActivePack()?.metadata.id ?? 'unknown-pack',
-            tick: context.sim.getCurrentTick().toString(),
+            pack_id: context.activePack.getActivePack()?.metadata.id ?? 'unknown-pack',
+            tick: context.clock.getCurrentTick().toString(),
             source_inference_id: latestIntent.source_inference_id,
             reasoning: latestEvent,
             semantic_intent_kind: latestIntent.semantic_intent_kind,
@@ -104,8 +104,8 @@ export const runActionDispatcher = async ({
         if (latestIntent?.semantic_intent_kind === 'record_execution_postmortem') {
           await memoryRecordingService.recordExecutionReflection({
             actor_id: latestIntent.actor_agent_id,
-            pack_id: context.sim.getActivePack()?.metadata.id ?? 'unknown-pack',
-            tick: context.sim.getCurrentTick().toString(),
+            pack_id: context.activePack.getActivePack()?.metadata.id ?? 'unknown-pack',
+            tick: context.clock.getCurrentTick().toString(),
             source_inference_id: latestIntent.source_inference_id,
             source_action_intent_id: latestIntent.id,
             intent_type: 'record_execution_postmortem',
@@ -123,8 +123,8 @@ export const runActionDispatcher = async ({
         if (latestIntent) {
           await memoryRecordingService.recordExecutionReflection({
             actor_id: latestIntent.actor_agent_id,
-            pack_id: context.sim.getActivePack()?.metadata.id ?? 'unknown-pack',
-            tick: context.sim.getCurrentTick().toString(),
+            pack_id: context.activePack.getActivePack()?.metadata.id ?? 'unknown-pack',
+            tick: context.clock.getCurrentTick().toString(),
             source_inference_id: latestIntent.source_inference_id,
             source_action_intent_id: latestIntent.id,
             intent_type: latestIntent.intent_type,
@@ -144,8 +144,8 @@ export const runActionDispatcher = async ({
       if (latestIntent) {
         await memoryRecordingService.recordExecutionReflection({
           actor_id: latestIntent.actor_agent_id,
-          pack_id: context.sim.getActivePack()?.metadata.id ?? 'unknown-pack',
-          tick: context.sim.getCurrentTick().toString(),
+          pack_id: context.activePack.getActivePack()?.metadata.id ?? 'unknown-pack',
+          tick: context.clock.getCurrentTick().toString(),
           source_inference_id: latestIntent.source_inference_id,
           source_action_intent_id: latestIntent.id,
           intent_type: latestIntent.intent_type,
@@ -175,8 +175,8 @@ export const runActionDispatcher = async ({
       if (latestIntent) {
         await memoryRecordingService.recordExecutionReflection({
           actor_id: latestIntent.actor_agent_id,
-          pack_id: context.sim.getActivePack()?.metadata.id ?? 'unknown-pack',
-          tick: context.sim.getCurrentTick().toString(),
+          pack_id: context.activePack.getActivePack()?.metadata.id ?? 'unknown-pack',
+          tick: context.clock.getCurrentTick().toString(),
           source_inference_id: latestIntent.source_inference_id,
           source_action_intent_id: latestIntent.id,
           intent_type: latestIntent.intent_type,

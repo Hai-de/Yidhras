@@ -621,6 +621,8 @@ const buildCliAppContext = async (packId: string): Promise<PluginCliContext> => 
   return {
     prisma,
     sim,
+    clock: sim as unknown as AppContext['clock'],
+    activePack: sim as unknown as AppContext['activePack'],
     notifications,
     startupHealth,
     getRuntimeReady: () => runtimeReady,

@@ -11,6 +11,7 @@ describe('memory block stores', () => {
     const fixture = await createIsolatedAppContextFixture();
 
     try {
+      fixture.context.activePackRuntime = fixture.context.sim as typeof fixture.context.activePackRuntime;
       const blockStore = createPrismaLongMemoryBlockStore(fixture.context);
       const longTermStore = createPrismaLongTermMemoryStore(fixture.context);
 

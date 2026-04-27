@@ -1,4 +1,4 @@
-import type { AppContext } from '../../app/context.js';
+import type { AppInfrastructure } from '../../app/context.js';
 import { readVisibleClockSnapshot } from '../../app/services/app_context_ports.js';
 import { getPackEntityOverviewProjection } from '../../packs/runtime/projections/entity_overview_service.js';
 import { listPackNarrativeTimelineProjection } from '../../packs/runtime/projections/narrative_projection_service.js';
@@ -13,10 +13,10 @@ export interface GlobalProjectionIndexSnapshot {
   } | null;
 }
 
-export const extractGlobalProjectionIndex = async (context: AppContext): Promise<GlobalProjectionIndexSnapshot> => {
+export const extractGlobalProjectionIndex = async (context: AppInfrastructure): Promise<GlobalProjectionIndexSnapshot> => {
   const operatorProjection = await getOperatorOverviewProjection(context);
-  const activePack = context.sim.getActivePack();
-  const visibleClock = readVisibleClockSnapshot(context);
+  const activePack = context.activePack.getActivePack();
+  const visibleClock = readVisibleClockSnapshot(context as unknown as Parameters<typeof readVisibleClockSnapshot>[0]);
 
   /**
    * generated_at is an operator-visible/read-model timestamp and therefore

@@ -4,7 +4,10 @@ import {
   worldRuleExecuteObjectiveResultSchema
 } from '@yidhras/contracts';
 
-import type { AppContext } from '../../app/context.js';
+import type { AppContextPorts } from '../../app/services/app_context_ports.js';
+import type { AppInfrastructure } from '../../app/context.js';
+
+type EnforcementContext = AppInfrastructure & Pick<AppContextPorts, 'worldEngine'>;
 import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage/entity_state_repo.js';
 import { ApiError } from '../../utils/api_error.js';
 import { resolveAuthorityForSubject, resolveMediatorBindingsForPack } from '../authority/resolver.js';
@@ -24,7 +27,7 @@ const buildPackEntityStateId = (packId: string, entityId: string, namespace: str
   return `${packId}:state:${entityId}:${namespace}`;
 };
 
-const resolveEffectiveCapabilityGrant = async (context: AppContext, invocation: InvocationRequest) => {
+const resolveEffectiveCapabilityGrant = async (context: EnforcementContext, invocation: InvocationRequest) => {
   if (!invocation.capability_key) {
     return null;
   }
@@ -69,7 +72,7 @@ const resolveEffectiveMediatorId = (
 };
 
 const validateMediatorBinding = async (
-  context: AppContext,
+  context: EnforcementContext,
   packId: string,
   mediatorId: string | null
 ): Promise<void> => {
@@ -88,9 +91,9 @@ const validateMediatorBinding = async (
 };
 
 const hasEventBridge = (
-  context: AppContext
-): context is AppContext & {
-  prisma: AppContext['prisma'] & {
+  context: EnforcementContext
+): context is EnforcementContext & {
+  prisma: EnforcementContext['prisma'] & {
     event: {
       create(args: {
         data: {
@@ -104,7 +107,7 @@ const hasEventBridge = (
         };
       }): Promise<{ id: string }>;
     };
-    $transaction: <T>(callback: (tx: AppContext['prisma']) => Promise<T>) => Promise<T>;
+    $transaction: <T>(callback: (tx: EnforcementContext['prisma']) => Promise<T>) => Promise<T>;
   };
 } => {
   const prismaCandidate = context.prisma as unknown;
@@ -164,7 +167,7 @@ const buildEventBridgeImpactData = (
 };
 
 const emitObjectiveEvents = async (
-  context: AppContext,
+  context: EnforcementContext,
   input: {
     invocation: InvocationRequest;
     events: Array<{
@@ -225,7 +228,7 @@ const emitObjectiveEvents = async (
 };
 
 export const enforceInvocationRequest = async (
-  context: AppContext,
+  context: EnforcementContext,
   invocation: InvocationRequest
 ): Promise<InvocationEnforcementResult> => {
   const now = invocation.created_at;

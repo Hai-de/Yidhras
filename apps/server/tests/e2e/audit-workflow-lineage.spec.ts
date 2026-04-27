@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { getRootAuthHeadersWithIdentity } from '../helpers/auth.js';
 import {
   assertArrayField,
   assertRecord,
@@ -15,13 +16,7 @@ import { isRecord, requestJson, sleep, withTestServer } from '../helpers/server.
 const DEATH_NOTE_PACK_REF = 'death_note';
 const DEATH_NOTE_AGENT_ID = 'agent-001';
 
-const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
-  return JSON.stringify({
-    id: identityId,
-    type,
-    name: identityId
-  });
-};
+
 
 const pollJobUntil = async (
   baseUrl: string,
@@ -90,8 +85,7 @@ describe('audit workflow lineage e2e', () => {
         expect(statusData.runtime_ready).toBe(true);
 
         const headers = {
-          'Content-Type': 'application/json',
-          'x-m2-identity': createIdentityHeader(DEATH_NOTE_AGENT_ID, 'agent')
+          ...(await getRootAuthHeadersWithIdentity(server.baseUrl, DEATH_NOTE_AGENT_ID, 'agent'))
         };
 
         await clearSchedulerPendingBaseline(prisma, DEATH_NOTE_AGENT_ID);

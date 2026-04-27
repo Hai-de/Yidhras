@@ -49,8 +49,7 @@ export const getExperimentalPackRuntimeStatusSnapshot = async (
   packId: string
 ): Promise<PackRuntimeStatusSnapshot & { control_plane?: ExperimentalPackRuntimeSnapshot } | null> => {
   const observation = getPackRuntimeObservation({
-    packRuntimeObservation: context.packRuntimeObservation,
-    sim: context.sim
+    packRuntimeObservation: context.packRuntimeObservation
   });
   const snapshot = observation.getStatus(packId);
   if (!snapshot) {
@@ -58,8 +57,7 @@ export const getExperimentalPackRuntimeStatusSnapshot = async (
   }
 
   const runtimeReadyPackId = getPackRuntimeLookupPort({
-    packRuntimeLookup: context.packRuntimeLookup,
-    sim: context.sim
+    packRuntimeLookup: context.packRuntimeLookup
   }).getActivePackId();
   const controlPlane = await buildExperimentalPackRuntimeSnapshot(context, packId);
 
@@ -77,8 +75,7 @@ export const loadExperimentalPackRuntime = async (
   packRef: string
 ): Promise<{ handle: PackRuntimeHandle; loaded: boolean; already_loaded: boolean }> => {
   const result = await getPackRuntimeControl({
-    packRuntimeControl: context.packRuntimeControl,
-    sim: context.sim
+    packRuntimeControl: context.packRuntimeControl
   }).load(packRef);
   await syncExperimentalPackPluginRuntime(context, result.handle.pack_id);
   return result;
@@ -91,8 +88,7 @@ export const unloadExperimentalPackRuntime = async (
   return {
     acknowledged: true,
     unloaded: await getPackRuntimeControl({
-      packRuntimeControl: context.packRuntimeControl,
-      sim: context.sim
+      packRuntimeControl: context.packRuntimeControl
     }).unload(packId)
   };
 };

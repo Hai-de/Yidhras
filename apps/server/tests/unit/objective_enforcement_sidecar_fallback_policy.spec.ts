@@ -45,21 +45,25 @@ const buildTestContext = (
   }
 ): AppContext => {
   const now = options?.now ?? 1000n;
+  const sim = {
+    getActivePack(): typeof pack {
+      return pack;
+    },
+    getCurrentTick(): bigint {
+      return now;
+    },
+    clock: {
+      getTicks(): bigint {
+        return now;
+      }
+    }
+  } as AppContext['sim'];
+
   return {
     prisma: {} as AppContext['prisma'],
-    sim: {
-      getActivePack(): typeof pack {
-        return pack;
-      },
-      getCurrentTick(): bigint {
-        return now;
-      },
-      clock: {
-        getTicks(): bigint {
-          return now;
-        }
-      }
-    } as AppContext['sim'],
+    sim,
+    clock: sim as AppContext['clock'],
+    activePack: sim as AppContext['activePack'],
     notifications: {
       push(level, content) {
         return { id: 'noop', level, content, timestamp: Date.now() };

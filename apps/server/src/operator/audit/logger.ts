@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client'
 
-import type { AppContext } from '../../app/context.js'
+import type { AppInfrastructure } from '../../app/context.js'
 import type { AuditAction } from '../constants.js'
 
 export interface OperatorAuditEntry {
@@ -13,10 +13,10 @@ export interface OperatorAuditEntry {
 }
 
 export const logOperatorAudit = async (
-  context: AppContext,
+  context: AppInfrastructure,
   entry: OperatorAuditEntry
 ): Promise<void> => {
-  const now = context.sim.getCurrentTick()
+  const now = context.clock.getCurrentTick()
 
   await context.prisma.operatorAuditLog.create({
     data: {

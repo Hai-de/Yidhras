@@ -11,6 +11,19 @@ paths:
   plugins_dir: "data/plugins"
   ai_models_config: "apps/server/config/ai_models.yaml"
 
+operator:
+  auth:
+    jwt_secret: "changeme-please-replace-with-a-secure-random-string"
+    jwt_expires_in: "24h"
+    bcrypt_rounds: 12
+  root:
+    default_password: "changeme-root-password"
+
+plugins:
+  enable_warning:
+    enabled: true
+    require_acknowledgement: true
+
 world:
   preferred_pack: "death_note"
   bootstrap:
@@ -28,6 +41,11 @@ sqlite:
   busy_timeout_ms: 5000
   wal_autocheckpoint_pages: 1000
   synchronous: "NORMAL"
+
+world_engine:
+  timeout_ms: 500
+  binary_path: "apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar"
+  auto_restart: true
 
 scheduler:
   enabled: true
@@ -77,6 +95,7 @@ scheduler:
     max_candidates: 20
     decision_kernel:
       mode: "rust_primary"
+      timeout_ms: 500
       binary_path: "apps/server/rust/scheduler_decision_sidecar/target/debug/scheduler_decision_sidecar"
       auto_restart: true
     signal_policy:
@@ -121,9 +140,18 @@ scheduler:
 
 prompt_workflow:
   profiles:
-    agent_decision_default: { token_budget: 2200, section_policy: "standard" }
-    context_summary_default: { token_budget: 1600, section_policy: "minimal" }
-    memory_compaction_default: { token_budget: 1800, section_policy: "minimal" }
+    agent_decision_default:
+      token_budget: 2200
+      section_policy: "standard"
+      safety_margin_tokens: 80
+    context_summary_default:
+      token_budget: 1600
+      section_policy: "minimal"
+      safety_margin_tokens: 60
+    memory_compaction_default:
+      token_budget: 1800
+      section_policy: "minimal"
+      safety_margin_tokens: 60
 
 runtime:
   multi_pack:
@@ -140,3 +168,4 @@ features:
       enabled: false
       operator_api_enabled: false
       ui_enabled: false
+    prompt_slot_permissions: false

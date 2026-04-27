@@ -56,8 +56,7 @@ export const createPackScopedPluginRuntimeService = (
       }
 
       const lookup = getPackRuntimeLookupPort({
-        packRuntimeLookup: context.packRuntimeLookup,
-        sim: context.sim
+        packRuntimeLookup: context.packRuntimeLookup
       });
       if (lookup.getActivePackId() === normalizedPackId) {
         await syncActivePackPluginRuntime(context);

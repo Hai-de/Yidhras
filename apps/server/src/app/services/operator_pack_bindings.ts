@@ -24,7 +24,7 @@ export const createPackBinding = async (
     throw new ApiError(409, 'BINDING_ALREADY_EXISTS', 'Operator already bound to this pack')
   }
 
-  const now = context.sim.getCurrentTick()
+  const now = context.clock.getCurrentTick()
 
   const binding = await context.prisma.operatorPackBinding.create({
     data: {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { getRootAuthHeadersWithIdentity } from '../helpers/auth.js';
 import { assertErrorEnvelope } from '../helpers/envelopes.js';
 import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { isRecord, requestJson } from '../helpers/server.js';
@@ -11,10 +12,7 @@ describe('access-policy contracts e2e', () => {
       activePackRef: 'example_pack',
       seededPackRefs: ['example_pack']
     }, async server => {
-      const headers = {
-        'Content-Type': 'application/json',
-        'x-m2-identity': JSON.stringify({ id: 'system', type: 'system', name: 'System' })
-      };
+      const headers = await getRootAuthHeadersWithIdentity(server.baseUrl, 'system', 'system');
 
       const createResponse = await requestJson(server.baseUrl, '/api/access-policy', {
         method: 'POST',

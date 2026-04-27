@@ -16,6 +16,8 @@ const createContext = (): AppContext => {
   return {
     prisma: {} as AppContext['prisma'],
     sim,
+    clock: sim as AppContext['clock'],
+    activePack: sim as AppContext['activePack'],
     activePackRuntime: {
       init: vi.fn(async () => undefined),
       getActivePack: () => ({ metadata: { id: TEST_PACK_ID } }) as never,

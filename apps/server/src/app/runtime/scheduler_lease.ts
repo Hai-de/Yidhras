@@ -93,7 +93,7 @@ export const acquireSchedulerLease = async (
   }
 ): Promise<SchedulerLeaseAcquireResult> => {
   const partitionScope = normalizePartitionScope(input.partitionId);
-  const now = input.now ?? context.sim.getCurrentTick();
+  const now = input.now ?? context.clock.getCurrentTick();
   const leaseTicks = input.leaseTicks ?? getSchedulerLeaseTicks();
   const expiresAt = now + leaseTicks;
   const key = buildSchedulerLeaseKey(partitionScope.storagePartitionId);
@@ -208,7 +208,7 @@ export const updateSchedulerCursor = async (
 ): Promise<void> => {
   const partitionScope = normalizePartitionScope(input.partitionId);
   const key = buildSchedulerCursorKey(partitionScope.storagePartitionId);
-  const now = input.now ?? context.sim.getCurrentTick();
+  const now = input.now ?? context.clock.getCurrentTick();
   await upsertSchedulerCursorRecord(context, {
     key,
     partition_id: partitionScope.storagePartitionId,

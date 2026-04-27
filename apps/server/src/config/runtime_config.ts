@@ -876,3 +876,26 @@ export const logRuntimeConfigSnapshot = (logger: (message: string) => void = con
 export const isAiGatewayEnabled = (): boolean => {
   return getRuntimeConfig().features.ai_gateway_enabled
 }
+
+export const validateProductionSecrets = (): void => {
+  const config = getRuntimeConfig()
+  const env = config.app.env
+
+  if (env === 'development') {
+    return
+  }
+
+  const defaultJwtSecret = 'changeme-please-replace-with-a-secure-random-string'
+  if (config.operator.auth.jwt_secret === defaultJwtSecret) {
+    throw new Error(
+      'OPERATOR_JWT_SECRET 未配置。生产环境必须设置 OPERATOR_JWT_SECRET 环境变量或在 data/configw/local.yaml 中覆盖 jwt_secret。'
+    )
+  }
+
+  const defaultPassword = 'changeme-root-password'
+  if (config.operator.root.default_password === defaultPassword) {
+    throw new Error(
+      'OPERATOR_ROOT_DEFAULT_PASSWORD 未配置。生产环境必须设置 OPERATOR_ROOT_DEFAULT_PASSWORD 环境变量或在 data/configw/local.yaml 中覆盖 default_password。'
+    )
+  }
+}

@@ -63,6 +63,7 @@ export const createTestAppContext = (
     getStepTicks: () => 1n,
     step: async () => {},
     getActivePack: () => null,
+    getCurrentRevision: () => clock.getTicks(),
     getRuntimeSpeedSnapshot: () => ({
       mode: 'fixed' as const,
       source: 'default' as const,
@@ -82,6 +83,8 @@ export const createTestAppContext = (
   return {
     prisma,
     sim,
+    clock: sim as unknown as AppContext['clock'],
+    activePack: sim as unknown as AppContext['activePack'],
     notifications,
     startupHealth: options.startupHealth ?? createDefaultStartupHealth(),
     getRuntimeReady: () => runtimeReady,
@@ -102,6 +105,22 @@ export const createTestAppContext = (
       httpApp = app;
     },
     worldEngineStepCoordinator: createWorldEngineStepCoordinator(),
+    packRuntimeLookup: {
+      getActivePackId: () => null,
+      hasPackRuntime: () => false,
+      assertPackScope: (packId: string) => packId.trim(),
+      getPackRuntimeSummary: () => null
+    },
+    packRuntimeObservation: {
+      getStatus: () => null,
+      listStatuses: () => [],
+      getClockSnapshot: () => null,
+      getRuntimeSpeedSnapshot: () => null
+    },
+    packRuntimeControl: {
+      load: async () => ({ handle: null as never, loaded: false, already_loaded: false }),
+      unload: async () => false
+    },
     assertRuntimeReady: () => {}
   };
 };

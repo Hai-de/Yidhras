@@ -45,12 +45,15 @@ const createContext = (): AppContext => {
     calendars: []
   });
 
+  const sim = {
+    getCurrentTick: () => 1n,
+    getAllTimes: () => [{ calendar_id: 'fallback', display: 'fallback-time', units: {} }]
+  };
   return {
     prisma: {} as never,
-    sim: {
-      getCurrentTick: () => 1n,
-      getAllTimes: () => [{ calendar_id: 'fallback', display: 'fallback-time', units: {} }]
-    } as never,
+    sim: sim as never,
+    clock: sim as AppContext['clock'],
+    activePack: { getActivePack: () => undefined, getCurrentRevision: () => 1n } as AppContext['activePack'],
     activePackRuntime: {
       getActivePack: () => ({ metadata: { id: 'world-test-pack' } })
     } as never,
@@ -160,7 +163,7 @@ describe('clock routes host projection read path', () => {
       success: true,
       data: {
         absolute_ticks: '1',
-        calendars: [{ calendar_id: 'fallback', display: 'fallback-time', units: {} }]
+        calendars: []
       }
     });
   });
@@ -169,6 +172,8 @@ describe('clock routes host projection read path', () => {
     const context = createContext();
     context.runtimeClockProjection = createRuntimeClockProjectionService();
     context.activePackRuntime = undefined;
+    (context as AppContext).clock = { getCurrentTick: () => 9n } as AppContext['clock'];
+    (context as AppContext).activePack = { getActivePack: () => ({ metadata: { id: 'world-test-pack' } } as never), getCurrentRevision: () => 9n };
     context.sim = {
       getCurrentTick: () => 9n,
       getAllTimes: () => [{ calendar_id: 'sim-only', display: 'sim-only-time', units: {} }],
@@ -190,7 +195,7 @@ describe('clock routes host projection read path', () => {
       success: true,
       data: {
         absolute_ticks: '9',
-        calendars: [{ calendar_id: 'sim-only', display: 'sim-only-time', units: {} }]
+        calendars: []
       }
     });
   });

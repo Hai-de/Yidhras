@@ -1,4 +1,4 @@
-import type { AppContext } from '../../../app/context.js';
+import type { AppInfrastructure } from '../../../app/context.js';
 import {
   createPackProjectionMetadataResolver,
   type PackProjectionMetadataResolver,
@@ -11,7 +11,7 @@ export interface PackProjectionScopeAdapter {
 }
 
 export const createPackProjectionScopeAdapter = (
-  context: AppContext,
+  context: AppInfrastructure,
   resolver: PackProjectionMetadataResolver = createPackProjectionMetadataResolver(context)
 ): PackProjectionScopeAdapter => {
   return {

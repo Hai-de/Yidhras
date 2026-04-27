@@ -1,4 +1,4 @@
-import type { AppContext } from '../../app/context.js';
+import type { AppInfrastructure } from '../../app/context.js';
 import { packEntityIdFromResolvedAgentId } from '../../inference/context_builder.js';
 import { listPackAuthorityGrants } from '../../packs/storage/authority_repo.js';
 import { listPackEntityStates } from '../../packs/storage/entity_state_repo.js';
@@ -54,7 +54,7 @@ const matchesConditions = (
   return true;
 };
 
-const findActorState = async (context: AppContext, packId: string, subjectEntityId: string | null): Promise<Record<string, unknown> | null> => {
+const findActorState = async (context: AppInfrastructure, packId: string, subjectEntityId: string | null): Promise<Record<string, unknown> | null> => {
   if (!subjectEntityId) {
     return null;
   }
@@ -69,7 +69,7 @@ const findActorState = async (context: AppContext, packId: string, subjectEntity
 };
 
 const resolveTargetSelectorMatch = async (
-  context: AppContext,
+  context: AppInfrastructure,
   packId: string,
   subjectEntityId: string | null,
   targetSelector: Record<string, unknown>
@@ -106,7 +106,7 @@ const resolveTargetSelectorMatch = async (
   }
 
   if (kind === 'subject_entity' && typeof targetSelector.identity_id === 'string') {
-    const currentIdentityId = (context as AppContext & { identity?: { id?: string } }).identity?.id;
+    const currentIdentityId = (context as AppInfrastructure & { identity?: { id?: string } }).identity?.id;
     return targetSelector.identity_id === currentIdentityId ? 'subject_entity' : null;
   }
 
@@ -114,7 +114,7 @@ const resolveTargetSelectorMatch = async (
 };
 
 export const resolveAuthorityForSubject = async (
-  context: AppContext,
+  context: AppInfrastructure,
   input: {
     packId: string;
     subjectEntityId: string | null;
@@ -171,7 +171,7 @@ export const resolveAuthorityForSubject = async (
 };
 
 export const resolveMediatorBindingsForPack = async (
-  _context: AppContext,
+  _context: AppInfrastructure,
   input: { packId: string }
 ) => {
   return listPackMediatorBindings(input.packId);

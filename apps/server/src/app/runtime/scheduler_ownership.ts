@@ -121,7 +121,7 @@ export const refreshSchedulerWorkerRuntimeState = async (
     now?: bigint;
   }
 ): Promise<SchedulerWorkerRuntimeStateRecord> => {
-  const now = input.now ?? context.sim.getCurrentTick();
+  const now = input.now ?? context.clock.getCurrentTick();
   const activeMigrationCount = await countSchedulerOwnershipMigrationsInProgress(context, input.workerId);
 
   return upsertSchedulerWorkerRuntimeStateRecord(context, {
@@ -139,7 +139,7 @@ export const refreshSchedulerWorkerRuntimeLiveness = async (
   context: AppContext,
   now?: bigint
 ): Promise<void> => {
-  const currentTick = now ?? context.sim.getCurrentTick();
+  const currentTick = now ?? context.clock.getCurrentTick();
   const staleThreshold = BigInt(process.env.SCHEDULER_WORKER_STALE_TICKS ?? DEFAULT_SCHEDULER_WORKER_STALE_TICKS.toString());
   const deadThreshold = BigInt(process.env.SCHEDULER_WORKER_DEAD_TICKS ?? DEFAULT_SCHEDULER_WORKER_DEAD_TICKS.toString());
   const workerStates = await listSchedulerWorkerRuntimeStates(context);
@@ -164,7 +164,7 @@ export const reconcileSchedulerBootstrapAssignments = async (
   workerId: string,
   partitionIds?: string[]
 ): Promise<void> => {
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
   const partitionCount = getSchedulerPartitionCount();
   const bootstrapPartitionIds = resolveOwnedSchedulerPartitionIds({
     explicitPartitionIds: partitionIds,
@@ -262,7 +262,7 @@ export const createSchedulerOwnershipMigration = async (
     requestedByWorkerId?: string | null;
   }
 ): Promise<SchedulerOwnershipMigrationRecord> => {
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
   const existingAssignment = await getSchedulerPartitionAssignmentRecord(context, input.partitionId);
 
   const migration = await createSchedulerOwnershipMigrationRecord(context, {
@@ -306,7 +306,7 @@ export const markSchedulerOwnershipMigrationInProgress = async (
   context: AppContext,
   migrationId: string
 ): Promise<void> => {
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
   await updateSchedulerOwnershipMigrationRecord(context, {
     id: migrationId,
     status: 'in_progress',
@@ -321,7 +321,7 @@ export const completeActiveSchedulerOwnershipMigration = async (
     toWorkerId: string;
   }
 ): Promise<void> => {
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
   const migration = await findLatestActiveSchedulerOwnershipMigrationForPartition(context, {
     partition_id: input.partitionId,
     to_worker_id: input.toWorkerId
@@ -342,7 +342,7 @@ export const completeSchedulerOwnershipMigration = async (
   context: AppContext,
   migrationId: string
 ): Promise<void> => {
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
   const migration = await getSchedulerOwnershipMigrationRecordById(context, migrationId);
   if (!migration) {
     return;

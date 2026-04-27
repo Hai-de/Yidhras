@@ -21,3 +21,32 @@ version: 1
 #     preferred_models:
 #       - provider: openai
 #         model: gpt-4.1-mini
+#
+# Route-level elasticity defaults (optional, programmatic):
+#
+# Each route can carry a `defaults` block to tune circuit breaker,
+# rate limiting, and backoff behaviour for all providers used by
+# that route.  These fields use snake_case to stay consistent with
+# the rest of the YAML schema.
+#
+# routes:
+#   - route_id: default.agent_decision
+#     preferred_models:
+#       - provider: openai
+#         model: gpt-4.1-mini
+#     defaults:
+#       timeout_ms: 30000
+#       retry_limit: 2
+#       allow_fallback: true
+#       audit_level: standard
+#       # ── circuit breaker ─────────────────────────────────────
+#       circuit_breaker:
+#         failure_threshold: 5        # 连续失败 N 次后熔断 (default 5)
+#         recovery_timeout_ms: 30000  # open → half_open 冷却时间 (default 30000)
+#       # ── rate limiter ────────────────────────────────────────
+#       rate_limit:
+#         max_concurrent: 10          # 每个 provider 最大并发请求数 (default 10)
+#       # ── exponential backoff ─────────────────────────────────
+#       backoff:
+#         base_delay_ms: 1000         # 首次重试延迟 (default 1000)
+#         max_delay_ms: 30000         # 退避延迟上限 (default 30000)

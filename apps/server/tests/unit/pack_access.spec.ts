@@ -9,15 +9,18 @@ describe('pack access guard', () => {
 
   beforeEach(() => {
     mockFindUnique = vi.fn()
+    const sim = {
+      getCurrentTick: () => 1000n
+    } as AppContext['sim']
     context = {
       prisma: {
         operatorPackBinding: {
           findUnique: mockFindUnique
         }
       } as unknown as AppContext['prisma'],
-      sim: {
-        getCurrentTick: () => 1000n
-      }
+      sim,
+      clock: sim as AppContext['clock'],
+      activePack: sim as AppContext['activePack']
     } as AppContext
   })
 

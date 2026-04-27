@@ -1,4 +1,4 @@
-import type { AppContext } from '../context.js';
+import type { AppInfrastructure } from '../context.js';
 
 export interface LatestEventEvidenceRecord {
   id: string;
@@ -9,7 +9,7 @@ export interface LatestEventEvidenceRecord {
 }
 
 export const getLatestEventEvidenceRecord = async (
-  context: AppContext
+  context: AppInfrastructure
 ): Promise<LatestEventEvidenceRecord | null> => {
   return context.prisma.event.findFirst({
     orderBy: {

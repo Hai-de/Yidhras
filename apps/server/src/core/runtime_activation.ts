@@ -3,11 +3,10 @@ import path from 'path';
 
 import { ChronosEngine } from '../clock/engine.js';
 import type { CalendarConfig } from '../clock/types.js';
-import { installPackRuntime } from '../kernel/install/install_pack.js';
 import type { PackManifestLoader, WorldPack } from '../packs/manifest/loader.js';
-import { materializeActorBridges, materializePackRuntimeCoreModels } from '../packs/runtime/materializer.js';
 import { discoverPackLocalPlugins, type PluginDiscoveryResult } from '../plugins/discovery.js';
 import { notifications } from '../utils/notifications.js';
+import { materializePackRuntime } from './pack_materializer.js';
 import type { RuntimeSpeedPolicy } from './runtime_speed.js';
 import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
 
@@ -90,9 +89,7 @@ export const activateWorldPackRuntime = async ({
 
   configureRuntimeSpeedFromPack(runtimeSpeed, pack);
 
-  await installPackRuntime(pack);
-  await materializePackRuntimeCoreModels(pack, runtimeConfig.initialTick);
-  await materializeActorBridges(pack, prisma, runtimeConfig.initialTick);
+  await materializePackRuntime({ pack, prisma, initialTick: runtimeConfig.initialTick });
 
   const clock = await resolvePackClock({
     calendars,

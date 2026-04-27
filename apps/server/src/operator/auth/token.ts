@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import * as jwt from 'jsonwebtoken'
 
-import type { AppContext } from '../../app/context.js'
+import type { AppInfrastructure } from '../../app/context.js'
 import { getOperatorAuthConfig } from '../../config/runtime_config.js'
 import type { JwtPayload, OperatorContext } from './types.js'
 
@@ -40,7 +40,7 @@ export const computeTokenHash = (token: string): string => {
 }
 
 export const createSession = async (
-  context: AppContext,
+  context: AppInfrastructure,
   operatorId: string,
   token: string,
   packId?: string | null
@@ -50,7 +50,7 @@ export const createSession = async (
   const decoded = jwt.decode(token) as JwtPayload | null
   const expiresAt = decoded?.exp
     ? BigInt(decoded.exp * 1000)
-    : context.sim.getCurrentTick()
+    : context.clock.getCurrentTick()
 
   await context.prisma.operatorSession.create({
     data: {
@@ -58,13 +58,13 @@ export const createSession = async (
       token_hash: tokenHash,
       pack_id: packId ?? null,
       expires_at: expiresAt,
-      created_at: context.sim.getCurrentTick()
+      created_at: context.clock.getCurrentTick()
     }
   })
 }
 
 export const destroySession = async (
-  context: AppContext,
+  context: AppInfrastructure,
   token: string
 ): Promise<boolean> => {
   const tokenHash = computeTokenHash(token)
@@ -77,11 +77,11 @@ export const destroySession = async (
 }
 
 export const findActiveSession = async (
-  context: AppContext,
+  context: AppInfrastructure,
   token: string
 ): Promise<{ operatorId: string; packId: string | null } | null> => {
   const tokenHash = computeTokenHash(token)
-  const now = context.sim.getCurrentTick()
+  const now = context.clock.getCurrentTick()
 
   const session = await context.prisma.operatorSession.findFirst({
     where: {

@@ -85,11 +85,22 @@ const translateExperimentalUnloadError = (packId: string, error: unknown): never
   })
 }
 
+const requireExperimentalPackHost = (context: AppContext, packId: string) => {
+  assertPackScope(context, packId, 'experimental', 'experimental runtime pack host')
+  const host = context.sim.getPackRuntimeRegistry().getHost(packId)
+  if (!host) {
+    throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', 'Experimental runtime pack not found', {
+      pack_id: packId
+    })
+  }
+
+  return host
+}
+
 const requireExperimentalPackHandle = (context: AppContext, packId: string) => {
   assertPackScope(context, packId, 'experimental', 'experimental runtime pack handle')
   const summary = getPackRuntimeLookupPort({
-    packRuntimeLookup: context.packRuntimeLookup,
-    sim: context.sim
+    packRuntimeLookup: context.packRuntimeLookup
   }).getPackRuntimeSummary(packId)
   const handle = context.sim.getPackRuntimeHandle(packId)
   if (!summary || !handle) {
@@ -163,6 +174,33 @@ export const registerExperimentalRuntimeRoutes = (
       } catch (error) {
         translateExperimentalUnloadError(packId, error)
       }
+    })
+  )
+
+  app.post(
+    '/api/experimental/runtime/packs/:packId/step',
+    packGuard,
+    controlGuard,
+    deps.asyncHandler(async (req, res) => {
+      assertExperimentalOperatorApiEnabled(context)
+      const packId = resolvePackIdParam(req.params.packId)
+      const host = requireExperimentalPackHost(context, packId)
+
+      const amountInput = (req.body as Record<string, unknown> | undefined)?.amount
+      const amount = typeof amountInput === 'number' && Number.isFinite(amountInput) && amountInput > 0
+        ? BigInt(Math.trunc(amountInput))
+        : 1n
+
+      const previousTick = host.getClock().getTicks()
+      host.getClock().tick(amount)
+      const currentTick = host.getClock().getTicks()
+
+      jsonOk(res, toJsonSafe({
+        pack_id: packId,
+        previous_tick: previousTick.toString(),
+        current_tick: currentTick.toString(),
+        advanced_by: amount.toString()
+      }))
     })
   )
 

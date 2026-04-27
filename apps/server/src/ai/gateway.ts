@@ -1,7 +1,15 @@
-import type { AppContext } from '../app/context.js';
+import type { AppInfrastructure } from '../app/context.js';
 import { ApiError } from '../utils/api_error.js';
 import type { CircuitBreaker, RateLimiter } from './elasticity/index.js';
-import { createCircuitBreaker, createExponentialBackoff, createRateLimiter, DEFAULT_BACKOFF_CONFIG } from './elasticity/index.js';
+import {
+  createCircuitBreaker,
+  createExponentialBackoff,
+  createRateLimiter,
+  DEFAULT_BACKOFF_CONFIG,
+  resolveBackoffConfig,
+  resolveCircuitBreakerConfig,
+  resolveRateLimiterConfig,
+} from './elasticity/index.js';
 import { recordAiInvocation } from './observability.js';
 import { createMockAiProviderAdapter } from './providers/mock.js';
 import { createOpenAiProviderAdapter } from './providers/openai.js';
@@ -22,7 +30,7 @@ export interface ModelGateway {
 
 export interface CreateModelGatewayOptions {
   adapters?: AiProviderAdapter[];
-  context?: AppContext;
+  context?: AppInfrastructure;
   registryConfig?: AiRegistryConfig;
 }
 
@@ -273,7 +281,10 @@ export const createModelGateway = ({
       const attempts: AiInvocationAttemptRecord[] = [];
       const cbMap = new Map<string, CircuitBreaker>();
       const rlMap = new Map<string, RateLimiter>();
-      const backoff = createExponentialBackoff(DEFAULT_BACKOFF_CONFIG);
+      const backoff = createExponentialBackoff({
+        ...DEFAULT_BACKOFF_CONFIG,
+        ...resolveBackoffConfig(route.defaults),
+      });
       const getOrCreate = <T>(map: Map<string, T>, key: string, factory: (key: string) => T): T => {
         const existing = map.get(key);
         if (existing) return existing;
@@ -328,7 +339,9 @@ export const createModelGateway = ({
           continue;
         }
 
-        const cb = getOrCreate(cbMap, candidate.provider, createCircuitBreaker);
+        const cb = getOrCreate(cbMap, candidate.provider, (provider) =>
+          createCircuitBreaker(provider, resolveCircuitBreakerConfig(route.defaults)),
+        );
         if (!cb.allowRequest()) {
           attempts.push(buildAttemptRecord(candidate, 'failed', 'error', {
             errorCode: 'AI_CIRCUIT_OPEN',
@@ -343,7 +356,9 @@ export const createModelGateway = ({
           continue;
         }
 
-        const rl = getOrCreate(rlMap, candidate.provider, createRateLimiter);
+        const rl = getOrCreate(rlMap, candidate.provider, (provider) =>
+          createRateLimiter(provider, resolveRateLimiterConfig(route.defaults)),
+        );
         try {
           await rl.acquire();
         } catch (err) {

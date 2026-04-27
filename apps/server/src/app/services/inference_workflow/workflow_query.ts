@@ -7,7 +7,7 @@ import type {
   WorkflowSnapshot
 } from '../../../inference/types.js';
 import { ApiError } from '../../../utils/api_error.js';
-import type { AppContext } from '../../context.js';
+import type { AppInfrastructure } from '../../context.js';
 import { toJsonSafe } from '../../http/json.js';
 import {
   ensureNonEmptyId,
@@ -161,7 +161,7 @@ interface WorkflowSnapshotBundle {
 }
 
 const safeFindInferenceTraceById = async (
-  context: AppContext,
+  context: AppInfrastructure,
   id: string
 ): Promise<InferenceTraceRecord | null> => {
   try {
@@ -172,7 +172,7 @@ const safeFindInferenceTraceById = async (
 };
 
 const safeFindActionIntentById = async (
-  context: AppContext,
+  context: AppInfrastructure,
   id: string
 ): Promise<ActionIntentRecord | null> => {
   try {
@@ -183,7 +183,7 @@ const safeFindActionIntentById = async (
 };
 
 const safeFindActionIntentByInferenceId = async (
-  context: AppContext,
+  context: AppInfrastructure,
   sourceInferenceId: string
 ): Promise<ActionIntentRecord | null> => {
   try {
@@ -193,7 +193,7 @@ const safeFindActionIntentByInferenceId = async (
   }
 };
 
-const safeFindDecisionJobById = async (context: AppContext, id: string): Promise<DecisionJobRecord | null> => {
+const safeFindDecisionJobById = async (context: AppInfrastructure, id: string): Promise<DecisionJobRecord | null> => {
   try {
     return await context.prisma.decisionJob.findUnique({ where: { id } });
   } catch {
@@ -201,7 +201,7 @@ const safeFindDecisionJobById = async (context: AppContext, id: string): Promise
   }
 };
 
-const safeListReplayChildrenByParentId = async (context: AppContext, jobId: string): Promise<DecisionJobRecord[]> => {
+const safeListReplayChildrenByParentId = async (context: AppInfrastructure, jobId: string): Promise<DecisionJobRecord[]> => {
   try {
     return await context.prisma.decisionJob.findMany({ where: { replay_of_job_id: jobId }, orderBy: { created_at: 'asc' } });
   } catch {
@@ -210,7 +210,7 @@ const safeListReplayChildrenByParentId = async (context: AppContext, jobId: stri
 };
 
 const buildWorkflowSnapshotBundleForJobs = async (
-  context: AppContext,
+  context: AppInfrastructure,
   jobs: DecisionJobRecord[]
 ): Promise<WorkflowSnapshotBundle> => {
   const inferenceIds = Array.from(
@@ -401,7 +401,7 @@ const matchesInferenceJobsCursor = (cursor: ParsedInferenceJobsFilters['cursor']
 };
 
 export const listInferenceJobs = async (
-  context: AppContext,
+  context: AppInfrastructure,
   input: ListInferenceJobsInput
 ): Promise<InferenceJobsListSnapshot> => {
   const filters = parseInferenceJobsFilters(input);
@@ -470,7 +470,7 @@ export const listInferenceJobs = async (
 };
 
 export const getWorkflowSnapshotByInferenceId = async (
-  context: AppContext,
+  context: AppInfrastructure,
   inferenceId?: string
 ): Promise<WorkflowSnapshot> => {
   const id = ensureNonEmptyId(inferenceId, 'inference_id');
@@ -522,7 +522,7 @@ export const getWorkflowSnapshotByInferenceId = async (
 };
 
 export const getWorkflowSnapshotByJobId = async (
-  context: AppContext,
+  context: AppInfrastructure,
   jobId?: string
 ): Promise<WorkflowSnapshot> => {
   const id = ensureNonEmptyId(jobId, 'job_id');

@@ -8,6 +8,7 @@ import type { IdentityRequest } from '../../identity/middleware.js';
 import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseBody, parseQuery } from '../http/zod.js';
+import { requireAuth } from '../middleware/require_auth.js';
 import { createSocialPost, listSocialFeed } from '../services/social.js';
 
 export interface SocialRouteDependencies {
@@ -38,6 +39,7 @@ export const registerSocialRoutes = (
 
   app.post(
     '/api/social/post',
+    requireAuth(),
     deps.asyncHandler(async (req, res) => {
       const identityRequest = req as IdentityRequest;
       context.assertRuntimeReady('social post');

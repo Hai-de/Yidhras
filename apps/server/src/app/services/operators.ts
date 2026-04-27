@@ -24,7 +24,7 @@ export const createOperator = async (
   }
 
   const passwordHash = await hashPassword(input.password)
-  const now = context.sim.getCurrentTick()
+  const now = context.clock.getCurrentTick()
 
   // 创建 Identity
   const identity = await context.prisma.identity.create({
@@ -113,7 +113,7 @@ export const updateOperator = async (
     throw new ApiError(404, 'OPERATOR_NOT_FOUND', 'Operator not found')
   }
 
-  const now = context.sim.getCurrentTick()
+  const now = context.clock.getCurrentTick()
   const data: Record<string, unknown> = { updated_at: now }
 
   if (input.status !== undefined) {
@@ -165,7 +165,7 @@ export const deleteOperator = async (
     throw new ApiError(404, 'OPERATOR_NOT_FOUND', 'Operator not found')
   }
 
-  const now = context.sim.getCurrentTick()
+  const now = context.clock.getCurrentTick()
 
   const updated = await context.prisma.operator.update({
     where: { id: operatorId },

@@ -103,9 +103,9 @@ const resolveDropDecision = (
 const dispatchTriggerEventIntent = async (context: AppContext, intent: ActionIntentRecord): Promise<void> => {
   const actor = resolveTriggerEventActor(intent.actor_ref);
   const payload = resolveTriggerEventPayload(intent.payload);
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
 
-  const activePack = context.sim.getActivePack();
+  const activePack = context.activePack.getActivePack();
   const impactData = {
     ...(payload.impact_data ?? {}),
     pack_id: activePack?.metadata.id ?? null,
@@ -130,7 +130,7 @@ const dispatchAdjustSnrIntent = async (context: AppContext, intent: ActionIntent
   resolveAdjustSnrActorAgentId(intent.actor_ref);
   const targetAgentId = resolveAdjustSnrTargetAgentId(intent.target_ref);
   const payload = resolveAdjustSnrPayload(intent.payload);
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
 
   const targetAgent = await getAgentSnrTargetById(context, targetAgentId);
   if (!targetAgent) {
@@ -171,7 +171,7 @@ const dispatchAdjustRelationshipIntent = async (context: AppContext, intent: Act
   const actorAgentId = resolveActiveAgentIdFromActorRef(intent.actor_ref);
   const targetAgentId = await resolveRelationshipTargetAgentId(context, intent.target_ref, actorAgentId);
   const payload = resolveAdjustRelationshipPayload(intent.payload);
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
 
   const existing = await getRelationshipByCompositeKey(context, {
     from_id: actorAgentId,
@@ -268,7 +268,7 @@ export const dispatchActionIntent = async (
   context: AppContext,
   intent: ActionIntentRecord
 ): Promise<{ outcome: 'completed' | 'dropped'; reason: string | null }> => {
-  assertActionIntentLockOwnership(intent, intent.locked_by ?? '', context.sim.getCurrentTick());
+  assertActionIntentLockOwnership(intent, intent.locked_by ?? '', context.clock.getCurrentTick());
 
   const invocationResult = await dispatchInvocationFromActionIntent(context, {
     id: intent.id,

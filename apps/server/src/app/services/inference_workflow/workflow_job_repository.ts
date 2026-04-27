@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 
 import type { InferenceJobIntentClass, InferenceRequestInput } from '../../../inference/types.js';
 import { ApiError } from '../../../utils/api_error.js';
-import type { AppContext } from '../../context.js';
+import type { AppInfrastructure } from '../../context.js';
 import { toJsonSafe } from '../../http/json.js';
 import { ensureNonEmptyId } from './parsers.js';
 import type { DecisionJobRecord } from './types.js';
@@ -13,7 +13,7 @@ import {
   RUNNABLE_JOB_STATUSES
 } from './types.js';
 
-export const getDecisionJobById = async (context: AppContext, jobId?: string) => {
+export const getDecisionJobById = async (context: AppInfrastructure, jobId?: string) => {
   const id = ensureNonEmptyId(jobId, 'job_id');
   const job = await context.prisma.decisionJob.findUnique({
     where: {
@@ -46,7 +46,7 @@ const mergeDecisionJobRequestInputAttributes = (
   }) as Prisma.InputJsonValue;
 };
 
-export const getDecisionJobByInferenceId = async (context: AppContext, inferenceId?: string) => {
+export const getDecisionJobByInferenceId = async (context: AppInfrastructure, inferenceId?: string) => {
   const id = ensureNonEmptyId(inferenceId, 'inference_id');
   const decisionJob = await context.prisma.decisionJob.findUnique({
     where: {
@@ -63,7 +63,7 @@ export const getDecisionJobByInferenceId = async (context: AppContext, inference
   return decisionJob;
 };
 
-export const getInferenceTraceById = async (context: AppContext, inferenceId?: string) => {
+export const getInferenceTraceById = async (context: AppInfrastructure, inferenceId?: string) => {
   const id = ensureNonEmptyId(inferenceId, 'inference_id');
   const trace = await context.prisma.inferenceTrace.findUnique({
     where: { id }
@@ -78,7 +78,7 @@ export const getInferenceTraceById = async (context: AppContext, inferenceId?: s
   return trace;
 };
 
-export const getActionIntentByInferenceId = async (context: AppContext, inferenceId?: string) => {
+export const getActionIntentByInferenceId = async (context: AppInfrastructure, inferenceId?: string) => {
   const id = ensureNonEmptyId(inferenceId, 'inference_id');
   const actionIntent = await context.prisma.actionIntent.findUnique({
     where: {
@@ -96,7 +96,7 @@ export const getActionIntentByInferenceId = async (context: AppContext, inferenc
 };
 
 export const getDecisionJobByIdempotencyKey = async (
-  context: AppContext,
+  context: AppInfrastructure,
   idempotencyKey: string
 ): Promise<DecisionJobRecord | null> => {
   return context.prisma.decisionJob.findUnique({
@@ -107,10 +107,10 @@ export const getDecisionJobByIdempotencyKey = async (
 };
 
 export const listRunnableDecisionJobs = async (
-  context: AppContext,
+  context: AppInfrastructure,
   limit = 10
 ): Promise<DecisionJobRecord[]> => {
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
 
   return context.prisma.decisionJob.findMany({
     where: {
@@ -133,7 +133,7 @@ export const listRunnableDecisionJobs = async (
 };
 
 export const claimDecisionJob = async (
-  context: AppContext,
+  context: AppInfrastructure,
   input: {
     job_id: string;
     worker_id: string;
@@ -142,7 +142,7 @@ export const claimDecisionJob = async (
   }
 ): Promise<DecisionJobRecord | null> => {
   const existing = await getDecisionJobById(context, input.job_id);
-  const now = input.now ?? context.sim.getCurrentTick();
+  const now = input.now ?? context.clock.getCurrentTick();
   const lockTicks = input.lock_ticks ?? DEFAULT_DECISION_JOB_LOCK_TICKS;
 
   if (!RUNNABLE_JOB_STATUSES.includes(existing.status as (typeof RUNNABLE_JOB_STATUSES)[number])) {
@@ -197,7 +197,7 @@ export const claimDecisionJob = async (
 };
 
 export const releaseDecisionJobLock = async (
-  context: AppContext,
+  context: AppInfrastructure,
   input: {
     job_id: string;
     worker_id?: string;
@@ -216,7 +216,7 @@ export const releaseDecisionJobLock = async (
       locked_by: null,
       locked_at: null,
       lock_expires_at: null,
-      updated_at: context.sim.getCurrentTick()
+      updated_at: context.clock.getCurrentTick()
     }
   });
 };
@@ -237,7 +237,7 @@ export const assertDecisionJobLockOwnership = (
 export { DEFAULT_DECISION_JOB_LOCK_TICKS };
 
 export const updateDecisionJobState = async (
-  context: AppContext,
+  context: AppInfrastructure,
   input: {
     job_id: string;
     status: DecisionJobRecord['status'];
@@ -291,7 +291,7 @@ export const updateDecisionJobState = async (
       intent_class: input.intent_class ?? existing.intent_class,
       scheduled_for_tick: input.scheduled_for_tick === undefined ? existing.scheduled_for_tick : input.scheduled_for_tick,
       action_intent_id: input.action_intent_id === undefined ? existing.action_intent_id : input.action_intent_id,
-      updated_at: context.sim.getCurrentTick(),
+      updated_at: context.clock.getCurrentTick(),
       ...(input.request_input_attributes_patch
         ? { request_input: mergeDecisionJobRequestInputAttributes(existing, input.request_input_attributes_patch) }
         : {}),
@@ -301,7 +301,7 @@ export const updateDecisionJobState = async (
 };
 
 export const createPendingDecisionJob = async (
-  context: AppContext,
+  context: AppInfrastructure,
   input: {
     idempotency_key: string;
     request_input: InferenceRequestInput;
@@ -311,7 +311,7 @@ export const createPendingDecisionJob = async (
     job_source?: string;
   }
 ): Promise<DecisionJobRecord> => {
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
 
   return context.prisma.decisionJob.create({
     data: {
@@ -349,7 +349,7 @@ export const createPendingDecisionJob = async (
 };
 
 export const createReplayDecisionJob = async (
-  context: AppContext,
+  context: AppInfrastructure,
   input: {
     source_job: DecisionJobRecord;
     source_trace_id: string | null;
@@ -360,7 +360,7 @@ export const createReplayDecisionJob = async (
     replay_override_snapshot?: Record<string, unknown> | null;
   }
 ): Promise<DecisionJobRecord> => {
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
   return context.prisma.decisionJob.create({
     data: {
       pending_source_key: buildPendingSourceKey(input.idempotency_key),

@@ -1,16 +1,24 @@
 import type { PrismaClient } from '@prisma/client';
+import fs from 'fs';
 
+import { ChronosEngine } from '../clock/engine.js';
+import type { CalendarConfig } from '../clock/types.js';
 import { getRuntimeMultiPackConfig } from '../config/runtime_config.js';
 import type { WorldPack } from '../packs/manifest/loader.js';
 import { teardownActorBridges } from '../packs/runtime/materializer.js';
+import { resolvePackRuntimeDatabaseLocation } from '../packs/storage/pack_db_locator.js';
+import { pluginRuntimeRegistry } from '../plugins/runtime.js';
 import { ApiError } from '../utils/api_error.js';
 import type { DefaultPackCatalogService } from './pack_catalog_service.js';
+import { materializePackRuntime } from './pack_materializer.js';
 import type { PackRuntimeHandle } from './pack_runtime_handle.js';
 import type { PackRuntimeStatusSnapshot } from './pack_runtime_health.js';
 import type { PackRuntimeHost } from './pack_runtime_host.js';
 import { PackRuntimeInstance } from './pack_runtime_instance.js';
 import type { PackRuntimeControl, PackRuntimeLocator, PackRuntimeObservation } from './pack_runtime_ports.js';
 import type { PackRuntimeRegistry } from './pack_runtime_registry.js';
+import { RuntimeSpeedPolicy } from './runtime_speed.js';
+import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
 
 export interface DefaultPackRuntimeRegistryServiceOptions {
   registry: PackRuntimeRegistry;
@@ -118,9 +126,22 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       throw new Error(`experimental runtime max loaded packs exceeded: ${String(maxLoadedPacks)}`);
     }
 
+    const runtimeConfig = getWorldPackRuntimeConfig(resolved.pack);
+    await materializePackRuntime({
+      pack: resolved.pack,
+      prisma: this.prisma,
+      initialTick: runtimeConfig.initialTick
+    });
+
+    const calendars = (resolved.pack.time_systems ?? []) as unknown as CalendarConfig[];
+    const clock = new ChronosEngine(calendars, runtimeConfig.initialTick);
+    const runtimeSpeed = new RuntimeSpeedPolicy(runtimeConfig.configuredStepTicks ?? 1n);
+
     const host = new PackRuntimeInstance({
       pack: resolved.pack,
       packFolderName: resolved.packFolderName,
+      clock,
+      runtimeSpeed,
       initialStatus: 'loaded',
       initialMessage: 'experimental operator-loaded runtime'
     });
@@ -158,6 +179,21 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     if (deletedCount > 0) {
       console.log(`[PackRuntimeRegistryService] Cleaned up ${String(deletedCount)} actor bridge records for unloaded pack ${packId}`);
     }
+
+    const location = resolvePackRuntimeDatabaseLocation(packId);
+    const runtimeDbPath = location.runtimeDbPath;
+    const storagePlanPath = `${runtimeDbPath}.storage-plan.json`;
+
+    if (fs.existsSync(runtimeDbPath)) {
+      fs.rmSync(runtimeDbPath, { force: true });
+      console.log(`[PackRuntimeRegistryService] Removed runtime database for unloaded pack ${packId}: ${runtimeDbPath}`);
+    }
+    if (fs.existsSync(storagePlanPath)) {
+      fs.rmSync(storagePlanPath, { force: true });
+    }
+
+    pluginRuntimeRegistry.clearRuntimes(packId);
+
     return this.registry.unregister(packId);
   }
 

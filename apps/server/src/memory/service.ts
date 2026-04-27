@@ -1,4 +1,4 @@
-import type { AppContext } from '../app/context.js';
+import type { AppInfrastructure } from '../app/context.js';
 import type { InferenceActorRef } from '../inference/types.js';
 import { createNoopLongTermMemoryStore } from './long_term_store.js';
 import { selectMemory, toMemoryContextPack } from './selector.js';
@@ -19,7 +19,7 @@ export interface MemoryService {
 }
 
 export interface CreateMemoryServiceOptions {
-  context: AppContext;
+  context: AppInfrastructure;
   longTermStore?: LongTermMemoryStore;
 }
 

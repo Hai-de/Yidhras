@@ -6,6 +6,7 @@ export const identityTypeSchema = z.enum([
   'user',
   'agent',
   'system',
+  'anonymous',
   'plugin_reserved',
   'external_reserved'
 ])

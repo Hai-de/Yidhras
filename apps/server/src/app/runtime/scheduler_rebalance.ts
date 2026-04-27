@@ -149,7 +149,7 @@ export const applySchedulerAutomaticRebalanceForWorker = async (
     maxApply?: number;
   }
 ): Promise<ApplySchedulerAutomaticRebalanceResult> => {
-  const now = input.now ?? context.sim.getCurrentTick();
+  const now = input.now ?? context.clock.getCurrentTick();
   const config = getSchedulerAutomaticRebalanceConfig();
   const maxApply = Math.max(input.maxApply ?? config.max_apply, 1);
   const recommendations = await listPendingSchedulerRebalanceRecommendationsForWorker(context, {
@@ -234,7 +234,7 @@ export const evaluateSchedulerAutomaticRebalance = async (
     migrationBacklogLimit?: number;
   }
 ): Promise<EvaluateSchedulerAutomaticRebalanceResult> => {
-  const now = input?.now ?? context.sim.getCurrentTick();
+  const now = input?.now ?? context.clock.getCurrentTick();
   const config = getSchedulerAutomaticRebalanceConfig();
   const maxRecommendations = Math.max(input?.maxRecommendations ?? config.max_recommendations, 1);
   const migrationBacklogLimit = Math.max(

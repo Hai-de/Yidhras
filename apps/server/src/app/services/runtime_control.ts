@@ -17,8 +17,8 @@ const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
 };
 
 export const overrideRuntimeSpeed = (context: AppContext, stepTicks: bigint): RuntimeSpeedSnapshot => {
-  context.sim.setRuntimeSpeedOverride(stepTicks);
-  const snapshot = context.sim.getRuntimeSpeedSnapshot();
+  context.activePackRuntime!.setRuntimeSpeedOverride(stepTicks);
+  const snapshot = context.activePackRuntime!.getRuntimeSpeedSnapshot();
 
   context.notifications.push('info', `运行时步进已覆盖为 ${stepTicks.toString()}`, 'RUNTIME_SPEED_OVERRIDE', {
     step_ticks: stepTicks.toString(),
@@ -29,8 +29,8 @@ export const overrideRuntimeSpeed = (context: AppContext, stepTicks: bigint): Ru
 };
 
 export const clearRuntimeSpeedOverride = (context: AppContext): RuntimeSpeedSnapshot => {
-  context.sim.clearRuntimeSpeedOverride();
-  const snapshot = context.sim.getRuntimeSpeedSnapshot();
+  context.activePackRuntime!.clearRuntimeSpeedOverride();
+  const snapshot = context.activePackRuntime!.getRuntimeSpeedSnapshot();
 
   context.notifications.push('info', '运行时步进覆盖已清除', 'RUNTIME_SPEED_OVERRIDE_CLEAR', {
     override_since: null

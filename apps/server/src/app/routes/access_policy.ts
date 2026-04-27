@@ -12,6 +12,7 @@ import type { IdentityRequest } from '../../identity/middleware.js';
 import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseBody } from '../http/zod.js';
+import { requireAuth } from '../middleware/require_auth.js';
 
 export interface AccessPolicyRouteDependencies {
   asyncHandler(
@@ -26,6 +27,7 @@ export const registerAccessPolicyRoutes = (
 ): void => {
   app.post(
     '/api/access-policy',
+    requireAuth(),
     deps.asyncHandler(async (req, res) => {
       const body = parseBody(createPolicyRequestSchema, req.body, 'POLICY_INVALID');
 
@@ -37,6 +39,7 @@ export const registerAccessPolicyRoutes = (
 
   app.post(
     '/api/access-policy/evaluate',
+    requireAuth(),
     deps.asyncHandler(async (req, res) => {
       const identityRequest = req as IdentityRequest;
       const body = parseBody(evaluatePolicyRequestSchema, req.body, 'POLICY_EVAL_INVALID');

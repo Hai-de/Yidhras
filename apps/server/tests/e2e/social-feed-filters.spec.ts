@@ -1,6 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { describe, expect, it } from 'vitest';
 
+import { getRootAuthHeadersWithIdentity } from '../helpers/auth.js';
 import {
   assertErrorEnvelope,
   assertSuccessEnvelopeArrayData,
@@ -13,13 +14,7 @@ import {
 } from '../helpers/runtime.js';
 import { isRecord, requestJson, withTestServer } from '../helpers/server.js';
 
-const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
-  return JSON.stringify({
-    id: identityId,
-    type,
-    name: identityId
-  });
-};
+
 
 const createTraceRecord = (id: string, agentId: string, tick: bigint) => ({
   id,
@@ -277,7 +272,7 @@ describe('social feed filters e2e', () => {
           expect(statusData.runtime_ready).toBe(true);
 
           const headers = {
-            'x-m2-identity': createIdentityHeader('agent-001', 'agent')
+            ...(await getRootAuthHeadersWithIdentity(server.baseUrl, 'agent-001', 'agent'))
           };
 
           const latestResponse = await requestJson(

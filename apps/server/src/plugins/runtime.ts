@@ -1,7 +1,7 @@
 import type { PluginManifest } from '@yidhras/contracts';
 import type { Express, Request, Response } from 'express';
 
-import type { AppContext } from '../app/context.js';
+import type { AppInfrastructure } from '../app/context.js';
 import type {
   QueryContributor,
   RuleContributor,
@@ -11,10 +11,12 @@ import type { ContextSourceAdapter } from '../context/source_registry.js';
 import type { PromptWorkflowStepExecutor } from '../context/workflow/registry.js';
 import { createPluginStore } from './store.js';
 
+type Ctx = AppInfrastructure & { getHttpApp?(): Express | null };
+
 export interface ServerPluginHostApi {
   registerContextSource(adapter: ContextSourceAdapter, capabilityKey?: string): void;
   registerPromptWorkflowStep(executor: PromptWorkflowStepExecutor, capabilityKey?: string): void;
-  registerPackRoute(register: (app: Express, context: AppContext) => void, capabilityKey?: string): void;
+  registerPackRoute(register: (app: Express, context: Ctx) => void, capabilityKey?: string): void;
   registerStepContributor(contributor: StepContributor, capabilityKey?: string): void;
   registerRuleContributor(contributor: RuleContributor, capabilityKey?: string): void;
   registerQueryContributor(contributor: QueryContributor, capabilityKey?: string): void;
@@ -28,7 +30,7 @@ export interface RegisteredServerPluginRuntime {
   granted_capabilities: string[];
   context_sources: ContextSourceAdapter[];
   prompt_workflow_steps: PromptWorkflowStepExecutor[];
-  pack_routes: Array<(app: Express, context: AppContext) => void>;
+  pack_routes: Array<(app: Express, context: Ctx) => void>;
   step_contributors: StepContributor[];
   rule_contributors: RuleContributor[];
   query_contributors: QueryContributor[];
@@ -130,7 +132,7 @@ class PluginRuntimeRegistry {
     return this.listRuntimes(packId).flatMap(runtime => runtime.query_contributors);
   }
 
-  public applyPackRoutes(packId: string, app: Express, context: AppContext): void {
+  public applyPackRoutes(packId: string, app: Express, context: Ctx): void {
     for (const runtime of this.listRuntimes(packId)) {
       runtime.pack_routes.forEach((register, index) => {
         const routeKey = `${packId}:${runtime.installation_id}:${String(index)}`;
@@ -242,8 +244,8 @@ const registerManifestContributions = (runtime: RegisteredServerPluginRuntime): 
   }
 }
 
-export const syncActivePackPluginRuntime = async (context: AppContext): Promise<void> => {
-  const activePackId = context.sim.getActivePack()?.metadata.id;
+export const syncActivePackPluginRuntime = async (context: Ctx): Promise<void> => {
+  const activePackId = context.activePack.getActivePack()?.metadata.id;
   if (!activePackId) {
     return;
   }
@@ -259,7 +261,7 @@ export const syncActivePackPluginRuntime = async (context: AppContext): Promise<
 };
 
 export const syncExperimentalPackPluginRuntime = async (
-  context: AppContext,
+  context: Ctx,
   packId: string
 ): Promise<void> => {
   await refreshPackPluginRuntime(context, packId);
@@ -272,8 +274,8 @@ export const syncExperimentalPackPluginRuntime = async (
   pluginRuntimeRegistry.applyPackRoutes(packId, app, context);
 };
 
-export const refreshActivePackPluginRuntime = async (context: AppContext): Promise<void> => {
-  const activePack = context.sim.getActivePack();
+export const refreshActivePackPluginRuntime = async (context: Ctx): Promise<void> => {
+  const activePack = context.activePack.getActivePack();
   if (!activePack) {
     return;
   }
@@ -282,7 +284,7 @@ export const refreshActivePackPluginRuntime = async (context: AppContext): Promi
 };
 
 export const refreshPackPluginRuntime = async (
-  context: AppContext,
+  context: Ctx,
   packId: string
 ): Promise<void> => {
   const normalizedPackId = packId.trim();

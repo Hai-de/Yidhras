@@ -23,7 +23,7 @@ export const createAgentBinding = async (
     throw new ApiError(409, 'BINDING_ALREADY_EXISTS', 'Agent binding already exists for this operator')
   }
 
-  const now = context.sim.getCurrentTick()
+  const now = context.clock.getCurrentTick()
 
   const binding = await context.prisma.identityNodeBinding.create({
     data: {
@@ -67,7 +67,7 @@ export const unbindAgent = async (
     throw new ApiError(404, 'BINDING_NOT_FOUND', 'Agent binding not found')
   }
 
-  const now = context.sim.getCurrentTick()
+  const now = context.clock.getCurrentTick()
 
   await context.prisma.identityNodeBinding.update({
     where: { id: binding.id },

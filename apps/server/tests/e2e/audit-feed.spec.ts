@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { getRootAuthHeadersWithIdentity } from '../helpers/auth.js';
 import {
   assertArrayField,
   assertPaginationMeta,
@@ -13,13 +14,7 @@ import {
 } from '../helpers/runtime.js';
 import { isRecord, requestJson, sleep, withTestServer } from '../helpers/server.js';
 
-const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
-  return JSON.stringify({
-    id: identityId,
-    type,
-    name: identityId
-  });
-};
+
 
 const pollReplayJob = async (
   baseUrl: string,
@@ -81,7 +76,7 @@ describe('audit feed e2e', () => {
 
           const headers = {
             'Content-Type': 'application/json',
-            'x-m2-identity': createIdentityHeader('agent-001', 'agent')
+            ...(await getRootAuthHeadersWithIdentity(server.baseUrl, 'agent-001', 'agent'))
           };
 
           const messageContent = `Audit feed post ${Date.now()}`;

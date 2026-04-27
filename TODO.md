@@ -6,15 +6,24 @@
 ## 当前重点 / Current Focus
 
 ### 梳理当前代码实现
-- [ ] 实现部分 docs/ENHANCEMENTS.md 文件中列出的高价值内容
+
 - [ ] mock 和 rule_based 是开发/测试用的本地 provider，判断一下项目目前是否还需要她们
+
+- [ ] 实现部分 docs/ENHANCEMENTS.md 文件中列出的高价值内容
 ### AI 网关模块盲点修复 (基于代码审计发现)
 
 - [~] 启用 tool calling 入口：`task_service.ts` 中硬编码 `tools:[]` + `tool_policy:{mode:'disabled'}`，已有方案，详见 `.limcode/design/ai-tool-calling-enablement.md`
 - [ ] Streaming/SSE 支持：**全项目盲点** — gateway 和旧 inference 链路均为 req→full response，`openai.ts` 适配器无 `stream:true`，无 SSE/EventSource 能力，择日处理
-- [x] 引入熔断器/速率限制/指数退避：**全项目盲点** — 当前仅简单 `retry_limit` 循环，无 circuit breaker、rate limiter、exponential backoff（`gateway.ts` 重试间零延迟，`openai.ts` 不处理 429 Retry-After，旧 inference 无 API 级重试）
-- [x] 补充测试覆盖：`registry.ts`（YAML 加载/合并）、`task_decoder.ts`（schema 校验/alias/unwrap）、`observability.ts`（Prisma 写入）、OpenAI adapter 集成测试、HTTP 路由契约测试 — 择日处理
 
+### 世界包多包运行时 (World-Pack Multi-Runtime)
+
+- [x] 共享 materialization 接口抽取：`pack_materializer.ts` + `runtime_activation.ts` 重构 + `PackRuntimeRegistryService.load()` 接入 — 详见 `.limcode/design/experimental-pack-runtime-materialization.md`
+- [x] Experimental pack step API：`POST /api/experimental/runtime/packs/:packId/step` — 独立时钟推进
+- [x] Unload 清理增强：删除 runtime.sqlite + storage-plan.json + pluginRuntimeRegistry 缓存
+- [ ] Plugin discovery for experimental packs：当前 `discoverPackLocalPlugins` 只在 active activation 调用，实验性 pack 加载不触发 — 需要 `packFolderName` 定位目录
+- [ ] `bootstrap_list` 启动模式：`runtime.multi_pack.start_mode` 和 `bootstrap_packs` 配置已存在，启动逻辑未实现 — 留钩子
+- [ ] Scheduler 多包隔离：`experimental_scheduler_runtime.ts` 当前只给 `partition_id` 加前缀，未真正按 pack 隔离数据 — 需深重构
+- [ ] 实验性 pack 卸载无 scheduler worker 通知：当前只清理数据和缓存，未通知 scheduler 停止相关 workers
 
 
 ## 说明 / Notes

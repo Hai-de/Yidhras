@@ -63,12 +63,10 @@ export const buildExperimentalRuntimeControlPlaneSnapshot = async (
   context: AppContext
 ): Promise<ExperimentalRuntimeControlPlaneSnapshot> => {
   const lookup = getPackRuntimeLookupPort({
-    packRuntimeLookup: context.packRuntimeLookup,
-    sim: context.sim
+    packRuntimeLookup: context.packRuntimeLookup
   });
   const observation = getPackRuntimeObservation({
-    packRuntimeObservation: context.packRuntimeObservation,
-    sim: context.sim
+    packRuntimeObservation: context.packRuntimeObservation
   });
 
   const loadedPackIds = context.sim.getPackRuntimeRegistry().listLoadedPackIds();

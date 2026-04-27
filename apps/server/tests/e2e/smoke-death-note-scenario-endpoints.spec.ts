@@ -1,19 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { getRootAuthHeadersWithIdentity } from '../helpers/auth.js';
 import { assertRecord, assertSuccessEnvelopeArrayData, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
 import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { isRecord, requestJson } from '../helpers/server.js';
 
 const DEATH_NOTE_PACK_REF = 'death_note';
 const DEATH_NOTE_PACK_ID = 'world-death-note';
-
-const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
-  return JSON.stringify({
-    id: identityId,
-    type,
-    name: identityId
-  });
-};
 
 describe('smoke death note scenario endpoints e2e', () => {
   it('covers social, relational, projection and scenario-bound inference reads under explicit death_note', async () => {
@@ -46,14 +39,11 @@ describe('smoke death note scenario endpoints e2e', () => {
         const timelineData = assertSuccessEnvelopeData(timelineResponse.body, '/api/packs/world-death-note/projections/timeline');
         expect(Array.isArray(timelineData.timeline)).toBe(true);
 
-        const activeIdentityHeaders = {
-          'Content-Type': 'application/json',
-          'x-m2-identity': createIdentityHeader('agent-001', 'agent')
-        };
+        const previewHeaders = await getRootAuthHeadersWithIdentity(server.baseUrl, 'agent-001', 'agent');
 
         const previewByAgentResponse = await requestJson(server.baseUrl, '/api/inference/preview', {
           method: 'POST',
-          headers: activeIdentityHeaders,
+          headers: previewHeaders,
           body: JSON.stringify({
             agent_id: 'agent-001',
             strategy: 'mock',
@@ -69,13 +59,10 @@ describe('smoke death note scenario endpoints e2e', () => {
         expect(previewByAgentActor.agent_id).toBe('agent-001');
         expect(isRecord(previewByAgentData.prompt)).toBe(true);
 
-        const atmosphereIdentityHeaders = {
-          'Content-Type': 'application/json',
-          'x-m2-identity': createIdentityHeader('user-001', 'user')
-        };
+        const atmosphereHeaders = await getRootAuthHeadersWithIdentity(server.baseUrl, 'user-001', 'user');
         const previewAtmosphereResponse = await requestJson(server.baseUrl, '/api/inference/preview', {
           method: 'POST',
-          headers: atmosphereIdentityHeaders,
+          headers: atmosphereHeaders,
           body: JSON.stringify({
             identity_id: 'user-001',
             strategy: 'mock'
@@ -89,9 +76,10 @@ describe('smoke death note scenario endpoints e2e', () => {
         expect(previewAtmosphereActor.atmosphere_node_id).toBe('atm-001');
         expect(previewAtmosphereActor.agent_id).toBeNull();
 
+        const runHeaders = await getRootAuthHeadersWithIdentity(server.baseUrl, 'agent-001', 'agent');
         const runResponse = await requestJson(server.baseUrl, '/api/inference/run', {
           method: 'POST',
-          headers: activeIdentityHeaders,
+          headers: runHeaders,
           body: JSON.stringify({
             agent_id: 'agent-001',
             identity_id: 'agent-001',

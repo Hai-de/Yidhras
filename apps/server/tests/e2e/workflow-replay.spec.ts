@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { getRootAuthHeadersWithIdentity } from '../helpers/auth.js';
 import { assertRecord, assertStringArrayField, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
 import {
   createIsolatedRuntimeEnvironment,
@@ -23,13 +24,7 @@ const assertStringArray = (value: unknown, label: string): string[] => {
   return value;
 };
 
-const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
-  return JSON.stringify({
-    id: identityId,
-    type,
-    name: identityId
-  });
-};
+
 
 const pollJobUntil = async (
   baseUrl: string,
@@ -98,8 +93,7 @@ describe('workflow replay e2e', () => {
         expect(statusData.runtime_ready).toBe(true);
 
         const headers = {
-          'Content-Type': 'application/json',
-          'x-m2-identity': createIdentityHeader(DEATH_NOTE_AGENT_ID, 'agent')
+          ...(await getRootAuthHeadersWithIdentity(server.baseUrl, DEATH_NOTE_AGENT_ID, 'agent'))
         };
 
         await clearSchedulerPendingBaseline(prisma, DEATH_NOTE_AGENT_ID);

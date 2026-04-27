@@ -52,7 +52,7 @@ export const checkCapability = async (
   }
 
   // 查 OperatorGrant 委托
-  const now = context.sim.getCurrentTick()
+  const now = context.clock.getCurrentTick()
   const grant = await context.prisma.operatorGrant.findFirst({
     where: {
       receiver_identity_id: operator.identity_id,

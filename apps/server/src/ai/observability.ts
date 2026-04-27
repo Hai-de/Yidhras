@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 
-import type { AppContext } from '../app/context.js';
+import type { AppInfrastructure } from '../app/context.js';
 import type { AiInvocationTrace, ModelGatewayResponse } from './types.js';
 
 const toJsonValue = (value: unknown): Prisma.InputJsonValue => {
@@ -77,7 +77,7 @@ const buildUpsertPayload = (
 };
 
 export const recordAiInvocation = async (
-  context: AppContext | null | undefined,
+  context: AppInfrastructure | null | undefined,
   response: ModelGatewayResponse,
   options?: {
     sourceInferenceId?: string | null;
@@ -105,7 +105,7 @@ export const recordAiInvocation = async (
       ? attemptLatencies.reduce((sum, value) => sum + value, 0)
       : null;
 
-  const currentTick = context.sim.getCurrentTick();
+  const currentTick = context.clock.getCurrentTick();
 
   try {
     await context.prisma.aiInvocationRecord.upsert(

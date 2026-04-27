@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import { Prisma } from '@prisma/client';
 
-import type { AppContext } from '../../app/context.js';
+import type { AppInfrastructure } from '../../app/context.js';
+import type { AppContextPorts } from '../../app/services/app_context_ports.js';
 import { getErrorMessage } from '../../app/http/errors.js';
 import { toJsonSafe } from '../../app/http/json.js';
 import type {
@@ -181,7 +182,9 @@ const isMissingMemoryBlockTablesError = (error: unknown): boolean => {
   );
 };
 
-export const createPrismaLongMemoryBlockStore = (context: AppContext): LongMemoryBlockStore => {
+type MemoryBlockStoreContext = AppInfrastructure & Pick<AppContextPorts, 'activePackRuntime'>;
+
+export const createPrismaLongMemoryBlockStore = (context: MemoryBlockStoreContext): LongMemoryBlockStore => {
   return {
     async listCandidateBlocks(input: MemoryBlockCandidateQuery): Promise<MemoryBlockRecord[]> {
       try {
@@ -338,7 +341,7 @@ export const createPrismaLongMemoryBlockStore = (context: AppContext): LongMemor
 
     async hardDeleteBlock(input: DeleteMemoryBlockInput): Promise<void> {
       try {
-        const activePackRuntime = context.activePackRuntime ?? context.sim;
+        const activePackRuntime = context.activePackRuntime!;
         await context.prisma.$transaction(async prisma => {
           await prisma.memoryBlockDeletionAudit.create({
             data: {

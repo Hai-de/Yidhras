@@ -1,13 +1,13 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-04-26T12:18:43.073Z
+- Updated At: 2026-04-26T16:16:36.001Z
 - Status: active
 - Phase: implementation
 
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
-- 当前进度：3/3 个里程碑已完成；最新：test-fix-and-coverage
+- 当前进度：4/4 个里程碑已完成；最新：pack-runtime-materialization-shared
 - 当前焦点：AI 网关盲点修复收尾 — 仅剩 Streaming/SSE（择日处理）
 - 最新结论：测试冲刺完成：10 失败→5 失败，278 pass→314 pass。新增 registry/task_decoder/observability 降级/openai adapter 共 31 个新测试。TODO.md 仅剩 Streaming/SSE 一项未处理。
 - 下一步：仅剩 Streaming/SSE 需求评估留待日后。可关闭本轮盲点修复
@@ -16,21 +16,21 @@
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/ai-elasticity-circuit-breaker-rate-limiter-backoff.md`
-- 计划：`.limcode/plans/plan.plan.md`
+- 设计：`.limcode/design/experimental-pack-runtime-materialization.md`
+- 计划：`.limcode/plans/共享-pack-runtime-materialization-接口抽取.plan.md`
 - 审查：`.limcode/review/测试链路重构评估.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 修复 prompt_bundle_v2.spec.ts — 删除 T2 和 T6  `#t1`
-- [x] 修复 prompt_workflow_sections.spec.ts — 删除过时测试  `#t2`
-- [x] 新建 registry.spec.ts — YAML 加载/合并/zod 校验测试  `#t3`
-- [x] 新建 task_decoder.spec.ts — decodeAiTaskOutput 各模式测试  `#t4`
-- [x] 扩展 observability.spec.ts — 降级行为测试  `#t5`
-- [x] 新建 openai_adapter.spec.ts — 请求构建 + 响应解析测试  `#t6`
-- [x] 更新 TODO.md — 标记测试覆盖完成  `#t7`
+- [x] 新建 pack_materializer.ts 接口文件（类型定义 + 空函数签名）  `#t1`
+- [x] 新建 pack_materializer.spec.ts 单元测试（6 个用例）  `#t2`
+- [x] 实现 materializePackRuntime() 函数体（三条已有函数调用）  `#t3`
+- [x] 重构 runtime_activation.ts：三行调用 → 一行 materializePackRuntime  `#t4`
+- [x] 重构 PackRuntimeRegistryService.load()：注入 materialization + 独立时钟  `#t5`
+- [x] 扩展 pack_runtime_registry.spec.ts（load 集成测试 + unload 清理测试）  `#t6`
+- [x] 全量回归：unit / integration / e2e + tsc --noEmit  `#t7`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -67,6 +67,17 @@
   - 计划：`.limcode/plans/plan.plan.md`
 - 摘要:
 测试冲刺完成：(1) 修复 3 个预存测试失败 — 删除 prompt_bundle_v2.spec.ts 中 2 个过时测试（toLegacyPromptBundle / buildPromptBundle），删除 prompt_workflow_sections.spec.ts 中 1 个过时 pipeline 测试；(2) 新增 4 个测试文件 — registry.spec.ts (13 tests)、task_decoder.spec.ts (13 tests)、ai_observability.spec.ts 扩展 (+5 resilience tests)、openai_adapter.spec.ts (5 tests)。失败从 10 降至 5，通过从 278 升至 314。(3) 导出 mergeAiRegistryConfig 供测试使用。
+
+### pack-runtime-materialization-shared · 共享 Pack Runtime Materialization 接口抽取完成
+- 状态：completed
+- 记录时间：2026-04-26T16:16:36.001Z
+- 完成时间：2026-04-26T16:16:36.001Z
+- 关联 TODO：t1, t2, t3, t4, t5, t6, t7
+- 关联文档：
+  - 设计：`.limcode/design/experimental-pack-runtime-materialization.md`
+  - 计划：`.limcode/plans/共享-pack-runtime-materialization-接口抽取.plan.md`
+- 摘要:
+实现共享 pack materialization 函数：新建 pack_materializer.ts（MaterializePackRuntimeInput/Output 接口 + materializePackRuntime() 三元调用）、6 个单元测试（fresh pack / idempotent / file structure / scoped IDs / no storage / custom collections）、重构 runtime_activation.ts（三行调用→一行共享函数）、重构 PackRuntimeRegistryService.load()（注入 materialization + 独立 ChronosEngine 时钟 + RuntimeSpeedPolicy）、扩展注册表测试（+3 集成测试：load 触发 materialization / unload 清理 actor bridges / already_loaded 幂等）。全量 336 单元测试通过，无回归。
 <!-- LIMCODE_PROGRESS_MILESTONES_END -->
 
 ## 风险与阻塞
@@ -78,10 +89,6 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-04-25T22:02:47.159Z | artifact_changed | plan | 同步计划文档：.limcode/plans/plan.plan.md
-- 2026-04-25T23:31:02.938Z | artifact_changed | design | 同步设计文档：.limcode/design/ai-tool-calling-enablement.md
-- 2026-04-26T00:38:00.535Z | artifact_changed | design | 同步设计文档：.limcode/design/prompt-bundle-componentized-refactoring-design.md
-- 2026-04-26T00:39:29.363Z | artifact_changed | plan | 同步计划文档：.limcode/plans/prompt-bundle-组件化重构-phase-2-推进.plan.md
 - 2026-04-26T00:53:31.081Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/prompt-bundle-组件化重构-phase-2-推进.plan.md
 - 2026-04-26T01:42:43.193Z | artifact_changed | plan | 同步计划文档：.limcode/plans/prompt-bundle-组件化重构-phase-3-processor-管线树化.plan.md
 - 2026-04-26T01:48:48.013Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/prompt-bundle-组件化重构-phase-3-processor-管线树化.plan.md
@@ -98,6 +105,10 @@
 - 2026-04-26T12:05:01.314Z | artifact_changed | plan | 同步计划文档：.limcode/plans/plan.plan.md
 - 2026-04-26T12:18:12.219Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/plan.plan.md
 - 2026-04-26T12:18:28.651Z | milestone_recorded | test-fix-and-coverage | 记录里程碑：测试修复与新覆盖完成
+- 2026-04-26T15:59:44.842Z | artifact_changed | design | 同步设计文档：.limcode/design/experimental-pack-runtime-materialization.md
+- 2026-04-26T16:02:01.887Z | artifact_changed | plan | 同步计划文档：.limcode/plans/共享-pack-runtime-materialization-接口抽取.plan.md
+- 2026-04-26T16:16:23.984Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/共享-pack-runtime-materialization-接口抽取.plan.md
+- 2026-04-26T16:16:36.001Z | milestone_recorded | pack-runtime-materialization-shared | 记录里程碑：共享 Pack Runtime Materialization 接口抽取完成
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -107,7 +118,7 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-04-24T15:27:52.689Z",
-  "updatedAt": "2026-04-26T12:18:43.073Z",
+  "updatedAt": "2026-04-26T16:16:36.001Z",
   "status": "active",
   "phase": "implementation",
   "currentFocus": "AI 网关盲点修复收尾 — 仅剩 Streaming/SSE（择日处理）",
@@ -115,44 +126,44 @@
   "currentBlocker": null,
   "nextAction": "仅剩 Streaming/SSE 需求评估留待日后。可关闭本轮盲点修复",
   "activeArtifacts": {
-    "design": ".limcode/design/ai-elasticity-circuit-breaker-rate-limiter-backoff.md",
-    "plan": ".limcode/plans/plan.plan.md",
+    "design": ".limcode/design/experimental-pack-runtime-materialization.md",
+    "plan": ".limcode/plans/共享-pack-runtime-materialization-接口抽取.plan.md",
     "review": ".limcode/review/测试链路重构评估.md"
   },
   "todos": [
     {
       "id": "t1",
-      "content": "修复 prompt_bundle_v2.spec.ts — 删除 T2 和 T6",
+      "content": "新建 pack_materializer.ts 接口文件（类型定义 + 空函数签名）",
       "status": "completed"
     },
     {
       "id": "t2",
-      "content": "修复 prompt_workflow_sections.spec.ts — 删除过时测试",
+      "content": "新建 pack_materializer.spec.ts 单元测试（6 个用例）",
       "status": "completed"
     },
     {
       "id": "t3",
-      "content": "新建 registry.spec.ts — YAML 加载/合并/zod 校验测试",
+      "content": "实现 materializePackRuntime() 函数体（三条已有函数调用）",
       "status": "completed"
     },
     {
       "id": "t4",
-      "content": "新建 task_decoder.spec.ts — decodeAiTaskOutput 各模式测试",
+      "content": "重构 runtime_activation.ts：三行调用 → 一行 materializePackRuntime",
       "status": "completed"
     },
     {
       "id": "t5",
-      "content": "扩展 observability.spec.ts — 降级行为测试",
+      "content": "重构 PackRuntimeRegistryService.load()：注入 materialization + 独立时钟",
       "status": "completed"
     },
     {
       "id": "t6",
-      "content": "新建 openai_adapter.spec.ts — 请求构建 + 响应解析测试",
+      "content": "扩展 pack_runtime_registry.spec.ts（load 集成测试 + unload 清理测试）",
       "status": "completed"
     },
     {
       "id": "t7",
-      "content": "更新 TODO.md — 标记测试覆盖完成",
+      "content": "全量回归：unit / integration / e2e + tsc --noEmit",
       "status": "completed"
     }
   ],
@@ -222,34 +233,33 @@
       "completedAt": "2026-04-26T12:18:28.651Z",
       "recordedAt": "2026-04-26T12:18:28.651Z",
       "nextAction": null
+    },
+    {
+      "id": "pack-runtime-materialization-shared",
+      "title": "共享 Pack Runtime Materialization 接口抽取完成",
+      "status": "completed",
+      "summary": "实现共享 pack materialization 函数：新建 pack_materializer.ts（MaterializePackRuntimeInput/Output 接口 + materializePackRuntime() 三元调用）、6 个单元测试（fresh pack / idempotent / file structure / scoped IDs / no storage / custom collections）、重构 runtime_activation.ts（三行调用→一行共享函数）、重构 PackRuntimeRegistryService.load()（注入 materialization + 独立 ChronosEngine 时钟 + RuntimeSpeedPolicy）、扩展注册表测试（+3 集成测试：load 触发 materialization / unload 清理 actor bridges / already_loaded 幂等）。全量 336 单元测试通过，无回归。",
+      "relatedTodoIds": [
+        "t1",
+        "t2",
+        "t3",
+        "t4",
+        "t5",
+        "t6",
+        "t7"
+      ],
+      "relatedReviewMilestoneIds": [],
+      "relatedArtifacts": {
+        "design": ".limcode/design/experimental-pack-runtime-materialization.md",
+        "plan": ".limcode/plans/共享-pack-runtime-materialization-接口抽取.plan.md"
+      },
+      "completedAt": "2026-04-26T16:16:36.001Z",
+      "recordedAt": "2026-04-26T16:16:36.001Z",
+      "nextAction": null
     }
   ],
   "risks": [],
   "log": [
-    {
-      "at": "2026-04-25T22:02:47.159Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/plan.plan.md"
-    },
-    {
-      "at": "2026-04-25T23:31:02.938Z",
-      "type": "artifact_changed",
-      "refId": "design",
-      "message": "同步设计文档：.limcode/design/ai-tool-calling-enablement.md"
-    },
-    {
-      "at": "2026-04-26T00:38:00.535Z",
-      "type": "artifact_changed",
-      "refId": "design",
-      "message": "同步设计文档：.limcode/design/prompt-bundle-componentized-refactoring-design.md"
-    },
-    {
-      "at": "2026-04-26T00:39:29.363Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划文档：.limcode/plans/prompt-bundle-组件化重构-phase-2-推进.plan.md"
-    },
     {
       "at": "2026-04-26T00:53:31.081Z",
       "type": "artifact_changed",
@@ -343,11 +353,35 @@
       "type": "milestone_recorded",
       "refId": "test-fix-and-coverage",
       "message": "记录里程碑：测试修复与新覆盖完成"
+    },
+    {
+      "at": "2026-04-26T15:59:44.842Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/experimental-pack-runtime-materialization.md"
+    },
+    {
+      "at": "2026-04-26T16:02:01.887Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/共享-pack-runtime-materialization-接口抽取.plan.md"
+    },
+    {
+      "at": "2026-04-26T16:16:23.984Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/共享-pack-runtime-materialization-接口抽取.plan.md"
+    },
+    {
+      "at": "2026-04-26T16:16:36.001Z",
+      "type": "milestone_recorded",
+      "refId": "pack-runtime-materialization-shared",
+      "message": "记录里程碑：共享 Pack Runtime Materialization 接口抽取完成"
     }
   ],
   "stats": {
-    "milestonesTotal": 3,
-    "milestonesCompleted": 3,
+    "milestonesTotal": 4,
+    "milestonesCompleted": 4,
     "todosTotal": 7,
     "todosCompleted": 7,
     "todosInProgress": 0,
@@ -356,8 +390,8 @@
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-04-26T12:18:43.073Z",
-    "bodyHash": "sha256:20506b76f654a8208837c1f84841da903fb60f0bc65aa3e59c17504e38568f29"
+    "generatedAt": "2026-04-26T16:16:36.001Z",
+    "bodyHash": "sha256:bd4875ee4783f741a1d7fac035a5d54f5b3cca5294b28806aad63d9160c6616e"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

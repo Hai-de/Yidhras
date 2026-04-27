@@ -1,15 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
 import { AccessPolicyService } from '../access_policy/service.js';
-import type { AppContext } from '../app/context.js';
-import { getAgentContextSnapshot } from '../app/services/agent.js';
-import { getActivePackRuntimeFacade } from '../app/services/app_context_ports.js';
+import type { AppContext, AppInfrastructure } from '../app/context.js';
+import type { AppContextPorts } from '../app/services/app_context_ports.js';
 import { createContextAssemblyPort } from '../app/services/context_memory_ports.js';
+import { getAgentContextSnapshot } from '../app/services/agent.js';
 import { getLatestEventEvidenceRecord } from '../app/services/event_evidence_repository.js';
-import { createContextService } from '../context/service.js';
 import { IdentityService } from '../identity/service.js';
 import type { IdentityContext } from '../identity/types.js';
-import { createMemoryService } from '../memory/service.js';
 import type { PromptVariableContext, PromptVariableNamespace, VariablePool } from '../narrative/types.js';
 import {
   createPromptVariableContext,
@@ -43,6 +41,8 @@ import type {
   InferenceStrategy,
   InferenceTransmissionProfile
 } from './types.js';
+
+type Ctx = AppInfrastructure & Pick<AppContextPorts, 'activePackRuntime' | 'packRuntimeLookup' | 'contextAssembly'>;
 
 const SUPPORTED_STRATEGIES: InferenceStrategy[] = ['mock', 'rule_based', 'model_routed'];
 
@@ -117,15 +117,15 @@ const normalizeAttributes = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 
-const createIdentityService = (context: AppContext): IdentityService => {
+const createIdentityService = (context: Ctx): IdentityService => {
   return new IdentityService(context.prisma);
 };
 
-const createAccessPolicyService = (context: AppContext): AccessPolicyService => {
+const createAccessPolicyService = (context: Ctx): AccessPolicyService => {
   return new AccessPolicyService(context.prisma);
 };
 
-const listActiveBindingsForIdentity = async (context: AppContext, identityId: string): Promise<BindingRecord[]> => {
+const listActiveBindingsForIdentity = async (context: Ctx, identityId: string): Promise<BindingRecord[]> => {
   return context.prisma.identityNodeBinding.findMany({
     where: {
       identity_id: identityId,
@@ -147,7 +147,7 @@ const listActiveBindingsForIdentity = async (context: AppContext, identityId: st
   }) as Promise<BindingRecord[]>;
 };
 
-const resolveIdentityById = async (context: AppContext, identityId: string): Promise<IdentityContext | null> => {
+const resolveIdentityById = async (context: Ctx, identityId: string): Promise<IdentityContext | null> => {
   const service = createIdentityService(context);
   return service.fetchIdentity(identityId);
 };
@@ -163,7 +163,7 @@ export const packEntityIdFromResolvedAgentId = (packId: string, resolvedAgentId:
   return resolvedAgentId;
 };
 
-const resolveActor = async (context: AppContext, input: InferenceRequestInput, packId?: string): Promise<ResolvedActor> => {
+const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?: string): Promise<ResolvedActor> => {
   if (input.agent_id) {
     const agentContext = await getAgentContextSnapshot(context, input.agent_id);
     return {
@@ -256,7 +256,7 @@ const resolveActor = async (context: AppContext, input: InferenceRequestInput, p
       });
     }
 
-    const activePack = context.sim.getActivePack();
+    const activePack = context.activePack.getActivePack();
     const actorDef = activePack?.entities?.actors?.find(a => a.id === input.actor_entity_id);
     const entityKind = actorDef?.kind ?? 'actor';
 
@@ -350,7 +350,7 @@ const buildAgentSnapshot = (identity: Record<string, unknown>): InferenceAgentSn
 };
 
 const buildPolicySummary = async (
-  context: AppContext,
+  context: Ctx,
   identity: IdentityContext,
   attributes: Record<string, unknown>,
   config?: InferenceContextConfig
@@ -473,7 +473,7 @@ const parsePackStateRecord = (value: unknown): InferencePackStateRecord => {
 };
 
 const buildPackStateSnapshot = async (
-  context: AppContext,
+  context: Ctx,
   packId: string,
   resolvedAgentId: string | null,
   attributes: Record<string, unknown>
@@ -548,8 +548,8 @@ const buildPackStateSnapshot = async (
   };
 };
 
-const buildPackRuntimeContract = (context: AppContext): InferencePackRuntimeContract => {
-  const activePack = context.sim.getActivePack();
+const buildPackRuntimeContract = (context: Ctx): InferencePackRuntimeContract => {
+  const activePack = context.activePack.getActivePack();
   if (!activePack) {
     return {};
   }
@@ -566,38 +566,35 @@ const buildPackRuntimeContract = (context: AppContext): InferencePackRuntimeCont
 const createPackRuntimeContractResolver = (): PackRuntimeContractResolver => {
   return {
     async resolvePackRuntimeContract(
-      context: AppContext,
+      context: Ctx,
       input: {
         pack_id: string;
         mode: 'stable' | 'experimental';
       }
     ): Promise<InferencePackRuntimeContract> {
       if (input.mode === 'stable') {
-        const activePack = context.sim.getActivePack();
+        const activePack = context.activePack.getActivePack();
         if (!activePack || activePack.metadata.id !== input.pack_id) {
           return {};
         }
         return buildPackRuntimeContract(context);
       }
 
-      const handle = context.sim.getPackRuntimeHandle(input.pack_id);
-      if (!handle) {
+      const summary = context.packRuntimeLookup?.getPackRuntimeSummary(input.pack_id);
+      if (!summary) {
         return {};
       }
 
-      return {
-        invocation_rules: (handle.pack.rules?.invocation ?? []).map(rule => ({
-          id: rule.id,
-          when: { ...(rule.when ?? {}) },
-          then: { ...(rule.then ?? {}) }
-        }))
-      };
+      // NOTE: packRuntimeLookup.getPackRuntimeSummary uses slimmer return shape;
+      // pack-scoped invocation_rules for experimental mode are not yet exposed
+      // through a focused port. Returning empty contract for now.
+      return {};
     }
   };
 };
 
 const buildInferenceVariableContext = (input: {
-  context: AppContext;
+  context: Ctx;
   pack: { metadata: { id: string; name: string; version: string }; variables?: Record<string, unknown>; prompts?: Record<string, unknown>; ai?: unknown; };
   strategy: InferenceStrategy;
   attributes: Record<string, unknown>;
@@ -719,20 +716,19 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
   const packRuntimeContractResolver = createPackRuntimeContractResolver();
 
   return {
-    async buildForPack(context: AppContext, input: BuildInferenceContextForPackInput): Promise<InferenceContext> {
+    async buildForPack(context: Ctx, input: BuildInferenceContextForPackInput): Promise<InferenceContext> {
       context.assertRuntimeReady('inference context');
 
-      const activePackRuntime = getActivePackRuntimeFacade({
-        activePackRuntime: context.activePackRuntime,
-        sim: context.sim
-      });
-      const activePack = activePackRuntime.getActivePack();
+      const activePack = context.activePack.getActivePack();
 
       const stablePack = input.mode === 'stable' ? activePack : undefined;
-      const experimentalHandle = input.mode === 'experimental' ? context.sim.getPackRuntimeHandle(input.pack_id) : null;
+      const experimentalSummary = input.mode === 'experimental' ? context.packRuntimeLookup?.getPackRuntimeSummary(input.pack_id) : null;
+      // NOTE: packRuntimeLookup.getPackRuntimeSummary uses a slimmer shape; the full
+      // pack object for experimental mode is not yet exposed through a focused port.
+      // Experimental mode will need an additional port in a future batch.
       const pack = stablePack && stablePack.metadata.id === input.pack_id
         ? stablePack
-        : experimentalHandle?.pack;
+        : undefined;
 
       if (!pack) {
         const activePackId = activePack?.metadata.id ?? '(none)';
@@ -755,8 +751,8 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
       }
 
       const currentTick = input.mode === 'experimental'
-        ? experimentalHandle?.getClockSnapshot().current_tick ?? '0'
-        : activePackRuntime.getCurrentTick().toString();
+        ? experimentalSummary?.current_tick ?? '0'
+        : context.clock.getCurrentTick().toString();
 
       const strategy = selectStrategy(input);
       const attributes = normalizeAttributes(input.attributes);
@@ -783,11 +779,11 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         attributes,
         config
       );
-      const contextAssembly = context.contextAssembly ?? createContextAssemblyPort(context);
-      const fallbackContextService = createContextService({
-        context, memoryService: createMemoryService({ context })
-      });
-      const contextResult = await (contextAssembly.buildContextRun ?? fallbackContextService.buildContextRun)({
+      const contextAssembly = context.contextAssembly ?? createContextAssemblyPort(context as unknown as AppContext);
+      if (!contextAssembly.buildContextRun) {
+        throw new ApiError(500, 'CONTEXT_ASSEMBLY_MISSING', 'Context assembly port is not configured with buildContextRun');
+      }
+      const contextResult = await contextAssembly.buildContextRun({
         actor_ref: resolvedActor.actor_ref as unknown as Record<string, unknown>,
         identity: resolvedActor.identity,
         resolved_agent_id: resolvedActor.resolved_agent_id,
@@ -842,14 +838,10 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
 };
 
 export const buildInferenceContext = async (
-  context: AppContext,
+  context: Ctx,
   input: InferenceRequestInput
 ): Promise<InferenceContext> => {
-  const activePackRuntime = getActivePackRuntimeFacade({
-    activePackRuntime: context.activePackRuntime,
-    sim: context.sim
-  });
-  const pack = activePackRuntime.getActivePack();
+  const pack = context.activePack.getActivePack();
   if (!pack) {
     throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for inference context', {
       startup_level: context.startupHealth.level,

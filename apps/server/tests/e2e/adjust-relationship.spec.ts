@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { getRootAuthHeadersWithIdentity } from '../helpers/auth.js';
 import { assertRecord, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
 import {
   createIsolatedRuntimeEnvironment,
@@ -8,13 +9,7 @@ import {
 } from '../helpers/runtime.js';
 import { isRecord, requestJson, sleep, withTestServer } from '../helpers/server.js';
 
-const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
-  return JSON.stringify({
-    id: identityId,
-    type,
-    name: identityId
-  });
-};
+
 
 const pollReplayJob = async (
   baseUrl: string,
@@ -204,7 +199,7 @@ describe('adjust relationship e2e', () => {
 
             const headers = {
               'Content-Type': 'application/json',
-              'x-m2-identity': createIdentityHeader('agent-001', 'agent')
+              ...(await getRootAuthHeadersWithIdentity(server.baseUrl, 'agent-001', 'agent'))
             };
 
             const initialFriendWeight = await readRelationshipWeight(prisma, 'agent-001', 'agent-002', 'friend');

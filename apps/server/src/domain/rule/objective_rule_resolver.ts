@@ -1,4 +1,4 @@
-import type { AppContext } from '../../app/context.js';
+import type { ActivePackSource } from '../../app/context.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { ResolvedCapabilityItem } from '../authority/resolver.js';
@@ -213,11 +213,11 @@ const resolveObjectiveEventEffects = (
 };
 
 const resolveObjectiveRulePlanFromRules = async (
-  context: AppContext,
+  context: ActivePackSource,
   invocation: InvocationRequest,
   effectiveMediatorId: string | null
 ): Promise<ObjectiveRulePlan | null> => {
-  const pack = context.sim.getActivePack();
+  const pack = context.activePack.getActivePack();
   if (!pack) {
     return null;
   }
@@ -294,14 +294,14 @@ const resolveObjectiveRulePlanFromRules = async (
 };
 
 export const resolveObjectiveRulePlan = async (
-  context: AppContext,
+  context: ActivePackSource,
   input: {
     invocation: InvocationRequest;
     capabilityGrant: ResolvedCapabilityItem | null;
     mediatorId: string | null;
   }
 ): Promise<ObjectiveRulePlan> => {
-  const pack = context.sim.getActivePack();
+  const pack = context.activePack.getActivePack();
   if (!pack) {
     throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for objective rule resolution');
   }

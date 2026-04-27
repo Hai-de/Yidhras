@@ -54,7 +54,7 @@ export interface RuntimeStatusSnapshot {
   world_time: {
     absolute_ticks: string;
     calendars: unknown;
-    source: 'host_projection' | 'sim_fallback';
+    source: 'host_projection' | 'clock_fallback';
   };
   has_error: boolean;
   startup_errors: string[];
@@ -168,7 +168,7 @@ export const getRuntimeStatusSnapshot = async (
     schedulerPartitionIds?: string[];
   }
 ): Promise<RuntimeStatusSnapshot> => {
-  const pack = context.sim.getActivePack();
+  const pack = context.activePack.getActivePack();
   const schedulerWorkerId = options?.schedulerWorkerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
   const visibleClock = readVisibleClockSnapshot(context);
   const runtimeKernel = createRuntimeKernelService(context);
@@ -181,7 +181,7 @@ export const getRuntimeStatusSnapshot = async (
   return {
     status: context.getPaused() ? 'paused' : 'running',
     runtime_ready: context.getRuntimeReady(),
-    runtime_speed: context.sim.getRuntimeSpeedSnapshot(),
+    runtime_speed: context.activePackRuntime!.getRuntimeSpeedSnapshot(),
     runtime_loop: runtimeLoop,
     sqlite: context.getSqliteRuntimePragmas?.() ?? null,
     scheduler: {

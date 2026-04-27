@@ -8,13 +8,15 @@ import {
 } from '../../src/app/runtime/world_engine_persistence.js';
 import { createPackHostApi } from '../../src/app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from '../../src/app/runtime/world_engine_snapshot.js';
-import { sim } from '../../src/core/simulation.js';
-import { createIsolatedRuntimeEnvironment, migrateIsolatedDatabase } from '../helpers/runtime.js';
+import { SimulationManager } from '../../src/core/simulation.js';
+import { createIsolatedRuntimeEnvironment, createPrismaClientForEnvironment, migrateIsolatedDatabase } from '../helpers/runtime.js';
 
 const DEATH_NOTE_PACK_REF = 'death_note';
 const DEATH_NOTE_PACK_ID = 'world-death-note';
 
 describe('world engine sidecar failure recovery integration', () => {
+  let prisma: ReturnType<typeof createPrismaClientForEnvironment>;
+  let sim: SimulationManager;
   let cleanup: (() => Promise<void>) | null = null;
   let context: AppContext;
   let sidecar: WorldEngineSidecarClient;
@@ -34,9 +36,12 @@ describe('world engine sidecar failure recovery integration', () => {
     process.env.DATABASE_URL = environment.databaseUrl;
     process.env.APP_ENV = environment.envOverrides.APP_ENV;
 
+    prisma = createPrismaClientForEnvironment(environment);
+    sim = new SimulationManager({ prisma });
+
     await sim.init('death_note');
     context = {
-      prisma: sim.prisma,
+      prisma,
       sim,
       runtimeBootstrap: sim,
       activePackRuntime: sim,
@@ -75,7 +80,7 @@ describe('world engine sidecar failure recovery integration', () => {
   afterAll(async () => {
     await sidecar?.unloadPack({ pack_id: packId });
     await sidecar?.stop();
-    await sim.prisma.$disconnect();
+    await prisma?.$disconnect();
     if (originalWorkspaceRoot === undefined) delete process.env.WORKSPACE_ROOT;
     else process.env.WORKSPACE_ROOT = originalWorkspaceRoot;
     if (originalWorldPacksDir === undefined) delete process.env.WORLD_PACKS_DIR;

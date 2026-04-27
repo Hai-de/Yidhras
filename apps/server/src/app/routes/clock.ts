@@ -8,6 +8,7 @@ import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import { jsonOk } from '../http/json.js';
 import { parseBody } from '../http/zod.js';
+import { requireAuth } from '../middleware/require_auth.js';
 import { readVisibleClockSnapshot } from '../services/app_context_ports.js';
 import {
   clearRuntimeSpeedOverride,
@@ -39,7 +40,7 @@ export const registerClockRoutes = (
     };
   };
 
-  app.post('/api/runtime/speed', (req, res) => {
+  app.post('/api/runtime/speed', requireAuth(), (req, res) => {
     context.assertRuntimeReady('runtime speed control');
     const body = parseBody(runtimeSpeedOverrideRequestSchema, req.body, 'RUNTIME_SPEED_INVALID');
 
@@ -87,7 +88,7 @@ export const registerClockRoutes = (
     }
   });
 
-  app.post('/api/clock/control', (req, res) => {
+  app.post('/api/clock/control', requireAuth(), (req, res) => {
     context.assertRuntimeReady('clock control');
     const body = parseBody(clockControlRequestSchema, req.body, 'CLOCK_ACTION_INVALID');
 

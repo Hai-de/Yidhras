@@ -46,7 +46,7 @@ export const listDispatchableActionIntents = async (
   context: AppContext,
   limit = 10
 ): Promise<ActionIntentRecord[]> => {
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
 
   return context.prisma.actionIntent.findMany({
     where: {
@@ -74,7 +74,7 @@ export const claimActionIntent = async (
     lock_ticks?: bigint;
   }
 ): Promise<ActionIntentRecord | null> => {
-  const now = input.now ?? context.sim.getCurrentTick();
+  const now = input.now ?? context.clock.getCurrentTick();
   const lockTicks = input.lock_ticks ?? 5n;
   const existing = await context.prisma.actionIntent.findUnique({
     where: {
@@ -156,7 +156,7 @@ export const releaseActionIntentLock = async (
       locked_by: null,
       locked_at: null,
       lock_expires_at: null,
-      updated_at: context.sim.getCurrentTick()
+      updated_at: context.clock.getCurrentTick()
     }
   });
 };
@@ -174,7 +174,7 @@ export const markActionIntentDispatching = async (
   context: AppContext,
   intentId: string
 ): Promise<ActionIntentRecord> => {
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
 
   return context.prisma.actionIntent.update({
     where: {
@@ -195,7 +195,7 @@ export const markActionIntentCompleted = async (
   context: AppContext,
   intentId: string
 ): Promise<ActionIntentRecord> => {
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
 
   return context.prisma.actionIntent.update({
     where: {
@@ -221,7 +221,7 @@ export const markActionIntentFailed = async (
   reason: string | null = null,
   code: string | null = 'ACTION_DISPATCH_FAIL'
 ): Promise<ActionIntentRecord> => {
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
 
   return context.prisma.actionIntent.update({
     where: {
@@ -244,7 +244,7 @@ export const markActionIntentDropped = async (
   intentId: string,
   reason: string | null
 ): Promise<ActionIntentRecord> => {
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
 
   return context.prisma.actionIntent.update({
     where: {

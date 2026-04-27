@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { getRootAuthHeadersWithIdentity } from '../helpers/auth.js';
 import { assertErrorEnvelope, assertRecord, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
 import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { isRecord, requestJson, sleep } from '../helpers/server.js';
@@ -7,13 +8,7 @@ import { isRecord, requestJson, sleep } from '../helpers/server.js';
 const DEATH_NOTE_ACTIVE_PACK_ID = 'world-death-note';
 const DEATH_NOTE_PACK_REF = 'death_note';
 
-const createIdentityHeader = (identityId: string, type: 'agent' | 'user' | 'system' = 'agent'): string => {
-  return JSON.stringify({
-    id: identityId,
-    type,
-    name: identityId
-  });
-};
+
 
 const pollReplayJob = async (
   baseUrl: string,
@@ -56,7 +51,7 @@ describe('trigger event e2e', () => {
 
       const activeHeaders = {
         'Content-Type': 'application/json',
-        'x-m2-identity': createIdentityHeader('agent-001', 'agent')
+        ...(await getRootAuthHeadersWithIdentity(server.baseUrl, 'agent-001', 'agent'))
       };
 
       const ritualEventKey = `trigger-event-ritual-${Date.now()}`;
@@ -131,17 +126,17 @@ describe('trigger event e2e', () => {
 
       const activeHeaders = {
         'Content-Type': 'application/json',
-        'x-m2-identity': createIdentityHeader('agent-001', 'agent')
+        ...(await getRootAuthHeadersWithIdentity(server.baseUrl, 'agent-001', 'agent'))
       };
 
       const secondaryActiveHeaders = {
         'Content-Type': 'application/json',
-        'x-m2-identity': createIdentityHeader('agent-002', 'agent')
+        ...(await getRootAuthHeadersWithIdentity(server.baseUrl, 'agent-002', 'agent'))
       };
 
       const systemHeaders = {
         'Content-Type': 'application/json',
-        'x-m2-identity': createIdentityHeader('system', 'system')
+        ...(await getRootAuthHeadersWithIdentity(server.baseUrl, 'system', 'system'))
       };
 
       const activeEventTitle = `Trigger Event Active ${Date.now()}`;

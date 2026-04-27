@@ -1,8 +1,8 @@
 import { buildAiTaskRequestFromInferenceContext } from '../../ai/task_prompt_builder.js';
 import type { AiTaskService } from '../../ai/task_service.js';
 import { createAiTaskService } from '../../ai/task_service.js';
-import type { AppContext } from '../../app/context.js';
-import { getActivePackRuntimeFacade } from '../../app/services/app_context_ports.js';
+import type { AppInfrastructure } from '../../app/context.js';
+import type { AppContextPorts } from '../../app/services/app_context_ports.js';
 import { isAiGatewayEnabled } from '../../config/runtime_config.js';
 import { createContextOverlayStore } from '../../context/overlay/store.js';
 import { buildInferenceContext } from '../../inference/context_builder.js';
@@ -47,8 +47,10 @@ export interface MemoryCompactionService {
   runForAgent(input: { agent_id: string; identity_id?: string }): Promise<MemoryCompactionRunResult | null>;
 }
 
+type CompactionServiceContext = AppInfrastructure & Pick<AppContextPorts, 'activePackRuntime'>;
+
 export interface CreateMemoryCompactionServiceOptions {
-  context: AppContext;
+  context: CompactionServiceContext;
   aiTaskService?: AiTaskService;
   longMemoryBlockStore?: LongMemoryBlockStore;
 }
@@ -74,11 +76,7 @@ export const createMemoryCompactionService = ({
     },
 
     async runForAgent(input) {
-      const activePackRuntime = getActivePackRuntimeFacade({
-        activePackRuntime: context.activePackRuntime,
-        sim: context.sim
-      });
-      const pack = activePackRuntime.getActivePack();
+      const pack = context.activePackRuntime?.getActivePack();
       if (!pack) {
         return null;
       }
@@ -102,7 +100,7 @@ export const createMemoryCompactionService = ({
         };
       }
 
-      const now = activePackRuntime.getCurrentTick();
+      const now = context.clock.getCurrentTick();
       const state = await context.prisma.memoryCompactionState.upsert({
         where: { agent_id: input.agent_id },
         update: {

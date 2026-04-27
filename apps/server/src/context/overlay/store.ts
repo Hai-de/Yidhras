@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { Prisma } from '@prisma/client';
 
-import type { AppContext } from '../../app/context.js';
+import type { AppInfrastructure } from '../../app/context.js';
 import { getErrorMessage } from '../../app/http/errors.js';
 import { toJsonSafe } from '../../app/http/json.js';
 import type {
@@ -117,7 +117,7 @@ const isMissingOverlayTableError = (error: unknown): boolean => {
   return message.includes('ContextOverlayEntry') && message.includes('does not exist');
 };
 
-export const createContextOverlayStore = (context: AppContext): ContextOverlayStore => {
+export const createContextOverlayStore = (context: AppInfrastructure): ContextOverlayStore => {
   return {
     async listEntries(input: ContextOverlayQuery): Promise<ContextOverlayEntry[]> {
       let rows: Awaited<ReturnType<typeof context.prisma.contextOverlayEntry.findMany>> = [];

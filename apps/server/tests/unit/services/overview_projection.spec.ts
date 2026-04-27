@@ -54,6 +54,10 @@ const createContext = (): AppContext => {
       getCurrentTick: () => 1n,
       getAllTimes: () => [{ calendar_id: 'fallback', display: 'fallback-time', units: {} }]
     } as never,
+    clock: {
+      getCurrentTick: () => 1n
+    } as AppContext['clock'],
+    activePack: { getActivePack: () => undefined, getCurrentRevision: () => 1n } as AppContext['activePack'],
     activePackRuntime: {
       getActivePack: () => ({ metadata: { id: 'world-test-pack' } })
     } as never,
@@ -107,16 +111,14 @@ describe('overview summary world time projection', () => {
       getAllTimes: () => [{ calendar_id: 'sim-only', display: 'sim-only-time', units: {} }],
       getActivePack: () => ({ metadata: { id: 'world-test-pack' } })
     } as never;
+    (context as AppContext).clock = { getCurrentTick: () => 7n } as AppContext['clock'];
+    (context as AppContext).activePack = { getActivePack: () => ({ metadata: { id: 'world-test-pack' } } as never), getCurrentRevision: () => 7n };
 
     const summary = await getOverviewSummary(context);
 
     expect(summary.world_time).toEqual({
       tick: '7',
-      calendars: [{
-        calendar_id: 'sim-only',
-        display: 'sim-only-time',
-        units: {}
-      }]
+      calendars: []
     });
   });
 });

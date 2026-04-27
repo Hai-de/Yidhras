@@ -1,5 +1,10 @@
 export { createExponentialBackoff } from './backoff.js';
 export { createCircuitBreaker } from './circuit_breaker.js';
+export {
+  resolveBackoffConfig,
+  resolveCircuitBreakerConfig,
+  resolveRateLimiterConfig,
+} from './config_resolver.js';
 export { createRateLimiter } from './rate_limiter.js';
 export type {
   BackoffConfig,

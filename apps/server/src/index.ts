@@ -1,3 +1,5 @@
+import { PrismaClient } from '@prisma/client';
+
 import { startAiRegistryWatcher } from './ai/registry_watcher.js';
 import { createInferenceProviders } from './app/composition/inference.js';
 import type { AppContext, RouteRegistrar, RuntimeLoopDiagnostics } from './app/context.js';
@@ -31,7 +33,6 @@ import { registerSchedulerRoutes } from './app/routes/scheduler.js';
 import { registerSocialRoutes } from './app/routes/social.js';
 import { registerSystemRoutes } from './app/routes/system.js';
 import { createRuntimeClockProjectionService } from './app/runtime/runtime_clock_projection.js';
-import { createRuntimeKernelService } from './app/runtime/runtime_kernel_service.js';
 import { resolveOwnedSchedulerPartitionIds } from './app/runtime/scheduler_partitioning.js';
 import {
   createWorldEngineSidecarClient,
@@ -48,10 +49,7 @@ import { createWorldEngineStepCoordinator } from './app/runtime/world_engine_per
 import { createPackHostApi } from './app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from './app/runtime/world_engine_snapshot.js';
 import { getRuntimeBootstrap } from './app/services/app_context_ports.js';
-import {
-  createContextAssemblyPort,
-  createMemoryRuntimePort
-} from './app/services/context_memory_ports.js';
+import { createContextAssemblyPort } from './app/services/context_memory_ports.js';
 import { ensureSchedulerBootstrapOwnership, resetDevelopmentRuntimeState } from './app/services/system.js';
 import type { CalendarConfig } from './clock/types.js';
 import {
@@ -65,14 +63,18 @@ import {
   getWorldPacksDir,
   isAiGatewayEnabled,
   logRuntimeConfigSnapshot,
-  resolveWorkspacePath
+  resolveWorkspacePath,
+  validateProductionSecrets
 } from './config/runtime_config.js';
-import { sim } from './core/simulation.js';
+import { SimulationManager } from './core/simulation.js';
 import { createInferenceService } from './inference/service.js';
 import { createPrismaInferenceTraceSink } from './inference/sinks/prisma.js';
 import { syncActivePackPluginRuntime } from './plugins/runtime.js';
 import { ApiError } from './utils/api_error.js';
 import { notifications } from './utils/notifications.js';
+
+const prisma = new PrismaClient();
+const sim = new SimulationManager({ prisma });
 
 const port = getAppPort();
 const worldPacksDir = getWorldPacksDir();
@@ -108,11 +110,12 @@ const assertRuntimeReady = createRuntimeReadyGuard({
 });
 
 const appContext: AppContext = {
-  prisma: sim.prisma,
+  prisma,
   sim,
+  clock: sim,
+  activePack: sim,
   runtimeBootstrap: sim,
   activePackRuntime: sim,
-  packCatalog: sim,
   notifications,
   startupHealth,
   getRuntimeReady: () => runtimeReady,
@@ -127,7 +130,7 @@ const appContext: AppContext = {
   setRuntimeLoopDiagnostics: next => {
     runtimeLoopDiagnostics = next;
   },
-  getSqliteRuntimePragmas: () => getRuntimeBootstrap({ runtimeBootstrap: appContext.runtimeBootstrap, sim }).getSqliteRuntimePragmaSnapshot(),
+  getSqliteRuntimePragmas: () => getRuntimeBootstrap({ runtimeBootstrap: appContext.runtimeBootstrap }).getSqliteRuntimePragmaSnapshot(),
   getPluginEnableWarningConfig: () => ({
     enabled: getRuntimeConfig().plugins.enable_warning.enabled,
     require_acknowledgement: getRuntimeConfig().plugins.enable_warning.require_acknowledgement
@@ -141,9 +144,33 @@ const appContext: AppContext = {
   assertRuntimeReady
 };
 
-appContext.runtimeKernel = createRuntimeKernelService(appContext);
 appContext.contextAssembly = createContextAssemblyPort(appContext);
-appContext.memoryRuntime = createMemoryRuntimePort(appContext);
+appContext.packRuntimeLookup = {
+  getActivePackId: () => sim.getActivePack()?.metadata.id ?? null,
+  hasPackRuntime: packId => sim.getPackRuntimeHandle(packId) !== null,
+  assertPackScope: (packId, _mode, _feature) => packId.trim(),
+  getPackRuntimeSummary: packId => {
+    const handle = sim.getPackRuntimeHandle(packId);
+    if (!handle) return null;
+    return {
+      pack_id: handle.pack_id,
+      pack_folder_name: handle.pack_folder_name,
+      health_status: handle.getHealthSnapshot().status,
+      current_tick: handle.getClockSnapshot().current_tick,
+      runtime_ready: sim.getActivePack()?.metadata.id === handle.pack_id
+    };
+  }
+};
+appContext.packRuntimeObservation = {
+  getStatus: packId => sim.getPackRuntimeStatusSnapshot(packId),
+  listStatuses: () => [],
+  getClockSnapshot: packId => sim.getPackRuntimeHandle(packId)?.getClockSnapshot() ?? null,
+  getRuntimeSpeedSnapshot: packId => sim.getPackRuntimeHandle(packId)?.getRuntimeSpeedSnapshot() ?? null
+};
+appContext.packRuntimeControl = {
+  load: packRef => sim.loadExperimentalPackRuntime(packRef),
+  unload: packId => sim.unloadExperimentalPackRuntime(packId)
+};
 const worldEngineConfig = getWorldEngineConfig();
 appContext.worldEngine = createWorldEngineSidecarClient({
   binaryPath: worldEngineConfig.binary_path,
@@ -297,15 +324,16 @@ const startSimulation = (): void => {
 };
 
 const start = async (): Promise<void> => {
+  validateProductionSecrets();
   logRuntimeConfigSnapshot();
 
-  await getRuntimeBootstrap({ runtimeBootstrap: appContext.runtimeBootstrap, sim }).prepareDatabase();
+  await getRuntimeBootstrap({ runtimeBootstrap: appContext.runtimeBootstrap }).prepareDatabase();
 
   await runStartupPreflight({
     startupHealth,
     startupPolicy,
     worldPacksDir,
-    queryDatabaseHealth: () => sim.prisma.$queryRawUnsafe('SELECT 1'),
+    queryDatabaseHealth: () => prisma.$queryRawUnsafe('SELECT 1'),
     getErrorMessage
   });
 
@@ -332,13 +360,13 @@ const start = async (): Promise<void> => {
         throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for startup');
       }
 
-      await sim.init(selectedPack);
-      const activePack = sim.getActivePack();
+      await appContext.activePackRuntime!.init(selectedPack);
+      const activePack = appContext.activePack!.getActivePack();
       const activePackId = activePack?.metadata.id ?? selectedPack;
       appContext.runtimeClockProjection?.rebuildFromRuntimeSeed({
         pack_id: activePackId,
-        current_tick: sim.getCurrentTick().toString(),
-        current_revision: sim.getCurrentRevision().toString(),
+        current_tick: appContext.clock!.getCurrentTick().toString(),
+        current_revision: appContext.activePack!.getCurrentRevision().toString(),
         calendars: (activePack?.time_systems ?? []) as unknown as CalendarConfig[]
       });
 

@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 
-import type { AppContext } from '../../app/context.js';
+import type { AppInfrastructure } from '../../app/context.js';
 import { toJsonSafe } from '../../app/http/json.js';
 import type { InferenceTraceEvent, InferenceTraceSink } from '../trace_sink.js';
 import type { PromptWorkflowSnapshot } from '../types.js';
@@ -212,7 +212,7 @@ const resolveJobPayload = (event: InferenceTraceEvent, now: bigint) => {
   };
 };
 
-export const createPrismaInferenceTraceSink = (context: AppContext): InferenceTraceSink => {
+export const createPrismaInferenceTraceSink = (context: AppInfrastructure): InferenceTraceSink => {
   return {
     async record(event) {
       const now = event.context.tick;

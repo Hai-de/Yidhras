@@ -57,7 +57,7 @@ export const getGraphView = async (
   input: GraphViewInput
 ): Promise<GraphViewSnapshot> => {
   const filters = parseGraphViewFilters(input);
-  const now = context.sim.getCurrentTick();
+  const now = context.clock.getCurrentTick();
 
   const [agents, relationships, atmosphereNodes, activeBindings, actionIntents] = await Promise.all([
     context.prisma.agent.findMany({

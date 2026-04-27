@@ -1,4 +1,4 @@
-import type { AppContext } from '../../app/context.js'
+import type { AppInfrastructure } from '../../app/context.js'
 import { logOperatorAudit } from '../../operator/audit/logger.js'
 import { AUDIT_ACTION } from '../../operator/constants.js'
 import { resolveSubjectForAgentAction } from '../../operator/guard/subject_resolver.js'
@@ -80,7 +80,7 @@ const resolveMediatorId = (intent: DispatchableActionIntentLike): string | null 
 }
 
 const resolveSubjectEntityId = async (
-  context: AppContext,
+  context: AppInfrastructure,
   actorRef: Record<string, unknown>
 ): Promise<string | null> => {
   if (typeof actorRef.agent_id === 'string' && actorRef.agent_id.trim().length > 0) {
@@ -92,13 +92,13 @@ const resolveSubjectEntityId = async (
       return agentId
     }
 
-    const pack = context.sim.getActivePack()
+    const pack = context.activePack.getActivePack()
     const packId = pack?.metadata.id ?? 'default'
     const cacheKey = `${packId}:${agentId}`
 
     // P3-2: 缓存同一 tick 内的解析结果
     const cached = subjectResolutionCache.get(cacheKey)
-    const now = context.sim.getCurrentTick()
+    const now = context.clock.getCurrentTick()
     if (cached && cached.resolvedAt === now) {
       return cached.subjectEntityId
     }
@@ -120,8 +120,8 @@ const resolveSubjectEntityId = async (
 
 const KERNEL_INTENT_TYPES = ['trigger_event', 'post_message', 'adjust_relationship', 'adjust_snr'] as const
 
-const shouldBridgeToInvocation = (context: AppContext, intent: DispatchableActionIntentLike): boolean => {
-  const pack = context.sim.getActivePack()
+const shouldBridgeToInvocation = (context: AppInfrastructure, intent: DispatchableActionIntentLike): boolean => {
+  const pack = context.activePack.getActivePack()
   if (!pack) {
     return false
   }
@@ -162,14 +162,14 @@ const shouldBridgeToInvocation = (context: AppContext, intent: DispatchableActio
 }
 
 export const buildInvocationRequestFromActionIntent = async (
-  context: AppContext,
+  context: AppInfrastructure,
   intent: DispatchableActionIntentLike
 ): Promise<InvocationRequest | null> => {
   if (!shouldBridgeToInvocation(context, intent)) {
     return null
   }
 
-  const pack = context.sim.getActivePack()
+  const pack = context.activePack.getActivePack()
   if (!pack) {
     return null
   }
@@ -187,12 +187,12 @@ export const buildInvocationRequestFromActionIntent = async (
     payload: normalizeRecord(intent.payload),
     mediator_id: resolveMediatorId(intent),
     actor_ref: actorRef,
-    created_at: context.sim.getCurrentTick()
+    created_at: context.clock.getCurrentTick()
   }
 }
 
 export const dispatchInvocationFromActionIntent = async (
-  context: AppContext,
+  context: AppInfrastructure,
   intent: DispatchableActionIntentLike
 ): Promise<InvocationDispatchResult | null> => {
   const invocationRequest = await buildInvocationRequestFromActionIntent(context, intent)

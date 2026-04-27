@@ -1,4 +1,4 @@
-import type { AppContext } from '../../app/context.js';
+import type { AppInfrastructure } from '../../app/context.js';
 import type { InferencePackStateSnapshot } from '../../inference/types.js';
 import { listPackEntityStates } from '../../packs/storage/entity_state_repo.js';
 
@@ -39,7 +39,7 @@ const buildPackStateVisibilitySet = (packState: InferencePackStateSnapshot): Set
 };
 
 export const resolvePerceptionForSubject = async (
-  context: AppContext,
+  context: AppInfrastructure,
   input: {
     packId: string;
     packState: InferencePackStateSnapshot;

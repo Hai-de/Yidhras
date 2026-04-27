@@ -1,4 +1,4 @@
-export type IdentityType = 'user' | 'agent' | 'system' | 'plugin_reserved' | 'external_reserved';
+export type IdentityType = 'user' | 'agent' | 'system' | 'anonymous' | 'plugin_reserved' | 'external_reserved';
 
 export interface IdentityContext {
   id: string;

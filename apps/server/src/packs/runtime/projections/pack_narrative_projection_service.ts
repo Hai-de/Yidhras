@@ -1,4 +1,4 @@
-import type { AppContext } from '../../../app/context.js';
+import type { AppInfrastructure } from '../../../app/context.js';
 import { listPackRuleExecutionRecords } from '../../storage/rule_execution_repo.js';
 import type { PackProjectionMetadataSnapshot } from './pack_projection_metadata_resolver.js';
 
@@ -49,7 +49,7 @@ const resolveEventBridgePackId = (impactData: Record<string, unknown> | null): s
 };
 
 export const createPackNarrativeProjectionService = (
-  context: AppContext
+  context: AppInfrastructure
 ): PackNarrativeProjectionService => {
   return {
     async getProjection(input: GetPackNarrativeProjectionInput): Promise<PackNarrativeProjectionSnapshot> {
