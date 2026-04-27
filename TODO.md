@@ -7,12 +7,11 @@
 
 ### 梳理当前代码实现
 
-- [ ] mock 和 rule_based 是开发/测试用的本地 provider，判断一下项目目前是否还需要她们
-
 - [ ] 实现部分 docs/ENHANCEMENTS.md 文件中列出的高价值内容
 ### AI 网关模块盲点修复 (基于代码审计发现)
 
-- [~] 启用 tool calling 入口：`task_service.ts` 中硬编码 `tools:[]` + `tool_policy:{mode:'disabled'}`，已有方案，详见 `.limcode/design/ai-tool-calling-enablement.md`
+- [x] 启用 tool calling 入口：`task_service.ts` 中硬编码 `tools:[]` + `tool_policy:{mode:'disabled'}`，已有方案，详见 `.limcode/design/ai-tool-calling-enablement.md` — **已完成（Phase 1–3，165 tests）**
+
 - [ ] Streaming/SSE 支持：**全项目盲点** — gateway 和旧 inference 链路均为 req→full response，`openai.ts` 适配器无 `stream:true`，无 SSE/EventSource 能力，择日处理
 
 ### 世界包多包运行时 (World-Pack Multi-Runtime)

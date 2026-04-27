@@ -403,23 +403,18 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 
 - model/provider routing 属于 host-side orchestration
 - invocation observability、audit、retry/recovery 仍留在 Node/TS host
+- elasticity（circuit breaker、rate limiter、exponential backoff）挂载在 gateway 层，对 adapter 透明
+- tool calling（cross_agent_tool、tool_executor、tool_loop_runner、tool_permissions）属于 host-side 受控执行能力
+- registry 支持 fs.watch 热加载（`registry_watcher.ts`），ai_models.yaml 与 prompt_slots.yaml 变更后自动校验重载
 - Rust world engine 若引入，不承接 AI gateway 本体
 
-**目录边界（2025-06 重构后）**：
+**目录边界**：
 
 | 目录 | 职责 |
 |------|------|
-| `ai/` | AI 网关层：gateway、task_service、route_resolver、observability、providers（含 gateway_backed）、adapters、schemas |
-| `inference/` | 推理流水线：context_builder、prompt builders、processors、tokenizers、types（inference 专用） |
-| `packages/contracts/src/ai_shared.ts` | AI/inference 共享类型契约：PromptBundleMetadata、PromptBundle、PromptWorkflowSnapshot 等 |
-
-`ai/` 和 `inference/` 之间不再有物理循环依赖：共享类型通过 contracts 包中介，`gateway_backed` 已移至 `ai/providers/`。
-
-**目录边界（2025-06 重构后）**：
-
-| 目录 | 职责 |
-|------|------|
-| `ai/` | AI 网关层：gateway、task_service、route_resolver、observability、providers（含 gateway_backed）、adapters、schemas |
+| `ai/` | AI 网关层：gateway、task_service、task_definitions、task_decoder、task_prompt_builder、route_resolver、registry、registry_watcher、observability、providers（含 gateway_backed）、adapters、schemas |
+| `ai/elasticity/` | 网关弹性层：circuit_breaker、rate_limiter、backoff、config_resolver |
+| `ai/tool_*.ts` | Tool Calling 系统：cross_agent_tool、tool_executor、tool_loop_runner、tool_permissions |
 | `inference/` | 推理流水线：context_builder、prompt builders、processors、tokenizers、types（inference 专用） |
 | `packages/contracts/src/ai_shared.ts` | AI/inference 共享类型契约：PromptBundleMetadata、PromptBundle、PromptWorkflowSnapshot 等 |
 

@@ -2,8 +2,8 @@
 
 Prompt Bundle V2 将原先硬编码的 6 个固定 prompt 字段替换为声明式 YAML 驱动的 Slot 配置系统。你可以通过配置文件自由增减 prompt 插槽，控制每个 slot 的优先级、模板内容、消息角色和可见性。
 
-> 设计文档：`.limcode/design/prompt-bundle-componentized-refactoring-design.md`
-> 实施计划：`.limcode/plans/prompt-bundle-组件化重构-phase-2-推进.plan.md`
+> 设计文档：`.limcode/archive/design/prompt-bundle-componentized-refactoring-design.md`
+> 实施计划：`.limcode/archive/plans/prompt-bundle-组件化重构-phase-2-推进.plan.md`
 
 ## 1. 功能状态
 
@@ -251,4 +251,4 @@ InferenceContext + PromptSlotRegistry
 - Prompt Workflow Runtime：`docs/capabilities/PROMPT_WORKFLOW.md`
 - 系统架构边界：`docs/ARCH.md`
 - 设计文档：`.limcode/design/prompt-bundle-componentized-refactoring-design.md`
-- 实施计划：`.limcode/plans/prompt-bundle-componentized-refactoring-phase1.md`
+- 实施计划：`.limcode/archive/plans/prompt-bundle-componentized-refactoring-phase1.md`

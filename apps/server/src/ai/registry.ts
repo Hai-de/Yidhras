@@ -14,7 +14,9 @@ import {
   type AiModelRegistryEntry,
   type AiProviderConfig,
   type AiRegistryConfig,
-  type AiRoutePolicy
+  type AiRoutePolicy,
+  type AiToolRegistryEntry,
+  type AiToolSpec
 } from './types.js';
 
 const nonEmptyStringSchema = z.string().trim().min(1);
@@ -98,7 +100,9 @@ const aiRoutePolicySchema = z
         max_latency_ms: z.number().int().positive().optional(),
         max_cost_usd: z.number().nonnegative().optional(),
         privacy_tier: z.enum(AI_PRIVACY_TIERS).optional(),
-        response_modes: z.array(z.enum(AI_RESPONSE_MODES)).optional()
+        response_modes: z.array(z.enum(AI_RESPONSE_MODES)).optional(),
+        allow_tool_calling: z.boolean().optional(),
+        allowed_tool_ids: z.array(nonEmptyStringSchema).optional()
       })
       .strict()
       .optional(),
@@ -115,12 +119,28 @@ const aiRoutePolicySchema = z
   })
   .strict();
 
+const aiToolRegistryEntrySchema = z
+  .object({
+    tool_id: nonEmptyStringSchema,
+    name: nonEmptyStringSchema,
+    description: nonEmptyStringSchema,
+    input_schema: z.record(z.string(), z.unknown()),
+    strict: z.boolean().optional(),
+    kind: z.enum(['system', 'pack']),
+    pack_id: nonEmptyStringSchema.nullish(),
+    enabled: z.boolean().default(true),
+    sandbox: z.enum(['strict', 'readonly_world', 'mutation']).optional(),
+    metadata: z.record(z.string(), z.unknown()).optional()
+  })
+  .strict();
+
 export const aiRegistryConfigSchema = z
   .object({
     version: z.number().int().positive().default(1),
     providers: z.array(aiProviderConfigSchema).default([]),
     models: z.array(aiModelRegistryEntrySchema).default([]),
-    routes: z.array(aiRoutePolicySchema).default([])
+    routes: z.array(aiRoutePolicySchema).default([]),
+    tools: z.array(aiToolRegistryEntrySchema).default([])
   })
   .strict();
 
@@ -235,7 +255,8 @@ export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
       constraints: {
         require_structured_output: true,
         privacy_tier: 'trusted_cloud',
-        response_modes: ['json_object', 'json_schema']
+        response_modes: ['json_object', 'json_schema'],
+        allow_tool_calling: true
       },
       defaults: {
         timeout_ms: 30000,
@@ -295,6 +316,80 @@ export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
     }
   ]
 };
+
+export const BUILTIN_AI_TOOLS: AiToolRegistryEntry[] = [
+  {
+    tool_id: 'sys.query_memory_blocks',
+    name: 'query_memory_blocks',
+    description: 'Query memory blocks for a pack by text or filter',
+    input_schema: {
+      type: 'object',
+      properties: {
+        pack_id: { type: 'string', description: 'The pack ID to query memory blocks from' },
+        limit: { type: 'integer', description: 'Maximum number of blocks to return (default 10, max 100)' }
+      },
+      required: []
+    },
+    kind: 'system',
+    enabled: true
+  },
+  {
+    tool_id: 'sys.get_entity',
+    name: 'get_entity',
+    description: 'Get a single entity by ID from a pack',
+    input_schema: {
+      type: 'object',
+      properties: {
+        pack_id: { type: 'string', description: 'The pack ID' },
+        entity_id: { type: 'string', description: 'The entity ID to retrieve' }
+      },
+      required: ['pack_id', 'entity_id']
+    },
+    kind: 'system',
+    enabled: true
+  },
+  {
+    tool_id: 'sys.list_active_agents',
+    name: 'list_active_agents',
+    description: 'List active agents, optionally filtered by pack',
+    input_schema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'integer', description: 'Maximum number of agents to return (default 50, max 100)' }
+      },
+      required: []
+    },
+    kind: 'system',
+    enabled: true
+  },
+  {
+    tool_id: 'sys.get_relationship',
+    name: 'get_relationship',
+    description: 'Get the relationship between two entities',
+    input_schema: {
+      type: 'object',
+      properties: {
+        source_id: { type: 'string', description: 'Source entity ID' },
+        target_id: { type: 'string', description: 'Target entity ID' }
+      },
+      required: ['source_id', 'target_id']
+    },
+    kind: 'system',
+    enabled: true
+  },
+  {
+    tool_id: 'sys.get_clock_state',
+    name: 'get_clock_state',
+    description: 'Get the current simulation clock state including tick and formatted times',
+    input_schema: {
+      type: 'object',
+      properties: {},
+      required: []
+    },
+    kind: 'system',
+    enabled: true
+  }
+];
 
 let aiRegistryCache: AiRegistryCache | null = null;
 
@@ -356,12 +451,32 @@ const mergeRoutePolicies = (base: AiRoutePolicy[], overrides: AiRoutePolicy[]): 
   return Array.from(mergedByRouteId.values());
 };
 
+const mergeToolEntries = (base: AiToolRegistryEntry[], overrides: AiToolRegistryEntry[]): AiToolRegistryEntry[] => {
+  const mergedByToolId = new Map(base.map(entry => [entry.tool_id, structuredClone(entry)]));
+
+  for (const override of overrides) {
+    const existing = mergedByToolId.get(override.tool_id);
+    if (!existing) {
+      mergedByToolId.set(override.tool_id, structuredClone(override));
+      continue;
+    }
+
+    mergedByToolId.set(
+      override.tool_id,
+      deepMerge(existing as unknown as Record<string, unknown>, override as unknown as Record<string, unknown>) as unknown as AiToolRegistryEntry
+    );
+  }
+
+  return Array.from(mergedByToolId.values());
+};
+
 export const mergeAiRegistryConfig = (base: AiRegistryConfig, override: AiRegistryConfig): AiRegistryConfig => {
   return {
     version: override.version,
     providers: mergeProviderConfigs(base.providers, override.providers),
     models: mergeModelRegistryEntries(base.models, override.models),
-    routes: mergeRoutePolicies(base.routes, override.routes)
+    routes: mergeRoutePolicies(base.routes, override.routes),
+    tools: mergeToolEntries(base.tools ?? [], override.tools ?? [])
   };
 };
 
@@ -375,8 +490,13 @@ const loadAiRegistryConfig = (): AiRegistryCache => {
     ...rawConfig
   });
 
+  const withBuiltinTools: AiRegistryConfig = {
+    ...BUILTIN_AI_REGISTRY_CONFIG,
+    tools: BUILTIN_AI_TOOLS
+  };
+
   return {
-    config: mergeAiRegistryConfig(BUILTIN_AI_REGISTRY_CONFIG, parsedOverride),
+    config: mergeAiRegistryConfig(withBuiltinTools, parsedOverride),
     metadata: {
       workspaceRoot,
       configPath,
@@ -430,6 +550,35 @@ export const listAiRoutePolicies = (taskType?: string): AiRoutePolicy[] => {
   }
 
   return routes.filter(route => route.task_types.includes(taskType as AiRoutePolicy['task_types'][number]));
+};
+
+export const listAiToolEntries = (): AiToolRegistryEntry[] => {
+  return getAiRegistryConfig().tools ?? [];
+};
+
+export const getAiToolEntry = (toolId: string): AiToolRegistryEntry | null => {
+  return getAiRegistryConfig().tools?.find(entry => entry.tool_id === toolId) ?? null;
+};
+
+export const findAiToolEntryByName = (name: string): AiToolRegistryEntry | null => {
+  return getAiRegistryConfig().tools?.find(entry => entry.name === name) ?? null;
+};
+
+export const resolveToolsFromRegistry = (toolIds: string[]): AiToolRegistryEntry[] => {
+  const tools = getAiRegistryConfig().tools ?? [];
+  const toolMap = new Map(tools.map(entry => [entry.tool_id, entry]));
+  return toolIds
+    .map(id => toolMap.get(id))
+    .filter((entry): entry is AiToolRegistryEntry => entry !== undefined && entry.enabled);
+};
+
+export const resolveToolSpecsFromRegistry = (toolIds: string[]): AiToolSpec[] => {
+  return resolveToolsFromRegistry(toolIds).map(entry => ({
+    name: entry.name,
+    description: entry.description,
+    input_schema: entry.input_schema,
+    strict: entry.strict
+  }));
 };
 
 const promptSlotConfigSchema = z

@@ -11,7 +11,7 @@ Key concepts:
 - **PromptFragment** — a discrete content unit within a section, carrying its own placement hint and priority
 - **ContextNode / ContextRun** — the upstream data that feeds the workflow: individual pieces of context (an actor's state, a world event, a memory block) organised by the context module
 
-> **PromptBundleV2 / PromptTree**：自 Phase 1-2 起，系统支持基于 YAML Slot 配置的树形 prompt 结构（`PromptBundleV2` / `PromptTree` / `PromptFragmentV2` / `PromptBlock`），通过 `features.experimental.prompt_bundle_v2` feature flag 控制。详见 `.limcode/design/prompt-bundle-componentized-refactoring-design.md`。
+> **PromptBundleV2 / PromptTree**：自 Phase 1-2 起，系统支持基于 YAML Slot 配置的树形 prompt 结构（`PromptBundleV2` / `PromptTree` / `PromptFragmentV2` / `PromptBlock`），通过 `features.experimental.prompt_bundle_v2` feature flag 控制。详见 `.limcode/archive/design/prompt-bundle-componentized-refactoring-design.md`。
 >
 
 本文档集中说明 Prompt Workflow Runtime 的结构、语义与边界，承接原先散落在 `docs/ARCH.md`、`docs/LOGIC.md` 与 `docs/API.md` 中的高耦合细节。

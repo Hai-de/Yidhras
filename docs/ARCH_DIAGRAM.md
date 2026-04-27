@@ -199,7 +199,55 @@ sequenceDiagram
 - runtime kernel 统一承接 simulation loop、runner、观测与 world engine 调用。
 - 提交后的结果会回流到 projection 与 observability，而不是只停留在 sidecar 内部。
 
-## 6. 阅读路径
+## 6. AI Tool Calling 链路
+
+```mermaid
+sequenceDiagram
+    participant TS as AiTaskService
+    participant GW as ModelGateway
+    participant AD as Provider Adapter
+    participant TL as ToolLoopRunner
+    participant TR as ToolRegistry
+    participant TP as ToolPermissionPolicy
+    participant CB as CrossAgentBridge
+
+    TS->>GW: ModelGatewayRequest (tools + tool_policy)
+    GW->>AD: invoke (含 tools 定义)
+    AD-->>GW: response (finish_reason='tool_call')
+    GW-->>TL: tool_calls[]
+    loop Tool Loop (≤ max_rounds)
+        TL->>TP: 校验 tool permission
+        TP-->>TL: allowed / denied
+        alt cross_agent query
+            TL->>CB: 转为 CrossAgentQuery
+            CB->>TS: runTask() 查询目标 agent
+            TS-->>CB: target agent result
+            CB-->>TL: CrossAgentResult
+        else 普通 tool
+            TL->>TR: execute(name, args)
+            TR-->>TL: ToolExecutionResult
+        end
+        TL->>GW: 追加 role='tool' 消息 + 重新调用
+        GW->>AD: invoke (更新后的消息历史)
+        AD-->>GW: response
+        alt finish_reason='stop'
+            GW-->>TL: 终止 loop
+        else finish_reason='tool_call'
+            GW-->>TL: 继续 loop
+        end
+    end
+    TL-->>TS: 最终 ModelGatewayResponse
+```
+
+### 读图结论
+
+- Tool loop 在 provider adapter 返回 `tool_call` 后由 `ToolLoopRunner` 接管。
+- 每次 tool 执行前必须通过 `ToolPermissionPolicy` 校验（role / pack / capability）。
+- Cross-agent query 通过 `CrossAgentBridge` 转为对目标 agent 的 `AiTaskService.runTask()` 调用，不绕过 gateway。
+- Loop 受 `max_rounds` 和 `total_timeout_ms` 双重约束，不可能无限循环。
+- 回传的 tool result 消息以 `role='tool'` 加入消息历史，保持完整的对话上下文。
+
+## 7. 阅读路径
 
 - 看图理解系统组成：本文件 `ARCH_DIAGRAM.md`
 - 看正式边界定义：`ARCH.md`

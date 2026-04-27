@@ -5,6 +5,7 @@ import type { PromptBundleV2 } from '../inference/prompt_bundle_v2.js';
 import { ApiError } from '../utils/api_error.js';
 import { adaptPromptTreeToAiMessages } from './adapters/prompt_tree_adapter.js';
 import { createModelGateway, type ModelGateway } from './gateway.js';
+import { resolveToolSpecsFromRegistry } from './registry.js';
 import { decodeAiTaskOutput } from './task_decoder.js';
 import { resolveAiTaskConfig } from './task_definitions.js';
 import type {
@@ -66,8 +67,13 @@ const buildGatewayRequest = (
             strict: taskConfig.output.strict
           }
         : null,
-    tools: [],
-    tool_policy: { mode: 'disabled' },
+    tools:
+      taskConfig.tools.length > 0
+        ? resolveToolSpecsFromRegistry(taskConfig.tools)
+        : (request.tools ?? []),
+    tool_policy: taskConfig.tools.length > 0
+      ? taskConfig.tool_policy
+      : (request.tool_policy ?? { mode: 'disabled' }),
     execution: {
       timeout_ms: 30000,
       retry_limit: 0,

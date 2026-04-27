@@ -228,6 +228,9 @@ export const resolveAiTaskConfig = (input: {
   const packTaskOverride = input.packAiConfig?.tasks?.[input.taskType] ?? null;
   const mergedOverride = mergeTaskOverride(packTaskOverride, input.inlineOverride ?? null);
 
+  const tools = mergedOverride?.tools ?? definition.default_tools ?? [];
+  const tool_policy = mergedOverride?.tool_policy ?? definition.default_tool_policy ?? { mode: 'disabled' as const };
+
   return {
     definition,
     override: mergedOverride,
@@ -259,6 +262,8 @@ export const resolveAiTaskConfig = (input: {
       determinism_tier: mergedOverride?.route?.determinism_tier,
       privacy_tier: mergedOverride?.route?.privacy_tier ?? packDefaults?.privacy_tier ?? definition.default_privacy_tier
     },
+    tools,
+    tool_policy,
     metadata: mergedOverride?.metadata
   };
 };

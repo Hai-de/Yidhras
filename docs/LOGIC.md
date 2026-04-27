@@ -37,7 +37,23 @@
 
 - provider 不必直接产出最终可执行世界动作
 - server-side grounder 负责把开放语义收束到受控执行路径
-- workflow 的“技术完成”与语义上的“成功完成”不是同一件事
+- workflow 的”技术完成”与语义上的”成功完成”不是同一件事
+- 当模型启用 tool calling 时，tool loop 在 grounder 之前执行，允许模型在做出最终决策前收集额外信息（包括跨 agent 查询）
+
+### 1.1 Tool Calling 执行子路径
+
+当 task config 启用 `tool_policy.mode != 'disabled'` 时，推理主线在步骤 2 之后插入 tool loop：
+
+1. provider 返回 `finish_reason='tool_call'` + `tool_calls[]`
+2. `ToolLoopRunner` 接管：
+   a. 对每个 tool_call 执行 `ToolPermissionPolicy` 校验
+   b. `ToolRegistry.execute(name, args)` 执行工具
+   c. 将 tool result 以 `role='tool'` 消息追加到对话历史
+   d. 重新调用 gateway（携带完整消息历史）
+3. 循环直到 `finish_reason='stop'` 或达到 max_rounds/timeout
+4. 最终 response 继续进入步骤 3（Intent Grounder）
+
+Cross-agent tool 允许 agent 在 tool loop 中查询另一个 agent 的推理结果，形成结构化的 agent-to-agent 信息交换。
 
 ## 2. Intent Grounder 语义
 
@@ -222,7 +238,11 @@ Memory Block Runtime 当前形成最小闭环：
 
 ## 8. AI task / gateway 的业务语义边界
 
-从业务语义上，AI gateway 是内部执行底座与观测层，而非正式公开的 provider-specific contract。当前对外只稳定承诺 `mock | rule_based`；`model_routed` 为内部 / 受控能力。完整分层与 public boundary 说明见 → [`AI_GATEWAY.md`](capabilities/AI_GATEWAY.md)
+从业务语义上，AI gateway 是内部执行底座与观测层，而非正式公开的 provider-specific contract。当前对外只稳定承诺 `mock | rule_based`；`model_routed` 为内部 / 受控能力。
+
+Tool calling 使模型能够在单次推理中进行多轮工具调用（包括跨 agent 查询），但它属于 host-side 受控执行能力，不作为对外公开 contract。Tool loop 由 `ToolLoopRunner` 驱动，受 `ToolPermissionPolicy` 约束，模型无法绕过权限校验或无限循环。
+
+完整分层与 public boundary 说明见 → [`AI_GATEWAY.md`](capabilities/AI_GATEWAY.md)
 
 ## 9. Prompt Workflow 与 Plugin Runtime 的专题说明
 

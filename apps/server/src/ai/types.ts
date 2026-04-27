@@ -118,6 +118,17 @@ export interface AiInvocationTrace {
   attempts: AiInvocationAttemptRecord[];
   request?: Record<string, unknown> | null;
   response?: Record<string, unknown> | null;
+  tool_loop?: AiToolLoopTrace;
+}
+
+export interface AiToolLoopTrace {
+  rounds: Array<{
+    round: number;
+    tool_calls: Array<{ name: string; latency_ms: number; success: boolean }>;
+    total_latency_ms: number;
+  }>;
+  total_rounds: number;
+  exhausted: boolean;
 }
 
 export interface ModelGatewayResponse {
@@ -206,6 +217,8 @@ export interface AiTaskRequest {
     determinism_tier?: AiDeterminismTier;
     privacy_tier?: AiPrivacyTier;
   };
+  tools?: AiToolSpec[];
+  tool_policy?: AiToolPolicy | null;
   metadata?: AiTaskRequestMetadata;
 }
 
@@ -283,6 +296,8 @@ export interface AiRouteConstraints {
   max_cost_usd?: number;
   privacy_tier?: AiPrivacyTier;
   response_modes?: AiResponseMode[];
+  allow_tool_calling?: boolean;
+  allowed_tool_ids?: string[];
 }
 
 export interface AiRouteDefaults {
@@ -322,6 +337,23 @@ export interface AiRegistryConfig {
   providers: AiProviderConfig[];
   models: AiModelRegistryEntry[];
   routes: AiRoutePolicy[];
+  tools?: AiToolRegistryEntry[];
+}
+
+export const AI_TOOL_SANDBOX_LEVELS = ['strict', 'readonly_world', 'mutation'] as const;
+export type AiToolSandboxLevel = (typeof AI_TOOL_SANDBOX_LEVELS)[number];
+
+export interface AiToolRegistryEntry {
+  tool_id: string;
+  name: string;
+  description: string;
+  input_schema: Record<string, unknown>;
+  strict?: boolean;
+  kind: 'system' | 'pack';
+  pack_id?: string | null;
+  enabled: boolean;
+  sandbox?: AiToolSandboxLevel;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AiTaskPromptOverride {
@@ -361,6 +393,8 @@ export interface AiTaskOverride {
   output?: AiTaskOutputOverride;
   parse?: AiTaskParseOverride;
   route?: AiTaskRouteHint;
+  tools?: string[];
+  tool_policy?: AiToolPolicy;
   metadata?: Record<string, unknown>;
 }
 
@@ -391,6 +425,8 @@ export interface AiTaskDefinition {
   default_schema?: Record<string, unknown>;
   default_strict?: boolean;
   default_privacy_tier?: AiPrivacyTier;
+  default_tools?: string[];
+  default_tool_policy?: AiToolPolicy;
 }
 
 export interface AiResolvedTaskConfig {
@@ -404,6 +440,8 @@ export interface AiResolvedTaskConfig {
   prompt: AiTaskPromptOverride;
   parse: AiTaskParseOverride;
   route: AiTaskRouteHint;
+  tools: string[];
+  tool_policy: AiToolPolicy;
   metadata?: Record<string, unknown>;
 }
 

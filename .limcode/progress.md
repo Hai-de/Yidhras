@@ -7,18 +7,18 @@
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
-- 当前进度：4/4 个里程碑已完成；最新：pack-runtime-materialization-shared
-- 当前焦点：AI 网关盲点修复收尾 — 仅剩 Streaming/SSE（择日处理）
-- 最新结论：测试冲刺完成：10 失败→5 失败，278 pass→314 pass。新增 registry/task_decoder/observability 降级/openai adapter 共 31 个新测试。TODO.md 仅剩 Streaming/SSE 一项未处理。
-- 下一步：仅剩 Streaming/SSE 需求评估留待日后。可关闭本轮盲点修复
+- 当前进度：5/5 个里程碑已完成；最新：tool-calling-enablement
+- 当前焦点：文档体系更新 — docs/ 落后于代码实现，正在逐项修复
+- 最新结论：Tool Calling Phase 1–3 完成（165 tests pass）。弹性层/热加载/Tool Calling 均已实现但 AI_GATEWAY.md 等文档未覆盖。已完成 .limcode/ 活跃层归档（9 个文件迁入 archive/）。
+- 下一步：逐项更新 docs/ 稳定参考文档以匹配当前代码实现
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/experimental-pack-runtime-materialization.md`
-- 计划：`.limcode/plans/共享-pack-runtime-materialization-接口抽取.plan.md`
-- 审查：`.limcode/review/测试链路重构评估.md`
+- 设计：`.limcode/design/ai-three-layer-directory-refactoring.md`
+- 计划：（当前无活跃计划）
+- 审查：（当前无活跃审查）
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
@@ -121,14 +121,14 @@
   "updatedAt": "2026-04-26T16:16:36.001Z",
   "status": "active",
   "phase": "implementation",
-  "currentFocus": "AI 网关盲点修复收尾 — 仅剩 Streaming/SSE（择日处理）",
-  "latestConclusion": "测试冲刺完成：10 失败→5 失败，278 pass→314 pass。新增 registry/task_decoder/observability 降级/openai adapter 共 31 个新测试。TODO.md 仅剩 Streaming/SSE 一项未处理。",
+  "currentFocus": "文档体系更新 — docs/ 落后于代码实现，正在逐项修复",
+  "latestConclusion": "Tool Calling Phase 1–3 完成（165 tests pass）。弹性层/热加载/Tool Calling 均已实现。已完成 .limcode/ 活跃层归档（9 个文件迁入 archive/）。",
   "currentBlocker": null,
-  "nextAction": "仅剩 Streaming/SSE 需求评估留待日后。可关闭本轮盲点修复",
+  "nextAction": "逐项更新 docs/ 稳定参考文档：AI_GATEWAY.md、ARCH.md、LOGIC.md、ARCH_DIAGRAM.md 等",
   "activeArtifacts": {
-    "design": ".limcode/design/experimental-pack-runtime-materialization.md",
-    "plan": ".limcode/plans/共享-pack-runtime-materialization-接口抽取.plan.md",
-    "review": ".limcode/review/测试链路重构评估.md"
+    "design": ".limcode/design/ai-three-layer-directory-refactoring.md",
+    "plan": null,
+    "review": null
   },
   "todos": [
     {

@@ -60,7 +60,7 @@
 | [plans/](../.limcode/plans/) | 当前活跃/参考执行计划与任务拆解 |
 | [review/](../.limcode/review/) | 当前活跃/参考评审记录 |
 | [archive/](../.limcode/archive/) | 已完成过程资产与历史草案归档 |
-| [progress.md](../.limcode/archive/progress.md) | 里程碑进度记录 |
+| [progress.md](../.limcode/progress.md) | 里程碑进度记录 |
 
 ## 6. 历史归档
 
