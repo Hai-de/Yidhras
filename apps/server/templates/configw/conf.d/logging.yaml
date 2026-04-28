@@ -1,0 +1,6 @@
+# 结构化日志配置
+# level: debug | info | warn | error（默认 info）
+# format: text（开发模式，人类可读）| json（生产模式，结构化输出）
+logging:
+  level: "info"
+  format: "text"

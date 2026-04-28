@@ -1,9 +1,13 @@
+import fs from 'fs'
 import path from 'path'
 
 import { ensureRuntimeConfigScaffold } from '../init/runtime_scaffold.js'
 import { createLogger } from '../utils/logger.js'
+import { BUILTIN_DEFAULTS } from './domains/index.js'
 import { readYamlFileIfExists, resolveFromWorkspaceRoot, resolveWorkspaceRoot } from './loader.js'
+import { loadTemplateDefaults } from './manifest.js'
 import { deepMergeAll } from './merge.js'
+import { detectConfigDrift, logConfigDrift } from './migration.js'
 import { type RuntimeConfig, RuntimeConfigSchema } from './schema.js'
 
 const logger = createLogger('runtime-config')
@@ -35,215 +39,12 @@ interface RuntimeConfigCache {
 }
 
 const CONFIG_DIR_RELATIVE_PATH = path.join('data', 'configw')
+const CONFIG_FRAGMENTS_DIRNAME = 'conf.d'
 const DEFAULT_CONFIG_BASENAME = 'default.yaml'
 const LOCAL_CONFIG_BASENAME = 'local.yaml'
 
-const BUILTIN_DEFAULTS: RuntimeConfig = {
-  config_version: 1,
-  app: {
-    name: 'Yidhras',
-    env: 'development',
-    port: 3001
-  },
-  paths: {
-    world_packs_dir: 'data/world_packs',
-    assets_dir: 'data/assets',
-    plugins_dir: 'data/plugins',
-    ai_models_config: 'apps/server/config/ai_models.yaml'
-  },
-  operator: {
-    auth: {
-      jwt_secret: 'changeme-please-replace-with-a-secure-random-string',
-      jwt_expires_in: '24h',
-      bcrypt_rounds: 12
-    },
-    root: {
-      default_password: 'changeme-root-password'
-    }
-  },
-  plugins: {
-    enable_warning: {
-      enabled: true,
-      require_acknowledgement: true
-    },
-    sandbox: {
-      capability_level: 'full',
-      max_manifest_size_bytes: 1048576,
-      max_manifest_depth: 20,
-      max_routes: 16,
-      max_context_sources: 32,
-      warn_on_full_access: true
-    }
-  },
-  world: {
-    preferred_pack: 'example_pack',
-    bootstrap: {
-      enabled: true,
-      target_pack_dir: 'example_pack',
-      template_file: 'data/configw/templates/world-pack/example_pack.yaml',
-      overwrite: false
-    }
-  },
-  world_engine: {
-    timeout_ms: 500,
-    binary_path: 'apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar',
-    auto_restart: true
-  },
-  startup: {
-    allow_degraded_mode: true,
-    fail_on_missing_world_pack_dir: false,
-    fail_on_no_world_pack: false
-  },
-  sqlite: {
-    busy_timeout_ms: 5000,
-    wal_autocheckpoint_pages: 1000,
-    synchronous: 'NORMAL'
-  },
-  logging: {
-    level: 'info',
-    format: 'text'
-  },
-  clock: {
-    monotonic_enabled: true,
-    max_step_ticks: 100000
-  },
-  scheduler: {
-    enabled: true,
-    runtime: {
-      simulation_loop_interval_ms: 1000
-    },
-    lease_ticks: 5,
-    entity_concurrency: {
-      default_max_active_workflows_per_entity: 1,
-      max_entity_activations_per_tick: 1,
-      allow_parallel_decision_per_entity: false,
-      allow_parallel_action_per_entity: false,
-      event_followup_preempts_periodic: true
-    },
-    tick_budget: {
-      max_created_jobs_per_tick: 32,
-      max_executed_decisions_per_tick: 16,
-      max_dispatched_actions_per_tick: 16
-    },
-    automatic_rebalance: {
-      backlog_limit: 2,
-      max_recommendations: 1,
-      max_apply: 1
-    },
-    runners: {
-      decision_job: {
-        batch_limit: 5,
-        concurrency: 2,
-        lock_ticks: 5
-      },
-      action_dispatcher: {
-        batch_limit: 5,
-        concurrency: 1,
-        lock_ticks: 5
-      }
-    },
-    observability: {
-      default_query_limit: 20,
-      max_query_limit: 100,
-      summary: {
-        default_sample_runs: 20,
-        max_sample_runs: 100
-      },
-      trends: {
-        default_sample_runs: 20,
-        max_sample_runs: 100
-      },
-      operator_projection: {
-        default_sample_runs: 20,
-        max_sample_runs: 100,
-        default_recent_limit: 5,
-        max_recent_limit: 20
-      }
-    },
-    agent: {
-      limit: 5,
-      cooldown_ticks: 3,
-      max_candidates: 20,
-      decision_kernel: {
-        mode: 'rust_primary',
-        timeout_ms: 500,
-        binary_path: 'apps/server/rust/scheduler_decision_sidecar/target/debug/scheduler_decision_sidecar',
-        auto_restart: true
-      },
-      signal_policy: {
-        event_followup: {
-          priority_score: 30,
-          delay_ticks: 1,
-          coalesce_window_ticks: 2,
-          suppression_tier: 'high'
-        },
-        relationship_change_followup: {
-          priority_score: 20,
-          delay_ticks: 1,
-          coalesce_window_ticks: 2,
-          suppression_tier: 'low'
-        },
-        snr_change_followup: {
-          priority_score: 10,
-          delay_ticks: 1,
-          coalesce_window_ticks: 2,
-          suppression_tier: 'low'
-        },
-        overlay_change_followup: {
-          priority_score: 8,
-          delay_ticks: 1,
-          coalesce_window_ticks: 2,
-          suppression_tier: 'low'
-        },
-        memory_change_followup: {
-          priority_score: 9,
-          delay_ticks: 1,
-          coalesce_window_ticks: 2,
-          suppression_tier: 'low'
-        }
-      },
-      recovery_suppression: {
-        replay: { suppress_periodic: true, suppress_event_tiers: ['low'] },
-        retry: { suppress_periodic: true, suppress_event_tiers: ['low'] }
-      }
-    },
-    memory: {
-      trigger_engine: {
-        mode: 'rust_primary',
-        timeout_ms: 500,
-        binary_path: 'apps/server/rust/memory_trigger_sidecar/target/debug/memory_trigger_sidecar',
-        auto_restart: true
-      }
-    }
-  },
-  prompt_workflow: {
-    profiles: {
-      agent_decision_default: { token_budget: 2200, section_policy: 'standard', safety_margin_tokens: 80 },
-      context_summary_default: { token_budget: 1600, section_policy: 'minimal', safety_margin_tokens: 60 },
-      memory_compaction_default: { token_budget: 1800, section_policy: 'minimal', safety_margin_tokens: 60 }
-    }
-  },
-  runtime: {
-    multi_pack: {
-      max_loaded_packs: 2,
-      start_mode: 'manual',
-      bootstrap_packs: []
-    }
-  },
-  features: {
-    ai_gateway_enabled: false,
-    inference_trace: true,
-    notifications: true,
-    experimental: {
-      prompt_slot_permissions: false,
-      multi_pack_runtime: {
-        enabled: false,
-        operator_api_enabled: false,
-        ui_enabled: false
-      }
-    }
-  }
-}
+// Built-in defaults are now defined per-domain in config/domains/.
+// Imported from domains/index.js above as BUILTIN_DEFAULTS.
 
 let runtimeConfigCache: RuntimeConfigCache | null = null
 let runtimeConfigSnapshotLogged = false
@@ -637,27 +438,73 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   return overrides
 }
 
+const loadConfigFragments = (configDir: string): Record<string, unknown>[] => {
+  const fragmentsDir = path.join(configDir, CONFIG_FRAGMENTS_DIRNAME)
+  if (!fs.existsSync(fragmentsDir) || !fs.statSync(fragmentsDir).isDirectory()) {
+    return []
+  }
+
+  const files = fs
+    .readdirSync(fragmentsDir)
+    .filter(name => name.endsWith('.yaml') || name.endsWith('.yml'))
+    .sort()
+    .map(name => path.join(fragmentsDir, name))
+
+  return files.map(filePath => readYamlFileIfExists(filePath))
+}
+
 const loadRuntimeConfig = (): RuntimeConfigCache => {
   const workspaceRoot = resolveWorkspaceRoot()
   ensureRuntimeConfigScaffold(workspaceRoot)
 
   const configDir = path.join(workspaceRoot, CONFIG_DIR_RELATIVE_PATH)
   const activeEnv = getActiveAppEnv()
-  const configFilePaths = [
-    path.join(configDir, DEFAULT_CONFIG_BASENAME),
-    path.join(configDir, `${activeEnv}.yaml`),
-    path.join(configDir, LOCAL_CONFIG_BASENAME)
-  ]
 
-  const fileOverrides = configFilePaths.map(filePath => readYamlFileIfExists(filePath))
+  // Load conf.d/ fragments (new layout) or fall back to single default.yaml (legacy)
+  const fragmentOverrides = loadConfigFragments(configDir)
+  const baseFileOverrides: Record<string, unknown>[] =
+    fragmentOverrides.length > 0
+      ? fragmentOverrides
+      : [readYamlFileIfExists(path.join(configDir, DEFAULT_CONFIG_BASENAME))]
+
+  const envFileOverride = readYamlFileIfExists(path.join(configDir, `${activeEnv}.yaml`))
+  const localFileOverride = readYamlFileIfExists(path.join(configDir, LOCAL_CONFIG_BASENAME))
   const envOverrides = buildEnvironmentOverrides(activeEnv)
+
   const merged = deepMergeAll(
     BUILTIN_DEFAULTS as unknown as Record<string, unknown>,
-    ...fileOverrides,
+    ...baseFileOverrides,
+    envFileOverride,
+    localFileOverride,
     envOverrides
   )
 
   const parsed = RuntimeConfigSchema.parse(merged)
+
+  // Detect config drift: warn if user config is missing keys that exist in templates
+  const templatesDir = path.join(workspaceRoot, 'apps', 'server', 'templates', 'configw')
+  const templateDefaults = loadTemplateDefaults(templatesDir, readYamlFileIfExists)
+  if (Object.keys(templateDefaults).length > 0) {
+    // Build the effective user override by merging file overrides
+    const userOverride = deepMergeAll({}, ...baseFileOverrides, envFileOverride, localFileOverride)
+    const drift = detectConfigDrift(userOverride, templateDefaults)
+    logConfigDrift(drift)
+  }
+
+  const loadedFiles: string[] = []
+  if (fragmentOverrides.length > 0) {
+    const fragmentsDir = path.join(configDir, CONFIG_FRAGMENTS_DIRNAME)
+    loadedFiles.push(fragmentsDir)
+  } else {
+    const defaultPath = path.join(configDir, DEFAULT_CONFIG_BASENAME)
+    if (Object.keys(readYamlFileIfExists(defaultPath)).length > 0) {
+      loadedFiles.push(defaultPath)
+    }
+  }
+  const envPath = path.join(configDir, `${activeEnv}.yaml`)
+  if (Object.keys(envFileOverride).length > 0) loadedFiles.push(envPath)
+  const localPath = path.join(configDir, LOCAL_CONFIG_BASENAME)
+  if (Object.keys(localFileOverride).length > 0) loadedFiles.push(localPath)
 
   return {
     config: parsed,
@@ -665,7 +512,7 @@ const loadRuntimeConfig = (): RuntimeConfigCache => {
       workspaceRoot,
       configDir,
       activeEnv,
-      loadedFiles: configFilePaths.filter((filePath, index) => Object.keys(fileOverrides[index]).length > 0)
+      loadedFiles
     }
   }
 }

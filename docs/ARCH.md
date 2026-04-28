@@ -80,32 +80,63 @@
 
 ## 2.4 Runtime 配置边界
 
-当前运行时配置继续沿用既有 `data/configw` scaffold：
+配置系统采用域拆分 + 多层合并架构，每个配置域独立管理 schema、默认值和模板。
 
-- 内建 defaults 定义于：`apps/server/src/config/runtime_config.ts`
-- schema 定义于：`apps/server/src/config/schema.ts`
-- YAML 读取 / 合并入口位于：`apps/server/src/config/runtime_config.ts`
-- scaffold 模板位于：`apps/server/templates/configw/*.yaml`
-- 工作区实际配置位于：`data/configw/*.yaml`
+### 2.4.1 域拆分结构
 
-明确边界如下：
+```
+apps/server/src/config/
+  domains/                         # 按域拆分的配置模块（每域: Schema + DEFAULTS）
+    index.ts                       # 组装 RuntimeConfigSchema + BUILTIN_DEFAULTS
+    app.ts / paths.ts / operator.ts / plugins.ts / world.ts
+    startup.ts / sqlite.ts / logging.ts / clock.ts
+    world_engine.ts / scheduler.ts / prompt_workflow.ts
+    runtime.ts / features.ts
+  schema.ts                        # 从 domains/ 重导出（保持旧导入兼容）
+  runtime_config.ts                # 加载链、缓存、env 解析
+  tiers.ts                         # 安全分级定义
+  watcher.ts                       # conf.d/ 文件变更监听与热重载
+  manifest.ts / migration.ts       # 模板默认值加载、配置漂移检测与迁移
+```
 
-- `data/configw/*.yaml`
-  - 承载 **宿主级 / 部署级 / runtime 行为级** 配置
-  - 如端口、路径、bootstrap、sqlite pragma、scheduler runtime/lease/rebalance/runner/observability、prompt workflow defaults
-- `apps/server/config/ai_models.yaml`
-  - 承载 **AI provider / model registry / route policy** 配置
-  - 不与 `configw` 混为一体，避免 runtime host config 与 AI registry config 混杂
+scaffold 模板位于：`apps/server/templates/configw/conf.d/*.yaml`（拆分后的域模板）。
+工作区实际配置位于：`data/configw/conf.d/*.yaml`。向后兼容旧版单文件 `data/configw/default.yaml`。
 
-当前优先级：
+### 2.4.2 合并优先级
 
-1. code builtin defaults
-2. `data/configw/default.yaml`
+1. code builtin defaults（`domains/` 中各域的 `*_DEFAULTS`）
+2. `data/configw/conf.d/*.yaml`（新布局）或 `data/configw/default.yaml`（旧布局兼容）
 3. `data/configw/<APP_ENV>.yaml`
 4. `data/configw/local.yaml`
 5. env overrides
 
 也即：**env > yaml > code default**。
+
+### 2.4.3 配置安全分级
+
+每个配置域映射到四级安全 tier，控制修改行为：
+
+| Tier | 含义 | 热重载 | 修改行为 |
+|------|------|--------|----------|
+| `safe` | 可热重载 | 是 | 即时生效（如 logging, features） |
+| `caution` | 需确认 | 否 | 写入文件，运行时生效但记录告警（如 scheduler agent limit） |
+| `dangerous` | 需重启 | 否 | 写入文件，重启后生效（如 sqlite, world_engine） |
+| `critical` | 需操作员确认 | 否 | 显式操作 + 重启（如 operator jwt/密码） |
+
+Tier 定义和查询见 `apps/server/src/config/tiers.ts`。Safe tier 配置支持 `conf.d/` 文件变更时的热重载（`watcher.ts`），非 safe tier 变更需重启服务。
+
+### 2.4.4 增量配置更新
+
+加载时自动检测用户配置与模板的漂移：对比 `data/configw/conf.d/` 与 `apps/server/templates/configw/conf.d/`，若用户侧存在模板已定义但缺失的 key，以 warning 级别日志报告。检测逻辑见 `migration.ts`。
+
+### 2.4.5 边界说明
+
+- `data/configw/`
+  - 承载 **宿主级 / 部署级 / runtime 行为级** 配置
+  - 如端口、路径、bootstrap、sqlite pragma、scheduler runtime/lease/rebalance/runner/observability、prompt workflow defaults
+- `apps/server/config/ai_models.yaml`
+  - 承载 **AI provider / model registry / route policy** 配置
+  - 不与 `configw` 混为一体，避免 runtime host config 与 AI registry config 混杂
 
 ## 3. 组合根与应用层
 

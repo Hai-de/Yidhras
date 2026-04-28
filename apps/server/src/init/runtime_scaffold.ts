@@ -7,6 +7,7 @@ import { createLogger } from '../utils/logger.js';
 const log = createLogger('runtime-scaffold');
 
 const CONFIG_DIR_RELATIVE_PATH = path.join('data', 'configw');
+const CONFIG_FRAGMENTS_DIRNAME = 'conf.d';
 const VERSION_MANAGED_CONFIG_TEMPLATE_DIR_RELATIVE_PATH = path.join('apps', 'server', 'templates', 'configw');
 const VERSION_MANAGED_WORLD_PACK_TEMPLATE_DIR_RELATIVE_PATH = path.join('apps', 'server', 'templates', 'world-pack');
 const DEFAULT_CONFIG_BASENAME = 'default.yaml';
@@ -77,6 +78,26 @@ export const ensureRuntimeConfigScaffold = (
 
   for (const basename of SEEDED_CONFIG_BASENAMES) {
     ensureFileFromTemplate(path.join(configDir, basename), path.join(configTemplateDir, basename), result);
+  }
+
+  // Seed conf.d/ fragments (new split-config layout)
+  const fragmentsTemplateDir = path.join(configTemplateDir, CONFIG_FRAGMENTS_DIRNAME);
+  const fragmentsTargetDir = path.join(configDir, CONFIG_FRAGMENTS_DIRNAME);
+
+  if (fs.existsSync(fragmentsTemplateDir)) {
+    fs.mkdirSync(fragmentsTargetDir, { recursive: true });
+
+    const fragmentFiles = fs
+      .readdirSync(fragmentsTemplateDir)
+      .filter(name => name.endsWith('.yaml') || name.endsWith('.yml'));
+
+    for (const basename of fragmentFiles) {
+      ensureFileFromTemplate(
+        path.join(fragmentsTargetDir, basename),
+        path.join(fragmentsTemplateDir, basename),
+        result
+      );
+    }
   }
 
   for (const basename of SEEDED_WORLD_PACK_TEMPLATE_BASENAMES) {

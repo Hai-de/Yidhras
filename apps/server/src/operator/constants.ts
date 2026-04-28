@@ -52,7 +52,8 @@ export const AUDIT_ACTION = {
   UPDATE_OPERATOR: 'update_operator',
   DELETE_OPERATOR: 'delete_operator',
   BIND_AGENT: 'bind_agent',
-  UNBIND_AGENT: 'unbind_agent'
+  UNBIND_AGENT: 'unbind_agent',
+  UPDATE_CONFIG: 'update_config'
 } as const
 
 export type AuditAction = (typeof AUDIT_ACTION)[keyof typeof AUDIT_ACTION]

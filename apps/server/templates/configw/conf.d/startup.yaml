@@ -1,0 +1,5 @@
+# 启动策略
+startup:
+  allow_degraded_mode: true
+  fail_on_missing_world_pack_dir: false
+  fail_on_no_world_pack: false

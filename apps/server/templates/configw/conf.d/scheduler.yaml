@@ -1,0 +1,91 @@
+# 调度器配置
+scheduler:
+  enabled: true
+  runtime:
+    simulation_loop_interval_ms: 1000
+  lease_ticks: 5
+  entity_concurrency:
+    default_max_active_workflows_per_entity: 1
+    max_entity_activations_per_tick: 1
+    allow_parallel_decision_per_entity: false
+    allow_parallel_action_per_entity: false
+    event_followup_preempts_periodic: true
+  tick_budget:
+    max_created_jobs_per_tick: 32
+    max_executed_decisions_per_tick: 16
+    max_dispatched_actions_per_tick: 16
+  automatic_rebalance:
+    backlog_limit: 2
+    max_recommendations: 1
+    max_apply: 1
+  runners:
+    decision_job:
+      batch_limit: 5
+      concurrency: 2
+      lock_ticks: 5
+    action_dispatcher:
+      batch_limit: 5
+      concurrency: 1
+      lock_ticks: 5
+  observability:
+    default_query_limit: 20
+    max_query_limit: 100
+    summary:
+      default_sample_runs: 20
+      max_sample_runs: 100
+    trends:
+      default_sample_runs: 20
+      max_sample_runs: 100
+    operator_projection:
+      default_sample_runs: 20
+      max_sample_runs: 100
+      default_recent_limit: 5
+      max_recent_limit: 20
+  agent:
+    limit: 5
+    cooldown_ticks: 3
+    max_candidates: 20
+    decision_kernel:
+      mode: "rust_primary"
+      timeout_ms: 500
+      binary_path: "apps/server/rust/scheduler_decision_sidecar/target/debug/scheduler_decision_sidecar"
+      auto_restart: true
+    signal_policy:
+      event_followup:
+        priority_score: 30
+        delay_ticks: 1
+        coalesce_window_ticks: 2
+        suppression_tier: "high"
+      relationship_change_followup:
+        priority_score: 20
+        delay_ticks: 1
+        coalesce_window_ticks: 2
+        suppression_tier: "low"
+      snr_change_followup:
+        priority_score: 10
+        delay_ticks: 1
+        coalesce_window_ticks: 2
+        suppression_tier: "low"
+      overlay_change_followup:
+        priority_score: 8
+        delay_ticks: 1
+        coalesce_window_ticks: 2
+        suppression_tier: "low"
+      memory_change_followup:
+        priority_score: 9
+        delay_ticks: 1
+        coalesce_window_ticks: 2
+        suppression_tier: "low"
+    recovery_suppression:
+      replay:
+        suppress_periodic: true
+        suppress_event_tiers: ["low"]
+      retry:
+        suppress_periodic: true
+        suppress_event_tiers: ["low"]
+  memory:
+    trigger_engine:
+      mode: "rust_primary"
+      timeout_ms: 500
+      binary_path: "apps/server/rust/memory_trigger_sidecar/target/debug/memory_trigger_sidecar"
+      auto_restart: true

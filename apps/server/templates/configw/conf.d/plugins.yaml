@@ -1,0 +1,18 @@
+# 插件系统配置
+plugins:
+  enable_warning:
+    enabled: true
+    require_acknowledgement: true
+
+  # 插件沙箱能力等级
+  # - readonly: 只读 pack 信息 + 通知推送，无 Prisma/模拟控制
+  # - pack_scoped: 同上 + 当前 pack 数据读写 + HTTP 上下文
+  # - full: 等同完整 AppContext（默认，向后兼容）
+  # warn_on_full_access 为 true 时，full 级别插件注册时打印风险警告。
+  sandbox:
+    capability_level: "full"
+    max_manifest_size_bytes: 1048576
+    max_manifest_depth: 20
+    max_routes: 16
+    max_context_sources: 32
+    warn_on_full_access: true

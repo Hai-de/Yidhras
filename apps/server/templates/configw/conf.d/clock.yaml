@@ -1,0 +1,7 @@
+# 时钟系统安全策略
+# monotonic_enabled: 禁止时间倒流（默认开启）。
+#   关闭风险：可能导致事件因果混乱、状态不一致。
+# max_step_ticks: 单次 tick() 调用最大步进量（默认 100000）。
+clock:
+  monotonic_enabled: true
+  max_step_ticks: 100000

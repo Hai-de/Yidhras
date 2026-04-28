@@ -1,0 +1,7 @@
+# 配置备份保留策略
+backup:
+  enabled: true
+  directory: "data/backups/config"
+  retention:
+    max_count: 20
+    max_age_days: 30

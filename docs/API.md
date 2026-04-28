@@ -459,3 +459,32 @@ Operator-Subject 统一权限层通过 JWT Bearer Token 认证，所有 operator
 
 - **GET `/api/audit/logs`** — 审计日志（root 可见全部，支持分页和过滤）
 - **GET `/api/audit/logs/me`** — 当前 Operator 的审计日志
+
+## 15. 配置管理接口
+
+配置读写通过 `/api/config` 端点，敏感字段（jwt_secret、default_password）脱敏返回。写操作受 tier 控管：safe tier 即时热重载，其他 tier 写入文件并提示重启。
+
+### 15.1 读取配置
+
+- **GET `/api/config`** — 返回完整配置（鉴权：操作员）。敏感字段显示为 `xxxx***`
+- **GET `/api/config/domains`** — 列出所有配置域及其 tier（鉴权：操作员）
+- **GET `/api/config/:domain`** — 返回单个域配置（鉴权：操作员）。domain 可选值：`app`、`paths`、`operator`、`plugins`、`world`、`startup`、`sqlite`、`logging`、`clock`、`world_engine`、`scheduler`、`prompt_workflow`、`runtime`、`features`
+
+### 15.2 更新配置
+
+- **PATCH `/api/config/:domain`** — 更新指定域配置（鉴权：root）。body 为 `Record<string, unknown>`，合并写入对应 `conf.d/<domain>.yaml`。返回 `{ domain, tier, hotReloaded, requiresRestart, message }`
+
+## 16. 配置备份接口
+
+配置备份通过 tar.gz 归档 `data/configw/` 目录，元数据存储在 `data/backups/config/backups.json`。保留策略：最多 20 个，最长 30 天。
+
+- **POST `/api/config/backups`** — 创建备份（鉴权：root）。body：`{ name?: string }`
+- **GET `/api/config/backups`** — 列出备份（鉴权：操作员）。query：`?limit=20&offset=0`
+- **GET `/api/config/backups/:id`** — 备份详情（鉴权：操作员）
+- **GET `/api/config/backups/:id/download`** — 下载备份文件（鉴权：root）
+- **DELETE `/api/config/backups/:id`** — 删除备份（鉴权：root）
+- **POST `/api/config/backups/:id/restore`** — 恢复备份（鉴权：root）。query：`?force=true` 强制覆盖非空目录
+- **GET `/api/config/backup-policy`** — 获取保留策略（鉴权：操作员）
+- **POST `/api/config/backups/cleanup`** — 触发保留策略清理（鉴权：root）
+
+错误码：`BACKUP_NOT_FOUND`、`ROOT_REQUIRED`、`OPERATOR_REQUIRED`、`INVALID_BACKUP_REQUEST`、`INVALID_LIST_QUERY`

@@ -1,0 +1,8 @@
+# 世界包配置
+world:
+  preferred_pack: "death_note"
+  bootstrap:
+    enabled: true
+    target_pack_dir: "death_note"
+    template_file: "data/configw/templates/world-pack/death_note.yaml"
+    overwrite: false

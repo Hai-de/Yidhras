@@ -86,13 +86,31 @@ pnpm smoke:server
 
 配置优先级：**env > yaml > code default**。完整优先级链与字段说明见 [`ARCH.md`](../ARCH.md) 第 2.4 节。
 
-常用运行参数（通过 `data/configw/local.yaml` 或 env 覆盖）：
+配置拆分布局（`data/configw/conf.d/`），每域独立 YAML 文件：
+
+```
+data/configw/
+  conf.d/
+    app.yaml / paths.yaml / operator.yaml / plugins.yaml / world.yaml
+    startup.yaml / sqlite.yaml / logging.yaml / clock.yaml
+    world_engine.yaml / scheduler.yaml / prompt_workflow.yaml
+    runtime.yaml / features.yaml
+  development.yaml / production.yaml / test.yaml
+  local.yaml                       # 本地覆盖，不入版本控制
+```
+
+常用运行参数（通过 `data/configw/conf.d/*.yaml` 或 `data/configw/local.yaml` 或 env 覆盖）：
 
 ```yaml
+# conf.d/app.yaml
 app:
   port: 3001
+
+# conf.d/sqlite.yaml
 sqlite:
   busy_timeout_ms: 5000
+
+# conf.d/scheduler.yaml
 scheduler:
   lease_ticks: 5
 ```
@@ -156,16 +174,19 @@ pnpm --filter yidhras-server exec prisma migrate deploy
 
 #### 3.5.1 直接改 YAML（推荐）
 
-在 `data/configw/default.yaml` 或 `data/configw/local.yaml` 中调整。示例片段：
+在 `data/configw/conf.d/<domain>.yaml` 或 `data/configw/local.yaml` 中调整。示例片段：
 
 ```yaml
+# conf.d/app.yaml
 app:
   port: 3001
 
+# conf.d/sqlite.yaml
 sqlite:
   busy_timeout_ms: 5000
   synchronous: "NORMAL"
 
+# conf.d/scheduler.yaml
 scheduler:
   lease_ticks: 5
   entity_concurrency:
@@ -174,7 +195,7 @@ scheduler:
     max_created_jobs_per_tick: 32
 ```
 
-完整配置字段与默认值参见 `apps/server/src/config/` 源码和 [`ARCH.md`](../ARCH.md) 第 2.4 节。
+完整配置字段与默认值参见 `apps/server/src/config/domains/` 源码和 [`ARCH.md`](../ARCH.md) 第 2.4 节。
 
 #### 3.5.2 临时使用 env 覆盖
 
@@ -202,7 +223,26 @@ pnpm --filter yidhras-server dev
 
 或在 YAML 中设置 `features.experimental.multi_pack_runtime.*` 与 `runtime.multi_pack.*`。
 
-### 3.5 World Pack 与手工脚本
+### 3.6 配置备份管理
+
+```bash
+pnpm --filter yidhras-server config:backup create [--name <name>]
+pnpm --filter yidhras-server config:backup list [--limit <n>]
+pnpm --filter yidhras-server config:backup info <id>
+pnpm --filter yidhras-server config:backup restore <id> [--force]
+pnpm --filter yidhras-server config:backup delete <id>
+pnpm --filter yidhras-server config:backup policy
+pnpm --filter yidhras-server config:backup cleanup
+```
+
+说明：
+- `config:backup` 是 CLI 入口，可附加子命令。不带参数运行显示完整帮助。
+- `config:backup:create`、`config:backup:list`、`config:backup:cleanup` 提供快捷别名。
+- 备份归档在 `data/backups/config/`，格式为 tar.gz，元数据存于同目录 `backups.json`。
+- 保留策略：最多 20 个备份，最长保留 30 天。`cleanup` 手动触发清理。
+- 等效 API 端点见 [`API.md`](../API.md) 第 16 节。
+
+### 3.7 World Pack 与手工脚本
 
 ```bash
 pnpm --filter yidhras-server scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"

@@ -1,0 +1,6 @@
+# 运行时多世界包配置
+runtime:
+  multi_pack:
+    max_loaded_packs: 2
+    start_mode: "manual"
+    bootstrap_packs: []

@@ -1,0 +1,6 @@
+# 应用基础配置
+# 环境通过 APP_ENV 或 NODE_ENV 环境变量控制，此处为默认值。
+app:
+  name: "Yidhras"
+  env: "development"
+  port: 3001

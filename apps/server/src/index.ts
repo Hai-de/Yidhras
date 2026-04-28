@@ -14,6 +14,8 @@ import { createGlobalErrorMiddleware } from './app/middleware/error_handler.js';
 import { registerAgentRoutes } from './app/routes/agent.js';
 import { registerAuditRoutes } from './app/routes/audit.js';
 import { registerClockRoutes } from './app/routes/clock.js';
+import { registerConfigRoutes } from './app/routes/config.js';
+import { registerConfigBackupRoutes } from './app/routes/config_backup.js';
 import { registerExperimentalPackProjectionRoutes } from './app/routes/experimental_pack_projection.js';
 import { registerExperimentalRuntimeRoutes } from './app/routes/experimental_runtime.js';
 import { registerGraphRoutes } from './app/routes/graph.js';
@@ -69,6 +71,7 @@ import {
   resolveWorkspacePath,
   validateProductionSecrets
 } from './config/runtime_config.js';
+import { startConfigWatcher } from './config/watcher.js';
 import { SimulationManager } from './core/simulation.js';
 import { createInferenceService } from './inference/service.js';
 import { createPrismaInferenceTraceSink } from './inference/sinks/prisma.js';
@@ -211,6 +214,12 @@ const registerRoutes: RouteRegistrar = (application, context) => {
     parsePositiveStepTicks,
     toJsonSafe,
     getErrorMessage
+  });
+  registerConfigBackupRoutes(application, context, {
+    asyncHandler
+  });
+  registerConfigRoutes(application, context, {
+    asyncHandler
   });
   registerExperimentalRuntimeRoutes(application, context, {
     asyncHandler
@@ -429,6 +438,8 @@ const start = async (): Promise<void> => {
     ),
   });
 
+  const configWatcher = startConfigWatcher();
+
   const gracefulShutdown = async (signal: string): Promise<void> => {
     logger.info(`收到 ${signal} 信号，开始优雅关闭...`);
 
@@ -455,6 +466,8 @@ const start = async (): Promise<void> => {
 
       registryWatcher.close();
       logger.info('Registry watcher 已关闭');
+
+      configWatcher?.close();
 
       clearTimeout(forceExit);
       logger.info('优雅关闭完成');

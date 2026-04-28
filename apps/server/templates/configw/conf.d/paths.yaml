@@ -1,0 +1,6 @@
+# 路径配置（相对于工作区根目录）
+paths:
+  world_packs_dir: "data/world_packs"
+  assets_dir: "data/assets"
+  plugins_dir: "data/plugins"
+  ai_models_config: "apps/server/config/ai_models.yaml"
