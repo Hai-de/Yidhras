@@ -1,24 +1,30 @@
 # TODO
 
-> 本文件只记录用户当前想要最近一段时间的待处理事项。
+> 本文件只记录用户当前想要最近一段时间的待处理事项，完成后用户会直接移除。
 > 稳定架构事实看 `docs/ARCH.md`，业务语义看 `docs/LOGIC.md`，接口契约看 `docs/API.md`，设计/计划/评审过程看 `.limcode/`。
 
 ## 当前重点 / Current Focus
+
+- [x] 完成世界包的开局快照的地基，确保一个世界包在初始化时能选择多态开局和的变量 
+- [ ] 目前不论是插件和配置文件都都已经有不同的配置风险，是时候让他们变成统合的不同等级的配置安全了
+- [ ] 拆分配置文件
+- [ ] 检查配置文件是否是增量更新
+- [ ] 创建个项目脚本，能定期备份配置文件，同步策略可配置
+- [ ] 实现世界包级别的快照存档功能
+- [ ] 已经开发了不少功能，是时候更新一下api接口了，前端很长一段时间基本没有更新，到时候基本是大翻新，在大翻新钱可以升级或者重构对外暴露的api接口
+
+
 
 ### 梳理当前代码实现
 
 - [ ] 实现部分 docs/ENHANCEMENTS.md 文件中列出的高价值内容
 ### AI 网关模块盲点修复 (基于代码审计发现)
 
-- [x] 启用 tool calling 入口：`task_service.ts` 中硬编码 `tools:[]` + `tool_policy:{mode:'disabled'}`，已有方案，详见 `.limcode/design/ai-tool-calling-enablement.md` — **已完成（Phase 1–3，165 tests）**
 
 - [ ] Streaming/SSE 支持：**全项目盲点** — gateway 和旧 inference 链路均为 req→full response，`openai.ts` 适配器无 `stream:true`，无 SSE/EventSource 能力，择日处理
 
 ### 世界包多包运行时 (World-Pack Multi-Runtime)
 
-- [x] 共享 materialization 接口抽取：`pack_materializer.ts` + `runtime_activation.ts` 重构 + `PackRuntimeRegistryService.load()` 接入 — 详见 `.limcode/design/experimental-pack-runtime-materialization.md`
-- [x] Experimental pack step API：`POST /api/experimental/runtime/packs/:packId/step` — 独立时钟推进
-- [x] Unload 清理增强：删除 runtime.sqlite + storage-plan.json + pluginRuntimeRegistry 缓存
 - [ ] Plugin discovery for experimental packs：当前 `discoverPackLocalPlugins` 只在 active activation 调用，实验性 pack 加载不触发 — 需要 `packFolderName` 定位目录
 - [ ] `bootstrap_list` 启动模式：`runtime.multi_pack.start_mode` 和 `bootstrap_packs` 配置已存在，启动逻辑未实现 — 留钩子
 - [ ] Scheduler 多包隔离：`experimental_scheduler_runtime.ts` 当前只给 `partition_id` 加前缀，未真正按 pack 隔离数据 — 需深重构

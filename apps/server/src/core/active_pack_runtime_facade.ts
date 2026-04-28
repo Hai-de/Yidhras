@@ -52,7 +52,7 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
     this.clock = new ChronosEngine({ calendarConfigs: [], initialTicks: 0n });
   }
 
-  public async init(packFolderName: string): Promise<void> {
+  public async init(packFolderName: string, openingId?: string): Promise<void> {
     await this.runtimeBootstrap.prepareDatabase();
 
     const activated = await activateWorldPackRuntime({
@@ -61,7 +61,8 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
       prisma: this.prisma,
       packsDir: this.packsDir,
       runtimeSpeed: this.runtimeSpeed,
-      notifications: this.notifications
+      notifications: this.notifications,
+      openingId
     });
 
     this.activePack = activated.pack;

@@ -51,6 +51,7 @@ describe('PackHostApi read surface integration', () => {
       setRuntimeSpeedOverride: () => {},
       clearRuntimeSpeedOverride: () => {},
       getCurrentTick: () => 1000n,
+      getCurrentRevision: () => 1000n,
       getAllTimes: () => ({ current_tick: '1000' }),
       step: async () => {}
     };

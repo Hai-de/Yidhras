@@ -14,7 +14,6 @@ import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseBody, parseParams, parseQuery } from '../http/zod.js';
 import { requireAuth } from '../middleware/require_auth.js';
-import { getOperatorPackIds } from '../services/operator_pack_bindings.js';
 import {
   getActionIntentByInferenceId,
   getAiInvocationById,
@@ -26,6 +25,7 @@ import {
   listAiInvocations,
   listInferenceJobs
 } from '../services/inference_workflow.js';
+import { getOperatorPackIds } from '../services/operator_pack_bindings.js';
 
 export interface InferenceRouteDependencies {
   asyncHandler(

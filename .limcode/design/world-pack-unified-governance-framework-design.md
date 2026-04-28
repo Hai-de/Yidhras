@@ -193,7 +193,7 @@ world-pack 可以声明自己的逻辑存储结构，但平台负责：
    - `apps/server/src/domain/authority/resolver.ts`
    - `apps/server/src/domain/perception/resolver.ts`
    - `apps/server/src/domain/perception/template_renderer.ts`
-   - `apps/server/src/domain/inference/context_assembler.ts`
+   - `apps/server/src/app/services/context_assembler.ts`（已从 `domain/inference/` 迁出）
 5. **Invocation / Objective Enforcement**
    - `apps/server/src/domain/invocation/invocation_dispatcher.ts`
    - `apps/server/src/domain/rule/objective_rule_resolver.ts`
@@ -235,10 +235,8 @@ world-pack 可以声明自己的逻辑存储结构，但平台负责：
 - `apps/server/src/core/simulation.ts`
   - 已完成第一轮 runtime facade 收口
   - activation/bootstrap 主流程已抽离到 `apps/server/src/core/runtime_activation.ts`
-- `POST /api/policy`
-- `POST /api/policy/evaluate`
-  - 当前保留为 access / projection policy debug surface
-  - 不再是 unified governance framework 中心接口
+- `POST /api/policy` / `POST /api/policy/evaluate`（已重命名为 `/api/access-policy`，2026-04-28 已删除）
+  - 服务层 `access_policy/service.ts` 继续保留，供 `social.ts` 与 `context_builder.ts` 内部调用
 - `apps/server/src/world/bootstrap.ts`
   - 当前只是 bootstrap CLI/入口，不是 canonical schema/loader 命名桥
 
@@ -592,10 +590,7 @@ bootstrap:
 
 ### 10.2 当前仍保留但已完成降级定位的兼容接口
 
-- `/api/policy/*`
-  - 当前只应视为 access / projection policy debug surface
-  - 不再是 unified governance framework 的中心接口
-  - 本轮继续保留，不做删除
+（无 — 最后一项 compat surface 已在 2026-04-28 移除）
 
 ### 10.3 已移除的兼容接口
 
@@ -605,6 +600,10 @@ bootstrap:
 - `/api/agent/:id/overview`
   - 已删除
   - entity overview 主线已统一到 `/api/entities/:id/overview`
+- `/api/access-policy`（原名 `/api/policy`）
+  - 2026-04-28 删除
+  - 服务端消费者（`social.ts`、`context_builder.ts`）直接调用 `access_policy/service.ts`，无需 HTTP 端点
+  - 零前端消费者，零 HTTP 调用方依赖
 
 ### 10.4 当前仍未完全达到的最终目标
 
@@ -759,12 +758,12 @@ bootstrap:
 2. `Event` / `Post` 是否长期保留在 kernel-side 统一宿主，还是进一步细分为更严格的 evidence/event contract？
 3. `ActionIntent` / `InferenceTrace` / `DecisionJob` 是否应继续永久属于 workflow kernel？
 4. 是否需要正式 `PackOutboxEvent` 模型来替代当前较轻的 projection extraction / bridge 方式？
-5. `/api/policy/*` 是否长期保留为 debug surface，还是应迁移到更独立的 access-policy 子系统？
+5. ~~`/api/policy/*` 是否长期保留为 debug surface~~ — 2026-04-28 已下线，HTTP 端点删除，服务层保留供内部调用
 6. 当前单 active pack 假设是否会在后续多 pack activation 下带来 API 语义调整？
 
 ---
 
-## 15. 实施状态审计 (Last Updated: 2026-04-08)
+## 15. 实施状态审计 (Last Updated: 2026-04-28)
 
 > **审计结论**：主线已落地。当前进入 **边界纯化 & Operator 产品化** 阶段。
 
@@ -776,6 +775,7 @@ bootstrap:
 - [x] Pack-local SQLite 存储边界
 - [x] Death Note 样板 Mediator 化
 - [x] API 路由收口 (`/api/entities/:id`, Active Pack Guard)
+- [x] `/api/policy/*` → `/api/access-policy/*` 彻底下线 (2026-04-28)
 
 ### ⚠️ 部分完成 (基础实现，待增强)
 - [~] Perception 系统 (可见集基础版，缺 Diff/复杂规则)
@@ -784,7 +784,6 @@ bootstrap:
 ### ❌ 未启动 / 后续阶段
 - [ ] Authority Inspector / Perception Diff 前端界面
 - [ ] SimulationManager 深度拆分
-- [ ] `/api/policy/*` 彻底下线策略
 - [ ] `PackOutboxEvent` 引入
 
 当前 unified governance framework 应被视为：

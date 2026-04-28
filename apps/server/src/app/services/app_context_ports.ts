@@ -14,7 +14,7 @@ import type { PackHostApi, WorldEnginePort } from '../runtime/world_engine_ports
 import type { ContextAssemblyPort } from './context_memory_ports.js';
 
 export interface ActivePackRuntimeFacade {
-  init(packFolderName: string): Promise<void>;
+  init(packFolderName: string, openingId?: string): Promise<void>;
   getActivePack(): WorldPack | undefined;
   resolvePackVariables(template: string, permission?: unknown, actorState?: Record<string, unknown> | null): string;
   getStepTicks(): bigint;

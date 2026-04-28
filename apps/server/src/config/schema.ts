@@ -197,6 +197,7 @@ export const RuntimeConfigSchema = z
     world: z
       .object({
         preferred_pack: NonEmptyStringSchema,
+        preferred_opening: NonEmptyStringSchema.optional(),
         bootstrap: z
           .object({
             enabled: z.boolean(),

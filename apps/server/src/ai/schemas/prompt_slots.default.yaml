@@ -1,6 +1,7 @@
 version: 1
 slots:
   system_core:
+    id: "system_core"
     display_name: "系统核心指令"
     description: "推理服务的系统级指令与身份声明"
     default_priority: 100
@@ -13,6 +14,7 @@ slots:
     enabled: true
 
   system_policy:
+    id: "system_policy"
     display_name: "系统策略"
     description: "访问控制与策略约束"
     default_priority: 95
@@ -28,6 +30,7 @@ slots:
       visible_to: []
 
   role_core:
+    id: "role_core"
     display_name: "角色核心"
     description: "当前 Actor 的角色定义与上下文"
     default_priority: 90
@@ -43,6 +46,7 @@ slots:
     enabled: true
 
   world_context:
+    id: "world_context"
     display_name: "世界上下文"
     description: "World Pack 提供的世界观与规则说明"
     default_priority: 80
@@ -53,6 +57,7 @@ slots:
     enabled: true
 
   memory_summary:
+    id: "memory_summary"
     display_name: "记忆摘要"
     description: "短期/长期记忆的摘要注入"
     default_priority: 70
@@ -62,6 +67,7 @@ slots:
     enabled: true
 
   output_contract:
+    id: "output_contract"
     display_name: "输出契约"
     description: "预期输出格式与约束"
     default_priority: 50
@@ -74,6 +80,7 @@ slots:
     enabled: true
 
   post_process:
+    id: "post_process"
     display_name: "上下文快照"
     description: "当前推理上下文的 JSON 快照"
     default_priority: 60

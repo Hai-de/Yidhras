@@ -59,7 +59,8 @@ const createEntityStateInput = (
 
 export const materializePackRuntimeCoreModels = async (
   pack: WorldPack,
-  now: bigint
+  now: bigint,
+  appliedOpeningId?: string
 ): Promise<PackRuntimeMaterializeSummary> => {
   const packId = pack.metadata.id;
   const worldEntities = new Map<string, PackRuntimeWorldEntityInput>();
@@ -201,6 +202,19 @@ export const materializePackRuntimeCoreModels = async (
       )
     );
   }
+
+  const metaStateId = buildEntityStateId(packId, DEFAULT_PACK_WORLD_ENTITY_ID, 'meta');
+  entityStates.set(metaStateId, {
+    id: metaStateId,
+    pack_id: packId,
+    entity_id: buildWorldEntityId(packId, DEFAULT_PACK_WORLD_ENTITY_ID),
+    state_namespace: 'meta',
+    state_json: {
+      applied_opening_id: appliedOpeningId ?? null,
+      materialized_at: String(now)
+    },
+    now
+  });
 
   for (const transform of pack.state_transforms ?? []) {
     putWorldEntity(

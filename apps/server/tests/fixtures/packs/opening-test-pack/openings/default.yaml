@@ -1,0 +1,10 @@
+name: "Default Opening"
+description: "The standard start"
+variables:
+  difficulty: "easy"
+initial_states:
+  - entity_id: "__world__"
+    state_namespace: "world"
+    state_json:
+      phase: "default_opening"
+      threat_level: "low"

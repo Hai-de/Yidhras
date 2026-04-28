@@ -4,6 +4,8 @@ import path from 'path';
 import { ChronosEngine } from '../clock/engine.js';
 import type { CalendarConfig } from '../clock/types.js';
 import type { PackManifestLoader, WorldPack } from '../packs/manifest/loader.js';
+import { applyOpening } from '../packs/openings/applicator.js';
+import { loadPackOpening } from '../packs/openings/loader.js';
 import { discoverPackLocalPlugins, type PluginDiscoveryResult } from '../plugins/discovery.js';
 export interface NotificationPort {
   push(level: string, content: string, code?: string, details?: Record<string, unknown>): unknown;
@@ -19,6 +21,7 @@ export interface ActivateWorldPackRuntimeOptions {
   runtimeSpeed: RuntimeSpeedPolicy;
   packsDir: string;
   notifications: NotificationPort;
+  openingId?: string;
 }
 
 export interface ActivatedWorldPackRuntime {
@@ -85,15 +88,25 @@ export const activateWorldPackRuntime = async ({
   prisma,
   runtimeSpeed,
   packsDir,
-  notifications
+  notifications,
+  openingId
 }: ActivateWorldPackRuntimeOptions): Promise<ActivatedWorldPackRuntime> => {
-  const pack = loader.loadPack(packFolderName);
+  let pack = loader.loadPack(packFolderName);
+  const packRootDir = path.join(packsDir, packFolderName);
+  let appliedOpeningId: string | undefined;
+
+  if (openingId) {
+    const opening = loadPackOpening(packRootDir, openingId);
+    pack = applyOpening(pack, opening);
+    appliedOpeningId = openingId;
+  }
+
   const runtimeConfig = getWorldPackRuntimeConfig(pack);
   const calendars = (pack.time_systems ?? []) as unknown as CalendarConfig[];
 
   configureRuntimeSpeedFromPack(runtimeSpeed, pack, notifications);
 
-  await materializePackRuntime({ pack, prisma, initialTick: runtimeConfig.initialTick });
+  await materializePackRuntime({ pack, prisma, initialTick: runtimeConfig.initialTick, appliedOpeningId });
 
   const clock = await resolvePackClock({
     calendars,

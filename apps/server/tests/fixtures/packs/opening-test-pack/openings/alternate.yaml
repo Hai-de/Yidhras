@@ -1,0 +1,17 @@
+name: "Alternate Opening"
+description: "A different start"
+variables:
+  difficulty: "hard"
+  starting_trust: 30
+  world_tone: "hostile"
+initial_states:
+  - entity_id: "__world__"
+    state_namespace: "world"
+    state_json:
+      phase: "alternate_opening"
+      threat_level: "high"
+      public_awareness: 0.5
+initial_events:
+  - event_type: "world_opening"
+    payload:
+      message: "The world awakens to tension."

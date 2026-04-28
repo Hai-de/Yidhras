@@ -310,6 +310,7 @@ export const getActiveAppEnv = (): string => {
 const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> => {
   const appPort = parseIntegerEnv('PORT', process.env.PORT)
   const preferredPack = parseOptionalStringEnv(process.env.WORLD_PACK)
+  const preferredOpening = parseOptionalStringEnv(process.env.WORLD_PREFERRED_OPENING)
   const worldPacksDir = parseOptionalStringEnv(process.env.WORLD_PACKS_DIR)
   const aiModelsConfigPath = parseOptionalStringEnv(process.env.AI_MODELS_CONFIG_PATH)
   const bootstrapEnabled = parseBooleanEnv('WORLD_BOOTSTRAP_ENABLED', process.env.WORLD_BOOTSTRAP_ENABLED)
@@ -474,6 +475,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
 
   if (
     preferredPack !== undefined
+    || preferredOpening !== undefined
     || bootstrapEnabled !== undefined
     || bootstrapTargetPackDir !== undefined
     || bootstrapTemplateFile !== undefined
@@ -481,6 +483,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   ) {
     overrides.world = {
       ...(preferredPack !== undefined ? { preferred_pack: preferredPack } : {}),
+      ...(preferredOpening !== undefined ? { preferred_opening: preferredOpening } : {}),
       bootstrap: {
         ...(bootstrapEnabled !== undefined ? { enabled: bootstrapEnabled } : {}),
         ...(bootstrapTargetPackDir !== undefined ? { target_pack_dir: bootstrapTargetPackDir } : {}),
@@ -771,6 +774,10 @@ export const getAiModelsConfigPath = (): string => {
 
 export const getPreferredWorldPack = (): string => {
   return getRuntimeConfig().world.preferred_pack
+}
+
+export const getPreferredOpening = (): string | undefined => {
+  return getRuntimeConfig().world.preferred_opening
 }
 
 export const getStartupPolicy = (): RuntimeStartupPolicy => {

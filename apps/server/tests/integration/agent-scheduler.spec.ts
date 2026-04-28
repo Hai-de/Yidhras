@@ -314,6 +314,8 @@ describe('agent scheduler integration', () => {
 
   describe('summary snapshot', () => {
     it('returns top skipped reasons covering all suppression types', async () => {
+      // First run creates jobs; second run produces pending_workflow skips.
+      await runAgentScheduler({ context, limit: 10 });
       await runAgentScheduler({ context, limit: 10 });
       const snapshot = await getSchedulerSummarySnapshot(context, { sampleRuns: 10 });
 

@@ -1,0 +1,19 @@
+metadata:
+  id: "test-opening-pack"
+  name: "Opening Test Pack"
+  version: "0.1.0"
+
+variables:
+  difficulty: "normal"
+  starting_trust: 70
+  world_tone: "neutral"
+
+bootstrap:
+  initial_states:
+    - entity_id: "__world__"
+      state_namespace: "world"
+      state_json:
+        phase: "idle"
+        threat_level: "low"
+        public_awareness: 0
+  initial_events: []

@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
 
 import { startAiRegistryWatcher } from './ai/registry_watcher.js';
 import { createInferenceProviders } from './app/composition/inference.js';
@@ -9,7 +11,6 @@ import { getErrorMessage } from './app/http/errors.js';
 import { toJsonSafe } from './app/http/json.js';
 import { parseOptionalTick, parsePositiveStepTicks } from './app/http/runtime.js';
 import { createGlobalErrorMiddleware } from './app/middleware/error_handler.js';
-import { registerAccessPolicyRoutes } from './app/routes/access_policy.js';
 import { registerAgentRoutes } from './app/routes/agent.js';
 import { registerAuditRoutes } from './app/routes/audit.js';
 import { registerClockRoutes } from './app/routes/clock.js';
@@ -26,6 +27,7 @@ import { registerGrantRoutes } from './app/routes/operator_grants.js';
 import { registerPackBindingRoutes } from './app/routes/operator_pack_bindings.js';
 import { registerOperatorRoutes } from './app/routes/operators.js';
 import { registerOverviewRoutes } from './app/routes/overview.js';
+import { registerPackOpeningRoutes } from './app/routes/pack_openings.js';
 import { registerPluginRuntimeWebRoutes } from './app/routes/plugin_runtime_web.js';
 import { registerPluginRoutes } from './app/routes/plugins.js';
 import { registerRelationalRoutes } from './app/routes/relational.js';
@@ -55,6 +57,7 @@ import type { CalendarConfig } from './clock/types.js';
 import {
   getAiModelsConfigPath,
   getAppPort,
+  getPreferredOpening,
   getPreferredWorldPack,
   getRuntimeConfig,
   getSimulationLoopIntervalMs,
@@ -198,6 +201,9 @@ const registerRoutes: RouteRegistrar = (application, context) => {
   registerOverviewRoutes(application, context, {
     asyncHandler
   });
+  registerPackOpeningRoutes(application, context, {
+    asyncHandler
+  });
   registerGraphRoutes(application, context, {
     asyncHandler
   });
@@ -230,9 +236,6 @@ const registerRoutes: RouteRegistrar = (application, context) => {
   registerIdentityRoutes(application, context, {
     asyncHandler,
     parseOptionalTick
-  });
-  registerAccessPolicyRoutes(application, context, {
-    asyncHandler
   });
   registerPluginRoutes(application, context, {
     asyncHandler
@@ -366,7 +369,17 @@ const start = async (): Promise<void> => {
         throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for startup');
       }
 
-      await appContext.activePackRuntime!.init(selectedPack);
+      const cliMarkerPath = path.join(resolveWorkspacePath('data/runtime'), 'startup_opening.txt');
+      let openingId = getPreferredOpening();
+      if (fs.existsSync(cliMarkerPath)) {
+        const cliOpening = fs.readFileSync(cliMarkerPath, 'utf-8').trim();
+        if (cliOpening) {
+          openingId = cliOpening;
+        }
+        fs.unlinkSync(cliMarkerPath);
+      }
+
+      await appContext.activePackRuntime!.init(selectedPack, openingId);
       const activePack = appContext.activePack!.getActivePack();
       const activePackId = activePack?.metadata.id ?? selectedPack;
       appContext.runtimeClockProjection?.rebuildFromRuntimeSeed({

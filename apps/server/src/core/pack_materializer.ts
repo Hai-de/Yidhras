@@ -10,6 +10,7 @@ export interface MaterializePackRuntimeInput {
   pack: WorldPack;
   prisma: PrismaClient;
   initialTick: bigint;
+  appliedOpeningId?: string;
 }
 
 export interface MaterializePackRuntimeOutput {
@@ -33,10 +34,10 @@ export interface MaterializePackRuntimeOutput {
 export async function materializePackRuntime(
   input: MaterializePackRuntimeInput
 ): Promise<MaterializePackRuntimeOutput> {
-  const { pack, prisma, initialTick } = input;
+  const { pack, prisma, initialTick, appliedOpeningId } = input;
 
   const install = await installPackRuntime(pack);
-  const coreModels = await materializePackRuntimeCoreModels(pack, initialTick);
+  const coreModels = await materializePackRuntimeCoreModels(pack, initialTick, appliedOpeningId);
   const actorBridges = await materializeActorBridges(pack, prisma, initialTick);
 
   return { install, coreModels, actorBridges };

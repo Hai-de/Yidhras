@@ -17,6 +17,7 @@ export interface CreateTestAppContextOptions {
   runtimeReady?: boolean;
   runtimeLoopDiagnostics?: RuntimeLoopDiagnostics;
   startupHealth?: StartupHealth;
+  activePackId?: string;
 }
 
 export const createDefaultRuntimeLoopDiagnostics = (): RuntimeLoopDiagnostics => ({
@@ -41,6 +42,10 @@ const createDefaultStartupHealth = (): StartupHealth => ({
   errors: []
 });
 
+const buildMinimalActivePack = (packId: string) => ({
+  metadata: { id: packId, name: packId, version: '0.1.0' }
+});
+
 export const createTestAppContext = (
   prisma: PrismaClient,
   options: CreateTestAppContextOptions = {}
@@ -50,6 +55,10 @@ export const createTestAppContext = (
   let runtimeLoopDiagnostics = options.runtimeLoopDiagnostics ?? createDefaultRuntimeLoopDiagnostics();
   const clock = new ChronosEngine({ calendarConfigs: [], initialTicks: 1000n });
   let httpApp: Express | null = null;
+  const defaultPackId = options.activePackId ?? DEFAULT_E2E_WORLD_PACK;
+
+  // Track experimentally loaded pack IDs so hasPackRuntime can answer correctly.
+  const loadedExperimentalPackIds = new Set<string>();
 
   const sim = {
     prisma,
@@ -62,7 +71,7 @@ export const createTestAppContext = (
     },
     getStepTicks: () => 1n,
     step: async () => {},
-    getActivePack: () => null,
+    getActivePack: () => buildMinimalActivePack(defaultPackId),
     getCurrentRevision: () => clock.getTicks(),
     getRuntimeSpeedSnapshot: () => ({
       mode: 'fixed' as const,
@@ -106,8 +115,12 @@ export const createTestAppContext = (
     },
     worldEngineStepCoordinator: createWorldEngineStepCoordinator(),
     packRuntimeLookup: {
-      getActivePackId: () => null,
-      hasPackRuntime: () => false,
+      getActivePackId: () => {
+        const pack = sim.getActivePack();
+        return pack ? (pack as { metadata: { id: string } }).metadata.id : null;
+      },
+      hasPackRuntime: (packId: string) =>
+        loadedExperimentalPackIds.has(packId.trim()) || sim.getPackRuntimeHandle(packId.trim()) !== null,
       assertPackScope: (packId: string) => packId.trim(),
       getPackRuntimeSummary: () => null
     },
@@ -117,9 +130,36 @@ export const createTestAppContext = (
       getClockSnapshot: () => null,
       getRuntimeSpeedSnapshot: () => null
     },
+    activePackRuntime: {
+      getActivePack() {
+        return sim.getActivePack();
+      },
+      getRuntimeSpeedSnapshot: () => ({
+        mode: 'fixed' as const,
+        source: 'default' as const,
+        configured_step_ticks: null,
+        override_step_ticks: null,
+        override_since: null,
+        effective_step_ticks: '1'
+      }),
+      getCurrentRevision: () => clock.getTicks(),
+      resolvePackVariables: (template: string) => template,
+      getStepTicks: () => 1n,
+      getCurrentTick: () => clock.getTicks()
+    } as unknown as AppContext['activePackRuntime'],
     packRuntimeControl: {
-      load: async () => ({ handle: null as never, loaded: false, already_loaded: false }),
-      unload: async () => false
+      load: async (packRef: string) => {
+        loadedExperimentalPackIds.add(packRef.trim());
+        return {
+          handle: { pack_id: packRef.trim() } as never,
+          loaded: true,
+          already_loaded: false
+        };
+      },
+      unload: async (packId: string) => {
+        loadedExperimentalPackIds.delete(packId.trim());
+        return true;
+      }
     },
     assertRuntimeReady: () => {}
   };

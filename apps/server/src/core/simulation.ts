@@ -91,8 +91,8 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
     return this.runtimeBootstrap.getSqliteRuntimePragmaSnapshot();
   }
 
-  public async init(packFolderName: string): Promise<void> {
-    await this.activePackRuntimeFacade.init(packFolderName);
+  public async init(packFolderName: string, openingId?: string): Promise<void> {
+    await this.activePackRuntimeFacade.init(packFolderName, openingId);
     this.syncClockFromActiveRuntime();
   }
 

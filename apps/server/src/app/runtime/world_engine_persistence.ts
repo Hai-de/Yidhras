@@ -8,9 +8,12 @@ import {
   WorldStepPrepareRequest} from '@yidhras/contracts';
 
 import type { PackRuntimeEntityStateRecord, PackRuntimeRuleExecutionRecord } from '../../packs/runtime/core_models.js';
+import { evaluateStateTransforms } from '../../packs/runtime/state_transform_evaluator.js';
+import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage/entity_state_repo.js';
 import { recordPackRuleExecution } from '../../packs/storage/rule_execution_repo.js';
 import { ApiError } from '../../utils/api_error.js';
+import { createLogger } from '../../utils/logger.js';
 import type { AppContext } from '../context.js';
 import type {
   RuntimeClockProjectionSnapshot,
@@ -358,6 +361,67 @@ export const executeWorldEnginePreparedStep = async (input: {
       status: 'persisting',
       updated_at: Date.now()
     });
+
+    // Evaluate state_transforms: compute range-based derived state keys
+    // for all actors and append the resulting delta operations before persist.
+    const logger = createLogger('state_transform_evaluator');
+    const [worldEntities, entityStates] = await Promise.all([
+      listPackWorldEntities(packId),
+      listPackEntityStates(packId)
+    ]);
+
+    const actorEntityIds = new Set(
+      worldEntities
+        .filter(e => {
+          const kind = typeof e.entity_kind === 'string' ? e.entity_kind : '';
+          return kind === 'actor' || kind.startsWith('actor:');
+        })
+        .map(e => e.id)
+    );
+
+    const actorStates = entityStates
+      .filter(
+        s =>
+          s.state_namespace === 'core' &&
+          actorEntityIds.has(s.entity_id) &&
+          typeof s.state_json === 'object' &&
+          s.state_json !== null &&
+          !Array.isArray(s.state_json)
+      )
+      .map(s => ({
+        entity_id: s.entity_id,
+        state_json: s.state_json as Record<string, unknown>
+      }));
+
+    const transformDefs = worldEntities
+      .filter(e => e.entity_kind === 'state_transform')
+      .map(e => {
+        const payload = (e.payload_json ?? {}) as Record<string, unknown>;
+        return {
+          source: typeof payload.source === 'string' ? payload.source : '',
+          ranges: (Array.isArray(payload.ranges) ? payload.ranges : []) as Array<{
+            min: number;
+            max: number;
+            label: string;
+          }>,
+          target: typeof payload.target === 'string' ? payload.target : ''
+        };
+      })
+      .filter(t => t.source.length > 0 && t.target.length > 0 && t.ranges.length > 0);
+
+    if (transformDefs.length > 0 && actorStates.length > 0) {
+      const transformOps = evaluateStateTransforms({
+        packId,
+        actorStates,
+        transformDefs,
+        logDebug: (message, meta) => logger.debug(message, meta),
+        logWarn: (message, meta) => logger.warn(message, meta)
+      });
+
+      if (transformOps.length > 0) {
+        prepared.state_delta.operations.push(...transformOps);
+      }
+    }
 
     const persisted = await input.persistence.persistPreparedStep({
       context: input.context,

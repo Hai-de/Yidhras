@@ -99,6 +99,19 @@ const buildProjectionTestContext = (
         };
       }
     } as unknown as AppContext['sim'],
+    activePack: {
+      getActivePack(): typeof pack {
+        return pack;
+      }
+    } as unknown as AppContext['activePack'],
+    clock: {
+      getCurrentTick() {
+        return now;
+      },
+      getAllTimes() {
+        return [];
+      }
+    } as unknown as AppContext['clock'],
     notifications: {
       push(level, content) {
         return { id: 'noop', level, content, timestamp: Date.now() };
@@ -229,7 +242,22 @@ const buildProjectionTestContext = (
           }
         };
       }
-    } as unknown as AppContext['worldEngine']
+    } as unknown as AppContext['worldEngine'],
+    activePackRuntime: {
+      getActivePack() {
+        return pack;
+      },
+      getRuntimeSpeedSnapshot: () => ({
+        mode: 'fixed' as const,
+        source: 'default' as const,
+        configured_step_ticks: null,
+        override_step_ticks: null,
+        override_since: null,
+        effective_step_ticks: '1'
+      }),
+      getCurrentRevision: () => 0n
+    } as unknown as AppContext['activePackRuntime'],
+    getSqliteRuntimePragmas: () => null
   };
 };
 

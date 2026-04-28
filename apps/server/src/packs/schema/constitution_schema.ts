@@ -433,6 +433,25 @@ const bootstrapInitialStateSchema = z
   })
   .strict();
 
+const bootstrapInitialEventSchema = z
+  .object({
+    event_type: nonEmptyStringSchema,
+    payload: z.record(z.string(), worldPackValueSchema).default({})
+  })
+  .strict();
+
+const worldPackVariablesRecordSchema = z.record(z.string(), worldPackVariableValueSchema);
+
+const worldPackOpeningSchema = z
+  .object({
+    name: z.string().optional(),
+    description: z.string().optional(),
+    variables: worldPackVariablesRecordSchema.optional(),
+    initial_states: bootstrapInitialStateSchema.array().optional().default([]),
+    initial_events: bootstrapInitialEventSchema.array().optional().default([])
+  })
+  .strict();
+
 const bootstrapSchema = z
   .object({
     initial_states: z.array(bootstrapInitialStateSchema).default([]),
@@ -527,6 +546,22 @@ export const worldPackConstitutionSchema = z
       }
     }
 
+    if (value.state_transforms && value.state_transforms.length > 1) {
+      const targets = value.state_transforms.map(t => t.target);
+      const seen = new Set<string>();
+      for (const target of targets) {
+        if (seen.has(target)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Duplicate state_transform target "${target}": each transform must have a unique target key`,
+            path: ['state_transforms']
+          });
+          break;
+        }
+        seen.add(target);
+      }
+    }
+
     if ('scenario' in value) {
       const scenarioValue = isRecord(value.scenario) ? value.scenario : null;
       if (scenarioValue && 'agents' in scenarioValue) {
@@ -563,11 +598,15 @@ export const worldPackConstitutionSchema = z
 
 export type SimulationTimeConfig = z.infer<typeof simulationTimeConfigSchema>;
 export type WorldPackBootstrapInitialState = z.infer<typeof bootstrapInitialStateSchema>;
+export type WorldPackBootstrapInitialEvent = z.infer<typeof bootstrapInitialEventSchema>;
+export type WorldPackOpening = z.infer<typeof worldPackOpeningSchema>;
 export type WorldPackVariableRecord = Record<string, WorldPackVariableValue>;
 export type WorldPackMetadata = z.infer<typeof metadataSchema>;
 export type WorldPackAiConfig = z.infer<typeof aiPackConfigSchema>;
 export type WorldPackStateTransform = z.infer<typeof stateTransformSchema>;
 export type WorldPack = z.infer<typeof worldPackConstitutionSchema>;
+
+export { bootstrapInitialEventSchema, worldPackOpeningSchema, worldPackVariablesRecordSchema };
 
 export const parseWorldPackConstitution = (value: unknown, sourceLabel = 'world pack'): WorldPack => {
   const result = worldPackConstitutionSchema.safeParse(value);
