@@ -488,3 +488,31 @@ Operator-Subject 统一权限层通过 JWT Bearer Token 认证，所有 operator
 - **POST `/api/config/backups/cleanup`** — 触发保留策略清理（鉴权：root）
 
 错误码：`BACKUP_NOT_FOUND`、`ROOT_REQUIRED`、`OPERATOR_REQUIRED`、`INVALID_BACKUP_REQUEST`、`INVALID_LIST_QUERY`
+
+## 17. 世界包快照接口
+
+快照是对世界包运行时完整状态的存档，覆盖三层数据：包运行时 SQLite（世界引擎状态）、中央 Prisma 数据库（Agent/Identity/Binding/Post/Relationship/Memory/ContextOverlay 等 domain 数据）、内存时钟状态。快照以目录形式存储在 `data/world_packs/<pack_id>/snapshots/<snapshot_id>/`，包含 `metadata.json`、`runtime.sqlite`、`prisma.json`、`storage-plan.json` 四个文件。
+
+所有快照接口均需 pack 操作员鉴权（`packAccessGuard`）。创建和恢复操作要求模拟已暂停（自动暂停/恢复）。
+
+- **GET `/api/packs/:packId/snapshots`**
+  - 说明：列出 pack 所有快照
+  - 返回：`{ snapshots: Array<{ snapshot_id, label, captured_at_tick, captured_at_timestamp, runtime_db_size_bytes, prisma_record_count }> }`
+
+- **POST `/api/packs/:packId/snapshots`**
+  - 说明：创建当前运行时状态的快照。模拟自动暂停 → 捕获 → 恢复
+  - 参数：`{ label?: string }` — 可选标签，最长 256 字符
+  - 返回：`{ snapshot_id, pack_id, captured_at_tick, prisma_record_count, runtime_db_size_bytes }`
+  - 注意：每 pack 最多保留 20 个快照，超出自动淘汰最旧
+
+- **POST `/api/packs/:packId/snapshots/:snapshotId/restore`**
+  - 说明：从快照恢复 pack 运行时状态。会清除当前所有运行时数据
+  - 参数：`{ confirm_data_loss: boolean }` — 必须为 `true` 才执行，否则返回 409
+  - 返回：`{ restored: true, pack_id, snapshot_id, restored_at_tick }`
+  - 恢复流程：暂停 → 卸载 sidecar → 清除运行时 SQLite → 拆除 kernel 桥接 → 删除 pack-scoped Prisma 记录 → 复制快照 SQLite 和 storage-plan → 重建 Prisma 记录（事务） → 恢复时钟 → 幂等物化 → 重载 sidecar
+
+- **DELETE `/api/packs/:packId/snapshots/:snapshotId`**
+  - 说明：删除指定快照及其所有文件
+  - 返回：`{ deleted: true, snapshot_id }`
+
+错误码：`SNAPSHOT_LIST_INVALID`、`SNAPSHOT_CREATE_INVALID`、`SNAPSHOT_CREATE_BODY_INVALID`、`SNAPSHOT_RESTORE_INVALID`、`SNAPSHOT_RESTORE_BODY_INVALID`、`SNAPSHOT_DATA_LOSS_UNCONFIRMED`、`SNAPSHOT_DELETE_INVALID`、`PACK_NOT_LOADED`、`PACK_ID_MISMATCH`

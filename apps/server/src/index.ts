@@ -30,6 +30,7 @@ import { registerPackBindingRoutes } from './app/routes/operator_pack_bindings.j
 import { registerOperatorRoutes } from './app/routes/operators.js';
 import { registerOverviewRoutes } from './app/routes/overview.js';
 import { registerPackOpeningRoutes } from './app/routes/pack_openings.js';
+import { registerPackSnapshotRoutes } from './app/routes/pack_snapshots.js';
 import { registerPluginRuntimeWebRoutes } from './app/routes/plugin_runtime_web.js';
 import { registerPluginRoutes } from './app/routes/plugins.js';
 import { registerRelationalRoutes } from './app/routes/relational.js';
@@ -205,6 +206,9 @@ const registerRoutes: RouteRegistrar = (application, context) => {
     asyncHandler
   });
   registerPackOpeningRoutes(application, context, {
+    asyncHandler
+  });
+  registerPackSnapshotRoutes(application, context, {
     asyncHandler
   });
   registerGraphRoutes(application, context, {

@@ -49,6 +49,7 @@
 | [guides/COMMANDS.md](guides/COMMANDS.md) | 工作区 / server / web 命令、测试矩阵、脚手架 |
 | [guides/DB_OPERATIONS.md](guides/DB_OPERATIONS.md) | 数据库迁移、初始化、路径更换 |
 | [guides/PLUGIN_OPERATIONS.md](guides/PLUGIN_OPERATIONS.md) | 插件治理 CLI / GUI / API 流程 |
+| [guides/SNAPSHOT.md](guides/SNAPSHOT.md) | 世界包快照系统：存档/恢复的原理、API 与使用工作流 |
 
 ## 5. 过程资产层
 

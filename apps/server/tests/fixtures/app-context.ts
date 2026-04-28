@@ -73,6 +73,9 @@ export const createTestAppContext = (
     step: async () => {},
     getActivePack: () => buildMinimalActivePack(defaultPackId),
     getCurrentRevision: () => clock.getTicks(),
+    applyClockProjection: (snapshot: { current_tick: string }) => {
+      clock.setTicks(BigInt(snapshot.current_tick));
+    },
     getRuntimeSpeedSnapshot: () => ({
       mode: 'fixed' as const,
       source: 'default' as const,
