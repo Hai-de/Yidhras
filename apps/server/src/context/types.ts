@@ -1,4 +1,4 @@
-import type { PromptFragmentSlot } from '../inference/prompt_fragments.js';
+import type { PromptFragmentSlot } from '../inference/prompt_slot_config.js';
 import type {
   ContextApprovedDirective,
   ContextDeniedDirective,

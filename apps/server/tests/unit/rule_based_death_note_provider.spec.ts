@@ -1,18 +1,27 @@
 import { describe, expect, it } from 'vitest';
 
 import { createRuleBasedInferenceProvider } from '../../src/inference/providers/rule_based.js';
-import type { InferenceContext,PromptBundle  } from '../../src/inference/types.js';
+import type { PromptBundleV2 } from '../../src/inference/prompt_bundle_v2.js';
+import type { InferenceContext } from '../../src/inference/types.js';
 
-const promptBundle: PromptBundle = {
-  system_prompt: '',
-  role_prompt: '',
-  world_prompt: '',
-  context_prompt: '',
-  output_contract_prompt: '',
+const promptBundle: PromptBundleV2 = {
+  slots: {},
   combined_prompt: '',
   metadata: {
     prompt_version: null,
     source_prompt_keys: []
+  },
+  tree: {
+    inference_id: '',
+    task_type: 'agent_decision',
+    fragments_by_slot: {},
+    slot_registry: {},
+    metadata: {
+      prompt_version: '',
+      profile_id: null,
+      profile_version: null,
+      source_prompt_keys: []
+    }
   }
 };
 

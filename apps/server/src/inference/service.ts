@@ -33,7 +33,6 @@ import type { InferenceTraceSink } from './trace_sink.js';
 import type {
   ActionIntentDraft,
   DecisionResult,
-  InferenceContext,
   InferenceJobReplayInput,
   InferenceJobReplaySubmitResult,
   InferenceJobRetryResult,

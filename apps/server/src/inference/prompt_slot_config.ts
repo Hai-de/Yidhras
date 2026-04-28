@@ -1,6 +1,21 @@
 import type { PromptFragmentPermissions } from './prompt_fragment_v2.js';
 
 /**
+ * Slot identifier used to categorize prompt fragments by role.
+ * Shared across both slot configuration and fragment placement.
+ */
+export type PromptFragmentSlot =
+  | 'system_core'
+  | 'system_policy'
+  | 'role_core'
+  | 'world_context'
+  | 'memory_short_term'
+  | 'memory_long_term'
+  | 'memory_summary'
+  | 'output_contract'
+  | 'post_process';
+
+/**
  * 单个 Slot 的声明式配置。
  * 来自 YAML 配置文件（如 prompt_slots.yaml）或 World Pack 的 pack.ai.slots。
  */

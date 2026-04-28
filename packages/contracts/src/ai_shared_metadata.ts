@@ -2,6 +2,8 @@
 // 定义 prompt workflow 执行快照和元数据的核心类型。
 // 被 ai_shared_trace.ts 和 ai_shared_bundle.ts 依赖。
 
+import type { PromptProcessingTrace } from './ai_shared_trace.js';
+
 /**
  * Prompt workflow step execution trace.
  */
@@ -51,4 +53,13 @@ export interface PromptWorkflowMetadata {
   workflow_placement_summary?: Record<string, unknown>;
   workflow_variable_summary?: Record<string, unknown>;
   workflow_macro_summary?: unknown;
+}
+
+/**
+ * Metadata carried by every PromptBundle (V2).
+ */
+export interface PromptBundleMetadata extends PromptWorkflowMetadata {
+  prompt_version: string | null;
+  source_prompt_keys: string[];
+  processing_trace?: PromptProcessingTrace;
 }

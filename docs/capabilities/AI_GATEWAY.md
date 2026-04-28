@@ -128,7 +128,7 @@ world pack **不能**：
 
 当前 workflow metadata 已透传到：
 
-- `PromptBundle.metadata`
+- `PromptBundleV2.metadata`
 - AI messages metadata
 - `AiTaskRequest.metadata`
 - `ModelGatewayRequest.metadata`
@@ -340,7 +340,7 @@ AiTaskService (task_config.tools / task_config.tool_policy)
 - 架构边界：`../ARCH.md`
 - 业务语义：`../LOGIC.md`
 - Prompt Workflow：`./PROMPT_WORKFLOW.md`
-- 共享类型契约：`packages/contracts/src/ai_shared.ts`（PromptBundleMetadata、PromptBundle、PromptWorkflowSnapshot 等 AI/inference 桥接类型）
+- 共享类型契约：`packages/contracts/src/ai_shared.ts`（PromptBundleMetadata、PromptWorkflowSnapshot 等 AI/inference 桥接类型）
 - 相关设计资产：`.limcode/archive/historical/design/multi-model-gateway-and-unified-ai-task-contract-design.md`
 - 重构设计：`.limcode/design/ai-three-layer-directory-refactoring.md`
 - Tool Calling 设计：`.limcode/archive/design/ai-tool-calling-enablement.md`

@@ -11,25 +11,39 @@ import {
   createAiTaskService
 } from '../../src/ai/task_service.js';
 import type { AiRegistryConfig } from '../../src/ai/types.js';
+import type { PromptBundleV2 } from '../../src/inference/prompt_bundle_v2.js';
 import type { InferenceProvider } from '../../src/inference/provider.js';
 import type {
   InferenceContext,
-  PromptBundle,
   ProviderDecisionRaw
 } from '../../src/inference/types.js';
 
 // ── Fixtures ──
 
-const createAgentDecisionPromptBundle = (): PromptBundle => ({
-  system_prompt: 'system prompt',
-  role_prompt: 'role prompt',
-  world_prompt: 'world prompt',
-  context_prompt: 'context prompt',
-  output_contract_prompt: 'output contract prompt',
+const createAgentDecisionPromptBundle = (): PromptBundleV2 => ({
+  slots: {
+    system_core: 'system prompt',
+    role_core: 'role prompt',
+    world_context: 'world prompt',
+    post_process: 'context prompt',
+    output_contract: 'output contract prompt'
+  },
   combined_prompt: 'combined prompt',
   metadata: {
     prompt_version: 'test-v1',
     source_prompt_keys: []
+  },
+  tree: {
+    inference_id: '',
+    task_type: 'agent_decision',
+    fragments_by_slot: {},
+    slot_registry: {},
+    metadata: {
+      prompt_version: '',
+      profile_id: null,
+      profile_version: null,
+      source_prompt_keys: []
+    }
   }
 });
 

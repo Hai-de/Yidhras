@@ -1,11 +1,12 @@
 import type { PromptBlock } from './prompt_block.js';
-import type {
-  PromptFragmentAnchor,
-  PromptFragmentAnchorKind,
-  PromptFragmentPlacementMode
-} from './prompt_fragments.js';
 
-export type { PromptFragmentAnchor, PromptFragmentAnchorKind, PromptFragmentPlacementMode };
+export type PromptFragmentPlacementMode = 'prepend' | 'append' | 'before_anchor' | 'after_anchor';
+export type PromptFragmentAnchorKind = 'slot_start' | 'slot_end' | 'source' | 'tag' | 'fragment_id';
+
+export interface PromptFragmentAnchor {
+  kind: PromptFragmentAnchorKind;
+  value: string;
+}
 
 /**
  * Fragment 是 Slot 内部的中间节点。

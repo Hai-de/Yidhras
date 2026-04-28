@@ -9,7 +9,6 @@ import type {
   InferenceRequestInput,
   InferenceStrategy,
   IntentGroundingResult,
-  PromptBundle,
   SemanticIntentResult,
   TraceMetadata
 } from './types.js';
@@ -22,7 +21,7 @@ export interface InferenceTraceEvent {
   actor_ref: InferenceActorRef;
   input: InferenceRequestInput;
   context: InferenceContext;
-  prompt: PromptBundle | PromptBundleV2;
+  prompt: PromptBundleV2;
   trace_metadata: TraceMetadata;
   decision?: DecisionResult;
   semantic_intent?: SemanticIntentResult;

@@ -1,89 +1,58 @@
-import type { PromptFragment } from '../prompt_fragments.js';
-import type { PromptProcessor, PromptTreeProcessor, PromptTreeProcessorInput } from '../prompt_processors.js';
+import type { PromptTreeProcessor, PromptTreeProcessorInput } from '../prompt_processors.js';
 import type { PromptTree } from '../prompt_tree.js';
-import { flattenTreeToPromptFragments, mergeFlatFragmentsIntoTree } from './memory_injector.js';
 
-const isMemoryFragment = (fragment: PromptFragment): boolean => {
-  return (
-    fragment.slot === 'memory_short_term' ||
-    fragment.slot === 'memory_long_term' ||
-    fragment.slot === 'memory_summary'
-  );
-};
+const MEMORY_SLOTS = new Set(['memory_short_term', 'memory_long_term', 'memory_summary']);
 
 const isBlockedByVisibility = (metadata: Record<string, unknown> | undefined): boolean => {
-  if (!metadata) {
-    return false;
-  }
-
-  if (metadata.visibility_blocked === true) {
-    return true;
-  }
-
+  if (!metadata) return false;
+  if (metadata.visibility_blocked === true) return true;
   if (typeof metadata.policy_gate === 'string' && metadata.policy_gate.trim().length > 0) {
     return metadata.policy_gate.trim() === 'deny';
   }
-
   return false;
 };
 
-const markPolicyFiltered = (fragment: PromptFragment, reason: string): PromptFragment => {
-  return {
-    ...fragment,
-    content: '',
-    metadata: {
-      ...fragment.metadata,
-      policy_filtered: true,
-      policy_filter_reason: reason
-    }
-  };
-};
-
-export const createPolicyFilterPromptProcessor = (): PromptProcessor => {
+export const createPolicyFilterTreeProcessor = (): PromptTreeProcessor => {
   return {
     name: 'policy-filter',
-    async process({ context, fragments }) {
+    async process(input: PromptTreeProcessorInput): Promise<PromptTree> {
+      const ctx = input.context;
       const blockedNodeIds = new Set(
-        Array.isArray(context.context_run.diagnostics.blocked_nodes)
-          ? context.context_run.diagnostics.blocked_nodes
-              .map(entry => (entry && typeof entry === 'object' && typeof entry.node_id === 'string' ? entry.node_id : null))
+        Array.isArray(ctx.context_run.diagnostics.blocked_nodes)
+          ? ctx.context_run.diagnostics.blocked_nodes
+              .map(entry => {
+                const e = entry as unknown as Record<string, unknown> | null | undefined;
+                return e && typeof e === 'object' && typeof e.node_id === 'string' ? e.node_id : null;
+              })
               .filter((value): value is string => value !== null)
           : []
       );
+
       const filtered: Record<string, string> = {};
-      const nextFragments = fragments
-        .map(fragment => {
-          if (!isMemoryFragment(fragment)) {
-            return fragment;
-          }
 
-          const metadata = fragment.metadata;
-          if (typeof metadata?.memory_entry_id === 'string' && blockedNodeIds.has(metadata.memory_entry_id)) {
+      for (const [slotId, fragments] of Object.entries(input.tree.fragments_by_slot)) {
+        if (!MEMORY_SLOTS.has(slotId)) continue;
+
+        for (const fragment of fragments) {
+          const meta = fragment.metadata;
+          if (typeof meta?.memory_entry_id === 'string' && blockedNodeIds.has(meta.memory_entry_id as string)) {
+            fragment.permission_denied = true;
+            fragment.denied_reason = 'context_policy_engine';
             filtered[fragment.id] = 'context_policy_engine';
-            return markPolicyFiltered(fragment, 'context_policy_engine');
-          }
-
-          if (isBlockedByVisibility(metadata)) {
+          } else if (isBlockedByVisibility(meta)) {
+            fragment.permission_denied = true;
+            fragment.denied_reason = 'visibility_or_policy_gate';
             filtered[fragment.id] = 'visibility_or_policy_gate';
-            return markPolicyFiltered(fragment, 'visibility_or_policy_gate');
           }
+        }
+      }
 
-          return fragment;
-        })
-        .filter(fragment => {
-          if (!isMemoryFragment(fragment)) {
-            return true;
-          }
-
-          return fragment.content.length > 0;
-        });
-
-      context.memory_context.diagnostics = {
-        ...context.memory_context.diagnostics,
+      ctx.memory_context.diagnostics = {
+        ...ctx.memory_context.diagnostics,
         prompt_processing_trace: {
-          ...(typeof context.memory_context.diagnostics.prompt_processing_trace === 'object' &&
-          context.memory_context.diagnostics.prompt_processing_trace !== null
-            ? (context.memory_context.diagnostics.prompt_processing_trace as Record<string, unknown>)
+          ...(typeof ctx.memory_context.diagnostics.prompt_processing_trace === 'object' &&
+          ctx.memory_context.diagnostics.prompt_processing_trace !== null
+            ? (ctx.memory_context.diagnostics.prompt_processing_trace as Record<string, unknown>)
             : {}),
           policy_filtering: {
             filtered_fragment_ids: Object.keys(filtered),
@@ -92,22 +61,7 @@ export const createPolicyFilterPromptProcessor = (): PromptProcessor => {
         }
       };
 
-      return nextFragments;
+      return input.tree;
     }
   };
 };
-
-// ── Tree-aware adapter (V2) ──
-
-export const createPolicyFilterTreeProcessor = (): PromptTreeProcessor => {
-  const flat = createPolicyFilterPromptProcessor();
-  return {
-    name: 'policy-filter-tree',
-    async process(input: PromptTreeProcessorInput): Promise<PromptTree> {
-      const flatFragments = flattenTreeToPromptFragments(input.tree);
-      const result = await flat.process({ context: input.context, fragments: flatFragments, workflow: input.workflow });
-      return mergeFlatFragmentsIntoTree(input.tree, result);
-    }
-  };
-};
-

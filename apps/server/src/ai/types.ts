@@ -1,4 +1,4 @@
-import type { PromptBundleMetadata } from '@yidhras/contracts';
+import type { PromptBundleMetadata } from '../inference/types.js';
 
 export const AI_TASK_TYPES = [
   'agent_decision',
@@ -184,16 +184,6 @@ export interface AiTaskRequestMetadata extends PromptBundleMetadata {
   binding_ref?: unknown;
 }
 
-export interface AiTaskPromptBundleSnapshot {
-  system_prompt: string;
-  role_prompt: string;
-  world_prompt: string;
-  context_prompt: string;
-  output_contract_prompt: string;
-  combined_prompt: string;
-  metadata?: AiTaskRequestMetadata;
-}
-
 export interface AiTaskRequest {
   task_id: string;
   task_type: AiTaskType;
@@ -202,7 +192,6 @@ export interface AiTaskRequest {
   input: Record<string, unknown>;
   prompt_context: {
     messages?: AiMessage[];
-    prompt_bundle?: AiTaskPromptBundleSnapshot | null;
     prompt_bundle_v2?: unknown | null;
   };
   output_contract?: {

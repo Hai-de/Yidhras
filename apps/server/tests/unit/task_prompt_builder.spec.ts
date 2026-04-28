@@ -107,9 +107,9 @@ describe('buildAiTaskRequestFromInferenceContext', () => {
 
     const contextSummaryRequest = await buildAiTaskRequestFromInferenceContext(inferenceContext, { task_type: 'context_summary' });
     expect(contextSummaryRequest.task_type).toBe('context_summary');
-    expect(contextSummaryRequest.prompt_context.prompt_bundle?.metadata?.workflow_task_type).toBe('context_summary');
-    expect(contextSummaryRequest.prompt_context.prompt_bundle?.metadata?.workflow_profile_id).toBe('context-summary-default');
-    expect(contextSummaryRequest.prompt_context.prompt_bundle?.metadata?.workflow_section_summary).toMatchObject({
+    expect(contextSummaryRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_task_type).toBe('context_summary');
+    expect(contextSummaryRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_profile_id).toBe('context-summary-default');
+    expect(contextSummaryRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_section_summary).toMatchObject({
       task_type: 'context_summary',
       section_policy: 'minimal',
       section_scores: expect.any(Array),
@@ -118,9 +118,9 @@ describe('buildAiTaskRequestFromInferenceContext', () => {
 
     const memoryCompactionRequest = await buildAiTaskRequestFromInferenceContext(inferenceContext, { task_type: 'memory_compaction' });
     expect(memoryCompactionRequest.task_type).toBe('memory_compaction');
-    expect(memoryCompactionRequest.prompt_context.prompt_bundle?.metadata?.workflow_task_type).toBe('memory_compaction');
-    expect(memoryCompactionRequest.prompt_context.prompt_bundle?.metadata?.workflow_profile_id).toBe('memory-compaction-default');
-    expect(memoryCompactionRequest.prompt_context.prompt_bundle?.metadata?.workflow_section_summary).toMatchObject({
+    expect(memoryCompactionRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_task_type).toBe('memory_compaction');
+    expect(memoryCompactionRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_profile_id).toBe('memory-compaction-default');
+    expect(memoryCompactionRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_section_summary).toMatchObject({
       task_type: 'memory_compaction',
       section_policy: 'minimal',
       section_scores: expect.any(Array),

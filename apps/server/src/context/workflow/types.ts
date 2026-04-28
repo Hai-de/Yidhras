@@ -1,15 +1,13 @@
 import type { AiMessage } from '../../ai/types.js';
 import type {
-  PromptFragment,
   PromptFragmentAnchor,
-  PromptFragmentPlacementMode,
-  PromptFragmentSlot
-} from '../../inference/prompt_fragments.js';
+  PromptFragmentPlacementMode
+} from '../../inference/prompt_fragment_v2.js';
+import type { PromptFragmentSlot } from '../../inference/prompt_slot_config.js';
 import type { PromptTree } from '../../inference/prompt_tree.js';
 import type {
   InferenceActorRef,
-  InferenceStrategy,
-  PromptBundle
+  InferenceStrategy
 } from '../../inference/types.js';
 import type { ContextNode, ContextRun } from '../types.js';
 
@@ -148,9 +146,6 @@ export interface PromptWorkflowDiagnostics {
   section_summary?: Record<string, unknown>;
   section_budget?: PromptWorkflowSectionBudgetSummary;
   placement_summary?: PromptWorkflowPlacementSummary;
-  compatibility?: {
-    legacy_processors_used: string[];
-  };
 }
 
 export interface PromptWorkflowState {
@@ -165,11 +160,8 @@ export interface PromptWorkflowState {
   working_set: ContextNode[];
   grouped_nodes: Record<string, ContextNode[]>;
   section_drafts: PromptSectionDraft[];
-  fragments: PromptFragment[];
-  prompt_bundle: PromptBundle | null;
   ai_messages?: AiMessage[];
   tree?: PromptTree;
-  compatibility: Record<string, never>;
   diagnostics: PromptWorkflowDiagnostics;
 }
 
@@ -190,10 +182,7 @@ export const createPromptWorkflowDiagnostics = (profile: PromptWorkflowProfile):
   profile_id: profile.id,
   profile_version: profile.version,
   selected_step_keys: profile.steps.filter(step => step.enabled !== false).map(step => step.key),
-  step_traces: [],
-  compatibility: {
-    legacy_processors_used: []
-  }
+  step_traces: []
 });
 
 export const createInitialPromptWorkflowState = (input: {
@@ -203,10 +192,8 @@ export const createInitialPromptWorkflowState = (input: {
   strategy: InferenceStrategy;
   pack_id: string;
   profile: PromptWorkflowProfile;
-  fragments?: PromptFragment[];
   tree?: PromptTree;
   include_sections?: string[];
-  compatibility?: Record<string, never>;
 }): PromptWorkflowState => {
   const safeNodes = input.context_run?.nodes ?? [];
   return {
@@ -221,10 +208,7 @@ export const createInitialPromptWorkflowState = (input: {
     working_set: safeNodes,
     grouped_nodes: {},
     section_drafts: [],
-    fragments: input.fragments ?? [],
     tree: input.tree,
-    prompt_bundle: null,
-    compatibility: {},
     diagnostics: createPromptWorkflowDiagnostics(input.profile)
   };
 };

@@ -1,5 +1,3 @@
-import type { PromptBundle } from '@yidhras/contracts';
-
 import type { ContextRun } from '../context/types.js';
 import type { IdentityContext } from '../identity/types.js';
 import type { MemoryContextPack } from '../memory/types.js';
@@ -9,6 +7,7 @@ import type {
   VariablePool
 } from '../narrative/types.js';
 import type { WorldPackAiConfig, WorldPackValue } from '../packs/schema/constitution_schema.js';
+import type { PromptBundleV2 } from './prompt_bundle_v2.js';
 
 export type InferenceStrategy = 'mock' | 'rule_based' | 'model_routed';
 export type InferenceActorRole = 'active' | 'atmosphere';
@@ -259,9 +258,7 @@ export interface InferenceMemoryMutationSnapshot {
 }
 
 // ── Re-exported from contracts (canonical versions) ──
-// These types are shared between ai/ and inference/.
 export type {
-  PromptBundle,
   PromptBundleMetadata,
   PromptProcessingTrace,
   PromptWorkflowMetadata,
@@ -341,7 +338,7 @@ export interface InferencePreviewResult {
   strategy: InferenceStrategy;
   provider: string;
   tick: string;
-  prompt: PromptBundle;
+  prompt: PromptBundleV2;
   metadata: InferencePreviewMetadata;
 }
 

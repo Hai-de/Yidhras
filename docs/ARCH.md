@@ -447,7 +447,7 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 | `ai/elasticity/` | 网关弹性层：circuit_breaker、rate_limiter、backoff、config_resolver |
 | `ai/tool_*.ts` | Tool Calling 系统：cross_agent_tool、tool_executor、tool_loop_runner、tool_permissions |
 | `inference/` | 推理流水线：context_builder、prompt builders、processors、tokenizers、types（inference 专用） |
-| `packages/contracts/src/ai_shared.ts` | AI/inference 共享类型契约：PromptBundleMetadata、PromptBundle、PromptWorkflowSnapshot 等 |
+| `packages/contracts/src/ai_shared.ts` | AI/inference 共享类型契约：PromptBundleMetadata、PromptWorkflowSnapshot 等 |
 
 `ai/` 和 `inference/` 之间不再有物理循环依赖：共享类型通过 contracts 包中介，`gateway_backed` 已移至 `ai/providers/`。
 
