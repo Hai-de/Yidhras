@@ -43,7 +43,7 @@ export const registerGraphRoutes = (
       });
 
       jsonOk(res, toJsonSafe(snapshot), {
-        schema_version: 'graph-v2'
+        schema_version: 'graph'
       });
     })
   );

@@ -255,7 +255,7 @@ CLI 与 GUI 复用同一组治理语义：
 - experimental multi-pack plugin runtime 仍是 operator / test-only
 - 当前不会把 stable active-pack plugin runtime surface 直接升级为任意 loaded pack 可读
 - server-side pack route registration 仍以保守兼容为主，而不是完整平台化插件容器
-- 更深的 multi-pack operator ergonomics 已记录在 `docs/ENHANCEMENTS.md`
+- 更深的 multi-pack operator ergonomics 已记录在 `.limcode/enhancements-backlog.md`
 
 ## 10. 相关文档
 

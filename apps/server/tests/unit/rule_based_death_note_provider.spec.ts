@@ -69,7 +69,7 @@ const buildInferenceContext = (input?: {
   world_ai: {
     tasks: {
       agent_decision: {
-        metadata: { rule_based_profile: 'notebook_investigation_reference_v1' }
+        metadata: { rule_based_profile: 'notebook_investigation_reference' }
       }
     }
   },

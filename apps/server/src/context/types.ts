@@ -30,9 +30,7 @@ export type ContextReadAccess = 'visible' | 'exists_only' | 'hidden';
 export interface ContextVisibilityPolicy {
   level: ContextVisibilityLevel;
   read_access: ContextReadAccess;
-  /**
-   * Legacy compatibility gate carried forward from MemoryEntry visibility.
-   */
+  /** Policy gate for field-level visibility control. */
   policy_gate?: string | null;
   blocked?: boolean;
 }

@@ -9,9 +9,8 @@ import type {
 import { createPrismaLongMemoryBlockStore } from '../memory/blocks/store.js';
 import type { LongMemoryBlockStore } from '../memory/blocks/types.js';
 import { createMemoryService, type MemoryService } from '../memory/service.js';
-import type { MemoryContextPack } from '../memory/types.js';
+import type { MemoryContextPack, MemoryEntry, MemorySourceKind } from '../memory/types.js';
 import { pluginRuntimeRegistry } from '../plugins/runtime.js';
-import { buildMemoryContextPack } from './compat.js';
 import { createContextOverlayStore } from './overlay/store.js';
 import type { ContextOverlayStore } from './overlay/types.js';
 import { applyPolicyDecisionsToSelection, evaluateContextPolicies } from './policy_engine.js';
@@ -159,7 +158,49 @@ export const createContextService = ({
         }
       };
 
-      const memoryContext = buildMemoryContextPack(contextRun);
+      const selectedEntries: MemoryEntry[] = [];
+      for (const node of contextRun.nodes) {
+        if (node.source_kind === 'overlay') continue;
+        const sourceKind = node.source_kind as MemorySourceKind;
+        if (!['trace', 'intent', 'job', 'post', 'event', 'summary', 'manual'].includes(sourceKind)) continue;
+        const preferredSlot = node.placement_policy.preferred_slot;
+        if (preferredSlot !== 'memory_short_term' && preferredSlot !== 'memory_long_term' && preferredSlot !== 'memory_summary') continue;
+        const scope = preferredSlot === 'memory_long_term' ? 'long_term' as const : 'short_term' as const;
+        selectedEntries.push({
+          id: node.id,
+          scope,
+          actor_ref: (node.actor_ref && typeof node.actor_ref === 'object' && !Array.isArray(node.actor_ref) ? node.actor_ref as unknown as MemoryEntry['actor_ref'] : null),
+          source_kind: sourceKind,
+          source_ref: node.source_ref ? { ...node.source_ref } as MemoryEntry['source_ref'] : null,
+          content: { text: node.content.text, ...(node.content.structured ? { structured: node.content.structured } : {}) },
+          tags: node.tags,
+          importance: node.importance,
+          salience: node.salience,
+          confidence: node.confidence ?? null,
+          visibility: { policy_gate: typeof node.visibility.policy_gate === 'string' ? node.visibility.policy_gate : null },
+          created_at: node.created_at,
+          occurred_at: node.occurred_at ?? null,
+          expires_at: node.expires_at ?? null,
+          metadata: { node_type: node.node_type, ...(node.metadata ? { context_metadata: node.metadata } : {}) }
+        });
+      }
+
+      const shortTerm = selectedEntries.filter(e => e.scope === 'short_term' && e.source_kind !== 'summary');
+      const longTerm = selectedEntries.filter(e => e.scope === 'long_term');
+      const summaries = selectedEntries.filter(e => e.source_kind === 'summary');
+      const dropped = contextRun.diagnostics.dropped_nodes.map(d => ({ entry_id: d.node_id, reason: d.reason }));
+
+      const memoryContext: MemoryContextPack = {
+        short_term: shortTerm,
+        long_term: longTerm,
+        summaries,
+        diagnostics: {
+          selected_count: selectedEntries.length,
+          skipped_count: dropped.length,
+          memory_selection: { selected_entry_ids: selectedEntries.map(e => e.id), dropped },
+          prompt_processing_trace: null
+        }
+      };
 
       return {
         context_run: contextRun,

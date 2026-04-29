@@ -5,9 +5,7 @@ import { createLogger } from '../utils/logger.js'
 import { safeFs } from '../utils/safe_fs.js'
 import { BUILTIN_DEFAULTS } from './domains/index.js'
 import { readYamlFileIfExists, resolveFromWorkspaceRoot, resolveWorkspaceRoot } from './loader.js'
-import { loadTemplateDefaults } from './manifest.js'
 import { deepMergeAll } from './merge.js'
-import { detectConfigDrift, logConfigDrift } from './migration.js'
 import { type RuntimeConfig, RuntimeConfigSchema } from './schema.js'
 
 const logger = createLogger('runtime-config')
@@ -40,7 +38,6 @@ interface RuntimeConfigCache {
 
 const CONFIG_DIR_RELATIVE_PATH = path.join('data', 'configw')
 const CONFIG_FRAGMENTS_DIRNAME = 'conf.d'
-const DEFAULT_CONFIG_BASENAME = 'default.yaml'
 const LOCAL_CONFIG_BASENAME = 'local.yaml'
 
 // Built-in defaults are now defined per-domain in config/domains/.
@@ -48,14 +45,6 @@ const LOCAL_CONFIG_BASENAME = 'local.yaml'
 
 let runtimeConfigCache: RuntimeConfigCache | null = null
 let runtimeConfigSnapshotLogged = false
-
-const warnWorldEngineUseSidecarDeprecated = (input: {
-  activeEnv: string
-}): void => {
-  logger.warn(
-    `环境变量 WORLD_ENGINE_USE_SIDECAR 已废弃（env=${input.activeEnv}）；world engine 现仅支持 Rust sidecar，请改用 WORLD_ENGINE_TIMEOUT_MS / WORLD_ENGINE_BINARY_PATH / WORLD_ENGINE_AUTO_RESTART 等显式参数。`
-  )
-}
 
 const parseOptionalStringEnv = (value: string | undefined): string | undefined => {
   if (value === undefined) {
@@ -136,7 +125,6 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   const memoryTriggerEngineTimeoutMs = parseIntegerEnv('MEMORY_TRIGGER_ENGINE_TIMEOUT_MS', process.env.MEMORY_TRIGGER_ENGINE_TIMEOUT_MS)
   const memoryTriggerEngineBinaryPath = parseOptionalStringEnv(process.env.MEMORY_TRIGGER_ENGINE_BINARY_PATH)
   const memoryTriggerEngineAutoRestart = parseBooleanEnv('MEMORY_TRIGGER_ENGINE_AUTO_RESTART', process.env.MEMORY_TRIGGER_ENGINE_AUTO_RESTART)
-  const worldEngineUseSidecar = parseBooleanEnv('WORLD_ENGINE_USE_SIDECAR', process.env.WORLD_ENGINE_USE_SIDECAR)
   const worldEngineTimeoutMs = parseIntegerEnv('WORLD_ENGINE_TIMEOUT_MS', process.env.WORLD_ENGINE_TIMEOUT_MS)
   const worldEngineBinaryPath = parseOptionalStringEnv(process.env.WORLD_ENGINE_BINARY_PATH)
   const worldEngineAutoRestart = parseBooleanEnv('WORLD_ENGINE_AUTO_RESTART', process.env.WORLD_ENGINE_AUTO_RESTART)
@@ -419,17 +407,10 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   }
 
   if (
-    worldEngineUseSidecar !== undefined
-    || worldEngineTimeoutMs !== undefined
+    worldEngineTimeoutMs !== undefined
     || worldEngineBinaryPath !== undefined
     || worldEngineAutoRestart !== undefined
   ) {
-    if (worldEngineUseSidecar !== undefined) {
-      warnWorldEngineUseSidecarDeprecated({
-        activeEnv
-      })
-    }
-
     overrides.world_engine = {
       ...(worldEngineTimeoutMs !== undefined ? { timeout_ms: worldEngineTimeoutMs } : {}),
       ...(worldEngineBinaryPath !== undefined ? { binary_path: worldEngineBinaryPath } : {}),
@@ -462,12 +443,8 @@ const loadRuntimeConfig = (): RuntimeConfigCache => {
   const configDir = path.join(workspaceRoot, CONFIG_DIR_RELATIVE_PATH)
   const activeEnv = getActiveAppEnv()
 
-  // Load conf.d/ fragments (new layout) or fall back to single default.yaml (legacy)
-  const fragmentOverrides = loadConfigFragments(configDir)
-  const baseFileOverrides: Record<string, unknown>[] =
-    fragmentOverrides.length > 0
-      ? fragmentOverrides
-      : [readYamlFileIfExists(path.join(configDir, DEFAULT_CONFIG_BASENAME))]
+  // Load conf.d/ fragments
+  const baseFileOverrides = loadConfigFragments(configDir)
 
   const envFileOverride = readYamlFileIfExists(path.join(configDir, `${activeEnv}.yaml`))
   const localFileOverride = readYamlFileIfExists(path.join(configDir, LOCAL_CONFIG_BASENAME))
@@ -483,26 +460,8 @@ const loadRuntimeConfig = (): RuntimeConfigCache => {
 
   const parsed = RuntimeConfigSchema.parse(merged)
 
-  // Detect config drift: warn if user config is missing keys that exist in templates
-  const templatesDir = path.join(workspaceRoot, 'apps', 'server', 'templates', 'configw')
-  const templateDefaults = loadTemplateDefaults(templatesDir, readYamlFileIfExists)
-  if (Object.keys(templateDefaults).length > 0) {
-    // Build the effective user override by merging file overrides
-    const userOverride = deepMergeAll({}, ...baseFileOverrides, envFileOverride, localFileOverride)
-    const drift = detectConfigDrift(userOverride, templateDefaults)
-    logConfigDrift(drift)
-  }
 
-  const loadedFiles: string[] = []
-  if (fragmentOverrides.length > 0) {
-    const fragmentsDir = path.join(configDir, CONFIG_FRAGMENTS_DIRNAME)
-    loadedFiles.push(fragmentsDir)
-  } else {
-    const defaultPath = path.join(configDir, DEFAULT_CONFIG_BASENAME)
-    if (Object.keys(readYamlFileIfExists(defaultPath)).length > 0) {
-      loadedFiles.push(defaultPath)
-    }
-  }
+  const loadedFiles: string[] = [path.join(configDir, CONFIG_FRAGMENTS_DIRNAME)]
   const envPath = path.join(configDir, `${activeEnv}.yaml`)
   if (Object.keys(envFileOverride).length > 0) loadedFiles.push(envPath)
   const localPath = path.join(configDir, LOCAL_CONFIG_BASENAME)
@@ -550,11 +509,6 @@ export const getAppPort = (): number => {
 
 export const getDatabaseConfig = (): RuntimeConfig['database'] => {
   return getRuntimeConfig().database
-}
-
-/** @deprecated Use getDatabaseConfig().sqlite */
-export const getSqliteRuntimeConfig = (): RuntimeConfig['database']['sqlite'] => {
-  return getDatabaseConfig().sqlite ?? { busy_timeout_ms: 5000, wal_autocheckpoint_pages: 1000, synchronous: 'NORMAL' as const }
 }
 
 export const getSimulationLoopIntervalMs = (): number => {

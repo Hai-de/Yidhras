@@ -213,7 +213,7 @@ export class NarrativeResolver {
               ...(options.extraContext ?? {})
             }),
             metadata: {
-              source_label: 'narrative-resolver-legacy-visible-pool',
+              source_label: 'narrative-resolver-visible-pool',
               trusted: true
             }
           })

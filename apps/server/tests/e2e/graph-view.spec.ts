@@ -210,7 +210,7 @@ describe('graph view e2e', () => {
           const graphViewResponse = await requestJson(server.baseUrl, '/api/graph/view');
           expect(graphViewResponse.status).toBe(200);
           const graphView = assertSuccessEnvelopeData(graphViewResponse.body, 'graph view response');
-          expect(graphView.schema_version).toBe('graph-v2');
+          expect(graphView.schema_version).toBe('graph');
           expect(graphView.view).toBe('mesh');
           expect(Array.isArray(graphView.nodes)).toBe(true);
           expect(Array.isArray(graphView.edges)).toBe(true);
@@ -219,7 +219,7 @@ describe('graph view e2e', () => {
           expect(typeof graphSummary.returned_edge_count).toBe('number');
           expect(isRecord(graphSummary.applied_filters)).toBe(true);
           const responseMeta = assertRecord((graphViewResponse.body as Record<string, unknown>).meta, 'graph view meta');
-          expect(responseMeta.schema_version).toBe('graph-v2');
+          expect(responseMeta.schema_version).toBe('graph');
 
           const hasAgentNode = graphView.nodes.some(node => isRecord(node) && node.kind === 'agent');
           const hasAtmosphereNode = graphView.nodes.some(node => isRecord(node) && node.kind === 'atmosphere');

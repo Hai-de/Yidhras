@@ -31,7 +31,6 @@ export interface WorldPackProjectScaffoldOptions {
   license?: string;
   tags?: string[];
   status?: string;
-  yidhrasCompatibility?: string;
   overwrite?: boolean;
   setPreferredPack?: boolean;
   setBootstrapTemplate?: boolean;
@@ -236,7 +235,7 @@ export const scaffoldWorldPackProject = (
   const tags = (options.tags?.map(item => item.trim()).filter(Boolean) ?? []).length > 0
     ? options.tags!.map(item => item.trim()).filter(Boolean)
     : ['custom-pack'];
-  const yidhrasCompatibility = options.yidhrasCompatibility?.trim() || '>=0.5.0';
+  const yidhrasCompatibility = '>=0.5.0';
   const publishedAt = formatDate(new Date());
   const targetPackDir = path.join(getWorldPacksDir(), normalizedPackDirName);
 

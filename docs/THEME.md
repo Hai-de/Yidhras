@@ -2,7 +2,7 @@
 
 本文档描述 `apps/web` 前端主题系统的文件职责、解析链路与常见改动入口。
 
-> 相关文档：`apps/web/README.md` · `docs/ARCH.md` · `docs/ENHANCEMENTS.md`
+> 相关文档：`apps/web/README.md` · `docs/ARCH.md`
 
 ---
 

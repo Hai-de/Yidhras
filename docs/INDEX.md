@@ -26,7 +26,6 @@
 | [LOGIC.md](LOGIC.md) | 业务规则、执行主线、领域语义 |
 | [THEME.md](THEME.md) | 前端主题 contract、解析链路、调试入口 |
 | [WORLD_PACK.md](WORLD_PACK.md) | world pack 项目化、README 标配、发布规范 |
-| [ENHANCEMENTS.md](ENHANCEMENTS.md) | 延后增强项重定向入口；实际内容在 [backlog](../.limcode/enhancements-backlog.md) |
 | [apps/web/README.md](../apps/web/README.md) | 前端应用范围、结构与开发约束 |
 
 ## 3. 专题能力层

@@ -65,11 +65,6 @@ const parseArgs = (argv: string[]): WorldPackProjectScaffoldOptions => {
         options.status = next;
         index += 1;
         break;
-      case '--compat':
-      case '--yidhras-compat':
-        options.yidhrasCompatibility = next;
-        index += 1;
-        break;
       case '--overwrite':
         options.overwrite = true;
         break;
@@ -101,7 +96,8 @@ const parseArgs = (argv: string[]): WorldPackProjectScaffoldOptions => {
           '  --license <license>',
           '  --tags <a,b,c>',
           '  --status <draft|stable|template>',
-          '  --compat, --yidhras-compat <range>',
+
+
           '  --overwrite                   覆盖已存在文件',
           '  --set-preferred              把该 pack 写入 data/configw/default.yaml 的 world.preferred_pack',
           '  --set-bootstrap-template     把 bootstrap.target_pack_dir/template_file 指向新 pack',

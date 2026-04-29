@@ -113,7 +113,7 @@ const buildReferenceProfileSemanticDecision = (
   reasoning: input.reasoning,
   meta: {
     provider_mode: 'rule_based_profile',
-    rule_based_profile: 'notebook_investigation_reference_v1',
+    rule_based_profile: 'notebook_investigation_reference',
     semantic_intent: {
       kind: input.semanticIntentKind,
       text: input.reasoning,
@@ -150,7 +150,7 @@ const buildReferenceProfileObserverDecision = (context: Parameters<InferenceProv
     reasoning: `${context.actor_display_name} 目前更倾向于观察案件升级与人类反应，而不是直接采取客观行动。`,
     meta: {
       provider_mode: 'rule_based_profile_observer',
-      rule_based_profile: 'notebook_investigation_reference_v1',
+      rule_based_profile: 'notebook_investigation_reference',
       transmission_delay_ticks: '1',
       transmission_policy: 'reliable',
       transmission_drop_chance: 0,
@@ -406,7 +406,7 @@ export const createRuleBasedInferenceProvider = (): InferenceProvider => {
     strategies: ['rule_based'],
     run(context) {
       const ruleBasedProfile = resolveRuleBasedProfile(context);
-      if (ruleBasedProfile === 'notebook_investigation_reference_v1') {
+      if (ruleBasedProfile === 'notebook_investigation_reference') {
         return Promise.resolve(buildReferenceProfileRuleBasedDecision(context));
       }
 

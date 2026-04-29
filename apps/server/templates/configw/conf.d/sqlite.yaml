@@ -1,5 +1,0 @@
-# SQLite 数据库配置
-sqlite:
-  busy_timeout_ms: 5000
-  wal_autocheckpoint_pages: 1000
-  synchronous: "NORMAL"

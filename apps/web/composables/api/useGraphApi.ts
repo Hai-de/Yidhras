@@ -50,7 +50,7 @@ export interface GraphEdgeView {
 }
 
 export interface GraphViewSnapshot {
-  schema_version: 'graph-v2'
+  schema_version: 'graph'
   view: GraphViewMode
   nodes: GraphNodeView[]
   edges: GraphEdgeView[]

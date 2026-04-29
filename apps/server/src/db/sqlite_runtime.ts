@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 
-import { getSqliteRuntimeConfig } from '../config/runtime_config.js';
+import { getDatabaseConfig } from '../config/runtime_config.js';
 
 export interface SqliteRuntimePragmaSnapshot {
   journal_mode: string;
@@ -97,7 +97,7 @@ export const readSqliteRuntimePragmas = async (prisma: PrismaClient): Promise<Sq
 };
 
 export const applySqliteRuntimePragmas = async (prisma: PrismaClient): Promise<SqliteRuntimePragmaSnapshot> => {
-  const config = getSqliteRuntimeConfig();
+  const config = getDatabaseConfig().sqlite;
   const busyTimeoutMs = config?.busy_timeout_ms ?? 5000;
   const walAutocheckpointPages = config?.wal_autocheckpoint_pages ?? 1000;
   const synchronousMode = config?.synchronous ?? 'NORMAL';

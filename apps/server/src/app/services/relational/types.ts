@@ -64,7 +64,7 @@ export interface GraphEdgeView {
 }
 
 export interface GraphViewSnapshot {
-  schema_version: 'graph-v2';
+  schema_version: 'graph';
   view: 'mesh' | 'tree';
   nodes: GraphNodeView[];
   edges: GraphEdgeView[];

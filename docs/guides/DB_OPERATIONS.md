@@ -328,11 +328,7 @@ pnpm --filter yidhras-server seed:identity
 
 ## 8. 数据库文件位置更换
 
-当前第一阶段数据库边界治理的目标之一，是“继续用 Prisma，但让迁移/更换更容易”。
-
-对部署者来说，**最现实、最低风险的“更换”首先是更换数据库文件位置**，而不是立刻切换 ORM。
-
-## 8.1 更换 SQLite 文件路径
+### 8.1 更换 SQLite 文件路径
 
 你只需要修改：
 
@@ -363,7 +359,7 @@ pnpm --filter yidhras-server start
 pnpm prepare:runtime
 ```
 
-## 8.2 更换时要确认的事项
+### 8.2 更换时要确认的事项
 
 请确认：
 

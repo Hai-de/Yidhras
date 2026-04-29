@@ -416,7 +416,7 @@ export const getGraphView = async (
   }, {});
 
   return {
-    schema_version: 'graph-v2',
+    schema_version: 'graph',
     view: filters.view,
     nodes,
     edges,
