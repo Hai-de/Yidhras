@@ -94,9 +94,9 @@ class ProcessSchedulerDecisionSidecarTransport implements SchedulerDecisionSidec
 
   constructor(private readonly options: Required<SchedulerDecisionSidecarClientOptions>) {}
 
-  public async start(): Promise<void> {
+  public start(): Promise<void> {
     if (this.child) {
-      return;
+      return Promise.resolve();
     }
 
     const configuredBinaryPath = this.options.binaryPath.trim();
@@ -105,10 +105,11 @@ class ProcessSchedulerDecisionSidecarTransport implements SchedulerDecisionSidec
       : null;
 
     if (resolvedBinaryPath) {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- binary path from admin configuration
       if (!existsSync(resolvedBinaryPath)) {
-        throw new ApiError(500, 'SCHEDULER_DECISION_SIDECAR_NOT_READY', 'Scheduler decision sidecar binary does not exist', {
+        return Promise.reject(new ApiError(500, 'SCHEDULER_DECISION_SIDECAR_NOT_READY', 'Scheduler decision sidecar binary does not exist', {
           binary_path: resolvedBinaryPath
-        });
+        }));
       }
 
       this.child = spawn(resolvedBinaryPath, [], {
@@ -125,10 +126,10 @@ class ProcessSchedulerDecisionSidecarTransport implements SchedulerDecisionSidec
 
     this.child.stdout.setEncoding('utf8');
     this.child.stderr.setEncoding('utf8');
-    this.child.stdout.on('data', chunk => {
+    this.child.stdout.on('data', (chunk: string) => {
       this.handleStdout(chunk);
     });
-    this.child.stderr.on('data', chunk => {
+    this.child.stderr.on('data', (chunk: string) => {
       const message = chunk.toString().trim();
       if (message.length > 0) {
         logger.warn(message);
@@ -154,6 +155,8 @@ class ProcessSchedulerDecisionSidecarTransport implements SchedulerDecisionSidec
         }));
       }
     });
+
+    return Promise.resolve();
   }
 
   public async stop(): Promise<void> {

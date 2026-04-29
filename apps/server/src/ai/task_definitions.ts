@@ -215,6 +215,7 @@ const mergeTaskOverride = (base: AiTaskOverride | null, override: AiTaskOverride
 };
 
 export const getAiTaskDefinition = (taskType: AiTaskType): AiTaskDefinition => {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   return TASK_DEFINITIONS[taskType];
 };
 

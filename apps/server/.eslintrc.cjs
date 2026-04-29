@@ -6,14 +6,18 @@ module.exports = {
   },
   parser: '@typescript-eslint/parser',
   parserOptions: {
-    sourceType: 'module'
+    sourceType: 'module',
+    project: true,
+    tsconfigRootDir: __dirname
   },
-  plugins: ['@typescript-eslint', 'import', 'simple-import-sort'],
+  plugins: ['@typescript-eslint', 'import', 'simple-import-sort', 'security'],
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/recommended-type-checked',
     'plugin:import/recommended',
     'plugin:import/typescript',
+    'plugin:security/recommended-legacy',
     'prettier'
   ],
   settings: {
@@ -27,6 +31,11 @@ module.exports = {
     'no-console': 'off',
     'prefer-const': 'error',
     'no-case-declarations': 'error',
+    'no-eval': 'error',
+    'no-implied-eval': 'error',
+    'no-new-func': 'error',
+    'no-prototype-builtins': 'error',
+    'no-path-concat': 'error',
     'import/no-named-as-default-member': 'off',
     'simple-import-sort/imports': 'error',
     'simple-import-sort/exports': 'error',

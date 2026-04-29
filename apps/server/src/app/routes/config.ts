@@ -42,32 +42,32 @@ export const registerConfigRoutes = (
   // GET /api/config — full config (masked)
   app.get(
     '/api/config',
-    deps.asyncHandler(async (req, res) => {
+    (req, res) => {
       const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, 'OPERATOR_REQUIRED', 'Authentication required')
       }
       const config = getMaskedConfig()
       jsonOk(res, toJsonSafe(config))
-    })
+    }
   )
 
   // GET /api/config/domains — list domains with tiers
   app.get(
     '/api/config/domains',
-    deps.asyncHandler(async (req, res) => {
+    (req, res) => {
       const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, 'OPERATOR_REQUIRED', 'Authentication required')
       }
       jsonOk(res, toJsonSafe(listConfigDomains()))
-    })
+    }
   )
 
   // GET /api/config/:domain — single domain config
   app.get(
     '/api/config/:domain',
-    deps.asyncHandler(async (req, res) => {
+    (req, res) => {
       const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, 'OPERATOR_REQUIRED', 'Authentication required')
@@ -77,7 +77,7 @@ export const registerConfigRoutes = (
         throw new ApiError(404, 'CONFIG_DOMAIN_NOT_FOUND', `配置域 "${req.params.domain}" 不存在`)
       }
       jsonOk(res, toJsonSafe(domainConfig))
-    })
+    }
   )
 
   // PATCH /api/config/:domain — update config domain (root required)

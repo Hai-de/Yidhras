@@ -6,7 +6,7 @@ import { ApiError } from '../../utils/api_error.js';
 const flattenQueryValue = (value: unknown): unknown => {
   if (Array.isArray(value)) {
     const normalized = value
-      .map(item => (typeof item === 'string' ? item.trim() : item))
+      .map(item => (typeof item === 'string' ? item.trim() : String(item)))
       .filter(item => item !== '');
 
     if (normalized.length === 0) {

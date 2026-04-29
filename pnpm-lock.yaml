@@ -175,8 +175,8 @@ importers:
         specifier: ^2.32.0
         version: 2.32.0(@typescript-eslint/parser@8.58.0(eslint@8.57.1)(typescript@5.9.3))(eslint-import-resolver-typescript@4.4.4)(eslint@8.57.1)
       eslint-plugin-no-unsanitized:
-        specifier: ^4.1.5
-        version: 4.1.5(eslint@8.57.1)
+        specifier: ^3.2.0
+        version: 3.2.0(eslint@8.57.1)
       eslint-plugin-simple-import-sort:
         specifier: ^12.1.1
         version: 12.1.1(eslint@8.57.1)
@@ -3424,10 +3424,10 @@ packages:
       '@typescript-eslint/parser':
         optional: true
 
-  eslint-plugin-no-unsanitized@4.1.5:
-    resolution: {integrity: sha512-MSB4hXPVFQrI8weqzs6gzl7reP2k/qSjtCoL2vUMSDejIIq9YL1ZKvq5/ORBXab/PvfBBrWO2jWviYpL+4Ghfg==}
+  eslint-plugin-no-unsanitized@3.2.0:
+    resolution: {integrity: sha512-92opuXbjWmXcod94EyCKhp36V1QHLM/ArAST2ssgKOojALne0eZvSPfrg4oyr0EwTXvy0RJNe/Tkm33VkDUrKQ==}
     peerDependencies:
-      eslint: ^9 || ^10
+      eslint: ^5 || ^6 || ^7
 
   eslint-plugin-security@4.0.0:
     resolution: {integrity: sha512-tfuQT8K/Li1ZxhFzyD8wPIKtlzZxqBcPr9q0jFMQ77wWAbKBVEhaMPVQRTMTvCMUDhwBe5vPVqQPwAGk/ASfxQ==}
@@ -10070,7 +10070,7 @@ snapshots:
       - eslint-import-resolver-webpack
       - supports-color
 
-  eslint-plugin-no-unsanitized@4.1.5(eslint@8.57.1):
+  eslint-plugin-no-unsanitized@3.2.0(eslint@8.57.1):
     dependencies:
       eslint: 8.57.1
 

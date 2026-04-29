@@ -306,7 +306,7 @@ export const groundDecisionIntent = async (
     const targetEntityId =
       toNullableString(targetRef?.entity_id) ??
       toNullableString(targetRef?.agent_id) ??
-      toNullableString((decision.payload as Record<string, unknown>).target_entity_id);
+      toNullableString((decision.payload).target_entity_id);
 
     return {
       decision: buildRewrittenDecision(decision, semanticIntent, grounding, translateToCapability, targetRef, {
@@ -332,7 +332,7 @@ export const groundDecisionIntent = async (
       return {
         decision: buildRewrittenDecision(decision, semanticIntent, grounding, 'post_message', decision.target_ref, {
           content:
-            toNullableString((decision.payload as Record<string, unknown>).content) ??
+            toNullableString((decision.payload).content) ??
             semanticIntent.text ??
             decision.reasoning ??
             '未指定内容的案件进展通告。'

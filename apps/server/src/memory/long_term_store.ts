@@ -80,11 +80,11 @@ const isMissingMemoryBlockTablesError = (error: unknown): boolean => {
 
 export const createNoopLongTermMemoryStore = (): LongTermMemoryStore => {
   return {
-    async search(_input: LongTermMemorySearchInput): Promise<MemoryEntry[]> {
-      return [];
+    search(_input: LongTermMemorySearchInput): Promise<MemoryEntry[]> {
+      return Promise.resolve([]);
     },
-    async save(_entries: MemoryEntry[]): Promise<void> {
-      return;
+    save(_entries: MemoryEntry[]): Promise<void> {
+      return Promise.resolve();
     }
   };
 };
@@ -116,8 +116,8 @@ export const createPrismaLongTermMemoryStore = (context: AppInfrastructure): Lon
         throw error;
       }
     },
-    async save(_entries: MemoryEntry[]): Promise<void> {
-      return;
+    save(_entries: MemoryEntry[]): Promise<void> {
+      return Promise.resolve();
     }
   };
 };

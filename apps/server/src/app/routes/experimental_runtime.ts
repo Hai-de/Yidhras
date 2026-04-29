@@ -127,10 +127,10 @@ export const registerExperimentalRuntimeRoutes = (
 
   app.get(
     '/api/experimental/runtime/system/health',
-    deps.asyncHandler(async (_req, res) => {
+    (_req, res) => {
       assertExperimentalOperatorApiEnabled(context)
       jsonOk(res, toJsonSafe(buildExperimentalSystemHealthSnapshot(context)))
-    })
+    }
   )
 
   app.get(
@@ -181,7 +181,7 @@ export const registerExperimentalRuntimeRoutes = (
     '/api/experimental/runtime/packs/:packId/step',
     packGuard,
     controlGuard,
-    deps.asyncHandler(async (req, res) => {
+    (req, res) => {
       assertExperimentalOperatorApiEnabled(context)
       const packId = resolvePackIdParam(req.params.packId)
       const host = requireExperimentalPackHost(context, packId)
@@ -201,7 +201,7 @@ export const registerExperimentalRuntimeRoutes = (
         current_tick: currentTick.toString(),
         advanced_by: amount.toString()
       }))
-    })
+    }
   )
 
   app.get(
@@ -221,7 +221,7 @@ export const registerExperimentalRuntimeRoutes = (
     '/api/experimental/runtime/packs/:packId/clock',
     packGuard,
     observeGuard,
-    deps.asyncHandler(async (req, res) => {
+    (req, res) => {
       assertExperimentalOperatorApiEnabled(context)
       const packId = resolvePackIdParam(req.params.packId)
       const handle = requireExperimentalPackHandle(context, packId)
@@ -233,7 +233,7 @@ export const registerExperimentalRuntimeRoutes = (
           runtime_speed: handle.getRuntimeSpeedSnapshot()
         })
       )
-    })
+    }
   )
 
   app.get(

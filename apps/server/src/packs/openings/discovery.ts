@@ -1,6 +1,7 @@
-import fs from 'fs';
 import path from 'path';
 import * as YAML from 'yaml';
+
+import { safeFs } from '../../utils/safe_fs.js';
 
 export interface OpeningSummary {
   id: string;
@@ -18,11 +19,11 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 export const listPackOpenings = (packDir: string): OpeningSummary[] => {
   const openingsDir = path.join(packDir, OPENINGS_DIR);
 
-  if (!fs.existsSync(openingsDir) || !fs.statSync(openingsDir).isDirectory()) {
+  if (!safeFs.existsSync(packDir, openingsDir) || !safeFs.statSync(packDir, openingsDir).isDirectory()) {
     return [];
   }
 
-  const entries = fs.readdirSync(openingsDir, { withFileTypes: true });
+  const entries = safeFs.readdirSync(packDir, openingsDir, { withFileTypes: true });
   const results: OpeningSummary[] = [];
 
   for (const entry of entries) {
@@ -39,8 +40,8 @@ export const listPackOpenings = (packDir: string): OpeningSummary[] => {
     const filePath = path.join(openingsDir, entry.name);
 
     try {
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const parsed = YAML.parse(content);
+      const content = safeFs.readFileSync(packDir, filePath, 'utf-8');
+      const parsed = YAML.parse(content) as Record<string, unknown>;
       if (isRecord(parsed)) {
         results.push({
           id,

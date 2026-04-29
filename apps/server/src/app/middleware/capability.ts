@@ -94,85 +94,89 @@ export const capabilityGuard = (
   capabilityKey: string,
   options: CapabilityGuardOptions = {}
 ) => {
-  return async (
+  return (
     req: OperatorRequest,
     _res: Response,
     next: NextFunction
-  ): Promise<void> => {
-    // 提取 packId
-    const packId = options.packIdParam
-      ? (req.params[options.packIdParam] as string | undefined)
-      : options.packIdQuery
-        ? (req.query[options.packIdQuery] as string | undefined)
+  ): void => {
+    const run = async (): Promise<void> => {
+      // 提取 packId
+      const packId = options.packIdParam
+        ? (req.params[options.packIdParam] as string | undefined)
+        : options.packIdQuery
+          ? (req.query[options.packIdQuery] as string | undefined)
+          : undefined
+
+      if (!packId) {
+        throw new ApiError(400, 'PACK_ID_REQUIRED', 'Pack ID is required for capability check')
+      }
+
+      // 需要 operator 认证
+      if (!req.operator) {
+        throw new ApiError(
+          401,
+          OPERATOR_ERROR_CODE.OPERATOR_REQUIRED,
+          'Authentication required'
+        )
+      }
+
+      // L1: Pack Access
+      const access = await checkPackAccess(context, req.operator.id, packId)
+      if (!access.allowed) {
+        await logOperatorAudit(context, {
+          operator_id: req.operator.id,
+          pack_id: packId,
+          action: AUDIT_ACTION.PACK_ACCESS_DENIED,
+          detail_json: { reason: access.reason, capability_key: capabilityKey },
+          client_ip: req.ip
+        })
+
+        throw new ApiError(
+          403,
+          OPERATOR_ERROR_CODE.PACK_ACCESS_DENIED,
+          `Operator not bound to pack: ${packId}`
+        )
+      }
+
+      // L2: Capability
+      const targetAgentId = options.targetAgentIdParam
+        ? (req.params[options.targetAgentIdParam] as string | undefined)
         : undefined
 
-    if (!packId) {
-      throw new ApiError(400, 'PACK_ID_REQUIRED', 'Pack ID is required for capability check')
-    }
-
-    // 需要 operator 认证
-    if (!req.operator) {
-      throw new ApiError(
-        401,
-        OPERATOR_ERROR_CODE.OPERATOR_REQUIRED,
-        'Authentication required'
+      const result = await checkCapability(
+        context,
+        req.operator.id,
+        packId,
+        capabilityKey,
+        targetAgentId
       )
+
+      if (!result.allowed) {
+        await logOperatorAudit(context, {
+          operator_id: req.operator.id,
+          pack_id: packId,
+          action: AUDIT_ACTION.CAPABILITY_DENIED,
+          detail_json: {
+            capability_key: capabilityKey,
+            subject_entity_id: result.subjectEntityId
+          },
+          client_ip: req.ip
+        })
+
+        throw new ApiError(
+          403,
+          OPERATOR_ERROR_CODE.CAPABILITY_DENIED,
+          `Missing capability: ${capabilityKey}`,
+          {
+            capability_key: capabilityKey,
+            subject_entity_id: result.subjectEntityId
+          }
+        )
+      }
+
+      next()
     }
 
-    // L1: Pack Access
-    const access = await checkPackAccess(context, req.operator.id, packId)
-    if (!access.allowed) {
-      await logOperatorAudit(context, {
-        operator_id: req.operator.id,
-        pack_id: packId,
-        action: AUDIT_ACTION.PACK_ACCESS_DENIED,
-        detail_json: { reason: access.reason, capability_key: capabilityKey },
-        client_ip: req.ip
-      })
-
-      throw new ApiError(
-        403,
-        OPERATOR_ERROR_CODE.PACK_ACCESS_DENIED,
-        `Operator not bound to pack: ${packId}`
-      )
-    }
-
-    // L2: Capability
-    const targetAgentId = options.targetAgentIdParam
-      ? (req.params[options.targetAgentIdParam] as string | undefined)
-      : undefined
-
-    const result = await checkCapability(
-      context,
-      req.operator.id,
-      packId,
-      capabilityKey,
-      targetAgentId
-    )
-
-    if (!result.allowed) {
-      await logOperatorAudit(context, {
-        operator_id: req.operator.id,
-        pack_id: packId,
-        action: AUDIT_ACTION.CAPABILITY_DENIED,
-        detail_json: {
-          capability_key: capabilityKey,
-          subject_entity_id: result.subjectEntityId
-        },
-        client_ip: req.ip
-      })
-
-      throw new ApiError(
-        403,
-        OPERATOR_ERROR_CODE.CAPABILITY_DENIED,
-        `Missing capability: ${capabilityKey}`,
-        {
-          capability_key: capabilityKey,
-          subject_entity_id: result.subjectEntityId
-        }
-      )
-    }
-
-    next()
+    run().catch(next)
   }
 }

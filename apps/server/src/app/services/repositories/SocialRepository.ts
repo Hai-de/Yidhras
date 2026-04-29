@@ -72,10 +72,10 @@ export class PrismaSocialRepository implements SocialRepository {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async queryPosts(input: { where?: Record<string, unknown>; orderBy?: any; take?: number; include?: Record<string, unknown>; skip?: number }): Promise<any[]> {
+  async queryPosts(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown> | Array<Record<string, unknown>>; take?: number; include?: Record<string, unknown>; skip?: number }): Promise<Array<Record<string, unknown>>> {
     return this.prisma.post.findMany({
       where: input.where as never,
-      orderBy: input.orderBy,
+      orderBy: input.orderBy as never,
       take: input.take,
       include: input.include as never,
       skip: input.skip

@@ -48,7 +48,7 @@ const assertExperimentalProjectionApiEnabled = (context: AppContext): void => {
 }
 
 const resolvePackId = (reqParams: unknown): string => {
-  const params = parseParams(packIdParamsSchema as never, reqParams, 'EXPERIMENTAL_PACK_ID_INVALID') as { packId: string }
+  const params = parseParams(packIdParamsSchema, reqParams as Record<string, unknown>, 'EXPERIMENTAL_PACK_ID_INVALID')
   return params.packId
 }
 

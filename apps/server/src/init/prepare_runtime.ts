@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 
 import {
@@ -8,6 +7,7 @@ import {
   logRuntimeConfigSnapshot,
   resolveWorkspacePath
 } from '../config/runtime_config.js';
+import { safeFs } from '../utils/safe_fs.js';
 import {
   buildRuntimeConfigScaffoldReport,
   buildRuntimeMetadataReport,
@@ -30,9 +30,9 @@ const parseOpeningCliArg = (argv: string[]): string | undefined => {
 
 const writeStartupOpeningMarker = (openingId: string): void => {
   const runtimeDir = resolveWorkspacePath('data/runtime');
-  fs.mkdirSync(runtimeDir, { recursive: true });
+  safeFs.mkdirSync(runtimeDir, runtimeDir, { recursive: true });
   const markerPath = path.join(runtimeDir, 'startup_opening.txt');
-  fs.writeFileSync(markerPath, openingId, 'utf-8');
+  safeFs.writeFileSync(runtimeDir, markerPath, openingId);
 };
 
 const main = async (): Promise<void> => {

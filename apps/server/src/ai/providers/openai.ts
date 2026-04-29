@@ -13,6 +13,7 @@ const getEnv = (name: string | null | undefined): string | null => {
     return null;
   }
 
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   const value = process.env[name];
   if (typeof value !== 'string' || value.trim().length === 0) {
     return null;
@@ -405,7 +406,7 @@ const performRequest = async (input: AiProviderAdapterRequest): Promise<Response
 
 const normalizeEmbeddingsResponse = (payload: Record<string, unknown>, response: Response): AiProviderAdapterResult => {
   const data = Array.isArray(payload.data) ? payload.data : [];
-  const first = data.find(item => isRecord(item) && Array.isArray(item.embedding));
+  const first: unknown = data.find(item => isRecord(item) && Array.isArray(item.embedding));
   const embedding = first && isRecord(first) ? first.embedding : null;
   if (!Array.isArray(embedding) || !embedding.every(value => typeof value === 'number')) {
     throw new ApiError(500, 'AI_PROVIDER_DECODE_FAIL', 'OpenAI embeddings response is missing embedding vector');
@@ -438,7 +439,7 @@ const normalizeEmbeddingsResponse = (payload: Record<string, unknown>, response:
 
 const normalizeChatCompletionsResponse = (payload: Record<string, unknown>, response: Response): AiProviderAdapterResult => {
   const choices = Array.isArray(payload.choices) ? payload.choices : [];
-  const firstChoice = choices.find(choice => isRecord(choice)) as Record<string, unknown> | undefined;
+  const firstChoice = choices.find(choice => isRecord(choice));
   if (!firstChoice || !isRecord(firstChoice.message)) {
     throw new ApiError(500, 'AI_PROVIDER_DECODE_FAIL', 'OpenAI chat completion response is missing choices[0].message');
   }

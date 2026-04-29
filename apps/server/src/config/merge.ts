@@ -3,7 +3,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
     return false;
   }
 
-  const prototype = Object.getPrototypeOf(value);
+  const prototype = Object.getPrototypeOf(value) as object | null;
   return prototype === Object.prototype || prototype === null;
 };
 
@@ -22,12 +22,15 @@ export const deepMerge = <T extends Record<string, unknown>>(
       continue;
     }
 
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     const currentValue = result[key];
     if (isPlainObject(currentValue) && isPlainObject(value)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       result[key] = deepMerge(currentValue, value);
       continue;
     }
 
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     result[key] = cloneValue(value);
   }
 

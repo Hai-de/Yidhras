@@ -13,7 +13,7 @@ const TEMPLATE_TOKEN_PATTERN = /\{\{[^{}]+\}\}/;
 export const createMacroExpansionTreeProcessor = (): PromptTreeProcessor => {
   return {
     name: 'macro-expansion',
-    async process(input: PromptTreeProcessorInput): Promise<PromptTree> {
+    process(input: PromptTreeProcessorInput): Promise<PromptTree> {
       const { context, tree } = input;
       const variableContext = context.variable_context;
       const extraContext: Record<string, unknown> = {
@@ -34,7 +34,7 @@ export const createMacroExpansionTreeProcessor = (): PromptTreeProcessor => {
         }
       }
 
-      return tree;
+      return Promise.resolve(tree);
     }
   };
 };

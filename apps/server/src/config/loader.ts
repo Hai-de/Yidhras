@@ -19,6 +19,7 @@ export const resolveWorkspaceRoot = (startDir: string = process.cwd()): string =
 
   while (current !== null) {
     const currentDir = current;
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- 启动时发现工作区根目录
     const hasMarker = WORKSPACE_ROOT_MARKERS.some(marker => fs.existsSync(path.join(currentDir, marker)));
     if (hasMarker) {
       return currentDir;
@@ -39,10 +40,12 @@ export const resolveFromWorkspaceRoot = (
 };
 
 export const readYamlFileIfExists = (filePath: string): Record<string, unknown> => {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- 从已解析的工作区路径加载YAML
   if (!fs.existsSync(filePath)) {
     return {};
   }
 
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- 从已解析的工作区路径加载YAML
   const content = fs.readFileSync(filePath, 'utf-8');
   if (content.trim().length === 0) {
     return {};

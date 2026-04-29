@@ -2,7 +2,6 @@ import type { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import type { PackSnapshotPrismaData } from '@yidhras/contracts';
 import { packSnapshotPrismaDataSchema } from '@yidhras/contracts';
-import fs from 'fs';
 
 import type { RuntimeClockProjectionSnapshot } from '../../app/runtime/runtime_clock_projection.js';
 import type { WorldEnginePort } from '../../app/runtime/world_engine_ports.js';
@@ -12,9 +11,10 @@ import type { TimeFormatted } from '../../clock/types.js';
 import type { NotificationPort } from '../../core/runtime_activation.js';
 import type { SimulationManager } from '../../core/simulation.js';
 import type { WorldPack } from '../../packs/manifest/loader.js';
+import { safeFs } from '../../utils/safe_fs.js';
 import { clearPackRuntimeStorage } from '../runtime/teardown.js';
 import { listPackEntityStates } from '../storage/entity_state_repo.js';
-import { resolvePackRuntimeDatabaseLocation } from '../storage/pack_db_locator.js';
+import { getPackRootDir, resolvePackRuntimeDatabaseLocation } from '../storage/pack_db_locator.js';
 import type { PackStorageAdapter } from '../storage/PackStorageAdapter.js';
 import {
   readSnapshotMetadata,
@@ -35,8 +35,9 @@ const jsonValue = (value: unknown): Prisma.InputJsonValue => {
   return (value ?? {}) as Prisma.InputJsonValue;
 };
 
-const readPrismaData = (location: { prismaJsonPath: string }): PackSnapshotPrismaData => {
-  const raw = fs.readFileSync(location.prismaJsonPath, 'utf-8');
+const readPrismaData = (location: { prismaJsonPath: string; packId: string }): PackSnapshotPrismaData => {
+  const packRoot = getPackRootDir(location.packId);
+  const raw = safeFs.readFileSync(packRoot, location.prismaJsonPath, 'utf-8');
   const parsed = JSON.parse(raw) as unknown;
   return packSnapshotPrismaDataSchema.parse(parsed);
 };
@@ -49,7 +50,7 @@ const readAppliedOpeningId = async (adapter: PackStorageAdapter, packId: string)
   if (!metaState || typeof metaState.state_json !== 'object' || metaState.state_json === null) {
     return null;
   }
-  const stateJson = metaState.state_json as Record<string, unknown>;
+  const stateJson = metaState.state_json;
   return typeof stateJson.applied_opening_id === 'string' ? stateJson.applied_opening_id : null;
 };
 
@@ -282,6 +283,7 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
   const { packId, snapshotId, prisma, packStorageAdapter, pack, sim, activePackRuntime, worldEngine, notifications } = input;
 
   const location = resolveSnapshotLocation(packId, snapshotId);
+  const packRoot = getPackRootDir(packId);
 
   if (!snapshotFilesExist(location)) {
     throw new Error(`Snapshot "${snapshotId}" is incomplete or missing files`);
@@ -303,7 +305,7 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
   }
 
   // 2. Clear runtime storage
-  clearPackRuntimeStorage(packStorageAdapter, packId);
+  await clearPackRuntimeStorage(packStorageAdapter, packId);
 
   // 3. Teardown kernel bridges
   const { teardownActorBridges } = await import('../runtime/materializer.js');
@@ -314,12 +316,12 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
 
   // 5. Restore SQLite
   const runtimeDbLocation = resolvePackRuntimeDatabaseLocation(packId);
-  fs.mkdirSync(runtimeDbLocation.packRootDir, { recursive: true });
-  fs.copyFileSync(location.runtimeDbPath, runtimeDbLocation.runtimeDbPath);
+  safeFs.mkdirSync(packRoot, runtimeDbLocation.packRootDir, { recursive: true });
+  safeFs.copyFileSync(packRoot, location.runtimeDbPath, runtimeDbLocation.runtimeDbPath);
 
   const storagePlanPath = `${runtimeDbLocation.runtimeDbPath}.storage-plan.json`;
-  if (fs.existsSync(location.storagePlanPath)) {
-    fs.copyFileSync(location.storagePlanPath, storagePlanPath);
+  if (safeFs.existsSync(packRoot, location.storagePlanPath)) {
+    safeFs.copyFileSync(packRoot, location.storagePlanPath, storagePlanPath);
   }
 
   // 6. Read applied_opening_id from restored SQLite

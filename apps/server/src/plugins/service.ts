@@ -43,6 +43,7 @@ const assertLifecycleTransition = (
     archived: []
   };
 
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   if (!allowed[previousState].includes(nextState)) {
     throw new ApiError(409, 'PLUGIN_LIFECYCLE_TRANSITION_INVALID', 'Plugin lifecycle transition is not allowed', {
       previous_state: previousState,

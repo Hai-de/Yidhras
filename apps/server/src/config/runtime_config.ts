@@ -1,8 +1,8 @@
-import fs from 'fs'
 import path from 'path'
 
 import { ensureRuntimeConfigScaffold } from '../init/runtime_scaffold.js'
 import { createLogger } from '../utils/logger.js'
+import { safeFs } from '../utils/safe_fs.js'
 import { BUILTIN_DEFAULTS } from './domains/index.js'
 import { readYamlFileIfExists, resolveFromWorkspaceRoot, resolveWorkspaceRoot } from './loader.js'
 import { loadTemplateDefaults } from './manifest.js'
@@ -442,12 +442,12 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
 
 const loadConfigFragments = (configDir: string): Record<string, unknown>[] => {
   const fragmentsDir = path.join(configDir, CONFIG_FRAGMENTS_DIRNAME)
-  if (!fs.existsSync(fragmentsDir) || !fs.statSync(fragmentsDir).isDirectory()) {
+  if (!safeFs.existsSync(configDir, fragmentsDir) || !safeFs.statSync(configDir, fragmentsDir).isDirectory()) {
     return []
   }
 
-  const files = fs
-    .readdirSync(fragmentsDir)
+  const files = safeFs
+    .readdirSync(configDir, fragmentsDir)
     .filter(name => name.endsWith('.yaml') || name.endsWith('.yml'))
     .sort()
     .map(name => path.join(fragmentsDir, name))

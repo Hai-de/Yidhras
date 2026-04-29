@@ -390,13 +390,13 @@ export const executeWorldEnginePreparedStep = async (input: {
       )
       .map(s => ({
         entity_id: s.entity_id,
-        state_json: s.state_json as Record<string, unknown>
+        state_json: s.state_json
       }));
 
     const transformDefs = worldEntities
       .filter(e => e.entity_kind === 'state_transform')
       .map(e => {
-        const payload = (e.payload_json ?? {}) as Record<string, unknown>;
+        const payload = (e.payload_json ?? {});
         return {
           source: typeof payload.source === 'string' ? payload.source : '',
           ranges: (Array.isArray(payload.ranges) ? payload.ranges : []) as Array<{

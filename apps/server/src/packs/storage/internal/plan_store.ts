@@ -1,5 +1,4 @@
-import fs from 'fs';
-
+import { safeFs } from '../../../utils/safe_fs.js';
 import { stringifyJsonSafe } from './json.js';
 
 export interface PersistedStoragePlan {
@@ -21,11 +20,11 @@ export interface PersistedStoragePlan {
   projections: Array<Record<string, unknown>>;
   install: Record<string, unknown>;
 }
-export const readPersistedStoragePlan = (storagePlanPath: string): PersistedStoragePlan | null => {
-  if (!fs.existsSync(storagePlanPath)) {
+export const readPersistedStoragePlan = (baseDir: string, storagePlanPath: string): PersistedStoragePlan | null => {
+  if (!safeFs.existsSync(baseDir, storagePlanPath)) {
     return null;
   }
-  const content = fs.readFileSync(storagePlanPath, 'utf-8').trim();
+  const content = safeFs.readFileSync(baseDir, storagePlanPath, 'utf-8').trim();
   if (content.length === 0) {
     return null;
   }
@@ -33,8 +32,9 @@ export const readPersistedStoragePlan = (storagePlanPath: string): PersistedStor
 };
 
 export const writePersistedStoragePlan = (
+  baseDir: string,
   storagePlanPath: string,
   storagePlan: PersistedStoragePlan
 ): void => {
-  fs.writeFileSync(storagePlanPath, stringifyJsonSafe(storagePlan), 'utf-8');
+  safeFs.writeFileSync(baseDir, storagePlanPath, stringifyJsonSafe(storagePlan));
 };

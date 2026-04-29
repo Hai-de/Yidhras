@@ -49,17 +49,16 @@ export const registerSystemRoutes = (app: Express, context: AppContext): void =>
   app.get(
     '/api/status',
     requireRoot,
-    async (_req, res, next) => {
-      try {
-        const snapshot = await getRuntimeStatusSnapshot(context, {
-          schedulerWorkerId: process.env.SCHEDULER_WORKER_ID,
-          schedulerPartitionIds: undefined
+    (_req, res, next) => {
+      getRuntimeStatusSnapshot(context, {
+        schedulerWorkerId: process.env.SCHEDULER_WORKER_ID,
+        schedulerPartitionIds: undefined
+      })
+        .then(snapshot => {
+          runtimeStatusDataSchema.parse(snapshot)
+          jsonOk(res, snapshot)
         })
-        runtimeStatusDataSchema.parse(snapshot)
-        jsonOk(res, snapshot)
-      } catch (error) {
-        next(error)
-      }
+        .catch(next)
     }
   )
 

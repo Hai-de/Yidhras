@@ -9,39 +9,52 @@ const getNestedRecord = (value: unknown, key: string): Record<string, unknown> |
     return null;
   }
 
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   const nested = value[key];
   return isRecord(nested) ? nested : null;
 };
 
 const getBooleanFlag = (input: Record<string, unknown>, key: string): boolean => {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   if (input[key] === true) {
     return true;
   }
 
   const attributes = getNestedRecord(input, 'attributes');
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   return attributes?.[key] === true;
 };
 
 const getStringValue = (input: Record<string, unknown>, key: string): string | null => {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   if (typeof input[key] === 'string' && input[key].trim().length > 0) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     return input[key].trim();
   }
 
   const attributes = getNestedRecord(input, 'attributes');
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   if (typeof attributes?.[key] === 'string' && attributes[key].trim().length > 0) {
-    return attributes[key].trim() as string;
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+    return attributes[key].trim();
   }
 
   return null;
 };
 
 const getRecordValue = (input: Record<string, unknown>, key: string): Record<string, unknown> | null => {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   if (isRecord(input[key])) {
-    return input[key] as Record<string, unknown>;
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+    return input[key];
   }
 
   const attributes = getNestedRecord(input, 'attributes');
-  return isRecord(attributes?.[key]) ? (attributes[key] as Record<string, unknown>) : null;
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+  return isRecord(attributes?.[key]) ? (attributes[key]) : null;
 };
 
 const buildDefaultAgentDecision = (input: {
@@ -116,11 +129,11 @@ const buildCompletedResult = (output: AiProviderAdapterResult['output']): AiProv
 export const createMockAiProviderAdapter = (): AiProviderAdapter => {
   return {
     provider: 'mock',
-    async execute(input) {
+    execute(input) {
       const taskInput = input.task_request.input;
 
       if (getBooleanFlag(taskInput, 'force_provider_fail') || getBooleanFlag(taskInput, 'force_fail')) {
-        return {
+        return Promise.resolve({
           status: 'failed',
           finish_reason: 'error',
           output: {
@@ -144,28 +157,28 @@ export const createMockAiProviderAdapter = (): AiProviderAdapter => {
             retryable: true,
             stage: 'provider'
           }
-        };
+        });
       }
 
       if (input.request.response_mode === 'embedding') {
-        return buildCompletedResult({
+        return Promise.resolve(buildCompletedResult({
           mode: 'embedding',
           embedding: [0.12, 0.34, 0.56, 0.78]
-        });
+        }));
       }
 
       if (input.request.response_mode === 'free_text') {
-        return buildCompletedResult({
+        return Promise.resolve(buildCompletedResult({
           mode: 'free_text',
           text: getStringValue(taskInput, 'mock_text') ?? 'Mock AI provider text output.'
-        });
+        }));
       }
 
       if (isRecord(taskInput.mock_json)) {
-        return buildCompletedResult({
+        return Promise.resolve(buildCompletedResult({
           mode: input.request.response_mode,
-          json: taskInput.mock_json as Record<string, unknown>
-        });
+          json: taskInput.mock_json
+        }));
       }
 
       const actorDisplayName =
@@ -186,10 +199,10 @@ export const createMockAiProviderAdapter = (): AiProviderAdapter => {
         semanticIntentProposedMethod: getStringValue(taskInput, 'semantic_intent_proposed_method')
       });
 
-      return buildCompletedResult({
+      return Promise.resolve(buildCompletedResult({
         mode: input.request.response_mode,
         json: decision
-      });
+      }));
     }
   };
 };

@@ -32,7 +32,7 @@ export const registerPackBindingRoutes = (
   app.post(
     '/api/packs/:packId/bindings',
     deps.asyncHandler(async (req, res) => {
-      const operator = (req as OperatorRequest).operator
+      const operator = (req).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -56,7 +56,7 @@ export const registerPackBindingRoutes = (
   app.get(
     '/api/packs/:packId/bindings',
     deps.asyncHandler(async (req, res) => {
-      const operator = (req as OperatorRequest).operator
+      const operator = (req).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -70,7 +70,7 @@ export const registerPackBindingRoutes = (
   app.patch(
     '/api/packs/:packId/bindings/:operatorId',
     deps.asyncHandler(async (req, res) => {
-      const operator = (req as OperatorRequest).operator
+      const operator = (req).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -94,7 +94,7 @@ export const registerPackBindingRoutes = (
   app.delete(
     '/api/packs/:packId/bindings/:operatorId',
     deps.asyncHandler(async (req, res) => {
-      const operator = (req as OperatorRequest).operator
+      const operator = (req).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -115,7 +115,7 @@ export const registerPackBindingRoutes = (
   app.get(
     '/api/me/bindings',
     deps.asyncHandler(async (req, res) => {
-      const operator = (req as OperatorRequest).operator
+      const operator = (req).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }

@@ -63,6 +63,7 @@ export const adaptPromptTreeToAiMessages = (
 
   const slots: SlotEntry[] = [];
   for (const slotId of Object.keys(registry)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     const config = registry[slotId];
     if (!isRecord(config)) {
       continue;
@@ -71,6 +72,7 @@ export const adaptPromptTreeToAiMessages = (
     if (!enabled) {
       continue;
     }
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     const text = bundle.slots[slotId];
     if (typeof text !== 'string' || text.trim().length === 0) {
       continue;
@@ -78,7 +80,7 @@ export const adaptPromptTreeToAiMessages = (
     slots.push({
       id: slotId,
       priority: typeof config.default_priority === 'number' ? config.default_priority : 0,
-      heading: config.combined_heading != null && typeof config.combined_heading === 'string' ? config.combined_heading as string : null,
+      heading: config.combined_heading != null && typeof config.combined_heading === 'string' ? config.combined_heading : null,
       text
     });
   }
@@ -93,8 +95,10 @@ export const adaptPromptTreeToAiMessages = (
     const config = registry[slot.id];
     const messageRole = (isRecord(config) && config.message_role && typeof config.message_role === 'string'
       ? (config.message_role as SlotRole)
-      : 'user') as SlotRole;
+      : 'user');
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     if (groups[messageRole]) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       groups[messageRole].push(slot);
     }
   }

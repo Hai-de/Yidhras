@@ -49,7 +49,7 @@ export const registerOperatorAuthRoutes = (
     deps.asyncHandler(async (req, res) => {
       const bearer = req.header('authorization')
       const token = bearer?.startsWith('Bearer ') ? bearer.slice(7) : ''
-      const operatorId = (req as OperatorRequest).operator?.id
+      const operatorId = (req).operator?.id
 
       if (token && operatorId) {
         await logoutOperator(context, token, operatorId, req.ip)
@@ -62,7 +62,7 @@ export const registerOperatorAuthRoutes = (
   // GET /api/auth/session
   app.get(
     '/api/auth/session',
-    deps.asyncHandler(async (req, res) => {
+    (req, res) => {
       const operator = (req as OperatorRequest).operator
       if (!operator) {
         jsonOk(res, null)
@@ -71,14 +71,14 @@ export const registerOperatorAuthRoutes = (
 
       const session = getSessionInfo(operator)
       jsonOk(res, toJsonSafe(session))
-    })
+    }
   )
 
   // POST /api/auth/refresh
   app.post(
     '/api/auth/refresh',
     deps.asyncHandler(async (req, res) => {
-      const operator = (req as OperatorRequest).operator
+      const operator = (req).operator
       if (!operator) {
         jsonOk(res, null)
         return

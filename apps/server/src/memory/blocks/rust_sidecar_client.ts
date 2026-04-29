@@ -97,9 +97,9 @@ class ProcessMemoryTriggerSidecarTransport implements MemoryTriggerSidecarTransp
 
   constructor(private readonly options: Required<MemoryTriggerSidecarClientOptions>) {}
 
-  public async start(): Promise<void> {
+  public start(): Promise<void> {
     if (this.child) {
-      return;
+      return Promise.resolve();
     }
 
     const configuredBinaryPath = this.options.binaryPath.trim();
@@ -108,10 +108,11 @@ class ProcessMemoryTriggerSidecarTransport implements MemoryTriggerSidecarTransp
       : null;
 
     if (resolvedBinaryPath) {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- binary path from admin configuration
       if (!existsSync(resolvedBinaryPath)) {
-        throw new ApiError(500, 'MEMORY_TRIGGER_SIDECAR_NOT_READY', 'Memory trigger sidecar binary does not exist', {
+        return Promise.reject(new ApiError(500, 'MEMORY_TRIGGER_SIDECAR_NOT_READY', 'Memory trigger sidecar binary does not exist', {
           binary_path: resolvedBinaryPath
-        });
+        }));
       }
 
       this.child = spawn(resolvedBinaryPath, [], {
@@ -128,10 +129,10 @@ class ProcessMemoryTriggerSidecarTransport implements MemoryTriggerSidecarTransp
 
     this.child.stdout.setEncoding('utf8');
     this.child.stderr.setEncoding('utf8');
-    this.child.stdout.on('data', chunk => {
+    this.child.stdout.on('data', (chunk: string) => {
       this.handleStdout(chunk);
     });
-    this.child.stderr.on('data', chunk => {
+    this.child.stderr.on('data', (chunk: string) => {
       const message = chunk.toString().trim();
       if (message.length > 0) {
         logger.warn(message);
@@ -157,6 +158,8 @@ class ProcessMemoryTriggerSidecarTransport implements MemoryTriggerSidecarTransp
         }));
       }
     });
+
+    return Promise.resolve();
   }
 
   public async stop(): Promise<void> {

@@ -89,7 +89,7 @@ const parseAuditFeedFilters = (query: Record<string, unknown>): AuditFeedFilters
   const parsedLimit = typeof query.limit === 'string' ? Number.parseInt(query.limit, 10) : DEFAULT_AUDIT_FEED_LIMIT;
   const limit = Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : DEFAULT_AUDIT_FEED_LIMIT, 1), MAX_AUDIT_FEED_LIMIT);
   const rawKinds = Array.isArray(query.kinds)
-    ? query.kinds
+    ? (query.kinds as unknown[])
     : typeof query.kinds === 'string'
       ? [query.kinds]
       : null;
@@ -217,7 +217,13 @@ const buildPostAuditEntries = async (
       ...(buildBigIntRangeWhere(filters, 'created_at') ?? {})
     },
     orderBy: { created_at: 'desc' }
-  });
+  }) as Array<{
+    id: string;
+    created_at: bigint;
+    source_action_intent_id: string | null;
+    author_id: string;
+    content: string;
+  }>;
 
   return posts.flatMap(post => {
     if (!matchesTickRange(filters, post.created_at)) {
@@ -407,7 +413,20 @@ const buildEventAuditEntries = async (
         }
       }
     }
-  });
+  }) as Array<{
+    id: string;
+    created_at: bigint;
+    source_action_intent_id: string | null;
+    impact_data: string | null;
+    type: string;
+    title: string;
+    description: string;
+    tick: bigint;
+    source_action_intent: {
+      actor_ref: unknown;
+      target_ref: unknown;
+    } | null;
+  }>;
 
   return events.flatMap(event => {
     if (!matchesActionIntentFilter(filters, [event.source_action_intent_id])) {
@@ -512,14 +531,14 @@ const buildWorkflowAuditEntryBySnapshot = (jobId: string, snapshot: Awaited<Retu
   const intentPayload = isRecord(intent?.payload) ? intent.payload : null;
   const intentGrounding =
     (traceMetadata && isRecord(traceMetadata.intent_grounding) ? traceMetadata.intent_grounding : null) ??
-    (decisionRecord && isRecord(decisionRecord.meta) && isRecord((decisionRecord.meta as Record<string, unknown>).intent_grounding)
-      ? ((decisionRecord.meta as Record<string, unknown>).intent_grounding as Record<string, unknown>)
+    (decisionRecord && isRecord(decisionRecord.meta) && isRecord((decisionRecord.meta).intent_grounding)
+      ? ((decisionRecord.meta).intent_grounding)
       : null) ??
     (intentPayload && isRecord(intentPayload.intent_grounding) ? intentPayload.intent_grounding : null);
   const semanticIntent =
     (traceMetadata && isRecord(traceMetadata.semantic_intent) ? traceMetadata.semantic_intent : null) ??
-    (decisionRecord && isRecord(decisionRecord.meta) && isRecord((decisionRecord.meta as Record<string, unknown>).semantic_intent)
-      ? ((decisionRecord.meta as Record<string, unknown>).semantic_intent as Record<string, unknown>)
+    (decisionRecord && isRecord(decisionRecord.meta) && isRecord((decisionRecord.meta).semantic_intent)
+      ? ((decisionRecord.meta).semantic_intent)
       : null) ??
     (intentPayload && isRecord(intentPayload.semantic_intent) ? intentPayload.semantic_intent : null);
 
@@ -560,7 +579,7 @@ const buildWorkflowAuditEntryBySnapshot = (jobId: string, snapshot: Awaited<Retu
       intent_grounding: intentGrounding,
       semantic_outcome:
         (decisionRecord && isRecord(decisionRecord.meta)
-          ? (decisionRecord.meta as Record<string, unknown>).semantic_outcome
+          ? (decisionRecord.meta).semantic_outcome
           : null) ?? null,
       objective_effect_applied:
         (intentGrounding && typeof intentGrounding.objective_effect_applied === 'boolean'

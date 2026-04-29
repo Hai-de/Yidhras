@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client';
-import fs from 'fs';
 import path from 'path';
 
 import { startAiRegistryWatcher } from './ai/registry_watcher.js';
@@ -83,6 +82,7 @@ import { syncActivePackPluginRuntime } from './plugins/runtime.js';
 import { ApiError } from './utils/api_error.js';
 import { createLogger, setLoggerRuntimeConfig } from './utils/logger.js';
 import { createNotificationManager } from './utils/notifications.js';
+import { safeFs } from './utils/safe_fs.js';
 
 const logger = createLogger('yidhras-server');
 
@@ -396,23 +396,24 @@ const start = async (): Promise<void> => {
         throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for startup');
       }
 
-      const cliMarkerPath = path.join(resolveWorkspacePath('data/runtime'), 'startup_opening.txt');
+      const runtimeDataDir = resolveWorkspacePath('data/runtime');
+      const cliMarkerPath = path.join(runtimeDataDir, 'startup_opening.txt');
       let openingId = getPreferredOpening();
-      if (fs.existsSync(cliMarkerPath)) {
-        const cliOpening = fs.readFileSync(cliMarkerPath, 'utf-8').trim();
+      if (safeFs.existsSync(runtimeDataDir, cliMarkerPath)) {
+        const cliOpening = safeFs.readFileSync(runtimeDataDir, cliMarkerPath, 'utf-8').trim();
         if (cliOpening) {
           openingId = cliOpening;
         }
-        fs.unlinkSync(cliMarkerPath);
+        safeFs.unlinkSync(runtimeDataDir, cliMarkerPath);
       }
 
       await appContext.activePackRuntime!.init(selectedPack, openingId);
-      const activePack = appContext.activePack!.getActivePack();
+      const activePack = appContext.activePack.getActivePack();
       const activePackId = activePack?.metadata.id ?? selectedPack;
       appContext.runtimeClockProjection?.rebuildFromRuntimeSeed({
         pack_id: activePackId,
-        current_tick: appContext.clock!.getCurrentTick().toString(),
-        current_revision: appContext.activePack!.getCurrentRevision().toString(),
+        current_tick: appContext.clock.getCurrentTick().toString(),
+        current_revision: appContext.activePack.getCurrentRevision().toString(),
         calendars: (activePack?.time_systems ?? []) as unknown as CalendarConfig[]
       });
 

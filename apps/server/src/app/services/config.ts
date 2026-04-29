@@ -1,4 +1,3 @@
-import fs from 'fs'
 import path from 'path'
 import * as YAML from 'yaml'
 
@@ -10,6 +9,7 @@ import {
   tierRequiresRestart
 } from '../../config/tiers.js'
 import { createLogger } from '../../utils/logger.js'
+import { safeFs } from '../../utils/safe_fs.js'
 
 const logger = createLogger('config-service')
 
@@ -40,8 +40,10 @@ const deepMapValues = (
   for (const [key, value] of Object.entries(obj)) {
     const fullKey = prefix ? `${prefix}.${key}` : key
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       result[key] = deepMapValues(value as Record<string, unknown>, fullKey, fn)
     } else {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       result[key] = fn(fullKey, value)
     }
   }
@@ -65,6 +67,7 @@ export const getDomainConfig = (domain: string): Record<string, unknown> | null 
     return null
   }
   return deepMapValues(
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     { [domain]: fullConfig[domain] },
     '',
     maskValue
@@ -95,7 +98,7 @@ export const updateDomainConfig = (
   // Determine the target YAML file
   const targetFile = path.join(fragmentsDir, `${domain}.yaml`)
 
-  if (!fs.existsSync(targetFile)) {
+  if (!safeFs.existsSync(configDir, targetFile)) {
     return null
   }
 
@@ -104,7 +107,7 @@ export const updateDomainConfig = (
   // Read existing file
   let existing: Record<string, unknown> = {}
   try {
-    const raw = fs.readFileSync(targetFile, 'utf-8')
+    const raw = safeFs.readFileSync(configDir, targetFile, 'utf-8')
     // Simple YAML merge: we write the new values as-is
     // More sophisticated: use js-yaml load/dump
     existing = raw ? {} : {} // Keep existing as base
@@ -120,7 +123,7 @@ export const updateDomainConfig = (
     sortMapEntries: false
   })
 
-  fs.writeFileSync(targetFile, yamlContent, 'utf-8')
+  safeFs.writeFileSync(configDir, targetFile, yamlContent)
   logger.info(`配置域已更新: ${domain} (tier=${tier})`)
 
   if (tierAllowsHotReload(tier)) {

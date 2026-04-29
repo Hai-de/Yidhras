@@ -85,7 +85,7 @@ export const buildWorldPackBootstrapReport = (
 
 export const printInitReport = (
   report: InitReport,
-  logger: (message: string) => void = log.info
+  logger: (message: string) => void = (...args) => log.info(...args)
 ): void => {
   logger(`[init-report] ${JSON.stringify(report)}`);
 };

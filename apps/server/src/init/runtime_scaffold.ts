@@ -1,8 +1,8 @@
-import fs from 'fs';
 import path from 'path';
 
 import { resolveFromWorkspaceRoot, resolveWorkspaceRoot } from '../config/loader.js';
 import { createLogger } from '../utils/logger.js';
+import { safeFs } from '../utils/safe_fs.js';
 
 const log = createLogger('runtime-scaffold');
 
@@ -41,21 +41,22 @@ export interface RuntimeConfigScaffoldResult {
 }
 
 const ensureFileFromTemplate = (
+  workspaceRoot: string,
   targetFilePath: string,
   templateFilePath: string,
   result: RuntimeConfigScaffoldResult
 ): void => {
-  if (fs.existsSync(targetFilePath)) {
+  if (safeFs.existsSync(workspaceRoot, targetFilePath)) {
     result.existingFiles.push(targetFilePath);
     return;
   }
 
-  if (!fs.existsSync(templateFilePath)) {
+  if (!safeFs.existsSync(workspaceRoot, templateFilePath)) {
     throw new Error(`[configw] 缺少版本管理模板文件: ${templateFilePath}`);
   }
 
-  fs.mkdirSync(path.dirname(targetFilePath), { recursive: true });
-  fs.copyFileSync(templateFilePath, targetFilePath);
+  safeFs.mkdirSync(workspaceRoot, path.dirname(targetFilePath), { recursive: true });
+  safeFs.copyFileSync(workspaceRoot, templateFilePath, targetFilePath);
   result.createdFiles.push(targetFilePath);
 };
 
@@ -67,7 +68,7 @@ export const ensureRuntimeConfigScaffold = (
   const worldPackTemplateDir = resolveFromWorkspaceRoot(VERSION_MANAGED_WORLD_PACK_TEMPLATE_DIR_RELATIVE_PATH, workspaceRoot);
   const aiModelsConfigTemplatePath = resolveFromWorkspaceRoot(VERSION_MANAGED_AI_CONFIG_RELATIVE_PATH, workspaceRoot);
 
-  fs.mkdirSync(configDir, { recursive: true });
+  safeFs.mkdirSync(workspaceRoot, configDir, { recursive: true });
 
   const result: RuntimeConfigScaffoldResult = {
     workspaceRoot,
@@ -77,22 +78,22 @@ export const ensureRuntimeConfigScaffold = (
   };
 
   for (const basename of SEEDED_CONFIG_BASENAMES) {
-    ensureFileFromTemplate(path.join(configDir, basename), path.join(configTemplateDir, basename), result);
+    ensureFileFromTemplate(workspaceRoot, path.join(configDir, basename), path.join(configTemplateDir, basename), result);
   }
 
   // Seed conf.d/ fragments (new split-config layout)
   const fragmentsTemplateDir = path.join(configTemplateDir, CONFIG_FRAGMENTS_DIRNAME);
   const fragmentsTargetDir = path.join(configDir, CONFIG_FRAGMENTS_DIRNAME);
 
-  if (fs.existsSync(fragmentsTemplateDir)) {
-    fs.mkdirSync(fragmentsTargetDir, { recursive: true });
+  if (safeFs.existsSync(workspaceRoot, fragmentsTemplateDir)) {
+    safeFs.mkdirSync(workspaceRoot, fragmentsTargetDir, { recursive: true });
 
-    const fragmentFiles = fs
-      .readdirSync(fragmentsTemplateDir)
+    const fragmentFiles = safeFs
+      .readdirSync(workspaceRoot, fragmentsTemplateDir)
       .filter(name => name.endsWith('.yaml') || name.endsWith('.yml'));
 
     for (const basename of fragmentFiles) {
-      ensureFileFromTemplate(
+      ensureFileFromTemplate(workspaceRoot,
         path.join(fragmentsTargetDir, basename),
         path.join(fragmentsTemplateDir, basename),
         result
@@ -101,10 +102,10 @@ export const ensureRuntimeConfigScaffold = (
   }
 
   for (const basename of SEEDED_WORLD_PACK_TEMPLATE_BASENAMES) {
-    ensureFileFromTemplate(path.join(configDir, 'templates', 'world-pack', basename), path.join(worldPackTemplateDir, basename), result);
+    ensureFileFromTemplate(workspaceRoot, path.join(configDir, 'templates', 'world-pack', basename), path.join(worldPackTemplateDir, basename), result);
   }
 
-  ensureFileFromTemplate(
+  ensureFileFromTemplate(workspaceRoot,
     resolveFromWorkspaceRoot(path.join('apps', 'server', 'config', DEFAULT_AI_MODELS_CONFIG_BASENAME), workspaceRoot),
     aiModelsConfigTemplatePath,
     result
@@ -115,7 +116,7 @@ export const ensureRuntimeConfigScaffold = (
 
 export const logRuntimeConfigScaffoldResult = (
   result: RuntimeConfigScaffoldResult,
-  logger: (message: string) => void = log.info
+  logger: (message: string) => void = (...args) => log.info(...args)
 ): void => {
   logger(
     `[init:configw] config_dir=${result.configDir} | created=${result.createdFiles.length} | existing=${result.existingFiles.length}`

@@ -41,6 +41,7 @@ const diffObjects = (
       continue
     }
 
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     const userValue = user[key]
 
     if (

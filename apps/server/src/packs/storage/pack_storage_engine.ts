@@ -1,5 +1,4 @@
-import fs from 'fs';
-
+import { safeFs } from '../../utils/safe_fs.js';
 import type { WorldPackStorage, WorldPackStorageCollectionDefinition } from '../schema/storage_schema.js';
 import { type PersistedStoragePlan, writePersistedStoragePlan } from './internal/plan_store.js';
 import { ensurePackRuntimeDirectory, type PackRuntimeDatabaseLocation } from './pack_db_locator.js';
@@ -45,7 +44,7 @@ export class PackStorageEngine {
     storage: WorldPackStorage
   ): Promise<PackStorageMaterializeSummary> {
     const location = ensurePackRuntimeDirectory(packId, storage.runtime_db_file);
-    const runtimeDbExisted = fs.existsSync(location.runtimeDbPath);
+    const runtimeDbExisted = safeFs.existsSync(location.packRootDir, location.runtimeDbPath);
     const storagePlanPath = `${location.runtimeDbPath}.storage-plan.json`;
 
     await this.adapter.ensureEngineOwnedSchema(packId);
@@ -62,7 +61,7 @@ export class PackStorageEngine {
       });
     }
 
-    writePersistedStoragePlan(storagePlanPath, persistedPlan);
+    writePersistedStoragePlan(location.packRootDir, storagePlanPath, persistedPlan);
 
     return {
       location,

@@ -185,7 +185,7 @@ function encodeFieldValue(field: CollectionFieldDefinition, value: unknown): str
     case 'timestamp':
     case 'string':
     default:
-      return String(value);
+      return JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined);
   }
 }
 
@@ -205,7 +205,7 @@ function decodeFieldValue(field: CollectionFieldDefinition, value: unknown): unk
       return value;
     }
     default:
-      return typeof value === 'string' ? value : String(value);
+      return typeof value === 'string' ? value : (JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined));
   }
 }
 
@@ -254,14 +254,19 @@ function decodeEngineOwnedRow(tableName: string, row: Record<string, unknown>): 
         key === 'scheduled_after_ticks' || key === 'scheduled_for_tick' || key === 'created_at_tick' || key === 'updated_at_tick' ||
         key === 'bound_at' || key === 'imported_at' || key === 'confirmed_at' || key === 'enabled_at' || key === 'disabled_at' ||
         key === 'started_at' || key === 'finished_at' || key === 'last_heartbeat_at') {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       decoded[key] = value !== null && value !== undefined ? toBigIntValue(value) : null;
     } else if (scope && key === 'priority') {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       decoded[key] = typeof value === 'number' ? value : Number(value);
     } else if (scope && key === 'revocable') {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       decoded[key] = toNullableBooleanValue(value);
     } else if (key === 'tags' || (scope && key === 'target_selector_json')) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       decoded[key] = parseJsonValue(value) ?? (key === 'tags' ? [] : {});
     } else if (key === 'tags_json') {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       decoded[key] = parseStringArrayValue(value);
     } else if (key === 'payload_json' || key === 'state_json' || key === 'scope_json' || key === 'conditions_json' ||
                key === 'metadata_json' || key === 'impact_data' || key === 'details' || key === 'summary' ||
@@ -271,8 +276,10 @@ function decodeEngineOwnedRow(tableName: string, row: Record<string, unknown>): 
                key === 'attempted_models_json' || key === 'usage_json' || key === 'safety_json' || key === 'request_json' ||
                key === 'response_json' || key === 'detail_json' || key === 'candidate_reasons' || key === 'replay_override_snapshot' ||
                key === 'emitted_events_json') {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       decoded[key] = parseJsonValue(value);
     } else {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       decoded[key] = value;
     }
   }
@@ -307,7 +314,7 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
 
     for (const def of ENGINE_OWNED_TABLE_DEFS) {
       const tableName = this.qualifiedName(packId, def.name);
-      const ddl = `CREATE TABLE IF NOT EXISTS ${tableName} (\n        ${def.ddl}\n      )`;
+      const ddl = `CREATE TABLE IF NOT EXISTS ${tableName} (\n        ${def.ddl.join(',\n        ')}\n      )`;
       await this.prisma.$executeRawUnsafe(ddl);
 
       for (const idx of def.indexes) {
@@ -382,7 +389,7 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
         rec['id'] as string
       );
       if (existingRows.length > 0) {
-        const existing = existingRows[0] as Record<string, unknown>;
+        const existing = existingRows[0];
         if (existing['created_at'] !== null) {
           origCreatedAt = existing['created_at'];
         }
@@ -405,6 +412,7 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
       : `INSERT INTO ${table} (${columns.map(c => `"${c}"`).join(', ')}) VALUES (${values.join(', ')}) ON CONFLICT DO NOTHING`;
 
     const params = columns.map(c => {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       const val = upsertRecord[c];
       if (c === 'tags_json' || c === 'target_selector_json' || c === 'payload_json' || c === 'state_json' ||
           c === 'scope_json' || c === 'conditions_json' || c === 'metadata_json' || c === 'emitted_events_json') {

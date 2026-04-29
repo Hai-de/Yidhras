@@ -491,7 +491,7 @@ Operator-Subject 统一权限层通过 JWT Bearer Token 认证，所有 operator
 
 ## 17. 世界包快照接口
 
-快照是对世界包运行时完整状态的存档，覆盖三层数据：包运行时 SQLite（世界引擎状态）、中央 Prisma 数据库（Agent/Identity/Binding/Post/Relationship/Memory/ContextOverlay 等 domain 数据）、内存时钟状态。快照以目录形式存储在 `data/world_packs/<pack_id>/snapshots/<snapshot_id>/`，包含 `metadata.json`、`runtime.sqlite`、`prisma.json`、`storage-plan.json` 四个文件。
+快照是对世界包运行时完整状态的存档，覆盖三层数据：包运行时数据库（世界引擎状态，SQLite 或 PostgreSQL adapter）、中央 Prisma 数据库（Agent/Identity/Binding/Post/Relationship/Memory/ContextOverlay 等 domain 数据）、内存时钟状态。快照以目录形式存储在 `data/world_packs/<pack_id>/snapshots/<snapshot_id>/`，包含 `metadata.json`、`runtime.sqlite`、`prisma.json`、`storage-plan.json` 四个文件。
 
 所有快照接口均需 pack 操作员鉴权（`packAccessGuard`）。创建和恢复操作要求模拟已暂停（自动暂停/恢复）。
 
@@ -509,7 +509,7 @@ Operator-Subject 统一权限层通过 JWT Bearer Token 认证，所有 operator
   - 说明：从快照恢复 pack 运行时状态。会清除当前所有运行时数据
   - 参数：`{ confirm_data_loss: boolean }` — 必须为 `true` 才执行，否则返回 409
   - 返回：`{ restored: true, pack_id, snapshot_id, restored_at_tick }`
-  - 恢复流程：暂停 → 卸载 sidecar → 清除运行时 SQLite → 拆除 kernel 桥接 → 删除 pack-scoped Prisma 记录 → 复制快照 SQLite 和 storage-plan → 重建 Prisma 记录（事务） → 恢复时钟 → 幂等物化 → 重载 sidecar
+  - 恢复流程：暂停 → 卸载 sidecar → 清除运行时数据库 → 拆除 kernel 桥接 → 删除 pack-scoped Prisma 记录 → 复制快照数据库和 storage-plan → 重建 Prisma 记录（事务） → 恢复时钟 → 幂等物化 → 重载 sidecar
 
 - **DELETE `/api/packs/:packId/snapshots/:snapshotId`**
   - 说明：删除指定快照及其所有文件

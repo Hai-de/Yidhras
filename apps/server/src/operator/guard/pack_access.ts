@@ -35,66 +35,70 @@ export const packAccessGuard = (
   context: AppInfrastructure,
   options: PackAccessGuardOptions = {}
 ) => {
-  return async (
+  return (
     req: OperatorRequest,
     _res: Response,
     next: NextFunction
-  ): Promise<void> => {
-    const packId = options.packIdParam
-      ? (req.params[options.packIdParam] as string | undefined)
-      : options.packIdQuery
-        ? (req.query[options.packIdQuery] as string | undefined)
-        : undefined
+  ): void => {
+    const run = async (): Promise<void> => {
+      const packId = options.packIdParam
+        ? (req.params[options.packIdParam] as string | undefined)
+        : options.packIdQuery
+          ? (req.query[options.packIdQuery] as string | undefined)
+          : undefined
 
-    if (!packId) {
-      next()
-      return
-    }
-
-    if (!req.operator) {
-      if (options.allowPublic) {
+      if (!packId) {
         next()
         return
       }
-      throw new ApiError(
-        401,
-        OPERATOR_ERROR_CODE.OPERATOR_REQUIRED,
-        'Authentication required'
-      )
+
+      if (!req.operator) {
+        if (options.allowPublic) {
+          next()
+          return
+        }
+        throw new ApiError(
+          401,
+          OPERATOR_ERROR_CODE.OPERATOR_REQUIRED,
+          'Authentication required'
+        )
+      }
+
+      const access = await checkPackAccess(context, req.operator.id, packId)
+
+      if (!access.allowed) {
+        await logOperatorAudit(context, {
+          operator_id: req.operator.id,
+          pack_id: packId,
+          action: AUDIT_ACTION.PACK_ACCESS_DENIED,
+          detail_json: { reason: access.reason },
+          client_ip: req.ip
+        })
+
+        throw new ApiError(
+          403,
+          OPERATOR_ERROR_CODE.PACK_ACCESS_DENIED,
+          `Operator not bound to pack: ${packId}`,
+          { reason: access.reason }
+        )
+      }
+
+      if (
+        options.minBindingType &&
+        access.bindingType &&
+        (bindingTypeRank[access.bindingType] ?? 0) <
+          (bindingTypeRank[options.minBindingType] ?? 0)
+      ) {
+        throw new ApiError(
+          403,
+          OPERATOR_ERROR_CODE.PACK_ACCESS_DENIED,
+          `Insufficient binding type: need ${options.minBindingType}, got ${access.bindingType}`
+        )
+      }
+
+      next()
     }
 
-    const access = await checkPackAccess(context, req.operator.id, packId)
-
-    if (!access.allowed) {
-      await logOperatorAudit(context, {
-        operator_id: req.operator.id,
-        pack_id: packId,
-        action: AUDIT_ACTION.PACK_ACCESS_DENIED,
-        detail_json: { reason: access.reason },
-        client_ip: req.ip
-      })
-
-      throw new ApiError(
-        403,
-        OPERATOR_ERROR_CODE.PACK_ACCESS_DENIED,
-        `Operator not bound to pack: ${packId}`,
-        { reason: access.reason }
-      )
-    }
-
-    if (
-      options.minBindingType &&
-      access.bindingType &&
-      (bindingTypeRank[access.bindingType] ?? 0) <
-        (bindingTypeRank[options.minBindingType] ?? 0)
-    ) {
-      throw new ApiError(
-        403,
-        OPERATOR_ERROR_CODE.PACK_ACCESS_DENIED,
-        `Insufficient binding type: need ${options.minBindingType}, got ${access.bindingType}`
-      )
-    }
-
-    next()
+    run().catch(next)
   }
 }

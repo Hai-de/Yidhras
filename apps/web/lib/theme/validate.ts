@@ -26,7 +26,7 @@ export const validateResolvedTheme = (
     issues.push({
       path: 'meta.colorScheme',
       severity: 'warning',
-      message: `Invalid colorScheme '${theme.meta.colorScheme}', fallback applied.`,
+      message: `Invalid colorScheme '${String(theme.meta.colorScheme)}', fallback applied.`,
       fallbackApplied: true
     })
     theme.meta.colorScheme = fallbackTheme.meta.colorScheme

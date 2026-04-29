@@ -1,6 +1,6 @@
-import fs from 'fs'
 import path from 'path'
 
+import { safeFs } from '../utils/safe_fs.js'
 import { deepMerge } from './merge.js'
 
 interface ConfigKeyTree {
@@ -16,20 +16,24 @@ export const extractKeyTree = (obj: Record<string, unknown>): ConfigKeyTree => {
 
   for (const [key, value] of Object.entries(obj)) {
     if (value === null || value === undefined) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       tree[key] = true
       continue
     }
 
     if (Array.isArray(value)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       tree[key] = true
       continue
     }
 
     if (typeof value === 'object') {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       tree[key] = extractKeyTree(value as Record<string, unknown>)
       continue
     }
 
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     tree[key] = true
   }
 
@@ -46,12 +50,12 @@ export const loadTemplateDefaults = (
 ): Record<string, unknown> => {
   const fragmentsDir = path.join(templatesDir, 'conf.d')
 
-  if (!fs.existsSync(fragmentsDir) || !fs.statSync(fragmentsDir).isDirectory()) {
+  if (!safeFs.existsSync(templatesDir, fragmentsDir) || !safeFs.statSync(templatesDir, fragmentsDir).isDirectory()) {
     return {}
   }
 
-  const files = fs
-    .readdirSync(fragmentsDir)
+  const files = safeFs
+    .readdirSync(templatesDir, fragmentsDir)
     .filter(name => name.endsWith('.yaml') || name.endsWith('.yml'))
     .sort()
     .map(name => path.join(fragmentsDir, name))

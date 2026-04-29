@@ -8,7 +8,6 @@ import type {
   RuntimeWorldMetadata
 } from '../composables/api/useSystemApi'
 import { padTickString } from '../lib/time/format'
-import type { TickString } from '../lib/time/tick'
 import { ZERO_TICK } from '../lib/time/tick'
 
 const formatFreshnessLabel = (timestamp: number | null, isSyncing: boolean, idleLabel: string): string => {
@@ -25,7 +24,7 @@ const formatFreshnessLabel = (timestamp: number | null, isSyncing: boolean, idle
 
 export const useRuntimeStore = defineStore('runtime', {
   state: () => ({
-    absoluteTicks: ZERO_TICK as TickString,
+    absoluteTicks: ZERO_TICK,
     calendars: [] as TimeFormatted[],
     status: 'idle' as 'idle' | 'running' | 'paused' | 'error',
     worldPack: null as RuntimeWorldMetadata | null,

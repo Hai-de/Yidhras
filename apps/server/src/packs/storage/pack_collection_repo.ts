@@ -1,8 +1,8 @@
+import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
-import fs from 'fs';
-
 import { createLogger } from '../../utils/logger.js';
+import { safeFs } from '../../utils/safe_fs.js';
 import { stringifyJsonSafe, toJsonSafe } from './internal/json.js';
 import type { PersistedStoragePlan } from './internal/plan_store.js';
 import { readPersistedStoragePlan } from './internal/plan_store.js';
@@ -33,7 +33,7 @@ const toNullableString = (value: unknown): string | null => {
   if (value === null || value === undefined) {
     return null;
   }
-  return String(value);
+  return JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined);
 };
 
 const openDatabase = (runtimeDbPath: string): DatabaseSync => {
@@ -138,7 +138,7 @@ const encodeFieldValue = (
     case 'authority_ref':
     case 'enum':
     default:
-      return String(value);
+      return JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined);
   }
 };
 
@@ -198,7 +198,7 @@ const readCollectionDefinition = (
   runtimeDbPath: string,
   collectionKey: string
 ): PersistedPackCollectionDefinition | null => {
-  const storagePlan = readPersistedStoragePlan(`${runtimeDbPath}.storage-plan.json`);
+  const storagePlan = readPersistedStoragePlan(path.dirname(runtimeDbPath), `${runtimeDbPath}.storage-plan.json`);
   if (!storagePlan) {
     return null;
   }
@@ -209,7 +209,7 @@ export const ensureDeclaredPackCollectionTables = async (
   runtimeDbPath: string,
   collections: PersistedPackCollectionDefinition[]
 ): Promise<void> => {
-  if (!fs.existsSync(runtimeDbPath) || collections.length === 0) {
+  if (!safeFs.existsSync(path.dirname(runtimeDbPath), runtimeDbPath) || collections.length === 0) {
     return;
   }
 
@@ -229,7 +229,7 @@ export const upsertDeclaredPackCollectionRecord = async (
   record: PackCollectionRecord
 ): Promise<PackCollectionRecord | null> => {
   const location = resolvePackRuntimeDatabaseLocation(packId);
-  if (!fs.existsSync(location.runtimeDbPath)) {
+  if (!safeFs.existsSync(location.packRootDir, location.runtimeDbPath)) {
     logger.warn(`runtime db missing for pack=${packId} path=${location.runtimeDbPath}`);
     return null;
   }
@@ -248,6 +248,7 @@ export const upsertDeclaredPackCollectionRecord = async (
     for (const statement of buildCreateIndexStatements(collection)) {
       db.prepare(statement).run();
     }
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     db.prepare(buildUpsertStatement(collection, columns)).run(...columns.map(column => normalized[column] ?? null));
     return decodeRowForCollection(collection, normalized);
   });
@@ -258,7 +259,7 @@ export const listDeclaredPackCollectionRecords = async (
   collectionKey: string
 ): Promise<PackCollectionRecord[]> => {
   const location = resolvePackRuntimeDatabaseLocation(packId);
-  if (!fs.existsSync(location.runtimeDbPath)) {
+  if (!safeFs.existsSync(location.packRootDir, location.runtimeDbPath)) {
     logger.warn(`runtime db missing while listing pack=${packId} path=${location.runtimeDbPath}`);
     return [];
   }

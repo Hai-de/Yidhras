@@ -55,7 +55,7 @@ export const registerConfigBackupRoutes = (
   // List backups
   app.get(
     '/api/config/backups',
-    deps.asyncHandler(async (req, res) => {
+    (req, res) => {
       const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, 'OPERATOR_REQUIRED', 'Authentication required')
@@ -63,13 +63,13 @@ export const registerConfigBackupRoutes = (
       const query = parseQuery(listBackupsQuerySchema, req.query, 'INVALID_LIST_QUERY')
       const backups = listConfigBackups(query.limit, query.offset)
       jsonOk(res, toJsonSafe(backups))
-    })
+    }
   )
 
   // Get backup details
   app.get(
     '/api/config/backups/:id',
-    deps.asyncHandler(async (req, res) => {
+    (req, res) => {
       const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, 'OPERATOR_REQUIRED', 'Authentication required')
@@ -79,33 +79,33 @@ export const registerConfigBackupRoutes = (
         throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params.id} 不存在`)
       }
       jsonOk(res, toJsonSafe(backup))
-    })
+    }
   )
 
   // Download backup
   app.get(
     '/api/config/backups/:id/download',
     requireRoot,
-    deps.asyncHandler(async (req, res) => {
+    (req, res) => {
       const backup = getConfigBackup(req.params.id)
       if (!backup) {
         throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params.id} 不存在`)
       }
       res.download(backup.path, `${backup.id}.tar.gz`)
-    })
+    }
   )
 
   // Delete backup
   app.delete(
     '/api/config/backups/:id',
     requireRoot,
-    deps.asyncHandler(async (req, res) => {
+    (req, res) => {
       const deleted = deleteConfigBackup(req.params.id)
       if (!deleted) {
         throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params.id} 不存在`)
       }
       jsonOk(res, { deleted: true })
-    })
+    }
   )
 
   // Restore backup
@@ -122,22 +122,22 @@ export const registerConfigBackupRoutes = (
   // Get backup policy
   app.get(
     '/api/config/backup-policy',
-    deps.asyncHandler(async (req, res) => {
+    (req, res) => {
       const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, 'OPERATOR_REQUIRED', 'Authentication required')
       }
       jsonOk(res, toJsonSafe(getBackupPolicy()))
-    })
+    }
   )
 
   // Cleanup (apply retention policy)
   app.post(
     '/api/config/backups/cleanup',
     requireRoot,
-    deps.asyncHandler(async (_req, res) => {
+    (_req, res) => {
       const removed = applyRetentionPolicy()
       jsonOk(res, { removed })
-    })
+    }
   )
 }

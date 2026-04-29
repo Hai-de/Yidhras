@@ -39,6 +39,7 @@ export function getHostAgentIds(context: InferenceContext): string[] {
 
 function resolveTokenValues(tokens: string[], hostAgentIds: string[]): string[] {
   return tokens.flatMap(token => {
+    // eslint-disable-next-line security/detect-possible-timing-attacks -- internal token comparison, not auth
     if (token === HOST_AGENT_TOKEN) {
       return hostAgentIds.length > 0 ? hostAgentIds : [];
     }
@@ -62,7 +63,9 @@ export function resolveSlotPermission(input: PermissionCheckInput): PermissionCh
   const slotPerms = input.slot_config.permissions;
   const fragPerms = input.fragment.permissions;
   const allowedList: string[] | boolean | undefined | null =
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     (fragPerms as unknown as Record<string, unknown>)?.[permKey] as string[] | boolean | undefined | null
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     ?? (slotPerms as unknown as Record<string, unknown>)?.[permKey] as string[] | boolean | undefined | null;
 
   if (allowedList === null) {
@@ -79,7 +82,7 @@ export function resolveSlotPermission(input: PermissionCheckInput): PermissionCh
   }
 
   // string[] for read/write/adjust/visible_to
-  const resolvedTokens = resolveTokenValues(allowedList as string[], input.host_agent_ids);
+  const resolvedTokens = resolveTokenValues(allowedList, input.host_agent_ids);
 
   if (resolvedTokens.length === 0) {
     return { allowed: false, reason: `${input.permission_kind} allowlist is empty` };
@@ -135,7 +138,7 @@ function applyFragmentPermissions(
 
   for (const child of fragment.children) {
     if (!('kind' in child)) {
-      applyFragmentPermissions(child as PromptFragmentV2, slotConfig, context, hostAgentIds);
+      applyFragmentPermissions(child, slotConfig, context, hostAgentIds);
     }
   }
 }

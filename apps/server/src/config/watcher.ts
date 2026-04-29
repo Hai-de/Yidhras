@@ -16,6 +16,7 @@ const getConfigDir = (): string | null => {
   let dir = process.cwd()
   for (let i = 0; i < 10; i++) {
     const configDir = path.join(dir, 'data', 'configw', 'conf.d')
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- 启动时发现配置目录
     if (fs.existsSync(configDir) && fs.statSync(configDir).isDirectory()) {
       return configDir
     }
@@ -56,6 +57,7 @@ export const startConfigWatcher = (): ConfigWatcher | null => {
     const filePath = path.join(configDir, filename)
     let stat: fs.Stats | null = null
     try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- 从内部发现的配置路径
       stat = fs.statSync(filePath)
     } catch {
       // file deleted or inaccessible — treat as change
@@ -86,6 +88,7 @@ export const startConfigWatcher = (): ConfigWatcher | null => {
     }, DEBOUNCE_MS)
   }
 
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- 从内部发现的配置路径
   const watcher = fs.watch(configDir, { persistent: false }, handleChange)
 
   logger.info(`配置文件监听已启动: ${configDir}`)

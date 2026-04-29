@@ -59,32 +59,36 @@ export class PackRuntimeInstance implements PackRuntimeHost {
     };
   }
 
-  public async load(): Promise<void> {
+  public load(): Promise<void> {
     this.health = {
       status: 'loaded',
       message: this.health.message ?? null
     };
+    return Promise.resolve();
   }
 
-  public async start(): Promise<void> {
+  public start(): Promise<void> {
     this.health = {
       status: 'running',
       message: this.health.message ?? null
     };
+    return Promise.resolve();
   }
 
-  public async stop(): Promise<void> {
+  public stop(): Promise<void> {
     this.health = {
       status: 'stopped',
       message: this.health.message ?? null
     };
+    return Promise.resolve();
   }
 
-  public async dispose(): Promise<void> {
+  public dispose(): Promise<void> {
     this.health = {
       status: 'stopped',
       message: null
     };
+    return Promise.resolve();
   }
 
   public getHandle(): PackRuntimeHandle {

@@ -1,5 +1,4 @@
 import type { PrismaClient } from '@prisma/client';
-import fs from 'fs';
 
 import { ChronosEngine } from '../clock/engine.js';
 import type { CalendarConfig } from '../clock/types.js';
@@ -11,6 +10,7 @@ import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js'
 import { pluginRuntimeRegistry } from '../plugins/runtime.js';
 import { ApiError } from '../utils/api_error.js';
 import { createLogger } from '../utils/logger.js';
+import { safeFs } from '../utils/safe_fs.js';
 
 const logger = createLogger('pack-runtime-registry');
 import type { DefaultPackCatalogService } from './pack_catalog_service.js';
@@ -29,8 +29,8 @@ export interface DefaultPackRuntimeRegistryServiceOptions {
   packCatalog: Pick<DefaultPackCatalogService, 'resolvePackByIdOrFolder'>;
   prisma: PrismaClient;
   packStorageAdapter: PackStorageAdapter;
-  getActivePack(): WorldPack | undefined;
-  getStartupLevel(): 'ok' | 'degraded' | 'fail';
+  getActivePack: () => WorldPack | undefined;
+  getStartupLevel: () => 'ok' | 'degraded' | 'fail';
 }
 
 export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, PackRuntimeObservation, PackRuntimeControl {
@@ -189,15 +189,15 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     }
 
     const location = resolvePackRuntimeDatabaseLocation(packId);
-    const runtimeDbPath = location.runtimeDbPath;
+    const { packRootDir, runtimeDbPath } = location;
     const storagePlanPath = `${runtimeDbPath}.storage-plan.json`;
 
-    if (fs.existsSync(runtimeDbPath)) {
-      fs.rmSync(runtimeDbPath, { force: true });
+    if (safeFs.existsSync(packRootDir, runtimeDbPath)) {
+      safeFs.rmSync(packRootDir, runtimeDbPath, { force: true });
       logger.info(`Removed runtime database for unloaded pack ${packId}: ${runtimeDbPath}`);
     }
-    if (fs.existsSync(storagePlanPath)) {
-      fs.rmSync(storagePlanPath, { force: true });
+    if (safeFs.existsSync(packRootDir, storagePlanPath)) {
+      safeFs.rmSync(packRootDir, storagePlanPath, { force: true });
     }
 
     pluginRuntimeRegistry.clearRuntimes(packId);

@@ -36,9 +36,9 @@ export function aggregateFragmentTokens(fragment: PromptFragmentV2): number {
   let total = 0;
   for (const child of fragment.children) {
     if ('kind' in child) {
-      total += (child as PromptBlock).estimated_tokens ?? 0;
+      total += (child).estimated_tokens ?? 0;
     } else {
-      total += aggregateFragmentTokens(child as PromptFragmentV2);
+      total += aggregateFragmentTokens(child);
     }
   }
   fragment.estimated_tokens = total;
@@ -69,6 +69,7 @@ export function createPromptTokenCounter(tokenizer: PromptTokenizer): PromptToke
         for (const fragment of fragments) {
           if (fragment.permission_denied) continue;
           let fragTokens = 0;
+          // eslint-disable-next-line @typescript-eslint/require-await -- API contract requires Promise<void> return
           await walkPromptBlocksAsync([fragment], async (block: PromptBlock) => {
             const text = block.rendered;
             if (typeof text === 'string' && text.length > 0) {
@@ -85,6 +86,7 @@ export function createPromptTokenCounter(tokenizer: PromptTokenizer): PromptToke
           byFragment[fragment.id] = fragTokens;
         }
         const total = Object.values(byFragment).reduce((s, v) => s + v, 0);
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
         bySlot[slotId] = { total, by_fragment: byFragment };
       }
 

@@ -29,7 +29,7 @@ export class TiktokenTokenizerAdapter implements PromptTokenizer {
     const truncated = tokens.slice(0, maxTokens);
     const decoded = this.encoder.decode(truncated);
     if (typeof decoded === 'string') return decoded;
-    const uint8 = decoded as Uint8Array;
+    const uint8 = decoded;
     return new TextDecoder().decode(uint8);
   }
 }

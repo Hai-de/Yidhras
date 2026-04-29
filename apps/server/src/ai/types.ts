@@ -192,7 +192,7 @@ export interface AiTaskRequest {
   input: Record<string, unknown>;
   prompt_context: {
     messages?: AiMessage[];
-    prompt_bundle_v2?: unknown | null;
+    prompt_bundle_v2?: unknown;
   };
   output_contract?: {
     mode: AiResponseMode;

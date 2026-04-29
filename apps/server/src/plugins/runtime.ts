@@ -178,8 +178,8 @@ const registerManifestContributions = (runtime: RegisteredServerPluginRuntime): 
     host.registerContextSource(
       {
         name: `plugin:${runtime.plugin_id}:context_source:${contextSourceId}`,
-        async buildNodes() {
-          return [];
+        buildNodes() {
+          return Promise.resolve([]);
         }
       },
       'server.context_source.register'
@@ -190,8 +190,8 @@ const registerManifestContributions = (runtime: RegisteredServerPluginRuntime): 
     host.registerPromptWorkflowStep(
       {
         kind: 'bundle_finalize',
-        async execute(input) {
-          return {
+        execute(input) {
+          return Promise.resolve({
             ...input.state,
             diagnostics: {
               ...input.state.diagnostics,
@@ -210,7 +210,7 @@ const registerManifestContributions = (runtime: RegisteredServerPluginRuntime): 
                 }
               ]
             }
-          };
+          });
         }
       },
       'server.prompt_workflow.register'

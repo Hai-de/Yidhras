@@ -1,11 +1,15 @@
-import fs from 'fs';
 import path from 'path';
 
-import { getWorldBootstrapConfig, getWorldPacksDir } from '../config/runtime_config.js';
+import {
+  getRuntimeConfigMetadata,
+  getWorldBootstrapConfig,
+  getWorldPacksDir
+} from '../config/runtime_config.js';
 import { type InstalledPackRuntimeSummary,installPackRuntime } from '../kernel/install/install_pack.js';
 import { PackManifestLoader } from '../packs/manifest/loader.js';
 import { SqlitePackStorageAdapter } from '../packs/storage/internal/SqlitePackStorageAdapter.js';
 import { createLogger } from '../utils/logger.js';
+import { safeFs } from '../utils/safe_fs.js';
 
 const log = createLogger('world-pack-bootstrap');
 
@@ -21,6 +25,7 @@ export interface WorldPackBootstrapResult {
 }
 
 export const ensureBootstrapWorldPack = async (): Promise<WorldPackBootstrapResult> => {
+  const workspaceRoot = getRuntimeConfigMetadata().workspaceRoot;
   const worldPacksDir = getWorldPacksDir();
   const bootstrapConfig = getWorldBootstrapConfig();
   const targetConfigPath = path.join(bootstrapConfig.targetPackDirPath, DEFAULT_PACK_CONFIG_FILE);
@@ -38,23 +43,23 @@ export const ensureBootstrapWorldPack = async (): Promise<WorldPackBootstrapResu
     return result;
   }
 
-  if (!fs.existsSync(bootstrapConfig.templateFilePath)) {
+  if (!safeFs.existsSync(workspaceRoot, bootstrapConfig.templateFilePath)) {
     throw new Error(`[bootstrap] Template file not found: ${bootstrapConfig.templateFilePath}`);
   }
 
-  if (!fs.existsSync(worldPacksDir)) {
-    fs.mkdirSync(worldPacksDir, { recursive: true });
+  if (!safeFs.existsSync(workspaceRoot, worldPacksDir)) {
+    safeFs.mkdirSync(workspaceRoot, worldPacksDir, { recursive: true });
   }
 
-  if (!fs.existsSync(bootstrapConfig.targetPackDirPath)) {
-    fs.mkdirSync(bootstrapConfig.targetPackDirPath, { recursive: true });
+  if (!safeFs.existsSync(workspaceRoot, bootstrapConfig.targetPackDirPath)) {
+    safeFs.mkdirSync(workspaceRoot, bootstrapConfig.targetPackDirPath, { recursive: true });
   }
 
-  const shouldWrite = bootstrapConfig.overwrite || !fs.existsSync(targetConfigPath);
+  const shouldWrite = bootstrapConfig.overwrite || !safeFs.existsSync(workspaceRoot, targetConfigPath);
   if (!shouldWrite) {
     result.status = 'skipped';
   } else {
-    fs.copyFileSync(bootstrapConfig.templateFilePath, targetConfigPath);
+    safeFs.copyFileSync(workspaceRoot, bootstrapConfig.templateFilePath, targetConfigPath);
 
     const templateDir = path.dirname(bootstrapConfig.templateFilePath);
     const templateBasename = path.basename(
@@ -66,12 +71,12 @@ export const ensureBootstrapWorldPack = async (): Promise<WorldPackBootstrapResu
     const targetReadmePath = path.join(bootstrapConfig.targetPackDirPath, 'README.md');
     const targetChangelogPath = path.join(bootstrapConfig.targetPackDirPath, 'CHANGELOG.md');
 
-    if (fs.existsSync(readmeTemplatePath) && (bootstrapConfig.overwrite || !fs.existsSync(targetReadmePath))) {
-      fs.copyFileSync(readmeTemplatePath, targetReadmePath);
+    if (safeFs.existsSync(workspaceRoot, readmeTemplatePath) && (bootstrapConfig.overwrite || !safeFs.existsSync(workspaceRoot, targetReadmePath))) {
+      safeFs.copyFileSync(workspaceRoot, readmeTemplatePath, targetReadmePath);
     }
 
-    if (fs.existsSync(changelogTemplatePath) && (bootstrapConfig.overwrite || !fs.existsSync(targetChangelogPath))) {
-      fs.copyFileSync(changelogTemplatePath, targetChangelogPath);
+    if (safeFs.existsSync(workspaceRoot, changelogTemplatePath) && (bootstrapConfig.overwrite || !safeFs.existsSync(workspaceRoot, targetChangelogPath))) {
+      safeFs.copyFileSync(workspaceRoot, changelogTemplatePath, targetChangelogPath);
     }
 
     result.status = bootstrapConfig.overwrite ? 'updated' : 'created';
@@ -85,7 +90,7 @@ export const ensureBootstrapWorldPack = async (): Promise<WorldPackBootstrapResu
 
 export const logWorldPackBootstrapResult = (
   result: WorldPackBootstrapResult,
-  logger: (message: string) => void = log.info
+  logger: (message: string) => void = (...args) => log.info(...args)
 ): void => {
   switch (result.status) {
     case 'disabled':

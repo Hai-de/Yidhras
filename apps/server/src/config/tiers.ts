@@ -62,7 +62,9 @@ const DEFAULT_TIER = ConfigTier.DANGEROUS
  */
 export const resolveConfigTier = (pathPrefix: string): ConfigTier => {
   // Exact match
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   if (CONFIG_DOMAIN_TIERS[pathPrefix] !== undefined) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     return CONFIG_DOMAIN_TIERS[pathPrefix]
   }
 
@@ -72,7 +74,9 @@ export const resolveConfigTier = (pathPrefix: string): ConfigTier => {
 
   for (let i = parts.length; i >= 1; i--) {
     const prefix = parts.slice(0, i).join('.')
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     if (CONFIG_DOMAIN_TIERS[prefix] !== undefined) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       bestMatch = CONFIG_DOMAIN_TIERS[prefix]
       break
     }

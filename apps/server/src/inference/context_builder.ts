@@ -8,7 +8,7 @@ import { createContextAssemblyPort } from '../app/services/context_memory_ports.
 import { getLatestEventEvidenceRecord } from '../app/services/event_evidence_repository.js';
 import { IdentityService } from '../identity/service.js';
 import type { IdentityContext } from '../identity/types.js';
-import type { PromptVariableContext, PromptVariableNamespace, VariablePool } from '../narrative/types.js';
+import type { PromptVariableContext, PromptVariableNamespace } from '../narrative/types.js';
 import {
   createPromptVariableContext,
   createPromptVariableContextSummary,
@@ -386,6 +386,7 @@ const buildPolicySummary = async (
       evaluation.fields
     );
     const key = `${evaluation.resource}_${evaluation.action}`;
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     results[key] = {
       allowed: result.allowedFields.size > 0,
       fields: Array.from(result.allowedFields)
@@ -568,7 +569,7 @@ const buildPackRuntimeContract = (context: Ctx): InferencePackRuntimeContract =>
 
 const createPackRuntimeContractResolver = (): PackRuntimeContractResolver => {
   return {
-    async resolvePackRuntimeContract(
+    resolvePackRuntimeContract(
       context: Ctx,
       input: {
         pack_id: string;
@@ -578,20 +579,20 @@ const createPackRuntimeContractResolver = (): PackRuntimeContractResolver => {
       if (input.mode === 'stable') {
         const activePack = context.activePack.getActivePack();
         if (!activePack || activePack.metadata.id !== input.pack_id) {
-          return {};
+          return Promise.resolve({});
         }
-        return buildPackRuntimeContract(context);
+        return Promise.resolve(buildPackRuntimeContract(context));
       }
 
       const summary = context.packRuntimeLookup?.getPackRuntimeSummary(input.pack_id);
       if (!summary) {
-        return {};
+        return Promise.resolve({});
       }
 
       // NOTE: packRuntimeLookup.getPackRuntimeSummary uses slimmer return shape;
       // pack-scoped invocation_rules for experimental mode are not yet exposed
       // through a focused port. Returning empty contract for now.
-      return {};
+      return Promise.resolve({});
     }
   };
 };
@@ -644,6 +645,7 @@ const buildInferenceVariableContext = (input: {
 
   const layers = layerOrder
     .map((namespace) => {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       const layerConfig = configuredLayers?.[namespace];
       if (!layerConfig) return null;
       if (layerConfig.enabled === false) return null;
@@ -826,7 +828,7 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         },
         world_prompts: pack.prompts ?? {},
         world_ai: pack.ai ?? null,
-        visible_variables: flattenPromptVariableContextToVisibleVariables(variableContext) as VariablePool,
+        visible_variables: flattenPromptVariableContextToVisibleVariables(variableContext),
         variable_context: variableContext,
         policy_summary: policySummary,
         transmission_profile: transmissionProfile,

@@ -65,7 +65,7 @@ const toPromptVariableValue = (value: unknown): PromptVariableValue => {
   if (isRecord(value)) {
     return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, toPromptVariableValue(entry)]));
   }
-  return String(value);
+  return JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined);
 };
 
 export const normalizePromptVariableRecord = (value: Record<string, unknown> | null | undefined): PromptVariableRecord => {
@@ -92,6 +92,7 @@ export const flattenPromptVariableContextToVisibleVariables = (
   for (const layer of context.layers) {
     for (const [key, value] of Object.entries(layer.alias_values ?? {})) {
       if (!(key in result)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
         result[key] = toLegacyVariableValue(value);
       }
     }
@@ -149,7 +150,7 @@ export const previewPromptVariableValue = (value: unknown, maxLength = 160): str
       const keys = Object.keys(value);
       return `[object:${keys.length}] ${keys.slice(0, 8).join(', ')}`;
     }
-    return String(value);
+    return JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined);
   })();
 
   return rendered.length > maxLength ? `${rendered.slice(0, maxLength)}…` : rendered;
@@ -162,6 +163,7 @@ const getValueAtPath = (path: string, value: unknown): unknown => {
 
   return path.split('.').reduce<unknown>((current, segment) => {
     if (isRecord(current) && segment in current) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       return current[segment];
     }
     return undefined;

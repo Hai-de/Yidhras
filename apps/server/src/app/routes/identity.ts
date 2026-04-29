@@ -53,7 +53,7 @@ export const registerIdentityRoutes = (
         context,
         body,
         {
-          parseOptionalTick: deps.parseOptionalTick
+          parseOptionalTick: (value: unknown, fieldName: string) => deps.parseOptionalTick(value, fieldName)
         }
       );
 

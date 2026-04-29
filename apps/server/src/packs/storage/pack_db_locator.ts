@@ -1,7 +1,7 @@
-import fs from 'fs';
 import path from 'path';
 
 import { resolveFromWorkspaceRoot, resolveWorkspaceRoot } from '../../config/loader.js';
+import { safeFs } from '../../utils/safe_fs.js';
 
 const DEFAULT_PACK_RUNTIME_DB_BASENAME = 'runtime.sqlite';
 
@@ -48,6 +48,6 @@ export const ensurePackRuntimeDirectory = (
   runtimeDbFileName?: string
 ): PackRuntimeDatabaseLocation => {
   const location = resolvePackRuntimeDatabaseLocation(packId, runtimeDbFileName);
-  fs.mkdirSync(location.packRootDir, { recursive: true });
+  safeFs.mkdirSync(location.packRootDir, location.packRootDir, { recursive: true });
   return location;
 };

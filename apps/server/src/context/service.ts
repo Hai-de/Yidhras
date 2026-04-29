@@ -47,6 +47,8 @@ export interface CreateContextServiceOptions {
 
 const buildNodeCountsByType = (nodeTypes: string[]): Record<string, number> => {
   return nodeTypes.reduce<Record<string, number>>((acc, nodeType) => {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     acc[nodeType] = (acc[nodeType] ?? 0) + 1;
     return acc;
   }, {});

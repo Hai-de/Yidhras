@@ -1,8 +1,8 @@
 import type { PackSnapshotMetadata } from '@yidhras/contracts';
 import { packSnapshotMetadataSchema } from '@yidhras/contracts';
-import fs from 'fs';
 import path from 'path';
 
+import { safeFs } from '../../utils/safe_fs.js';
 import { getPackRootDir } from '../storage/pack_db_locator.js';
 
 export interface SnapshotLocation {
@@ -50,46 +50,51 @@ export const resolveSnapshotLocation = (packId: string, snapshotId: string): Sna
 };
 
 export const listSnapshotDirs = (packId: string): string[] => {
+  const packRoot = getPackRootDir(packId);
   const snapshotsDir = getPackSnapshotsDir(packId);
 
-  if (!fs.existsSync(snapshotsDir)) {
+  if (!safeFs.existsSync(packRoot, snapshotsDir)) {
     return [];
   }
 
-  return fs
-    .readdirSync(snapshotsDir, { withFileTypes: true })
+  return safeFs
+    .readdirSync(packRoot, snapshotsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
 };
 
 export const readSnapshotMetadata = (location: SnapshotLocation): PackSnapshotMetadata => {
-  if (!fs.existsSync(location.metadataPath)) {
+  const packRoot = getPackRootDir(location.packId);
+  if (!safeFs.existsSync(packRoot, location.metadataPath)) {
     throw new Error(`Snapshot metadata not found: ${location.metadataPath}`);
   }
 
-  const raw = fs.readFileSync(location.metadataPath, 'utf-8');
+  const raw = safeFs.readFileSync(packRoot, location.metadataPath, 'utf-8');
   const parsed = JSON.parse(raw) as unknown;
 
   return packSnapshotMetadataSchema.parse(parsed);
 };
 
 export const writeSnapshotMetadata = (location: SnapshotLocation, metadata: PackSnapshotMetadata): void => {
-  fs.mkdirSync(location.snapshotDir, { recursive: true });
-  fs.writeFileSync(location.metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
+  const packRoot = getPackRootDir(location.packId);
+  safeFs.mkdirSync(packRoot, location.snapshotDir, { recursive: true });
+  safeFs.writeFileSync(packRoot, location.metadataPath, JSON.stringify(metadata, null, 2));
 };
 
 export const deleteSnapshotDir = (location: SnapshotLocation): void => {
-  if (fs.existsSync(location.snapshotDir)) {
-    fs.rmSync(location.snapshotDir, { recursive: true, force: true });
+  const packRoot = getPackRootDir(location.packId);
+  if (safeFs.existsSync(packRoot, location.snapshotDir)) {
+    safeFs.rmSync(packRoot, location.snapshotDir, { recursive: true, force: true });
   }
 };
 
 export const snapshotFilesExist = (location: SnapshotLocation): boolean => {
+  const packRoot = getPackRootDir(location.packId);
   return (
-    fs.existsSync(location.metadataPath) &&
-    fs.existsSync(location.runtimeDbPath) &&
-    fs.existsSync(location.prismaJsonPath) &&
-    fs.existsSync(location.storagePlanPath)
+    safeFs.existsSync(packRoot, location.metadataPath) &&
+    safeFs.existsSync(packRoot, location.runtimeDbPath) &&
+    safeFs.existsSync(packRoot, location.prismaJsonPath) &&
+    safeFs.existsSync(packRoot, location.storagePlanPath)
   );
 };

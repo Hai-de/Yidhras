@@ -6,8 +6,8 @@ export interface MemorySummarizer {
 
 export const createNoopMemorySummarizer = (): MemorySummarizer => {
   return {
-    async summarize(_entries: MemoryEntry[], _limit: number): Promise<MemoryEntry[]> {
-      return [];
+    summarize(_entries: MemoryEntry[], _limit: number): Promise<MemoryEntry[]> {
+      return Promise.resolve([]);
     }
   };
 };

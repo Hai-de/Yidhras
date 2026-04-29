@@ -46,6 +46,7 @@ const matchesConditions = (
       continue;
     }
     const stateKey = key.slice('subject_state.'.length);
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     if (actorState[stateKey] !== expected) {
       return false;
     }

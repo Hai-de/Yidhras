@@ -97,7 +97,7 @@ const buildMemoryFragmentsV2 = (
 export const createMemoryInjectorTreeProcessor = (): PromptTreeProcessor => {
   return {
     name: 'memory-injector',
-    async process(input: PromptTreeProcessorInput): Promise<PromptTree> {
+    process(input: PromptTreeProcessorInput): Promise<PromptTree> {
       const ctx = input.context;
 
       const shortTermFragments = buildMemoryFragmentsV2(
@@ -126,6 +126,7 @@ export const createMemoryInjectorTreeProcessor = (): PromptTreeProcessor => {
         if (slotId === 'memory_short_term' || slotId === 'memory_long_term' || slotId === 'memory_summary') {
           continue;
         }
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
         nextBySlot[slotId] = fragments;
       }
 
@@ -142,7 +143,7 @@ export const createMemoryInjectorTreeProcessor = (): PromptTreeProcessor => {
       nextBySlot['memory_short_term'] = shortTermFragments;
       nextBySlot['memory_long_term'] = longTermFragments;
 
-      return { ...input.tree, fragments_by_slot: nextBySlot };
+      return Promise.resolve({ ...input.tree, fragments_by_slot: nextBySlot });
     }
   };
 };

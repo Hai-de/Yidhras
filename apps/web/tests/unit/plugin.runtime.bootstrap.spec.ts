@@ -11,7 +11,7 @@ vi.mock('../../composables/api/usePluginApi', () => ({
 }))
 
 vi.mock('../../features/plugins/runtime/loader', () => ({
-  loadPluginRuntimeModule: (...args: unknown[]) => loadPluginRuntimeModuleMock(...args),
+  loadPluginRuntimeModule: (...args: unknown[]): unknown => loadPluginRuntimeModuleMock(...args),
   getPluginRuntimeLoadErrorMessage: (error: unknown) => (error instanceof Error ? error.message : 'Unknown plugin runtime load error')
 }))
 

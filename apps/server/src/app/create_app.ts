@@ -21,7 +21,7 @@ export const createApp = ({ context, registerRoutes }: CreateAppOptions) => {
 
   app.use(cors());
   app.use(express.json());
-  app.use(operatorAuthMiddleware(context));
+  app.use((req, res, next) => { void operatorAuthMiddleware(context)(req, res, next); });
   app.use(identityInjector());
   app.use(requestIdMiddleware());
 

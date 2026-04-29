@@ -265,6 +265,7 @@ const resolvePluginWebAssetWithScope = async (
     });
   }
 
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- 从插件存储库加载已验证的Web资源路径
   if (!fs.existsSync(absolutePath)) {
     throw new ApiError(404, 'PLUGIN_WEB_ASSET_NOT_FOUND', 'Plugin web asset file not found', {
       asset_path: normalizedAssetPath,

@@ -70,17 +70,17 @@ export const createMockInferenceProvider = (): InferenceProvider => {
   return {
     name: 'mock',
     strategies: ['mock'],
-    async run(context) {
+    run(context) {
       if (context.attributes.force_fail === true) {
-        throw new Error('Forced mock provider failure');
+        return Promise.reject(new Error('Forced mock provider failure'));
       }
 
       if (context.attributes.force_invalid_payload === true) {
-        return {
+        return Promise.resolve({
           action_type: 'post_message',
           target_ref: null,
           payload: null
-        };
+        });
       }
 
       if (context.attributes.mock_action_type === 'semantic_intent') {
@@ -104,7 +104,7 @@ export const createMockInferenceProvider = (): InferenceProvider => {
             ? context.attributes.semantic_intent_proposed_method
             : null;
 
-        return {
+        return Promise.resolve({
           action_type: 'semantic_intent',
           target_ref: targetRef,
           payload: {
@@ -125,11 +125,11 @@ export const createMockInferenceProvider = (): InferenceProvider => {
               target_ref: targetRef
             }
           }
-        };
+        });
       }
 
       if (context.attributes.mock_action_type === 'trigger_event') {
-        return {
+        return Promise.resolve({
           action_type: 'trigger_event',
           target_ref: null,
           payload: {
@@ -154,11 +154,11 @@ export const createMockInferenceProvider = (): InferenceProvider => {
           meta: {
             provider_mode: 'mock_trigger_event'
           }
-        };
+        });
       }
 
       if (context.attributes.mock_action_type === 'adjust_relationship') {
-        return {
+        return Promise.resolve({
           action_type: 'adjust_relationship',
           target_ref: {
             agent_id:
@@ -183,11 +183,11 @@ export const createMockInferenceProvider = (): InferenceProvider => {
           meta: {
             provider_mode: 'mock_adjust_relationship'
           }
-        };
+        });
       }
 
       if (context.attributes.mock_action_type === 'adjust_snr') {
-        return {
+        return Promise.resolve({
           action_type: 'adjust_snr',
           target_ref: {
             agent_id:
@@ -214,7 +214,7 @@ export const createMockInferenceProvider = (): InferenceProvider => {
           meta: {
             provider_mode: 'mock_adjust_snr'
           }
-        };
+        });
       }
 
       const mockedContent =
@@ -231,7 +231,7 @@ export const createMockInferenceProvider = (): InferenceProvider => {
         context.transmission_profile.drop_chance
       );
 
-      return {
+      return Promise.resolve({
         action_type: 'post_message',
         target_ref: null,
         payload: {
@@ -250,7 +250,7 @@ export const createMockInferenceProvider = (): InferenceProvider => {
           transmission_drop_chance: transmissionDropChance,
           drop_reason: transmissionPolicy === 'blocked' ? 'policy_blocked' : context.transmission_profile.drop_reason
         }
-      };
+      });
     }
   };
 };

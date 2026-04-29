@@ -36,8 +36,8 @@ flowchart LR
     end
 
     subgraph Persistence[Persistence]
-        KernelDB[(Kernel-side Prisma / SQLite)]
-        PackDB[(Pack-local runtime SQLite)]
+        KernelDB[(Kernel-side Prisma\nSQLite / PostgreSQL)]
+        PackDB[(Pack-local runtime DB\nSQLite / PostgreSQL adapter)]
     end
 
     subgraph Sidecar[Rust sidecar]
@@ -114,8 +114,8 @@ flowchart LR
         Objective[Objective enforcement\nrule matching / mutation planning]
     end
 
-    KernelDB[(Kernel-side Prisma / SQLite)]
-    PackDB[(Pack-local runtime SQLite)]
+    KernelDB[(Kernel-side Prisma\nSQLite / PostgreSQL)]
+    PackDB[(Pack-local runtime DB\nSQLite / PostgreSQL adapter)]
 
     RuntimeLoop --> KernelFacade
     KernelFacade --> WEP

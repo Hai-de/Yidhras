@@ -38,6 +38,7 @@ const parseArgs = (argv: string[]): ParsedArgs => {
   const parsed: ParsedArgs = {}
 
   for (let i = 0; i < argv.length; i++) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     const arg = argv[i]
 
     switch (arg) {

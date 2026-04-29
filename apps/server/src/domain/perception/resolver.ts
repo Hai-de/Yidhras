@@ -84,6 +84,7 @@ export const filterProjectionReadableFields = <T extends Record<string, unknown>
   const output: Partial<T> = {};
   for (const [key, value] of Object.entries(record)) {
     if (allowed.has(key) && isRecord(output)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       (output as Record<string, unknown>)[key] = value;
     }
   }

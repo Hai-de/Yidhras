@@ -1,5 +1,4 @@
 import {
-  type WorldObjectiveExecutionDiagnostics,
   type WorldObjectiveRuleDefinition,
   type WorldObjectiveRuleInvocation,
   type WorldObjectiveWorldEntity,
@@ -83,7 +82,7 @@ export const toObjectiveRulePlanFromSidecarResult = (result: WorldRuleExecuteObj
     capability_key: result.capability_key,
     mediator_id: result.mediator_id,
     target_entity_id: result.target_entity_id,
-    diagnostics: result.diagnostics as WorldObjectiveExecutionDiagnostics,
+    diagnostics: result.diagnostics,
     mutations: result.mutations,
     emitted_events: result.emitted_events
   };

@@ -21,7 +21,8 @@ export const loadPluginRuntimeModule = async (plugin: PluginWebManifestSnapshot)
     return cached
   }
 
-  const pending = import(/* @vite-ignore */ plugin.web_bundle_url).then(module => {
+  // eslint-disable-next-line no-unsanitized/method -- web_bundle_url originates from server-verified plugin manifests
+  const pending = import(/* @vite-ignore */ plugin.web_bundle_url).then((module: unknown) => {
     if (module && typeof module === 'object' && 'default' in module) {
       return (module as { default: unknown }).default
     }

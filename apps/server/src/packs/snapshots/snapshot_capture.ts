@@ -1,10 +1,10 @@
 import type { PrismaClient } from '@prisma/client';
 import type { PackSnapshotMetadata, PackSnapshotPrismaData } from '@yidhras/contracts';
 import crypto from 'crypto';
-import fs from 'fs';
 
 import type { ActivePackRuntimeFacade } from '../../app/services/app_context_ports.js';
-import { resolvePackRuntimeDatabaseLocation } from '../storage/pack_db_locator.js';
+import { safeFs } from '../../utils/safe_fs.js';
+import { getPackRootDir, resolvePackRuntimeDatabaseLocation } from '../storage/pack_db_locator.js';
 import {
   deleteSnapshotDir,
   listSnapshotDirs,
@@ -253,26 +253,27 @@ export const capturePackSnapshot = async (input: CaptureSnapshotInput): Promise<
 
   const memoryState = captureInMemoryState(activePackRuntime, packId, getExperimentalTick, getExperimentalRevision);
   const prismaData = await capturePrismaData(prisma, packId);
+  const packRoot = getPackRootDir(packId);
 
-  fs.mkdirSync(location.snapshotDir, { recursive: true });
+  safeFs.mkdirSync(packRoot, location.snapshotDir, { recursive: true });
 
   const runtimeDbLocation = resolvePackRuntimeDatabaseLocation(packId);
 
-  if (fs.existsSync(runtimeDbLocation.runtimeDbPath)) {
-    fs.copyFileSync(runtimeDbLocation.runtimeDbPath, location.runtimeDbPath);
+  if (safeFs.existsSync(packRoot, runtimeDbLocation.runtimeDbPath)) {
+    safeFs.copyFileSync(packRoot, runtimeDbLocation.runtimeDbPath, location.runtimeDbPath);
   }
 
   const storagePlanPath = `${runtimeDbLocation.runtimeDbPath}.storage-plan.json`;
-  if (fs.existsSync(storagePlanPath)) {
-    fs.copyFileSync(storagePlanPath, location.storagePlanPath);
+  if (safeFs.existsSync(packRoot, storagePlanPath)) {
+    safeFs.copyFileSync(packRoot, storagePlanPath, location.storagePlanPath);
   } else {
-    fs.writeFileSync(location.storagePlanPath, JSON.stringify({}), 'utf-8');
+    safeFs.writeFileSync(packRoot, location.storagePlanPath, JSON.stringify({}));
   }
 
-  fs.writeFileSync(location.prismaJsonPath, JSON.stringify(prismaData, null, 2), 'utf-8');
+  safeFs.writeFileSync(packRoot, location.prismaJsonPath, JSON.stringify(prismaData, null, 2));
 
-  const runtimeDbSizeBytes = fs.existsSync(location.runtimeDbPath)
-    ? fs.statSync(location.runtimeDbPath).size
+  const runtimeDbSizeBytes = safeFs.existsSync(packRoot, location.runtimeDbPath)
+    ? safeFs.statSync(packRoot, location.runtimeDbPath).size
     : 0;
 
   const metadata: PackSnapshotMetadata = {

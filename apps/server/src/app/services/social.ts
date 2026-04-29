@@ -389,7 +389,7 @@ export const listSocialFeed = async (
       return true;
     }
 
-    return compareSocialFeedCursorPosition(buildSocialFeedCursor(post, sort), cursor) > 0;
+    return compareSocialFeedCursorPosition(buildSocialFeedCursor(post as { id: string; created_at: bigint; noise_level: number }, sort), cursor) > 0;
   });
 
   const hasNextPage = cursorFilteredPosts.length > limit;
@@ -413,7 +413,7 @@ export const listSocialFeed = async (
     items,
     page_info: {
       has_next_page: hasNextPage,
-      next_cursor: hasNextPage ? encodeSocialFeedCursor(buildSocialFeedCursor(pagePosts[pagePosts.length - 1], sort)) : null
+      next_cursor: hasNextPage ? encodeSocialFeedCursor(buildSocialFeedCursor(pagePosts[pagePosts.length - 1] as { id: string; created_at: bigint; noise_level: number }, sort)) : null
     }
   };
 };

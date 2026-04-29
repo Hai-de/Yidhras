@@ -1,8 +1,8 @@
-import fs from 'fs';
 import path from 'path';
 import * as YAML from 'yaml';
 import { fromError } from 'zod-validation-error';
 
+import { safeFs } from '../../utils/safe_fs.js';
 import type { WorldPackOpening } from '../schema/constitution_schema.js';
 import { worldPackOpeningSchema } from '../schema/constitution_schema.js';
 
@@ -14,7 +14,7 @@ export const loadPackOpening = (packDir: string, openingId: string): WorldPackOp
 
   for (const ext of YAML_EXTENSIONS) {
     const candidate = path.join(packDir, OPENINGS_DIR, `${openingId}${ext}`);
-    if (fs.existsSync(candidate)) {
+    if (safeFs.existsSync(packDir, candidate)) {
       filePath = candidate;
       break;
     }
@@ -24,8 +24,8 @@ export const loadPackOpening = (packDir: string, openingId: string): WorldPackOp
     throw new Error(`[OpeningLoader] Opening "${openingId}" not found in pack: ${packDir}`);
   }
 
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const parsed = YAML.parse(content);
+  const content = safeFs.readFileSync(packDir, filePath, 'utf-8');
+  const parsed = YAML.parse(content) as Record<string, unknown>;
 
   const result = worldPackOpeningSchema.safeParse(parsed);
   if (!result.success) {

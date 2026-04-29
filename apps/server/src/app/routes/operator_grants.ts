@@ -30,7 +30,7 @@ export const registerGrantRoutes = (
   app.post(
     '/api/packs/:packId/grants',
     deps.asyncHandler(async (req, res) => {
-      const operator = (req as OperatorRequest).operator
+      const operator = (req).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -63,7 +63,7 @@ export const registerGrantRoutes = (
   app.get(
     '/api/packs/:packId/grants',
     deps.asyncHandler(async (req, res) => {
-      const operator = (req as OperatorRequest).operator
+      const operator = (req).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -77,7 +77,7 @@ export const registerGrantRoutes = (
   app.delete(
     '/api/packs/:packId/grants/:grantId',
     deps.asyncHandler(async (req, res) => {
-      const operator = (req as OperatorRequest).operator
+      const operator = (req).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }

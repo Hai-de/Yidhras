@@ -12,34 +12,48 @@
 >
 > 当前主事实：
 > - ORM / migration 工具：Prisma
-> - 默认 datasource：SQLite
-> - Prisma schema：`apps/server/prisma/schema.prisma`
+> - 支持后端：SQLite（默认）/ PostgreSQL
+> - Prisma schema：`apps/server/prisma/schema.sqlite.prisma` + `apps/server/prisma/schema.pg.prisma`
 > - 默认本地数据库文件：`data/yidhras.sqlite`
 >
-> 本文档关注“部署与迁移操作”，不替代架构边界说明；架构边界请看 `../ARCH.md`。
+> 本文档关注”部署与迁移操作”，不替代架构边界说明；架构边界请看 `../ARCH.md`。
 
 ---
 
 ## 1. 当前数据库形态
 
-当前后端使用 Prisma，schema 定义在：
+当前后端使用 Prisma，支持 SQLite 和 PostgreSQL 两种后端，通过 `PRISMA_DB_PROVIDER` 环境变量切换（默认 `sqlite`）。
 
-- `apps/server/prisma/schema.prisma`
+Schema 已按 provider 拆分：
 
-其中 datasource 为：
+- `apps/server/prisma/schema.sqlite.prisma` — SQLite datasource
+- `apps/server/prisma/schema.pg.prisma` — PostgreSQL datasource
+
+两者模型定义完全一致，仅 `datasource` provider 与 `generator` 输出路径不同。
+
+SQLite datasource 定义：
 
 ```prisma
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider = “sqlite”
+  url      = env(“DATABASE_URL”)
+}
+```
+
+PostgreSQL datasource 定义：
+
+```prisma
+datasource db {
+  provider = “postgresql”
+  url      = env(“DATABASE_URL”)
 }
 ```
 
 也就是说：
 
-- **Prisma 通过 `DATABASE_URL` 决定连接目标**；
+- **Prisma 通过 `DATABASE_URL` 决定连接目标，通过 `PRISMA_DB_PROVIDER` 决定 schema**；
 - 当前仓库默认以 **SQLite** 方式运行；
-- migration 通过 `prisma migrate deploy` 应用。
+- migration 通过 `prisma migrate deploy` 应用（`package.json` 脚本已参数化 `--schema`）。
 
 ### 默认开发数据库位置
 
@@ -361,36 +375,44 @@ pnpm prepare:runtime
 
 ---
 
-## 9. 更换数据库后端时的现实说明
+## 9. 切换到 PostgreSQL
 
-当前仓库在 Prisma schema 中使用的是：
+仓库已完成数据库分布式重构，Kernel-side 和 Pack-local 两层均支持 PostgreSQL。
 
-```prisma
-provider = "sqlite"
+### 9.1 Kernel-side (Prisma)
+
+设置环境变量：
+
+```bash
+export PRISMA_DB_PROVIDER=postgresql
+export DATABASE_URL=”postgresql://user:password@host:5432/yidhras?schema=public”
 ```
 
-这意味着：
+然后执行：
 
-- **简单改一个 `DATABASE_URL`，不能直接切到 PostgreSQL/MySQL**；
-- 真正切换数据库后端时，至少还需要：
-  1. 修改 `schema.prisma` 中 datasource provider；
-  2. 重新生成 Prisma Client；
-  3. 重新处理 migration；
-  4. 检查 SQLite 特有假设（文件路径、锁、sidecar 文件、开发脚本等）。
+```bash
+pnpm --filter yidhras-server exec prisma migrate deploy --schema prisma/schema.pg.prisma
+pnpm prepare:runtime
+```
 
-### 当前建议
+`package.json` 脚本会根据 `PRISMA_DB_PROVIDER` 自动选择正确的 schema 文件。
 
-第一阶段已经把 repository/store 边界收口得更清晰了，但**部署者层面的推荐做法仍然是：优先继续使用 Prisma + SQLite，只调整数据库文件位置、迁移顺序和初始化流程**。
+### 9.2 Pack-local (Pack Storage Adapter)
 
-如果你真要切换数据库后端，建议至少做这些准备：
+Pack runtime DB 同样通过 `PRISMA_DB_PROVIDER` 切换 adapter：
 
-- 单独立项；
-- 先确认 `schema.prisma` 是否能无损迁移；
-- 审查所有与 SQLite 文件语义耦合的脚本：
-  - `reset_dev_db.ts`
-  - `SimulationManager.prepareDatabase()` 中的 SQLite pragma
-  - 各类“database is locked”相关经验和重试逻辑
-- 在测试环境做完整迁移演练，而不是直接在现有环境上改。
+- `sqlite` → `SqlitePackStorageAdapter`（每 pack 独立 SQLite 文件）
+- `postgresql` → `PostgresPackStorageAdapter`（schema-per-pack 策略，`pack_<id>.*` 表）
+
+PostgreSQL adapter 使用 Prisma raw SQL（`$queryRaw` / `$executeRaw`），所有 DDL 已从 SQLite 方言适配为 PostgreSQL 方言。
+
+### 9.3 切换前注意事项
+
+- 现有 SQLite 数据需手动迁移到 PostgreSQL（schema 兼容，但数据文件格式不同）
+- `reset_dev_db.ts` 当前仅操作默认 SQLite 文件路径，不覆盖 PostgreSQL 数据库
+- SQLite 特有的 pragma 配置（`busy_timeout_ms` 等）在 PostgreSQL 下自动跳过
+- 确认 PostgreSQL 连接权限与 schema 创建权限
+- 在测试环境做完整迁移演练，而不是直接在现有环境上改
 
 ---
 

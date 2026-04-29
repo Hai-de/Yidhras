@@ -86,6 +86,7 @@ const resolveTemplatePathValue = (context: Record<string, unknown>, path: string
     if (!isRecord(current) || !(part in current)) {
       return '';
     }
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     current = current[part];
   }
   return current ?? '';

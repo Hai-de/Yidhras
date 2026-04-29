@@ -38,6 +38,7 @@ const resolveLoggingConfig = (): { level: LogLevel; format: 'text' | 'json' } | 
   const envFormat = process.env.LOGGING_FORMAT as 'text' | 'json' | undefined;
   if (envLevel || envFormat) {
     return {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       level: (envLevel && LEVEL_ORDER[envLevel] !== undefined ? envLevel : 'info'),
       format: (envFormat === 'json' ? 'json' : 'text')
     };
@@ -72,6 +73,7 @@ export const createLogger = (module: string): Logger => {
   const shouldLog = (level: LogLevel): boolean => {
     const config = resolveLoggingConfig();
     if (!config) return true;
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     return LEVEL_ORDER[level] >= LEVEL_ORDER[config.level];
   };
 

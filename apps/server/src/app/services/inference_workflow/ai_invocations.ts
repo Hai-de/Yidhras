@@ -331,7 +331,7 @@ export const listAiInvocations = async (
     items: pageItems,
     page_info: {
       has_next_page: hasNextPage,
-      next_cursor: hasNextPage ? encodeAiInvocationCursor(pageItems[pageItems.length - 1]!) : null
+      next_cursor: hasNextPage ? encodeAiInvocationCursor(pageItems[pageItems.length - 1]) : null
     },
     summary: {
       returned: pageItems.length,

@@ -65,7 +65,7 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T
     const timer = setTimeout(() => reject(new Error('TOOL_EXECUTION_TIMEOUT')), timeoutMs);
     promise.then(
       (value) => { clearTimeout(timer); resolve(value); },
-      (err) => { clearTimeout(timer); reject(err); }
+      (err) => { clearTimeout(timer); reject(err instanceof Error ? err : new Error(String(err))); }
     );
   });
 };

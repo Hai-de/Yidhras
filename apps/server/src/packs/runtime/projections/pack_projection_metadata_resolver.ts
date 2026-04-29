@@ -31,36 +31,36 @@ export const createPackProjectionMetadataResolver = (
 ): PackProjectionMetadataResolver => {
   const ctx = context as unknown as AppContext;
   return {
-    async resolve(packId: string, mode: PackProjectionScopeMode, feature: string): Promise<PackProjectionResolution> {
+    resolve(packId: string, mode: PackProjectionScopeMode, feature: string): Promise<PackProjectionResolution> {
       const resolvedPackId = assertPackScope(ctx, packId, mode, feature);
 
       if (mode === 'stable') {
         const activePack = context.activePack.getActivePack();
         if (!activePack || activePack.metadata.id !== resolvedPackId) {
-          throw new ApiError(503, 'WORLD_PACK_NOT_READY', `World pack not ready for ${feature}`, {
+          return Promise.reject(new ApiError(503, 'WORLD_PACK_NOT_READY', `World pack not ready for ${feature}`, {
             pack_id: resolvedPackId,
             feature
-          });
+          }));
         }
 
-        return {
+        return Promise.resolve({
           pack_id: resolvedPackId,
           pack: toPackProjectionMetadataSnapshot(activePack)
-        };
+        });
       }
 
       const handle = ctx.sim.getPackRuntimeHandle(resolvedPackId);
       if (!handle) {
-        throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', `Experimental pack runtime not found for ${feature}`, {
+        return Promise.reject(new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', `Experimental pack runtime not found for ${feature}`, {
           pack_id: resolvedPackId,
           feature
-        });
+        }));
       }
 
-      return {
+      return Promise.resolve({
         pack_id: resolvedPackId,
         pack: toPackProjectionMetadataSnapshot(handle.pack)
-      };
+      });
     }
   };
 };

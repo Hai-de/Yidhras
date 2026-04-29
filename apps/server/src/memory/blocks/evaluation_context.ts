@@ -41,6 +41,7 @@ const getAllowedFields = async (
     }
 
     for (const [key, expected] of Object.entries(conditions)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       if (attributes[key] !== expected) {
         return false;
       }
@@ -208,6 +209,17 @@ const buildIntentRecentRecord = async (input: {
     });
 };
 
+interface EventQueryRecord {
+  id: string;
+  title: string;
+  description: string;
+  tick: bigint;
+  type: string;
+  impact_data: string | null;
+  source_action_intent: Record<string, unknown> | null;
+  created_at: bigint;
+}
+
 const buildEventRecentRecord = async (input: {
   context: AppInfrastructure;
   identity: IdentityContext;
@@ -219,7 +231,7 @@ const buildEventRecentRecord = async (input: {
     return [];
   }
 
-  const events = await input.context.repos.narrative.queryEvents({
+  const events = (await input.context.repos.narrative.queryEvents({
     orderBy: [{ tick: 'desc' }],
     take: RECENT_SOURCE_LIMIT * 3,
     include: {
@@ -229,7 +241,7 @@ const buildEventRecentRecord = async (input: {
         }
       }
     }
-  });
+  })) as EventQueryRecord[];
 
   const allowedFields = await getAllowedFields(
     input.context,
@@ -244,14 +256,17 @@ const buildEventRecentRecord = async (input: {
   );
 
   return events
-    .filter(event => {
-      const actorRef = event.source_action_intent && isRecord(event.source_action_intent.actor_ref)
+    .filter((event: EventQueryRecord) => {
+      if (!event.source_action_intent) {
+        return false;
+      }
+      const actorRef = isRecord(event.source_action_intent.actor_ref)
         ? event.source_action_intent.actor_ref
         : null;
       return actorRef && typeof actorRef.agent_id === 'string' && actorRef.agent_id === agentId;
     })
     .slice(0, RECENT_SOURCE_LIMIT)
-    .map(event => {
+    .map((event: EventQueryRecord) => {
       let impactData: Record<string, unknown> | null = null;
       if (typeof event.impact_data === 'string' && event.impact_data.trim().length > 0) {
         try {
@@ -276,7 +291,7 @@ const buildEventRecentRecord = async (input: {
 
       return {
         id: event.id,
-        kind: 'event',
+        kind: 'event' as const,
         payload: pickAllowedFields(payload, allowedFields),
         occurred_at_tick: event.tick.toString()
       };

@@ -5,7 +5,7 @@ import { useSchedulerApi } from '../../composables/api/useSchedulerApi'
 const requestApiDataMock = vi.fn()
 
 vi.mock('../../lib/http/client', () => ({
-  requestApiData: (...args: unknown[]) => requestApiDataMock(...args)
+  requestApiData: (...args: unknown[]): unknown => requestApiDataMock(...args)
 }))
 
 describe('useSchedulerApi', () => {

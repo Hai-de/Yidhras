@@ -1,11 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto';
 
-import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
 
 import type { WorldPack } from '../packs/schema/constitution_schema.js';
 import { ApiError } from '../utils/api_error.js';
+import { safeFs } from '../utils/safe_fs.js';
 import {
   parsePluginManifest,
   PLUGIN_MANIFEST_INVALID_CODE} from './contracts.js';
@@ -37,7 +37,7 @@ export interface PluginDiscoveryResult {
 const readPluginManifestCandidate = (pluginDirPath: string): string | null => {
   for (const fileName of PLUGIN_MANIFEST_FILE_NAMES) {
     const candidatePath = path.join(pluginDirPath, fileName);
-    if (fs.existsSync(candidatePath)) {
+    if (safeFs.existsSync(pluginDirPath, candidatePath)) {
       return candidatePath;
     }
   }
@@ -47,12 +47,12 @@ const readPluginManifestCandidate = (pluginDirPath: string): string | null => {
 
 export const listPackPluginCandidates = (packRootDir: string): DiscoveredPluginCandidate[] => {
   const pluginsRootDir = path.join(packRootDir, 'plugins');
-  if (!fs.existsSync(pluginsRootDir)) {
+  if (!safeFs.existsSync(packRootDir, pluginsRootDir)) {
     return [];
   }
 
-  return fs
-    .readdirSync(pluginsRootDir, { withFileTypes: true })
+  return safeFs
+    .readdirSync(packRootDir, pluginsRootDir, { withFileTypes: true })
     .filter(entry => entry.isDirectory())
     .map(entry => {
       const pluginDirPath = path.join(pluginsRootDir, entry.name);
@@ -87,7 +87,7 @@ const validatePackCompatibility = (pack: WorldPack, manifestPackId: string): voi
 };
 
 const loadManifestFromCandidate = (candidate: DiscoveredPluginCandidate) => {
-  const manifestContent = fs.readFileSync(candidate.manifest_path, 'utf-8');
+  const manifestContent = safeFs.readFileSync(candidate.plugin_dir_path, candidate.manifest_path, 'utf-8');
   const manifest = parsePluginManifest(YAML.parse(manifestContent) as unknown);
 
   return {

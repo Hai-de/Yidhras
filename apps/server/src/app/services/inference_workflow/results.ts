@@ -48,20 +48,20 @@ export const getDecisionResultFromWorkflowSnapshot = (workflowSnapshot: Workflow
   });
 };
 
-export const buildInferenceJobReplayResult = async (
+export const buildInferenceJobReplayResult = (
   job: DecisionJobRecord,
   workflowSnapshot: WorkflowSnapshot
 ): Promise<InferenceJobSubmitResult> => {
   const result = getDecisionResultFromWorkflowSnapshot(workflowSnapshot);
 
-  return {
+  return Promise.resolve({
     replayed: true,
     inference_id: resolveInferenceIdForSubmitResult(workflowSnapshot, job),
     job: toInferenceJobSnapshot(job),
     result,
     result_source: resolveResultSource(true, result),
     workflow_snapshot: workflowSnapshot
-  };
+  });
 };
 
 export const buildInferenceJobSubmitResult = (

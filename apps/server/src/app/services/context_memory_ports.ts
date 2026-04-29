@@ -9,16 +9,16 @@ import { createMemoryService } from '../../memory/service.js';
 import type { AppContext } from '../context.js';
 
 export interface ContextAssemblyPort {
-  buildPromptVariableContext?(input: unknown): Promise<unknown> | unknown;
-  buildRuntimeContext?(input: unknown): Promise<unknown> | unknown;
-  buildPackScopedContext?(input: unknown): Promise<unknown> | unknown;
+  buildPromptVariableContext?(input: unknown): unknown;
+  buildRuntimeContext?(input: unknown): unknown;
+  buildPackScopedContext?(input: unknown): unknown;
   buildContextRun?(input: BuildContextRunInput): Promise<ContextServiceBuildResult>;
 }
 
 export interface MemoryRuntimePort {
-  queryOverlayEntries?(input: unknown): Promise<unknown> | unknown;
-  listMemoryBlocks?(input: unknown): Promise<unknown> | unknown;
-  getMemoryRuntimeSnapshot?(input: unknown): Promise<unknown> | unknown;
+  queryOverlayEntries?(input: unknown): unknown;
+  listMemoryBlocks?(input: unknown): unknown;
+  getMemoryRuntimeSnapshot?(input: unknown): unknown;
   buildMemoryContext?(input: BuildMemoryContextInput): Promise<Awaited<ReturnType<MemoryService['buildMemoryContext']>>>;
 }
 

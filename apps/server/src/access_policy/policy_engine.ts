@@ -70,6 +70,7 @@ const matchConditions = (rule: PolicyRule, conditionInput: ConditionInput): bool
   };
 
   for (const [key, expected] of Object.entries(rule.conditions)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     const actual = attributes[key];
     if (Array.isArray(expected)) {
       if (!matchArrayCondition(expected, actual)) {

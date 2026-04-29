@@ -1,5 +1,4 @@
-import fs from 'fs';
-
+import { safeFs } from '../../../utils/safe_fs.js';
 import type { PackCollectionRecord } from '../pack_collection_repo.js';
 import {
   ensureDeclaredPackCollectionTables,
@@ -38,12 +37,13 @@ const TABLE_SPEC_MAP: Record<string, SqliteEngineOwnedTableSpec<any>> = {
 export class SqlitePackStorageAdapter implements PackStorageAdapter {
   readonly backend: PackStorageBackend = 'sqlite';
 
-  private resolveDbPath(packId: string): string {
-    return resolvePackRuntimeDatabaseLocation(packId).runtimeDbPath;
+  private resolveLocation(packId: string) {
+    return resolvePackRuntimeDatabaseLocation(packId);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private resolveSpec(tableName: string): SqliteEngineOwnedTableSpec<any> {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     const spec = TABLE_SPEC_MAP[tableName];
     if (!spec) {
       throw new Error(`[SqlitePackStorageAdapter] unknown engine-owned table: ${tableName}`);
@@ -52,22 +52,22 @@ export class SqlitePackStorageAdapter implements PackStorageAdapter {
   }
 
   private readPersistedPlan(packId: string): PersistedStoragePlan | null {
-    const dbPath = this.resolveDbPath(packId);
-    return readPersistedStoragePlan(`${dbPath}.storage-plan.json`);
+    const loc = this.resolveLocation(packId);
+    return readPersistedStoragePlan(loc.packRootDir, `${loc.runtimeDbPath}.storage-plan.json`);
   }
 
   // -- Schema --
 
   async ensureEngineOwnedSchema(packId: string): Promise<void> {
-    const dbPath = this.resolveDbPath(packId);
-    const dir = dbPath.substring(0, dbPath.lastIndexOf('/'));
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    const loc = this.resolveLocation(packId);
+    const dir = loc.runtimeDbPath.substring(0, loc.runtimeDbPath.lastIndexOf('/'));
+    if (!safeFs.existsSync(loc.packRootDir, dir)) {
+      safeFs.mkdirSync(loc.packRootDir, dir, { recursive: true });
     }
-    if (!fs.existsSync(dbPath)) {
-      fs.writeFileSync(dbPath, '');
+    if (!safeFs.existsSync(loc.packRootDir, loc.runtimeDbPath)) {
+      safeFs.writeFileSync(loc.packRootDir, loc.runtimeDbPath, '');
     }
-    await ensurePackRuntimeSqliteStorage(dbPath);
+    await ensurePackRuntimeSqliteStorage(loc.runtimeDbPath);
   }
 
   async ensureCollection(packId: string, _collection: CollectionDefinition): Promise<void> {
@@ -79,26 +79,26 @@ export class SqlitePackStorageAdapter implements PackStorageAdapter {
     if (!collection) {
       return;
     }
-    const dbPath = this.resolveDbPath(packId);
-    await ensureDeclaredPackCollectionTables(dbPath, [collection]);
+    const loc = this.resolveLocation(packId);
+    await ensureDeclaredPackCollectionTables(loc.runtimeDbPath, [collection]);
   }
 
   // -- Engine-owned records --
 
   async listEngineOwnedRecords<T = Record<string, unknown>>(packId: string, tableName: string): Promise<T[]> {
     const spec = this.resolveSpec(tableName);
-    const dbPath = this.resolveDbPath(packId);
-    return listSqliteEngineOwnedRecords(dbPath, spec, packId) as Promise<T[]>;
+    const loc = this.resolveLocation(packId);
+    return listSqliteEngineOwnedRecords(loc.runtimeDbPath, spec, packId) as Promise<T[]>;
   }
 
   async upsertEngineOwnedRecord<T = Record<string, unknown>>(packId: string, tableName: string, record: T): Promise<T> {
     const spec = this.resolveSpec(tableName);
-    const dbPath = this.resolveDbPath(packId);
-    if (!fs.existsSync(dbPath)) {
+    const loc = this.resolveLocation(packId);
+    if (!safeFs.existsSync(loc.packRootDir, loc.runtimeDbPath)) {
       throw new Error(`[SqlitePackStorageAdapter] runtime db does not exist for pack=${packId}`);
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return upsertSqliteEngineOwnedRecord(dbPath, spec, record as any) as Promise<T>;
+    return upsertSqliteEngineOwnedRecord(loc.runtimeDbPath, spec, record as any) as Promise<T>;
   }
 
   // -- Dynamic collections --
@@ -113,11 +113,12 @@ export class SqlitePackStorageAdapter implements PackStorageAdapter {
 
   // -- Lifecycle --
 
-  async destroyPackStorage(packId: string): Promise<void> {
-    const dbPath = this.resolveDbPath(packId);
-    if (fs.existsSync(dbPath)) {
-      fs.unlinkSync(dbPath);
+  destroyPackStorage(packId: string): Promise<void> {
+    const loc = this.resolveLocation(packId);
+    if (safeFs.existsSync(loc.packRootDir, loc.runtimeDbPath)) {
+      safeFs.unlinkSync(loc.packRootDir, loc.runtimeDbPath);
     }
+    return Promise.resolve();
   }
 
   // -- Snapshot support --
@@ -129,6 +130,7 @@ export class SqlitePackStorageAdapter implements PackStorageAdapter {
       if (tableName === 'projection_events') {
         continue;
       }
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       result[tableName] = await this.listEngineOwnedRecords(packId, tableName);
     }
 
@@ -146,7 +148,7 @@ export class SqlitePackStorageAdapter implements PackStorageAdapter {
     await this.ensureEngineOwnedSchema(packId);
 
     for (const [tableName, rows] of Object.entries(data)) {
-      if (ENGINE_OWNED_TABLE_NAMES.includes(tableName as typeof ENGINE_OWNED_TABLE_NAMES[number]) && tableName !== 'projection_events') {
+      if (ENGINE_OWNED_TABLE_NAMES.includes(tableName) && tableName !== 'projection_events') {
         for (const row of rows) {
           await this.upsertEngineOwnedRecord(packId, tableName, row);
         }
@@ -160,8 +162,8 @@ export class SqlitePackStorageAdapter implements PackStorageAdapter {
 
   // -- Health --
 
-  async ping(packId: string): Promise<boolean> {
-    const dbPath = this.resolveDbPath(packId);
-    return fs.existsSync(dbPath);
+  ping(packId: string): Promise<boolean> {
+    const loc = this.resolveLocation(packId);
+    return Promise.resolve(safeFs.existsSync(loc.packRootDir, loc.runtimeDbPath));
   }
 }

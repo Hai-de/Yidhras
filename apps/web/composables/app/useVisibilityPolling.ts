@@ -69,10 +69,11 @@ export const useVisibilityPolling = (
       return
     }
 
-    timerId.value = setTimeout(async () => {
+    timerId.value = setTimeout(() => {
       timerId.value = null
-      await refresh()
-      scheduleNext()
+      void refresh().then(() => {
+        scheduleNext()
+      })
     }, intervalMs)
   }
 

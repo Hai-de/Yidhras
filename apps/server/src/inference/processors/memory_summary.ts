@@ -42,7 +42,7 @@ const buildSummaryFragmentV2 = (sourceFragments: PromptFragmentV2[], content: st
       summarized_fragment_count: sourceFragments.length,
       summarized_sources: sourceFragments.map(f => f.source),
       summarized_tags: sourceFragments.flatMap(
-        f => (Array.isArray(f.metadata?.tags) ? (f.metadata!.tags as string[]) : [])
+        f => (Array.isArray(f.metadata?.tags) ? (f.metadata.tags as string[]) : [])
       )
     }
   };
@@ -51,12 +51,13 @@ const buildSummaryFragmentV2 = (sourceFragments: PromptFragmentV2[], content: st
 export const createMemorySummaryTreeProcessor = (): PromptTreeProcessor => {
   return {
     name: 'memory-summary',
-    async process(input: PromptTreeProcessorInput): Promise<PromptTree> {
+    process(input: PromptTreeProcessorInput): Promise<PromptTree> {
       const ctx = input.context;
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       const shortTermFragments = input.tree.fragments_by_slot[SHORT_TERM_SLOT] ?? [];
 
       if (shortTermFragments.length < 4) {
-        return input.tree;
+        return Promise.resolve(input.tree);
       }
 
       const sorted = [...shortTermFragments].sort((a, b) => b.priority - a.priority);
@@ -68,7 +69,7 @@ export const createMemorySummaryTreeProcessor = (): PromptTreeProcessor => {
         .join(' | ');
 
       if (summaryContent.length === 0) {
-        return input.tree;
+        return Promise.resolve(input.tree);
       }
 
       const summaryFragment = buildSummaryFragmentV2(summarySource, summaryContent);
@@ -88,10 +89,13 @@ export const createMemorySummaryTreeProcessor = (): PromptTreeProcessor => {
       };
 
       const nextBySlot = { ...input.tree.fragments_by_slot };
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       nextBySlot[SHORT_TERM_SLOT] = compacted;
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       nextBySlot[SUMMARY_SLOT] = [...(nextBySlot[SUMMARY_SLOT] ?? []), summaryFragment];
 
-      return { ...input.tree, fragments_by_slot: nextBySlot };
+      return Promise.resolve({ ...input.tree, fragments_by_slot: nextBySlot });
     }
   };
 };

@@ -316,12 +316,12 @@ const resolveQueryStateData = async (context: AppContext, packId: string, query:
 
 export const createPackHostApi = (context: AppContext): PackHostApi => {
   return {
-    async getPackSummary(input) {
-      return getPackSummary(context, input.pack_id);
+    getPackSummary(input) {
+      return Promise.resolve(getPackSummary(context, input.pack_id));
     },
 
-    async getCurrentTick(input) {
-      return getPackSummary(context, input.pack_id)?.current_tick ?? null;
+    getCurrentTick(input) {
+      return Promise.resolve(getPackSummary(context, input.pack_id)?.current_tick ?? null);
     },
 
     async queryWorldState(input) {

@@ -42,7 +42,7 @@ export const registerPackSnapshotRoutes = (
   app.get(
     '/api/packs/:packId/snapshots',
     packAccessGuard(context, { packIdParam: 'packId' }),
-    deps.asyncHandler(async (req, res) => {
+    (req, res) => {
       context.assertRuntimeReady('snapshot list');
       const params = parseParams(packIdParamsSchema, req.params, 'SNAPSHOT_LIST_INVALID');
 
@@ -62,7 +62,7 @@ export const registerPackSnapshotRoutes = (
 
       const body = listSnapshotsResponseSchema.parse({ snapshots });
       jsonOk(res, body);
-    })
+    }
   );
 
   // POST /api/packs/:packId/snapshots — create snapshot

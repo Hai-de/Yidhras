@@ -39,7 +39,7 @@ function walkFragmentChildren(
 ): void {
   for (const child of fragment.children) {
     if ('kind' in child) {
-      const block = child as PromptBlock;
+      const block = child;
       visitor(block, [...ancestors, block]);
       if (block.kind === 'conditional' || block.kind === 'loop') {
         const nested = (block.content as { children?: PromptBlock[] }).children;
@@ -50,7 +50,7 @@ function walkFragmentChildren(
         }
       }
     } else {
-      const childFrag = child as PromptFragmentV2;
+      const childFrag = child;
       if (childFrag.permission_denied) {
         continue;
       }
@@ -63,6 +63,7 @@ export function renderSlotText(
   fragmentsBySlot: Record<string, PromptFragmentV2[]>,
   slotId: string
 ): string {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   const fragments = fragmentsBySlot[slotId] ?? [];
   const lines: string[] = [];
   walkPromptBlocks(fragments, (block) => {
@@ -92,7 +93,7 @@ async function walkFragmentChildrenAsync(
 ): Promise<void> {
   for (const child of fragment.children) {
     if ('kind' in child) {
-      const block = child as PromptBlock;
+      const block = child;
       await visitor(block, [...ancestors, block]);
       if (block.kind === 'conditional' || block.kind === 'loop') {
         const nested = (block.content as { children?: PromptBlock[] }).children;
@@ -103,7 +104,7 @@ async function walkFragmentChildrenAsync(
         }
       }
     } else {
-      const childFrag = child as PromptFragmentV2;
+      const childFrag = child;
       if (childFrag.permission_denied) {
         continue;
       }

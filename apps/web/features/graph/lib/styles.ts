@@ -33,7 +33,8 @@ const resolveNodeShape = (ele: cytoscape.NodeSingular): string => {
 }
 
 const resolveNodeBorderColor = (ele: cytoscape.NodeSingular): string => {
-  const isPinned = Boolean(ele.data('state')?.is_pinned)
+  const state = ele.data('state') as Record<string, unknown> | undefined
+  const isPinned = Boolean(state?.is_pinned)
   return isPinned ? 'var(--yd-color-state-warning)' : 'var(--yd-color-border-strong)'
 }
 
@@ -64,7 +65,7 @@ const resolveEdgeColor = (ele: cytoscape.EdgeSingular): string => {
 }
 
 const resolveEdgeWidth = (ele: cytoscape.EdgeSingular): number => {
-  const weight = ele.data('weight')
+  const weight = ele.data('weight') as unknown
   return typeof weight === 'number' ? Math.min(6, Math.max(1, weight)) : 2
 }
 

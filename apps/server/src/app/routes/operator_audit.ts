@@ -26,7 +26,7 @@ export const registerOperatorAuditRoutes = (
   app.get(
     '/api/audit/logs',
     deps.asyncHandler(async (req, res) => {
-      const operator = (req as OperatorRequest).operator
+      const operator = (req).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -61,7 +61,7 @@ export const registerOperatorAuditRoutes = (
   app.get(
     '/api/audit/logs/me',
     deps.asyncHandler(async (req, res) => {
-      const operator = (req as OperatorRequest).operator
+      const operator = (req).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }

@@ -76,7 +76,7 @@ const extractRequestInputAttributes = (job: WorkflowJobDetail | null): Record<st
     return null
   }
 
-  const requestInput = job.request_input as Record<string, unknown>
+  const requestInput = job.request_input
   const attributes = requestInput.attributes
   if (!attributes || typeof attributes !== 'object' || Array.isArray(attributes)) {
     return null

@@ -94,7 +94,7 @@ export const createIdentityBinding = async (
     throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'Provide exactly one of agent_id or atmosphere_node_id');
   }
 
-  const normalizedStatus = (status ?? 'active') as string;
+  const normalizedStatus = (status ?? 'active');
   if (!bindingStatuses.includes(normalizedStatus as IdentityBindingStatus)) {
     throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'status must be active, inactive, or expired');
   }

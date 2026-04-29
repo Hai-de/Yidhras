@@ -391,7 +391,7 @@ const KERNEL_INTENT_TYPES = ['trigger_event', 'post_message', 'adjust_relationsh
 
 const objectiveEnforcementWhenSchema = z.record(z.string(), worldPackValueSchema).superRefine((when, ctx) => {
   if (typeof when.invocation_type === 'string' && when.invocation_type.trim().length > 0) {
-    const value = when.invocation_type as string;
+    const value = when.invocation_type;
     if (KERNEL_INTENT_TYPES.includes(value as (typeof KERNEL_INTENT_TYPES)[number])) {
       return;
     }

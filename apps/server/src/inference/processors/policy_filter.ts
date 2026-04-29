@@ -15,7 +15,7 @@ const isBlockedByVisibility = (metadata: Record<string, unknown> | undefined): b
 export const createPolicyFilterTreeProcessor = (): PromptTreeProcessor => {
   return {
     name: 'policy-filter',
-    async process(input: PromptTreeProcessorInput): Promise<PromptTree> {
+    process(input: PromptTreeProcessorInput): Promise<PromptTree> {
       const ctx = input.context;
       const blockedNodeIds = new Set(
         Array.isArray(ctx.context_run.diagnostics.blocked_nodes)
@@ -35,7 +35,7 @@ export const createPolicyFilterTreeProcessor = (): PromptTreeProcessor => {
 
         for (const fragment of fragments) {
           const meta = fragment.metadata;
-          if (typeof meta?.memory_entry_id === 'string' && blockedNodeIds.has(meta.memory_entry_id as string)) {
+          if (typeof meta?.memory_entry_id === 'string' && blockedNodeIds.has(meta.memory_entry_id)) {
             fragment.permission_denied = true;
             fragment.denied_reason = 'context_policy_engine';
             filtered[fragment.id] = 'context_policy_engine';
@@ -61,7 +61,7 @@ export const createPolicyFilterTreeProcessor = (): PromptTreeProcessor => {
         }
       };
 
-      return input.tree;
+      return Promise.resolve(input.tree);
     }
   };
 };

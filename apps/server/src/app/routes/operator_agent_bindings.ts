@@ -29,7 +29,7 @@ export const registerAgentBindingRoutes = (
   app.post(
     '/api/agents/:agentId/bindings',
     deps.asyncHandler(async (req, res) => {
-      const operator = (req as OperatorRequest).operator
+      const operator = (req).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -53,7 +53,7 @@ export const registerAgentBindingRoutes = (
   app.delete(
     '/api/agents/:agentId/bindings/me',
     deps.asyncHandler(async (req, res) => {
-      const operator = (req as OperatorRequest).operator
+      const operator = (req).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }

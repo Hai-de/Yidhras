@@ -52,7 +52,7 @@ export interface PromptWorkflowProfile {
   description?: string;
   applies_to: {
     task_types?: string[];
-    strategies?: Array<InferenceStrategy | string>;
+    strategies?: Array<string>;
     pack_ids?: string[];
   };
   defaults?: {

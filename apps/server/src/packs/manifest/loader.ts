@@ -1,8 +1,8 @@
-import fs from 'fs';
 import path from 'path';
 import * as YAML from 'yaml';
 
 import { createLogger } from '../../utils/logger.js';
+import { safeFs } from '../../utils/safe_fs.js';
 import type { SimulationTimeConfig, WorldPack } from './constitution_loader.js';
 import { parseWorldPackConstitution } from './constitution_loader.js';
 
@@ -23,7 +23,7 @@ export class PackManifestLoader {
 
     for (const file of potentialFiles) {
       const filePath = path.join(this.packsDir, folderName, file);
-      if (fs.existsSync(filePath)) {
+      if (safeFs.existsSync(this.packsDir, filePath)) {
         packPath = filePath;
         break;
       }
@@ -34,7 +34,7 @@ export class PackManifestLoader {
     }
 
     try {
-      const content = fs.readFileSync(packPath, 'utf-8');
+      const content = safeFs.readFileSync(this.packsDir, packPath, 'utf-8');
       const parsedYaml = YAML.parse(content) as unknown;
       const parsed = parseWorldPackConstitution(parsedYaml, packPath);
 
@@ -58,12 +58,12 @@ export class PackManifestLoader {
   }
 
   public listAvailablePacks(): string[] {
-    if (!fs.existsSync(this.packsDir)) {
+    if (!safeFs.existsSync(this.packsDir, this.packsDir)) {
       return [];
     }
 
-    return fs
-      .readdirSync(this.packsDir, { withFileTypes: true })
+    return safeFs
+      .readdirSync(this.packsDir, this.packsDir, { withFileTypes: true })
       .filter(entry => entry.isDirectory())
       .map(entry => entry.name);
   }

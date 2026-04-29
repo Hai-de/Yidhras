@@ -404,10 +404,10 @@ export const createRuleBasedInferenceProvider = (): InferenceProvider => {
   return {
     name: 'rule_based',
     strategies: ['rule_based'],
-    async run(context) {
+    run(context) {
       const ruleBasedProfile = resolveRuleBasedProfile(context);
       if (ruleBasedProfile === 'notebook_investigation_reference_v1') {
-        return buildReferenceProfileRuleBasedDecision(context);
+        return Promise.resolve(buildReferenceProfileRuleBasedDecision(context));
       }
 
       const transmissionPolicy = normalizeTransmissionPolicy(
@@ -425,7 +425,7 @@ export const createRuleBasedInferenceProvider = (): InferenceProvider => {
       const dropReason = transmissionPolicy === 'blocked' ? 'policy_blocked' : context.transmission_profile.drop_reason;
 
       if (context.policy_summary.social_post_write_allowed) {
-        return {
+        return Promise.resolve({
           action_type: 'post_message',
           target_ref: null,
           payload: {
@@ -443,10 +443,11 @@ export const createRuleBasedInferenceProvider = (): InferenceProvider => {
             transmission_drop_chance: transmissionDropChance,
             drop_reason: dropReason
           }
-        };
+        });
+
       }
 
-      return {
+      return Promise.resolve({
         action_type: 'trigger_event',
         target_ref: null,
         payload: {
@@ -471,7 +472,7 @@ export const createRuleBasedInferenceProvider = (): InferenceProvider => {
           transmission_drop_chance: transmissionDropChance,
           drop_reason: dropReason
         }
-      };
+      });
     }
   };
 };

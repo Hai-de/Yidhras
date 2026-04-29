@@ -1,8 +1,8 @@
-import fs from 'fs';
 import path from 'path';
 
 import type { RuntimeStartupPolicy } from '../../config/runtime_config.js';
 import { ApiError } from '../../utils/api_error.js';
+import { safeFs } from '../../utils/safe_fs.js';
 import type { StartupHealth } from '../context.js';
 
 export const createStartupHealth = (): StartupHealth => {
@@ -18,20 +18,20 @@ export const createStartupHealth = (): StartupHealth => {
   };
 };
 
-const hasPackConfig = (packDir: string): boolean => {
+const hasPackConfig = (worldPacksDir: string, packDir: string): boolean => {
   const candidates = ['config.yaml', 'config.yml', 'pack.yaml', 'pack.yml'];
-  return candidates.some(file => fs.existsSync(path.join(packDir, file)));
+  return candidates.some(file => safeFs.existsSync(worldPacksDir, path.join(packDir, file)));
 };
 
 const detectAvailableWorldPacks = (worldPacksDir: string): string[] => {
-  if (!fs.existsSync(worldPacksDir)) {
+  if (!safeFs.existsSync(worldPacksDir, worldPacksDir)) {
     return [];
   }
 
-  const entries = fs.readdirSync(worldPacksDir, { withFileTypes: true });
+  const entries = safeFs.readdirSync(worldPacksDir, worldPacksDir, { withFileTypes: true });
   return entries
     .filter(entry => entry.isDirectory())
-    .filter(entry => hasPackConfig(path.join(worldPacksDir, entry.name)))
+    .filter(entry => hasPackConfig(worldPacksDir, path.join(worldPacksDir, entry.name)))
     .map(entry => entry.name);
 };
 
@@ -67,8 +67,8 @@ export interface RunStartupPreflightOptions {
   startupHealth: StartupHealth;
   startupPolicy: RuntimeStartupPolicy;
   worldPacksDir: string;
-  queryDatabaseHealth(): Promise<unknown>;
-  getErrorMessage(err: unknown): string;
+  queryDatabaseHealth: () => Promise<unknown>;
+  getErrorMessage: (err: unknown) => string;
 }
 
 export const runStartupPreflight = async ({
@@ -79,7 +79,7 @@ export const runStartupPreflight = async ({
   getErrorMessage
 }: RunStartupPreflightOptions): Promise<void> => {
   startupHealth.errors = [];
-  startupHealth.checks.world_pack_dir = fs.existsSync(worldPacksDir);
+  startupHealth.checks.world_pack_dir = safeFs.existsSync(worldPacksDir, worldPacksDir);
   startupHealth.available_world_packs = detectAvailableWorldPacks(worldPacksDir);
   startupHealth.checks.world_pack_available = startupHealth.available_world_packs.length > 0;
 
@@ -107,7 +107,7 @@ export const runStartupPreflight = async ({
 };
 
 export interface RuntimeReadyGuardOptions {
-  getRuntimeReady(): boolean;
+  getRuntimeReady: () => boolean;
   startupHealth: StartupHealth;
 }
 

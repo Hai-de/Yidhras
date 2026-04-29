@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { resolveWorkspaceRoot } from '../config/loader.js';
 import { createLogger } from '../utils/logger.js';
+import { safeFs } from '../utils/safe_fs.js';
 
 const logger = createLogger('reset-dev-db');
 
@@ -26,13 +27,14 @@ const assertNoRunningDevServer = (): void => {
   }
 };
 
-const removeDatabaseFiles = (files: string[]): void => {
+const removeDatabaseFiles = (workspaceRoot: string, files: string[]): void => {
   for (const filePath of files) {
-    if (!fs.existsSync(filePath)) {
+    if (!safeFs.existsSync(workspaceRoot, filePath)) {
       continue;
     }
 
-    fs.rmSync(filePath, { force: true });
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- workspaceRoot-validated path
+    fs.rmSync(safeFs.inBase(workspaceRoot, filePath), { force: true });
     logger.info(`removed ${filePath}`);
   }
 };
@@ -55,7 +57,7 @@ const main = (): void => {
   const databaseFiles = resolveWorkspaceDatabaseFiles(workspaceRoot);
 
   assertNoRunningDevServer();
-  removeDatabaseFiles(databaseFiles);
+  removeDatabaseFiles(workspaceRoot, databaseFiles);
   runWorkspaceCommand(workspaceRoot, 'pnpm', ['--filter', 'yidhras-server', 'exec', 'prisma', 'migrate', 'deploy']);
   runWorkspaceCommand(workspaceRoot, 'pnpm', ['--filter', 'yidhras-server', 'run', 'init:runtime']);
   runWorkspaceCommand(workspaceRoot, 'pnpm', ['--filter', 'yidhras-server', 'run', 'seed:identity']);

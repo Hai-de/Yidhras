@@ -25,6 +25,7 @@ export function createTreeTokenBudgetTrimmer(
       const sortedSlots = Object.entries(input.tree.fragments_by_slot)
         .map(([slotId, frags]) => ({
           slotId,
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
           priority: input.tree.slot_registry[slotId]?.default_priority ?? 0,
           fragments: frags
         }))

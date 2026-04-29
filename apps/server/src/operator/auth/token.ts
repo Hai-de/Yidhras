@@ -6,11 +6,11 @@ import { getOperatorAuthConfig } from '../../config/runtime_config.js'
 import type { JwtPayload, OperatorContext } from './types.js'
 
 const getJwtSecret = (): jwt.Secret => {
-  return getOperatorAuthConfig().jwt_secret as string
+  return getOperatorAuthConfig().jwt_secret
 }
 
 const getJwtExpiresIn = (): string => {
-  return getOperatorAuthConfig().jwt_expires_in as string
+  return getOperatorAuthConfig().jwt_expires_in
 }
 
 export const signToken = (operator: OperatorContext): string => {

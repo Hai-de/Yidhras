@@ -7,6 +7,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 const getValueAtPath = (path: string, root: Record<string, unknown>): unknown => {
   return path.split('.').reduce<unknown>((current, segment) => {
     if (isRecord(current) && segment in current) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       return current[segment];
     }
     return undefined;
@@ -70,7 +71,7 @@ const resolveValue = (
       Object.entries(value).map(([key, entry]) => [key, resolveValue(entry, runtimeObjects)])
     );
   }
-  return String(value);
+  return JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined);
 };
 
 export const resolveConfigValues = (

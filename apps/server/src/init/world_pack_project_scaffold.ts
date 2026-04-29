@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 import * as YAML from 'yaml';
 
@@ -6,6 +5,7 @@ import { resolveFromWorkspaceRoot, resolveWorkspaceRoot } from '../config/loader
 import { getWorldPacksDir } from '../config/runtime_config.js';
 import { parseWorldPackConstitution } from '../packs/manifest/constitution_loader.js';
 import { createLogger } from '../utils/logger.js';
+import { safeFs } from '../utils/safe_fs.js';
 
 const log = createLogger('world-pack-scaffold');
 
@@ -91,6 +91,7 @@ const escapeRegExp = (value: string): string => {
 const renderTemplate = (template: string, values: Record<string, string>): string => {
   let rendered = template;
   for (const [key, value] of Object.entries(values)) {
+    // eslint-disable-next-line security/detect-non-literal-regexp -- key from internal template values, escaped
     rendered = rendered.replace(new RegExp(`{{${escapeRegExp(key)}}}`, 'g'), value);
   }
   return rendered;
@@ -121,6 +122,7 @@ const toAuthorsYaml = (values: string[]): string => {
 };
 
 const writeRenderedTemplate = (input: {
+  workspaceRoot: string;
   templatePath: string;
   targetPath: string;
   values: Record<string, string>;
@@ -128,12 +130,12 @@ const writeRenderedTemplate = (input: {
   result: WorldPackProjectScaffoldResult;
   dryRun: boolean;
 }): void => {
-  const { templatePath, targetPath, values, overwrite, result, dryRun } = input;
-  if (!fs.existsSync(templatePath)) {
+  const { workspaceRoot, templatePath, targetPath, values, overwrite, result, dryRun } = input;
+  if (!safeFs.existsSync(workspaceRoot, templatePath)) {
     throw new Error(`[world-pack-scaffold] 模板文件不存在: ${templatePath}`);
   }
 
-  const existed = fs.existsSync(targetPath);
+  const existed = safeFs.existsSync(workspaceRoot, targetPath);
   if (existed && !overwrite) {
     result.skippedFiles.push(targetPath);
     return;
@@ -144,10 +146,10 @@ const writeRenderedTemplate = (input: {
     return;
   }
 
-  const template = fs.readFileSync(templatePath, 'utf-8');
+  const template = safeFs.readFileSync(workspaceRoot, templatePath, 'utf-8');
   const rendered = renderTemplate(template, values);
-  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-  fs.writeFileSync(targetPath, rendered, 'utf-8');
+  safeFs.mkdirSync(workspaceRoot, path.dirname(targetPath), { recursive: true });
+  safeFs.writeFileSync(workspaceRoot, targetPath, rendered);
 
   if (existed) {
     result.overwrittenFiles.push(targetPath);
@@ -170,11 +172,11 @@ const updateDefaultRuntimeConfig = (input: {
   }
 
   const defaultConfigPath = resolveFromWorkspaceRoot(path.join('data', 'configw', DEFAULT_CONFIGW_BASENAME), input.workspaceRoot);
-  if (!fs.existsSync(defaultConfigPath)) {
+  if (!safeFs.existsSync(input.workspaceRoot, defaultConfigPath)) {
     return updates;
   }
 
-  const raw = fs.readFileSync(defaultConfigPath, 'utf-8');
+  const raw = safeFs.readFileSync(input.workspaceRoot, defaultConfigPath, 'utf-8');
   const parsed = (YAML.parse(raw) ?? {}) as Record<string, unknown>;
   const world = (parsed.world && typeof parsed.world === 'object' ? parsed.world : {}) as Record<string, unknown>;
   const bootstrap = (world.bootstrap && typeof world.bootstrap === 'object' ? world.bootstrap : {}) as Record<string, unknown>;
@@ -202,7 +204,7 @@ const updateDefaultRuntimeConfig = (input: {
 
   world.bootstrap = bootstrap;
   parsed.world = world;
-  fs.writeFileSync(defaultConfigPath, YAML.stringify(parsed), 'utf-8');
+  safeFs.writeFileSync(input.workspaceRoot, defaultConfigPath, YAML.stringify(parsed));
 
   return updates;
 };
@@ -274,10 +276,11 @@ export const scaffoldWorldPackProject = (
   };
 
   if (!result.dryRun) {
-    fs.mkdirSync(targetPackDir, { recursive: true });
+    safeFs.mkdirSync(workspaceRoot,targetPackDir, { recursive: true });
   }
 
   writeRenderedTemplate({
+    workspaceRoot,
     templatePath: path.join(templateDir, DEFAULT_CONFIG_TEMPLATE_BASENAME),
     targetPath: path.join(targetPackDir, 'config.yaml'),
     values,
@@ -287,6 +290,7 @@ export const scaffoldWorldPackProject = (
   });
 
   writeRenderedTemplate({
+    workspaceRoot,
     templatePath: path.join(templateDir, DEFAULT_README_TEMPLATE_BASENAME),
     targetPath: path.join(targetPackDir, 'README.md'),
     values,
@@ -296,6 +300,7 @@ export const scaffoldWorldPackProject = (
   });
 
   writeRenderedTemplate({
+    workspaceRoot,
     templatePath: path.join(templateDir, DEFAULT_CHANGELOG_TEMPLATE_BASENAME),
     targetPath: path.join(targetPackDir, 'CHANGELOG.md'),
     values,
@@ -305,12 +310,13 @@ export const scaffoldWorldPackProject = (
   });
 
   if (!result.dryRun) {
-    fs.mkdirSync(path.join(targetPackDir, 'docs'), { recursive: true });
-    fs.mkdirSync(path.join(targetPackDir, 'assets'), { recursive: true });
-    fs.mkdirSync(path.join(targetPackDir, 'examples'), { recursive: true });
+    safeFs.mkdirSync(workspaceRoot,path.join(targetPackDir, 'docs'), { recursive: true });
+    safeFs.mkdirSync(workspaceRoot,path.join(targetPackDir, 'assets'), { recursive: true });
+    safeFs.mkdirSync(workspaceRoot,path.join(targetPackDir, 'examples'), { recursive: true });
   }
 
   writeRenderedTemplate({
+    workspaceRoot,
     templatePath: path.join(templateDir, DEFAULT_LICENSE_TEMPLATE_BASENAME),
     targetPath: path.join(targetPackDir, 'LICENSE'),
     values,
@@ -320,6 +326,7 @@ export const scaffoldWorldPackProject = (
   });
 
   writeRenderedTemplate({
+    workspaceRoot,
     templatePath: path.join(templateDir, DEFAULT_DOCS_SETTING_TEMPLATE_BASENAME),
     targetPath: path.join(targetPackDir, 'docs', 'setting.md'),
     values,
@@ -329,6 +336,7 @@ export const scaffoldWorldPackProject = (
   });
 
   writeRenderedTemplate({
+    workspaceRoot,
     templatePath: path.join(templateDir, DEFAULT_EXAMPLES_OVERRIDES_TEMPLATE_BASENAME),
     targetPath: path.join(targetPackDir, 'examples', 'overrides.example.yaml'),
     values,
@@ -347,11 +355,11 @@ export const scaffoldWorldPackProject = (
   });
 
   const configTemplatePath = path.join(templateDir, DEFAULT_CONFIG_TEMPLATE_BASENAME);
-  if (!fs.existsSync(configTemplatePath)) {
+  if (!safeFs.existsSync(workspaceRoot, configTemplatePath)) {
     throw new Error(`[world-pack-scaffold] 模板文件不存在: ${configTemplatePath}`);
   }
-  const renderedConfig = renderTemplate(fs.readFileSync(configTemplatePath, 'utf-8'), values);
-  const generatedPack = YAML.parse(renderedConfig);
+  const renderedConfig = renderTemplate(safeFs.readFileSync(workspaceRoot, configTemplatePath, 'utf-8'), values);
+  const generatedPack = YAML.parse(renderedConfig) as Record<string, unknown>;
   parseWorldPackConstitution(generatedPack, `${targetPackDir}/config.yaml`);
 
   return result;
@@ -359,7 +367,7 @@ export const scaffoldWorldPackProject = (
 
 export const logWorldPackProjectScaffoldResult = (
   result: WorldPackProjectScaffoldResult,
-  logger: (message: string) => void = log.info
+  logger: (message: string) => void = (...args) => log.info(...args)
 ): void => {
   const mode = result.dryRun ? 'dry-run' : 'write';
   logger(

@@ -69,10 +69,10 @@ export class PrismaNarrativeEventRepository implements NarrativeEventRepository 
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async queryEvents(input: { where?: Record<string, unknown>; orderBy?: any; take?: number; include?: Record<string, unknown> }): Promise<Array<Record<string, unknown>>> {
+  async queryEvents(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown> | Array<Record<string, unknown>>; take?: number; include?: Record<string, unknown> }): Promise<Array<Record<string, unknown>>> {
     return this.prisma.event.findMany({
       where: input.where as never,
-      orderBy: input.orderBy,
+      orderBy: input.orderBy as never,
       take: input.take,
       include: input.include as never
     }) as Promise<Array<Record<string, unknown>>>;

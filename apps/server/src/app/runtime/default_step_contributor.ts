@@ -31,12 +31,12 @@ export const createDefaultStepContributor = (): StepContributor => {
 
       const previousWorldState = context.entity_states.find(
         state =>
-          (state as Record<string, unknown>).entity_id === '__world__' &&
-          (state as Record<string, unknown>).state_namespace === 'world'
+          (state).entity_id === '__world__' &&
+          (state).state_namespace === 'world'
       ) ?? null;
 
       const previousStateJson = previousWorldState
-        ? ((previousWorldState as Record<string, unknown>).state_json as Record<string, unknown> | null) ?? null
+        ? ((previousWorldState).state_json as Record<string, unknown> | null) ?? null
         : null;
 
       const nextWorldState = {

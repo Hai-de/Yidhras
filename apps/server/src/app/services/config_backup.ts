@@ -3,11 +3,11 @@ import type {
   ConfigBackupPolicy
 } from '@yidhras/contracts'
 import { spawn } from 'child_process'
-import fs from 'fs'
 import path from 'path'
 
 import { readYamlFileIfExists, resolveWorkspaceRoot } from '../../config/loader.js'
 import { createLogger } from '../../utils/logger.js'
+import { safeFs } from '../../utils/safe_fs.js'
 
 const logger = createLogger('config-backup')
 
@@ -68,23 +68,23 @@ const getMetadataPath = (backupDir: string): string => {
   return path.join(backupDir, BACKUP_METADATA_FILE)
 }
 
-const readMetadata = (backupDir: string): BackupMetadata => {
+const readMetadata = (workspaceRoot: string, backupDir: string): BackupMetadata => {
   const metaPath = getMetadataPath(backupDir)
-  if (!fs.existsSync(metaPath)) {
+  if (!safeFs.existsSync(workspaceRoot, metaPath)) {
     return { backups: [] }
   }
 
   try {
-    const raw = fs.readFileSync(metaPath, 'utf-8')
+    const raw = safeFs.readFileSync(workspaceRoot, metaPath, 'utf-8')
     return JSON.parse(raw) as BackupMetadata
   } catch {
     return { backups: [] }
   }
 }
 
-const writeMetadata = (backupDir: string, metadata: BackupMetadata): void => {
-  fs.mkdirSync(backupDir, { recursive: true })
-  fs.writeFileSync(getMetadataPath(backupDir), JSON.stringify(metadata, null, 2), 'utf-8')
+const writeMetadata = (workspaceRoot: string, backupDir: string, metadata: BackupMetadata): void => {
+  safeFs.mkdirSync(workspaceRoot, backupDir, { recursive: true })
+  safeFs.writeFileSync(workspaceRoot, getMetadataPath(backupDir), JSON.stringify(metadata, null, 2))
 }
 
 const generateBackupId = (): string => {
@@ -119,10 +119,10 @@ const archiveDirectory = (
       }
 
       try {
-        const stat = fs.statSync(archivePath)
+        const stat = safeFs.statSync(cwd, archivePath)
         resolve(stat.size)
       } catch (err) {
-        reject(err)
+        reject(err instanceof Error ? err : new Error(String(err)))
       }
     })
 
@@ -165,14 +165,14 @@ export const createConfigBackup = async (
   const backupDir = getBackupDir(workspaceRoot)
   const sourceDir = path.join(workspaceRoot, CONFIGW_RELATIVE_PATH)
 
-  if (!fs.existsSync(sourceDir)) {
+  if (!safeFs.existsSync(workspaceRoot, sourceDir)) {
     throw new Error(`配置目录不存在: ${sourceDir}`)
   }
 
   const id = generateBackupId()
   const archivePath = path.join(backupDir, `${id}.tar.gz`)
 
-  fs.mkdirSync(backupDir, { recursive: true })
+  safeFs.mkdirSync(workspaceRoot, backupDir, { recursive: true })
 
   const sizeBytes = await archiveDirectory(sourceDir, archivePath, workspaceRoot)
 
@@ -183,9 +183,9 @@ export const createConfigBackup = async (
     size_bytes: sizeBytes
   }
 
-  const metadata = readMetadata(backupDir)
+  const metadata = readMetadata(workspaceRoot, backupDir)
   metadata.backups.unshift(entry)
-  writeMetadata(backupDir, metadata)
+  writeMetadata(workspaceRoot, backupDir, metadata)
 
   logger.info(`配置备份已创建: ${id} (${(sizeBytes / 1024).toFixed(1)} KB)${name ? ` [${name}]` : ''}`)
 
@@ -201,7 +201,7 @@ export const createConfigBackup = async (
 export const listConfigBackups = (limit = 20, offset = 0): ConfigBackup[] => {
   const workspaceRoot = resolveWorkspaceRoot()
   const backupDir = getBackupDir(workspaceRoot)
-  const metadata = readMetadata(backupDir)
+  const metadata = readMetadata(workspaceRoot, backupDir)
 
   return metadata.backups.slice(offset, offset + limit).map(entry => ({
     id: entry.id,
@@ -215,7 +215,7 @@ export const listConfigBackups = (limit = 20, offset = 0): ConfigBackup[] => {
 export const getConfigBackup = (id: string): ConfigBackup | null => {
   const workspaceRoot = resolveWorkspaceRoot()
   const backupDir = getBackupDir(workspaceRoot)
-  const metadata = readMetadata(backupDir)
+  const metadata = readMetadata(workspaceRoot, backupDir)
   const entry = metadata.backups.find(b => b.id === id)
 
   if (!entry) {
@@ -234,7 +234,7 @@ export const getConfigBackup = (id: string): ConfigBackup | null => {
 export const deleteConfigBackup = (id: string): boolean => {
   const workspaceRoot = resolveWorkspaceRoot()
   const backupDir = getBackupDir(workspaceRoot)
-  const metadata = readMetadata(backupDir)
+  const metadata = readMetadata(workspaceRoot, backupDir)
   const index = metadata.backups.findIndex(b => b.id === id)
 
   if (index === -1) {
@@ -242,12 +242,12 @@ export const deleteConfigBackup = (id: string): boolean => {
   }
 
   const archivePath = path.join(backupDir, `${id}.tar.gz`)
-  if (fs.existsSync(archivePath)) {
-    fs.unlinkSync(archivePath)
+  if (safeFs.existsSync(workspaceRoot, archivePath)) {
+    safeFs.unlinkSync(workspaceRoot, archivePath)
   }
 
   metadata.backups.splice(index, 1)
-  writeMetadata(backupDir, metadata)
+  writeMetadata(workspaceRoot, backupDir, metadata)
 
   logger.info(`配置备份已删除: ${id}`)
   return true
@@ -261,24 +261,24 @@ export const restoreConfigBackup = async (
   const backupDir = getBackupDir(workspaceRoot)
   const archivePath = path.join(backupDir, `${id}.tar.gz`)
 
-  if (!fs.existsSync(archivePath)) {
+  if (!safeFs.existsSync(workspaceRoot, archivePath)) {
     throw new Error(`备份文件不存在: ${archivePath}`)
   }
 
   const targetDir = path.join(workspaceRoot, CONFIGW_RELATIVE_PATH)
 
-  if (fs.existsSync(targetDir) && fs.readdirSync(targetDir).length > 0 && !force) {
+  if (safeFs.existsSync(workspaceRoot, targetDir) && safeFs.readdirSync(workspaceRoot, targetDir).length > 0 && !force) {
     throw new Error(
       `目标目录非空: ${targetDir}。使用 --force 强制覆盖。`
     )
   }
 
   // If force-mode, clear target first
-  if (force && fs.existsSync(targetDir)) {
-    fs.rmSync(targetDir, { recursive: true })
+  if (force && safeFs.existsSync(workspaceRoot, targetDir)) {
+    safeFs.rmSync(workspaceRoot, targetDir, { recursive: true })
   }
 
-  fs.mkdirSync(path.dirname(targetDir), { recursive: true })
+  safeFs.mkdirSync(workspaceRoot, path.dirname(targetDir), { recursive: true })
 
   await extractArchive(archivePath, path.dirname(targetDir), workspaceRoot)
 
@@ -293,7 +293,7 @@ export const getBackupPolicy = (): ConfigBackupPolicy => {
 export const applyRetentionPolicy = (): number => {
   const workspaceRoot = resolveWorkspaceRoot()
   const backupDir = getBackupDir(workspaceRoot)
-  const metadata = readMetadata(backupDir)
+  const metadata = readMetadata(workspaceRoot, backupDir)
   const policy = loadBackupPolicy(workspaceRoot)
   let removed = 0
 
@@ -306,8 +306,8 @@ export const applyRetentionPolicy = (): number => {
     const toRemove = metadata.backups.slice(policy.retention.max_count)
     for (const entry of toRemove) {
       const archivePath = path.join(backupDir, `${entry.id}.tar.gz`)
-      if (fs.existsSync(archivePath)) {
-        fs.unlinkSync(archivePath)
+      if (safeFs.existsSync(workspaceRoot, archivePath)) {
+        safeFs.unlinkSync(workspaceRoot, archivePath)
       }
       removed++
     }
@@ -321,8 +321,8 @@ export const applyRetentionPolicy = (): number => {
     const createdAt = new Date(entry.created_at).getTime()
     if (createdAt < cutoff) {
       const archivePath = path.join(backupDir, `${entry.id}.tar.gz`)
-      if (fs.existsSync(archivePath)) {
-        fs.unlinkSync(archivePath)
+      if (safeFs.existsSync(workspaceRoot, archivePath)) {
+        safeFs.unlinkSync(workspaceRoot, archivePath)
       }
       removed++
     } else {
@@ -331,7 +331,7 @@ export const applyRetentionPolicy = (): number => {
   }
   metadata.backups = remaining
 
-  writeMetadata(backupDir, metadata)
+  writeMetadata(workspaceRoot, backupDir, metadata)
 
   if (removed > 0) {
     logger.info(`保留策略清理: 已移除 ${removed} 个过期备份`)

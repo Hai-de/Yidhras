@@ -51,7 +51,7 @@ function buildDynamicSlotFragments(
       result['post_process'] = [{
         id: randomUUID(),
         slot_id: 'post_process',
-        priority: slotRegistry['post_process']!.default_priority,
+        priority: slotRegistry['post_process'].default_priority,
         source: 'context.snapshot',
         removable: true,
         replaceable: true,
@@ -73,7 +73,7 @@ function buildDynamicSlotFragments(
     result['memory_summary'] = [{
       id: randomUUID(),
       slot_id: 'memory_summary',
-      priority: slotRegistry['memory_summary']!.default_priority,
+      priority: slotRegistry['memory_summary'].default_priority,
       source: 'memory.summary',
       removable: true,
       replaceable: true,
@@ -93,7 +93,7 @@ function buildDynamicSlotFragments(
       result['output_contract'] = [{
         id: randomUUID(),
         slot_id: 'output_contract',
-        priority: slotRegistry['output_contract']!.default_priority,
+        priority: slotRegistry['output_contract'].default_priority,
         source: 'output.contract',
         removable: false,
         replaceable: true,
@@ -164,10 +164,13 @@ export function buildPromptTree(
   // Merge dynamically generated slot content (post_process, memory_summary, etc.)
   const dynamicFragments = buildDynamicSlotFragments(context, slotRegistry);
   for (const [slotId, fragments] of Object.entries(dynamicFragments)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     if (!fragmentsBySlot[slotId]) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       fragmentsBySlot[slotId] = [];
     }
-    fragmentsBySlot[slotId]!.push(...fragments);
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+    fragmentsBySlot[slotId].push(...fragments);
     sourceKeys.push(...fragments.map(f => f.source));
   }
 
@@ -193,10 +196,12 @@ export function buildPromptBundleV2(tree: PromptTree, _context: PromptContext): 
   const combinedParts: string[] = [];
 
   for (const slotId of Object.keys(tree.slot_registry)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     const config = tree.slot_registry[slotId];
     if (!config || !config.enabled) {
       continue;
     }
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     const fragments = tree.fragments_by_slot[slotId] ?? [];
     const allDenied = fragments.length > 0 && fragments.every(f => f.permission_denied === true);
     if (allDenied) {
@@ -205,6 +210,7 @@ export function buildPromptBundleV2(tree: PromptTree, _context: PromptContext): 
 
 
     const text = renderSlotText(tree.fragments_by_slot, slotId);
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     slots[slotId] = text;
     
 

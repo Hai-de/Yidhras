@@ -66,7 +66,7 @@ export const buildAiTaskRequest = async (input: {
   return buildAiTaskRequestFromInferenceContext(input.context, input.options);
 };
 
-export const buildAiTaskRequestFromInferenceContextV2 = async (
+export const buildAiTaskRequestFromInferenceContextV2 = (
   context: InferenceContext,
   options: BuildAiTaskRequestFromInferenceOptions
 ): Promise<AiTaskRequest> => {
@@ -74,7 +74,7 @@ export const buildAiTaskRequestFromInferenceContextV2 = async (
   const tree = buildPromptTree(context, registry.slots);
   const v2 = buildPromptBundleV2(tree, context);
 
-  return {
+  return Promise.resolve({
     task_id: options.task_id ?? context.inference_id,
     task_type: options.task_type,
     pack_id: options.pack_id ?? context.world_pack.id,
@@ -97,5 +97,5 @@ export const buildAiTaskRequestFromInferenceContextV2 = async (
       processing_trace: v2.metadata.processing_trace,
       ...(options.metadata ?? {})
     }
-  };
+  });
 };

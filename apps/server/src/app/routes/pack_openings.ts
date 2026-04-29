@@ -36,13 +36,13 @@ export const registerPackOpeningRoutes = (
   app.get(
     '/api/packs/:packId/openings',
     packAccessGuard(context, { packIdParam: 'packId' }),
-    deps.asyncHandler(async (req, res) => {
+    (req, res) => {
       context.assertRuntimeReady('pack openings list');
       const params = parseParams(packIdParamsSchema, req.params, 'OPENING_LIST_INVALID');
       const packDir = `${getWorldPacksDir()}/${params.packId}`;
       const openings = listPackOpenings(packDir);
       jsonOk(res, { openings: toJsonSafe(openings) });
-    })
+    }
   );
 
   app.post(

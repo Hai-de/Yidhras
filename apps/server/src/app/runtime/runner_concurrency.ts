@@ -21,6 +21,8 @@ export const runWithConcurrency = async <T, R>(
           return;
         }
 
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
         results[currentIndex] = await worker(items[currentIndex], currentIndex);
       }
     })

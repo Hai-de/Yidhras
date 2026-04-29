@@ -184,6 +184,8 @@ const aggregatePartitionRunResults = (results: PartitionSchedulerRunResult[]): A
   const skipCounts = createEmptyPartitionRunResult(DEFAULT_SCHEDULER_PARTITION_ID).skipped_by_reason;
   for (const result of results) {
     for (const reason of Object.keys(skipCounts) as SchedulerSkipReason[]) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       skipCounts[reason] += result.skipped_by_reason[reason];
     }
   }

@@ -134,6 +134,8 @@ export class AccessPolicyService {
 
     for (const field of fields) {
       if (result.allowedFields.has(field)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
         (output as Record<string, unknown>)[field] = record[field];
       }
     }

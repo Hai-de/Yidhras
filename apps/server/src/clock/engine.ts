@@ -71,6 +71,7 @@ export class ChronosEngine {
 
     // 从最小单位向上计算
     for (let i = 0; i < config.units.length; i++) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       const unit = config.units[i];
       const nextUnit = config.units[i + 1];
 

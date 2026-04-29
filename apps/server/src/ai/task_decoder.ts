@@ -18,6 +18,7 @@ const resolvePath = (value: unknown, path: string | undefined): unknown => {
       if (!isRecord(current)) {
         return undefined;
       }
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       return current[part];
     }, value);
 };
@@ -30,6 +31,8 @@ const applyFieldAliases = (value: Record<string, unknown>, aliasMap?: Record<str
   const next = { ...value };
   for (const [sourceKey, targetKey] of Object.entries(aliasMap)) {
     if (sourceKey in next && !(targetKey in next)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       next[targetKey] = next[sourceKey];
     }
   }
@@ -96,6 +99,7 @@ const validateSchemaNode = (value: unknown, schema: Record<string, unknown>, pat
         if (!(key in value) || !isRecord(propertySchema)) {
           continue;
         }
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
         issues.push(...validateSchemaNode(value[key], propertySchema, `${path}.${key}`));
       }
     }

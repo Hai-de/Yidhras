@@ -96,7 +96,7 @@ export interface StartSimulationLoopOptions {
   actionDispatcherWorkerId: string;
   schedulerWorkerId?: string;
   intervalMs?: number;
-  onStepError(err: unknown): void;
+  onStepError: (err: unknown) => void;
 }
 
 export interface SimulationLoopHandle {

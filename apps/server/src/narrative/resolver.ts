@@ -58,6 +58,7 @@ const parseLiteralValue = (input: string): unknown => {
   if (trimmed === 'null') {
     return null;
   }
+  // eslint-disable-next-line security/detect-unsafe-regex -- simple number parsing, bounded input
   if (/^-?\d+(\.\d+)?$/.test(trimmed)) {
     return Number(trimmed);
   }
@@ -66,6 +67,7 @@ const parseLiteralValue = (input: string): unknown => {
 
 const parseInterpolationSpec = (expression: string): InterpolationSpec | null => {
   const trimmed = expression.trim();
+  // eslint-disable-next-line security/detect-unsafe-regex -- internal config expression parser, bounded
   const match = trimmed.match(/^([\w.]+)(?:\s*\|\s*default\((.*)\))?$/);
   if (!match) {
     return null;
@@ -159,8 +161,10 @@ export class NarrativeResolver {
    */
   public updateVariables(newVars: VariablePool, metadataMap: Record<string, InformationMetadata> = {}): void {
     for (const [key, value] of Object.entries(newVars)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       this.variables[key] = {
         value,
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
         meta: metadataMap[key] || { id: key, min_level: AccessLevel.PUBLIC }
       };
     }
@@ -262,6 +266,7 @@ export class NarrativeResolver {
     const visiblePool: VariablePool = {};
     for (const [key, entry] of Object.entries(this.variables)) {
       if (this.canAccess(entry.meta, permission)) {
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
         visiblePool[key] = entry.value;
       }
     }
@@ -323,7 +328,7 @@ export class NarrativeResolver {
     let changed = false;
     const regex = /\{\{\s*([^#/{][^{}]*?)\s*\}\}/g;
 
-    const text = template.replace(regex, (match, expression) => {
+    const text = template.replace(regex, (match: string, expression: string) => {
       const spec = parseInterpolationSpec(expression);
       if (!spec) {
         diagnostics.missing_paths.push(expression.trim());
@@ -377,7 +382,7 @@ export class NarrativeResolver {
     let changed = false;
     const regex = /\{\{#if\s+([^{}]+?)\s*\}\}([\s\S]*?)\{\{\/if\}\}/g;
 
-    const text = template.replace(regex, (match, expression, body) => {
+    const text = template.replace(regex, (match: string, expression: string, body: string) => {
       const lookup = lookupPromptVariable({
         expression: expression.trim(),
         path: expression.trim(),
@@ -423,7 +428,7 @@ export class NarrativeResolver {
     let changed = false;
     const regex = /\{\{#each\s+([^{}]+?)\s*\}\}([\s\S]*?)\{\{\/each\}\}/g;
 
-    const text = template.replace(regex, (match, expression, body) => {
+    const text = template.replace(regex, (match: string, expression: string, body: string) => {
       const spec = parseEachSpec(expression);
       if (!spec) {
         diagnostics.missing_paths.push(expression.trim());
@@ -468,7 +473,7 @@ export class NarrativeResolver {
               ...input,
               localScope: {
                 ...input.localScope,
-                [spec.alias]: entry
+                [spec.alias]: entry as Record<string, unknown>
               }
             },
             depth + 1

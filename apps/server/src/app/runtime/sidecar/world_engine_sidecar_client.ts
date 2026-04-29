@@ -12,7 +12,6 @@ import type {
   WorldEngineCommitResult,
   WorldEngineHealthSnapshot,
   WorldEngineLoadResult,
-  WorldEnginePackMode,
   WorldEnginePackStatus,
   WorldProtocolHandshakeRequest,
   WorldProtocolHandshakeResponse,
@@ -125,9 +124,9 @@ class ProcessWorldEngineSidecarTransport implements WorldEngineSidecarTransport 
 
   constructor(private readonly options: Required<WorldEngineSidecarClientOptions>) {}
 
-  public async start(): Promise<void> {
+  public start(): Promise<void> {
     if (this.child) {
-      return;
+      return Promise.resolve();
     }
 
     const configuredBinaryPath = this.options.binaryPath.trim();
@@ -136,10 +135,11 @@ class ProcessWorldEngineSidecarTransport implements WorldEngineSidecarTransport 
       : null;
 
     if (resolvedBinaryPath) {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- binary path from admin configuration
       if (!existsSync(resolvedBinaryPath)) {
-        throw new ApiError(500, 'WORLD_ENGINE_SIDECAR_NOT_READY', 'World engine sidecar binary does not exist', {
+        return Promise.reject(new ApiError(500, 'WORLD_ENGINE_SIDECAR_NOT_READY', 'World engine sidecar binary does not exist', {
           binary_path: resolvedBinaryPath
-        });
+        }));
       }
 
       this.child = spawn(resolvedBinaryPath, [], {
@@ -156,10 +156,10 @@ class ProcessWorldEngineSidecarTransport implements WorldEngineSidecarTransport 
 
     this.child.stdout.setEncoding('utf8');
     this.child.stderr.setEncoding('utf8');
-    this.child.stdout.on('data', chunk => {
+    this.child.stdout.on('data', (chunk: string) => {
       this.handleStdout(chunk);
     });
-    this.child.stderr.on('data', chunk => {
+    this.child.stderr.on('data', (chunk: string) => {
       const message = chunk.toString().trim();
       if (message.length > 0) {
         logger.warn(message);
@@ -185,6 +185,8 @@ class ProcessWorldEngineSidecarTransport implements WorldEngineSidecarTransport 
         }));
       }
     });
+
+    return Promise.resolve();
   }
 
   public async stop(): Promise<void> {
@@ -321,7 +323,7 @@ export class WorldEngineSidecarClient implements WorldEnginePort {
       transport: 'stdio_jsonrpc',
       host_capabilities: ['typescript_host', 'prepared_commit']
     });
-    this.handshake = await this.transport.send('world.protocol.handshake', request, worldProtocolHandshakeResponseSchema.parse);
+    this.handshake = await this.transport.send('world.protocol.handshake', request, (v) => worldProtocolHandshakeResponseSchema.parse(v));
   }
 
   public async stop(): Promise<void> {
@@ -335,11 +337,11 @@ export class WorldEngineSidecarClient implements WorldEnginePort {
       protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
       pack_id: normalizePackId(input.pack_id),
       pack_ref: input.pack_ref,
-      mode: (input.mode ?? 'active') as WorldEnginePackMode,
+      mode: (input.mode ?? 'active'),
       hydrate: input.hydrate,
       correlation_id: input.correlation_id,
       idempotency_key: input.idempotency_key
-    }, worldEngineLoadResultSchema.parse);
+    }, (v) => worldEngineLoadResultSchema.parse(v));
   }
 
   public async unloadPack(input: Parameters<WorldEnginePort['unloadPack']>[0]): Promise<void> {
@@ -354,12 +356,12 @@ export class WorldEngineSidecarClient implements WorldEnginePort {
 
   public async prepareStep(input: WorldStepPrepareRequest): Promise<PreparedWorldStep> {
     await this.ensureStarted();
-    return this.call('world.step.prepare', input, preparedWorldStepSchema.parse);
+    return this.call('world.step.prepare', input, (v) => preparedWorldStepSchema.parse(v));
   }
 
   public async commitPreparedStep(input: WorldStepCommitRequest): Promise<WorldEngineCommitResult> {
     await this.ensureStarted();
-    return this.call('world.step.commit', input, worldEngineCommitResultSchema.parse);
+    return this.call('world.step.commit', input, (v) => worldEngineCommitResultSchema.parse(v));
   }
 
   public async abortPreparedStep(input: WorldStepAbortRequest): Promise<void> {
@@ -369,7 +371,7 @@ export class WorldEngineSidecarClient implements WorldEnginePort {
 
   public async queryState(input: WorldStateQuery): Promise<WorldStateQueryResult> {
     await this.ensureStarted();
-    return this.call('world.state.query', input, worldStateQueryResultSchema.parse);
+    return this.call('world.state.query', input, (v) => worldStateQueryResultSchema.parse(v));
   }
 
   public async getStatus(input: { pack_id: string; correlation_id?: string }): Promise<WorldEnginePackStatus> {
@@ -378,14 +380,14 @@ export class WorldEngineSidecarClient implements WorldEnginePort {
       protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
       pack_id: normalizePackId(input.pack_id),
       correlation_id: input.correlation_id
-    }, worldEnginePackStatusSchema.parse);
+    }, (v) => worldEnginePackStatusSchema.parse(v));
   }
 
   public async getHealth(): Promise<WorldEngineHealthSnapshot> {
     await this.ensureStarted();
     return this.call('world.health.get', {
       protocol_version: WORLD_ENGINE_PROTOCOL_VERSION
-    }, worldEngineHealthSnapshotSchema.parse);
+    }, (v) => worldEngineHealthSnapshotSchema.parse(v));
   }
 
   private async ensureStarted(): Promise<void> {
@@ -400,7 +402,7 @@ export class WorldEngineSidecarClient implements WorldEnginePort {
 
   public async executeObjectiveRule(input: WorldRuleExecuteObjectiveRequest): Promise<WorldRuleExecuteObjectiveResult> {
     await this.ensureStarted();
-    return this.call('world.rule.execute_objective', input, worldRuleExecuteObjectiveResultSchema.parse);
+    return this.call('world.rule.execute_objective', input, (v) => worldRuleExecuteObjectiveResultSchema.parse(v));
   }
 
   private isTransport(

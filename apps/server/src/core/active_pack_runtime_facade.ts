@@ -194,9 +194,10 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
     this.currentRevision = BigInt(snapshot.current_revision);
   }
 
-  public async step(amount: bigint = 1n): Promise<void> {
+  public step(amount: bigint = 1n): Promise<void> {
     this.clock.tick(amount);
     this.currentRevision = this.clock.getTicks();
+    return Promise.resolve();
   }
 
   private createProjectionClock(pack: WorldPack): ChronosEngine {

@@ -82,6 +82,7 @@ const validateSchemaNode = (value: unknown, schema: Record<string, unknown>, pat
         if (!(key in value) || !isRecord(propertySchema)) {
           continue;
         }
+// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
         issues.push(...validateSchemaNode(value[key], propertySchema, `${path}.${key}`));
       }
     }
@@ -230,16 +231,16 @@ export const createToolRegistry = (toolEntries?: AiToolRegistryEntry[], permissi
   });
 
   registerWithSchema('get_clock_state', {
-    async execute(_args, ctx) {
+    execute(_args, ctx) {
       const tick = ctx.context.activePackRuntime?.getCurrentTick()
         ?? ctx.context.clock.getCurrentTick();
 
       const times = ctx.context.activePackRuntime?.getAllTimes?.() ?? [];
 
-      return {
+      return Promise.resolve({
         current_tick: tick.toString(),
         formatted_times: times
-      };
+      });
     }
   });
 
