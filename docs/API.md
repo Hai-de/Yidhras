@@ -491,7 +491,9 @@ Operator-Subject 统一权限层通过 JWT Bearer Token 认证，所有 operator
 
 ## 17. 世界包快照接口
 
-快照是对世界包运行时完整状态的存档，覆盖三层数据：包运行时数据库（世界引擎状态，SQLite 或 PostgreSQL adapter）、中央 Prisma 数据库（Agent/Identity/Binding/Post/Relationship/Memory/ContextOverlay 等 domain 数据）、内存时钟状态。快照以目录形式存储在 `data/world_packs/<pack_id>/snapshots/<snapshot_id>/`，包含 `metadata.json`、`runtime.sqlite`、`prisma.json`、`storage-plan.json` 四个文件。
+> **后端兼容性**：快照功能**仅支持 SQLite 后端**。快照系统直接复制 `runtime.sqlite` 文件以保留完整数据库物理状态（WAL、索引结构等），这是 adapter 行数据导出无法替代的。PostgreSQL 等分布式数据库的部署者应使用数据库原生工具（如 `pg_dump`、`pg_basebackup`、WAL archiving）进行备份。对非 SQLite 后端调用快照接口将返回 `501 SNAPSHOT_NOT_AVAILABLE`。
+
+快照是对世界包运行时完整状态的存档，覆盖三层数据：包运行时数据库（世界引擎状态）、中央 Prisma 数据库（Agent/Identity/Binding/Post/Relationship/Memory/ContextOverlay 等 domain 数据）、内存时钟状态。快照以目录形式存储在 `data/world_packs/<pack_id>/snapshots/<snapshot_id>/`，包含 `metadata.json`、`runtime.sqlite`、`prisma.json`、`storage-plan.json` 四个文件。
 
 所有快照接口均需 pack 操作员鉴权（`packAccessGuard`）。创建和恢复操作要求模拟已暂停（自动暂停/恢复）。
 

@@ -1,7 +1,15 @@
+/**
+ * 设计决策：快照恢复为何直接复制 runtime.sqlite 而非使用 adapter.importPackData()
+ *
+ * 见 snapshot_capture.ts 顶部完整说明。简言之：SQLite 文件级快照保留完整数据库物理状态，
+ * 行数据导入无法替代；PostgreSQL 部署者应使用 pg_dump/pg_basebackup 等原生工具。
+ */
 import type { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import type { PackSnapshotPrismaData } from '@yidhras/contracts';
 import { packSnapshotPrismaDataSchema } from '@yidhras/contracts';
+import fs from 'fs';
+import { gunzipSync } from 'zlib';
 
 import type { RuntimeClockProjectionSnapshot } from '../../app/runtime/runtime_clock_projection.js';
 import type { WorldEnginePort } from '../../app/runtime/world_engine_ports.js';
@@ -19,6 +27,7 @@ import type { PackStorageAdapter } from '../storage/PackStorageAdapter.js';
 import {
   readSnapshotMetadata,
   resolveSnapshotLocation,
+  resolveStoragePlanPathInChain,
   snapshotFilesExist
 } from './snapshot_locator.js';
 
@@ -36,8 +45,8 @@ const jsonValue = (value: unknown): Prisma.InputJsonValue => {
 };
 
 const readPrismaData = (location: { prismaJsonPath: string; packId: string }): PackSnapshotPrismaData => {
-  const packRoot = getPackRootDir(location.packId);
-  const raw = safeFs.readFileSync(packRoot, location.prismaJsonPath, 'utf-8');
+  const compressed = fs.readFileSync(location.prismaJsonPath);
+  const raw = gunzipSync(compressed).toString('utf-8');
   const parsed = JSON.parse(raw) as unknown;
   return packSnapshotPrismaDataSchema.parse(parsed);
 };
@@ -282,6 +291,12 @@ export interface RestorePackSnapshotResult {
 export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Promise<RestorePackSnapshotResult> => {
   const { packId, snapshotId, prisma, packStorageAdapter, pack, sim, activePackRuntime, worldEngine, notifications } = input;
 
+  if (packStorageAdapter.backend !== 'sqlite') {
+    throw new Error(
+      `[snapshot_restore] 快照功能仅支持 SQLite 后端，当前后端为 ${packStorageAdapter.backend}。请使用数据库原生工具进行恢复。`
+    );
+  }
+
   const location = resolveSnapshotLocation(packId, snapshotId);
   const packRoot = getPackRootDir(packId);
 
@@ -314,14 +329,17 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
   // 4. Teardown pack-scoped Prisma data
   await teardownPrismaPackData(prisma, packId, agentIds);
 
-  // 5. Restore SQLite
+  // 5. Restore SQLite (gunzip compressed snapshot)
   const runtimeDbLocation = resolvePackRuntimeDatabaseLocation(packId);
   safeFs.mkdirSync(packRoot, runtimeDbLocation.packRootDir, { recursive: true });
-  safeFs.copyFileSync(packRoot, location.runtimeDbPath, runtimeDbLocation.runtimeDbPath);
+  const compressedDb = fs.readFileSync(location.runtimeDbPath);
+  const decompressedDb = gunzipSync(compressedDb);
+  safeFs.writeFileSync(packRoot, runtimeDbLocation.runtimeDbPath, decompressedDb);
 
   const storagePlanPath = `${runtimeDbLocation.runtimeDbPath}.storage-plan.json`;
-  if (safeFs.existsSync(packRoot, location.storagePlanPath)) {
-    safeFs.copyFileSync(packRoot, location.storagePlanPath, storagePlanPath);
+  const resolvedStoragePlanPath = resolveStoragePlanPathInChain(packId, snapshotId);
+  if (resolvedStoragePlanPath) {
+    safeFs.copyFileSync(packRoot, resolvedStoragePlanPath, storagePlanPath);
   }
 
   // 6. Read applied_opening_id from restored SQLite

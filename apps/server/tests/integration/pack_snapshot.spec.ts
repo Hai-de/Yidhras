@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
+import { gunzipSync } from 'zlib';
 
 import fs from 'fs';
 import os from 'os';
@@ -213,6 +214,7 @@ describe('pack snapshot integration', () => {
       const result = await capturePackSnapshot({
         packId: TEST_PACK_ID,
         prisma: context.prisma,
+        packStorageAdapter: context.packStorageAdapter,
         activePackRuntime: context.activePackRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
@@ -232,12 +234,14 @@ describe('pack snapshot integration', () => {
       const result = await capturePackSnapshot({
         packId: TEST_PACK_ID,
         prisma: context.prisma,
+        packStorageAdapter: context.packStorageAdapter,
         activePackRuntime: context.activePackRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
 
-      const prismaRaw = fs.readFileSync(result.location.prismaJsonPath, 'utf-8');
+      const prismaCompressed = fs.readFileSync(result.location.prismaJsonPath);
+      const prismaRaw = gunzipSync(prismaCompressed).toString('utf-8');
       const prismaData = JSON.parse(prismaRaw);
 
       expect(prismaData.agents).toHaveLength(2);
@@ -254,6 +258,7 @@ describe('pack snapshot integration', () => {
         packId: TEST_PACK_ID,
         label: 'test-snapshot',
         prisma: context.prisma,
+        packStorageAdapter: context.packStorageAdapter,
         activePackRuntime: context.activePackRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
@@ -277,6 +282,7 @@ describe('pack snapshot integration', () => {
       await capturePackSnapshot({
         packId: TEST_PACK_ID,
         prisma: context.prisma,
+        packStorageAdapter: context.packStorageAdapter,
         activePackRuntime: context.activePackRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
@@ -284,6 +290,7 @@ describe('pack snapshot integration', () => {
       await capturePackSnapshot({
         packId: TEST_PACK_ID,
         prisma: context.prisma,
+        packStorageAdapter: context.packStorageAdapter,
         activePackRuntime: context.activePackRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
@@ -303,6 +310,7 @@ describe('pack snapshot integration', () => {
       const result = await capturePackSnapshot({
         packId: TEST_PACK_ID,
         prisma: context.prisma,
+        packStorageAdapter: context.packStorageAdapter,
         activePackRuntime: context.activePackRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
@@ -322,6 +330,7 @@ describe('pack snapshot integration', () => {
       const result = await capturePackSnapshot({
         packId: TEST_PACK_ID,
         prisma: context.prisma,
+        packStorageAdapter: context.packStorageAdapter,
         activePackRuntime: context.activePackRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
@@ -358,6 +367,7 @@ describe('pack snapshot integration', () => {
         packId: TEST_PACK_ID,
         snapshotId: result.metadata.snapshot_id,
         prisma: context.prisma,
+        packStorageAdapter: context.packStorageAdapter,
         pack: packMock,
         sim: context.sim,
         activePackRuntime: context.activePackRuntime,
@@ -388,6 +398,7 @@ describe('pack snapshot integration', () => {
       const result = await capturePackSnapshot({
         packId: TEST_PACK_ID,
         prisma: context.prisma,
+        packStorageAdapter: context.packStorageAdapter,
         activePackRuntime: context.activePackRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null

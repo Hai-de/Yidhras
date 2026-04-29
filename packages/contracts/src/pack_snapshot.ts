@@ -16,7 +16,10 @@ export const packSnapshotMetadataSchema = z
     captured_at_revision: nonNegativeBigIntStringSchema,
     captured_at_timestamp: z.string(),
     runtime_db_size_bytes: z.number().int().nonnegative(),
-    prisma_record_count: z.number().int().nonnegative()
+    prisma_record_count: z.number().int().nonnegative(),
+    compression: z.enum(['none', 'gzip']).default('gzip'),
+    storage_plan_sha256: z.string().nullable().optional(),
+    storage_plan_inherits_from: z.string().nullable().optional()
   })
   .strict()
 

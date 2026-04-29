@@ -18,6 +18,15 @@ import type { AppContext } from '../context.js';
 import { jsonOk } from '../http/json.js';
 import { parseBody, parseParams } from '../http/zod.js';
 
+const SNAPSHOT_NOT_AVAILABLE_MESSAGE =
+  '快照功能仅支持 SQLite 后端。当前后端不支持快照，请使用数据库原生工具进行备份（如 PostgreSQL 的 pg_dump、pg_basebackup 等）。';
+
+const requireSqliteBackend = (context: AppContext): void => {
+  if (context.packStorageAdapter.backend !== 'sqlite') {
+    throw new ApiError(501, 'SNAPSHOT_NOT_AVAILABLE', SNAPSHOT_NOT_AVAILABLE_MESSAGE);
+  }
+};
+
 const packIdParamsSchema = z.object({
   packId: z.string().trim().min(1)
 });
@@ -44,6 +53,7 @@ export const registerPackSnapshotRoutes = (
     packAccessGuard(context, { packIdParam: 'packId' }),
     (req, res) => {
       context.assertRuntimeReady('snapshot list');
+      requireSqliteBackend(context);
       const params = parseParams(packIdParamsSchema, req.params, 'SNAPSHOT_LIST_INVALID');
 
       const snapshotIds = listSnapshotDirs(params.packId);
@@ -71,6 +81,7 @@ export const registerPackSnapshotRoutes = (
     packAccessGuard(context, { packIdParam: 'packId' }),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('snapshot create');
+      requireSqliteBackend(context);
       const params = parseParams(packIdParamsSchema, req.params, 'SNAPSHOT_CREATE_INVALID');
       const body = parseBody(createSnapshotRequestSchema, req.body, 'SNAPSHOT_CREATE_BODY_INVALID');
 
@@ -90,6 +101,7 @@ export const registerPackSnapshotRoutes = (
         packId: params.packId,
         label: body.label,
         prisma: context.prisma,
+        packStorageAdapter: context.packStorageAdapter,
         activePackRuntime: context.activePackRuntime,
         getExperimentalTick,
         getExperimentalRevision
@@ -119,6 +131,7 @@ export const registerPackSnapshotRoutes = (
     packAccessGuard(context, { packIdParam: 'packId' }),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('snapshot restore');
+      requireSqliteBackend(context);
       const params = parseParams(snapshotIdParamsSchema, req.params, 'SNAPSHOT_RESTORE_INVALID');
       const body = parseBody(restoreSnapshotRequestSchema, req.body, 'SNAPSHOT_RESTORE_BODY_INVALID');
 
@@ -175,6 +188,7 @@ export const registerPackSnapshotRoutes = (
     packAccessGuard(context, { packIdParam: 'packId' }),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('snapshot delete');
+      requireSqliteBackend(context);
       const params = parseParams(snapshotIdParamsSchema, req.params, 'SNAPSHOT_DELETE_INVALID');
 
       const location = resolveSnapshotLocation(params.packId, params.snapshotId);

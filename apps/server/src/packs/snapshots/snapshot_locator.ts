@@ -1,5 +1,7 @@
 import type { PackSnapshotMetadata } from '@yidhras/contracts';
 import { packSnapshotMetadataSchema } from '@yidhras/contracts';
+import crypto from 'crypto';
+import fs from 'fs';
 import path from 'path';
 
 import { safeFs } from '../../utils/safe_fs.js';
@@ -17,8 +19,8 @@ export interface SnapshotLocation {
 
 const SNAPSHOTS_DIRNAME = 'snapshots';
 const METADATA_FILENAME = 'metadata.json';
-const RUNTIME_DB_FILENAME = 'runtime.sqlite';
-const PRISMA_JSON_FILENAME = 'prisma.json';
+const RUNTIME_DB_FILENAME = 'runtime.sqlite.gz';
+const PRISMA_JSON_FILENAME = 'prisma.json.gz';
 const STORAGE_PLAN_FILENAME = 'storage-plan.json';
 
 export const getPackSnapshotsDir = (packId: string): string => {
@@ -91,10 +93,61 @@ export const deleteSnapshotDir = (location: SnapshotLocation): void => {
 
 export const snapshotFilesExist = (location: SnapshotLocation): boolean => {
   const packRoot = getPackRootDir(location.packId);
-  return (
-    safeFs.existsSync(packRoot, location.metadataPath) &&
-    safeFs.existsSync(packRoot, location.runtimeDbPath) &&
-    safeFs.existsSync(packRoot, location.prismaJsonPath) &&
-    safeFs.existsSync(packRoot, location.storagePlanPath)
-  );
+
+  if (!safeFs.existsSync(packRoot, location.metadataPath)) {
+    return false;
+  }
+
+  const hasRuntimeDb = safeFs.existsSync(packRoot, location.runtimeDbPath);
+  const hasPrismaJson = safeFs.existsSync(packRoot, location.prismaJsonPath);
+  const hasStoragePlan = safeFs.existsSync(packRoot, location.storagePlanPath);
+
+  let metadata: PackSnapshotMetadata;
+  try {
+    metadata = readSnapshotMetadata(location);
+  } catch {
+    return false;
+  }
+
+  if (metadata.storage_plan_inherits_from) {
+    return hasRuntimeDb && hasPrismaJson;
+  }
+
+  return hasRuntimeDb && hasPrismaJson && hasStoragePlan;
+};
+
+export const computeSha256 = (absolutePath: string): string => {
+  const content = fs.readFileSync(absolutePath);
+  return crypto.createHash('sha256').update(content).digest('hex');
+};
+
+export const resolveStoragePlanPathInChain = (
+  packId: string,
+  snapshotId: string,
+  maxDepth: number = 20
+): string | null => {
+  const packRoot = getPackRootDir(packId);
+
+  for (let depth = 0; depth < maxDepth; depth++) {
+    const location = resolveSnapshotLocation(packId, snapshotId);
+
+    if (!safeFs.existsSync(packRoot, location.metadataPath)) {
+      return null;
+    }
+
+    const metadata = readSnapshotMetadata(location);
+
+    if (safeFs.existsSync(packRoot, location.storagePlanPath)) {
+      return location.storagePlanPath;
+    }
+
+    const parentId = metadata.storage_plan_inherits_from ?? null;
+    if (!parentId) {
+      return null;
+    }
+
+    snapshotId = parentId;
+  }
+
+  return null;
 };

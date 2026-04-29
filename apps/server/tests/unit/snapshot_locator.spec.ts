@@ -27,7 +27,8 @@ const validMetadata = {
   captured_at_revision: '1000',
   captured_at_timestamp: '2026-04-28T00:00:00.000Z',
   runtime_db_size_bytes: 1024,
-  prisma_record_count: 10
+  prisma_record_count: 10,
+  compression: 'gzip' as const
 };
 
 describe('snapshot_locator', () => {
@@ -64,8 +65,8 @@ describe('snapshot_locator', () => {
       expect(testLocation.snapshotDir).toContain('snapshots');
       expect(testLocation.snapshotDir).toContain(TEST_SNAPSHOT_ID);
       expect(path.basename(testLocation.metadataPath)).toBe('metadata.json');
-      expect(path.basename(testLocation.runtimeDbPath)).toBe('runtime.sqlite');
-      expect(path.basename(testLocation.prismaJsonPath)).toBe('prisma.json');
+      expect(path.basename(testLocation.runtimeDbPath)).toBe('runtime.sqlite.gz');
+      expect(path.basename(testLocation.prismaJsonPath)).toBe('prisma.json.gz');
       expect(path.basename(testLocation.storagePlanPath)).toBe('storage-plan.json');
     });
 

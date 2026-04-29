@@ -1,16 +1,44 @@
 import type { PrismaClient } from '@prisma/client';
 import type { PackSnapshotMetadata, PackSnapshotPrismaData } from '@yidhras/contracts';
 import crypto from 'crypto';
+import fs from 'fs';
+import { gzipSync } from 'zlib';
 
 import type { ActivePackRuntimeFacade } from '../../app/services/app_context_ports.js';
 import { safeFs } from '../../utils/safe_fs.js';
 import { getPackRootDir, resolvePackRuntimeDatabaseLocation } from '../storage/pack_db_locator.js';
+import type { PackStorageAdapter } from '../storage/PackStorageAdapter.js';
 import {
+  computeSha256,
   deleteSnapshotDir,
   listSnapshotDirs,
+  readSnapshotMetadata,
   resolveSnapshotLocation,
   writeSnapshotMetadata
 } from './snapshot_locator.js';
+
+/**
+ * 设计决策：快照系统为何直接复制 runtime.sqlite 而非使用 adapter.exportPackData()
+ *
+ * 当前快照系统绕过 PackStorageAdapter 抽象层，直接通过 copyFileSync 复制原始 SQLite
+ * 数据库文件。这是有意为之，原因如下：
+ *
+ * 1. SQLite 的文件级快照保留了完整的数据库状态，包括 WAL、索引结构、页面缓存等，
+ *    这是 adapter.exportPackData() 逐行导出 JSON 无法替代的。行数据导出丢失了数据库
+ *    物理结构，恢复时需要通过 upsert 逐行重新写入，既不高效也不忠实于原始状态。
+ *
+ * 2. 对于 PostgreSQL 等分布式数据库，部署者应使用数据库原生工具进行备份：
+ *    - pg_dump / pg_basebackup / WAL archiving
+ *    - 这些工具远比应用层自建的"通用快照"成熟可靠
+ *    - 数据库备份属于基础设施层职责，不应由应用层强行抽象
+ *
+ * 3. 如果在应用层通过 adapter.exportPackData() 强行统一快照接口，结果将是一个既不匹配
+ *    SQLite 优势（文件级快照的简单性和完整性）、也不匹配 PostgreSQL 优势（原生工具链）
+ *    的半吊子方案。
+ *
+ * 因此，快照功能仅支持 SQLite 后端。API 路由层会检查 packStorageAdapter.backend，
+ * 对非 SQLite 后端返回 501 Not Implemented，并引导部署者使用数据库原生工具。
+ */
 
 const MAX_SNAPSHOTS_PER_PACK = 20;
 
@@ -234,6 +262,7 @@ export interface CaptureSnapshotInput {
   packId: string;
   label?: string;
   prisma: PrismaClient;
+  packStorageAdapter: PackStorageAdapter;
   activePackRuntime?: ActivePackRuntimeFacade;
   getExperimentalTick: (packId: string) => string | null;
   getExperimentalRevision: (packId: string) => string | null;
@@ -244,8 +273,36 @@ export interface CaptureSnapshotResult {
   location: ReturnType<typeof resolveSnapshotLocation>;
 }
 
+const getLatestSnapshotMetadata = (
+  packId: string
+): PackSnapshotMetadata | null => {
+  const dirs = listSnapshotDirs(packId);
+  if (dirs.length === 0) return null;
+
+  let latest: PackSnapshotMetadata | null = null;
+  for (const dir of dirs) {
+    const loc = resolveSnapshotLocation(packId, dir);
+    try {
+      const meta = readSnapshotMetadata(loc);
+      if (!latest || meta.captured_at_timestamp > latest.captured_at_timestamp) {
+        latest = meta;
+      }
+    } catch {
+      // corrupted/incomplete snapshot — skip
+    }
+  }
+  return latest;
+};
+
 export const capturePackSnapshot = async (input: CaptureSnapshotInput): Promise<CaptureSnapshotResult> => {
-  const { packId, label, prisma, activePackRuntime, getExperimentalTick, getExperimentalRevision } = input;
+  const { packId, label, prisma, packStorageAdapter, activePackRuntime, getExperimentalTick, getExperimentalRevision } = input;
+
+  if (packStorageAdapter.backend !== 'sqlite') {
+    throw new Error(
+      `[snapshot_capture] 快照功能仅支持 SQLite 后端，当前后端为 ${packStorageAdapter.backend}。请使用数据库原生工具进行备份。`
+    );
+  }
+
   const snapshotId = crypto.randomUUID();
   const location = resolveSnapshotLocation(packId, snapshotId);
 
@@ -259,22 +316,38 @@ export const capturePackSnapshot = async (input: CaptureSnapshotInput): Promise<
 
   const runtimeDbLocation = resolvePackRuntimeDatabaseLocation(packId);
 
+  // 2.1: gzip runtime.sqlite
+  let runtimeDbSizeBytes = 0;
   if (safeFs.existsSync(packRoot, runtimeDbLocation.runtimeDbPath)) {
-    safeFs.copyFileSync(packRoot, runtimeDbLocation.runtimeDbPath, location.runtimeDbPath);
+    const dbContent = fs.readFileSync(runtimeDbLocation.runtimeDbPath);
+    const compressed = gzipSync(dbContent);
+    safeFs.writeFileSync(packRoot, location.runtimeDbPath, compressed);
+    runtimeDbSizeBytes = compressed.length;
   }
 
+  // 2.3: storage-plan dedup via SHA256
   const storagePlanPath = `${runtimeDbLocation.runtimeDbPath}.storage-plan.json`;
+  let storagePlanSha256: string | null = null;
+  let storagePlanInheritsFrom: string | null = null;
+
   if (safeFs.existsSync(packRoot, storagePlanPath)) {
-    safeFs.copyFileSync(packRoot, storagePlanPath, location.storagePlanPath);
+    const currentSha = computeSha256(storagePlanPath);
+    storagePlanSha256 = currentSha;
+
+    const prevMetadata = getLatestSnapshotMetadata(packId);
+    if (prevMetadata?.storage_plan_sha256 === currentSha) {
+      storagePlanInheritsFrom = prevMetadata.snapshot_id;
+    } else {
+      safeFs.copyFileSync(packRoot, storagePlanPath, location.storagePlanPath);
+    }
   } else {
     safeFs.writeFileSync(packRoot, location.storagePlanPath, JSON.stringify({}));
   }
 
-  safeFs.writeFileSync(packRoot, location.prismaJsonPath, JSON.stringify(prismaData, null, 2));
-
-  const runtimeDbSizeBytes = safeFs.existsSync(packRoot, location.runtimeDbPath)
-    ? safeFs.statSync(packRoot, location.runtimeDbPath).size
-    : 0;
+  // 2.2: gzip prisma.json
+  const prismaJson = JSON.stringify(prismaData);
+  const compressedPrisma = gzipSync(Buffer.from(prismaJson, 'utf-8'));
+  safeFs.writeFileSync(packRoot, location.prismaJsonPath, compressedPrisma);
 
   const metadata: PackSnapshotMetadata = {
     schema_version: 1,
@@ -285,7 +358,10 @@ export const capturePackSnapshot = async (input: CaptureSnapshotInput): Promise<
     captured_at_revision: memoryState.current_revision,
     captured_at_timestamp: new Date().toISOString(),
     runtime_db_size_bytes: runtimeDbSizeBytes,
-    prisma_record_count: computePrismaRecordCount(prismaData)
+    prisma_record_count: computePrismaRecordCount(prismaData),
+    compression: 'gzip',
+    storage_plan_sha256: storagePlanSha256,
+    storage_plan_inherits_from: storagePlanInheritsFrom
   };
 
   writeSnapshotMetadata(location, metadata);

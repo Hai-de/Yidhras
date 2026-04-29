@@ -9,6 +9,7 @@ import type {
 import { createWorldEngineStepCoordinator } from '../../src/app/runtime/world_engine_persistence.js';
 import { ChronosEngine } from '../../src/clock/engine.js';
 import type { SimulationManager } from '../../src/core/simulation.js';
+import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import { createNotificationManager } from '../../src/utils/notifications.js';
 import { DEFAULT_E2E_WORLD_PACK } from '../support/config.js';
 
@@ -164,6 +165,19 @@ export const createTestAppContext = (
         return true;
       }
     },
-    assertRuntimeReady: () => {}
+    assertRuntimeReady: () => {},
+    packStorageAdapter: {
+      backend: 'sqlite',
+      ping: async () => true,
+      destroyPackStorage: async () => {},
+      ensureEngineOwnedSchema: async () => {},
+      listEngineOwnedRecords: async () => [],
+      upsertEngineOwnedRecord: async (packId: string, tableName: string, record: unknown) => record as never,
+      ensureCollection: async () => {},
+      upsertCollectionRecord: async () => null,
+      listCollectionRecords: async () => [],
+      exportPackData: async () => ({}),
+      importPackData: async () => {}
+    } as PackStorageAdapter
   };
 };
