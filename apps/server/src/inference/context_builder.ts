@@ -129,7 +129,7 @@ const createAccessPolicyService = (context: Ctx): AccessPolicyService => {
 };
 
 const listActiveBindingsForIdentity = async (context: Ctx, identityId: string): Promise<BindingRecord[]> => {
-  return context.prisma.identityNodeBinding.findMany({
+  return context.repos.identityOperator.getPrisma().identityNodeBinding.findMany({
     where: {
       identity_id: identityId,
       status: 'active'
@@ -249,7 +249,7 @@ const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?:
 
   if (input.actor_entity_id && packId) {
     const bridgedAgentId = `${packId}${ACTOR_ENTITY_ID_SEPARATOR}${input.actor_entity_id}`;
-    const agent = await context.prisma.agent.findUnique({
+    const agent = await context.repos.agent.getPrisma().agent.findUnique({
       where: { id: bridgedAgentId }
     });
     if (!agent) {
@@ -263,7 +263,7 @@ const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?:
     const actorDef = activePack?.entities?.actors?.find(a => a.id === input.actor_entity_id);
     const entityKind = actorDef?.kind ?? 'actor';
 
-    const binding = await context.prisma.identityNodeBinding.findFirst({
+    const binding = await context.repos.identityOperator.getPrisma().identityNodeBinding.findFirst({
       where: {
         agent_id: bridgedAgentId,
         status: 'active',
@@ -481,7 +481,7 @@ const buildPackStateSnapshot = async (
   resolvedAgentId: string | null,
   attributes: Record<string, unknown>
 ): Promise<InferencePackStateSnapshot> => {
-  const rows = await listPackEntityStateProjectionRecords(packId);
+  const rows = await listPackEntityStateProjectionRecords(context.packStorageAdapter, packId);
 
   const candidateEntityIds: string[] = [];
   if (resolvedAgentId) {

@@ -55,6 +55,7 @@ import { createPackHostApi } from './app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from './app/runtime/world_engine_snapshot.js';
 import { getRuntimeBootstrap } from './app/services/app_context_ports.js';
 import { createContextAssemblyPort } from './app/services/context_memory_ports.js';
+import { createPrismaRepositories } from './app/services/repositories/index.js';
 import { ensureSchedulerBootstrapOwnership, resetDevelopmentRuntimeState } from './app/services/system.js';
 import type { CalendarConfig } from './clock/types.js';
 import {
@@ -76,6 +77,8 @@ import { startConfigWatcher } from './config/watcher.js';
 import { SimulationManager } from './core/simulation.js';
 import { createInferenceService } from './inference/service.js';
 import { createPrismaInferenceTraceSink } from './inference/sinks/prisma.js';
+import { PostgresPackStorageAdapter } from './packs/storage/internal/PostgresPackStorageAdapter.js';
+import { SqlitePackStorageAdapter } from './packs/storage/internal/SqlitePackStorageAdapter.js';
 import { syncActivePackPluginRuntime } from './plugins/runtime.js';
 import { ApiError } from './utils/api_error.js';
 import { createLogger, setLoggerRuntimeConfig } from './utils/logger.js';
@@ -84,8 +87,13 @@ import { createNotificationManager } from './utils/notifications.js';
 const logger = createLogger('yidhras-server');
 
 const prisma = new PrismaClient();
+const repos = createPrismaRepositories(prisma);
+const dbProvider = process.env.PRISMA_DB_PROVIDER ?? 'sqlite';
+const packStorageAdapter = dbProvider === 'postgresql'
+  ? new PostgresPackStorageAdapter(prisma)
+  : new SqlitePackStorageAdapter();
 const notifications = createNotificationManager();
-const sim = new SimulationManager({ prisma, notifications });
+const sim = new SimulationManager({ prisma, packStorageAdapter, notifications });
 
 const port = getAppPort();
 const worldPacksDir = getWorldPacksDir();
@@ -122,7 +130,9 @@ const assertRuntimeReady = createRuntimeReadyGuard({
 });
 
 const appContext: AppContext = {
+  repos,
   prisma,
+  packStorageAdapter,
   sim,
   clock: sim,
   activePack: sim,
@@ -142,7 +152,7 @@ const appContext: AppContext = {
   setRuntimeLoopDiagnostics: next => {
     runtimeLoopDiagnostics = next;
   },
-  getSqliteRuntimePragmas: () => getRuntimeBootstrap({ runtimeBootstrap: appContext.runtimeBootstrap }).getSqliteRuntimePragmaSnapshot(),
+  getDatabaseHealth: () => getRuntimeBootstrap({ runtimeBootstrap: appContext.runtimeBootstrap }).getDatabaseHealth(),
   getPluginEnableWarningConfig: () => ({
     enabled: getRuntimeConfig().plugins.enable_warning.enabled,
     require_acknowledgement: getRuntimeConfig().plugins.enable_warning.require_acknowledgement
@@ -294,16 +304,20 @@ const isDatabaseTimeoutError = (message: string): boolean => {
 const handleSimulationStepError = (err: unknown): void => {
   const message = getErrorMessage(err);
   const runtimeLoop = appContext.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
-  const sqlitePragmas = appContext.getSqliteRuntimePragmas?.() ?? null;
+  const dbHealth = appContext.getDatabaseHealth?.() ?? null;
   const details = {
     runtime_loop_status: runtimeLoop.status,
     runtime_loop_in_flight: runtimeLoop.in_flight,
     runtime_loop_iteration_count: runtimeLoop.iteration_count,
     runtime_loop_overlap_skipped_count: runtimeLoop.overlap_skipped_count,
     runtime_loop_last_duration_ms: runtimeLoop.last_duration_ms,
-    sqlite_journal_mode: sqlitePragmas?.journal_mode ?? null,
-    sqlite_busy_timeout: sqlitePragmas?.busy_timeout ?? null,
-    sqlite_synchronous: sqlitePragmas?.synchronous ?? null
+    db_provider: dbHealth?.provider ?? null,
+    db_connected: dbHealth?.connected ?? null,
+    ...(dbHealth?.sqlite ? {
+      sqlite_journal_mode: dbHealth.sqlite.journal_mode,
+      sqlite_busy_timeout: dbHealth.sqlite.busy_timeout,
+      sqlite_synchronous: dbHealth.sqlite.synchronous
+    } : {})
   };
 
   appContext.notifications.push(

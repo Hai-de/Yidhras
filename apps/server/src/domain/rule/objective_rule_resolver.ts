@@ -1,5 +1,6 @@
 import type { ActivePackSource } from '../../app/context.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
+import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { ResolvedCapabilityItem } from '../authority/resolver.js';
 import type { InvocationRequest } from '../invocation/invocation_dispatcher.js';
@@ -68,12 +69,12 @@ const resolveTargetKindCondition = (when: Record<string, unknown>): string | nul
   return null;
 };
 
-const resolveTargetEntityKind = async (packId: string, targetEntityId: string | null): Promise<string | null> => {
+const resolveTargetEntityKind = async (_adapter: PackStorageAdapter, packId: string, targetEntityId: string | null): Promise<string | null> => {
   if (!targetEntityId) {
     return null;
   }
 
-  const entities = await listPackWorldEntities(packId);
+  const entities = await listPackWorldEntities(_adapter, packId);
   const target = entities.find(entity => extractEntityIdFromWorldEntityRecordId(packId, entity.id) === targetEntityId) ?? null;
   return target?.entity_kind ?? null;
 };
@@ -215,7 +216,8 @@ const resolveObjectiveEventEffects = (
 const resolveObjectiveRulePlanFromRules = async (
   context: ActivePackSource,
   invocation: InvocationRequest,
-  effectiveMediatorId: string | null
+  effectiveMediatorId: string | null,
+  adapter: PackStorageAdapter
 ): Promise<ObjectiveRulePlan | null> => {
   const pack = context.activePack.getActivePack();
   if (!pack) {
@@ -224,7 +226,7 @@ const resolveObjectiveRulePlanFromRules = async (
 
   const targetEntityId = resolveTargetEntityId(invocation);
   const targetStateEntityId = targetEntityId ?? resolveArtifactId(invocation);
-  const targetEntityKind = await resolveTargetEntityKind(invocation.pack_id, targetEntityId);
+  const targetEntityKind = await resolveTargetEntityKind(adapter, invocation.pack_id, targetEntityId);
   const objectiveRules = pack.rules?.objective_enforcement ?? [];
 
   for (const rule of objectiveRules) {
@@ -299,6 +301,7 @@ export const resolveObjectiveRulePlan = async (
     invocation: InvocationRequest;
     capabilityGrant: ResolvedCapabilityItem | null;
     mediatorId: string | null;
+    packStorageAdapter: PackStorageAdapter;
   }
 ): Promise<ObjectiveRulePlan> => {
   const pack = context.activePack.getActivePack();
@@ -306,7 +309,7 @@ export const resolveObjectiveRulePlan = async (
     throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for objective rule resolution');
   }
 
-  const planFromRules = await resolveObjectiveRulePlanFromRules(context, input.invocation, input.mediatorId);
+  const planFromRules = await resolveObjectiveRulePlanFromRules(context, input.invocation, input.mediatorId, input.packStorageAdapter);
   if (planFromRules) {
     return planFromRules;
   }

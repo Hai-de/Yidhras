@@ -18,15 +18,13 @@ export const logOperatorAudit = async (
 ): Promise<void> => {
   const now = context.clock.getCurrentTick()
 
-  await context.prisma.operatorAuditLog.create({
-    data: {
-      operator_id: entry.operator_id ?? null,
-      pack_id: entry.pack_id ?? null,
-      action: entry.action,
-      target_id: entry.target_id ?? null,
-      detail_json: entry.detail_json ?? undefined,
-      client_ip: entry.client_ip ?? null,
-      created_at: now
-    }
+  await context.repos.identityOperator.createAuditLog({
+    operator_id: entry.operator_id ?? null,
+    pack_id: entry.pack_id ?? null,
+    action: entry.action,
+    target_id: entry.target_id ?? null,
+    detail_json: entry.detail_json ?? undefined,
+    client_ip: entry.client_ip ?? null,
+    created_at: now
   })
 }

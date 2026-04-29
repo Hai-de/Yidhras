@@ -1,14 +1,11 @@
 import type { PackRuntimeWorldEntityInput, PackRuntimeWorldEntityRecord } from '../runtime/core_models.js';
-import {
-  listSqliteEngineOwnedRecords,
-  packRuntimeWorldEntityTableSpec,
-  upsertSqliteEngineOwnedRecord
-} from './internal/sqlite_engine_owned_store.js';
-import { resolvePackRuntimeDatabaseLocation } from './pack_db_locator.js';
+import type { PackStorageAdapter } from './PackStorageAdapter.js';
 
-export const upsertPackWorldEntity = async (input: PackRuntimeWorldEntityInput): Promise<PackRuntimeWorldEntityRecord> => {
-  const location = resolvePackRuntimeDatabaseLocation(input.pack_id);
-  return upsertSqliteEngineOwnedRecord(location.runtimeDbPath, packRuntimeWorldEntityTableSpec, {
+export const upsertPackWorldEntity = async (
+  adapter: PackStorageAdapter,
+  input: PackRuntimeWorldEntityInput
+): Promise<PackRuntimeWorldEntityRecord> => {
+  return adapter.upsertEngineOwnedRecord<PackRuntimeWorldEntityRecord>(input.pack_id, 'world_entities', {
     id: input.id,
     pack_id: input.pack_id,
     entity_kind: input.entity_kind,
@@ -22,7 +19,9 @@ export const upsertPackWorldEntity = async (input: PackRuntimeWorldEntityInput):
   });
 };
 
-export const listPackWorldEntities = async (packId: string): Promise<PackRuntimeWorldEntityRecord[]> => {
-  const location = resolvePackRuntimeDatabaseLocation(packId);
-  return listSqliteEngineOwnedRecords(location.runtimeDbPath, packRuntimeWorldEntityTableSpec, packId);
+export const listPackWorldEntities = async (
+  adapter: PackStorageAdapter,
+  packId: string
+): Promise<PackRuntimeWorldEntityRecord[]> => {
+  return adapter.listEngineOwnedRecords<PackRuntimeWorldEntityRecord>(packId, 'world_entities');
 };

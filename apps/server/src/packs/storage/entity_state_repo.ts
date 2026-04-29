@@ -1,14 +1,11 @@
 import type { PackRuntimeEntityStateInput, PackRuntimeEntityStateRecord } from '../runtime/core_models.js';
-import {
-  listSqliteEngineOwnedRecords,
-  packRuntimeEntityStateTableSpec,
-  upsertSqliteEngineOwnedRecord
-} from './internal/sqlite_engine_owned_store.js';
-import { resolvePackRuntimeDatabaseLocation } from './pack_db_locator.js';
+import type { PackStorageAdapter } from './PackStorageAdapter.js';
 
-export const upsertPackEntityState = async (input: PackRuntimeEntityStateInput): Promise<PackRuntimeEntityStateRecord> => {
-  const location = resolvePackRuntimeDatabaseLocation(input.pack_id);
-  return upsertSqliteEngineOwnedRecord(location.runtimeDbPath, packRuntimeEntityStateTableSpec, {
+export const upsertPackEntityState = async (
+  adapter: PackStorageAdapter,
+  input: PackRuntimeEntityStateInput
+): Promise<PackRuntimeEntityStateRecord> => {
+  return adapter.upsertEngineOwnedRecord<PackRuntimeEntityStateRecord>(input.pack_id, 'entity_states', {
     id: input.id,
     pack_id: input.pack_id,
     entity_id: input.entity_id,
@@ -19,7 +16,9 @@ export const upsertPackEntityState = async (input: PackRuntimeEntityStateInput):
   });
 };
 
-export const listPackEntityStates = async (packId: string): Promise<PackRuntimeEntityStateRecord[]> => {
-  const location = resolvePackRuntimeDatabaseLocation(packId);
-  return listSqliteEngineOwnedRecords(location.runtimeDbPath, packRuntimeEntityStateTableSpec, packId);
+export const listPackEntityStates = async (
+  adapter: PackStorageAdapter,
+  packId: string
+): Promise<PackRuntimeEntityStateRecord[]> => {
+  return adapter.listEngineOwnedRecords<PackRuntimeEntityStateRecord>(packId, 'entity_states');
 };

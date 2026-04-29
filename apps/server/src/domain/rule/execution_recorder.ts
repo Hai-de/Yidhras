@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
 
 import type { PackRuntimeRuleExecutionRecord } from '../../packs/runtime/core_models.js';
+import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { recordPackRuleExecution } from '../../packs/storage/rule_execution_repo.js';
 
 export interface ObjectiveRuleExecutionRecordInput {
+  packStorageAdapter: PackStorageAdapter;
   id?: string;
   pack_id: string;
   rule_id: string;
@@ -20,7 +22,7 @@ export interface ObjectiveRuleExecutionRecordInput {
 export const createObjectiveRuleExecutionRecord = async (
   input: ObjectiveRuleExecutionRecordInput
 ): Promise<PackRuntimeRuleExecutionRecord> => {
-  return recordPackRuleExecution({
+  return recordPackRuleExecution(input.packStorageAdapter, {
     id: input.id ?? randomUUID(),
     pack_id: input.pack_id,
     rule_id: input.rule_id,

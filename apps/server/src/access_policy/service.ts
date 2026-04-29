@@ -214,7 +214,7 @@ export const createAccessPolicy = async (
 
   const now = context.clock.getCurrentTick();
 
-  return context.prisma.policy.create({
+  return context.repos.identityOperator.getPrisma().policy.create({
     data: {
       effect,
       subject_id: subject_id ?? null,

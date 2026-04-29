@@ -174,7 +174,7 @@ const resolveQueryStateData = async (context: AppContext, packId: string, query:
     case 'world_entities': {
       const selectorIds = getSelectorIds(query);
       const items = applyQueryLimit(
-        (await listPackWorldEntities(packId)).filter(item => {
+        (await listPackWorldEntities(context.packStorageAdapter, packId)).filter(item => {
           if (selectorIds && !selectorIds.includes(item.id)) {
             return false;
           }
@@ -207,7 +207,7 @@ const resolveQueryStateData = async (context: AppContext, packId: string, query:
         });
       }
 
-      const items = await listPackEntityStates(packId);
+      const items = await listPackEntityStates(context.packStorageAdapter, packId);
       const matched = items.find(item => item.entity_id === entityId && item.state_namespace === stateNamespace) ?? null;
       return {
         entity_id: entityId,
@@ -217,7 +217,7 @@ const resolveQueryStateData = async (context: AppContext, packId: string, query:
     }
     case 'authority_grants': {
       const items = applyQueryLimit(
-        (await listPackAuthorityGrants(packId)).filter(item => {
+        (await listPackAuthorityGrants(context.packStorageAdapter, packId)).filter(item => {
           if (typeof query.selector.source_entity_id === 'string' && query.selector.source_entity_id.trim().length > 0) {
             if (item.source_entity_id !== query.selector.source_entity_id.trim()) {
               return false;
@@ -249,7 +249,7 @@ const resolveQueryStateData = async (context: AppContext, packId: string, query:
     }
     case 'mediator_bindings': {
       const items = applyQueryLimit(
-        (await listPackMediatorBindings(packId)).filter(item => {
+        (await listPackMediatorBindings(context.packStorageAdapter, packId)).filter(item => {
           if (typeof query.selector.mediator_id === 'string' && query.selector.mediator_id.trim().length > 0) {
             if (item.mediator_id !== query.selector.mediator_id.trim()) {
               return false;
@@ -281,7 +281,7 @@ const resolveQueryStateData = async (context: AppContext, packId: string, query:
     }
     case 'rule_execution_summary': {
       const items = applyQueryLimit(
-        (await listPackRuleExecutionRecords(packId)).filter(item => {
+        (await listPackRuleExecutionRecords(context.packStorageAdapter, packId)).filter(item => {
           if (typeof query.selector.rule_id === 'string' && query.selector.rule_id.trim().length > 0) {
             if (item.rule_id !== query.selector.rule_id.trim()) {
               return false;

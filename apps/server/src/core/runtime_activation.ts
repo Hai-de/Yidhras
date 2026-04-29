@@ -6,6 +6,7 @@ import type { CalendarConfig } from '../clock/types.js';
 import type { PackManifestLoader, WorldPack } from '../packs/manifest/loader.js';
 import { applyOpening } from '../packs/openings/applicator.js';
 import { loadPackOpening } from '../packs/openings/loader.js';
+import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
 import { discoverPackLocalPlugins, type PluginDiscoveryResult } from '../plugins/discovery.js';
 export interface NotificationPort {
   push(level: string, content: string, code?: string, details?: Record<string, unknown>): unknown;
@@ -18,6 +19,7 @@ export interface ActivateWorldPackRuntimeOptions {
   packFolderName: string;
   loader: Pick<PackManifestLoader, 'loadPack'>;
   prisma: PrismaClient;
+  packStorageAdapter: PackStorageAdapter;
   runtimeSpeed: RuntimeSpeedPolicy;
   packsDir: string;
   notifications: NotificationPort;
@@ -86,6 +88,7 @@ export const activateWorldPackRuntime = async ({
   packFolderName,
   loader,
   prisma,
+  packStorageAdapter,
   runtimeSpeed,
   packsDir,
   notifications,
@@ -106,7 +109,7 @@ export const activateWorldPackRuntime = async ({
 
   configureRuntimeSpeedFromPack(runtimeSpeed, pack, notifications);
 
-  await materializePackRuntime({ pack, prisma, initialTick: runtimeConfig.initialTick, appliedOpeningId });
+  await materializePackRuntime({ pack, prisma, packStorageAdapter, initialTick: runtimeConfig.initialTick, appliedOpeningId });
 
   const clock = await resolvePackClock({
     calendars,

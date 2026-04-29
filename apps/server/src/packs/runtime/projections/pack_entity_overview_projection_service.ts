@@ -79,11 +79,11 @@ export const createPackEntityOverviewProjectionService = (
   return {
     async getProjection(input: GetPackEntityOverviewProjectionInput): Promise<PackEntityProjectionSnapshot> {
       const [entities, entityStates, authorities, mediatorBindings, ruleExecutions] = await Promise.all([
-        listPackWorldEntities(input.pack_id),
-        listPackEntityStates(input.pack_id),
-        listPackAuthorityGrants(input.pack_id),
-        listPackMediatorBindings(input.pack_id),
-        listPackRuleExecutionRecords(input.pack_id)
+        listPackWorldEntities(_context.packStorageAdapter, input.pack_id),
+        listPackEntityStates(_context.packStorageAdapter, input.pack_id),
+        listPackAuthorityGrants(_context.packStorageAdapter, input.pack_id),
+        listPackMediatorBindings(_context.packStorageAdapter, input.pack_id),
+        listPackRuleExecutionRecords(_context.packStorageAdapter, input.pack_id)
       ]);
 
       return {

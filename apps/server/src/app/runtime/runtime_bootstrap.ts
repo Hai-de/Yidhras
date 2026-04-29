@@ -1,6 +1,6 @@
-import type { SqliteRuntimePragmaSnapshot } from '../../db/sqlite_runtime.js';
+import type { DatabaseHealthSnapshot } from '../../db/sqlite_runtime.js';
 
 export interface RuntimeDatabaseBootstrap {
-  prepareDatabase(): Promise<SqliteRuntimePragmaSnapshot>;
-  getSqliteRuntimePragmaSnapshot(): SqliteRuntimePragmaSnapshot | null;
+  prepareDatabase(): Promise<DatabaseHealthSnapshot>;
+  getDatabaseHealth(): DatabaseHealthSnapshot | null;
 }

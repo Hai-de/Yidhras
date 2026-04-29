@@ -211,11 +211,11 @@ export const buildShortTermMemory = async (
   const limit = input.limit ?? DEFAULT_LIMIT;
 
   const [traces, jobs, intents, posts, events] = await Promise.all([
-    context.prisma.inferenceTrace.findMany({
+    context.repos.inference.getPrisma().inferenceTrace.findMany({
       orderBy: { updated_at: 'desc' },
       take: limit * 3
     }),
-    context.prisma.decisionJob.findMany({
+    context.repos.inference.getPrisma().decisionJob.findMany({
       include: {
         source_inference: {
           select: {
@@ -231,18 +231,18 @@ export const buildShortTermMemory = async (
       orderBy: { updated_at: 'desc' },
       take: limit * 3
     }),
-    context.prisma.actionIntent.findMany({
+    context.repos.inference.getPrisma().actionIntent.findMany({
       orderBy: { updated_at: 'desc' },
       take: limit * 3
     }),
     input.resolved_agent_id
-      ? context.prisma.post.findMany({
+      ? context.repos.social.queryPosts({
           where: { author_id: input.resolved_agent_id },
           orderBy: { created_at: 'desc' },
           take: limit
         })
       : Promise.resolve([]),
-    context.prisma.event.findMany({
+    context.repos.narrative.queryEvents({
       orderBy: { tick: 'desc' },
       take: Math.max(3, Math.ceil(limit / 2))
     })

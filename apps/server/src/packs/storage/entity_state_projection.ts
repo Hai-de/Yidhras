@@ -1,4 +1,5 @@
 import { listPackEntityStates } from './entity_state_repo.js';
+import type { PackStorageAdapter } from './PackStorageAdapter.js';
 
 export interface PackEntityStateProjectionRecord {
   entity_id: string;
@@ -7,9 +8,10 @@ export interface PackEntityStateProjectionRecord {
 }
 
 export const listPackEntityStateProjectionRecords = async (
+  adapter: PackStorageAdapter,
   packId: string
 ): Promise<PackEntityStateProjectionRecord[]> => {
-  const states = await listPackEntityStates(packId);
+  const states = await listPackEntityStates(adapter, packId);
   return states.map(state => ({
     entity_id: state.entity_id,
     state_namespace: state.state_namespace,

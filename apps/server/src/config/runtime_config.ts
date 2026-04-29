@@ -197,12 +197,14 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   }
 
   if (sqliteBusyTimeoutMs !== undefined || sqliteWalAutocheckpointPages !== undefined || sqliteSynchronous !== undefined) {
-    overrides.sqlite = {
-      ...(sqliteBusyTimeoutMs !== undefined ? { busy_timeout_ms: sqliteBusyTimeoutMs } : {}),
-      ...(sqliteWalAutocheckpointPages !== undefined
-        ? { wal_autocheckpoint_pages: sqliteWalAutocheckpointPages }
-        : {}),
-      ...(sqliteSynchronous !== undefined ? { synchronous: sqliteSynchronous } : {})
+    overrides.database = {
+      sqlite: {
+        ...(sqliteBusyTimeoutMs !== undefined ? { busy_timeout_ms: sqliteBusyTimeoutMs } : {}),
+        ...(sqliteWalAutocheckpointPages !== undefined
+          ? { wal_autocheckpoint_pages: sqliteWalAutocheckpointPages }
+          : {}),
+        ...(sqliteSynchronous !== undefined ? { synchronous: sqliteSynchronous } : {})
+      }
     }
   }
 
@@ -546,8 +548,13 @@ export const getAppPort = (): number => {
   return getRuntimeConfig().app.port
 }
 
-export const getSqliteRuntimeConfig = (): RuntimeConfig['sqlite'] => {
-  return getRuntimeConfig().sqlite
+export const getDatabaseConfig = (): RuntimeConfig['database'] => {
+  return getRuntimeConfig().database
+}
+
+/** @deprecated Use getDatabaseConfig().sqlite */
+export const getSqliteRuntimeConfig = (): RuntimeConfig['database']['sqlite'] => {
+  return getDatabaseConfig().sqlite ?? { busy_timeout_ms: 5000, wal_autocheckpoint_pages: 1000, synchronous: 'NORMAL' as const }
 }
 
 export const getSimulationLoopIntervalMs = (): number => {
@@ -671,9 +678,9 @@ export const buildRuntimeConfigSnapshot = (): Record<string, string | boolean | 
     preferred_world_pack: config.world.preferred_pack,
     world_packs_dir: getWorldPacksDir(),
     ai_models_config: getAiModelsConfigPath(),
-    sqlite_busy_timeout_ms: String(config.sqlite.busy_timeout_ms),
-    sqlite_wal_autocheckpoint_pages: String(config.sqlite.wal_autocheckpoint_pages),
-    sqlite_synchronous: config.sqlite.synchronous,
+    sqlite_busy_timeout_ms: String(config.database.sqlite?.busy_timeout_ms ?? 5000),
+    sqlite_wal_autocheckpoint_pages: String(config.database.sqlite?.wal_autocheckpoint_pages ?? 1000),
+    sqlite_synchronous: config.database.sqlite?.synchronous ?? 'NORMAL',
     operator_jwt_expires_in: config.operator.auth.jwt_expires_in,
     operator_bcrypt_rounds: String(config.operator.auth.bcrypt_rounds),
     plugin_enable_warning_enabled: String(config.plugins.enable_warning.enabled),

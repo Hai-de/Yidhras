@@ -4,9 +4,11 @@ import type { Express } from 'express';
 import type { ActivePackProvider } from '../core/active_pack_provider.js';
 import type { ClockProvider } from '../core/clock_provider.js';
 import type { SimulationManager } from '../core/simulation.js';
-import type { SqliteRuntimePragmaSnapshot } from '../db/sqlite_runtime.js';
+import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
+import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
 import type { NotificationLevel, SystemMessage } from '../utils/notifications.js';
 import type { AppContextPorts } from './services/app_context_ports.js';
+import type { Repositories } from './services/repositories/index.js';
 
 export type HealthLevel = 'ok' | 'degraded' | 'fail';
 
@@ -54,7 +56,9 @@ export interface ActivePackSource {
 export interface RuntimeSource extends ClockSource, ActivePackSource {}
 
 export interface AppInfrastructure extends RuntimeSource {
+  readonly repos: Repositories;
   readonly prisma: PrismaClient;
+  readonly packStorageAdapter: PackStorageAdapter;
   readonly notifications: NotificationStore;
   readonly startupHealth: StartupHealth;
   assertRuntimeReady(feature: string): void;
@@ -62,8 +66,11 @@ export interface AppInfrastructure extends RuntimeSource {
 
 export interface AppContext extends AppInfrastructure, AppContextPorts {
   /**
-   * @deprecated Use focused ports (clock, activePack, activePackRuntime, etc.)
-   * instead of reaching into sim directly. Will be removed in Batch 3.
+   * SimulationManager — canonical owner for multi-pack runtime, graph data,
+   * pack runtime handles, and experimental features. Prefer focused ports
+   * (clock, activePack, activePackRuntime) when the operation they expose is
+   * sufficient; use sim directly for registry, graph, and runtime-control
+   * operations that have no focused-port equivalent.
    */
   readonly sim: SimulationManager;
   getRuntimeReady(): boolean;
@@ -72,7 +79,7 @@ export interface AppContext extends AppInfrastructure, AppContextPorts {
   setPaused(paused: boolean): void;
   getRuntimeLoopDiagnostics?(): RuntimeLoopDiagnostics;
   setRuntimeLoopDiagnostics?(next: RuntimeLoopDiagnostics): void;
-  getSqliteRuntimePragmas?(): SqliteRuntimePragmaSnapshot | null;
+  getDatabaseHealth?(): DatabaseHealthSnapshot | null;
   getPluginEnableWarningConfig?(): {
     enabled: boolean;
     require_acknowledgement: boolean;

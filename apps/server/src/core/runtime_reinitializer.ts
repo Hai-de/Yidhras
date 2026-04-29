@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 
 import { teardownActorBridges } from '../packs/runtime/materializer.js';
 import { clearPackRuntimeStorage } from '../packs/runtime/teardown.js';
+import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
 import type { NotificationPort } from './runtime_activation.js';
 import type { SimulationManager } from './simulation.js';
 
@@ -11,15 +12,16 @@ export interface ReinitializePackRuntimeInput {
   packId: string;
   openingId: string;
   prisma: PrismaClient;
+  packStorageAdapter: PackStorageAdapter;
   notifications: NotificationPort;
 }
 
 export const reinitializePackRuntime = async (input: ReinitializePackRuntimeInput): Promise<void> => {
-  const { sim, packFolderName, packId, openingId, prisma, notifications } = input;
+  const { sim, packFolderName, packId, openingId, prisma, packStorageAdapter, notifications } = input;
 
   notifications.push('info', `正在为包 "${packId}" 重新初始化，应用开局 "${openingId}"...`, 'PACK_REINIT_START');
 
-  clearPackRuntimeStorage(packId);
+  await clearPackRuntimeStorage(packStorageAdapter, packId);
 
   const deletedCount = await teardownActorBridges(packId, prisma);
   if (deletedCount > 0) {

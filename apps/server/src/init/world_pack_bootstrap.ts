@@ -4,6 +4,7 @@ import path from 'path';
 import { getWorldBootstrapConfig, getWorldPacksDir } from '../config/runtime_config.js';
 import { type InstalledPackRuntimeSummary,installPackRuntime } from '../kernel/install/install_pack.js';
 import { PackManifestLoader } from '../packs/manifest/loader.js';
+import { SqlitePackStorageAdapter } from '../packs/storage/internal/SqlitePackStorageAdapter.js';
 import { createLogger } from '../utils/logger.js';
 
 const log = createLogger('world-pack-bootstrap');
@@ -78,7 +79,7 @@ export const ensureBootstrapWorldPack = async (): Promise<WorldPackBootstrapResu
 
   const loader = new PackManifestLoader(worldPacksDir);
   const pack = loader.loadPack(bootstrapConfig.targetPackDirName);
-  result.packRuntime = await installPackRuntime(pack);
+  result.packRuntime = await installPackRuntime(pack, new SqlitePackStorageAdapter());
   return result;
 };
 

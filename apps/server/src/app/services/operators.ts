@@ -15,9 +15,7 @@ export const createOperator = async (
   createdByOperatorId?: string,
   clientIp?: string
 ) => {
-  const existing = await context.prisma.operator.findUnique({
-    where: { username: input.username }
-  })
+  const existing = await context.repos.identityOperator.findOperatorByUsername(input.username)
 
   if (existing) {
     throw new ApiError(409, 'USERNAME_TAKEN', `Username '${input.username}' is already taken`)
@@ -27,29 +25,25 @@ export const createOperator = async (
   const now = context.clock.getCurrentTick()
 
   // 创建 Identity
-  const identity = await context.prisma.identity.create({
-    data: {
-      type: 'user',
-      name: input.username,
-      provider: 'operator',
-      status: 'active',
-      created_at: now,
-      updated_at: now
-    }
+  const identity = await context.repos.identityOperator.createIdentity({
+    type: 'user',
+    name: input.username,
+    provider: 'operator',
+    status: 'active',
+    created_at: now,
+    updated_at: now
   })
 
   // 创建 Operator
-  const operator = await context.prisma.operator.create({
-    data: {
-      identity_id: identity.id,
-      username: input.username,
-      password_hash: passwordHash,
-      is_root: input.is_root ?? false,
-      status: OPERATOR_STATUS.ACTIVE,
-      display_name: input.display_name ?? null,
-      created_at: now,
-      updated_at: now
-    }
+  const operator = await context.repos.identityOperator.createOperatorRecord({
+    identity_id: (identity as { id: string }).id,
+    username: input.username,
+    password_hash: passwordHash,
+    is_root: input.is_root ?? false,
+    status: OPERATOR_STATUS.ACTIVE,
+    display_name: input.display_name ?? null,
+    created_at: now,
+    updated_at: now
   })
 
   await logOperatorAudit(context, {
@@ -64,22 +58,11 @@ export const createOperator = async (
 }
 
 export const listOperators = async (context: AppContext) => {
-  return context.prisma.operator.findMany({
-    orderBy: { created_at: 'desc' },
-    select: {
-      id: true,
-      username: true,
-      is_root: true,
-      status: true,
-      display_name: true,
-      created_at: true,
-      updated_at: true
-    }
-  })
+  return context.repos.identityOperator.listOperators()
 }
 
 export const getOperator = async (context: AppContext, operatorId: string) => {
-  const operator = await context.prisma.operator.findUnique({
+  const operator = await context.repos.identityOperator.getPrisma().operator.findUnique({
     where: { id: operatorId },
     include: {
       pack_bindings: true
@@ -105,9 +88,7 @@ export const updateOperator = async (
   updatedByOperatorId?: string,
   clientIp?: string
 ) => {
-  const operator = await context.prisma.operator.findUnique({
-    where: { id: operatorId }
-  })
+  const operator = await context.repos.identityOperator.findOperatorById(operatorId)
 
   if (!operator) {
     throw new ApiError(404, 'OPERATOR_NOT_FOUND', 'Operator not found')
@@ -135,10 +116,7 @@ export const updateOperator = async (
     data.is_root = input.is_root
   }
 
-  const updated = await context.prisma.operator.update({
-    where: { id: operatorId },
-    data
-  })
+  const updated = await context.repos.identityOperator.updateOperator(operatorId, data)
 
   await logOperatorAudit(context, {
     operator_id: updatedByOperatorId ?? null,
@@ -157,9 +135,7 @@ export const deleteOperator = async (
   deletedByOperatorId?: string,
   clientIp?: string
 ) => {
-  const operator = await context.prisma.operator.findUnique({
-    where: { id: operatorId }
-  })
+  const operator = await context.repos.identityOperator.findOperatorById(operatorId)
 
   if (!operator) {
     throw new ApiError(404, 'OPERATOR_NOT_FOUND', 'Operator not found')
@@ -167,12 +143,9 @@ export const deleteOperator = async (
 
   const now = context.clock.getCurrentTick()
 
-  const updated = await context.prisma.operator.update({
-    where: { id: operatorId },
-    data: {
-      status: OPERATOR_STATUS.DISABLED,
-      updated_at: now
-    }
+  const updated = await context.repos.identityOperator.updateOperator(operatorId, {
+    status: OPERATOR_STATUS.DISABLED,
+    updated_at: now
   })
 
   await logOperatorAudit(context, {

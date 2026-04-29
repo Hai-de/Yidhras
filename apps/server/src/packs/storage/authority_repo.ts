@@ -1,16 +1,11 @@
 import type { PackRuntimeAuthorityGrantInput, PackRuntimeAuthorityGrantRecord } from '../runtime/core_models.js';
-import {
-  listSqliteEngineOwnedRecords,
-  packRuntimeAuthorityGrantTableSpec,
-  upsertSqliteEngineOwnedRecord
-} from './internal/sqlite_engine_owned_store.js';
-import { resolvePackRuntimeDatabaseLocation } from './pack_db_locator.js';
+import type { PackStorageAdapter } from './PackStorageAdapter.js';
 
 export const upsertPackAuthorityGrant = async (
+  adapter: PackStorageAdapter,
   input: PackRuntimeAuthorityGrantInput
 ): Promise<PackRuntimeAuthorityGrantRecord> => {
-  const location = resolvePackRuntimeDatabaseLocation(input.pack_id);
-  return upsertSqliteEngineOwnedRecord(location.runtimeDbPath, packRuntimeAuthorityGrantTableSpec, {
+  return adapter.upsertEngineOwnedRecord<PackRuntimeAuthorityGrantRecord>(input.pack_id, 'authority_grants', {
     id: input.id,
     pack_id: input.pack_id,
     source_entity_id: input.source_entity_id,
@@ -28,7 +23,9 @@ export const upsertPackAuthorityGrant = async (
   });
 };
 
-export const listPackAuthorityGrants = async (packId: string): Promise<PackRuntimeAuthorityGrantRecord[]> => {
-  const location = resolvePackRuntimeDatabaseLocation(packId);
-  return listSqliteEngineOwnedRecords(location.runtimeDbPath, packRuntimeAuthorityGrantTableSpec, packId);
+export const listPackAuthorityGrants = async (
+  adapter: PackStorageAdapter,
+  packId: string
+): Promise<PackRuntimeAuthorityGrantRecord[]> => {
+  return adapter.listEngineOwnedRecords<PackRuntimeAuthorityGrantRecord>(packId, 'authority_grants');
 };

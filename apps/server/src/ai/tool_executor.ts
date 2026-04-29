@@ -172,14 +172,7 @@ export const createToolRegistry = (toolEntries?: AiToolRegistryEntry[], permissi
       const packId = typeof args.pack_id === 'string' ? args.pack_id : ctx.pack_id;
       const limit = typeof args.limit === 'number' && args.limit > 0 ? Math.min(Math.trunc(args.limit), 100) : 10;
 
-      const rows = await ctx.context.prisma.memoryBlock.findMany({
-        where: {
-          ...(packId ? { pack_id: packId } : {}),
-          status: 'active'
-        },
-        orderBy: [{ updated_at_tick: 'desc' }, { created_at_tick: 'desc' }],
-        take: limit
-      });
+      const rows = await ctx.context.repos.memory.listActiveMemoryBlocks(packId, limit);
 
       return rows.map(row => ({
         id: row.id,
@@ -206,7 +199,7 @@ export const createToolRegistry = (toolEntries?: AiToolRegistryEntry[], permissi
         return { error: { code: 'MISSING_ENTITY_ID', message: 'entity_id is required' } };
       }
 
-      const entities = await listPackWorldEntities(packId);
+      const entities = await listPackWorldEntities(ctx.context.packStorageAdapter, packId);
       return entities.find(e => e.id === entityId) ?? null;
     }
   });
@@ -228,7 +221,7 @@ export const createToolRegistry = (toolEntries?: AiToolRegistryEntry[], permissi
         return { error: { code: 'MISSING_IDS', message: 'source_id and target_id are required' } };
       }
 
-      const rel = await ctx.context.prisma.relationship.findFirst({
+      const rel = await ctx.context.repos.relationship.getPrisma().relationship.findFirst({
         where: { from_id: sourceId, to_id: targetId }
       });
 

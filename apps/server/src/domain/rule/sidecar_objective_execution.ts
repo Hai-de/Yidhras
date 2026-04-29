@@ -9,6 +9,7 @@ import {
 
 import type { ActivePackSource } from '../../app/context.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
+import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { InvocationRequest } from '../invocation/invocation_dispatcher.js';
 import type { ObjectiveRulePlan } from './objective_rule_resolver.js';
@@ -55,6 +56,7 @@ export const buildSidecarObjectiveExecutionRequest = async (
   input: {
     invocation: InvocationRequest;
     effectiveMediatorId: string | null;
+    packStorageAdapter: PackStorageAdapter;
   }
 ): Promise<WorldRuleExecuteObjectiveRequest> => {
   const pack = context.activePack.getActivePack();
@@ -64,7 +66,7 @@ export const buildSidecarObjectiveExecutionRequest = async (
     });
   }
 
-  const worldEntities = await listPackWorldEntities(input.invocation.pack_id);
+  const worldEntities = await listPackWorldEntities(input.packStorageAdapter, input.invocation.pack_id);
   return {
     protocol_version: 'world_engine/v1alpha1',
     pack_id: input.invocation.pack_id,

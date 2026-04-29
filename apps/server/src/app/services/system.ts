@@ -1,6 +1,6 @@
 import { isAiGatewayEnabled } from '../../config/runtime_config.js';
 import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
-import type { SqliteRuntimePragmaSnapshot } from '../../db/sqlite_runtime.js';
+import type { DatabaseHealthSnapshot } from '../../db/sqlite_runtime.js';
 import type { SystemMessage } from '../../utils/notifications.js';
 import type { AppContext, RuntimeLoopDiagnostics } from '../context.js';
 import { createRuntimeKernelService } from '../runtime/runtime_kernel_service.js';
@@ -22,7 +22,7 @@ export interface RuntimeStatusSnapshot {
   runtime_ready: boolean;
   runtime_speed: RuntimeSpeedSnapshot;
   runtime_loop: RuntimeLoopDiagnostics;
-  sqlite: SqliteRuntimePragmaSnapshot | null;
+  database: DatabaseHealthSnapshot | null;
   scheduler: {
     worker_id: string;
     partition_count: number;
@@ -128,7 +128,7 @@ export const resetDevelopmentRuntimeState = async (context: AppContext): Promise
     return null;
   }
 
-  return context.prisma.$transaction(async tx => {
+  return context.repos.inference.getPrisma().$transaction(async tx => {
     const schedulerCandidateDecisions = await tx.schedulerCandidateDecision.deleteMany();
     const schedulerRuns = await tx.schedulerRun.deleteMany();
     const relationshipAdjustmentLogs = await tx.relationshipAdjustmentLog.deleteMany();
@@ -183,7 +183,7 @@ export const getRuntimeStatusSnapshot = async (
     runtime_ready: context.getRuntimeReady(),
     runtime_speed: context.activePackRuntime!.getRuntimeSpeedSnapshot(),
     runtime_loop: runtimeLoop,
-    sqlite: context.getSqliteRuntimePragmas?.() ?? null,
+    database: context.getDatabaseHealth?.() ?? null,
     scheduler: {
       worker_id: ownershipSnapshot.worker_id,
       partition_count: ownershipSnapshot.partition_count,

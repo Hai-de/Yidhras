@@ -150,6 +150,7 @@ export const registerPackSnapshotRoutes = (
         packId: params.packId,
         snapshotId: params.snapshotId,
         prisma: context.prisma,
+        packStorageAdapter: context.packStorageAdapter,
         pack,
         sim: context.sim,
         activePackRuntime: context.activePackRuntime,

@@ -22,6 +22,7 @@ const logger = createLogger('active-pack-runtime-facade');
 export interface DefaultActivePackRuntimeFacadeOptions {
   loader: Pick<PackManifestLoader, 'loadPack'>;
   prisma: Parameters<typeof activateWorldPackRuntime>[0]['prisma'];
+  packStorageAdapter: ActivateWorldPackRuntimeOptions['packStorageAdapter'];
   packsDir: string;
   runtimeSpeed: RuntimeSpeedPolicy;
   runtimeBootstrap: RuntimeDatabaseBootstrap;
@@ -32,6 +33,7 @@ export interface DefaultActivePackRuntimeFacadeOptions {
 export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
   private readonly loader: Pick<PackManifestLoader, 'loadPack'>;
   private readonly prisma: Parameters<typeof activateWorldPackRuntime>[0]['prisma'];
+  private readonly packStorageAdapter: ActivateWorldPackRuntimeOptions['packStorageAdapter'];
   private readonly packsDir: string;
   private readonly runtimeSpeed: RuntimeSpeedPolicy;
   private readonly runtimeBootstrap: RuntimeDatabaseBootstrap;
@@ -44,6 +46,7 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
   constructor(options: DefaultActivePackRuntimeFacadeOptions) {
     this.loader = options.loader;
     this.prisma = options.prisma;
+    this.packStorageAdapter = options.packStorageAdapter;
     this.packsDir = options.packsDir;
     this.runtimeSpeed = options.runtimeSpeed;
     this.runtimeBootstrap = options.runtimeBootstrap;
@@ -55,7 +58,7 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
   public async init(packFolderName: string, openingId?: string): Promise<void> {
     await this.runtimeBootstrap.prepareDatabase();
 
-    const activated = await activateWorldPackRuntime({
+    const activated = await activateWorldPackRuntime({ packStorageAdapter: this.packStorageAdapter,
       packFolderName,
       loader: this.loader,
       prisma: this.prisma,

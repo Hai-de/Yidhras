@@ -1,19 +1,9 @@
 import fs from 'fs';
 
 import type { WorldPackStorage, WorldPackStorageCollectionDefinition } from '../schema/storage_schema.js';
-import { asMutablePlanRecord, type PersistedStoragePlan,readPersistedStoragePlan, writePersistedStoragePlan } from './internal/plan_store.js';
-import {
-  ensurePackRuntimeSqliteStorage,
-  packRuntimeAuthorityGrantTableSpec,
-  packRuntimeEntityStateTableSpec,
-  packRuntimeMediatorBindingTableSpec,
-  packRuntimeRuleExecutionTableSpec,
-  packRuntimeWorldEntityTableSpec,
-  seedSqliteEngineOwnedRecordsIfEmpty,
-  type SqliteEngineOwnedTableSpec
-} from './internal/sqlite_engine_owned_store.js';
-import { ensureDeclaredPackCollectionTables } from './pack_collection_repo.js';
+import { type PersistedStoragePlan, writePersistedStoragePlan } from './internal/plan_store.js';
 import { ensurePackRuntimeDirectory, type PackRuntimeDatabaseLocation } from './pack_db_locator.js';
+import type { CollectionFieldType, PackStorageAdapter } from './PackStorageAdapter.js';
 
 export interface PackStorageMaterializeSummary {
   location: PackRuntimeDatabaseLocation;
@@ -22,15 +12,6 @@ export interface PackStorageMaterializeSummary {
   engineOwnedCollections: string[];
   packCollections: string[];
 }
-
-
-const LEGACY_SQLITE_MIGRATION_SPECS = {
-  world_entities: packRuntimeWorldEntityTableSpec,
-  entity_states: packRuntimeEntityStateTableSpec,
-  authority_grants: packRuntimeAuthorityGrantTableSpec,
-  mediator_bindings: packRuntimeMediatorBindingTableSpec,
-  rule_execution_records: packRuntimeRuleExecutionTableSpec
-} satisfies Record<string, SqliteEngineOwnedTableSpec<unknown>>;
 
 const toPersistedStoragePlan = (
   storage: WorldPackStorage,
@@ -52,44 +33,34 @@ const toPersistedStoragePlan = (
   };
 };
 
-const migrateLegacyEngineOwnedCollections = async (
-  runtimeDbPath: string,
-  existingPlan: PersistedStoragePlan | null
-): Promise<void> => {
-  if (!existingPlan) {
-    return;
-  }
-
-  const mutablePlan = asMutablePlanRecord(existingPlan);
-  for (const [collectionKey, spec] of Object.entries(LEGACY_SQLITE_MIGRATION_SPECS)) {
-    const legacyRows = mutablePlan[collectionKey];
-    if (!Array.isArray(legacyRows) || legacyRows.length === 0) {
-      continue;
-    }
-    await seedSqliteEngineOwnedRecordsIfEmpty(
-      runtimeDbPath,
-      spec,
-      legacyRows.map(row => spec.decode((row ?? {}) as Record<string, unknown>))
-    );
-  }
-};
-
 export class PackStorageEngine {
-  public async materializeStoragePlan(packId: string, storage: WorldPackStorage): Promise<PackStorageMaterializeSummary> {
+  private readonly adapter: PackStorageAdapter;
+
+  constructor(adapter: PackStorageAdapter) {
+    this.adapter = adapter;
+  }
+
+  public async materializeStoragePlan(
+    packId: string,
+    storage: WorldPackStorage
+  ): Promise<PackStorageMaterializeSummary> {
     const location = ensurePackRuntimeDirectory(packId, storage.runtime_db_file);
     const runtimeDbExisted = fs.existsSync(location.runtimeDbPath);
     const storagePlanPath = `${location.runtimeDbPath}.storage-plan.json`;
 
-    if (!runtimeDbExisted) {
-      fs.writeFileSync(location.runtimeDbPath, '', 'utf-8');
-    }
+    await this.adapter.ensureEngineOwnedSchema(packId);
 
-    const existingPlan = readPersistedStoragePlan(storagePlanPath);
-    await ensurePackRuntimeSqliteStorage(location.runtimeDbPath);
     const persistedPlan = toPersistedStoragePlan(storage, storage.pack_collections);
 
-    await migrateLegacyEngineOwnedCollections(location.runtimeDbPath, existingPlan);
-    await ensureDeclaredPackCollectionTables(location.runtimeDbPath, persistedPlan.pack_collections);
+    for (const collection of persistedPlan.pack_collections) {
+      await this.adapter.ensureCollection(packId, {
+        key: collection.key,
+        kind: collection.kind,
+        primary_key: collection.primary_key,
+        fields: collection.fields.map(f => ({ name: f.key, type: f.type as CollectionFieldType, required: f.required })),
+        indexes: collection.indexes?.map(idx => ({ columns: idx }))
+      });
+    }
 
     writePersistedStoragePlan(storagePlanPath, persistedPlan);
 
@@ -103,6 +74,6 @@ export class PackStorageEngine {
   }
 }
 
-export const createPackStorageEngine = (): PackStorageEngine => {
-  return new PackStorageEngine();
+export const createPackStorageEngine = (adapter: PackStorageAdapter): PackStorageEngine => {
+  return new PackStorageEngine(adapter);
 };

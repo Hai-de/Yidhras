@@ -169,11 +169,6 @@ const allStatement = <T extends SqliteRow>(
 ): T[] => {
   return (db.prepare(sql).all(...params) as T[] | undefined) ?? [];
 };
-
-const execStatements = (db: SqliteDatabase, sql: string): void => {
-  db.exec(sql);
-};
-
 const withRuntimeDatabase = async <T>(
   runtimeDbPath: string,
   handler: (db: SqliteDatabase) => Promise<T> | T
@@ -546,41 +541,5 @@ export const countSqliteEngineOwnedRecords = async (
     applySchema(db);
     const row = getStatement<{ count: number | string }>(db, `SELECT COUNT(*) as count FROM ${tableName}`);
     return Number(row?.count ?? 0);
-  });
-};
-
-export const seedSqliteEngineOwnedRecordsIfEmpty = async <RecordT>(
-  runtimeDbPath: string,
-  spec: SqliteEngineOwnedTableSpec<RecordT>,
-  records: RecordT[]
-): Promise<boolean> => {
-  if (!fs.existsSync(runtimeDbPath) || records.length === 0) {
-    return false;
-  }
-
-  return withRuntimeDatabase(runtimeDbPath, db => {
-    applySchema(db);
-    const row = getStatement<{ count: number | string }>(db, `SELECT COUNT(*) as count FROM ${spec.tableName}`);
-    if (Number(row?.count ?? 0) > 0) {
-      return false;
-    }
-
-    execStatements(db, 'BEGIN IMMEDIATE TRANSACTION');
-    try {
-      for (const record of records) {
-        const encoded = spec.encode(record);
-        const columns = Object.keys(encoded);
-        runStatement(
-          db,
-          buildUpsertStatement(spec.tableName, columns),
-          columns.map(column => encoded[column] ?? null)
-        );
-      }
-      execStatements(db, 'COMMIT');
-      return true;
-    } catch (error) {
-      execStatements(db, 'ROLLBACK');
-      throw error;
-    }
   });
 };

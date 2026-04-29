@@ -20,7 +20,7 @@ const getAllowedFields = async (
   fields: string[],
   attributes: Record<string, unknown>
 ): Promise<Set<string>> => {
-  const rules = await context.prisma.policy.findMany({
+  const rules = await context.repos.identityOperator.getPrisma().policy.findMany({
     where: {
       resource: MEMORY_POLICY_RESOURCE,
       action,
@@ -112,7 +112,7 @@ const buildTraceRecentRecord = async (input: {
     return [];
   }
 
-  const traces = await input.context.prisma.inferenceTrace.findMany({
+  const traces = await input.context.repos.inference.getPrisma().inferenceTrace.findMany({
     orderBy: [{ updated_at: 'desc' }],
     take: RECENT_SOURCE_LIMIT * 3
   });
@@ -166,7 +166,7 @@ const buildIntentRecentRecord = async (input: {
     return [];
   }
 
-  const intents = await input.context.prisma.actionIntent.findMany({
+  const intents = await input.context.repos.inference.getPrisma().actionIntent.findMany({
     orderBy: [{ updated_at: 'desc' }],
     take: RECENT_SOURCE_LIMIT * 3
   });
@@ -219,7 +219,7 @@ const buildEventRecentRecord = async (input: {
     return [];
   }
 
-  const events = await input.context.prisma.event.findMany({
+  const events = await input.context.repos.narrative.queryEvents({
     orderBy: [{ tick: 'desc' }],
     take: RECENT_SOURCE_LIMIT * 3,
     include: {

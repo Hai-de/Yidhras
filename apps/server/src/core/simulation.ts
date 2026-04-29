@@ -14,8 +14,9 @@ import {
   getWorldPacksDir,
   isExperimentalMultiPackRuntimeEnabled
 } from '../config/runtime_config.js';
-import type { SqliteRuntimePragmaSnapshot } from '../db/sqlite_runtime.js';
+import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
 import { PackManifestLoader, type WorldPack } from '../packs/manifest/loader.js';
+import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
 import type { ActivePackProvider } from './active_pack_provider.js';
 import { DefaultActivePackRuntimeFacade, type DefaultActivePackRuntimeFacadeOptions } from './active_pack_runtime_facade.js';
 import type { ClockProvider } from './clock_provider.js';
@@ -43,7 +44,7 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
   private readonly activePackRuntimeFacade: DefaultActivePackRuntimeFacade;
   private readonly packRuntimeRegistryService: DefaultPackRuntimeRegistryService;
 
-  constructor(options: { prisma: PrismaClient; notifications: DefaultActivePackRuntimeFacadeOptions['notifications'] }) {
+  constructor(options: { prisma: PrismaClient; packStorageAdapter: PackStorageAdapter; notifications: DefaultActivePackRuntimeFacadeOptions['notifications'] }) {
     this.packsDir = getWorldPacksDir();
 
     this.prisma = options.prisma;
@@ -63,6 +64,7 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
     this.activePackRuntimeFacade = new DefaultActivePackRuntimeFacade({
       loader: this.loader,
       prisma: this.prisma,
+      packStorageAdapter: options.packStorageAdapter,
       packsDir: this.packsDir,
       runtimeSpeed: this.runtimeSpeed,
       runtimeBootstrap: this.runtimeBootstrap,
@@ -78,17 +80,18 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
       registry: this.packRuntimeRegistry,
       packCatalog: this.packCatalogService,
       prisma: this.prisma,
+      packStorageAdapter: options.packStorageAdapter,
       getActivePack: () => this.activePackRuntimeFacade.getActivePack(),
       getStartupLevel: () => this.startupHealthLevel()
     });
   }
 
-  public async prepareDatabase(): Promise<SqliteRuntimePragmaSnapshot> {
+  public async prepareDatabase(): Promise<DatabaseHealthSnapshot> {
     return this.runtimeBootstrap.prepareDatabase();
   }
 
-  public getSqliteRuntimePragmaSnapshot(): SqliteRuntimePragmaSnapshot | null {
-    return this.runtimeBootstrap.getSqliteRuntimePragmaSnapshot();
+  public getDatabaseHealth(): DatabaseHealthSnapshot | null {
+    return this.runtimeBootstrap.getDatabaseHealth();
   }
 
   public async init(packFolderName: string, openingId?: string): Promise<void> {

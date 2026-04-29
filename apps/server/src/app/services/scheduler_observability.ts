@@ -964,7 +964,7 @@ const buildSchedulerDecisionWorkflowLinks = async (
     return new Map();
   }
 
-  const jobs = await context.prisma.decisionJob.findMany({
+  const jobs = await context.repos.inference.getPrisma().decisionJob.findMany({
     where: {
       id: {
         in: createdJobIds
@@ -1102,7 +1102,7 @@ export const recordSchedulerRunSnapshot = async (
   const runId = randomUUID();
   const partitionId = input.partitionId ?? DEFAULT_SCHEDULER_PARTITION_ID;
 
-  await context.prisma.schedulerRun.create({
+  await context.repos.scheduler.getPrisma().schedulerRun.create({
     data: {
       id: runId,
       worker_id: input.workerId,
@@ -1136,7 +1136,7 @@ export const recordSchedulerRunSnapshot = async (
 };
 
 export const getLatestSchedulerRunReadModel = async (context: AppContext): Promise<SchedulerRunReadModel | null> => {
-  const schedulerRun = await context.prisma.schedulerRun.findFirst({
+  const schedulerRun = await context.repos.scheduler.getPrisma().schedulerRun.findFirst({
     include: {
       candidate_decisions: {
         orderBy: {
@@ -1174,7 +1174,7 @@ export const getSchedulerRunReadModelById = async (
   context: AppContext,
   runId: string
 ): Promise<SchedulerRunReadModel | null> => {
-  const schedulerRun = await context.prisma.schedulerRun.findUnique({
+  const schedulerRun = await context.repos.scheduler.getPrisma().schedulerRun.findUnique({
     where: {
       id: runId
     },
@@ -1221,7 +1221,7 @@ export const getAgentSchedulerProjection = async (
   }
 
   const limit = parseLimit(options?.limit);
-  const decisions = await context.prisma.schedulerCandidateDecision.findMany({
+  const decisions = await context.repos.scheduler.getPrisma().schedulerCandidateDecision.findMany({
     where: {
       actor_id: resolvedActorId
     },
@@ -1238,7 +1238,7 @@ export const getAgentSchedulerProjection = async (
   );
   const runIds = Array.from(new Set(timeline.map(item => item.scheduler_run_id)));
   const runs = runIds.length
-    ? await context.prisma.schedulerRun.findMany({
+    ? await context.repos.scheduler.getPrisma().schedulerRun.findMany({
         where: {
           id: {
             in: runIds
@@ -1322,7 +1322,7 @@ export const listAgentSchedulerDecisions = async (
   actorId: string,
   limit = getSchedulerObservabilityConfig().default_query_limit
 ): Promise<SchedulerCandidateDecisionReadModel[]> => {
-  const decisions = await context.prisma.schedulerCandidateDecision.findMany({
+  const decisions = await context.repos.scheduler.getPrisma().schedulerCandidateDecision.findMany({
     where: {
       actor_id: actorId
     },
@@ -1338,7 +1338,7 @@ export const listSchedulerRuns = async (
   input: ListSchedulerRunsInput
 ): Promise<ListSchedulerRunsResult> => {
   const filters = parseRunFilters(input);
-  const runs = await context.prisma.schedulerRun.findMany({
+  const runs = await context.repos.scheduler.getPrisma().schedulerRun.findMany({
     where: {
       ...(filters.worker_id !== null ? { worker_id: filters.worker_id } : {}),
       ...(filters.partition_id !== null ? { partition_id: filters.partition_id } : {}),
@@ -1390,7 +1390,7 @@ export const listSchedulerDecisions = async (
   input: ListSchedulerDecisionsInput
 ): Promise<ListSchedulerDecisionsResult> => {
   const filters = parseDecisionFilters(input);
-  const decisions = await context.prisma.schedulerCandidateDecision.findMany({
+  const decisions = await context.repos.scheduler.getPrisma().schedulerCandidateDecision.findMany({
     where: {
       ...(filters.actor_id !== null ? { actor_id: filters.actor_id } : {}),
       ...(filters.kind !== null ? { kind: filters.kind } : {}),
@@ -1461,15 +1461,15 @@ export const getSchedulerSummarySnapshot = async (
   );
   const [latestRunReadModel, recentRuns, recentDecisions, recentJobs] = await Promise.all([
     getLatestSchedulerRunReadModel(context),
-    context.prisma.schedulerRun.findMany({
+    context.repos.scheduler.getPrisma().schedulerRun.findMany({
       orderBy: [{ created_at: 'desc' }],
       take: sampleRuns
     }),
-    context.prisma.schedulerCandidateDecision.findMany({
+    context.repos.scheduler.getPrisma().schedulerCandidateDecision.findMany({
       orderBy: [{ created_at: 'desc' }],
       take: sampleRuns * 10
     }),
-    context.prisma.decisionJob.findMany({
+    context.repos.inference.getPrisma().decisionJob.findMany({
       where: {
         intent_class: {
           in: ['scheduler_periodic', 'scheduler_event_followup', 'replay_recovery', 'retry_recovery', 'direct_inference']
@@ -1570,7 +1570,7 @@ export const getSchedulerTrendsSnapshot = async (
     Math.max(input?.sampleRuns ?? config.default_sample_runs, 1),
     config.max_sample_runs
   );
-  const recentRuns = await context.prisma.schedulerRun.findMany({
+  const recentRuns = await context.repos.scheduler.getPrisma().schedulerRun.findMany({
     orderBy: [{ created_at: 'desc' }],
     take: sampleRuns
   });
@@ -1600,7 +1600,7 @@ export const listSchedulerOwnershipAssignments = async (
   input: ListSchedulerOwnershipAssignmentsInput = {}
 ): Promise<SchedulerOwnershipAssignmentsResult> => {
   const filters = parseOwnershipAssignmentFilters(input);
-  const assignments = await context.prisma.schedulerPartitionAssignment.findMany({
+  const assignments = await context.repos.scheduler.getPrisma().schedulerPartitionAssignment.findMany({
     where: {
       ...(filters.worker_id !== null ? { worker_id: filters.worker_id } : {}),
       ...(filters.partition_id !== null ? { partition_id: filters.partition_id } : {}),
@@ -1611,7 +1611,7 @@ export const listSchedulerOwnershipAssignments = async (
 
   const latestMigrations = await Promise.all(
     assignments.map(async assignment => {
-      const migration = await context.prisma.schedulerOwnershipMigrationLog.findFirst({
+      const migration = await context.repos.scheduler.getPrisma().schedulerOwnershipMigrationLog.findFirst({
         where: {
           partition_id: assignment.partition_id
         },
@@ -1649,7 +1649,7 @@ export const listSchedulerOwnershipMigrations = async (
   input: ListSchedulerOwnershipMigrationsInput = {}
 ): Promise<SchedulerOwnershipMigrationsResult> => {
   const filters = parseOwnershipMigrationFilters(input);
-  const migrations = await context.prisma.schedulerOwnershipMigrationLog.findMany({
+  const migrations = await context.repos.scheduler.getPrisma().schedulerOwnershipMigrationLog.findMany({
     where: {
       ...(filters.partition_id !== null ? { partition_id: filters.partition_id } : {}),
       ...(filters.status !== null ? { status: filters.status } : {}),

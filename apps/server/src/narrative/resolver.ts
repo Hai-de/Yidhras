@@ -24,23 +24,6 @@ const logger = createLogger('narrative-resolver');
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 };
-
-const toSafeVariableValue = (value: unknown): VariableValue => {
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return value;
-  }
-  if (value === null || value === undefined) {
-    return String(value ?? '');
-  }
-  if (Array.isArray(value)) {
-    return JSON.stringify(value);
-  }
-  if (isRecord(value)) {
-    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, toSafeVariableValue(entry)]));
-  }
-  return String(value);
-};
-
 interface RenderInput {
   context: PromptVariableContext;
   localScope: Record<string, unknown>;
@@ -525,8 +508,4 @@ export const renderNarrativeTemplate = (input: {
     permission: input.permission,
     templateSource: input.templateSource
   });
-};
-
-export const createLegacyVariablePoolFromRecord = (value: Record<string, unknown>): VariablePool => {
-  return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, toSafeVariableValue(entry)]));
 };

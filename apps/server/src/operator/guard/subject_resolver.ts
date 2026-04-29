@@ -14,13 +14,7 @@ export const resolveSubjectForOperator = async (
 ): Promise<SubjectResolutionResult> => {
   // 1. 显式 targetAgentId
   if (targetAgentId) {
-    const binding = await context.prisma.identityNodeBinding.findFirst({
-      where: {
-        identity_id: operator.identity_id,
-        agent_id: targetAgentId,
-        status: 'active'
-      }
-    })
+    const binding = await context.repos.identityOperator.findBindingByAgentAndIdentity(targetAgentId, operator.identity_id)
 
     if (binding) {
       return {
@@ -32,14 +26,7 @@ export const resolveSubjectForOperator = async (
   }
 
   // 2. 默认 Agent 绑定
-  const defaultBinding = await context.prisma.identityNodeBinding.findFirst({
-    where: {
-      identity_id: operator.identity_id,
-      status: 'active',
-      agent_id: { not: null }
-    },
-    orderBy: { created_at: 'asc' }
-  })
+  const defaultBinding = await context.repos.identityOperator.findDefaultBindingForIdentity(operator.identity_id)
 
   if (defaultBinding?.agent_id) {
     return {
@@ -65,14 +52,7 @@ export const resolveSubjectForAgentAction = async (
   agentId: string,
   _packId: string
 ): Promise<SubjectResolutionResult> => {
-  const binding = await context.prisma.identityNodeBinding.findFirst({
-    where: {
-      agent_id: agentId,
-      role: 'active',
-      status: 'active'
-    },
-    include: { identity: true }
-  })
+  const binding = await context.repos.identityOperator.findOperatorBindingForAgent(agentId)
 
   if (binding?.identity?.type === 'user') {
     return {

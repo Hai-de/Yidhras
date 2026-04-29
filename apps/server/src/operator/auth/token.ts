@@ -52,14 +52,12 @@ export const createSession = async (
     ? BigInt(decoded.exp * 1000)
     : context.clock.getCurrentTick()
 
-  await context.prisma.operatorSession.create({
-    data: {
-      operator_id: operatorId,
-      token_hash: tokenHash,
-      pack_id: packId ?? null,
-      expires_at: expiresAt,
-      created_at: context.clock.getCurrentTick()
-    }
+  await context.repos.identityOperator.createSession({
+    operator_id: operatorId,
+    token_hash: tokenHash,
+    pack_id: packId ?? null,
+    expires_at: expiresAt,
+    created_at: context.clock.getCurrentTick()
   })
 }
 
@@ -69,9 +67,7 @@ export const destroySession = async (
 ): Promise<boolean> => {
   const tokenHash = computeTokenHash(token)
 
-  const deleted = await context.prisma.operatorSession.deleteMany({
-    where: { token_hash: tokenHash }
-  })
+  const deleted = await context.repos.identityOperator.deleteSessionsByTokenHash(tokenHash)
 
   return deleted.count > 0
 }
@@ -83,12 +79,7 @@ export const findActiveSession = async (
   const tokenHash = computeTokenHash(token)
   const now = context.clock.getCurrentTick()
 
-  const session = await context.prisma.operatorSession.findFirst({
-    where: {
-      token_hash: tokenHash,
-      expires_at: { gt: now }
-    }
-  })
+  const session = await context.repos.identityOperator.findSessionByTokenHash(tokenHash, now)
 
   if (!session) {
     return null

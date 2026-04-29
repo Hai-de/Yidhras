@@ -5,10 +5,12 @@ import { installPackRuntime } from '../kernel/install/install_pack.js';
 import type { WorldPack } from '../packs/manifest/constitution_loader.js';
 import type { PackRuntimeMaterializeSummary } from '../packs/runtime/core_models.js';
 import { type ActorBridgeSummary,materializeActorBridges, materializePackRuntimeCoreModels } from '../packs/runtime/materializer.js';
+import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
 
 export interface MaterializePackRuntimeInput {
   pack: WorldPack;
   prisma: PrismaClient;
+  packStorageAdapter: PackStorageAdapter;
   initialTick: bigint;
   appliedOpeningId?: string;
 }
@@ -34,10 +36,10 @@ export interface MaterializePackRuntimeOutput {
 export async function materializePackRuntime(
   input: MaterializePackRuntimeInput
 ): Promise<MaterializePackRuntimeOutput> {
-  const { pack, prisma, initialTick, appliedOpeningId } = input;
+  const { pack, prisma, packStorageAdapter, initialTick, appliedOpeningId } = input;
 
-  const install = await installPackRuntime(pack);
-  const coreModels = await materializePackRuntimeCoreModels(pack, initialTick, appliedOpeningId);
+  const install = await installPackRuntime(pack, packStorageAdapter);
+  const coreModels = await materializePackRuntimeCoreModels(pack, initialTick, packStorageAdapter, appliedOpeningId);
   const actorBridges = await materializeActorBridges(pack, prisma, initialTick);
 
   return { install, coreModels, actorBridges };

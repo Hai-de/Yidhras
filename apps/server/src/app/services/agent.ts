@@ -237,10 +237,7 @@ const toAuditEntries = (entries: AuditViewEntry[], kind: AuditViewEntry['kind'])
 };
 
 export const getAgentContextSnapshot = async (context: AppInfrastructure & Pick<AppContextPorts, 'activePackRuntime'>, agentId: string) => {
-  const agent = await context.prisma.agent.findUnique({
-    where: { id: agentId },
-    include: { circle_memberships: { include: { circle: true } } }
-  });
+  const agent = await context.repos.agent.findAgentByIdWithCircles(agentId);
 
   if (!agent) {
     throw new ApiError(404, 'AGENT_NOT_FOUND', 'Agent not found', { agent_id: agentId });
@@ -270,16 +267,7 @@ export const getEntityOverview = async (
     fieldName: 'limit'
   });
 
-  const agent = await context.prisma.agent.findUnique({
-    where: { id: resolvedAgentId },
-    include: {
-      circle_memberships: {
-        include: {
-          circle: true
-        }
-      }
-    }
-  });
+  const agent = await context.repos.agent.findAgentByIdWithCircles(resolvedAgentId);
 
   if (!agent) {
     throw new ApiError(404, 'AGENT_NOT_FOUND', 'Agent not found', {
@@ -297,7 +285,7 @@ export const getEntityOverview = async (
     recentTraces,
     packProjection
   ] = await Promise.all([
-    context.prisma.identityNodeBinding.findMany({
+    context.repos.identityOperator.getPrisma().identityNodeBinding.findMany({
       where: {
         agent_id: resolvedAgentId
       },
@@ -308,7 +296,7 @@ export const getEntityOverview = async (
         created_at: 'desc'
       }
     }),
-    context.prisma.relationship.findMany({
+    context.repos.relationship.getPrisma().relationship.findMany({
       where: {
         to_id: resolvedAgentId
       },
@@ -319,7 +307,7 @@ export const getEntityOverview = async (
         updated_at: 'desc'
       }
     }),
-    context.prisma.relationship.findMany({
+    context.repos.relationship.getPrisma().relationship.findMany({
       where: {
         from_id: resolvedAgentId
       },
@@ -342,7 +330,7 @@ export const getEntityOverview = async (
       agent_id: resolvedAgentId,
       limit
     }),
-    context.prisma.inferenceTrace.findMany({
+    context.repos.inference.getPrisma().inferenceTrace.findMany({
       orderBy: {
         created_at: 'desc'
       },
@@ -399,7 +387,7 @@ export const getEntityOverview = async (
       ? ((((latestTrace.trace_metadata as Record<string, unknown>).memory_mutations as Record<string, unknown>).records as unknown[]).filter(isRecord).map(item => item as Record<string, unknown>))
       : [];
   const packEntity = packProjection.entities.find(entity => entity.id === resolvedAgentId) ?? null;
-  const memoryCompactionState = await context.prisma.memoryCompactionState.findUnique({ where: { agent_id: resolvedAgentId } });
+  const memoryCompactionState = await context.repos.memory.getCompactionState(resolvedAgentId);
 
   const bindingSummary = {
     active: bindings
@@ -628,7 +616,7 @@ export const listSnrAdjustmentLogs = async (
     fieldName: 'limit'
   });
 
-  return context.prisma.sNRAdjustmentLog.findMany({
+  return context.repos.relationship.getPrisma().sNRAdjustmentLog.findMany({
     where: {
       agent_id: agentId
     },

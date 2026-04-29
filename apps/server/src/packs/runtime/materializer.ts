@@ -5,6 +5,7 @@ import { upsertPackAuthorityGrant } from '../storage/authority_repo.js';
 import { upsertPackWorldEntity } from '../storage/entity_repo.js';
 import { upsertPackEntityState } from '../storage/entity_state_repo.js';
 import { upsertPackMediatorBinding } from '../storage/mediator_repo.js';
+import type { PackStorageAdapter } from '../storage/PackStorageAdapter.js';
 import {
   DEFAULT_PACK_WORLD_ENTITY_ID,
   type PackRuntimeAuthorityGrantInput,
@@ -60,6 +61,7 @@ const createEntityStateInput = (
 export const materializePackRuntimeCoreModels = async (
   pack: WorldPack,
   now: bigint,
+  packStorageAdapter: PackStorageAdapter,
   appliedOpeningId?: string
 ): Promise<PackRuntimeMaterializeSummary> => {
   const packId = pack.metadata.id;
@@ -226,16 +228,16 @@ export const materializePackRuntimeCoreModels = async (
   }
 
   for (const worldEntity of worldEntities.values()) {
-    await upsertPackWorldEntity(worldEntity);
+    await upsertPackWorldEntity(packStorageAdapter, worldEntity);
   }
   for (const entityState of entityStates.values()) {
-    await upsertPackEntityState(entityState);
+    await upsertPackEntityState(packStorageAdapter, entityState);
   }
   for (const authorityGrant of authorityGrants.values()) {
-    await upsertPackAuthorityGrant(authorityGrant);
+    await upsertPackAuthorityGrant(packStorageAdapter, authorityGrant);
   }
   for (const mediatorBinding of mediatorBindings.values()) {
-    await upsertPackMediatorBinding(mediatorBinding);
+    await upsertPackMediatorBinding(packStorageAdapter, mediatorBinding);
   }
 
   return {

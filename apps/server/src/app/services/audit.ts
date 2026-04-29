@@ -197,7 +197,7 @@ const buildPostAuditEntries = async (
     return [];
   }
 
-  const posts = await context.prisma.post.findMany({
+  const posts = await context.repos.social.queryPosts({
     ...(shouldFetchAllForFilters(filters)
       ? {}
       : {
@@ -253,7 +253,7 @@ const buildRelationshipAdjustmentAuditEntries = async (
     return [];
   }
 
-  const logs = await context.prisma.relationshipAdjustmentLog.findMany({
+  const logs = await context.repos.relationship.getPrisma().relationshipAdjustmentLog.findMany({
     ...(shouldFetchAllForFilters(filters)
       ? {}
       : {
@@ -316,7 +316,7 @@ const buildSnrAdjustmentAuditEntries = async (
     return [];
   }
 
-  const logs = await context.prisma.sNRAdjustmentLog.findMany({
+  const logs = await context.repos.relationship.getPrisma().sNRAdjustmentLog.findMany({
     ...(shouldFetchAllForFilters(filters)
       ? {}
       : {
@@ -384,7 +384,7 @@ const buildEventAuditEntries = async (
     return [];
   }
 
-  const events = await context.prisma.event.findMany({
+  const events = await context.repos.narrative.queryEvents({
     ...(shouldFetchAllForFilters(filters)
       ? {}
       : {
@@ -651,11 +651,7 @@ export const getAuditEntryById = async (
       return buildWorkflowAuditDetailEntry(context, id, snapshot);
     }
     case 'post': {
-      const post = await context.prisma.post.findUnique({
-        where: {
-          id
-        }
-      });
+      const post = await context.repos.social.findPostById(id);
 
       if (!post) {
         throw new Error(`Audit post entry not found for ${id}`);

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { APP_DEFAULTS,AppConfigSchema } from './app.js';
 import { CLOCK_DEFAULTS, ClockConfigSchema } from './clock.js';
+import { DATABASE_DEFAULTS, DatabaseConfigSchema } from './database.js';
 import { FEATURES_DEFAULTS, FeaturesConfigSchema } from './features.js';
 import { LOGGING_DEFAULTS, LoggingConfigSchema } from './logging.js';
 import { OPERATOR_DEFAULTS, OperatorConfigSchema } from './operator.js';
@@ -10,7 +11,6 @@ import { PLUGINS_DEFAULTS, PluginsConfigSchema } from './plugins.js';
 import { PROMPT_WORKFLOW_DEFAULTS, PromptWorkflowConfigSchema } from './prompt_workflow.js';
 import { RUNTIME_DEFAULTS, RuntimeConfig_DomainSchema } from './runtime.js';
 import { SCHEDULER_DEFAULTS, SchedulerConfigSchema } from './scheduler.js';
-import { SQLITE_DEFAULTS, SqliteConfigSchema } from './sqlite.js';
 import { STARTUP_DEFAULTS, StartupConfigSchema } from './startup.js';
 import { WORLD_DEFAULTS, WorldConfigSchema } from './world.js';
 import { WORLD_ENGINE_DEFAULTS, WorldEngineConfigSchema } from './world_engine.js';
@@ -25,7 +25,7 @@ export const RuntimeConfigSchema = z
     world: WorldConfigSchema,
     world_engine: WorldEngineConfigSchema,
     startup: StartupConfigSchema,
-    sqlite: SqliteConfigSchema,
+    database: DatabaseConfigSchema,
     logging: LoggingConfigSchema,
     clock: ClockConfigSchema,
     scheduler: SchedulerConfigSchema,
@@ -46,7 +46,7 @@ export const BUILTIN_DEFAULTS: RuntimeConfig = {
   world: WORLD_DEFAULTS,
   world_engine: WORLD_ENGINE_DEFAULTS,
   startup: STARTUP_DEFAULTS,
-  sqlite: SQLITE_DEFAULTS,
+  database: DATABASE_DEFAULTS,
   logging: LOGGING_DEFAULTS,
   clock: CLOCK_DEFAULTS,
   scheduler: SCHEDULER_DEFAULTS,
@@ -60,6 +60,8 @@ export {
   AppConfigSchema,
   CLOCK_DEFAULTS,
   ClockConfigSchema,
+  DATABASE_DEFAULTS,
+  DatabaseConfigSchema,
   FEATURES_DEFAULTS,
   FeaturesConfigSchema,
   LOGGING_DEFAULTS,
@@ -76,8 +78,6 @@ export {
   RuntimeConfig_DomainSchema,
   SCHEDULER_DEFAULTS,
   SchedulerConfigSchema,
-  SQLITE_DEFAULTS,
-  SqliteConfigSchema,
   STARTUP_DEFAULTS,
   StartupConfigSchema,
   WORLD_DEFAULTS,
@@ -88,6 +88,7 @@ export {
 
 export type { AppConfig } from './app.js';
 export type { ClockConfig } from './clock.js';
+export type { DatabaseConfig } from './database.js';
 export type { FeaturesConfig } from './features.js';
 export type { LoggingConfig } from './logging.js';
 export type { OperatorConfig } from './operator.js';
@@ -96,7 +97,6 @@ export type { PluginsConfig } from './plugins.js';
 export type { PromptWorkflowConfig } from './prompt_workflow.js';
 export type { RuntimeConfig_Domain } from './runtime.js';
 export type { SchedulerConfig } from './scheduler.js';
-export type { SqliteConfig } from './sqlite.js';
 export type { StartupConfig } from './startup.js';
 export type { WorldConfig } from './world.js';
 export type { WorldEngineConfig } from './world_engine.js';

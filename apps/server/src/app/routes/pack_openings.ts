@@ -74,6 +74,7 @@ export const registerPackOpeningRoutes = (
           packId: params.packId,
           openingId: params.openingId,
           prisma: context.prisma,
+          packStorageAdapter: context.packStorageAdapter,
           notifications: context.notifications
         });
         jsonOk(res, {

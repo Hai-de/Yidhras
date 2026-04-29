@@ -7,7 +7,7 @@ import {
   MAX_RELATIONSHIP_LOG_LIMIT} from './types.js'
 
 export const listRelationalCircles = async (context: AppContext) => {
-  return context.prisma.circle.findMany({
+  return context.repos.agent.getPrisma().circle.findMany({
     include: { members: true }
   });
 };
@@ -20,8 +20,8 @@ export const listAtmosphereNodes = async (
   const includeExpired = input.include_expired === true;
   const now = context.clock.getCurrentTick();
 
-  return context.prisma.atmosphereNode.findMany({
-    where: {
+  return context.repos.agent.listAtmosphereNodes(
+    {
       ...(ownerId.length === 0 ? {} : { owner_id: ownerId }),
       ...(includeExpired
         ? {}
@@ -29,8 +29,8 @@ export const listAtmosphereNodes = async (
             OR: [{ expires_at: null }, { expires_at: { gt: now } }]
           })
     },
-    orderBy: { created_at: 'desc' }
-  });
+    { created_at: 'desc' }
+  );
 };
 
 const parseRelationshipLogLimit = (value: number | undefined): number => {
@@ -70,7 +70,7 @@ export const listRelationshipAdjustmentLogs = async (
 
   const limit = parseRelationshipLogLimit(input.limit);
 
-  return context.prisma.relationshipAdjustmentLog.findMany({
+  return context.repos.relationship.getPrisma().relationshipAdjustmentLog.findMany({
     where: {
       from_id: fromId,
       to_id: toId,

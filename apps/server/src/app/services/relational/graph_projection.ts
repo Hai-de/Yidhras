@@ -60,17 +60,17 @@ export const getGraphView = async (
   const now = context.clock.getCurrentTick();
 
   const [agents, relationships, atmosphereNodes, activeBindings, actionIntents] = await Promise.all([
-    context.prisma.agent.findMany({
+    context.repos.agent.getPrisma().agent.findMany({
       orderBy: {
         created_at: 'asc'
       }
     }),
-    context.prisma.relationship.findMany({
+    context.repos.relationship.getPrisma().relationship.findMany({
       orderBy: {
         created_at: 'asc'
       }
     }),
-    context.prisma.atmosphereNode.findMany({
+    context.repos.agent.getPrisma().atmosphereNode.findMany({
       where: filters.includeInactive
         ? {}
         : {
@@ -80,7 +80,7 @@ export const getGraphView = async (
         created_at: 'asc'
       }
     }),
-    context.prisma.identityNodeBinding.findMany({
+    context.repos.identityOperator.getPrisma().identityNodeBinding.findMany({
       where: {
         role: 'active',
         status: 'active',
@@ -92,7 +92,7 @@ export const getGraphView = async (
         agent_id: true
       }
     }),
-    context.prisma.actionIntent.findMany({
+    context.repos.inference.getPrisma().actionIntent.findMany({
       where: filters.includeUnresolved
         ? {}
         : {

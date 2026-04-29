@@ -180,9 +180,9 @@ const applyPreparedWorldStateDelta = async (input: {
           });
         }
 
-        const existingStates = await listPackEntityStates(input.prepared.pack_id);
+        const existingStates = await listPackEntityStates(input.context.packStorageAdapter, input.prepared.pack_id);
         const existing = existingStates.find(item => item.entity_id === entityId && item.state_namespace === namespace) ?? null;
-        const persisted = await upsertPackEntityState({
+        const persisted = await upsertPackEntityState(input.context.packStorageAdapter, {
           id: existing?.id ?? buildPackEntityStateId(input.prepared.pack_id, entityId, namespace),
           pack_id: input.prepared.pack_id,
           entity_id: entityId,
@@ -212,7 +212,7 @@ const applyPreparedWorldStateDelta = async (input: {
           });
         }
 
-        const persisted = await recordPackRuleExecution({
+        const persisted = await recordPackRuleExecution(input.context.packStorageAdapter, {
           id: recordId,
           pack_id: input.prepared.pack_id,
           rule_id: 'world_step.advance_clock',
@@ -366,8 +366,8 @@ export const executeWorldEnginePreparedStep = async (input: {
     // for all actors and append the resulting delta operations before persist.
     const logger = createLogger('state_transform_evaluator');
     const [worldEntities, entityStates] = await Promise.all([
-      listPackWorldEntities(packId),
-      listPackEntityStates(packId)
+      listPackWorldEntities(input.context.packStorageAdapter, packId),
+      listPackEntityStates(input.context.packStorageAdapter, packId)
     ]);
 
     const actorEntityIds = new Set(

@@ -1,16 +1,11 @@
 import type { PackRuntimeRuleExecutionInput, PackRuntimeRuleExecutionRecord } from '../runtime/core_models.js';
-import {
-  listSqliteEngineOwnedRecords,
-  packRuntimeRuleExecutionTableSpec,
-  upsertSqliteEngineOwnedRecord
-} from './internal/sqlite_engine_owned_store.js';
-import { resolvePackRuntimeDatabaseLocation } from './pack_db_locator.js';
+import type { PackStorageAdapter } from './PackStorageAdapter.js';
 
 export const recordPackRuleExecution = async (
+  adapter: PackStorageAdapter,
   input: PackRuntimeRuleExecutionInput
 ): Promise<PackRuntimeRuleExecutionRecord> => {
-  const location = resolvePackRuntimeDatabaseLocation(input.pack_id);
-  return upsertSqliteEngineOwnedRecord(location.runtimeDbPath, packRuntimeRuleExecutionTableSpec, {
+  return adapter.upsertEngineOwnedRecord<PackRuntimeRuleExecutionRecord>(input.pack_id, 'rule_execution_records', {
     id: input.id,
     pack_id: input.pack_id,
     rule_id: input.rule_id,
@@ -26,7 +21,9 @@ export const recordPackRuleExecution = async (
   });
 };
 
-export const listPackRuleExecutionRecords = async (packId: string): Promise<PackRuntimeRuleExecutionRecord[]> => {
-  const location = resolvePackRuntimeDatabaseLocation(packId);
-  return listSqliteEngineOwnedRecords(location.runtimeDbPath, packRuntimeRuleExecutionTableSpec, packId);
+export const listPackRuleExecutionRecords = async (
+  adapter: PackStorageAdapter,
+  packId: string
+): Promise<PackRuntimeRuleExecutionRecord[]> => {
+  return adapter.listEngineOwnedRecords<PackRuntimeRuleExecutionRecord>(packId, 'rule_execution_records');
 };

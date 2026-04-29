@@ -21,11 +21,6 @@ export interface PersistedStoragePlan {
   projections: Array<Record<string, unknown>>;
   install: Record<string, unknown>;
 }
-
-export const asMutablePlanRecord = (storagePlan: PersistedStoragePlan): Record<string, unknown> => {
-  return storagePlan as unknown as Record<string, unknown>;
-};
-
 export const readPersistedStoragePlan = (storagePlanPath: string): PersistedStoragePlan | null => {
   if (!fs.existsSync(storagePlanPath)) {
     return null;

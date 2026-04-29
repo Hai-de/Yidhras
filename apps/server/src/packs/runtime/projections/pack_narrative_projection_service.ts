@@ -54,11 +54,8 @@ export const createPackNarrativeProjectionService = (
   return {
     async getProjection(input: GetPackNarrativeProjectionInput): Promise<PackNarrativeProjectionSnapshot> {
       const [events, ruleExecutions] = await Promise.all([
-        context.prisma.event.findMany({
-          orderBy: { created_at: 'desc' },
-          take: 100
-        }),
-        listPackRuleExecutionRecords(input.pack_id)
+        context.repos.narrative.listRecentEvents(100),
+        listPackRuleExecutionRecords(context.packStorageAdapter, input.pack_id)
       ]);
 
       const eventTimeline = events

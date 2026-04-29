@@ -1,21 +1,5 @@
 import type { AppContext } from '../context.js';
 import {
-  countSchedulerOwnershipMigrationsInProgress,
-  createSchedulerOwnershipMigrationRecord,
-  createSchedulerPartitionAssignmentRecord,
-  findLatestActiveSchedulerOwnershipMigrationForPartition,
-  getSchedulerOwnershipMigrationRecordById,
-  getSchedulerPartitionAssignmentRecord,
-  getSchedulerWorkerRuntimeStateRecord,
-  listSchedulerOwnershipMigrationRecords,
-  listSchedulerPartitionAssignmentRecords,
-  listSchedulerWorkerRuntimeStateRecords,
-  updateSchedulerOwnershipMigrationRecord,
-  updateSchedulerPartitionAssignmentRecord,
-  updateSchedulerWorkerRuntimeStatus,
-  upsertSchedulerWorkerRuntimeStateRecord
-} from './scheduler_ownership_repository.js';
-import {
   getSchedulerPartitionCount,
   listSchedulerPartitionIds,
   resolveOwnedSchedulerPartitionIds
@@ -73,7 +57,7 @@ export const getSchedulerPartitionAssignment = async (
   context: AppContext,
   partitionId: string
 ): Promise<SchedulerPartitionAssignmentRecord | null> => {
-  return getSchedulerPartitionAssignmentRecord(context, partitionId);
+  return context.repos.scheduler.getPartition(partitionId);
 };
 
 export const isWorkerAllowedToOperateSchedulerPartition = async (
@@ -94,22 +78,22 @@ export const isWorkerAllowedToOperateSchedulerPartition = async (
 export const listSchedulerPartitionAssignments = async (
   context: AppContext
 ): Promise<SchedulerPartitionAssignmentRecord[]> => {
-  return listSchedulerPartitionAssignmentRecords(context);
+  return context.repos.scheduler.listPartitions();
 };
 
 export const listRecentSchedulerOwnershipMigrations = async (
   context: AppContext,
   limit = 20
 ): Promise<SchedulerOwnershipMigrationRecord[]> => {
-  return listSchedulerOwnershipMigrationRecords(context, limit);
+  return context.repos.scheduler.listMigrations(limit);
 };
 
-export { countSchedulerOwnershipMigrationsInProgress };
+// countSchedulerOwnershipMigrationsInProgress — migrated to context.repos.scheduler.countMigrationsInProgress
 
 export const listSchedulerWorkerRuntimeStates = async (
   context: AppContext
 ): Promise<SchedulerWorkerRuntimeStateRecord[]> => {
-  return listSchedulerWorkerRuntimeStateRecords(context);
+  return context.repos.scheduler.listWorkerStates();
 };
 
 export const refreshSchedulerWorkerRuntimeState = async (
@@ -122,9 +106,9 @@ export const refreshSchedulerWorkerRuntimeState = async (
   }
 ): Promise<SchedulerWorkerRuntimeStateRecord> => {
   const now = input.now ?? context.clock.getCurrentTick();
-  const activeMigrationCount = await countSchedulerOwnershipMigrationsInProgress(context, input.workerId);
+  const activeMigrationCount = await context.repos.scheduler.countMigrationsInProgress(input.workerId);
 
-  return upsertSchedulerWorkerRuntimeStateRecord(context, {
+  return context.repos.scheduler.upsertWorkerState({
     worker_id: input.workerId,
     status: 'active',
     last_heartbeat_at: now,
@@ -151,11 +135,11 @@ export const refreshSchedulerWorkerRuntimeLiveness = async (
       continue;
     }
 
-    await updateSchedulerWorkerRuntimeStatus(context, {
-      worker_id: state.worker_id,
-      status: nextStatus,
-      updated_at: currentTick
-    });
+    await context.repos.scheduler.updateWorkerStatus(
+      state.worker_id,
+      nextStatus,
+      currentTick
+    );
   }
 };
 
@@ -174,7 +158,7 @@ export const reconcileSchedulerBootstrapAssignments = async (
   const allPartitionIds = listSchedulerPartitionIds(partitionCount);
   const bootstrapPartitionIdSet = new Set(bootstrapPartitionIds);
 
-  const existingAssignments = await listSchedulerPartitionAssignmentRecords(context);
+  const existingAssignments = await context.repos.scheduler.listPartitions();
   const existingByPartition = new Map(existingAssignments.map(item => [item.partition_id, item]));
 
   for (const partitionId of allPartitionIds) {
@@ -184,7 +168,7 @@ export const reconcileSchedulerBootstrapAssignments = async (
     const nextStatus = shouldOwn ? 'assigned' : 'released';
 
     if (!existing) {
-      await createSchedulerPartitionAssignmentRecord(context, {
+      await context.repos.scheduler.createPartition({
         partition_id: partitionId,
         worker_id: nextWorkerId,
         status: nextStatus,
@@ -203,7 +187,7 @@ export const reconcileSchedulerBootstrapAssignments = async (
       continue;
     }
 
-    await updateSchedulerPartitionAssignmentRecord(context, {
+    await context.repos.scheduler.updatePartition({
       partition_id: partitionId,
       worker_id: nextWorkerId,
       status: nextStatus,
@@ -238,8 +222,8 @@ export const resolveSchedulerOwnershipSnapshot = async (
           partitionCount
         });
 
-  const migrationInProgressCount = await countSchedulerOwnershipMigrationsInProgress(context, input.workerId);
-  const workerState = await getSchedulerWorkerRuntimeStateRecord(context, input.workerId);
+  const migrationInProgressCount = await context.repos.scheduler.countMigrationsInProgress(input.workerId);
+  const workerState = await context.repos.scheduler.getWorkerState(input.workerId);
 
   return {
     worker_id: input.workerId,
@@ -263,9 +247,9 @@ export const createSchedulerOwnershipMigration = async (
   }
 ): Promise<SchedulerOwnershipMigrationRecord> => {
   const now = context.clock.getCurrentTick();
-  const existingAssignment = await getSchedulerPartitionAssignmentRecord(context, input.partitionId);
+  const existingAssignment = await context.repos.scheduler.getPartition(input.partitionId);
 
-  const migration = await createSchedulerOwnershipMigrationRecord(context, {
+  const migration = await context.repos.scheduler.createMigration({
     partition_id: input.partitionId,
     from_worker_id: existingAssignment?.worker_id ?? null,
     to_worker_id: input.toWorkerId,
@@ -280,7 +264,7 @@ export const createSchedulerOwnershipMigration = async (
   });
 
   if (!existingAssignment) {
-    await createSchedulerPartitionAssignmentRecord(context, {
+    await context.repos.scheduler.createPartition({
       partition_id: input.partitionId,
       worker_id: input.toWorkerId,
       status: 'migrating',
@@ -289,7 +273,7 @@ export const createSchedulerOwnershipMigration = async (
       updated_at: now
     });
   } else {
-    await updateSchedulerPartitionAssignmentRecord(context, {
+    await context.repos.scheduler.updatePartition({
       partition_id: input.partitionId,
       worker_id: input.toWorkerId,
       status: 'migrating',
@@ -307,7 +291,7 @@ export const markSchedulerOwnershipMigrationInProgress = async (
   migrationId: string
 ): Promise<void> => {
   const now = context.clock.getCurrentTick();
-  await updateSchedulerOwnershipMigrationRecord(context, {
+  await context.repos.scheduler.updateMigration({
     id: migrationId,
     status: 'in_progress',
     updated_at: now
@@ -322,17 +306,17 @@ export const completeActiveSchedulerOwnershipMigration = async (
   }
 ): Promise<void> => {
   const now = context.clock.getCurrentTick();
-  const migration = await findLatestActiveSchedulerOwnershipMigrationForPartition(context, {
-    partition_id: input.partitionId,
-    to_worker_id: input.toWorkerId
-  });
+  const migration = await context.repos.scheduler.findLatestActiveMigrationForPartition(
+    input.partitionId,
+    input.toWorkerId
+  );
 
   if (!migration) {
     return;
   }
 
   await completeSchedulerOwnershipMigration(context, migration.id);
-  await updateSchedulerOwnershipMigrationRecord(context, {
+  await context.repos.scheduler.updateMigration({
     id: migration.id,
     updated_at: now
   });
@@ -343,19 +327,19 @@ export const completeSchedulerOwnershipMigration = async (
   migrationId: string
 ): Promise<void> => {
   const now = context.clock.getCurrentTick();
-  const migration = await getSchedulerOwnershipMigrationRecordById(context, migrationId);
+  const migration = await context.repos.scheduler.getMigrationById(migrationId);
   if (!migration) {
     return;
   }
 
-  await updateSchedulerOwnershipMigrationRecord(context, {
+  await context.repos.scheduler.updateMigration({
     id: migrationId,
     status: 'completed',
     updated_at: now,
     completed_at: now
   });
 
-  await updateSchedulerPartitionAssignmentRecord(context, {
+  await context.repos.scheduler.updatePartition({
     partition_id: migration.partition_id,
     worker_id: migration.to_worker_id,
     status: 'assigned',

@@ -3,20 +3,11 @@ import { Prisma } from '@prisma/client';
 import { getSchedulerAutomaticRebalanceConfig } from '../../config/runtime_config.js';
 import type { AppContext } from '../context.js';
 import {
-  countSchedulerOwnershipMigrationsInProgress,
   createSchedulerOwnershipMigration,
   getSchedulerPartitionAssignment,
   listSchedulerPartitionAssignments,
   listSchedulerWorkerRuntimeStates
 } from './scheduler_ownership.js';
-import {
-  createSchedulerRebalanceRecommendationRecord,
-  findOpenSchedulerRebalanceRecommendation,
-  getSchedulerRebalanceRecommendationRecordById,
-  listPendingSchedulerRebalanceRecommendationsForWorker,
-  listRecentSchedulerRebalanceRecommendationRecords,
-  updateSchedulerRebalanceRecommendationRecord
-} from './scheduler_rebalance_repository.js';
 
 export interface SchedulerRebalanceRecommendationRecord {
   id: string;
@@ -56,7 +47,7 @@ const findOpenRecommendation = async (
     suppressReason: string | null;
   }
 ): Promise<SchedulerRebalanceRecommendationRecord | null> => {
-  return findOpenSchedulerRebalanceRecommendation(context, {
+  return context.repos.scheduler.findOpenRecommendation({
     partition_id: input.partitionId,
     status: input.status,
     reason: input.reason,
@@ -93,7 +84,7 @@ const createRecommendation = async (
     return existing;
   }
 
-  return createSchedulerRebalanceRecommendationRecord(context, {
+  return context.repos.scheduler.createRecommendation({
     partition_id: input.partitionId,
     from_worker_id: input.fromWorkerId,
     to_worker_id: input.toWorkerId,
@@ -112,7 +103,7 @@ export const listRecentSchedulerRebalanceRecommendations = async (
   context: AppContext,
   limit = 20
 ): Promise<SchedulerRebalanceRecommendationRecord[]> => {
-  return listRecentSchedulerRebalanceRecommendationRecords(context, limit);
+  return context.repos.scheduler.listRecentRecommendations(limit);
 };
 
 const markRecommendationStatus = async (
@@ -125,9 +116,9 @@ const markRecommendationStatus = async (
     extraDetails?: Record<string, unknown>;
   }
 ): Promise<void> => {
-  const existing = await getSchedulerRebalanceRecommendationRecordById(context, input.recommendationId);
+  const existing = await context.repos.scheduler.getRecommendationById(input.recommendationId);
 
-  await updateSchedulerRebalanceRecommendationRecord(context, {
+  await context.repos.scheduler.updateRecommendation({
     id: input.recommendationId,
     status: input.status,
     updated_at: input.now,
@@ -152,25 +143,20 @@ export const applySchedulerAutomaticRebalanceForWorker = async (
   const now = input.now ?? context.clock.getCurrentTick();
   const config = getSchedulerAutomaticRebalanceConfig();
   const maxApply = Math.max(input.maxApply ?? config.max_apply, 1);
-  const recommendations = await listPendingSchedulerRebalanceRecommendationsForWorker(context, {
-    worker_id: input.workerId,
-    max_apply: maxApply
-  });
+  const recommendations = await context.repos.scheduler.listPendingRecommendationsForWorker(
+    input.workerId,
+    maxApply
+  );
 
   const appliedRecommendationIds: string[] = [];
   const createdMigrationIds: string[] = [];
   const supersededRecommendationIds: string[] = [];
 
   for (const recommendation of recommendations) {
-    const activeMigration = await context.prisma.schedulerOwnershipMigrationLog.findFirst({
-      where: {
-        partition_id: recommendation.partition_id,
-        status: {
-          in: ['requested', 'in_progress']
-        }
-      },
-      orderBy: [{ created_at: 'desc' }]
-    });
+    const activeMigration = await context.repos.scheduler.findLatestActiveMigrationForPartition(
+      recommendation.partition_id,
+      input.workerId
+    );
 
     if (activeMigration) {
       await markRecommendationStatus(context, {
@@ -245,7 +231,7 @@ export const evaluateSchedulerAutomaticRebalance = async (
   const [workerStates, assignments, migrationBacklogCount] = await Promise.all([
     listSchedulerWorkerRuntimeStates(context),
     listSchedulerPartitionAssignments(context),
-    countSchedulerOwnershipMigrationsInProgress(context)
+    context.repos.scheduler.countMigrationsInProgress()
   ]);
 
   const createdRecommendations: SchedulerRebalanceRecommendationRecord[] = [];

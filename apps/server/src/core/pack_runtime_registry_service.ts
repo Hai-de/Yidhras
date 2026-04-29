@@ -7,6 +7,7 @@ import { getRuntimeMultiPackConfig } from '../config/runtime_config.js';
 import type { WorldPack } from '../packs/manifest/loader.js';
 import { teardownActorBridges } from '../packs/runtime/materializer.js';
 import { resolvePackRuntimeDatabaseLocation } from '../packs/storage/pack_db_locator.js';
+import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
 import { pluginRuntimeRegistry } from '../plugins/runtime.js';
 import { ApiError } from '../utils/api_error.js';
 import { createLogger } from '../utils/logger.js';
@@ -27,6 +28,7 @@ export interface DefaultPackRuntimeRegistryServiceOptions {
   registry: PackRuntimeRegistry;
   packCatalog: Pick<DefaultPackCatalogService, 'resolvePackByIdOrFolder'>;
   prisma: PrismaClient;
+  packStorageAdapter: PackStorageAdapter;
   getActivePack(): WorldPack | undefined;
   getStartupLevel(): 'ok' | 'degraded' | 'fail';
 }
@@ -35,6 +37,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
   private readonly registry: PackRuntimeRegistry;
   private readonly packCatalog: Pick<DefaultPackCatalogService, 'resolvePackByIdOrFolder'>;
   private readonly prisma: PrismaClient;
+  private readonly packStorageAdapter: PackStorageAdapter;
   private readonly getActivePackRef: () => WorldPack | undefined;
   private readonly getStartupLevelRef: () => 'ok' | 'degraded' | 'fail';
 
@@ -42,6 +45,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     this.registry = options.registry;
     this.packCatalog = options.packCatalog;
     this.prisma = options.prisma;
+    this.packStorageAdapter = options.packStorageAdapter;
     this.getActivePackRef = options.getActivePack;
     this.getStartupLevelRef = options.getStartupLevel;
   }
@@ -133,6 +137,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     await materializePackRuntime({
       pack: resolved.pack,
       prisma: this.prisma,
+      packStorageAdapter: this.packStorageAdapter,
       initialTick: runtimeConfig.initialTick
     });
 

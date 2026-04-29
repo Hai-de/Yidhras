@@ -101,21 +101,12 @@ export const createMemoryCompactionService = ({
       }
 
       const now = context.clock.getCurrentTick();
-      const state = await context.prisma.memoryCompactionState.upsert({
-        where: { agent_id: input.agent_id },
-        update: {
-          pack_id: pack.metadata.id,
-          inference_count_since_summary: { increment: 1 },
-          inference_count_since_compaction: { increment: 1 },
-          updated_at_tick: now
-        },
-        create: {
-          agent_id: input.agent_id,
-          pack_id: pack.metadata.id,
-          inference_count_since_summary: 1,
-          inference_count_since_compaction: 1,
-          updated_at_tick: now
-        }
+      const state = await context.repos.memory.upsertCompactionState({
+        agent_id: input.agent_id,
+        pack_id: pack.metadata.id,
+        inference_count_since_summary: 1,
+        inference_count_since_compaction: 1,
+        updated_at_tick: now
       });
 
       const shouldRunSummary = state.inference_count_since_summary >= thresholds.summary_every_n_rounds;
@@ -244,15 +235,12 @@ export const createMemoryCompactionService = ({
         compactionText = typeof result.output.compaction === 'string' ? result.output.compaction : null;
       }
 
-      const updatedState = await context.prisma.memoryCompactionState.update({
-        where: { agent_id: input.agent_id },
-        data: {
-          inference_count_since_summary: shouldRunSummary ? 0 : state.inference_count_since_summary,
-          inference_count_since_compaction: shouldRunCompaction ? 0 : state.inference_count_since_compaction,
-          last_summary_tick: shouldRunSummary ? now : state.last_summary_tick,
-          last_compaction_tick: shouldRunCompaction ? now : state.last_compaction_tick,
-          updated_at_tick: now
-        }
+      const updatedState = await context.repos.memory.updateCompactionState(input.agent_id, {
+        inference_count_since_summary: shouldRunSummary ? 0 : state.inference_count_since_summary,
+        inference_count_since_compaction: shouldRunCompaction ? 0 : state.inference_count_since_compaction,
+        last_summary_tick: shouldRunSummary ? now : state.last_summary_tick,
+        last_compaction_tick: shouldRunCompaction ? now : state.last_compaction_tick,
+        updated_at_tick: now
       });
 
       return {

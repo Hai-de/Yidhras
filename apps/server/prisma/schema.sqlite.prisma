@@ -1,0 +1,759 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// --- L1 & L2: Agent & Identity ---
+
+model Agent {
+  id              String   @id @default(uuid())
+  name            String
+  type            String   // "active", "noise", "system"
+
+  // Value Dynamics
+  snr             Float    @default(0.5) // 信噪比 (0.0 - 1.0)
+  is_pinned       Boolean  @default(false)
+
+  // Relations
+  posts           Post[]
+  snr_adjustment_logs SNRAdjustmentLog[]
+  relationships_from Relationship[] @relation("FromNode")
+  relationships_to   Relationship[] @relation("ToNode")
+
+  identity_bindings IdentityNodeBinding[]
+
+  // Atmosphere Nodes (Sockpuppets)
+  atmosphere_nodes AtmosphereNode[]
+
+  // Circles (Permissions)
+  circle_memberships CircleMember[]
+
+  created_at      BigInt
+  updated_at      BigInt
+}
+
+model AtmosphereNode {
+  id              String   @id @default(uuid())
+  name            String
+  owner_id        String
+  owner           Agent    @relation(fields: [owner_id], references: [id])
+
+  identity_bindings IdentityNodeBinding[]
+
+  expires_at      BigInt?  // 自动回收时间
+  created_at      BigInt
+}
+
+// --- Permission System ---
+
+model Circle {
+  id          String         @id @default(uuid())
+  name        String
+  level       Int            // AccessLevel Enum (0-3)
+  description String?
+
+  members     CircleMember[]
+}
+
+model CircleMember {
+  agent_id    String
+  circle_id   String
+  agent       Agent    @relation(fields: [agent_id], references: [id])
+  circle      Circle   @relation(fields: [circle_id], references: [id])
+
+  @@id([agent_id, circle_id])
+}
+
+// --- L2: Relationship Graph ---
+
+model Relationship {
+  id          String   @id @default(uuid())
+  from_id     String
+  to_id       String
+  type        String   // "friend", "enemy", "command", "transfer"
+  weight      Float    @default(1.0)
+
+  from        Agent    @relation("FromNode", fields: [from_id], references: [id])
+  to          Agent    @relation("ToNode", fields: [to_id], references: [id])
+  adjustment_logs RelationshipAdjustmentLog[]
+
+  created_at  BigInt
+  updated_at  BigInt
+
+  @@unique([from_id, to_id, type])
+}
+
+model RelationshipAdjustmentLog {
+  id               String       @id @default(uuid())
+  action_intent_id String
+  relationship_id  String
+  from_id          String
+  to_id            String
+  type             String
+  operation        String
+  old_weight       Float?
+  new_weight       Float
+  reason           String?
+  created_at       BigInt
+
+  action_intent    ActionIntent @relation(fields: [action_intent_id], references: [id])
+  relationship     Relationship @relation(fields: [relationship_id], references: [id])
+
+  @@index([action_intent_id, created_at])
+  @@index([relationship_id, created_at])
+  @@index([from_id, to_id, type, created_at])
+}
+
+model SNRAdjustmentLog {
+  id               String       @id @default(uuid())
+  action_intent_id String
+  agent_id         String
+  operation        String
+  requested_value  Float
+  baseline_value   Float
+  resolved_value   Float
+  reason           String?
+  created_at       BigInt
+
+  action_intent    ActionIntent @relation(fields: [action_intent_id], references: [id])
+  agent            Agent        @relation(fields: [agent_id], references: [id])
+
+  @@index([action_intent_id, created_at])
+  @@index([agent_id, created_at])
+}
+
+// --- L1: Social Layer ---
+
+model Post {
+  id          String   @id @default(uuid())
+  author_id   String
+  source_action_intent_id String?
+  content     String
+
+  // L4 Transmission Props
+  noise_level Float    @default(0.0)
+  is_encrypted Boolean @default(false)
+
+  author      Agent    @relation(fields: [author_id], references: [id])
+  source_action_intent ActionIntent? @relation(fields: [source_action_intent_id], references: [id])
+
+  created_at  BigInt
+
+  @@index([source_action_intent_id, created_at])
+}
+
+// --- L3: Narrative Layer ---
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  tick        BigInt   // 发生时的绝对时间
+  type        String   // "history", "interaction", "system"
+
+  // 影响范围 (JSON)
+  impact_data String?  // 存储 JSON: { "snr_delta": ..., "affected_nodes": [] }
+  source_action_intent_id String?
+  created_at   BigInt
+
+  source_action_intent ActionIntent? @relation(fields: [source_action_intent_id], references: [id])
+
+  @@index([tick])
+  @@index([type, tick])
+  @@index([source_action_intent_id, tick])
+}
+
+model WorldVariable {
+  key         String   @id
+  value       String
+  updated_at  BigInt
+}
+
+// --- Identity Layer ---
+
+model Identity {
+  id         String  @id @default(uuid())
+  type       String
+  name       String?
+  provider   String  @default("m2")
+  status     String  @default("active")
+  claims     Json?
+  metadata   Json?
+  created_at BigInt
+  updated_at BigInt
+
+  policies   Policy[]
+  bindings   IdentityNodeBinding[]
+
+  operator    Operator?
+}
+
+model IdentityNodeBinding {
+  id                  String   @id @default(uuid())
+  identity_id         String
+  agent_id            String?
+  atmosphere_node_id  String?
+  role                String
+  status              String   @default("active")
+  pack_id             String?
+  expires_at          BigInt?
+  created_at          BigInt
+  updated_at          BigInt
+
+  identity        Identity       @relation(fields: [identity_id], references: [id])
+  agent           Agent?         @relation(fields: [agent_id], references: [id])
+  atmosphere_node AtmosphereNode? @relation(fields: [atmosphere_node_id], references: [id])
+
+  @@index([identity_id])
+  @@index([agent_id])
+  @@index([atmosphere_node_id])
+  @@index([role, status])
+}
+
+model Policy {
+  id            String   @id @default(uuid())
+  effect        String
+  subject_id    String?
+  subject_type  String?
+  resource      String
+  action        String
+  field         String
+  conditions    Json?
+  priority      Int      @default(0)
+  created_at    BigInt
+  updated_at    BigInt
+
+  subject       Identity? @relation(fields: [subject_id], references: [id])
+
+  @@index([resource, action])
+  @@index([subject_id])
+  @@index([subject_type])
+}
+
+model InferenceTrace {
+  id               String      @id
+  kind             String
+  strategy         String
+  provider         String
+  actor_ref        Json
+  input            Json
+  context_snapshot Json
+  prompt_bundle    Json
+  trace_metadata   Json
+  decision         Json?
+  created_at       BigInt
+  updated_at       BigInt
+
+  action_intent    ActionIntent?
+  decision_job     DecisionJob?
+  replay_source_jobs DecisionJob[] @relation("DecisionJobReplaySourceTrace")
+  ai_invocations   AiInvocationRecord[]
+
+  @@index([kind, created_at])
+  @@index([strategy, provider])
+}
+
+model ActionIntent {
+  id                    String         @id @default(uuid())
+  source_inference_id   String         @unique
+  intent_type           String
+  actor_ref             Json
+  target_ref            Json?
+  payload               Json
+  scheduled_after_ticks BigInt?
+  scheduled_for_tick    BigInt?
+  status                String         @default("pending")
+  locked_by             String?
+  locked_at             BigInt?
+  lock_expires_at       BigInt?
+  dispatch_started_at   BigInt?
+  dispatched_at         BigInt?
+  transmission_delay_ticks BigInt?
+  transmission_policy   String         @default("reliable")
+  transmission_drop_chance Float        @default(0)
+  drop_reason           String?
+  dispatch_error_code   String?
+  dispatch_error_message String?
+  created_at            BigInt
+  updated_at            BigInt
+
+  source_inference      InferenceTrace @relation(fields: [source_inference_id], references: [id])
+  decision_job          DecisionJob?
+  relationship_adjustment_logs RelationshipAdjustmentLog[]
+  snr_adjustment_logs   SNRAdjustmentLog[]
+  sourced_posts         Post[]
+  sourced_events        Event[]
+
+  @@index([status, created_at])
+  @@index([status, lock_expires_at])
+}
+
+model DecisionJob {
+  id                  String          @id @default(uuid())
+  source_inference_id String?         @unique
+  replay_of_job_id    String?
+  replay_source_trace_id String?
+  replay_reason       String?
+  action_intent_id    String?         @unique
+  job_type            String
+  status              String
+  idempotency_key     String?         @unique
+  attempt_count       Int             @default(1)
+  max_attempts        Int             @default(3)
+  pending_source_key  String?         @unique
+  request_input       Json?
+  replay_override_snapshot Json?
+  last_error          String?
+  last_error_code     String?
+  last_error_stage    String?
+  started_at          BigInt?
+  next_retry_at       BigInt?
+  locked_by           String?
+  locked_at           BigInt?
+  lock_expires_at     BigInt?
+  scheduled_for_tick  BigInt?
+  intent_class        String          @default("direct_inference")
+  pack_id             String?
+  created_at          BigInt
+  updated_at          BigInt
+  completed_at        BigInt?
+
+  source_inference    InferenceTrace? @relation(fields: [source_inference_id], references: [id])
+  replay_source_trace InferenceTrace? @relation("DecisionJobReplaySourceTrace", fields: [replay_source_trace_id], references: [id])
+  replay_of_job       DecisionJob?    @relation("DecisionJobReplayLineage", fields: [replay_of_job_id], references: [id])
+  replayed_jobs       DecisionJob[]   @relation("DecisionJobReplayLineage")
+  action_intent       ActionIntent?   @relation(fields: [action_intent_id], references: [id])
+
+  @@index([status, created_at])
+  @@index([status, lock_expires_at])
+  @@index([status, scheduled_for_tick])
+  @@index([intent_class, created_at])
+  @@index([replay_of_job_id, created_at])
+}
+
+model AiInvocationRecord {
+  id                  String   @id
+  task_id             String
+  task_type           String
+  source_inference_id String?
+  provider            String
+  model               String
+  route_id            String?
+  status              String
+  finish_reason       String
+  attempted_models_json Json
+  fallback_used       Boolean  @default(false)
+  latency_ms          Int?
+  usage_json          Json?
+  safety_json         Json?
+  request_json        Json?
+  response_json       Json?
+  error_code          String?
+  error_message       String?
+  error_stage         String?
+  audit_level         String
+  created_at          BigInt
+  completed_at        BigInt?
+
+  source_inference    InferenceTrace? @relation(fields: [source_inference_id], references: [id])
+
+  @@index([source_inference_id, created_at])
+  @@index([task_type, created_at])
+  @@index([provider, model, created_at])
+  @@index([status, created_at])
+}
+
+model ContextOverlayEntry {
+  id                String @id @default(uuid())
+  actor_id          String
+  pack_id           String?
+  overlay_type      String
+  title             String?
+  content_text      String
+  content_structured Json?
+  tags              String
+  status            String
+  persistence_mode  String
+  source_node_ids   String
+  created_by        String
+  created_at_tick   BigInt
+  updated_at_tick   BigInt
+
+  @@index([actor_id, updated_at_tick])
+  @@index([actor_id, pack_id, status])
+  @@index([overlay_type, status])
+}
+
+model MemoryBlock {
+  id                String @id @default(uuid())
+  owner_agent_id    String
+  pack_id           String?
+  kind              String
+  status            String
+  title             String?
+  content_text      String
+  content_structured Json?
+  tags              String
+  keywords          String
+  source_ref        Json?
+  importance        Float
+  salience          Float
+  confidence        Float?
+  created_at_tick   BigInt
+  updated_at_tick   BigInt
+
+  behavior          MemoryBlockBehavior?
+  runtime_state     MemoryBlockRuntimeState?
+
+  @@index([owner_agent_id, updated_at_tick])
+  @@index([owner_agent_id, pack_id, status])
+  @@index([kind, status])
+}
+
+model MemoryBlockBehavior {
+  memory_block_id   String @id
+  behavior_json     Json
+  created_at_tick   BigInt
+  updated_at_tick   BigInt
+
+  memory_block      MemoryBlock @relation(fields: [memory_block_id], references: [id], onDelete: Cascade)
+}
+
+model MemoryBlockRuntimeState {
+  memory_block_id                     String @id
+  trigger_count                       Int     @default(0)
+  last_triggered_tick                 BigInt?
+  last_inserted_tick                  BigInt?
+  cooldown_until_tick                 BigInt?
+  delayed_until_tick                  BigInt?
+  retain_until_tick                   BigInt?
+  currently_active                    Boolean @default(false)
+  last_activation_score               Float?
+  recent_distance_from_latest_message Int?
+
+  memory_block                        MemoryBlock @relation(fields: [memory_block_id], references: [id], onDelete: Cascade)
+
+  @@index([currently_active, last_triggered_tick])
+}
+
+model MemoryBlockDeletionAudit {
+  id                String @id @default(uuid())
+  memory_block_id   String
+  deleted_by        String
+  actor_id          String?
+  reason            String?
+  deleted_at_tick   BigInt
+
+  @@index([memory_block_id, deleted_at_tick])
+}
+
+model MemoryCompactionState {
+  agent_id                    String @id
+  pack_id                     String?
+  inference_count_since_summary Int   @default(0)
+  inference_count_since_compaction Int @default(0)
+  last_summary_tick           BigInt?
+  last_compaction_tick        BigInt?
+  updated_at_tick             BigInt
+
+  @@index([pack_id, updated_at_tick])
+}
+
+model PluginArtifact {
+  artifact_id       String @id
+  plugin_id         String
+  version           String
+  manifest_version  String
+  source_type       String
+  source_pack_id    String?
+  source_path       String
+  checksum          String @unique
+  manifest_json     Json
+  imported_at       BigInt
+
+  installations     PluginInstallation[]
+
+  @@index([plugin_id, version])
+  @@index([source_pack_id, plugin_id])
+}
+
+model PluginInstallation {
+  installation_id        String @id
+  plugin_id              String
+  artifact_id            String
+  version                String
+  scope_type             String
+  scope_ref              String?
+  lifecycle_state        String
+  requested_capabilities String
+  granted_capabilities   String
+  trust_mode             String
+  failure_policy         String @default("fail_open")
+  confirmed_at           BigInt?
+  enabled_at             BigInt?
+  disabled_at            BigInt?
+  last_error             String?
+
+  artifact               PluginArtifact                @relation(fields: [artifact_id], references: [artifact_id])
+  activation_sessions    PluginActivationSession[]
+  acknowledgements       PluginEnableAcknowledgement[]
+
+  @@unique([plugin_id, scope_type, scope_ref])
+  @@index([scope_type, scope_ref, lifecycle_state])
+}
+
+model PluginActivationSession {
+  activation_id       String @id
+  installation_id     String
+  pack_id             String
+  channel             String
+  result              String
+  started_at          BigInt
+  finished_at         BigInt?
+  loaded_server       Boolean @default(false)
+  loaded_web_manifest Boolean @default(false)
+  error_message       String?
+
+  installation        PluginInstallation @relation(fields: [installation_id], references: [installation_id])
+
+  @@index([installation_id, started_at])
+  @@index([pack_id, started_at])
+}
+
+model PluginEnableAcknowledgement {
+  acknowledgement_id  String @id
+  installation_id     String
+  pack_id             String
+  channel             String
+  reminder_text_hash  String
+  acknowledged        Boolean
+  actor_id            String?
+  actor_label         String?
+  created_at          BigInt
+
+  installation        PluginInstallation @relation(fields: [installation_id], references: [installation_id])
+
+  @@index([installation_id, created_at])
+  @@index([pack_id, created_at])
+}
+
+model ScenarioEntityState {
+  id         String @id
+  pack_id    String
+  entity_type String
+  entity_id  String
+  state_json Json
+  created_at BigInt
+  updated_at BigInt
+
+  @@unique([pack_id, entity_type, entity_id])
+  @@index([pack_id, entity_type])
+  @@index([entity_type, entity_id])
+}
+
+model SchedulerRun {
+  id         String                     @id
+  worker_id  String
+  partition_id String                   @default("p0")
+  lease_holder String?
+  lease_expires_at_snapshot BigInt?
+  tick       BigInt
+  summary    Json
+  started_at BigInt
+  finished_at BigInt
+  created_at BigInt
+
+  candidate_decisions SchedulerCandidateDecision[]
+
+  @@index([tick, created_at])
+  @@index([partition_id, created_at])
+}
+
+model SchedulerCandidateDecision {
+  id                 String       @id
+  scheduler_run_id   String
+  partition_id       String       @default("p0")
+  actor_id           String
+  kind               String
+  candidate_reasons  Json
+  chosen_reason      String
+  scheduled_for_tick BigInt
+  priority_score     Int
+  skipped_reason     String?
+  created_job_id     String?
+  created_at         BigInt
+
+  scheduler_run      SchedulerRun @relation(fields: [scheduler_run_id], references: [id])
+
+  @@index([scheduler_run_id, created_at])
+  @@index([actor_id, created_at])
+  @@index([partition_id, created_at])
+}
+
+model SchedulerLease {
+  key          String @id
+  partition_id String @unique @default("p0")
+  holder       String
+  acquired_at  BigInt
+  expires_at   BigInt
+  updated_at   BigInt
+
+  @@index([partition_id, expires_at])
+}
+
+model SchedulerCursor {
+  key               String @id
+  partition_id      String @unique @default("p0")
+  last_scanned_tick BigInt
+  last_signal_tick  BigInt
+  updated_at        BigInt
+}
+
+model SchedulerPartitionAssignment {
+  partition_id String @id
+  worker_id    String?
+  status       String @default("released")
+  version      Int    @default(1)
+  source       String @default("bootstrap")
+  updated_at   BigInt
+
+  @@index([worker_id, updated_at])
+  @@index([status, updated_at])
+}
+
+model SchedulerOwnershipMigrationLog {
+  id             String  @id @default(uuid())
+  partition_id   String
+  from_worker_id String?
+  to_worker_id   String
+  status         String
+  reason         String?
+  details        Json?
+  created_at     BigInt
+  updated_at     BigInt
+  completed_at   BigInt?
+
+  @@index([partition_id, created_at])
+  @@index([to_worker_id, created_at])
+  @@index([status, created_at])
+}
+
+model SchedulerWorkerRuntimeState {
+  worker_id               String @id
+  status                  String @default("active")
+  last_heartbeat_at       BigInt
+  owned_partition_count   Int    @default(0)
+  active_migration_count  Int    @default(0)
+  capacity_hint           Int?
+  updated_at              BigInt
+
+  @@index([status, updated_at])
+  @@index([last_heartbeat_at])
+}
+
+model SchedulerRebalanceRecommendation {
+  id                  String @id @default(uuid())
+  partition_id        String
+  from_worker_id      String?
+  to_worker_id        String?
+  status              String
+  reason              String
+  score               Float?
+  suppress_reason     String?
+  details             Json?
+  created_at          BigInt
+  updated_at          BigInt
+  applied_migration_id String?
+
+  @@index([status, created_at])
+  @@index([partition_id, created_at])
+}
+
+// --- Operator Layer ---
+
+model Operator {
+  id            String   @id @default(uuid())
+  identity_id   String   @unique
+  username      String   @unique
+  password_hash String
+  is_root       Boolean  @default(false)
+  status        String   @default("active") // active | disabled | suspended
+  display_name  String?
+  created_at    BigInt
+  updated_at    BigInt
+
+  identity      Identity            @relation(fields: [identity_id], references: [id])
+  sessions      OperatorSession[]
+  pack_bindings OperatorPackBinding[]
+  grants_given  OperatorGrant[]     @relation("GrantGiver")
+  audit_logs    OperatorAuditLog[]
+}
+
+model OperatorSession {
+  id          String  @id @default(uuid())
+  operator_id String
+  token_hash  String  // SHA-256(JWT)，用于注销时定位
+  pack_id     String? // nullable = global session；有值 = pack-scoped session
+  expires_at  BigInt
+  created_at  BigInt
+
+  operator    Operator @relation(fields: [operator_id], references: [id])
+
+  @@index([operator_id, expires_at])
+  @@index([token_hash])
+}
+
+model OperatorPackBinding {
+  id           String  @id @default(uuid())
+  operator_id  String
+  pack_id      String
+  binding_type String  @default("member") // owner | admin | member | spectator
+  bound_at     BigInt
+  bound_by     String? // 邀请者 operator_id
+  created_at   BigInt
+
+  operator     Operator @relation(fields: [operator_id], references: [id])
+
+  @@unique([operator_id, pack_id])
+  @@index([pack_id, binding_type])
+}
+
+model OperatorGrant {
+  id                    String  @id @default(uuid())
+  giver_operator_id     String
+  receiver_identity_id  String  // Identity.id（可以是另一个 Operator，也可以是 Agent）
+  pack_id               String
+  capability_key        String
+  scope_json            Json?   // 约束：如 { "target_entity_ids": ["e1", "e2"] }
+  revocable             Boolean @default(true)
+  expires_at            BigInt?
+  created_at            BigInt
+
+  giver                 Operator @relation("GrantGiver", fields: [giver_operator_id], references: [id])
+
+  @@index([receiver_identity_id, pack_id])
+  @@index([giver_operator_id, pack_id])
+}
+
+model OperatorAuditLog {
+  id          String  @id @default(uuid())
+  operator_id String?
+  pack_id     String?
+  action      String  // login | logout | bind_pack | unbind_pack | grant_capability | revoke_grant | capability_denied | pack_access_denied
+  target_id   String? // 被操作对象 id
+  detail_json Json?   // 上下文快照
+  client_ip   String?
+  created_at  BigInt
+
+  operator    Operator? @relation(fields: [operator_id], references: [id])
+
+  @@index([operator_id, created_at])
+  @@index([pack_id, action, created_at])
+}

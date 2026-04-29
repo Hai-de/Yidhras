@@ -1,6 +1,7 @@
 import { compilePackStoragePlan } from '../../packs/compiler/compile_pack_storage.js';
 import type { WorldPack } from '../../packs/schema/constitution_schema.js';
 import { createPackStorageEngine, type PackStorageMaterializeSummary } from '../../packs/storage/pack_storage_engine.js';
+import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 
 export interface InstalledPackRuntimeSummary {
   packId: string;
@@ -10,9 +11,9 @@ export interface InstalledPackRuntimeSummary {
   packCollections: string[];
 }
 
-export const installPackRuntime = async (pack: WorldPack): Promise<InstalledPackRuntimeSummary> => {
+export const installPackRuntime = async (pack: WorldPack, packStorageAdapter: PackStorageAdapter): Promise<InstalledPackRuntimeSummary> => {
   const compiledStorage = compilePackStoragePlan(pack);
-  const storageEngine = createPackStorageEngine();
+  const storageEngine = createPackStorageEngine(packStorageAdapter);
   const materialized = await storageEngine.materializeStoragePlan(pack.metadata.id, {
     strategy: compiledStorage.strategy,
     runtime_db_file: compiledStorage.runtimeDbFile,

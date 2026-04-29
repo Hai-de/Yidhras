@@ -74,7 +74,7 @@ const stepWorldEngine = async (context: AppContext): Promise<void> => {
 
 export const expireIdentityBindings = async (context: AppContext): Promise<void> => {
   const now = await getActiveCurrentTick(context);
-  await context.prisma.identityNodeBinding.updateMany({
+  await context.repos.identityOperator.getPrisma().identityNodeBinding.updateMany({
     where: {
       AND: [
         { expires_at: { not: null } },

@@ -378,7 +378,7 @@ export const listSocialFeed = async (
     ? [{ noise_level: 'asc' }, { created_at: 'desc' }, { id: 'desc' }]
     : [{ created_at: 'desc' }, { id: 'desc' }];
 
-  const posts = await context.prisma.post.findMany({
+  const posts = await context.repos.social.queryPosts({
     where,
     orderBy,
     include: { author: true }
@@ -441,12 +441,10 @@ export const createSocialPost = async (
     { content }
   );
 
-  return context.prisma.post.create({
-    data: {
-      author_id: resolvedIdentity.id,
-      source_action_intent_id: options?.source_action_intent_id ?? null,
-      content,
-      created_at: context.clock.getCurrentTick()
-    }
+  return context.repos.social.createPostRecord({
+    author_id: resolvedIdentity.id,
+    source_action_intent_id: options?.source_action_intent_id ?? null,
+    content,
+    created_at: context.clock.getCurrentTick()
   });
 };

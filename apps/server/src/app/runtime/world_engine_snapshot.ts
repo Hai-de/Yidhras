@@ -49,11 +49,11 @@ const resolveSnapshotClock = (context: AppContext, packId: string): { current_ti
 export const buildWorldPackSnapshot = async (context: AppContext, packId: string): Promise<WorldPackSnapshot> => {
   const normalizedPackId = normalizePackId(packId);
   const [worldEntities, entityStates, authorityGrants, mediatorBindings, ruleExecutionRecords] = await Promise.all([
-    listPackWorldEntities(normalizedPackId),
-    listPackEntityStates(normalizedPackId),
-    listPackAuthorityGrants(normalizedPackId),
-    listPackMediatorBindings(normalizedPackId),
-    listPackRuleExecutionRecords(normalizedPackId)
+    listPackWorldEntities(context.packStorageAdapter, normalizedPackId),
+    listPackEntityStates(context.packStorageAdapter, normalizedPackId),
+    listPackAuthorityGrants(context.packStorageAdapter, normalizedPackId),
+    listPackMediatorBindings(context.packStorageAdapter, normalizedPackId),
+    listPackRuleExecutionRecords(context.packStorageAdapter, normalizedPackId)
   ]);
 
   return serializeWorldPackSnapshotRecord({

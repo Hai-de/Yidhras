@@ -1,16 +1,11 @@
 import type { PackRuntimeMediatorBindingInput, PackRuntimeMediatorBindingRecord } from '../runtime/core_models.js';
-import {
-  listSqliteEngineOwnedRecords,
-  packRuntimeMediatorBindingTableSpec,
-  upsertSqliteEngineOwnedRecord
-} from './internal/sqlite_engine_owned_store.js';
-import { resolvePackRuntimeDatabaseLocation } from './pack_db_locator.js';
+import type { PackStorageAdapter } from './PackStorageAdapter.js';
 
 export const upsertPackMediatorBinding = async (
+  adapter: PackStorageAdapter,
   input: PackRuntimeMediatorBindingInput
 ): Promise<PackRuntimeMediatorBindingRecord> => {
-  const location = resolvePackRuntimeDatabaseLocation(input.pack_id);
-  return upsertSqliteEngineOwnedRecord(location.runtimeDbPath, packRuntimeMediatorBindingTableSpec, {
+  return adapter.upsertEngineOwnedRecord<PackRuntimeMediatorBindingRecord>(input.pack_id, 'mediator_bindings', {
     id: input.id,
     pack_id: input.pack_id,
     mediator_id: input.mediator_id,
@@ -23,7 +18,9 @@ export const upsertPackMediatorBinding = async (
   });
 };
 
-export const listPackMediatorBindings = async (packId: string): Promise<PackRuntimeMediatorBindingRecord[]> => {
-  const location = resolvePackRuntimeDatabaseLocation(packId);
-  return listSqliteEngineOwnedRecords(location.runtimeDbPath, packRuntimeMediatorBindingTableSpec, packId);
+export const listPackMediatorBindings = async (
+  adapter: PackStorageAdapter,
+  packId: string
+): Promise<PackRuntimeMediatorBindingRecord[]> => {
+  return adapter.listEngineOwnedRecords<PackRuntimeMediatorBindingRecord>(packId, 'mediator_bindings');
 };

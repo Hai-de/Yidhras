@@ -10,6 +10,12 @@ export interface SqliteRuntimePragmaSnapshot {
   wal_autocheckpoint: number;
 }
 
+export interface DatabaseHealthSnapshot {
+  provider: 'sqlite' | 'postgresql';
+  connected: boolean;
+  sqlite?: SqliteRuntimePragmaSnapshot;
+}
+
 const normalizeInteger = (value: unknown, fallback = 0): number => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return Math.trunc(value);
@@ -92,9 +98,9 @@ export const readSqliteRuntimePragmas = async (prisma: PrismaClient): Promise<Sq
 
 export const applySqliteRuntimePragmas = async (prisma: PrismaClient): Promise<SqliteRuntimePragmaSnapshot> => {
   const config = getSqliteRuntimeConfig();
-  const busyTimeoutMs = config.busy_timeout_ms;
-  const walAutocheckpointPages = config.wal_autocheckpoint_pages;
-  const synchronousMode = config.synchronous;
+  const busyTimeoutMs = config?.busy_timeout_ms ?? 5000;
+  const walAutocheckpointPages = config?.wal_autocheckpoint_pages ?? 1000;
+  const synchronousMode = config?.synchronous ?? 'NORMAL';
 
   await runPragma(prisma, 'PRAGMA journal_mode = WAL;');
   await runPragma(prisma, `PRAGMA busy_timeout = ${busyTimeoutMs};`);

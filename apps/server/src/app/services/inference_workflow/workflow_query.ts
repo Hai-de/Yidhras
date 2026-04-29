@@ -166,7 +166,7 @@ const safeFindInferenceTraceById = async (
   id: string
 ): Promise<InferenceTraceRecord | null> => {
   try {
-    return await context.prisma.inferenceTrace.findUnique({ where: { id } });
+    return await context.repos.inference.getPrisma().inferenceTrace.findUnique({ where: { id } });
   } catch {
     return null;
   }
@@ -177,7 +177,7 @@ const safeFindActionIntentById = async (
   id: string
 ): Promise<ActionIntentRecord | null> => {
   try {
-    return await context.prisma.actionIntent.findUnique({ where: { id } });
+    return await context.repos.inference.getPrisma().actionIntent.findUnique({ where: { id } });
   } catch {
     return null;
   }
@@ -188,7 +188,7 @@ const safeFindActionIntentByInferenceId = async (
   sourceInferenceId: string
 ): Promise<ActionIntentRecord | null> => {
   try {
-    return await context.prisma.actionIntent.findUnique({ where: { source_inference_id: sourceInferenceId } });
+    return await context.repos.inference.getPrisma().actionIntent.findUnique({ where: { source_inference_id: sourceInferenceId } });
   } catch {
     return null;
   }
@@ -196,7 +196,7 @@ const safeFindActionIntentByInferenceId = async (
 
 const safeFindDecisionJobById = async (context: AppInfrastructure, id: string): Promise<DecisionJobRecord | null> => {
   try {
-    return await context.prisma.decisionJob.findUnique({ where: { id } });
+    return await context.repos.inference.getPrisma().decisionJob.findUnique({ where: { id } });
   } catch {
     return null;
   }
@@ -204,7 +204,7 @@ const safeFindDecisionJobById = async (context: AppInfrastructure, id: string): 
 
 const safeListReplayChildrenByParentId = async (context: AppInfrastructure, jobId: string): Promise<DecisionJobRecord[]> => {
   try {
-    return await context.prisma.decisionJob.findMany({ where: { replay_of_job_id: jobId }, orderBy: { created_at: 'asc' } });
+    return await context.repos.inference.getPrisma().decisionJob.findMany({ where: { replay_of_job_id: jobId }, orderBy: { created_at: 'asc' } });
   } catch {
     return [];
   }
@@ -406,7 +406,7 @@ export const listInferenceJobs = async (
   input: ListInferenceJobsInput
 ): Promise<InferenceJobsListSnapshot> => {
   const filters = parseInferenceJobsFilters(input);
-  const jobs = await context.prisma.decisionJob.findMany({
+  const jobs = await context.repos.inference.getPrisma().decisionJob.findMany({
     ...(shouldFetchAllInferenceJobs(filters)
       ? {}
       : {
@@ -476,10 +476,10 @@ export const getWorkflowSnapshotByInferenceId = async (
 ): Promise<WorkflowSnapshot> => {
   const id = ensureNonEmptyId(inferenceId, 'inference_id');
   const [trace, job] = await Promise.all([
-    context.prisma.inferenceTrace.findUnique({
+    context.repos.inference.getPrisma().inferenceTrace.findUnique({
       where: { id }
     }),
-    context.prisma.decisionJob.findUnique({
+    context.repos.inference.getPrisma().decisionJob.findUnique({
       where: { source_inference_id: id }
     })
   ]);
@@ -491,7 +491,7 @@ export const getWorkflowSnapshotByInferenceId = async (
   }
 
   if (!job) {
-    const intent = await context.prisma.actionIntent.findUnique({
+    const intent = await context.repos.inference.getPrisma().actionIntent.findUnique({
       where: { source_inference_id: id }
     });
 

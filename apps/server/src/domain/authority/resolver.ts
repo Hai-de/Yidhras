@@ -58,7 +58,7 @@ const findActorState = async (context: AppInfrastructure, packId: string, subjec
   if (!subjectEntityId) {
     return null;
   }
-  const states = await listPackEntityStates(packId);
+  const states = await listPackEntityStates(context.packStorageAdapter, packId);
   const candidateIds = [subjectEntityId];
   const packEntityId = packEntityIdFromResolvedAgentId(packId, subjectEntityId);
   if (packEntityId && packEntityId !== subjectEntityId) {
@@ -96,7 +96,7 @@ const resolveTargetSelectorMatch = async (
   }
 
   if (kind === 'holder_of' && typeof targetSelector.entity_id === 'string') {
-    const states = await listPackEntityStates(packId);
+    const states = await listPackEntityStates(context.packStorageAdapter, packId);
     const targetState = states.find(
       state => state.entity_id === targetSelector.entity_id && state.state_namespace === 'core'
     );
@@ -121,7 +121,7 @@ export const resolveAuthorityForSubject = async (
   }
 ): Promise<AuthorityResolutionResult> => {
   const actorState = await findActorState(context, input.packId, input.subjectEntityId);
-  const authorityGrants = await listPackAuthorityGrants(input.packId);
+  const authorityGrants = await listPackAuthorityGrants(context.packStorageAdapter, input.packId);
 
   const resolved_capabilities: ResolvedCapabilityItem[] = [];
   const blocked_authority_ids: string[] = [];
@@ -174,5 +174,5 @@ export const resolveMediatorBindingsForPack = async (
   _context: AppInfrastructure,
   input: { packId: string }
 ) => {
-  return listPackMediatorBindings(input.packId);
+  return listPackMediatorBindings(_context.packStorageAdapter, input.packId);
 };

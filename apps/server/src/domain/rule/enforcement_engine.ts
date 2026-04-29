@@ -9,6 +9,7 @@ import type { AppContextPorts } from '../../app/services/app_context_ports.js';
 
 type EnforcementContext = AppInfrastructure & Pick<AppContextPorts, 'worldEngine'>;
 import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage/entity_state_repo.js';
+import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { ApiError } from '../../utils/api_error.js';
 import { resolveAuthorityForSubject, resolveMediatorBindingsForPack } from '../authority/resolver.js';
 import type { InvocationRequest } from '../invocation/invocation_dispatcher.js';
@@ -126,9 +127,10 @@ const applyMutationEffect = async (
     stateNamespace: string;
     statePatch: Record<string, unknown>;
     now: bigint;
+    packStorageAdapter: PackStorageAdapter;
   }
 ): Promise<void> => {
-  const states = await listPackEntityStates(input.packId);
+  const states = await listPackEntityStates(input.packStorageAdapter, input.packId);
   const existing = states.find(
     state => state.entity_id === input.entityId && state.state_namespace === input.stateNamespace
   ) ?? null;
@@ -137,7 +139,7 @@ const applyMutationEffect = async (
     ...input.statePatch
   };
 
-  await upsertPackEntityState({
+  await upsertPackEntityState(input.packStorageAdapter, {
     id: buildPackEntityStateId(input.packId, input.entityId, input.stateNamespace),
     pack_id: input.packId,
     entity_id: input.entityId,
@@ -200,7 +202,7 @@ const emitObjectiveEvents = async (
   const emittedEvents: unknown[] = [];
   for (const event of input.events) {
     const bridgeImpactData = buildEventBridgeImpactData(input.invocation, event);
-    const created = await context.prisma.$transaction(async tx => {
+    const created = await context.repos.inference.getPrisma().$transaction(async tx => {
       return tx.event.create({
         data: {
           title: event.title,
@@ -246,7 +248,8 @@ export const enforceInvocationRequest = async (
     }
     const sidecarRequest = await buildSidecarObjectiveExecutionRequest(context, {
       invocation,
-      effectiveMediatorId: mediatorId
+      effectiveMediatorId: mediatorId,
+      packStorageAdapter: context.packStorageAdapter
     });
     const sidecarResult = normalizeObjectiveRuleSidecarResult(
       await context.worldEngine.executeObjectiveRule(sidecarRequest)
@@ -267,7 +270,8 @@ export const enforceInvocationRequest = async (
         entityId: mutation.entity_id,
         stateNamespace: mutation.state_namespace,
         statePatch: mutation.state_patch,
-        now
+        now,
+        packStorageAdapter: context.packStorageAdapter
       });
     }
 
@@ -278,6 +282,7 @@ export const enforceInvocationRequest = async (
     });
 
     const executionRecord = await createObjectiveRuleExecutionRecord({
+      packStorageAdapter: context.packStorageAdapter,
       id: `${invocation.id}:execution`,
       pack_id: invocation.pack_id,
       rule_id: plan.rule_id,
@@ -302,6 +307,7 @@ export const enforceInvocationRequest = async (
     };
   } catch (error) {
     await createObjectiveRuleExecutionRecord({
+      packStorageAdapter: context.packStorageAdapter,
       id: `${invocation.id}:execution`,
       pack_id: invocation.pack_id,
       rule_id: `failed:${invocation.invocation_type}`,

@@ -15,6 +15,7 @@ import type { WorldPack } from '../../packs/manifest/loader.js';
 import { clearPackRuntimeStorage } from '../runtime/teardown.js';
 import { listPackEntityStates } from '../storage/entity_state_repo.js';
 import { resolvePackRuntimeDatabaseLocation } from '../storage/pack_db_locator.js';
+import type { PackStorageAdapter } from '../storage/PackStorageAdapter.js';
 import {
   readSnapshotMetadata,
   resolveSnapshotLocation,
@@ -40,8 +41,8 @@ const readPrismaData = (location: { prismaJsonPath: string }): PackSnapshotPrism
   return packSnapshotPrismaDataSchema.parse(parsed);
 };
 
-const readAppliedOpeningId = async (packId: string): Promise<string | null> => {
-  const states = await listPackEntityStates(packId);
+const readAppliedOpeningId = async (adapter: PackStorageAdapter, packId: string): Promise<string | null> => {
+  const states = await listPackEntityStates(adapter, packId);
   const metaState = states.find(
     (s) => s.entity_id === `${packId}:entity:__world__` && s.state_namespace === 'meta'
   );
@@ -263,6 +264,7 @@ export interface RestorePackSnapshotInput {
   packId: string;
   snapshotId: string;
   prisma: PrismaClient;
+  packStorageAdapter: PackStorageAdapter;
   pack: WorldPack;
   sim: SimulationManager;
   activePackRuntime?: ActivePackRuntimeFacade;
@@ -277,7 +279,7 @@ export interface RestorePackSnapshotResult {
 }
 
 export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Promise<RestorePackSnapshotResult> => {
-  const { packId, snapshotId, prisma, pack, sim, activePackRuntime, worldEngine, notifications } = input;
+  const { packId, snapshotId, prisma, packStorageAdapter, pack, sim, activePackRuntime, worldEngine, notifications } = input;
 
   const location = resolveSnapshotLocation(packId, snapshotId);
 
@@ -301,7 +303,7 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
   }
 
   // 2. Clear runtime storage
-  clearPackRuntimeStorage(packId);
+  clearPackRuntimeStorage(packStorageAdapter, packId);
 
   // 3. Teardown kernel bridges
   const { teardownActorBridges } = await import('../runtime/materializer.js');
@@ -321,7 +323,7 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
   }
 
   // 6. Read applied_opening_id from restored SQLite
-  const appliedOpeningId = await readAppliedOpeningId(packId);
+  const appliedOpeningId = await readAppliedOpeningId(packStorageAdapter, packId);
 
   // 7. Restore Prisma data
   await restorePrismaData(prisma, prismaData);
@@ -335,7 +337,7 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
   // 8. Materialize (idempotent)
   const { materializePackRuntime } = await import('../../core/pack_materializer.js');
   const tick = parseBigInt(metadata.captured_at_tick);
-  await materializePackRuntime({ pack, prisma, initialTick: tick, appliedOpeningId: appliedOpeningId ?? undefined });
+  await materializePackRuntime({ pack, prisma, packStorageAdapter, initialTick: tick, appliedOpeningId: appliedOpeningId ?? undefined });
 
   // 9. Restore in-memory clock
   const clockSnapshot: RuntimeClockProjectionSnapshot = {

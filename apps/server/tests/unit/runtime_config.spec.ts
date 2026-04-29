@@ -232,7 +232,6 @@ afterEach(async () => {
   delete process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED;
   delete process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED;
   delete process.env.EXPERIMENTAL_MULTI_PACK_RUNTIME_UI_ENABLED;
-  delete process.env.WORLD_ENGINE_USE_SIDECAR;
   delete process.env.WORLD_ENGINE_TIMEOUT_MS;
   delete process.env.WORLD_ENGINE_BINARY_PATH;
   delete process.env.WORLD_ENGINE_AUTO_RESTART;
@@ -335,30 +334,6 @@ describe('runtime config YAML migration', () => {
     });
     expect(config.scheduler.agent.signal_policy.event_followup.delay_ticks).toBe(2);
     expect(config.scheduler.agent.recovery_suppression.retry.suppress_periodic).toBe(false);
-  });
-
-  it('keeps WORLD_ENGINE_USE_SIDECAR as deprecated warning only and does not alter world engine mode', async () => {
-    const rootDir = await createWorkspace({
-      'data/configw/default.yaml': defaultYamlBase
-    });
-
-    process.env.WORKSPACE_ROOT = rootDir;
-    process.env.WORLD_ENGINE_USE_SIDECAR = '1';
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-
-    expect(getWorldEngineConfig()).toEqual({
-      timeout_ms: 1200,
-      binary_path: 'apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar',
-      auto_restart: false
-    });
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('WORLD_ENGINE_USE_SIDECAR 已废弃')
-    );
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('world engine 现仅支持 Rust sidecar')
-    );
-
-    warnSpy.mockRestore();
   });
 
   it('allows env to override migrated scheduler YAML values and world engine runtime settings', async () => {

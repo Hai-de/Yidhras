@@ -88,11 +88,7 @@ export const getOverviewSummary = async (context: AppContext): Promise<OverviewS
   const [operatorProjection, globalProjectionIndex, activeAgentCount, notifications, recentAudit, latestEvents, latestPosts] = await Promise.all([
     getOperatorOverviewProjection(context),
     extractGlobalProjectionIndex(context),
-    context.prisma.agent.count({
-      where: {
-        type: 'active'
-      }
-    }),
+    context.repos.agent.countActiveAgents(),
     Promise.resolve(context.notifications.getMessages()),
     listAuditFeed(context, {
       limit: 50,

@@ -287,7 +287,7 @@ const toListItem = (record: AiInvocationRecord): AiInvocationListItem => ({
 
 export const getAiInvocationById = async (context: AppContext, invocationId?: string): Promise<AiInvocationRecord> => {
   const id = ensureNonEmptyId(invocationId, 'ai_invocation_id');
-  const record = await context.prisma.aiInvocationRecord.findUnique({
+  const record = await context.repos.inference.getPrisma().aiInvocationRecord.findUnique({
     where: { id }
   });
 
@@ -305,7 +305,7 @@ export const listAiInvocations = async (
   input: ListAiInvocationsInput
 ): Promise<AiInvocationsListSnapshot> => {
   const filters = parseAiInvocationFilters(input);
-  const records = await context.prisma.aiInvocationRecord.findMany({
+  const records = await context.repos.inference.getPrisma().aiInvocationRecord.findMany({
     where: buildAiInvocationWhere(filters),
     orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
     take: filters.limit + 1

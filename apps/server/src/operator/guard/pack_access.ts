@@ -17,14 +17,7 @@ export const checkPackAccess = async (
   operatorId: string,
   packId: string
 ): Promise<PackAccessResult> => {
-  const binding = await context.prisma.operatorPackBinding.findUnique({
-    where: {
-      operator_id_pack_id: {
-        operator_id: operatorId,
-        pack_id: packId
-      }
-    }
-  })
+  const binding = await context.repos.identityOperator.findPackBinding(operatorId, packId)
 
   if (!binding) {
     return { allowed: false, bindingType: null, reason: 'NOT_BOUND' }

@@ -45,7 +45,7 @@ export const resolvePerceptionForSubject = async (
     packState: InferencePackStateSnapshot;
   }
 ): Promise<PerceptionResolutionResult> => {
-  const states = await listPackEntityStates(input.packId);
+  const states = await listPackEntityStates(context.packStorageAdapter, input.packId);
   const visibleSet = buildPackStateVisibilitySet(input.packState);
 
   const visible_state_entries: PerceptionResolutionResult['visible_state_entries'] = [];
