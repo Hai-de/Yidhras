@@ -105,7 +105,7 @@ flowchart TB
         MultiPackLoopHost[MultiPackLoopHost\npack lifecycle / loop orchestration]
         PackStateMachine[Pack state machine\nloading → ready → degraded → unloading → gone]
 
-        subgraph PackContainer[“Per-pack container (× N loaded packs)”]
+        subgraph PackContainer["Per-pack container (× N loaded packs)"]
             direction LR
             PackLoop[PackSimulationLoop\n5-step cycle]
             SchedAdapter[SchedulerStorageAdapter\nlease / cursor / ownership]
@@ -120,13 +120,13 @@ flowchart TB
 
     PackSQLite[(Pack-local runtime SQLite\nworld data + scheduler storage)]
 
-    MultiPackLoopHost -->|”start/stop/monitor”| PackLoop
+    MultiPackLoopHost -->|"start/stop/monitor"| PackLoop
     MultiPackLoopHost --> PackStateMachine
     PackLoop --> SchedAdapter
     PackLoop --> WEP
     PackLoop --> HostAPI
-    WEP <-->|”per-pack JSON-RPC”| SidecarProc
-    HostAPI -.->|”controlled read”| SidecarProc
+    WEP <-->|"per-pack JSON-RPC"| SidecarProc
+    HostAPI -.->|"controlled read"| SidecarProc
     SchedAdapter --> PackSQLite
 ```
 
@@ -137,7 +137,7 @@ flowchart TB
 - Pack 状态机（`loading → ready → degraded → unloading → gone`）通过 `PackScopeResolver` + `packScopeMiddleware` 在 API 层强制执行：loading/unloading → 503 + Retry-After；gone → 404；degraded → 503 + degraded_reason。
 - `PackHostApi` 只暴露受控读面，不暴露 runtime kernel 控制能力。
 - Sidecar 进程池（`scheduler_sidecar_pool.ts`）通过 `max_processes` 配置硬上限，超出时排队等待；连续崩溃达 `SCHEDULER_CRASH_THRESHOLD` 时自动熔断，pack 切为 degraded。
-- world engine 与数据库之间不存在”sidecar 直接落库即系统真相”的边界设计；持久化仍由 host 编排。
+- world engine 与数据库之间不存在"sidecar 直接落库即系统真相"的边界设计；持久化仍由 host 编排。
 
 ## 4. 典型 HTTP 请求链路
 
