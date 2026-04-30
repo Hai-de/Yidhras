@@ -5,6 +5,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  getDatabaseConfig,
   getExperimentalMultiPackRuntimeConfig,
   getMemoryTriggerEngineConfig,
   getRuntimeConfig,
@@ -17,7 +18,6 @@ import {
   getSchedulerRunnerConfig,
   getSchedulerTickBudgetConfig,
   getSimulationLoopIntervalMs,
-  getSqliteRuntimeConfig,
   getWorldEngineConfig,
   isAiGatewayEnabled,
   isExperimentalMultiPackOperatorApiEnabled,
@@ -252,14 +252,14 @@ afterEach(async () => {
 describe('runtime config YAML migration', () => {
   it('loads scheduler runtime, prompt workflow defaults, and experimental multi-pack settings from YAML', async () => {
     const rootDir = await createWorkspace({
-      'data/configw/default.yaml': defaultYamlBase
+      'data/configw/test.yaml': defaultYamlBase
     });
 
     process.env.WORKSPACE_ROOT = rootDir;
 
     const config = getRuntimeConfig();
 
-    expect(getSqliteRuntimeConfig()).toMatchObject({
+    expect(getDatabaseConfig().sqlite).toMatchObject({
       busy_timeout_ms: 5000,
       wal_autocheckpoint_pages: 1000,
       synchronous: 'NORMAL'
@@ -386,7 +386,7 @@ describe('runtime config YAML migration', () => {
     process.env.RUNTIME_MULTI_PACK_START_MODE = 'bootstrap_list';
     process.env.RUNTIME_MULTI_PACK_BOOTSTRAP_PACKS = 'death_note,test_pack';
 
-    expect(getSqliteRuntimeConfig()).toMatchObject({ busy_timeout_ms: 8000, wal_autocheckpoint_pages: 1200, synchronous: 'FULL' });
+    expect(getDatabaseConfig().sqlite).toMatchObject({ busy_timeout_ms: 8000, wal_autocheckpoint_pages: 1200, synchronous: 'FULL' });
     expect(getSimulationLoopIntervalMs()).toBe(2500);
     expect(getSchedulerLeaseTicks()).toBe(9n);
     expect(getSchedulerEntityConcurrencyConfig()).toMatchObject({

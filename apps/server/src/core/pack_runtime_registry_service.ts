@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import path from 'path';
 
 import { ChronosEngine } from '../clock/engine.js';
 import type { CalendarConfig } from '../clock/types.js';
@@ -7,6 +8,7 @@ import type { WorldPack } from '../packs/manifest/loader.js';
 import { teardownActorBridges } from '../packs/runtime/materializer.js';
 import { resolvePackRuntimeDatabaseLocation } from '../packs/storage/pack_db_locator.js';
 import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
+import { discoverPackLocalPlugins } from '../plugins/discovery.js';
 import { pluginRuntimeRegistry } from '../plugins/runtime.js';
 import { ApiError } from '../utils/api_error.js';
 import { createLogger } from '../utils/logger.js';
@@ -29,8 +31,10 @@ export interface DefaultPackRuntimeRegistryServiceOptions {
   packCatalog: Pick<DefaultPackCatalogService, 'resolvePackByIdOrFolder'>;
   prisma: PrismaClient;
   packStorageAdapter: PackStorageAdapter;
+  packsDir: string;
   getActivePack: () => WorldPack | undefined;
   getStartupLevel: () => 'ok' | 'degraded' | 'fail';
+  onBeforeUnload?: (packId: string) => Promise<void>;
 }
 
 export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, PackRuntimeObservation, PackRuntimeControl {
@@ -38,16 +42,20 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
   private readonly packCatalog: Pick<DefaultPackCatalogService, 'resolvePackByIdOrFolder'>;
   private readonly prisma: PrismaClient;
   private readonly packStorageAdapter: PackStorageAdapter;
+  private readonly packsDir: string;
   private readonly getActivePackRef: () => WorldPack | undefined;
   private readonly getStartupLevelRef: () => 'ok' | 'degraded' | 'fail';
+  private readonly onBeforeUnload?: (packId: string) => Promise<void>;
 
   constructor(options: DefaultPackRuntimeRegistryServiceOptions) {
     this.registry = options.registry;
     this.packCatalog = options.packCatalog;
     this.prisma = options.prisma;
     this.packStorageAdapter = options.packStorageAdapter;
+    this.packsDir = options.packsDir;
     this.getActivePackRef = options.getActivePack;
     this.getStartupLevelRef = options.getStartupLevel;
+    this.onBeforeUnload = options.onBeforeUnload;
   }
 
   public listLoadedPackIds(): string[] {
@@ -165,6 +173,13 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       );
     }
 
+    const packRootDir = path.join(this.packsDir, resolved.packFolderName);
+    await discoverPackLocalPlugins({
+      prismaContext: { prisma: this.prisma },
+      pack: resolved.pack,
+      packRootDir
+    });
+
     return {
       handle: host.getHandle(),
       loaded: true,
@@ -180,6 +195,10 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
 
     if (this.getActivePackId() === packId) {
       throw new Error('cannot unload active pack runtime from stable runtime host');
+    }
+
+    if (this.onBeforeUnload) {
+      await this.onBeforeUnload(packId);
     }
 
     await host.dispose();

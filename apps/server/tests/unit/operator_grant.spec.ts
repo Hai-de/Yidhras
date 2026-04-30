@@ -1,7 +1,10 @@
+import type { PrismaClient } from '@prisma/client'
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { AppContext } from '../../src/app/context.js'
 import { checkCapability } from '../../src/app/middleware/capability.js'
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js'
 
 describe('operator grant capability check', () => {
   let context: AppContext
@@ -14,15 +17,17 @@ describe('operator grant capability check', () => {
     const sim = {
       getCurrentTick: () => 1000n
     } as AppContext['sim']
+    const prisma = {
+      operator: {
+        findUnique: mockOperatorFindUnique
+      },
+      operatorGrant: {
+        findFirst: mockGrantFindFirst
+      }
+    } as unknown as AppContext['prisma']
     context = {
-      prisma: {
-        operator: {
-          findUnique: mockOperatorFindUnique
-        },
-        operatorGrant: {
-          findFirst: mockGrantFindFirst
-        }
-      } as unknown as AppContext['prisma'],
+      repos: wrapPrismaAsRepositories(prisma as PrismaClient),
+      prisma,
       sim,
       clock: sim as AppContext['clock'],
       activePack: sim as AppContext['activePack']

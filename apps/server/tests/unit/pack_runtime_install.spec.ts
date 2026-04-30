@@ -6,6 +6,7 @@ import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
 import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
 import { countSqliteEngineOwnedRecords } from '../../src/packs/storage/internal/sqlite_engine_owned_store.js';
+import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 
 const createdRoots: string[] = [];
@@ -19,6 +20,8 @@ afterEach(() => {
 });
 
 describe('pack runtime install', () => {
+  const packStorageAdapter = new SqlitePackStorageAdapter();
+
   it('materializes a pack runtime database file and storage plan metadata', async () => {
     const environment = await createIsolatedRuntimeEnvironment({
       appEnv: 'test'
@@ -80,7 +83,7 @@ describe('pack runtime install', () => {
       }
     });
 
-    const summary = await installPackRuntime(pack);
+    const summary = await installPackRuntime(pack, packStorageAdapter);
 
     expect(summary.packId).toBe('world-test-pack');
     expect(summary.runtimeDbCreated).toBe(true);

@@ -5,6 +5,7 @@ import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 import { materializePackRuntime } from '../../src/core/pack_materializer.js';
 import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
 import { countSqliteEngineOwnedRecords } from '../../src/packs/storage/internal/sqlite_engine_owned_store.js';
+import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 
 const createdRoots: string[] = [];
@@ -97,6 +98,8 @@ const buildPackWithStorage = (packId: string) => {
 };
 
 describe('materializePackRuntime', () => {
+  const packStorageAdapter = new SqlitePackStorageAdapter();
+
   it('materializes a fresh pack', async () => {
     const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test' });
     createdRoots.push(environment.rootDir);
@@ -108,6 +111,7 @@ describe('materializePackRuntime', () => {
     const result = await materializePackRuntime({
       pack,
       prisma,
+      packStorageAdapter,
       initialTick: 0n
     });
 
@@ -140,11 +144,13 @@ describe('materializePackRuntime', () => {
     const first = await materializePackRuntime({
       pack,
       prisma,
+      packStorageAdapter,
       initialTick: 0n
     });
     const second = await materializePackRuntime({
       pack,
       prisma,
+      packStorageAdapter,
       initialTick: 0n
     });
 
@@ -169,6 +175,7 @@ describe('materializePackRuntime', () => {
     const result = await materializePackRuntime({
       pack,
       prisma,
+      packStorageAdapter,
       initialTick: 0n
     });
 
@@ -195,6 +202,7 @@ describe('materializePackRuntime', () => {
     await materializePackRuntime({
       pack,
       prisma,
+      packStorageAdapter,
       initialTick: 0n
     });
 
@@ -230,6 +238,7 @@ describe('materializePackRuntime', () => {
     const result = await materializePackRuntime({
       pack,
       prisma,
+      packStorageAdapter,
       initialTick: 0n
     });
 
@@ -250,6 +259,7 @@ describe('materializePackRuntime', () => {
     const result = await materializePackRuntime({
       pack,
       prisma,
+      packStorageAdapter,
       initialTick: 0n
     });
 

@@ -7,6 +7,8 @@ import {
 } from '@yidhras/contracts';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { PrismaClient } from '@prisma/client';
+
 import type { AppContext } from '../../../src/app/context.js';
 import {
   createDefaultWorldEnginePersistencePort,
@@ -14,11 +16,31 @@ import {
   executeWorldEnginePreparedStep
 } from '../../../src/app/runtime/world_engine_persistence.js';
 import type { WorldEnginePort } from '../../../src/app/runtime/world_engine_ports.js';
+import type { PackStorageAdapter } from '../../../src/packs/storage/PackStorageAdapter.js';
+import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 
 const TEST_PACK_ID = 'world-test-pack';
 
-const createMinimalContext = (): AppContext => ({
-  prisma: {} as never,
+const createMockPackStorageAdapter = (): PackStorageAdapter => ({
+  backend: 'sqlite',
+  ping: async () => true,
+  destroyPackStorage: async () => {},
+  ensureEngineOwnedSchema: async () => {},
+  listEngineOwnedRecords: async () => [],
+  upsertEngineOwnedRecord: async (_packId, _table, record) => record as never,
+  ensureCollection: async () => {},
+  upsertCollectionRecord: async () => null,
+  listCollectionRecords: async () => [],
+  exportPackData: async () => ({}),
+  importPackData: async () => {}
+});
+
+const createMinimalContext = (): AppContext => {
+  const prisma = {} as never;
+  return {
+    repos: wrapPrismaAsRepositories(prisma as unknown as PrismaClient),
+    prisma,
+    packStorageAdapter: createMockPackStorageAdapter(),
   sim: {} as never,
   notifications: {
     push: vi.fn() as never,
@@ -37,7 +59,8 @@ const createMinimalContext = (): AppContext => ({
   setPaused: vi.fn(),
   worldEngineStepCoordinator: createWorldEngineStepCoordinator(),
   assertRuntimeReady: vi.fn()
-}) as unknown as AppContext;
+  };
+};
 
 const createPreparedEvent = (packId: string, token: string, tick: string): WorldDomainEvent => ({
   event_id: `world-step-prepared:${token}`,
@@ -351,7 +374,7 @@ describe('world engine persistence orchestration', () => {
         updated_at: input.now
       };
     });
-    const recordSpy = vi.spyOn(ruleExecutionRepo, 'recordPackRuleExecution').mockImplementation(async input => {
+    const recordSpy = vi.spyOn(ruleExecutionRepo, 'recordPackRuleExecution').mockImplementation(async (_adapter, input) => {
       recordedExecutions.push({ id: input.id, rule_id: input.rule_id, execution_status: input.execution_status });
       return {
         id: input.id,

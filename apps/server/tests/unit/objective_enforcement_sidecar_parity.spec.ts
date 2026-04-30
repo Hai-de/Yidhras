@@ -1,6 +1,8 @@
 import fs from 'fs';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { PrismaClient } from '@prisma/client';
+
 import type { AppContext } from '../../src/app/context.js';
 import { WorldEngineSidecarClient, type WorldEngineSidecarTransport } from '../../src/app/runtime/sidecar/world_engine_sidecar_client.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
@@ -8,8 +10,11 @@ import { dispatchInvocationFromActionIntent } from '../../src/domain/invocation/
 import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
 import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
 import { materializePackRuntimeCoreModels } from '../../src/packs/runtime/materializer.js';
+import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
+import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import { listPackEntityStates } from '../../src/packs/storage/entity_state_repo.js';
 import { listPackRuleExecutionRecords } from '../../src/packs/storage/rule_execution_repo.js';
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 
 const createdRoots: string[] = [];
@@ -32,6 +37,7 @@ const createTestSidecarClient = (): WorldEngineSidecarClient => {
 
 const buildTestContext = (
   pack: ReturnType<typeof parseWorldPackConstitution>,
+  packStorageAdapter: PackStorageAdapter,
   options?: {
     now?: bigint;
   }
@@ -52,7 +58,9 @@ const buildTestContext = (
   } as AppContext['sim'];
 
   return {
+    repos: wrapPrismaAsRepositories({} as PrismaClient),
     prisma: {} as AppContext['prisma'],
+    packStorageAdapter,
     sim,
     clock: sim as AppContext['clock'],
     activePack: sim as AppContext['activePack'],
@@ -136,6 +144,8 @@ const buildTestContext = (
 };
 
 describe('objective enforcement sidecar parity', () => {
+  const packStorageAdapter = new SqlitePackStorageAdapter();
+
   it('matches objective enforcement results for a richer subject/target/world/event scenario', async () => {
     const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test' });
     createdRoots.push(environment.rootDir);
@@ -274,15 +284,15 @@ describe('objective enforcement sidecar parity', () => {
       }
     });
 
-    await installPackRuntime(pack);
-    await materializePackRuntimeCoreModels(pack, 1000n);
+    await installPackRuntime(pack, packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack, 1000n, packStorageAdapter);
 
-    const firstContext = buildTestContext(pack);
+    const firstContext = buildTestContext(pack, packStorageAdapter);
     await firstContext.worldEngine?.loadPack({
       pack_id: pack.metadata.id,
       mode: 'active'
     });
-    const secondContext = buildTestContext(pack);
+    const secondContext = buildTestContext(pack, packStorageAdapter);
     await secondContext.worldEngine?.loadPack({
       pack_id: pack.metadata.id,
       mode: 'active'
@@ -307,14 +317,14 @@ describe('objective enforcement sidecar parity', () => {
     };
 
     await dispatchInvocationFromActionIntent(firstContext, invocation);
-    const firstStates = await listPackEntityStates(pack.metadata.id);
-    const firstRecords = await listPackRuleExecutionRecords(pack.metadata.id);
+    const firstStates = await listPackEntityStates(packStorageAdapter, pack.metadata.id);
+    const firstRecords = await listPackRuleExecutionRecords(packStorageAdapter, pack.metadata.id);
 
-    await materializePackRuntimeCoreModels(pack, 1000n);
+    await materializePackRuntimeCoreModels(pack, 1000n, packStorageAdapter);
 
     await dispatchInvocationFromActionIntent(secondContext, invocation);
-    const secondStates = await listPackEntityStates(pack.metadata.id);
-    const secondRecords = await listPackRuleExecutionRecords(pack.metadata.id);
+    const secondStates = await listPackEntityStates(packStorageAdapter, pack.metadata.id);
+    const secondRecords = await listPackRuleExecutionRecords(packStorageAdapter, pack.metadata.id);
 
     const pickState = (states: Awaited<ReturnType<typeof listPackEntityStates>>, entityId: string, namespace: string) => {
       return states.find(state => state.entity_id === entityId && state.state_namespace === namespace)?.state_json ?? null;

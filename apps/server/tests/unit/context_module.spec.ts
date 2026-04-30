@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import type { PrismaClient } from '@prisma/client';
+
 import type { AppContext } from '../../src/app/context.js';
 import type { ContextOverlayStore } from '../../src/context/overlay/types.js';
 import { createContextService } from '../../src/context/service.js';
@@ -11,6 +13,8 @@ import type {
 import type { LongMemoryBlockStore, MemoryBehavior, MemoryBlock, MemoryRuntimeState } from '../../src/memory/blocks/types.js';
 import type { BuildMemoryContextInput, MemoryService } from '../../src/memory/service.js';
 import type { MemoryContextPack, MemoryEntry, MemorySelectionResult } from '../../src/memory/types.js';
+
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 
 const buildMemoryEntry = (input: {
   id: string;
@@ -95,8 +99,8 @@ const buildLongMemoryBlockStoreStub = (): LongMemoryBlockStore => ({
   async hardDeleteBlock() { throw new Error('unexpected hardDeleteBlock call in test'); }
 });
 
-const buildContext = (): AppContext => ({
-  prisma: {
+const buildContext = (): AppContext => {
+  const prisma = {
     policy: { findMany: async () => [] },
     inferenceTrace: {
       findMany: async () => [{
@@ -112,7 +116,16 @@ const buildContext = (): AppContext => ({
         tick: 999n, source_action_intent: { actor_ref: { agent_id: 'agent-001' } }
       }]
     }
-  } as unknown as AppContext['prisma'],
+  } as unknown as AppContext['prisma'];
+  const repos = wrapPrismaAsRepositories(prisma as PrismaClient);
+  repos.narrative = {
+    getPrisma: () => prisma as PrismaClient,
+    queryEvents: async () => []
+  } as unknown as typeof repos.narrative;
+
+  return {
+    repos,
+    prisma,
   sim: { getCurrentTick() { return 1000n; } } as AppContext['sim'],
   notifications: {
     push(level, content) { return { id: 'noop', level, content, timestamp: Date.now() }; },
@@ -128,7 +141,8 @@ const buildContext = (): AppContext => ({
   getPaused() { return false; },
   setPaused() {},
   assertRuntimeReady() {}
-});
+  };
+};
 
 const buildSelection = (): MemorySelectionResult => ({
   short_term: [

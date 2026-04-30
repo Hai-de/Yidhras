@@ -1,14 +1,9 @@
+// Plugin CLI source was removed during backward-compatibility cleanup.
+// Tests preserved for reference; re-enable when CLI is re-implemented.
 import type { PluginInstallation } from '@yidhras/contracts';
 import { describe, expect, it, vi } from 'vitest';
 
 import * as pluginService from '../../src/app/services/plugins.js';
-import type {
-  PluginCliContext,
-  PluginLogSnapshot,
-  PluginRescanSnapshot,
-  WhyNotEnableSnapshot
-} from '../../src/cli/plugin_cli.js';
-import { formatPluginInstallationTable, parsePluginCliArgs, runPluginCli } from '../../src/cli/plugin_cli.js';
 import type { PluginDiscoveryResult } from '../../src/plugins/discovery.js';
 
 const createInstallation = (overrides: Partial<PluginInstallation> = {}): PluginInstallation => ({
@@ -129,7 +124,6 @@ const createCliContext = (): PluginCliContext => ({
   setPaused: vi.fn(),
   getRuntimeLoopDiagnostics: vi.fn(),
   setRuntimeLoopDiagnostics: vi.fn(),
-  getSqliteRuntimePragmas: vi.fn(() => null),
   getPluginEnableWarningConfig: () => ({
     enabled: true,
     require_acknowledgement: true
@@ -149,7 +143,7 @@ const defaultPackSelection = {
   }
 };
 
-describe('plugin cli', () => {
+describe.skip('plugin cli', () => {
   it('parses show/json/yes options', () => {
     expect(parsePluginCliArgs(['show', '--plugin', 'plugin.alpha', '--json', '--yes'])).toEqual({
       command: 'show',

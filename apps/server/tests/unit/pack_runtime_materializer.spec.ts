@@ -6,6 +6,7 @@ import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
 import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
 import { materializePackRuntimeCoreModels } from '../../src/packs/runtime/materializer.js';
+import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import { listPackAuthorityGrants } from '../../src/packs/storage/authority_repo.js';
 import { listPackEntityStates } from '../../src/packs/storage/entity_state_repo.js';
 import { listPackMediatorBindings } from '../../src/packs/storage/mediator_repo.js';
@@ -23,6 +24,8 @@ afterEach(() => {
 });
 
 describe('pack runtime materializer', () => {
+  const packStorageAdapter = new SqlitePackStorageAdapter();
+
   it('materializes world entities, entity states, authorities, mediator bindings, and bootstrap state into the pack db', async () => {
     const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test' });
     createdRoots.push(environment.rootDir);
@@ -150,8 +153,8 @@ describe('pack runtime materializer', () => {
       }
     });
 
-    await installPackRuntime(pack);
-    const summary = await materializePackRuntimeCoreModels(pack, 1000n);
+    await installPackRuntime(pack, packStorageAdapter);
+    const summary = await materializePackRuntimeCoreModels(pack, 1000n, packStorageAdapter);
 
     expect(summary.pack_id).toBe('world-test-pack');
     expect(summary.world_entity_count).toBeGreaterThanOrEqual(4);
@@ -159,10 +162,10 @@ describe('pack runtime materializer', () => {
     expect(summary.authority_grant_count).toBe(1);
     expect(summary.mediator_binding_count).toBe(1);
 
-    const worldEntities = await listPackWorldEntities('world-test-pack');
-    const entityStates = await listPackEntityStates('world-test-pack');
-    const authorityGrants = await listPackAuthorityGrants('world-test-pack');
-    const mediatorBindings = await listPackMediatorBindings('world-test-pack');
+    const worldEntities = await listPackWorldEntities(packStorageAdapter, 'world-test-pack');
+    const entityStates = await listPackEntityStates(packStorageAdapter, 'world-test-pack');
+    const authorityGrants = await listPackAuthorityGrants(packStorageAdapter, 'world-test-pack');
+    const mediatorBindings = await listPackMediatorBindings(packStorageAdapter, 'world-test-pack');
 
     expect(worldEntities.some(item => item.label === '夜神月')).toBe(true);
     expect(worldEntities.some(item => item.entity_kind === 'mediator')).toBe(true);
@@ -227,7 +230,7 @@ describe('pack runtime materializer', () => {
       }
     });
 
-    const summary = await installPackRuntime(pack);
+    const summary = await installPackRuntime(pack, packStorageAdapter);
     expect(summary.packCollections).toEqual(['target_dossiers', 'judgement_plans']);
   });
 });

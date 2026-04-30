@@ -1,14 +1,19 @@
 import fs from 'fs';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { PrismaClient } from '@prisma/client';
+
 import type { AppContext } from '../../src/app/context.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 import { dispatchInvocationFromActionIntent } from '../../src/domain/invocation/invocation_dispatcher.js';
 import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
 import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
 import { materializePackRuntimeCoreModels } from '../../src/packs/runtime/materializer.js';
+import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
+import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import { listPackRuleExecutionRecords } from '../../src/packs/storage/rule_execution_repo.js';
 import { ApiError } from '../../src/utils/api_error.js';
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 
 const createdRoots: string[] = [];
@@ -39,6 +44,7 @@ const createObjectiveOnlyWorldEngineStub = (input: {
 
 const buildTestContext = (
   pack: ReturnType<typeof parseWorldPackConstitution>,
+  packStorageAdapter: PackStorageAdapter,
   options?: {
     now?: bigint;
     worldEngine?: AppContext['worldEngine'];
@@ -60,7 +66,9 @@ const buildTestContext = (
   } as AppContext['sim'];
 
   return {
+    repos: wrapPrismaAsRepositories({} as PrismaClient),
     prisma: {} as AppContext['prisma'],
+    packStorageAdapter,
     sim,
     clock: sim as AppContext['clock'],
     activePack: sim as AppContext['activePack'],
@@ -105,6 +113,8 @@ const buildTestContext = (
 };
 
 describe('objective enforcement sidecar fallback policy', () => {
+  const packStorageAdapter = new SqlitePackStorageAdapter();
+
   it('does not silently fall back to TS objective resolution when a configured sidecar reports OBJECTIVE_RULE_NOT_FOUND', async () => {
     const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test' });
     createdRoots.push(environment.rootDir);
@@ -191,10 +201,10 @@ describe('objective enforcement sidecar fallback policy', () => {
       }
     });
 
-    await installPackRuntime(pack);
-    await materializePackRuntimeCoreModels(pack, 1000n);
+    await installPackRuntime(pack, packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack, 1000n, packStorageAdapter);
 
-    const context = buildTestContext(pack, {
+    const context = buildTestContext(pack, packStorageAdapter, {
       worldEngine: createObjectiveOnlyWorldEngineStub({
         executeObjectiveRule: async () => {
           throw new ApiError(500, 'OBJECTIVE_RULE_NOT_FOUND', 'sidecar reported no matching objective rule', {
@@ -226,7 +236,7 @@ describe('objective enforcement sidecar fallback policy', () => {
       code: 'OBJECTIVE_RULE_NOT_FOUND'
     });
 
-    const executionRecords = await listPackRuleExecutionRecords(pack.metadata.id);
+    const executionRecords = await listPackRuleExecutionRecords(packStorageAdapter, pack.metadata.id);
     expect(executionRecords).toHaveLength(1);
     expect(executionRecords[0]?.execution_status).toBe('failed');
     expect(executionRecords[0]?.rule_id).toBe('failed:invoke.claim_book');

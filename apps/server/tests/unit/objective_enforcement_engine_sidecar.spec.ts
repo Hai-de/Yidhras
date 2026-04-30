@@ -1,6 +1,8 @@
 import fs from 'fs';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { PrismaClient } from '@prisma/client';
+
 import type { AppContext } from '../../src/app/context.js';
 import { WorldEngineSidecarClient, type WorldEngineSidecarTransport } from '../../src/app/runtime/sidecar/world_engine_sidecar_client.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
@@ -8,8 +10,11 @@ import { dispatchInvocationFromActionIntent } from '../../src/domain/invocation/
 import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
 import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
 import { materializePackRuntimeCoreModels } from '../../src/packs/runtime/materializer.js';
+import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
+import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import { listPackEntityStates } from '../../src/packs/storage/entity_state_repo.js';
 import { listPackRuleExecutionRecords } from '../../src/packs/storage/rule_execution_repo.js';
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 
 const createdRoots: string[] = [];
@@ -30,7 +35,7 @@ const createTestSidecarClient = (): WorldEngineSidecarClient => {
   return new WorldEngineSidecarClient(undefined as WorldEngineSidecarTransport | undefined);
 };
 
-const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, now = 1000n): AppContextWithConcreteSidecar => {
+const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, packStorageAdapter: PackStorageAdapter, now = 1000n): AppContextWithConcreteSidecar => {
   const sim = {
     getActivePack(): typeof pack {
       return pack;
@@ -46,7 +51,9 @@ const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, n
   } as AppContext['sim'];
 
   return {
+    repos: wrapPrismaAsRepositories({} as PrismaClient),
     prisma: {} as AppContext['prisma'],
+    packStorageAdapter,
     sim,
     clock: sim as AppContext['clock'],
     activePack: sim as AppContext['activePack'],
@@ -91,6 +98,8 @@ const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, n
 };
 
 describe('objective enforcement engine via sidecar', () => {
+  const packStorageAdapter = new SqlitePackStorageAdapter();
+
   it('executes a real objective rule path through Rust sidecar and persists host-managed effects', async () => {
     const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test' });
     createdRoots.push(environment.rootDir);
@@ -177,10 +186,10 @@ describe('objective enforcement engine via sidecar', () => {
       }
     });
 
-    await installPackRuntime(pack);
-    await materializePackRuntimeCoreModels(pack, 1000n);
+    await installPackRuntime(pack, packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack, 1000n, packStorageAdapter);
 
-    const context = buildTestContext(pack);
+    const context = buildTestContext(pack, packStorageAdapter);
     await context.worldEngine.loadPack({
       pack_id: pack.metadata.id,
       mode: 'active'
@@ -205,12 +214,12 @@ describe('objective enforcement engine via sidecar', () => {
 
     expect(result?.outcome).toBe('completed');
 
-    const states = await listPackEntityStates(pack.metadata.id);
+    const states = await listPackEntityStates(packStorageAdapter, pack.metadata.id);
     const artifactState = states.find(state => state.entity_id === 'artifact-book' && state.state_namespace === 'core');
     expect(artifactState?.state_json.holder_agent_id).toBe('agent-holder');
     expect(artifactState?.state_json.location).toBeNull();
 
-    const executionRecords = await listPackRuleExecutionRecords(pack.metadata.id);
+    const executionRecords = await listPackRuleExecutionRecords(packStorageAdapter, pack.metadata.id);
     expect(executionRecords).toHaveLength(1);
     expect(executionRecords[0]?.rule_id).toBe('claim-book-objective-rule');
     expect(executionRecords[0]?.execution_status).toBe('completed');

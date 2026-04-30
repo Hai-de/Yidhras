@@ -9,6 +9,7 @@ import {
   listDeclaredPackCollectionRecords,
   upsertDeclaredPackCollectionRecord
 } from '../../src/packs/storage/pack_collection_repo.js';
+import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 
 const createdRoots: string[] = [];
@@ -22,6 +23,8 @@ afterEach(() => {
 });
 
 describe('pack collection repo', () => {
+  const packStorageAdapter = new SqlitePackStorageAdapter();
+
   it('upserts and lists declared pack collection records from the pack runtime sqlite database', async () => {
     const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test' });
     createdRoots.push(environment.rootDir);
@@ -59,7 +62,7 @@ describe('pack collection repo', () => {
       }
     });
 
-    await installPackRuntime(pack);
+    await installPackRuntime(pack, packStorageAdapter);
 
     const upserted = await upsertDeclaredPackCollectionRecord('world-storage-repo-pack', 'target_dossiers', {
       id: 'dossier-001',

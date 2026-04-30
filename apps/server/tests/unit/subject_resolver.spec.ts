@@ -1,3 +1,4 @@
+import type { PrismaClient } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { AppContext } from '../../src/app/context.js'
@@ -5,10 +6,13 @@ import {
   resolveSubjectForAgentAction,
   resolveSubjectForOperator
 } from '../../src/operator/guard/subject_resolver.js'
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js'
 
 describe('subject resolver', () => {
   let context: AppContext
-  let mockFindFirst: ReturnType<typeof vi.fn>
+  let mockFindBindingByAgentAndIdentity: ReturnType<typeof vi.fn>
+  let mockFindDefaultBindingForIdentity: ReturnType<typeof vi.fn>
+  let mockFindOperatorBindingForAgent: ReturnType<typeof vi.fn>
 
   const operator = {
     id: 'op-1',
@@ -20,13 +24,20 @@ describe('subject resolver', () => {
   }
 
   beforeEach(() => {
-    mockFindFirst = vi.fn()
+    mockFindBindingByAgentAndIdentity = vi.fn()
+    mockFindDefaultBindingForIdentity = vi.fn()
+    mockFindOperatorBindingForAgent = vi.fn()
+    const prisma = {} as unknown as AppContext['prisma'];
+    const repos = wrapPrismaAsRepositories(prisma as PrismaClient);
+    repos.identityOperator = {
+      getPrisma: () => prisma as PrismaClient,
+      findBindingByAgentAndIdentity: mockFindBindingByAgentAndIdentity,
+      findDefaultBindingForIdentity: mockFindDefaultBindingForIdentity,
+      findOperatorBindingForAgent: mockFindOperatorBindingForAgent
+    } as unknown as typeof repos.identityOperator;
     context = {
-      prisma: {
-        identityNodeBinding: {
-          findFirst: mockFindFirst
-        }
-      } as unknown as AppContext['prisma'],
+      prisma,
+      repos,
       sim: {
         getCurrentTick: () => 1000n
       }
@@ -35,7 +46,7 @@ describe('subject resolver', () => {
 
   describe('resolveSubjectForOperator', () => {
     it('returns bound agent when targetAgentId specified and binding exists', async () => {
-      mockFindFirst.mockResolvedValue({
+      mockFindBindingByAgentAndIdentity.mockResolvedValue({
         identity_id: 'identity-op-1',
         agent_id: 'agent-1',
         status: 'active'
@@ -49,7 +60,7 @@ describe('subject resolver', () => {
     })
 
     it('falls back to default binding when no targetAgentId', async () => {
-      mockFindFirst.mockResolvedValue({
+      mockFindDefaultBindingForIdentity.mockResolvedValue({
         identity_id: 'identity-op-1',
         agent_id: 'agent-default',
         status: 'active'
@@ -62,7 +73,7 @@ describe('subject resolver', () => {
     })
 
     it('falls back to operator identity when no bindings exist', async () => {
-      mockFindFirst.mockResolvedValue(null)
+      mockFindDefaultBindingForIdentity.mockResolvedValue(null)
 
       const result = await resolveSubjectForOperator(context, operator, 'pack-1')
 
@@ -72,7 +83,8 @@ describe('subject resolver', () => {
     })
 
     it('falls back to operator identity when targetAgentId binding missing', async () => {
-      mockFindFirst.mockResolvedValue(null)
+      mockFindBindingByAgentAndIdentity.mockResolvedValue(null)
+      mockFindDefaultBindingForIdentity.mockResolvedValue(null)
 
       const result = await resolveSubjectForOperator(context, operator, 'pack-1', 'agent-missing')
 
@@ -83,7 +95,7 @@ describe('subject resolver', () => {
 
   describe('resolveSubjectForAgentAction', () => {
     it('returns controller operator identity when agent has active user binding', async () => {
-      mockFindFirst.mockResolvedValue({
+      mockFindOperatorBindingForAgent.mockResolvedValue({
         identity_id: 'identity-user-1',
         agent_id: 'agent-1',
         role: 'active',
@@ -102,7 +114,7 @@ describe('subject resolver', () => {
     })
 
     it('returns agent itself when no controlling operator (NPC)', async () => {
-      mockFindFirst.mockResolvedValue(null)
+      mockFindOperatorBindingForAgent.mockResolvedValue(null)
 
       const result = await resolveSubjectForAgentAction(context, 'agent-npc', 'pack-1')
 
@@ -112,7 +124,7 @@ describe('subject resolver', () => {
     })
 
     it('returns agent itself when binding identity is not user type', async () => {
-      mockFindFirst.mockResolvedValue({
+      mockFindOperatorBindingForAgent.mockResolvedValue({
         identity_id: 'identity-agent-2',
         agent_id: 'agent-1',
         role: 'active',

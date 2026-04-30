@@ -15,6 +15,7 @@
 ### 梳理当前代码实现
 
 - [ ] 实现部分 docs/ENHANCEMENTS.md 文件中列出的高价值内容
+
 ### AI 网关模块盲点修复 (基于代码审计发现)
 
 
@@ -23,9 +24,12 @@
 ### 世界包多包运行时 (World-Pack Multi-Runtime)
 
 - [ ] Plugin discovery for experimental packs：当前 `discoverPackLocalPlugins` 只在 active activation 调用，实验性 pack 加载不触发 — 需要 `packFolderName` 定位目录
-- [ ] `bootstrap_list` 启动模式：`runtime.multi_pack.start_mode` 和 `bootstrap_packs` 配置已存在，启动逻辑未实现 — 留钩子
-- [ ] Scheduler 多包隔离：`experimental_scheduler_runtime.ts` 当前只给 `partition_id` 加前缀，未真正按 pack 隔离数据 — 需深重构
-- [ ] 实验性 pack 卸载无 scheduler worker 通知：当前只清理数据和缓存，未通知 scheduler 停止相关 workers
+- [ ] `bootstrap_list` 启动模式：`runtime.multi_pack.start_mode` 和 `bootstrap_packs` 配置已存在，启动逻辑未实现 — 本轮实现"读配置 + 逐个 load + 留钩子"，暂不打破现有 active pack 依赖
+- [ ] `listStatuses` stub 修复：`index.ts:188` 的 `listStatuses: () => []` 未接入 `DefaultPackRuntimeRegistryService` 的已实现方法
+- [ ] 实验性 pack 卸载无 scheduler worker 通知：当前只清理数据和缓存，未通知 scheduler 停止相关 workers — 通过 `onBeforeUnload` hook 注入 scheduler 清理逻辑
+- [ ] **移除 active pack 单例依赖**：`simulation_loop.ts`、`runtime_kernel_service.ts`、大量 routes/services 假定存在唯一 activePack — 需全面重构，在 scheduler Docker 式隔离完成后处理 (`bootstrap_list` 真正运作的前置条件)
+- [ ] **Simulation loop 多包 tick**：当前 loop 只 tick active pack — 需 per-pack 调度循环，在 Scheduler Docker 式容器隔离完成后处理
+- [ ] **Scheduler Docker 式容器隔离**：每个 pack 物理上完全独立的 scheduler — 详见 `.limcode/design/scheduler-docker-isolation-design.md`，单独实施
 
 
 ## 说明 / Notes

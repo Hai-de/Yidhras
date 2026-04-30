@@ -129,7 +129,6 @@ const encodeFieldValue = (
       return value === true ? 1 : 0;
     case 'json':
       return stringifyJsonSafe(value);
-    case 'tick':
     case 'string':
     case 'entity_ref':
     case 'identity_ref':
@@ -137,8 +136,11 @@ const encodeFieldValue = (
     case 'mediator_ref':
     case 'authority_ref':
     case 'enum':
+      return typeof value === 'string' ? value : String(value);
+    case 'tick':
+      return typeof value === 'bigint' ? value.toString() : String(value);
     default:
-      return JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined);
+      return JSON.stringify(value) ?? String(value);
   }
 };
 

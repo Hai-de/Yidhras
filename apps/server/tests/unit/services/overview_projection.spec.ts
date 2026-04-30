@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { PrismaClient } from '@prisma/client';
+
 import type { AppContext } from '../../../src/app/context.js';
 import { createRuntimeClockProjectionService } from '../../../src/app/runtime/runtime_clock_projection.js';
+import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 import { getOverviewSummary } from '../../../src/app/services/overview.js';
 
 vi.mock('../../../src/kernel/projections/operator_overview_service.js', () => ({
@@ -44,12 +47,16 @@ const createContext = (): AppContext => {
     calendars: []
   });
 
+  const mockPrisma = {} as unknown as PrismaClient;
+  const repos = wrapPrismaAsRepositories(mockPrisma);
+  repos.agent = {
+    getPrisma: () => mockPrisma,
+    countActiveAgents: vi.fn(async () => 0)
+  } as unknown as typeof repos.agent;
+
   return {
-    prisma: {
-      agent: {
-        count: vi.fn(async () => 0)
-      }
-    } as never,
+    repos,
+    prisma: mockPrisma,
     sim: {
       getCurrentTick: () => 1n,
       getAllTimes: () => [{ calendar_id: 'fallback', display: 'fallback-time', units: {} }]

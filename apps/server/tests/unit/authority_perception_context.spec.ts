@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { PrismaClient } from '@prisma/client';
+
 import type { AppContext } from '../../src/app/context.js';
 import { buildInferenceContextV2 } from '../../src/app/services/context_assembler.js';
+import { createPrismaRepositories } from '../../src/app/services/repositories/index.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 import { SimulationManager } from '../../src/core/simulation.js';
 import { resolveAuthorityForSubject } from '../../src/domain/authority/resolver.js';
+import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import { resolvePerceptionForSubject } from '../../src/domain/perception/resolver.js';
 import { notifications } from '../../src/utils/notifications.js';
 import {
@@ -37,7 +41,7 @@ describe('authority/perception/context assembly', () => {
     await prepareIsolatedRuntime(environment);
 
     const prisma = createPrismaClientForEnvironment(environment);
-    const sim = new SimulationManager({ prisma });
+    const sim = new SimulationManager({ prisma, packStorageAdapter: new SqlitePackStorageAdapter(), notifications });
 
     await sim.prepareDatabase();
     await sim.init('death_note');
@@ -47,6 +51,8 @@ describe('authority/perception/context assembly', () => {
       clock: sim as AppContext['clock'],
       activePack: sim as AppContext['activePack'],
       prisma,
+      packStorageAdapter: new SqlitePackStorageAdapter(),
+      repos: createPrismaRepositories(prisma),
       notifications,
       startupHealth: {
         level: 'ok',

@@ -4,11 +4,16 @@ import type { AiTaskService } from '../../src/ai/task_service.js';
 import { createCrossAgentBridge, createCrossAgentToolHandler, registerCrossAgentTool } from '../../src/ai/cross_agent_tool.js';
 import { createToolRegistry } from '../../src/ai/tool_executor.js';
 import type { ToolExecutionContext } from '../../src/ai/tool_executor.js';
+import type { PrismaClient } from '@prisma/client';
+
 import type { AppContext } from '../../src/app/context.js';
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 
 const buildMockContext = (): AppContext => {
+  const prisma = { memoryBlock: { findMany: vi.fn().mockResolvedValue([]) }, relationship: { findFirst: vi.fn().mockResolvedValue(null) }, agent: { findMany: vi.fn().mockResolvedValue([]) } };
   return {
-    prisma: { memoryBlock: { findMany: vi.fn().mockResolvedValue([]) }, relationship: { findFirst: vi.fn().mockResolvedValue(null) }, agent: { findMany: vi.fn().mockResolvedValue([]) } },
+    prisma,
+    repos: wrapPrismaAsRepositories(prisma as PrismaClient),
     clock: { getCurrentTick: vi.fn().mockReturnValue(42n) }
   } as unknown as AppContext;
 };

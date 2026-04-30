@@ -2,15 +2,19 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { DefaultPackCatalogService } from '../../src/core/pack_catalog_service.js';
 import { PrismaRuntimeDatabaseBootstrap } from '../../src/core/runtime_database_bootstrap.js';
-import type { SqliteRuntimePragmaSnapshot } from '../../src/db/sqlite_runtime.js';
+import type { DatabaseHealthSnapshot } from '../../src/db/sqlite_runtime.js';
 import type { WorldPack } from '../../src/packs/manifest/loader.js';
 
-const createSnapshot = (): SqliteRuntimePragmaSnapshot => ({
-  journal_mode: 'wal',
-  busy_timeout: 5000,
-  synchronous: 'NORMAL',
-  foreign_keys: true,
-  wal_autocheckpoint: 1000
+const createHealthSnapshot = (): DatabaseHealthSnapshot => ({
+  provider: 'sqlite',
+  connected: true,
+  sqlite: {
+    journal_mode: 'wal',
+    busy_timeout: 5000,
+    synchronous: 'NORMAL',
+    foreign_keys: true,
+    wal_autocheckpoint: 1000
+  }
 });
 
 const createPack = (packId: string, name = packId): WorldPack => ({
@@ -23,7 +27,7 @@ const createPack = (packId: string, name = packId): WorldPack => ({
 
 describe('PrismaRuntimeDatabaseBootstrap', () => {
   it('applies sqlite pragmas once and reuses cached snapshot', async () => {
-    const snapshot = createSnapshot();
+    const snapshot = createHealthSnapshot();
     const applyPragmas = vi.fn(async () => snapshot);
     const log = vi.fn();
     const bootstrap = new PrismaRuntimeDatabaseBootstrap({
@@ -36,7 +40,7 @@ describe('PrismaRuntimeDatabaseBootstrap', () => {
     await expect(bootstrap.prepareDatabase()).resolves.toBe(snapshot);
 
     expect(applyPragmas).toHaveBeenCalledTimes(1);
-    expect(bootstrap.getSqliteRuntimePragmaSnapshot()).toBe(snapshot);
+    expect(bootstrap.getDatabaseHealth()).toBe(snapshot);
     expect(log).toHaveBeenCalledTimes(1);
   });
 });

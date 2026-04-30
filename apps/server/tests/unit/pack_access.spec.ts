@@ -1,23 +1,29 @@
+import type { PrismaClient } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { AppContext } from '../../src/app/context.js'
 import { checkPackAccess } from '../../src/operator/guard/pack_access.js'
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js'
 
 describe('pack access guard', () => {
   let context: AppContext
-  let mockFindUnique: ReturnType<typeof vi.fn>
+  let mockFindPackBinding: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    mockFindUnique = vi.fn()
+    mockFindPackBinding = vi.fn()
     const sim = {
       getCurrentTick: () => 1000n
     } as AppContext['sim']
+    const prisma = {} as unknown as AppContext['prisma'];
+    const repos = wrapPrismaAsRepositories(prisma as PrismaClient);
+    repos.identityOperator = {
+      getPrisma: () => prisma as PrismaClient,
+      findPackBinding: mockFindPackBinding
+    } as unknown as typeof repos.identityOperator;
+
     context = {
-      prisma: {
-        operatorPackBinding: {
-          findUnique: mockFindUnique
-        }
-      } as unknown as AppContext['prisma'],
+      prisma,
+      repos,
       sim,
       clock: sim as AppContext['clock'],
       activePack: sim as AppContext['activePack']
@@ -25,9 +31,7 @@ describe('pack access guard', () => {
   })
 
   it('allows access when binding exists', async () => {
-    mockFindUnique.mockResolvedValue({
-      operator_id: 'op-1',
-      pack_id: 'pack-1',
+    mockFindPackBinding.mockResolvedValue({
       binding_type: 'member'
     })
 
@@ -38,7 +42,7 @@ describe('pack access guard', () => {
   })
 
   it('denies access when no binding exists (including root)', async () => {
-    mockFindUnique.mockResolvedValue(null)
+    mockFindPackBinding.mockResolvedValue(null)
 
     const result = await checkPackAccess(context, 'op-root', 'pack-1')
 
@@ -48,9 +52,7 @@ describe('pack access guard', () => {
   })
 
   it('returns correct bindingType for owner role', async () => {
-    mockFindUnique.mockResolvedValue({
-      operator_id: 'op-1',
-      pack_id: 'pack-1',
+    mockFindPackBinding.mockResolvedValue({
       binding_type: 'owner'
     })
 
@@ -61,9 +63,7 @@ describe('pack access guard', () => {
   })
 
   it('returns correct bindingType for spectator role', async () => {
-    mockFindUnique.mockResolvedValue({
-      operator_id: 'op-2',
-      pack_id: 'pack-1',
+    mockFindPackBinding.mockResolvedValue({
       binding_type: 'spectator'
     })
 
@@ -74,7 +74,7 @@ describe('pack access guard', () => {
   })
 
   it('denies access for different pack', async () => {
-    mockFindUnique.mockResolvedValue(null)
+    mockFindPackBinding.mockResolvedValue(null)
 
     const result = await checkPackAccess(context, 'op-1', 'pack-2')
 

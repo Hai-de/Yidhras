@@ -65,9 +65,11 @@ import {
   getRuntimeConfig,
   getSimulationLoopIntervalMs,
   getStartupPolicy,
+  getRuntimeMultiPackConfig,
   getWorldEngineConfig,
   getWorldPacksDir,
   isAiGatewayEnabled,
+  isExperimentalMultiPackRuntimeEnabled,
   logRuntimeConfigSnapshot,
   resolveWorkspacePath,
   validateProductionSecrets
@@ -185,7 +187,7 @@ appContext.packRuntimeLookup = {
 };
 appContext.packRuntimeObservation = {
   getStatus: packId => sim.getPackRuntimeStatusSnapshot(packId),
-  listStatuses: () => [],
+  listStatuses: () => sim.listRuntimeStatuses(),
   getClockSnapshot: packId => sim.getPackRuntimeHandle(packId)?.getClockSnapshot() ?? null,
   getRuntimeSpeedSnapshot: packId => sim.getPackRuntimeHandle(packId)?.getRuntimeSpeedSnapshot() ?? null
 };
@@ -426,6 +428,27 @@ const start = async (): Promise<void> => {
         });
       }
       await syncActivePackPluginRuntime(appContext);
+
+      if (isExperimentalMultiPackRuntimeEnabled()) {
+        const multiPackConfig = getRuntimeMultiPackConfig();
+        if (multiPackConfig.start_mode === 'bootstrap_list' && multiPackConfig.bootstrap_packs.length > 0) {
+          logger.info(`bootstrap_list: loading ${String(multiPackConfig.bootstrap_packs.length)} pack(s): ${multiPackConfig.bootstrap_packs.join(', ')}`);
+          for (const packRef of multiPackConfig.bootstrap_packs) {
+            try {
+              const result = await sim.loadExperimentalPackRuntime(packRef);
+              if (result.loaded) {
+                logger.info(`bootstrap_list: loaded experimental pack ${packRef} (handle=${result.handle.pack_id})`);
+              } else if (result.already_loaded) {
+                logger.info(`bootstrap_list: pack ${packRef} already loaded, skipping`);
+              }
+            } catch (err) {
+              logger.error(`bootstrap_list: failed to load ${packRef}: ${getErrorMessage(err)}`);
+              startupHealth.errors.push(`bootstrap_list: failed to load ${packRef}: ${getErrorMessage(err)}`);
+            }
+          }
+        }
+      }
+
       appContext.setRuntimeReady(true);
       appContext.notifications.push(
         'info',

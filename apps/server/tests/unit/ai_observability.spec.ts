@@ -1,8 +1,11 @@
+import type { PrismaClient } from '@prisma/client';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { recordAiInvocation } from '../../src/ai/observability.js';
 import type { ModelGatewayResponse } from '../../src/ai/types.js';
 import type { AppContext } from '../../src/app/context.js';
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 
 type UpsertFn = (args: Record<string, unknown>) => Promise<Record<string, unknown>>;
 
@@ -23,12 +26,14 @@ const createMockAppContext = (overrides?: {
   tick?: bigint;
 }): AppContext => {
   const upsertFn: UpsertFn = overrides?.upsert ?? vi.fn<UpsertFn>();
+  const prisma = {
+    aiInvocationRecord: { upsert: upsertFn }
+  } as unknown as AppContext['prisma'];
 
   const clock = { getCurrentTick: () => overrides?.tick ?? 1000n, getAllTimes: () => [], tick: () => {}, setTicks: () => {}, getTicks: () => overrides?.tick ?? 1000n };
   return {
-    prisma: {
-      aiInvocationRecord: { upsert: upsertFn }
-    } as unknown as AppContext['prisma'],
+    repos: wrapPrismaAsRepositories(prisma as PrismaClient),
+    prisma,
     sim: { getCurrentTick: () => overrides?.tick ?? 1000n } as AppContext['sim'],
     clock: clock as AppContext['clock'],
     activePack: { getActivePack: () => undefined, getCurrentRevision: () => 0n } as AppContext['activePack'],
@@ -50,7 +55,6 @@ const createMockAppContext = (overrides?: {
       last_duration_ms: null, last_error_message: null
     })),
     setRuntimeLoopDiagnostics: vi.fn(),
-    getSqliteRuntimePragmas: vi.fn(() => null),
     getHttpApp: vi.fn(() => null),
     setHttpApp: vi.fn(),
     worldEngineStepCoordinator: null as unknown as AppContext['worldEngineStepCoordinator']

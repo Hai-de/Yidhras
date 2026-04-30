@@ -1,20 +1,26 @@
+import type { PrismaClient } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 
 import { hasActiveWorkflowForActor, listActiveWorkflowActors } from '../../src/app/runtime/entity_activity_query.js';
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 
 const buildContext = (input: {
   jobs?: Array<{ request_input: unknown }>;
   intents?: Array<{ actor_ref: unknown }>;
-}) => ({
-  prisma: {
+}) => {
+  const prisma = {
     decisionJob: {
       findMany: vi.fn(async () => input.jobs ?? [])
     },
     actionIntent: {
       findMany: vi.fn(async () => input.intents ?? [])
     }
-  }
-}) as never;
+  };
+  return {
+    repos: wrapPrismaAsRepositories(prisma as unknown as PrismaClient),
+    prisma
+  } as never;
+}
 
 describe('entity activity query', () => {
   it('collects active workflow actors from decision jobs and action intents', async () => {

@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { PrismaClient } from '@prisma/client';
+
 import type { AppContext } from '../../../src/app/context.js';
 import { registerClockRoutes } from '../../../src/app/routes/clock.js';
+import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 import { createRuntimeClockProjectionService } from '../../../src/app/runtime/runtime_clock_projection.js';
 
 const createFakeApp = () => {
@@ -50,6 +53,7 @@ const createContext = (): AppContext => {
     getAllTimes: () => [{ calendar_id: 'fallback', display: 'fallback-time', units: {} }]
   };
   return {
+    repos: wrapPrismaAsRepositories({} as PrismaClient),
     prisma: {} as never,
     sim: sim as never,
     clock: sim as AppContext['clock'],

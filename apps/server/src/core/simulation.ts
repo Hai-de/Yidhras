@@ -81,8 +81,13 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
       packCatalog: this.packCatalogService,
       prisma: this.prisma,
       packStorageAdapter: options.packStorageAdapter,
+      packsDir: this.packsDir,
       getActivePack: () => this.activePackRuntimeFacade.getActivePack(),
-      getStartupLevel: () => this.startupHealthLevel()
+      getStartupLevel: () => this.startupHealthLevel(),
+      onBeforeUnload: async (packId: string) => {
+        const { releaseAllPackSchedulerLeases } = await import('../app/runtime/scheduler_lease.js');
+        await releaseAllPackSchedulerLeases(packId, this.prisma);
+      }
     });
   }
 
@@ -192,6 +197,10 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
 
   public getPackRuntimeStatusSnapshot(packId: string): PackRuntimeStatusSnapshot | null {
     return this.packRuntimeRegistryService.getStatus(packId);
+  }
+
+  public listRuntimeStatuses(): PackRuntimeStatusSnapshot[] {
+    return this.packRuntimeRegistryService.listStatuses();
   }
 
   public async loadExperimentalPackRuntime(packRef: string): Promise<{

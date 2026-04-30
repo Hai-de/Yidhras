@@ -4,15 +4,25 @@ import type { ToolRegistry } from '../../src/ai/tool_executor.js';
 import { createToolRegistry, registerPackTools, validateToolArgs } from '../../src/ai/tool_executor.js';
 import type { ToolPermissionPolicy } from '../../src/ai/tool_permissions.js';
 import type { AiToolRegistryEntry } from '../../src/ai/types.js';
+import type { PrismaClient } from '@prisma/client';
+
 import type { AppContext } from '../../src/app/context.js';
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 
 const buildMockContext = (overrides?: Record<string, unknown>): AppContext => {
+  const prisma = {
+    memoryBlock: { findMany: vi.fn().mockResolvedValue([]) },
+    relationship: { findFirst: vi.fn().mockResolvedValue(null) },
+    agent: { findMany: vi.fn().mockResolvedValue([]) }
+  };
+  const repos = wrapPrismaAsRepositories(prisma as PrismaClient);
+  repos.memory = {
+    getPrisma: () => prisma as PrismaClient,
+    listActiveMemoryBlocks: vi.fn().mockResolvedValue([])
+  } as unknown as typeof repos.memory;
   return {
-    prisma: {
-      memoryBlock: { findMany: vi.fn().mockResolvedValue([]) },
-      relationship: { findFirst: vi.fn().mockResolvedValue(null) },
-      agent: { findMany: vi.fn().mockResolvedValue([]) }
-    },
+    prisma,
+    repos,
     clock: { getCurrentTick: vi.fn().mockReturnValue(42n) },
     activePackRuntime: {
       init: vi.fn().mockResolvedValue(undefined),
@@ -609,15 +619,10 @@ describe('builtin system tools', () => {
         }
       ];
       const ctx = {
-        context: buildMockContext({
-          prisma: {
-            memoryBlock: { findMany: vi.fn().mockResolvedValue(mockBlocks) },
-            relationship: { findFirst: vi.fn().mockResolvedValue(null) },
-            agent: { findMany: vi.fn().mockResolvedValue([]) }
-          }
-        }),
+        context: buildMockContext(),
         pack_id: 'pack-1'
       };
+      (ctx.context.repos.memory as ReturnType<typeof vi.fn> & { listActiveMemoryBlocks: ReturnType<typeof vi.fn> }).listActiveMemoryBlocks = vi.fn().mockResolvedValue(mockBlocks);
 
       const result = await registry.execute('query_memory_blocks', { pack_id: 'pack-1', limit: 5 }, ctx);
       expect(result.success).toBe(true);

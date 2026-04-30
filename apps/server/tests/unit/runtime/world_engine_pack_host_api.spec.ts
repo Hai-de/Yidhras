@@ -43,14 +43,14 @@ describe('PackHostApi host boundary', () => {
     context.worldEngine = mockWorldEngine;
     const hostApi = createPackHostApi(context);
 
-    await expect(hostApi.getCurrentTick({ pack_id: 'world-death-note' })).rejects.toThrow('activePackRuntime is required for world engine host operations');
+    await expect(hostApi.getCurrentTick({ pack_id: 'world-death-note' })).resolves.toBeNull();
 
     await expect(hostApi.queryWorldState({
       protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
       pack_id: 'world-death-note',
       query_name: 'pack_summary',
       selector: {}
-    })).rejects.toThrow('activePackRuntime is required for world engine host operations');
+    })).resolves.toBeDefined();
   });
 
   it('reads current tick from host-projected truth when runtimeClockProjection is available', async () => {

@@ -1,3 +1,5 @@
+import type { PrismaClient } from '@prisma/client';
+
 import { getSchedulerLeaseTicks } from '../../config/runtime_config.js';
 import type { AppContext } from '../context.js';
 import { buildPackScopedSchedulerCursorKey, buildPackScopedSchedulerLeaseKey, parsePackScopedSchedulerPartitionId } from './multi_pack_scheduler_scope.js';
@@ -225,5 +227,26 @@ export const getSchedulerCursor = async (
     partition_id: cursor.partition_id,
     last_scanned_tick: cursor.last_scanned_tick,
     last_signal_tick: cursor.last_signal_tick
+  };
+};
+
+export const releaseAllPackSchedulerLeases = async (
+  packId: string,
+  prisma: PrismaClient
+): Promise<{ deletedLeases: number; deletedCursors: number }> => {
+  const packPrefix = `${packId}::`;
+
+  const [deletedLeases, deletedCursors] = await Promise.all([
+    prisma.schedulerLease.deleteMany({
+      where: { partition_id: { startsWith: packPrefix } }
+    }),
+    prisma.schedulerCursor.deleteMany({
+      where: { partition_id: { startsWith: packPrefix } }
+    })
+  ]);
+
+  return {
+    deletedLeases: deletedLeases.count,
+    deletedCursors: deletedCursors.count
   };
 };

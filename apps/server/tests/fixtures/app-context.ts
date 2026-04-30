@@ -11,6 +11,7 @@ import { ChronosEngine } from '../../src/clock/engine.js';
 import type { SimulationManager } from '../../src/core/simulation.js';
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import { createNotificationManager } from '../../src/utils/notifications.js';
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { DEFAULT_E2E_WORLD_PACK } from '../support/config.js';
 
 export interface CreateTestAppContextOptions {
@@ -85,7 +86,6 @@ export const createTestAppContext = (
       override_since: null,
       effective_step_ticks: '1'
     }),
-    getSqliteRuntimePragmaSnapshot: () => null,
     setRuntimeSpeedOverride: () => {},
     clearRuntimeSpeedOverride: () => {},
     isExperimentalMultiPackRuntimeEnabled: () => false,
@@ -94,6 +94,7 @@ export const createTestAppContext = (
   } as unknown as SimulationManager;
 
   return {
+    repos: wrapPrismaAsRepositories(prisma),
     prisma,
     sim,
     clock: sim as unknown as AppContext['clock'],
@@ -112,7 +113,6 @@ export const createTestAppContext = (
     setRuntimeLoopDiagnostics: next => {
       runtimeLoopDiagnostics = next;
     },
-    getSqliteRuntimePragmas: () => null,
     getHttpApp: () => httpApp,
     setHttpApp: app => {
       httpApp = app;

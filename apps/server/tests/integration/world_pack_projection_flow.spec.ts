@@ -1,8 +1,11 @@
 import fs from 'fs';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { PrismaClient } from '@prisma/client';
+
 import type { AppContext } from '../../src/app/context.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { dispatchInvocationFromActionIntent } from '../../src/domain/invocation/invocation_dispatcher.js';
 import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
 import { extractGlobalProjectionIndex } from '../../src/kernel/projections/projection_extractor.js';
@@ -34,9 +37,8 @@ const buildProjectionTestContext = (
       return [];
     }
   };
-  return {
-    prisma: {
-      schedulerPartitionAssignment: {
+  const prisma = {
+    schedulerPartitionAssignment: {
         async findMany() {
           return [];
         }
@@ -77,6 +79,7 @@ const buildProjectionTestContext = (
         }
       }
     } as unknown as AppContext['prisma'],
+    repos: wrapPrismaAsRepositories(prisma as PrismaClient),
     sim: {
       getActivePack(): typeof pack {
         return pack;
@@ -257,7 +260,6 @@ const buildProjectionTestContext = (
       }),
       getCurrentRevision: () => 0n
     } as unknown as AppContext['activePackRuntime'],
-    getSqliteRuntimePragmas: () => null
   };
 };
 

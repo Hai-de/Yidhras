@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { PrismaClient } from '@prisma/client';
+
 import type { AppContext } from '../../../src/app/context.js';
 import { buildWorldPackHydrateRequest, buildWorldPackSnapshot } from '../../../src/app/runtime/world_engine_snapshot.js';
 import type { SimulationManager } from '../../../src/core/simulation.js';
+import { SqlitePackStorageAdapter } from '../../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
+import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 
 const TEST_PACK_ID = 'world-test-pack';
 
@@ -13,8 +17,11 @@ const createContext = (): AppContext => {
     getPackRuntimeHandle: () => null
   } as unknown as SimulationManager;
 
+  const prisma = {} as AppContext['prisma'];
   return {
-    prisma: {} as AppContext['prisma'],
+    repos: wrapPrismaAsRepositories(prisma as PrismaClient),
+    prisma,
+    packStorageAdapter: new SqlitePackStorageAdapter(),
     sim,
     clock: sim as AppContext['clock'],
     activePack: sim as AppContext['activePack'],

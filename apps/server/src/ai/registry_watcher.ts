@@ -128,6 +128,10 @@ export const startAiRegistryWatcher = (options: AiRegistryWatcherOptions): AiReg
   const watchFile = (filePath: string, handler: () => void): void => {
     try {
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- 从管理员配置构造的监视路径
+      if (!fs.existsSync(filePath)) {
+        return;
+      }
+
       const watcher = fs.watch(filePath, (_eventType, _filename) => {
         scheduleReload(filePath, handler);
       });

@@ -5,11 +5,16 @@ import { createToolLoopRunner } from '../../src/ai/tool_loop_runner.js';
 import type { ToolLoopRunner } from '../../src/ai/tool_loop_runner.js';
 import type { ToolExecutionContext, ToolRegistry } from '../../src/ai/tool_executor.js';
 import { createToolRegistry } from '../../src/ai/tool_executor.js';
+import type { PrismaClient } from '@prisma/client';
+
 import type { AppContext } from '../../src/app/context.js';
+import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 
 const buildMockContext = (): AppContext => {
+  const prisma = { memoryBlock: { findMany: vi.fn().mockResolvedValue([]) }, relationship: { findFirst: vi.fn().mockResolvedValue(null) }, agent: { findMany: vi.fn().mockResolvedValue([]) } };
   return {
-    prisma: { memoryBlock: { findMany: vi.fn().mockResolvedValue([]) }, relationship: { findFirst: vi.fn().mockResolvedValue(null) }, agent: { findMany: vi.fn().mockResolvedValue([]) } },
+    prisma,
+    repos: wrapPrismaAsRepositories(prisma as PrismaClient),
     clock: { getCurrentTick: vi.fn().mockReturnValue(42n) }
   } as unknown as AppContext;
 };
