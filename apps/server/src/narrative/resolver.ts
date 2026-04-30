@@ -4,9 +4,9 @@ import type {
   PromptMacroBlockTrace,
   PromptMacroRenderResult,
   PromptVariableContext,
+  PromptVariableRecord,
   PromptVariableResolutionTrace,
-  VariablePool,
-  VariableValue
+  PromptVariableValue
 } from './types.js';
 import {
   buildEmptyPromptMacroDiagnostics,
@@ -124,10 +124,6 @@ const pushTraceDiagnostics = (
     new Set([...(diagnostics.namespaces_used ?? []), ...collectNamespacesFromTrace(trace)])
   );
 
-  if (trace.resolution_mode === 'alias_fallback' && trace.resolved) {
-    diagnostics.alias_fallback_count = (diagnostics.alias_fallback_count ?? 0) + 1;
-  }
-
   if (trace.missing) {
     diagnostics.missing_paths.push(trace.requested_path);
   }
@@ -145,21 +141,21 @@ const dedupeDiagnostics = (
 });
 
 export class NarrativeResolver {
-  private variables: Record<string, { value: VariableValue; meta?: InformationMetadata }> = {};
+  private variables: Record<string, { value: PromptVariableValue; meta?: InformationMetadata }> = {};
   private readonly MAX_RECURSION_DEPTH = 10;
   private readonly MAX_TEMPLATE_OUTPUT_LENGTH = 32_000;
 
   // 非法占位符模式（如：带有特殊控制符、不完整的 {{）
   private readonly ILLEGAL_PATTERN = /\{\{[^\w.#|()\-\s"',/]+\}\}/g;
 
-  constructor(initialVariables: VariablePool = {}) {
+  constructor(initialVariables: PromptVariableRecord = {}) {
     this.updateVariables(initialVariables);
   }
 
   /**
    * 更新变量池，并附带元数据支持（如：权限等级）
    */
-  public updateVariables(newVars: VariablePool, metadataMap: Record<string, InformationMetadata> = {}): void {
+  public updateVariables(newVars: PromptVariableRecord, metadataMap: Record<string, InformationMetadata> = {}): void {
     for (const [key, value] of Object.entries(newVars)) {
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       this.variables[key] = {
@@ -173,7 +169,7 @@ export class NarrativeResolver {
   /**
    * 解析模板
    */
-  public resolve(template: string, extraContext: VariablePool = {}, permission?: PermissionContext): string {
+  public resolve(template: string, extraContext: PromptVariableRecord = {}, permission?: PermissionContext): string {
     return this.render(template, {
       extraContext,
       permission
@@ -262,8 +258,8 @@ export class NarrativeResolver {
     return false;
   }
 
-  private buildVisiblePool(permission?: PermissionContext): VariablePool {
-    const visiblePool: VariablePool = {};
+  private buildVisiblePool(permission?: PermissionContext): PromptVariableRecord {
+    const visiblePool: PromptVariableRecord = {};
     for (const [key, entry] of Object.entries(this.variables)) {
       if (this.canAccess(entry.meta, permission)) {
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
@@ -410,7 +406,6 @@ export class NarrativeResolver {
       diagnostics.missing_paths = merged.missing_paths;
       diagnostics.restricted_paths = merged.restricted_paths;
       diagnostics.blocks = merged.blocks;
-      diagnostics.alias_fallback_count = merged.alias_fallback_count;
       diagnostics.namespaces_used = merged.namespaces_used;
       diagnostics.output_length = merged.output_length;
       return nested.text;
@@ -483,7 +478,6 @@ export class NarrativeResolver {
           diagnostics.missing_paths = merged.missing_paths;
           diagnostics.restricted_paths = merged.restricted_paths;
           diagnostics.blocks = merged.blocks;
-          diagnostics.alias_fallback_count = merged.alias_fallback_count;
           diagnostics.namespaces_used = merged.namespaces_used;
           diagnostics.output_length = merged.output_length;
           return nested.text;

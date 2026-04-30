@@ -34,7 +34,7 @@ const createMockAppContext = (overrides?: {
   return {
     repos: wrapPrismaAsRepositories(prisma as PrismaClient),
     prisma,
-    sim: { getCurrentTick: () => overrides?.tick ?? 1000n } as AppContext['sim'],
+    clock: { getCurrentTick: () => overrides?.tick ?? 1000n } as AppContext['clock'],
     clock: clock as AppContext['clock'],
     activePack: { getActivePack: () => undefined, getCurrentRevision: () => 0n } as AppContext['activePack'],
     notifications: { push: vi.fn(), getMessages: vi.fn(() => []), clear: vi.fn() },

@@ -10,7 +10,7 @@ export interface OverviewSummarySnapshot {
   runtime: {
     status: 'paused' | 'running';
     runtime_ready: boolean;
-    runtime_speed: ReturnType<AppContext['sim']['getRuntimeSpeedSnapshot']>;
+    runtime_speed: import('../../core/runtime_speed.js').RuntimeSpeedSnapshot;
     health_level: AppContext['startupHealth']['level'];
     world_pack:
       | {
@@ -78,7 +78,7 @@ const readProjectedWorldTime = (context: AppContext): { tick: string; calendars:
 
   return {
     tick: visibleClock.absolute_ticks,
-    calendars: context.sim.isRuntimeReady() ? toJsonSafe(visibleClock.calendars) : []
+    calendars: context.isRuntimeReady!() ? toJsonSafe(visibleClock.calendars) : []
   };
 };
 

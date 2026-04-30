@@ -69,7 +69,7 @@ export const buildExperimentalRuntimeControlPlaneSnapshot = async (
     packRuntimeObservation: context.packRuntimeObservation
   });
 
-  const loadedPackIds = context.sim.getPackRuntimeRegistry().listLoadedPackIds();
+  const loadedPackIds = context.listLoadedPackRuntimeIds!();
   const activePackId = lookup.getActivePackId();
 
   const items = await Promise.all(
@@ -82,7 +82,7 @@ export const buildExperimentalRuntimeControlPlaneSnapshot = async (
       return {
         pack_id: packId,
         mode: activePackId === packId ? 'active' : 'experimental_loaded',
-        runtime_ready: activePackId === packId && context.sim.isRuntimeReady(),
+        runtime_ready: activePackId === packId && context.isRuntimeReady!(),
         status: status?.health_status ?? summary?.health_status ?? 'loaded',
         message: status?.message ?? null,
         current_tick: status?.current_tick ?? summary?.current_tick ?? '0',
@@ -108,7 +108,7 @@ export const buildExperimentalRuntimeControlPlaneSnapshot = async (
 
   return {
     system_health_level: context.startupHealth.level,
-    runtime_ready: context.sim.isRuntimeReady(),
+    runtime_ready: context.isRuntimeReady!(),
     active_pack_id: activePackId,
     loaded_pack_ids: loadedPackIds,
     items,

@@ -17,7 +17,6 @@ import { buildWorldPackHydrateRequest } from '../../app/runtime/world_engine_sna
 import type { ActivePackRuntimeFacade } from '../../app/services/app_context_ports.js';
 import type { TimeFormatted } from '../../clock/types.js';
 import type { NotificationPort } from '../../core/runtime_activation.js';
-import type { SimulationManager } from '../../core/simulation.js';
 import type { WorldPack } from '../../packs/manifest/loader.js';
 import { safeFs } from '../../utils/safe_fs.js';
 import { clearPackRuntimeStorage } from '../runtime/teardown.js';
@@ -276,8 +275,8 @@ export interface RestorePackSnapshotInput {
   prisma: PrismaClient;
   packStorageAdapter: PackStorageAdapter;
   pack: WorldPack;
-  sim: SimulationManager;
   activePackRuntime?: ActivePackRuntimeFacade;
+  applyClockProjection: (snapshot: RuntimeClockProjectionSnapshot) => void;
   worldEngine?: WorldEnginePort;
   notifications: NotificationPort;
 }
@@ -289,7 +288,7 @@ export interface RestorePackSnapshotResult {
 }
 
 export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Promise<RestorePackSnapshotResult> => {
-  const { packId, snapshotId, prisma, packStorageAdapter, pack, sim, activePackRuntime, worldEngine, notifications } = input;
+  const { packId, snapshotId, prisma, packStorageAdapter, pack, activePackRuntime, applyClockProjection, worldEngine, notifications } = input;
 
   if (packStorageAdapter.backend !== 'sqlite') {
     throw new Error(
@@ -369,12 +368,12 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
     updated_at_ms: Date.now(),
     generation: 1
   };
-  sim.applyClockProjection(clockSnapshot);
+  applyClockProjection(clockSnapshot);
 
   // 10. Reload sidecar with restored state
   if (worldEngine) {
     const hydrateRequest = await buildWorldPackHydrateRequest(
-      { activePackRuntime, sim } as import('../../app/context.js').AppContext,
+      { activePackRuntime } as import('../../app/context.js').AppContext,
       packId
     );
     await worldEngine.loadPack({

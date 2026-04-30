@@ -48,7 +48,6 @@ export interface RuntimeStatusSnapshot {
         homepage?: string;
         repository?: string;
         tags?: string[];
-        compatibility?: { yidhras?: string; schema_version?: string; notes?: string };
       }
     | null;
   world_time: {
@@ -110,11 +109,12 @@ export const clearSystemNotifications = (context: AppContext): AcknowledgementSn
 export const ensureSchedulerBootstrapOwnership = async (
   context: AppContext,
   options: {
+    packId: string;
     schedulerWorkerId: string;
     schedulerPartitionIds?: string[];
   }
 ): Promise<void> => {
-  const runtimeKernel = createRuntimeKernelService(context);
+  const runtimeKernel = createRuntimeKernelService(context, options.packId);
   await runtimeKernel.reconcileBootstrapOwnership({
     schedulerWorkerId: options.schedulerWorkerId,
     schedulerPartitionIds: options.schedulerPartitionIds
@@ -156,14 +156,19 @@ export const resetDevelopmentRuntimeState = async (context: AppContext): Promise
 export const getRuntimeStatusSnapshot = async (
   context: AppContext,
   options?: {
+    packId?: string;
     schedulerWorkerId?: string;
     schedulerPartitionIds?: string[];
   }
 ): Promise<RuntimeStatusSnapshot> => {
-  const pack = context.activePack.getActivePack();
+  const packId = options?.packId ?? context.activePack.getActivePack()?.metadata.id;
+  if (!packId) {
+    throw new Error('packId is required for getRuntimeStatusSnapshot');
+  }
+  const pack = context.getPackRuntimeHandle?.(packId)?.pack ?? null;
   const schedulerWorkerId = options?.schedulerWorkerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
   const visibleClock = readVisibleClockSnapshot(context);
-  const runtimeKernel = createRuntimeKernelService(context);
+  const runtimeKernel = createRuntimeKernelService(context, packId);
   const ownershipSnapshot = await runtimeKernel.getOwnershipSnapshot({
     workerId: schedulerWorkerId,
     partitionIds: options?.schedulerPartitionIds
@@ -171,8 +176,8 @@ export const getRuntimeStatusSnapshot = async (
   const runtimeLoop = runtimeKernel.getLoopDiagnostics() ?? context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
 
   return {
-    status: context.sim.isPaused() ? 'paused' : 'running',
-    runtime_ready: context.sim.isRuntimeReady(),
+    status: context.isPaused!() ? 'paused' : 'running',
+    runtime_ready: context.isRuntimeReady!(),
     runtime_speed: context.activePackRuntime!.getRuntimeSpeedSnapshot(),
     runtime_loop: runtimeLoop,
     database: context.getDatabaseHealth?.() ?? null,
@@ -200,8 +205,7 @@ export const getRuntimeStatusSnapshot = async (
           ...(pack.metadata.license ? { license: pack.metadata.license } : {}),
           ...(pack.metadata.homepage ? { homepage: pack.metadata.homepage } : {}),
           ...(pack.metadata.repository ? { repository: pack.metadata.repository } : {}),
-          ...(pack.metadata.tags ? { tags: pack.metadata.tags } : {}),
-          ...(pack.metadata.compatibility ? { compatibility: pack.metadata.compatibility } : {})
+          ...(pack.metadata.tags ? { tags: pack.metadata.tags } : {})
         }
       : null,
 
@@ -222,7 +226,7 @@ export const getStartupHealthSnapshot = (
     body: {
       healthy: context.startupHealth.level !== 'fail',
       level: context.startupHealth.level,
-      runtime_ready: context.sim.isRuntimeReady(),
+      runtime_ready: context.isRuntimeReady!(),
       checks: context.startupHealth.checks,
       available_world_packs: context.startupHealth.available_world_packs,
       errors: context.startupHealth.errors

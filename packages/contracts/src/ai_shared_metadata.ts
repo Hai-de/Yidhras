@@ -34,7 +34,6 @@ export interface PromptWorkflowSnapshot {
   profile_version: string | null;
   selected_step_keys: string[];
   step_traces?: PromptWorkflowStepTraceSnapshot[];
-  compatibility?: Record<string, unknown> | null;
   placement_summary?: PromptWorkflowPlacementSummarySnapshot | null;
   variable_summary?: Record<string, unknown> | null;
   macro_summary?: unknown;

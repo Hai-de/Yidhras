@@ -60,6 +60,25 @@ const buildProjectionTestContext = (
       }
     } as unknown as AppContext['prisma'];
   const repos = wrapPrismaAsRepositories(prisma as PrismaClient);
+  repos.narrative = {
+    ...repos.narrative,
+    async listRecentEvents(limit?: number) {
+      const events = await prisma.event.findMany({
+        orderBy: { created_at: 'desc' },
+        take: limit ?? 100
+      });
+      return events as Array<{
+        id: string;
+        title: string;
+        description: string;
+        tick: bigint;
+        type: string;
+        impact_data: string | null;
+        source_action_intent_id: string | null;
+        created_at: bigint;
+      }>;
+    }
+  };
   return {
     clock: { getCurrentTick() { return now; }, getAllTimes() { return []; } } as unknown as AppContext['clock'],
     activePack: { getActivePack(): typeof pack { return pack; } } as unknown as AppContext['activePack'],
@@ -76,6 +95,9 @@ const buildProjectionTestContext = (
         return [];
       },
       clock,
+      isRuntimeReady: () => true,
+      isPaused: () => false,
+      getPackRuntimeHandle: () => null,
       getRuntimeSpeedSnapshot() {
         return {
           mode: 'fixed' as const,
@@ -220,6 +242,77 @@ const buildProjectionTestContext = (
       }),
       getCurrentRevision: () => 0n
     } as unknown as AppContext['activePackRuntime'],
+    packStorageAdapter: (() => {
+      const store = new Map<string, Map<string, Array<Record<string, unknown>>>>();
+      const getTable = (packId: string, tableName: string): Array<Record<string, unknown>> => {
+        const packStore = store.get(packId) ?? new Map<string, Array<Record<string, unknown>>>();
+        if (!store.has(packId)) store.set(packId, packStore);
+        const table = packStore.get(tableName) ?? [];
+        if (!packStore.has(tableName)) packStore.set(tableName, table);
+        return table;
+      };
+      return {
+        backend: 'sqlite',
+        ping: async () => true,
+        destroyPackStorage: async () => {},
+        ensureEngineOwnedSchema: async () => {},
+        listEngineOwnedRecords: async (packId, tableName) => getTable(packId, tableName),
+        upsertEngineOwnedRecord: async (packId, tableName, record) => {
+          const table = getTable(packId, tableName);
+          const rec = record as Record<string, unknown>;
+          const id = String(rec.id ?? '');
+          const idx = table.findIndex(r => String(r.id) === id);
+          if (idx >= 0) {
+            table[idx] = { ...table[idx], ...rec };
+          } else {
+            table.push(rec);
+          }
+          return rec as never;
+        },
+        ensureCollection: async () => {},
+        upsertCollectionRecord: async () => null,
+        listCollectionRecords: async () => [],
+        exportPackData: async () => ({}),
+        importPackData: async () => {}
+      };
+    })(),
+    schedulerStorage: {
+      open: () => {},
+      close: () => {},
+      destroyPackSchedulerStorage: () => {},
+      listOpenPackIds: () => [],
+      upsertLease: () => ({ key: '', partition_id: '', holder: '', acquired_at: 0n, expires_at: 0n }),
+      getLease: () => null,
+      updateLeaseIfClaimable: () => ({ count: 0 }),
+      deleteLeaseByHolder: () => ({ count: 0 }),
+      upsertCursor: () => ({ key: '', partition_id: '', last_scanned_tick: 0n, last_signal_tick: 0n, updated_at: 0n }),
+      getCursor: () => null,
+      getPartition: () => null,
+      listPartitions: () => [],
+      createPartition: (_packId: string, input: Record<string, unknown>) => input as never,
+      updatePartition: (_packId: string, input: Record<string, unknown>) => input as never,
+      listMigrations: () => [],
+      countMigrationsInProgress: () => 0,
+      getMigrationById: () => null,
+      findLatestActiveMigrationForPartition: () => null,
+      createMigration: (_packId: string, input: Record<string, unknown>) => ({ id: 'mock_migration', ...input }) as never,
+      updateMigration: (_packId: string, input: Record<string, unknown>) => input as never,
+      listWorkerStates: () => [],
+      getWorkerState: () => null,
+      upsertWorkerState: (_packId: string, input: Record<string, unknown>) => input as never,
+      updateWorkerStatus: (_packId: string, _workerId: string, _status: string, _updatedAt: bigint) => ({ worker_id: _workerId, status: _status, updated_at: _updatedAt }) as never,
+      findOpenRecommendation: () => null,
+      createRecommendation: (_packId: string, input: Record<string, unknown>) => ({ id: 'mock_rec', ...input }) as never,
+      listRecentRecommendations: () => [],
+      getRecommendationById: () => null,
+      updateRecommendation: (_packId: string, input: Record<string, unknown>) => input as never,
+      listPendingRecommendationsForWorker: () => [],
+      writeDetailedSnapshot: (_packId: string, input: Record<string, unknown>) => input,
+      writeCandidateDecision: (_packId: string, _schedulerRunId: string, input: Record<string, unknown>) => input,
+      listRuns: () => [],
+      listCandidateDecisions: () => [],
+      getAgentDecisions: () => []
+    } as AppContext['schedulerStorage']
   };
 };
 
@@ -321,10 +414,9 @@ describe('world-pack projection flow integration', () => {
       }
     });
 
-    await installPackRuntime(pack);
-    await materializePackRuntimeCoreModels(pack, 1000n);
-
     const context = buildProjectionTestContext(pack);
+    await installPackRuntime(pack, context.packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack, 1000n, context.packStorageAdapter);
     await dispatchInvocationFromActionIntent(context, {
       id: 'intent-judgement',
       source_inference_id: 'inference-judgement',

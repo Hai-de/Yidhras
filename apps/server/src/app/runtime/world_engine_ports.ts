@@ -120,7 +120,7 @@ const getActiveCurrentTick = (context: AppContext): string | null => {
 };
 
 const getExperimentalRuntimeSummary = (context: AppContext, packId: string): PackRuntimeSummary | null => {
-  const handle = context.sim.getPackRuntimeHandle(packId);
+  const handle = context.getPackRuntimeHandle?.(packId);
   if (!handle) {
     return null;
   }
@@ -142,9 +142,9 @@ const getPackSummary = (context: AppContext, packId: string): PackRuntimeSummary
     return {
       pack_id: normalizedPackId,
       pack_folder_name: null,
-      health_status: context.sim.isPaused() ? 'paused' : 'running',
+      health_status: context.isPaused?.() ? 'paused' : 'running',
       current_tick: projectedTick ?? getActiveCurrentTick(context),
-      runtime_ready: context.sim.isRuntimeReady()
+      runtime_ready: context.isRuntimeReady?.()
     };
   }
 

@@ -176,12 +176,10 @@ describe('InMemoryPackRuntimeRegistry', () => {
           return null;
         }
       } as never,
-      sim: {
-        getPackRuntimeRegistry: () => registry,
-        getActivePack: () => ({ metadata: { id: 'pack-a' } }),
-        isRuntimeReady: () => true,
-        isPaused: () => false
-      } as never
+      listLoadedPackRuntimeIds: () => registry.listLoadedPackIds(),
+      activePack: { getActivePack: () => ({ metadata: { id: 'pack-a' } }), getCurrentRevision: () => 1n } as AppContext['activePack'],
+      isRuntimeReady: () => true,
+      isPaused: () => false
     } as unknown as AppContext;
 
     await expect(buildExperimentalPackRuntimeRegistrySnapshot(context)).resolves.toEqual({
@@ -301,13 +299,11 @@ describe('InMemoryPackRuntimeRegistry', () => {
             }
           : null)
       } as never,
-      sim: {
-        getPackRuntimeHandle: (packId: string) => (packId === 'pack-a' ? handle : null),
-        getPackRuntimeRegistry: () => ({ listLoadedPackIds: () => ['pack-a'] }),
-        getActivePack: () => ({ metadata: { id: 'pack-a' } }),
-        isRuntimeReady: () => true,
-        isPaused: () => false
-      }
+      getPackRuntimeHandle: (packId: string) => (packId === 'pack-a' ? handle : null),
+      listLoadedPackRuntimeIds: () => ['pack-a'],
+      activePack: { getActivePack: () => ({ metadata: { id: 'pack-a' } }), getCurrentRevision: () => 1n } as AppContext['activePack'],
+      isRuntimeReady: () => true,
+      isPaused: () => false
     } as unknown as AppContext;
 
     expect(buildExperimentalSystemHealthSnapshot(context)).toEqual({

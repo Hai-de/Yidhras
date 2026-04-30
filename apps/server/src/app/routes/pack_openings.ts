@@ -66,10 +66,10 @@ export const registerPackOpeningRoutes = (
 
       if (isActive && body.confirm_data_loss) {
         const { reinitializePackRuntime } = await import('../../core/runtime_reinitializer.js');
-        const handle = context.sim.getPackRuntimeHandle(params.packId);
+        const handle = context.getPackRuntimeHandle?.(params.packId);
         const packFolderName = handle?.pack_folder_name ?? params.packId;
         await reinitializePackRuntime({
-          sim: context.sim,
+          activePackRuntime: context.activePackRuntime!,
           packFolderName,
           packId: params.packId,
           openingId: params.openingId,

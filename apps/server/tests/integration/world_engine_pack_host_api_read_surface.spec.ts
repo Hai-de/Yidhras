@@ -6,10 +6,50 @@ import { createPackHostApi } from '../../src/app/runtime/world_engine_ports.js';
 import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
 import { PackManifestLoader } from '../../src/packs/manifest/loader.js';
 import { materializePackRuntimeCoreModels } from '../../src/packs/runtime/materializer.js';
+import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import { createTestAppContext } from '../fixtures/app-context.js';
 import { createIsolatedRuntimeEnvironment, createPrismaClientForEnvironment, migrateIsolatedDatabase } from '../helpers/runtime.js';
 
 const DEATH_NOTE_PACK_REF = 'death_note';
+
+const createMemPackStorageAdapter = (): PackStorageAdapter => {
+  const store = new Map<string, Map<string, Array<Record<string, unknown>>>>();
+
+  const getTable = (packId: string, tableName: string): Array<Record<string, unknown>> => {
+    const packStore = store.get(packId) ?? new Map<string, Array<Record<string, unknown>>>();
+    if (!store.has(packId)) store.set(packId, packStore);
+    const table = packStore.get(tableName) ?? [];
+    if (!packStore.has(tableName)) packStore.set(tableName, table);
+    return table;
+  };
+
+  return {
+    backend: 'sqlite',
+    ping: async () => true,
+    destroyPackStorage: async () => {},
+    ensureEngineOwnedSchema: async () => {},
+    listEngineOwnedRecords: async (packId, tableName) => {
+      return getTable(packId, tableName);
+    },
+    upsertEngineOwnedRecord: async (packId, tableName, record) => {
+      const table = getTable(packId, tableName);
+      const rec = record as Record<string, unknown>;
+      const id = String(rec.id ?? '');
+      const idx = table.findIndex(r => String(r.id) === id);
+      if (idx >= 0) {
+        table[idx] = { ...table[idx], ...rec };
+      } else {
+        table.push(rec);
+      }
+      return rec as never;
+    },
+    ensureCollection: async () => {},
+    upsertCollectionRecord: async () => null,
+    listCollectionRecords: async () => [],
+    exportPackData: async () => ({}),
+    importPackData: async () => {}
+  };
+};
 
 describe('PackHostApi read surface integration', () => {
   let cleanup: (() => Promise<void>) | null = null;
@@ -24,6 +64,7 @@ describe('PackHostApi read surface integration', () => {
 
     const prisma = createPrismaClientForEnvironment(environment);
     context = createTestAppContext(prisma);
+    context = { ...context, packStorageAdapter: createMemPackStorageAdapter() };
     sidecar = new WorldEngineSidecarClient();
     process.env.WORKSPACE_ROOT = environment.rootDir;
     process.env.WORLD_PACKS_DIR = environment.worldPacksDir;
@@ -55,8 +96,8 @@ describe('PackHostApi read surface integration', () => {
       getAllTimes: () => ({ current_tick: '1000' }),
       step: async () => {}
     };
-    await installPackRuntime(pack);
-    await materializePackRuntimeCoreModels(pack, 1000n);
+    await installPackRuntime(pack, context.packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack, 1000n, context.packStorageAdapter);
     await sidecar.loadPack({
       pack_id: packId,
       pack_ref: DEATH_NOTE_PACK_REF,

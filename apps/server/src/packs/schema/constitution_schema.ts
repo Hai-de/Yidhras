@@ -199,14 +199,6 @@ const metadataAuthorSchema = z
   })
   .strict();
 
-const metadataCompatibilitySchema = z
-  .object({
-    yidhras: nonEmptyStringSchema.optional(),
-    schema_version: nonEmptyStringSchema.optional(),
-    notes: nonEmptyStringSchema.optional()
-  })
-  .strict();
-
 const metadataPresentationSchema = z
   .object({
     cover_image: nonEmptyStringSchema.optional(),
@@ -226,7 +218,6 @@ const metadataSchema = z
     homepage: metadataLinkSchema.optional(),
     repository: metadataLinkSchema.optional(),
     tags: z.array(nonEmptyStringSchema).optional(),
-    compatibility: metadataCompatibilitySchema.optional(),
     presentation: metadataPresentationSchema.optional(),
     published_at: nonEmptyStringSchema.optional(),
     status: nonEmptyStringSchema.optional()

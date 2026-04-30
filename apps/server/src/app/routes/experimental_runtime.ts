@@ -1,6 +1,5 @@
 import type { Express, NextFunction, Request, Response } from 'express'
 
-import { isExperimentalMultiPackOperatorApiEnabled } from '../../config/runtime_config.js'
 import { OPERATOR_CAPABILITY } from '../../operator/constants.js'
 import { packAccessGuard } from '../../operator/guard/pack_access.js'
 import { ApiError } from '../../utils/api_error.js'
@@ -22,20 +21,6 @@ export interface ExperimentalRuntimeRouteDependencies {
   asyncHandler(
     handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
   ): (req: Request, res: Response, next: NextFunction) => void
-}
-
-const assertExperimentalOperatorApiEnabled = (context: AppContext): void => {
-  if (!context.sim.isExperimentalMultiPackRuntimeEnabled() || !isExperimentalMultiPackOperatorApiEnabled()) {
-    throw new ApiError(
-      404,
-      'EXPERIMENTAL_MULTI_PACK_RUNTIME_DISABLED',
-      'Experimental multi-pack runtime operator API is disabled',
-      {
-        experimental_multi_pack_runtime_enabled: context.sim.isExperimentalMultiPackRuntimeEnabled(),
-        operator_api_enabled: isExperimentalMultiPackOperatorApiEnabled()
-      }
-    )
-  }
 }
 
 const resolvePackIdParam = (value: unknown): string => {
@@ -82,7 +67,7 @@ const translateExperimentalUnloadError = (packId: string, error: unknown): never
 
 const requireExperimentalPackHost = (context: AppContext, packId: string) => {
   assertPackScope(context, packId, 'experimental', 'experimental runtime pack host')
-  const host = context.sim.getPackRuntimeRegistry().getHost(packId)
+  const host = context.getPackRuntimeHost?.(packId)
   if (!host) {
     throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', 'Experimental runtime pack not found', {
       pack_id: packId
@@ -97,7 +82,7 @@ const requireExperimentalPackHandle = (context: AppContext, packId: string) => {
   const summary = getPackRuntimeLookupPort({
     packRuntimeLookup: context.packRuntimeLookup
   }).getPackRuntimeSummary(packId)
-  const handle = context.sim.getPackRuntimeHandle(packId)
+  const handle = context.getPackRuntimeHandle?.(packId)
   if (!summary || !handle) {
     throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', 'Experimental runtime pack not found', {
       pack_id: packId
@@ -123,16 +108,14 @@ export const registerExperimentalRuntimeRoutes = (
   app.get(
     '/api/experimental/runtime/system/health',
     (_req, res) => {
-      assertExperimentalOperatorApiEnabled(context)
-      jsonOk(res, toJsonSafe(buildExperimentalSystemHealthSnapshot(context)))
+jsonOk(res, toJsonSafe(buildExperimentalSystemHealthSnapshot(context)))
     }
   )
 
   app.get(
     '/api/experimental/runtime/packs',
     deps.asyncHandler(async (_req, res) => {
-      assertExperimentalOperatorApiEnabled(context)
-      jsonOk(
+jsonOk(
         res,
         toJsonSafe(await buildExperimentalPackRuntimeRegistrySnapshot(context))
       )
@@ -144,8 +127,7 @@ export const registerExperimentalRuntimeRoutes = (
     packGuard,
     controlGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context)
-      const packId = resolvePackIdParam(req.params.packId)
+const packId = resolvePackIdParam(req.params.packId)
 
       try {
         const result = await loadExperimentalPackRuntime(context, packId)
@@ -161,8 +143,7 @@ export const registerExperimentalRuntimeRoutes = (
     packGuard,
     controlGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context)
-      const packId = resolvePackIdParam(req.params.packId)
+const packId = resolvePackIdParam(req.params.packId)
 
       try {
         jsonOk(res, toJsonSafe(await unloadExperimentalPackRuntime(context, packId)))
@@ -177,8 +158,7 @@ export const registerExperimentalRuntimeRoutes = (
     packGuard,
     controlGuard,
     (req, res) => {
-      assertExperimentalOperatorApiEnabled(context)
-      const packId = resolvePackIdParam(req.params.packId)
+const packId = resolvePackIdParam(req.params.packId)
       const host = requireExperimentalPackHost(context, packId)
 
       const amountInput = (req.body as Record<string, unknown> | undefined)?.amount
@@ -204,8 +184,7 @@ export const registerExperimentalRuntimeRoutes = (
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context)
-      const packId = resolvePackIdParam(req.params.packId)
+const packId = resolvePackIdParam(req.params.packId)
       const snapshot = await getExperimentalPackRuntimeStatusSnapshot(context, packId)
       requireExperimentalPackHandle(context, packId)
       jsonOk(res, toJsonSafe(snapshot))
@@ -217,8 +196,7 @@ export const registerExperimentalRuntimeRoutes = (
     packGuard,
     observeGuard,
     (req, res) => {
-      assertExperimentalOperatorApiEnabled(context)
-      const packId = resolvePackIdParam(req.params.packId)
+const packId = resolvePackIdParam(req.params.packId)
       const handle = requireExperimentalPackHandle(context, packId)
       jsonOk(
         res,
@@ -236,8 +214,7 @@ export const registerExperimentalRuntimeRoutes = (
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context)
-      const packId = resolvePackIdParam(req.params.packId)
+const packId = resolvePackIdParam(req.params.packId)
       requireExperimentalPackHandle(context, packId)
       const kernel = createRuntimeKernelService(context, packId)
       jsonOk(res, toJsonSafe(await kernel.getSummary?.({})))
@@ -249,8 +226,7 @@ export const registerExperimentalRuntimeRoutes = (
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context)
-      const packId = resolvePackIdParam(req.params.packId)
+const packId = resolvePackIdParam(req.params.packId)
       requireExperimentalPackHandle(context, packId)
       const kernel = createRuntimeKernelService(context, packId)
       jsonOk(res, toJsonSafe(await kernel.getOwnershipAssignments?.({})))
@@ -262,8 +238,7 @@ export const registerExperimentalRuntimeRoutes = (
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context)
-      const packId = resolvePackIdParam(req.params.packId)
+const packId = resolvePackIdParam(req.params.packId)
       requireExperimentalPackHandle(context, packId)
       const kernel = createRuntimeKernelService(context, packId)
       jsonOk(res, toJsonSafe(await kernel.getWorkers?.({})))
@@ -275,8 +250,7 @@ export const registerExperimentalRuntimeRoutes = (
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
-      assertExperimentalOperatorApiEnabled(context)
-      const packId = resolvePackIdParam(req.params.packId)
+const packId = resolvePackIdParam(req.params.packId)
       requireExperimentalPackHandle(context, packId)
       const kernel = createRuntimeKernelService(context, packId)
       jsonOk(res, toJsonSafe(await kernel.getOperatorProjection?.({})))

@@ -241,6 +241,7 @@ export interface ListSchedulerRunsInput {
   to_tick?: string | number;
   worker_id?: string;
   partition_id?: string;
+  pack_id?: string;
 }
 
 export interface ListSchedulerDecisionsInput {
@@ -253,12 +254,14 @@ export interface ListSchedulerDecisionsInput {
   from_tick?: string | number;
   to_tick?: string | number;
   partition_id?: string;
+  pack_id?: string;
 }
 
 export interface ListSchedulerOwnershipAssignmentsInput {
   worker_id?: string;
   partition_id?: string;
   status?: string;
+  pack_id?: string;
 }
 
 export interface ListSchedulerOwnershipMigrationsInput {
@@ -266,11 +269,13 @@ export interface ListSchedulerOwnershipMigrationsInput {
   partition_id?: string;
   worker_id?: string;
   status?: string;
+  pack_id?: string;
 }
 
 export interface ListSchedulerWorkersInput {
   worker_id?: string;
   status?: string;
+  pack_id?: string;
 }
 
 export interface ListSchedulerRebalanceRecommendationsInput {
@@ -279,6 +284,7 @@ export interface ListSchedulerRebalanceRecommendationsInput {
   worker_id?: string;
   status?: string;
   suppress_reason?: string;
+  pack_id?: string;
 }
 
 interface SchedulerRunFilters {
@@ -288,6 +294,7 @@ interface SchedulerRunFilters {
   to_tick: bigint | null;
   worker_id: string | null;
   partition_id: string | null;
+  pack_id: string | null;
 }
 
 interface SchedulerDecisionFilters {
@@ -300,12 +307,14 @@ interface SchedulerDecisionFilters {
   from_tick: bigint | null;
   to_tick: bigint | null;
   partition_id: string | null;
+  pack_id: string | null;
 }
 
 interface SchedulerOwnershipAssignmentFilters {
   worker_id: string | null;
   partition_id: string | null;
   status: string | null;
+  pack_id: string | null;
 }
 
 interface SchedulerOwnershipMigrationFilters {
@@ -313,11 +322,13 @@ interface SchedulerOwnershipMigrationFilters {
   partition_id: string | null;
   worker_id: string | null;
   status: string | null;
+  pack_id: string | null;
 }
 
 interface SchedulerWorkerFilters {
   worker_id: string | null;
   status: string | null;
+  pack_id: string | null;
 }
 
 interface SchedulerRebalanceRecommendationFilters {
@@ -326,6 +337,7 @@ interface SchedulerRebalanceRecommendationFilters {
   worker_id: string | null;
   status: string | null;
   suppress_reason: string | null;
+  pack_id: string | null;
 }
 
 export interface ListSchedulerRunsResult {
@@ -343,6 +355,7 @@ export interface ListSchedulerRunsResult {
       to_tick: string | null;
       worker_id: string | null;
       partition_id: string | null;
+      pack_id: string | null;
     };
   };
 }
@@ -365,6 +378,7 @@ export interface ListSchedulerDecisionsResult {
       from_tick: string | null;
       to_tick: string | null;
       partition_id: string | null;
+      pack_id: string | null;
     };
   };
 }
@@ -376,6 +390,7 @@ export interface SchedulerOwnershipAssignmentsResult {
       worker_id: string | null;
       partition_id: string | null;
       status: string | null;
+      pack_id: string | null;
     };
   };
 }
@@ -390,6 +405,7 @@ export interface SchedulerOwnershipMigrationsResult {
       partition_id: string | null;
       worker_id: string | null;
       status: string | null;
+      pack_id: string | null;
     };
   };
 }
@@ -404,6 +420,7 @@ export interface SchedulerWorkersResult {
     filters: {
       worker_id: string | null;
       status: string | null;
+      pack_id: string | null;
     };
   };
 }
@@ -426,6 +443,7 @@ export interface SchedulerRebalanceRecommendationsResult {
       worker_id: string | null;
       status: string | null;
       suppress_reason: string | null;
+      pack_id: string | null;
     };
   };
 }
@@ -703,7 +721,8 @@ const parseOwnershipAssignmentFilters = (
 ): SchedulerOwnershipAssignmentFilters => ({
   worker_id: parseOptionalIdFilter(input.worker_id, 'worker_id'),
   partition_id: parseOptionalPartitionId(input.partition_id),
-  status: parseOptionalIdFilter(input.status, 'status')
+  status: parseOptionalIdFilter(input.status, 'status'),
+  pack_id: parseOptionalIdFilter(input.pack_id, 'pack_id')
 });
 
 const parseOwnershipMigrationFilters = (
@@ -712,12 +731,14 @@ const parseOwnershipMigrationFilters = (
   limit: parseLimit(input.limit),
   partition_id: parseOptionalPartitionId(input.partition_id),
   worker_id: parseOptionalIdFilter(input.worker_id, 'worker_id'),
-  status: parseOptionalIdFilter(input.status, 'status')
+  status: parseOptionalIdFilter(input.status, 'status'),
+  pack_id: parseOptionalIdFilter(input.pack_id, 'pack_id')
 });
 
 const parseWorkerFilters = (input: ListSchedulerWorkersInput): SchedulerWorkerFilters => ({
   worker_id: parseOptionalIdFilter(input.worker_id, 'worker_id'),
-  status: parseOptionalIdFilter(input.status, 'status')
+  status: parseOptionalIdFilter(input.status, 'status'),
+  pack_id: parseOptionalIdFilter(input.pack_id, 'pack_id')
 });
 
 const parseRebalanceRecommendationFilters = (
@@ -727,7 +748,8 @@ const parseRebalanceRecommendationFilters = (
   partition_id: parseOptionalPartitionId(input.partition_id),
   worker_id: parseOptionalIdFilter(input.worker_id, 'worker_id'),
   status: parseOptionalIdFilter(input.status, 'status'),
-  suppress_reason: parseOptionalIdFilter(input.suppress_reason, 'suppress_reason')
+  suppress_reason: parseOptionalIdFilter(input.suppress_reason, 'suppress_reason'),
+  pack_id: parseOptionalIdFilter(input.pack_id, 'pack_id')
 });
 
 // ---------------------------------------------------------------------------
@@ -800,6 +822,11 @@ const parseSummaryJson = (raw: string): unknown => {
 
 const getAllPackIds = (context: AppContext): string[] => {
   return context.schedulerStorage?.listOpenPackIds() ?? [];
+};
+
+const getFilteredPackIds = (context: AppContext, packId?: string): string[] => {
+  const all = getAllPackIds(context);
+  return packId ? all.filter(id => id === packId) : all;
 };
 
 // ---------------------------------------------------------------------------
@@ -1096,7 +1123,8 @@ const parseRunFilters = (input: ListSchedulerRunsInput): SchedulerRunFilters => 
     from_tick: fromTick,
     to_tick: toTick,
     worker_id: parseOptionalIdFilter(input.worker_id, 'worker_id'),
-    partition_id: parseOptionalPartitionId(input.partition_id)
+    partition_id: parseOptionalPartitionId(input.partition_id),
+    pack_id: parseOptionalIdFilter(input.pack_id, 'pack_id')
   };
 };
 
@@ -1119,7 +1147,8 @@ const parseDecisionFilters = (input: ListSchedulerDecisionsInput): SchedulerDeci
     skipped_reason: parseOptionalSkipReason(input.skipped_reason),
     from_tick: fromTick,
     to_tick: toTick,
-    partition_id: parseOptionalPartitionId(input.partition_id)
+    partition_id: parseOptionalPartitionId(input.partition_id),
+    pack_id: parseOptionalIdFilter(input.pack_id, 'pack_id')
   };
 };
 
@@ -1207,33 +1236,32 @@ export const recordSchedulerRunSnapshot = (
   },
   packId?: string
 ): string => {
-  const runId = randomUUID();
-
   if (packId) {
-    writeDetailedSnapshot(packId, context, input);
+    const runId = writeDetailedSnapshot(packId, context, input);
     emitAggregatedMetrics(packId, input.summary);
+    return runId;
   }
 
-  return runId;
+  return randomUUID();
 };
 
-export const getLatestSchedulerRunReadModel = async (context: AppContext): Promise<SchedulerRunReadModel | null> => {
+export const getLatestSchedulerRunReadModel = async (context: AppContext, packId?: string): Promise<SchedulerRunReadModel | null> => {
   const adapter = context.schedulerStorage;
   if (!adapter) {
     return null;
   }
 
-  const packIds = getAllPackIds(context);
+  const packIds = getFilteredPackIds(context, packId);
   let bestRun: RawSchedulerRunRow | null = null;
   let bestPackId: string | null = null;
 
-  for (const packId of packIds) {
-    const rows = adapter.listRuns(packId, { orderBy: { created_at: 'desc' }, take: 1 });
+  for (const pid of packIds) {
+    const rows = adapter.listRuns(pid, { orderBy: { created_at: 'desc' }, take: 1 });
     if (rows.length > 0) {
       const run = castRawRow<RawSchedulerRunRow>(rows[0]);
       if (!bestRun || run.created_at > bestRun.created_at) {
         bestRun = run;
-        bestPackId = packId;
+        bestPackId = pid;
       }
     }
   }
@@ -1287,22 +1315,23 @@ export const getLatestSchedulerRunReadModel = async (context: AppContext): Promi
 
 export const getSchedulerRunReadModelById = async (
   context: AppContext,
-  runId: string
+  runId: string,
+  packId?: string
 ): Promise<SchedulerRunReadModel | null> => {
   const adapter = context.schedulerStorage;
   if (!adapter) {
     return null;
   }
 
-  const packIds = getAllPackIds(context);
-  for (const packId of packIds) {
-    const rows = adapter.listRuns(packId, { where: { id: runId }, take: 1 });
+  const packIds = getFilteredPackIds(context, packId);
+  for (const pid of packIds) {
+    const rows = adapter.listRuns(pid, { where: { id: runId }, take: 1 });
     if (rows.length === 0) {
       continue;
     }
 
     const schedulerRun = castRawRow<RawSchedulerRunRow>(rows[0]);
-    const rawDecisions = adapter.listCandidateDecisions(packId, {
+    const rawDecisions = adapter.listCandidateDecisions(pid, {
       where: { scheduler_run_id: schedulerRun.id },
       orderBy: { created_at: 'asc' }
     });
@@ -1353,6 +1382,7 @@ export const getAgentSchedulerProjection = async (
   actorId: string,
   options?: {
     limit?: number;
+    packId?: string;
   }
 ): Promise<AgentSchedulerProjection> => {
   const resolvedActorId = parseOptionalIdFilter(actorId, 'actor_id');
@@ -1366,13 +1396,13 @@ export const getAgentSchedulerProjection = async (
     return emptyAgentProjection(resolvedActorId);
   }
 
-  const packIds = getAllPackIds(context);
+  const packIds = getFilteredPackIds(context, options?.packId);
   const allRawDecisions: Array<{ decision: RawSchedulerCandidateDecisionRow; packId: string }> = [];
 
-  for (const packId of packIds) {
-    const rows = adapter.getAgentDecisions(packId, resolvedActorId, limit);
+  for (const pid of packIds) {
+    const rows = adapter.getAgentDecisions(pid, resolvedActorId, limit);
     for (const row of rows) {
-      allRawDecisions.push({ decision: castRawRow<RawSchedulerCandidateDecisionRow>(row), packId });
+      allRawDecisions.push({ decision: castRawRow<RawSchedulerCandidateDecisionRow>(row), packId: pid });
     }
   }
 
@@ -1401,8 +1431,8 @@ export const getAgentSchedulerProjection = async (
   const runIds = Array.from(new Set(timeline.map(item => item.scheduler_run_id)));
   const runs: Array<{ run_id: string; tick: string; worker_id: string; partition_id: string; created_at: string }> = [];
   for (const runId of runIds) {
-    for (const packId of packIds) {
-      const rows = adapter.listRuns(packId, { where: { id: runId }, take: 1 });
+    for (const pid of packIds) {
+      const rows = adapter.listRuns(pid, { where: { id: runId }, take: 1 });
       if (rows.length > 0) {
         const run = castRawRow<RawSchedulerRunRow>(rows[0]);
         runs.push({
@@ -1506,18 +1536,19 @@ const emptyAgentProjection = (actorId: string): AgentSchedulerProjection => ({
 export const listAgentSchedulerDecisions = (
   context: AppContext,
   actorId: string,
-  limit = getSchedulerObservabilityConfig().default_query_limit
+  limit = getSchedulerObservabilityConfig().default_query_limit,
+  packId?: string
 ): SchedulerCandidateDecisionReadModel[] => {
   const adapter = context.schedulerStorage;
   if (!adapter) {
     return [];
   }
 
-  const packIds = getAllPackIds(context);
+  const packIds = getFilteredPackIds(context, packId);
   const allDecisions: RawSchedulerCandidateDecisionRow[] = [];
 
-  for (const packId of packIds) {
-    const rows = adapter.getAgentDecisions(packId, actorId, limit);
+  for (const pid of packIds) {
+    const rows = adapter.getAgentDecisions(pid, actorId, limit);
     for (const row of rows) {
       allDecisions.push(castRawRow<RawSchedulerCandidateDecisionRow>(row));
     }
@@ -1554,14 +1585,14 @@ export const listSchedulerRuns = (
     return emptyRunListResult(filters);
   }
 
-  const packIds = getAllPackIds(context);
+  const packIds = getFilteredPackIds(context, filters.pack_id ?? undefined);
   const cursorPredicate = buildRunCursorWhere(filters.cursor);
   const fromTickNum = filters.from_tick !== null ? Number(filters.from_tick) : null;
   const toTickNum = filters.to_tick !== null ? Number(filters.to_tick) : null;
 
   const allRuns: RawSchedulerRunRow[] = [];
-  for (const packId of packIds) {
-    const rows = adapter.listRuns(packId, {
+  for (const pid of packIds) {
+    const rows = adapter.listRuns(pid, {
       orderBy: { created_at: 'desc' },
       take: filters.limit + 1
     });
@@ -1615,7 +1646,8 @@ export const listSchedulerRuns = (
         from_tick: filters.from_tick?.toString() ?? null,
         to_tick: filters.to_tick?.toString() ?? null,
         worker_id: filters.worker_id,
-        partition_id: filters.partition_id
+        partition_id: filters.partition_id,
+        pack_id: filters.pack_id
       }
     }
   };
@@ -1632,7 +1664,8 @@ const emptyRunListResult = (filters: ReturnType<typeof parseRunFilters>): ListSc
       from_tick: filters.from_tick?.toString() ?? null,
       to_tick: filters.to_tick?.toString() ?? null,
       worker_id: filters.worker_id,
-      partition_id: filters.partition_id
+      partition_id: filters.partition_id,
+      pack_id: filters.pack_id
     }
   }
 });
@@ -1647,14 +1680,14 @@ export const listSchedulerDecisions = async (
     return emptyDecisionListResult(filters);
   }
 
-  const packIds = getAllPackIds(context);
+  const packIds = getFilteredPackIds(context, filters.pack_id ?? undefined);
   const cursorPredicate = buildDecisionCursorWhere(filters.cursor);
   const fromTickNum = filters.from_tick !== null ? Number(filters.from_tick) : null;
   const toTickNum = filters.to_tick !== null ? Number(filters.to_tick) : null;
 
   const allDecisions: RawSchedulerCandidateDecisionRow[] = [];
-  for (const packId of packIds) {
-    const rows = adapter.listCandidateDecisions(packId, {
+  for (const pid of packIds) {
+    const rows = adapter.listCandidateDecisions(pid, {
       orderBy: { created_at: 'desc' },
       take: filters.limit + 1
     });
@@ -1719,7 +1752,8 @@ export const listSchedulerDecisions = async (
         skipped_reason: filters.skipped_reason,
         from_tick: filters.from_tick?.toString() ?? null,
         to_tick: filters.to_tick?.toString() ?? null,
-        partition_id: filters.partition_id
+        partition_id: filters.partition_id,
+        pack_id: filters.pack_id
       }
     }
   };
@@ -1739,14 +1773,15 @@ const emptyDecisionListResult = (filters: ReturnType<typeof parseDecisionFilters
       skipped_reason: filters.skipped_reason,
       from_tick: filters.from_tick?.toString() ?? null,
       to_tick: filters.to_tick?.toString() ?? null,
-      partition_id: filters.partition_id
+      partition_id: filters.partition_id,
+      pack_id: filters.pack_id
     }
   }
 });
 
 export const getSchedulerSummarySnapshot = async (
   context: AppContext,
-  input?: { sampleRuns?: number }
+  input?: { sampleRuns?: number; packId?: string }
 ): Promise<SchedulerSummarySnapshot> => {
   const config = getSchedulerObservabilityConfig().summary;
   const sampleRuns = Math.min(
@@ -1754,22 +1789,42 @@ export const getSchedulerSummarySnapshot = async (
     config.max_sample_runs
   );
   const adapter = context.schedulerStorage;
-  const packIds = getAllPackIds(context);
+  const packIds = getFilteredPackIds(context, input?.packId);
 
   let allRuns: RawSchedulerRunRow[] = [];
   let allDecisions: RawSchedulerCandidateDecisionRow[] = [];
 
   if (adapter) {
-    for (const packId of packIds) {
-      const runs = adapter.listRuns(packId, { orderBy: { created_at: 'desc' }, take: sampleRuns });
+    for (const pid of packIds) {
+      const runs = adapter.listRuns(pid, { orderBy: { created_at: 'desc' }, take: sampleRuns });
       allRuns.push(...runs.map(row => castRawRow<RawSchedulerRunRow>(row)));
 
-      const decisions = adapter.listCandidateDecisions(packId, { orderBy: { created_at: 'desc' }, take: sampleRuns * 10 });
+      const decisions = adapter.listCandidateDecisions(pid, { orderBy: { created_at: 'desc' }, take: sampleRuns * 10 });
       allDecisions.push(...decisions.map(row => castRawRow<RawSchedulerCandidateDecisionRow>(row)));
     }
-    allRuns.sort((a, b) => b.created_at - a.created_at);
+    allRuns.sort((a, b) => {
+      const av = a.created_at;
+      const bv = b.created_at;
+      if (typeof av === 'bigint' && typeof bv === 'bigint') {
+        return av > bv ? -1 : av < bv ? 1 : 0;
+      }
+      if (typeof av === 'number' && typeof bv === 'number') {
+        return bv - av;
+      }
+      return 0;
+    });
     allRuns = allRuns.slice(0, sampleRuns);
-    allDecisions.sort((a, b) => b.created_at - a.created_at);
+    allDecisions.sort((a, b) => {
+      const av = a.created_at;
+      const bv = b.created_at;
+      if (typeof av === 'bigint' && typeof bv === 'bigint') {
+        return av > bv ? -1 : av < bv ? 1 : 0;
+      }
+      if (typeof av === 'number' && typeof bv === 'number') {
+        return bv - av;
+      }
+      return 0;
+    });
     allDecisions = allDecisions.slice(0, sampleRuns * 10);
   }
 
@@ -1869,7 +1924,7 @@ export const getSchedulerSummarySnapshot = async (
 
 export const getSchedulerTrendsSnapshot = (
   context: AppContext,
-  input?: { sampleRuns?: number }
+  input?: { sampleRuns?: number; packId?: string }
 ): SchedulerTrendsSnapshot => {
   const config = getSchedulerObservabilityConfig().trends;
   const sampleRuns = Math.min(
@@ -1881,11 +1936,11 @@ export const getSchedulerTrendsSnapshot = (
     return { points: [] };
   }
 
-  const packIds = getAllPackIds(context);
+  const packIds = getFilteredPackIds(context, input?.packId);
   let allRuns: RawSchedulerRunRow[] = [];
 
-  for (const packId of packIds) {
-    const rows = adapter.listRuns(packId, { orderBy: { created_at: 'desc' }, take: sampleRuns });
+  for (const pid of packIds) {
+    const rows = adapter.listRuns(pid, { orderBy: { created_at: 'desc' }, take: sampleRuns });
     allRuns.push(...rows.map(row => castRawRow<RawSchedulerRunRow>(row)));
   }
 
@@ -1928,12 +1983,12 @@ export const listSchedulerOwnershipAssignments = (
     };
   }
 
-  const packIds = getAllPackIds(context);
+  const packIds = getFilteredPackIds(context, filters.pack_id ?? undefined);
   const allPartitions: RawSchedulerPartitionRow[] = [];
   const allMigrations: RawSchedulerMigrationRow[] = [];
 
-  for (const packId of packIds) {
-    const partitions = adapter.listPartitions(packId);
+  for (const pid of packIds) {
+    const partitions = adapter.listPartitions(pid);
     for (const p of partitions) {
       const partition = castRawRow<RawSchedulerPartitionRow>(p as unknown as Record<string, unknown>);
       if (filters.worker_id !== null && partition.worker_id !== filters.worker_id) continue;
@@ -1942,7 +1997,7 @@ export const listSchedulerOwnershipAssignments = (
       allPartitions.push(partition);
     }
 
-    const migrations = adapter.listMigrations(packId);
+    const migrations = adapter.listMigrations(pid);
     for (const m of migrations) {
       allMigrations.push(castRawRow<RawSchedulerMigrationRow>(m as unknown as Record<string, unknown>));
     }
@@ -2017,11 +2072,11 @@ export const listSchedulerOwnershipMigrations = (
     };
   }
 
-  const packIds = getAllPackIds(context);
+  const packIds = getFilteredPackIds(context, filters.pack_id ?? undefined);
   let allMigrations: RawSchedulerMigrationRow[] = [];
 
-  for (const packId of packIds) {
-    const migrations = adapter.listMigrations(packId);
+  for (const pid of packIds) {
+    const migrations = adapter.listMigrations(pid);
     for (const m of migrations) {
       const migration = castRawRow<RawSchedulerMigrationRow>(m as unknown as Record<string, unknown>);
       if (filters.partition_id !== null && migration.partition_id !== filters.partition_id) continue;
@@ -2073,12 +2128,12 @@ export const listSchedulerWorkers = (
     };
   }
 
-  const packIds = getAllPackIds(context);
+  const packIds = getFilteredPackIds(context, filters.pack_id ?? undefined);
   const allWorkers: ReturnType<typeof listSchedulerWorkerRuntimeStates> = [];
 
-  for (const packId of packIds) {
+  for (const pid of packIds) {
     try {
-      const workers = listSchedulerWorkerRuntimeStates(context, packId);
+      const workers = listSchedulerWorkerRuntimeStates(context, pid);
       allWorkers.push(...workers);
     } catch {
       // packId is required by underlying function — skip packs without scheduler storage
@@ -2117,12 +2172,12 @@ export const listSchedulerRebalanceRecommendations = (
     };
   }
 
-  const packIds = getAllPackIds(context);
+  const packIds = getFilteredPackIds(context, filters.pack_id ?? undefined);
   const allRecommendations: SchedulerRebalanceRecommendationRecord[] = [];
 
-  for (const packId of packIds) {
+  for (const pid of packIds) {
     try {
-      const recommendations = listRecentSchedulerRebalanceRecommendations(context, filters.limit, packId);
+      const recommendations = listRecentSchedulerRebalanceRecommendations(context, filters.limit, pid);
       allRecommendations.push(...recommendations);
     } catch {
       // packId is required — skip packs without scheduler storage
@@ -2161,7 +2216,7 @@ export const listSchedulerRebalanceRecommendations = (
 
 export const getSchedulerOperatorProjection = async (
   context: AppContext,
-  input?: { sampleRuns?: number; recentLimit?: number }
+  input?: { sampleRuns?: number; recentLimit?: number; packId?: string }
 ): Promise<SchedulerOperatorProjection> => {
   const config = getSchedulerObservabilityConfig().operator_projection;
   const sampleRuns = Math.min(
@@ -2169,18 +2224,19 @@ export const getSchedulerOperatorProjection = async (
     config.max_sample_runs
   );
   const recentLimit = Math.min(Math.max(input?.recentLimit ?? config.default_recent_limit, 1), config.max_recent_limit);
+  const packId = input?.packId;
 
-  const ownershipAssignments = listSchedulerOwnershipAssignments(context);
-  const ownershipMigrations = listSchedulerOwnershipMigrations(context, { limit: recentLimit });
-  const workers = listSchedulerWorkers(context);
-  const rebalanceRecommendations = listSchedulerRebalanceRecommendations(context, { limit: recentLimit });
+  const ownershipAssignments = listSchedulerOwnershipAssignments(context, packId ? { pack_id: packId } : {});
+  const ownershipMigrations = listSchedulerOwnershipMigrations(context, { limit: recentLimit, ...(packId ? { pack_id: packId } : {}) });
+  const workers = listSchedulerWorkers(context, packId ? { pack_id: packId } : {});
+  const rebalanceRecommendations = listSchedulerRebalanceRecommendations(context, { limit: recentLimit, ...(packId ? { pack_id: packId } : {}) });
 
   const [latestRun, summary, trends, recentRunsResult, recentDecisionsResult] = await Promise.all([
-    getLatestSchedulerRunReadModel(context),
-    getSchedulerSummarySnapshot(context, { sampleRuns }),
-    Promise.resolve(getSchedulerTrendsSnapshot(context, { sampleRuns })),
-    Promise.resolve(listSchedulerRuns(context, { limit: recentLimit })),
-    listSchedulerDecisions(context, { limit: recentLimit })
+    getLatestSchedulerRunReadModel(context, packId),
+    getSchedulerSummarySnapshot(context, { sampleRuns, packId }),
+    Promise.resolve(getSchedulerTrendsSnapshot(context, { sampleRuns, packId })),
+    Promise.resolve(listSchedulerRuns(context, { limit: recentLimit, ...(packId ? { pack_id: packId } : {}) })),
+    listSchedulerDecisions(context, { limit: recentLimit, ...(packId ? { pack_id: packId } : {}) })
   ]);
 
   const latestCandidates = latestRun?.candidates ?? [];

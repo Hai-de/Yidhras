@@ -4,7 +4,7 @@ import type { MemoryContextPack } from '../memory/types.js';
 import type {
   PromptVariableContext,
   PromptVariableContextSummary,
-  VariablePool
+  PromptVariableRecord
 } from '../narrative/types.js';
 import type { WorldPackAiConfig, WorldPackValue } from '../packs/schema/constitution_schema.js';
 import type { PromptBundleV2 } from './prompt_bundle_v2.js';
@@ -234,7 +234,7 @@ export interface InferenceContext extends PromptResolvableContext {
   inference_id: string;
   binding_ref: InferenceBindingRef | null;
   world_ai?: WorldPackAiConfig | null;
-  visible_variables: VariablePool;
+  visible_variables: PromptVariableRecord;
   policy_summary: InferencePolicySummary;
   transmission_profile: InferenceTransmissionProfile;
   context_run: ContextRun;

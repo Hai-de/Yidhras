@@ -113,19 +113,17 @@ CLI 与 GUI 复用同一组治理语义：
 约束：
 
 - 继续绑定当前 active pack
-- 不因 experimental multi-pack runtime 打开而自动放宽作用域
+- 多包运行时不自动放宽 stable surface 的作用域
 - stable surface 的 pack 解析继续受 active-pack guard 控制
 
-### Experimental pack-local surface
+### 附加包（experimental）surface
 
 - `GET /api/experimental/runtime/packs/:packId/plugins/runtime/web`
 - `GET /api/experimental/runtime/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`
 
 约束：
 
-- 仅在 `features.experimental.multi_pack_runtime.enabled=true`
-- 且 `features.experimental.multi_pack_runtime.operator_api_enabled=true` 时可用
-- 目标 pack 必须已经进入 experimental runtime registry
+- 目标 pack 必须已经加载到 runtime registry
 - experimental surface 的 pack 解析通过统一 `PackRuntimeLookupPort` / `PackScopeResolver` 校验
 
 当前 web runtime snapshot 由：
@@ -165,7 +163,7 @@ CLI 与 GUI 复用同一组治理语义：
 
 - `/packs/:packId/plugins/:pluginId/*`
 
-在 experimental multi-pack runtime 下，需要特别区分：
+在多包运行时下，需要特别区分：
 
 - stable `web_bundle_url`
   - 指向 `/api/packs/:packId/plugins/.../runtime/web/...`
@@ -196,7 +194,7 @@ CLI 与 GUI 复用同一组治理语义：
 - registry refresh 与 pack-local route mounting 走统一同步入口
 - route 挂载带去重，避免 enable / disable / startup 多次同步时重复注册
 
-当前 experimental multi-pack runtime 补充了：
+当前多包运行时补充了：
 
 - `refreshPackPluginRuntime(context, packId)`
 - `syncExperimentalPackPluginRuntime(context, packId)`
@@ -252,7 +250,7 @@ CLI 与 GUI 复用同一组治理语义：
 - plugin runtime module contract 校验仍偏轻量
 - sandbox / isolation 能力仍不算强
 - 当前范围仍以 `pack_local` 为正式边界
-- experimental multi-pack plugin runtime 仍是 operator / test-only
+- 多包运行时 plugin runtime 通过 operator API 访问
 - 当前不会把 stable active-pack plugin runtime surface 直接升级为任意 loaded pack 可读
 - server-side pack route registration 仍以保守兼容为主，而不是完整平台化插件容器
 - 更深的 multi-pack operator ergonomics 已记录在 `.limcode/enhancements-backlog.md`

@@ -46,38 +46,45 @@ export const schedulerRunsQuerySchema = z.object({
   from_tick: nonNegativeBigIntStringSchema.optional(),
   to_tick: nonNegativeBigIntStringSchema.optional(),
   worker_id: z.string().optional(),
-  partition_id: z.string().optional()
+  partition_id: z.string().optional(),
+  pack_id: z.string().optional()
 })
 
 export const schedulerSummaryQuerySchema = z.object({
-  sample_runs: positiveSchedulerQueryNumberSchema.optional()
+  sample_runs: positiveSchedulerQueryNumberSchema.optional(),
+  pack_id: z.string().optional()
 })
 
 export const schedulerTrendsQuerySchema = z.object({
-  sample_runs: positiveSchedulerQueryNumberSchema.optional()
+  sample_runs: positiveSchedulerQueryNumberSchema.optional(),
+  pack_id: z.string().optional()
 })
 
 export const schedulerOperatorQuerySchema = z.object({
   sample_runs: positiveSchedulerQueryNumberSchema.optional(),
-  recent_limit: positiveSchedulerQueryNumberSchema.optional()
+  recent_limit: positiveSchedulerQueryNumberSchema.optional(),
+  pack_id: z.string().optional()
 })
 
 export const schedulerOwnershipQuerySchema = z.object({
   worker_id: z.string().optional(),
   partition_id: z.string().optional(),
-  status: schedulerOwnershipStatusSchema.optional()
+  status: schedulerOwnershipStatusSchema.optional(),
+  pack_id: z.string().optional()
 })
 
 export const schedulerMigrationsQuerySchema = z.object({
   limit: positiveSchedulerQueryNumberSchema.optional(),
   worker_id: z.string().optional(),
   partition_id: z.string().optional(),
-  status: schedulerMigrationStatusSchema.optional()
+  status: schedulerMigrationStatusSchema.optional(),
+  pack_id: z.string().optional()
 })
 
 export const schedulerWorkersQuerySchema = z.object({
   worker_id: z.string().optional(),
-  status: schedulerWorkerRuntimeStatusSchema.optional()
+  status: schedulerWorkerRuntimeStatusSchema.optional(),
+  pack_id: z.string().optional()
 })
 
 export const schedulerRebalanceRecommendationsQuerySchema = z.object({
@@ -85,7 +92,8 @@ export const schedulerRebalanceRecommendationsQuerySchema = z.object({
   worker_id: z.string().optional(),
   partition_id: z.string().optional(),
   status: schedulerRebalanceRecommendationStatusSchema.optional(),
-  suppress_reason: z.string().optional()
+  suppress_reason: z.string().optional(),
+  pack_id: z.string().optional()
 })
 
 export const schedulerRunIdParamsSchema = z.object({
@@ -101,5 +109,6 @@ export const schedulerDecisionsQuerySchema = z.object({
   skipped_reason: schedulerSkipReasonSchema.optional(),
   from_tick: nonNegativeBigIntStringSchema.optional(),
   to_tick: nonNegativeBigIntStringSchema.optional(),
-  partition_id: z.string().optional()
+  partition_id: z.string().optional(),
+  pack_id: z.string().optional()
 })

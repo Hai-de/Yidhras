@@ -589,9 +589,8 @@ const createPackRuntimeContractResolver = (): PackRuntimeContractResolver => {
         return Promise.resolve({});
       }
 
-      // NOTE: packRuntimeLookup.getPackRuntimeSummary uses slimmer return shape;
-      // pack-scoped invocation_rules for experimental mode are not yet exposed
-      // through a focused port. Returning empty contract for now.
+      // Additional packs (experimental scope) do not expose invocation rules
+      // through PackRuntimeLookupPort; they rely on the default empty contract.
       return Promise.resolve({});
     }
   };
@@ -641,7 +640,7 @@ const buildInferenceVariableContext = (input: {
   };
 
   const configuredLayers = resolvedConfig?.layers;
-  const layerOrder = resolvedConfig?.alias_precedence ?? ['system', 'app', 'pack', 'runtime', 'actor', 'request'];
+  const layerOrder = ['system', 'app', 'pack', 'runtime', 'actor', 'request'];
 
   const layers = layerOrder
     .map((namespace) => {

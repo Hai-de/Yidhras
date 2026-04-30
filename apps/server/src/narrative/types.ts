@@ -1,13 +1,3 @@
-export type VariableValue =
-  | string
-  | number
-  | boolean
-  | {
-      [key: string]: VariableValue;
-    };
-
-export type VariablePool = Record<string, VariableValue>;
-
 export type PromptVariableScalar = string | number | boolean | null;
 export type PromptVariableValue =
   | PromptVariableScalar
@@ -28,10 +18,7 @@ export type PromptVariableNamespace =
   | 'request'
   | `plugin.${string}`;
 
-export const DEFAULT_PROMPT_VARIABLE_ALIAS_PRECEDENCE = ['request', 'actor', 'runtime', 'pack', 'app', 'system'] as const;
-
-export type PromptVariableAliasNamespace = (typeof DEFAULT_PROMPT_VARIABLE_ALIAS_PRECEDENCE)[number];
-export type PromptVariableResolutionMode = 'namespaced' | 'alias_fallback' | 'local';
+export type PromptVariableResolutionMode = 'namespaced' | 'local';
 export type PromptVariableValueType = 'null' | 'string' | 'number' | 'boolean' | 'array' | 'object' | 'unknown';
 
 export interface PromptVariableLayer {
@@ -47,14 +34,10 @@ export interface PromptVariableLayer {
 
 export interface PromptVariableContext {
   layers: PromptVariableLayer[];
-  alias_precedence: PromptVariableAliasNamespace[];
-  strict_namespace: boolean;
 }
 
 export interface PromptVariableContextSummary {
   namespaces: string[];
-  alias_precedence: string[];
-  strict_namespace: boolean;
   layer_count: number;
 }
 
@@ -87,7 +70,6 @@ export interface PromptMacroDiagnostics {
   missing_paths: string[];
   restricted_paths: string[];
   blocks?: PromptMacroBlockTrace[];
-  alias_fallback_count?: number;
   namespaces_used?: string[];
   output_length?: number;
 }
@@ -95,9 +77,4 @@ export interface PromptMacroDiagnostics {
 export interface PromptMacroRenderResult {
   text: string;
   diagnostics: PromptMacroDiagnostics;
-}
-
-export interface NarrativeConfig {
-  variables: VariablePool;
-  prompts: Record<string, string>;
 }

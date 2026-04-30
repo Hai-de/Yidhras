@@ -335,7 +335,7 @@ const applyCommittedClockProjection = (input: {
   };
 
   const snapshot = projectionPort.applyWorldEngineCommitProjection(projectionInput);
-  input.context.sim.applyClockProjection(snapshot);
+  input.context.applyClockProjection?.(snapshot);
   return snapshot;
 };
 

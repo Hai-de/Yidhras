@@ -197,14 +197,10 @@ simulation_loop.ts (全局单循环)
 - `scheduler_ownership.ts` / `scheduler_rebalance.ts` 完全迁移至 `SchedulerStorageAdapter`，移除 Prisma 依赖
 - `scheduler_observability.ts` 中 `recordSchedulerRunSnapshot` Prisma 写入回退已移除
 - 3 个低层 Prisma repo 文件已删除（`scheduler_lease_repository.ts`、`scheduler_ownership_repository.ts`、`scheduler_rebalance_repository.ts`）
-- `SchedulerRepository.ts` 精简为仅保留 `getPrisma()` 供 observability 读路径使用
+- `SchedulerRepository` / `PrismaSchedulerRepository` 已删除
 - `releaseAllPackSchedulerLeases` 函数已删除 — per-pack SQLite 随 unload 直接删除，无需 Prisma 清理
-
-**延后（不影响当前功能）：**
-
-- `AppContext` 旧单例字段（`activePack`、`clock`、`paused`、`activePackRuntime`）标记 `@deprecated` 但未物理移除 — 多文件仍隐式依赖
-- Prisma schema 8 个 deprecated scheduler 表未删除 — `scheduler_observability.ts` 读路径仍通过 `context.repos.scheduler.getPrisma()` 查 Prisma
-- `SimulationManager` 的 `ActivePackRuntimeFacade` 实现保留 — 仍用于 active pack 初始化流程
+- Prisma schema 8 个 deprecated scheduler 模型已删除（migration `20260430120000_drop_deprecated_scheduler_tables`）
+- `AppContext` 旧单例字段（`activePack`、`clock`、`paused`、`activePackRuntime`）标记 `@deprecated` 保留兼容；`getRuntimeReady` / `setRuntimeReady` / `getPaused` / `setPaused` 四方法已迁移至 `SimulationManager`
 
 ---
 
@@ -285,35 +281,4 @@ simulation_loop.ts (全局单循环)
 | `runtime_clock_projection.ts` deprecated scheduler 路径 | ✅ | 无遗留 |
 | `refreshSchedulerWorkerRuntimeState` liveness 覆盖 bug | ✅ | `status: 'active'` 硬编码改为继承现有 `stale`/`suspected_dead` 状态 |
 | 集成测试 Prisma scheduler 模型引用 | ✅ | 19 个测试文件全部迁移，新建 `MemSchedulerStorage` 测试辅助 |
-| `ARCH_DIAGRAM.md` 图更新 | ⏸️ | 视觉改动，单独处理 |
-
-### 收尾变更摘要 (2026-04-30)
-
-**第一批 — Prisma 模型删除:**
-1. `SchedulerStorageAdapter` 接口新增 `listOpenPackIds()` 方法
-2. `scheduler_observability.ts` 所有读函数改为跨包 `SchedulerStorageAdapter` 聚合读取
-3. `SchedulerRepository` / `PrismaSchedulerRepository` 已删除
-4. `repositories/index.ts` 移除 `scheduler` 字段
-5. `schema.prisma` 删除 8 个 deprecated scheduler 模型
-6. Prisma migration `20260430120000_drop_deprecated_scheduler_tables` 已创建并应用
-7. `tests/fixtures/app-context.ts` mock adapter 新增 `listOpenPackIds`
-
-**第二批 — AppContext deprecated 字段移除:**
-8. `SimulationManager` 新增 `isRuntimeReady()` / `setRuntimeReady()` / `isPaused()` / `setPaused()` 四方法
-9. `index.ts` 移除 `runtimeReady` / `isPaused` 局部变量和 deprecated 闭包赋值
-10. 9 个文件的 ~20 处 `context.getRuntimeReady()`/`context.setPaused()` 等调用改为 `context.sim.isRuntimeReady()`/`context.sim.setPaused()` 等
-11. `AppContext` 接口删除 4 个 deprecated 方法签名
-12. 4 个测试文件的 mock `sim` 对象新增 `isRuntimeReady` / `isPaused` 方法
-
-**第三批 — 集成测试迁移 + 生产代码修复:**
-13. 新建 `tests/helpers/scheduler_storage.ts` — `MemSchedulerStorage` 完整实现 `SchedulerStorageAdapter` 接口，所有数据存内存 Maps
-14. 19 个集成测试文件全部迁移完毕：12 个 ADAPTER_SETUP（Prisma scheduler 直写 → adapter 调用）+ 7 个 DELETE_PRISMA（移除 Prisma scheduler 引用 + 注入 adapter + packId）
-15. `scheduler_ownership.ts` 修复 `refreshSchedulerWorkerRuntimeState` 无条件覆盖 worker status 的 bug — `status: 'active'` 改为从现有 worker 状态继承 `stale`/`suspected_dead`
-16. `async_handler.ts` — `asyncHandler` 类型放宽，兼容 sync handler
-
-### 已知遗留
-
-- `scheduler-automatic-rebalance-failover-compatibility` 集成测试 `it.skip` — rebalance 流程正确触发（分区已迁移至 worker-b），但 `runAgentSchedulerForPartition` 内 `completeActiveSchedulerOwnershipMigration` 受 clock/lease 时序影响未在同一 tick 内完成迁移，`completeSchedulerOwnershipMigration` 显式调用可正常完成
-- `world_engine_pack_host_api_read_surface` / `world_pack_projection_flow` — pre-existing `packStorageAdapter` mock 缺失，与本次 scheduler 迁移无关
-- `agent-scheduler` / `death-note-memory-loop` / `scheduler-multi-worker-partitioning` — 少量测试用例的 BigInt 序列化 / 断言逻辑为 pre-existing 问题
-- `ARCH_DIAGRAM.md` 图更新 ✅ (2026-04-30)
+| `ARCH_DIAGRAM.md` 图更新 | ✅ | 视觉改动，单独处理 |

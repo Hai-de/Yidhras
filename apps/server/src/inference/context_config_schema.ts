@@ -12,8 +12,6 @@ const variableLayerConfigSchema = z
 
 const variableContextConfigSchema = z
   .object({
-    alias_precedence: z.array(z.string()).optional(),
-    strict_namespace: z.boolean().optional(),
     layers: z.record(z.string(), variableLayerConfigSchema).optional()
   })
   .strict();

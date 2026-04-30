@@ -78,7 +78,7 @@ const createReadonlyContext = (context: AppContext): ReadonlyPluginContext => ({
 const createPackScopedContext = (context: AppContext): PackScopedPluginContext => ({
   ...createReadonlyContext(context),
   getHttpApp: () => context.getHttpApp?.() ?? null,
-  getRuntimeReady: () => context.sim.isRuntimeReady(),
+  getRuntimeReady: () => context.isRuntimeReady!(),
   assertRuntimeReady: feature => context.assertRuntimeReady(feature),
   startupHealth: context.startupHealth
 });

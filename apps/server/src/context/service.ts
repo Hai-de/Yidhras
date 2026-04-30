@@ -153,8 +153,7 @@ export const createContextService = ({
         nodes: policySelection.nodes,
         selected_node_ids: policySelection.nodes.map(node => node.id),
         diagnostics: {
-          ...diagnosticsBase,
-          compatibility: undefined
+          ...diagnosticsBase
         }
       };
 

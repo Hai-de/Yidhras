@@ -70,12 +70,7 @@ export const runtimeStatusDataSchema = z.object({
       license: z.string().optional(),
       homepage: z.string().optional(),
       repository: z.string().optional(),
-      tags: z.array(z.string()).optional(),
-      compatibility: z.object({
-        yidhras: z.string().optional(),
-        schema_version: z.string().optional(),
-        notes: z.string().optional()
-      }).optional()
+      tags: z.array(z.string()).optional()
     })
     .nullable(),
   has_error: z.boolean(),

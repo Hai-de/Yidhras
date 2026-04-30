@@ -14,12 +14,6 @@ export interface RuntimeWorldAuthor {
   homepage?: string
 }
 
-export interface RuntimeWorldCompatibility {
-  yidhras?: string
-  schema_version?: string
-  notes?: string
-}
-
 export interface RuntimeWorldMetadata {
   id: string
   name: string
@@ -30,7 +24,6 @@ export interface RuntimeWorldMetadata {
   homepage?: string
   repository?: string
   tags?: string[]
-  compatibility?: RuntimeWorldCompatibility
   /**
    * Stable provider-owned runtime theme contract.
    */

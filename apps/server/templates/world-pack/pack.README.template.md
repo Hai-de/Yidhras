@@ -8,7 +8,6 @@
 - Version：`{{PACK_VERSION}}`
 - 题材：{{PACK_GENRE}}
 - 当前状态：{{PACK_STATUS}}
-- 兼容的 Yidhras 版本：{{YIDHRAS_COMPATIBILITY}}
 - 许可证：{{PACK_LICENSE}}
 
 ## 世界前提

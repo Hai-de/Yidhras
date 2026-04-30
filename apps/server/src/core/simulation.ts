@@ -12,8 +12,7 @@ import type {
 import { ChronosEngine } from '../clock/engine.js';
 import {
   getRuntimeConfig,
-  getWorldPacksDir,
-  isExperimentalMultiPackRuntimeEnabled
+  getWorldPacksDir
 } from '../config/runtime_config.js';
 import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
 import { PackManifestLoader, type WorldPack } from '../packs/manifest/loader.js';
@@ -39,7 +38,6 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
   private readonly runtimeSpeed: RuntimeSpeedPolicy;
   private readonly packsDir: string;
   private readonly packRuntimeRegistry: PackRuntimeRegistry;
-  private readonly experimentalPackRuntimeEnabled: boolean;
   private readonly runtimeBootstrap: RuntimeDatabaseBootstrap;
   private readonly packCatalogService: DefaultPackCatalogService;
   private readonly activePackRuntimeFacade: DefaultActivePackRuntimeFacade;
@@ -60,7 +58,6 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
     });
     this.runtimeSpeed = new RuntimeSpeedPolicy(1n);
     this.packRuntimeRegistry = new InMemoryPackRuntimeRegistry();
-    this.experimentalPackRuntimeEnabled = isExperimentalMultiPackRuntimeEnabled();
     this.runtimeBootstrap = new PrismaRuntimeDatabaseBootstrap({
       prisma: this.prisma
     });
@@ -188,10 +185,6 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
 
   public getPackRuntimeRegistry(): PackRuntimeRegistry {
     return this.packRuntimeRegistryService.getRegistry();
-  }
-
-  public isExperimentalMultiPackRuntimeEnabled(): boolean {
-    return this.experimentalPackRuntimeEnabled;
   }
 
   public listLoadedPackRuntimeIds(): string[] {

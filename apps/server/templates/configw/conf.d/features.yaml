@@ -4,8 +4,4 @@ features:
   inference_trace: true
   notifications: true
   experimental:
-    multi_pack_runtime:
-      enabled: false
-      operator_api_enabled: false
-      ui_enabled: false
     prompt_slot_permissions: false

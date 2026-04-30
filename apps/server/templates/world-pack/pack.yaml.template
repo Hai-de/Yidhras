@@ -9,10 +9,6 @@ metadata:
   homepage: "{{PACK_HOMEPAGE}}"
   repository: "{{PACK_REPOSITORY}}"
   tags: {{PACK_TAGS_INLINE_YAML}}
-  compatibility:
-    yidhras: "{{YIDHRAS_COMPATIBILITY}}"
-    schema_version: "world-pack/v1"
-    notes: "{{PACK_COMPATIBILITY_NOTES}}"
   published_at: "{{PACK_PUBLISHED_AT}}"
   status: "{{PACK_STATUS}}"
 

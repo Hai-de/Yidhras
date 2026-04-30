@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   getDatabaseConfig,
-  getExperimentalMultiPackRuntimeConfig,
   getMemoryTriggerEngineConfig,
   getRuntimeConfig,
   getRuntimeMultiPackConfig,
@@ -20,8 +19,6 @@ import {
   getSimulationLoopIntervalMs,
   getWorldEngineConfig,
   isAiGatewayEnabled,
-  isExperimentalMultiPackOperatorApiEnabled,
-  isExperimentalMultiPackRuntimeEnabled,
   resetRuntimeConfigCache
 } from '../../src/config/runtime_config.js';
 
@@ -189,10 +186,7 @@ const defaultYamlBase = [
   '  inference_trace: true',
   '  notifications: true',
   '  experimental:',
-  '    multi_pack_runtime:',
-  '      enabled: false',
-  '      operator_api_enabled: false',
-  '      ui_enabled: false'
+  '    prompt_slot_permissions: false'
 ].join('\n') + '\n';
 
 afterEach(async () => {
@@ -320,14 +314,7 @@ describe('runtime config YAML migration', () => {
       start_mode: 'manual',
       bootstrap_packs: ['death_note', 'test_pack']
     });
-    expect(getExperimentalMultiPackRuntimeConfig()).toMatchObject({
-      enabled: false,
-      operator_api_enabled: false,
-      ui_enabled: false
-    });
     expect(isAiGatewayEnabled()).toBe(false);
-    expect(isExperimentalMultiPackRuntimeEnabled()).toBe(false);
-    expect(isExperimentalMultiPackOperatorApiEnabled()).toBe(false);
     expect(config.prompt_workflow.profiles.agent_decision_default).toMatchObject({
       token_budget: 2600,
       section_policy: 'expanded'
@@ -436,13 +423,6 @@ describe('runtime config YAML migration', () => {
       start_mode: 'bootstrap_list',
       bootstrap_packs: ['death_note', 'test_pack']
     });
-    expect(getExperimentalMultiPackRuntimeConfig()).toMatchObject({
-      enabled: true,
-      operator_api_enabled: true,
-      ui_enabled: false
-    });
-    expect(isExperimentalMultiPackRuntimeEnabled()).toBe(true);
-    expect(isExperimentalMultiPackOperatorApiEnabled()).toBe(true);
   });
 
   it('allows AI gateway to be re-enabled via environment override', async () => {

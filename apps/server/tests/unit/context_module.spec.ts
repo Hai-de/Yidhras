@@ -126,7 +126,7 @@ const buildContext = (): AppContext => {
   return {
     repos,
     prisma,
-  sim: { getCurrentTick() { return 1000n; } } as AppContext['sim'],
+  clock: { getCurrentTick() { return 1000n; } } as AppContext['clock'],
   notifications: {
     push(level, content) { return { id: 'noop', level, content, timestamp: Date.now() }; },
     getMessages() { return []; },
@@ -296,11 +296,6 @@ describe('context module service', () => {
     expect(result.context_run.diagnostics.submitted_directives).toEqual([]);
     expect(result.context_run.diagnostics.approved_directives).toEqual([]);
     expect(result.context_run.diagnostics.denied_directives).toEqual([]);
-  });
-
-  it('reports no compatibility field in diagnostics', async () => {
-    const result = await runContextBuild();
-    expect(result.context_run.diagnostics.compatibility).toBeUndefined();
   });
 
   it('tracks policy summary in selected node summaries', async () => {

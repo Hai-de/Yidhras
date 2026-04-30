@@ -57,12 +57,8 @@ const createContext = (): AppContext => {
   return {
     repos,
     prisma: mockPrisma,
-    sim: {
-      getCurrentTick: () => 1n,
-      getAllTimes: () => [{ calendar_id: 'fallback', display: 'fallback-time', units: {} }],
-      isRuntimeReady: () => true,
-      isPaused: () => false
-    } as never,
+    isRuntimeReady: () => true,
+    isPaused: () => false,
     clock: {
       getCurrentTick: () => 1n
     } as AppContext['clock'],

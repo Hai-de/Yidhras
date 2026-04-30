@@ -58,7 +58,6 @@ const extractPromptWorkflowSnapshot = (event: InferenceTraceEvent): PromptWorkfl
     selected_step_keys: toStringArray(promptWorkflow.selected_step_keys),
     placement_summary: toPlacementSummary(promptWorkflow.placement_summary),
     section_summary: isRecord(promptWorkflow.section_summary) ? promptWorkflow.section_summary : null,
-    compatibility: isRecord(promptWorkflow.compatibility) ? promptWorkflow.compatibility : null,
     step_traces: Array.isArray(promptWorkflow.step_traces) ? (promptWorkflow.step_traces as PromptWorkflowSnapshot['step_traces']) : []
   };
 };

@@ -48,9 +48,10 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/runs/latest',
     observeGuard(context),
-    deps.asyncHandler(async (_req, res) => {
+    deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler latest run')
-      const readModel = await getLatestSchedulerRunReadModel(context)
+      const packId = req.query.packId as string | undefined
+      const readModel = await getLatestSchedulerRunReadModel(context, packId)
       jsonOk(res, toJsonSafe(readModel))
     })
   )
@@ -68,7 +69,8 @@ export const registerSchedulerRoutes = (
         from_tick: query.from_tick,
         to_tick: query.to_tick,
         worker_id: query.worker_id,
-        partition_id: query.partition_id
+        partition_id: query.partition_id,
+        pack_id: query.pack_id
       })
       jsonOk(
         res,
@@ -91,7 +93,8 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler summary')
       const query = parseQuery(schedulerSummaryQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
-      const runtimeKernel = createRuntimeKernelService(context)
+      const packId = req.query.packId as string
+      const runtimeKernel = createRuntimeKernelService(context, packId)
       const summary = await runtimeKernel.getSummary?.({
         sampleRuns: query.sample_runs
       })
@@ -107,7 +110,8 @@ export const registerSchedulerRoutes = (
       context.assertRuntimeReady('scheduler trends')
       const query = parseQuery(schedulerTrendsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       const trends = getSchedulerTrendsSnapshot(context, {
-        sampleRuns: query.sample_runs
+        sampleRuns: query.sample_runs,
+        packId: query.pack_id
       })
       jsonOk(res, toJsonSafe(trends))
     })
@@ -120,7 +124,8 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler operator projection')
       const query = parseQuery(schedulerOperatorQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
-      const runtimeKernel = createRuntimeKernelService(context)
+      const packId = req.query.packId as string
+      const runtimeKernel = createRuntimeKernelService(context, packId)
       const projection = await runtimeKernel.getOperatorProjection?.({
         sampleRuns: query.sample_runs,
         recentLimit: query.recent_limit
@@ -136,7 +141,8 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler ownership projection')
       const query = parseQuery(schedulerOwnershipQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
-      const runtimeKernel = createRuntimeKernelService(context)
+      const packId = req.query.packId as string
+      const runtimeKernel = createRuntimeKernelService(context, packId)
       const result = await runtimeKernel.getOwnershipAssignments?.({
         worker_id: query.worker_id,
         partition_id: query.partition_id,
@@ -157,7 +163,8 @@ export const registerSchedulerRoutes = (
         limit: query.limit,
         worker_id: query.worker_id,
         partition_id: query.partition_id,
-        status: query.status
+        status: query.status,
+        pack_id: query.pack_id
       })
       jsonOk(res, toJsonSafe(result))
     })
@@ -170,7 +177,8 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler worker runtime states')
       const query = parseQuery(schedulerWorkersQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
-      const runtimeKernel = createRuntimeKernelService(context)
+      const packId = req.query.packId as string
+      const runtimeKernel = createRuntimeKernelService(context, packId)
       const result = await runtimeKernel.getWorkers?.({
         worker_id: query.worker_id,
         status: query.status
@@ -191,7 +199,8 @@ export const registerSchedulerRoutes = (
         worker_id: query.worker_id,
         partition_id: query.partition_id,
         status: query.status,
-        suppress_reason: query.suppress_reason
+        suppress_reason: query.suppress_reason,
+        pack_id: query.pack_id
       })
       jsonOk(res, toJsonSafe(result))
     })
@@ -204,7 +213,8 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler run read')
       const params = parseParams(schedulerRunIdParamsSchema, req.params, 'SCHEDULER_QUERY_INVALID')
-      const readModel = await getSchedulerRunReadModelById(context, params.id)
+      const packId = req.query.packId as string | undefined
+      const readModel = await getSchedulerRunReadModelById(context, params.id, packId)
       jsonOk(res, toJsonSafe(readModel))
     })
   )
@@ -225,7 +235,8 @@ export const registerSchedulerRoutes = (
         skipped_reason: query.skipped_reason,
         from_tick: query.from_tick,
         to_tick: query.to_tick,
-        partition_id: query.partition_id
+        partition_id: query.partition_id,
+        pack_id: query.pack_id
       })
       jsonOk(
         res,
@@ -250,7 +261,8 @@ export const registerSchedulerRoutes = (
       // eslint-disable-next-line @typescript-eslint/require-await
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('agent scheduler decisions')
-      const decisions = listAgentSchedulerDecisions(context, req.params.id)
+      const packId = req.query.packId as string | undefined
+      const decisions = listAgentSchedulerDecisions(context, req.params.id, undefined, packId)
       jsonOk(res, toJsonSafe(decisions))
     })
   )

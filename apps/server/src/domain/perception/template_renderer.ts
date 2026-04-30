@@ -1,5 +1,5 @@
 import { renderNarrativeTemplate } from '../../narrative/resolver.js';
-import type { PromptVariableContext, VariablePool } from '../../narrative/types.js';
+import type { PromptVariableContext, PromptVariableRecord } from '../../narrative/types.js';
 import {
   createPromptVariableContext,
   createPromptVariableLayer,
@@ -9,8 +9,8 @@ import type { PermissionContext } from '../../permission/types.js';
 
 export const renderTemplateWithVisibleVariables = (
   template: string,
-  visibleVariables: VariablePool,
-  extraContext: VariablePool = {},
+  visibleVariables: PromptVariableRecord,
+  extraContext: PromptVariableRecord = {},
   permission?: PermissionContext
 ): string => {
   const variableContext = createPromptVariableContext({

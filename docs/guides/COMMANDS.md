@@ -115,7 +115,7 @@ scheduler:
   lease_ticks: 5
 ```
 
-experimental multi-pack runtime 默认关闭，仅 operator / test-only；架构边界见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。
+多包运行时默认启用，架构边界见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。
 
 ## 3. Server 命令
 
@@ -213,15 +213,7 @@ pnpm --filter yidhras-server dev
 
 多包 runtime 当前为 **experimental / default off / operator test-only**。架构边界与约束见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。
 
-启用方式：
-
-```bash
-EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED=true \
-EXPERIMENTAL_MULTI_PACK_RUNTIME_OPERATOR_API_ENABLED=true \
-pnpm --filter yidhras-server dev
-```
-
-或在 YAML 中设置 `features.experimental.multi_pack_runtime.*` 与 `runtime.multi_pack.*`。
+多包运行时通过 `runtime.multi_pack.*` 配置，详见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。
 
 ### 3.6 配置备份管理
 

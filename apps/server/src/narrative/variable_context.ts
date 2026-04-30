@@ -1,6 +1,5 @@
 import type {
   PromptMacroDiagnostics,
-  PromptVariableAliasNamespace,
   PromptVariableContext,
   PromptVariableContextSummary,
   PromptVariableLayer,
@@ -9,24 +8,15 @@ import type {
   PromptVariableResolutionMode,
   PromptVariableResolutionTrace,
   PromptVariableValue,
-  PromptVariableValueType,
-  VariablePool,
-  VariableValue
+  PromptVariableValueType
 } from './types.js';
-import { DEFAULT_PROMPT_VARIABLE_ALIAS_PRECEDENCE } from './types.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 };
 
-const isPromptVariableAliasNamespace = (value: string): value is PromptVariableAliasNamespace => {
-  return (DEFAULT_PROMPT_VARIABLE_ALIAS_PRECEDENCE as readonly string[]).includes(value);
-};
-
 export const DEFAULT_PROMPT_VARIABLE_CONTEXT: PromptVariableContext = {
-  layers: [],
-  alias_precedence: [...DEFAULT_PROMPT_VARIABLE_ALIAS_PRECEDENCE],
-  strict_namespace: false
+  layers: []
 };
 
 export const createPromptVariableLayer = (input: {
@@ -41,16 +31,9 @@ export const createPromptVariableLayer = (input: {
   metadata: input.metadata
 });
 
-export const createPromptVariableContext = (input?: Partial<PromptVariableContext>): PromptVariableContext => {
-  const aliasPrecedence = (input?.alias_precedence ?? DEFAULT_PROMPT_VARIABLE_ALIAS_PRECEDENCE)
-    .filter(isPromptVariableAliasNamespace);
-
-  return {
-    layers: input?.layers ? [...input.layers] : [],
-    alias_precedence: aliasPrecedence.length > 0 ? aliasPrecedence : [...DEFAULT_PROMPT_VARIABLE_ALIAS_PRECEDENCE],
-    strict_namespace: input?.strict_namespace ?? false
-  };
-};
+export const createPromptVariableContext = (input?: Partial<PromptVariableContext>): PromptVariableContext => ({
+  layers: input?.layers ? [...input.layers] : []
+});
 
 const toPromptVariableValue = (value: unknown): PromptVariableValue => {
   if (value === null) {
@@ -79,39 +62,24 @@ export const createPromptVariableContextSummary = (
   context: PromptVariableContext
 ): PromptVariableContextSummary => ({
   namespaces: context.layers.map(layer => layer.namespace),
-  alias_precedence: [...context.alias_precedence],
-  strict_namespace: context.strict_namespace,
   layer_count: context.layers.length
 });
 
 export const flattenPromptVariableContextToVisibleVariables = (
   context: PromptVariableContext
-): VariablePool => {
-  const result: Record<string, VariableValue> = {};
+): PromptVariableRecord => {
+  const result: PromptVariableRecord = {};
 
   for (const layer of context.layers) {
     for (const [key, value] of Object.entries(layer.alias_values ?? {})) {
       if (!(key in result)) {
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
-        result[key] = toLegacyVariableValue(value);
+        // eslint-disable-next-line security/detect-object-injection
+        result[key] = value;
       }
     }
   }
 
   return result;
-};
-
-const toLegacyVariableValue = (value: PromptVariableValue): VariableValue => {
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    return value;
-  }
-  if (Array.isArray(value)) {
-    return JSON.stringify(value);
-  }
-  if (value === null) {
-    return 'null';
-  }
-  return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, toLegacyVariableValue(entry)]));
 };
 
 export const detectPromptVariableValueType = (value: unknown): PromptVariableValueType => {
@@ -163,7 +131,7 @@ const getValueAtPath = (path: string, value: unknown): unknown => {
 
   return path.split('.').reduce<unknown>((current, segment) => {
     if (isRecord(current) && segment in current) {
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+      // eslint-disable-next-line security/detect-object-injection
       return current[segment];
     }
     return undefined;
@@ -269,35 +237,13 @@ export const lookupPromptVariable = (input: {
     };
   }
 
-  for (const namespace of input.context.alias_precedence) {
-    const layer = getLayerByNamespace(input.context, namespace);
-    const resolved = layer ? getValueAtPath(input.path, layer.alias_values ?? {}) : undefined;
-    if (resolved !== undefined) {
-      return {
-        value: resolved,
-        trace: {
-          expression: input.expression,
-          requested_path: input.path,
-          resolution_mode: 'alias_fallback',
-          resolved: true,
-          resolved_layer: namespace,
-          resolved_path: input.path,
-          fallback_applied: true,
-          value_preview: previewPromptVariableValue(resolved),
-          value_type: detectPromptVariableValueType(resolved)
-        }
-      };
-    }
-  }
-
   return {
     value: undefined,
     trace: {
       expression: input.expression,
       requested_path: input.path,
-      resolution_mode: 'alias_fallback',
+      resolution_mode: 'namespaced',
       resolved: false,
-      fallback_applied: false,
       missing: true
     }
   };
@@ -315,7 +261,6 @@ export const mergePromptMacroDiagnostics = (
     missing_paths: Array.from(new Set([...left.missing_paths, ...right.missing_paths])),
     restricted_paths: Array.from(new Set([...left.restricted_paths, ...right.restricted_paths])),
     blocks: [...(left.blocks ?? []), ...(right.blocks ?? [])],
-    alias_fallback_count: (left.alias_fallback_count ?? 0) + (right.alias_fallback_count ?? 0),
     namespaces_used: Array.from(namespaces),
     output_length: right.output_length ?? left.output_length
   };
@@ -336,15 +281,9 @@ export const buildEmptyPromptMacroDiagnostics = (templateSource?: string): Promp
   missing_paths: [],
   restricted_paths: [],
   blocks: [],
-  alias_fallback_count: 0,
   namespaces_used: [],
   output_length: 0
 });
-
-export const normalizeAliasPrecedence = (values?: string[]): PromptVariableAliasNamespace[] => {
-  const resolved = (values ?? DEFAULT_PROMPT_VARIABLE_ALIAS_PRECEDENCE).filter(isPromptVariableAliasNamespace);
-  return resolved.length > 0 ? resolved : [...DEFAULT_PROMPT_VARIABLE_ALIAS_PRECEDENCE];
-};
 
 export const resolvePromptVariableResolutionMode = (
   path: string,
@@ -353,5 +292,5 @@ export const resolvePromptVariableResolutionMode = (
   if (getValueAtPath(path, localScope ?? {}) !== undefined) {
     return 'local';
   }
-  return splitNamespacePath(path) ? 'namespaced' : 'alias_fallback';
+  return 'namespaced';
 };

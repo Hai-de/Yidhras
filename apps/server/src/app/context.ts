@@ -3,7 +3,6 @@ import type { Express } from 'express';
 
 import type { ActivePackProvider } from '../core/active_pack_provider.js';
 import type { ClockProvider } from '../core/clock_provider.js';
-import type { SimulationManager } from '../core/simulation.js';
 import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
 import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
 import type { SchedulerStorageAdapter } from '../packs/storage/SchedulerStorageAdapter.js';
@@ -69,16 +68,19 @@ export interface AppInfrastructure extends RuntimeSource {
 
 export interface AppContext extends AppInfrastructure, AppContextPorts {
   /**
-   * SimulationManager — compatibility facade. Prefer focused ports or
-   * `packScope` for pack-scoped resolution.
-   */
-  readonly sim: SimulationManager;
-
-  /**
    * PackScopeResolver — preferred path for pack-scoped context resolution.
-   * Replaces the deprecated singleton fields (clock, activePack, paused).
    */
   readonly packScope?: PackScopeResolver;
+
+  // Lifecycle / runtime methods
+  isRuntimeReady?(): boolean;
+  setRuntimeReady?(ready: boolean): void;
+  isPaused?(): boolean;
+  setPaused?(paused: boolean): void;
+  getPackRuntimeHandle?(packId: string): import('../core/pack_runtime_handle.js').PackRuntimeHandle | null;
+  getPackRuntimeHost?(packId: string): import('../core/pack_runtime_host.js').PackRuntimeHost | null;
+  listLoadedPackRuntimeIds?(): string[];
+  applyClockProjection?(snapshot: import('./runtime/runtime_clock_projection.js').RuntimeClockProjectionSnapshot): void;
 
   getRuntimeLoopDiagnostics?(): RuntimeLoopDiagnostics;
   setRuntimeLoopDiagnostics?(next: RuntimeLoopDiagnostics): void;

@@ -123,7 +123,7 @@ Prisma 连接数据库所必需。默认值见 `apps/server/.env`：`file:../../
 
 配置优先级链的事实源与完整字段说明见 [`ARCH.md`](../ARCH.md) 第 2.4 节。简要结论：**env > yaml > code default**。
 
-与数据库 / runtime 稳定性直接相关的 config 字段包括路径、SQLite pragma、scheduler 策略等；experimental multi-pack runtime 的配置与启用约束见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。
+与数据库 / runtime 稳定性直接相关的 config 字段包括路径、SQLite pragma、scheduler 策略等；多包运行时的配置见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。
 
 影响范围简述：
 

@@ -29,7 +29,6 @@ const normalizePromptWorkflow = (value: unknown) => {
   const record = toRecord(value);
   record.selected_step_keys = Array.isArray(record.selected_step_keys) ? record.selected_step_keys : [];
   record.step_traces = Array.isArray(record.step_traces) ? record.step_traces : [];
-  record.compatibility = isRecord(record.compatibility) ? toRecord(record.compatibility) : null;
   record.placement_summary = isRecord(record.placement_summary) ? toRecord(record.placement_summary) : null;
   record.section_summary = isRecord(record.section_summary) ? toRecord(record.section_summary) : null;
   return record;

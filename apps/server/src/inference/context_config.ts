@@ -170,30 +170,6 @@ const parseNumberEnv = (name: string, value: string | undefined): number | undef
   return parsed;
 };
 
-const parseBooleanEnv = (name: string, value: string | undefined): boolean | undefined => {
-  if (value === undefined) {
-    return undefined;
-  }
-  const normalized = value.trim().toLowerCase();
-  if (normalized.length === 0) {
-    return undefined;
-  }
-  switch (normalized) {
-    case '1':
-    case 'true':
-    case 'yes':
-    case 'on':
-      return true;
-    case '0':
-    case 'false':
-    case 'no':
-    case 'off':
-      return false;
-    default:
-      throw new Error(`[inference_context_config] env ${name} invalid boolean: ${value}`);
-  }
-};
-
 const buildEnvironmentOverrides = (): Record<string, unknown> => {
   const snrFallback = parseNumberEnv('ICC_SNR_FALLBACK', process.env.ICC_SNR_FALLBACK);
   const fragileSnr = parseNumberEnv('ICC_FRAGILE_SNR', process.env.ICC_FRAGILE_SNR);
@@ -203,11 +179,6 @@ const buildEnvironmentOverrides = (): Record<string, unknown> => {
     process.env.ICC_BEST_EFFORT_DROP_CHANCE
   );
   const reliableDropChance = parseNumberEnv('ICC_RELIABLE_DROP_CHANCE', process.env.ICC_RELIABLE_DROP_CHANCE);
-  const strictNamespace = parseBooleanEnv(
-    'ICC_POLICY_STRICT_NAMESPACE',
-    process.env.ICC_POLICY_STRICT_NAMESPACE
-  );
-
   const overrides: Record<string, unknown> = {};
 
   if (
@@ -229,12 +200,6 @@ const buildEnvironmentOverrides = (): Record<string, unknown> => {
             }
           }
         : {})
-    };
-  }
-
-  if (strictNamespace !== undefined) {
-    overrides.variable_context = {
-      strict_namespace: strictNamespace
     };
   }
 
@@ -359,8 +324,6 @@ export const buildInferenceContextConfigSnapshot = (): Record<string, unknown> =
   return {
     config_version: config.config_version,
     variable_layers_count: Object.keys(config.variable_context?.layers ?? {}).length,
-    variable_alias_precedence: config.variable_context?.alias_precedence ?? [],
-    variable_strict_namespace: config.variable_context?.strict_namespace ?? false,
     transmission_snr_fallback: config.transmission_profile?.defaults?.snr_fallback ?? 0.5,
     transmission_fragile_snr: config.transmission_profile?.thresholds?.fragile_snr ?? 0.3,
     transmission_fragile_drop: config.transmission_profile?.drop_chances?.fragile ?? 0.35,

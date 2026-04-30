@@ -8,6 +8,19 @@ import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerS
 // data setup that runtime functions can read back.
 // ---------------------------------------------------------------------------
 
+const compareValues = (a: unknown, b: unknown): number => {
+  if (typeof a === 'bigint' && typeof b === 'bigint') {
+    return a < b ? -1 : a > b ? 1 : 0;
+  }
+  if (typeof a === 'number' && typeof b === 'number') {
+    return a - b;
+  }
+  if (typeof a === 'string' && typeof b === 'string') {
+    return a < b ? -1 : a > b ? 1 : 0;
+  }
+  return String(a).localeCompare(String(b));
+};
+
 interface MemRun {
   id: string;
   worker_id: string;
@@ -608,7 +621,7 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     const candidateReasons = Array.isArray(input.candidate_reasons)
       ? JSON.stringify(input.candidate_reasons)
       : String(input.candidate_reasons ?? '[]');
-    this.decisions.get(packId)!.push({ ...input, candidate_reasons: candidateReasons } as unknown as MemDecision);
+    this.decisions.get(packId)!.push({ ...input, scheduler_run_id: _schedulerRunId, candidate_reasons: candidateReasons } as unknown as MemDecision);
     return input;
   }
 
@@ -628,13 +641,13 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     if (input.orderBy) {
       for (const [key, dir] of Object.entries(input.orderBy)) {
         items.sort((a, b) => {
-          const av = (a as Record<string, unknown>)[key] as number;
-          const bv = (b as Record<string, unknown>)[key] as number;
-          return dir === 'desc' ? bv - av : av - bv;
+          const av = (a as Record<string, unknown>)[key];
+          const bv = (b as Record<string, unknown>)[key];
+          return dir === 'desc' ? compareValues(bv, av) : compareValues(av, bv);
         });
       }
     } else {
-      items.sort((a, b) => b.created_at - a.created_at);
+      items.sort((a, b) => compareValues(b.created_at, a.created_at));
     }
     if (input.take !== undefined) items = items.slice(0, input.take);
     return items as Array<Record<string, unknown>>;
@@ -656,9 +669,9 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     if (input.orderBy) {
       for (const [key, dir] of Object.entries(input.orderBy)) {
         items.sort((a, b) => {
-          const av = (a as Record<string, unknown>)[key] as number;
-          const bv = (b as Record<string, unknown>)[key] as number;
-          return dir === 'asc' ? av - bv : bv - av;
+          const av = (a as Record<string, unknown>)[key];
+          const bv = (b as Record<string, unknown>)[key];
+          return dir === 'asc' ? compareValues(av, bv) : compareValues(bv, av);
         });
       }
     }
@@ -667,7 +680,7 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
 
   getAgentDecisions(packId: string, actorId: string, limit?: number): Array<Record<string, unknown>> {
     let items = (this.decisions.get(packId) ?? []).filter(d => d.actor_id === actorId);
-    items.sort((a, b) => b.created_at - a.created_at);
+    items.sort((a, b) => compareValues(b.created_at, a.created_at));
     if (limit !== undefined) items = items.slice(0, limit);
     return items as Array<Record<string, unknown>>;
   }

@@ -219,7 +219,6 @@ export interface ContextRunDiagnostics {
   submitted_directives?: ContextDirectiveRequest[];
   approved_directives?: ContextApprovedDirective[];
   denied_directives?: ContextDeniedDirective[];
-  compatibility?: Record<string, unknown>;
   selected_node_summaries?: Array<{ id: string; node_type: string; source_kind: ContextNodeSourceKind; preferred_slot: PromptFragmentSlot | null }>;
   orchestration?: Record<string, unknown>;
   prompt_assembly?: ContextPromptAssemblySummary | null;

@@ -26,16 +26,16 @@ const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
 
 export interface RuntimeKernelService extends RuntimeKernelFacade, SchedulerObservationPort, SchedulerControlPort {}
 
-export const createRuntimeKernelService = (context: AppContext, _packId?: string): RuntimeKernelService => {
+export const createRuntimeKernelService = (context: AppContext, packId: string): RuntimeKernelService => {
   return {
     start() {
-      context.sim.setPaused(false);
+      context.setPaused?.(false);
     },
     stop() {
-      context.sim.setPaused(true);
+      context.setPaused?.(true);
     },
     isRunning() {
-      return context.sim.isPaused() === false;
+      return context.isPaused!() === false;
     },
     getLoopDiagnostics() {
       return context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
@@ -43,32 +43,32 @@ export const createRuntimeKernelService = (context: AppContext, _packId?: string
     getHealthSnapshot(): RuntimeKernelHealthSnapshot {
       const diagnostics = context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
       return {
-        runtime_ready: context.sim.isRuntimeReady(),
-        paused: context.sim.isPaused(),
+        runtime_ready: context.isRuntimeReady!(),
+        paused: context.isPaused!(),
         loop_status: diagnostics.status
       };
     },
     reconcileBootstrapOwnership(input) {
-      reconcileSchedulerBootstrapAssignments(context, input.schedulerWorkerId, input.schedulerPartitionIds, _packId);
+      reconcileSchedulerBootstrapAssignments(context, input.schedulerWorkerId, input.schedulerPartitionIds, packId);
     },
     getOwnershipSnapshot(input) {
       const workerId = input?.workerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
       return resolveSchedulerOwnershipSnapshot(context, {
         workerId,
         bootstrapPartitionIds: input?.partitionIds
-      }, _packId);
+      }, packId);
     },
     async getOwnershipAssignments(input) {
-      return listSchedulerOwnershipAssignments(context, input ?? {});
+      return listSchedulerOwnershipAssignments(context, { ...input ?? {}, pack_id: packId });
     },
     getWorkers(input) {
-      return listSchedulerWorkers(context, input ?? {});
+      return listSchedulerWorkers(context, { ...input ?? {}, pack_id: packId });
     },
     async getSummary(input) {
-      return getSchedulerSummarySnapshot(context, input);
+      return getSchedulerSummarySnapshot(context, { ...input, packId });
     },
     async getOperatorProjection(input) {
-      return getSchedulerOperatorProjection(context, input);
+      return getSchedulerOperatorProjection(context, { ...input, packId });
     }
   };
 };

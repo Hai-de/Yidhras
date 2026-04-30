@@ -58,7 +58,6 @@ import {
   getWorldEngineConfig,
   getWorldPacksDir,
   isAiGatewayEnabled,
-  isExperimentalMultiPackRuntimeEnabled,
   logRuntimeConfigSnapshot,
   resolveWorkspacePath,
   validateProductionSecrets
@@ -127,12 +126,19 @@ const appContext: AppContext = {
   prisma,
   packStorageAdapter,
   schedulerStorage,
-  sim,
   clock: sim,
   activePack: sim,
   runtimeBootstrap: sim,
   activePackRuntime: sim,
   packScope: packScopeResolver,
+  isRuntimeReady: () => sim.isRuntimeReady(),
+  setRuntimeReady: ready => sim.setRuntimeReady(ready),
+  isPaused: () => sim.isPaused(),
+  setPaused: paused => sim.setPaused(paused),
+  getPackRuntimeHandle: packId => sim.getPackRuntimeHandle(packId),
+  getPackRuntimeHost: packId => sim.getPackRuntimeRegistry().getHost(packId),
+  listLoadedPackRuntimeIds: () => sim.listLoadedPackRuntimeIds(),
+  applyClockProjection: snapshot => sim.applyClockProjection(snapshot),
   notifications,
   startupHealth,
   getRuntimeLoopDiagnostics: () => runtimeLoopDiagnostics,
@@ -272,7 +278,7 @@ const handleSimulationStepError = (err: unknown): void => {
     'SIM_STEP_ERR',
     details
   );
-  sim.setPaused(true);
+  appContext.setPaused?.(true);
   const latestDiagnostics = appContext.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
   appContext.setRuntimeLoopDiagnostics?.({
     ...latestDiagnostics,
@@ -283,7 +289,7 @@ const handleSimulationStepError = (err: unknown): void => {
 };
 
 const startSimulation = (): void => {
-  if (!sim.isRuntimeReady()) {
+  if (!appContext.isRuntimeReady?.()) {
     return;
   }
 
@@ -322,11 +328,6 @@ const start = async (): Promise<void> => {
     if (resetSummary) {
       appContext.notifications.push('info', '开发环境 runtime 观测数据已清理', 'DEV_RUNTIME_RESET', toJsonSafe(resetSummary) as Record<string, unknown>);
     }
-
-    await ensureSchedulerBootstrapOwnership(appContext, {
-      schedulerWorkerId,
-      schedulerPartitionIds
-    });
 
     if (startupHealth.level === 'fail') {
       sim.setRuntimeReady(false);
@@ -370,23 +371,26 @@ const start = async (): Promise<void> => {
         });
       }
       await syncActivePackPluginRuntime(appContext);
+      await ensureSchedulerBootstrapOwnership(appContext, {
+        packId: activePackId,
+        schedulerWorkerId,
+        schedulerPartitionIds
+      });
 
-      if (isExperimentalMultiPackRuntimeEnabled()) {
-        const multiPackConfig = getRuntimeMultiPackConfig();
-        if (multiPackConfig.start_mode === 'bootstrap_list' && multiPackConfig.bootstrap_packs.length > 0) {
-          logger.info(`bootstrap_list: loading ${String(multiPackConfig.bootstrap_packs.length)} pack(s): ${multiPackConfig.bootstrap_packs.join(', ')}`);
-          for (const packRef of multiPackConfig.bootstrap_packs) {
-            try {
-              const result = await sim.loadExperimentalPackRuntime(packRef);
-              if (result.loaded) {
-                logger.info(`bootstrap_list: loaded experimental pack ${packRef} (handle=${result.handle.pack_id})`);
-              } else if (result.already_loaded) {
-                logger.info(`bootstrap_list: pack ${packRef} already loaded, skipping`);
-              }
-            } catch (err) {
-              logger.error(`bootstrap_list: failed to load ${packRef}: ${getErrorMessage(err)}`);
-              startupHealth.errors.push(`bootstrap_list: failed to load ${packRef}: ${getErrorMessage(err)}`);
+      const multiPackConfig = getRuntimeMultiPackConfig();
+      if (multiPackConfig.start_mode === 'bootstrap_list' && multiPackConfig.bootstrap_packs.length > 0) {
+        logger.info(`bootstrap_list: loading ${String(multiPackConfig.bootstrap_packs.length)} pack(s): ${multiPackConfig.bootstrap_packs.join(', ')}`);
+        for (const packRef of multiPackConfig.bootstrap_packs) {
+          try {
+            const result = await appContext.packRuntimeControl!.load(packRef);
+            if (result.loaded) {
+              logger.info(`bootstrap_list: loaded pack ${packRef} (handle=${result.handle.pack_id})`);
+            } else if (result.already_loaded) {
+              logger.info(`bootstrap_list: pack ${packRef} already loaded, skipping`);
             }
+          } catch (err) {
+            logger.error(`bootstrap_list: failed to load ${packRef}: ${getErrorMessage(err)}`);
+            startupHealth.errors.push(`bootstrap_list: failed to load ${packRef}: ${getErrorMessage(err)}`);
           }
         }
       }

@@ -42,7 +42,6 @@ afterEach(async () => {
   delete process.env.ICC_FRAGILE_DROP_CHANCE;
   delete process.env.ICC_BEST_EFFORT_DROP_CHANCE;
   delete process.env.ICC_RELIABLE_DROP_CHANCE;
-  delete process.env.ICC_POLICY_STRICT_NAMESPACE;
 
   const { rm } = await import('node:fs/promises');
   for (const root of createdRoots.splice(0, createdRoots.length)) {
@@ -126,7 +125,6 @@ describe('inference context config', () => {
     process.env.ICC_FRAGILE_DROP_CHANCE = '0.6';
     process.env.ICC_BEST_EFFORT_DROP_CHANCE = '0.25';
     process.env.ICC_RELIABLE_DROP_CHANCE = '0.1';
-    process.env.ICC_POLICY_STRICT_NAMESPACE = 'true';
 
     const config = getInferenceContextConfig();
 
@@ -135,7 +133,6 @@ describe('inference context config', () => {
     expect(config.transmission_profile?.drop_chances?.fragile).toBe(0.6);
     expect(config.transmission_profile?.drop_chances?.best_effort).toBe(0.25);
     expect(config.transmission_profile?.drop_chances?.reliable).toBe(0.1);
-    expect(config.variable_context?.strict_namespace).toBe(true);
   });
 
   it('rejects invalid config_version via schema validation', () => {
@@ -162,8 +159,6 @@ describe('inference context config', () => {
     expect(snapshot).toMatchObject({
       config_version: 1,
       variable_layers_count: 6,
-      variable_alias_precedence: expect.any(Array),
-      variable_strict_namespace: expect.any(Boolean),
       transmission_snr_fallback: 0.5,
       transmission_fragile_snr: 0.3,
       transmission_fragile_drop: 0.35,

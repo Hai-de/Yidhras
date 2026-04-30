@@ -73,18 +73,6 @@ describe('prompt macro resolver', () => {
     expect(result.diagnostics.missing_paths).toEqual([]);
   });
 
-  it('applies alias precedence with request overriding actor alias', () => {
-    const result = renderNarrativeTemplate({
-      template: '别名命中：{{ actor_name }}',
-      variableContext: buildVariableContext(),
-      templateSource: 'unit.alias'
-    });
-
-    expect(result.text).toBe('别名命中：请求侧别名');
-    expect(result.diagnostics.alias_fallback_count).toBe(1);
-    expect(result.diagnostics.traces[0]?.resolved_layer).toBe('request');
-  });
-
   it('supports default fallback syntax', () => {
     const result = renderNarrativeTemplate({
       template: '称号：{{ actor.profile.title | default("unknown") }}',

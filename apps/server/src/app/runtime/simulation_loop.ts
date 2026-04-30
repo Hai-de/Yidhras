@@ -169,7 +169,7 @@ export const startSimulationLoop = ({
 
     const previous = getLoopDiagnostics(context);
     setLoopDiagnostics(context, buildLoopDiagnostics(previous, {
-      status: context.sim.isPaused() ? 'paused' : 'scheduled',
+      status: context.isPaused?.() ? 'paused' : 'scheduled',
       in_flight: false
     }));
 
@@ -183,7 +183,7 @@ export const startSimulationLoop = ({
       return;
     }
 
-    if (context.sim.isPaused()) {
+    if (context.isPaused?.()) {
       const previous = getLoopDiagnostics(context);
       setLoopDiagnostics(context, buildLoopDiagnostics(previous, {
         status: 'paused',

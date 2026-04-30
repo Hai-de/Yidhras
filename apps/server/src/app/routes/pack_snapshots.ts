@@ -85,15 +85,15 @@ export const registerPackSnapshotRoutes = (
       const params = parseParams(packIdParamsSchema, req.params, 'SNAPSHOT_CREATE_INVALID');
       const body = parseBody(createSnapshotRequestSchema, req.body, 'SNAPSHOT_CREATE_BODY_INVALID');
 
-      context.sim.setPaused(true);
+      context.setPaused?.(true);
 
       const getExperimentalTick = (packId: string): string | null => {
-        const handle = context.sim.getPackRuntimeHandle(packId);
+        const handle = context.getPackRuntimeHandle?.(packId);
         return handle?.getClockSnapshot().current_tick ?? null;
       };
 
       const getExperimentalRevision = (packId: string): string | null => {
-        const handle = context.sim.getPackRuntimeHandle(packId);
+        const handle = context.getPackRuntimeHandle?.(packId);
         return handle?.getClockSnapshot().current_tick ?? null;
       };
 
@@ -107,7 +107,7 @@ export const registerPackSnapshotRoutes = (
         getExperimentalRevision
       });
 
-      context.sim.setPaused(false);
+      context.setPaused?.(false);
 
       context.notifications.push(
         'info',
@@ -155,7 +155,7 @@ export const registerPackSnapshotRoutes = (
         throw new ApiError(400, 'PACK_ID_MISMATCH', 'Active pack does not match requested packId');
       }
 
-      context.sim.setPaused(true);
+      context.setPaused?.(true);
 
       const { restorePackSnapshot } = await import('../../packs/snapshots/snapshot_restore.js');
 
@@ -165,13 +165,13 @@ export const registerPackSnapshotRoutes = (
         prisma: context.prisma,
         packStorageAdapter: context.packStorageAdapter,
         pack,
-        sim: context.sim,
+        applyClockProjection: snapshot => context.applyClockProjection?.(snapshot),
         activePackRuntime: context.activePackRuntime,
         worldEngine: context.worldEngine,
         notifications: context.notifications
       });
 
-      context.sim.setPaused(false);
+      context.setPaused?.(false);
 
       jsonOk(res, {
         restored: true as const,
