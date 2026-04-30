@@ -58,10 +58,11 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/runs',
     observeGuard(context),
+      // eslint-disable-next-line @typescript-eslint/require-await
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler runs list')
       const query = parseQuery(schedulerRunsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
-      const result = await listSchedulerRuns(context, {
+      const result = listSchedulerRuns(context, {
         limit: query.limit,
         cursor: query.cursor,
         from_tick: query.from_tick,
@@ -86,6 +87,7 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/summary',
     observeGuard(context),
+      // eslint-disable-next-line @typescript-eslint/require-await
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler summary')
       const query = parseQuery(schedulerSummaryQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
@@ -100,10 +102,11 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/trends',
     observeGuard(context),
+      // eslint-disable-next-line @typescript-eslint/require-await
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler trends')
       const query = parseQuery(schedulerTrendsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
-      const trends = await getSchedulerTrendsSnapshot(context, {
+      const trends = getSchedulerTrendsSnapshot(context, {
         sampleRuns: query.sample_runs
       })
       jsonOk(res, toJsonSafe(trends))
@@ -113,6 +116,7 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/operator',
     observeGuard(context),
+      // eslint-disable-next-line @typescript-eslint/require-await
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler operator projection')
       const query = parseQuery(schedulerOperatorQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
@@ -128,6 +132,7 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/ownership',
     observeGuard(context),
+      // eslint-disable-next-line @typescript-eslint/require-await
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler ownership projection')
       const query = parseQuery(schedulerOwnershipQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
@@ -144,10 +149,11 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/migrations',
     observeGuard(context),
+      // eslint-disable-next-line @typescript-eslint/require-await
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler ownership migrations')
       const query = parseQuery(schedulerMigrationsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
-      const result = await listSchedulerOwnershipMigrations(context, {
+      const result = listSchedulerOwnershipMigrations(context, {
         limit: query.limit,
         worker_id: query.worker_id,
         partition_id: query.partition_id,
@@ -160,6 +166,7 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/workers',
     observeGuard(context),
+      // eslint-disable-next-line @typescript-eslint/require-await
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler worker runtime states')
       const query = parseQuery(schedulerWorkersQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
@@ -175,10 +182,11 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/rebalance/recommendations',
     observeGuard(context),
+      // eslint-disable-next-line @typescript-eslint/require-await
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler rebalance recommendations')
       const query = parseQuery(schedulerRebalanceRecommendationsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
-      const result = await listSchedulerRebalanceRecommendations(context, {
+      const result = listSchedulerRebalanceRecommendations(context, {
         limit: query.limit,
         worker_id: query.worker_id,
         partition_id: query.partition_id,
@@ -192,6 +200,7 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/runs/:id',
     observeGuard(context),
+      // eslint-disable-next-line @typescript-eslint/require-await
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler run read')
       const params = parseParams(schedulerRunIdParamsSchema, req.params, 'SCHEDULER_QUERY_INVALID')
@@ -203,6 +212,7 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/decisions',
     observeGuard(context),
+      // eslint-disable-next-line @typescript-eslint/require-await
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler decisions list')
       const query = parseQuery(schedulerDecisionsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
@@ -237,9 +247,10 @@ export const registerSchedulerRoutes = (
       packIdQuery: 'packId',
       targetAgentIdParam: 'id'
     }),
+      // eslint-disable-next-line @typescript-eslint/require-await
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('agent scheduler decisions')
-      const decisions = await listAgentSchedulerDecisions(context, req.params.id)
+      const decisions = listAgentSchedulerDecisions(context, req.params.id)
       jsonOk(res, toJsonSafe(decisions))
     })
   )

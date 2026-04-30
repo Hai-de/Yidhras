@@ -7,6 +7,7 @@ import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { capabilityGuard } from '../middleware/capability.js'
+import { createRuntimeKernelService } from '../runtime/runtime_kernel_service.js'
 import { getPackRuntimeLookupPort } from '../services/app_context_ports.js'
 import {
   buildExperimentalPackRuntimeRegistrySnapshot,
@@ -15,12 +16,6 @@ import {
   loadExperimentalPackRuntime,
   unloadExperimentalPackRuntime
 } from '../services/experimental_multi_pack_runtime.js'
-import {
-  getExperimentalPackSchedulerOperatorProjection,
-  getExperimentalPackSchedulerOwnershipProjection,
-  getExperimentalPackSchedulerSummaryProjection,
-  getExperimentalPackSchedulerWorkersProjection
-} from '../services/experimental_scheduler_runtime.js'
 import { assertPackScope } from '../services/pack_scope_resolver.js'
 
 export interface ExperimentalRuntimeRouteDependencies {
@@ -244,7 +239,8 @@ export const registerExperimentalRuntimeRoutes = (
       assertExperimentalOperatorApiEnabled(context)
       const packId = resolvePackIdParam(req.params.packId)
       requireExperimentalPackHandle(context, packId)
-      jsonOk(res, toJsonSafe(await getExperimentalPackSchedulerSummaryProjection(context, packId)))
+      const kernel = createRuntimeKernelService(context, packId)
+      jsonOk(res, toJsonSafe(await kernel.getSummary?.({})))
     })
   )
 
@@ -256,7 +252,8 @@ export const registerExperimentalRuntimeRoutes = (
       assertExperimentalOperatorApiEnabled(context)
       const packId = resolvePackIdParam(req.params.packId)
       requireExperimentalPackHandle(context, packId)
-      jsonOk(res, toJsonSafe(await getExperimentalPackSchedulerOwnershipProjection(context, packId)))
+      const kernel = createRuntimeKernelService(context, packId)
+      jsonOk(res, toJsonSafe(await kernel.getOwnershipAssignments?.({})))
     })
   )
 
@@ -268,7 +265,8 @@ export const registerExperimentalRuntimeRoutes = (
       assertExperimentalOperatorApiEnabled(context)
       const packId = resolvePackIdParam(req.params.packId)
       requireExperimentalPackHandle(context, packId)
-      jsonOk(res, toJsonSafe(await getExperimentalPackSchedulerWorkersProjection(context, packId)))
+      const kernel = createRuntimeKernelService(context, packId)
+      jsonOk(res, toJsonSafe(await kernel.getWorkers?.({})))
     })
   )
 
@@ -280,7 +278,8 @@ export const registerExperimentalRuntimeRoutes = (
       assertExperimentalOperatorApiEnabled(context)
       const packId = resolvePackIdParam(req.params.packId)
       requireExperimentalPackHandle(context, packId)
-      jsonOk(res, toJsonSafe(await getExperimentalPackSchedulerOperatorProjection(context, packId)))
+      const kernel = createRuntimeKernelService(context, packId)
+      jsonOk(res, toJsonSafe(await kernel.getOperatorProjection?.({})))
     })
   )
 }

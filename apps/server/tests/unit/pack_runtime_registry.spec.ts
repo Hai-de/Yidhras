@@ -178,7 +178,9 @@ describe('InMemoryPackRuntimeRegistry', () => {
       } as never,
       sim: {
         getPackRuntimeRegistry: () => registry,
-        getActivePack: () => ({ metadata: { id: 'pack-a' } })
+        getActivePack: () => ({ metadata: { id: 'pack-a' } }),
+        isRuntimeReady: () => true,
+        isPaused: () => false
       } as never
     } as unknown as AppContext;
 
@@ -302,7 +304,9 @@ describe('InMemoryPackRuntimeRegistry', () => {
       sim: {
         getPackRuntimeHandle: (packId: string) => (packId === 'pack-a' ? handle : null),
         getPackRuntimeRegistry: () => ({ listLoadedPackIds: () => ['pack-a'] }),
-        getActivePack: () => ({ metadata: { id: 'pack-a' } })
+        getActivePack: () => ({ metadata: { id: 'pack-a' } }),
+        isRuntimeReady: () => true,
+        isPaused: () => false
       }
     } as unknown as AppContext;
 

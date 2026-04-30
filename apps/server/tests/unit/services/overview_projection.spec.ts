@@ -59,7 +59,9 @@ const createContext = (): AppContext => {
     prisma: mockPrisma,
     sim: {
       getCurrentTick: () => 1n,
-      getAllTimes: () => [{ calendar_id: 'fallback', display: 'fallback-time', units: {} }]
+      getAllTimes: () => [{ calendar_id: 'fallback', display: 'fallback-time', units: {} }],
+      isRuntimeReady: () => true,
+      isPaused: () => false
     } as never,
     clock: {
       getCurrentTick: () => 1n
@@ -116,7 +118,9 @@ describe('overview summary world time projection', () => {
     context.sim = {
       getCurrentTick: () => 7n,
       getAllTimes: () => [{ calendar_id: 'sim-only', display: 'sim-only-time', units: {} }],
-      getActivePack: () => ({ metadata: { id: 'world-test-pack' } })
+      getActivePack: () => ({ metadata: { id: 'world-test-pack' } }),
+      isRuntimeReady: () => true,
+      isPaused: () => false
     } as never;
     (context as AppContext).clock = { getCurrentTick: () => 7n } as AppContext['clock'];
     (context as AppContext).activePack = { getActivePack: () => ({ metadata: { id: 'world-test-pack' } } as never), getCurrentRevision: () => 7n };

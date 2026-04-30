@@ -10,6 +10,7 @@ import { createWorldEngineStepCoordinator } from '../../src/app/runtime/world_en
 import { ChronosEngine } from '../../src/clock/engine.js';
 import type { SimulationManager } from '../../src/core/simulation.js';
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
+import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
 import { createNotificationManager } from '../../src/utils/notifications.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { DEFAULT_E2E_WORLD_PACK } from '../support/config.js';
@@ -20,6 +21,7 @@ export interface CreateTestAppContextOptions {
   runtimeLoopDiagnostics?: RuntimeLoopDiagnostics;
   startupHealth?: StartupHealth;
   activePackId?: string;
+  schedulerStorage?: SchedulerStorageAdapter;
 }
 
 export const createDefaultRuntimeLoopDiagnostics = (): RuntimeLoopDiagnostics => ({
@@ -88,6 +90,14 @@ export const createTestAppContext = (
     }),
     setRuntimeSpeedOverride: () => {},
     clearRuntimeSpeedOverride: () => {},
+    isRuntimeReady: () => runtimeReady,
+    setRuntimeReady: (ready: boolean) => {
+      runtimeReady = ready;
+    },
+    isPaused: () => paused,
+    setPaused: (next: boolean) => {
+      paused = next;
+    },
     isExperimentalMultiPackRuntimeEnabled: () => false,
     loadExperimentalPackRuntime: async () => ({ handle: null, loaded: false, already_loaded: false }),
     getPackRuntimeHandle: () => null
@@ -178,6 +188,43 @@ export const createTestAppContext = (
       listCollectionRecords: async () => [],
       exportPackData: async () => ({}),
       importPackData: async () => {}
-    } as PackStorageAdapter
+    } as PackStorageAdapter,
+    schedulerStorage: options.schedulerStorage ?? {
+      open: () => {},
+      close: () => {},
+      destroyPackSchedulerStorage: () => {},
+      listOpenPackIds: () => [],
+      upsertLease: () => ({ key: '', partition_id: '', holder: '', acquired_at: 0n, expires_at: 0n }),
+      getLease: () => null,
+      updateLeaseIfClaimable: () => ({ count: 0 }),
+      deleteLeaseByHolder: () => ({ count: 0 }),
+      upsertCursor: () => ({ key: '', partition_id: '', last_scanned_tick: 0n, last_signal_tick: 0n, updated_at: 0n }),
+      getCursor: () => null,
+      getPartition: () => null,
+      listPartitions: () => [],
+      createPartition: (packId: string, input: Record<string, unknown>) => input as never,
+      updatePartition: (packId: string, input: Record<string, unknown>) => input as never,
+      listMigrations: () => [],
+      countMigrationsInProgress: () => 0,
+      getMigrationById: () => null,
+      findLatestActiveMigrationForPartition: () => null,
+      createMigration: (packId: string, input: Record<string, unknown>) => ({ id: 'mock_migration', ...input }) as never,
+      updateMigration: (packId: string, input: Record<string, unknown>) => input as never,
+      listWorkerStates: () => [],
+      getWorkerState: () => null,
+      upsertWorkerState: (packId: string, input: Record<string, unknown>) => input as never,
+      updateWorkerStatus: (packId: string, workerId: string, status: string, updatedAt: bigint) => ({ worker_id: workerId, status, updated_at: updatedAt }) as never,
+      findOpenRecommendation: () => null,
+      createRecommendation: (packId: string, input: Record<string, unknown>) => ({ id: 'mock_rec', ...input }) as never,
+      listRecentRecommendations: () => [],
+      getRecommendationById: () => null,
+      updateRecommendation: (packId: string, input: Record<string, unknown>) => input as never,
+      listPendingRecommendationsForWorker: () => [],
+      writeDetailedSnapshot: (packId: string, input: Record<string, unknown>) => input,
+      writeCandidateDecision: (packId: string, schedulerRunId: string, input: Record<string, unknown>) => input,
+      listRuns: () => [],
+      listCandidateDecisions: () => [],
+      getAgentDecisions: () => []
+    } as SchedulerStorageAdapter
   };
 };

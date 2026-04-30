@@ -53,21 +53,36 @@ const ASSIGNED_STATUSES = new Set(['assigned', 'migrating']);
 const DEFAULT_SCHEDULER_WORKER_STALE_TICKS = 5n;
 const DEFAULT_SCHEDULER_WORKER_DEAD_TICKS = 15n;
 
-export const getSchedulerPartitionAssignment = async (
-  context: AppContext,
-  partitionId: string
-): Promise<SchedulerPartitionAssignmentRecord | null> => {
-  return context.repos.scheduler.getPartition(partitionId);
+const requireAdapter = (context: AppContext) => {
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
+    throw new Error('[scheduler_ownership] SchedulerStorageAdapter is required. Ensure it is injected into AppContext.');
+  }
+  return adapter;
 };
 
-export const isWorkerAllowedToOperateSchedulerPartition = async (
+export const getSchedulerPartitionAssignment = (
+  context: AppContext,
+  partitionId: string,
+  packId?: string
+): SchedulerPartitionAssignmentRecord | null => {
+  if (!packId) {
+    throw new Error('[scheduler_ownership] packId is required');
+  }
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+  return adapter.getPartition(packId, partitionId);
+};
+
+export const isWorkerAllowedToOperateSchedulerPartition = (
   context: AppContext,
   input: {
     partitionId: string;
     workerId: string;
-  }
-): Promise<boolean> => {
-  const assignment = await getSchedulerPartitionAssignment(context, input.partitionId);
+  },
+  packId?: string
+): boolean => {
+  const assignment = getSchedulerPartitionAssignment(context, input.partitionId, packId);
   if (!assignment) {
     return true;
   }
@@ -75,42 +90,70 @@ export const isWorkerAllowedToOperateSchedulerPartition = async (
   return assignment.worker_id === input.workerId && ASSIGNED_STATUSES.has(assignment.status);
 };
 
-export const listSchedulerPartitionAssignments = async (
-  context: AppContext
-): Promise<SchedulerPartitionAssignmentRecord[]> => {
-  return context.repos.scheduler.listPartitions();
-};
-
-export const listRecentSchedulerOwnershipMigrations = async (
+export const listSchedulerPartitionAssignments = (
   context: AppContext,
-  limit = 20
-): Promise<SchedulerOwnershipMigrationRecord[]> => {
-  return context.repos.scheduler.listMigrations(limit);
+  packId?: string
+): SchedulerPartitionAssignmentRecord[] => {
+  if (!packId) {
+    throw new Error('[scheduler_ownership] packId is required');
+  }
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+  return adapter.listPartitions(packId);
 };
 
-// countSchedulerOwnershipMigrationsInProgress — migrated to context.repos.scheduler.countMigrationsInProgress
-
-export const listSchedulerWorkerRuntimeStates = async (
-  context: AppContext
-): Promise<SchedulerWorkerRuntimeStateRecord[]> => {
-  return context.repos.scheduler.listWorkerStates();
+export const listRecentSchedulerOwnershipMigrations = (
+  context: AppContext,
+  limit = 20,
+  packId?: string
+): SchedulerOwnershipMigrationRecord[] => {
+  if (!packId) {
+    throw new Error('[scheduler_ownership] packId is required');
+  }
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+  return adapter.listMigrations(packId, limit);
 };
 
-export const refreshSchedulerWorkerRuntimeState = async (
+export const listSchedulerWorkerRuntimeStates = (
+  context: AppContext,
+  packId?: string
+): SchedulerWorkerRuntimeStateRecord[] => {
+  if (!packId) {
+    throw new Error('[scheduler_ownership] packId is required');
+  }
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+  return adapter.listWorkerStates(packId);
+};
+
+export const refreshSchedulerWorkerRuntimeState = (
   context: AppContext,
   input: {
     workerId: string;
     ownedPartitionIds: string[];
     capacityHint?: number | null;
     now?: bigint;
+  },
+  packId?: string
+): SchedulerWorkerRuntimeStateRecord => {
+  if (!packId) {
+    throw new Error('[scheduler_ownership] packId is required');
   }
-): Promise<SchedulerWorkerRuntimeStateRecord> => {
-  const now = input.now ?? context.clock.getCurrentTick();
-  const activeMigrationCount = await context.repos.scheduler.countMigrationsInProgress(input.workerId);
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
 
-  return context.repos.scheduler.upsertWorkerState({
+  const now = input.now ?? context.clock.getCurrentTick();
+  const activeMigrationCount = adapter.countMigrationsInProgress(packId, input.workerId);
+
+  const existing = adapter.getWorkerState(packId, input.workerId);
+  const status = existing?.status === 'stale' || existing?.status === 'suspected_dead'
+    ? existing.status
+    : 'active';
+
+  return adapter.upsertWorkerState(packId, {
     worker_id: input.workerId,
-    status: 'active',
+    status,
     last_heartbeat_at: now,
     owned_partition_count: input.ownedPartitionIds.length,
     active_migration_count: activeMigrationCount,
@@ -119,14 +162,21 @@ export const refreshSchedulerWorkerRuntimeState = async (
   });
 };
 
-export const refreshSchedulerWorkerRuntimeLiveness = async (
+export const refreshSchedulerWorkerRuntimeLiveness = (
   context: AppContext,
-  now?: bigint
-): Promise<void> => {
+  now?: bigint,
+  packId?: string
+): void => {
+  if (!packId) {
+    throw new Error('[scheduler_ownership] packId is required');
+  }
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+
   const currentTick = now ?? context.clock.getCurrentTick();
   const staleThreshold = BigInt(process.env.SCHEDULER_WORKER_STALE_TICKS ?? DEFAULT_SCHEDULER_WORKER_STALE_TICKS.toString());
   const deadThreshold = BigInt(process.env.SCHEDULER_WORKER_DEAD_TICKS ?? DEFAULT_SCHEDULER_WORKER_DEAD_TICKS.toString());
-  const workerStates = await listSchedulerWorkerRuntimeStates(context);
+  const workerStates = listSchedulerWorkerRuntimeStates(context, packId);
 
   for (const state of workerStates) {
     const age = currentTick - state.last_heartbeat_at;
@@ -135,19 +185,22 @@ export const refreshSchedulerWorkerRuntimeLiveness = async (
       continue;
     }
 
-    await context.repos.scheduler.updateWorkerStatus(
-      state.worker_id,
-      nextStatus,
-      currentTick
-    );
+    adapter.updateWorkerStatus(packId, state.worker_id, nextStatus, currentTick);
   }
 };
 
-export const reconcileSchedulerBootstrapAssignments = async (
+export const reconcileSchedulerBootstrapAssignments = (
   context: AppContext,
   workerId: string,
-  partitionIds?: string[]
-): Promise<void> => {
+  partitionIds?: string[],
+  packId?: string
+): void => {
+  if (!packId) {
+    throw new Error('[scheduler_ownership] packId is required');
+  }
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+
   const now = context.clock.getCurrentTick();
   const partitionCount = getSchedulerPartitionCount();
   const bootstrapPartitionIds = resolveOwnedSchedulerPartitionIds({
@@ -158,7 +211,7 @@ export const reconcileSchedulerBootstrapAssignments = async (
   const allPartitionIds = listSchedulerPartitionIds(partitionCount);
   const bootstrapPartitionIdSet = new Set(bootstrapPartitionIds);
 
-  const existingAssignments = await context.repos.scheduler.listPartitions();
+  const existingAssignments = adapter.listPartitions(packId);
   const existingByPartition = new Map(existingAssignments.map(item => [item.partition_id, item]));
 
   for (const partitionId of allPartitionIds) {
@@ -168,7 +221,7 @@ export const reconcileSchedulerBootstrapAssignments = async (
     const nextStatus = shouldOwn ? 'assigned' : 'released';
 
     if (!existing) {
-      await context.repos.scheduler.createPartition({
+      adapter.createPartition(packId, {
         partition_id: partitionId,
         worker_id: nextWorkerId,
         status: nextStatus,
@@ -187,7 +240,7 @@ export const reconcileSchedulerBootstrapAssignments = async (
       continue;
     }
 
-    await context.repos.scheduler.updatePartition({
+    adapter.updatePartition(packId, {
       partition_id: partitionId,
       worker_id: nextWorkerId,
       status: nextStatus,
@@ -197,15 +250,22 @@ export const reconcileSchedulerBootstrapAssignments = async (
   }
 };
 
-export const resolveSchedulerOwnershipSnapshot = async (
+export const resolveSchedulerOwnershipSnapshot = (
   context: AppContext,
   input: {
     workerId: string;
     bootstrapPartitionIds?: string[];
+  },
+  packId?: string
+): SchedulerOwnershipSnapshot => {
+  if (!packId) {
+    throw new Error('[scheduler_ownership] packId is required');
   }
-): Promise<SchedulerOwnershipSnapshot> => {
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+
   const partitionCount = getSchedulerPartitionCount();
-  const assignments = await listSchedulerPartitionAssignments(context);
+  const assignments = listSchedulerPartitionAssignments(context, packId);
   const activeAssignments = assignments.filter(
     assignment => assignment.worker_id === input.workerId && ASSIGNED_STATUSES.has(assignment.status)
   );
@@ -222,8 +282,8 @@ export const resolveSchedulerOwnershipSnapshot = async (
           partitionCount
         });
 
-  const migrationInProgressCount = await context.repos.scheduler.countMigrationsInProgress(input.workerId);
-  const workerState = await context.repos.scheduler.getWorkerState(input.workerId);
+  const migrationInProgressCount = adapter.countMigrationsInProgress(packId, input.workerId);
+  const workerState = adapter.getWorkerState(packId, input.workerId);
 
   return {
     worker_id: input.workerId,
@@ -237,19 +297,26 @@ export const resolveSchedulerOwnershipSnapshot = async (
   };
 };
 
-export const createSchedulerOwnershipMigration = async (
+export const createSchedulerOwnershipMigration = (
   context: AppContext,
   input: {
     partitionId: string;
     toWorkerId: string;
     reason?: string | null;
     requestedByWorkerId?: string | null;
+  },
+  packId?: string
+): SchedulerOwnershipMigrationRecord => {
+  if (!packId) {
+    throw new Error('[scheduler_ownership] packId is required');
   }
-): Promise<SchedulerOwnershipMigrationRecord> => {
-  const now = context.clock.getCurrentTick();
-  const existingAssignment = await context.repos.scheduler.getPartition(input.partitionId);
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
 
-  const migration = await context.repos.scheduler.createMigration({
+  const now = context.clock.getCurrentTick();
+  const existingAssignment = adapter.getPartition(packId, input.partitionId);
+
+  const migration = adapter.createMigration(packId, {
     partition_id: input.partitionId,
     from_worker_id: existingAssignment?.worker_id ?? null,
     to_worker_id: input.toWorkerId,
@@ -264,7 +331,7 @@ export const createSchedulerOwnershipMigration = async (
   });
 
   if (!existingAssignment) {
-    await context.repos.scheduler.createPartition({
+    adapter.createPartition(packId, {
       partition_id: input.partitionId,
       worker_id: input.toWorkerId,
       status: 'migrating',
@@ -273,7 +340,7 @@ export const createSchedulerOwnershipMigration = async (
       updated_at: now
     });
   } else {
-    await context.repos.scheduler.updatePartition({
+    adapter.updatePartition(packId, {
       partition_id: input.partitionId,
       worker_id: input.toWorkerId,
       status: 'migrating',
@@ -286,27 +353,42 @@ export const createSchedulerOwnershipMigration = async (
   return migration;
 };
 
-export const markSchedulerOwnershipMigrationInProgress = async (
+export const markSchedulerOwnershipMigrationInProgress = (
   context: AppContext,
-  migrationId: string
-): Promise<void> => {
+  migrationId: string,
+  packId?: string
+): void => {
+  if (!packId) {
+    throw new Error('[scheduler_ownership] packId is required');
+  }
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+
   const now = context.clock.getCurrentTick();
-  await context.repos.scheduler.updateMigration({
+  adapter.updateMigration(packId, {
     id: migrationId,
     status: 'in_progress',
     updated_at: now
   });
 };
 
-export const completeActiveSchedulerOwnershipMigration = async (
+export const completeActiveSchedulerOwnershipMigration = (
   context: AppContext,
   input: {
     partitionId: string;
     toWorkerId: string;
+  },
+  packId?: string
+): void => {
+  if (!packId) {
+    throw new Error('[scheduler_ownership] packId is required');
   }
-): Promise<void> => {
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+
   const now = context.clock.getCurrentTick();
-  const migration = await context.repos.scheduler.findLatestActiveMigrationForPartition(
+  const migration = adapter.findLatestActiveMigrationForPartition(
+    packId,
     input.partitionId,
     input.toWorkerId
   );
@@ -315,31 +397,38 @@ export const completeActiveSchedulerOwnershipMigration = async (
     return;
   }
 
-  await completeSchedulerOwnershipMigration(context, migration.id);
-  await context.repos.scheduler.updateMigration({
+  completeSchedulerOwnershipMigration(context, migration.id, packId);
+  adapter.updateMigration(packId, {
     id: migration.id,
     updated_at: now
   });
 };
 
-export const completeSchedulerOwnershipMigration = async (
+export const completeSchedulerOwnershipMigration = (
   context: AppContext,
-  migrationId: string
-): Promise<void> => {
+  migrationId: string,
+  packId?: string
+): void => {
+  if (!packId) {
+    throw new Error('[scheduler_ownership] packId is required');
+  }
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+
   const now = context.clock.getCurrentTick();
-  const migration = await context.repos.scheduler.getMigrationById(migrationId);
+  const migration = adapter.getMigrationById(packId, migrationId);
   if (!migration) {
     return;
   }
 
-  await context.repos.scheduler.updateMigration({
+  adapter.updateMigration(packId, {
     id: migrationId,
     status: 'completed',
     updated_at: now,
     completed_at: now
   });
 
-  await context.repos.scheduler.updatePartition({
+  adapter.updatePartition(packId, {
     partition_id: migration.partition_id,
     worker_id: migration.to_worker_id,
     status: 'assigned',

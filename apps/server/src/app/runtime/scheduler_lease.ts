@@ -1,8 +1,5 @@
-import type { PrismaClient } from '@prisma/client';
-
 import { getSchedulerLeaseTicks } from '../../config/runtime_config.js';
 import type { AppContext } from '../context.js';
-import { buildPackScopedSchedulerCursorKey, buildPackScopedSchedulerLeaseKey, parsePackScopedSchedulerPartitionId } from './multi_pack_scheduler_scope.js';
 import {
   DEFAULT_SCHEDULER_PARTITION_ID,
   isSchedulerPartitionId
@@ -34,121 +31,129 @@ const normalizePartitionId = (partitionId: string | undefined): string => {
   return normalized;
 };
 
-const normalizePartitionScope = (partitionId: string | undefined): { rawPartitionId: string; storagePartitionId: string; packId: string | null } => {
-  const incoming = typeof partitionId === 'string' ? partitionId.trim() : '';
-
-  if (incoming.includes('::')) {
-    const parsed = parsePackScopedSchedulerPartitionId(incoming);
-    return {
-      rawPartitionId: parsed.partition_id,
-      storagePartitionId: parsed.scoped_partition_id,
-      packId: parsed.pack_id
-    };
-  }
-
-  const normalized = normalizePartitionId(partitionId);
-
-  if (!normalized.includes('::')) {
-    return {
-      rawPartitionId: normalized,
-      storagePartitionId: normalized,
-      packId: null
-    };
-  }
-
-  return {
-    rawPartitionId: normalized,
-    storagePartitionId: normalized,
-    packId: null
-  };
-};
-
 export const buildSchedulerLeaseKey = (partitionId = DEFAULT_SCHEDULER_PARTITION_ID): string => {
-  const scope = normalizePartitionScope(partitionId);
-  return scope.packId
-    ? `${SCHEDULER_LEASE_KEY_PREFIX}:${buildPackScopedSchedulerLeaseKey(scope.packId, scope.rawPartitionId)}`
-    : `${SCHEDULER_LEASE_KEY_PREFIX}:${scope.storagePartitionId}`;
+  const id = normalizePartitionId(partitionId);
+  return `${SCHEDULER_LEASE_KEY_PREFIX}:${id}`;
 };
 
 export const buildSchedulerCursorKey = (partitionId = DEFAULT_SCHEDULER_PARTITION_ID): string => {
-  const scope = normalizePartitionScope(partitionId);
-  return scope.packId
-    ? `${SCHEDULER_CURSOR_KEY_PREFIX}:${buildPackScopedSchedulerCursorKey(scope.packId, scope.rawPartitionId)}`
-    : `${SCHEDULER_CURSOR_KEY_PREFIX}:${scope.storagePartitionId}`;
+  const id = normalizePartitionId(partitionId);
+  return `${SCHEDULER_CURSOR_KEY_PREFIX}:${id}`;
 };
 
-export const acquireSchedulerLease = async (
+const requireAdapter = (context: AppContext) => {
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
+    throw new Error('[scheduler_lease] SchedulerStorageAdapter is required. Ensure it is injected into AppContext.');
+  }
+  return adapter;
+};
+
+export const acquireSchedulerLease = (
   context: AppContext,
   input: {
     workerId: string;
     partitionId?: string;
     now?: bigint;
     leaseTicks?: bigint;
+  },
+  packId?: string
+): SchedulerLeaseAcquireResult => {
+  if (!packId) {
+    throw new Error('[scheduler_lease] packId is required for acquireSchedulerLease');
   }
-): Promise<SchedulerLeaseAcquireResult> => {
-  const partitionScope = normalizePartitionScope(input.partitionId);
+
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+
+  const partitionId = normalizePartitionId(input.partitionId);
   const now = input.now ?? context.clock.getCurrentTick();
   const leaseTicks = input.leaseTicks ?? getSchedulerLeaseTicks();
   const expiresAt = now + leaseTicks;
-  const key = buildSchedulerLeaseKey(partitionScope.storagePartitionId);
-  const existing = await context.repos.scheduler.upsertLease({
-    key,
-    partition_id: partitionScope.storagePartitionId,
-    holder: input.workerId,
-    acquired_at: now,
-    expires_at: expiresAt,
-    updated_at: now
-  });
+  const key = buildSchedulerLeaseKey(partitionId);
 
-  if (existing.holder === input.workerId && existing.acquired_at === now && existing.expires_at === expiresAt) {
+  const existing = adapter.getLease(packId, partitionId);
+
+  // No existing lease — create one
+  if (!existing) {
+    adapter.upsertLease(packId, {
+      key,
+      partition_id: partitionId,
+      holder: input.workerId,
+      acquired_at: now,
+      expires_at: expiresAt,
+      updated_at: now
+    });
+
     return {
       acquired: true,
       holder: input.workerId,
       expires_at: expiresAt,
-      partition_id: partitionScope.storagePartitionId,
+      partition_id: partitionId,
+      key
+    };
+  }
+
+  // Same worker already holds the lease — extend it
+  if (existing.holder === input.workerId) {
+    adapter.upsertLease(packId, {
+      key: existing.key,
+      partition_id: partitionId,
+      holder: input.workerId,
+      acquired_at: existing.acquired_at,
+      expires_at: expiresAt,
+      updated_at: now
+    });
+
+    return {
+      acquired: true,
+      holder: input.workerId,
+      expires_at: expiresAt,
+      partition_id: partitionId,
       key: existing.key
     };
   }
 
-  if (existing.holder !== input.workerId && existing.expires_at > now) {
+  // Held by another worker and not expired
+  if (existing.expires_at > now) {
     return {
       acquired: false,
       holder: existing.holder,
       expires_at: existing.expires_at,
-      partition_id: partitionScope.storagePartitionId,
+      partition_id: partitionId,
       key: existing.key
     };
   }
 
-  const updatedLease = await context.repos.scheduler.updateLeaseIfClaimable({
-    partition_id: partitionScope.storagePartitionId,
+  // Expired — try to claim
+  const result = adapter.updateLeaseIfClaimable(packId, {
+    partition_id: partitionId,
     holder: input.workerId,
-    acquired_at: existing.holder === input.workerId ? existing.acquired_at : now,
+    acquired_at: now,
     expires_at: expiresAt,
     updated_at: now,
-    key: existing.key ?? key,
+    key,
     now
   });
 
-  if (updatedLease.count === 0) {
-    const latestLease = await context.repos.scheduler.getLease(partitionScope.storagePartitionId);
-
-    if (!latestLease) {
+  if (result.count === 0) {
+    const latest = adapter.getLease(packId, partitionId);
+    if (!latest) {
       return {
         acquired: false,
         holder: null,
         expires_at: null,
-        partition_id: partitionScope.storagePartitionId,
+        partition_id: partitionId,
         key
       };
     }
 
     return {
-      acquired: latestLease.holder === input.workerId,
-      holder: latestLease.holder,
-      expires_at: latestLease.expires_at,
-      partition_id: latestLease.partition_id,
-      key: latestLease.key
+      acquired: latest.holder === input.workerId,
+      holder: latest.holder,
+      expires_at: latest.expires_at,
+      partition_id: latest.partition_id,
+      key: latest.key
     };
   }
 
@@ -156,68 +161,87 @@ export const acquireSchedulerLease = async (
     acquired: true,
     holder: input.workerId,
     expires_at: expiresAt,
-    partition_id: partitionScope.storagePartitionId,
-    key: existing.key
+    partition_id: partitionId,
+    key
   };
 };
 
-export const renewSchedulerLease = async (
+export const renewSchedulerLease = (
   context: AppContext,
   input: {
     workerId: string;
     partitionId?: string;
     now?: bigint;
     leaseTicks?: bigint;
-  }
-): Promise<SchedulerLeaseAcquireResult> => {
-  return acquireSchedulerLease(context, input);
+  },
+  packId?: string
+): SchedulerLeaseAcquireResult => {
+  return acquireSchedulerLease(context, input, packId);
 };
 
-export const releaseSchedulerLease = async (
+export const releaseSchedulerLease = (
   context: AppContext,
   workerId: string,
-  partitionId?: string
-): Promise<boolean> => {
-  const partitionScope = normalizePartitionScope(partitionId);
-  const releaseResult = await context.repos.scheduler.deleteLeaseByHolder(
-    partitionScope.storagePartitionId,
-    workerId
-  );
-
-  if (releaseResult.count === 0) {
-    return false;
+  partitionId?: string,
+  packId?: string
+): boolean => {
+  if (!packId) {
+    throw new Error('[scheduler_lease] packId is required for releaseSchedulerLease');
   }
 
-  return true;
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+
+  const id = normalizePartitionId(partitionId);
+  const result = adapter.deleteLeaseByHolder(packId, id, workerId);
+
+  return result.count > 0;
 };
 
-export const updateSchedulerCursor = async (
+export const updateSchedulerCursor = (
   context: AppContext,
   input: {
     partitionId?: string;
     lastScannedTick: bigint;
     lastSignalTick: bigint;
     now?: bigint;
+  },
+  packId?: string
+): void => {
+  if (!packId) {
+    throw new Error('[scheduler_lease] packId is required for updateSchedulerCursor');
   }
-): Promise<void> => {
-  const partitionScope = normalizePartitionScope(input.partitionId);
-  const key = buildSchedulerCursorKey(partitionScope.storagePartitionId);
+
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+
+  const id = normalizePartitionId(input.partitionId);
+  const key = buildSchedulerCursorKey(id);
   const now = input.now ?? context.clock.getCurrentTick();
-  await context.repos.scheduler.upsertCursor({
+
+  adapter.upsertCursor(packId, {
     key,
-    partition_id: partitionScope.storagePartitionId,
+    partition_id: id,
     last_scanned_tick: input.lastScannedTick,
     last_signal_tick: input.lastSignalTick,
     updated_at: now
   });
 };
 
-export const getSchedulerCursor = async (
+export const getSchedulerCursor = (
   context: AppContext,
-  partitionId?: string
-): Promise<{ partition_id: string; last_scanned_tick: bigint; last_signal_tick: bigint } | null> => {
-  const partitionScope = normalizePartitionScope(partitionId);
-  const cursor = await context.repos.scheduler.getCursor(partitionScope.storagePartitionId);
+  partitionId?: string,
+  packId?: string
+): { partition_id: string; last_scanned_tick: bigint; last_signal_tick: bigint } | null => {
+  if (!packId) {
+    throw new Error('[scheduler_lease] packId is required for getSchedulerCursor');
+  }
+
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+
+  const id = normalizePartitionId(partitionId);
+  const cursor = adapter.getCursor(packId, id);
 
   if (!cursor) {
     return null;
@@ -230,23 +254,3 @@ export const getSchedulerCursor = async (
   };
 };
 
-export const releaseAllPackSchedulerLeases = async (
-  packId: string,
-  prisma: PrismaClient
-): Promise<{ deletedLeases: number; deletedCursors: number }> => {
-  const packPrefix = `${packId}::`;
-
-  const [deletedLeases, deletedCursors] = await Promise.all([
-    prisma.schedulerLease.deleteMany({
-      where: { partition_id: { startsWith: packPrefix } }
-    }),
-    prisma.schedulerCursor.deleteMany({
-      where: { partition_id: { startsWith: packPrefix } }
-    })
-  ]);
-
-  return {
-    deletedLeases: deletedLeases.count,
-    deletedCursors: deletedCursors.count
-  };
-};

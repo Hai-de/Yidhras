@@ -12,15 +12,17 @@
 
 ## 0. Stable vs Experimental 边界
 
-multi-pack runtime 为 **experimental / default off / operator test-only**，架构边界详见 [`ARCH.md`](ARCH.md) 第 3.3.1 节。
+Scheduler Docker 式隔离重构后，多 pack 调度已提升为默认架构。pack-scoped 路由挂载于 `/:packId/` 前缀，由 `packScopeMiddleware` 做 pack 状态校验。
 
-稳定的 pack-local 接口规则（适用于本文所有 `/api/packs/:packId/` 路由）：
+pack-scoped 路由（`/:packId/api/...`）：
+- 适用于 inference、overview、scheduler、graph、clock、agent、narrative、social、relational、identity、audit 等模块
+- 非 `ready` 状态的 pack 返回 503（loading/unloading/degraded）或 404（gone）
 
-- 稳定 contract 以 **single active-pack runtime** 为中心
-- `/api/packs/:packId/overview` 与 `/api/packs/:packId/projections/timeline` 要求 `packId === active pack`，否则返回 `PACK_ROUTE_ACTIVE_PACK_MISMATCH`
-- `/api/status` 返回单个 `world_pack`
-- experimental surfaces 需显式启用 `features.experimental.multi_pack_runtime.*`
-- experimental `/api/experimental/...` 路由只面向 operator / test-only，不承诺短期稳定 contract
+global 路由（无 pack 前缀）：
+- `/api/status`、`/api/health`、`/api/config`、`/api/admin`、`/api/operators` 等
+- 不经过 pack scope 中间件
+
+experimental `/api/experimental/...` 路由仍面向 operator / test-only，不承诺短期稳定 contract。
 
 
 

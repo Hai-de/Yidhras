@@ -26,16 +26,16 @@ const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
 
 export interface RuntimeKernelService extends RuntimeKernelFacade, SchedulerObservationPort, SchedulerControlPort {}
 
-export const createRuntimeKernelService = (context: AppContext): RuntimeKernelService => {
+export const createRuntimeKernelService = (context: AppContext, _packId?: string): RuntimeKernelService => {
   return {
     start() {
-      context.setPaused(false);
+      context.sim.setPaused(false);
     },
     stop() {
-      context.setPaused(true);
+      context.sim.setPaused(true);
     },
     isRunning() {
-      return context.getPaused() === false;
+      return context.sim.isPaused() === false;
     },
     getLoopDiagnostics() {
       return context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
@@ -43,25 +43,25 @@ export const createRuntimeKernelService = (context: AppContext): RuntimeKernelSe
     getHealthSnapshot(): RuntimeKernelHealthSnapshot {
       const diagnostics = context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
       return {
-        runtime_ready: context.getRuntimeReady(),
-        paused: context.getPaused(),
+        runtime_ready: context.sim.isRuntimeReady(),
+        paused: context.sim.isPaused(),
         loop_status: diagnostics.status
       };
     },
-    async reconcileBootstrapOwnership(input) {
-      await reconcileSchedulerBootstrapAssignments(context, input.schedulerWorkerId, input.schedulerPartitionIds);
+    reconcileBootstrapOwnership(input) {
+      reconcileSchedulerBootstrapAssignments(context, input.schedulerWorkerId, input.schedulerPartitionIds, _packId);
     },
-    async getOwnershipSnapshot(input) {
+    getOwnershipSnapshot(input) {
       const workerId = input?.workerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
       return resolveSchedulerOwnershipSnapshot(context, {
         workerId,
         bootstrapPartitionIds: input?.partitionIds
-      });
+      }, _packId);
     },
     async getOwnershipAssignments(input) {
       return listSchedulerOwnershipAssignments(context, input ?? {});
     },
-    async getWorkers(input) {
+    getWorkers(input) {
       return listSchedulerWorkers(context, input ?? {});
     },
     async getSummary(input) {

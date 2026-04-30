@@ -13,6 +13,7 @@ export interface SchedulerDecisionKernelProviderOptions {
   timeoutMs: number;
   binaryPath: string;
   autoRestart: boolean;
+  packId?: string;
 }
 
 class RustPrimarySchedulerDecisionKernelProvider implements SchedulerDecisionKernelProvider {
@@ -22,7 +23,8 @@ class RustPrimarySchedulerDecisionKernelProvider implements SchedulerDecisionKer
     this.rustKernel = createSchedulerDecisionSidecarClient({
       binaryPath: options.binaryPath,
       timeoutMs: options.timeoutMs,
-      autoRestart: options.autoRestart
+      autoRestart: options.autoRestart,
+      packId: options.packId
     });
   }
 

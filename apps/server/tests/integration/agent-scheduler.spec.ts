@@ -2,6 +2,8 @@ import { Prisma } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
+import type { SchedulerStorageAdapter } from "../../src/packs/storage/SchedulerStorageAdapter.js";
+import { MemSchedulerStorage } from "../helpers/scheduler_storage.js";
 import { runAgentScheduler } from '../../src/app/runtime/agent_scheduler.js';
 import { claimDecisionJob } from '../../src/app/services/inference_workflow.js';
 import {
@@ -14,22 +16,21 @@ import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 describe('agent scheduler integration', () => {
   let cleanup: (() => Promise<void>) | null = null;
   let context: AppContext;
+  let adapter: MemSchedulerStorage;
+const TEST_PACK_ID = "test-agent-sched";
 
   beforeAll(async () => {
     const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
     context = fixture.context;
+    cleanup = fixture.cleanup;
+    adapter = new MemSchedulerStorage();
+    adapter.open(TEST_PACK_ID);
+    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter;
   });
 
   beforeEach(async () => {
-    await context.prisma.schedulerCandidateDecision.deleteMany();
-    await context.prisma.schedulerRun.deleteMany();
-    await context.prisma.schedulerCursor.deleteMany();
-    await context.prisma.schedulerLease.deleteMany();
-    await context.prisma.schedulerRebalanceRecommendation.deleteMany();
-    await context.prisma.schedulerWorkerRuntimeState.deleteMany();
-    await context.prisma.schedulerOwnershipMigrationLog.deleteMany();
-    await context.prisma.schedulerPartitionAssignment.deleteMany();
+    adapter.destroyPackSchedulerStorage(TEST_PACK_ID);
+    adapter.open(TEST_PACK_ID);
     await context.prisma.relationshipAdjustmentLog.deleteMany();
     await context.prisma.sNRAdjustmentLog.deleteMany();
     await context.prisma.event.deleteMany();
@@ -65,7 +66,7 @@ describe('agent scheduler integration', () => {
       const activeAgentCount = await prisma.agent.count({ where: { type: 'active' } });
       expect(activeAgentCount).toBeGreaterThan(0);
 
-      const firstRun = await runAgentScheduler({ context, limit: 10 });
+      const firstRun = await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
       const afterCount = await prisma.decisionJob.count({ where: { idempotency_key: { startsWith: 'sch:' } } });
 
       expect(firstRun.created_count).toBeGreaterThan(0);
@@ -75,10 +76,10 @@ describe('agent scheduler integration', () => {
 
     it('suppresses duplicate jobs on second run due to pending workflow', async () => {
       const prisma = context.prisma;
-      await runAgentScheduler({ context, limit: 10 });
+      await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
       const afterFirst = await prisma.decisionJob.count({ where: { idempotency_key: { startsWith: 'sch:' } } });
 
-      const secondRun = await runAgentScheduler({ context, limit: 10 });
+      const secondRun = await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
       const afterSecond = await prisma.decisionJob.count({ where: { idempotency_key: { startsWith: 'sch:' } } });
 
       expect(secondRun.created_count).toBe(0);
@@ -92,7 +93,7 @@ describe('agent scheduler integration', () => {
 
     it('produces valid periodic job structure with scheduler attributes', async () => {
       const prisma = context.prisma;
-      await runAgentScheduler({ context, limit: 10 });
+      await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
 
       const jobs = await prisma.decisionJob.findMany({
         where: { idempotency_key: { startsWith: 'sch:' } },
@@ -128,13 +129,13 @@ describe('agent scheduler integration', () => {
 
   describe('read models', () => {
     it('exposes latest scheduler run read model', async () => {
-      await runAgentScheduler({ context, limit: 10 });
+      await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
       const latest = await getLatestSchedulerRunReadModel(context);
       expect(latest).not.toBeNull();
     });
 
     it('returns candidates in run read model by id', async () => {
-      const firstRun = await runAgentScheduler({ context, limit: 10 });
+      const firstRun = await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
       if (Array.isArray(firstRun.scheduler_run_ids)) {
         const models = await Promise.all(
           firstRun.scheduler_run_ids.map(runId => getSchedulerRunReadModelById(context, runId))
@@ -146,7 +147,7 @@ describe('agent scheduler integration', () => {
 
   describe('future-dated jobs', () => {
     it('rejects claims on jobs scheduled for a future tick', async () => {
-      await runAgentScheduler({ context, limit: 10 });
+      await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
       const baseTick = context.sim.clock.getTicks();
       const futureTick = baseTick + 10n;
       const key = `sch:agent-001:${baseTick.toString()}:event_driven:event_followup`;
@@ -172,7 +173,7 @@ describe('agent scheduler integration', () => {
   describe('event-driven followup', () => {
     it('detects relationship and SNR changes and creates event-driven jobs', async () => {
       const prisma = context.prisma;
-      await runAgentScheduler({ context, limit: 10 });
+      await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
 
       const tick = context.sim.clock.getTicks();
       const traceId = `sched-int-trace-${Date.now()}`;
@@ -204,7 +205,7 @@ describe('agent scheduler integration', () => {
       await prisma.decisionJob.deleteMany({ where: { status: 'pending', idempotency_key: { startsWith: 'sch:agent-001:' } } });
       await prisma.decisionJob.deleteMany({ where: { status: 'pending', idempotency_key: { startsWith: 'sch:agent-002:' } } });
 
-      const followupRun = await runAgentScheduler({ context, limit: 10 });
+      const followupRun = await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
 
       expect(typeof followupRun.skipped_by_reason.replay_window_periodic_suppressed).toBe('number');
       expect(typeof followupRun.skipped_by_reason.retry_window_periodic_suppressed).toBe('number');
@@ -233,7 +234,7 @@ describe('agent scheduler integration', () => {
   describe('replay window suppression', () => {
     it('suppresses event-driven jobs when a recent replay recovery exists', async () => {
       const prisma = context.prisma;
-      await runAgentScheduler({ context, limit: 10 });
+      await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
 
       const tick = context.sim.clock.getTicks();
       const intentId = `sched-replay-intent-${Date.now()}`;
@@ -262,7 +263,7 @@ describe('agent scheduler integration', () => {
 
       await prisma.decisionJob.deleteMany({ where: { status: 'pending', idempotency_key: { startsWith: 'sch:agent-002:' } } });
 
-      const run = await runAgentScheduler({ context, limit: 10 });
+      const run = await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
       const models = Array.isArray(run.scheduler_run_ids)
         ? await Promise.all(run.scheduler_run_ids.map(id => getSchedulerRunReadModelById(context, id)))
         : [];
@@ -277,7 +278,7 @@ describe('agent scheduler integration', () => {
   describe('retry window suppression', () => {
     it('suppresses event-driven jobs when a recent retry recovery exists', async () => {
       const prisma = context.prisma;
-      await runAgentScheduler({ context, limit: 10 });
+      await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
 
       const tick = context.sim.clock.getTicks();
       const traceId = `sched-retry-trace-${Date.now()}`;
@@ -300,7 +301,7 @@ describe('agent scheduler integration', () => {
 
       await prisma.decisionJob.deleteMany({ where: { status: 'pending', idempotency_key: { startsWith: 'sch:agent-002:' } } });
 
-      const run = await runAgentScheduler({ context, limit: 10 });
+      const run = await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
       const models = Array.isArray(run.scheduler_run_ids)
         ? await Promise.all(run.scheduler_run_ids.map(id => getSchedulerRunReadModelById(context, id)))
         : [];
@@ -315,8 +316,8 @@ describe('agent scheduler integration', () => {
   describe('summary snapshot', () => {
     it('returns top skipped reasons covering all suppression types', async () => {
       // First run creates jobs; second run produces pending_workflow skips.
-      await runAgentScheduler({ context, limit: 10 });
-      await runAgentScheduler({ context, limit: 10 });
+      await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
+      await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
       const snapshot = await getSchedulerSummarySnapshot(context, { sampleRuns: 10 });
 
       expect(Array.isArray(snapshot.top_skipped_reasons)).toBe(true);

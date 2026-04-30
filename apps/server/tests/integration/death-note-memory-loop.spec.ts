@@ -4,6 +4,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { AppContext } from '../../src/app/context.js';
 import { runActionDispatcher } from '../../src/app/runtime/action_dispatcher_runner.js';
 import { runAgentScheduler } from '../../src/app/runtime/agent_scheduler.js';
+import { getLatestSchedulerRunReadModel } from '../../src/app/services/scheduler_observability.js';
+import type { SchedulerStorageAdapter } from "../../src/packs/storage/SchedulerStorageAdapter.js";
+import { MemSchedulerStorage } from "../helpers/scheduler_storage.js";
 import { createMemoryCompactionService } from '../../src/memory/recording/compaction_service.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 
@@ -14,11 +17,16 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 describe('death note memory loop integration', () => {
   let cleanup: (() => Promise<void>) | null = null;
   let context: AppContext;
+  let adapter: MemSchedulerStorage;
+const TEST_PACK_ID = "test-death-note";
 
   beforeAll(async () => {
     const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
     context = fixture.context;
+    cleanup = fixture.cleanup;
+    adapter = new MemSchedulerStorage();
+    adapter.open(TEST_PACK_ID);
+    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter;
     context.sim.getActivePack = () => ({
       metadata: { id: 'world-death-note', name: '死亡笔记', version: '0.5.0' },
       ai: {
@@ -32,10 +40,8 @@ describe('death note memory loop integration', () => {
   });
 
   beforeEach(async () => {
-    await context.prisma.schedulerCandidateDecision.deleteMany();
-    await context.prisma.schedulerRun.deleteMany();
-    await context.prisma.schedulerCursor.deleteMany();
-    await context.prisma.schedulerLease.deleteMany();
+    adapter.destroyPackSchedulerStorage(TEST_PACK_ID);
+    adapter.open(TEST_PACK_ID);
     await context.prisma.relationshipAdjustmentLog.deleteMany();
     await context.prisma.sNRAdjustmentLog.deleteMany();
     await context.prisma.event.deleteMany();
@@ -147,7 +153,7 @@ describe('death note memory loop integration', () => {
       }
     });
 
-    const dispatchedCount = await runActionDispatcher({
+    const dispatchedCount = await runActionDispatcher({ packId: TEST_PACK_ID, 
       context,
       workerId: 'memory-loop-test-dispatcher',
       limit: 10
@@ -173,7 +179,7 @@ describe('death note memory loop integration', () => {
       : [];
     expect(traceMemoryMutations.length).toBeGreaterThan(0);
 
-    const schedulerResult = await runAgentScheduler({
+    const schedulerResult = await runAgentScheduler({ packId: TEST_PACK_ID, 
       context,
       workerId: 'memory-loop-test-scheduler',
       limit: 10
@@ -211,12 +217,9 @@ describe('death note memory loop integration', () => {
     });
     expect(compactionState).not.toBeNull();
 
-    const latestRun = await context.prisma.schedulerRun.findFirst({
-      orderBy: { created_at: 'desc' },
-      include: { candidate_decisions: true }
-    });
-    expect(latestRun).not.toBeNull();
-    const candidateReasons = latestRun?.candidate_decisions.flatMap(item =>
+    const latestRunModel = await getLatestSchedulerRunReadModel(context);
+    expect(latestRunModel).not.toBeNull();
+    const candidateReasons = latestRunModel?.candidates.flatMap(item =>
       Array.isArray(item.candidate_reasons) ? item.candidate_reasons : []
     ) ?? [];
     expect(Array.isArray(candidateReasons)).toBe(true);
@@ -294,7 +297,7 @@ describe('death note memory loop integration', () => {
       }
     });
 
-    const dispatchedCount = await runActionDispatcher({
+    const dispatchedCount = await runActionDispatcher({ packId: TEST_PACK_ID, 
       context,
       workerId: 'revise-plan-test-dispatcher',
       limit: 10

@@ -1,7 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-import { Prisma } from '@prisma/client';
-
 import { getSchedulerObservabilityConfig } from '../../config/runtime_config.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
@@ -551,10 +549,6 @@ const SCHEDULER_SKIP_REASONS: SchedulerSkipReason[] = [
   'limit_reached'
 ];
 
-const toJsonValue = (value: unknown): Prisma.InputJsonValue => {
-  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
-};
-
 const encodeSchedulerCursor = (value: SchedulerListCursor): string => {
   return Buffer.from(
     JSON.stringify({
@@ -736,60 +730,104 @@ const parseRebalanceRecommendationFilters = (
   suppress_reason: parseOptionalIdFilter(input.suppress_reason, 'suppress_reason')
 });
 
-const buildRunCursorWhere = (cursor: SchedulerListCursor | null): Prisma.SchedulerRunWhereInput => {
-  if (!cursor) {
+// ---------------------------------------------------------------------------
+// Raw row types from SchedulerStorageAdapter (SQLite columns)
+// ---------------------------------------------------------------------------
+
+interface RawSchedulerRunRow {
+  id: string;
+  worker_id: string;
+  partition_id: string;
+  lease_holder: string | null;
+  lease_expires_at_snapshot: number | null;
+  tick: number;
+  summary: string;
+  started_at: number;
+  finished_at: number;
+  created_at: number;
+}
+
+interface RawSchedulerCandidateDecisionRow {
+  id: string;
+  scheduler_run_id: string;
+  partition_id: string;
+  actor_id: string;
+  kind: string;
+  candidate_reasons: string;
+  chosen_reason: string;
+  scheduled_for_tick: number;
+  priority_score: number;
+  skipped_reason: string | null;
+  created_job_id: string | null;
+  created_at: number;
+}
+
+interface RawSchedulerPartitionRow {
+  partition_id: string;
+  worker_id: string | null;
+  status: string;
+  version: number;
+  source: string;
+  updated_at: number;
+}
+
+interface RawSchedulerMigrationRow {
+  id: string;
+  partition_id: string;
+  from_worker_id: string | null;
+  to_worker_id: string;
+  status: string;
+  reason: string | null;
+  details: string | null;
+  created_at: number;
+  updated_at: number;
+  completed_at: number | null;
+}
+
+const castRawRow = <T>(row: Record<string, unknown>): T => row as unknown as T;
+
+const parseSummaryJson = (raw: string): unknown => {
+  try {
+    return JSON.parse(raw);
+  } catch {
     return {};
   }
-
-  return {
-    OR: [
-      {
-        created_at: {
-          lt: BigInt(cursor.created_at)
-        }
-      },
-      {
-        AND: [
-          {
-            created_at: BigInt(cursor.created_at)
-          },
-          {
-            id: {
-              lt: cursor.id
-            }
-          }
-        ]
-      }
-    ]
-  };
 };
 
-const buildDecisionCursorWhere = (cursor: SchedulerListCursor | null): Prisma.SchedulerCandidateDecisionWhereInput => {
-  if (!cursor) {
-    return {};
-  }
+// ---------------------------------------------------------------------------
+// Cross-pack helpers
+// ---------------------------------------------------------------------------
 
-  return {
-    OR: [
-      {
-        created_at: {
-          lt: BigInt(cursor.created_at)
-        }
-      },
-      {
-        AND: [
-          {
-            created_at: BigInt(cursor.created_at)
-          },
-          {
-            id: {
-              lt: cursor.id
-            }
-          }
-        ]
-      }
-    ]
-  };
+const getAllPackIds = (context: AppContext): string[] => {
+  return context.schedulerStorage?.listOpenPackIds() ?? [];
+};
+
+// ---------------------------------------------------------------------------
+// Cursor helpers (in-memory, non-Prisma)
+// ---------------------------------------------------------------------------
+
+const buildRunCursorWhere = (
+  cursor: SchedulerListCursor | null
+): ((run: RawSchedulerRunRow) => boolean) => {
+  if (!cursor) {
+    return () => true;
+  }
+  const cursorCreatedAt = Number(BigInt(cursor.created_at));
+  return (run: RawSchedulerRunRow) =>
+    run.created_at < cursorCreatedAt ||
+    (run.created_at === cursorCreatedAt && run.id < cursor.id);
+};
+
+const buildDecisionCursorWhere = (
+  cursor: SchedulerListCursor | null
+): ((decision: RawSchedulerCandidateDecisionRow) => boolean) => {
+  if (!cursor) {
+    return () => true;
+  }
+  const cursorCreatedAt = Number(BigInt(cursor.created_at));
+  return (decision: RawSchedulerCandidateDecisionRow) =>
+    decision.created_at < cursorCreatedAt ||
+    (decision.created_at === cursorCreatedAt && decision.id < cursor.id);
 };
 
 const toRunReadModel = (schedulerRun: {
@@ -1085,7 +1123,11 @@ const parseDecisionFilters = (input: ListSchedulerDecisionsInput): SchedulerDeci
   };
 };
 
-export const recordSchedulerRunSnapshot = async (
+/**
+ * Write a detailed scheduler run snapshot to pack SQLite for per-pack debugging.
+ */
+export const writeDetailedSnapshot = (
+  packId: string,
   context: AppContext,
   input: {
     workerId: string;
@@ -1098,72 +1140,145 @@ export const recordSchedulerRunSnapshot = async (
     summary: AgentSchedulerRunResult;
     candidateDecisions: AgentSchedulerCandidateDecisionSnapshot[];
   }
-): Promise<string> => {
+): string => {
   const runId = randomUUID();
   const partitionId = input.partitionId ?? DEFAULT_SCHEDULER_PARTITION_ID;
+  const adapter = context.schedulerStorage;
 
-  await context.repos.scheduler.getPrisma().schedulerRun.create({
-    data: {
+  if (adapter) {
+    adapter.open(packId);
+    adapter.writeDetailedSnapshot(packId, {
       id: runId,
       worker_id: input.workerId,
       partition_id: partitionId,
       lease_holder: input.leaseHolder ?? input.workerId,
       lease_expires_at_snapshot: input.leaseExpiresAtSnapshot ?? null,
       tick: input.tick,
-      summary: toJsonValue(input.summary),
+      summary: input.summary as unknown as Record<string, unknown>,
       started_at: input.startedAt,
       finished_at: input.finishedAt,
-      created_at: input.finishedAt,
-      candidate_decisions: {
-        create: input.candidateDecisions.map(candidate => ({
-          id: randomUUID(),
-          partition_id: candidate.partition_id ?? partitionId,
-          actor_id: candidate.actor_id,
-          kind: candidate.kind,
-          candidate_reasons: toJsonValue(candidate.candidate_reasons),
-          chosen_reason: candidate.chosen_reason,
-          scheduled_for_tick: candidate.scheduled_for_tick,
-          priority_score: candidate.priority_score,
-          skipped_reason: candidate.skipped_reason,
-          created_job_id: candidate.created_job_id,
-          created_at: input.finishedAt
-        }))
-      }
+      created_at: input.finishedAt
+    });
+
+    for (const candidate of input.candidateDecisions) {
+      adapter.writeCandidateDecision(packId, runId, {
+        id: randomUUID(),
+        partition_id: candidate.partition_id ?? partitionId,
+        actor_id: candidate.actor_id,
+        kind: candidate.kind,
+        candidate_reasons: candidate.candidate_reasons,
+        chosen_reason: candidate.chosen_reason,
+        scheduled_for_tick: candidate.scheduled_for_tick,
+        priority_score: candidate.priority_score,
+        skipped_reason: candidate.skipped_reason,
+        created_job_id: candidate.created_job_id,
+        created_at: input.finishedAt
+      });
     }
-  });
+  }
+
+  return runId;
+};
+
+/**
+ * Emit aggregated metrics for cross-pack dashboard.
+ * Stubbed — will be wired to a real metrics backend later.
+ */
+export const emitAggregatedMetrics = (
+  _packId: string,
+  _summary: AgentSchedulerRunResult
+): void => {
+  // Phase 3 stub: aggregated metrics emission point.
+  // Future: push to metrics collector / time-series DB for cross-pack dashboard.
+};
+
+export const recordSchedulerRunSnapshot = (
+  context: AppContext,
+  input: {
+    workerId: string;
+    partitionId?: string;
+    leaseHolder?: string | null;
+    leaseExpiresAtSnapshot?: bigint | null;
+    tick: bigint;
+    startedAt: bigint;
+    finishedAt: bigint;
+    summary: AgentSchedulerRunResult;
+    candidateDecisions: AgentSchedulerCandidateDecisionSnapshot[];
+  },
+  packId?: string
+): string => {
+  const runId = randomUUID();
+
+  if (packId) {
+    writeDetailedSnapshot(packId, context, input);
+    emitAggregatedMetrics(packId, input.summary);
+  }
 
   return runId;
 };
 
 export const getLatestSchedulerRunReadModel = async (context: AppContext): Promise<SchedulerRunReadModel | null> => {
-  const schedulerRun = await context.repos.scheduler.getPrisma().schedulerRun.findFirst({
-    include: {
-      candidate_decisions: {
-        orderBy: {
-          created_at: 'asc'
-        }
-      }
-    },
-    orderBy: {
-      created_at: 'desc'
-    }
-  });
-
-  if (!schedulerRun) {
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
     return null;
   }
 
-  const workflowLinks = await buildSchedulerDecisionWorkflowLinks(context, schedulerRun.candidate_decisions);
-  const candidates = schedulerRun.candidate_decisions.map(candidate =>
+  const packIds = getAllPackIds(context);
+  let bestRun: RawSchedulerRunRow | null = null;
+  let bestPackId: string | null = null;
+
+  for (const packId of packIds) {
+    const rows = adapter.listRuns(packId, { orderBy: { created_at: 'desc' }, take: 1 });
+    if (rows.length > 0) {
+      const run = castRawRow<RawSchedulerRunRow>(rows[0]);
+      if (!bestRun || run.created_at > bestRun.created_at) {
+        bestRun = run;
+        bestPackId = packId;
+      }
+    }
+  }
+
+  if (!bestRun || !bestPackId) {
+    return null;
+  }
+
+  const rawDecisions = adapter.listCandidateDecisions(bestPackId, {
+    where: { scheduler_run_id: bestRun.id },
+    orderBy: { created_at: 'asc' }
+  });
+  const decisions = rawDecisions.map(row => castRawRow<RawSchedulerCandidateDecisionRow>(row));
+
+  const workflowLinks = await buildSchedulerDecisionWorkflowLinks(context, decisions.map(d => ({ id: d.id, created_job_id: d.created_job_id })));
+  const candidates = decisions.map(decision =>
     toCandidateDecisionReadModel({
-      ...candidate,
-      workflow_link: workflowLinks.get(candidate.id) ?? null
+      id: decision.id,
+      scheduler_run_id: decision.scheduler_run_id,
+      partition_id: decision.partition_id,
+      actor_id: decision.actor_id,
+      kind: decision.kind,
+      candidate_reasons: parseSummaryJson(decision.candidate_reasons),
+      chosen_reason: decision.chosen_reason,
+      scheduled_for_tick: BigInt(decision.scheduled_for_tick),
+      priority_score: decision.priority_score,
+      skipped_reason: decision.skipped_reason,
+      created_job_id: decision.created_job_id,
+      workflow_link: workflowLinks.get(decision.id) ?? null,
+      created_at: BigInt(decision.created_at)
     })
   );
 
   return {
     run: toRunReadModel({
-      ...schedulerRun,
+      id: bestRun.id,
+      worker_id: bestRun.worker_id,
+      partition_id: bestRun.partition_id,
+      lease_holder: bestRun.lease_holder,
+      lease_expires_at_snapshot: bestRun.lease_expires_at_snapshot !== null ? BigInt(bestRun.lease_expires_at_snapshot) : null,
+      tick: BigInt(bestRun.tick),
+      summary: parseSummaryJson(bestRun.summary),
+      started_at: BigInt(bestRun.started_at),
+      finished_at: BigInt(bestRun.finished_at),
+      created_at: BigInt(bestRun.created_at),
       cross_link_summary: buildRunCrossLinkSummary(candidates)
     }),
     candidates
@@ -1174,38 +1289,63 @@ export const getSchedulerRunReadModelById = async (
   context: AppContext,
   runId: string
 ): Promise<SchedulerRunReadModel | null> => {
-  const schedulerRun = await context.repos.scheduler.getPrisma().schedulerRun.findUnique({
-    where: {
-      id: runId
-    },
-    include: {
-      candidate_decisions: {
-        orderBy: {
-          created_at: 'asc'
-        }
-      }
-    }
-  });
-
-  if (!schedulerRun) {
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
     return null;
   }
 
-  const workflowLinks = await buildSchedulerDecisionWorkflowLinks(context, schedulerRun.candidate_decisions);
-  const candidates = schedulerRun.candidate_decisions.map(candidate =>
-    toCandidateDecisionReadModel({
-      ...candidate,
-      workflow_link: workflowLinks.get(candidate.id) ?? null
-    })
-  );
+  const packIds = getAllPackIds(context);
+  for (const packId of packIds) {
+    const rows = adapter.listRuns(packId, { where: { id: runId }, take: 1 });
+    if (rows.length === 0) {
+      continue;
+    }
 
-  return {
-    run: toRunReadModel({
-      ...schedulerRun,
-      cross_link_summary: buildRunCrossLinkSummary(candidates)
-    }),
-    candidates
-  };
+    const schedulerRun = castRawRow<RawSchedulerRunRow>(rows[0]);
+    const rawDecisions = adapter.listCandidateDecisions(packId, {
+      where: { scheduler_run_id: schedulerRun.id },
+      orderBy: { created_at: 'asc' }
+    });
+    const decisions = rawDecisions.map(row => castRawRow<RawSchedulerCandidateDecisionRow>(row));
+
+    const workflowLinks = await buildSchedulerDecisionWorkflowLinks(context, decisions.map(d => ({ id: d.id, created_job_id: d.created_job_id })));
+    const candidates = decisions.map(decision =>
+      toCandidateDecisionReadModel({
+        id: decision.id,
+        scheduler_run_id: decision.scheduler_run_id,
+        partition_id: decision.partition_id,
+        actor_id: decision.actor_id,
+        kind: decision.kind,
+        candidate_reasons: parseSummaryJson(decision.candidate_reasons),
+        chosen_reason: decision.chosen_reason,
+        scheduled_for_tick: BigInt(decision.scheduled_for_tick),
+        priority_score: decision.priority_score,
+        skipped_reason: decision.skipped_reason,
+        created_job_id: decision.created_job_id,
+        workflow_link: workflowLinks.get(decision.id) ?? null,
+        created_at: BigInt(decision.created_at)
+      })
+    );
+
+    return {
+      run: toRunReadModel({
+        id: schedulerRun.id,
+        worker_id: schedulerRun.worker_id,
+        partition_id: schedulerRun.partition_id,
+        lease_holder: schedulerRun.lease_holder,
+        lease_expires_at_snapshot: schedulerRun.lease_expires_at_snapshot !== null ? BigInt(schedulerRun.lease_expires_at_snapshot) : null,
+        tick: BigInt(schedulerRun.tick),
+        summary: parseSummaryJson(schedulerRun.summary),
+        started_at: BigInt(schedulerRun.started_at),
+        finished_at: BigInt(schedulerRun.finished_at),
+        created_at: BigInt(schedulerRun.created_at),
+        cross_link_summary: buildRunCrossLinkSummary(candidates)
+      }),
+      candidates
+    };
+  }
+
+  return null;
 };
 
 export const getAgentSchedulerProjection = async (
@@ -1221,32 +1361,61 @@ export const getAgentSchedulerProjection = async (
   }
 
   const limit = parseLimit(options?.limit);
-  const decisions = await context.repos.scheduler.getPrisma().schedulerCandidateDecision.findMany({
-    where: {
-      actor_id: resolvedActorId
-    },
-    orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-    take: limit
-  });
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
+    return emptyAgentProjection(resolvedActorId);
+  }
 
-  const workflowLinks = await buildSchedulerDecisionWorkflowLinks(context, decisions);
-  const timeline = decisions.map(decision =>
+  const packIds = getAllPackIds(context);
+  const allRawDecisions: Array<{ decision: RawSchedulerCandidateDecisionRow; packId: string }> = [];
+
+  for (const packId of packIds) {
+    const rows = adapter.getAgentDecisions(packId, resolvedActorId, limit);
+    for (const row of rows) {
+      allRawDecisions.push({ decision: castRawRow<RawSchedulerCandidateDecisionRow>(row), packId });
+    }
+  }
+
+  allRawDecisions.sort((a, b) => b.decision.created_at - a.decision.created_at || (b.decision.id < a.decision.id ? -1 : 1));
+  const topDecisions = allRawDecisions.slice(0, limit);
+
+  const workflowLinks = await buildSchedulerDecisionWorkflowLinks(context, topDecisions.map(d => ({ id: d.decision.id, created_job_id: d.decision.created_job_id })));
+  const timeline = topDecisions.map(({ decision }) =>
     toCandidateDecisionReadModel({
-      ...decision,
-      workflow_link: workflowLinks.get(decision.id) ?? null
+      id: decision.id,
+      scheduler_run_id: decision.scheduler_run_id,
+      partition_id: decision.partition_id,
+      actor_id: decision.actor_id,
+      kind: decision.kind,
+      candidate_reasons: parseSummaryJson(decision.candidate_reasons),
+      chosen_reason: decision.chosen_reason,
+      scheduled_for_tick: BigInt(decision.scheduled_for_tick),
+      priority_score: decision.priority_score,
+      skipped_reason: decision.skipped_reason,
+      created_job_id: decision.created_job_id,
+      workflow_link: workflowLinks.get(decision.id) ?? null,
+      created_at: BigInt(decision.created_at)
     })
   );
+
   const runIds = Array.from(new Set(timeline.map(item => item.scheduler_run_id)));
-  const runs = runIds.length
-    ? await context.repos.scheduler.getPrisma().schedulerRun.findMany({
-        where: {
-          id: {
-            in: runIds
-          }
-        },
-        orderBy: [{ created_at: 'desc' }]
-      })
-    : [];
+  const runs: Array<{ run_id: string; tick: string; worker_id: string; partition_id: string; created_at: string }> = [];
+  for (const runId of runIds) {
+    for (const packId of packIds) {
+      const rows = adapter.listRuns(packId, { where: { id: runId }, take: 1 });
+      if (rows.length > 0) {
+        const run = castRawRow<RawSchedulerRunRow>(rows[0]);
+        runs.push({
+          run_id: run.id,
+          tick: BigInt(run.tick).toString(),
+          worker_id: run.worker_id,
+          partition_id: run.partition_id,
+          created_at: BigInt(run.created_at).toString()
+        });
+        break;
+      }
+    }
+  }
 
   const reasonCounts = new Map<SchedulerReason, number>();
   const skippedReasonCounts = new Map<SchedulerSkipReason, number>();
@@ -1296,13 +1465,7 @@ export const getAgentSchedulerProjection = async (
     skipped_reason_breakdown: sortedSkippedReasons.map(([skipped_reason, count]) => ({ skipped_reason, count })),
     timeline,
     linkage: {
-      recent_runs: runs.map(run => ({
-        run_id: run.id,
-        tick: run.tick.toString(),
-        worker_id: run.worker_id,
-        partition_id: run.partition_id,
-        created_at: run.created_at.toString()
-      })),
+      recent_runs: runs,
       recent_created_jobs: timeline
         .filter(item => item.created_job_id !== null)
         .map(item => ({
@@ -1317,47 +1480,120 @@ export const getAgentSchedulerProjection = async (
   };
 };
 
-export const listAgentSchedulerDecisions = async (
+const emptyAgentProjection = (actorId: string): AgentSchedulerProjection => ({
+  actor_id: actorId,
+  summary: {
+    total_decisions: 0,
+    created_count: 0,
+    skipped_count: 0,
+    periodic_count: 0,
+    event_driven_count: 0,
+    latest_scheduled_tick: null,
+    latest_run_id: null,
+    latest_partition_id: null,
+    top_reason: null,
+    top_skipped_reason: null
+  },
+  reason_breakdown: [],
+  skipped_reason_breakdown: [],
+  timeline: [],
+  linkage: {
+    recent_runs: [],
+    recent_created_jobs: []
+  }
+});
+
+export const listAgentSchedulerDecisions = (
   context: AppContext,
   actorId: string,
   limit = getSchedulerObservabilityConfig().default_query_limit
-): Promise<SchedulerCandidateDecisionReadModel[]> => {
-  const decisions = await context.repos.scheduler.getPrisma().schedulerCandidateDecision.findMany({
-    where: {
-      actor_id: actorId
-    },
-    orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-    take: limit
-  });
+): SchedulerCandidateDecisionReadModel[] => {
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
+    return [];
+  }
 
-  return decisions.map(toCandidateDecisionReadModel);
+  const packIds = getAllPackIds(context);
+  const allDecisions: RawSchedulerCandidateDecisionRow[] = [];
+
+  for (const packId of packIds) {
+    const rows = adapter.getAgentDecisions(packId, actorId, limit);
+    for (const row of rows) {
+      allDecisions.push(castRawRow<RawSchedulerCandidateDecisionRow>(row));
+    }
+  }
+
+  allDecisions.sort((a, b) => b.created_at - a.created_at || (b.id < a.id ? -1 : 1));
+  const topDecisions = allDecisions.slice(0, limit);
+
+  return topDecisions.map(decision =>
+    toCandidateDecisionReadModel({
+      id: decision.id,
+      scheduler_run_id: decision.scheduler_run_id,
+      partition_id: decision.partition_id,
+      actor_id: decision.actor_id,
+      kind: decision.kind,
+      candidate_reasons: parseSummaryJson(decision.candidate_reasons),
+      chosen_reason: decision.chosen_reason,
+      scheduled_for_tick: BigInt(decision.scheduled_for_tick),
+      priority_score: decision.priority_score,
+      skipped_reason: decision.skipped_reason,
+      created_job_id: decision.created_job_id,
+      created_at: BigInt(decision.created_at)
+    })
+  );
 };
 
-export const listSchedulerRuns = async (
+export const listSchedulerRuns = (
   context: AppContext,
   input: ListSchedulerRunsInput
-): Promise<ListSchedulerRunsResult> => {
+): ListSchedulerRunsResult => {
   const filters = parseRunFilters(input);
-  const runs = await context.repos.scheduler.getPrisma().schedulerRun.findMany({
-    where: {
-      ...(filters.worker_id !== null ? { worker_id: filters.worker_id } : {}),
-      ...(filters.partition_id !== null ? { partition_id: filters.partition_id } : {}),
-      ...(filters.from_tick !== null || filters.to_tick !== null
-        ? {
-            tick: {
-              ...(filters.from_tick !== null ? { gte: filters.from_tick } : {}),
-              ...(filters.to_tick !== null ? { lte: filters.to_tick } : {})
-            }
-          }
-        : {}),
-      ...buildRunCursorWhere(filters.cursor)
-    },
-    orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-    take: filters.limit + 1
-  });
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
+    return emptyRunListResult(filters);
+  }
 
-  const hasNextPage = runs.length > filters.limit;
-  const pageItems = runs.slice(0, filters.limit).map(toRunReadModel);
+  const packIds = getAllPackIds(context);
+  const cursorPredicate = buildRunCursorWhere(filters.cursor);
+  const fromTickNum = filters.from_tick !== null ? Number(filters.from_tick) : null;
+  const toTickNum = filters.to_tick !== null ? Number(filters.to_tick) : null;
+
+  const allRuns: RawSchedulerRunRow[] = [];
+  for (const packId of packIds) {
+    const rows = adapter.listRuns(packId, {
+      orderBy: { created_at: 'desc' },
+      take: filters.limit + 1
+    });
+    for (const row of rows) {
+      const run = castRawRow<RawSchedulerRunRow>(row);
+      if (filters.worker_id !== null && run.worker_id !== filters.worker_id) continue;
+      if (filters.partition_id !== null && run.partition_id !== filters.partition_id) continue;
+      if (fromTickNum !== null && run.tick < fromTickNum) continue;
+      if (toTickNum !== null && run.tick > toTickNum) continue;
+      if (!cursorPredicate(run)) continue;
+      allRuns.push(run);
+    }
+  }
+
+  allRuns.sort((a, b) => b.created_at - a.created_at || (b.id < a.id ? -1 : 1));
+  const totalRuns = allRuns.slice(0, filters.limit + 1);
+
+  const hasNextPage = totalRuns.length > filters.limit;
+  const pageItems = totalRuns.slice(0, filters.limit).map(run =>
+    toRunReadModel({
+      id: run.id,
+      worker_id: run.worker_id,
+      partition_id: run.partition_id,
+      lease_holder: run.lease_holder,
+      lease_expires_at_snapshot: run.lease_expires_at_snapshot !== null ? BigInt(run.lease_expires_at_snapshot) : null,
+      tick: BigInt(run.tick),
+      summary: parseSummaryJson(run.summary),
+      started_at: BigInt(run.started_at),
+      finished_at: BigInt(run.finished_at),
+      created_at: BigInt(run.created_at)
+    })
+  );
   const nextCursor = hasNextPage && pageItems.length > 0
     ? encodeSchedulerCursor({
         created_at: pageItems[pageItems.length - 1].created_at,
@@ -1385,39 +1621,78 @@ export const listSchedulerRuns = async (
   };
 };
 
+const emptyRunListResult = (filters: ReturnType<typeof parseRunFilters>): ListSchedulerRunsResult => ({
+  items: [],
+  page_info: { has_next_page: false, next_cursor: null },
+  summary: {
+    returned: 0,
+    limit: filters.limit,
+    filters: {
+      cursor: filters.cursor ? encodeSchedulerCursor(filters.cursor) : null,
+      from_tick: filters.from_tick?.toString() ?? null,
+      to_tick: filters.to_tick?.toString() ?? null,
+      worker_id: filters.worker_id,
+      partition_id: filters.partition_id
+    }
+  }
+});
+
 export const listSchedulerDecisions = async (
   context: AppContext,
   input: ListSchedulerDecisionsInput
 ): Promise<ListSchedulerDecisionsResult> => {
   const filters = parseDecisionFilters(input);
-  const decisions = await context.repos.scheduler.getPrisma().schedulerCandidateDecision.findMany({
-    where: {
-      ...(filters.actor_id !== null ? { actor_id: filters.actor_id } : {}),
-      ...(filters.kind !== null ? { kind: filters.kind } : {}),
-      ...(filters.reason !== null ? { chosen_reason: filters.reason } : {}),
-      ...(filters.skipped_reason !== null ? { skipped_reason: filters.skipped_reason } : {}),
-      ...(filters.partition_id !== null ? { partition_id: filters.partition_id } : {}),
-      ...(filters.from_tick !== null || filters.to_tick !== null
-        ? {
-            scheduled_for_tick: {
-              ...(filters.from_tick !== null ? { gte: filters.from_tick } : {}),
-              ...(filters.to_tick !== null ? { lte: filters.to_tick } : {})
-            }
-          }
-        : {}),
-      ...buildDecisionCursorWhere(filters.cursor)
-    },
-    orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-    take: filters.limit + 1
-  });
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
+    return emptyDecisionListResult(filters);
+  }
 
-  const hasNextPage = decisions.length > filters.limit;
-  const pageDecisions = decisions.slice(0, filters.limit);
-  const workflowLinks = await buildSchedulerDecisionWorkflowLinks(context, pageDecisions);
+  const packIds = getAllPackIds(context);
+  const cursorPredicate = buildDecisionCursorWhere(filters.cursor);
+  const fromTickNum = filters.from_tick !== null ? Number(filters.from_tick) : null;
+  const toTickNum = filters.to_tick !== null ? Number(filters.to_tick) : null;
+
+  const allDecisions: RawSchedulerCandidateDecisionRow[] = [];
+  for (const packId of packIds) {
+    const rows = adapter.listCandidateDecisions(packId, {
+      orderBy: { created_at: 'desc' },
+      take: filters.limit + 1
+    });
+    for (const row of rows) {
+      const decision = castRawRow<RawSchedulerCandidateDecisionRow>(row);
+      if (filters.actor_id !== null && decision.actor_id !== filters.actor_id) continue;
+      if (filters.kind !== null && decision.kind !== filters.kind) continue;
+      if (filters.reason !== null && decision.chosen_reason !== filters.reason) continue;
+      if (filters.skipped_reason !== null && decision.skipped_reason !== filters.skipped_reason) continue;
+      if (filters.partition_id !== null && decision.partition_id !== filters.partition_id) continue;
+      if (fromTickNum !== null && decision.scheduled_for_tick < fromTickNum) continue;
+      if (toTickNum !== null && decision.scheduled_for_tick > toTickNum) continue;
+      if (!cursorPredicate(decision)) continue;
+      allDecisions.push(decision);
+    }
+  }
+
+  allDecisions.sort((a, b) => b.created_at - a.created_at || (b.id < a.id ? -1 : 1));
+  const totalDecisions = allDecisions.slice(0, filters.limit + 1);
+
+  const hasNextPage = totalDecisions.length > filters.limit;
+  const pageDecisions = totalDecisions.slice(0, filters.limit);
+  const workflowLinks = await buildSchedulerDecisionWorkflowLinks(context, pageDecisions.map(d => ({ id: d.id, created_job_id: d.created_job_id })));
   const pageItems = pageDecisions.map(decision =>
     toCandidateDecisionReadModel({
-      ...decision,
-      workflow_link: workflowLinks.get(decision.id) ?? null
+      id: decision.id,
+      scheduler_run_id: decision.scheduler_run_id,
+      partition_id: decision.partition_id,
+      actor_id: decision.actor_id,
+      kind: decision.kind,
+      candidate_reasons: parseSummaryJson(decision.candidate_reasons),
+      chosen_reason: decision.chosen_reason,
+      scheduled_for_tick: BigInt(decision.scheduled_for_tick),
+      priority_score: decision.priority_score,
+      skipped_reason: decision.skipped_reason,
+      created_job_id: decision.created_job_id,
+      workflow_link: workflowLinks.get(decision.id) ?? null,
+      created_at: BigInt(decision.created_at)
     })
   );
   const nextCursor = hasNextPage && pageItems.length > 0
@@ -1450,6 +1725,25 @@ export const listSchedulerDecisions = async (
   };
 };
 
+const emptyDecisionListResult = (filters: ReturnType<typeof parseDecisionFilters>): ListSchedulerDecisionsResult => ({
+  items: [],
+  page_info: { has_next_page: false, next_cursor: null },
+  summary: {
+    returned: 0,
+    limit: filters.limit,
+    filters: {
+      cursor: filters.cursor ? encodeSchedulerCursor(filters.cursor) : null,
+      actor_id: filters.actor_id,
+      kind: filters.kind,
+      reason: filters.reason,
+      skipped_reason: filters.skipped_reason,
+      from_tick: filters.from_tick?.toString() ?? null,
+      to_tick: filters.to_tick?.toString() ?? null,
+      partition_id: filters.partition_id
+    }
+  }
+});
+
 export const getSchedulerSummarySnapshot = async (
   context: AppContext,
   input?: { sampleRuns?: number }
@@ -1459,16 +1753,28 @@ export const getSchedulerSummarySnapshot = async (
     Math.max(input?.sampleRuns ?? config.default_sample_runs, 1),
     config.max_sample_runs
   );
-  const [latestRunReadModel, recentRuns, recentDecisions, recentJobs] = await Promise.all([
+  const adapter = context.schedulerStorage;
+  const packIds = getAllPackIds(context);
+
+  let allRuns: RawSchedulerRunRow[] = [];
+  let allDecisions: RawSchedulerCandidateDecisionRow[] = [];
+
+  if (adapter) {
+    for (const packId of packIds) {
+      const runs = adapter.listRuns(packId, { orderBy: { created_at: 'desc' }, take: sampleRuns });
+      allRuns.push(...runs.map(row => castRawRow<RawSchedulerRunRow>(row)));
+
+      const decisions = adapter.listCandidateDecisions(packId, { orderBy: { created_at: 'desc' }, take: sampleRuns * 10 });
+      allDecisions.push(...decisions.map(row => castRawRow<RawSchedulerCandidateDecisionRow>(row)));
+    }
+    allRuns.sort((a, b) => b.created_at - a.created_at);
+    allRuns = allRuns.slice(0, sampleRuns);
+    allDecisions.sort((a, b) => b.created_at - a.created_at);
+    allDecisions = allDecisions.slice(0, sampleRuns * 10);
+  }
+
+  const [latestRunReadModel, recentJobs] = await Promise.all([
     getLatestSchedulerRunReadModel(context),
-    context.repos.scheduler.getPrisma().schedulerRun.findMany({
-      orderBy: [{ created_at: 'desc' }],
-      take: sampleRuns
-    }),
-    context.repos.scheduler.getPrisma().schedulerCandidateDecision.findMany({
-      orderBy: [{ created_at: 'desc' }],
-      take: sampleRuns * 10
-    }),
     context.repos.inference.getPrisma().decisionJob.findMany({
       where: {
         intent_class: {
@@ -1490,7 +1796,7 @@ export const getSchedulerSummarySnapshot = async (
   const workerCounts = new Map<string, number>();
   const intentClassCounts = new Map<string, number>();
 
-  for (const decision of recentDecisions) {
+  for (const decision of allDecisions) {
     const chosenReason = decision.chosen_reason as SchedulerReason;
     reasonCounts.set(chosenReason, (reasonCounts.get(chosenReason) ?? 0) + 1);
     actorCounts.set(decision.actor_id, (actorCounts.get(decision.actor_id) ?? 0) + 1);
@@ -1501,7 +1807,7 @@ export const getSchedulerSummarySnapshot = async (
     }
   }
 
-  for (const run of recentRuns) {
+  for (const run of allRuns) {
     workerCounts.set(run.worker_id, (workerCounts.get(run.worker_id) ?? 0) + 1);
   }
 
@@ -1509,9 +1815,9 @@ export const getSchedulerSummarySnapshot = async (
     intentClassCounts.set(job.intent_class, (intentClassCounts.get(job.intent_class) ?? 0) + 1);
   }
 
-  const runTotals = recentRuns.reduce(
+  const runTotals = allRuns.reduce(
     (accumulator, run) => {
-      const summary = run.summary as unknown as AgentSchedulerRunResult;
+      const summary = parseSummaryJson(run.summary) as AgentSchedulerRunResult;
       accumulator.sampled_runs += 1;
       accumulator.created_total += summary.created_count;
       accumulator.created_periodic_total += summary.created_periodic_count;
@@ -1561,26 +1867,37 @@ export const getSchedulerSummarySnapshot = async (
   };
 };
 
-export const getSchedulerTrendsSnapshot = async (
+export const getSchedulerTrendsSnapshot = (
   context: AppContext,
   input?: { sampleRuns?: number }
-): Promise<SchedulerTrendsSnapshot> => {
+): SchedulerTrendsSnapshot => {
   const config = getSchedulerObservabilityConfig().trends;
   const sampleRuns = Math.min(
     Math.max(input?.sampleRuns ?? config.default_sample_runs, 1),
     config.max_sample_runs
   );
-  const recentRuns = await context.repos.scheduler.getPrisma().schedulerRun.findMany({
-    orderBy: [{ created_at: 'desc' }],
-    take: sampleRuns
-  });
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
+    return { points: [] };
+  }
+
+  const packIds = getAllPackIds(context);
+  let allRuns: RawSchedulerRunRow[] = [];
+
+  for (const packId of packIds) {
+    const rows = adapter.listRuns(packId, { orderBy: { created_at: 'desc' }, take: sampleRuns });
+    allRuns.push(...rows.map(row => castRawRow<RawSchedulerRunRow>(row)));
+  }
+
+  allRuns.sort((a, b) => b.created_at - a.created_at);
+  allRuns = allRuns.slice(0, sampleRuns);
 
   return {
-    points: recentRuns
+    points: allRuns
       .map(run => {
-        const summary = run.summary as unknown as AgentSchedulerRunResult;
+        const summary = parseSummaryJson(run.summary) as AgentSchedulerRunResult;
         return {
-          tick: run.tick.toString(),
+          tick: BigInt(run.tick).toString(),
           run_id: run.id,
           partition_id: run.partition_id,
           worker_id: run.worker_id,
@@ -1595,42 +1912,85 @@ export const getSchedulerTrendsSnapshot = async (
   };
 };
 
-export const listSchedulerOwnershipAssignments = async (
+export const listSchedulerOwnershipAssignments = (
   context: AppContext,
   input: ListSchedulerOwnershipAssignmentsInput = {}
-): Promise<SchedulerOwnershipAssignmentsResult> => {
+): SchedulerOwnershipAssignmentsResult => {
   const filters = parseOwnershipAssignmentFilters(input);
-  const assignments = await context.repos.scheduler.getPrisma().schedulerPartitionAssignment.findMany({
-    where: {
-      ...(filters.worker_id !== null ? { worker_id: filters.worker_id } : {}),
-      ...(filters.partition_id !== null ? { partition_id: filters.partition_id } : {}),
-      ...(filters.status !== null ? { status: filters.status } : {})
-    },
-    orderBy: [{ partition_id: 'asc' }]
-  });
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
+    return {
+      items: [],
+      summary: {
+        ...buildSchedulerOwnershipSummary([]),
+        filters
+      }
+    };
+  }
 
-  const latestMigrations = await Promise.all(
-    assignments.map(async assignment => {
-      const migration = await context.repos.scheduler.getPrisma().schedulerOwnershipMigrationLog.findFirst({
-        where: {
-          partition_id: assignment.partition_id
-        },
-        orderBy: [{ created_at: 'desc' }]
-      });
-      return [assignment.partition_id, migration] as const;
-    })
-  );
-  const latestMigrationByPartition = new Map(latestMigrations);
+  const packIds = getAllPackIds(context);
+  const allPartitions: RawSchedulerPartitionRow[] = [];
+  const allMigrations: RawSchedulerMigrationRow[] = [];
 
-  const items = assignments.map(assignment => ({
+  for (const packId of packIds) {
+    const partitions = adapter.listPartitions(packId);
+    for (const p of partitions) {
+      const partition = castRawRow<RawSchedulerPartitionRow>(p as unknown as Record<string, unknown>);
+      if (filters.worker_id !== null && partition.worker_id !== filters.worker_id) continue;
+      if (filters.partition_id !== null && partition.partition_id !== filters.partition_id) continue;
+      if (filters.status !== null && partition.status !== filters.status) continue;
+      allPartitions.push(partition);
+    }
+
+    const migrations = adapter.listMigrations(packId);
+    for (const m of migrations) {
+      allMigrations.push(castRawRow<RawSchedulerMigrationRow>(m as unknown as Record<string, unknown>));
+    }
+  }
+
+  allPartitions.sort((a, b) => a.partition_id < b.partition_id ? -1 : 1);
+
+  allMigrations.sort((a, b) => b.created_at - a.created_at);
+  const latestMigrationByPartition = new Map<string, RawSchedulerMigrationRow>();
+  for (const m of allMigrations) {
+    if (!latestMigrationByPartition.has(m.partition_id)) {
+      latestMigrationByPartition.set(m.partition_id, m);
+    }
+  }
+
+  const items = allPartitions.map(assignment => ({
     partition_id: assignment.partition_id,
     worker_id: assignment.worker_id,
     status: assignment.status,
     version: assignment.version,
     source: assignment.source,
-    updated_at: assignment.updated_at.toString(),
+    updated_at: BigInt(assignment.updated_at).toString(),
     latest_migration: latestMigrationByPartition.get(assignment.partition_id)
-      ? toOwnershipMigrationReadModel(latestMigrationByPartition.get(assignment.partition_id)!)
+      ? toOwnershipMigrationReadModel({
+          id: latestMigrationByPartition.get(assignment.partition_id)!.id,
+          partition_id: latestMigrationByPartition.get(assignment.partition_id)!.partition_id,
+          from_worker_id: latestMigrationByPartition.get(assignment.partition_id)!.from_worker_id,
+          to_worker_id: latestMigrationByPartition.get(assignment.partition_id)!.to_worker_id,
+          status: latestMigrationByPartition.get(assignment.partition_id)!.status,
+          reason: latestMigrationByPartition.get(assignment.partition_id)!.reason,
+          details: latestMigrationByPartition.get(assignment.partition_id)!.details,
+          created_at: BigInt(latestMigrationByPartition.get(assignment.partition_id)!.created_at),
+          updated_at: BigInt(latestMigrationByPartition.get(assignment.partition_id)!.updated_at),
+          completed_at: latestMigrationByPartition.get(assignment.partition_id)!.completed_at !== null
+            ? BigInt(latestMigrationByPartition.get(assignment.partition_id)!.completed_at!)
+            : null
+        } as {
+          id: string;
+          partition_id: string;
+          from_worker_id: string | null;
+          to_worker_id: string;
+          status: string;
+          reason: string | null;
+          details: unknown;
+          created_at: bigint;
+          updated_at: bigint;
+          completed_at: bigint | null;
+        })
       : null
   }));
   const summary = buildSchedulerOwnershipSummary(items);
@@ -1644,45 +2004,88 @@ export const listSchedulerOwnershipAssignments = async (
   };
 };
 
-export const listSchedulerOwnershipMigrations = async (
+export const listSchedulerOwnershipMigrations = (
   context: AppContext,
   input: ListSchedulerOwnershipMigrationsInput = {}
-): Promise<SchedulerOwnershipMigrationsResult> => {
+): SchedulerOwnershipMigrationsResult => {
   const filters = parseOwnershipMigrationFilters(input);
-  const migrations = await context.repos.scheduler.getPrisma().schedulerOwnershipMigrationLog.findMany({
-    where: {
-      ...(filters.partition_id !== null ? { partition_id: filters.partition_id } : {}),
-      ...(filters.status !== null ? { status: filters.status } : {}),
-      ...(filters.worker_id !== null
-        ? {
-            OR: [{ from_worker_id: filters.worker_id }, { to_worker_id: filters.worker_id }]
-          }
-        : {})
-    },
-    orderBy: [{ created_at: 'desc' }],
-    take: filters.limit
-  });
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
+    return {
+      items: [],
+      summary: { returned: 0, limit: filters.limit, in_progress_count: 0, filters }
+    };
+  }
 
-  const items = migrations.map(toOwnershipMigrationReadModel);
+  const packIds = getAllPackIds(context);
+  let allMigrations: RawSchedulerMigrationRow[] = [];
+
+  for (const packId of packIds) {
+    const migrations = adapter.listMigrations(packId);
+    for (const m of migrations) {
+      const migration = castRawRow<RawSchedulerMigrationRow>(m as unknown as Record<string, unknown>);
+      if (filters.partition_id !== null && migration.partition_id !== filters.partition_id) continue;
+      if (filters.status !== null && migration.status !== filters.status) continue;
+      if (filters.worker_id !== null && migration.from_worker_id !== filters.worker_id && migration.to_worker_id !== filters.worker_id) continue;
+      allMigrations.push(migration);
+    }
+  }
+
+  allMigrations.sort((a, b) => b.created_at - a.created_at);
+  allMigrations = allMigrations.slice(0, filters.limit);
+
+  const items = allMigrations.map(migration =>
+    toOwnershipMigrationReadModel({
+      id: migration.id,
+      partition_id: migration.partition_id,
+      from_worker_id: migration.from_worker_id,
+      to_worker_id: migration.to_worker_id,
+      status: migration.status,
+      reason: migration.reason,
+      details: migration.details ? parseSummaryJson(migration.details) : null,
+      created_at: BigInt(migration.created_at),
+      updated_at: BigInt(migration.updated_at),
+      completed_at: migration.completed_at !== null ? BigInt(migration.completed_at) : null
+    })
+  );
 
   return {
     items,
     summary: {
       returned: items.length,
       limit: filters.limit,
-      in_progress_count: migrations.filter(item => item.status === 'requested' || item.status === 'in_progress').length,
+      in_progress_count: allMigrations.filter(item => item.status === 'requested' || item.status === 'in_progress').length,
       filters
     }
   };
 };
 
-export const listSchedulerWorkers = async (
+export const listSchedulerWorkers = (
   context: AppContext,
   input: ListSchedulerWorkersInput = {}
-): Promise<SchedulerWorkersResult> => {
+): SchedulerWorkersResult => {
   const filters = parseWorkerFilters(input);
-  const workers = await listSchedulerWorkerRuntimeStates(context);
-  const filteredWorkers = workers.filter(
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
+    return {
+      items: [],
+      summary: { returned: 0, active_count: 0, stale_count: 0, suspected_dead_count: 0, filters }
+    };
+  }
+
+  const packIds = getAllPackIds(context);
+  const allWorkers: ReturnType<typeof listSchedulerWorkerRuntimeStates> = [];
+
+  for (const packId of packIds) {
+    try {
+      const workers = listSchedulerWorkerRuntimeStates(context, packId);
+      allWorkers.push(...workers);
+    } catch {
+      // packId is required by underlying function — skip packs without scheduler storage
+    }
+  }
+
+  const filteredWorkers = allWorkers.filter(
     worker =>
       (filters.worker_id === null || worker.worker_id === filters.worker_id) &&
       (filters.status === null || worker.status === filters.status)
@@ -1701,13 +2104,32 @@ export const listSchedulerWorkers = async (
   };
 };
 
-export const listSchedulerRebalanceRecommendations = async (
+export const listSchedulerRebalanceRecommendations = (
   context: AppContext,
   input: ListSchedulerRebalanceRecommendationsInput = {}
-): Promise<SchedulerRebalanceRecommendationsResult> => {
+): SchedulerRebalanceRecommendationsResult => {
   const filters = parseRebalanceRecommendationFilters(input);
-  const recommendations = await listRecentSchedulerRebalanceRecommendations(context, filters.limit);
-  const filteredRecommendations = recommendations.filter(
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
+    return {
+      items: [],
+      summary: { returned: 0, limit: filters.limit, status_breakdown: [], suppress_reason_breakdown: [], filters }
+    };
+  }
+
+  const packIds = getAllPackIds(context);
+  const allRecommendations: SchedulerRebalanceRecommendationRecord[] = [];
+
+  for (const packId of packIds) {
+    try {
+      const recommendations = listRecentSchedulerRebalanceRecommendations(context, filters.limit, packId);
+      allRecommendations.push(...recommendations);
+    } catch {
+      // packId is required — skip packs without scheduler storage
+    }
+  }
+
+  const filteredRecommendations = allRecommendations.filter(
     item =>
       (filters.partition_id === null || item.partition_id === filters.partition_id) &&
       (filters.status === null || item.status === filters.status) &&
@@ -1748,16 +2170,17 @@ export const getSchedulerOperatorProjection = async (
   );
   const recentLimit = Math.min(Math.max(input?.recentLimit ?? config.default_recent_limit, 1), config.max_recent_limit);
 
-  const [latestRun, summary, trends, recentRunsResult, recentDecisionsResult, ownershipAssignments, ownershipMigrations, workers, rebalanceRecommendations] = await Promise.all([
+  const ownershipAssignments = listSchedulerOwnershipAssignments(context);
+  const ownershipMigrations = listSchedulerOwnershipMigrations(context, { limit: recentLimit });
+  const workers = listSchedulerWorkers(context);
+  const rebalanceRecommendations = listSchedulerRebalanceRecommendations(context, { limit: recentLimit });
+
+  const [latestRun, summary, trends, recentRunsResult, recentDecisionsResult] = await Promise.all([
     getLatestSchedulerRunReadModel(context),
     getSchedulerSummarySnapshot(context, { sampleRuns }),
-    getSchedulerTrendsSnapshot(context, { sampleRuns }),
-    listSchedulerRuns(context, { limit: recentLimit }),
-    listSchedulerDecisions(context, { limit: recentLimit }),
-    listSchedulerOwnershipAssignments(context),
-    listSchedulerOwnershipMigrations(context, { limit: recentLimit }),
-    listSchedulerWorkers(context),
-    listSchedulerRebalanceRecommendations(context, { limit: recentLimit })
+    Promise.resolve(getSchedulerTrendsSnapshot(context, { sampleRuns })),
+    Promise.resolve(listSchedulerRuns(context, { limit: recentLimit })),
+    listSchedulerDecisions(context, { limit: recentLimit })
   ]);
 
   const latestCandidates = latestRun?.candidates ?? [];
@@ -1773,8 +2196,18 @@ export const getSchedulerOperatorProjection = async (
   const latestPendingWorkflowCount = latestCandidates.filter(candidate => candidate.workflow_link?.workflow_state === 'pending').length;
   const latestCompletedWorkflowCount = latestCandidates.filter(candidate => candidate.workflow_link?.workflow_state === 'completed').length;
   const latestTopActor = summary.top_actors[0]?.actor_id ?? null;
-  const topOwnerWorkerId = ownershipAssignments.summary.top_workers[0]?.worker_id ?? null;
-  const latestStaleWorkerId = workers.items.find(item => item.status === 'stale' || item.status === 'suspected_dead')?.worker_id ?? null;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+  const topOwnerWorkerId: string | null = ownershipAssignments.summary.top_workers[0]?.worker_id ?? null;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+  const latestStaleWorkerId: string | null = workers.items.find(item => item.status === 'stale' || item.status === 'suspected_dead')?.worker_id ?? null;
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+  const ownershipItems: SchedulerPartitionOwnershipReadModel[] = ownershipAssignments.items;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+  const migrationItems: SchedulerOwnershipMigrationReadModel[] = ownershipMigrations.items;
+  const migrationInProgressCount: number = ownershipMigrations.summary.in_progress_count;
+  const latestMigrationPartitionId: string | null = latestMigration?.partition_id ?? null;
+  const latestMigrationToWorkerId: string | null = latestMigration?.to_worker_id ?? null;
 
   return {
     latest_run: latestRun,
@@ -1783,9 +2216,9 @@ export const getSchedulerOperatorProjection = async (
     recent_runs: recentRunsResult.items,
     recent_decisions: recentDecisionsResult.items,
     ownership: {
-      assignments: ownershipAssignments.items,
-      recent_migrations: ownershipMigrations.items,
-      summary: buildSchedulerOwnershipSummary(ownershipAssignments.items)
+      assignments: ownershipItems,
+      recent_migrations: migrationItems,
+      summary: buildSchedulerOwnershipSummary(ownershipItems)
     },
     workers: {
       items: workers.items,
@@ -1808,9 +2241,9 @@ export const getSchedulerOperatorProjection = async (
       latest_pending_workflow_count: latestPendingWorkflowCount,
       latest_completed_workflow_count: latestCompletedWorkflowCount,
       latest_top_actor: latestTopActor,
-      migration_in_progress_count: ownershipMigrations.summary.in_progress_count,
-      latest_migration_partition_id: latestMigration?.partition_id ?? null,
-      latest_migration_to_worker_id: latestMigration?.to_worker_id ?? null,
+      migration_in_progress_count: migrationInProgressCount,
+      latest_migration_partition_id: latestMigrationPartitionId,
+      latest_migration_to_worker_id: latestMigrationToWorkerId,
       top_owner_worker_id: topOwnerWorkerId,
       latest_rebalance_status: latestRebalance?.status ?? null,
       latest_rebalance_partition_id: latestRebalance?.partition_id ?? null,

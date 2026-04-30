@@ -8,34 +8,23 @@ import { createApp } from './app/create_app.js';
 import { asyncHandler } from './app/http/async_handler.js';
 import { getErrorMessage } from './app/http/errors.js';
 import { toJsonSafe } from './app/http/json.js';
+import { createPackScopeMiddleware } from './app/http/pack_scope_middleware.js';
 import { parseOptionalTick, parsePositiveStepTicks } from './app/http/runtime.js';
 import { createGlobalErrorMiddleware } from './app/middleware/error_handler.js';
-import { registerAgentRoutes } from './app/routes/agent.js';
-import { registerAuditRoutes } from './app/routes/audit.js';
-import { registerClockRoutes } from './app/routes/clock.js';
 import { registerConfigRoutes } from './app/routes/config.js';
 import { registerConfigBackupRoutes } from './app/routes/config_backup.js';
-import { registerExperimentalPackProjectionRoutes } from './app/routes/experimental_pack_projection.js';
-import { registerExperimentalRuntimeRoutes } from './app/routes/experimental_runtime.js';
-import { registerGraphRoutes } from './app/routes/graph.js';
-import { registerIdentityRoutes } from './app/routes/identity.js';
-import { registerInferenceRoutes } from './app/routes/inference.js';
-import { registerNarrativeRoutes } from './app/routes/narrative.js';
 import { registerAgentBindingRoutes } from './app/routes/operator_agent_bindings.js';
 import { registerOperatorAuditRoutes } from './app/routes/operator_audit.js';
 import { registerOperatorAuthRoutes } from './app/routes/operator_auth.js';
 import { registerGrantRoutes } from './app/routes/operator_grants.js';
 import { registerPackBindingRoutes } from './app/routes/operator_pack_bindings.js';
 import { registerOperatorRoutes } from './app/routes/operators.js';
-import { registerOverviewRoutes } from './app/routes/overview.js';
-import { registerPackOpeningRoutes } from './app/routes/pack_openings.js';
-import { registerPackSnapshotRoutes } from './app/routes/pack_snapshots.js';
+import { registerPackRoutes } from './app/routes/packs/index.js';
 import { registerPluginRuntimeWebRoutes } from './app/routes/plugin_runtime_web.js';
 import { registerPluginRoutes } from './app/routes/plugins.js';
-import { registerRelationalRoutes } from './app/routes/relational.js';
-import { registerSchedulerRoutes } from './app/routes/scheduler.js';
-import { registerSocialRoutes } from './app/routes/social.js';
 import { registerSystemRoutes } from './app/routes/system.js';
+import { MultiPackLoopHost } from './app/runtime/MultiPackLoopHost.js';
+import { PackScopeResolver } from './app/runtime/PackScopeResolver.js';
 import { createRuntimeClockProjectionService } from './app/runtime/runtime_clock_projection.js';
 import { resolveOwnedSchedulerPartitionIds } from './app/runtime/scheduler_partitioning.js';
 import {
@@ -63,9 +52,9 @@ import {
   getPreferredOpening,
   getPreferredWorldPack,
   getRuntimeConfig,
+  getRuntimeMultiPackConfig,
   getSimulationLoopIntervalMs,
   getStartupPolicy,
-  getRuntimeMultiPackConfig,
   getWorldEngineConfig,
   getWorldPacksDir,
   isAiGatewayEnabled,
@@ -80,6 +69,7 @@ import { createInferenceService } from './inference/service.js';
 import { createPrismaInferenceTraceSink } from './inference/sinks/prisma.js';
 import { PostgresPackStorageAdapter } from './packs/storage/internal/PostgresPackStorageAdapter.js';
 import { SqlitePackStorageAdapter } from './packs/storage/internal/SqlitePackStorageAdapter.js';
+import { SqliteSchedulerStorageAdapter } from './packs/storage/internal/SqliteSchedulerStorageAdapter.js';
 import { syncActivePackPluginRuntime } from './plugins/runtime.js';
 import { ApiError } from './utils/api_error.js';
 import { createLogger, setLoggerRuntimeConfig } from './utils/logger.js';
@@ -94,6 +84,7 @@ const dbProvider = process.env.PRISMA_DB_PROVIDER ?? 'sqlite';
 const packStorageAdapter = dbProvider === 'postgresql'
   ? new PostgresPackStorageAdapter(prisma)
   : new SqlitePackStorageAdapter();
+const schedulerStorage = new SqliteSchedulerStorageAdapter();
 const notifications = createNotificationManager();
 const sim = new SimulationManager({ prisma, packStorageAdapter, notifications });
 
@@ -114,9 +105,7 @@ const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
   last_error_message: null
 };
 
-let runtimeReady = false;
 let timer: SimulationLoopHandle | null = null;
-let isPaused = false;
 let httpServer: ReturnType<typeof app.listen> | null = null;
 let runtimeLoopDiagnostics: RuntimeLoopDiagnostics = { ...DEFAULT_RUNTIME_LOOP_DIAGNOSTICS };
 let httpApp: import('express').Express | null = null;
@@ -127,29 +116,25 @@ const schedulerPartitionIds = resolveOwnedSchedulerPartitionIds({ workerId: sche
 const simulationLoopIntervalMs = getSimulationLoopIntervalMs();
 
 const assertRuntimeReady = createRuntimeReadyGuard({
-  getRuntimeReady: () => runtimeReady,
+  getRuntimeReady: () => sim.isRuntimeReady(),
   startupHealth
 });
+
+const packScopeResolver = new PackScopeResolver(sim.getPackRuntimeRegistry());
 
 const appContext: AppContext = {
   repos,
   prisma,
   packStorageAdapter,
+  schedulerStorage,
   sim,
   clock: sim,
   activePack: sim,
   runtimeBootstrap: sim,
   activePackRuntime: sim,
+  packScope: packScopeResolver,
   notifications,
   startupHealth,
-  getRuntimeReady: () => runtimeReady,
-  setRuntimeReady: (ready: boolean) => {
-    runtimeReady = ready;
-  },
-  getPaused: () => isPaused,
-  setPaused: (paused: boolean) => {
-    isPaused = paused;
-  },
   getRuntimeLoopDiagnostics: () => runtimeLoopDiagnostics,
   setRuntimeLoopDiagnostics: next => {
     runtimeLoopDiagnostics = next;
@@ -209,86 +194,43 @@ const inferenceService = createInferenceService({
   traceSink: createPrismaInferenceTraceSink(appContext)
 });
 
+const multiPackLoopHost = new MultiPackLoopHost({
+  context: appContext,
+  inferenceService,
+  decisionWorkerId,
+  actionDispatcherWorkerId,
+  intervalMs: simulationLoopIntervalMs
+});
+sim.setMultiPackLoopHost(multiPackLoopHost);
+
+const packScopeMiddleware = createPackScopeMiddleware(packScopeResolver);
+
 const registerRoutes: RouteRegistrar = (application, context) => {
-  registerInferenceRoutes(application, context, inferenceService, {
-    asyncHandler
-  });
-  registerSystemRoutes(application, context);
-  registerOverviewRoutes(application, context, {
-    asyncHandler
-  });
-  registerPackOpeningRoutes(application, context, {
-    asyncHandler
-  });
-  registerPackSnapshotRoutes(application, context, {
-    asyncHandler
-  });
-  registerGraphRoutes(application, context, {
-    asyncHandler
-  });
-  registerClockRoutes(application, context, {
+  // -- Pack-scoped routes mounted at /:packId --
+  const packRouter = registerPackRoutes({
+    context,
+    scopeResolver: packScopeResolver,
+    asyncHandler,
+    inferenceService,
+    parseOptionalTick,
     parsePositiveStepTicks,
     toJsonSafe,
     getErrorMessage
   });
-  registerConfigBackupRoutes(application, context, {
-    asyncHandler
-  });
-  registerConfigRoutes(application, context, {
-    asyncHandler
-  });
-  registerExperimentalRuntimeRoutes(application, context, {
-    asyncHandler
-  });
-  registerExperimentalPackProjectionRoutes(application, context, {
-    asyncHandler
-  });
-  registerSocialRoutes(application, context, {
-    asyncHandler
-  });
-  registerRelationalRoutes(application, context, {
-    asyncHandler
-  });
-  registerNarrativeRoutes(application, context, {
-    asyncHandler
-  });
-  registerAgentRoutes(application, context, {
-    asyncHandler
-  });
-  registerAuditRoutes(application, context, {
-    asyncHandler
-  });
-  registerIdentityRoutes(application, context, {
-    asyncHandler,
-    parseOptionalTick
-  });
-  registerPluginRoutes(application, context, {
-    asyncHandler
-  });
-  registerPluginRuntimeWebRoutes(application, context, {
-    asyncHandler
-  });
-  registerSchedulerRoutes(application, context, {
-    asyncHandler
-  });
-  registerOperatorAuthRoutes(application, context, {
-    asyncHandler
-  });
-  registerOperatorRoutes(application, context, {
-    asyncHandler
-  });
-  registerPackBindingRoutes(application, context, {
-    asyncHandler
-  });
-  registerAgentBindingRoutes(application, context, {
-    asyncHandler
-  });
-  registerGrantRoutes(application, context, {
-    asyncHandler
-  });
-  registerOperatorAuditRoutes(application, context, {
-    asyncHandler
-  });
+  application.use('/:packId', packScopeMiddleware, packRouter);
+
+  // -- Global routes (no pack prefix) --
+  registerSystemRoutes(application, context);
+  registerConfigBackupRoutes(application, context, { asyncHandler });
+  registerConfigRoutes(application, context, { asyncHandler });
+  registerPluginRoutes(application, context, { asyncHandler });
+  registerPluginRuntimeWebRoutes(application, context, { asyncHandler });
+  registerOperatorAuthRoutes(application, context, { asyncHandler });
+  registerOperatorRoutes(application, context, { asyncHandler });
+  registerPackBindingRoutes(application, context, { asyncHandler });
+  registerAgentBindingRoutes(application, context, { asyncHandler });
+  registerGrantRoutes(application, context, { asyncHandler });
+  registerOperatorAuditRoutes(application, context, { asyncHandler });
 };
 
 const app = createApp({
@@ -330,7 +272,7 @@ const handleSimulationStepError = (err: unknown): void => {
     'SIM_STEP_ERR',
     details
   );
-  appContext.setPaused(true);
+  sim.setPaused(true);
   const latestDiagnostics = appContext.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
   appContext.setRuntimeLoopDiagnostics?.({
     ...latestDiagnostics,
@@ -341,7 +283,7 @@ const handleSimulationStepError = (err: unknown): void => {
 };
 
 const startSimulation = (): void => {
-  if (!appContext.getRuntimeReady()) {
+  if (!sim.isRuntimeReady()) {
     return;
   }
 
@@ -387,10 +329,10 @@ const start = async (): Promise<void> => {
     });
 
     if (startupHealth.level === 'fail') {
-      appContext.setRuntimeReady(false);
+      sim.setRuntimeReady(false);
       appContext.notifications.push('error', `系统启动健康检查失败: ${startupHealth.errors.join('; ')}`, 'SYS_PRECHECK_FAIL');
     } else if (!startupHealth.checks.world_pack_available) {
-      appContext.setRuntimeReady(false);
+      sim.setRuntimeReady(false);
       appContext.notifications.push('warning', '世界包为空，系统以降级模式启动。请先导入 world pack。', 'WORLD_PACK_EMPTY');
     } else {
       const selectedPack = selectStartupWorldPack(startupHealth.available_world_packs, preferredWorldPack);
@@ -449,7 +391,7 @@ const start = async (): Promise<void> => {
         }
       }
 
-      appContext.setRuntimeReady(true);
+      sim.setRuntimeReady(true);
       appContext.notifications.push(
         'info',
         `Yidhras 系统初始化成功 (pack=${selectedPack}, schedulerPartitions=${schedulerPartitionIds.join(',') || 'none'}, loopIntervalMs=${String(simulationLoopIntervalMs)}, aiGatewayEnabled=${String(isAiGatewayEnabled())})`,
@@ -459,7 +401,7 @@ const start = async (): Promise<void> => {
       startSimulation();
     }
   } catch (err: unknown) {
-    appContext.setRuntimeReady(false);
+    sim.setRuntimeReady(false);
     startupHealth.level = 'degraded';
     startupHealth.errors.push(`simulation init failed: ${getErrorMessage(err)}`);
     logger.error('Init Error', { error: getErrorMessage(err) });

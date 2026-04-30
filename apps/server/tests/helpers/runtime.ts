@@ -252,3 +252,34 @@ export const withIsolatedTestServer = async <T>(
     await environment.cleanup();
   }
 };
+
+/**
+ * Create an isolated pack SQLite database with scheduler tables for testing.
+ * Creates a temp directory mimicking a pack's runtime directory structure,
+ * instantiates SqliteSchedulerStorageAdapter, and runs DDL via open().
+ */
+export const createTestPackSQLite = async (
+  packId = 'test-pack'
+): Promise<{ path: string; cleanup: () => Promise<void> }> => {
+  const { SqliteSchedulerStorageAdapter } = await import(
+    '../../src/packs/storage/internal/SqliteSchedulerStorageAdapter.js'
+  );
+
+  const rootDir = await mkdtemp(join(os.tmpdir(), 'yidhras-scheduler-test-'));
+  const packDir = join(rootDir, 'data', 'world_packs', packId);
+  await mkdir(packDir, { recursive: true });
+
+  const dbPath = join(packDir, 'runtime.sqlite');
+  process.env.WORKSPACE_ROOT = rootDir;
+
+  const adapter = new SqliteSchedulerStorageAdapter();
+  adapter.open(packId);
+
+  return {
+    path: dbPath,
+    cleanup: async () => {
+      adapter.close(packId);
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  };
+};

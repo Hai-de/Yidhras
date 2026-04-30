@@ -14,8 +14,6 @@ import type { PluginRepository } from './PluginRepository.js';
 import { PrismaPluginRepository } from './PluginRepository.js';
 import type { RelationshipGraphRepository } from './RelationshipGraphRepository.js';
 import { PrismaRelationshipGraphRepository } from './RelationshipGraphRepository.js';
-import type { SchedulerRepository } from './SchedulerRepository.js';
-import { PrismaSchedulerRepository } from './SchedulerRepository.js';
 import type { SocialRepository } from './SocialRepository.js';
 import { PrismaSocialRepository } from './SocialRepository.js';
 
@@ -26,7 +24,6 @@ export interface Repositories {
   readonly narrative: NarrativeEventRepository;
   readonly relationship: RelationshipGraphRepository;
   readonly plugin: PluginRepository;
-  readonly scheduler: SchedulerRepository;
   readonly agent: AgentRepository;
   readonly social: SocialRepository;
 }
@@ -39,7 +36,6 @@ export function createPrismaRepositories(prisma: PrismaClient): Repositories {
     narrative: new PrismaNarrativeEventRepository(prisma),
     relationship: new PrismaRelationshipGraphRepository(prisma),
     plugin: new PrismaPluginRepository(prisma),
-    scheduler: new PrismaSchedulerRepository(prisma),
     agent: new PrismaAgentRepository(prisma),
     social: new PrismaSocialRepository(prisma)
   };

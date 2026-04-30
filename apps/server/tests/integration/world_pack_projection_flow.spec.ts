@@ -38,27 +38,7 @@ const buildProjectionTestContext = (
     }
   };
   const prisma = {
-    schedulerPartitionAssignment: {
-        async findMany() {
-          return [];
-        }
-      },
-      schedulerWorkerRuntimeState: {
-        async findUnique() {
-          return null;
-        }
-      },
-      schedulerOwnershipMigrationLog: {
-        async count() {
-          return 0;
-        }
-      },
-      schedulerLease: {
-        async findUnique() {
-          return null;
-        }
-      },
-      event: {
+    event: {
         async findMany() {
           return [];
         }
@@ -78,8 +58,13 @@ const buildProjectionTestContext = (
           return [];
         }
       }
-    } as unknown as AppContext['prisma'],
-    repos: wrapPrismaAsRepositories(prisma as PrismaClient),
+    } as unknown as AppContext['prisma'];
+  const repos = wrapPrismaAsRepositories(prisma as PrismaClient);
+  return {
+    clock: { getCurrentTick() { return now; }, getAllTimes() { return []; } } as unknown as AppContext['clock'],
+    activePack: { getActivePack(): typeof pack { return pack; } } as unknown as AppContext['activePack'],
+    prisma,
+    repos,
     sim: {
       getActivePack(): typeof pack {
         return pack;
@@ -102,19 +87,6 @@ const buildProjectionTestContext = (
         };
       }
     } as unknown as AppContext['sim'],
-    activePack: {
-      getActivePack(): typeof pack {
-        return pack;
-      }
-    } as unknown as AppContext['activePack'],
-    clock: {
-      getCurrentTick() {
-        return now;
-      },
-      getAllTimes() {
-        return [];
-      }
-    } as unknown as AppContext['clock'],
     notifications: {
       push(level, content) {
         return { id: 'noop', level, content, timestamp: Date.now() };
@@ -135,18 +107,6 @@ const buildProjectionTestContext = (
       },
       available_world_packs: [pack.metadata.id],
       errors: []
-    },
-    getRuntimeReady() {
-      return true;
-    },
-    setRuntimeReady() {
-      // noop
-    },
-    getPaused() {
-      return false;
-    },
-    setPaused() {
-      // noop
     },
     assertRuntimeReady() {
       // noop

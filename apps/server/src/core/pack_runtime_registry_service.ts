@@ -15,6 +15,7 @@ import { createLogger } from '../utils/logger.js';
 import { safeFs } from '../utils/safe_fs.js';
 
 const logger = createLogger('pack-runtime-registry');
+import type { MultiPackLoopHost } from '../app/runtime/MultiPackLoopHost.js';
 import type { DefaultPackCatalogService } from './pack_catalog_service.js';
 import { materializePackRuntime } from './pack_materializer.js';
 import type { PackRuntimeHandle } from './pack_runtime_handle.js';
@@ -35,6 +36,7 @@ export interface DefaultPackRuntimeRegistryServiceOptions {
   getActivePack: () => WorldPack | undefined;
   getStartupLevel: () => 'ok' | 'degraded' | 'fail';
   onBeforeUnload?: (packId: string) => Promise<void>;
+  multiPackLoopHost?: MultiPackLoopHost;
 }
 
 export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, PackRuntimeObservation, PackRuntimeControl {
@@ -46,6 +48,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
   private readonly getActivePackRef: () => WorldPack | undefined;
   private readonly getStartupLevelRef: () => 'ok' | 'degraded' | 'fail';
   private readonly onBeforeUnload?: (packId: string) => Promise<void>;
+  private multiPackLoopHost?: MultiPackLoopHost;
 
   constructor(options: DefaultPackRuntimeRegistryServiceOptions) {
     this.registry = options.registry;
@@ -56,6 +59,11 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     this.getActivePackRef = options.getActivePack;
     this.getStartupLevelRef = options.getStartupLevel;
     this.onBeforeUnload = options.onBeforeUnload;
+    this.multiPackLoopHost = options.multiPackLoopHost;
+  }
+
+  public setMultiPackLoopHost(host: MultiPackLoopHost): void {
+    this.multiPackLoopHost = host;
   }
 
   public listLoadedPackIds(): string[] {
@@ -127,7 +135,9 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       });
     }
 
-    const existing = this.registry.getHandle(resolved.pack.metadata.id);
+    const packId = resolved.pack.metadata.id;
+
+    const existing = this.registry.getHandle(packId);
     if (existing) {
       return {
         handle: existing,
@@ -135,6 +145,8 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
         already_loaded: true
       };
     }
+
+    this.registry.transitionTo(packId, 'loading');
 
     const { max_loaded_packs: maxLoadedPacks } = getRuntimeMultiPackConfig();
     if (this.registry.listLoadedPackIds().length >= maxLoadedPacks) {
@@ -180,6 +192,11 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       packRootDir
     });
 
+    // Start per-pack simulation loop
+    if (this.multiPackLoopHost) {
+      this.multiPackLoopHost.startLoop(resolved.pack.metadata.id, clock);
+    }
+
     return {
       handle: host.getHandle(),
       loaded: true,
@@ -195,6 +212,13 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
 
     if (this.getActivePackId() === packId) {
       throw new Error('cannot unload active pack runtime from stable runtime host');
+    }
+
+    this.registry.transitionTo(packId, 'unloading');
+
+    // Stop per-pack simulation loop before disposal
+    if (this.multiPackLoopHost) {
+      this.multiPackLoopHost.stopLoop(packId);
     }
 
     if (this.onBeforeUnload) {

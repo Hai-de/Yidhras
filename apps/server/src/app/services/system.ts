@@ -129,34 +129,26 @@ export const resetDevelopmentRuntimeState = async (context: AppContext): Promise
   }
 
   return context.repos.inference.getPrisma().$transaction(async tx => {
-    const schedulerCandidateDecisions = await tx.schedulerCandidateDecision.deleteMany();
-    const schedulerRuns = await tx.schedulerRun.deleteMany();
     const relationshipAdjustmentLogs = await tx.relationshipAdjustmentLog.deleteMany();
     const snrAdjustmentLogs = await tx.sNRAdjustmentLog.deleteMany();
     const decisionJobs = await tx.decisionJob.deleteMany();
     const actionIntents = await tx.actionIntent.deleteMany();
     const inferenceTraces = await tx.inferenceTrace.deleteMany();
-    const schedulerRebalanceRecommendations = await tx.schedulerRebalanceRecommendation.deleteMany();
-    const schedulerOwnershipMigrations = await tx.schedulerOwnershipMigrationLog.deleteMany();
-    const schedulerWorkerRuntimeStates = await tx.schedulerWorkerRuntimeState.deleteMany();
-    const schedulerPartitionAssignments = await tx.schedulerPartitionAssignment.deleteMany();
-    const schedulerCursor = await tx.schedulerCursor.deleteMany();
-    const schedulerLease = await tx.schedulerLease.deleteMany();
 
     return {
-      scheduler_candidate_decisions_deleted: schedulerCandidateDecisions.count,
-      scheduler_runs_deleted: schedulerRuns.count,
+      scheduler_candidate_decisions_deleted: 0,
+      scheduler_runs_deleted: 0,
       relationship_adjustment_logs_deleted: relationshipAdjustmentLogs.count,
       snr_adjustment_logs_deleted: snrAdjustmentLogs.count,
       decision_jobs_deleted: decisionJobs.count,
       action_intents_deleted: actionIntents.count,
       inference_traces_deleted: inferenceTraces.count,
-      scheduler_rebalance_recommendations_deleted: schedulerRebalanceRecommendations.count,
-      scheduler_ownership_migrations_deleted: schedulerOwnershipMigrations.count,
-      scheduler_worker_runtime_states_deleted: schedulerWorkerRuntimeStates.count,
-      scheduler_partition_assignments_deleted: schedulerPartitionAssignments.count,
-      scheduler_cursor_deleted: schedulerCursor.count,
-      scheduler_lease_deleted: schedulerLease.count
+      scheduler_rebalance_recommendations_deleted: 0,
+      scheduler_ownership_migrations_deleted: 0,
+      scheduler_worker_runtime_states_deleted: 0,
+      scheduler_partition_assignments_deleted: 0,
+      scheduler_cursor_deleted: 0,
+      scheduler_lease_deleted: 0
     } satisfies DevRuntimeResetSummary;
   });
 };
@@ -179,8 +171,8 @@ export const getRuntimeStatusSnapshot = async (
   const runtimeLoop = runtimeKernel.getLoopDiagnostics() ?? context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
 
   return {
-    status: context.getPaused() ? 'paused' : 'running',
-    runtime_ready: context.getRuntimeReady(),
+    status: context.sim.isPaused() ? 'paused' : 'running',
+    runtime_ready: context.sim.isRuntimeReady(),
     runtime_speed: context.activePackRuntime!.getRuntimeSpeedSnapshot(),
     runtime_loop: runtimeLoop,
     database: context.getDatabaseHealth?.() ?? null,
@@ -230,7 +222,7 @@ export const getStartupHealthSnapshot = (
     body: {
       healthy: context.startupHealth.level !== 'fail',
       level: context.startupHealth.level,
-      runtime_ready: context.getRuntimeReady(),
+      runtime_ready: context.sim.isRuntimeReady(),
       checks: context.startupHealth.checks,
       available_world_packs: context.startupHealth.available_world_packs,
       errors: context.startupHealth.errors

@@ -169,7 +169,7 @@ export const startSimulationLoop = ({
 
     const previous = getLoopDiagnostics(context);
     setLoopDiagnostics(context, buildLoopDiagnostics(previous, {
-      status: context.getPaused() ? 'paused' : 'scheduled',
+      status: context.sim.isPaused() ? 'paused' : 'scheduled',
       in_flight: false
     }));
 
@@ -183,7 +183,7 @@ export const startSimulationLoop = ({
       return;
     }
 
-    if (context.getPaused()) {
+    if (context.sim.isPaused()) {
       const previous = getLoopDiagnostics(context);
       setLoopDiagnostics(context, buildLoopDiagnostics(previous, {
         status: 'paused',
@@ -223,7 +223,8 @@ export const startSimulationLoop = ({
 
       await runAgentScheduler({
         context,
-        workerId: schedulerWorkerId
+        workerId: schedulerWorkerId,
+        packId: getActivePackId(context)
       });
       await runDecisionJobRunner({
         context,

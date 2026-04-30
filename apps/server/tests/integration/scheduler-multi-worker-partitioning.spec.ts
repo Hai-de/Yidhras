@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
+import type { SchedulerStorageAdapter } from "../../src/packs/storage/SchedulerStorageAdapter.js";
+import { MemSchedulerStorage } from "../helpers/scheduler_storage.js";
 import { runAgentScheduler } from '../../src/app/runtime/agent_scheduler.js';
 import { resolveSchedulerPartitionId } from '../../src/app/runtime/scheduler_partitioning.js';
 import {
@@ -32,22 +34,21 @@ const findAgentIdsByPartition = (): Map<string, string> => {
 describe('scheduler multi worker partitioning integration', () => {
   let cleanup: (() => Promise<void>) | null = null;
   let context: AppContext;
+  let adapter: MemSchedulerStorage;
+const TEST_PACK_ID = "test-multi-worker";
 
   beforeAll(async () => {
     const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
     context = fixture.context;
+    cleanup = fixture.cleanup;
+    adapter = new MemSchedulerStorage();
+    adapter.open(TEST_PACK_ID);
+    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter;
   });
 
   beforeEach(async () => {
-    await context.prisma.schedulerCandidateDecision.deleteMany();
-    await context.prisma.schedulerRun.deleteMany();
-    await context.prisma.schedulerCursor.deleteMany();
-    await context.prisma.schedulerLease.deleteMany();
-    await context.prisma.schedulerRebalanceRecommendation.deleteMany();
-    await context.prisma.schedulerWorkerRuntimeState.deleteMany();
-    await context.prisma.schedulerOwnershipMigrationLog.deleteMany();
-    await context.prisma.schedulerPartitionAssignment.deleteMany();
+    adapter.destroyPackSchedulerStorage(TEST_PACK_ID);
+    adapter.open(TEST_PACK_ID);
     await context.prisma.decisionJob.deleteMany({
       where: {
         idempotency_key: {
@@ -83,7 +84,7 @@ describe('scheduler multi worker partitioning integration', () => {
       }))
     });
 
-    const firstRun = await runAgentScheduler({
+    const firstRun = await runAgentScheduler({ packId: TEST_PACK_ID, 
       context,
       workerId: 'multi-worker-a',
       partitionIds: ['p0', 'p2'],
@@ -94,7 +95,7 @@ describe('scheduler multi worker partitioning integration', () => {
     expect(firstRun.scheduler_run_ids?.length ?? 0).toBeGreaterThanOrEqual(1);
     expect(firstRun.created_count).toBeGreaterThan(0);
 
-    const secondRun = await runAgentScheduler({
+    const secondRun = await runAgentScheduler({ packId: TEST_PACK_ID, 
       context,
       workerId: 'multi-worker-b',
       partitionIds: ['p1', 'p3'],

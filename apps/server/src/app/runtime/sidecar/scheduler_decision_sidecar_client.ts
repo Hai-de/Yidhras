@@ -54,6 +54,7 @@ export interface SchedulerDecisionSidecarClientOptions {
   binaryPath?: string;
   timeoutMs?: number;
   autoRestart?: boolean;
+  packId?: string;
 }
 
 const resolveSidecarProjectDir = (): string => {
@@ -86,13 +87,15 @@ const toApiError = (error: JsonRpcFailure['error']): ApiError => {
   });
 };
 
+type ResolvedOptions = Required<Omit<SchedulerDecisionSidecarClientOptions, 'packId'>> & { packId?: string };
+
 class ProcessSchedulerDecisionSidecarTransport implements SchedulerDecisionSidecarTransport {
   private child: ChildProcessWithoutNullStreams | null = null;
   private requestId = 0;
   private pending = new Map<string, PendingRequest>();
   private readBuffer = '';
 
-  constructor(private readonly options: Required<SchedulerDecisionSidecarClientOptions>) {}
+  constructor(private readonly options: ResolvedOptions) {}
 
   public start(): Promise<void> {
     if (this.child) {
@@ -104,6 +107,8 @@ class ProcessSchedulerDecisionSidecarTransport implements SchedulerDecisionSidec
       ? resolveFromWorkspaceRoot(configuredBinaryPath)
       : null;
 
+    const spawnArgs = this.options.packId ? ['--pack-id', this.options.packId] : [];
+
     if (resolvedBinaryPath) {
       // eslint-disable-next-line security/detect-non-literal-fs-filename -- binary path from admin configuration
       if (!existsSync(resolvedBinaryPath)) {
@@ -112,13 +117,17 @@ class ProcessSchedulerDecisionSidecarTransport implements SchedulerDecisionSidec
         }));
       }
 
-      this.child = spawn(resolvedBinaryPath, [], {
+      this.child = spawn(resolvedBinaryPath, spawnArgs, {
         cwd: path.dirname(resolvedBinaryPath),
         stdio: ['pipe', 'pipe', 'pipe']
       });
     } else {
       const projectDir = resolveSidecarProjectDir();
-      this.child = spawn(resolveCargoCommand(), ['run', '--quiet'], {
+      const cargoArgs = ['run', '--quiet'];
+      if (spawnArgs.length > 0) {
+        cargoArgs.push('--', ...spawnArgs);
+      }
+      this.child = spawn(resolveCargoCommand(), cargoArgs, {
         cwd: projectDir,
         stdio: ['pipe', 'pipe', 'pipe']
       });
@@ -317,7 +326,8 @@ export const createSchedulerDecisionSidecarClient = (
     new ProcessSchedulerDecisionSidecarTransport({
       binaryPath: options.binaryPath ?? '',
       timeoutMs: options.timeoutMs ?? 500,
-      autoRestart: options.autoRestart ?? true
+      autoRestart: options.autoRestart ?? true,
+      packId: options.packId
     })
   );
 };

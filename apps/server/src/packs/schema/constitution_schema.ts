@@ -510,6 +510,11 @@ export const worldPackConstitutionSchema = z
     authorities: z.array(authorityDefinitionSchema).optional(),
     rules: rulesSchema.optional(),
     storage: worldPackStorageSchema.optional(),
+    scheduler: z
+      .object({
+        partition_count: z.number().int().positive().optional()
+      })
+      .optional(),
     bootstrap: bootstrapSchema.optional(),
     state_transforms: z.array(stateTransformSchema).optional()
   })

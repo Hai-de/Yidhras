@@ -74,6 +74,7 @@ export interface RunAgentSchedulerOptions {
   cooldownTicks?: bigint;
   strategy?: 'mock' | 'rule_based';
   schedulerReason?: SchedulerReason;
+  packId?: string;
 }
 
 interface PartitionSchedulerRunResult extends AgentSchedulerRunResult {
@@ -304,7 +305,8 @@ const runAgentSchedulerForPartition = async ({
   strategy,
   schedulerReason,
   now,
-  startedAt
+  startedAt,
+  packId
 }: {
   context: AppContext;
   workerId: string;
@@ -315,23 +317,24 @@ const runAgentSchedulerForPartition = async ({
   schedulerReason: SchedulerReason;
   now: bigint;
   startedAt: bigint;
+  packId?: string;
 }): Promise<PartitionSchedulerRunResult> => {
-  const leaseResult = await acquireSchedulerLease(context, {
+  const leaseResult = acquireSchedulerLease(context, {
     workerId,
     partitionId,
     now
-  });
+  }, packId);
   if (!leaseResult.acquired) {
     return createEmptyPartitionRunResult(partitionId);
   }
 
-  if (!(await isWorkerAllowedToOperateSchedulerPartition(context, { partitionId, workerId }))) {
+  if (!isWorkerAllowedToOperateSchedulerPartition(context, { partitionId, workerId }, packId)) {
     return createEmptyPartitionRunResult(partitionId);
   }
 
-  await completeActiveSchedulerOwnershipMigration(context, { partitionId, toWorkerId: workerId });
+  completeActiveSchedulerOwnershipMigration(context, { partitionId, toWorkerId: workerId }, packId);
 
-  const cursor = await getSchedulerCursor(context, partitionId);
+  const cursor = getSchedulerCursor(context, partitionId, packId);
   const lookbackTicks = cooldownTicks > 0n ? cooldownTicks : 1n;
   const signalSinceTick = cursor ? cursor.last_signal_tick : now - lookbackTicks;
   const [allAgents, recentEventSignals, recentRelationshipSignals, recentSnrSignals, recentOverlaySignals, recentMemorySignals, replayRecoveryActorTicks, retryRecoveryActorTicks] =
@@ -356,7 +359,7 @@ const runAgentSchedulerForPartition = async ({
 
   if (agentIds.length === 0) {
     const summary = createEmptyPartitionRunResult(partitionId);
-    const schedulerRunId = await recordSchedulerRunSnapshot(context, {
+    const schedulerRunId = recordSchedulerRunSnapshot(context, {
       workerId,
       partitionId,
       leaseHolder: workerId,
@@ -366,14 +369,14 @@ const runAgentSchedulerForPartition = async ({
       finishedAt: context.clock.getCurrentTick(),
       summary,
       candidateDecisions
-    });
+    }, packId);
 
-    await updateSchedulerCursor(context, {
+    updateSchedulerCursor(context, {
       partitionId,
       lastScannedTick: now,
       lastSignalTick: signalSinceTick,
       now
-    });
+    }, packId);
 
     return {
       ...summary,
@@ -430,7 +433,8 @@ const runAgentSchedulerForPartition = async ({
   const schedulerKernel = createSchedulerDecisionKernelProvider({
     timeoutMs: kernelConfig.timeout_ms,
     binaryPath: kernelConfig.binary_path,
-    autoRestart: kernelConfig.auto_restart
+    autoRestart: kernelConfig.auto_restart,
+    packId
   });
   const kernelInput = buildSchedulerKernelInput({
     partitionId,
@@ -509,7 +513,7 @@ const runAgentSchedulerForPartition = async ({
     }
   }
 
-  const schedulerRunId = await recordSchedulerRunSnapshot(context, {
+  const schedulerRunId = recordSchedulerRunSnapshot(context, {
     workerId,
     partitionId,
     leaseHolder: workerId,
@@ -519,7 +523,7 @@ const runAgentSchedulerForPartition = async ({
     finishedAt: context.clock.getCurrentTick(),
     summary,
     candidateDecisions
-  });
+  }, packId);
   const observedSignalTickCandidates = [
     ...recentSignals.map(signal => signal.created_at),
     ...Array.from(replayRecoveryActorTicks.entries()).filter(([actorId]) => allowedAgentIds.has(actorId)).map(([_actorId, tick]) => tick),
@@ -529,12 +533,12 @@ const runAgentSchedulerForPartition = async ({
     ? observedSignalTickCandidates.reduce<bigint | null>((latest, tick) => (latest === null || tick > latest ? tick : latest), null)
     : await getLatestSchedulerSignalTick(context, signalSinceTick, now);
 
-  await updateSchedulerCursor(context, {
+  updateSchedulerCursor(context, {
     partitionId,
     lastScannedTick: now,
     lastSignalTick: observedSignalTick ?? signalSinceTick,
     now
-  });
+  }, packId);
 
   return {
     ...summary,
@@ -549,31 +553,32 @@ export const runAgentScheduler = async ({
   limit = getSchedulerAgentConfig().limit,
   cooldownTicks = BigInt(getSchedulerAgentConfig().cooldown_ticks),
   strategy = 'rule_based',
-  schedulerReason = 'periodic_tick'
+  schedulerReason = 'periodic_tick',
+  packId
 }: RunAgentSchedulerOptions): Promise<AgentSchedulerRunResult> => {
   const startedAt = context.clock.getCurrentTick();
   const now = context.clock.getCurrentTick();
-  await refreshSchedulerWorkerRuntimeLiveness(context, now);
+  refreshSchedulerWorkerRuntimeLiveness(context, now, packId);
 
-  const initialOwnershipSnapshot = await resolveSchedulerOwnershipSnapshot(context, {
+  const initialOwnershipSnapshot = resolveSchedulerOwnershipSnapshot(context, {
     workerId,
     bootstrapPartitionIds: partitionIds
-  });
+  }, packId);
   const initialOwnedPartitionIds = initialOwnershipSnapshot.owned_partition_ids;
 
-  await refreshSchedulerWorkerRuntimeState(context, {
+  refreshSchedulerWorkerRuntimeState(context, {
     workerId,
     ownedPartitionIds: initialOwnedPartitionIds,
     now
-  });
+  }, packId);
 
-  await evaluateSchedulerAutomaticRebalance(context, { now });
-  await applySchedulerAutomaticRebalanceForWorker(context, { workerId, now });
+  evaluateSchedulerAutomaticRebalance(context, { now }, packId);
+  applySchedulerAutomaticRebalanceForWorker(context, { workerId, now }, packId);
 
-  const ownershipSnapshot = await resolveSchedulerOwnershipSnapshot(context, {
+  const ownershipSnapshot = resolveSchedulerOwnershipSnapshot(context, {
     workerId,
     bootstrapPartitionIds: partitionIds
-  });
+  }, packId);
   const ownedPartitionIds = ownershipSnapshot.owned_partition_ids;
 
   if (ownedPartitionIds.length === 0) {
@@ -595,7 +600,8 @@ export const runAgentScheduler = async ({
         strategy,
         schedulerReason,
         now,
-        startedAt
+        startedAt,
+        packId
       })
     )
   );

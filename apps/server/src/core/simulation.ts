@@ -2,6 +2,7 @@ import 'dotenv/config';
 
 import { PrismaClient } from '@prisma/client';
 
+import type { MultiPackLoopHost } from '../app/runtime/MultiPackLoopHost.js';
 import type { RuntimeDatabaseBootstrap } from '../app/runtime/runtime_bootstrap.js';
 import type { RuntimeClockProjectionSnapshot } from '../app/runtime/runtime_clock_projection.js';
 import type {
@@ -43,8 +44,10 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
   private readonly packCatalogService: DefaultPackCatalogService;
   private readonly activePackRuntimeFacade: DefaultActivePackRuntimeFacade;
   private readonly packRuntimeRegistryService: DefaultPackRuntimeRegistryService;
+  private runtimeReady = false;
+  private paused = false;
 
-  constructor(options: { prisma: PrismaClient; packStorageAdapter: PackStorageAdapter; notifications: DefaultActivePackRuntimeFacadeOptions['notifications'] }) {
+  constructor(options: { prisma: PrismaClient; packStorageAdapter: PackStorageAdapter; notifications: DefaultActivePackRuntimeFacadeOptions['notifications']; multiPackLoopHost?: MultiPackLoopHost }) {
     this.packsDir = getWorldPacksDir();
 
     this.prisma = options.prisma;
@@ -84,11 +87,32 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
       packsDir: this.packsDir,
       getActivePack: () => this.activePackRuntimeFacade.getActivePack(),
       getStartupLevel: () => this.startupHealthLevel(),
-      onBeforeUnload: async (packId: string) => {
-        const { releaseAllPackSchedulerLeases } = await import('../app/runtime/scheduler_lease.js');
-        await releaseAllPackSchedulerLeases(packId, this.prisma);
-      }
+      onBeforeUnload: async (_packId: string) => {
+        // Scheduler data is in per-pack SQLite which is deleted on unload.
+        // No Prisma cleanup needed.
+      },
+      multiPackLoopHost: options.multiPackLoopHost
     });
+  }
+
+  public setMultiPackLoopHost(host: MultiPackLoopHost): void {
+    this.packRuntimeRegistryService.setMultiPackLoopHost(host);
+  }
+
+  public isRuntimeReady(): boolean {
+    return this.runtimeReady;
+  }
+
+  public setRuntimeReady(ready: boolean): void {
+    this.runtimeReady = ready;
+  }
+
+  public isPaused(): boolean {
+    return this.paused;
+  }
+
+  public setPaused(paused: boolean): void {
+    this.paused = paused;
   }
 
   public async prepareDatabase(): Promise<DatabaseHealthSnapshot> {

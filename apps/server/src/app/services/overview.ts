@@ -78,7 +78,7 @@ const readProjectedWorldTime = (context: AppContext): { tick: string; calendars:
 
   return {
     tick: visibleClock.absolute_ticks,
-    calendars: context.getRuntimeReady() ? toJsonSafe(visibleClock.calendars) : []
+    calendars: context.sim.isRuntimeReady() ? toJsonSafe(visibleClock.calendars) : []
   };
 };
 

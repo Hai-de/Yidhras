@@ -38,7 +38,7 @@ export const buildExperimentalSystemHealthSnapshot = (
 ): ExperimentalSystemHealthSnapshot => {
   return {
     system_health_level: context.startupHealth.level,
-    runtime_ready: context.getRuntimeReady(),
+    runtime_ready: context.sim.isRuntimeReady(),
     available_world_packs: [...context.startupHealth.available_world_packs],
     startup_errors: [...context.startupHealth.errors]
   };
@@ -64,7 +64,7 @@ export const getExperimentalPackRuntimeStatusSnapshot = async (
   return {
     ...snapshot,
     startup_level: context.startupHealth.level,
-    runtime_ready: runtimeReadyPackId === packId && context.getRuntimeReady(),
+    runtime_ready: runtimeReadyPackId === packId && context.sim.isRuntimeReady(),
     message: snapshot.message ?? null,
     control_plane: controlPlane ?? undefined
   };

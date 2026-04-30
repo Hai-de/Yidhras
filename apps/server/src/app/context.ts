@@ -6,7 +6,9 @@ import type { ClockProvider } from '../core/clock_provider.js';
 import type { SimulationManager } from '../core/simulation.js';
 import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
 import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
+import type { SchedulerStorageAdapter } from '../packs/storage/SchedulerStorageAdapter.js';
 import type { NotificationLevel, SystemMessage } from '../utils/notifications.js';
+import type { PackScopeResolver } from './runtime/PackScopeResolver.js';
 import type { AppContextPorts } from './services/app_context_ports.js';
 import type { Repositories } from './services/repositories/index.js';
 
@@ -59,6 +61,7 @@ export interface AppInfrastructure extends RuntimeSource {
   readonly repos: Repositories;
   readonly prisma: PrismaClient;
   readonly packStorageAdapter: PackStorageAdapter;
+  readonly schedulerStorage?: SchedulerStorageAdapter;
   readonly notifications: NotificationStore;
   readonly startupHealth: StartupHealth;
   assertRuntimeReady(feature: string): void;
@@ -66,17 +69,17 @@ export interface AppInfrastructure extends RuntimeSource {
 
 export interface AppContext extends AppInfrastructure, AppContextPorts {
   /**
-   * SimulationManager — canonical owner for multi-pack runtime, graph data,
-   * pack runtime handles, and experimental features. Prefer focused ports
-   * (clock, activePack, activePackRuntime) when the operation they expose is
-   * sufficient; use sim directly for registry, graph, and runtime-control
-   * operations that have no focused-port equivalent.
+   * SimulationManager — compatibility facade. Prefer focused ports or
+   * `packScope` for pack-scoped resolution.
    */
   readonly sim: SimulationManager;
-  getRuntimeReady(): boolean;
-  setRuntimeReady(ready: boolean): void;
-  getPaused(): boolean;
-  setPaused(paused: boolean): void;
+
+  /**
+   * PackScopeResolver — preferred path for pack-scoped context resolution.
+   * Replaces the deprecated singleton fields (clock, activePack, paused).
+   */
+  readonly packScope?: PackScopeResolver;
+
   getRuntimeLoopDiagnostics?(): RuntimeLoopDiagnostics;
   setRuntimeLoopDiagnostics?(next: RuntimeLoopDiagnostics): void;
   getDatabaseHealth?(): DatabaseHealthSnapshot | null;

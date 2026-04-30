@@ -65,14 +65,6 @@ describe('PackHostApi read surface integration', () => {
   });
 
   beforeEach(async () => {
-    await context.prisma.schedulerCandidateDecision.deleteMany();
-    await context.prisma.schedulerRun.deleteMany();
-    await context.prisma.schedulerCursor.deleteMany();
-    await context.prisma.schedulerLease.deleteMany();
-    await context.prisma.schedulerRebalanceRecommendation.deleteMany();
-    await context.prisma.schedulerWorkerRuntimeState.deleteMany();
-    await context.prisma.schedulerOwnershipMigrationLog.deleteMany();
-    await context.prisma.schedulerPartitionAssignment.deleteMany();
     await context.prisma.relationshipAdjustmentLog.deleteMany();
     await context.prisma.sNRAdjustmentLog.deleteMany();
     await context.prisma.event.deleteMany();

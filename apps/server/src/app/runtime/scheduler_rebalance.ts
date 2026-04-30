@@ -1,5 +1,3 @@
-import { Prisma } from '@prisma/client';
-
 import { getSchedulerAutomaticRebalanceConfig } from '../../config/runtime_config.js';
 import type { AppContext } from '../context.js';
 import {
@@ -36,8 +34,17 @@ export interface ApplySchedulerAutomaticRebalanceResult {
   superseded_recommendation_ids: string[];
 }
 
-const findOpenRecommendation = async (
+const requireAdapter = (context: AppContext) => {
+  const adapter = context.schedulerStorage;
+  if (!adapter) {
+    throw new Error('[scheduler_rebalance] SchedulerStorageAdapter is required.');
+  }
+  return adapter;
+};
+
+const findOpenRecommendation = (
   context: AppContext,
+  packId: string,
   input: {
     partitionId: string;
     status: 'recommended' | 'suppressed';
@@ -46,8 +53,9 @@ const findOpenRecommendation = async (
     toWorkerId: string | null;
     suppressReason: string | null;
   }
-): Promise<SchedulerRebalanceRecommendationRecord | null> => {
-  return context.repos.scheduler.findOpenRecommendation({
+): SchedulerRebalanceRecommendationRecord | null => {
+  const adapter = requireAdapter(context);
+  return adapter.findOpenRecommendation(packId, {
     partition_id: input.partitionId,
     status: input.status,
     reason: input.reason,
@@ -57,8 +65,9 @@ const findOpenRecommendation = async (
   });
 };
 
-const createRecommendation = async (
+const createRecommendation = (
   context: AppContext,
+  packId: string,
   input: {
     partitionId: string;
     fromWorkerId: string | null;
@@ -70,8 +79,10 @@ const createRecommendation = async (
     details?: Record<string, unknown>;
     now: bigint;
   }
-): Promise<SchedulerRebalanceRecommendationRecord> => {
-  const existing = await findOpenRecommendation(context, {
+): SchedulerRebalanceRecommendationRecord => {
+  const adapter = requireAdapter(context);
+
+  const existing = findOpenRecommendation(context, packId, {
     partitionId: input.partitionId,
     status: input.status,
     reason: input.reason,
@@ -84,7 +95,7 @@ const createRecommendation = async (
     return existing;
   }
 
-  return context.repos.scheduler.createRecommendation({
+  return adapter.createRecommendation(packId, {
     partition_id: input.partitionId,
     from_worker_id: input.fromWorkerId,
     to_worker_id: input.toWorkerId,
@@ -99,15 +110,22 @@ const createRecommendation = async (
   });
 };
 
-export const listRecentSchedulerRebalanceRecommendations = async (
+export const listRecentSchedulerRebalanceRecommendations = (
   context: AppContext,
-  limit = 20
-): Promise<SchedulerRebalanceRecommendationRecord[]> => {
-  return context.repos.scheduler.listRecentRecommendations(limit);
+  limit = 20,
+  packId?: string
+): SchedulerRebalanceRecommendationRecord[] => {
+  if (!packId) {
+    throw new Error('[scheduler_rebalance] packId is required');
+  }
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+  return adapter.listRecentRecommendations(packId, limit);
 };
 
-const markRecommendationStatus = async (
+const markRecommendationStatus = (
   context: AppContext,
+  packId: string,
   input: {
     recommendationId: string;
     status: 'applied' | 'superseded';
@@ -115,35 +133,46 @@ const markRecommendationStatus = async (
     appliedMigrationId?: string | null;
     extraDetails?: Record<string, unknown>;
   }
-): Promise<void> => {
-  const existing = await context.repos.scheduler.getRecommendationById(input.recommendationId);
+): void => {
+  const adapter = requireAdapter(context);
+  const existing = adapter.getRecommendationById(packId, input.recommendationId);
 
-  await context.repos.scheduler.updateRecommendation({
+  const mergedDetails: Record<string, unknown> = {
+    ...(typeof existing?.details === 'object' && existing?.details !== null && !Array.isArray(existing.details)
+      ? (existing.details as Record<string, unknown>)
+      : {}),
+    ...(input.extraDetails ?? {})
+  };
+
+  adapter.updateRecommendation(packId, {
     id: input.recommendationId,
     status: input.status,
     updated_at: input.now,
-    applied_migration_id: input.appliedMigrationId ?? existing?.applied_migration_id ?? null,
-    details: ({
-      ...(typeof existing?.details === 'object' && existing?.details !== null && !Array.isArray(existing.details)
-        ? (existing.details as Record<string, unknown>)
-        : {}),
-      ...(input.extraDetails ?? {})
-    } satisfies Record<string, unknown>) as Prisma.InputJsonValue
+    applied_migration_id: input.appliedMigrationId ?? (existing?.applied_migration_id ?? null),
+    details: mergedDetails
   });
 };
 
-export const applySchedulerAutomaticRebalanceForWorker = async (
+export const applySchedulerAutomaticRebalanceForWorker = (
   context: AppContext,
   input: {
     workerId: string;
     now?: bigint;
     maxApply?: number;
+  },
+  packId?: string
+): ApplySchedulerAutomaticRebalanceResult => {
+  if (!packId) {
+    throw new Error('[scheduler_rebalance] packId is required');
   }
-): Promise<ApplySchedulerAutomaticRebalanceResult> => {
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+
   const now = input.now ?? context.clock.getCurrentTick();
   const config = getSchedulerAutomaticRebalanceConfig();
   const maxApply = Math.max(input.maxApply ?? config.max_apply, 1);
-  const recommendations = await context.repos.scheduler.listPendingRecommendationsForWorker(
+  const recommendations = adapter.listPendingRecommendationsForWorker(
+    packId,
     input.workerId,
     maxApply
   );
@@ -153,13 +182,14 @@ export const applySchedulerAutomaticRebalanceForWorker = async (
   const supersededRecommendationIds: string[] = [];
 
   for (const recommendation of recommendations) {
-    const activeMigration = await context.repos.scheduler.findLatestActiveMigrationForPartition(
+    const activeMigration = adapter.findLatestActiveMigrationForPartition(
+      packId,
       recommendation.partition_id,
       input.workerId
     );
 
     if (activeMigration) {
-      await markRecommendationStatus(context, {
+      markRecommendationStatus(context, packId, {
         recommendationId: recommendation.id,
         status: 'superseded',
         now,
@@ -172,9 +202,9 @@ export const applySchedulerAutomaticRebalanceForWorker = async (
       continue;
     }
 
-    const assignment = await getSchedulerPartitionAssignment(context, recommendation.partition_id);
+    const assignment = getSchedulerPartitionAssignment(context, recommendation.partition_id, packId);
     if (assignment?.worker_id === recommendation.to_worker_id && assignment.status === 'assigned') {
-      await markRecommendationStatus(context, {
+      markRecommendationStatus(context, packId, {
         recommendationId: recommendation.id,
         status: 'superseded',
         now,
@@ -186,13 +216,13 @@ export const applySchedulerAutomaticRebalanceForWorker = async (
       continue;
     }
 
-    const migration = await createSchedulerOwnershipMigration(context, {
+    const migration = createSchedulerOwnershipMigration(context, {
       partitionId: recommendation.partition_id,
       toWorkerId: recommendation.to_worker_id ?? input.workerId,
       reason: `automatic_rebalance:${recommendation.reason}`,
       requestedByWorkerId: input.workerId
-    });
-    await markRecommendationStatus(context, {
+    }, packId);
+    markRecommendationStatus(context, packId, {
       recommendationId: recommendation.id,
       status: 'applied',
       now,
@@ -212,14 +242,21 @@ export const applySchedulerAutomaticRebalanceForWorker = async (
   };
 };
 
-export const evaluateSchedulerAutomaticRebalance = async (
+export const evaluateSchedulerAutomaticRebalance = (
   context: AppContext,
   input?: {
     now?: bigint;
     maxRecommendations?: number;
     migrationBacklogLimit?: number;
+  },
+  packId?: string
+): EvaluateSchedulerAutomaticRebalanceResult => {
+  if (!packId) {
+    throw new Error('[scheduler_rebalance] packId is required');
   }
-): Promise<EvaluateSchedulerAutomaticRebalanceResult> => {
+  const adapter = requireAdapter(context);
+  adapter.open(packId);
+
   const now = input?.now ?? context.clock.getCurrentTick();
   const config = getSchedulerAutomaticRebalanceConfig();
   const maxRecommendations = Math.max(input?.maxRecommendations ?? config.max_recommendations, 1);
@@ -228,17 +265,15 @@ export const evaluateSchedulerAutomaticRebalance = async (
     0
   );
 
-  const [workerStates, assignments, migrationBacklogCount] = await Promise.all([
-    listSchedulerWorkerRuntimeStates(context),
-    listSchedulerPartitionAssignments(context),
-    context.repos.scheduler.countMigrationsInProgress()
-  ]);
+  const workerStates = listSchedulerWorkerRuntimeStates(context, packId);
+  const assignments = listSchedulerPartitionAssignments(context, packId);
+  const migrationBacklogCount = adapter.countMigrationsInProgress(packId);
 
   const createdRecommendations: SchedulerRebalanceRecommendationRecord[] = [];
   const createdSuppressions: SchedulerRebalanceRecommendationRecord[] = [];
 
   if (migrationBacklogCount > migrationBacklogLimit) {
-    const suppression = await createRecommendation(context, {
+    const suppression = createRecommendation(context, packId, {
       partitionId: assignments[0]?.partition_id ?? 'p0',
       fromWorkerId: assignments[0]?.worker_id ?? null,
       toWorkerId: null,
@@ -285,7 +320,7 @@ export const evaluateSchedulerAutomaticRebalance = async (
       continue;
     }
 
-    const recommendation = await createRecommendation(context, {
+    const recommendation = createRecommendation(context, packId, {
       partitionId: candidatePartitionId,
       fromWorkerId: staleWorker.worker_id,
       toWorkerId: targetWorker.worker_id,
@@ -316,7 +351,7 @@ export const evaluateSchedulerAutomaticRebalance = async (
     ) {
       const candidatePartitionId = (partitionsByWorker.get(mostLoadedWorker.worker_id) ?? [])[0] ?? null;
       if (candidatePartitionId) {
-        const recommendation = await createRecommendation(context, {
+        const recommendation = createRecommendation(context, packId, {
           partitionId: candidatePartitionId,
           fromWorkerId: mostLoadedWorker.worker_id,
           toWorkerId: leastLoadedWorker.worker_id,
@@ -335,7 +370,7 @@ export const evaluateSchedulerAutomaticRebalance = async (
   }
 
   if (createdRecommendations.length === 0 && createdSuppressions.length === 0) {
-    const suppression = await createRecommendation(context, {
+    const suppression = createRecommendation(context, packId, {
       partitionId: assignments[0]?.partition_id ?? 'p0',
       fromWorkerId: assignments[0]?.worker_id ?? null,
       toWorkerId: null,
