@@ -26,9 +26,9 @@ export const useRuntimeStore = defineStore('runtime', {
   state: () => ({
     absoluteTicks: ZERO_TICK,
     calendars: [] as TimeFormatted[],
-    status: 'idle' as 'idle' | 'running' | 'paused' | 'error',
+    status: 'idle',
     worldPack: null as RuntimeWorldMetadata | null,
-    healthLevel: 'ok' as 'ok' | 'degraded' | 'fail',
+    healthLevel: 'ok',
     runtimeReady: false,
     runtimeSpeed: null as RuntimeSpeedSnapshot | null,
     startupErrors: [] as string[],

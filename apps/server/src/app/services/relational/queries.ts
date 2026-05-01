@@ -18,7 +18,7 @@ export const listAtmosphereNodes = async (
 ) => {
   const ownerId = typeof input.owner_id === 'string' ? input.owner_id.trim() : '';
   const includeExpired = input.include_expired === true;
-  const now = context.clock.getCurrentTick();
+  const now = context.activePackRuntime!.getCurrentTick();
 
   return context.repos.agent.listAtmosphereNodes(
     {

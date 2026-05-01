@@ -79,7 +79,7 @@ export const createMemorySummaryTreeProcessor = (): PromptTreeProcessor => {
         prompt_processing_trace: {
           ...(typeof ctx.memory_context.diagnostics.prompt_processing_trace === 'object' &&
           ctx.memory_context.diagnostics.prompt_processing_trace !== null
-            ? (ctx.memory_context.diagnostics.prompt_processing_trace as Record<string, unknown>)
+            ? (ctx.memory_context.diagnostics.prompt_processing_trace)
             : {}),
           summary_compaction: {
             summarized_fragment_ids: summarySource.map(f => f.id),
@@ -91,7 +91,7 @@ export const createMemorySummaryTreeProcessor = (): PromptTreeProcessor => {
       const nextBySlot = { ...input.tree.fragments_by_slot };
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       nextBySlot[SHORT_TERM_SLOT] = compacted;
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+ 
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       nextBySlot[SUMMARY_SLOT] = [...(nextBySlot[SUMMARY_SLOT] ?? []), summaryFragment];
 

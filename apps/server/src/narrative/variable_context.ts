@@ -15,6 +15,11 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 };
 
+const serializeUnknown = (value: unknown): string => {
+  if (typeof value === 'object' && value !== null) return JSON.stringify(value);
+  return String(value);
+};
+
 export const DEFAULT_PROMPT_VARIABLE_CONTEXT: PromptVariableContext = {
   layers: []
 };
@@ -48,7 +53,7 @@ const toPromptVariableValue = (value: unknown): PromptVariableValue => {
   if (isRecord(value)) {
     return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, toPromptVariableValue(entry)]));
   }
-  return JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined);
+  return serializeUnknown(value);
 };
 
 export const normalizePromptVariableRecord = (value: Record<string, unknown> | null | undefined): PromptVariableRecord => {
@@ -118,7 +123,7 @@ export const previewPromptVariableValue = (value: unknown, maxLength = 160): str
       const keys = Object.keys(value);
       return `[object:${keys.length}] ${keys.slice(0, 8).join(', ')}`;
     }
-    return JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined);
+    return serializeUnknown(value);
   })();
 
   return rendered.length > maxLength ? `${rendered.slice(0, maxLength)}…` : rendered;

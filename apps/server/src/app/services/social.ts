@@ -445,6 +445,6 @@ export const createSocialPost = async (
     author_id: resolvedIdentity.id,
     source_action_intent_id: options?.source_action_intent_id ?? null,
     content,
-    created_at: context.clock.getCurrentTick()
+    created_at: context.activePackRuntime!.getCurrentTick()
   });
 };

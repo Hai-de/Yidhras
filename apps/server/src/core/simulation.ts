@@ -16,17 +16,17 @@ import {
 } from '../config/runtime_config.js';
 import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
 import { PackManifestLoader, type WorldPack } from '../packs/manifest/loader.js';
+import { DefaultPackCatalogService } from '../packs/orchestration/pack_catalog_service.js';
+import { DefaultPackRuntimeRegistryService } from '../packs/orchestration/pack_runtime_registry_service.js';
 import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
 import type { ActivePackProvider } from './active_pack_provider.js';
 import { DefaultActivePackRuntimeFacade, type DefaultActivePackRuntimeFacadeOptions } from './active_pack_runtime_facade.js';
 import type { ClockProvider } from './clock_provider.js';
 import { getGraphData } from './graph_data.js';
-import { DefaultPackCatalogService } from './pack_catalog_service.js';
 import type { PackRuntimeHandle } from './pack_runtime_handle.js';
 import type { ExperimentalPackRuntimeStatusRecord, PackRuntimeStatusSnapshot } from './pack_runtime_health.js';
 import type { PackRuntimeHost } from './pack_runtime_host.js';
 import { InMemoryPackRuntimeRegistry, type PackRuntimeRegistry } from './pack_runtime_registry.js';
-import { DefaultPackRuntimeRegistryService } from './pack_runtime_registry_service.js';
 import { PrismaRuntimeDatabaseBootstrap } from './runtime_database_bootstrap.js';
 import { RuntimeSpeedPolicy, type RuntimeSpeedSnapshot } from './runtime_speed.js';
 

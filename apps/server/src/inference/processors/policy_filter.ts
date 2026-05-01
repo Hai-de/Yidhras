@@ -52,7 +52,7 @@ export const createPolicyFilterTreeProcessor = (): PromptTreeProcessor => {
         prompt_processing_trace: {
           ...(typeof ctx.memory_context.diagnostics.prompt_processing_trace === 'object' &&
           ctx.memory_context.diagnostics.prompt_processing_trace !== null
-            ? (ctx.memory_context.diagnostics.prompt_processing_trace as Record<string, unknown>)
+            ? (ctx.memory_context.diagnostics.prompt_processing_trace)
             : {}),
           policy_filtering: {
             filtered_fragment_ids: Object.keys(filtered),

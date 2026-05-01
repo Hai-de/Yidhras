@@ -71,7 +71,7 @@ export class PrismaSocialRepository implements SocialRepository {
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   async queryPosts(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown> | Array<Record<string, unknown>>; take?: number; include?: Record<string, unknown>; skip?: number }): Promise<Array<Record<string, unknown>>> {
     return this.prisma.post.findMany({
       where: input.where as never,
@@ -83,7 +83,7 @@ export class PrismaSocialRepository implements SocialRepository {
   }
 
   async findPostById(id: string): Promise<{ id: string; created_at: bigint; source_action_intent_id: string | null; author_id: string; content: string; noise_level: number; is_encrypted: boolean } | null> {
-    return this.prisma.post.findUnique({ where: { id } }) as Promise<{ id: string; created_at: bigint; source_action_intent_id: string | null; author_id: string; content: string; noise_level: number; is_encrypted: boolean } | null>;
+    return this.prisma.post.findUnique({ where: { id } });
   }
 
   async createPostRecord(data: Record<string, unknown>): Promise<unknown> {

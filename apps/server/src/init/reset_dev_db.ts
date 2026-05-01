@@ -33,7 +33,7 @@ const removeDatabaseFiles = (workspaceRoot: string, files: string[]): void => {
       continue;
     }
 
-    // eslint-disable-next-line security/detect-non-literal-fs-filename -- workspaceRoot-validated path
+     
     fs.rmSync(safeFs.inBase(workspaceRoot, filePath), { force: true });
     logger.info(`removed ${filePath}`);
   }

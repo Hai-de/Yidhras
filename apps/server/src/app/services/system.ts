@@ -161,7 +161,7 @@ export const getRuntimeStatusSnapshot = async (
     schedulerPartitionIds?: string[];
   }
 ): Promise<RuntimeStatusSnapshot> => {
-  const packId = options?.packId ?? context.activePack.getActivePack()?.metadata.id;
+  const packId = options?.packId ?? context.activePackRuntime?.getActivePack()?.metadata.id;
   if (!packId) {
     throw new Error('packId is required for getRuntimeStatusSnapshot');
   }

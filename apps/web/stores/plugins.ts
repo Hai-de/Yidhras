@@ -77,13 +77,20 @@ export const normalizePluginRuntimeModule = (value: unknown): PluginRuntimeModul
 }
 
 export const usePluginRuntimeStore = defineStore('plugin-runtime', {
-  state: () => ({
-    activePackId: null as string | null,
-    runtime: null as ActivePackPluginRuntimeSnapshot | null,
+  state: (): {
+    activePackId: string | null
+    runtime: ActivePackPluginRuntimeSnapshot | null
+    isFetching: boolean
+    errorMessage: string | null
+    lastSyncedAt: number | null
+    bundleStates: Record<string, PluginBundleLoadState>
+  } => ({
+    activePackId: null,
+    runtime: null,
     isFetching: false,
-    errorMessage: null as string | null,
-    lastSyncedAt: null as number | null,
-    bundleStates: {} as Record<string, PluginBundleLoadState>
+    errorMessage: null,
+    lastSyncedAt: null,
+    bundleStates: {}
   }),
   getters: {
     panelPlugins: state => (target: string) =>

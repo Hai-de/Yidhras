@@ -100,10 +100,10 @@ const toContextNode = (entry: MemoryEntry): ContextNode => {
     node_type: resolveNodeType(entry),
     scope: 'agent',
     source_kind: toSourceKind(entry),
-    source_ref: entry.source_ref ? ({ ...entry.source_ref } as Record<string, unknown>) : null,
+    source_ref: entry.source_ref ? ({ ...entry.source_ref }) : null,
     actor_ref:
       entry.actor_ref && typeof entry.actor_ref === 'object' && !Array.isArray(entry.actor_ref)
-        ? ({ ...(entry.actor_ref as unknown as Record<string, unknown>) } as Record<string, unknown>)
+        ? ({ ...(entry.actor_ref as unknown as Record<string, unknown>) })
         : null,
     content: {
       text: entry.content.text,

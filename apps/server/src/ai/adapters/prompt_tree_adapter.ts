@@ -94,7 +94,7 @@ export const adaptPromptTreeToAiMessages = (
   for (const slot of slots) {
     const config = registry[slot.id];
     const messageRole = (isRecord(config) && config.message_role && typeof config.message_role === 'string'
-      ? (config.message_role as SlotRole)
+      ? (config.message_role)
       : 'user');
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     if (groups[messageRole]) {

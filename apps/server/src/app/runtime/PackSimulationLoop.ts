@@ -240,7 +240,7 @@ export class PackSimulationLoop {
 }
 
 const expirePackIdentityBindings = async (context: AppContext): Promise<void> => {
-  const now = context.clock.getCurrentTick();
+  const now = context.activePackRuntime!.getCurrentTick();
   await context.repos.identityOperator.getPrisma().identityNodeBinding.updateMany({
     where: {
       AND: [

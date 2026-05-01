@@ -46,7 +46,7 @@ export interface BuildAiTaskRequestFromInferenceOptions {
 
 export const resolvePromptWorkflowTaskTypeForAiTask = (taskType: AiTaskType): PromptWorkflowTaskType => {
   if (PROMPT_WORKFLOW_TASK_TYPES.has(taskType)) {
-    return taskType as PromptWorkflowTaskType;
+    return taskType;
   }
 
   return 'agent_decision';

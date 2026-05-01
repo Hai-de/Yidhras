@@ -637,7 +637,7 @@ const loadPromptSlotRegistry = (): PromptSlotRegistryCache => {
     ? promptSlotRegistrySchema.parse(deepMerge(defaultParsed as unknown as Record<string, unknown>, overrideRaw))
     : defaultParsed;
   return {
-    config: merged as { version: number; slots: Record<string, ParsedPromptSlotConfig> },
+    config: merged,
     metadata: { workspaceRoot, configPath, loadedFromFile: hasOverride }
   };
 };

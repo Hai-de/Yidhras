@@ -55,7 +55,7 @@ const deepMapValues = (
  */
 export const getMaskedConfig = (): Record<string, unknown> => {
   const config = getRuntimeConfig()
-  return deepMapValues(config as unknown as Record<string, unknown>, '', maskValue)
+  return deepMapValues(config, '', maskValue)
 }
 
 /**

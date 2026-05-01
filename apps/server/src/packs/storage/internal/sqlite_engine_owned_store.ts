@@ -34,6 +34,11 @@ const parseJsonString = (value: string): unknown => {
   }
 };
 
+const serializeUnknown = (value: unknown): string => {
+  if (typeof value === 'object' && value !== null) return JSON.stringify(value);
+  return String(value);
+};
+
 const parseRecordValue = (value: unknown, fallback: Record<string, unknown> = {}): Record<string, unknown> => {
   if (isRecord(value)) {
     return value;
@@ -99,7 +104,7 @@ const toNullableString = (value: unknown): string | null => {
   if (typeof value === 'object') {
     return JSON.stringify(value) ?? null;
   }
-  return String(value as string | number | boolean | bigint | symbol | undefined);
+  return serializeUnknown(value);
 };
 
 const toBigInt = (value: unknown): bigint => {
@@ -217,11 +222,11 @@ export const packRuntimeWorldEntityTableSpec: SqliteEngineOwnedTableSpec<PackRun
   },
   decode(row) {
     return {
-      id: String(row.id as string),
-      pack_id: String(row.pack_id as string),
-      entity_kind: String(row.entity_kind as string),
+      id: String(row.id),
+      pack_id: String(row.pack_id),
+      entity_kind: String(row.entity_kind),
       entity_type: toNullableString(row.entity_type),
-      label: String(row.label as string),
+      label: String(row.label),
       tags: parseStringArrayValue(row.tags_json ?? row.tags),
       static_schema_ref: toNullableString(row.static_schema_ref),
       payload_json: parseNullableRecordValue(row.payload_json),
@@ -259,10 +264,10 @@ export const packRuntimeEntityStateTableSpec: SqliteEngineOwnedTableSpec<PackRun
   },
   decode(row) {
     return {
-      id: String(row.id as string),
-      pack_id: String(row.pack_id as string),
-      entity_id: String(row.entity_id as string),
-      state_namespace: String(row.state_namespace as string),
+      id: String(row.id),
+      pack_id: String(row.pack_id),
+      entity_id: String(row.entity_id),
+      state_namespace: String(row.state_namespace),
       state_json: parseRecordValue(row.state_json),
       created_at: toBigInt(row.created_at),
       updated_at: toBigInt(row.updated_at)
@@ -312,12 +317,12 @@ export const packRuntimeAuthorityGrantTableSpec: SqliteEngineOwnedTableSpec<Pack
   },
   decode(row) {
     return {
-      id: String(row.id as string),
-      pack_id: String(row.pack_id as string),
-      source_entity_id: String(row.source_entity_id as string),
+      id: String(row.id),
+      pack_id: String(row.pack_id),
+      source_entity_id: String(row.source_entity_id),
       target_selector_json: parseRecordValue(row.target_selector_json),
-      capability_key: String(row.capability_key as string),
-      grant_type: String(row.grant_type as string),
+      capability_key: String(row.capability_key),
+      grant_type: String(row.grant_type),
       mediated_by_entity_id: toNullableString(row.mediated_by_entity_id),
       scope_json: parseNullableRecordValue(row.scope_json),
       conditions_json: parseNullableRecordValue(row.conditions_json),
@@ -362,12 +367,12 @@ export const packRuntimeMediatorBindingTableSpec: SqliteEngineOwnedTableSpec<Pac
   },
   decode(row) {
     return {
-      id: String(row.id as string),
-      pack_id: String(row.pack_id as string),
-      mediator_id: String(row.mediator_id as string),
+      id: String(row.id),
+      pack_id: String(row.pack_id),
+      mediator_id: String(row.mediator_id),
       subject_entity_id: toNullableString(row.subject_entity_id),
-      binding_kind: String(row.binding_kind as string),
-      status: String(row.status as string),
+      binding_kind: String(row.binding_kind),
+      status: String(row.status),
       metadata_json: parseNullableRecordValue(row.metadata_json),
       created_at: toBigInt(row.created_at),
       updated_at: toBigInt(row.updated_at)
@@ -413,14 +418,14 @@ export const packRuntimeRuleExecutionTableSpec: SqliteEngineOwnedTableSpec<PackR
   },
   decode(row) {
     return {
-      id: String(row.id as string),
-      pack_id: String(row.pack_id as string),
-      rule_id: String(row.rule_id as string),
+      id: String(row.id),
+      pack_id: String(row.pack_id),
+      rule_id: String(row.rule_id),
       capability_key: toNullableString(row.capability_key),
       mediator_id: toNullableString(row.mediator_id),
       subject_entity_id: toNullableString(row.subject_entity_id),
       target_entity_id: toNullableString(row.target_entity_id),
-      execution_status: String(row.execution_status as string),
+      execution_status: String(row.execution_status),
       payload_json: parseNullableRecordValue(row.payload_json),
       emitted_events_json: parseUnknownArrayValue(row.emitted_events_json),
       created_at: toBigInt(row.created_at),
@@ -524,12 +529,12 @@ export const upsertSqliteEngineOwnedRecord = async <RecordT>(
     const row = spec.encode(record);
     const existing = getStatement<SqliteRow>(db, `SELECT created_at FROM ${spec.tableName} WHERE id = ?`, [row.id ?? null]);
     if (existing?.created_at !== undefined && existing.created_at !== null) {
-      row.created_at = String(existing.created_at as string);
+      row.created_at = serializeUnknown(existing.created_at);
     }
     const columns = Object.keys(row);
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     runStatement(db, buildUpsertStatement(spec.tableName, columns), columns.map(column => row[column] ?? null));
-    return spec.decode(row as SqliteRow);
+    return spec.decode(row);
   });
 };
 

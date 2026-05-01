@@ -51,7 +51,7 @@ const formatSummary = (rawConfig: Record<string, unknown>, kind: 'ai_models' | '
   }
 
   const slots = typeof rawConfig.slots === 'object' && rawConfig.slots !== null
-    ? Object.keys(rawConfig.slots as Record<string, unknown>).length
+    ? Object.keys(rawConfig.slots).length
     : 0;
   return `slots: ${String(slots)}`;
 };

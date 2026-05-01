@@ -243,7 +243,7 @@ export const getAgentContextSnapshot = async (context: AppInfrastructure & Pick<
   }
 
   const permission = buildPermissionContext(agent);
-  const resolvedVariables = context.activePackRuntime?.resolvePackVariables(JSON.stringify(context.activePack.getActivePack()?.variables || {}), permission) ?? JSON.stringify({});
+  const resolvedVariables = context.activePackRuntime?.resolvePackVariables(JSON.stringify(context.activePackRuntime?.getActivePack()?.variables || {}), permission) ?? JSON.stringify({});
 
   return {
     identity: agent,

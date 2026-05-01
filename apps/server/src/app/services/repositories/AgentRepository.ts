@@ -35,14 +35,14 @@ export class PrismaAgentRepository implements AgentRepository {
   }
 
   async findAgentById(id: string): Promise<{ id: string; name: string; type: string; snr: number; is_pinned: boolean; created_at: bigint; updated_at: bigint } | null> {
-    return this.prisma.agent.findUnique({ where: { id } }) as Promise<{ id: string; name: string; type: string; snr: number; is_pinned: boolean; created_at: bigint; updated_at: bigint } | null>;
+    return this.prisma.agent.findUnique({ where: { id } });
   }
 
   async findAgentByIdWithCircles(id: string): Promise<{ id: string; name: string; type: string; snr: number; is_pinned: boolean; created_at: bigint; updated_at: bigint; circle_memberships: Array<{ circle_id: string; circle: { level: number } }> } | null> {
     return this.prisma.agent.findUnique({
       where: { id },
       include: { circle_memberships: { include: { circle: true } } }
-    }) as Promise<{ id: string; name: string; type: string; snr: number; is_pinned: boolean; created_at: bigint; updated_at: bigint; circle_memberships: Array<{ circle_id: string; circle: { level: number } }> } | null>;
+    });
   }
 
   async listAgents(orderBy?: Record<string, string>): Promise<unknown[]> {

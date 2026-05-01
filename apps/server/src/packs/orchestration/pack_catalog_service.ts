@@ -1,5 +1,5 @@
-import type { PackCatalogService } from '../app/services/app_context_ports.js';
-import { PackManifestLoader, type WorldPack } from '../packs/manifest/loader.js';
+import type { PackCatalogService } from '../../app/services/app_context_ports.js';
+import { PackManifestLoader, type WorldPack } from '../manifest/loader.js';
 
 export interface PackResolution {
   pack: WorldPack;

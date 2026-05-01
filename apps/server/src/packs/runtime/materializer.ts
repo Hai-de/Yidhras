@@ -89,7 +89,7 @@ export const materializePackRuntimeCoreModels = async (
         entityType: actor.entity_type ?? null,
         tags: actor.tags,
         staticSchemaRef: actor.static_schema_ref ?? null,
-        payload: actor as Record<string, unknown>
+        payload: actor
       })
     );
     if (actor.state) {
@@ -103,7 +103,7 @@ export const materializePackRuntimeCoreModels = async (
         entityType: artifact.entity_type ?? null,
         tags: artifact.tags,
         staticSchemaRef: artifact.static_schema_ref ?? null,
-        payload: artifact as Record<string, unknown>
+        payload: artifact
       })
     );
     if (artifact.state) {
@@ -117,7 +117,7 @@ export const materializePackRuntimeCoreModels = async (
         entityType: domain.entity_type ?? null,
         tags: domain.tags,
         staticSchemaRef: domain.static_schema_ref ?? null,
-        payload: domain as Record<string, unknown>
+        payload: domain
       })
     );
     if (domain.state) {
@@ -131,7 +131,7 @@ export const materializePackRuntimeCoreModels = async (
         entityType: institution.entity_type ?? null,
         tags: institution.tags,
         staticSchemaRef: institution.static_schema_ref ?? null,
-        payload: institution as Record<string, unknown>
+        payload: institution
       })
     );
     if (institution.state) {
@@ -143,7 +143,7 @@ export const materializePackRuntimeCoreModels = async (
     putWorldEntity(
       createWorldEntityInput(packId, mediator.id, 'mediator', mediator.id, now, {
         entityType: mediator.mediator_kind,
-        payload: mediator as Record<string, unknown>
+        payload: mediator
       })
     );
     putMediatorBinding({
@@ -153,7 +153,7 @@ export const materializePackRuntimeCoreModels = async (
       subject_entity_id: mediator.entity_ref,
       binding_kind: 'entity_ref',
       status: 'active',
-      metadata_json: mediator as Record<string, unknown>,
+      metadata_json: mediator,
       now
     });
   }
@@ -162,7 +162,7 @@ export const materializePackRuntimeCoreModels = async (
     putWorldEntity(
       createWorldEntityInput(packId, identity.id, 'abstract_authority', identity.id, now, {
         entityType: identity.type,
-        payload: identity as Record<string, unknown>
+        payload: identity
       })
     );
   }
@@ -222,7 +222,7 @@ export const materializePackRuntimeCoreModels = async (
     putWorldEntity(
       createWorldEntityInput(packId, transform.target, 'state_transform', transform.target, now, {
         entityType: 'state_transform',
-        payload: transform as Record<string, unknown>
+        payload: transform
       })
     );
   }

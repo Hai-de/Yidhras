@@ -32,7 +32,7 @@ export interface PluginSandboxConfig {
 export const getPluginSandboxConfig = (): PluginSandboxConfig => {
   const config = getRuntimeConfig().plugins.sandbox;
   return {
-    capabilityLevel: config.capability_level as PluginCapabilityLevel,
+    capabilityLevel: config.capability_level,
     maxManifestSizeBytes: config.max_manifest_size_bytes,
     maxManifestDepth: config.max_manifest_depth,
     maxRoutes: config.max_routes,
@@ -70,9 +70,12 @@ export type PluginContext = ReadonlyPluginContext | PackScopedPluginContext | Fu
 
 const createReadonlyContext = (context: AppContext): ReadonlyPluginContext => ({
   notifications: context.notifications,
-  clock: context.clock,
-  activePack: context.activePack,
-  getActivePackId: () => context.activePack.getActivePack()?.metadata.id ?? null
+  clock: { getCurrentTick: () => context.activePackRuntime!.getCurrentTick() },
+  activePack: {
+    getActivePack: () => context.activePackRuntime!.getActivePack(),
+    getCurrentRevision: () => context.activePackRuntime!.getCurrentRevision()
+  },
+  getActivePackId: () => context.activePackRuntime?.getActivePack()?.metadata.id ?? null
 });
 
 const createPackScopedContext = (context: AppContext): PackScopedPluginContext => ({

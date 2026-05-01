@@ -125,11 +125,11 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
   // -- Operator (direct Prisma) --
 
   async findOperatorById(id: string): Promise<{ id: string; username: string; password_hash: string; identity_id: string; is_root: boolean; status: string; display_name: string | null; created_at: bigint; updated_at: bigint; pack_bindings?: unknown[] } | null> {
-    return this.prisma.operator.findUnique({ where: { id } }) as Promise<{ id: string; username: string; password_hash: string; identity_id: string; is_root: boolean; status: string; display_name: string | null; created_at: bigint; updated_at: bigint; pack_bindings?: unknown[] } | null>;
+    return this.prisma.operator.findUnique({ where: { id } });
   }
 
   async getOperatorDetail(id: string): Promise<{ id: string; username: string; password_hash: string; identity_id: string; is_root: boolean; status: string; display_name: string | null; created_at: bigint; updated_at: bigint; pack_bindings: Array<{ pack_id: string; binding_type: string; bound_at: bigint }> } | null> {
-    return this.prisma.operator.findUnique({ where: { id }, include: { pack_bindings: true } }) as Promise<{ id: string; username: string; password_hash: string; identity_id: string; is_root: boolean; status: string; display_name: string | null; created_at: bigint; updated_at: bigint; pack_bindings: Array<{ pack_id: string; binding_type: string; bound_at: bigint }> } | null>;
+    return this.prisma.operator.findUnique({ where: { id }, include: { pack_bindings: true } });
   }
 
   async findOperatorByUsername(username: string): Promise<{ id: string; username: string } | null> {
@@ -244,7 +244,7 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
     return this.prisma.identityNodeBinding.findFirst({
       where: { agent_id: agentId, role: 'active', status: 'active' },
       include: { identity: { select: { id: true, type: true } } }
-    }) as Promise<{ identity: { id: string; type: string } | null } | null>;
+    });
   }
 
   async findBindingById(id: string): Promise<unknown> {

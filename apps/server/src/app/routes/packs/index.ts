@@ -61,5 +61,5 @@ export const registerPackRoutes = (deps: PackRoutesDependencies): Router => {
   });
   registerSchedulerRoutes(router, context, { asyncHandler });
 
-  return router as unknown as Router;
+  return router;
 };

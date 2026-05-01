@@ -168,7 +168,7 @@ export const applySchedulerAutomaticRebalanceForWorker = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = input.now ?? context.clock.getCurrentTick();
+  const now = input.now ?? context.activePackRuntime!.getCurrentTick();
   const config = getSchedulerAutomaticRebalanceConfig();
   const maxApply = Math.max(input.maxApply ?? config.max_apply, 1);
   const recommendations = adapter.listPendingRecommendationsForWorker(
@@ -257,7 +257,7 @@ export const evaluateSchedulerAutomaticRebalance = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = input?.now ?? context.clock.getCurrentTick();
+  const now = input?.now ?? context.activePackRuntime!.getCurrentTick();
   const config = getSchedulerAutomaticRebalanceConfig();
   const maxRecommendations = Math.max(input?.maxRecommendations ?? config.max_recommendations, 1);
   const migrationBacklogLimit = Math.max(

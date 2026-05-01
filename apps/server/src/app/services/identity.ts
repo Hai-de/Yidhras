@@ -56,7 +56,7 @@ export const registerIdentity = async (
     throw new ApiError(400, 'IDENTITY_INVALID', 'id and type are required');
   }
 
-  const now = context.clock.getCurrentTick();
+  const now = context.activePackRuntime!.getCurrentTick();
   return context.prisma.identity.create({
     data: {
       id,
@@ -117,7 +117,7 @@ export const createIdentityBinding = async (
   }
 
   const expiresAt = deps.parseOptionalTick(expires_at, 'expires_at');
-  const now = context.clock.getCurrentTick();
+  const now = context.activePackRuntime!.getCurrentTick();
 
   return context.prisma.identityNodeBinding.create({
     data: {
@@ -157,14 +157,14 @@ export const queryIdentityBindings = async (
     if (!bindingRoles.includes(role as IdentityBindingRole)) {
       throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'role must be active or atmosphere');
     }
-    where.role = role as IdentityBindingRole;
+    where.role = role;
   }
 
   if (status) {
     if (!bindingStatuses.includes(status as IdentityBindingStatus)) {
       throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'status must be active, inactive, or expired');
     }
-    where.status = status as IdentityBindingStatus;
+    where.status = status;
   } else if (!include_expired) {
     where.status = { not: 'expired' };
   }
@@ -203,7 +203,7 @@ export const unbindIdentityBinding = async (
     throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'status must be active, inactive, or expired');
   }
 
-  const now = context.clock.getCurrentTick();
+  const now = context.activePackRuntime!.getCurrentTick();
   return context.prisma.identityNodeBinding.update({
     where: { id: binding_id },
     data: {
@@ -230,7 +230,7 @@ export const expireIdentityBinding = async (
     throw new ApiError(404, 'IDENTITY_BINDING_NOT_FOUND', 'Binding not found', { binding_id });
   }
 
-  const now = context.clock.getCurrentTick();
+  const now = context.activePackRuntime!.getCurrentTick();
   return context.prisma.identityNodeBinding.update({
     where: { id: binding_id },
     data: {

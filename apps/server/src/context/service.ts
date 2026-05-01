@@ -46,7 +46,7 @@ export interface CreateContextServiceOptions {
 
 const buildNodeCountsByType = (nodeTypes: string[]): Record<string, number> => {
   return nodeTypes.reduce<Record<string, number>>((acc, nodeType) => {
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+ 
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
     acc[nodeType] = (acc[nodeType] ?? 0) + 1;
     return acc;
@@ -170,7 +170,7 @@ export const createContextService = ({
           scope,
           actor_ref: (node.actor_ref && typeof node.actor_ref === 'object' && !Array.isArray(node.actor_ref) ? node.actor_ref as unknown as MemoryEntry['actor_ref'] : null),
           source_kind: sourceKind,
-          source_ref: node.source_ref ? { ...node.source_ref } as MemoryEntry['source_ref'] : null,
+          source_ref: node.source_ref ? { ...node.source_ref } : null,
           content: { text: node.content.text, ...(node.content.structured ? { structured: node.content.structured } : {}) },
           tags: node.tags,
           importance: node.importance,

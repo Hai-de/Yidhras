@@ -67,7 +67,7 @@ export const acquireSchedulerLease = (
   adapter.open(packId);
 
   const partitionId = normalizePartitionId(input.partitionId);
-  const now = input.now ?? context.clock.getCurrentTick();
+  const now = input.now ?? context.activePackRuntime!.getCurrentTick();
   const leaseTicks = input.leaseTicks ?? getSchedulerLeaseTicks();
   const expiresAt = now + leaseTicks;
   const key = buildSchedulerLeaseKey(partitionId);
@@ -217,7 +217,7 @@ export const updateSchedulerCursor = (
 
   const id = normalizePartitionId(input.partitionId);
   const key = buildSchedulerCursorKey(id);
-  const now = input.now ?? context.clock.getCurrentTick();
+  const now = input.now ?? context.activePackRuntime!.getCurrentTick();
 
   adapter.upsertCursor(packId, {
     key,

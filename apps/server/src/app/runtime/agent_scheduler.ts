@@ -185,7 +185,7 @@ const aggregatePartitionRunResults = (results: PartitionSchedulerRunResult[]): A
   const skipCounts = createEmptyPartitionRunResult(DEFAULT_SCHEDULER_PARTITION_ID).skipped_by_reason;
   for (const result of results) {
     for (const reason of Object.keys(skipCounts) as SchedulerSkipReason[]) {
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+ 
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       skipCounts[reason] += result.skipped_by_reason[reason];
     }
@@ -366,7 +366,7 @@ const runAgentSchedulerForPartition = async ({
       leaseExpiresAtSnapshot: leaseResult.expires_at,
       tick: now,
       startedAt,
-      finishedAt: context.clock.getCurrentTick(),
+      finishedAt: context.activePackRuntime!.getCurrentTick(),
       summary,
       candidateDecisions
     }, packId);
@@ -520,7 +520,7 @@ const runAgentSchedulerForPartition = async ({
     leaseExpiresAtSnapshot: leaseResult.expires_at,
     tick: now,
     startedAt,
-    finishedAt: context.clock.getCurrentTick(),
+    finishedAt: context.activePackRuntime!.getCurrentTick(),
     summary,
     candidateDecisions
   }, packId);
@@ -556,8 +556,8 @@ export const runAgentScheduler = async ({
   schedulerReason = 'periodic_tick',
   packId
 }: RunAgentSchedulerOptions): Promise<AgentSchedulerRunResult> => {
-  const startedAt = context.clock.getCurrentTick();
-  const now = context.clock.getCurrentTick();
+  const startedAt = context.activePackRuntime!.getCurrentTick();
+  const now = context.activePackRuntime!.getCurrentTick();
   refreshSchedulerWorkerRuntimeLiveness(context, now, packId);
 
   const initialOwnershipSnapshot = resolveSchedulerOwnershipSnapshot(context, {

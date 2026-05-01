@@ -42,8 +42,8 @@ const persistDockHeight = (height: number) => {
 
 export const useShellStore = defineStore('shell', {
   state: () => ({
-    activeWorkspaceId: 'overview' as OperatorWorkspaceId,
-    activeDockTabId: 'jobs' as DockTabId,
+    activeWorkspaceId: 'overview',
+    activeDockTabId: 'jobs',
     isDockExpanded: false,
     recentTargets: [] as ShellRecentTarget[],
     dockHeight: readPersistedDockHeight()

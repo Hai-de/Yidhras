@@ -75,7 +75,7 @@ export class PrismaPluginRepository implements PluginRepository {
     activationId: string,
     patch: Record<string, unknown>
   ): Promise<unknown> {
-    return this.store.updateActivationSession(activationId, patch as never);
+    return this.store.updateActivationSession(activationId, patch);
   }
 
   async createEnableAcknowledgement(input: Record<string, unknown>): Promise<unknown> {

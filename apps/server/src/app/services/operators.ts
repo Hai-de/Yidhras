@@ -22,7 +22,7 @@ export const createOperator = async (
   }
 
   const passwordHash = await hashPassword(input.password)
-  const now = context.clock.getCurrentTick()
+  const now = context.activePackRuntime!.getCurrentTick()
 
   // 创建 Identity
   const identity = await context.repos.identityOperator.createIdentity({
@@ -36,7 +36,7 @@ export const createOperator = async (
 
   // 创建 Operator
   const operator = await context.repos.identityOperator.createOperatorRecord({
-    identity_id: (identity as { id: string }).id,
+    identity_id: (identity).id,
     username: input.username,
     password_hash: passwordHash,
     is_root: input.is_root ?? false,
@@ -94,7 +94,7 @@ export const updateOperator = async (
     throw new ApiError(404, 'OPERATOR_NOT_FOUND', 'Operator not found')
   }
 
-  const now = context.clock.getCurrentTick()
+  const now = context.activePackRuntime!.getCurrentTick()
   const data: Record<string, unknown> = { updated_at: now }
 
   if (input.status !== undefined) {
@@ -122,7 +122,7 @@ export const updateOperator = async (
     operator_id: updatedByOperatorId ?? null,
     action: AUDIT_ACTION.UPDATE_OPERATOR,
     target_id: operatorId,
-    detail_json: input as unknown as import('@prisma/client/runtime/library').JsonObject,
+    detail_json: input,
     client_ip: clientIp ?? null
   })
 
@@ -141,7 +141,7 @@ export const deleteOperator = async (
     throw new ApiError(404, 'OPERATOR_NOT_FOUND', 'Operator not found')
   }
 
-  const now = context.clock.getCurrentTick()
+  const now = context.activePackRuntime!.getCurrentTick()
 
   const updated = await context.repos.identityOperator.updateOperator(operatorId, {
     status: OPERATOR_STATUS.DISABLED,

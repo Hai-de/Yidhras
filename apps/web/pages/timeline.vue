@@ -67,11 +67,11 @@
 import { computed } from 'vue'
 
 import AppButton from '../components/ui/AppButton.vue'
+import PluginPanelHost from '../features/plugins/components/PluginPanelHost.vue'
 import SourceContextBanner from '../features/shared/components/SourceContextBanner.vue'
 import WorkspacePageHeader from '../features/shared/components/WorkspacePageHeader.vue'
 import WorkspaceStatusBanner from '../features/shared/components/WorkspaceStatusBanner.vue'
 import { formatFreshnessLabel } from '../features/shared/feedback'
-import PluginPanelHost from '../features/plugins/components/PluginPanelHost.vue'
 import TimelineEventDetail from '../features/timeline/components/TimelineEventDetail.vue'
 import TimelineEventList from '../features/timeline/components/TimelineEventList.vue'
 import TimelineRangeBar from '../features/timeline/components/TimelineRangeBar.vue'

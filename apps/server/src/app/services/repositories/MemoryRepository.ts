@@ -47,7 +47,7 @@ export class PrismaMemoryRepository implements MemoryRepository {
   constructor(private readonly prisma: PrismaClient) {
     const ctx = { prisma } as AppInfrastructure & Pick<AppContextPorts, 'activePackRuntime'>;
     this.blockStore = createPrismaLongMemoryBlockStore(ctx);
-    this.longTermStore = createPrismaLongTermMemoryStore(ctx as AppInfrastructure);
+    this.longTermStore = createPrismaLongTermMemoryStore(ctx);
   }
 
   async listCandidateBlocks(input: MemoryBlockCandidateQuery): Promise<MemoryBlockRecord[]> {

@@ -145,7 +145,7 @@ export const useShellContext = () => {
   const sourceContext = useOperatorSourceContext()
 
   const workspaceTitle = computed(() => {
-    return workspaceTitleMap[shell.activeWorkspaceId] ?? 'Operator Workspace'
+    return workspaceTitleMap[shell.activeWorkspaceId as keyof typeof workspaceTitleMap] ?? 'Operator Workspace'
   })
 
   const workspaceSubtitle = computed(() => {

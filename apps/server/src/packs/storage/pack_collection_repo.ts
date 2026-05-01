@@ -26,6 +26,11 @@ const parseJsonString = (value: string): unknown => {
   }
 };
 
+const serializeUnknown = (value: unknown): string => {
+  if (typeof value === 'object' && value !== null) return JSON.stringify(value);
+  return String(value);
+};
+
 const toNullableString = (value: unknown): string | null => {
   if (typeof value === 'string') {
     return value;
@@ -33,7 +38,7 @@ const toNullableString = (value: unknown): string | null => {
   if (value === null || value === undefined) {
     return null;
   }
-  return JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined);
+  return serializeUnknown(value);
 };
 
 const openDatabase = (runtimeDbPath: string): DatabaseSync => {
@@ -136,11 +141,11 @@ const encodeFieldValue = (
     case 'mediator_ref':
     case 'authority_ref':
     case 'enum':
-      return typeof value === 'string' ? value : String(value);
+      return typeof value === 'string' ? value : serializeUnknown(value);
     case 'tick':
-      return typeof value === 'bigint' ? value.toString() : String(value);
+      return typeof value === 'bigint' ? value.toString() : serializeUnknown(value);
     default:
-      return JSON.stringify(value) ?? String(value);
+      return serializeUnknown(value);
   }
 };
 

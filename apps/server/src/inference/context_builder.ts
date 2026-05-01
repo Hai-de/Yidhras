@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { AccessPolicyService } from '../access_policy/service.js';
-import type { AppContext, AppInfrastructure } from '../app/context.js';
+import type { AppInfrastructure } from '../app/context.js';
 import { getAgentContextSnapshot } from '../app/services/agent.js';
 import type { AppContextPorts } from '../app/services/app_context_ports.js';
 import { createContextAssemblyPort } from '../app/services/context_memory_ports.js';
@@ -147,7 +147,7 @@ const listActiveBindingsForIdentity = async (context: Ctx, identityId: string): 
     orderBy: {
       created_at: 'desc'
     }
-  }) as Promise<BindingRecord[]>;
+  });
 };
 
 const resolveIdentityById = async (context: Ctx, identityId: string): Promise<IdentityContext | null> => {
@@ -181,7 +181,7 @@ const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?:
       actor_display_name: agentContext.identity.name ?? input.agent_id,
       binding_ref: null,
       resolved_agent_id: input.agent_id,
-      agent_snapshot: buildAgentSnapshot(agentContext.identity as Record<string, unknown>)
+      agent_snapshot: buildAgentSnapshot(agentContext.identity)
     };
   }
 
@@ -210,7 +210,7 @@ const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?:
         actor_display_name: identity.name ?? binding.agent_id,
         binding_ref: toBindingRef(binding),
         resolved_agent_id: binding.agent_id,
-        agent_snapshot: buildAgentSnapshot(boundAgentContext.identity as Record<string, unknown>)
+        agent_snapshot: buildAgentSnapshot(boundAgentContext.identity)
       };
     }
 
@@ -259,7 +259,7 @@ const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?:
       });
     }
 
-    const activePack = context.activePack.getActivePack();
+    const activePack = context.activePackRuntime?.getActivePack();
     const actorDef = activePack?.entities?.actors?.find(a => a.id === input.actor_entity_id);
     const entityKind = actorDef?.kind ?? 'actor';
 
@@ -553,7 +553,7 @@ const buildPackStateSnapshot = async (
 };
 
 const buildPackRuntimeContract = (context: Ctx): InferencePackRuntimeContract => {
-  const activePack = context.activePack.getActivePack();
+  const activePack = context.activePackRuntime?.getActivePack();
   if (!activePack) {
     return {};
   }
@@ -577,7 +577,7 @@ const createPackRuntimeContractResolver = (): PackRuntimeContractResolver => {
       }
     ): Promise<InferencePackRuntimeContract> {
       if (input.mode === 'stable') {
-        const activePack = context.activePack.getActivePack();
+        const activePack = context.activePackRuntime?.getActivePack();
         if (!activePack || activePack.metadata.id !== input.pack_id) {
           return Promise.resolve({});
         }
@@ -723,7 +723,7 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
     async buildForPack(context: Ctx, input: BuildInferenceContextForPackInput): Promise<InferenceContext> {
       context.assertRuntimeReady('inference context');
 
-      const activePack = context.activePack.getActivePack();
+      const activePack = context.activePackRuntime?.getActivePack();
 
       const stablePack = input.mode === 'stable' ? activePack : undefined;
       const experimentalSummary = input.mode === 'experimental' ? context.packRuntimeLookup?.getPackRuntimeSummary(input.pack_id) : null;
@@ -756,7 +756,7 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
 
       const currentTick = input.mode === 'experimental'
         ? experimentalSummary?.current_tick ?? '0'
-        : context.clock.getCurrentTick().toString();
+        : context.activePackRuntime!.getCurrentTick().toString();
 
       const strategy = selectStrategy(input);
       const attributes = normalizeAttributes(input.attributes);
@@ -783,7 +783,7 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         attributes,
         config
       );
-      const contextAssembly = context.contextAssembly ?? createContextAssemblyPort(context as unknown as AppContext);
+      const contextAssembly = context.contextAssembly ?? createContextAssemblyPort(context);
       if (!contextAssembly.buildContextRun) {
         throw new ApiError(500, 'CONTEXT_ASSEMBLY_MISSING', 'Context assembly port is not configured with buildContextRun');
       }
@@ -845,7 +845,7 @@ export const buildInferenceContext = async (
   context: Ctx,
   input: InferenceRequestInput
 ): Promise<InferenceContext> => {
-  const pack = context.activePack.getActivePack();
+  const pack = context.activePackRuntime?.getActivePack();
   if (!pack) {
     throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for inference context', {
       startup_level: context.startupHealth.level,

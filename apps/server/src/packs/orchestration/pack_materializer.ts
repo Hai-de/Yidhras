@@ -1,11 +1,11 @@
 import type { PrismaClient } from '@prisma/client';
 
-import type { InstalledPackRuntimeSummary } from '../kernel/install/install_pack.js';
-import { installPackRuntime } from '../kernel/install/install_pack.js';
-import type { WorldPack } from '../packs/manifest/constitution_loader.js';
-import type { PackRuntimeMaterializeSummary } from '../packs/runtime/core_models.js';
-import { type ActorBridgeSummary,materializeActorBridges, materializePackRuntimeCoreModels } from '../packs/runtime/materializer.js';
-import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
+import type { InstalledPackRuntimeSummary } from '../../kernel/install/install_pack.js';
+import { installPackRuntime } from '../../kernel/install/install_pack.js';
+import type { WorldPack } from '../manifest/constitution_loader.js';
+import type { PackRuntimeMaterializeSummary } from '../runtime/core_models.js';
+import { type ActorBridgeSummary,materializeActorBridges, materializePackRuntimeCoreModels } from '../runtime/materializer.js';
+import type { PackStorageAdapter } from '../storage/PackStorageAdapter.js';
 
 export interface MaterializePackRuntimeInput {
   pack: WorldPack;

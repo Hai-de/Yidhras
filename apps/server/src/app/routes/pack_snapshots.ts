@@ -143,7 +143,7 @@ export const registerPackSnapshotRoutes = (
         );
       }
 
-      const activePack = context.activePack?.getActivePack();
+      const activePack = context.activePackRuntime?.getActivePack();
       const activeRuntimePack = context.activePackRuntime?.getActivePack();
       const pack = activeRuntimePack ?? activePack;
 

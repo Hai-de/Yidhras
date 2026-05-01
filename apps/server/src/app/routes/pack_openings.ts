@@ -53,7 +53,7 @@ export const registerPackOpeningRoutes = (
       const params = parseParams(applyOpeningParamsSchema, req.params, 'OPENING_APPLY_INVALID');
       const body = parseBody(applyOpeningBodySchema, req.body, 'OPENING_APPLY_BODY_INVALID');
 
-      const activePack = context.activePack.getActivePack();
+      const activePack = context.activePackRuntime?.getActivePack();
       const isActive = activePack?.metadata.id === params.packId;
 
       if (isActive && !body.confirm_data_loss) {
@@ -65,18 +65,7 @@ export const registerPackOpeningRoutes = (
       }
 
       if (isActive && body.confirm_data_loss) {
-        const { reinitializePackRuntime } = await import('../../core/runtime_reinitializer.js');
-        const handle = context.getPackRuntimeHandle?.(params.packId);
-        const packFolderName = handle?.pack_folder_name ?? params.packId;
-        await reinitializePackRuntime({
-          activePackRuntime: context.activePackRuntime!,
-          packFolderName,
-          packId: params.packId,
-          openingId: params.openingId,
-          prisma: context.prisma,
-          packStorageAdapter: context.packStorageAdapter,
-          notifications: context.notifications
-        });
+        await context.reinitializePackRuntime!(params.packId, params.openingId);
         jsonOk(res, {
           reinitialized: true,
           pack_id: params.packId,

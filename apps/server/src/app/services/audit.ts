@@ -56,7 +56,7 @@ const parseAuditEntryKind = (value: string | undefined): AuditEntryKind => {
   if (!parsed.success) {
     throw new Error('Invalid audit entry kind');
   }
-  return parsed.data as AuditEntryKind;
+  return parsed.data;
 };
 
 const parseAuditEntryId = (value: string | undefined): string => {

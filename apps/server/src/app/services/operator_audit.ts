@@ -36,11 +36,11 @@ export const queryAuditLogs = async (
   }
 
   if (filters.from_date) {
-    where.created_at = { ...(where.created_at as Record<string, unknown> ?? {}), gte: BigInt(filters.from_date) }
+    where.created_at = { ...(where.created_at ?? {}), gte: BigInt(filters.from_date) }
   }
 
   if (filters.to_date) {
-    where.created_at = { ...(where.created_at as Record<string, unknown> ?? {}), lte: BigInt(filters.to_date) }
+    where.created_at = { ...(where.created_at ?? {}), lte: BigInt(filters.to_date) }
   }
 
   // cursor 分页

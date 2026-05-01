@@ -22,7 +22,7 @@ function assertInBase(fullPath: string, baseDir: string): string {
   return resolved;
 }
 
-// eslint-disable-next-line security/detect-non-literal-fs-filename
+ 
 function readdirWrapper(baseDir: string, dirPath: string): string[];
 function readdirWrapper(baseDir: string, dirPath: string, options: { withFileTypes: true }): fs.Dirent[];
 function readdirWrapper(

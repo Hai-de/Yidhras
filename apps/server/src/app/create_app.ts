@@ -27,7 +27,7 @@ export const createApp = ({ context, registerRoutes }: CreateAppOptions) => {
 
   registerRoutes(app, context);
 
-  const activePackId = context.activePack.getActivePack()?.metadata.id;
+  const activePackId = context.activePackRuntime?.getActivePack()?.metadata.id;
   if (activePackId) {
     pluginRuntimeRegistry.applyPackRoutes(activePackId, app, context);
   }

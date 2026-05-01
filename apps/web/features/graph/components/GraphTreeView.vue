@@ -10,8 +10,8 @@
 </template>
 
 <script setup lang="ts">
-import GraphCanvas from './GraphCanvas.vue'
 import type { GraphCanvasSnapshot } from '../lib/normalize'
+import GraphCanvas from './GraphCanvas.vue'
 
 defineProps<{
   snapshot: GraphCanvasSnapshot

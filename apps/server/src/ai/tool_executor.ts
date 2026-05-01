@@ -232,8 +232,8 @@ export const createToolRegistry = (toolEntries?: AiToolRegistryEntry[], permissi
 
   registerWithSchema('get_clock_state', {
     execute(_args, ctx) {
-      const tick = ctx.context.activePackRuntime?.getCurrentTick()
-        ?? ctx.context.clock.getCurrentTick();
+      const tick = ctx.context.activePackRuntime!.getCurrentTick()
+        ?? ctx.context.activePackRuntime!.getCurrentTick();
 
       const times = ctx.context.activePackRuntime?.getAllTimes?.() ?? [];
 

@@ -89,7 +89,7 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/summary',
     observeGuard(context),
-      // eslint-disable-next-line @typescript-eslint/require-await
+       
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler summary')
       const query = parseQuery(schedulerSummaryQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
@@ -120,7 +120,7 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/operator',
     observeGuard(context),
-      // eslint-disable-next-line @typescript-eslint/require-await
+       
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler operator projection')
       const query = parseQuery(schedulerOperatorQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
@@ -137,7 +137,7 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/ownership',
     observeGuard(context),
-      // eslint-disable-next-line @typescript-eslint/require-await
+       
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler ownership projection')
       const query = parseQuery(schedulerOwnershipQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
@@ -173,7 +173,7 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/workers',
     observeGuard(context),
-      // eslint-disable-next-line @typescript-eslint/require-await
+       
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler worker runtime states')
       const query = parseQuery(schedulerWorkersQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
@@ -209,7 +209,7 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/runs/:id',
     observeGuard(context),
-      // eslint-disable-next-line @typescript-eslint/require-await
+       
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler run read')
       const params = parseParams(schedulerRunIdParamsSchema, req.params, 'SCHEDULER_QUERY_INVALID')
@@ -222,7 +222,7 @@ export const registerSchedulerRoutes = (
   app.get(
     '/api/runtime/scheduler/decisions',
     observeGuard(context),
-      // eslint-disable-next-line @typescript-eslint/require-await
+       
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler decisions list')
       const query = parseQuery(schedulerDecisionsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')

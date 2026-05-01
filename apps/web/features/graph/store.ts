@@ -4,7 +4,7 @@ export const useGraphStore = defineStore('graph', {
   state: () => ({
     isFetching: false,
     lastSyncedAt: null as number | null,
-    autoRefreshMode: 'manual' as 'manual' | 'visible-polling'
+    autoRefreshMode: 'manual'
   }),
   actions: {
     setFetching(isFetching: boolean) {

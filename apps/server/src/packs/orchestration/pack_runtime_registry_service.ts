@@ -1,31 +1,31 @@
 import type { PrismaClient } from '@prisma/client';
 import path from 'path';
 
-import { ChronosEngine } from '../clock/engine.js';
-import type { CalendarConfig } from '../clock/types.js';
-import { getRuntimeMultiPackConfig } from '../config/runtime_config.js';
-import type { WorldPack } from '../packs/manifest/loader.js';
-import { teardownActorBridges } from '../packs/runtime/materializer.js';
-import { resolvePackRuntimeDatabaseLocation } from '../packs/storage/pack_db_locator.js';
-import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
-import { discoverPackLocalPlugins } from '../plugins/discovery.js';
-import { pluginRuntimeRegistry } from '../plugins/runtime.js';
-import { ApiError } from '../utils/api_error.js';
-import { createLogger } from '../utils/logger.js';
-import { safeFs } from '../utils/safe_fs.js';
-
-const logger = createLogger('pack-runtime-registry');
-import type { MultiPackLoopHost } from '../app/runtime/MultiPackLoopHost.js';
+import type { MultiPackLoopHost } from '../../app/runtime/MultiPackLoopHost.js';
+import { ChronosEngine } from '../../clock/engine.js';
+import type { CalendarConfig } from '../../clock/types.js';
+import { getRuntimeMultiPackConfig } from '../../config/runtime_config.js';
+import type { PackRuntimeHandle } from '../../core/pack_runtime_handle.js';
+import type { PackRuntimeStatusSnapshot } from '../../core/pack_runtime_health.js';
+import type { PackRuntimeHost } from '../../core/pack_runtime_host.js';
+import { PackRuntimeInstance } from '../../core/pack_runtime_instance.js';
+import type { PackRuntimeControl, PackRuntimeLocator, PackRuntimeObservation } from '../../core/pack_runtime_ports.js';
+import type { PackRuntimeRegistry } from '../../core/pack_runtime_registry.js';
+import { RuntimeSpeedPolicy } from '../../core/runtime_speed.js';
+import { getWorldPackRuntimeConfig } from '../../core/world_pack_runtime.js';
+import { discoverPackLocalPlugins } from '../../plugins/discovery.js';
+import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
+import { ApiError } from '../../utils/api_error.js';
+import { createLogger } from '../../utils/logger.js';
+import { safeFs } from '../../utils/safe_fs.js';
+import type { WorldPack } from '../manifest/loader.js';
+import { teardownActorBridges } from '../runtime/materializer.js';
+import { resolvePackRuntimeDatabaseLocation } from '../storage/pack_db_locator.js';
+import type { PackStorageAdapter } from '../storage/PackStorageAdapter.js';
 import type { DefaultPackCatalogService } from './pack_catalog_service.js';
 import { materializePackRuntime } from './pack_materializer.js';
-import type { PackRuntimeHandle } from './pack_runtime_handle.js';
-import type { PackRuntimeStatusSnapshot } from './pack_runtime_health.js';
-import type { PackRuntimeHost } from './pack_runtime_host.js';
-import { PackRuntimeInstance } from './pack_runtime_instance.js';
-import type { PackRuntimeControl, PackRuntimeLocator, PackRuntimeObservation } from './pack_runtime_ports.js';
-import type { PackRuntimeRegistry } from './pack_runtime_registry.js';
-import { RuntimeSpeedPolicy } from './runtime_speed.js';
-import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
+
+const logger = createLogger('pack-runtime-registry');
 
 export interface DefaultPackRuntimeRegistryServiceOptions {
   registry: PackRuntimeRegistry;

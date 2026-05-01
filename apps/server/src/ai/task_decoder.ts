@@ -31,7 +31,7 @@ const applyFieldAliases = (value: Record<string, unknown>, aliasMap?: Record<str
   const next = { ...value };
   for (const [sourceKey, targetKey] of Object.entries(aliasMap)) {
     if (sourceKey in next && !(targetKey in next)) {
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+ 
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       next[targetKey] = next[sourceKey];
     }

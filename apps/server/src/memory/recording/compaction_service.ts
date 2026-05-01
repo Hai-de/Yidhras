@@ -100,7 +100,7 @@ export const createMemoryCompactionService = ({
         };
       }
 
-      const now = context.clock.getCurrentTick();
+      const now = context.activePackRuntime!.getCurrentTick();
       const state = await context.repos.memory.upsertCompactionState({
         agent_id: input.agent_id,
         pack_id: pack.metadata.id,

@@ -4,6 +4,11 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 };
 
+const serializeUnknown = (value: unknown): string => {
+  if (typeof value === 'object' && value !== null) return JSON.stringify(value);
+  return String(value);
+};
+
 const getValueAtPath = (path: string, root: Record<string, unknown>): unknown => {
   return path.split('.').reduce<unknown>((current, segment) => {
     if (isRecord(current) && segment in current) {
@@ -45,7 +50,7 @@ const resolveTemplateValue = (
     if (fallbackResolved !== undefined) {
       return fallbackResolved as PromptVariableValue;
     }
-    return fallback as PromptVariableValue;
+    return fallback;
   }
   return null;
 };
@@ -71,7 +76,7 @@ const resolveValue = (
       Object.entries(value).map(([key, entry]) => [key, resolveValue(entry, runtimeObjects)])
     );
   }
-  return JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined);
+  return serializeUnknown(value);
 };
 
 export const resolveConfigValues = (

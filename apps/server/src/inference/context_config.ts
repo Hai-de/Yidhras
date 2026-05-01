@@ -267,7 +267,7 @@ const loadDeploymentConfig = (deploymentId: string): ConfigCacheEntry => {
 
   let merged: Record<string, unknown>;
   if (Object.keys(deploymentOverride).length === 0) {
-    merged = globalEntry.config as unknown as Record<string, unknown>;
+    merged = globalEntry.config;
   } else {
     merged = deepMerge(
       globalEntry.config as unknown as Record<string, unknown>,

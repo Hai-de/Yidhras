@@ -80,6 +80,7 @@ export interface AppContext extends AppInfrastructure, AppContextPorts {
   getPackRuntimeHandle?(packId: string): import('../core/pack_runtime_handle.js').PackRuntimeHandle | null;
   getPackRuntimeHost?(packId: string): import('../core/pack_runtime_host.js').PackRuntimeHost | null;
   listLoadedPackRuntimeIds?(): string[];
+  reinitializePackRuntime?(packId: string, openingId: string): Promise<void>;
   applyClockProjection?(snapshot: import('./runtime/runtime_clock_projection.js').RuntimeClockProjectionSnapshot): void;
 
   getRuntimeLoopDiagnostics?(): RuntimeLoopDiagnostics;

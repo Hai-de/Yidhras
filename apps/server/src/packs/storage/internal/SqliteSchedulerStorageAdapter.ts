@@ -284,7 +284,7 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
       Number(input.expires_at),
       Number(input.updated_at)
     );
-    return input as SchedulerLeaseRecord;
+    return input;
   }
 
   public getLease(packId: string, partitionId: string): SchedulerLeaseRecord | null {
@@ -419,7 +419,7 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
       input.source,
       Number(input.updated_at)
     );
-    return input as SchedulerPartitionRecord;
+    return input;
   }
 
   public updatePartition(

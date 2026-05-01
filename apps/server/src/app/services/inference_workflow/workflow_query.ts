@@ -439,7 +439,7 @@ export const listInferenceJobs = async (
   };
 
   for (const item of pageItems) {
-    countsByStatus[item.status as (typeof INFERENCE_JOB_STATUSES)[number]] += 1;
+    countsByStatus[item.status] += 1;
   }
 
   return {

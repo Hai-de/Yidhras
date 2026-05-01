@@ -36,11 +36,11 @@ const jsonOrNull = (value: unknown): Prisma.InputJsonValue | Prisma.NullableJson
   if (value === null || value === undefined) {
     return Prisma.JsonNull;
   }
-  return value as Prisma.InputJsonValue;
+  return value;
 };
 
 const jsonValue = (value: unknown): Prisma.InputJsonValue => {
-  return (value ?? {}) as Prisma.InputJsonValue;
+  return (value ?? {});
 };
 
 const readPrismaData = (location: { prismaJsonPath: string; packId: string }): PackSnapshotPrismaData => {
@@ -354,7 +354,7 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
   );
 
   // 8. Materialize (idempotent)
-  const { materializePackRuntime } = await import('../../core/pack_materializer.js');
+  const { materializePackRuntime } = await import('../orchestration/pack_materializer.js');
   const tick = parseBigInt(metadata.captured_at_tick);
   await materializePackRuntime({ pack, prisma, packStorageAdapter, initialTick: tick, appliedOpeningId: appliedOpeningId ?? undefined });
 

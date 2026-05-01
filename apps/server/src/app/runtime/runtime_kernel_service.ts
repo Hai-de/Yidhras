@@ -48,20 +48,24 @@ export const createRuntimeKernelService = (context: AppContext, packId: string):
         loop_status: diagnostics.status
       };
     },
-    reconcileBootstrapOwnership(input) {
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async reconcileBootstrapOwnership(input) {
       reconcileSchedulerBootstrapAssignments(context, input.schedulerWorkerId, input.schedulerPartitionIds, packId);
     },
-    getOwnershipSnapshot(input) {
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async getOwnershipSnapshot(input) {
       const workerId = input?.workerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
       return resolveSchedulerOwnershipSnapshot(context, {
         workerId,
         bootstrapPartitionIds: input?.partitionIds
       }, packId);
     },
+    // eslint-disable-next-line @typescript-eslint/require-await
     async getOwnershipAssignments(input) {
       return listSchedulerOwnershipAssignments(context, { ...input ?? {}, pack_id: packId });
     },
-    getWorkers(input) {
+    // eslint-disable-next-line @typescript-eslint/require-await
+    async getWorkers(input) {
       return listSchedulerWorkers(context, { ...input ?? {}, pack_id: packId });
     },
     async getSummary(input) {

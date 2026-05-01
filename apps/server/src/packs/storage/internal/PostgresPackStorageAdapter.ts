@@ -151,6 +151,11 @@ const TABLE_DEF_BY_NAME = new Map<string, EngineOwnedTableDef>(
   ENGINE_OWNED_TABLE_DEFS.map(def => [def.name, def])
 );
 
+const serializeUnknown = (value: unknown): string => {
+  if (typeof value === 'object' && value !== null) return JSON.stringify(value);
+  return String(value);
+};
+
 function mapFieldTypeToPgType(fieldType: string): string {
   switch (fieldType) {
     case 'number':
@@ -185,7 +190,7 @@ function encodeFieldValue(field: CollectionFieldDefinition, value: unknown): str
     case 'timestamp':
     case 'string':
     default:
-      return JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined);
+      return serializeUnknown(value);
   }
 }
 
@@ -205,7 +210,7 @@ function decodeFieldValue(field: CollectionFieldDefinition, value: unknown): unk
       return value;
     }
     default:
-      return typeof value === 'string' ? value : (JSON.stringify(value) ?? String(value as string | number | boolean | bigint | symbol | null | undefined));
+      return typeof value === 'string' ? value : serializeUnknown(value);
   }
 }
 
@@ -386,7 +391,7 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
       const table = this.qualifiedName(packId, tableName);
       const existingRows = await this.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
         `SELECT created_at FROM ${table} WHERE id = $1`,
-        rec['id'] as string
+        rec['id']
       );
       if (existingRows.length > 0) {
         const existing = existingRows[0];

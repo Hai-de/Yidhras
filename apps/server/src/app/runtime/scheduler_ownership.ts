@@ -143,7 +143,7 @@ export const refreshSchedulerWorkerRuntimeState = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = input.now ?? context.clock.getCurrentTick();
+  const now = input.now ?? context.activePackRuntime!.getCurrentTick();
   const activeMigrationCount = adapter.countMigrationsInProgress(packId, input.workerId);
 
   const existing = adapter.getWorkerState(packId, input.workerId);
@@ -173,7 +173,7 @@ export const refreshSchedulerWorkerRuntimeLiveness = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const currentTick = now ?? context.clock.getCurrentTick();
+  const currentTick = now ?? context.activePackRuntime!.getCurrentTick();
   const staleThreshold = BigInt(process.env.SCHEDULER_WORKER_STALE_TICKS ?? DEFAULT_SCHEDULER_WORKER_STALE_TICKS.toString());
   const deadThreshold = BigInt(process.env.SCHEDULER_WORKER_DEAD_TICKS ?? DEFAULT_SCHEDULER_WORKER_DEAD_TICKS.toString());
   const workerStates = listSchedulerWorkerRuntimeStates(context, packId);
@@ -201,7 +201,7 @@ export const reconcileSchedulerBootstrapAssignments = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = context.clock.getCurrentTick();
+  const now = context.activePackRuntime!.getCurrentTick();
   const partitionCount = getSchedulerPartitionCount();
   const bootstrapPartitionIds = resolveOwnedSchedulerPartitionIds({
     explicitPartitionIds: partitionIds,
@@ -313,7 +313,7 @@ export const createSchedulerOwnershipMigration = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = context.clock.getCurrentTick();
+  const now = context.activePackRuntime!.getCurrentTick();
   const existingAssignment = adapter.getPartition(packId, input.partitionId);
 
   const migration = adapter.createMigration(packId, {
@@ -364,7 +364,7 @@ export const markSchedulerOwnershipMigrationInProgress = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = context.clock.getCurrentTick();
+  const now = context.activePackRuntime!.getCurrentTick();
   adapter.updateMigration(packId, {
     id: migrationId,
     status: 'in_progress',
@@ -386,7 +386,7 @@ export const completeActiveSchedulerOwnershipMigration = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = context.clock.getCurrentTick();
+  const now = context.activePackRuntime!.getCurrentTick();
   const migration = adapter.findLatestActiveMigrationForPartition(
     packId,
     input.partitionId,
@@ -415,7 +415,7 @@ export const completeSchedulerOwnershipMigration = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = context.clock.getCurrentTick();
+  const now = context.activePackRuntime!.getCurrentTick();
   const migration = adapter.getMigrationById(packId, migrationId);
   if (!migration) {
     return;

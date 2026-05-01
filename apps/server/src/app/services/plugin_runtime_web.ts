@@ -68,7 +68,7 @@ const normalizePluginRelativePath = (value: string): string => {
 };
 
 const resolveManifestView = (manifestJson: unknown): PluginWebManifestView => {
-  return (manifestJson ?? {}) as PluginWebManifestView;
+  return (manifestJson ?? {});
 };
 
 const getPluginWebEntrypoint = (manifestJson: unknown): string | null => {

@@ -11,6 +11,7 @@ import type {
 } from '../../../composables/api/useWorkflowApi'
 import WorkspaceEmptyState from '../../shared/components/WorkspaceEmptyState.vue'
 import WorkspaceSectionHeader from '../../shared/components/WorkspaceSectionHeader.vue'
+import type { WorkflowSchedulerSourceViewModel } from '../adapters'
 import {
   buildWorkflowEntityLinks,
   buildWorkflowFailureSummary,
@@ -22,7 +23,6 @@ import {
   stringifyDebugValue,
   toWorkflowRefField
 } from '../adapters'
-import type { WorkflowSchedulerSourceViewModel } from '../adapters'
 
 const props = defineProps<{
   job: WorkflowJobDetail | null

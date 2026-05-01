@@ -26,7 +26,7 @@ const getBooleanFlag = (input: Record<string, unknown>, key: string): boolean =>
 };
 
 const getStringValue = (input: Record<string, unknown>, key: string): string | null => {
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+ 
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   if (typeof input[key] === 'string' && input[key].trim().length > 0) {
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
@@ -34,7 +34,7 @@ const getStringValue = (input: Record<string, unknown>, key: string): string | n
   }
 
   const attributes = getNestedRecord(input, 'attributes');
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+ 
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   if (typeof attributes?.[key] === 'string' && attributes[key].trim().length > 0) {
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
@@ -52,7 +52,7 @@ const getRecordValue = (input: Record<string, unknown>, key: string): Record<str
   }
 
   const attributes = getNestedRecord(input, 'attributes');
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+ 
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
   return isRecord(attributes?.[key]) ? (attributes[key]) : null;
 };

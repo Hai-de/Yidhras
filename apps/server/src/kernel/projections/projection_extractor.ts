@@ -16,7 +16,7 @@ export interface GlobalProjectionIndexSnapshot {
 export const extractGlobalProjectionIndex = async (context: AppInfrastructure): Promise<GlobalProjectionIndexSnapshot> => {
   const operatorProjection = await getOperatorOverviewProjection(context);
   const activePack = context.activePack.getActivePack();
-  const visibleClock = readVisibleClockSnapshot(context as unknown as Parameters<typeof readVisibleClockSnapshot>[0]);
+  const visibleClock = readVisibleClockSnapshot(context);
 
   /**
    * generated_at is an operator-visible/read-model timestamp and therefore

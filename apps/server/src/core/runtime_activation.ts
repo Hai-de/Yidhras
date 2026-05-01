@@ -11,7 +11,7 @@ import { discoverPackLocalPlugins, type PluginDiscoveryResult } from '../plugins
 export interface NotificationPort {
   push(level: string, content: string, code?: string, details?: Record<string, unknown>): unknown;
 }
-import { materializePackRuntime } from './pack_materializer.js';
+import { materializePackRuntime } from '../packs/orchestration/pack_materializer.js';
 import type { RuntimeSpeedPolicy } from './runtime_speed.js';
 import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
 

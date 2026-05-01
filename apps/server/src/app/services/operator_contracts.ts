@@ -44,7 +44,7 @@ export interface OperatorAdvancedContractsSnapshot {
 }
 
 const resolvePackMetadata = (context: AppContext) => {
-  const pack = context.activePack.getActivePack();
+  const pack = context.activePackRuntime?.getActivePack();
   if (!pack) {
     throw new Error('World pack not ready for operator advanced contracts');
   }

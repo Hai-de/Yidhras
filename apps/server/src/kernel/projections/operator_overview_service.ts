@@ -53,7 +53,7 @@ export const getOperatorOverviewProjection = async (
   context: AppInfrastructure,
   options: OperatorOverviewProjectionOptions = {}
 ): Promise<OperatorOverviewProjectionSnapshot> => {
-  const runtime = await getRuntimeStatusSnapshot(context as Parameters<typeof getRuntimeStatusSnapshot>[0], {
+  const runtime = await getRuntimeStatusSnapshot(context, {
     packId: options.packId
   });
   const activePack = context.activePack.getActivePack();

@@ -9,7 +9,7 @@ import {
   createPromptVariableLayer,
   normalizePromptVariableRecord
 } from '../narrative/variable_context.js';
-import { type PackManifestLoader, type WorldPack } from '../packs/manifest/loader.js';
+import type { PackManifestLoader, WorldPack } from '../packs/manifest/loader.js';
 import type { PermissionContext } from '../permission/types.js';
 import { createLogger } from '../utils/logger.js';
 import { PackRuntimeInstance } from './pack_runtime_instance.js';

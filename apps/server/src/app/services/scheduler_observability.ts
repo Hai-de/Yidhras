@@ -2034,17 +2034,6 @@ export const listSchedulerOwnershipAssignments = (
           completed_at: latestMigrationByPartition.get(assignment.partition_id)!.completed_at !== null
             ? BigInt(latestMigrationByPartition.get(assignment.partition_id)!.completed_at!)
             : null
-        } as {
-          id: string;
-          partition_id: string;
-          from_worker_id: string | null;
-          to_worker_id: string;
-          status: string;
-          reason: string | null;
-          details: unknown;
-          created_at: bigint;
-          updated_at: bigint;
-          completed_at: bigint | null;
         })
       : null
   }));
@@ -2252,14 +2241,14 @@ export const getSchedulerOperatorProjection = async (
   const latestPendingWorkflowCount = latestCandidates.filter(candidate => candidate.workflow_link?.workflow_state === 'pending').length;
   const latestCompletedWorkflowCount = latestCandidates.filter(candidate => candidate.workflow_link?.workflow_state === 'completed').length;
   const latestTopActor = summary.top_actors[0]?.actor_id ?? null;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+   
   const topOwnerWorkerId: string | null = ownershipAssignments.summary.top_workers[0]?.worker_id ?? null;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+   
   const latestStaleWorkerId: string | null = workers.items.find(item => item.status === 'stale' || item.status === 'suspected_dead')?.worker_id ?? null;
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+   
   const ownershipItems: SchedulerPartitionOwnershipReadModel[] = ownershipAssignments.items;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+   
   const migrationItems: SchedulerOwnershipMigrationReadModel[] = ownershipMigrations.items;
   const migrationInProgressCount: number = ownershipMigrations.summary.in_progress_count;
   const latestMigrationPartitionId: string | null = latestMigration?.partition_id ?? null;

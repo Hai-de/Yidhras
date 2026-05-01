@@ -63,6 +63,7 @@ import {
   validateProductionSecrets
 } from './config/runtime_config.js';
 import { startConfigWatcher } from './config/watcher.js';
+import { reinitializePackRuntime } from './core/runtime_reinitializer.js';
 import { SimulationManager } from './core/simulation.js';
 import { createInferenceService } from './inference/service.js';
 import { createPrismaInferenceTraceSink } from './inference/sinks/prisma.js';
@@ -185,6 +186,19 @@ appContext.packRuntimeObservation = {
 appContext.packRuntimeControl = {
   load: packRef => sim.loadExperimentalPackRuntime(packRef),
   unload: packId => sim.unloadExperimentalPackRuntime(packId)
+};
+appContext.reinitializePackRuntime = async (packId, openingId) => {
+  const handle = sim.getPackRuntimeHandle(packId);
+  const packFolderName = handle?.pack_folder_name ?? packId;
+  await reinitializePackRuntime({
+    activePackRuntime: appContext.activePackRuntime!,
+    packFolderName,
+    packId,
+    openingId,
+    prisma,
+    packStorageAdapter,
+    notifications
+  });
 };
 const worldEngineConfig = getWorldEngineConfig();
 appContext.worldEngine = createWorldEngineSidecarClient({

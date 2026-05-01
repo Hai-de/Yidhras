@@ -1,4 +1,3 @@
-import type { InferenceRequestInput } from '../../inference/types.js';
 import type { AppContext } from '../context.js';
 import { normalizeStoredRequestInput } from '../services/inference_workflow/parsers.js';
 import { isRecord } from '../services/inference_workflow/types.js';
@@ -15,7 +14,7 @@ const resolveActionIntentActorId = (actorRef: unknown): string | null => {
 };
 
 const resolveRequestInputAgentId = (requestInput: unknown): string | null => {
-  const normalized = normalizeStoredRequestInput(requestInput as InferenceRequestInput);
+  const normalized = normalizeStoredRequestInput(requestInput);
   return typeof normalized.agent_id === 'string' && normalized.agent_id.length > 0 ? normalized.agent_id : null;
 };
 

@@ -1,5 +1,6 @@
 import { entityIdParamsSchema } from '@yidhras/contracts'
 import type { Express, NextFunction, Request, Response } from 'express'
+import { z } from 'zod'
 
 import { packAccessGuard } from '../../operator/guard/pack_access.js'
 import { ApiError } from '../../utils/api_error.js'
@@ -14,25 +15,9 @@ import {
   getExperimentalPackPluginInstallations
 } from '../services/experimental_projection_runtime.js'
 
-const packIdParamsSchema = {
-  safeParse(value: unknown) {
-    const packId = typeof (value as { packId?: unknown })?.packId === 'string'
-      ? (value as { packId: string }).packId.trim()
-      : ''
-
-    if (packId.length === 0) {
-      return {
-        success: false as const,
-        error: { issues: [{ message: 'packId is required' }] }
-      }
-    }
-
-    return {
-      success: true as const,
-      data: { packId }
-    }
-  }
-}
+const packIdParamsSchema = z.object({
+  packId: z.string().min(1, 'packId is required')
+})
 
 export interface ExperimentalPackProjectionRouteDependencies {
   asyncHandler(
