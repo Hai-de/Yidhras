@@ -1,7 +1,11 @@
 import { defineStore } from 'pinia'
 
 export const useGraphStore = defineStore('graph', {
-  state: () => ({
+  state: (): {
+    isFetching: boolean
+    lastSyncedAt: number | null
+    autoRefreshMode: 'manual' | 'visible-polling'
+  } => ({
     isFetching: false,
     lastSyncedAt: null as number | null,
     autoRefreshMode: 'manual'

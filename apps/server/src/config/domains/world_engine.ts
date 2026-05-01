@@ -14,7 +14,7 @@ export const WorldEngineConfigSchema = z
 export type WorldEngineConfig = z.infer<typeof WorldEngineConfigSchema>;
 
 export const WORLD_ENGINE_DEFAULTS: WorldEngineConfig = {
-  timeout_ms: 500,
+  timeout_ms: 5000,
   binary_path: 'apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar',
   auto_restart: true
 };

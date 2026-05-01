@@ -311,7 +311,7 @@ export class WorldEngineSidecarClient implements WorldEnginePort {
 
     this.transport = new ProcessWorldEngineSidecarTransport({
       binaryPath: transportOrOptions?.binaryPath ?? '',
-      timeoutMs: transportOrOptions?.timeoutMs ?? 500,
+      timeoutMs: transportOrOptions?.timeoutMs ?? 5000,
       autoRestart: transportOrOptions?.autoRestart ?? true
     });
   }
