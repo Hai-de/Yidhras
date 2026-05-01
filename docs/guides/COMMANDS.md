@@ -300,39 +300,98 @@ pnpm --filter yidhras-server exec vitest run --config vitest.e2e.config.ts tests
 pnpm --filter web exec vitest run --config vitest.config.ts tests/unit/<file>.spec.ts
 ```
 
-## 6. 插件治理入口命令
+## 6. 开发者 CLI 工具
 
-当前统一入口：
+以下 CLI 命令均为 `apps/server` 包内脚本，通过 `pnpm --filter yidhras-server <command>` 调用。
+所有命令均不依赖运行中的服务器，可直接离线使用（`sim` 和部分 `snapshot` 操作除外）。
 
-```bash
-pnpm --filter yidhras-server plugin -- <command>
-```
-
-常见 command 包括：
-
-- `list`
-- `show`
-- `confirm`
-- `enable`
-- `disable`
-- `rescan`
-- `logs`
-- `why-not-enable`
-
-示例：
+### 6.1 数据库管理 (`db`)
 
 ```bash
-pnpm --filter yidhras-server plugin -- list --pack my_pack
-pnpm --filter yidhras-server plugin -- show --plugin plugin.alpha --pack my_pack
-pnpm --filter yidhras-server plugin -- confirm --plugin plugin.alpha --pack my_pack --grant requested
-pnpm --filter yidhras-server plugin -- enable --plugin plugin.alpha --pack my_pack --yes --non-interactive
-pnpm --filter yidhras-server plugin -- disable --plugin plugin.alpha --pack my_pack --yes --non-interactive
-pnpm --filter yidhras-server plugin -- rescan --pack my_pack
+pnpm --filter yidhras-server db status          # 迁移状态 + 文件信息
+pnpm --filter yidhras-server db migrate          # 执行待处理的迁移
+pnpm --filter yidhras-server db integrity         # PRAGMA integrity_check
+pnpm --filter yidhras-server db tables            # 列出所有表及行数
 ```
 
-说明：
-- 本文件只保留入口与少量示例；
-- 更完整的治理说明、acknowledgement 语义、GUI/CLI 对照和排障路径，应放入 `docs/guides/PLUGIN_OPERATIONS.md`。
+### 6.2 世界包校验 (`validate:pack`)
+
+```bash
+pnpm --filter yidhras-server validate:pack <pack-dir>   # 校验单个 pack
+pnpm --filter yidhras-server validate:pack --all          # 校验所有 pack
+```
+
+校验项：配置文件存在性、YAML 解析、Zod schema 验证、README.md 存在性、插件 manifest（如有）。
+
+### 6.3 模拟控制 (`sim`)
+
+需要服务器运行中。
+
+```bash
+pnpm --filter yidhras-server sim status     # 运行时状态摘要 (公开端点)
+pnpm --filter yidhras-server sim pause      # 暂停模拟循环 (需认证)
+pnpm --filter yidhras-server sim resume     # 恢复模拟循环 (需认证)
+pnpm --filter yidhras-server sim speed <n|reset>  # 设置/重置速度倍率 (需认证)
+pnpm --filter yidhras-server sim login --username <u> --password <p>  # 登录获取 token
+```
+
+认证方式：`--token <token>` 参数或 `YIDHRAS_TOKEN` 环境变量。
+默认服务器地址：`http://localhost:3001`（可通过 `--base-url` 覆盖）。
+
+### 6.4 AI 网关工具 (`ai`)
+
+```bash
+pnpm --filter yidhras-server ai models       # 列出所有注册模型及状态
+pnpm --filter yidhras-server ai test <model>  # 发送最小化请求验证连通性
+```
+
+模型列表来自内置注册表 (`BUILTIN_AI_REGISTRY_CONFIG`) 与 `apps/server/config/ai_models.yaml` 的合并结果。
+
+### 6.5 运行时诊断 (`diag`)
+
+```bash
+pnpm --filter yidhras-server diag            # 完整诊断报告
+pnpm --filter yidhras-server diag --json     # JSON 格式输出
+```
+
+输出内容：数据库信息、配置域列表、World Pack 清单、备份状态、环境信息。
+
+### 6.6 操作者管理 (`operator`)
+
+```bash
+pnpm --filter yidhras-server operator create --name <u> --password <p> [--root]
+pnpm --filter yidhras-server operator list [--limit <n>]
+pnpm --filter yidhras-server operator show <id>
+pnpm --filter yidhras-server operator update <id> [--password <p>] [--status active|disabled|suspended] [--root]
+pnpm --filter yidhras-server operator delete <id>
+```
+
+注意：`delete` 为软删除（状态设为 `disabled`），非物理删除。
+
+### 6.7 快照管理 (`snapshot`)
+
+```bash
+pnpm --filter yidhras-server snapshot list [--pack <pack-id>]
+pnpm --filter yidhras-server snapshot show <id> --pack <pack-id>
+pnpm --filter yidhras-server snapshot delete <id> --pack <pack-id> [--force]
+```
+
+注意：`create` 和 `restore` 需要服务器运行中，请使用 HTTP API：
+- `POST /api/packs/snapshots` — 创建快照
+- `POST /api/packs/snapshots/:id/restore` — 恢复快照
+
+### 6.8 插件治理
+
+插件管理通过 HTTP API 进行：
+
+```bash
+GET    /api/packs/:id/plugins              # 列出插件
+POST   /api/packs/:id/plugins/:id/confirm  # 确认导入
+POST   /api/packs/:id/plugins/:id/enable   # 启用
+POST   /api/packs/:id/plugins/:id/disable  # 禁用
+```
+
+更完整的治理说明、acknowledgement 语义、GUI/CLI 对照和排障路径见 `docs/guides/PLUGIN_OPERATIONS.md`。
 
 ## 7. 常用工作流建议
 

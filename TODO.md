@@ -9,7 +9,7 @@
 
 ### AI 网关模块盲点修复 (基于代码审计发现)
 
-- [ ] Streaming/SSE 支持：**全项目盲点** — gateway 和旧 inference 链路均为 req→full response，`openai.ts` 适配器无 `stream:true`，无 SSE/EventSource 能力，择日处理
+- [x] Streaming/SSE 支持：已评估 → 移入 `.limcode/enhancements-backlog.md`（2026-05-01）
 
 ## 说明 / Notes
 

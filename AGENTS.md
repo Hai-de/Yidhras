@@ -84,7 +84,15 @@ pnpm --filter yidhras-server exec vitest run --config vitest.e2e.config.ts tests
 ```
 pnpm --filter yidhras-server reset:dev-db        # wipe and re-seed local dev DB
 pnpm scaffold:world-pack -- --dir <dir> --name "<Name>" --author "<Author>"
-pnpm --filter yidhras-server plugin -- <command>
+
+# CLI tools (see docs/guides/COMMANDS.md for full reference)
+pnpm --filter yidhras-server db status|migrate|integrity|tables
+pnpm --filter yidhras-server validate:pack <dir>|--all
+pnpm --filter yidhras-server sim status|pause|resume|speed|login
+pnpm --filter yidhras-server ai models|test
+pnpm --filter yidhras-server diag
+pnpm --filter yidhras-server operator create|list|show|update|delete
+pnpm --filter yidhras-server snapshot list|show|delete
 ```
 
 ### CI baseline

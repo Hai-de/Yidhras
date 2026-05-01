@@ -14,9 +14,9 @@
 
 当前已支持的主要入口：
 
-- CLI：`pnpm --filter yidhras-server plugin -- <command>`
 - GUI：前端 `/plugins` 页面
 - API：`/api/packs/:packId/plugins*`
+- CLI：plugin CLI 已在兼容性清理中移除（2026-05-02），请使用 HTTP API 替代
 
 当前边界：
 
@@ -45,31 +45,22 @@ discovered
   -> enabled / disabled
 ```
 
-## 3. CLI 入口
+## 3. HTTP API 入口
 
-统一命令入口：
+插件管理通过 HTTP API 操作，需服务器运行中。
 
 ```bash
-pnpm --filter yidhras-server plugin -- <command>
+# 基础 URL (默认端口 3001)
+BASE=http://localhost:3001
 ```
 
-当前常用命令：
-
-- `list`
-- `show`
-- `confirm`
-- `enable`
-- `disable`
-- `rescan`
-- `logs`
-- `why-not-enable`
-
-## 4. 常见操作
+### 4. 常见操作
 
 ### 4.1 查看当前 pack 的插件列表
 
 ```bash
-pnpm --filter yidhras-server plugin -- list --pack my_pack
+curl -H "Authorization: Bearer $YIDHRAS_TOKEN" \
+  $BASE/api/packs/my_pack/plugins
 ```
 
 适用场景：
@@ -80,7 +71,8 @@ pnpm --filter yidhras-server plugin -- list --pack my_pack
 ### 4.2 查看单个插件详情
 
 ```bash
-pnpm --filter yidhras-server plugin -- show --plugin plugin.alpha --pack my_pack
+curl -H "Authorization: Bearer $YIDHRAS_TOKEN" \
+  $BASE/api/packs/my_pack/plugins/<installation-id>
 ```
 
 适用场景：
@@ -91,7 +83,11 @@ pnpm --filter yidhras-server plugin -- show --plugin plugin.alpha --pack my_pack
 ### 4.3 确认导入插件
 
 ```bash
-pnpm --filter yidhras-server plugin -- confirm --plugin plugin.alpha --pack my_pack --grant requested
+curl -X POST \
+  -H "Authorization: Bearer $YIDHRAS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"granted_capabilities": ["<capability-key>"]}' \
+  $BASE/api/packs/my_pack/plugins/<installation-id>/confirm
 ```
 
 说明：
@@ -102,18 +98,24 @@ pnpm --filter yidhras-server plugin -- confirm --plugin plugin.alpha --pack my_p
 ### 4.4 启用插件
 
 ```bash
-pnpm --filter yidhras-server plugin -- enable --plugin plugin.alpha --pack my_pack --yes --non-interactive
+curl -X POST \
+  -H "Authorization: Bearer $YIDHRAS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"acknowledgement": {"reminder_text_hash": "<hash>"}}' \
+  $BASE/api/packs/my_pack/plugins/<installation-id>/enable
 ```
 
 说明：
 - enable 前通常要求 installation 已处于可启用状态
 - 如果系统启用了 enable warning，可能需要 acknowledgement
-- CLI 与 GUI 都遵循同一套 warning / acknowledgement 语义
+- GUI 与 API 都遵循同一套 warning / acknowledgement 语义
 
 ### 4.5 禁用插件
 
 ```bash
-pnpm --filter yidhras-server plugin -- disable --plugin plugin.alpha --pack my_pack --yes --non-interactive
+curl -X POST \
+  -H "Authorization: Bearer $YIDHRAS_TOKEN" \
+  $BASE/api/packs/my_pack/plugins/<installation-id>/disable
 ```
 
 适用场景：
@@ -122,9 +124,7 @@ pnpm --filter yidhras-server plugin -- disable --plugin plugin.alpha --pack my_p
 
 ### 4.6 重新扫描插件目录
 
-```bash
-pnpm --filter yidhras-server plugin -- rescan --pack my_pack
-```
+插件重新扫描通过前端 GUI `/plugins` 页面或直接重启服务器完成。无独立 HTTP API 端点。
 
 适用场景：
 - 本地修改了 `plugins/` 目录内容
@@ -133,7 +133,8 @@ pnpm --filter yidhras-server plugin -- rescan --pack my_pack
 ### 4.7 查看日志
 
 ```bash
-pnpm --filter yidhras-server plugin -- logs --plugin plugin.alpha --pack my_pack --limit 10
+curl -H "Authorization: Bearer $YIDHRAS_TOKEN" \
+  $BASE/api/audit/logs?action=ENABLE_PLUGIN&limit=10
 ```
 
 适用场景：
@@ -142,13 +143,7 @@ pnpm --filter yidhras-server plugin -- logs --plugin plugin.alpha --pack my_pack
 
 ### 4.8 诊断为何不能启用
 
-```bash
-pnpm --filter yidhras-server plugin -- why-not-enable --installation <installation-id> --pack my_pack --non-interactive
-```
-
-适用场景：
-- installation 处于不可启用状态
-- 不确定是 capability、acknowledgement 还是 lifecycle state 问题
+通过 `GET /api/packs/:packId/plugins` 查看 installation 的 `lifecycle_state` 和 `last_error` 字段，对照第 2 节状态流转图诊断。
 
 ## 5. GUI 操作说明
 
@@ -216,11 +211,7 @@ enable 失败时优先检查：
 - 是否仍处于 `pending_confirmation`
 - 是否尚未授予需要的 capability
 - 是否需要 acknowledgement
-- 使用：
-
-```bash
-pnpm --filter yidhras-server plugin -- why-not-enable --installation <installation-id> --pack my_pack --non-interactive
-```
+- 使用 `GET /api/packs/:packId/plugins/<installation-id>` 查看 `lifecycle_state` 和 `last_error` 字段
 
 ### 问题 2：GUI 能看到插件，但面板/路由没有生效
 
@@ -232,13 +223,7 @@ pnpm --filter yidhras-server plugin -- why-not-enable --installation <installati
 
 ### 问题 3：本地替换了插件文件，但行为没变化
 
-尝试：
-
-```bash
-pnpm --filter yidhras-server plugin -- rescan --pack my_pack
-```
-
-必要时结合 logs 与 GUI 页面重新确认当前 installation 状态。
+尝试通过前端 GUI `/plugins` 页面重新扫描，或重启服务器。必要时结合 logs 与 GUI 页面重新确认当前 installation 状态。
 
 ## 9. 相关文档
 
