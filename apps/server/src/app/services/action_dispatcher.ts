@@ -1,5 +1,4 @@
 import { dispatchInvocationFromActionIntent } from '../../domain/invocation/invocation_dispatcher.js';
-import { IdentityService } from '../../identity/service.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import { type ActionIntentRecord,assertActionIntentLockOwnership } from './action_intent_repository.js';
@@ -35,8 +34,7 @@ const resolveIdentityContext = async (context: AppContext, actorRef: unknown) =>
     throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'Action intent actor_ref is invalid');
   }
 
-  const identityService = new IdentityService(context.prisma);
-  const identity = await identityService.fetchIdentity(actorRef.identity_id);
+  const identity = await context.repos.identityOperator.findIdentityById(actorRef.identity_id);
   if (!identity) {
     throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'Action intent identity could not be resolved', {
       identity_id: actorRef.identity_id

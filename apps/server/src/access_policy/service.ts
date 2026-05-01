@@ -1,5 +1,3 @@
-import type { PrismaClient } from '@prisma/client';
-
 import type { AppInfrastructure } from '../app/context.js';
 import type { IdentityContext } from '../identity/types.js';
 import { ApiError } from '../utils/api_error.js';
@@ -10,6 +8,22 @@ import type {
   PolicyMatchInput,
   PolicyRule
 } from './types.js';
+
+interface PolicyStore {
+  listPolicies(where: Record<string, unknown>): Promise<Array<{
+    id: string;
+    effect: string;
+    subject_id: string | null;
+    subject_type: string | null;
+    resource: string;
+    action: string;
+    field: string;
+    conditions: unknown;
+    priority: number;
+    created_at: bigint;
+    updated_at: bigint;
+  }>>;
+}
 
 const toPolicyRule = (rule: {
   id: string;
@@ -36,23 +50,21 @@ const toPolicyRule = (rule: {
 };
 
 export class AccessPolicyService {
-  private prisma: PrismaClient;
+  private store: PolicyStore;
 
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
+  constructor(store: PolicyStore) {
+    this.store = store;
   }
 
   public async listPolicies(input: PolicyMatchInput): Promise<PolicyRule[]> {
-    const rules = await this.prisma.policy.findMany({
-      where: {
-        resource: input.resource,
-        action: input.action,
-        OR: [
-          { subject_id: input.identity.id },
-          { subject_type: input.identity.type },
-          { subject_type: '*' }
-        ]
-      }
+    const rules = await this.store.listPolicies({
+      resource: input.resource,
+      action: input.action,
+      OR: [
+        { subject_id: input.identity.id },
+        { subject_type: input.identity.type },
+        { subject_type: '*' }
+      ]
     });
     return rules.map(toPolicyRule);
   }
@@ -181,7 +193,7 @@ export const requireAccessPolicyIdentity = (identity: IdentityContext | undefine
 };
 
 const createAccessPolicyService = (context: AppInfrastructure): AccessPolicyService => {
-  return new AccessPolicyService(context.prisma);
+  return new AccessPolicyService(context.repos.identityOperator);
 };
 
 const createPolicyAccessContext = (

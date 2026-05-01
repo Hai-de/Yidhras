@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { createPluginStore } from '../../plugins/store.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import { assertPackScope } from './pack_scope_resolver.js';
@@ -130,8 +129,7 @@ const getPackPluginRuntimeWebSnapshot = async (
   surface: PluginRuntimeWebSurface
 ): Promise<ActivePackPluginRuntimeWebSnapshot> => {
   const scopedPackId = resolvePackRuntimeWebScope(context, packId, 'plugin runtime web snapshot', surface);
-  const store = createPluginStore({ prisma: context.prisma });
-  const installations = await store.listInstallationsByScope({
+  const installations = await context.repos.plugin.listInstallationsByScope({
     scope_type: 'pack_local',
     scope_ref: scopedPackId
   });
@@ -143,7 +141,7 @@ const getPackPluginRuntimeWebSnapshot = async (
       continue;
     }
 
-    const artifact = await store.getArtifactById(installation.artifact_id);
+    const artifact = await context.repos.plugin.getArtifactById(installation.artifact_id);
     if (!artifact) {
       continue;
     }
@@ -209,8 +207,7 @@ const resolvePluginWebAssetWithScope = async (
     'plugin runtime web asset',
     surface
   );
-  const store = createPluginStore({ prisma: context.prisma });
-  const installation = await store.getInstallationById(input.installation_id);
+  const installation = await context.repos.plugin.getInstallationById(input.installation_id);
 
   if (!installation) {
     throw new ApiError(404, 'PLUGIN_INSTALLATION_NOT_FOUND', 'Plugin installation not found', {
@@ -229,7 +226,7 @@ const resolvePluginWebAssetWithScope = async (
     });
   }
 
-  const artifact = await store.getArtifactById(installation.artifact_id);
+  const artifact = await context.repos.plugin.getArtifactById(installation.artifact_id);
   if (!artifact) {
     throw new ApiError(404, 'PLUGIN_ARTIFACT_NOT_FOUND', 'Plugin artifact not found', {
       artifact_id: installation.artifact_id

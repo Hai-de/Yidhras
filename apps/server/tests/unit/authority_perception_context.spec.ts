@@ -50,6 +50,7 @@ describe('authority/perception/context assembly', () => {
       sim,
       clock: sim as AppContext['clock'],
       activePack: sim as AppContext['activePack'],
+      activePackRuntime: sim as AppContext['activePackRuntime'],
       prisma,
       packStorageAdapter: new SqlitePackStorageAdapter(),
       repos: createPrismaRepositories(prisma),

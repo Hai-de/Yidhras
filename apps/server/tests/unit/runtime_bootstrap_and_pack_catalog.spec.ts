@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { DefaultPackCatalogService } from '../../src/core/pack_catalog_service.js';
+import { DefaultPackCatalogService } from '../../src/packs/orchestration/pack_catalog_service.js';
 import { PrismaRuntimeDatabaseBootstrap } from '../../src/core/runtime_database_bootstrap.js';
 import type { DatabaseHealthSnapshot } from '../../src/db/sqlite_runtime.js';
 import type { WorldPack } from '../../src/packs/manifest/loader.js';

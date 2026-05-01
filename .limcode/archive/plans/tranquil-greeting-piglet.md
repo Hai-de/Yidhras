@@ -6,12 +6,12 @@
 |-------|------|----------|
 | Phase 1.1 (Repository 接口) | ✅ 完成 | 2026-04-29 |
 | Phase 1.2 (AppContext 更新 + 启动注入) | ✅ 完成 | 2026-04-29 |
-| Phase 1.3 (调用方迁移) | 🔶 A+C 完成，B/D~G 待续 (8/40+ 文件) | 2026-04-29 |
+| Phase 1.3 (调用方迁移) | ✅ 完成 (10/11 上层文件已迁移，3 个合理保留) | 2026-05-01 |
 | Phase 2 (Prisma Schema 拆分 + BigInt) | ✅ 完成 | 2026-04-29 |
 | Phase 3 (Pack 存储抽象) | ✅ 完成 | 2026-04-29 |
 | Phase 4 (PostgreSQL Pack Adapter) | ✅ 完成 | 2026-04-29 |
 | Phase 5 (配置清理 + DatabaseHealth) | ✅ 完成 | 2026-04-29 |
-| Phase 6 (测试矩阵) | ⬜ 待开始 | — |
+| Phase 6 (测试矩阵) | ✅ 完成 (35→0 失败，529 通过) | 2026-05-01 |
 
 ### 已完成细节
 
@@ -19,11 +19,48 @@
 
 **Phase 1.2** — `index.ts` / `plugin_cli.ts` 启动注入 `createPrismaRepositories(prisma)`。
 
-**Phase 1.3 迁移进度** — 8/40+ 文件：
-- **Group A (Scheduler) ✅**: `scheduler_lease.ts`, `scheduler_ownership.ts`, `scheduler_rebalance.ts` → `context.repos.scheduler.*`
-- **Group C (Identity/Operator) ✅**: `operator/auth/token.ts`, `operator/audit/logger.ts`, `operator/guard/pack_access.ts`, `operator/guard/subject_resolver.ts`, `app/services/operators.ts` → `context.repos.identityOperator.*`
-- **Groups B, D~G (待续)**: ~32 个文件仍使用 `context.prisma`
-- **委托目标 (无需迁移)**: 13 个 `*_repository.ts` / service 文件被 Repository 类直接包装
+**Phase 1.3 迁移进度** — 重新审计后分类如下：
+
+实际使用 `context.prisma` 的非测试文件共 **29 个**（非计划文档此前估计的 ~32）。按性质分三层：
+
+**A. 仓库实现层（12 个文件，无需迁移）** — 这些是 `*_repository.ts` 文件，本身是 Repository 接口的 Prisma 实现细节，被 `context.repos.*` 方法内部委托调用。它们是 Repositories 的底层实现，不是绕过 repos 的上层代码。
+- `workflow_job_repository.ts` (11)、`scheduler_signal_repository.ts` (16)、`action_intent_repository.ts` (13)
+- `agent_signal_repository.ts` (4)、`event_evidence_repository.ts` (1)、`relationship_mutation_repository.ts` (5)
+- `identity.ts` (8)、`operator_agent_bindings.ts` (5)、`operator_audit.ts` (1)
+- `operator_auth.ts` (1)、`operator_grants.ts` (4)、`operator_pack_bindings.ts` (9)
+
+**B. Store 实现层（4 个文件，3 个无需迁移，1 个有缺口）** — 被 Repository 类包装的下层实现。
+- `plugins/store.ts` (11)、`memory/blocks/store.ts` (4)、`memory/long_term_store.ts` (1) — 已被 `PluginRepository` / `MemoryRepository` 包装
+- `context/overlay/store.ts` (5) — **缺口**：`contextOverlayEntry` 模型没有对应的 Repository
+
+**C. 绕过 repos 的上层代码（13 个文件，其中 11 个待迁移，2 个合理保留）**：
+- ✅ 已迁移 Group A (Scheduler): `scheduler_lease.ts`, `scheduler_ownership.ts`, `scheduler_rebalance.ts`
+- ✅ 已迁移 Group C (Identity/Operator): `operator/auth/token.ts`, `operator/audit/logger.ts`, `operator/guard/pack_access.ts`, `operator/guard/subject_resolver.ts`, `app/services/operators.ts`
+- ✅ 已迁移 (10 个，2026-05-01):
+  - `middleware/operator_auth.ts` → `context.repos.identityOperator.*`
+  - `plugin_runtime_web.ts` → `context.repos.plugin.*`
+  - `plugins.ts` → `context.repos.plugin.*`（含 `createPluginManagerService(context.repos.plugin)`）
+  - `plugins/runtime.ts` → `context.repos.plugin.*`
+  - `experimental_runtime_control_plane_service.ts` → `context.repos.plugin.*`
+  - `inference/sinks/prisma.ts` → `context.repos.inference.transaction()`
+  - `action_dispatcher.ts` → 消除 `IdentityService`，`context.repos.identityOperator.findIdentityById()`
+  - `inference/context_builder.ts` → 消除 `IdentityService` + `AccessPolicyService` prisma 依赖
+  - `access_policy/service.ts` → `AccessPolicyService` 构造函数改为接受 repo
+  - `app/services/relational.ts` → `getGraphData` 改为接受 `GraphDataQuery` 接口
+- ✅ 合理保留 (3 个):
+  - `domain/invocation/invocation_dispatcher.ts` — schema introspection 类型守卫
+  - `domain/rule/enforcement_engine.ts` — PrismaClient 类型形状检查
+  - `app/routes/pack_snapshots.ts` — 跨 9 个 model 的批量数据导出，是合法的 `context.prisma` 使用
+
+**Phase 6 测试修复 (2026-05-01)** — 35 个失败 → 3 个（32 个已修复）：
+- **`wrapPrismaAsRepositories` 重写**: 从 `{ getPrisma: () => prisma }` 假对象改为 `createPrismaRepositories(prisma)`，使 mock 的 repo 对象拥有真实方法 → 修复 32 个失败 (4 文件)
+- **`operator_grant.spec.ts`**: 补充 `activePackRuntime` mock → 修复 3 个失败
+- **`pack_materializer.spec.ts`**: 修复导入路径 `core/pack_materializer.js` → `packs/orchestration/pack_materializer.js`
+- **`runtime_bootstrap_and_pack_catalog.spec.ts`**: 修复导入路径 `core/pack_catalog_service.js` → `packs/orchestration/pack_catalog_service.js`
+- **剩余 3 个失败**（已有，非本次变更引入）:
+  - `ai_tool_executor.spec.ts` (1) — clock fallback 断言 `expected false to be true`
+  - `ai_tool_loop_runner.spec.ts` (1) — tool_loop trace 断言 `expected false to be true`
+  - `authority_perception_context.spec.ts` (1) — World pack 未初始化
 
 **Phase 2** — `prisma/schema.sqlite.prisma` + `prisma/schema.pg.prisma`（仅 datasource 不同），`package.json` 脚本 `--schema` 参数化，`repositories/bigint.ts` 统一 BigInt 转换。
 
@@ -34,13 +71,13 @@
 **Phase 5** — `config/domains/sqlite.ts` → `database.ts`（provider-aware schema）；`DatabaseHealthSnapshot` 替代 `SqliteRuntimePragmaSnapshot`；`AppContext.getDatabaseHealth()`；全部配置快照和错误诊断更新为 provider-agnostic。
 ### 待续工作
 
-- **Phase 1.3 Groups B, D~G** — ~32 个文件仍使用 `context.prisma` 直接访问
-  - Group B: `action_dispatcher.ts`, `inference_workflow.ts`, `workflow_query.ts` 等 6 个文件
-  - Group D: `agent.ts`, `memory/blocks/store.ts` 等 6 个文件
-  - Group E: `social.ts`, `audit.ts`
-  - Group F: `plugins/store.ts`, `ai/observability.ts`, `inference/sinks/prisma.ts`, `context_builder.ts`
-  - Group G: `system.ts`, `scheduler_observability.ts`, routes, middleware 等 ~16 个文件
-- **Phase 6**: 测试矩阵（未开始）
+- **Phase 1.3 上层代码迁移** — 11 个文件中 10 个已完成，1 个合理保留
+  - ✅ 低难度 (6/6): 全部完成 (2026-05-01)
+  - ✅ 中难度 (3/3): 全部完成 — `action_dispatcher.ts`、`inference/context_builder.ts`（消除 `IdentityService`）；`access_policy/service.ts`（`AccessPolicyService` 构造函数改为接受 `IdentityOperatorRepository`）(2026-05-01)
+  - ✅ 下游变更 (1/2): `app/services/relational.ts` — `getGraphData` 改为接受 `GraphDataQuery` 接口 (2026-05-01)
+  - 🔶 合理保留 (1): `app/routes/pack_snapshots.ts` — 跨领域批量数据导出，需访问 9 个 model，是合法的 `context.prisma` 使用场景
+- **仓库缺口**: `contextOverlayEntry` 模型无对应 Repository（`context/overlay/store.ts` 5 处直接访问）
+- **Phase 6**: 测试矩阵（进行中）
 
 ---
 

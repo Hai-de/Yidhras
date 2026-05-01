@@ -6,7 +6,6 @@ import { getAgentContextSnapshot } from '../app/services/agent.js';
 import type { AppContextPorts } from '../app/services/app_context_ports.js';
 import { createContextAssemblyPort } from '../app/services/context_memory_ports.js';
 import { getLatestEventEvidenceRecord } from '../app/services/event_evidence_repository.js';
-import { IdentityService } from '../identity/service.js';
 import type { IdentityContext } from '../identity/types.js';
 import type { PromptVariableContext, PromptVariableNamespace } from '../narrative/types.js';
 import {
@@ -120,12 +119,8 @@ const normalizeAttributes = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 
-const createIdentityService = (context: Ctx): IdentityService => {
-  return new IdentityService(context.prisma);
-};
-
 const createAccessPolicyService = (context: Ctx): AccessPolicyService => {
-  return new AccessPolicyService(context.prisma);
+  return new AccessPolicyService(context.repos.identityOperator);
 };
 
 // eslint-disable-next-line @typescript-eslint/require-await
@@ -152,8 +147,7 @@ const listActiveBindingsForIdentity = async (context: Ctx, identityId: string): 
 };
 
 const resolveIdentityById = async (context: Ctx, identityId: string): Promise<IdentityContext | null> => {
-  const service = createIdentityService(context);
-  return service.fetchIdentity(identityId);
+  return context.repos.identityOperator.findIdentityById(identityId);
 };
 
 export const ACTOR_ENTITY_ID_SEPARATOR = ':';

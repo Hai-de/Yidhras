@@ -1,8 +1,11 @@
-import type { PrismaClient } from '@prisma/client';
+export interface GraphDataQuery {
+  listAgents(): Promise<Array<{ id: string; name: string; snr: number; type: string; is_pinned: boolean }>>;
+  listRelationships(): Promise<Array<{ id: string; from_id: string; to_id: string; type: string; weight: number }>>;
+}
 
-export const getGraphData = async (prisma: PrismaClient) => {
-  const agents = await prisma.agent.findMany();
-  const relations = await prisma.relationship.findMany();
+export const getGraphData = async (query: GraphDataQuery) => {
+  const agents = await query.listAgents();
+  const relations = await query.listRelationships();
 
   const nodes = agents.map(agent => ({
     data: {

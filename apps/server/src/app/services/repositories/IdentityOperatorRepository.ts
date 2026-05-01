@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 
+import type { IdentityContext } from '../../../identity/types.js';
 import type { AppContext } from '../../context.js';
 import type {
   CreateIdentityBindingInput,
@@ -40,6 +41,7 @@ export interface IdentityOperatorRepository {
   queryIdentityBindings(input: QueryIdentityBindingsInput): Promise<unknown>;
   unbindIdentityBinding(input: { binding_id?: string; status?: string }): Promise<unknown>;
   expireIdentityBinding(input: { binding_id?: string }): Promise<unknown>;
+  findIdentityById(id: string): Promise<IdentityContext | null>;
 
   // -- Operator --
   findOperatorById(id: string): Promise<{ id: string; username: string; password_hash: string; identity_id: string; is_root: boolean; status: string; display_name: string | null; created_at: bigint; updated_at: bigint; pack_bindings?: unknown[] } | null>;
@@ -126,6 +128,19 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
 
   async expireIdentityBinding(input: { binding_id?: string }): Promise<unknown> {
     return expireIdentityBinding(this.ctx(), input);
+  }
+
+  async findIdentityById(id: string): Promise<IdentityContext | null> {
+    const identity = await this.prisma.identity.findUnique({ where: { id } });
+    if (!identity) return null;
+    return {
+      id: identity.id,
+      type: identity.type as IdentityContext['type'],
+      name: identity.name,
+      provider: identity.provider,
+      status: identity.status,
+      claims: identity.claims as Record<string, unknown> | null
+    };
   }
 
   // -- Operator (direct Prisma) --

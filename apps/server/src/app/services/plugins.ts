@@ -4,7 +4,6 @@ import type { PluginInstallation, PluginListResponseData } from '@yidhras/contra
 
 import { PLUGIN_ENABLE_ACK_REQUIRED_CODE, PLUGIN_ENABLE_WARNING_TEXT } from '../../plugins/contracts.js';
 import { assertPluginEnableAllowed, createPluginManagerService } from '../../plugins/service.js';
-import { createPluginStore } from '../../plugins/store.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import { createPackScopedPluginRuntimeService } from './pack_scoped_plugin_runtime_service.js';
@@ -19,8 +18,7 @@ const refreshScopedPluginRuntime = async (context: AppContext, packId: string | 
 };
 
 const createManager = (context: AppContext) => {
-  const store = createPluginStore({ prisma: context.prisma });
-  return createPluginManagerService(store);
+  return createPluginManagerService(context.repos.plugin);
 };
 
 const getEnableWarningConfig = (context: AppContext) => {
@@ -48,8 +46,7 @@ export const listPackPluginInstallations = async (
   context: AppContext,
   packId: string
 ): Promise<PluginListResponseData> => {
-  const store = createPluginStore({ prisma: context.prisma });
-  const items = await store.listInstallationsByScope({
+  const items = await context.repos.plugin.listInstallationsByScope({
     scope_type: 'pack_local',
     scope_ref: packId
   });
@@ -98,9 +95,8 @@ export const enablePackPlugin = async (
     actor_label?: string;
   }
 ): Promise<PluginInstallation> => {
-  const store = createPluginStore({ prisma: context.prisma });
   const manager = createManager(context);
-  const installation = await store.getInstallationById(installationId);
+  const installation = await context.repos.plugin.getInstallationById(installationId);
 
   if (!installation) {
     throw new ApiError(404, 'PLUGIN_INSTALLATION_NOT_FOUND', 'Plugin installation not found', { installation_id: installationId });

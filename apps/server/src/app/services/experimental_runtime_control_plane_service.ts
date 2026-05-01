@@ -1,4 +1,3 @@
-import { createPluginStore } from '../../plugins/store.js';
 import type { AppContext } from '../context.js';
 import { getPackRuntimeLookupPort, getPackRuntimeObservation } from './app_context_ports.js';
 
@@ -47,9 +46,8 @@ const readEnabledPluginCount = async (context: AppContext, packId: string): Prom
     return 0;
   }
 
-  const store = createPluginStore({ prisma: context.prisma });
   try {
-    const installations = await store.listInstallationsByScope({
+    const installations = await context.repos.plugin.listInstallationsByScope({
       scope_type: 'pack_local',
       scope_ref: packId
     });

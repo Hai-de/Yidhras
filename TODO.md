@@ -7,8 +7,6 @@
 
 ### 梳理当前代码实现
 
-- [ ] 实现部分 docs/ENHANCEMENTS.md 文件中列出的高价值内容
-
 ### AI 网关模块盲点修复 (基于代码审计发现)
 
 - [ ] Streaming/SSE 支持：**全项目盲点** — gateway 和旧 inference 链路均为 req→full response，`openai.ts` 适配器无 `stream:true`，无 SSE/EventSource 能力，择日处理

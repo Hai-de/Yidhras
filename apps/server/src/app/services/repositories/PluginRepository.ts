@@ -1,27 +1,42 @@
 import type { PrismaClient } from '@prisma/client';
+import type {
+  PluginActivationSession,
+  PluginArtifact,
+  PluginEnableAcknowledgement,
+  PluginInstallation
+} from '@yidhras/contracts';
 
 import { createPluginStore } from '../../../plugins/store.js';
-import type { PluginScopeType, PluginStore } from '../../../plugins/types.js';
+import type {
+  PluginActivationSessionCreateInput,
+  PluginEnableAcknowledgementCreateInput,
+  PluginInstallationUpsertInput,
+  PluginScopeType,
+  PluginStore
+} from '../../../plugins/types.js';
 
 export interface PluginRepository {
-  getArtifactById(artifactId: string): Promise<unknown>;
-  getArtifactByChecksum(checksum: string): Promise<unknown>;
-  upsertArtifact(input: Record<string, unknown>): Promise<unknown>;
-  getInstallationById(installationId: string): Promise<unknown>;
+  getArtifactById(artifactId: string): Promise<PluginArtifact | null>;
+  getArtifactByChecksum(checksum: string): Promise<PluginArtifact | null>;
+  upsertArtifact(input: PluginArtifact): Promise<PluginArtifact>;
+  getInstallationById(installationId: string): Promise<PluginInstallation | null>;
   getInstallationByScope(input: {
     plugin_id: string;
     scope_type: PluginScopeType;
     scope_ref?: string;
-  }): Promise<unknown>;
+  }): Promise<PluginInstallation | null>;
   listInstallationsByScope(input: {
     scope_type: PluginScopeType;
     scope_ref?: string;
-  }): Promise<unknown[]>;
-  upsertInstallation(input: Record<string, unknown>): Promise<unknown>;
-  createActivationSession(input: Record<string, unknown>): Promise<unknown>;
-  updateActivationSession(activationId: string, patch: Record<string, unknown>): Promise<unknown>;
-  createEnableAcknowledgement(input: Record<string, unknown>): Promise<unknown>;
-  getLatestEnableAcknowledgement(installationId: string): Promise<unknown>;
+  }): Promise<PluginInstallation[]>;
+  upsertInstallation(input: PluginInstallationUpsertInput): Promise<PluginInstallation>;
+  createActivationSession(input: PluginActivationSessionCreateInput): Promise<PluginActivationSession>;
+  updateActivationSession(
+    activationId: string,
+    patch: Partial<Pick<PluginActivationSession, 'result' | 'finished_at' | 'loaded_server' | 'loaded_web_manifest' | 'error_message'>>
+  ): Promise<PluginActivationSession>;
+  createEnableAcknowledgement(input: PluginEnableAcknowledgementCreateInput): Promise<PluginEnableAcknowledgement>;
+  getLatestEnableAcknowledgement(installationId: string): Promise<PluginEnableAcknowledgement | null>;
 }
 
 export class PrismaPluginRepository implements PluginRepository {
@@ -31,19 +46,19 @@ export class PrismaPluginRepository implements PluginRepository {
     this.store = createPluginStore({ prisma });
   }
 
-  async getArtifactById(artifactId: string): Promise<unknown> {
+  async getArtifactById(artifactId: string): Promise<PluginArtifact | null> {
     return this.store.getArtifactById(artifactId);
   }
 
-  async getArtifactByChecksum(checksum: string): Promise<unknown> {
+  async getArtifactByChecksum(checksum: string): Promise<PluginArtifact | null> {
     return this.store.getArtifactByChecksum(checksum);
   }
 
-  async upsertArtifact(input: Record<string, unknown>): Promise<unknown> {
-    return this.store.upsertArtifact(input as never);
+  async upsertArtifact(input: PluginArtifact): Promise<PluginArtifact> {
+    return this.store.upsertArtifact(input);
   }
 
-  async getInstallationById(installationId: string): Promise<unknown> {
+  async getInstallationById(installationId: string): Promise<PluginInstallation | null> {
     return this.store.getInstallationById(installationId);
   }
 
@@ -51,38 +66,37 @@ export class PrismaPluginRepository implements PluginRepository {
     plugin_id: string;
     scope_type: PluginScopeType;
     scope_ref?: string;
-  }): Promise<unknown> {
+  }): Promise<PluginInstallation | null> {
     return this.store.getInstallationByScope(input);
   }
 
   async listInstallationsByScope(input: {
     scope_type: PluginScopeType;
     scope_ref?: string;
-  }): Promise<unknown[]> {
+  }): Promise<PluginInstallation[]> {
     return this.store.listInstallationsByScope(input);
   }
 
-  async upsertInstallation(input: Record<string, unknown>): Promise<unknown> {
-    return this.store.upsertInstallation(input as never);
+  async upsertInstallation(input: PluginInstallationUpsertInput): Promise<PluginInstallation> {
+    return this.store.upsertInstallation(input);
   }
 
-  async createActivationSession(input: Record<string, unknown>): Promise<unknown> {
-    return this.store.createActivationSession(input as never);
+  async createActivationSession(input: PluginActivationSessionCreateInput): Promise<PluginActivationSession> {
+    return this.store.createActivationSession(input);
   }
 
   async updateActivationSession(
     activationId: string,
-    patch: Record<string, unknown>
-  ): Promise<unknown> {
+    patch: Partial<Pick<PluginActivationSession, 'result' | 'finished_at' | 'loaded_server' | 'loaded_web_manifest' | 'error_message'>>
+  ): Promise<PluginActivationSession> {
     return this.store.updateActivationSession(activationId, patch);
   }
 
-  async createEnableAcknowledgement(input: Record<string, unknown>): Promise<unknown> {
-    return this.store.createEnableAcknowledgement(input as never);
+  async createEnableAcknowledgement(input: PluginEnableAcknowledgementCreateInput): Promise<PluginEnableAcknowledgement> {
+    return this.store.createEnableAcknowledgement(input);
   }
 
-  async getLatestEnableAcknowledgement(installationId: string): Promise<unknown> {
+  async getLatestEnableAcknowledgement(installationId: string): Promise<PluginEnableAcknowledgement | null> {
     return this.store.getLatestEnableAcknowledgement(installationId);
   }
-
 }

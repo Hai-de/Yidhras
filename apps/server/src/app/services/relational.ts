@@ -18,7 +18,10 @@ import type {
 export type { GraphEdgeView, GraphNodeView, GraphViewInput, GraphViewSnapshot, ListAtmosphereNodesInput, ListRelationshipAdjustmentLogsInput }
 
 export const getRelationalGraph = async (context: AppContext) => {
-  return getGraphData(context.prisma);
+  return getGraphData({
+    listAgents: () => context.repos.agent.listAgents(),
+    listRelationships: () => context.repos.relationship.listRelationships()
+  });
 }
 
 export {

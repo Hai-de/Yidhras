@@ -172,7 +172,10 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
   }
 
   public async getGraphData(): ReturnType<typeof getGraphData> {
-    return getGraphData(this.prisma);
+    return getGraphData({
+      listAgents: () => this.prisma.agent.findMany(),
+      listRelationships: () => this.prisma.relationship.findMany()
+    });
   }
 
   public listAvailablePacks(): string[] {

@@ -222,7 +222,7 @@ export const createPrismaInferenceTraceSink = (context: AppInfrastructure): Infe
       const { jobStatus, jobLastError, jobLastErrorCode, jobLastErrorStage, completedAt, idempotencyKey, attemptCount, maxAttempts } =
         resolveJobPayload(event, now);
 
-      await context.prisma.$transaction(async prisma => {
+      await context.repos.inference.transaction(async prisma => {
         await prisma.inferenceTrace.upsert({
           where: {
             id: event.inference_id

@@ -9,8 +9,6 @@ import type {
 } from '../app/runtime/world_engine_contributors.js';
 import type { ContextSourceAdapter } from '../context/source_registry.js';
 import type { PromptWorkflowStepExecutor } from '../context/workflow/registry.js';
-import { createPluginStore } from './store.js';
-
 type Ctx = AppInfrastructure & { getHttpApp?(): Express | null };
 
 export interface ServerPluginHostApi {
@@ -292,8 +290,7 @@ export const refreshPackPluginRuntime = async (
     return;
   }
 
-  const store = createPluginStore({ prisma: context.prisma });
-  const installations = await store.listInstallationsByScope({
+  const installations = await context.repos.plugin.listInstallationsByScope({
     scope_type: 'pack_local',
     scope_ref: normalizedPackId
   });
@@ -305,7 +302,7 @@ export const refreshPackPluginRuntime = async (
       continue;
     }
 
-    const artifact = await store.getArtifactById(installation.artifact_id);
+    const artifact = await context.repos.plugin.getArtifactById(installation.artifact_id);
     if (!artifact) {
       continue;
     }
