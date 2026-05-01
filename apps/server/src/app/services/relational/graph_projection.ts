@@ -60,27 +60,17 @@ export const getGraphView = async (
   const now = context.activePackRuntime!.getCurrentTick();
 
   const [agents, relationships, atmosphereNodes, activeBindings, actionIntents] = await Promise.all([
-    context.repos.agent.getPrisma().agent.findMany({
-      orderBy: {
-        created_at: 'asc'
-      }
-    }),
-    context.repos.relationship.getPrisma().relationship.findMany({
-      orderBy: {
-        created_at: 'asc'
-      }
-    }),
-    context.repos.agent.getPrisma().atmosphereNode.findMany({
-      where: filters.includeInactive
+    context.repos.agent.listAgents({ created_at: 'asc' }),
+    context.repos.relationship.listRelationships({ orderBy: { created_at: 'asc' } }),
+    context.repos.agent.listAtmosphereNodes(
+      filters.includeInactive
         ? {}
         : {
             OR: [{ expires_at: null }, { expires_at: { gt: now } }]
           },
-      orderBy: {
-        created_at: 'asc'
-      }
-    }),
-    context.repos.identityOperator.getPrisma().identityNodeBinding.findMany({
+      { created_at: 'asc' }
+    ),
+    context.repos.identityOperator.listIdentityBindings({
       where: {
         role: 'active',
         status: 'active',
@@ -92,7 +82,7 @@ export const getGraphView = async (
         agent_id: true
       }
     }),
-    context.repos.inference.getPrisma().actionIntent.findMany({
+    context.repos.inference.listActionIntents({
       where: filters.includeUnresolved
         ? {}
         : {

@@ -211,11 +211,11 @@ export const buildShortTermMemory = async (
   const limit = input.limit ?? DEFAULT_LIMIT;
 
   const [traces, jobs, intents, posts, events] = await Promise.all([
-    context.repos.inference.getPrisma().inferenceTrace.findMany({
+    context.repos.inference.listInferenceTraces({
       orderBy: { updated_at: 'desc' },
       take: limit * 3
     }),
-    context.repos.inference.getPrisma().decisionJob.findMany({
+    context.repos.inference.findDecisionJobs({
       include: {
         source_inference: {
           select: {
@@ -231,7 +231,7 @@ export const buildShortTermMemory = async (
       orderBy: { updated_at: 'desc' },
       take: limit * 3
     }),
-    context.repos.inference.getPrisma().actionIntent.findMany({
+    context.repos.inference.listActionIntents({
       orderBy: { updated_at: 'desc' },
       take: limit * 3
     }),
@@ -250,7 +250,8 @@ export const buildShortTermMemory = async (
 
   return [
     ...filterTraceForActor(traces, input.actor_ref, limit).map(buildTraceMemoryEntry),
-    ...filterJobForActor(jobs, input.actor_ref, limit).map(job => buildJobMemoryEntry(job)),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+    ...filterJobForActor(jobs as any[], input.actor_ref, limit).map(job => buildJobMemoryEntry(job)),
     ...filterTraceForActor(intents, input.actor_ref, limit).map(intent => buildIntentMemoryEntry(intent)),
     ...posts.map(buildPostMemoryEntry),
     ...events.map(buildEventMemoryEntry)

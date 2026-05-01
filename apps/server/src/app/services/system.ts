@@ -128,7 +128,7 @@ export const resetDevelopmentRuntimeState = async (context: AppContext): Promise
     return null;
   }
 
-  return context.repos.inference.getPrisma().$transaction(async tx => {
+  return context.repos.inference.transaction(async tx => {
     const relationshipAdjustmentLogs = await tx.relationshipAdjustmentLog.deleteMany();
     const snrAdjustmentLogs = await tx.sNRAdjustmentLog.deleteMany();
     const decisionJobs = await tx.decisionJob.deleteMany();

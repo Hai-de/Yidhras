@@ -284,7 +284,7 @@ export const getEntityOverview = async (
     recentTraces,
     packProjection
   ] = await Promise.all([
-    context.repos.identityOperator.getPrisma().identityNodeBinding.findMany({
+    context.repos.identityOperator.listIdentityBindings({
       where: {
         agent_id: resolvedAgentId
       },
@@ -295,27 +295,15 @@ export const getEntityOverview = async (
         created_at: 'desc'
       }
     }),
-    context.repos.relationship.getPrisma().relationship.findMany({
-      where: {
-        to_id: resolvedAgentId
-      },
-      include: {
-        from: true
-      },
-      orderBy: {
-        updated_at: 'desc'
-      }
+    context.repos.relationship.listRelationships({
+      where: { to_id: resolvedAgentId },
+      include: { from: true },
+      orderBy: { updated_at: 'desc' }
     }),
-    context.repos.relationship.getPrisma().relationship.findMany({
-      where: {
-        from_id: resolvedAgentId
-      },
-      include: {
-        to: true
-      },
-      orderBy: {
-        updated_at: 'desc'
-      }
+    context.repos.relationship.listRelationships({
+      where: { from_id: resolvedAgentId },
+      include: { to: true },
+      orderBy: { updated_at: 'desc' }
     }),
     listAuditFeed(context, {
       filter_agent_id: resolvedAgentId,
@@ -329,7 +317,7 @@ export const getEntityOverview = async (
       agent_id: resolvedAgentId,
       limit
     }),
-    context.repos.inference.getPrisma().inferenceTrace.findMany({
+    context.repos.inference.listInferenceTraces({
       orderBy: {
         created_at: 'desc'
       },
@@ -354,7 +342,7 @@ export const getEntityOverview = async (
 
   const latestTrace = filteredRecentTraces[0] ?? null;
   const latestContextSnapshot = isRecord(latestTrace?.context_snapshot)
-    ? (latestTrace?.context_snapshot as Record<string, unknown>)
+    ? (latestTrace?.context_snapshot)
     : null;
   const latestPolicyDecisions = latestContextSnapshot && Array.isArray(latestContextSnapshot.policy_decisions)
     ? latestContextSnapshot.policy_decisions.filter(isRecord).map(item => item)
@@ -380,10 +368,10 @@ export const getEntityOverview = async (
   const latestMemoryBlockMutations = latestContextSnapshot && Array.isArray(latestContextSnapshot.memory_block_mutations)
     ? latestContextSnapshot.memory_block_mutations.filter(isRecord).map(item => item)
     : [];
-  const latestTraceMemoryMutations = latestTrace && isRecord(latestTrace.trace_metadata) && Array.isArray((latestTrace.trace_metadata as Record<string, unknown>).memory_mutations)
-    ? (((latestTrace.trace_metadata as Record<string, unknown>).memory_mutations as unknown[]).filter(isRecord).map(item => item))
-    : latestTrace && isRecord(latestTrace.trace_metadata) && isRecord((latestTrace.trace_metadata as Record<string, unknown>).memory_mutations) && Array.isArray(((latestTrace.trace_metadata as Record<string, unknown>).memory_mutations as Record<string, unknown>).records)
-      ? ((((latestTrace.trace_metadata as Record<string, unknown>).memory_mutations as Record<string, unknown>).records as unknown[]).filter(isRecord).map(item => item))
+  const latestTraceMemoryMutations = latestTrace && isRecord(latestTrace.trace_metadata) && Array.isArray((latestTrace.trace_metadata).memory_mutations)
+    ? (((latestTrace.trace_metadata).memory_mutations as unknown[]).filter(isRecord).map(item => item))
+    : latestTrace && isRecord(latestTrace.trace_metadata) && isRecord((latestTrace.trace_metadata).memory_mutations) && Array.isArray(((latestTrace.trace_metadata).memory_mutations).records)
+      ? ((((latestTrace.trace_metadata).memory_mutations).records as unknown[]).filter(isRecord).map(item => item))
       : [];
   const packEntity = packProjection.entities.find(entity => entity.id === resolvedAgentId) ?? null;
   const memoryCompactionState = await context.repos.memory.getCompactionState(resolvedAgentId);
@@ -394,7 +382,7 @@ export const getEntityOverview = async (
       .slice(0, limit)
       .map(binding => ({
         binding_id: binding.id,
-        identity_id: binding.identity.id,
+        identity_id: binding.identity?.id ?? '',
         role: binding.role,
         status: binding.status,
         atmosphere_node_id: binding.atmosphere_node_id,
@@ -405,7 +393,7 @@ export const getEntityOverview = async (
       .slice(0, limit)
       .map(binding => ({
         binding_id: binding.id,
-        identity_id: binding.identity.id,
+        identity_id: binding.identity?.id ?? '',
         role: binding.role,
         status: binding.status,
         atmosphere_node_id: binding.atmosphere_node_id,
@@ -433,7 +421,7 @@ export const getEntityOverview = async (
       incoming: incomingRelationships.map(relationship => ({
         id: relationship.id,
         from_id: relationship.from_id,
-        from_name: relationship.from.name,
+        from_name: relationship.from?.name ?? 'unknown',
         type: relationship.type,
         weight: relationship.weight,
         updated_at: relationship.updated_at.toString()
@@ -441,7 +429,7 @@ export const getEntityOverview = async (
       outgoing: outgoingRelationships.map(relationship => ({
         id: relationship.id,
         to_id: relationship.to_id,
-        to_name: relationship.to.name,
+        to_name: relationship.to?.name ?? 'unknown',
         type: relationship.type,
         weight: relationship.weight,
         updated_at: relationship.updated_at.toString()
@@ -494,7 +482,7 @@ export const getEntityOverview = async (
       )
         ? (findWorkflowByInferenceId(trace.id)?.workflow.outcome_summary as unknown as Record<string, unknown>)
         : null,
-      decision: isRecord(trace.decision) ? (trace.decision as Record<string, unknown>) : null,
+      decision: isRecord(trace.decision) ? (trace.decision) : null,
       created_at: trace.created_at.toString()
     })),
     snr: {
@@ -615,7 +603,7 @@ export const listSnrAdjustmentLogs = async (
     fieldName: 'limit'
   });
 
-  return context.repos.relationship.getPrisma().sNRAdjustmentLog.findMany({
+  return context.repos.relationship.listSnrAdjustmentLogs({
     where: {
       agent_id: agentId
     },

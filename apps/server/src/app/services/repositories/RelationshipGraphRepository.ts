@@ -63,7 +63,10 @@ export interface RelationshipGraphRepository {
     target_snr: number;
     reason: string | null;
   };
-  getPrisma(): PrismaClient;
+  listRelationships(input?: { where?: Record<string, unknown>; include?: Record<string, unknown>; orderBy?: Record<string, unknown> }): Promise<Array<{ id: string; from_id: string; to_id: string; type: string; weight: number; updated_at: bigint; created_at: bigint; from?: { name: string } | null; to?: { name: string } | null }>>;
+  findRelationship(where: Record<string, unknown>): Promise<{ from_id: string; to_id: string } | null>;
+  listRelationshipAdjustmentLogs(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown>; take?: number }): Promise<Array<{ id: string; created_at: bigint; action_intent_id: string | null; relationship_id: string; from_id: string; to_id: string; type: string; operation: string; old_weight: number | null; new_weight: number; reason: string | null }>>;
+  listSnrAdjustmentLogs(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown>; take?: number; include?: Record<string, unknown> }): Promise<Array<{ id: string; operation: string; requested_value: number; baseline_value: number; resolved_value: number; reason: string | null; created_at: bigint; action_intent_id: string | null; agent_id: string; agent?: { id: string; name: string } | null }>>;
 }
 
 export class PrismaRelationshipGraphRepository implements RelationshipGraphRepository {
@@ -177,5 +180,32 @@ export class PrismaRelationshipGraphRepository implements RelationshipGraphRepos
     return resolveAdjustSnrPayload(payload);
   }
 
-  getPrisma(): PrismaClient { return this.prisma; }
+  async listRelationships(input?: { where?: Record<string, unknown>; include?: Record<string, unknown>; orderBy?: Record<string, unknown> }): Promise<Array<{ id: string; from_id: string; to_id: string; type: string; weight: number; updated_at: bigint; created_at: bigint; from?: { name: string } | null; to?: { name: string } | null }>> {
+    return this.prisma.relationship.findMany({
+      where: input?.where as never,
+      include: input?.include as never,
+      orderBy: (input?.orderBy as never) ?? { created_at: 'asc' }
+    });
+  }
+
+  async findRelationship(where: Record<string, unknown>): Promise<{ from_id: string; to_id: string } | null> {
+    return this.prisma.relationship.findFirst({ where: where as never });
+  }
+
+  async listRelationshipAdjustmentLogs(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown>; take?: number }): Promise<Array<{ id: string; created_at: bigint; action_intent_id: string | null; relationship_id: string; from_id: string; to_id: string; type: string; operation: string; old_weight: number | null; new_weight: number; reason: string | null }>> {
+    return this.prisma.relationshipAdjustmentLog.findMany({
+      where: input.where as never,
+      orderBy: (input.orderBy as never) ?? { created_at: 'desc' },
+      take: input.take
+    });
+  }
+
+  async listSnrAdjustmentLogs(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown>; take?: number; include?: Record<string, unknown> }): Promise<Array<{ id: string; operation: string; requested_value: number; baseline_value: number; resolved_value: number; reason: string | null; created_at: bigint; action_intent_id: string | null; agent_id: string; agent?: { id: string; name: string } | null }>> {
+    return this.prisma.sNRAdjustmentLog.findMany({
+      where: input.where as never,
+      orderBy: (input.orderBy as never) ?? { created_at: 'desc' },
+      take: input.take,
+      include: input.include as never
+    });
+  }
 }

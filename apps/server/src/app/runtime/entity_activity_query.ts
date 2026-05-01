@@ -34,7 +34,7 @@ export const listActiveWorkflowActors = async (
   const excludedDecisionJobIds = options?.excludeDecisionJobIds ?? [];
   const excludedActionIntentIds = options?.excludeActionIntentIds ?? [];
   const [jobs, intents] = await Promise.all([
-    context.repos.inference.getPrisma().decisionJob.findMany({
+    context.repos.inference.findDecisionJobs({
       where: {
         status: {
           in: [...ACTIVE_DECISION_JOB_STATUSES]
@@ -46,7 +46,7 @@ export const listActiveWorkflowActors = async (
         request_input: true
       }
     }),
-    context.repos.inference.getPrisma().actionIntent.findMany({
+    context.repos.inference.listActionIntents({
       where: {
         status: {
           in: [...ACTIVE_ACTION_INTENT_STATUSES]

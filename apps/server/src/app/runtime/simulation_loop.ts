@@ -74,19 +74,7 @@ const stepWorldEngine = async (context: AppContext): Promise<void> => {
 
 export const expireIdentityBindings = async (context: AppContext): Promise<void> => {
   const now = await getActiveCurrentTick(context);
-  await context.repos.identityOperator.getPrisma().identityNodeBinding.updateMany({
-    where: {
-      AND: [
-        { expires_at: { not: null } },
-        { expires_at: { lte: now } },
-        { status: { not: 'expired' } }
-      ]
-    },
-    data: {
-      status: 'expired',
-      updated_at: now
-    }
-  });
+  await context.repos.identityOperator.expireBindings(now);
 };
 
 export interface StartSimulationLoopOptions {

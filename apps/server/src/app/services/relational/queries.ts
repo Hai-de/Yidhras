@@ -7,9 +7,7 @@ import {
   MAX_RELATIONSHIP_LOG_LIMIT} from './types.js'
 
 export const listRelationalCircles = async (context: AppContext) => {
-  return context.repos.agent.getPrisma().circle.findMany({
-    include: { members: true }
-  });
+  return context.repos.agent.listCircles();
 };
 
 export const listAtmosphereNodes = async (
@@ -70,7 +68,7 @@ export const listRelationshipAdjustmentLogs = async (
 
   const limit = parseRelationshipLogLimit(input.limit);
 
-  return context.repos.relationship.getPrisma().relationshipAdjustmentLog.findMany({
+  return context.repos.relationship.listRelationshipAdjustmentLogs({
     where: {
       from_id: fromId,
       to_id: toId,

@@ -1029,7 +1029,7 @@ const buildSchedulerDecisionWorkflowLinks = async (
     return new Map();
   }
 
-  const jobs = await context.repos.inference.getPrisma().decisionJob.findMany({
+  const jobs = await context.repos.inference.findDecisionJobs({
     where: {
       id: {
         in: createdJobIds
@@ -1830,7 +1830,7 @@ export const getSchedulerSummarySnapshot = async (
 
   const [latestRunReadModel, recentJobs] = await Promise.all([
     getLatestSchedulerRunReadModel(context),
-    context.repos.inference.getPrisma().decisionJob.findMany({
+    context.repos.inference.findDecisionJobs({
       where: {
         intent_class: {
           in: ['scheduler_periodic', 'scheduler_event_followup', 'replay_recovery', 'retry_recovery', 'direct_inference']

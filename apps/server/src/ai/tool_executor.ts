@@ -222,9 +222,7 @@ export const createToolRegistry = (toolEntries?: AiToolRegistryEntry[], permissi
         return { error: { code: 'MISSING_IDS', message: 'source_id and target_id are required' } };
       }
 
-      const rel = await ctx.context.repos.relationship.getPrisma().relationship.findFirst({
-        where: { from_id: sourceId, to_id: targetId }
-      });
+      const rel = await ctx.context.repos.relationship.findRelationship({ from_id: sourceId, to_id: targetId });
 
       return rel ?? null;
     }

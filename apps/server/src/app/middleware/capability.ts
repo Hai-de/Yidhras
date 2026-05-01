@@ -26,9 +26,7 @@ export const checkCapability = async (
   _targetAgentId?: string
 ): Promise<CapabilityCheckResult> => {
   // 查 operator
-  const operator = await context.repos.identityOperator.getPrisma().operator.findUnique({
-    where: { id: operatorId }
-  })
+  const operator = await context.repos.identityOperator.findOperatorById(operatorId)
 
   if (!operator) {
     return {
@@ -53,17 +51,11 @@ export const checkCapability = async (
 
   // 查 OperatorGrant 委托
   const now = context.activePackRuntime!.getCurrentTick()
-  const grant = await context.repos.identityOperator.getPrisma().operatorGrant.findFirst({
-    where: {
-      receiver_identity_id: operator.identity_id,
-      pack_id: packId,
-      capability_key: capabilityKey,
-      OR: [
-        { expires_at: null },
-        { expires_at: { gt: now } }
-      ]
-    },
-    orderBy: { created_at: 'desc' }
+  const grant = await context.repos.identityOperator.findOperatorGrant({
+    receiver_identity_id: operator.identity_id,
+    pack_id: packId,
+    capability_key: capabilityKey,
+    now
   })
 
   if (grant) {

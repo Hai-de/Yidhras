@@ -202,7 +202,7 @@ const emitObjectiveEvents = async (
   const emittedEvents: unknown[] = [];
   for (const event of input.events) {
     const bridgeImpactData = buildEventBridgeImpactData(input.invocation, event);
-    const created = await context.repos.inference.getPrisma().$transaction(async tx => {
+    const created = await context.repos.inference.transaction(async tx => {
       return tx.event.create({
         data: {
           title: event.title,

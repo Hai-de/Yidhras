@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 
 import type { AppInfrastructure } from '../app/context.js';
 import type { IdentityContext } from '../identity/types.js';
@@ -216,22 +216,20 @@ export const createAccessPolicy = async (
 
   const now = context.clock.getCurrentTick();
 
-  return context.repos.identityOperator.getPrisma().policy.create({
-    data: {
-      effect,
-      subject_id: subject_id ?? null,
-      subject_type: subject_type ?? null,
-      resource,
-      action,
-      field,
-      conditions:
-        conditions && Object.keys(conditions).length > 0
-          ? (conditions as Prisma.InputJsonValue)
-          : undefined,
-      priority: priority ?? 0,
-      created_at: now,
-      updated_at: now
-    }
+  return context.repos.identityOperator.createPolicy({
+    effect,
+    subject_id: subject_id ?? null,
+    subject_type: subject_type ?? null,
+    resource,
+    action,
+    field,
+    conditions:
+      conditions && Object.keys(conditions).length > 0
+        ? (conditions)
+        : undefined,
+    priority: priority ?? 0,
+    created_at: now,
+    updated_at: now
   });
 };
 

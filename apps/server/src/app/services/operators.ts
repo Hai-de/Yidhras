@@ -62,12 +62,7 @@ export const listOperators = async (context: AppContext) => {
 }
 
 export const getOperator = async (context: AppContext, operatorId: string) => {
-  const operator = await context.repos.identityOperator.getPrisma().operator.findUnique({
-    where: { id: operatorId },
-    include: {
-      pack_bindings: true
-    }
-  })
+  const operator = await context.repos.identityOperator.getOperatorDetail(operatorId)
 
   if (!operator) {
     throw new ApiError(404, 'OPERATOR_NOT_FOUND', 'Operator not found')

@@ -241,19 +241,7 @@ export class PackSimulationLoop {
 
 const expirePackIdentityBindings = async (context: AppContext): Promise<void> => {
   const now = context.activePackRuntime!.getCurrentTick();
-  await context.repos.identityOperator.getPrisma().identityNodeBinding.updateMany({
-    where: {
-      AND: [
-        { expires_at: { not: null } },
-        { expires_at: { lte: now } },
-        { status: { not: 'expired' } }
-      ]
-    },
-    data: {
-      status: 'expired',
-      updated_at: now
-    }
-  });
+  await context.repos.identityOperator.expireBindings(now);
 };
 
 const stepPackWorldEngine = async (context: AppContext, packId: string): Promise<void> => {

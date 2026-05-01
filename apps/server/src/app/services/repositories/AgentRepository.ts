@@ -8,10 +8,9 @@ export interface AgentRepository {
   countActiveAgents(): Promise<number>;
   findAgentById(id: string): Promise<{ id: string; name: string; type: string; snr: number; is_pinned: boolean; created_at: bigint; updated_at: bigint } | null>;
   findAgentByIdWithCircles(id: string): Promise<{ id: string; name: string; type: string; snr: number; is_pinned: boolean; created_at: bigint; updated_at: bigint; circle_memberships: Array<{ circle_id: string; circle: { level: number } }> } | null>;
-  listAgents(orderBy?: Record<string, string>): Promise<unknown[]>;
-  listAtmosphereNodes(where?: Record<string, unknown>, orderBy?: Record<string, unknown>): Promise<unknown[]>;
-  listCircles(): Promise<unknown[]>;
-  getPrisma(): PrismaClient;
+  listAgents(orderBy?: Record<string, string>): Promise<Array<{ id: string; name: string; type: string; snr: number; is_pinned: boolean; created_at: bigint; updated_at: bigint }>>;
+  listAtmosphereNodes(where?: Record<string, unknown>, orderBy?: Record<string, unknown>): Promise<Array<{ id: string; name: string; owner_id: string; expires_at: bigint | null; created_at: bigint }>>;
+  listCircles(): Promise<Array<{ id: string; members: unknown[] }>>;
 }
 
 export class PrismaAgentRepository implements AgentRepository {
@@ -45,20 +44,18 @@ export class PrismaAgentRepository implements AgentRepository {
     });
   }
 
-  async listAgents(orderBy?: Record<string, string>): Promise<unknown[]> {
+  async listAgents(orderBy?: Record<string, string>): Promise<Array<{ id: string; name: string; type: string; snr: number; is_pinned: boolean; created_at: bigint; updated_at: bigint }>> {
     return this.prisma.agent.findMany({ orderBy: (orderBy as never) ?? { created_at: 'asc' } });
   }
 
-  async listAtmosphereNodes(where?: Record<string, unknown>, orderBy?: Record<string, unknown>): Promise<unknown[]> {
+  async listAtmosphereNodes(where?: Record<string, unknown>, orderBy?: Record<string, unknown>): Promise<Array<{ id: string; name: string; owner_id: string; expires_at: bigint | null; created_at: bigint }>> {
     return this.prisma.atmosphereNode.findMany({
       where: where as never,
       orderBy: (orderBy as never) ?? { created_at: 'desc' }
     });
   }
 
-  async listCircles(): Promise<unknown[]> {
+  async listCircles(): Promise<Array<{ id: string; members: unknown[] }>> {
     return this.prisma.circle.findMany({ include: { members: true } });
   }
-
-  getPrisma(): PrismaClient { return this.prisma; }
 }

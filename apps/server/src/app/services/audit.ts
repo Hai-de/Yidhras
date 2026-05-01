@@ -259,12 +259,8 @@ const buildRelationshipAdjustmentAuditEntries = async (
     return [];
   }
 
-  const logs = await context.repos.relationship.getPrisma().relationshipAdjustmentLog.findMany({
-    ...(shouldFetchAllForFilters(filters)
-      ? {}
-      : {
-          take: limit
-        }),
+  const logs = await context.repos.relationship.listRelationshipAdjustmentLogs({
+    take: shouldFetchAllForFilters(filters) ? undefined : limit,
     where: {
       ...(filters.action_intent_id
         ? {
@@ -322,12 +318,8 @@ const buildSnrAdjustmentAuditEntries = async (
     return [];
   }
 
-  const logs = await context.repos.relationship.getPrisma().sNRAdjustmentLog.findMany({
-    ...(shouldFetchAllForFilters(filters)
-      ? {}
-      : {
-          take: limit
-        }),
+  const logs = await context.repos.relationship.listSnrAdjustmentLogs({
+    take: shouldFetchAllForFilters(filters) ? undefined : limit,
     where: {
       ...(filters.action_intent_id
         ? {
@@ -366,11 +358,11 @@ const buildSnrAdjustmentAuditEntries = async (
         action_intent_id: log.action_intent_id,
         agent_id: log.agent_id
       },
-      summary: `${log.agent.name} SNR ${String(log.baseline_value)} -> ${String(log.resolved_value)}`,
+      summary: `${log.agent?.name ?? log.agent_id} SNR ${String(log.baseline_value)} -> ${String(log.resolved_value)}`,
       data: {
         action_intent_id: log.action_intent_id,
         agent_id: log.agent_id,
-        agent_name: log.agent.name,
+        agent_name: log.agent?.name ?? log.agent_id,
         operation: log.operation,
         requested_value: log.requested_value,
         baseline_value: log.baseline_value,

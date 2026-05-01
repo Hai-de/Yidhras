@@ -287,9 +287,7 @@ const toListItem = (record: AiInvocationRecord): AiInvocationListItem => ({
 
 export const getAiInvocationById = async (context: AppContext, invocationId?: string): Promise<AiInvocationRecord> => {
   const id = ensureNonEmptyId(invocationId, 'ai_invocation_id');
-  const record = await context.repos.inference.getPrisma().aiInvocationRecord.findUnique({
-    where: { id }
-  });
+  const record = await context.repos.inference.findAiInvocationById(id);
 
   if (!record) {
     throw new ApiError(404, 'AI_INVOCATION_NOT_FOUND', 'AI invocation record not found', {
@@ -305,14 +303,14 @@ export const listAiInvocations = async (
   input: ListAiInvocationsInput
 ): Promise<AiInvocationsListSnapshot> => {
   const filters = parseAiInvocationFilters(input);
-  const records = await context.repos.inference.getPrisma().aiInvocationRecord.findMany({
+  const records = await context.repos.inference.listAiInvocations({
     where: buildAiInvocationWhere(filters),
     orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
     take: filters.limit + 1
   });
 
   const cursorFilteredItems = records
-    .map(record => toListItem(record as AiInvocationRecord))
+    .map(record => toListItem(record))
     .filter(item => {
       if (!filters.cursor) {
         return true;
@@ -322,7 +320,8 @@ export const listAiInvocations = async (
 
   const hasNextPage = cursorFilteredItems.length > filters.limit;
   const pageItems = hasNextPage ? cursorFilteredItems.slice(0, filters.limit) : cursorFilteredItems;
-  const countsByStatus = pageItems.reduce<Record<string, number>>((acc, item) => {
+   
+  const countsByStatus = pageItems.reduce((acc: Record<string, number>, item) => {
     acc[item.status] = (acc[item.status] ?? 0) + 1;
     return acc;
   }, {});

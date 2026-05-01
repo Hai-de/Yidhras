@@ -22,7 +22,6 @@ export interface PluginRepository {
   updateActivationSession(activationId: string, patch: Record<string, unknown>): Promise<unknown>;
   createEnableAcknowledgement(input: Record<string, unknown>): Promise<unknown>;
   getLatestEnableAcknowledgement(installationId: string): Promise<unknown>;
-  getPrisma(): PrismaClient;
 }
 
 export class PrismaPluginRepository implements PluginRepository {
@@ -86,5 +85,4 @@ export class PrismaPluginRepository implements PluginRepository {
     return this.store.getLatestEnableAcknowledgement(installationId);
   }
 
-  getPrisma(): PrismaClient { return this.prisma; }
 }

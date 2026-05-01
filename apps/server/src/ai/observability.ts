@@ -112,13 +112,13 @@ export const recordAiInvocation = async (
   const currentTick = context.clock.getCurrentTick();
 
   try {
-    await context.repos.inference.getPrisma().aiInvocationRecord.upsert(
+    await context.repos.inference.upsertAiInvocation(
       buildUpsertPayload(response, trace, options, latencyMs, currentTick)
     );
   } catch (error: unknown) {
     if (isForeignKeyViolation(error)) {
       try {
-        await context.repos.inference.getPrisma().aiInvocationRecord.upsert(
+        await context.repos.inference.upsertAiInvocation(
           buildUpsertPayload(response, trace, options, latencyMs, currentTick, null)
         );
       } catch (innerError: unknown) {

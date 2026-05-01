@@ -128,8 +128,9 @@ const createAccessPolicyService = (context: Ctx): AccessPolicyService => {
   return new AccessPolicyService(context.prisma);
 };
 
+// eslint-disable-next-line @typescript-eslint/require-await
 const listActiveBindingsForIdentity = async (context: Ctx, identityId: string): Promise<BindingRecord[]> => {
-  return context.repos.identityOperator.getPrisma().identityNodeBinding.findMany({
+  return context.repos.identityOperator.listIdentityBindings({
     where: {
       identity_id: identityId,
       status: 'active'
@@ -147,7 +148,7 @@ const listActiveBindingsForIdentity = async (context: Ctx, identityId: string): 
     orderBy: {
       created_at: 'desc'
     }
-  });
+  }) as unknown as BindingRecord[];
 };
 
 const resolveIdentityById = async (context: Ctx, identityId: string): Promise<IdentityContext | null> => {
@@ -249,9 +250,7 @@ const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?:
 
   if (input.actor_entity_id && packId) {
     const bridgedAgentId = `${packId}${ACTOR_ENTITY_ID_SEPARATOR}${input.actor_entity_id}`;
-    const agent = await context.repos.agent.getPrisma().agent.findUnique({
-      where: { id: bridgedAgentId }
-    });
+    const agent = await context.repos.agent.findAgentById(bridgedAgentId);
     if (!agent) {
       throw new ApiError(404, 'ACTOR_ENTITY_NOT_FOUND', 'Pack actor entity not found', {
         actor_entity_id: input.actor_entity_id,
@@ -263,23 +262,16 @@ const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?:
     const actorDef = activePack?.entities?.actors?.find(a => a.id === input.actor_entity_id);
     const entityKind = actorDef?.kind ?? 'actor';
 
-    const binding = await context.repos.identityOperator.getPrisma().identityNodeBinding.findFirst({
-      where: {
-        agent_id: bridgedAgentId,
-        status: 'active',
-        role: 'active'
-      },
-      include: { identity: true }
-    });
+    const binding = await context.repos.identityOperator.findActiveBindingForAgent(bridgedAgentId);
 
     const identityContext: IdentityContext = binding
       ? {
-          id: binding.identity.id,
-          type: binding.identity.type as IdentityContext['type'],
-          name: binding.identity.name,
-          provider: binding.identity.provider ?? undefined,
-          status: binding.identity.status ?? undefined,
-          claims: binding.identity.claims as Record<string, unknown> | null ?? null
+          id: binding.identity?.id ?? '',
+          type: (binding.identity?.type as IdentityContext['type']) ?? 'noise',
+          name: binding.identity?.name ?? '',
+          provider: binding.identity?.provider ?? undefined,
+          status: binding.identity?.status ?? undefined,
+          claims: binding.identity?.claims as Record<string, unknown> | null ?? null
         }
       : {
           id: `${packId}:identity:${input.actor_entity_id}`,
