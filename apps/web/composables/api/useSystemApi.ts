@@ -3,6 +3,7 @@ import type { TimeFormatted } from '@yidhras/contracts'
 import { requestApiData } from '../../lib/http/client'
 import type { WorldPackThemeConfig } from '../../lib/theme/tokens'
 import { type TickString,toTickString } from '../../lib/time/tick'
+import { useRuntimeStore } from '../../stores/runtime'
 
 export interface RuntimeWorldThemePayload {
   theme: WorldPackThemeConfig
@@ -95,9 +96,14 @@ const normalizeSystemNotification = (
 }
 
 export const useSystemApi = () => {
+  const runtime = useRuntimeStore()
+
   return {
     getRuntimeStatus: () => requestApiData<RuntimeStatusSnapshot>('/api/status'),
-    getFormattedClock: () => requestApiData<FormattedClockSnapshot>('/api/clock/formatted'),
+    getFormattedClock: () =>
+      requestApiData<FormattedClockSnapshot>('/api/clock/formatted', {
+        packId: runtime.worldPack?.id
+      }),
     listNotifications: async () => {
       const notifications = await requestApiData<RawSystemNotification[]>('/api/system/notifications')
       return notifications.map(normalizeSystemNotification)

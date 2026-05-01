@@ -1,6 +1,8 @@
+import type { ApiClientOptions } from '../../lib/http/client'
 import { requestApiData } from '../../lib/http/client'
 import { normalizeOptionalString } from '../../lib/route/query'
 import type { TickString } from '../../lib/time/tick'
+import { useRuntimeStore } from '../../stores/runtime'
 
 export type WorkflowJobStatus = 'pending' | 'running' | 'completed' | 'failed'
 export type WorkflowIntentStatus = 'pending' | 'dispatching' | 'completed' | 'failed' | 'dropped'
@@ -217,20 +219,27 @@ const buildQueryString = (input: WorkflowJobsQueryInput): string => {
 }
 
 export const useWorkflowApi = () => {
+  const runtime = useRuntimeStore()
+
+  const packOpts = (extra?: Partial<ApiClientOptions>): ApiClientOptions => ({
+    packId: runtime.worldPack?.id,
+    ...extra
+  })
+
   return {
     listJobs: (input: WorkflowJobsQueryInput = {}) =>
-      requestApiData<WorkflowJobsSnapshot>(`/api/inference/jobs${buildQueryString(input)}`),
-    getJob: (jobId: string) => requestApiData<WorkflowJobDetail>(`/api/inference/jobs/${jobId}`),
+      requestApiData<WorkflowJobsSnapshot>(`/api/inference/jobs${buildQueryString(input)}`, packOpts()),
+    getJob: (jobId: string) =>
+      requestApiData<WorkflowJobDetail>(`/api/inference/jobs/${jobId}`, packOpts()),
     getJobWorkflow: (jobId: string) =>
-      requestApiData<WorkflowSnapshotDetail>(`/api/inference/jobs/${jobId}/workflow`),
-    getTrace: (traceId: string) => requestApiData<WorkflowTraceDetail>(`/api/inference/traces/${traceId}`),
+      requestApiData<WorkflowSnapshotDetail>(`/api/inference/jobs/${jobId}/workflow`, packOpts()),
+    getTrace: (traceId: string) =>
+      requestApiData<WorkflowTraceDetail>(`/api/inference/traces/${traceId}`, packOpts()),
     getIntent: (traceId: string) =>
-      requestApiData<WorkflowIntentDetail>(`/api/inference/traces/${traceId}/intent`),
+      requestApiData<WorkflowIntentDetail>(`/api/inference/traces/${traceId}/intent`, packOpts()),
     getTraceWorkflow: (traceId: string) =>
-      requestApiData<WorkflowSnapshotDetail>(`/api/inference/traces/${traceId}/workflow`),
+      requestApiData<WorkflowSnapshotDetail>(`/api/inference/traces/${traceId}/workflow`, packOpts()),
     retryJob: (jobId: string) =>
-      requestApiData<RetryWorkflowJobResult>(`/api/inference/jobs/${jobId}/retry`, {
-        method: 'POST'
-      })
+      requestApiData<RetryWorkflowJobResult>(`/api/inference/jobs/${jobId}/retry`, packOpts({ method: 'POST' }))
   }
 }

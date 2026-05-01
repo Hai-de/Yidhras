@@ -45,6 +45,7 @@ export interface ApiClientOptions {
   headers?: HeadersInit
   body?: BodyInit | Record<string, unknown>
   baseURL?: string
+  packId?: string
   signal?: AbortSignal | null
   cache?: RequestCache
   credentials?: RequestCredentials
@@ -78,13 +79,14 @@ export const resolveApiBaseUrl = (baseURL?: string): string => {
   return (baseURL ?? tryResolveRuntimeConfigBaseUrl() ?? DEFAULT_API_BASE_URL).replace(/\/$/, '')
 }
 
-const buildUrl = (path: string, baseURL?: string): string => {
+const buildUrl = (path: string, options?: { baseURL?: string; packId?: string }): string => {
   if (/^https?:\/\//.test(path)) {
     return path
   }
 
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  return `${resolveApiBaseUrl(baseURL)}${normalizedPath}`
+  const prefixed = options?.packId ? `/${options.packId}${normalizedPath}` : normalizedPath
+  return `${resolveApiBaseUrl(options?.baseURL)}${prefixed}`
 }
 
 const normalizeBody = (body: ApiClientOptions['body']): BodyInit | undefined => {
@@ -140,7 +142,7 @@ export const unwrapApiSuccess = <T>(response: ApiEnvelope<T>): T => {
 }
 
 export const requestApi = async <T>(path: string, options: ApiClientOptions = {}): Promise<ApiEnvelope<T>> => {
-  const response = await fetch(buildUrl(path, options.baseURL), {
+  const response = await fetch(buildUrl(path, { baseURL: options.baseURL, packId: options.packId }), {
     method: options.method,
     headers: buildHeaders(options.headers, options.body),
     body: normalizeBody(options.body),

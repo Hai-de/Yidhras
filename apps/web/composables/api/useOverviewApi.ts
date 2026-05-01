@@ -1,5 +1,6 @@
 import { requestApiData } from '../../lib/http/client'
 import type { TickString } from '../../lib/time/tick'
+import { useRuntimeStore } from '../../stores/runtime'
 import type {
   RuntimeStatusSnapshot,
   SystemNotificationSnapshot
@@ -30,7 +31,12 @@ export interface OverviewSummarySnapshot {
 }
 
 export const useOverviewApi = () => {
+  const runtime = useRuntimeStore()
+
   return {
-    getSummary: () => requestApiData<OverviewSummarySnapshot>('/api/overview/summary')
+    getSummary: () =>
+      requestApiData<OverviewSummarySnapshot>('/api/overview/summary', {
+        packId: runtime.worldPack?.id
+      })
   }
 }

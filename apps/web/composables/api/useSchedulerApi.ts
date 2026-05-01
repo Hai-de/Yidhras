@@ -1,6 +1,8 @@
+import type { ApiClientOptions } from '../../lib/http/client'
 import { requestApiData } from '../../lib/http/client'
 import { normalizeOptionalString } from '../../lib/route/query'
 import type { TickString } from '../../lib/time/tick'
+import { useRuntimeStore } from '../../stores/runtime'
 
 export type SchedulerKind = 'periodic' | 'event_driven'
 export type SchedulerReason =
@@ -485,6 +487,12 @@ const buildQueryString = (input: Record<string, string | number | null | undefin
 }
 
 export const useSchedulerApi = () => {
+  const runtime = useRuntimeStore()
+
+  const packOpts = (): ApiClientOptions => ({
+    packId: runtime.worldPack?.id
+  })
+
   return {
     listRuns: (input: SchedulerRunsQueryInput = {}) =>
       requestApiData<SchedulerRunsSnapshot>(
@@ -495,29 +503,35 @@ export const useSchedulerApi = () => {
           to_tick: normalizeOptionalString(input.toTick),
           worker_id: normalizeOptionalString(input.workerId),
           partition_id: normalizeOptionalString(input.partitionId)
-        })}`
+        })}`,
+        packOpts()
       ),
     getSummary: (input: { sampleRuns?: number } = {}) =>
       requestApiData<SchedulerSummarySnapshot>(
         `/api/runtime/scheduler/summary${buildQueryString({
           sample_runs: input.sampleRuns
-        })}`
+        })}`,
+        packOpts()
       ),
     getTrends: (input: { sampleRuns?: number } = {}) =>
       requestApiData<SchedulerTrendsSnapshot>(
         `/api/runtime/scheduler/trends${buildQueryString({
           sample_runs: input.sampleRuns
-        })}`
+        })}`,
+        packOpts()
       ),
     getOperatorProjection: (input: { sampleRuns?: number; recentLimit?: number } = {}) =>
       requestApiData<SchedulerOperatorProjection>(
         `/api/runtime/scheduler/operator${buildQueryString({
           sample_runs: input.sampleRuns,
           recent_limit: input.recentLimit
-        })}`
+        })}`,
+        packOpts()
       ),
-    getLatestRun: () => requestApiData<SchedulerRunReadModel | null>('/api/runtime/scheduler/runs/latest'),
-    getRunById: (runId: string) => requestApiData<SchedulerRunReadModel | null>(`/api/runtime/scheduler/runs/${runId}`),
+    getLatestRun: () =>
+      requestApiData<SchedulerRunReadModel | null>('/api/runtime/scheduler/runs/latest', packOpts()),
+    getRunById: (runId: string) =>
+      requestApiData<SchedulerRunReadModel | null>(`/api/runtime/scheduler/runs/${runId}`, packOpts()),
     listDecisions: (input: SchedulerDecisionsQueryInput = {}) =>
       requestApiData<SchedulerDecisionsSnapshot>(
         `/api/runtime/scheduler/decisions${buildQueryString({
@@ -530,7 +544,8 @@ export const useSchedulerApi = () => {
           from_tick: normalizeOptionalString(input.fromTick),
           to_tick: normalizeOptionalString(input.toTick),
           partition_id: normalizeOptionalString(input.partitionId)
-        })}`
+        })}`,
+        packOpts()
       ),
     listOwnershipAssignments: (input: SchedulerOwnershipAssignmentsQueryInput = {}) =>
       requestApiData<SchedulerOwnershipAssignmentsSnapshot>(
@@ -538,7 +553,8 @@ export const useSchedulerApi = () => {
           worker_id: normalizeOptionalString(input.workerId),
           partition_id: normalizeOptionalString(input.partitionId),
           status: input.status
-        })}`
+        })}`,
+        packOpts()
       ),
     listOwnershipMigrations: (input: SchedulerOwnershipMigrationsQueryInput = {}) =>
       requestApiData<{ items: SchedulerOwnershipMigrationReadModel[]; summary: { returned: number; limit: number; in_progress_count: number; filters: { worker_id: string | null; partition_id: string | null; status: SchedulerMigrationStatus | null } } }>(
@@ -547,14 +563,16 @@ export const useSchedulerApi = () => {
           worker_id: normalizeOptionalString(input.workerId),
           partition_id: normalizeOptionalString(input.partitionId),
           status: input.status
-        })}`
+        })}`,
+        packOpts()
       ),
     listWorkers: (input: SchedulerWorkersQueryInput = {}) =>
       requestApiData<SchedulerWorkersSnapshot>(
         `/api/runtime/scheduler/workers${buildQueryString({
           worker_id: normalizeOptionalString(input.workerId),
           status: input.status
-        })}`
+        })}`,
+        packOpts()
       ),
     listRebalanceRecommendations: (input: SchedulerRebalanceRecommendationsQueryInput = {}) =>
       requestApiData<SchedulerRebalanceRecommendationsSnapshot>(
@@ -564,14 +582,17 @@ export const useSchedulerApi = () => {
           partition_id: normalizeOptionalString(input.partitionId),
           status: input.status,
           suppress_reason: normalizeOptionalString(input.suppressReason)
-        })}`
+        })}`,
+        packOpts()
       ),
-    listAgentDecisions: (agentId: string) => requestApiData<SchedulerDecisionItem[]>(`/api/agent/${agentId}/scheduler`),
+    listAgentDecisions: (agentId: string) =>
+      requestApiData<SchedulerDecisionItem[]>(`/api/agent/${agentId}/scheduler`, packOpts()),
     getAgentProjection: (agentId: string, input: { limit?: number } = {}) =>
       requestApiData<AgentSchedulerProjection>(
         `/api/agent/${agentId}/scheduler/projection${buildQueryString({
           limit: input.limit
-        })}`
+        })}`,
+        packOpts()
       )
   }
 }

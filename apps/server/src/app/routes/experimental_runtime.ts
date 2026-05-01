@@ -123,7 +123,7 @@ jsonOk(
   )
 
   app.post(
-    '/api/experimental/runtime/packs/:packId/load',
+    '/api/experimental/runtime/packs/load',
     packGuard,
     controlGuard,
     deps.asyncHandler(async (req, res) => {
@@ -139,7 +139,7 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.post(
-    '/api/experimental/runtime/packs/:packId/unload',
+    '/api/experimental/runtime/packs/unload',
     packGuard,
     controlGuard,
     deps.asyncHandler(async (req, res) => {
@@ -154,7 +154,7 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.post(
-    '/api/experimental/runtime/packs/:packId/step',
+    '/api/experimental/runtime/packs/step',
     packGuard,
     controlGuard,
     (req, res) => {
@@ -180,7 +180,7 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.get(
-    '/api/experimental/runtime/packs/:packId/status',
+    '/api/experimental/runtime/packs/status',
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
@@ -192,7 +192,7 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.get(
-    '/api/experimental/runtime/packs/:packId/clock',
+    '/api/experimental/runtime/packs/clock',
     packGuard,
     observeGuard,
     (req, res) => {
@@ -210,7 +210,7 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.get(
-    '/api/experimental/runtime/packs/:packId/scheduler/summary',
+    '/api/experimental/runtime/packs/scheduler/summary',
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
@@ -222,7 +222,7 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.get(
-    '/api/experimental/runtime/packs/:packId/scheduler/ownership',
+    '/api/experimental/runtime/packs/scheduler/ownership',
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
@@ -234,7 +234,7 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.get(
-    '/api/experimental/runtime/packs/:packId/scheduler/workers',
+    '/api/experimental/runtime/packs/scheduler/workers',
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
@@ -246,7 +246,7 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.get(
-    '/api/experimental/runtime/packs/:packId/scheduler/operator',
+    '/api/experimental/runtime/packs/scheduler/operator',
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {

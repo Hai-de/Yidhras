@@ -49,7 +49,7 @@ export const registerPackSnapshotRoutes = (
 ): void => {
   // GET /api/packs/:packId/snapshots — list snapshots
   app.get(
-    '/api/packs/:packId/snapshots',
+    '/api/packs/snapshots',
     packAccessGuard(context, { packIdParam: 'packId' }),
     (req, res) => {
       context.assertRuntimeReady('snapshot list');
@@ -77,7 +77,7 @@ export const registerPackSnapshotRoutes = (
 
   // POST /api/packs/:packId/snapshots — create snapshot
   app.post(
-    '/api/packs/:packId/snapshots',
+    '/api/packs/snapshots',
     packAccessGuard(context, { packIdParam: 'packId' }),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('snapshot create');
@@ -127,7 +127,7 @@ export const registerPackSnapshotRoutes = (
 
   // POST /api/packs/:packId/snapshots/:snapshotId/restore — restore snapshot
   app.post(
-    '/api/packs/:packId/snapshots/:snapshotId/restore',
+    '/api/packs/snapshots/:snapshotId/restore',
     packAccessGuard(context, { packIdParam: 'packId' }),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('snapshot restore');
@@ -184,7 +184,7 @@ export const registerPackSnapshotRoutes = (
 
   // DELETE /api/packs/:packId/snapshots/:snapshotId — delete snapshot
   app.delete(
-    '/api/packs/:packId/snapshots/:snapshotId',
+    '/api/packs/snapshots/:snapshotId',
     packAccessGuard(context, { packIdParam: 'packId' }),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('snapshot delete');

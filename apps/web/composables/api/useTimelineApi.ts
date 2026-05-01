@@ -1,4 +1,5 @@
 import { requestApiData } from '../../lib/http/client'
+import { useRuntimeStore } from '../../stores/runtime'
 
 export interface TimelineEventSnapshot {
   id: string
@@ -19,11 +20,13 @@ export interface PackNarrativeProjectionSnapshot {
   timeline: TimelineEventSnapshot[]
 }
 
-const DEFAULT_TIMELINE_PACK_ID = 'world-death-note'
-
 export const useTimelineApi = () => {
+  const runtime = useRuntimeStore()
+
   return {
-    listTimeline: (packId = DEFAULT_TIMELINE_PACK_ID) =>
-      requestApiData<PackNarrativeProjectionSnapshot>(`/api/packs/${packId}/projections/timeline`)
+    listTimeline: () =>
+      requestApiData<PackNarrativeProjectionSnapshot>('/api/packs/projections/timeline', {
+        packId: runtime.worldPack?.id
+      })
   }
 }

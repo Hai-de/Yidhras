@@ -19,7 +19,7 @@ export const registerNarrativeRoutes = (
   deps: NarrativeRouteDependencies
 ): void => {
   app.get(
-    '/api/packs/:packId/projections/timeline',
+    '/api/packs/projections/timeline',
     packAccessGuard(context, { packIdParam: 'packId' }),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('pack narrative timeline')

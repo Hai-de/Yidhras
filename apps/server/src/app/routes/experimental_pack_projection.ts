@@ -51,7 +51,7 @@ export const registerExperimentalPackProjectionRoutes = (
   const packGuard = packAccessGuard(context, { packIdParam: 'packId' })
 
   app.get(
-    '/api/experimental/packs/:packId/overview',
+    '/api/experimental/packs/overview',
     packGuard,
     deps.asyncHandler(async (req, res) => {
 const packId = resolvePackId(req.params)
@@ -64,7 +64,7 @@ const packId = resolvePackId(req.params)
   )
 
   app.get(
-    '/api/experimental/packs/:packId/projections/timeline',
+    '/api/experimental/packs/projections/timeline',
     packGuard,
     deps.asyncHandler(async (req, res) => {
 const packId = resolvePackId(req.params)
@@ -77,7 +77,7 @@ const packId = resolvePackId(req.params)
   )
 
   app.get(
-    '/api/experimental/packs/:packId/projections/entities',
+    '/api/experimental/packs/projections/entities',
     packGuard,
     deps.asyncHandler(async (req, res) => {
 const packId = resolvePackId(req.params)
@@ -90,7 +90,7 @@ const packId = resolvePackId(req.params)
   )
 
   app.get(
-    '/api/experimental/packs/:packId/entities/:id/overview',
+    '/api/experimental/packs/entities/:id/overview',
     packGuard,
     deps.asyncHandler(async (req, res) => {
 const packId = resolvePackId(req.params)
@@ -104,7 +104,7 @@ const packId = resolvePackId(req.params)
   )
 
   app.get(
-    '/api/experimental/packs/:packId/plugins',
+    '/api/experimental/packs/plugins',
     packGuard,
     deps.asyncHandler(async (req, res) => {
 const packId = resolvePackId(req.params)

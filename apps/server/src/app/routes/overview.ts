@@ -33,7 +33,7 @@ export const registerOverviewRoutes = (
   )
 
   app.get(
-    '/api/packs/:packId/overview',
+    '/api/packs/overview',
     packAccessGuard(context, { packIdParam: 'packId' }),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('pack overview')

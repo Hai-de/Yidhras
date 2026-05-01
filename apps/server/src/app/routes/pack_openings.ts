@@ -34,7 +34,7 @@ export const registerPackOpeningRoutes = (
   deps: PackOpeningsRouteDependencies
 ): void => {
   app.get(
-    '/api/packs/:packId/openings',
+    '/api/packs/openings',
     packAccessGuard(context, { packIdParam: 'packId' }),
     (req, res) => {
       context.assertRuntimeReady('pack openings list');
@@ -46,7 +46,7 @@ export const registerPackOpeningRoutes = (
   );
 
   app.post(
-    '/api/packs/:packId/openings/:openingId/apply',
+    '/api/packs/openings/:openingId/apply',
     packAccessGuard(context, { packIdParam: 'packId' }),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('pack openings apply');

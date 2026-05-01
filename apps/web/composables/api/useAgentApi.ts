@@ -1,5 +1,6 @@
 import { requestApiData } from '../../lib/http/client'
 import type { TickString } from '../../lib/time/tick'
+import { useRuntimeStore } from '../../stores/runtime'
 
 export interface AgentOverviewSnapshot {
   profile: {
@@ -115,8 +116,12 @@ export interface AgentOverviewSnapshot {
 }
 
 export const useAgentApi = () => {
+  const runtime = useRuntimeStore()
+
   return {
     getOverview: (entityId: string, limit = 10) =>
-      requestApiData<AgentOverviewSnapshot>(`/api/entities/${entityId}/overview?limit=${limit}`)
+      requestApiData<AgentOverviewSnapshot>(`/api/entities/${entityId}/overview?limit=${limit}`, {
+        packId: runtime.worldPack?.id
+      })
   }
 }
