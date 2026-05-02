@@ -71,6 +71,7 @@ import { PostgresPackStorageAdapter } from './packs/storage/internal/PostgresPac
 import { SqlitePackStorageAdapter } from './packs/storage/internal/SqlitePackStorageAdapter.js';
 import { SqliteSchedulerStorageAdapter } from './packs/storage/internal/SqliteSchedulerStorageAdapter.js';
 import { syncActivePackPluginRuntime } from './plugins/runtime.js';
+import { initSystemPackPlugins } from './plugins/system_pack_init.js';
 import { ApiError } from './utils/api_error.js';
 import { createLogger, setLoggerRuntimeConfig } from './utils/logger.js';
 import { createNotificationManager } from './utils/notifications.js';
@@ -226,6 +227,21 @@ sim.setMultiPackLoopHost(multiPackLoopHost);
 const packScopeMiddleware = createPackScopeMiddleware(packScopeResolver);
 
 const registerRoutes: RouteRegistrar = (application, context) => {
+  // -- Global routes (no pack prefix) -- must be registered before /:packId middleware
+  // so that /api/* paths match exact routes rather than being caught by the
+  // /:packId wildcard (which would resolve "api" as a pack id).
+  registerSystemRoutes(application, context);
+  registerConfigBackupRoutes(application, context, { asyncHandler });
+  registerConfigRoutes(application, context, { asyncHandler });
+  registerPluginRoutes(application, context, { asyncHandler });
+  registerPluginRuntimeWebRoutes(application, context, { asyncHandler });
+  registerOperatorAuthRoutes(application, context, { asyncHandler });
+  registerOperatorRoutes(application, context, { asyncHandler });
+  registerPackBindingRoutes(application, context, { asyncHandler });
+  registerAgentBindingRoutes(application, context, { asyncHandler });
+  registerGrantRoutes(application, context, { asyncHandler });
+  registerOperatorAuditRoutes(application, context, { asyncHandler });
+
   // -- Pack-scoped routes mounted at /:packId --
   const packRouter = registerPackRoutes({
     context,
@@ -238,19 +254,6 @@ const registerRoutes: RouteRegistrar = (application, context) => {
     getErrorMessage
   });
   application.use('/:packId', packScopeMiddleware, packRouter);
-
-  // -- Global routes (no pack prefix) --
-  registerSystemRoutes(application, context);
-  registerConfigBackupRoutes(application, context, { asyncHandler });
-  registerConfigRoutes(application, context, { asyncHandler });
-  registerPluginRoutes(application, context, { asyncHandler });
-  registerPluginRuntimeWebRoutes(application, context, { asyncHandler });
-  registerOperatorAuthRoutes(application, context, { asyncHandler });
-  registerOperatorRoutes(application, context, { asyncHandler });
-  registerPackBindingRoutes(application, context, { asyncHandler });
-  registerAgentBindingRoutes(application, context, { asyncHandler });
-  registerGrantRoutes(application, context, { asyncHandler });
-  registerOperatorAuditRoutes(application, context, { asyncHandler });
 };
 
 const app = createApp({
@@ -384,6 +387,20 @@ const start = async (): Promise<void> => {
           hydrate: await buildWorldPackHydrateRequest(appContext, activePackId)
         });
       }
+      const systemPackResult = await initSystemPackPlugins(
+        { prisma },
+        resolveWorkspacePath('apps/server/builtin/system_pack/plugins')
+      );
+      if (systemPackResult.errors.length > 0) {
+        for (const err of systemPackResult.errors) {
+          logger.warn(`system pack plugin: ${err}`);
+        }
+      }
+
+      if (systemPackResult.enabled.length > 0) {
+        logger.info(`system pack plugins enabled: ${systemPackResult.enabled.join(', ')}`);
+      }
+
       await syncActivePackPluginRuntime(appContext);
       await ensureSchedulerBootstrapOwnership(appContext, {
         packId: activePackId,

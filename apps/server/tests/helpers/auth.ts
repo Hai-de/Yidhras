@@ -6,14 +6,15 @@ export interface AuthHeaders {
   'x-m2-identity'?: string
 }
 
-let cachedRootToken: string | null = null
+const rootTokenCache = new Map<string, string>()
 
 /**
  * 登录为 root operator 并返回包含 Bearer token 的请求头。
- * token 在进程生命周期内缓存。
+ * token 按 baseUrl 缓存（不同 server 实例有不同的 JWT secret）。
  */
 export const getRootAuthHeaders = async (baseUrl: string): Promise<AuthHeaders> => {
-  if (!cachedRootToken) {
+  let token = rootTokenCache.get(baseUrl)
+  if (!token) {
     const response = await requestJson(baseUrl, '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -31,12 +32,13 @@ export const getRootAuthHeaders = async (baseUrl: string): Promise<AuthHeaders> 
 
     const body = response.body as Record<string, unknown>
     const data = body.data as Record<string, unknown>
-    cachedRootToken = data.token as string
+    token = data.token as string
+    rootTokenCache.set(baseUrl, token)
   }
 
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${cachedRootToken}`
+    Authorization: `Bearer ${token}`
   }
 }
 
@@ -56,5 +58,5 @@ export const getRootAuthHeadersWithIdentity = async (
 }
 
 export const clearCachedToken = (): void => {
-  cachedRootToken = null
+  rootTokenCache.clear()
 }

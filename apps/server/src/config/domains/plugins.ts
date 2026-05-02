@@ -17,6 +17,11 @@ export const PluginsConfigSchema = z
         max_context_sources: z.number().int().positive(),
         warn_on_full_access: z.boolean()
       })
+      .strict(),
+    dependency: z
+      .object({
+        strict: z.boolean()
+      })
       .strict()
   })
   .strict();
@@ -35,5 +40,8 @@ export const PLUGINS_DEFAULTS: PluginsConfig = {
     max_routes: 16,
     max_context_sources: 32,
     warn_on_full_access: true
+  },
+  dependency: {
+    strict: false
   }
 };

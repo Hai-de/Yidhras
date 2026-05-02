@@ -24,6 +24,33 @@ const pluginManifestVersionSchema = z.literal('plugin/v1')
 
 export const pluginCapabilityKeySchema = nonEmptyStringSchema
 
+export const pluginLoadConfigSchema = z.object({
+  priority: z.number().int().default(0),
+  after: z.array(nonEmptyStringSchema).default([])
+})
+
+export const pluginInterfaceDependencySchema = z.object({
+  key: nonEmptyStringSchema,
+  version: semverStringSchema.optional(),
+  optional: z.boolean().default(false)
+})
+
+export const pluginHardDependencySchema = z.object({
+  plugin_id: nonEmptyStringSchema,
+  version: semverStringSchema.optional(),
+  optional: z.boolean().default(false)
+})
+
+export const pluginDependenciesSchema = z.object({
+  interfaces: z.array(pluginInterfaceDependencySchema).default([]),
+  plugins: z.array(pluginHardDependencySchema).default([])
+})
+
+export const pluginProvidesSchema = z.object({
+  key: nonEmptyStringSchema,
+  version: semverStringSchema
+})
+
 export const pluginAuditEventCodeSchema = z.enum([
   'plugin_discovered',
   'plugin_import_confirmed',
@@ -120,6 +147,9 @@ export const pluginManifestSchema = z.object({
       menu_items: []
     })
   }),
+  load: pluginLoadConfigSchema.default({ priority: 0, after: [] }),
+  dependencies: pluginDependenciesSchema.default({ interfaces: [], plugins: [] }),
+  provides: z.array(pluginProvidesSchema).default([]),
   metadata: z
     .object({
       author: nonEmptyStringSchema.optional(),
@@ -249,6 +279,11 @@ export const pluginRuntimeWarningConfigSchema = z.object({
 })
 
 export type PluginManifest = z.infer<typeof pluginManifestSchema>
+export type PluginLoadConfig = z.infer<typeof pluginLoadConfigSchema>
+export type PluginInterfaceDependency = z.infer<typeof pluginInterfaceDependencySchema>
+export type PluginHardDependency = z.infer<typeof pluginHardDependencySchema>
+export type PluginDependencies = z.infer<typeof pluginDependenciesSchema>
+export type PluginProvides = z.infer<typeof pluginProvidesSchema>
 export type PluginArtifact = z.infer<typeof pluginArtifactSchema>
 export type PluginInstallation = z.infer<typeof pluginInstallationSchema>
 export type PluginActivationSession = z.infer<typeof pluginActivationSessionSchema>

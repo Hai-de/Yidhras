@@ -1,0 +1,38 @@
+manifest_version: "plugin/v1"
+id: "string-methods"
+name: "String Methods Cleaner"
+version: "1.0.0"
+kind: "data_cleaner"
+
+entrypoints:
+  server:
+    source: "server.js"
+    runtime: "node_esm"
+
+compatibility:
+  yidhras: ">=0.1.0"
+  pack_id: "yidhras-system"
+
+requested_capabilities: []
+
+contributions:
+  server:
+    context_sources: []
+    prompt_workflow_steps: []
+    intent_grounders: []
+    pack_projections: []
+    api_routes: []
+    step_contributors: []
+    rule_contributors: []
+    query_contributors: []
+
+load:
+  priority: 100
+
+provides:
+  - key: "data_cleaner.string"
+    version: "1.0.0"
+
+metadata:
+  author: "Yidhras"
+  description: "提供基础字符串清洗方法：trim、lowercase、uppercase、collapse_whitespace、strip_html、strip_control"

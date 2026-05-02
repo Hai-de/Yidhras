@@ -1,0 +1,7 @@
+metadata:
+  id: "yidhras-system"
+  name: "Yidhras System Pack"
+  version: "0.1.0"
+  description: "Built-in system plugins providing core data cleaning capabilities"
+
+system: true

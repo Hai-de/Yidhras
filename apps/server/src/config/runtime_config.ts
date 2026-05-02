@@ -682,7 +682,7 @@ export const validateProductionSecrets = (): void => {
   const config = getRuntimeConfig()
   const env = config.app.env
 
-  if (env === 'development') {
+  if (env === 'development' || env === 'test') {
     return
   }
 

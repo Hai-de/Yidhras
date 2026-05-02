@@ -16,9 +16,9 @@ import type {
   PluginStore
 } from './types.js';
 
-const assertPackLocalScope = (scopeType: PluginInstallation['scope_type']): void => {
-  if (scopeType !== 'pack_local') {
-    throw new ApiError(400, 'PLUGIN_SCOPE_UNSUPPORTED', 'Only pack_local plugin scope is supported in the current phase', {
+const assertSupportedScope = (scopeType: PluginInstallation['scope_type']): void => {
+  if (scopeType !== 'pack_local' && scopeType !== 'global') {
+    throw new ApiError(400, 'PLUGIN_SCOPE_UNSUPPORTED', 'Only pack_local and global plugin scopes are supported in the current phase', {
       scope_type: scopeType
     });
   }
@@ -80,7 +80,7 @@ export const createPluginManagerService = (store: PluginStore): PluginManagerSer
 
     async ensurePackLocalInstallation(input) {
       const scope_type: PluginInstallation['scope_type'] = 'pack_local';
-      assertPackLocalScope(scope_type);
+      assertSupportedScope(scope_type);
 
       const existing = await store.getInstallationByScope({
         plugin_id: input.artifact.plugin_id,

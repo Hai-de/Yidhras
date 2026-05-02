@@ -20,7 +20,7 @@ Yidhras 当前没有独立 CLI 包。CLI 能力内嵌在 `apps/server` 中，通
 | `pnpm scaffold:world-pack` | `src/init/scaffold_world_pack.ts` | 活跃 |
 | `pnpm reset:dev-db` | `src/init/reset_dev_db.ts` | 活跃 |
 | `pnpm seed:identity` | `src/db/seed_identity.ts` | 活跃 |
-| `pnpm plugin` | `src/cli/plugin_cli.ts` | **源文件已删除** |
+| `pnpm plugin` | `src/cli/plugin_cli.ts` | **已恢复 (2026-05-02)** |
 
 ### 1.2 现有 HTTP API 覆盖但 CLI 缺失的能力
 
@@ -53,12 +53,11 @@ Yidhras 当前没有独立 CLI 包。CLI 能力内嵌在 `apps/server` 中，通
 
 ### 3.1 已死代码清理
 
-**#A — plugin CLI 残留清理**
+**#A — plugin CLI** (已恢复)
 
-- 源文件 `apps/server/src/cli/plugin_cli.ts` 已删除
-- 残留项:
-  - `apps/server/package.json` 中 `"plugin": "tsx src/cli/plugin_cli.ts"` 脚本
-  - `apps/server/tests/unit/plugin_cli.spec.ts` — 全部 `describe.skip`，保留作参考
+- 源文件 `apps/server/src/cli/plugin_cli.ts` — 重新实现，支持 `list | confirm | enable | disable` 四个命令
+- `apps/server/package.json` 中 `"plugin": "tsx src/cli/plugin_cli.ts"` 脚本已恢复
+- 旧的 `tests/unit/plugin_cli.spec.ts` 仍为 `describe.skip`（逻辑与当前实现不兼容）
 
 ### 3.2 数据库管理 (db)
 

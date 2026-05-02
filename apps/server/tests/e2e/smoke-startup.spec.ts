@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { getRootAuthHeaders } from '../helpers/auth.js';
 import { assertRecord, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
 import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { requestJson } from '../helpers/server.js';
@@ -25,7 +26,9 @@ describe('startup smoke e2e', () => {
       expect(Array.isArray(healthData.available_world_packs)).toBe(true);
       expect(Array.isArray(healthData.errors)).toBe(true);
 
-      const statusResponse = await requestJson(server.baseUrl, '/api/status');
+      const statusResponse = await requestJson(server.baseUrl, '/api/status', {
+        headers: await getRootAuthHeaders(server.baseUrl)
+      });
       expect(statusResponse.status).toBe(200);
       const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');
       const runtimeSpeed = assertRecord(statusData.runtime_speed, '/api/status.runtime_speed');

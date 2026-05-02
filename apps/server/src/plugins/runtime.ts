@@ -1,5 +1,6 @@
 import type { PluginManifest } from '@yidhras/contracts';
 import type { Express, Request, Response } from 'express';
+import path from 'path';
 
 import type { AppInfrastructure } from '../app/context.js';
 import type {
@@ -9,6 +10,9 @@ import type {
 } from '../app/runtime/world_engine_contributors.js';
 import type { ContextSourceAdapter } from '../context/source_registry.js';
 import type { PromptWorkflowStepExecutor } from '../context/workflow/registry.js';
+import { resolveLoadOrder } from './dependency_resolver.js';
+import type { DataCleaner } from './extensions/data_cleaner_registry.js';
+import { dataCleanerRegistry } from './extensions/data_cleaner_registry.js';
 type Ctx = AppInfrastructure & { getHttpApp?(): Express | null };
 
 export interface ServerPluginHostApi {
@@ -18,6 +22,7 @@ export interface ServerPluginHostApi {
   registerStepContributor(contributor: StepContributor, capabilityKey?: string): void;
   registerRuleContributor(contributor: RuleContributor, capabilityKey?: string): void;
   registerQueryContributor(contributor: QueryContributor, capabilityKey?: string): void;
+  registerDataCleaner(cleaner: DataCleaner, capabilityKey?: string): void;
 }
 
 export interface RegisteredServerPluginRuntime {
@@ -85,6 +90,13 @@ const createServerPluginHostApi = (runtime: RegisteredServerPluginRuntime): Serv
       }
 
       runtime.query_contributors.push(contributor);
+    },
+    registerDataCleaner(cleaner, capabilityKey) {
+      if (!hasCapability(runtime.granted_capabilities, capabilityKey)) {
+        return;
+      }
+
+      dataCleanerRegistry.register(cleaner);
     }
   };
 };
@@ -242,6 +254,17 @@ const registerManifestContributions = (runtime: RegisteredServerPluginRuntime): 
   }
 }
 
+const activatePluginEntrypoint = async (
+  entrypointPath: string,
+  host: ServerPluginHostApi
+): Promise<void> => {
+  const module = await import(entrypointPath) as { activate?: (host: ServerPluginHostApi) => void | Promise<void> };
+
+  if (typeof module.activate === 'function') {
+    await module.activate(host);
+  }
+};
+
 export const syncActivePackPluginRuntime = async (context: Ctx): Promise<void> => {
   const activePackId = context.activePack.getActivePack()?.metadata.id;
   if (!activePackId) {
@@ -290,24 +313,43 @@ export const refreshPackPluginRuntime = async (
     return;
   }
 
-  const installations = await context.repos.plugin.listInstallationsByScope({
+  const packLocalInstallations = await context.repos.plugin.listInstallationsByScope({
     scope_type: 'pack_local',
     scope_ref: normalizedPackId
   });
 
+  const globalInstallations = await context.repos.plugin.listInstallationsByScope({
+    scope_type: 'global'
+  });
+
+  const allInstallations = [...packLocalInstallations, ...globalInstallations];
+  const enabledInstallations = allInstallations.filter(i => i.lifecycle_state === 'enabled');
+
+  // Build manifest map for ordering
+  const manifests = new Map<string, PluginManifest>();
+  const artifactStore = new Map<string, { source_path: string }>();
+  for (const inst of enabledInstallations) {
+    const artifact = await context.repos.plugin.getArtifactById(inst.artifact_id);
+    if (!artifact) continue;
+    artifactStore.set(inst.installation_id, artifact);
+    manifests.set(inst.installation_id, artifact.manifest_json as PluginManifest);
+  }
+
+  // Sort by load order
+  const orderedInstallations = resolveLoadOrder({
+    installations: enabledInstallations,
+    manifests
+  });
+
   const runtimes: RegisteredServerPluginRuntime[] = [];
 
-  for (const installation of installations) {
-    if (installation.lifecycle_state !== 'enabled') {
-      continue;
-    }
+  for (const installation of orderedInstallations) {
+    const artifact = artifactStore.get(installation.installation_id);
+    if (!artifact) continue;
 
-    const artifact = await context.repos.plugin.getArtifactById(installation.artifact_id);
-    if (!artifact) {
-      continue;
-    }
+    const manifest = manifests.get(installation.installation_id);
+    if (!manifest) continue;
 
-    const manifest = artifact.manifest_json as PluginManifest;
     const runtime = createRuntimeForManifest({
       installation_id: installation.installation_id,
       plugin_id: installation.plugin_id,
@@ -317,6 +359,18 @@ export const refreshPackPluginRuntime = async (
     });
     registerManifestContributions(runtime);
     runtimes.push(runtime);
+
+    // Load server entrypoint for plugins that have one
+    const serverEntrypoint = manifest.entrypoints?.server;
+    if (serverEntrypoint?.source) {
+      try {
+        const entrypointPath = path.join(artifact.source_path, serverEntrypoint.source);
+        const host = createServerPluginHostApi(runtime);
+        await activatePluginEntrypoint(entrypointPath, host);
+      } catch {
+        // Entrypoint loading failures are non-fatal for the pack
+      }
+    }
   }
 
   pluginRuntimeRegistry.clearRuntimes(normalizedPackId);

@@ -1,10 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
-import type { PluginInstallation, PluginListResponseData } from '@yidhras/contracts';
+import type { PluginInstallation, PluginListResponseData, PluginManifest } from '@yidhras/contracts';
 
+import { getRuntimeConfig } from '../../config/runtime_config.js';
 import { PLUGIN_ENABLE_ACK_REQUIRED_CODE, PLUGIN_ENABLE_WARNING_TEXT } from '../../plugins/contracts.js';
+import { checkDependencies, checkReverseDependencies } from '../../plugins/dependency_resolver.js';
 import { assertPluginEnableAllowed, createPluginManagerService } from '../../plugins/service.js';
 import { ApiError } from '../../utils/api_error.js';
+import { createLogger } from '../../utils/logger.js';
 import type { AppContext } from '../context.js';
 import { createPackScopedPluginRuntimeService } from './pack_scoped_plugin_runtime_service.js';
 
@@ -71,19 +74,73 @@ export const confirmPackPluginImport = async (
   });
 };
 
+const buildDependencyContext = async (context: AppContext, scopeRef?: string) => {
+  const packLocal = scopeRef
+    ? await context.repos.plugin.listInstallationsByScope({ scope_type: 'pack_local', scope_ref: scopeRef })
+    : [];
+  const global = await context.repos.plugin.listInstallationsByScope({ scope_type: 'global' });
+  const enabledInstallations = [...packLocal, ...global].filter(i => i.lifecycle_state === 'enabled');
+
+  const enabledManifests = new Map<string, PluginManifest>();
+  for (const inst of enabledInstallations) {
+    const artifact = await context.repos.plugin.getArtifactById(inst.artifact_id);
+    if (artifact) {
+      enabledManifests.set(inst.installation_id, artifact.manifest_json as PluginManifest);
+    }
+  }
+
+  return { enabledInstallations, enabledManifests };
+};
+
 export const disablePackPlugin = async (
   context: AppContext,
   installationId: string
 ): Promise<PluginInstallation> => {
   const manager = createManager(context);
-  const installation = await manager.disableInstallation({
+  const installation = await context.repos.plugin.getInstallationById(installationId);
+
+  if (!installation) {
+    throw new ApiError(404, 'PLUGIN_INSTALLATION_NOT_FOUND', 'Plugin installation not found', { installation_id: installationId });
+  }
+
+  const { enabledInstallations, enabledManifests } = await buildDependencyContext(
+    context,
+    installation.scope_ref
+  );
+
+  const dependents = checkReverseDependencies(
+    installation.plugin_id,
+    enabledInstallations,
+    enabledManifests
+  );
+
+  if (dependents.length > 0) {
+    const strictMode = getRuntimeConfig().plugins.dependency.strict;
+
+    if (strictMode) {
+      throw new ApiError(
+        409,
+        'PLUGIN_HAS_DEPENDENTS',
+        'Cannot disable plugin: other enabled plugins depend on it',
+        { plugin_id: installation.plugin_id, dependents }
+      );
+    }
+
+    const log = createLogger('plugins');
+    log.warn(
+      `Disabling plugin "${installation.plugin_id}" which has active dependents: ${dependents.join(', ')}. ` +
+      'Set plugins.dependency.strict to true to block this.'
+    );
+  }
+
+  const disabled = await manager.disableInstallation({
     installation_id: installationId,
     disabled_at: String(Date.now())
   });
 
   await refreshScopedPluginRuntime(context, installation.scope_ref);
 
-  return installation;
+  return disabled;
 };
 
 export const enablePackPlugin = async (
@@ -103,6 +160,37 @@ export const enablePackPlugin = async (
   }
 
   assertPluginEnableAllowed(installation);
+
+  // Check dependencies before enabling
+  const artifact = await context.repos.plugin.getArtifactById(installation.artifact_id);
+  if (artifact) {
+    const manifest = artifact.manifest_json as PluginManifest;
+    const { enabledInstallations, enabledManifests } = await buildDependencyContext(
+      context,
+      installation.scope_ref
+    );
+
+    const depCheck = checkDependencies({
+      installation,
+      manifest,
+      enabledInstallations,
+      enabledManifests
+    });
+
+    if (!depCheck.satisfied) {
+      const missing = [
+        ...depCheck.missingHardDeps.map(d => `plugin:${d.plugin_id}`),
+        ...depCheck.missingInterfaceDeps.map(d => `interface:${d.key}`)
+      ];
+
+      throw new ApiError(
+        400,
+        'PLUGIN_DEPENDENCIES_UNSATISFIED',
+        `Cannot enable plugin: missing dependencies`,
+        { plugin_id: installation.plugin_id, missing }
+      );
+    }
+  }
 
   const warning = getEnableWarningConfig(context);
   if (warning.enabled && warning.require_acknowledgement) {
