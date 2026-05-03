@@ -1,4 +1,3 @@
-import { getPromptSlotRegistry } from '../ai/registry.js';
 import type { AppInfrastructure } from '../app/context.js';
 import { toJsonSafe } from '../app/http/json.js';
 import {
@@ -21,12 +20,11 @@ import {
   releaseDecisionJobLock,
   updateDecisionJobState
 } from '../app/services/inference_workflow.js';
-import { runPromptWorkflowV2 } from '../context/workflow/runtime.js';
+import { buildWorkflowPromptBundle } from '../context/workflow/orchestrator.js';
 import { groundDecisionIntent } from '../domain/invocation/intent_grounder.js';
 import { createMemoryRecordingService } from '../memory/recording/service.js';
 import { ApiError } from '../utils/api_error.js';
 import { buildInferenceContext } from './context_builder.js';
-import { buildPromptBundleV2, buildPromptTree } from './prompt_builder_v2.js';
 import type { InferenceProvider } from './provider.js';
 import { createNoopInferenceTraceSink } from './sinks/noop.js';
 import type { InferenceTraceSink } from './trace_sink.js';
@@ -233,10 +231,10 @@ const executeRunInternal = async (
 ): Promise<InferenceRunResult> => {
   const inferenceContext = await buildInferenceContext(context, input);
   const provider = selectProvider(providers, inferenceContext.strategy);
-  const registry = getPromptSlotRegistry();
-  const tree = buildPromptTree(inferenceContext, registry.slots);
-  const { tree: processed } = await runPromptWorkflowV2({ tree, context: inferenceContext });
-  const prompt = buildPromptBundleV2(processed, inferenceContext);
+  const { bundle: prompt } = await buildWorkflowPromptBundle({
+    context: inferenceContext,
+    taskType: 'agent_decision'
+  });
   const attemptCount = options?.attemptCount ?? 1;
   const maxAttempts = options?.maxAttempts ?? DEFAULT_JOB_MAX_ATTEMPTS;
   const memoryRecordingService = createMemoryRecordingService({ context });
@@ -434,10 +432,10 @@ export const createInferenceService = ({
     async previewInference(input) {
       const inferenceContext = await buildInferenceContext(context, input);
       const provider = selectProvider(providers, inferenceContext.strategy);
-      const registry = getPromptSlotRegistry();
-      const tree = buildPromptTree(inferenceContext, registry.slots);
-      const { tree: processed } = await runPromptWorkflowV2({ tree, context: inferenceContext });
-      const prompt = buildPromptBundleV2(processed, inferenceContext);
+      const { bundle: prompt } = await buildWorkflowPromptBundle({
+        context: inferenceContext,
+        taskType: 'agent_decision'
+      });
       const tick = inferenceContext.tick.toString();
       const metadata = {
         world_pack_id: inferenceContext.world_pack.id,

@@ -6,7 +6,7 @@ import type { PromptBundleV2 } from './prompt_bundle_v2.js';
 import type { PromptFragmentV2 } from './prompt_fragment_v2.js';
 import type { PromptSlotConfig } from './prompt_slot_config.js';
 import { type PromptTree,renderSlotText } from './prompt_tree.js';
-import type { InferenceContext, PromptBundleMetadata, PromptProcessingTrace, PromptResolvableContext } from './types.js';
+import type { InferenceContext, PromptBundleMetadata, PromptResolvableContext } from './types.js';
 
 type ParsedPromptSlotConfig = PromptSlotConfig;
 type PromptContext = InferenceContext | PromptResolvableContext;
@@ -65,7 +65,7 @@ function buildDynamicSlotFragments(
     }
   }
 
-  // memory_summary: placeholder (content injected later by memory_injector processor)
+  // memory_summary: placeholder (content injected by node track in System B)
   if (slotRegistry['memory_summary']?.enabled) {
     const memorySelectionCount = context.memory_context
       ? context.memory_context.short_term.length + context.memory_context.long_term.length + context.memory_context.summaries.length
@@ -233,8 +233,7 @@ export function buildPromptBundleV2(tree: PromptTree, _context: PromptContext): 
     workflow_section_summary: tree.metadata.workflow?.workflow_section_summary,
     workflow_placement_summary: tree.metadata.workflow?.workflow_placement_summary,
     workflow_variable_summary: tree.metadata.workflow?.workflow_variable_summary,
-    workflow_macro_summary: tree.metadata.workflow?.workflow_macro_summary,
-    processing_trace: tree.metadata.processing_trace as PromptProcessingTrace | undefined
+    workflow_macro_summary: tree.metadata.workflow?.workflow_macro_summary
   };
 
   return {

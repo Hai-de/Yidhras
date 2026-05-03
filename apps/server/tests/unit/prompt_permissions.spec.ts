@@ -144,7 +144,7 @@ describe('prompt permissions', () => {
     const restrictedFrags = tree.fragments_by_slot['restricted_slot'] ?? [];
     for (const f of restrictedFrags) {
       f.permission_denied = true;
-      f.denied_reason = 'test: manually denied';
+      f.denial = [{ source: 'permission_read', reason: 'test: manually denied' }];
     }
 
     // Fragment 仍存在（不删除），但标记为 permission_denied

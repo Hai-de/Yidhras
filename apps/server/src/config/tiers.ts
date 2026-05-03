@@ -3,7 +3,7 @@
  *
  * safe:      可热重载，即时生效（logging.level, features.*）
  * caution:   需确认，运行时生效但记录告警（scheduler agent limit）
- * dangerous: 需重启（sqlite.*, world_engine.binary_path）
+ * dangerous: 需重启（database.sqlite.*, world_engine.binary_path）
  * critical:  需操作员显式确认 + 重启（jwt_secret, default_password）
  */
 export const enum ConfigTier {
@@ -38,7 +38,7 @@ export const CONFIG_DOMAIN_TIERS: Record<string, ConfigTier> = {
   'clock.max_step_ticks': ConfigTier.CAUTION,
 
   // Dangerous — requires restart
-  'sqlite': ConfigTier.DANGEROUS,
+  'database': ConfigTier.DANGEROUS,
   'paths': ConfigTier.DANGEROUS,
   'world_engine': ConfigTier.DANGEROUS,
   'scheduler.runners': ConfigTier.DANGEROUS,

@@ -136,7 +136,7 @@ flowchart TB
 - 每个 pack 拥有物理上完全独立的运行时：独立的 `PackSimulationLoop`（5 步完整循环）、独立的 `SchedulerStorageAdapter`（lease/cursor/ownership 存 pack-local SQLite）、独立的 sidecar 进程。
 - Pack 状态机（`loading → ready → degraded → unloading → gone`）通过 `PackScopeResolver` + `packScopeMiddleware` 在 API 层强制执行：loading/unloading → 503 + Retry-After；gone → 404；degraded → 503 + degraded_reason。
 - `PackHostApi` 只暴露受控读面，不暴露 runtime kernel 控制能力。
-- Sidecar 进程池（`scheduler_sidecar_pool.ts`）通过 `max_processes` 配置硬上限，超出时排队等待；连续崩溃达 `SCHEDULER_CRASH_THRESHOLD` 时自动熔断，pack 切为 degraded。
+- Sidecar 进程池（`scheduler_sidecar_pool.ts`）通过 `max_processes` 配置硬上限，超出时排队等待；`PackSimulationLoop` 中连续崩溃达 `SCHEDULER_CRASH_THRESHOLD`（默认 3）时自动熔断，pack 切为 degraded。
 - world engine 与数据库之间不存在"sidecar 直接落库即系统真相"的边界设计；持久化仍由 host 编排。
 
 ## 4. 典型 HTTP 请求链路
@@ -202,7 +202,7 @@ sequenceDiagram
 - 每个 pack 的 5 步循环依次为：expire stale leases → world engine step → scheduler partition/assign → decision jobs → action dispatcher。
 - Scheduler 运营数据（lease、cursor、ownership）通过 `SchedulerStorageAdapter` 写入 pack-local SQLite，不经过 kernel-side Prisma。
 - 可观测性拆分为两层：单 pack 调试数据通过 `writeDetailedSnapshot` 写入 pack-local SQLite；跨 pack 聚合指标通过 `emitAggregatedMetrics` 走独立通道供运维面板使用。
-- 连续 sidecar 调用失败达 `SCHEDULER_CRASH_THRESHOLD`（默认 3）时自动熔断，pack 状态切为 `degraded`，保留数据但停止调度。
+- `PackSimulationLoop` 中连续 sidecar 调用失败达 `SCHEDULER_CRASH_THRESHOLD`（默认 3）时自动熔断，pack 状态切为 `degraded`，保留数据但停止调度。
 
 ## 6. AI Tool Calling 链路
 
@@ -274,8 +274,8 @@ stateDiagram-v2
 
 ### 读图结论
 
-- 五态状态机在 `InMemoryPackRuntimeRegistry` 中实现：`loading → ready → degraded → unloading → gone`。
-- API 中间件 `packScopeMiddleware` 在每个 `/:packId/` 请求上检查状态：`loading`/`unloading` → 503 + `Retry-After`；`gone` → 404；`degraded` → 503 + `degraded_reason`。
+- 五态状态机在 `InMemoryPackRuntimeRegistry`（`core/pack_runtime_registry.ts`）中实现，由 `DefaultPackRuntimeRegistryService`（`packs/orchestration/pack_runtime_registry_service.ts`）服务层包装：`loading → ready → degraded → unloading → gone`。
+- API 中间件 `packScopeMiddleware` 在每个 `/:packId` 请求上检查状态：`loading`/`unloading` → 503 + `Retry-After`；`gone` → 404；`degraded` → 503 + `degraded_reason`。
 - `degraded` 状态下 loop 已暂停但 sidecar 和资源未释放，等待外部 `resume()` 指令恢复。
 - `gone` 状态的 pack 可被重新 `load()`，回到 `loading`。
 - `loading` 和 `unloading` 状态有最大等待时间，超时后强制推进。

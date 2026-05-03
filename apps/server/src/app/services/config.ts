@@ -154,7 +154,7 @@ export const updateDomainConfig = (
 export const listConfigDomains = (): Array<{ domain: string; tier: ConfigTier }> => {
   const domains = [
     'app', 'paths', 'operator', 'plugins', 'world', 'startup',
-    'sqlite', 'logging', 'clock', 'world_engine', 'scheduler',
+    'database', 'logging', 'clock', 'world_engine', 'scheduler',
     'prompt_workflow', 'runtime', 'features'
   ]
   return domains.map(domain => ({

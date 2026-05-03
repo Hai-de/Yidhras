@@ -4,7 +4,7 @@ import { buildInferenceContext } from '../../inference/context_builder.js';
 import type { ActorResolvable, InferenceContext } from '../../inference/types.js';
 import type { AppContext } from '../context.js';
 
-export interface InferenceContextV2 {
+export interface ExtendedInferenceContext {
   base: InferenceContext;
   subject_context: ActorResolvable;
   authority_context: Awaited<ReturnType<typeof resolveAuthorityForSubject>>;
@@ -15,10 +15,10 @@ export interface InferenceContextV2 {
   };
 }
 
-export const buildInferenceContextV2 = async (
+export const buildExtendedInferenceContext = async (
   context: AppContext,
   input: Parameters<typeof buildInferenceContext>[1]
-): Promise<InferenceContextV2> => {
+): Promise<ExtendedInferenceContext> => {
   const base = await buildInferenceContext(context, input);
 
   const authorityContext = await resolveAuthorityForSubject(context, {

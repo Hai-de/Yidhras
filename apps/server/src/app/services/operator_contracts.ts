@@ -1,6 +1,6 @@
 import { getPackEntityOverviewProjection } from '../../packs/runtime/projections/entity_overview_service.js';
 import type { AppContext } from '../context.js';
-import { buildInferenceContextV2 } from './context_assembler.js';
+import { buildExtendedInferenceContext } from './context_assembler.js';
 
 export interface OperatorAuthorityInspectorSnapshot {
   pack: {
@@ -9,8 +9,8 @@ export interface OperatorAuthorityInspectorSnapshot {
     version: string;
   };
   subject_entity_id: string;
-  authority_resolution: Awaited<ReturnType<typeof buildInferenceContextV2>>['authority_context'];
-  mediator_bindings: Awaited<ReturnType<typeof buildInferenceContextV2>>['world_rule_context']['mediator_bindings'];
+  authority_resolution: Awaited<ReturnType<typeof buildExtendedInferenceContext>>['authority_context'];
+  mediator_bindings: Awaited<ReturnType<typeof buildExtendedInferenceContext>>['world_rule_context']['mediator_bindings'];
 }
 
 export interface OperatorPerceptionDiffSnapshot {
@@ -20,8 +20,8 @@ export interface OperatorPerceptionDiffSnapshot {
     version: string;
   };
   subject_entity_id: string;
-  visible_state_entries: Awaited<ReturnType<typeof buildInferenceContextV2>>['perception_context']['visible_state_entries'];
-  hidden_state_entries: Awaited<ReturnType<typeof buildInferenceContextV2>>['perception_context']['hidden_state_entries'];
+  visible_state_entries: Awaited<ReturnType<typeof buildExtendedInferenceContext>>['perception_context']['visible_state_entries'];
+  hidden_state_entries: Awaited<ReturnType<typeof buildExtendedInferenceContext>>['perception_context']['hidden_state_entries'];
 }
 
 export interface OperatorRuleExecutionTimelineSnapshot {
@@ -63,7 +63,7 @@ export const getOperatorAdvancedContracts = async (
   subjectEntityId: string
 ): Promise<OperatorAdvancedContractsSnapshot> => {
   const { metadata } = resolvePackMetadata(context);
-  const inferenceContext = await buildInferenceContextV2(context, {
+  const inferenceContext = await buildExtendedInferenceContext(context, {
     actor_entity_id: subjectEntityId,
     strategy: 'mock'
   });

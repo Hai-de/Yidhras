@@ -211,8 +211,8 @@ const registerManifestContributions = (runtime: RegisteredServerPluginRuntime): 
                   key: `plugin:${runtime.plugin_id}:${stepId}`,
                   kind: 'bundle_finalize',
                   status: 'completed',
-                  before: {},
-                  after: {},
+                  before: { section_drafts_count: 0, fragment_count: 0, total_estimated_tokens: 0, denied_fragment_count: 0, working_set_node_count: 0 },
+                  after: { section_drafts_count: 0, fragment_count: 0, total_estimated_tokens: 0, denied_fragment_count: 0, working_set_node_count: 0 },
                   notes: {
                     plugin_id: runtime.plugin_id,
                     contribution: stepId

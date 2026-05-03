@@ -1,9 +1,10 @@
 import type { AiMessage } from '../../ai/types.js';
+import type { PromptBundleV2 } from '../../inference/prompt_bundle_v2.js';
 import type {
   PromptFragmentAnchor,
   PromptFragmentPlacementMode
 } from '../../inference/prompt_fragment_v2.js';
-import type { PromptFragmentSlot } from '../../inference/prompt_slot_config.js';
+import type { PromptFragmentSlot, PromptSlotConfig } from '../../inference/prompt_slot_config.js';
 import type { PromptTree } from '../../inference/prompt_tree.js';
 import type {
   InferenceActorRef,
@@ -18,14 +19,6 @@ export type PromptWorkflowTaskType =
   | 'intent_grounding_assist'
   | (string & {});
 
-export type PromptWorkflowSectionPolicy = 'minimal' | 'standard' | 'expanded' | 'include_only';
-
-export const PROTECTED_SECTION_TYPES: readonly PromptSectionDraftType[] = [
-  'system_instruction',
-  'role_context',
-  'world_context'
-] as const;
-
 export type PromptWorkflowStepKind =
   | 'memory_projection'
   | 'node_working_set_filter'
@@ -34,8 +27,8 @@ export type PromptWorkflowStepKind =
   | 'token_budget_trim'
   | 'placement_resolution'
   | 'fragment_assembly'
-  | 'bundle_finalize'
-  | 'ai_message_projection';
+  | 'permission_filter'
+  | 'bundle_finalize';
 
 export interface PromptWorkflowStepSpec {
   key: string;
@@ -57,8 +50,12 @@ export interface PromptWorkflowProfile {
   };
   defaults?: {
     token_budget?: number;
-    section_policy?: PromptWorkflowSectionPolicy;
     safety_margin_tokens?: number;
+  };
+  tracks?: {
+    template?: boolean;
+    node?: boolean;
+    snapshot?: boolean;
   };
   steps: PromptWorkflowStepSpec[];
 }
@@ -67,6 +64,7 @@ export type PromptSectionDraftType =
   | 'system_instruction'
   | 'role_context'
   | 'world_context'
+  | 'system_policy'
   | 'recent_evidence'
   | 'memory_short_term'
   | 'memory_long_term'
@@ -88,9 +86,11 @@ export type PromptSectionContentBlock =
 
 export interface PromptSectionDraft {
   id: string;
+  track: 'template' | 'node' | 'snapshot' | (string & {});
   section_type: PromptSectionDraftType;
   title?: string | null;
   slot: PromptFragmentSlot;
+  priority: number;
   source_node_ids: string[];
   content_blocks: PromptSectionContentBlock[];
   placement?: {
@@ -99,7 +99,14 @@ export interface PromptSectionDraft {
     depth?: number | null;
     order?: number | null;
   };
+  removable: boolean;
+  estimated_tokens?: number;
   metadata?: Record<string, unknown>;
+}
+
+export interface TrackResult<T> {
+  result: T;
+  trace: TrackTrace;
 }
 
 export interface PromptWorkflowSectionBudgetAllocation {
@@ -121,12 +128,20 @@ export interface PromptWorkflowSectionBudgetSummary {
   dropped_section_ids: string[];
 }
 
+export interface StepSnapshotSummary {
+  section_drafts_count: number;
+  fragment_count: number;
+  total_estimated_tokens: number;
+  denied_fragment_count: number;
+  working_set_node_count: number;
+}
+
 export interface PromptWorkflowStepTrace {
   key: string;
   kind: PromptWorkflowStepKind;
   status: 'completed' | 'skipped' | 'failed';
-  before: Record<string, unknown>;
-  after: Record<string, unknown>;
+  before: StepSnapshotSummary;
+  after: StepSnapshotSummary;
   notes?: Record<string, unknown>;
 }
 
@@ -134,6 +149,13 @@ export interface PromptWorkflowPlacementSummary {
   total_fragments: number;
   resolved_with_anchor: number;
   fallback_count: number;
+}
+
+export interface TrackTrace {
+  track: 'template' | 'node' | 'snapshot' | (string & {});
+  input_summary: Record<string, unknown>;
+  output_summary: Record<string, unknown>;
+  decisions: Record<string, unknown>[];
 }
 
 export interface PromptWorkflowDiagnostics {
@@ -146,10 +168,11 @@ export interface PromptWorkflowDiagnostics {
   section_summary?: Record<string, unknown>;
   section_budget?: PromptWorkflowSectionBudgetSummary;
   placement_summary?: PromptWorkflowPlacementSummary;
+  track_traces?: TrackTrace[];
 }
 
 export interface PromptWorkflowState {
-  context_run: ContextRun;
+  context_run: ContextRun | null;
   actor_ref: InferenceActorRef;
   task_type: PromptWorkflowTaskType;
   strategy: InferenceStrategy;
@@ -162,6 +185,8 @@ export interface PromptWorkflowState {
   section_drafts: PromptSectionDraft[];
   ai_messages?: AiMessage[];
   tree?: PromptTree;
+  bundle?: PromptBundleV2;
+  slot_registry?: Record<string, PromptSlotConfig>;
   diagnostics: PromptWorkflowDiagnostics;
 }
 
@@ -186,7 +211,7 @@ export const createPromptWorkflowDiagnostics = (profile: PromptWorkflowProfile):
 });
 
 export const createInitialPromptWorkflowState = (input: {
-  context_run: ContextRun;
+  context_run: ContextRun | null;
   actor_ref: InferenceActorRef;
   task_type: PromptWorkflowTaskType;
   strategy: InferenceStrategy;

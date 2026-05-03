@@ -50,10 +50,11 @@ startup:
   fail_on_missing_world_pack_dir: false
   fail_on_no_world_pack: false
 
-sqlite:
-  busy_timeout_ms: 5000
-  wal_autocheckpoint_pages: 1000
-  synchronous: "NORMAL"
+database:
+  sqlite:
+    busy_timeout_ms: 5000
+    wal_autocheckpoint_pages: 1000
+    synchronous: "NORMAL"
 
 # 结构化日志配置。
 # level: debug | info | warn | error（默认 info）
@@ -172,15 +173,12 @@ prompt_workflow:
   profiles:
     agent_decision_default:
       token_budget: 2200
-      section_policy: "standard"
       safety_margin_tokens: 80
     context_summary_default:
       token_budget: 1600
-      section_policy: "minimal"
       safety_margin_tokens: 60
     memory_compaction_default:
       token_budget: 1800
-      section_policy: "minimal"
       safety_margin_tokens: 60
 
 runtime:

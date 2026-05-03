@@ -260,7 +260,6 @@ export interface InferenceMemoryMutationSnapshot {
 // ── Re-exported from contracts (canonical versions) ──
 export type {
   PromptBundleMetadata,
-  PromptProcessingTrace,
   PromptWorkflowMetadata,
   PromptWorkflowPlacementSummarySnapshot,
   PromptWorkflowSnapshot,

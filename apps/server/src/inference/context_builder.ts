@@ -657,46 +657,9 @@ const buildInferenceVariableContext = (input: {
     .filter((layer): layer is NonNullable<typeof layer> => layer !== null);
 
   if (layers.length === 0) {
-    return createPromptVariableContext({
-      layers: [
-        createPromptVariableLayer({
-          namespace: 'system',
-          values: normalizePromptVariableRecord({ name: 'Yidhras', timezone: 'Asia/Shanghai' }),
-          alias_values: normalizePromptVariableRecord({ system_name: 'Yidhras', timezone: 'Asia/Shanghai' }),
-          metadata: { source_label: 'system-defaults', trusted: true }
-        }),
-        createPromptVariableLayer({
-          namespace: 'app',
-          values: normalizePromptVariableRecord({ startup_health: input.context.startupHealth }),
-          alias_values: normalizePromptVariableRecord({ startup_level: input.context.startupHealth.level }),
-          metadata: { source_label: 'app-context', trusted: true }
-        }),
-        createPromptVariableLayer({
-          namespace: 'pack',
-          values: normalizePromptVariableRecord({ metadata: input.pack.metadata, variables: input.pack.variables ?? {}, prompts: input.pack.prompts ?? {}, ai: input.pack.ai ?? null }),
-          alias_values: normalizePromptVariableRecord({ ...(input.pack.variables ?? {}), world_name: input.pack.metadata.name, pack_id: input.pack.metadata.id, pack_name: input.pack.metadata.name }),
-          metadata: { source_label: 'world-pack', trusted: true }
-        }),
-        createPromptVariableLayer({
-          namespace: 'runtime',
-          values: normalizePromptVariableRecord({ current_tick: input.currentTick, pack_state: input.packState, pack_runtime: input.packRuntime, world_state: input.packState.world_state, owned_artifacts: input.packState.owned_artifacts, latest_event: input.packState.latest_event }),
-          alias_values: normalizePromptVariableRecord({ current_tick: input.currentTick, world_state: input.packState.world_state, latest_event: input.packState.latest_event, owned_artifacts: input.packState.owned_artifacts }),
-          metadata: { source_label: 'runtime-state', trusted: true }
-        }),
-        createPromptVariableLayer({
-          namespace: 'actor',
-          values: normalizePromptVariableRecord({ identity_id: input.resolvedActor.identity.id, identity_type: input.resolvedActor.identity.type, display_name: input.resolvedActor.actor_display_name, role: input.resolvedActor.actor_ref.role, binding_ref: input.resolvedActor.binding_ref, agent_id: input.resolvedActor.resolved_agent_id, agent_snapshot: input.resolvedActor.agent_snapshot }),
-          alias_values: normalizePromptVariableRecord({ actor_name: input.resolvedActor.actor_display_name, actor_role: input.resolvedActor.actor_ref.role, actor_id: input.resolvedActor.resolved_agent_id ?? input.resolvedActor.identity.id, identity_id: input.resolvedActor.identity.id }),
-          metadata: { source_label: 'resolved-actor', trusted: true }
-        }),
-        createPromptVariableLayer({
-          namespace: 'request',
-          values: normalizePromptVariableRecord({ task_type: 'agent_decision', strategy: input.strategy, attributes: input.attributes, agent_id: input.requestInput.agent_id ?? null, identity_id: input.requestInput.identity_id ?? null, idempotency_key: input.requestInput.idempotency_key ?? null }),
-          alias_values: normalizePromptVariableRecord({ strategy: input.strategy, task_type: 'agent_decision', request_agent_id: input.requestInput.agent_id ?? null, request_identity_id: input.requestInput.identity_id ?? null }),
-          metadata: { source_label: 'inference-request', mutable: true, trusted: true }
-        })
-      ]
-    });
+    // No configured layers — variable resolution will be limited.
+    // YAML config (data/configw/default.yaml) should provide layer definitions.
+    return createPromptVariableContext({ layers: [] });
   }
 
   return createPromptVariableContext({ layers });

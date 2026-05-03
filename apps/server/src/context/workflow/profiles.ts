@@ -13,54 +13,53 @@ const buildBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => {
     {
       id: 'agent-decision-default',
       version: '1',
-      description: '默认 agent decision prompt workflow，兼容现有 Orchestrator Lite 并为后续正式化阶段预留显式 step 边界。',
+      description: '默认 agent decision prompt workflow。汇合后 pipeline：placement → assembly → permission → budget_trim → finalize。',
       applies_to: {
         task_types: ['agent_decision'],
         strategies: ['mock', 'rule_based', 'model_routed']
       },
       defaults: { ...config.prompt_workflow.profiles.agent_decision_default },
+      tracks: { template: true, node: true, snapshot: true },
       steps: [
-        { key: 'memory_projection', kind: 'memory_projection' },
-        { key: 'node_working_set_filter', kind: 'node_working_set_filter', requires: ['selected_nodes'], produces: ['working_set'] },
-        { key: 'summary_compaction', kind: 'summary_compaction', requires: ['working_set', 'fragments'], produces: ['fragments'] },
-        { key: 'token_budget_trim', kind: 'token_budget_trim', requires: ['fragments'], produces: ['fragments'] },
-        { key: 'placement_resolution', kind: 'placement_resolution', requires: ['fragments'], produces: ['fragments', 'diagnostics.placement_summary'] },
-        { key: 'bundle_finalize', kind: 'bundle_finalize', requires: ['fragments'], produces: ['prompt_bundle'] }
+        { key: 'placement', kind: 'placement_resolution' },
+        { key: 'assembly', kind: 'fragment_assembly' },
+        { key: 'permission', kind: 'permission_filter' },
+        { key: 'budget_trim', kind: 'token_budget_trim' },
+        { key: 'finalize', kind: 'bundle_finalize' }
       ]
     },
     {
       id: 'context-summary-default',
       version: '1',
-      description: '为 context summary 任务保留的默认 profile，目前先提供稳定 selector 落点。',
+      description: 'Context summary 任务 profile。汇合后 pipeline。',
       applies_to: {
         task_types: ['context_summary']
       },
       defaults: { ...config.prompt_workflow.profiles.context_summary_default },
+      tracks: { template: true, node: true, snapshot: true },
       steps: [
-        { key: 'memory_projection', kind: 'memory_projection' },
-        { key: 'node_working_set_filter', kind: 'node_working_set_filter' },
-        { key: 'summary_compaction', kind: 'summary_compaction' },
-        { key: 'fragment_assembly', kind: 'fragment_assembly' },
-        { key: 'token_budget_trim', kind: 'token_budget_trim' },
-        { key: 'bundle_finalize', kind: 'bundle_finalize' }
+        { key: 'placement', kind: 'placement_resolution' },
+        { key: 'assembly', kind: 'fragment_assembly' },
+        { key: 'permission', kind: 'permission_filter' },
+        { key: 'budget_trim', kind: 'token_budget_trim' },
+        { key: 'finalize', kind: 'bundle_finalize' }
       ]
     },
     {
       id: 'memory-compaction-default',
       version: '1',
-      description: '为 memory compaction 任务保留的默认 profile，目前先提供稳定 selector 落点。',
+      description: 'Memory compaction 任务 profile。汇合后 pipeline。',
       applies_to: {
         task_types: ['memory_compaction']
       },
       defaults: { ...config.prompt_workflow.profiles.memory_compaction_default },
+      tracks: { template: true, node: true, snapshot: true },
       steps: [
-        { key: 'memory_projection', kind: 'memory_projection' },
-        { key: 'node_working_set_filter', kind: 'node_working_set_filter' },
-        { key: 'node_grouping', kind: 'node_grouping' },
-        { key: 'summary_compaction', kind: 'summary_compaction' },
-        { key: 'fragment_assembly', kind: 'fragment_assembly' },
-        { key: 'token_budget_trim', kind: 'token_budget_trim' },
-        { key: 'bundle_finalize', kind: 'bundle_finalize' }
+        { key: 'placement', kind: 'placement_resolution' },
+        { key: 'assembly', kind: 'fragment_assembly' },
+        { key: 'permission', kind: 'permission_filter' },
+        { key: 'budget_trim', kind: 'token_budget_trim' },
+        { key: 'finalize', kind: 'bundle_finalize' }
       ]
     }
   ];

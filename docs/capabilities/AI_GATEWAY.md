@@ -7,7 +7,7 @@ The other side of this subsystem is **knowing what happened after the fact**: ev
 Key concepts:
 
 - **AiTaskService** — the task-aware entry point that accepts a task type and context, then delegates to the appropriate route
-- **RouteResolver** — decides which model and provider to use based on task type, configuration, and route hints from the world pack
+- **RouteResolver** — decides which model and provider to use based on task type, configuration, and route hints from the world-pack
 - **ModelGateway** — the dispatch layer that actually calls the provider adapter and handles the request/response lifecycle
 - **AiInvocationRecord** — a kernel-side persistence record of each AI call, capturing provider, model, usage, latency, and audit data; it is evidence, not a public execution contract
 - **Elasticity layer** — circuit breaker, rate limiter, and exponential backoff mounted at the gateway level, transparent to adapters
@@ -20,7 +20,7 @@ Key concepts:
 本文件回答：
 
 - 内部 AI gateway 的分层是什么
-- world pack 能如何影响 AI task 路由
+- world-pack 能如何影响 AI task 路由
 - `model_routed` 在系统中的位置
 - `AiInvocationRecord` 暴露了什么观测能力
 - 弹性层 (circuit breaker / rate limiter / backoff) 如何工作
@@ -61,6 +61,8 @@ Key concepts:
 - `apps/server/src/ai/elasticity/rate_limiter.ts`
 - `apps/server/src/ai/elasticity/backoff.ts`
 - `apps/server/src/ai/elasticity/config_resolver.ts`
+- `apps/server/src/ai/elasticity/types.ts`
+- `apps/server/src/ai/elasticity/index.ts`
 - `apps/server/src/ai/cross_agent_tool.ts`
 - `apps/server/src/ai/tool_executor.ts`
 - `apps/server/src/ai/tool_loop_runner.ts`
@@ -85,9 +87,9 @@ AiTaskService
 - provider adapters：落到具体 provider 协议
 - elasticity layer：circuit breaker（per-provider 熔断）、rate limiter（per-provider 并发控制）、exponential backoff（指数退避 + jitter）
 
-## 4. world pack 的影响范围
+## 4. world-pack 的影响范围
 
-world pack 当前只能通过声明式 `pack.ai` 影响：
+world-pack 当前只能通过声明式 `pack.ai` 影响：
 
 - prompt organization
 - output schema
@@ -95,7 +97,7 @@ world pack 当前只能通过声明式 `pack.ai` 影响：
 - route hints
 - tool definitions（通过注册表的 `tools` 字段声明可用工具）
 
-world pack **不能**：
+world-pack **不能**：
 
 - 直接操纵 raw provider payload
 - 注入任意可执行 parser / composer 代码
@@ -328,7 +330,7 @@ AiTaskService (task_config.tools / task_config.tool_policy)
 
 - `model_routed` 仍是 internal / controlled capability
 - public `/api/inference/*` 不以 provider-specific contract 对外承诺
-- world pack 的 AI 定制能力是 declarative 的，不是任意执行能力
+- world-pack 的 AI 定制能力是 declarative 的，不是任意执行能力
 - 更复杂的 AI 行为扩展应继续走 server-side registered extension
 - 弹性层对 adapter 透明，adapter 无需感知 circuit breaker / rate limiter / backoff
 - tool calling 属于 host-side 受控执行能力，tool 注册与权限校验均在 host 侧完成

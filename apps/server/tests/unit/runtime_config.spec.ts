@@ -39,6 +39,9 @@ const createWorkspace = async (files: Record<string, string>): Promise<string> =
   await writeWorkspaceFile(rootDir, 'apps/server/templates/world-pack/example_pack.yaml', 'metadata:\n  id: world-example-pack\n');
   await writeWorkspaceFile(rootDir, 'apps/server/templates/world-pack/example_pack.README.md', '# example pack\n');
   await writeWorkspaceFile(rootDir, 'apps/server/templates/world-pack/example_pack.CHANGELOG.md', '# changelog\n');
+  await writeWorkspaceFile(rootDir, 'apps/server/templates/world-pack/death_note.yaml', 'metadata:\n  id: world-death-note\n');
+  await writeWorkspaceFile(rootDir, 'apps/server/templates/world-pack/death_note.README.md', '# death note pack\n');
+  await writeWorkspaceFile(rootDir, 'apps/server/templates/world-pack/death_note.CHANGELOG.md', '# changelog\n');
   await writeWorkspaceFile(rootDir, 'apps/server/templates/configw/default.yaml', 'config_version: 1\n');
   await writeWorkspaceFile(rootDir, 'apps/server/templates/configw/development.yaml', 'app:\n  env: "development"\n');
   await writeWorkspaceFile(rootDir, 'apps/server/templates/configw/production.yaml', 'app:\n  env: "production"\n');
@@ -170,13 +173,10 @@ const defaultYamlBase = [
   '  profiles:',
   '    agent_decision_default:',
   '      token_budget: 2600',
-  '      section_policy: "expanded"',
   '    context_summary_default:',
   '      token_budget: 1700',
-  '      section_policy: "minimal"',
   '    memory_compaction_default:',
   '      token_budget: 1900',
-  '      section_policy: "minimal"',
   'runtime:',
   '  multi_pack:',
   '    max_loaded_packs: 2',
@@ -316,8 +316,7 @@ describe('runtime config YAML migration', () => {
     });
     expect(isAiGatewayEnabled()).toBe(false);
     expect(config.prompt_workflow.profiles.agent_decision_default).toMatchObject({
-      token_budget: 2600,
-      section_policy: 'expanded'
+      token_budget: 2600
     });
     expect(config.scheduler.agent.signal_policy.event_followup.delay_ticks).toBe(2);
     expect(config.scheduler.agent.recovery_suppression.retry.suppress_periodic).toBe(false);

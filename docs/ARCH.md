@@ -8,11 +8,11 @@
 
 | 术语 | 含义 |
 |------|------|
-| 世界包 (world pack) | 封装世界规则、实体、能力、媒介的数据包，作为模拟的内容单元 |
+| 世界包 (world-pack) | 封装世界规则、实体、能力、媒介的数据包，作为模拟的内容单元 |
 | 宿主 (host) | 运行编排、调度、持久化的 Node/TS 进程 |
 | Sidecar (Rust sidecar) | 通过 stdio JSON-RPC 与宿主通信的 Rust 世界引擎进程，负责世界状态计算 |
 | Kernel-side | 宿主持久化层（Prisma，支持 SQLite / PostgreSQL），存储 workflow、social、audit、memory 等 |
-| Pack-local | 每个 world pack 独有的运行时数据库（pack runtime DB，支持 SQLite / PostgreSQL adapter） |
+| Pack-local | 每个 world-pack 独有的运行时数据库（pack runtime DB，支持 SQLite / PostgreSQL adapter） |
 | WorldEnginePort | TS 宿主持有的世界引擎控制面合约（step/commit/abort/query） |
 | PackHostApi | TS 宿主对外提供的受控读面合约 |
 | Inference workflow | 从上下文组装到模型推理到意图落地的完整链路 |
@@ -71,7 +71,7 @@
 这意味着当前系统明确区分：
 
 - **world governance core** -> pack runtime
-- **workflow / social / audit / observability / plugin governance / memory working layer** -> kernel side
+- **workflow / social / audit / observability / plugin governance / memory working layer** -> kernel-side
 
 `Event` 当前属于跨边界共享证据宿主：
 
@@ -88,6 +88,7 @@
 ```
 apps/server/src/app/services/repositories/
   types.ts                          # 共享领域类型
+  bigint.ts                         # BigInt 序列化工具
   AgentRepository.ts                # Agent CRUD
   IdentityOperatorRepository.ts     # Identity / Operator / Session / Grant / Audit
   InferenceWorkflowRepository.ts    # DecisionJob / InferenceTrace / AiInvocationRecord
@@ -308,11 +309,12 @@ HTTP Request
 - `PrismaRuntimeDatabaseBootstrap`
   - provider-aware 数据库 bootstrap（SQLite pragma apply / snapshot 或 PostgreSQL 连接校验）
 - `DefaultPackCatalogService`
-  - world pack catalog、pack id / folder 解析
+  - world-pack catalog、pack id / folder 解析
 - `DefaultActivePackRuntimeFacade`
   - stable single active-pack runtime、tick / runtime speed / variable resolve
-- `DefaultPackRuntimeRegistryService`
+- `DefaultPackRuntimeRegistryService`（`packs/orchestration/pack_runtime_registry_service.ts`）
   - experimental runtime registry、status/load/unload、host register/unregister
+  - 内部使用 `InMemoryPackRuntimeRegistry`（`core/pack_runtime_registry.ts`）作为存储实现
 
 另外，数据库 runtime pragma 已通过 provider-aware 配置纳入 runtime host config：
 
@@ -342,7 +344,7 @@ HTTP Request
 - 主包与附加包共享相同的 pack 状态机、路由和观测接口，仅在 world engine 接入方式和初始加载路径上有区别
 
 - 每个 pack 拥有独立的 `PackSimulationLoop`（完整 5 步循环）
-- pack-scoped 路由通过 `/:packId/` 前缀挂载，由 `packScopeMiddleware` 做状态门控
+- pack-scoped 路由通过 `/:packId` 前缀挂载，由 `packScopeMiddleware` 做状态门控
 - pack 状态机：`loading → ready → degraded → unloading → gone`
 
 当前职责分层：
@@ -365,7 +367,7 @@ HTTP Request
 - pack-scoped 路由统一在 `routes/packs/index.ts` 聚合，挂载至 `/:packId`
 - global 路由（health、admin、config、operator 等）保留原有路径
 - `PackScopeResolver` + `packScopeMiddleware` 实现请求级 pack 状态校验
-- `DefaultPackRuntimeRegistryService.load/unload` 自动启停 per-pack loop
+- `DefaultPackRuntimeRegistryService`（`packs/orchestration/pack_runtime_registry_service.ts`）`load/unload` 自动启停 per-pack loop
 - `PackSimulationLoop` 内维护 crash 计数器，连续失败达阈值自动切 `degraded`
 
 ### 3.3.2 Rust world engine 与 sidecar 边界
@@ -373,7 +375,7 @@ HTTP Request
 世界推进通过 Rust sidecar 执行，Node/TS host 保留运行编排权：
 
 - `WorldEnginePort`：TS host 持有的 control / compute plane contract
-  - world pack load/unload、step prepare/commit/abort、state query、health
+  - world-pack load/unload、step prepare/commit/abort、state query、health
 - `PackHostApi`：TS host kernel 持有的 host-mediated read contract
   - 只暴露受控读面（pack summary、current tick、world state query），不暴露内核控制能力
   - 长期语义是 host-accepted / host-projected truth，不是 sidecar internal truth
@@ -413,11 +415,13 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 进一步职责拆分到：
 
 - `inference_workflow/parsers.ts`
-- `inference_workflow/repository.ts`
+- `inference_workflow/workflow_job_repository.ts`
+- `inference_workflow/scheduler_signal_repository.ts`
 - `inference_workflow/snapshots.ts`
 - `inference_workflow/results.ts`
 - `inference_workflow/workflow_query.ts`
 - `inference_workflow/ai_invocations.ts`
+- `inference_workflow/types.ts`
 
 ### 4.2 边界约束
 
@@ -491,7 +495,7 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 
 ### 6.1 Prompt Workflow
 
-- workflow persistence 留在 kernel side
+- workflow persistence 留在 kernel-side
 - runtime step execution 不应穿透 pack runtime internal object
 - workflow orchestration 应消费 inference/context/runtime host contracts，而不是直接依赖世界内核实现细节
 

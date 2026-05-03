@@ -25,7 +25,7 @@
 | [ARCH.md](ARCH.md) | 系统分层、模块边界、宿主关系、依赖方向 |
 | [LOGIC.md](LOGIC.md) | 业务规则、执行主线、领域语义 |
 | [THEME.md](THEME.md) | 前端主题 contract、解析链路、调试入口 |
-| [WORLD_PACK.md](WORLD_PACK.md) | world pack 项目化、README 标配、发布规范 |
+| [WORLD_PACK.md](WORLD_PACK.md) | world-pack 项目化、README 标配、发布规范 |
 | [apps/web/README.md](../apps/web/README.md) | 前端应用范围、结构与开发约束 |
 
 ## 3. 专题能力层
@@ -64,6 +64,4 @@
 
 ## 6. 历史归档
 
-| 文档 | 定位 |
-|------|------|
-| [history/INDEX.md](history/INDEX.md) | 人类可读历史归档索引 |
+> 历史归档目录 `docs/history/` 尚未建立。规划完成后将在此添加索引。

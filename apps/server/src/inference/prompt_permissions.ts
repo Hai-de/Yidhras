@@ -125,15 +125,21 @@ function applyFragmentPermissions(
   const readResult = resolveSlotPermission({ ...baseInput, permission_kind: 'read' });
   if (!readResult.allowed) {
     fragment.permission_denied = true;
-    fragment.denied_reason = readResult.reason ?? 'read denied';
+    fragment.denial = fragment.denial ?? [];
+    fragment.denial.push({
+      source: 'permission_read',
+      reason: readResult.reason ?? 'read denied'
+    });
   }
 
   const visResult = resolveSlotPermission({ ...baseInput, permission_kind: 'visibility' });
   if (!visResult.allowed) {
     fragment.permission_denied = true;
-    fragment.denied_reason = fragment.denied_reason
-      ? `${fragment.denied_reason}; ${visResult.reason}`
-      : (visResult.reason ?? 'visibility denied');
+    fragment.denial = fragment.denial ?? [];
+    fragment.denial.push({
+      source: 'permission_visibility',
+      reason: visResult.reason ?? 'visibility denied'
+    });
   }
 
   for (const child of fragment.children) {

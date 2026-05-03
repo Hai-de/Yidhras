@@ -1,6 +1,6 @@
 # Pack-local Plugin Runtime
 
-Plugins extend what a world pack can do — adding UI panels, custom routes, new capabilities — but they must be discovered, trusted, and governed before they can run. This document describes how that lifecycle works: from discovery to import confirmation, from enable-with-acknowledgement to runtime manifest loading, and how the server and browser sides cooperate to keep the boundary tight.
+Plugins extend what a world-pack can do — adding UI panels, custom routes, new capabilities — but they must be discovered, trusted, and governed before they can run. This document describes how that lifecycle works: from discovery to import confirmation, from enable-with-acknowledgement to runtime manifest loading, and how the server and browser sides cooperate to keep the boundary tight.
 
 The core design principle is that **plugin governance is a kernel-side concern**: discovery records, installation state, activation sessions, and enable acknowledgements all live in the kernel database, not inside the pack's own runtime. This means the host always decides whether a plugin is allowed to run, and the pack never gets to bypass that decision.
 
@@ -55,7 +55,7 @@ Key concepts:
 - `PluginActivationSession`
 - `PluginEnableAcknowledgement`
 
-这意味着插件治理被视为平台 / kernel 级能力，而不是 world pack runtime 的内部宿主对象。
+这意味着插件治理被视为平台 / kernel 级能力，而不是 world-pack runtime 的内部宿主对象。
 
 ## 4. Discovery / Lifecycle / Governance
 

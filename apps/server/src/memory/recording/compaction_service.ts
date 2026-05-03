@@ -5,6 +5,7 @@ import type { AppInfrastructure } from '../../app/context.js';
 import type { AppContextPorts } from '../../app/services/app_context_ports.js';
 import { isAiGatewayEnabled } from '../../config/runtime_config.js';
 import { createContextOverlayStore } from '../../context/overlay/store.js';
+import { buildWorkflowPromptBundle } from '../../context/workflow/orchestrator.js';
 import { buildInferenceContext } from '../../inference/context_builder.js';
 import { createPrismaLongMemoryBlockStore } from '../blocks/store.js';
 import type { LongMemoryBlockStore } from '../blocks/types.js';
@@ -146,6 +147,10 @@ export const createMemoryCompactionService = ({
       const aggregatedMutations = emptyMutations();
 
       if (shouldRunSummary) {
+        const { bundle: summaryBundle } = await buildWorkflowPromptBundle({
+          context: inferenceContext,
+          taskType: 'context_summary'
+        });
         const request = await buildAiTaskRequestFromInferenceContext(inferenceContext, {
           task_type: 'context_summary',
           task_id: `context-summary:${input.agent_id}:${now.toString()}`,
@@ -154,7 +159,8 @@ export const createMemoryCompactionService = ({
             run_kind: 'context_summary',
             recent_memory_context: inferenceContext.memory_context,
             pack_state: inferenceContext.pack_state
-          }
+          },
+          prompt_bundle: summaryBundle
         });
         const result = await aiTaskService.runTask<Record<string, unknown>>(request, {
           packAiConfig: inferenceContext.world_ai ?? null
@@ -219,6 +225,10 @@ export const createMemoryCompactionService = ({
       }
 
       if (shouldRunCompaction) {
+        const { bundle: compactionBundle } = await buildWorkflowPromptBundle({
+          context: inferenceContext,
+          taskType: 'memory_compaction'
+        });
         const request = await buildAiTaskRequestFromInferenceContext(inferenceContext, {
           task_type: 'memory_compaction',
           task_id: `memory-compaction:${input.agent_id}:${now.toString()}`,
@@ -227,7 +237,8 @@ export const createMemoryCompactionService = ({
             run_kind: 'memory_compaction',
             recent_memory_context: inferenceContext.memory_context,
             pack_state: inferenceContext.pack_state
-          }
+          },
+          prompt_bundle: compactionBundle
         });
         const result = await aiTaskService.runTask<Record<string, unknown>>(request, {
           packAiConfig: inferenceContext.world_ai ?? null

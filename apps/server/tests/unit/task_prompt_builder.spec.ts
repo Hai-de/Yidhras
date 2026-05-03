@@ -111,7 +111,6 @@ describe('buildAiTaskRequestFromInferenceContext', () => {
     expect(contextSummaryRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_profile_id).toBe('context-summary-default');
     expect(contextSummaryRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_section_summary).toMatchObject({
       task_type: 'context_summary',
-      section_policy: 'minimal',
       section_scores: expect.any(Array),
       section_policies: ['evidence_first']
     });
@@ -122,7 +121,6 @@ describe('buildAiTaskRequestFromInferenceContext', () => {
     expect(memoryCompactionRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_profile_id).toBe('memory-compaction-default');
     expect(memoryCompactionRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_section_summary).toMatchObject({
       task_type: 'memory_compaction',
-      section_policy: 'minimal',
       section_scores: expect.any(Array),
       section_policies: ['memory_focused']
     });

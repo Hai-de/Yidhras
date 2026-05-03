@@ -1,8 +1,6 @@
 import type { PromptWorkflowTaskType } from '../context/workflow/types.js';
-import { buildPromptBundleV2, buildPromptTree } from '../inference/prompt_builder_v2.js';
 import type { PromptBundleV2 } from '../inference/prompt_bundle_v2.js';
 import type { InferenceContext } from '../inference/types.js';
-import { getPromptSlotRegistry } from './registry.js';
 import type { AiTaskRequest, AiTaskType } from './types.js';
 
 const PROMPT_WORKFLOW_TASK_TYPES: ReadonlySet<AiTaskType> = new Set([
@@ -70,9 +68,7 @@ export const buildAiTaskRequestFromInferenceContextV2 = (
   context: InferenceContext,
   options: BuildAiTaskRequestFromInferenceOptions
 ): Promise<AiTaskRequest> => {
-  const registry = getPromptSlotRegistry();
-  const tree = buildPromptTree(context, registry.slots);
-  const v2 = buildPromptBundleV2(tree, context);
+  const bundle = options.prompt_bundle!;
 
   return Promise.resolve({
     task_id: options.task_id ?? context.inference_id,
@@ -81,20 +77,19 @@ export const buildAiTaskRequestFromInferenceContextV2 = (
     actor_ref: options.actor_ref ?? buildDefaultActorRef(context),
     input: options.input ?? buildDefaultTaskInput(context),
     prompt_context: {
-      prompt_bundle_v2: v2
+      prompt_bundle_v2: bundle
     },
     output_contract: options.output_contract,
     route_hints: options.route_hints,
     metadata: {
       inference_id: context.inference_id,
       binding_ref: context.binding_ref,
-      prompt_version: v2.metadata.prompt_version,
-      source_prompt_keys: v2.metadata.source_prompt_keys ?? [],
-      workflow_task_type: v2.metadata.workflow_task_type ?? options.task_type,
-      workflow_profile_id: v2.metadata.workflow_profile_id ?? null,
-      workflow_profile_version: v2.metadata.workflow_profile_version ?? null,
-      workflow_step_keys: v2.metadata.workflow_step_keys ?? [],
-      processing_trace: v2.metadata.processing_trace,
+      prompt_version: bundle.metadata.prompt_version,
+      source_prompt_keys: bundle.metadata.source_prompt_keys ?? [],
+      workflow_task_type: bundle.metadata.workflow_task_type ?? options.task_type,
+      workflow_profile_id: bundle.metadata.workflow_profile_id ?? null,
+      workflow_profile_version: bundle.metadata.workflow_profile_version ?? null,
+      workflow_step_keys: bundle.metadata.workflow_step_keys ?? [],
       ...(options.metadata ?? {})
     }
   });

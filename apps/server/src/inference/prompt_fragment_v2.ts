@@ -1,5 +1,10 @@
 import type { PromptBlock } from './prompt_block.js';
 
+export interface DenialRecord {
+  source: 'permission_read' | 'permission_visibility' | 'token_budget_trim';
+  reason: string;
+}
+
 export type PromptFragmentPlacementMode = 'prepend' | 'append' | 'before_anchor' | 'after_anchor';
 export type PromptFragmentAnchorKind = 'slot_start' | 'slot_end' | 'source' | 'tag' | 'fragment_id';
 
@@ -43,8 +48,8 @@ export interface PromptFragmentV2 {
   permission_denied?: boolean;
   /** 聚合所有子 Block 的 estimated_tokens 之和 */
   estimated_tokens?: number;
-  /** 拒绝原因（调试用） */
-  denied_reason?: string | null;
+  /** 拒绝记录（权限过滤、token 裁剪等） */
+  denial?: DenialRecord[];
 
   metadata?: Record<string, unknown>;
 }

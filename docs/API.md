@@ -3,7 +3,7 @@
 本文档描述当前对外 HTTP contract。路由分为两层：
 
 - **Global** — 直接注册在 Express app 上，无 pack 前缀
-- **Pack-scoped** — 挂载于 `/:packId/`，经过 `packScopeMiddleware` 校验 pack 状态。非 `ready` 状态的 pack 返回 503（loading/unloading/degraded）或 404（gone）
+- **Pack-scoped** — 挂载于 `/:packId`，经过 `packScopeMiddleware` 校验 pack 状态。非 `ready` 状态的 pack 返回 503（loading/unloading/degraded）或 404（gone）
 
 > 模块分层与宿主关系见 `ARCH.md` · 业务执行语义见 `LOGIC.md` · 专题细节见 `docs/capabilities/`
 
@@ -24,7 +24,7 @@
 |------|------|
 | System | `/api/health`, `/api/status`, `/api/system/notifications`, `/api/system/notifications/clear` |
 | Config | `/api/config`, `/api/config/domains`, `/api/config/:domain` |
-| Config Backup | `/api/config/backups`, `/api/config/backups/:id`, `/api/config/backup-policy`, `/api/config/backups/cleanup` |
+| Config Backup | `/api/config/backups`, `/api/config/backups/:id`, `/api/config/backups/:id/download`, `/api/config/backups/:id/restore`, `/api/config/backup-policy`, `/api/config/backups/cleanup` |
 | Auth | `/api/auth/login`, `/api/auth/logout`, `/api/auth/session`, `/api/auth/refresh` |
 | Operators | `/api/operators`, `/api/operators/:id` |
 | Pack Bindings | `/api/packs/:packId/bindings`, `/api/me/bindings` |
@@ -32,7 +32,7 @@
 | Grants | `/api/packs/:packId/grants` |
 | Operator Audit | `/api/audit/logs`, `/api/audit/logs/me` |
 | Plugins (global) | `/api/packs/:packId/plugins`, `/api/packs/:packId/plugins/:installationId/*` |
-| Plugin Web (global) | `/api/packs/:packId/plugins/runtime/web`, `/api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*` |
+| Plugin Web (global) | `/api/packs/:packId/plugins/runtime/web`, `/api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`, `/api/experimental/runtime/packs/:packId/plugins/runtime/web`, `/api/experimental/runtime/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*` |
 
 ### Pack-scoped 路由（`/:packId/api/...`）
 
@@ -46,7 +46,7 @@
 | Pack Openings | `/api/packs/openings`, `/api/packs/openings/:openingId/apply` |
 | Snapshots | `/api/packs/snapshots`, `/api/packs/snapshots/:snapshotId/restore` |
 | Narrative | `/api/packs/projections/timeline` |
-| Inference | `/api/inference/preview`, `/api/inference/run`, `/api/inference/jobs`, `/api/inference/traces/:id`, `/api/inference/ai-invocations` |
+| Inference | `/api/inference/preview`, `/api/inference/run`, `/api/inference/jobs`, `/api/inference/jobs/:id`, `/api/inference/jobs/:id/retry`, `/api/inference/jobs/:id/replay`, `/api/inference/jobs/:id/workflow`, `/api/inference/traces/:id`, `/api/inference/traces/:id/intent`, `/api/inference/traces/:id/job`, `/api/inference/traces/:id/workflow`, `/api/inference/ai-invocations`, `/api/inference/ai-invocations/:id` |
 | Agent/Entity | `/api/agent/:id/context`, `/api/entities/:id/overview`, `/api/agent/:id/snr/logs`, `/api/agent/:id/scheduler/projection` |
 | Identity | `/api/identity/register`, `/api/identity/bind`, `/api/identity/bindings/query`, `/api/identity/bindings/unbind`, `/api/identity/bindings/expire` |
 | Audit | `/api/audit/feed`, `/api/audit/entries/:kind/:id` |
@@ -97,7 +97,7 @@
 
 - **GET `/api/config/:domain`**
   - 鉴权：operator
-  - 说明：单个域配置。domain 可选值：`app`, `paths`, `operator`, `plugins`, `world`, `startup`, `sqlite`, `logging`, `clock`, `world_engine`, `scheduler`, `prompt_workflow`, `runtime`, `features`
+  - 说明：单个域配置。domain 可选值：`app`, `paths`, `operator`, `plugins`, `world`, `startup`, `database`, `logging`, `clock`, `world_engine`, `scheduler`, `prompt_workflow`, `runtime`, `features`
   - 错误码：`CONFIG_DOMAIN_NOT_FOUND`
 
 - **PATCH `/api/config/:domain`**
@@ -582,7 +582,7 @@
 | `INFERENCE_PROVIDER_FAIL` | 推理提供者失败 |
 | `ACTION_DISPATCH_FAIL` | Action 分发失败 |
 | `EVENT_TYPE_UNSUPPORTED` | 不支持的事件类型 |
-| `WORLD_PACK_NOT_READY` | World pack 未就绪 |
+| `WORLD_PACK_NOT_READY` | World-pack 未就绪 |
 | `PACK_ROUTE_ACTIVE_PACK_MISMATCH` | Pack 路由不匹配 |
 | `OPERATOR_REQUIRED` | 需要 Operator 认证 |
 | `PACK_ACCESS_DENIED` | Pack 访问拒绝 |

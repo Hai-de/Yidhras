@@ -11,7 +11,7 @@
 | 层 | 存储位置 | 内容 |
 |----|---------|------|
 | 世界引擎状态 | `data/world_packs/<pack_id>/runtime.sqlite` | world_entities、entity_states、authority_grants、mediator_bindings、rule_execution_records，以及 pack 作者定义的自定义集合表 |
-| Domain 数据 | 中央 Prisma 数据库（SQLite） | Agent、Identity、IdentityNodeBinding、Post、Relationship、MemoryBlock、ContextOverlayEntry、MemoryCompactionState、ScenarioEntityState |
+| Domain 数据 | 中央 Prisma 数据库（SQLite） | Agent、Identity、IdentityNodeBinding、Post、Relationship、MemoryBlock（含 Behavior + RuntimeState 子模型）、ContextOverlayEntry、MemoryCompactionState、ScenarioEntityState（共 11 个模型：9 个顶层查询 + 2 个 MemoryBlock include 子模型） |
 | 内存状态 | 进程内存 | 时钟 tick、revision、runtime speed policy |
 
 快照必须同时捕获这三层，恢复时也同步还原。

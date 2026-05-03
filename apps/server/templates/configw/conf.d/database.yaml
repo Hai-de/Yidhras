@@ -1,0 +1,8 @@
+# 数据库配置
+# SQLite 连接参数和pragma。
+# PostgreSQL 连接参数在 database.postgresql 下配置。
+database:
+  sqlite:
+    busy_timeout_ms: 5000
+    wal_autocheckpoint_pages: 1000
+    synchronous: "NORMAL"

@@ -78,7 +78,7 @@ pnpm smoke:server
 
 说明：
 - `pnpm prepare:runtime` 会委托给 server 完成数据库迁移、运行时初始化与 identity seed。
-- `pnpm scaffold:world-pack` 是新建 world pack 项目的统一入口。
+- `pnpm scaffold:world-pack` 是新建 world-pack 项目的统一入口。
 - `pnpm smoke:server` 用于快速运行 server 冒烟验证。
 - 数据库迁移、初始化、路径更换与常见坑的展开说明见：`DB_OPERATIONS.md`
 
@@ -92,7 +92,7 @@ pnpm smoke:server
 data/configw/
   conf.d/
     app.yaml / paths.yaml / operator.yaml / plugins.yaml / world.yaml
-    startup.yaml / sqlite.yaml / logging.yaml / clock.yaml
+    startup.yaml / database.yaml / logging.yaml / clock.yaml
     world_engine.yaml / scheduler.yaml / prompt_workflow.yaml
     runtime.yaml / features.yaml
   development.yaml / production.yaml / test.yaml
@@ -106,9 +106,10 @@ data/configw/
 app:
   port: 3001
 
-# conf.d/sqlite.yaml
-sqlite:
-  busy_timeout_ms: 5000
+# conf.d/database.yaml
+database:
+  sqlite:
+    busy_timeout_ms: 5000
 
 # conf.d/scheduler.yaml
 scheduler:
@@ -181,10 +182,11 @@ pnpm --filter yidhras-server exec prisma migrate deploy
 app:
   port: 3001
 
-# conf.d/sqlite.yaml
-sqlite:
-  busy_timeout_ms: 5000
-  synchronous: "NORMAL"
+# conf.d/database.yaml
+database:
+  sqlite:
+    busy_timeout_ms: 5000
+    synchronous: "NORMAL"
 
 # conf.d/scheduler.yaml
 scheduler:
@@ -234,7 +236,7 @@ pnpm --filter yidhras-server config:backup cleanup
 - 保留策略：最多 20 个备份，最长保留 30 天。`cleanup` 手动触发清理。
 - 等效 API 端点见 [`API.md`](../API.md) 第 16 节。
 
-### 3.7 World Pack 与手工脚本
+### 3.7 World-Pack 与手工脚本
 
 ```bash
 pnpm --filter yidhras-server scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"
@@ -354,7 +356,7 @@ pnpm --filter yidhras-server diag            # 完整诊断报告
 pnpm --filter yidhras-server diag --json     # JSON 格式输出
 ```
 
-输出内容：数据库信息、配置域列表、World Pack 清单、备份状态、环境信息。
+输出内容：数据库信息、配置域列表、World-Pack 清单、备份状态、环境信息。
 
 ### 6.6 操作者管理 (`operator`)
 

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
 
 import type { AppContext } from '../../src/app/context.js';
-import { buildInferenceContextV2 } from '../../src/app/services/context_assembler.js';
+import { buildExtendedInferenceContext } from '../../src/app/services/context_assembler.js';
 import { createPrismaRepositories } from '../../src/app/services/repositories/index.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 import { SimulationManager } from '../../src/core/simulation.js';
@@ -94,7 +94,7 @@ describe('authority/perception/context assembly', () => {
     });
     expect(Array.isArray(authority.resolved_capabilities)).toBe(true);
 
-    const inferenceContextV2 = await buildInferenceContextV2(appContext, {
+    const inferenceContextV2 = await buildExtendedInferenceContext(appContext, {
       identity_id: 'agent-001',
       strategy: 'rule_based'
     });

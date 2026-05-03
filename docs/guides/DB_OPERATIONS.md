@@ -95,7 +95,7 @@ Prisma 连接数据库所必需。默认值见 `apps/server/.env`：`file:../../
 作用：
 
 - 显式指定工作区根目录；
-- runtime config、world pack 路径、脚手架定位会依赖它。
+- runtime config、world-pack 路径、脚手架定位会依赖它。
 
 不设置时，服务会向上查找：
 
@@ -110,7 +110,7 @@ Prisma 连接数据库所必需。默认值见 `apps/server/.env`：`file:../../
 
 作用：
 
-- 指定 world pack 读取位置；
+- 指定 world-pack 读取位置；
 - 不改变 Prisma 连接目标，但影响初始化和启动健康检查。
 
 ### `PORT`
@@ -167,7 +167,7 @@ pnpm --filter yidhras-server exec prisma migrate deploy
 ### 适用场景
 
 - 已有数据库，只想升级 schema；
-- 运行时 scaffold/world pack 不需要重复初始化；
+- 运行时 scaffold/world-pack 不需要重复初始化；
 - CI / 部署阶段只做 migration apply。
 
 ### 不建议直接跳过的情况
@@ -175,7 +175,7 @@ pnpm --filter yidhras-server exec prisma migrate deploy
 如果是全新环境，通常不要只做 migration，因为还需要：
 
 - runtime config scaffold
-- bootstrap world pack
+- bootstrap world-pack
 - identity seed
 
 所以新环境通常还是应优先：
@@ -204,7 +204,7 @@ pnpm --filter yidhras-server init:runtime
 
 职责：
 
-- 确保 runtime config scaffold 存在、bootstrap world pack 已准备；
+- 确保 runtime config scaffold 存在、bootstrap world-pack 已准备；
 - 输出 runtime config snapshot（便于确认最终生效值）与初始化报告。
 
 snapshot 中会包含 `app_port`、`world_packs_dir`、`sqlite_*`、`scheduler_*` 等运行参数。如需调优，参见 [`ARCH.md`](../ARCH.md) 第 2.4 节与 [`COMMANDS.md`](./COMMANDS.md) 第 2.6 节。
@@ -483,7 +483,7 @@ pnpm prepare:runtime
 
 1. `DATABASE_URL` 是否可写；
 2. `WORLD_PACKS_DIR` / runtime config 是否正确；
-3. world pack bootstrap 是否成功；
+3. world-pack bootstrap 是否成功；
 4. `seed:identity` 是否执行成功；
 5. 当前数据库 schema 是否与当前代码版本匹配。
 
@@ -502,5 +502,5 @@ pnpm --filter yidhras-server start
 
 - 命令入口矩阵：[`COMMANDS.md`](./COMMANDS.md)
 - 架构边界与配置优先级：[`ARCH.md`](../ARCH.md)
-- World Pack 规范：[`WORLD_PACK.md`](../WORLD_PACK)
+- World-Pack 规范：[`WORLD_PACK.md`](../WORLD_PACK)
 - 文档导航：[`INDEX.md`](../INDEX.md)
