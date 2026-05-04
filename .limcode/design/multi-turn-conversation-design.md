@@ -2,8 +2,8 @@
 
 ## 状态说明
 
-本文档是 TODO.md "多轮对话"项的前置设计草稿。目标是在不破坏现有 System B 多轨汇合架构的前提下，
-设计跨推理请求的对话持久化、增量上下文构建、消息格式和压缩机制。
+本文档是 TODO.md "多轮对话"项的前置设计草稿。目标是设计跨推理请求的对话持久化、增量上下文构建、
+消息格式和压缩机制。
 
 当前为开放性问题收集阶段，尚未开始编码。
 
@@ -48,44 +48,217 @@ turn 2: assistant2: "我今天是一只哼哼的小🐷"
 
 两者的内容已经不同。项目不关心谁对谁错，只关心：**谁改了这些内容？什么时候？通过什么机制？**
 
-### 1.3 当前讨论范围
+### 1.3 对话模式范围
 
-本章仅讨论**一对一 agent 对话**。一对多和多对多的对话模型待后续探讨。
+- **一对一 agent 对话**：阶段一实现
+- **一对多 / 多对多 agent 对话**：阶段一类型设计预留扩展点，阶段二/三实现
+
+在一对多和多对多场景中，不存在"对方 = user"的角色映射。所有 agent 以各自身份发言，
+整个对话 transcript 作为一个整体结构嵌入模型消息中（见 §2.2）。
 
 ---
 
-## 2. 发送到模型时的视角转换
+## 2. 发往模型时的消息组装
 
-对话记忆是以 agent 视角存储的（说话者 = 某个 agent），但发送到大模型时需要做视角转换。
+### 2.1 核心思路：可配置的对话结构组装引擎
 
-**局限性**：以下只适用于一对一 agent 对话。
+对话记忆（`AgentConversationMemory`）不直接按固定规则映射为 `AiMessage[]`。
+而是通过一个**可配置的组装引擎**，根据 YAML/JSON 配置决定：
+- 对话 transcript 如何格式化（每个 speaker 的前缀/后缀、轮次分隔符、嵌套结构）
+- 格式化后的内容如何映射到模型消息序列（消息级别 placement）
+- AI 在消息序列的哪个位置填充输出
+- 如何利用格式技巧（未闭合符号等）引导模型在指定位置续写
 
-assistant1 最终发往大模型的内容：
+### 2.2 一对一场景：传统角色映射
+
+assistant1 发往模型：
 ```
-turn 1: assistant: "你好，我是assistant1"      ← 自己的消息 → assistant 角色
-turn 1: user: "好久不见，我是assistant2"        ← 对方的消息 → user 角色
+turn 1: assistant: "你好，我是assistant1"
+turn 1: user: "好久不见，我是assistant2"
 turn 2: assistant: "今天天气如何？"
 turn 2: user: "今天天气非常好"
 ```
 
-assistant2 最终发往大模型的内容（注意内容已被修改）：
+对方 agent → `user` 角色，自己 → `assistant` 角色。这是最简单的配置。
+
+### 2.3 多 agent 场景：Transcript 嵌入
+
+操控员没空一个个和 agent 聊天。多个 agent 的对话直接作为 transcript 嵌入一条消息内部：
+
+原始对话记忆：
 ```
-turn 1: user: "你好，我是assistant1"            ← 对方的消息 → user 角色
-turn 1: assistant: "XXXX（被过滤），我是assistant2"  ← 自己的消息 → assistant 角色
-turn 2: user: "今天天气如何？"
-turn 2: assistant: "我今天是一只哼哼的小🐷"
+turn 1: assistant9: "你好，我是assistant9"
+turn 1: assistant2: "好久不见，我是assistant2"
+turn 2: assistant4: "今天天气如何？"
+turn 2: assistant7: "今天天气非常好"
 ```
 
-**转换规则**（一对一场景）：
-- 当前推理 agent 自己的消息 → `assistant` 角色
-- 对话中其他 agent 的消息 → `user` 角色
-- 存储在对话记忆中的内容可能已被修改（过滤、替换、清洗），发送到模型的是修改后的版本
+发往模型时，整个 transcript 嵌入 `user` 消息内部。不再有单一的"对方 = user"映射。
+
+### 2.4 消息级别 Placement：AI 在指定位置填充
+
+消息序列本身支持类似 slot placement 的定位能力。配置决定消息序列的结构，
+其中 `assistant` 角色的消息是**空槽位**，等待模型填充：
+
+```json
+[
+  {"role": "system", "content": "系统提示词1"},
+  {"role": "system", "content": "系统提示词2"},
+  {"role": "system", "content": "系统提示词3"},
+  {"role": "system", "content": "系统提示词4"},
+  {"role": "user", "content": "<嵌套了整个多 agent 对话 transcript>"},
+  {"role": "assistant", "content": "<AI 在此填充>"},
+  {"role": "user", "content": "<后续追加的更多需求>"}
+]
+```
+
+配置项：
+- 同 role 连续消息是否合并为一条（`merge_consecutive_same_role: true/false`）
+- AI 填充位置（`ai_fill_position`: 最后一条 assistant 消息 / 指定索引 / 匹配标记）
+- 每条消息的 `prefix` / `suffix` 定制
+
+### 2.5 伪 Role 格式注入（越狱工程）
+
+通过在 transcript 中故意留下未闭合的语法结构，利用模型补全下一个 token 的倾向，
+引导模型在指定位置续写内容：
+
+```
+user content:
+    "assistant9": "你好，我是assistant9"
+    "assistant2": "好久不见，我是assistant2"
+    "assistant4": "今天天气如何？"
+    "assistant7": "今天天气非常好"
+    {
+```
+
+故意留下未闭合的 `{`。模型倾向于补全 `}` 以及其内部的内容，
+这恰好是当前 agent 需要输出的回复。assistant 角色的消息内容从 `}` 开始。
+
+**这不需要模型侧的特殊支持，是纯 token 预测行为。** 唯一代价是 user 消息内塞入了超长上下文。
+
+### 2.6 压缩到单一 Role
+
+对话 transcript 可以从 `user` 角色折叠到 `system` 角色，释放 user 位置给新的输入：
+
+```
+压缩前:
+  system: (系统提示词)
+  user: (对话 transcript + 新输入)
+  assistant: (AI 填充)
+
+压缩后:
+  system: (系统提示词 + 压缩后的整个对话 transcript)
+  user: (继续)
+  assistant: (AI 填充)
+```
+
+旧的对话被折叠进 system 消息中，user 位置空出来接受新的操控输入。
+这是纯格式化操作，等价于消息数组前缀压缩。
 
 ---
 
-## 3. 背景：当前架构与多轮对话的差距
+## 3. 架构：对话结构组装引擎
 
-### 3.1 现有 System B 流水线（单次推理）
+### 3.1 核心组件
+
+```
+                      ConversationFormatConfig (YAML 配置)
+                        │
+                        ├── transcript_format       ← 多 agent 对话如何渲染为文本
+                        │     ├── per_speaker_prefix / suffix
+                        │     ├── turn_delimiter
+                        │     ├── nesting_rules
+                        │     └── jailbreak_patterns (未闭合符号等)
+                        │
+                        ├── message_assembly        ← 格式化后内容如何映射到 AiMessage[]
+                        │     ├── slot → message_role 映射
+                        │     ├── merge_consecutive_same_role
+                        │     ├── ai_fill_position
+                        │     ├── message_prefix / suffix (per role)
+                        │     └── injection_points
+                        │
+                        └── compression             ← 压缩策略
+                              ├── window_size (轮数或 token 数)
+                              ├── summary_trigger_threshold
+                              ├── compacted_target_role (折叠到 system/user/developer)
+                              └── compaction_preserve_recent_n
+```
+
+### 3.2 数据流
+
+```
+AgentConversationMemory (per-agent, 持久化)
+  │
+  ├── entries: ConversationEntry[]
+  ├── conversation_id
+  ├── owner_agent_id
+  └── metadata
+       │
+       ▼
+ConversationAssembler (新增)
+  │
+  ├── 1. 加载 ConversationFormatConfig
+  ├── 2. 渲染 transcript: entries → 格式化文本 (按 transcript_format 规则)
+  ├── 3. 压缩 (如果需要): 超出窗口 → 摘要 → 折叠到目标 role
+  ├── 4. 消息组装: 格式化文本 + slot 内容 → AiMessage[] (按 message_assembly 规则)
+  ├── 5. 注入点处理: 在 ai_fill_position 处插入空的 assistant 槽位
+  └── 6. 产出 AiMessage[]
+       │
+       ▼
+AI Gateway (现有，不变)
+```
+
+### 3.3 与现有 System B 的关系
+
+`ConversationAssembler` 取代了 `adaptPromptTreeToAiMessages` 的角色，
+但不是完全替换 — 它是一个超集：
+
+- 现有适配器逻辑 = `ConversationAssembler` 的一种特定配置（3 条消息，按 slot role 分组）
+- 多轮对话逻辑 = 另一种配置（多消息、transcript 嵌入、注入点）
+- 两种配置可共存，由 `PromptWorkflowProfile` 或 task_type 选择
+
+### 3.4 对结构化语法解析器的依赖
+
+结构化语法解析器（`apps/server/src/parser/`，详见 `docs/capabilities/STRUCTURED_PARSER.md`）
+	已实现，是 `ConversationAssembler` 格式模板渲染的基础设施。
+
+	解析器提供的三种 API 在组装引擎中的角色：
+
+	- **`render(template, variables)`**（一步渲染）— `ConversationAssembler` 的主要调用方式。
+	  用于 `speaker_format` 的 prefix/suffix 渲染、`role_format` 的消息级 prefix/suffix、
+	  `turn_delimiter` 等简单模板替换。
+	- **`createParser(config)`**（工厂模式，含自定义修饰符/块处理器）— 当组装引擎需要扩展
+	  语法时使用，例如注册 `conversation` 命名空间的专用修饰符。
+	- **`parseTemplate() → renderAst()`**（两步操作）— 为 Slot 函数系统预留。宏引用
+	  `{{macro_name}}` 在标准渲染时输出空字符串，由 Slot 函数系统通过操作 AST 消费。
+
+	`ConversationFormatConfig` 中内嵌的 `parser_syntax` 字段直接映射到 `ParserSyntaxConfig`
+	（`STRUCTURED_PARSER.md` §6.2），每个配置可独立覆盖默认语法：
+
+	```yaml
+	conversation_format:
+	  transcript:
+	    speaker_format:
+	      default:
+	        prefix: '"{speaker_id}": "'
+	        suffix: '"\n'
+	  parser_syntax:           # 可选，不传则用默认 {{...}} / {...} 语法
+	    delimiters:
+	      variable:
+	        open: "{"
+	        close: "}"
+	```
+
+	解析器当前约束在组装引擎中的影响：
+	- 变量缺失不报错 — transcript 模板中未提供的变量渲染为空字符串，适合可选字段场景
+	- 修饰符缺失静默跳过 — 不会因配置中的拼写错误导致组装中断
+	- 最大递归深度 32 — 嵌套 speaker_format 模板应避免递归引用
+
+---
+
+## 4. 背景：当前架构与多轮对话的差距
+
+### 4.1 现有 System B 流水线（单次推理）
 
 ```
 InferenceContext → 三条轨道(模板/节点/快照) → section_drafts
@@ -93,71 +266,68 @@ InferenceContext → 三条轨道(模板/节点/快照) → section_drafts
   → adaptPromptTreeToAiMessages → 3条消息(system/developer/user) → AI Gateway
 ```
 
-每次 `buildWorkflowPromptBundle()` 调用都是全新 `PromptWorkflowState`，无任何跨请求状态。
-
-### 3.2 关键缺口
+### 4.2 关键缺口
 
 | # | 缺口 | 位置 | 影响 |
 |---|------|------|------|
 | 1 | `PromptWorkflowState` 生命周期仅单次推理 | `types.ts` | 无跨请求状态传递 |
-| 2 | `adaptPromptTreeToAiMessages` 只产 3 条消息 | `prompt_tree_adapter.ts` | 无 assistant 消息、无多轮对话消息 |
-| 3 | `PromptSlotConfig.message_role` 不支持 `assistant` | `prompt_slot_config.ts` | slot 无法映射到 assistant 角色 |
-| 4 | `PromptSectionDraftType` 无对话类型 | `types.ts` | 无 `conversation_history` / `assistant_response` |
-| 5 | `PromptWorkflowState.ai_messages` 是骨架字段 | `types.ts` | 定义了但从未读写 |
-| 6 | `InferenceContext` 无对话引用 | `types.ts` | 无 `conversation_id` / `turn_number` |
-| 7 | 无对话记忆持久化层 | — | 对话历史无法跨请求存活 |
-| 8 | 无溯源追踪机制 | — | 无法追溯对话记忆的修改历史 |
+| 2 | `adaptPromptTreeToAiMessages` 只产 3 条固定消息 | `prompt_tree_adapter.ts` | 无多消息序列、无注入点 |
+| 3 | 无可配置的消息组装引擎 | — | 格式规则硬编码 |
+| 4 | 无对话记忆持久化层 | — | 对话历史无法跨请求存活 |
+| 5 | 无溯源追踪机制 | — | 无法追溯对话记忆修改历史 |
+| 6 | `InferenceContext` 无对话引用 | `types.ts` | 无 `conversation_id` / `owner_agent_id` |
+| 7 | ~~无结构化语法解析器~~ ✅ 已完成 | `apps/server/src/parser/` | `STRUCTURED_PARSER.md` §2-§6 |
 
-### 3.3 设计文档中已有的预留
+### 4.3 设计文档中已有的预留
 
-- System B 设计 §5.2：轨道数量不固定，未来可引入 `conversation_history` 轨道
-- System B 设计 §12.14：明确列出"多轮对话轨道"为预留扩展点
+- System B 设计 §5.2：轨道数量不固定，可引入 `conversation_history` 轨道
+- System B 设计 §12.14：多轮对话轨道为预留扩展点
 - System B 设计 §12.8：轻量路径（`profile.tracks`）已实现
 - `PromptWorkflowState.ai_messages` 字段已定义但未使用
+- `SectionDraft.metadata: Record<string, unknown>` 可作为组装配置的扩展点
 
 ---
 
-## 4. 架构概览（初步）
+## 5. 架构概览
 
-### 4.1 核心思路
-
-引入 `AgentConversationMemory` 作为每个 agent 的对话记忆持久化单元。
-新增 `conversation_history` 轨道，将当前 agent 视角的对话记忆转换为 `PromptSectionDraft[]` 汇入现有 pipeline。
+### 5.1 核心思路
 
 ```
 AgentConversationMemory (per-agent, 持久化)
   │
-  ├── owner_agent_id               ← 此记忆属于哪个 agent
+  ├── owner_agent_id
   ├── conversation_id
-  ├── entries: ConversationEntry[] ← 每条对话记录 + 溯源信息
-  ├── turn_number
+  ├── entries: ConversationEntry[]
   ├── summary?: string
-  └── metadata: Record<string, unknown>
+  └── metadata
        │
        ▼
 InferenceContext (扩展)
   ├── agent_conversation_memory?: AgentConversationMemory
-  ├── current_agent_id?: string
-  └── ...
+  └── current_agent_id?: string
        │
        ▼
 buildWorkflowPromptBundle()
   ├── runTemplateTrack()
   ├── runNodeTrack()
   ├── runSnapshotTrack()
-  ├── runConversationHistoryTrack()  ← 新增：从 agent 视角加载对话记忆
+  ├── runConversationHistoryTrack()   ← 新增：加载对话记忆 → section_drafts
   └── runPipeline()
        │
        ▼
-adaptPromptTreeToAiMessages()        ← 扩展：视角转换
-  ├── system message
-  ├── developer message
-  ├── user message (当前轮次上下文)
-  ├── assistant message (自己历史消息)  ← 新增
-  └── user message (对方历史消息)       ← 新增（对方 agent → user 角色）
+PromptBundleV2 (现有，不变)
+       │
+       ▼
+ConversationAssembler (新增，取代 adaptPromptTreeToAiMessages)
+  ├── 消费 PromptBundleV2 + AgentConversationMemory + ConversationFormatConfig
+  ├── 渲染 transcript + 压缩 + 消息序列组装
+  └── 产出 AiMessage[]
+       │
+       ▼
+AI Gateway (现有，不变)
 ```
 
-### 4.2 两条路径设想
+### 5.2 两条路径
 
 - **完整流水线**（首轮 / 复杂任务）：四条轨道 + 完整 pipeline
 - **轻量路径**（后续简单轮次）：`conversation_history` + `template` 轨道，跳过节点轨和快照轨
@@ -166,33 +336,29 @@ adaptPromptTreeToAiMessages()        ← 扩展：视角转换
 
 ---
 
-## 5. 开放性问题
+## 6. 开放性问题
 
-### 5.1 对话记忆的核心类型：`ConversationEntry`
+### 6.1 对话记忆的核心类型：`ConversationEntry`
 
-**已确认方向**：使用自定义类型，不直接复用 `AiMessage`。`AiMessage` 是发送到模型的传输格式，
-对话记忆是 agent 视角的持久化格式，两者是不同的关注点。
+**已确认方向**：自定义类型，不复用 `AiMessage`。
 
-**问题**：`ConversationEntry` 需要哪些字段来满足可被追踪性（traceability）？
-
-初步结构：
 ```typescript
 interface ConversationEntry {
   id: string;
   turn_number: number;
-  speaker_agent_id: string;        // 谁说的这句话（原始说话者）
+  speaker_agent_id: string;        // 谁说的（原始说话者）
 
-  // 内容（可能不一致）
-  original_content: string;        // 原始内容（首次记录时）
+  // 内容
+  original_content: string;        // 首次记录的内容
   current_content: string;         // 当前内容（可能被修改过）
 
   // 溯源追踪
-  recorded_by: string;             // 谁记录的（agent_id / 'user' / 'plugin:<id>'）
-  recorded_at: number;             // 记录时间戳
-  modifications: EntryModification[];  // 修改历史
+  recorded_by: string;             // agent_id / 'user' / 'plugin:<id>'
+  recorded_at: number;
+  modifications: EntryModification[];
 
   // 元数据
-  tags?: string[];                 // 标签（待定）
+  tags?: string[];
   metadata?: Record<string, unknown>;
 }
 
@@ -201,307 +367,265 @@ interface EntryModification {
   modified_at: number;
   previous_content: string;
   new_content: string;
-  reason?: string;                 // 修改原因（过滤规则触发、用户手动修改等）
+  reason?: string;
 }
 ```
 
 **待讨论**：
-- `original_content` 和 `current_content` 是否需要，还是只保留当前内容 + 修改链即可追溯？
-- `modifications` 是否需要保留完整历史，还是只保留最近 N 次修改？
-- content 类型是纯文本还是需要支持富文本/结构化？
+- `original_content` 和 `current_content` 是否都需要，还是只保留 content + modifications 链？
+- `modifications` 保留完整历史还是最近 N 次？
+- content 是纯文本还是支持结构化？
 
 ---
 
-### 5.2 溯源追踪的粒度和范围
-
-**问题**：溯源需要追踪到什么程度？
+### 6.2 溯源追踪粒度
 
 场景：
-- 用户通过 CLI 手动修改了某条对话记忆 → `modified_by: 'user'`
-- 正则过滤器匹配了敏感词并替换 → `modified_by: 'data_cleaner:regex'`
-- 某个 agent 插入了一条伪造的对话 → `recorded_by: 'agent:<id>'`
-- 插件 hook 修改了对话内容 → `modified_by: 'plugin:<plugin_id>'`
+- 用户 CLI 手动修改 → `modified_by: 'user'`
+- 正则过滤器匹配替换 → `modified_by: 'data_cleaner:regex'`
+- Agent 插入伪造对话 → `recorded_by: 'agent:<id>'`
+- 插件 hook 修改 → `modified_by: 'plugin:<plugin_id>'`
 
 选项：
 
-- **A. 仅记录操作者标识**：`modified_by: string`，格式约定为 `agent:<id>` / `user` / `plugin:<id>` / `data_cleaner:<rule_id>`。
-  - 优势：简单
-  - 风险：不同组件需要遵守命名约定，无强制
-
-- **B. 结构化操作者类型**：`ModifiedBy = { kind: 'agent' | 'user' | 'plugin' | 'data_cleaner'; id: string; rule?: string }`。
-  - 优势：类型安全
-  - 风险：新增操作者类型需要改类型定义
-
-- **C. 操作者 + 能力（capability）**：不仅记录谁，还记录以什么权限操作（`capability: 'conversation.insert' | 'conversation.modify' | 'conversation.delete'`）。
-  - 优势：后续可做权限审计
-  - 风险：增加了复杂度，需要定义能力枚举
-
-**待讨论**：选择哪种？是否需要记录操作者的能力/权限？
+- **A. 字符串约定**：`agent:<id>` / `user` / `plugin:<id>` / `data_cleaner:<rule_id>`
+- **B. 结构化类型**：`{ kind: 'agent'|'user'|'plugin'|'data_cleaner'; id: string; rule?: string }`
+- **C. 操作者 + 能力**：附加 `capability: 'conversation.insert' | 'conversation.modify' | 'conversation.delete'`
 
 ---
 
-### 5.3 对话记忆的持久化
+### 6.3 持久化方案
 
-**问题**：`AgentConversationMemory` 存在哪里？
-
-选项：
-
-- **A. Prisma + SQLite 新表**：`ConversationMemory` 模型，`entries` 存为 JSON 列。每条记录属于一个 agent。
-  - 优势：与现有架构一致
-  - 风险：entry 数量增长后 JSON 列变大；修改单条 entry 需要整列读写
-
-- **B. 独立的 `ConversationStore` 抽象**：定义接口，首版用 SQLite 实现，后续可替换。
-  - 优势：解耦
-  - 风险：多一层抽象
-
-- **C. 复用 Memory 系统**：对话记忆作为特殊类型存入 agent 的 memory 系统。
-  - 优势：复用 compaction/summary 基础设施
-  - 风险：memory 系统设计目标不同，可能不匹配
-
-**待讨论**：选择哪种？
+- **A. Prisma + SQLite 新表**：`ConversationMemory` 模型，entries 为 JSON 列
+- **B. ConversationStore 抽象**：接口 + SQLite 实现，后续可替换
+- **C. 复用 Memory 系统**：对话记忆作为特殊 ContextNode 类型
 
 ---
 
-### 5.4 新增 slot：`conversation_history`
+### 6.4 `ConversationFormatConfig` 的配置格式
 
-**问题**：新 slot 的配置如何定义？
+**问题**：组装引擎的配置用什么格式？YAML 还是 TypeScript 类型？
+
+```yaml
+# 示例：多 agent transcript 嵌入 user 消息的配置
+conversation_format:
+  transcript:
+    turn_delimiter: "\n"
+    speaker_format:
+      default:
+        prefix: '"{speaker_id}": "'
+        suffix: '"'
+    nesting:
+      open_marker: "{"
+      close_marker: "}"
+      # 可以故意不闭合 open_marker 来实现 jailbreak 注入
+      auto_close: false
+
+  message_assembly:
+    merge_consecutive_same_role: false  # system 消息是否合并
+    slots:
+      - slot: system_core
+        target_role: system
+      - slot: conversation_history
+        target_role: user              # transcript 嵌入 user 消息
+        placement: before_assistant    # 放在 assistant 消息之前
+    injection:
+      ai_fill_role: assistant
+      ai_fill_position: after_last_user
+    role_format:
+      user:
+        prefix: ""
+        suffix: ""
+      assistant:
+        prefix: ""
+        suffix: ""
+
+  compression:
+    strategy: summary_window           # summary | window | summary_window
+    window_turns: 20
+    summary_trigger_turns: 30
+    compacted_target_role: system      # 折叠到 system 消息
+    preserve_recent: 5                 # 压缩时保留最近 N 轮全量
+```
+
+`parser_syntax` 字段直接映射到 `ParserSyntaxConfig`（`STRUCTURED_PARSER.md` §6.2），
+为可选字段 — 不传时解析器使用默认 `{...}` / `{{...}}` 语法。
+
+**待讨论**：
+- 配置存在哪里？（`data/configw/` 还是独立的 conversation profile？）
+- 是全局配置还是 per-conversation 可覆盖？
+- 配置如何关联到 `PromptWorkflowProfile`？
+
+---
+
+### 6.5 新增 slot：`conversation_history`
 
 建议新增 `'conversation_history'` 到 `PromptFragmentSlot` 联合类型。
 
-**核心矛盾**：`PromptSlotConfig.message_role` 是单一值（`system | developer | user`），
-但 `conversation_history` slot 的内容在发送到模型时需要按消息拆分：
-- 当前 agent 的历史消息 → `assistant` 角色
-- 对方 agent 的历史消息 → `user` 角色
-
-选项：
-
-- **A. `conversation_history` slot 绕过 `adaptPromptTreeToAiMessages` 的 slot→角色分组逻辑**：
-  适配器在生成 `AiMessage[]` 时，直接从 `AgentConversationMemory.entries` 构建
-  多条 `AiMessage`（含 assistant 和 user 角色），不经过 slot 文本→单条消息的转换。
-  - 优势：避免多角色内容与单 `message_role` 字段的矛盾
-  - 风险：打破了"所有内容走 slot→fragment→bundle→单角色消息"的统一架构
-
-- **B. slot 内容内嵌角色标记**：`conversation_history` 的文本内容用标记分隔不同角色，
-  适配器解析后生成对应的 `AiMessage[]`。
-  - 优势：保持在 slot→文本的统一框架内
-  - 风险：解析脆弱；结构化数据→文本→再解析是往返浪费
-
-- **C. 新增 `message_role: 'mixed'`**：适配器识别到 `mixed` 时不按 slot 级路由，
-  而是按消息级路由。但消息结构需要从 slot 内容中获取。
-
-**待讨论**：选择哪种？
+与 §5.4 旧版讨论不同：该 slot 不再面临 `message_role` 矛盾。
+`ConversationAssembler` 直接从 `AgentConversationMemory` 构建多角色消息序列，
+不通过 slot 的 `message_role` 做单值路由。slot 的 `message_role` 可设为
+`user`（作为 transcript 的默认嵌入位置），但实际组装由 `ConversationFormatConfig` 控制。
 
 ---
 
-### 5.5 视角转换：Agent 对话记忆 → 模型消息
-
-**问题**：`adaptPromptTreeToAiMessages` 如何扩展以支持视角转换？
-
-当前适配器逻辑：
-```
-slots → 按 message_role 分组 → 每组生成一条 AiMessage
-```
-
-扩展后需要新增的转换：
-```
-AgentConversationMemory.entries
-  → 自己的消息 → AiMessage(role: 'assistant', parts: [current_content])
-  → 对方的/其他agent的消息 → AiMessage(role: 'user', parts: [current_content])
-```
-
-这个转换不经过 slot/fragment/bundle 管线，而是直接从 `AgentConversationMemory` 中提取。
-
-**子问题**：转换发生在哪个阶段？
-- 选项 A：在 `runConversationHistoryTrack` 产出 section_draft 之前就完成转换，section_draft 中的 content_blocks 已经是按模型视角的消息文本
-- 选项 B：section_draft 保留 agent 视角格式（标记 speaker），在 `adaptPromptTreeToAiMessages` 中完成视角转换
-
-如果选 §5.4 的选项 A（绕过适配器），则此问题自动被覆盖。
-
-**待讨论**：视角转换的时机？
-
----
-
-### 5.6 对话压缩策略
-
-**问题**：对话记忆超出 token 预算时如何压缩？
-
-与 §5.1 中的溯源机制交互：压缩是否修改 `current_content`？如果修改，是否需要记录到 `modifications` 链中？
-
-场景：
-- 短对话（< 10 轮）：全量保留
-- 中对话（10-30 轮）：早期轮次做摘要
-- 长对话（> 30 轮）：滑动窗口 + 全局摘要
-
-选项：
-
-- **A. 摘要压缩**：早期消息 → 摘要文本。摘要不修改原始 entries，而是新增一条 `ConversationEntry`（`speaker_agent_id: 'system'`，`recorded_by: 'compaction_service'`）。原始 entries 可标记为 `compacted: true` 以跳过渲染。
-  - 优势：原始内容不丢失，摘要也可被追溯
-  - 风险：entries 数量持续增长
-
-- **B. 滑动窗口**：只选取最近 N 轮。不做修改，只是选择。
-  - 优势：简单，无副作用
-  - 风险：丢失早期信息
-
-- **C. 混合（摘要 + 窗口）**：超出窗口的做摘要，未超出的全量。摘要记录为新的 Entry。
-
-**待讨论**：选择哪种？摘要是否需要额外推理调用？
-
----
-
-### 5.7 `conversation_history` 轨道设计
-
-**问题**：轨道函数的输入和输出？
+### 6.6 `runConversationHistoryTrack` 轨道
 
 ```typescript
-// 初步签名
 function runConversationHistoryTrack(input: {
   memory: AgentConversationMemory;
   slotRegistry: Record<string, PromptSlotConfig>;
-  taskType: PromptWorkflowTaskType;
+  formatConfig: ConversationFormatConfig;
   currentAgentId: string;
 }): TrackResult<PromptSectionDraft[]>;
 ```
 
-**子问题 5.7.1**：产出一个 section 还是多个 section？
+轨道职责：
+1. 从 `AgentConversationMemory` 加载对话记忆
+2. 根据 `formatConfig.transcript` 规则渲染 transcript 文本
+3. 根据 `formatConfig.compression` 规则决定是否需要压缩/截断
+4. 产出一个或多个 `PromptSectionDraft`（section_type: `'conversation_history'`）
 
-- **单一 section**：整个对话记忆作为一个 `conversation_history` section。
-  - 优势：placement 简单
-  - 风险：内部结构需要在内容层面处理
-
-- **多 section**：每条 entry 或每轮对话各产出一个 section。
-  - 优势：可利用 placement 排序
-  - 风险：section 暴增；且多个 section 如何分配 `slot` 归属？
-
-**子问题 5.7.2**：`section_type` 用什么？
-
-建议新增：`'conversation_history'`。
-
-**子问题 5.7.3**：`runConversationHistoryTrack` 内部是否包含压缩逻辑？
-还是压缩是一个独立的、在轨道之前运行的步骤？
-
-**待讨论**：以上。
+**子问题**：压缩逻辑在轨道内还是轨道外？
+- 轨道内：压缩后的内容直接进入 section_draft，后续 pipeline 无感知
+- 轨道外（独立 compaction 步骤）：可追踪压缩操作本身作为 `EntryModification`
 
 ---
 
-### 5.8 增量上下文构建与轻量路径
+### 6.7 `ConversationAssembler` 接口
 
-**问题**：多轮对话中，是否每次推理都需要完整流水线？
+```typescript
+interface ConversationAssembler {
+  assemble(input: {
+    bundle: PromptBundleV2;
+    memory: AgentConversationMemory;
+    formatConfig: ConversationFormatConfig;
+    currentAgentId: string;
+  }): AiMessage[];
+}
+```
 
-已有基础：`profile.tracks` 可跳过轨道，`profile.steps` 可跳过 pipeline 步骤。
+组装流程：
+1. 从 `PromptBundleV2` 提取 slot 文本（system_core, role_core 等）
+2. 按 `formatConfig.message_assembly.slots` 将 slot 映射到对应 role 的消息
+3. 从 `AgentConversationMemory` 渲染 transcript，注入到目标 role 的消息
+4. 按 `formatConfig.message_assembly.injection` 确定 AI 填充位置
+5. 按 `formatConfig.message_assembly.role_format` 添加每条消息的前缀/后缀
+6. 如配置 `merge_consecutive_same_role`，合并相邻同 role 消息
+7. 产出最终 `AiMessage[]`
 
-多轮场景建议：
+该组件取代现有的 `adaptPromptTreeToAiMessages`，但向后兼容 —
+现有行为是 `ConversationAssembler` 的一个默认配置实例。
 
-| 场景 | 启用的轨道 | 说明 |
-|------|-----------|------|
-| 首轮 | 全部 4 条 | 需要完整的系统/世界/角色上下文 |
+---
+
+### 6.8 轻量路径与轨道选择
+
+| 场景 | 轨道 | 说明 |
+|------|------|------|
+| 首轮 | 全部 4 条 | 完整上下文 |
 | 简单追问 | template + conversation_history | 世界未变 |
 | 世界状态变更 | template + conversation_history + snapshot | — |
 | memory compaction | template + node + conversation_history | — |
 
 选项：
-
-- **A. 多个静态 profile**：`chat-first-turn`、`chat-follow-up`、`chat-post-tool`
-- **B. 调用方动态选择轨道**
+- **A. 多个静态 profile**：`chat-first-turn`、`chat-follow-up`
+- **B. 调用方动态选择**
 - **C. 自适应检测**
 
-**待讨论**：选择哪种？
+---
+
+### 6.9 与 `tool_loop_runner` 的关系
+
+- **A. 统一写入 `AgentConversationMemory`**：工具调用中间消息作为 ConversationEntry
+- **B. 分层**：tool_loop_runner 保持单次循环，最终回复批量写入
+- **C. 废弃 tool_loop_runner**：完全由多轮对话承载
 
 ---
 
-### 5.9 与现有 `tool_loop_runner` 的关系
+### 6.10 跨推理因果链
 
-**问题**：多轮对话中的工具调用与现有工具循环如何统一？
-
-现有 `tool_loop_runner.ts` 在单次推理内做同步工具循环。多轮对话场景下，工具调用链跨推理请求持久化。
-
-选项：
-
-- **A. 统一写入 `AgentConversationMemory`**：工具调用的中间消息（assistant tool_calls + tool results）作为 `ConversationEntry` 写入对话记忆。单次推理内和多轮推理间使用同一套存储。
-- **B. 分层**：`tool_loop_runner` 保持单次循环逻辑。最终 assistant 回复产出后，整轮对话批量写入。
-- **C. 废弃 `tool_loop_runner`**：工具循环完全由多轮对话机制承载。
-
-**待讨论**：选择哪种？
+- **A. 引用链**：`ConversationEntry.source_inference_id`
+- **B. 延迟**：首版只记录 inference_id，不做完整因果图
 
 ---
 
-### 5.10 跨推理因果链
+### 6.11 一对多 / 多对多对话
 
-**问题**：多轮对话中推理之间的因果关系如何追踪？
+多 agent 场景下不再有 "对方 = user" 的映射。所有 agent 以各自身份出现在 transcript 中。
+`ConversationFormatConfig.transcript.speaker_format` 支持 per-speaker 覆盖：
 
-在 agent 视角模型下：
-- 推理 A 产出了某条 assistant 消息
-- 该消息被存入多个 agent 的对话记忆中（可能被各自修改）
-- 推理 B 基于自己的对话记忆做出了决策
-- B 的决策可能受到 A 产出内容被修改的影响
+```yaml
+speaker_format:
+  default:
+    prefix: '"{speaker_id}": "'
+    suffix: '"\n'
+  assistant9:                          # 特定 agent 的自定义格式
+    prefix: '[助理9] '
+    suffix: '\n'
+```
 
-选项：
-
-- **A. 引用链**：每条 `ConversationEntry` 携带 `source_inference_id` → 指向上次推理。修改记录在 `EntryModification` 中。
-- **B. 延迟**：首版只记录 `source_inference_id` 和 `modifications` 链，不做完整的因果图。
-
-**待讨论**：阶段一需要多复杂的因果追踪？
-
----
-
-### 5.11 一对多 / 多对多对话（未来方向）
-
-当前设计只覆盖一对一 agent 对话。以下问题作为未来参考：
-
-- 多对多对话中，agent 是否只看到"自己 vs 所有人"的合并视图？还是保留每个参与者独立的对话流？
-- 一对多广播场景（一个 agent 对多个 agent 发言），各 agent 记忆中同一条消息的 `source_inference_id` 相同但 `recorded_by` 不同？
-- 群组对话的视角转换：发往模型时，如何处理多于两个参与者的消息？是否将其他所有参与者映射为 `user`？
-
-**当前决定**：阶段一仅实现一对一 agent 对话，但类型设计中考虑此扩展点。
-例如 `speaker_agent_id` 是单个 agent ID（而非 `'other'`），为多参与者留空间。
+当前 agent 自己的消息在 transcript 中如何标记（高亮？加粗？注入点前？）也由配置决定。
 
 ---
 
-## 6. 优先级与分期
+## 7. 优先级与分期
 
-### 阶段一（核心多轮对话，一对一 agent）
+### 阶段一（核心：持久化 + 组装引擎 + 一对一）
 
 1. `ConversationEntry` + `AgentConversationMemory` 类型定义
-2. 持久化（SQLite / ConversationStore 抽象，取决于 §5.3 结论）
-3. 新增 `conversation_history` slot
-4. `runConversationHistoryTrack` 轨道实现
-5. `adaptPromptTreeToAiMessages` 扩展：视角转换 + 多消息生成
-6. `InferenceContext` 扩展（`agent_conversation_memory`、`current_agent_id`）
-7. 轻量路径 profile（`chat-follow-up`）
-8. 基础压缩（滑动窗口截断）
+2. 持久化（方案待 §6.3 结论）
+3. `ConversationFormatConfig` 类型 + YAML schema 定义
+4. `ConversationAssembler` 实现（取代 `adaptPromptTreeToAiMessages`）
+5. `runConversationHistoryTrack` 轨道
+6. `InferenceContext` 扩展
+7. 轻量路径 profile
+8. 基础压缩（滑动窗口）
 
-### 阶段二（压缩与追踪）
+### 阶段二（多 agent + 注入点 + 摘要）
 
-1. 摘要压缩（混合策略）
-2. `EntryModification` 溯源链完善
-3. 跨推理因果链
+1. 多 agent transcript 嵌入
+2. 消息级别 placement（AI 注入点）
+3. 伪 role 格式注入（jailbreak 模式）
+4. 摘要压缩
+5. 压缩到单一 role
 
 ### 阶段三（高级特性）
 
 1. 自适应轨道选择
 2. 与 `tool_loop_runner` 统一
-3. 一对多 / 多对多对话
-4. Tag 系统
+3. Tag 系统
+4. 完整的跨推理因果图
+
+### 前置依赖
+
+- **结构化语法解析器**（`apps/server/src/parser/`，`docs/capabilities/STRUCTURED_PARSER.md`）：
+  已完成实现。`render()` 一步渲染 API 覆盖阶段一所需的全部模板能力（speaker_format
+  prefix/suffix、role_format、turn_delimiter 等）。`createParser()` 工厂模式为阶段二的
+  自定义修饰符/块处理器提供扩展点。不再有阻塞阶段一的解析器缺口。
 
 ---
 
-## 7. 决策记录
+## 8. 决策记录
 
 ### 已确认
 
-- [x] **消息存储格式**（§5.1）：自定义 `ConversationEntry` 类型，不复用 `AiMessage`。`AiMessage` 是模型传输格式，对话记忆是 agent 视角持久化格式
-- [x] **Agent 中心化**（§1）：每个 agent 持有自己的对话记忆副本，项目不保证完整性，只保证可被追踪性
-- [x] **阶段一范围**（§5.11）：仅一对一 agent 对话，类型设计预留多参与者扩展
+- [x] **消息存储格式**（§6.1）：自定义 `ConversationEntry` 类型。`AiMessage` 是传输格式，`ConversationEntry` 是持久化格式
+- [x] **Agent 中心化**（§1）：每个 agent 持有自己的对话记忆副本。项目不保证完整性，只保证可被追踪性
+- [x] **可配置组装引擎**（§2-3）：`ConversationFormatConfig` + `ConversationAssembler` 取代硬编码的 `adaptPromptTreeToAiMessages`
+- [x] **多 agent 场景不映射 user 角色**（§2.3）：多 agent transcript 直接嵌入消息内部，不做 agent→user 映射
+- [x] **ConversationAssembler 向后兼容**（§6.7）：现有 3 条消息行为是默认配置实例
+- [x] **结构化语法解析器**（§3.4）：`apps/server/src/parser/` 已完成实现，`render()` /
+  `createParser()` / `parseTemplate() → renderAst()` 三种 API 覆盖阶段一至阶段二的模板需求。
+  `ConversationFormatConfig.parser_syntax` 直接映射到 `ParserSyntaxConfig`。
 
 ### 待确认
 
-- [ ] §5.1 `ConversationEntry` 完整字段定义（是否需要 `original_content`、`modifications` 保留深度）
-- [ ] §5.2 溯源追踪粒度（操作者格式：字符串约定 vs 结构化 vs 能力标注）
-- [ ] §5.3 持久化方案（Prisma JSON vs ConversationStore 抽象 vs Memory 系统）
-- [ ] §5.4 `conversation_history` slot 与 `message_role` 的矛盾处理
-- [ ] §5.5 视角转换的时机（轨道内 vs 适配器内）
-- [ ] §5.6 压缩策略（摘要 vs 窗口 vs 混合）
-- [ ] §5.7.1 单一 section vs 多 section
-- [ ] §5.7.3 压缩逻辑是在轨道内还是轨道外
-- [ ] §5.8 轻量路径策略（静态 profile vs 动态选择 vs 自适应）
-- [ ] §5.9 tool_loop_runner 关系
-- [ ] §5.10 因果链复杂度
+- [ ] §6.1 `ConversationEntry` 字段细节（original_content 必要性、modifications 深度、content 类型）
+- [ ] §6.2 溯源追踪粒度（字符串 vs 结构化 vs 能力标注）
+- [ ] §6.3 持久化方案（Prisma JSON vs ConversationStore 抽象 vs Memory 系统）
+- [ ] §6.4 `ConversationFormatConfig` 配置位置和 scope（全局 vs per-conversation）
+- [ ] §6.6 压缩逻辑在轨道内还是轨道外
+- [ ] §6.8 轻量路径策略（静态 profile vs 动态 vs 自适应）
+- [ ] §6.9 tool_loop_runner 关系
+- [ ] §6.10 因果链复杂度

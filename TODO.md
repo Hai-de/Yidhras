@@ -20,7 +20,7 @@
 
 - [x] 1. 正则引擎 → `data_cleaner.regex` — 含 ReDoS 防护（长度限制、嵌套量词检测、超时、匹配计数上限）
 - [x] 4. 基础字符串方法 → `data_cleaner.string` — 7 种模式（trim/lowercase/uppercase/collapse_ws/strip_html/strip_control/strip_punctuation）
-- [ ] 2. 结构化语法解析器
+- [x] 2. 结构化语法解析器
 - [ ] 3. 专用语义提取/验证库
 - [ ] 5. 自然语言处理（NLP）与模糊技术
 - [ ] 6. 规则引擎与决策流

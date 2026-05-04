@@ -1,0 +1,38 @@
+manifest_version: "plugin/v1"
+id: "template-engine"
+name: "Template Engine Cleaner"
+version: "1.0.0"
+kind: "data_cleaner"
+
+entrypoints:
+  server:
+    source: "server.js"
+    runtime: "node_esm"
+
+compatibility:
+  yidhras: ">=0.1.0"
+  pack_id: "yidhras-system"
+
+requested_capabilities: []
+
+contributions:
+  server:
+    context_sources: []
+    prompt_workflow_steps: []
+    intent_grounders: []
+    pack_projections: []
+    api_routes: []
+    step_contributors: []
+    rule_contributors: []
+    query_contributors: []
+
+load:
+  priority: 80
+
+provides:
+  - key: "data_cleaner.template"
+    version: "1.0.0"
+
+metadata:
+  author: "Yidhras"
+  description: "提供可配置的模板字符串渲染：变量插值、修饰符链、条件块、迭代块"
