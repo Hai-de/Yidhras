@@ -13,7 +13,8 @@ export type PromptFragmentSlot =
   | 'memory_long_term'
   | 'memory_summary'
   | 'output_contract'
-  | 'post_process';
+  | 'post_process'
+  | 'conversation_history';
 
 /**
  * 单个 Slot 的声明式配置。

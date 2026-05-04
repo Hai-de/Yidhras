@@ -88,3 +88,13 @@ slots:
     include_in_combined: true
     combined_heading: "Post Process Prompt"
     enabled: true
+
+  conversation_history:
+    id: "conversation_history"
+    display_name: "对话历史"
+    description: "多轮对话 transcript 注入槽位"
+    default_priority: 50
+    message_role: user
+    include_in_combined: true
+    combined_heading: "Conversation History"
+    enabled: true

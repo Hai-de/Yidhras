@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { APP_DEFAULTS,AppConfigSchema } from './app.js';
 import { CLOCK_DEFAULTS, ClockConfigSchema } from './clock.js';
+import { CONVERSATION_CONFIG_DEFAULTS, ConversationConfigSchema } from './conversation.js';
 import { DATABASE_DEFAULTS, DatabaseConfigSchema } from './database.js';
 import { FEATURES_DEFAULTS, FeaturesConfigSchema } from './features.js';
 import { LOGGING_DEFAULTS, LoggingConfigSchema } from './logging.js';
@@ -30,6 +31,7 @@ export const RuntimeConfigSchema = z
     clock: ClockConfigSchema,
     scheduler: SchedulerConfigSchema,
     prompt_workflow: PromptWorkflowConfigSchema,
+    conversation: ConversationConfigSchema,
     runtime: RuntimeConfig_DomainSchema,
     features: FeaturesConfigSchema
   })
@@ -51,6 +53,7 @@ export const BUILTIN_DEFAULTS: RuntimeConfig = {
   clock: CLOCK_DEFAULTS,
   scheduler: SCHEDULER_DEFAULTS,
   prompt_workflow: PROMPT_WORKFLOW_DEFAULTS,
+  conversation: CONVERSATION_CONFIG_DEFAULTS,
   runtime: RUNTIME_DEFAULTS,
   features: FEATURES_DEFAULTS
 };
@@ -60,6 +63,8 @@ export {
   AppConfigSchema,
   CLOCK_DEFAULTS,
   ClockConfigSchema,
+  CONVERSATION_CONFIG_DEFAULTS,
+  ConversationConfigSchema,
   DATABASE_DEFAULTS,
   DatabaseConfigSchema,
   FEATURES_DEFAULTS,
@@ -88,6 +93,7 @@ export {
 
 export type { AppConfig } from './app.js';
 export type { ClockConfig } from './clock.js';
+export type { ConversationConfig } from './conversation.js';
 export type { DatabaseConfig } from './database.js';
 export type { FeaturesConfig } from './features.js';
 export type { LoggingConfig } from './logging.js';

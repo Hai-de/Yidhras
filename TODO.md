@@ -7,11 +7,6 @@
 
 ### 大型任务
 
-### 插件拓展
-
-- [x] 实现插件加载顺序表 → `apps/server/src/plugins/dependency_resolver.ts` — `resolveLoadOrder()`
-- [x] 实现插件之间的依赖确定 → 接口依赖 + 硬依赖 + 反向依赖检查
-
 #### 数据的策略性清洗接口
 
 > 已建立 DataCleaner 统一抽象（`packages/contracts/src/data_cleaner.ts`），全局注册表在 `apps/server/src/plugins/extensions/data_cleaner_registry.ts`。
@@ -38,49 +33,33 @@
 阶段二的 上下文构建（Context Builder）：
 - 项目尚未上线也没有使用者，需要清理上下文构建（Context Builder）中的兼容性别名，且允许提供别名，只要是符合特定的语法（语法设置的方式尚未决定）
 
-#### 阶段三：提示词构建（Prompt Workflow） — ✅ 完成
+#### 阶段三：提示词构建（Prompt Workflow）
 
 > 设计文档：`.limcode/design/prompt-workflow-system-b-advancement-design.md`
 > 推进计划：`.limcode/plans/prompt-workflow-system-b-advancement-plan.md`
 
-System B 六个 Phase 全部完成（2026-05-03）：
+##### 多轮对话（Multi-Turn Conversation） — 阶段一 ✅ 完成
 
-- [x] Phase 1: executor 接口验证（试点 `token_budget_trim`）+ pipeline runner
-- [x] Phase 2: 汇合后统一 executor（`placement_resolution`、`fragment_assembly`、`permission_filter`、`bundle_finalize`）+ profile 更新
-- [x] Phase 3: 模板轨（`runTemplateTrack`）— YAML slot → section_drafts，宏展开在轨道内完成
-- [x] Phase 4: 节点轨（`runNodeTrack`）— ContextNode → section_drafts，含策略过滤、摘要压缩、节点分组
-- [x] Phase 5: 路径统一 + 轻量路径（`profile.tracks`）+ 快照轨（`runSnapshotTrack`）+ alias 清理（`buildExtendedInferenceContext`、删除硬编码 fallback、`task_prompt_builder` 支持预构建 bundle）
-- [x] Phase 6: 清理 System A 废弃代码（删除 5 个 processor + `runPromptWorkflowV2` + `PromptTreeProcessor` + `ai_message_projection`）
+> 设计文档：`.limcode/design/multi-turn-conversation-design.md`
+> 阶段一计划：`.limcode/plans/multi-turn-conversation-phase1.md`
 
-> 架构：多轨汇合（模板轨 + 节点轨 + 快照轨）→ section_drafts → pipeline（placement → assembly → permission → budget_trim → finalize）→ bundle
+阶段一（2026-05-05 完成）：
 
-##### 已确认的决策
+- [x] `ConversationEntry` + `AgentConversationMemory` 类型定义（含 `kind`、`turn_range`、`modifications` 上限 50）
+- [x] `ConversationStore` 接口 + Prisma 实现（`ConversationMemory` + `ConversationEntryRecord` 表）
+- [x] `ConversationFormatConfig` 类型 + YAML schema + 配置域（`data/configw/conf.d/conversation.yaml`）
+- [x] `ConversationAssembler` 实现（全路径取代旧的 `adaptPromptTreeToAiMessages`，已删除）
+- [x] `conversation_history` slot 加入 `PromptFragmentSlot` 联合类型
+- [x] `runConversationHistoryTrack` 轨道（per-entry draft + `getVisibleEntries` 截断）
+- [x] `InferenceContext` 扩展（`agent_conversation_memory` + `current_agent_id` + `conversation_profile`）
+- [x] `PromptWorkflowProfile` 扩展（`conversation_profile` + `tracks.conversation_history`）
+- [x] 静态 profile（`chat-first-turn`、`chat-follow-up`）+ 轻量路径
+- [x] 滑动窗口截断（`window_turns`）+ token_budget_trim 反转裁剪
+- [x] `source_inference_id` + `derived_from_entry_ids` 写入捕获
+- [x] 推理管线接入（`task_service` 全走 assembler + `executeRunInternal` writeback）+ 双向事务写入
+- [x] 测试：29 集成测试 + 单元覆盖
 
-- [x] 权限过滤：策略过滤归入节点轨，ACL 过滤为独立 `permission_filter` executor（§12.1 选 C）
-- [x] 宏展开时序：各轨道产出保证已展开文本，宏展开是模板轨内部责任（§12.2 选 A）
-- [x] Section type 与 Slot 映射：`section_type` 为元数据，`slot` 字段驱动路由（§12.3 选 A）
-- [x] `section_policy`：废弃并全量删除（§12.4 选 C）
-- [x] 轨道函数诊断：`TrackTrace` + `track_traces`（§12.5 选 A）
-- [x] State 变更模型：mutate-in-place + `StepSnapshotSummary`（§12.6 选 A）
-- [x] `ai_message_projection` 步骤类型：从联合类型中移除（§12.7 选 B）
-- [x] 轻量路径机制：`profile.tracks` 配置控制轨道启用/跳过（§12.8 选 A）
-- [x] `PromptTree.metadata.profile_id` 填充时机：`createInitialPromptWorkflowState` 时从 profile 写入（§12.9 选 B）
-- [x] 模板轨 slot 归属：只为有模板的 slot 生成 section_draft（§12.10 选 A）
-- [x] 节点轨内部编排：硬编码顺序，不引入子 registry（§12.11 选 A）
-- [x] 试点验证覆盖：`fragment_assembly` 实现后已追加集成回归（§12.12）
-- [x] Step trace 结构化：`StepSnapshotSummary` + `notes`（§12.13 选 C）
-- [x] `denied_reason` 结构化：推迟，波及 `PromptFragmentV2` 类型变更（§12.1 关联）
-
-##### 多轮对话
-- 实现多轮对话的功能，加入一个内置的slot来容纳
-- 这个slot将会容纳对话消息存储，模型回复内容传递，记忆压缩，跨推理因果链条，工具调用，增量上下文构建
-- 这个多轮对话的具体的内容会被某些规则控制和修改，不论是压缩还是结构变化
-- 需要讨论多轮对话内容的格式的是什么，工具调用记录和内容和还有混入其他奇奇怪怪的东西，组织结构需要讨论
-- 给多轮对话的内容打上足够的tag，让其更好的定位，方案未定
-- ⚠ 多轮对话需要跨请求持久化和增量上下文构建，超出当前单次推理的 `PromptWorkflowState` 生命周期模型，需要独立架构设计
-
-思考的问题： 多轮对话中，是否每一次都需要经历整个提示词的流水线？对于一些简单的请求是否也需要经历这么重量级别的提示词流水线？
-> 设计文档 §12.8 已记录：pipeline runner 需要支持 profile 配置跳过轨道和步骤的轻量路径
+阶段二/三待实现：多 agent transcript 嵌入、注入点（伪 role 格式）、AI 摘要压缩、压缩到单一 role、因果图查询、自适应轨道选择、Tag 系统、`SlotFunctionRegistry`、per-conversation 配置覆盖
 
 ##### 插槽函数（链表）
 

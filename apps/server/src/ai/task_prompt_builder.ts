@@ -77,7 +77,10 @@ export const buildAiTaskRequestFromInferenceContextV2 = (
     actor_ref: options.actor_ref ?? buildDefaultActorRef(context),
     input: options.input ?? buildDefaultTaskInput(context),
     prompt_context: {
-      prompt_bundle_v2: bundle
+      prompt_bundle_v2: bundle,
+      agent_conversation_memory: context.agent_conversation_memory ?? null,
+      current_agent_id: context.current_agent_id,
+      conversation_profile: context.conversation_profile
     },
     output_contract: options.output_contract,
     route_hints: options.route_hints,

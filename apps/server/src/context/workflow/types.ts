@@ -56,7 +56,10 @@ export interface PromptWorkflowProfile {
     template?: boolean;
     node?: boolean;
     snapshot?: boolean;
+    conversation_history?: boolean;
   };
+  /** Multi-turn conversation: YAML profile name (e.g. 'chat-first-turn') */
+  conversation_profile?: string;
   steps: PromptWorkflowStepSpec[];
 }
 
@@ -70,7 +73,8 @@ export type PromptSectionDraftType =
   | 'memory_long_term'
   | 'memory_summary'
   | 'output_contract'
-  | 'context_snapshot';
+  | 'context_snapshot'
+  | 'conversation_history';
 
 export type PromptSectionContentBlock =
   | {

@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
 import type { AppInfrastructure } from '../app/context.js';
+import { assembleConversationMessages } from '../conversation/assembler.js';
+import { resolveConversationFormatConfig } from '../conversation/format_config.js';
 import type { PromptBundleV2 } from '../inference/prompt_bundle_v2.js';
 import { ApiError } from '../utils/api_error.js';
-import { adaptPromptTreeToAiMessages } from './adapters/prompt_tree_adapter.js';
 import { createModelGateway, type ModelGateway } from './gateway.js';
 import { resolveToolSpecsFromRegistry } from './registry.js';
 import { decodeAiTaskOutput } from './task_decoder.js';
@@ -118,10 +119,15 @@ export const createAiTaskService = ({
 
       const messages = request.prompt_context.messages
         ?? (request.prompt_context.prompt_bundle_v2
-          ? adaptPromptTreeToAiMessages(
-              request.prompt_context.prompt_bundle_v2 as PromptBundleV2,
+          ? assembleConversationMessages({
+              bundle: request.prompt_context.prompt_bundle_v2 as PromptBundleV2,
+              memory: request.prompt_context.agent_conversation_memory ?? null,
+              formatConfig: resolveConversationFormatConfig(
+                request.prompt_context.conversation_profile
+              ),
+              currentAgentId: request.prompt_context.current_agent_id,
               taskConfig
-            )
+            })
           : null);
 
       if (!messages || messages.length === 0) {

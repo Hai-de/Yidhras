@@ -1,4 +1,5 @@
 import type { ContextRun } from '../context/types.js';
+import type { AgentConversationMemory } from '../conversation/types.js';
 import type { IdentityContext } from '../identity/types.js';
 import type { MemoryContextPack } from '../memory/types.js';
 import type {
@@ -31,6 +32,10 @@ export interface InferenceRequestInput {
   attributes?: Record<string, unknown>;
   idempotency_key?: string;
   pack_id?: string | null;
+  /** Multi-turn conversation: deterministic triple-based conversation ID */
+  conversation_id?: string;
+  /** Multi-turn conversation: the other agent in the conversation */
+  listener_agent_id?: string;
 }
 
 export type InferenceJobIntentClass = 'direct_inference' | 'scheduler_periodic' | 'scheduler_event_followup' | 'replay_recovery' | 'retry_recovery' | 'operator_forced';
@@ -240,6 +245,13 @@ export interface InferenceContext extends PromptResolvableContext {
   context_run: ContextRun;
   memory_context: MemoryContextPack;
   pack_runtime: InferencePackRuntimeContract;
+
+  /** Multi-turn conversation: per-agent conversation memory (Phase 1) */
+  agent_conversation_memory?: AgentConversationMemory | null;
+  /** Multi-turn conversation: the agent ID of the current inference subject */
+  current_agent_id?: string;
+  /** Multi-turn conversation: YAML conversation profile name (e.g. 'chat-first-turn') */
+  conversation_profile?: string;
 }
 
 export interface InferenceMemoryMutationRecord {

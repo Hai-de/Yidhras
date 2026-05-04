@@ -63,6 +63,7 @@ import {
   validateProductionSecrets
 } from './config/runtime_config.js';
 import { startConfigWatcher } from './config/watcher.js';
+import { PrismaConversationStore } from './conversation/store_prisma.js';
 import { reinitializePackRuntime } from './core/runtime_reinitializer.js';
 import { SimulationManager } from './core/simulation.js';
 import { createInferenceService } from './inference/service.js';
@@ -81,6 +82,7 @@ const logger = createLogger('yidhras-server');
 
 const prisma = new PrismaClient();
 const repos = createPrismaRepositories(prisma);
+const conversationStore = new PrismaConversationStore(prisma);
 const dbProvider = process.env.PRISMA_DB_PROVIDER ?? 'sqlite';
 const packStorageAdapter = dbProvider === 'postgresql'
   ? new PostgresPackStorageAdapter(prisma)
@@ -126,6 +128,7 @@ const packScopeResolver = new PackScopeResolver(sim.getPackRuntimeRegistry());
 const appContext: AppContext = {
   repos,
   prisma,
+  conversationStore,
   packStorageAdapter,
   schedulerStorage,
   clock: sim,

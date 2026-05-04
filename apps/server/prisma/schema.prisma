@@ -639,3 +639,44 @@ model OperatorAuditLog {
   @@index([operator_id, created_at])
   @@index([pack_id, action, created_at])
 }
+
+// --- Multi-Turn Conversation ---
+
+model ConversationMemory {
+  id              String   @id @default(uuid())
+  owner_agent_id  String
+  conversation_id String
+  summary         String?
+  metadata_json   String?
+  created_at      BigInt
+  updated_at      BigInt
+
+  entries         ConversationEntryRecord[]
+
+  @@unique([owner_agent_id, conversation_id])
+}
+
+model ConversationEntryRecord {
+  id                        String   @id @default(uuid())
+  memory_id                 String
+  turn_number               Int
+  speaker_agent_id          String
+  kind                      String   @default("original")
+  original_content          String
+  current_content           String
+  provenance_json           String
+  modifications_json        String   @default("[]")
+  recorded_at               BigInt
+  source_inference_id       String?
+  derived_from_entry_ids_json String?
+  turn_range_start          Int?
+  turn_range_end            Int?
+  tool_trace_json           String?
+  tags_json                 String?
+  metadata_json             String?
+
+  memory                    ConversationMemory @relation(fields: [memory_id], references: [id], onDelete: Cascade)
+
+  @@unique([memory_id, turn_number])
+  @@index([memory_id, turn_number])
+}

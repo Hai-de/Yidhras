@@ -193,6 +193,9 @@ export interface AiTaskRequest {
   prompt_context: {
     messages?: AiMessage[];
     prompt_bundle_v2?: unknown;
+    agent_conversation_memory?: import('../conversation/types.js').AgentConversationMemory | null;
+    current_agent_id?: string;
+    conversation_profile?: string;
   };
   output_contract?: {
     mode: AiResponseMode;

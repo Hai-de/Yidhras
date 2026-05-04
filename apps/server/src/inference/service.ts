@@ -21,6 +21,7 @@ import {
   updateDecisionJobState
 } from '../app/services/inference_workflow.js';
 import { buildWorkflowPromptBundle } from '../context/workflow/orchestrator.js';
+import { writeConversationEntries } from '../conversation/writeback.js';
 import { groundDecisionIntent } from '../domain/invocation/intent_grounder.js';
 import { createMemoryRecordingService } from '../memory/recording/service.js';
 import { ApiError } from '../utils/api_error.js';
@@ -231,9 +232,36 @@ const executeRunInternal = async (
 ): Promise<InferenceRunResult> => {
   const inferenceContext = await buildInferenceContext(context, input);
   const provider = selectProvider(providers, inferenceContext.strategy);
+
+  // Multi-turn conversation: load speaker's memory and attach to inference context
+  const conversationStore = input.conversation_id
+    ? context.conversationStore
+    : null;
+  const speakerAgentId = inferenceContext.resolved_agent_id ?? input.agent_id ?? null;
+  const listenerAgentId = input.listener_agent_id ?? null;
+
+  if (conversationStore && speakerAgentId && input.conversation_id) {
+    const speakerMemory = await conversationStore.getOrCreate(
+      speakerAgentId,
+      input.conversation_id
+    );
+    inferenceContext.agent_conversation_memory = speakerMemory;
+    inferenceContext.current_agent_id = speakerAgentId;
+
+    inferenceContext.conversation_profile =
+      speakerMemory.entries.length === 0 ? 'chat-first-turn' : 'chat-follow-up';
+  }
+
+  const conversationProfileId = input.conversation_id
+    ? (inferenceContext.agent_conversation_memory?.entries.length === 0
+        ? 'chat-first-turn'
+        : 'chat-follow-up')
+    : undefined;
+
   const { bundle: prompt } = await buildWorkflowPromptBundle({
     context: inferenceContext,
-    taskType: 'agent_decision'
+    taskType: 'agent_decision',
+    profileId: conversationProfileId
   });
   const attemptCount = options?.attemptCount ?? 1;
   const maxAttempts = options?.maxAttempts ?? DEFAULT_JOB_MAX_ATTEMPTS;
@@ -409,6 +437,38 @@ const executeRunInternal = async (
     ai_invocation_id: aiInvocationId,
     memory_mutations: decisionReflection.trace_memory_mutations
   });
+
+  // Multi-turn conversation: write entries to both agents' memories
+  if (conversationStore && speakerAgentId && listenerAgentId && input.conversation_id) {
+    try {
+      const listenerMemory = await conversationStore.getOrCreate(
+        listenerAgentId,
+        input.conversation_id
+      );
+      const speakerMemory =
+        inferenceContext.agent_conversation_memory ??
+        (await conversationStore.getOrCreate(speakerAgentId, input.conversation_id));
+
+      const responseContent =
+        typeof grounded.decision.reasoning === 'string' && grounded.decision.reasoning.length > 0
+          ? grounded.decision.reasoning
+          : JSON.stringify(grounded.decision);
+
+      await writeConversationEntries({
+        store: conversationStore,
+        speakerMemory,
+        listenerMemory,
+        speakerAgentId,
+        listenerAgentId,
+        responseContent,
+        inferenceId: inferenceContext.inference_id
+      });
+    } catch (err) {
+      // Writeback failure marks the inference as failed.
+      // Design doc §5.1: "写入失败 → 推理标记失败"
+      throw new ApiError(500, 'CONVERSATION_WRITEBACK_FAIL', `Failed to write conversation entries: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
 
   return {
     inference_id: inferenceContext.inference_id,

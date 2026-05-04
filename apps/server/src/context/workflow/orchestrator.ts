@@ -1,4 +1,5 @@
 import { getPromptSlotRegistry } from '../../ai/registry.js';
+import { resolveConversationFormatConfig } from '../../conversation/format_config.js';
 import type { InferenceContext } from '../../inference/types.js';
 import { createBundleFinalizeExecutor } from './executors/bundle_finalize.js';
 import { createFragmentAssemblyExecutor } from './executors/fragment_assembly.js';
@@ -8,6 +9,7 @@ import { createTokenBudgetTrimExecutor } from './executors/token_budget_trim.js'
 import { runPipeline } from './pipeline_runner.js';
 import { selectPromptWorkflowProfile } from './profiles.js';
 import { createPromptWorkflowStepRegistry } from './registry.js';
+import { runConversationHistoryTrack } from './tracks/conversation_history_track.js';
 import { runNodeTrack } from './tracks/node_track.js';
 import { runSnapshotTrack } from './tracks/snapshot_track.js';
 import { runTemplateTrack } from './tracks/template_track.js';
@@ -56,6 +58,18 @@ export const buildWorkflowPromptBundle = async (input: {
   }
   if (tracksEnabled.snapshot !== false) {
     const r = runSnapshotTrack(input.context, slotRegistry.slots);
+    state.section_drafts.push(...r.result);
+    trackResults.push(r.trace);
+  }
+  if (tracksEnabled.conversation_history && input.context.agent_conversation_memory) {
+    const conversationProfile = profile.conversation_profile ?? input.context.conversation_profile;
+    const formatConfig = resolveConversationFormatConfig(conversationProfile);
+    const r = runConversationHistoryTrack({
+      memory: input.context.agent_conversation_memory,
+      slotRegistry: slotRegistry.slots,
+      formatConfig,
+      currentAgentId: input.context.current_agent_id ?? 'unknown'
+    });
     state.section_drafts.push(...r.result);
     trackResults.push(r.trace);
   }

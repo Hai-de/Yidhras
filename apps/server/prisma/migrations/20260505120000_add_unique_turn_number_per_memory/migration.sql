@@ -1,0 +1,2 @@
+-- CreateIndex (unique) on ConversationEntryRecord to prevent duplicate turn_number per memory
+CREATE UNIQUE INDEX IF NOT EXISTS `ConversationEntryRecord_memory_id_turn_number_key` ON `ConversationEntryRecord`(`memory_id`, `turn_number`);

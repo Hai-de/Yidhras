@@ -1,7 +1,8 @@
 import { bench, describe } from 'vitest';
 
 import { adaptPromptBundleToAiMessages } from '../../src/ai/adapters/prompt_bundle_adapter.js';
-import { adaptPromptTreeToAiMessages } from '../../src/ai/adapters/prompt_tree_adapter.js';
+import { assembleConversationMessages } from '../../src/conversation/assembler.js';
+import { DEFAULT_CONVERSATION_FORMAT_CONFIG } from '../../src/conversation/format_config.js';
 import { resolveAiRoute } from '../../src/ai/route_resolver.js';
 import { decodeAiTaskOutput } from '../../src/ai/task_decoder.js';
 import type { AiResolvedTaskConfig, AiTaskRequest, ModelGatewayResponse } from '../../src/ai/types.js';
@@ -120,12 +121,18 @@ describe('inference benchmarks', () => {
     });
   });
 
-  describe('adaptPromptTreeToAiMessages', () => {
+  describe('assembleConversationMessages', () => {
     const v2 = createV2Bundle();
     const config = createTaskConfig();
 
-    bench('adapt prompt tree v2 to messages', () => {
-      adaptPromptTreeToAiMessages(v2, config);
+    bench('assemble conversation messages (default config)', () => {
+      assembleConversationMessages({
+        bundle: v2,
+        memory: null,
+        formatConfig: DEFAULT_CONVERSATION_FORMAT_CONFIG,
+        currentAgentId: '',
+        taskConfig: config
+      });
     });
   });
 

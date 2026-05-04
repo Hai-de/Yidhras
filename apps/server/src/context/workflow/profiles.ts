@@ -61,6 +61,52 @@ const buildBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => {
         { key: 'budget_trim', kind: 'token_budget_trim' },
         { key: 'finalize', kind: 'bundle_finalize' }
       ]
+    },
+    {
+      id: 'chat-first-turn',
+      version: '1',
+      description: '多轮对话首轮 profile。完整上下文（全部 4 条轨道）。',
+      applies_to: {
+        task_types: ['agent_decision']
+      },
+      defaults: { ...config.prompt_workflow.profiles.agent_decision_default },
+      tracks: {
+        template: true,
+        node: true,
+        snapshot: true,
+        conversation_history: true
+      },
+      conversation_profile: 'chat-first-turn',
+      steps: [
+        { key: 'placement', kind: 'placement_resolution' },
+        { key: 'assembly', kind: 'fragment_assembly' },
+        { key: 'permission', kind: 'permission_filter' },
+        { key: 'budget_trim', kind: 'token_budget_trim' },
+        { key: 'finalize', kind: 'bundle_finalize' }
+      ]
+    },
+    {
+      id: 'chat-follow-up',
+      version: '1',
+      description: '多轮对话后续轮次 profile。轻量路径（template + conversation_history 轨道）。',
+      applies_to: {
+        task_types: ['agent_decision']
+      },
+      defaults: { ...config.prompt_workflow.profiles.agent_decision_default },
+      tracks: {
+        template: true,
+        node: false,
+        snapshot: false,
+        conversation_history: true
+      },
+      conversation_profile: 'chat-follow-up',
+      steps: [
+        { key: 'placement', kind: 'placement_resolution' },
+        { key: 'assembly', kind: 'fragment_assembly' },
+        { key: 'permission', kind: 'permission_filter' },
+        { key: 'budget_trim', kind: 'token_budget_trim' },
+        { key: 'finalize', kind: 'bundle_finalize' }
+      ]
     }
   ];
 };

@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import type { Express } from 'express';
 
+import type { ConversationStore } from '../conversation/store.js';
 import type { ActivePackProvider } from '../core/active_pack_provider.js';
 import type { ClockProvider } from '../core/clock_provider.js';
 import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
@@ -59,6 +60,7 @@ export interface RuntimeSource extends ClockSource, ActivePackSource {}
 export interface AppInfrastructure extends RuntimeSource {
   readonly repos: Repositories;
   readonly prisma: PrismaClient;
+  readonly conversationStore: ConversationStore;
   readonly packStorageAdapter: PackStorageAdapter;
   readonly schedulerStorage?: SchedulerStorageAdapter;
   readonly notifications: NotificationStore;

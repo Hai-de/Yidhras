@@ -79,6 +79,15 @@ export const createTokenBudgetTrimExecutor = (
       }))
       .sort((a, b) => a.priority - b.priority);
 
+    // Reverse conversation_history fragment order within the slot so that
+    // oldest entries (lowest turn_number, earliest in array) are trimmed first.
+    // Design doc §6.6: "token_budget_trim 对 conversation_history slot 采用反转裁剪"
+    for (const slot of sortedSlots) {
+      if (slot.slotId === 'conversation_history') {
+        slot.fragments = [...slot.fragments].reverse();
+      }
+    }
+
     let remaining = effectiveBudget;
     for (const { fragments } of sortedSlots) {
       for (const fragment of fragments) {
