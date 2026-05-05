@@ -25,12 +25,13 @@ export type SpeakerFormatConfig = z.infer<typeof SpeakerFormatConfigSchema>;
 
 export const TranscriptConfigSchema = z
   .object({
+    mode: z.enum(['embed', 'role_map']).default('embed'),
     turn_delimiter: z.string().default('\n'),
     speaker_format: z
       .object({
         default: SpeakerFormatConfigSchema
       })
-      .strict()
+      .catchall(SpeakerFormatConfigSchema)
   })
   .strict();
 
@@ -51,12 +52,23 @@ export const MessageAssemblyInjectionSchema = z
   .object({
     ai_fill_role: z.enum(['assistant']).default('assistant'),
     ai_fill_position: z
-      .enum(['after_last_user', 'after_last_system', 'at_end'])
+      .union([
+        z.enum(['after_last_user', 'after_last_system', 'at_end']),
+        z.number().int().nonnegative()
+      ])
       .default('after_last_user')
   })
   .strict();
 
 export type MessageAssemblyInjection = z.infer<typeof MessageAssemblyInjectionSchema>;
+
+/** Accepts a single injection config or an array (multi-injection). */
+export const MessageAssemblyInjectionFieldSchema = z.union([
+  MessageAssemblyInjectionSchema,
+  z.array(MessageAssemblyInjectionSchema)
+]);
+
+export type MessageAssemblyInjectionField = z.infer<typeof MessageAssemblyInjectionFieldSchema>;
 
 export const RoleFormatConfigSchema = z
   .object({
@@ -71,7 +83,7 @@ export const MessageAssemblyConfigSchema = z
   .object({
     merge_consecutive_same_role: z.boolean().default(true),
     slots: z.array(MessageAssemblySlotMappingSchema),
-    injection: MessageAssemblyInjectionSchema,
+    injection: MessageAssemblyInjectionFieldSchema,
     role_format: z
       .object({
         system: RoleFormatConfigSchema,
@@ -89,9 +101,11 @@ export type MessageAssemblyConfig = z.infer<typeof MessageAssemblyConfigSchema>;
 
 export const CompressionConfigSchema = z
   .object({
+    enable_ai_summary: z.boolean().default(false),
     window_turns: z.number().int().nonnegative().default(20),
     summary_trigger_turns: z.number().int().nonnegative().default(30),
-    preserve_recent: z.number().int().nonnegative().default(5)
+    preserve_recent: z.number().int().nonnegative().default(5),
+    compacted_target_role: z.enum(['system', 'developer', 'user']).default('system')
   })
   .strict();
 
@@ -123,6 +137,7 @@ export type ConversationDomainConfig = z.infer<typeof ConversationDomainConfigSc
 
 export const DEFAULT_CONVERSATION_FORMAT_CONFIG: ConversationFormatConfig = {
   transcript: {
+    mode: 'embed',
     turn_delimiter: '\n',
     speaker_format: {
       default: {
@@ -157,9 +172,11 @@ export const DEFAULT_CONVERSATION_FORMAT_CONFIG: ConversationFormatConfig = {
     }
   },
   compression: {
+    enable_ai_summary: false,
     window_turns: 20,
     summary_trigger_turns: 30,
-    preserve_recent: 5
+    preserve_recent: 5,
+    compacted_target_role: 'system'
   }
 };
 

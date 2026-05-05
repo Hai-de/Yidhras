@@ -10,7 +10,12 @@
 
 **已废弃**：`adaptPromptTreeToAiMessages` 已删除，向后兼容负担已清理（项目未上线，无意义）。
 
-**阶段二/三待实现**：多 agent transcript 嵌入、注入点、摘要压缩、因果图查询等。
+**2026-05-05 设计修订**：
+- **多 agent transcript 嵌入提升为默认模式**：一对一角色映射降级为可配置的简化选项。多 agent 场景下所有发言者以各自身份出现在 transcript 文本中，不再做 "对方 = user" 的角色映射。
+- **Jailbreak 模式移除**：伪 role 格式注入（未闭合符号等）从设计中移除。该模式依赖模型补全倾向而非显式指令，不可靠且增加了不必要的配置复杂度。
+- **阶段二聚焦**：多 agent transcript 嵌入 + 消息级别注入点。AI 摘要压缩方案待讨论确定。
+
+**阶段二/三待实现**：多 agent transcript 嵌入（默认模式）、注入点、AI 摘要压缩、因果图查询等。
 
 ---
 
@@ -61,7 +66,7 @@ turn 2: assistant2: "我今天是一只哼哼的小🐷"
 - **一对多 / 多对多 agent 对话**：阶段一类型设计预留扩展点，阶段二/三实现
 
 在一对多和多对多场景中，不存在"对方 = user"的角色映射。所有 agent 以各自身份发言，
-整个对话 transcript 作为一个整体结构嵌入模型消息中（见 §2.3）。
+整个对话 transcript 作为一个整体结构嵌入模型消息中（见 §2.2）。
 
 ### 1.4 `conversation_id` 生命周期
 
@@ -87,20 +92,12 @@ turn 2: assistant2: "我今天是一只哼哼的小🐷"
 - AI 在消息序列的哪个位置填充输出
 - 如何利用格式技巧（未闭合符号等）引导模型在指定位置续写
 
-### 2.2 一对一场景：传统角色映射
+### 2.2 默认模式：Transcript 嵌入
 
-assistant1 发往模型时，对方 agent → `user` 角色，自己 → `assistant` 角色：
+多轮对话的**默认**组装方式是将整个对话 transcript 作为文本嵌入消息序列内部。
+所有发言者以各自身份出现在 transcript 文本中，不做 "对方 = user" 的角色映射。
 
-```
-turn 1: assistant: "你好，我是assistant1"
-turn 1: user: "好久不见，我是assistant2"
-turn 2: assistant: "今天天气如何？"
-turn 2: user: "今天天气非常好"
-```
-
-### 2.3 多 agent 场景：Transcript 嵌入
-
-多个 agent 的对话直接作为 transcript 嵌入一条消息内部。不再有单一的"对方 = user"映射。
+**这意味着嵌入其中的大模型最终接受到的所有内容和标记都是可以被更改捏造**
 
 原始对话记忆：
 
@@ -111,7 +108,21 @@ turn 2: assistant4: "今天天气如何？"
 turn 2: assistant7: "今天天气非常好"
 ```
 
-发往模型时，整个 transcript 嵌入 `user` 消息内部。
+发往模型时，整个 transcript 嵌入一条消息内部（默认嵌入 `user` 角色，可通过 `slot → target_role` 映射配置）。
+
+### 2.3 一对一简化模式（配置门控）
+
+当对话参与方恰好为两个 agent 时，可通过配置启用传统角色映射：
+当前 agent 自己的发言 → `assistant` 角色，对方 agent 的发言 → `user` 角色。
+
+```
+turn 1: assistant: "你好，我是assistant1"
+turn 1: user: "好久不见，我是assistant2"
+turn 2: assistant: "今天天气如何？"
+turn 2: user: "今天天气非常好"
+```
+
+此模式为可选的简化路径，由 `ConversationFormatConfig` 中的显式配置开关控制。默认不使用。
 
 ### 2.4 消息级别 Placement：AI 在指定位置填充
 
@@ -136,26 +147,7 @@ turn 2: assistant7: "今天天气非常好"
 - AI 填充位置（`ai_fill_position`: 最后一条 assistant 消息 / 指定索引 / 匹配标记）
 - 每条消息的 `prefix` / `suffix` 定制
 
-### 2.5 伪 Role 格式注入（越狱工程）
-
-通过在 transcript 中故意留下未闭合的语法结构，利用模型补全下一个 token 的倾向，
-引导模型在指定位置续写内容：
-
-```
-user content:
-    "assistant9": "你好，我是assistant9"
-    "assistant2": "好久不见，我是assistant2"
-    "assistant4": "今天天气如何？"
-    "assistant7": "今天天气非常好"
-    {
-```
-
-故意留下未闭合的 `{`。模型倾向于补全 `}` 以及其内部的内容，但在实际提示词工程中这种未必合的符号不一定需要固定符号
-这恰好是当前 agent 需要输出的回复。assistant 角色的消息内容从 `}` 开始。
-
-**这不需要模型侧的特殊支持，是纯 token 预测行为。** 唯一代价是 user 消息内塞入了超长上下文。
-
-### 2.6 压缩到单一 Role
+### 2.5 压缩到单一 Role
 
 对话 transcript 可以从 `user` 角色折叠到 `system` 角色，释放 user 位置给新的输入：
 
@@ -186,15 +178,14 @@ user content:
                         ├── transcript_format       ← 多 agent 对话如何渲染为文本
                         │     ├── per_speaker_prefix / suffix
                         │     ├── turn_delimiter
-                        │     ├── nesting_rules
-                        │     └── jailbreak_patterns (未闭合符号等)
+                        │     └── nesting (可选，transcript 包裹在标记内)
                         │
                         ├── message_assembly        ← 格式化后内容如何映射到 AiMessage[]
                         │     ├── slot → message_role 映射
                         │     ├── merge_consecutive_same_role
                         │     ├── ai_fill_position
                         │     ├── message_prefix / suffix (per role)
-                        │     └── injection_points
+                        │     └── injection_points  (多位置、索引、自定义 placement)
                         │
                         └── compression             ← 压缩策略
                               ├── window_turns (滑动窗口截断，视图层)
@@ -214,13 +205,13 @@ AgentConversationMemory (per-agent, 持久化)
   └── metadata
        │
        ▼
-ConversationAssembler (新增)
+ConversationAssembler
   │
   ├── 1. 加载 ConversationFormatConfig
   ├── 2. 渲染 transcript: entries → 格式化文本 (按 transcript_format 规则)
   ├── 3. 压缩 (如果需要): 超出窗口 → 摘要 → 折叠到目标 role
   ├── 4. 消息组装: 格式化文本 + slot 内容 → AiMessage[] (按 message_assembly 规则)
-  ├── 5. 注入点处理: 在 ai_fill_position 处插入空的 assistant 槽位
+  ├── 5. 注入点处理: 在配置的注入位置插入空的 assistant 槽位
   └── 6. 产出 AiMessage[]
        │
        ▼
@@ -425,6 +416,9 @@ interface ConversationEntry {
   // 工具调用摘要
   tool_trace?: EntryToolTrace;       // 仅最终回复携带，中间工具消息不入记忆
 
+  // 压缩状态
+  archived?: boolean;                // 软归档标记，AI 摘要压缩后设为 true。getVisibleEntries 过滤
+
   // 元数据
   tags?: string[];
   metadata?: Record<string, unknown>;
@@ -462,6 +456,7 @@ interface EntryToolTrace {
 - `modifications` 保留修改历史，默认上限 `MAX_MODIFICATIONS_PER_ENTRY = 50`（可配置）。超限时保留最近 N 条，旧 modifications 折叠为一条归档摘要（`operator.kind = 'data_cleaner'`，`reason = 'archived_modifications'`）
 - content 为字符串，结构化附属数据通过 `metadata` 扩展
 - `source_inference_id` + `derived_from_entry_ids` 构成因果链（详见 §6.10）
+- `archived` 软归档标记 — AI 摘要压缩后设为 `true`。条目不物理删除，保留完整审计链。无限增长问题记录在 TODO.md
 
 ### 6.2 溯源追踪粒度
 
@@ -476,7 +471,9 @@ interface EntryToolTrace {
 | 用户 CLI 手动修改 | `user` | `conversation.modify` |
 | 正则过滤器匹配替换 | `data_cleaner` | `conversation.modify` |
 | 插件 hook 修改 | `plugin` | `conversation.modify` |
-| AI 摘要压缩 | `data_cleaner` | `conversation.modify` |
+| AI 摘要压缩（summary entry） | `agent` | `conversation.record` |
+
+> **注意**：AI 摘要压缩的详细审计信息（模型、token 用量、耗时等）写入专用 `CompactionAuditEntry`，不通过 `EntryProvenance` 承载。Summary entry 的 `provenance` 仅记录触发压缩的 agent 身份，完整审计链见压缩审计日志。
 
 ### 6.3 持久化方案
 
@@ -507,18 +504,14 @@ interface ConversationStore {
 **YAML**，遵循项目现有的 Zod schema → TypeScript type → YAML 序列化模式。
 
 ```yaml
-# 多 agent transcript 嵌入 user 消息的配置示例
+# 多 agent transcript 嵌入 + AI 摘要压缩的配置示例
 conversation_format:
   transcript:
     turn_delimiter: "\n"
     speaker_format:
       default:
         prefix: '"{speaker_id}": "'
-        suffix: '"'
-    nesting:
-      open_marker: "{"
-      close_marker: "}"
-      auto_close: false
+        suffix: '"\n'
 
   message_assembly:
     merge_consecutive_same_role: false
@@ -527,7 +520,6 @@ conversation_format:
         target_role: system
       - slot: conversation_history
         target_role: user
-        placement: before_assistant
     injection:
       ai_fill_role: assistant
       ai_fill_position: after_last_user
@@ -540,19 +532,21 @@ conversation_format:
         suffix: ""
 
   compression:
-    strategy: summary_window
-    window_turns: 20
-    summary_trigger_turns: 30
-    compacted_target_role: system
-    preserve_recent: 5
+    enable_ai_summary: false        # Agent 级别 opt-in，默认关闭
+    window_turns: 20                # AI 摘要可用时的视图窗口
+    summary_trigger_turns: 30       # 触发 AI 摘要的阈值
+    compacted_target_role: system   # 压缩后 transcript 折叠到哪个 role
+    preserve_recent: 5              # AI 摘要不可用时的截断兜底
 ```
 
+- `enable_ai_summary` — agent 级别开关，默认 `false`。关闭时仅使用 `window_turns` + `preserve_recent` 截断兜底，不触发 AI 摘要压缩
+- `compacted_target_role` — 压缩后对话 transcript 从 `user` 角色折叠到的目标角色（详见 §2.5）
 - YAML 描述声明式结构（transcript 格式、消息映射、压缩参数）
-- 插槽函数留给独立的 `SlotFunctionRegistry`，格式配置通过函数名引用（如 `transform_fn: "transcript.default_format"`）
+- 插槽函数留给独立的 `SlotFunctionRegistry`，格式配置通过函数名引用
 - 格式配置和函数走不同通道：YAML 配置可热加载，函数注册是低频代码操作
 - `parser_syntax` 为可选字段，不传时解析器使用默认 `{...}` / `{{...}}` 语法
 
-**阶段一 schema 范围**：阶段一 Zod schema 和 TypeScript 类型只暴露阶段一实现的字段（`transcript`、`message_assembly`、`compression`）。`nesting`、`jailbreak_patterns`、`compacted_target_role` 等阶段二/三字段不在阶段一 schema 中定义。
+**阶段二 schema 范围**：阶段二新增 `compacted_target_role` 和 `enable_ai_summary` 字段。
 
 **配置位置**：`data/configw/conf.d/conversation.yaml`，以 conversation profile 形式组织
 （`chat-first-turn`、`chat-follow-up` 等）。
@@ -570,108 +564,116 @@ conversation_format:
 `AgentConversationMemory` 构建多角色消息序列。slot 的 `message_role` 设为 `user`
 （作为 transcript 的默认嵌入位置），实际组装由 `ConversationFormatConfig` 控制。
 
-### 6.6 `runConversationHistoryTrack` 轨道
+### 6.6 压缩策略：非 AI 截断兜底 + AI 摘要增量（Hybrid）
 
-**混合方案：截断在轨内，摘要在轨外。**
+**核心思路**：截断是必要条件（保证推理不超 context window），AI 摘要是可选增强（改善截断后的上下文质量）。两者走不同执行路径：
 
-| 策略 | 位置 | 性质 | 说明 |
-|------|------|------|------|
-| `window_turns`（滑动窗口） | 轨道内 | 无损视图层截取 | 渲染参数，不影响持久化。轨道根据配置取最近 N 条 entry |
-| `summary_trigger_turns`（AI 摘要） | 轨道外 | 有损持久化压缩 | 由独立 `ConversationCompactionService` 执行，以 `EntryModification` 记录溯源 |
+| 策略 | 路径 | 性质 | 触发 | 说明 |
+|------|------|------|------|------|
+| `window_turns`（滑动窗口） | 轨道内 | 无损视图层截取 | 每次推理 | 渲染参数，不影响持久化 |
+| 截断兜底 | 轨道内 | 无持久化副作用 | entries 超过 `summary_trigger_turns` 且 AI 摘要不可用/未启用 | `getVisibleEntries` 按 `preserve_recent` 取尾部 |
+| AI 摘要 | 独立推理路径 | 有损持久化压缩 | 写入后触发，检查阈值 | 独立压缩路径，标记旧 entry 为 `archived` |
 
-**AI 摘要压缩流程**：
+**触发时机**：写入后触发（post-append）。每次 `appendEntry` / `appendEntriesInTransaction` 写入后检查 entries 数量。若超过 `summary_trigger_turns` 且 agent 启用了摘要功能，则异步触发 AI 摘要压缩。
 
-1. 当 entry 数量超过 `summary_trigger_turns` 阈值，`ConversationCompactionService` 触发
-2. 调用 AI 将旧轮次折叠为一条 summary entry（`provenance.operator.kind: 'data_cleaner'`，`capability: 'conversation.modify'`，`kind: 'summary'`）
-3. 最近 `preserve_recent` 条原始 entry 保留不折叠
-4. 轨道渲染时看到的是 "summary entry + 最近 N 条原始 entry" 的混合视图
+**Agent 级别 opt-in**：AI 摘要压缩默认关闭。每个 agent 通过配置显式启用。未启用摘要的 agent 仅依赖 `window_turns` + 截断兜底，不调用 AI 压缩。
 
-**Per-entry Section Draft**：
+**专用压缩路径（Dedicated Compaction Path）**：
 
-轨道为每条可见 `ConversationEntry` 产出一条 `PromptSectionDraft`，而非一个整体 transcript。这使得管线可以在 entry 粒度裁剪。
+摘要压缩绕过正常推理管线，使用独立的极简 AI 调用路径：
+- 不走 `conversation_history` track（消除递归依赖）
+- 不加载模板、slot、world context、persona
+- 不触发 tool loop
+- 构造单一 summarize prompt：被压缩的 entries + 指令 → 生成摘要文本
+- 摘要推理的 trace 写入专用 compaction audit log（独立于 `InferenceTrace`）
+
+```
+ConversationEntry 写入
+  │
+  ├── entries 数量 ≤ summary_trigger_turns → 不触发
+  │
+  └── entries 数量 > summary_trigger_turns
+        │
+        ├── agent 未启用摘要 → 不触发（仅依赖截断兜底）
+        │
+        └── agent 已启用摘要
+              │
+              ├── 1. 非 AI 截断兜底：getVisibleEntries 按 preserve_recent 截断（保证当前推理可用）
+              │
+              └── 2. 异步 AI 摘要压缩（独立路径）：
+                    ├── 选取待压缩的旧 entry（按 preserve_recent 之外的条目）
+                    ├── 构造 summarize prompt → 直接调用 AI Gateway
+                    ├── 生成 summary entry（kind: 'summary', turn_range 覆盖被压缩范围）
+                    ├── 标记旧 entry 为 archived: true
+                    ├── 写入 compaction audit log
+                    └── 下次推理时 getVisibleEntries 看到 summary entry + 未归档的 recent entries
+```
+
+**Entry 替换模型：软归档（Soft Archive）**：
+
+`ConversationEntry` 新增 `archived: boolean` 字段（默认 `false`）。AI 摘要压缩将旧 entry 标记为 `archived: true`，不物理删除。
+
+- 保留完整审计链（`modifications`、`source_inference_id`、`derived_from_entry_ids` 均不受影响）
+- `getVisibleEntries` 过滤掉 `archived: true` 的条目
+- entries 数组无限增长问题记录在 TODO.md，日后处理（如定期物理归档到冷存储）
+
+**Summary of summary**：接受渐进信息失真。若 agent 需要保留确切数据，应使用工具调用写入独立存储（如 world state 或专用记忆块），而非依赖对话摘要的保真度。对话摘要的职责是维持上下文连贯性，不是充当数据库。
+
+**压缩审计日志**：
+
+压缩专用路径使用独立的 audit log（区别于 `InferenceTrace`）：
 
 ```typescript
-function runConversationHistoryTrack(input: {
-  memory: AgentConversationMemory;
-  slotRegistry: Record<string, PromptSlotConfig>;
-  formatConfig: ConversationFormatConfig;
-  currentAgentId: string;
-}): TrackResult<PromptSectionDraft[]> {
-  const entries = getVisibleEntries(input.memory, input.formatConfig.compression);
-
-  return {
-    result: entries.map((entry) => {
-      const role = resolveEntryRole(entry, input.currentAgentId, input.formatConfig);
-      return {
-        id: crypto.randomUUID(),
-        track: 'conversation_history',
-        section_type: 'conversation_history',
-        slot: 'conversation_history',
-        priority: entry.turn_number,
-        source_node_ids: [],
-        content_blocks: [
-          {
-            kind: 'text',
-            text: renderEntryText(entry, input.formatConfig.transcript),
-            metadata: { entry_id: entry.id, turn_number: entry.turn_number }
-          }
-        ],
-        removable: true,
-        estimated_tokens: estimateTokensForEntry(entry),
-        metadata: {
-          entry_id: entry.id,
-          entry_role: role,           // 'assistant' | 'user' | 'developer'
-          speaker_agent_id: entry.speaker_agent_id,
-          conversation_entry_kind: entry.kind  // 'original' | 'summary'
-        }
-      };
-    })
-  };
+interface CompactionAuditEntry {
+  id: string;
+  agent_id: string;
+  conversation_id: string;
+  triggered_at: number;
+  source_entry_ids: string[];      // 被压缩的原始 entry ID
+  summary_entry_id: string;         // 生成的 summary entry ID
+  summary_model: string;            // 使用的 AI 模型
+  summary_prompt_tokens: number;
+  summary_completion_tokens: number;
+  summary_duration_ms: number;
+  status: 'success' | 'failed';
+  error_message?: string;
 }
 ```
 
-关键点：
-
-- **每条 entry 是一个 draft**，使管线可以在 entry 粒度裁剪
-- **`removable: true`**，允许 `token_budget_trim` 逐条裁剪旧的条目
-- **`metadata.entry_role`** 携带该 entry 到消息 role 的映射，供 assembler 使用
-- **`priority = turn_number`**，管线排序天然保证时间序
-
-**压缩后 entries 数组结构与截断逻辑**：
-
-压缩后的 entries 数组采用"头部摘要 + 尾部原始"的稳定结构：`[summaryEntries..., recentEntries...]`，summary 在前，recent 在后，按 turn_number 升序。
-
-`window_turns` 只作用于 `kind === 'original'` 的 entries，summary entry 始终包含：
+**`getVisibleEntries` 更新**：
 
 ```typescript
 function getVisibleEntries(
   memory: AgentConversationMemory,
   compression: CompressionConfig
 ): ConversationEntry[] {
-  const { window_turns } = compression;
-  const sorted = [...memory.entries].sort((a, b) => a.turn_number - b.turn_number);
+  const { window_turns, preserve_recent } = compression;
+  
+  // Filter out archived entries
+  const active = memory.entries.filter(e => !e.archived);
+  const sorted = [...active].sort((a, b) => a.turn_number - b.turn_number);
 
   const summaryEntries = sorted.filter(e => e.kind === 'summary');
-  const recentEntries = sorted.filter(e => e.kind !== 'summary');
+  const originalEntries = sorted.filter(e => e.kind !== 'summary');
 
-  const visibleRecent = window_turns
-    ? recentEntries.slice(-window_turns)
-    : recentEntries;
+  // AI summary available: show summary + window_turns recent originals
+  // AI summary not available (fallback): truncate to preserve_recent
+  const effectiveWindow = summaryEntries.length > 0
+    ? (window_turns && window_turns > 0 ? window_turns : undefined)
+    : (preserve_recent && preserve_recent > 0 ? preserve_recent : undefined);
+
+  const visibleRecent = effectiveWindow
+    ? originalEntries.slice(-effectiveWindow)
+    : originalEntries;
 
   return [...summaryEntries, ...visibleRecent];
 }
 ```
 
-**Token 预算与窗口截断的双层约束**：
-
-两层裁剪，预算优先。`token_budget_trim` 优先级高于 `window_turns`。
-
-1. **第一层：`window_turns` 按 turn 截断** — 粗粒度，保证核心上下文可见（轨道内 `getVisibleEntries`）
-2. **第二层：`token_budget_trim` 按 token 裁剪** — 细粒度，保证总预算不超限（管线步骤）
-
-`token_budget_trim` 对 `conversation_history` slot 采用**反转裁剪**：从最旧的 entry 开始裁剪，保留最近的 entries。这是因为 `priority = turn_number` 使得高 turn_number 排在后面，而裁剪按低优先级先裁。
-
-`conversation_history` slot 的 `default_priority` 设为中等（如 50），低于 system/role 但高于辅助内容，确保系统指令不被裁而对话历史在预算不足时优先级低于核心上下文。
+关键变化：
+- 过滤 `archived` 条目
+- 无 AI 摘要时用 `preserve_recent` 截断（兜底），有摘要时用 `window_turns`
+- 其余逻辑不变（summary 始终包含，recent 在后，按 turn_number 升序）
 
 ### 6.7 `ConversationAssembler` 接口
 
@@ -834,9 +836,9 @@ ToolLoopRunner (内存中迭代 AiMessage[], 不变)
 4. **影响分析（阶段二）**：删除 entry → 反向查询哪些摘要依赖它
 5. **重放验证（阶段二）**：给定 `source_inference_id` 查出 `prompt_bundle`，用新模型重跑比对
 
-### 6.11 一对多 / 多对多对话
+### 6.11 Transcript 嵌入模式与 Per-Speaker 覆盖
 
-多 agent 场景下不再有 "对方 = user" 的映射。所有 agent 以各自身份出现在 transcript 中。
+所有对话均默认使用 transcript 嵌入模式（§2.2）。一对一角色映射（§2.3）为配置门控的简化选项。
 `ConversationFormatConfig.transcript.speaker_format` 支持 per-speaker 覆盖：
 
 ```yaml
@@ -855,7 +857,7 @@ speaker_format:
 
 ## 7. 优先级与分期
 
-### 阶段一（核心：持久化 + 组装引擎 + 一对一）
+### 阶段一（核心：持久化 + 组装引擎 + 一对一对话） ✅ 完成
 
 1. `ConversationEntry` + `AgentConversationMemory` 类型定义（含 `kind`、`turn_range` 字段，`modifications` 上限 50）
 2. `ConversationStore` 接口 + Prisma 实现（`ConversationMemory` + `ConversationEntryRecord` 表）
@@ -869,14 +871,17 @@ speaker_format:
 10. 推理成功后的双向事务写入（§5.1 写入回程）
 11. 向后兼容验收：现有 3 消息行为可被默认 YAML 配置精确复现
 
-### 阶段二（多 agent + 注入点 + 摘要）
+### 阶段二（多 agent transcript 嵌入 + 注入点 + AI 摘要压缩）
 
-1. 多 agent transcript 嵌入
-2. 消息级别 placement（AI 注入点）
-3. 伪 role 格式注入（jailbreak 模式）
-4. AI 摘要压缩（`ConversationCompactionService`，轨道外持久化）
-5. 压缩到单一 role
-6. 因果图查询 API（沿 `derived_from_entry_ids` 双向追溯）
+1. 多 agent transcript 嵌入（默认模式，取代一对一角色映射）
+2. 消息级别注入点（多位置、命名注入点、索引定位）
+3. 一对一角色映射降级为配置门控的简化选项
+4. `ConversationEntry.archived` 字段 + `getVisibleEntries` 过滤逻辑
+5. AI 摘要压缩 — Hybrid 方案（截断兜底 + 独立压缩路径 + 写入后触发 + 软归档）
+6. `CompactionAuditEntry` 类型 + 压缩审计日志
+7. `enable_ai_summary` agent 级别 opt-in + `compacted_target_role` 配置
+8. 压缩到单一 role（详见 §2.5）
+9. 因果图查询 API（沿 `derived_from_entry_ids` 双向追溯）
 
 ### 阶段三（高级特性）
 
@@ -902,7 +907,8 @@ speaker_format:
 - [x] **消息存储格式**（§6.1）：自定义 `ConversationEntry` 类型。`AiMessage` 是传输格式，`ConversationEntry` 是持久化格式。`original_content` + `current_content` 双字段，`kind: 'original' | 'summary'` 区分原始/摘要 entry，`turn_range` 记录被折叠的 turn 范围，`modifications` 上限 50 条
 - [x] **Agent 中心化**（§1.1）：每个 agent 持有自己的对话记忆副本。项目保证可审计性（auditability），不保证操作者身份的可信验证
 - [x] **可配置组装引擎**（§2-3）：`ConversationFormatConfig` + `ConversationAssembler` 取代硬编码的 `adaptPromptTreeToAiMessages`
-- [x] **多 agent 场景不映射 user 角色**（§2.3）：多 agent transcript 直接嵌入消息内部
+- [x] **Transcript 嵌入为默认模式**（§2.2）：多 agent transcript 直接嵌入消息内部，不做 "对方 = user" 的角色映射。一对一角色映射为配置门控的简化选项
+- [x] **Jailbreak 模式移除**（2026-05-05 修订）：伪 role 格式注入（未闭合符号）从设计中移除，依赖模型补全倾向不可靠且增加不必要的配置复杂度
 - [x] **ConversationAssembler 向后兼容**（§6.7）：现有 3 条消息行为是默认配置实例，精确复现为阶段一验收条件
 - [x] **结构化语法解析器**（§3.4）：`apps/server/src/parser/` 已完成实现
 - [x] **溯源追踪粒度**（§6.2）：结构化 `EntryProvenance`（`operator` + `capability`）
@@ -917,3 +923,7 @@ speaker_format:
 - [x] **轻量路径策略**（§6.8）：阶段一用静态 profile（`chat-first-turn`、`chat-follow-up`），阶段二/三可插 `resolveConversationProfile` 自适应选择器
 - [x] **tool_loop_runner 关系**（§6.9）：分层 + 轻量 trace annotation — 工具调用链在内存中迭代，仅最终回复写入 `ConversationEntry` + `tool_trace` 摘要。阶段一保持摘要格式不扩展
 - [x] **因果链**（§6.10）：引用链分两期 — 阶段一写入时捕获 `source_inference_id` + `derived_from_entry_ids`（最佳努力引用，不建外键约束），阶段二构建因果关系查询能力
+- [x] **AI 摘要压缩方案**（§6.6，2026-05-05 确认）：Hybrid 方案 — 非 AI 截断兜底（`preserve_recent` 截尾）+ AI 摘要增量（独立压缩路径，不走推理管线）。写入后触发（post-append），agent 级别 opt-in（`enable_ai_summary`，默认关闭）。软归档（`archived: true`）保留审计完整性，无限增长问题记录 TODO.md
+- [x] **压缩专用路径**（§6.6）：AI 摘要使用独立推理路径 — 绕过 conversation_history track、不加载模板/slot/world context/persona、不触发 tool loop。审计走专用 `CompactionAuditEntry` 日志
+- [x] **Summary of summary**（§6.6）：接受渐进信息失真。需保留确切数据时 agent 应使用工具写入独立存储（world state / 记忆块），对话摘要的职责是维持上下文连贯性而非充当数据库
+- [x] **压缩到单一 role**（§2.5）：对话 transcript 折叠到 `compacted_target_role`（默认 `system`），释放 `user` 位置给新输入

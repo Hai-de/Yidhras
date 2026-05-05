@@ -69,6 +69,9 @@ export interface ConversationEntry {
   // Tool call trace (final reply only)
   tool_trace?: EntryToolTrace;
 
+  // Soft archive (AI summary compaction)
+  archived?: boolean;
+
   // Metadata
   tags?: string[];
   metadata?: Record<string, unknown>;

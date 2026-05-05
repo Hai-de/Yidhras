@@ -7,7 +7,7 @@ import type { AiMessage, AiResolvedTaskConfig } from '../ai/types.js';
 import type { PromptBlock } from '../inference/prompt_block.js';
 import type { PromptBundleV2 } from '../inference/prompt_bundle_v2.js';
 import type { PromptFragmentV2 } from '../inference/prompt_fragment_v2.js';
-import type { ConversationFormatConfig } from './format_config.js';
+import type { ConversationFormatConfig, MessageAssemblyInjection } from './format_config.js';
 import type { AgentConversationMemory } from './types.js';
 
 // ── Helpers ────────────────────────────────────────────────
@@ -27,6 +27,7 @@ interface SlotEntry {
 interface ConversationFragmentEntry {
   text: string;
   entryRole: string;
+  entryKind: string;
   turnNumber: number;
   fragmentId: string;
 }
@@ -110,6 +111,10 @@ function extractConversationFragments(
         text: collectFragmentText(f),
         entryRole:
           typeof metadata.entry_role === 'string' ? metadata.entry_role : 'user',
+        entryKind:
+          typeof metadata.conversation_entry_kind === 'string'
+            ? metadata.conversation_entry_kind
+            : 'original',
         turnNumber:
           typeof metadata.turn_number === 'number' ? metadata.turn_number : 0,
         fragmentId: f.id
@@ -196,8 +201,9 @@ export function assembleConversationMessages(input: ConversationAssemblerInput):
     }
   }
 
-  // 2. Extract conversation_history fragments and group by entry_role
+  // 2. Extract conversation_history fragments and group by entry_role (or embed as transcript)
   const conversationFragments = extractConversationFragments(bundle);
+  const transcriptMode = formatConfig.transcript.mode ?? 'embed';
 
   const convEntriesByRole: Record<SlotRole, string[]> = {
     system: [],
@@ -209,11 +215,38 @@ export function assembleConversationMessages(input: ConversationAssemblerInput):
     if (cf.text.trim().length === 0) {
       continue;
     }
-    const role = cf.entryRole as SlotRole;
-    if (convEntriesByRole[role]) {
-      convEntriesByRole[role].push(cf.text);
+    if (transcriptMode === 'embed') {
+      // Embed mode: all fragments go to the conversation_history target role
+      const targetRole =
+        (slotRoleMap.get('conversation_history') as SlotRole | undefined) ?? 'user';
+      if (convEntriesByRole[targetRole]) {
+        convEntriesByRole[targetRole].push(cf.text);
+      } else {
+        convEntriesByRole.user.push(cf.text);
+      }
     } else {
-      convEntriesByRole.user.push(cf.text);
+      // role_map mode: use per-entry role metadata
+      const role = cf.entryRole as SlotRole;
+      if (convEntriesByRole[role]) {
+        convEntriesByRole[role].push(cf.text);
+      } else {
+        convEntriesByRole.user.push(cf.text);
+      }
+    }
+  }
+
+  // 2a. Compaction: if summary entries exist, fold all conversation text into compacted_target_role
+  const hasSummaryEntry = conversationFragments.some((cf) => cf.entryKind === 'summary');
+  if (hasSummaryEntry) {
+    const compactedRole =
+      (formatConfig.compression.compacted_target_role as SlotRole | undefined) ?? 'system';
+    const allConvText: string[] = [];
+    for (const role of ['system', 'developer', 'user'] as SlotRole[]) {
+      allConvText.push(...convEntriesByRole[role]);
+      convEntriesByRole[role] = [];
+    }
+    if (allConvText.length > 0) {
+      convEntriesByRole[compactedRole] = allConvText;
     }
   }
 
@@ -339,15 +372,27 @@ export function assembleConversationMessages(input: ConversationAssemblerInput):
     messages.push(userMsg);
   }
 
-  // -- AI fill position (only when conversation history is present) --
-  const injection = formatConfig.message_assembly.injection;
+  // -- AI fill position(s) (only when conversation history is present) --
+  const injectionField = formatConfig.message_assembly.injection;
+  const injections = Array.isArray(injectionField) ? injectionField : [injectionField];
   const hasConversationContent = conversationFragments.length > 0;
-  if (injection.ai_fill_role === 'assistant' && hasConversationContent) {
-    const aiMsgIndex = resolveInjectionIndex(messages, injection.ai_fill_position);
-    messages.splice(aiMsgIndex, 0, {
-      role: 'assistant',
-      parts: [{ type: 'text', text: '' }]
-    });
+
+  if (hasConversationContent) {
+    // Resolve all indices first, then insert descending to avoid index shifting
+    const pending: Array<{ index: number; injection: MessageAssemblyInjection }> = [];
+    for (const inj of injections) {
+      if (inj.ai_fill_role !== 'assistant') continue;
+      const idx = resolveInjectionIndex(messages, inj.ai_fill_position);
+      pending.push({ index: idx, injection: inj });
+    }
+    // Insert right-to-left so earlier indices remain valid
+    pending.sort((a, b) => b.index - a.index);
+    for (const { index } of pending) {
+      messages.splice(index, 0, {
+        role: 'assistant',
+        parts: [{ type: 'text', text: '' }]
+      });
+    }
   }
 
   return messages;
@@ -355,8 +400,11 @@ export function assembleConversationMessages(input: ConversationAssemblerInput):
 
 function resolveInjectionIndex(
   messages: AiMessage[],
-  position: string
+  position: string | number
 ): number {
+  if (typeof position === 'number') {
+    return Math.min(position, messages.length);
+  }
   switch (position) {
     case 'after_last_user': {
       for (let i = messages.length - 1; i >= 0; i--) {

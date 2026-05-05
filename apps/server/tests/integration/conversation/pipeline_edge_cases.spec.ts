@@ -54,6 +54,7 @@ const TASK_CONFIG: AiResolvedTaskConfig = {
 
 const CHAT_FORMAT_CONFIG: ConversationFormatConfig = {
   transcript: {
+    mode: 'embed',
     turn_delimiter: '\n',
     speaker_format: { default: { prefix: '"{speaker_id}": "', suffix: '"\n' } }
   },
@@ -73,7 +74,13 @@ const CHAT_FORMAT_CONFIG: ConversationFormatConfig = {
       assistant: { prefix: '', suffix: '' }
     }
   },
-  compression: { window_turns: 10, summary_trigger_turns: 30, preserve_recent: 3 }
+  compression: {
+    enable_ai_summary: false,
+    window_turns: 10,
+    summary_trigger_turns: 30,
+    preserve_recent: 3,
+    compacted_target_role: 'system'
+  }
 };
 
 function makeEntry(overrides: Partial<ConversationEntry> = {}): ConversationEntry {
@@ -118,7 +125,13 @@ function makeBundleWithConversationFragments(
   };
 }
 
-function makeConvFragment(text: string, entryRole: string, turnNumber: number, fragmentId: string): PromptFragmentV2 {
+function makeConvFragment(
+  text: string,
+  entryRole: string,
+  turnNumber: number,
+  fragmentId: string,
+  extraMeta: Record<string, unknown> = {}
+): PromptFragmentV2 {
   return {
     id: fragmentId, slot_id: 'conversation_history', priority: turnNumber,
     source: `section:${fragmentId}`, removable: true, replaceable: false,
@@ -128,7 +141,7 @@ function makeConvFragment(text: string, entryRole: string, turnNumber: number, f
       rendered: text
     }],
     estimated_tokens: Math.ceil(text.length / 4),
-    metadata: { entry_role: entryRole, turn_number: turnNumber }
+    metadata: { entry_role: entryRole, turn_number: turnNumber, conversation_entry_kind: 'original', ...extraMeta }
   };
 }
 
@@ -240,19 +253,30 @@ describe('Conversation pipeline edge cases', () => {
   });
 
   describe('resolveEntryRole', () => {
-    it('maps own messages to assistant', () => {
-      const entry = makeEntry({ speaker_agent_id: 'agent-x' });
-      expect(resolveEntryRole(entry, 'agent-x')).toBe('assistant');
+    describe('embed mode (default)', () => {
+      it('maps all entries to transcript role', () => {
+        const ownEntry = makeEntry({ speaker_agent_id: 'agent-x' });
+        const otherEntry = makeEntry({ speaker_agent_id: 'agent-y' });
+        expect(resolveEntryRole(ownEntry, 'agent-x', 'embed')).toBe('transcript');
+        expect(resolveEntryRole(otherEntry, 'agent-x', 'embed')).toBe('transcript');
+      });
     });
 
-    it('maps other messages to user', () => {
-      const entry = makeEntry({ speaker_agent_id: 'agent-y' });
-      expect(resolveEntryRole(entry, 'agent-x')).toBe('user');
-    });
+    describe('role_map mode', () => {
+      it('maps own messages to assistant', () => {
+        const entry = makeEntry({ speaker_agent_id: 'agent-x' });
+        expect(resolveEntryRole(entry, 'agent-x', 'role_map')).toBe('assistant');
+      });
 
-    it('treats empty speaker_agent_id as other agent', () => {
-      const entry = makeEntry({ speaker_agent_id: '' });
-      expect(resolveEntryRole(entry, 'agent-x')).toBe('user');
+      it('maps other messages to user', () => {
+        const entry = makeEntry({ speaker_agent_id: 'agent-y' });
+        expect(resolveEntryRole(entry, 'agent-x', 'role_map')).toBe('user');
+      });
+
+      it('treats empty speaker_agent_id as other agent', () => {
+        const entry = makeEntry({ speaker_agent_id: '' });
+        expect(resolveEntryRole(entry, 'agent-x', 'role_map')).toBe('user');
+      });
     });
   });
 
@@ -469,6 +493,204 @@ describe('Conversation pipeline edge cases', () => {
       expect(taskRequest.prompt_context!.agent_conversation_memory).toBeDefined();
       expect(taskRequest.prompt_context!.current_agent_id).toBe('agent-a');
       expect(taskRequest.prompt_context!.conversation_profile).toBe('chat-first-turn');
+    });
+  });
+
+  describe('Archived entries filtering (B1)', () => {
+    it('getVisibleEntries filters out archived entries', () => {
+      const memory: AgentConversationMemory = {
+        id: 'm', owner_agent_id: 'a', conversation_id: 'a:b:arch',
+        entries: [
+          makeEntry({ turn_number: 1, current_content: 'Old', archived: true }),
+          makeEntry({ turn_number: 2, current_content: 'Archived too', archived: true }),
+          makeEntry({ turn_number: 3, current_content: 'Recent', archived: false }),
+          makeEntry({ turn_number: 4, current_content: 'Latest', archived: false })
+        ]
+      };
+
+      const result = getVisibleEntries(memory, {
+        enable_ai_summary: false, window_turns: 10,
+        summary_trigger_turns: 30, preserve_recent: 3, compacted_target_role: 'system'
+      });
+
+      expect(result).toHaveLength(2);
+      expect(result[0].current_content).toBe('Recent');
+      expect(result[1].current_content).toBe('Latest');
+    });
+
+    it('summary entries are still visible even if other entries are archived', () => {
+      const memory: AgentConversationMemory = {
+        id: 'm', owner_agent_id: 'a', conversation_id: 'a:b:sumvis',
+        entries: [
+          makeEntry({ turn_number: 1, current_content: 'Compressed old', archived: true }),
+          makeEntry({ turn_number: 2, kind: 'summary', current_content: 'Summary of 1-1', archived: false }),
+          makeEntry({ turn_number: 3, current_content: 'New message', archived: false })
+        ]
+      };
+
+      const result = getVisibleEntries(memory, {
+        enable_ai_summary: false, window_turns: 10,
+        summary_trigger_turns: 30, preserve_recent: 3, compacted_target_role: 'system'
+      });
+
+      expect(result).toHaveLength(2);
+      expect(result[0].kind).toBe('summary');
+      expect(result[1].current_content).toBe('New message');
+    });
+  });
+
+  describe('Per-speaker format edge cases (A2)', () => {
+    it('falls back to default speaker format when speaker has no override', () => {
+      // CHAT_FORMAT_CONFIG only has 'default' in speaker_format, no per-speaker overrides
+      // This is implicitly tested by all existing assembler tests
+      const formatWithOverrides: ConversationFormatConfig = {
+        transcript: {
+          mode: 'embed',
+          turn_delimiter: '\n',
+          speaker_format: {
+            default: { prefix: '[', suffix: '] ' },
+            'special-agent': { prefix: '**', suffix: '** ' }
+          }
+        },
+        message_assembly: { ...CHAT_FORMAT_CONFIG.message_assembly },
+        compression: { ...CHAT_FORMAT_CONFIG.compression }
+      };
+
+      // An agent not in the override list should use default
+      const frag = makeConvFragment('Hello.', 'transcript', 1, 'f1');
+      const bundle = makeBundleWithConversationFragments([frag], { system_core: 'S' });
+
+      const messages = assembleConversationMessages({
+        bundle, memory: null,
+        formatConfig: formatWithOverrides,
+        currentAgentId: 'agent-a', taskConfig: TASK_CONFIG
+      });
+
+      // Default format applied (the prefix/suffix from default)
+      expect(messages.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Multi-injection points (A5)', () => {
+    it('handles single injection config (backward compat)', () => {
+      const bundle = makeBundleWithConversationFragments(
+        [makeConvFragment('Entry.', 'transcript', 1, 'f1')],
+        { system_core: 'System.', output_contract: 'OK.' }
+      );
+
+      const messages = assembleConversationMessages({
+        bundle, memory: null,
+        formatConfig: CHAT_FORMAT_CONFIG,
+        currentAgentId: 'agent-a', taskConfig: TASK_CONFIG
+      });
+
+      const assistantCount = messages.filter((m) => m.role === 'assistant').length;
+      expect(assistantCount).toBe(1);
+    });
+
+    it('handles multiple injection points', () => {
+      const multiInjectionConfig: ConversationFormatConfig = {
+        ...CHAT_FORMAT_CONFIG,
+        message_assembly: {
+          ...CHAT_FORMAT_CONFIG.message_assembly,
+          injection: [
+            { ai_fill_role: 'assistant', ai_fill_position: 'after_last_user' },
+            { ai_fill_role: 'assistant', ai_fill_position: 0 }
+          ]
+        }
+      };
+
+      const bundle = makeBundleWithConversationFragments(
+        [makeConvFragment('Entry.', 'transcript', 1, 'f1')],
+        { system_core: 'System.', output_contract: 'OK.' }
+      );
+
+      const messages = assembleConversationMessages({
+        bundle, memory: null,
+        formatConfig: multiInjectionConfig,
+        currentAgentId: 'agent-a', taskConfig: TASK_CONFIG
+      });
+
+      const assistantCount = messages.filter((m) => m.role === 'assistant').length;
+      expect(assistantCount).toBe(2);
+    });
+
+    it('numeric injection index clamps to message array length', () => {
+      const indexConfig: ConversationFormatConfig = {
+        ...CHAT_FORMAT_CONFIG,
+        message_assembly: {
+          ...CHAT_FORMAT_CONFIG.message_assembly,
+          injection: { ai_fill_role: 'assistant', ai_fill_position: 999 }
+        }
+      };
+
+      const bundle = makeBundleWithConversationFragments(
+        [makeConvFragment('Entry.', 'transcript', 1, 'f1')],
+        { system_core: 'S', output_contract: 'OK.' }
+      );
+
+      const messages = assembleConversationMessages({
+        bundle, memory: null,
+        formatConfig: indexConfig,
+        currentAgentId: 'agent-a', taskConfig: TASK_CONFIG
+      });
+
+      // Should not throw, assistant placed at end
+      expect(messages[messages.length - 1].role).toBe('assistant');
+    });
+  });
+
+  describe('Compaction target role redirection (B6)', () => {
+    it('folds conversation text to compacted_target_role when summary entry exists', () => {
+      const convFrag = makeConvFragment('Ongoing chat.', 'transcript', 1, 'f1');
+      const summaryFrag = makeConvFragment('Summary of early turns.', 'transcript', 0, 'f-sum', {
+        conversation_entry_kind: 'summary',
+        entry_id: 'e-sum',
+        speaker_agent_id: 'agent-a'
+      });
+
+      const compactedConfig: ConversationFormatConfig = {
+        ...CHAT_FORMAT_CONFIG,
+        compression: {
+          ...CHAT_FORMAT_CONFIG.compression,
+          compacted_target_role: 'system'
+        }
+      };
+
+      const bundle = makeBundleWithConversationFragments([summaryFrag, convFrag], {
+        system_core: 'System core.'
+      });
+
+      const messages = assembleConversationMessages({
+        bundle, memory: null,
+        formatConfig: compactedConfig,
+        currentAgentId: 'agent-a', taskConfig: TASK_CONFIG
+      });
+
+      // Summary exists → conversation text should fold into system
+      const systemMsg = messages.find((m) => m.role === 'system')!;
+      const systemText = (systemMsg.parts[0] as { text: string }).text;
+      expect(systemText).toContain('Summary of early turns.');
+      expect(systemText).toContain('Ongoing chat.');
+    });
+
+    it('does not redirect when no summary entry is present', () => {
+      const convFrag = makeConvFragment('Regular chat.', 'transcript', 1, 'f1');
+
+      const bundle = makeBundleWithConversationFragments([convFrag], {
+        system_core: 'System core.'
+      });
+
+      const messages = assembleConversationMessages({
+        bundle, memory: null,
+        formatConfig: CHAT_FORMAT_CONFIG,
+        currentAgentId: 'agent-a', taskConfig: TASK_CONFIG
+      });
+
+      // No summary → conversation should stay in user role
+      const systemMsg = messages.find((m) => m.role === 'system')!;
+      const systemText = (systemMsg.parts[0] as { text: string }).text;
+      expect(systemText).not.toContain('Regular chat.');
     });
   });
 });

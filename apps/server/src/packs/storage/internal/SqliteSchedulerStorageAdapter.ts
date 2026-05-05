@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
 import { resolvePackRuntimeDatabaseLocation } from '../pack_db_locator.js';
@@ -707,7 +708,7 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
     }
   ): SchedulerRebalanceRecommendationRecord {
     const db = this.getDb(packId);
-    const id = `rec_${input.partition_id}_${Number(input.created_at).toString()}`;
+    const id = `rec_${input.partition_id}_${Number(input.created_at)}_${crypto.randomUUID().slice(0, 8)}`;
     db.prepare(
       `INSERT INTO scheduler_rebalance_recommendation
        (id, partition_id, from_worker_id, to_worker_id, status, reason, score, suppress_reason, details, created_at, updated_at, applied_migration_id)

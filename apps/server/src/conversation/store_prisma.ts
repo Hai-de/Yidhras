@@ -53,6 +53,7 @@ function entryRecordToDomain(row: PrismaConversationEntryRecord): ConversationEn
         ? { start: row.turn_range_start, end: row.turn_range_end }
         : undefined,
     tool_trace: jsonParse<EntryToolTrace | null>(row.tool_trace_json, null) ?? undefined,
+    archived: row.archived,
     tags: jsonParse<string[] | null>(row.tags_json, null) ?? undefined,
     metadata: jsonParse<Record<string, unknown> | null>(row.metadata_json, null) ?? undefined
   };
@@ -91,6 +92,7 @@ export class PrismaConversationStore implements ConversationStore {
       turn_range_start: entry.turn_range?.start ?? null,
       turn_range_end: entry.turn_range?.end ?? null,
       tool_trace_json: entry.tool_trace ? JSON.stringify(entry.tool_trace) : null,
+      archived: entry.archived ?? false,
       tags_json: entry.tags ? JSON.stringify(entry.tags) : null,
       metadata_json: entry.metadata ? JSON.stringify(entry.metadata) : null
     };
@@ -229,6 +231,14 @@ export class PrismaConversationStore implements ConversationStore {
     await this.prisma.conversationMemory.update({
       where: { id: memoryId },
       data: { summary, updated_at: BigInt(this.now()) }
+    });
+  }
+
+  async archiveEntries(entryIds: string[]): Promise<void> {
+    if (entryIds.length === 0) return;
+    await this.prisma.conversationEntryRecord.updateMany({
+      where: { id: { in: entryIds } },
+      data: { archived: true }
     });
   }
 

@@ -15,7 +15,7 @@ import { DEFAULT_CONVERSATION_FORMAT_CONFIG } from '../../../src/conversation/fo
 import type { ConversationFormatConfig } from '../../../src/conversation/format_config.js';
 import { PrismaConversationStore } from '../../../src/conversation/store_prisma.js';
 import type { AgentConversationMemory, ConversationEntry } from '../../../src/conversation/types.js';
-import { runConversationHistoryTrack } from '../../../src/context/workflow/tracks/conversation_history_track.js';
+import { getVisibleEntries, runConversationHistoryTrack } from '../../../src/context/workflow/tracks/conversation_history_track.js';
 import type { PromptBundleV2 } from '../../../src/inference/prompt_bundle_v2.js';
 import type { PromptFragmentV2 } from '../../../src/inference/prompt_fragment_v2.js';
 import type { PromptSlotConfig } from '../../../src/inference/prompt_slot_config.js';
@@ -81,6 +81,7 @@ const TASK_CONFIG: AiResolvedTaskConfig = {
 
 const CHAT_FORMAT_CONFIG: ConversationFormatConfig = {
   transcript: {
+    mode: 'embed',
     turn_delimiter: '\n',
     speaker_format: { default: { prefix: '"{speaker_id}": "', suffix: '"\n' } }
   },
@@ -101,9 +102,11 @@ const CHAT_FORMAT_CONFIG: ConversationFormatConfig = {
     }
   },
   compression: {
+    enable_ai_summary: false,
     window_turns: 10,
     summary_trigger_turns: 30,
-    preserve_recent: 3
+    preserve_recent: 3,
+    compacted_target_role: 'system'
   }
 };
 
@@ -301,9 +304,10 @@ describe('D2 — Conversation flow integration', () => {
       });
 
       expect(result.result).toHaveLength(3);
-      expect(result.result[0].metadata!.entry_role).toBe('assistant');
-      expect(result.result[1].metadata!.entry_role).toBe('user');
-      expect(result.result[2].metadata!.entry_role).toBe('assistant');
+      // embed mode: all entries map to 'transcript'
+      expect(result.result[0].metadata!.entry_role).toBe('transcript');
+      expect(result.result[1].metadata!.entry_role).toBe('transcript');
+      expect(result.result[2].metadata!.entry_role).toBe('transcript');
       expect(result.result[0].removable).toBe(true);
     });
 
@@ -464,6 +468,134 @@ describe('D2 — Conversation flow integration', () => {
       expect(refreshedB.entries).toHaveLength(1);
       expect(refreshedA.entries[0].source_inference_id).toBe('inf-wb-001');
       expect(refreshedB.entries[0].source_inference_id).toBe('inf-wb-001');
+    });
+
+    it('archiveEntries marks entries as archived', async () => {
+      const cid = `agent-arch:agent-b:${runId}-archive`;
+      const memory = await store.getOrCreate('agent-arch', cid);
+
+      await store.appendEntry(
+        memory.id,
+        makeEntry({ turn_number: 1, current_content: 'To be archived.' })
+      );
+      await store.appendEntry(
+        memory.id,
+        makeEntry({ turn_number: 2, current_content: 'Also archived.' })
+      );
+
+      const memAfter = await store.getOrCreate('agent-arch', cid);
+      expect(memAfter.entries).toHaveLength(2);
+
+      const entryIds = memAfter.entries.map((e) => e.id);
+      await store.archiveEntries(entryIds);
+
+      const memAfterArchive = await store.getOrCreate('agent-arch', cid);
+      expect(memAfterArchive.entries).toHaveLength(2);
+      expect(memAfterArchive.entries[0].archived).toBe(true);
+      expect(memAfterArchive.entries[1].archived).toBe(true);
+    });
+
+    it('archiveEntries with empty array is a no-op', async () => {
+      await expect(store.archiveEntries([])).resolves.toBeUndefined();
+    });
+  });
+
+  describe('Compaction scenarios', () => {
+    it('getVisibleEntries with archived entries excludes them from view', () => {
+      const memory: AgentConversationMemory = {
+        id: 'mem-viz',
+        owner_agent_id: 'agent-a',
+        conversation_id: 'agent-a:agent-b:viz',
+        entries: [
+          makeEntry({ turn_number: 1, current_content: 'Archived', archived: true }),
+          makeEntry({ turn_number: 2, kind: 'summary', current_content: 'Summary of turn 1', turn_range: { start: 1, end: 1 }, archived: false }),
+          makeEntry({ turn_number: 3, current_content: 'Recent', archived: false }),
+          makeEntry({ turn_number: 4, current_content: 'Latest', archived: false })
+        ]
+      };
+
+      const result = getVisibleEntries(memory, {
+        enable_ai_summary: false, window_turns: 10,
+        summary_trigger_turns: 30, preserve_recent: 3, compacted_target_role: 'system'
+      });
+
+      // Summary entry (always visible) + 2 non-archived recent entries
+      expect(result).toHaveLength(3);
+      expect(result[0].kind).toBe('summary');
+      expect(result[1].current_content).toBe('Recent');
+      expect(result[2].current_content).toBe('Latest');
+    });
+
+    it('preserve_recent truncation applied when window is smaller', () => {
+      const memory: AgentConversationMemory = {
+        id: 'mem-pres',
+        owner_agent_id: 'agent-a',
+        conversation_id: 'agent-a:agent-b:pres',
+        entries: Array.from({ length: 20 }, (_, i) =>
+          makeEntry({ turn_number: i + 1, current_content: `Turn ${i + 1}` })
+        )
+      };
+
+      const result = getVisibleEntries(memory, {
+        enable_ai_summary: false, window_turns: 5,
+        summary_trigger_turns: 30, preserve_recent: 3, compacted_target_role: 'system'
+      });
+
+      // No summary → window_turns used: last 5 entries
+      expect(result).toHaveLength(5);
+      expect(result[0].turn_number).toBe(16);
+      expect(result[4].turn_number).toBe(20);
+    });
+
+    it('summary entry with compacted_target_role assembles into target role', () => {
+      const makeFrag = (text: string, entryRole: string, turn: number, id: string, extra: Record<string, unknown> = {}): PromptFragmentV2 => ({
+        id,
+        slot_id: 'conversation_history',
+        priority: turn,
+        source: `section:${id}`,
+        removable: true,
+        replaceable: false,
+        children: [{
+          id: crypto.randomUUID(), kind: 'text' as const,
+          content: { kind: 'text' as const, text },
+          rendered: text
+        }],
+        estimated_tokens: Math.ceil(text.length / 4),
+        metadata: { entry_role: entryRole, turn_number: turn, conversation_entry_kind: 'original', ...extra }
+      });
+
+      const summaryFrag = makeFrag('Summary: early discussion.', 'transcript', 0, 'f-sum', {
+        conversation_entry_kind: 'summary'
+      });
+      const recentFrag = makeFrag('Agent A: latest message.', 'transcript', 1, 'f1', {
+        conversation_entry_kind: 'original'
+      });
+
+      const compactedConfig: ConversationFormatConfig = {
+        ...CHAT_FORMAT_CONFIG,
+        compression: {
+          enable_ai_summary: false, window_turns: 10,
+          summary_trigger_turns: 30, preserve_recent: 3,
+          compacted_target_role: 'developer'
+        }
+      };
+
+      const bundle = makeBundleWithConversationFragments([summaryFrag, recentFrag], {
+        system_core: 'System.',
+        role_core: 'Role context.'
+      });
+
+      const messages = assembleConversationMessages({
+        bundle, memory: null,
+        formatConfig: compactedConfig,
+        currentAgentId: 'agent-a', taskConfig: TASK_CONFIG
+      });
+
+      // Summary exists → all conversation text folded to developer
+      const devMsg = messages.find((m) => m.role === 'developer')!;
+      const devText = (devMsg.parts[0] as { text: string }).text;
+      expect(devText).toContain('Summary: early discussion.');
+      expect(devText).toContain('Agent A: latest message.');
     });
   });
 });

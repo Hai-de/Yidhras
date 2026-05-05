@@ -15,8 +15,10 @@ import type { PromptSectionDraft, TrackResult } from '../types.js';
 
 /**
  * Returns visible entries based on compression config.
+ * - Filters out archived entries (soft-deleted by AI summary compaction)
  * - summary entries are always included (not affected by window_turns)
- * - original entries are truncated to the last N (window_turns)
+ * - If AI summaries exist: original entries truncated to window_turns
+ * - If no AI summaries (fallback): original entries truncated to preserve_recent
  *
  * Design doc §6.6: "summaryEntries在前，recentEntries在后，按turn_number升序"
  */
@@ -24,29 +26,45 @@ export function getVisibleEntries(
   memory: AgentConversationMemory,
   compression: CompressionConfig
 ): ConversationEntry[] {
-  const sorted = [...memory.entries].sort((a, b) => a.turn_number - b.turn_number);
+  const { window_turns: windowTurns } = compression;
+
+  // Filter out soft-archived entries
+  const active = memory.entries.filter((e) => !e.archived);
+  const sorted = [...active].sort((a, b) => a.turn_number - b.turn_number);
 
   const summaryEntries = sorted.filter((e) => e.kind === 'summary');
-  const recentEntries = sorted.filter((e) => e.kind !== 'summary');
+  const originalEntries = sorted.filter((e) => e.kind !== 'summary');
 
-  const { window_turns: windowTurns } = compression;
+  // window_turns controls the view window for original entries.
+  // Summary entries are always included (they represent compressed older turns).
   const visibleRecent =
-    windowTurns && windowTurns > 0 ? recentEntries.slice(-windowTurns) : recentEntries;
+    windowTurns && windowTurns > 0 ? originalEntries.slice(-windowTurns) : originalEntries;
 
   return [...summaryEntries, ...visibleRecent];
 }
 
 // ── Role Resolution ────────────────────────────────────────
 
+export type TranscriptMode = 'embed' | 'role_map';
+
 /**
  * Resolve the message role for a conversation entry from the current agent's perspective.
- * In one-to-one conversation: own messages → 'assistant', other's messages → 'user'.
+ *
+ * embed mode (default): all entries map to the same transcript target role ('transcript').
+ *   The actual message role is determined by the slot → target_role mapping in message_assembly.
+ * role_map mode (config-gated): own messages → 'assistant', other's messages → 'user'.
  */
 export function resolveEntryRole(
   entry: ConversationEntry,
-  currentAgentId: string
-): 'assistant' | 'user' {
-  return entry.speaker_agent_id === currentAgentId ? 'assistant' : 'user';
+  currentAgentId: string,
+  mode: TranscriptMode
+): string {
+  switch (mode) {
+    case 'embed':
+      return 'transcript';
+    case 'role_map':
+      return entry.speaker_agent_id === currentAgentId ? 'assistant' : 'user';
+  }
 }
 
 // ── Track ──────────────────────────────────────────────────
@@ -59,9 +77,10 @@ export function runConversationHistoryTrack(input: {
 }): TrackResult<PromptSectionDraft[]> {
   const { memory, formatConfig, currentAgentId } = input;
   const entries = getVisibleEntries(memory, formatConfig.compression);
+  const mode: TranscriptMode = formatConfig.transcript.mode ?? 'embed';
 
   const drafts: PromptSectionDraft[] = entries.map((entry) => {
-    const role = resolveEntryRole(entry, currentAgentId);
+    const role = resolveEntryRole(entry, currentAgentId, mode);
     const text = renderEntryText(entry, formatConfig.transcript, currentAgentId);
 
     return {

@@ -24,5 +24,8 @@ export interface ConversationStore {
 
   updateSummary(memoryId: string, summary: string): Promise<void>;
 
+  /** Mark entries as archived (soft delete for AI compaction). */
+  archiveEntries(entryIds: string[]): Promise<void>;
+
   deleteMemory(memoryId: string): Promise<void>;
 }

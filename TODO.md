@@ -10,9 +10,8 @@
 #### 数据的策略性清洗接口
 
 > 已建立 DataCleaner 统一抽象（`packages/contracts/src/data_cleaner.ts`），全局注册表在 `apps/server/src/plugins/extensions/data_cleaner_registry.ts`。
-> 两个内置实现放在系统 pack (`apps/server/builtin/system_pack/`) 中。
 > 设计文档: `.limcode/design/plugin-expansion-design.md`
-
+> 能提供接口就只供接口，复杂的功能应当通过外接来实现
 - [x] 1. 正则引擎 → `data_cleaner.regex` — 含 ReDoS 防护（长度限制、嵌套量词检测、超时、匹配计数上限）
 - [x] 4. 基础字符串方法 → `data_cleaner.string` — 7 种模式（trim/lowercase/uppercase/collapse_ws/strip_html/strip_control/strip_punctuation）
 - [x] 2. 结构化语法解析器
@@ -59,7 +58,16 @@
 - [x] 推理管线接入（`task_service` 全走 assembler + `executeRunInternal` writeback）+ 双向事务写入
 - [x] 测试：29 集成测试 + 单元覆盖
 
-阶段二/三待实现：多 agent transcript 嵌入、注入点（伪 role 格式）、AI 摘要压缩、压缩到单一 role、因果图查询、自适应轨道选择、Tag 系统、`SlotFunctionRegistry`、per-conversation 配置覆盖
+阶段二/三待实现（设计文档：`.limcode/design/multi-turn-conversation-design.md`）：
+- [ ] 多 agent transcript 嵌入（默认模式）+ 消息级别注入点
+- [ ] 一对一角色映射降级为配置门控简化选项
+- [ ] AI 摘要压缩（Hybrid 方案：截断兜底 + 独立压缩路径 + 写入后触发 + 软归档 + agent opt-in）
+- [ ] 压缩到单一 role + 因果图查询
+- [ ] 自适应轨道选择、Tag 系统、`SlotFunctionRegistry`、per-conversation 配置覆盖
+
+#### 已知技术债务（不阻塞当前阶段）
+
+- `ConversationEntry.archived` 软归档后 entries 数组无限增长 — 需日后实现定期物理归档到冷存储（如按年份归档到独立表、或导出为 JSON 文件并删除 DB 行）
 
 ##### 插槽函数（链表）
 

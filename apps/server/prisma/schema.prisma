@@ -672,6 +672,7 @@ model ConversationEntryRecord {
   turn_range_start          Int?
   turn_range_end            Int?
   tool_trace_json           String?
+  archived                  Boolean  @default(false)
   tags_json                 String?
   metadata_json             String?
 
