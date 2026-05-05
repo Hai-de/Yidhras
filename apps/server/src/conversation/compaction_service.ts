@@ -12,7 +12,7 @@ import type { CompactionAuditStore } from './compaction_audit.js';
 import { runCompactionInference } from './compaction_inference.js';
 import type { ConversationFormatConfig } from './format_config.js';
 import type { ConversationStore } from './store.js';
-import type { AgentConversationMemory, ConversationEntry } from './types.js';
+import type { AgentConversationMemory, ConversationEntry, ConversationMemoryMetadata } from './types.js';
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -44,14 +44,19 @@ export class DefaultConversationCompactionService implements ConversationCompact
   }): Promise<boolean> {
     const { memory, formatConfig, store, gateway, taskConfig, auditStore } = input;
     const { compression } = formatConfig;
+    const meta = memory.metadata as ConversationMemoryMetadata | undefined;
+
+    // Per-agent override takes priority over profile config
+    const enableAiSummary = meta?.enable_ai_summary ?? compression.enable_ai_summary;
+    const summaryTriggerTurns = meta?.summary_trigger_turns ?? compression.summary_trigger_turns;
 
     // Guard: AI summary disabled for this agent
-    if (!compression.enable_ai_summary) {
+    if (!enableAiSummary) {
       return false;
     }
 
     // Guard: below threshold
-    if (memory.entries.length <= compression.summary_trigger_turns) {
+    if (memory.entries.length <= summaryTriggerTurns) {
       return false;
     }
 

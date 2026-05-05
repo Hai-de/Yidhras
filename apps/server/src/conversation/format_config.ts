@@ -200,3 +200,23 @@ export function resolveConversationFormatConfig(
   }
   return DEFAULT_CONVERSATION_FORMAT_CONFIG;
 }
+
+import type { AgentConversationMemory, ConversationMemoryMetadata } from './types.js';
+
+/** Phase 3: Resolve effective format config, incorporating per-conversation overrides (A+C hybrid). */
+export function resolveEffectiveFormatConfig(
+  memory: AgentConversationMemory,
+  profileName?: string | null
+): ConversationFormatConfig {
+  const meta = memory.metadata as ConversationMemoryMetadata | undefined;
+
+  // 方案 C: profile name override — highest priority
+  const effectiveProfile = meta?.conversation_profile_override ?? profileName;
+
+  // 方案 A: full config override
+  const base = meta?.conversation_format_override as ConversationFormatConfig | undefined
+    ?? resolveConversationFormatConfig(effectiveProfile);
+
+  // Validate with Zod — missing required fields throw, no silent fallback
+  return ConversationFormatConfigSchema.parse(base);
+}

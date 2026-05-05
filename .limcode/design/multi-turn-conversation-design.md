@@ -13,9 +13,19 @@
 **2026-05-05 设计修订**：
 - **多 agent transcript 嵌入提升为默认模式**：一对一角色映射降级为可配置的简化选项。多 agent 场景下所有发言者以各自身份出现在 transcript 文本中，不再做 "对方 = user" 的角色映射。
 - **Jailbreak 模式移除**：伪 role 格式注入（未闭合符号等）从设计中移除。该模式依赖模型补全倾向而非显式指令，不可靠且增加了不必要的配置复杂度。
-- **阶段二聚焦**：多 agent transcript 嵌入 + 消息级别注入点。AI 摘要压缩方案待讨论确定。
+- **AI 摘要压缩方案确认**：Hybrid 方案 — 非 AI 截断兜底 + AI 摘要增量（独立压缩路径，agent 级别 opt-in，软归档）。
 
-**阶段二/三待实现**：多 agent transcript 嵌入（默认模式）、注入点、AI 摘要压缩、因果图查询等。
+**阶段一已完成**（同上）。
+**阶段二已完成**（2026-05-05）：多 agent transcript 嵌入 + per-speaker 覆盖、消息级别注入点（多位置/索引定位）、AI 摘要压缩（含 `CompactionInference` 独立路径 + `ConversationCompactionService` + `CompactionAuditEntry` 审计日志）、压缩到单一 role 组装逻辑、因果图查询（双向追溯 + 影响分析）、YAML 配置更新。
+详见 `.limcode/plans/multi-turn-conversation-phase2.md`。
+
+**阶段三已完成**（2026-05-05）：自适应轨道选择（`ProfileResolver` 接口 + 默认实现）、per-conversation 配置覆盖（A+C 混合方案 — `resolveEffectiveFormatConfig`）、阶段二遗留事项（`maybeCompact` 接入推理管线、`enable_ai_summary` per-agent metadata 覆盖、显式 `conversation_id` 支持 — `getById`/`listByAgent`/`create`）。
+详见 `.limcode/plans/multi-turn-conversation-phase3.md`。
+
+**Tag 系统推迟**：类型/Prisma schema 已就位，用途尚在讨论中，待决定后激活。
+**因果图查询无需追加**：阶段二 `CausalGraphQuery` + 重放 API 已覆盖当前需求。
+
+**`SlotFunctionRegistry`（插槽函数）已移出阶段三**：涉及图灵完备执行核心、双模块架构（声明式 pipeline + 插槽函数核心）等根本性架构变更（详见 `TODO.md` "插槽函数（链表）" 项）。此项作为独立设计项目，另起设计文档，不与当前多轮对话分期耦合。
 
 ---
 
@@ -883,13 +893,62 @@ speaker_format:
 8. 压缩到单一 role（详见 §2.5）
 9. 因果图查询 API（沿 `derived_from_entry_ids` 双向追溯）
 
-### 阶段三（高级特性）
+### 阶段三（高级特性）— ✅ 已完成 (2026-05-05)
 
-1. 自适应轨道选择（`resolveConversationProfile`）
-2. Tag 系统
-3. 完整的因果图查询（影响分析、重放验证）
-4. `SlotFunctionRegistry` 函数注册
-5. per-conversation 配置覆盖
+> 详见 `.limcode/plans/multi-turn-conversation-phase3.md`
+
+#### 3.1 自适应轨道选择（`resolveConversationProfile`）— ✅ 已实现
+
+**决策**：方案 D — 先定义 `ProfileResolver` 函数签名，默认实现保持当前行为不变。
+后续可通过 A（world state mutation 事件）+ C（agent 显式请求重载）混合方案扩展。
+
+**实现**：
+- 新建 `apps/server/src/conversation/profile_resolver.ts` — `ProfileResolver` 类型 + `defaultProfileResolver`
+- `inference/service.ts` 中两处硬编码选择逻辑替换为 `defaultProfileResolver(memory, ctx)` 调用
+- `AppContext` 可注入自定义 `profileResolver`（可选，不设则用默认）
+
+**函数签名**（实际实现）：
+```typescript
+export type ProfileResolverContext = {
+  worldStateChanged: boolean;
+  agentRequestedProfile?: string;
+};
+
+export type ProfileResolver = (
+  memory: AgentConversationMemory,
+  ctx: ProfileResolverContext
+) => string;
+```
+
+#### 3.2 Tag 系统 — ⏸ 推迟
+
+**决策**：跳过。类型定义、Prisma 列、序列化/反序列化代码均已就位（阶段一预留），
+待有明确用途时激活只需在 `buildEntry` 加一行 `tags: [...]`。用途尚在讨论中，记录于 `TODO.md`。
+
+#### 3.3 完整因果图查询（含重放验证）— ✅ 无需追加
+
+**决策**：现有实现已够用。阶段二 `CausalGraphQuery` 四方法 + 重放 API（`replayInferenceJob`）
+覆盖了当前需求。不追加独立工作项。
+
+#### 3.4 per-conversation 配置覆盖 — ✅ 已实现
+
+**决策**：A + C 混合方案，无中间态。
+
+**实现**：
+- `format_config.ts` 新增 `resolveEffectiveFormatConfig(memory, profileName)` 函数
+- 优先级：`conversation_profile_override`（方案 C）> `conversation_format_override`（方案 A）> profile 名称 → YAML 查找 → 默认
+- 无论哪个路径，最终结果经过 `ConversationFormatConfigSchema.parse()` 校验，缺少必需字段抛错不静默回退
+- inference/service.ts 中 compaction 调用已使用 `resolveEffectiveFormatConfig`
+- `ConversationMemoryMetadata`（`types.ts`）承载 `conversation_profile_override` 和 `conversation_format_override` 字段
+
+#### 3.5 阶段二遗留事项 — ✅ 已实现
+
+| # | 事项 | 实现方式 |
+|---|------|----------|
+| 1 | `maybeCompact` 未接入管线 | `inference/service.ts` writeback 后调用，compaction 失败不阻断推理（独立 try-catch） |
+| 2 | `CompactionAuditEntry` 用量字段失败路径默认值 | 文档化已知限制 |
+| 3 | `enable_ai_summary` per-agent 级别 | `ConversationMemoryMetadata.enable_ai_summary` + `summary_trigger_turns`；`maybeCompact` 读取优先级 metadata > profile config |
+| 4 | `conversation_id` 显式多对话支持 | `ConversationStore` 新增 `getById`/`listByAgent`/`create`；Prisma schema 新增 `display_name`；推理管线仍用三元组创建，显式 API 已可用 |
 
 ### 前置依赖
 
@@ -927,3 +986,11 @@ speaker_format:
 - [x] **压缩专用路径**（§6.6）：AI 摘要使用独立推理路径 — 绕过 conversation_history track、不加载模板/slot/world context/persona、不触发 tool loop。审计走专用 `CompactionAuditEntry` 日志
 - [x] **Summary of summary**（§6.6）：接受渐进信息失真。需保留确切数据时 agent 应使用工具写入独立存储（world state / 记忆块），对话摘要的职责是维持上下文连贯性而非充当数据库
 - [x] **压缩到单一 role**（§2.5）：对话 transcript 折叠到 `compacted_target_role`（默认 `system`），释放 `user` 位置给新输入
+- [x] **自适应轨道选择**（§3.1，2026-05-05）：采用方案 D — 定义 `ProfileResolver` 函数签名，默认实现保持当前行为。后续通过 A（world state mutation）+ C（agent 显式请求）混合方案扩展
+- [x] **`SlotFunctionRegistry` 移出阶段三**（§3，2026-05-05）：插槽函数涉及图灵完备执行核心、双模块架构等根本性变更，作为独立设计项目另起文档，不与多轮对话分期耦合
+- [x] **`maybeCompact` 接入推理管线**（§3.5，2026-05-05）：在 `executeRunInternal` writeback 后调用，compaction 失败不阻断推理（独立 try-catch），所有 profile 的 `enable_ai_summary: false` 保证默认短路
+- [x] **`enable_ai_summary` per-agent 级别**（§3.5，2026-05-05）：通过 `ConversationMemoryMetadata` 覆盖，优先级 metadata > profile config。无独立 Agent 配置 YAML，per-agent 设置存在 conversation memory 的 metadata 中
+- [x] **显式 `conversation_id` 支持**（§3.5，2026-05-05）：`ConversationStore` 新增 `getById`/`listByAgent`/`create`；Prisma `ConversationMemory` 新增 `display_name`；推理管线仍用三元组创建，显式 API 已可用
+- [x] **per-conversation 配置覆盖**（§3.4，2026-05-05）：A + C 混合方案 — `resolveEffectiveFormatConfig` 函数，优先级 C > A > profile，Zod 校验必填字段
+- [x] **Tag 系统推迟**（§3.2，2026-05-05）：Schema 已就位，用途尚在讨论中
+- [x] **因果图查询无需追加**（§3.3，2026-05-05）：阶段二 `CausalGraphQuery` + 重放 API 已覆盖需求

@@ -11,6 +11,20 @@ export interface ConversationStore {
     conversationId: string
   ): Promise<AgentConversationMemory>;
 
+  /** Phase 3: Look up by explicit ID (null if not found). */
+  getById(conversationId: string): Promise<AgentConversationMemory | null>;
+
+  /** Phase 3: List all conversations owned by an agent. */
+  listByAgent(ownerAgentId: string): Promise<AgentConversationMemory[]>;
+
+  /** Phase 3: Create a conversation with explicit ID and optional display name. */
+  create(params: {
+    ownerAgentId: string;
+    conversationId: string;
+    displayName?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<AgentConversationMemory>;
+
   appendEntry(memoryId: string, entry: ConversationEntry): Promise<void>;
 
   appendEntriesInTransaction(entries: Array<{ memoryId: string; entry: ConversationEntry }>): Promise<void>;

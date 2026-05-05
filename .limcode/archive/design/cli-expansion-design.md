@@ -1,9 +1,9 @@
 # CLI 功能扩充 设计
 
-> 状态: 已实现 (阶段 1-3 完成，阶段 4 暂缓)
+> 状态: 已完成 (阶段 1-4 全部实现)
 > 关联: TODO.md — 梳理当前代码实现
 > 评估时间: 2026-05-02
-> 实施时间: 2026-05-02
+> 实施时间: 2026-05-02 ~ 2026-05-05
 
 ## 1. 背景
 
@@ -167,7 +167,7 @@ HTTP API 已有完整端点，无 CLI 对应:
 | P2 | #5 | diag | 纯只读文件/SQLite 操作，极低风险 | [x] 已完成 |
 | P3 | #6 | operator 管理 | 直接操作 Prisma，但不常用 | [x] 已完成 |
 | P3 | #7 | snapshot 管理 | 业务逻辑重，需编排暂停/快照/恢复 | [x] 已完成 (list/show/delete 离线, create/restore 指向 HTTP API) |
-| P4 | #8 | pack 导出 | 需先明确分发模型设计 | [ ] 暂缓 |
+| P4 | #8 | pack 导出/导入 | 需先明确分发模型设计 | [x] 已完成 (2026-05-05, tar.gz 模型) |
 
 ## 5. 分阶段实施
 
@@ -412,25 +412,27 @@ pnpm snapshot --help
 
 ---
 
-### 阶段 4: 分发支持
+### 阶段 4: 分发支持 (已完成 2026-05-05)
 
-#### 5.4.1 世界包导出 CLI (`pnpm pack:export`)
+#### 5.4.1 世界包导出/导入 CLI (`pnpm pack:export` / `pnpm pack:import`)
 
 **新文件**: `apps/server/src/cli/pack_export_cli.ts`
 
 **命令**:
 ```bash
-pnpm pack:export <pack-dir> [--output <path>]
+pnpm pack:export <pack-dir> [--output <path>] [--force] [--json]
+pnpm pack:import <archive> [--force] [--json]
 pnpm pack:export --help
 ```
 
 **实现要点**:
 - 先运行 validate:pack 校验，校验失败则拒绝导出（`--force` 可跳过）
 - 排除 `.git`、`node_modules`、`runtime/`（运行时数据）、临时文件
-- 生成 `.tar.gz` 归档
-- 归档内包含: `config.yaml`, `README.md`, `CHANGELOG.md`, `plugins/`, `assets/`（如有）
-
-**设计前置条件**: 需明确 world pack 的分发模型（本地 tar.gz? registry? git-based?），此命令仅实现本地打包。若后续有 registry 需求，在此基础上加 `--publish`。
+- 生成 `.tar.gz` 归档，内容平铺在根目录
+- 归档命名: `<pack-id>-<version>.tar.gz`（从 config.yaml metadata 读取）
+- 同时生成 `.sha256` 校验文件
+- `import` 命令: 解压到临时目录 → 校验 → 冲突检测（已存在需 `--force`）→ 安装到 `data/world_packs/<id>/`
+- 分发模型: 本地 tar.gz，零新依赖，使用系统 `tar` + `node:crypto`
 
 **`package.json` 脚本**:
 ```json
@@ -453,7 +455,7 @@ apps/server/src/cli/
   diag_cli.ts                # 阶段 2 — 运行时诊断
   operator_cli.ts            # 阶段 3 — 操作者管理
   snapshot_cli.ts            # 阶段 3 — 快照管理
-  pack_export_cli.ts         # 阶段 4 — 世界包导出
+  pack_export_cli.ts         # 阶段 4 — 世界包导出/导入
 ```
 
 ## 7. 实施记录
@@ -468,12 +470,15 @@ apps/server/src/cli/
 | ai prompt 命令 | `ai prompt <id>` | 未实现 | prompt 模板加载依赖复杂，暂跳过 |
 | snapshot create/restore | Prisma + 运行时 | 未实现，指向 HTTP API | create/restore 需要完整运行时上下文 |
 | operator 实现 | 复用服务层 | 直接操作 Prisma + bcrypt | 服务层依赖 AppContext，CLI 无法构造 |
+| pack:export 命令 | `export <dir> [--output]` | 增加 `import <archive>` 子命令 + `--json` + SHA256 | 导出和导入是对称操作，合并在同一 CLI 文件 |
+| pack:export 归档结构 | 嵌套目录 | 平铺在根目录 | 导入时以 metadata.id 重建目录名，无需保留原始目录名 |
+| pack:export 分发模型 | 待定（tar.gz / registry / git） | tar.gz 本地分发 | 早期阶段，tar.gz 是最简可行模型 |
 
 ### 7.2 后续工作
 
 - [ ] 如有超过 5 个 CLI 命令，考虑将公共参数解析逻辑提取为 `cli/lib/args.ts`（`--help`、`--json`、positional command dispatch），避免每个 CLI 文件重复实现
 - [ ] 如 sim CLI 的 HTTP 通信模式被多个命令使用（如 operator 也改为 HTTP），提取为 `cli/lib/http_client.ts`
 - [ ] CI 中加入 CLI 冒烟测试: `pnpm db status --json` 返回有效 JSON 且 exit code 0
-- [ ] 阶段 4: `pack:export` — 需要先明确分发模型
+- [x] 阶段 4: `pack:export` / `pack:import` — tar.gz 本地分发模型，含 SHA256 校验 (2026-05-05)
 - [ ] `ai prompt` 命令 — 需要 prompt 模板系统的轻量加载路径
 - [ ] `snapshot create/restore` — 需要不启动完整服务器即可访问的运行时外观

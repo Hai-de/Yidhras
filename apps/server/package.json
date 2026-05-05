@@ -33,6 +33,8 @@
     "plugin": "tsx src/cli/plugin_cli.ts",
     "snapshot": "tsx src/cli/snapshot_cli.ts",
     "validate:pack": "tsx src/cli/validate_pack_cli.ts",
+    "pack:export": "tsx src/cli/pack_export_cli.ts export",
+    "pack:import": "tsx src/cli/pack_export_cli.ts import",
     "config:backup": "tsx src/cli/config_backup_cli.ts",
     "config:backup:create": "tsx src/cli/config_backup_cli.ts create",
     "config:backup:list": "tsx src/cli/config_backup_cli.ts list",

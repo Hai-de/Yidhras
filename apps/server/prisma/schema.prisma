@@ -646,6 +646,7 @@ model ConversationMemory {
   id              String   @id @default(uuid())
   owner_agent_id  String
   conversation_id String
+  display_name    String?
   summary         String?
   metadata_json   String?
   created_at      BigInt

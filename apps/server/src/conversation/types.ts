@@ -79,10 +79,18 @@ export interface ConversationEntry {
 
 // ── Agent Conversation Memory ──────────────────────────────
 
+export interface ConversationMemoryMetadata {
+  conversation_profile_override?: string;
+  conversation_format_override?: unknown;
+  enable_ai_summary?: boolean;
+  summary_trigger_turns?: number;
+}
+
 export interface AgentConversationMemory {
   id: string;
   owner_agent_id: string;
   conversation_id: string;
+  display_name?: string;
   entries: ConversationEntry[];
   summary?: string;
   metadata?: Record<string, unknown>;

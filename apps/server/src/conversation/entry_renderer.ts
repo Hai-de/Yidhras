@@ -18,7 +18,7 @@ export function renderEntryText(
   currentAgentId: string
 ): string {
   const speakerFormat: SpeakerFormatConfig =
-    // eslint-disable-next-line security/detect-object-injection
+     
     transcriptConfig.speaker_format[entry.speaker_agent_id] ??
     transcriptConfig.speaker_format.default;
 

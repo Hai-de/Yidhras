@@ -98,6 +98,21 @@ export class PrismaConversationStore implements ConversationStore {
     };
   }
 
+  private memoryRowToDomain(
+    row: { id: string; owner_agent_id: string; conversation_id: string; display_name: string | null; summary: string | null; metadata_json: string | null },
+    entryRows: PrismaConversationEntryRecord[]
+  ): AgentConversationMemory {
+    return {
+      id: row.id,
+      owner_agent_id: row.owner_agent_id,
+      conversation_id: row.conversation_id,
+      display_name: row.display_name ?? undefined,
+      entries: entryRows.map(entryRecordToDomain),
+      summary: row.summary ?? undefined,
+      metadata: jsonParse<Record<string, unknown> | null>(row.metadata_json, null) ?? undefined
+    };
+  }
+
   async getOrCreate(
     ownerAgentId: string,
     conversationId: string
@@ -127,14 +142,71 @@ export class PrismaConversationStore implements ConversationStore {
       orderBy: { turn_number: 'asc' }
     });
 
-    return {
-      id: memory.id,
-      owner_agent_id: memory.owner_agent_id,
-      conversation_id: memory.conversation_id,
-      entries: entryRows.map(entryRecordToDomain),
-      summary: memory.summary ?? undefined,
-      metadata: jsonParse<Record<string, unknown> | null>(memory.metadata_json, null) ?? undefined
-    };
+    return this.memoryRowToDomain(memory, entryRows);
+  }
+
+  async getById(conversationId: string): Promise<AgentConversationMemory | null> {
+    const memory = await this.prisma.conversationMemory.findUnique({
+      where: { id: conversationId }
+    });
+    if (!memory) return null;
+
+    const entryRows = await this.prisma.conversationEntryRecord.findMany({
+      where: { memory_id: memory.id },
+      orderBy: { turn_number: 'asc' }
+    });
+
+    return this.memoryRowToDomain(memory, entryRows);
+  }
+
+  async listByAgent(ownerAgentId: string): Promise<AgentConversationMemory[]> {
+    const memories = await this.prisma.conversationMemory.findMany({
+      where: { owner_agent_id: ownerAgentId },
+      orderBy: { updated_at: 'desc' }
+    });
+
+    if (memories.length === 0) return [];
+
+    const memoryIds = memories.map((m) => m.id);
+    const allEntries = await this.prisma.conversationEntryRecord.findMany({
+      where: { memory_id: { in: memoryIds } },
+      orderBy: { turn_number: 'asc' }
+    });
+
+    const entriesByMemory = new Map<string, PrismaConversationEntryRecord[]>();
+    for (const e of allEntries) {
+      const list = entriesByMemory.get(e.memory_id);
+      if (list) {
+        list.push(e);
+      } else {
+        entriesByMemory.set(e.memory_id, [e]);
+      }
+    }
+
+    return memories.map((m) => this.memoryRowToDomain(m, entriesByMemory.get(m.id) ?? []));
+  }
+
+  async create(params: {
+    ownerAgentId: string;
+    conversationId: string;
+    displayName?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<AgentConversationMemory> {
+    const now = BigInt(this.now());
+
+    const memory = await this.prisma.conversationMemory.create({
+      data: {
+        id: params.conversationId,
+        owner_agent_id: params.ownerAgentId,
+        conversation_id: params.conversationId,
+        display_name: params.displayName ?? null,
+        metadata_json: params.metadata ? JSON.stringify(params.metadata) : null,
+        created_at: now,
+        updated_at: now
+      }
+    });
+
+    return this.memoryRowToDomain(memory, []);
   }
 
   async appendEntry(memoryId: string, entry: ConversationEntry): Promise<void> {

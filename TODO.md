@@ -63,7 +63,9 @@
 - [ ] 一对一角色映射降级为配置门控简化选项
 - [ ] AI 摘要压缩（Hybrid 方案：截断兜底 + 独立压缩路径 + 写入后触发 + 软归档 + agent opt-in）
 - [ ] 压缩到单一 role + 因果图查询
-- [ ] 自适应轨道选择、Tag 系统、`SlotFunctionRegistry`、per-conversation 配置覆盖
+- [ ] 自适应轨道选择、per-conversation 配置覆盖
+- [ ] Tag 系统（类型/Prisma schema 已就位，用途尚在讨论中，待决定后激活）
+- [ ] `SlotFunctionRegistry` — 已移出阶段三，作为独立设计项目（涉及图灵完备执行核心、双模块架构）
 
 #### 已知技术债务（不阻塞当前阶段）
 

@@ -1,3 +1,5 @@
+import { createModelGateway } from '../ai/gateway.js';
+import { resolveAiTaskConfig } from '../ai/task_definitions.js';
 import type { AppInfrastructure } from '../app/context.js';
 import { toJsonSafe } from '../app/http/json.js';
 import {
@@ -21,6 +23,10 @@ import {
   updateDecisionJobState
 } from '../app/services/inference_workflow.js';
 import { buildWorkflowPromptBundle } from '../context/workflow/orchestrator.js';
+import { JsonlCompactionAuditStore } from '../conversation/compaction_audit.js';
+import { DefaultConversationCompactionService } from '../conversation/compaction_service.js';
+import { resolveEffectiveFormatConfig } from '../conversation/format_config.js';
+import { defaultProfileResolver } from '../conversation/profile_resolver.js';
 import { writeConversationEntries } from '../conversation/writeback.js';
 import { groundDecisionIntent } from '../domain/invocation/intent_grounder.js';
 import { createMemoryRecordingService } from '../memory/recording/service.js';
@@ -248,14 +254,15 @@ const executeRunInternal = async (
     inferenceContext.agent_conversation_memory = speakerMemory;
     inferenceContext.current_agent_id = speakerAgentId;
 
+    const profileCtx = { worldStateChanged: false };
     inferenceContext.conversation_profile =
-      speakerMemory.entries.length === 0 ? 'chat-first-turn' : 'chat-follow-up';
+      defaultProfileResolver(speakerMemory, profileCtx);
   }
 
-  const conversationProfileId = input.conversation_id
-    ? (inferenceContext.agent_conversation_memory?.entries.length === 0
-        ? 'chat-first-turn'
-        : 'chat-follow-up')
+  const conversationProfileId = inferenceContext.agent_conversation_memory
+    ? defaultProfileResolver(inferenceContext.agent_conversation_memory, {
+        worldStateChanged: false
+      })
     : undefined;
 
   const { bundle: prompt } = await buildWorkflowPromptBundle({
@@ -440,12 +447,14 @@ const executeRunInternal = async (
 
   // Multi-turn conversation: write entries to both agents' memories
   if (conversationStore && speakerAgentId && listenerAgentId && input.conversation_id) {
+    let speakerMemory = inferenceContext.agent_conversation_memory ?? undefined;
+
     try {
       const listenerMemory = await conversationStore.getOrCreate(
         listenerAgentId,
         input.conversation_id
       );
-      const speakerMemory =
+      speakerMemory =
         inferenceContext.agent_conversation_memory ??
         (await conversationStore.getOrCreate(speakerAgentId, input.conversation_id));
 
@@ -467,6 +476,32 @@ const executeRunInternal = async (
       // Writeback failure marks the inference as failed.
       // Design doc §5.1: "写入失败 → 推理标记失败"
       throw new ApiError(500, 'CONVERSATION_WRITEBACK_FAIL', `Failed to write conversation entries: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    // Trigger AI summary compaction check after entry write.
+    // Short-circuits at enable_ai_summary: false for all current profiles.
+    // Compaction failure must NOT block the inference result.
+    if (speakerMemory) {
+      try {
+        const compactionGateway = createModelGateway({ context });
+        const compactionAuditStore = new JsonlCompactionAuditStore();
+        const compactionService = new DefaultConversationCompactionService();
+        const formatConfig = resolveEffectiveFormatConfig(speakerMemory, conversationProfileId);
+        const taskConfig = resolveAiTaskConfig({
+          taskType: 'memory_compaction'
+        });
+
+        await compactionService.maybeCompact({
+          memory: speakerMemory,
+          formatConfig,
+          store: conversationStore,
+          gateway: compactionGateway,
+          taskConfig,
+          auditStore: compactionAuditStore
+        });
+      } catch {
+        // Compaction is best-effort. Swallow errors silently.
+      }
     }
   }
 

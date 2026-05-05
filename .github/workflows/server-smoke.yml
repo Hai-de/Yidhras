@@ -46,3 +46,28 @@ jobs:
       - name: Key endpoints smoke test
         run: pnpm --filter yidhras-server exec vitest run --config vitest.e2e.config.ts tests/e2e/smoke-endpoints.spec.ts
 
+      - name: CLI smoke tests
+        run: |
+          set -e
+          echo "=== db status ==="
+          pnpm --filter yidhras-server db status --json | python3 -m json.tool > /dev/null
+          echo "PASS"
+
+          echo "=== diag ==="
+          pnpm --filter yidhras-server diag --json | python3 -m json.tool > /dev/null
+          echo "PASS"
+
+          echo "=== validate:pack ==="
+          pnpm --filter yidhras-server validate:pack data/world_packs/death_note
+          echo "PASS"
+
+          echo "=== ai models ==="
+          pnpm --filter yidhras-server ai models --json | python3 -m json.tool > /dev/null
+          echo "PASS"
+
+          echo "=== operator list ==="
+          pnpm --filter yidhras-server operator list --json | python3 -m json.tool > /dev/null
+          echo "PASS"
+
+          echo "All CLI smoke tests passed"
+

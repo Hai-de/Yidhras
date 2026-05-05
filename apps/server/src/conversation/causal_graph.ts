@@ -92,7 +92,7 @@ export class CausalGraphQuery {
     visited.add(entryId);
 
     while (queue.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+       
       const current = queue.shift()!;
       if (current.depth >= maxDepth) continue;
 
