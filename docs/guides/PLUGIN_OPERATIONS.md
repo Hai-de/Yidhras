@@ -16,7 +16,7 @@
 
 - GUI：前端 `/plugins` 页面
 - API：`/api/packs/:packId/plugins*`
-- CLI：plugin CLI 已在兼容性清理中移除（2026-05-02），请使用 HTTP API 替代
+- CLI：`pnpm --filter yidhras-server plugin list|confirm|enable|disable`（直接操作 Prisma，不需要服务器运行）
 
 当前边界：
 

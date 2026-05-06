@@ -1,43 +1,71 @@
-# Structured Syntax Parser / 结构化语法解析器
+# Template Engine / 模板引擎
 
-可配置的模板字符串解析与渲染引擎。支持变量插值、修饰符链、条件/迭代块，语法本身由配置定义而非硬编码。
+共享内核 + 领域前端的模板解析与渲染引擎。支持变量插值、修饰符链、条件/迭代块，语法由配置定义而非硬编码。
 
 Key concepts:
 
-- **Layered architecture** — Lexer (tokenizer) → Parser (AST builder) → Renderer (string output)，三层独立，AST 可被程序化操作
-- **Configurable syntax** — 分隔符、修饰符链、块关键字全在 `ParserSyntaxConfig` 中定义，默认 `{...}` / `{{...}}` / `{{#...}}`，可替换为任意自定义语法
-- **Two usage modes** — `render()` 一步渲染（简单场景）；`parse() → 操作 AST → renderAst()` 两步操作（复杂场景，如 Slot 函数系统）
+- **Shared kernel + domain frontends** — `template_engine/core/` 提供 lexer → parser → renderer 流水线，`template_engine/frontends/` 下各领域前端注入变量解析、块处理器和语法配置
+- **Configurable syntax** — 分隔符、修饰符链、块关键字全在 `SyntaxConfig` 中定义。Data Cleaner 前端默认 `{...}` / `{{...}}`，Narrative 前端默认 `{{...}}`
+- **Two usage modes** — `render()` 一步渲染；`parse() → 操作 AST → renderAst()` 两步操作
 - **Modifier pipeline** — `{var|upper|trim|default("N/A")}`，修饰符链式执行，支持自定义注册
-- **Block handlers** — `{{#if}}`、`{{#each}}`、`{{#with}}` 内置块，可通过 `createParser()` 注册自定义块处理器
-- **DataCleaner adapter** — `data_cleaner.template` 作为薄封装暴露给 DataCleaner 管道，模板渲染可嵌入数据清洗流程
+- **Block handlers** — `if/else`、`each`、`with` 内置块，可通过 `createParser()` 注册自定义块处理器
+- **Domain frontends** — Data Cleaner（flat key lookup + 管道链）、Narrative（8 层命名空间变量解析）、Slot Function（slot 注册表引用）
 
-本文档集中说明解析器的 API、语法配置、修饰符/块系统以及 DataCleaner 适配器的使用方式。
+本文档集中说明共享内核的 API、语法配置、修饰符/块系统以及各领域前端的使用方式。
 
 ## 1. 文档定位
 
 本文件回答：
 
-- 解析器的公共 API 有哪些，如何选择 `render()` vs `parse()` vs `createParser()`
+- 模板引擎的公共 API 有哪些，如何选择 `render()` vs `parse()` vs `createParser()`
 - 默认语法规则是什么，如何配置自定义语法
 - 内置修饰符和块处理器的完整列表及行为
 - 如何注册自定义修饰符和块处理器
-- `data_cleaner.template` 适配器的输入输出契约
+- 各领域前端（Data Cleaner、Narrative、Slot Function）的职责与使用方式
 
 本文件不负责：
 
 - DataCleaner 注册表与插件生命周期：看 `docs/capabilities/PLUGIN_RUNTIME.md`
 - Prompt Workflow 中 slot 与 section draft 的关系：看 `docs/capabilities/PROMPT_WORKFLOW.md`
+- Narrative 变量上下文的 8 层命名空间解析细节：看 `docs/LOGIC.md`
 
-## 2. 公共 API
+## 2. 架构概览
 
-实现位于 `apps/server/src/parser/`，公共入口为 `index.ts`。
+```
+apps/server/src/template_engine/
+├── core/                       # 共享内核 — tokenize → parse → renderAst
+│   ├── lexer.ts                # 通用 tokenizer
+│   ├── parser.ts               # AST 构建器（栈式解析，支持嵌套）
+│   ├── renderer.ts              # 递归渲染骨架
+│   └── types.ts                 # AstNode, Token, RenderScope, SyntaxConfig 等
+├── defaults.ts                  # 默认语法配置 + 内置修饰符 + 内置块处理器
+├── frontends/
+│   ├── data_cleaner/            # Data Cleaner 前端（{ } 语法，flat key lookup）
+│   │   └── index.ts
+│   ├── narrative/               # Narrative 前端（{{ }} 语法，8 层命名空间解析）
+│   │   ├── resolver.ts          # renderNarrativeTemplate 入口
+│   │   ├── variable_context.ts  # PromptVariableContext 构建与查找
+│   │   ├── resolvers.ts         # Narrative VariableResolver
+│   │   ├── blocks.ts            # if/else, each, with 块处理器
+│   │   └── types.ts             # PromptVariableLayer, PromptVariableContext 等
+│   └── slot_function/           # Slot Function 前端（slot 引用与作用域）
+│       ├── types.ts             # SlotRegistration, SlotRegistry
+│       └── blocks.ts            # slot-ref 块处理器, scope 块接口
+```
 
-### 2.1 一步渲染：`render()`
+共享内核负责 tokenization、AST 构建和递归渲染骨架。各领域前端注入：
+- 变量解析函数（`VariableResolver`）
+- 块处理器（`BlockHandlerFn`）
+- 语法配置（`SyntaxConfig`）
 
-最简单的使用方式。传入模板字符串和变量映射，返回渲染后的字符串。
+## 3. 公共 API
+
+### 3.1 Data Cleaner 前端（一步渲染）
+
+最简单的使用方式，适用于 `{var}` 语法的模板渲染。
 
 ```typescript
-import { render } from './parser/index.js'
+import { render } from './template_engine/frontends/data_cleaner/index.js'
 
 const result = render('Hello {name|upper}, welcome to {place}', {
   name: 'alice',
@@ -52,126 +80,125 @@ const result = render('Hello {name|upper}, welcome to {place}', {
 function render(
   template: string,
   variables: Record<string, unknown>,
-  syntaxOverride?: Partial<ParserSyntaxConfig>
+  syntaxOverride?: Partial<SyntaxConfig>
 ): string
 ```
 
-适用场景：ConversationAssembler 的格式模板渲染、YAML 配置中的消息前缀/后缀替换。
-
-### 2.2 两步操作：`parseTemplate()` + `renderAst()`
-
-先解析为 AST，可程序化操作节点后再渲染。适用于需要在渲染前修改模板结构的场景。
+### 3.2 两步操作：`parseTemplate()` + `renderAst()`
 
 ```typescript
-import { parseTemplate, renderAstPublic } from './parser/index.js'
+import { parseTemplate, renderAstPublic } from './template_engine/frontends/data_cleaner/index.js'
 
 const { nodes, diagnostics } = parseTemplate('{name|upper}')
-// nodes: [{ type: 'variable', name: 'name', modifiers: [{ name: 'upper', args: [] }] }]
-
-// 可以在渲染前操作 nodes（插入、删除、修改节点）
-
 const result = renderAstPublic(nodes, { name: 'charlie' })
 // → 'CHARLIE'
 ```
 
-### 2.3 工厂模式：`createParser()`
-
-创建带自定义修饰符和块处理器的解析器实例。适用于 Slot 函数系统等需要扩展语法的场景。
+### 3.3 工厂模式：`createParser()`
 
 ```typescript
-import { createParser } from './parser/index.js'
+import { createParser } from './template_engine/frontends/data_cleaner/index.js'
 
 const parser = createParser({
-  syntax: {
-    delimiters: {
-      variable: { open: '<<', close: '>>' }
-    }
-  },
   modifiers: {
     scream: (value: unknown) => String(value).toUpperCase() + '!!!'
   },
   blockHandlers: {
     greet: (condition, body, _elseBody, scope, renderFn) => {
-      const inner = renderFn(body, scope)
-      return `[GREETING: ${inner}]`
+      return `[GREETING: ${renderFn(body, scope)}]`
     }
   }
 })
 
-parser.render('<<msg|scream>>', { msg: 'hello' })
-// → 'HELLO!!!'
-
-parser.render('{{#greet}}world{{/greet}}', {})
-// → '[GREETING: world]'
-```
-
-签名：
-
-```typescript
-function createParser(config: {
-  syntax?: Partial<ParserSyntaxConfig>
-  modifiers?: Record<string, ModifierFn>
-  blockHandlers?: Record<string, BlockHandlerFn>
-}): ParserInstance
+parser.render('{msg|scream}', { msg: 'hello' })  // → 'HELLO!!!'
+parser.render('{{#greet}}world{{/greet}}', {})    // → '[GREETING: world]'
 ```
 
 `ParserInstance` 接口：
 
 ```typescript
 interface ParserInstance {
-  render(template: string, variables: Record<string, unknown>, syntaxOverride?: Partial<ParserSyntaxConfig>): string
-  parse(template: string, syntaxOverride?: Partial<ParserSyntaxConfig>): { nodes: AstNode[]; diagnostics: ParserDiagnostic[] }
+  render(template: string, variables: Record<string, unknown>, syntaxOverride?: Partial<SyntaxConfig>): string
+  parse(template: string, syntaxOverride?: Partial<SyntaxConfig>): { nodes: AstNode[]; diagnostics: ParserDiagnostic[] }
   renderAst(nodes: AstNode[], variables: Record<string, unknown>): string
 }
 ```
 
-## 3. 默认语法规则
+### 3.4 Narrative 前端（`{{ }}` 语法，命名空间变量解析）
 
-默认配置定义在 `apps/server/src/parser/syntax_defaults.ts`，采用 Handlebars 风格。
+```typescript
+import { renderNarrativeTemplate } from './template_engine/frontends/narrative/resolver.js'
+import { createPromptVariableContext, createPromptVariableLayer, normalizePromptVariableRecord } from './template_engine/frontends/narrative/variable_context.js'
 
-### 3.1 变量插值
+const ctx = createPromptVariableContext({
+  layers: [
+    createPromptVariableLayer({
+      namespace: 'actor',
+      values: normalizePromptVariableRecord({ display_name: '夜神月' }),
+      metadata: { source_label: 'actor', trusted: true }
+    })
+  ]
+})
+
+const result = renderNarrativeTemplate({
+  template: '角色：{{ actor.display_name }}',
+  variableContext: ctx
+})
+// result.text → '角色：夜神月'
+// result.diagnostics → RenderDiagnostics（traces, missing_paths, errors 等）
+```
+
+返回类型：
+
+```typescript
+interface RenderResult {
+  text: string
+  diagnostics: RenderDiagnostics
+}
+```
+
+Narrative 前端支持 `{{#if}}...{{else}}...{{/if}}`、`{{#each path as alias}}...{{/each}}`、`{{#with path}}...{{/with}}` 块语法，以及 `{{path | default("fallback")}}` 默认值修饰符。
+
+## 4. 默认语法规则
+
+### 4.1 Data Cleaner 前端默认语法
+
+变量和块均使用 `{...}` / `{{...}}` 分隔符：
 
 ```
 {var_name}                     — 简单变量替换
 {var_name|modifier}            — 单修饰符
 {var_name|mod1|mod2}           — 修饰符链（从左到右执行）
 {var_name|mod(args)}           — 带参数的修饰符
-{var_name|mod1|mod2(arg)}      — 链式 + 参数
+{{#if condition}}...{{/if}}    — 条件块（支持 {{#else}}）
+{{#each items}}...{{/each}}    — 迭代块
+{{#with context}}...{{/with}}  — 上下文块
+{!-- comment --}              — 注释
 ```
+
+### 4.2 Narrative 前端默认语法
+
+变量统一使用 `{{ }}`，与块语法共用分隔符对：
+
+```
+{{ path }}                     — 命名空间变量插值
+{{ path | default("x") }}      — 带默认值的变量插值
+{{#if path}}...{{/if}}         — 条件块（支持嵌套和 {{#else}}）
+{{#each path as alias}}...{{/each}} — 迭代块
+{{#with path}}...{{/with}}     — 上下文块
+```
+
+Narrative 前端的 `{{ }}` 统一解析为变量节点，与 slot 引用的区分发生在变量解析层（先查 slot 注册表，再执行命名空间变量查找）。
+
+### 4.3 通用规则
 
 变量名支持点号路径访问嵌套属性：`{user.name}` 解析为 `variables.user.name`。
 
-### 3.2 宏引用
+转义使用 `\`：`\{not a variable\}` 输出为 `{not a variable}`。
 
-```
-{{macro_name}}                 — 简单宏引用
-{{macro_name arg1=val1}}       — 带命名参数的宏
-```
+最大递归深度 32 层，超出返回空字符串。
 
-宏当前在渲染器中不产生输出（返回空字符串），为 Slot 函数系统预留。Slot 函数系统可通过操作 AST 消费宏节点。
-
-### 3.3 块语法
-
-```
-{{#if condition}}...{{/if}}
-{{#if condition}}...{{#else}}...{{/if}}
-{{#each items}}...{{/each}}
-{{#with context}}...{{/with}}
-```
-
-块可嵌套。最大递归深度 32 层，超出返回空字符串。
-
-### 3.4 注释
-
-```
-{!-- 这是注释，不会出现在输出中 --}
-```
-
-### 3.5 转义
-
-使用 `\` 转义分隔符：`\{not a variable\}` 输出为 `{not a variable}`。
-
-## 4. 内置修饰符
+## 5. 内置修饰符
 
 | 修饰符 | 参数 | 行为 | 示例 |
 |--------|------|------|------|
@@ -189,11 +216,9 @@ interface ParserInstance {
 type ModifierFn = (value: unknown, ...args: string[]) => unknown
 ```
 
-## 5. 内置块处理器
+## 6. 内置块处理器
 
-### 5.1 `if` / `else`
-
-条件渲染。condition 为变量名，解析为 truthy/falsy 判断。
+### 6.1 `if` / `else`
 
 ```
 {{#if show}}
@@ -205,16 +230,9 @@ type ModifierFn = (value: unknown, ...args: string[]) => unknown
 
 Falsy 值：`null`、`undefined`、`false`、`0`、`""`、`[]`。其余为 truthy。
 
-### 5.2 `each`
+### 6.2 `each`
 
-迭代数组。condition 为数组变量名。每次迭代注入以下局部变量：
-
-| 变量 | 含义 |
-|------|------|
-| `item` | 当前元素 |
-| `index` | 当前索引（从 0 开始） |
-| `first` | 是否第一个元素 |
-| `last` | 是否最后一个元素 |
+Data Cleaner 前端注入 `item`、`index`、`first`、`last` 变量。Narrative 前端使用 `as alias` 语法：
 
 ```
 {{#each items}}
@@ -222,9 +240,9 @@ Falsy 值：`null`、`undefined`、`false`、`0`、`""`、`[]`。其余为 truth
 {{/each}}
 ```
 
-### 5.3 `with`
+### 6.3 `with`
 
-切换变量上下文。condition 为一个对象变量名，块内可直接访问该对象的属性。
+切换变量上下文，块内可直接访问该对象的属性：
 
 ```
 {{#with user}}
@@ -232,17 +250,15 @@ Falsy 值：`null`、`undefined`、`false`、`0`、`""`、`[]`。其余为 truth
 {{/with}}
 ```
 
-等价于在块内将 `variables` 与 `user` 对象合并。
+## 7. 自定义语法配置
 
-## 6. 自定义语法配置
-
-`ParserSyntaxConfig` 的完整结构。所有字段均有默认值，传 `Partial<ParserSyntaxConfig>` 只覆盖需要改的部分。
+`SyntaxConfig` 的完整结构：
 
 ```typescript
-interface ParserSyntaxConfig {
+interface SyntaxConfig {
   delimiters: {
-    variable:    { open: string; close: string }   // 默认: { }
-    macro:       { open: string; close: string }   // 默认: {{ }}
+    variable:    { open: string; close: string }   // Data Cleaner 默认: { }
+    macro:       { open: string; close: string }   // Data Cleaner 默认: {{ }}
     blockOpen:   { open: string; close: string }   // 默认: {{# }}
     blockClose:  { open: string; close: string }   // 默认: {{/ }}
     comment:     { open: string; close: string }   // 默认: {!-- --}
@@ -255,17 +271,17 @@ interface ParserSyntaxConfig {
     namedArgSep:    string   // 默认: =
   }
   blocks: {
-    conditional: { keyword: string; elseKeyword: string }  // 默认: if / else
-    iteration:   { keyword: string }                        // 默认: each
-    context:     { keyword: string }                        // 默认: with
+    keywords:    string[]    // 识别的块关键字，如 ['if', 'each', 'with', 'slot-ref']
+    elseKeyword: string      // 默认: 'else'
+    asKeyword:   string      // 默认: 'as'
   }
 }
 ```
 
-### 6.1 示例：自定义分隔符
+### 7.1 示例：自定义分隔符
 
 ```typescript
-import { render } from './parser/index.js'
+import { render } from './template_engine/frontends/data_cleaner/index.js'
 
 const result = render('Hello <<name>>', { name: 'World' }, {
   delimiters: {
@@ -275,35 +291,15 @@ const result = render('Hello <<name>>', { name: 'World' }, {
 // → 'Hello World'
 ```
 
-注意：部分覆盖时，未指定的字段保持默认值。只改了 `variable` 分隔符，`macro`、`block` 等仍用 `{{...}}`。
+## 8. DataCleaner 适配器
 
-### 6.2 示例：在 ConversationFormatConfig 中嵌入
-
-按设计决策，每个 `ConversationFormatConfig` 内嵌一份语法配置：
-
-```yaml
-conversation_format:
-  transcript:
-    speaker_format:
-      default:
-        prefix: '"{speaker_id}": "'
-        suffix: '"\n'
-  parser_syntax:           # 嵌入的语法配置（可选，不传则用默认）
-    delimiters:
-      variable:
-        open: "{"
-        close: "}"
-```
-
-## 7. DataCleaner 适配器
-
-### 7.1 接口 key
+### 8.1 接口 key
 
 ```
 data_cleaner.template
 ```
 
-### 7.2 输入输出
+### 8.2 输入输出
 
 ```typescript
 // 输入
@@ -311,7 +307,7 @@ data_cleaner.template
   text: string                              // 模板字符串
   options?: {
     variables?: Record<string, unknown>     // 变量映射
-    syntax_config?: Partial<ParserSyntaxConfig>  // 可选的语法覆盖
+    syntax_config?: Partial<SyntaxConfig>   // 可选的语法覆盖
   }
 }
 
@@ -319,40 +315,18 @@ data_cleaner.template
 {
   cleaned: string          // 渲染后的字符串
   metadata: {
-    variable_count: number // 传入的变量数量
-    input_length: number   // 输入模板长度
-    output_length: number  // 输出字符串长度
+    variable_count: number
+    input_length: number
+    output_length: number
   }
 }
 ```
 
-### 7.3 使用示例
+### 8.3 错误处理
 
-```typescript
-import { dataCleanerRegistry } from './plugins/extensions/data_cleaner_registry.js'
+模板解析或渲染过程中的异常被捕获，适配器返回原始输入文本作为降级。
 
-const cleaner = dataCleanerRegistry.get('data_cleaner.template')!
-const output = await cleaner.clean({
-  text: 'Agent {agent_id} says: {message|upper}',
-  options: {
-    variables: { agent_id: 'agent9', message: 'hello world' }
-  }
-})
-// output.cleaned → 'Agent agent9 says: HELLO WORLD'
-```
-
-### 7.4 错误处理
-
-模板解析或渲染过程中的异常被捕获，适配器返回原始输入文本作为降级：
-
-```typescript
-// 如果渲染抛出，输出 = 输入
-{ cleaned: originalText, metadata: { ... } }
-```
-
-## 8. AST 节点类型参考
-
-供需要程序化操作 AST 的消费者（如 Slot 函数系统）参考。
+## 9. AST 节点类型参考
 
 ```typescript
 type AstNode = TextNode | VariableNode | MacroNode | BlockNode
@@ -389,42 +363,26 @@ interface ModifierSpec {
 }
 ```
 
-操作 AST 后再渲染的典型流程：
+## 10. 集成点
 
-```typescript
-const parser = createParser({})
-const { nodes } = parser.parse('Hello {name}')
+### 10.1 ConversationAssembler
 
-// 程序化修改 AST：在末尾追加一个文本节点
-nodes.push({ type: 'text', content: '!' })
+`data_cleaner.template` 插件通过 `render()` 为 ConversationAssembler 的格式模板渲染提供基础设施。
 
-const result = parser.renderAst(nodes, { name: 'World' })
-// → 'Hello World!'
-```
+### 10.2 Narrative 模板渲染
 
-## 9. 集成点
+Narrative 前端 (`renderNarrativeTemplate`) 用于 prompt 模板渲染，替代了旧的 `NarrativeResolver` 正则实现。支持命名空间变量解析、嵌套 `if/else`、`each as alias`、`with` 块，返回 `RenderResult`（结构化错误替代标记字符串）。
 
-### 9.1 ConversationAssembler（近期）
+### 10.3 Slot 函数系统
 
-解析器的 `render()` 是 ConversationAssembler 格式模板渲染的基础设施。`ConversationFormatConfig` 中的 `speaker_format`、`role_format`、`message_prefix/suffix` 等字段通过 `render(template, {...})` 转为实际字符串。
+Slot Function 前端提供 `slot-ref` 块处理器，支持在模板中引用 slot 内容：
+- 内联形式：`{{slot_name}}` 通过 Narrative 前端 `VariableResolver` 分流
+- 块形式：`{{#slot-ref "slot_id"}}fallback{{/slot-ref}}` 支持回退内容
 
-详见 `.limcode/design/multi-turn-conversation-design.md` §3。
+## 11. 约束与限制
 
-### 9.2 Slot 函数系统（远期）
-
-解析器的 `parse() → 操作 AST → renderAst()` 两步模式支撑 Slot 函数系统中的宏展开、嵌套作用域、块级条件/迭代。
-
-详见 `TODO.md` "插槽函数（链表）" 项。
-
-### 9.3 NarrativeResolver（现有，未来迁移候选）
-
-`apps/server/src/narrative/resolver.ts` 中 `NarrativeResolver` 的 `processInterpolations` / `processIfBlocks` / `processEachBlocks` 是正则-based 的模板渲染。本解析器设计上可替换该实现，但不属于当前任务范围。
-
-## 10. 约束与限制
-
-- **最大递归深度 32** — 嵌套块超过此深度返回空字符串，防止栈溢出
-- **宏不产生输出** — `{{macro_name}}` 当前渲染为空字符串，为 Slot 函数系统预留的扩展点
-- **变量缺失不报错** — 未找到的变量渲染为空字符串，不抛异常
-- **修饰符缺失静默跳过** — 注册表中不存在的修饰符被跳过，值不变
-- **块处理器缺失静默跳过** — 未注册的块关键字不产生输出，不报错
-- **语法配置部分合并** — 传入 `Partial<ParserSyntaxConfig>` 时，未指定的字段保留默认值，使用浅合并
+- **最大递归深度 32** — 嵌套块超过此深度返回空字符串
+- **变量缺失不报错** — 未找到的变量渲染为空字符串（Data Cleaner）或在 diagnostics 中记录（Narrative）
+- **修饰符缺失静默跳过** — 注册表中不存在的修饰符被跳过
+- **块处理器缺失静默跳过** — 未注册的块关键字不产生输出
+- **语法配置部分合并** — 传入 `Partial<SyntaxConfig>` 时，未指定字段保留默认值

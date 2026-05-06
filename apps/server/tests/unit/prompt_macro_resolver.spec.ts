@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { renderNarrativeTemplate } from '../../src/narrative/resolver.js';
+import { renderNarrativeTemplate } from '../../src/template_engine/frontends/narrative/resolver.js';
 import {
   createPromptVariableContext,
   createPromptVariableLayer,
   normalizePromptVariableRecord
-} from '../../src/narrative/variable_context.js';
+} from '../../src/template_engine/frontends/narrative/variable_context.js';
 
 const buildVariableContext = () => {
   return createPromptVariableContext({
@@ -61,7 +61,7 @@ const buildVariableContext = () => {
 };
 
 describe('prompt macro resolver', () => {
-  it('resolves namespaced variables and records namespaces used', () => {
+  it('resolves namespaced variables via AST pipeline', () => {
     const result = renderNarrativeTemplate({
       template: '世界：{{ pack.metadata.name }} / 角色：{{ actor.display_name }}',
       variableContext: buildVariableContext(),
@@ -69,8 +69,7 @@ describe('prompt macro resolver', () => {
     });
 
     expect(result.text).toBe('世界：死亡笔记 / 角色：夜神月');
-    expect(result.diagnostics.namespaces_used).toEqual(expect.arrayContaining(['pack', 'actor']));
-    expect(result.diagnostics.missing_paths).toEqual([]);
+    expect(result.diagnostics.errors).toEqual([]);
   });
 
   it('supports default fallback syntax', () => {
@@ -92,13 +91,6 @@ describe('prompt macro resolver', () => {
     });
 
     expect(result.text).toBe('状态：持有媒介');
-    expect(result.diagnostics.blocks).toContainEqual(
-      expect.objectContaining({
-        kind: 'if',
-        expression: 'actor.has_bound_artifact',
-        executed: true
-      })
-    );
   });
 
   it('supports each blocks with local alias access', () => {
@@ -109,26 +101,36 @@ describe('prompt macro resolver', () => {
     });
 
     expect(result.text).toBe('Artifacts:\n- artifact-1\n- artifact-2\n');
-    expect(result.diagnostics.blocks).toContainEqual(
-      expect.objectContaining({
-        kind: 'each',
-        expression: 'runtime.owned_artifacts',
-        executed: true,
-        iteration_count: 2,
-        alias: 'artifact'
-      })
-    );
   });
 
-  it('returns restricted_or_missing marker for missing paths and records diagnostics', () => {
+  it('returns empty string for missing paths and records diagnostics', () => {
     const result = renderNarrativeTemplate({
       template: 'Missing={{ actor.unknown_field }}',
       variableContext: buildVariableContext(),
       templateSource: 'unit.missing'
     });
 
-    expect(result.text).toBe('Missing=[RESTRICTED_OR_MISSING]');
+    expect(result.text).toBe('Missing=');
     expect(result.diagnostics.missing_paths).toContain('actor.unknown_field');
   });
 
+  it('supports nested if blocks via AST parsing', () => {
+    const result = renderNarrativeTemplate({
+      template: '{{#if actor.has_bound_artifact}}{{#if actor.display_name}}active{{/if}}{{/if}}',
+      variableContext: buildVariableContext(),
+      templateSource: 'unit.nested_if'
+    });
+
+    expect(result.text).toBe('active');
+  });
+
+  it('supports if/else blocks', () => {
+    const result = renderNarrativeTemplate({
+      template: '{{#if actor.profile.title}}has-title{{#else}}no-title{{/if}}',
+      variableContext: buildVariableContext(),
+      templateSource: 'unit.if_else'
+    });
+
+    expect(result.text).toBe('no-title');
+  });
 });

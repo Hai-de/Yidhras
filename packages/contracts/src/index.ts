@@ -18,6 +18,6 @@ export * from './relational.js'
 export * from './scalars.js'
 export * from './scheduler.js'
 export * from './social.js'
-export * from './structured_parser.js'
+
 export * from './system.js'
 export * from './world_engine.js'

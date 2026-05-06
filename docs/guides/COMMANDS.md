@@ -382,9 +382,16 @@ pnpm --filter yidhras-server snapshot delete <id> --pack <pack-id> [--force]
 - `POST /api/packs/snapshots` — 创建快照
 - `POST /api/packs/snapshots/:id/restore` — 恢复快照
 
-### 6.8 插件治理
+### 6.8 插件治理 (`plugin`)
 
-插件管理通过 HTTP API 进行：
+```bash
+pnpm --filter yidhras-server plugin list [--pack <pack-id>]   # 列出插件
+pnpm --filter yidhras-server plugin confirm <id> --pack <p>   # 确认导入
+pnpm --filter yidhras-server plugin enable <id> --pack <p>    # 启用
+pnpm --filter yidhras-server plugin disable <id> --pack <p>   # 禁用
+```
+
+CLI 命令直接操作 Prisma，不需要服务器运行。也可通过 HTTP API 操作：
 
 ```bash
 GET    /api/packs/:id/plugins              # 列出插件
@@ -394,6 +401,19 @@ POST   /api/packs/:id/plugins/:id/disable  # 禁用
 ```
 
 更完整的治理说明、acknowledgement 语义、GUI/CLI 对照和排障路径见 `docs/guides/PLUGIN_OPERATIONS.md`。
+
+### 6.9 世界包导出/导入 (`pack:export` / `pack:import`)
+
+```bash
+pnpm --filter yidhras-server pack:export <pack-dir> [--output <path>] [--force] [--json]
+pnpm --filter yidhras-server pack:import <archive> [--force] [--json]
+```
+
+说明：
+- `export`：将 world pack 打包为 `<id>-<version>.tar.gz`，同时生成 `.sha256` 校验文件。默认输出到当前目录，`--output` 指定输出路径。导出前自动运行 validate:pack 校验，校验失败则拒绝（`--force` 跳过）。
+- `import`：从 `.tar.gz` 归档安装 world pack 到 `data/world_packs/<id>/`。自动校验归档内容，目标目录已存在时需 `--force` 覆盖。
+- 排除项：`.git`、`node_modules`、`runtime/`、临时文件。
+- 支持 `--json` 机器可读输出。
 
 ## 7. 常用工作流建议
 

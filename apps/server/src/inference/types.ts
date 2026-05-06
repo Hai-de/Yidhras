@@ -6,7 +6,7 @@ import type {
   PromptVariableContext,
   PromptVariableContextSummary,
   PromptVariableRecord
-} from '../narrative/types.js';
+} from '../template_engine/frontends/narrative/types.js';
 import type { WorldPackAiConfig, WorldPackValue } from '../packs/schema/constitution_schema.js';
 import type { PromptBundleV2 } from './prompt_bundle_v2.js';
 

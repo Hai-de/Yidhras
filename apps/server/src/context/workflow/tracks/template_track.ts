@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { buildOutputContractPrompt } from '../../../inference/prompt_builder.js';
 import type { PromptSlotConfig } from '../../../inference/prompt_slot_config.js';
 import type { InferenceContext } from '../../../inference/types.js';
-import { renderNarrativeTemplate } from '../../../narrative/resolver.js';
+import { renderNarrativeTemplate } from '../../../template_engine/frontends/narrative/resolver.js';
 import type {
   PromptSectionDraft,
   PromptSectionDraftType,

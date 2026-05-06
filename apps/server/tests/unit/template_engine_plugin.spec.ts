@@ -10,7 +10,7 @@ describe('data_cleaner.template', () => {
       version: '1.0.0',
       async clean(input: DataCleanerInput) {
         const { text, options } = input
-        const { render } = await import('../../src/parser/index.js')
+        const { render } = await import('../../src/template_engine/frontends/data_cleaner/index.js')
         const variables = (options?.variables as Record<string, unknown>) ?? {}
         let rendered: string
         try {

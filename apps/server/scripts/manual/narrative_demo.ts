@@ -1,9 +1,9 @@
-import { renderNarrativeTemplate } from '../../src/narrative/resolver.js';
+import { renderNarrativeTemplate } from '../../src/template_engine/frontends/narrative/resolver.js';
 import {
   createPromptVariableContext,
   createPromptVariableLayer,
   normalizePromptVariableRecord
-} from '../../src/narrative/variable_context.js';
+} from '../../src/template_engine/frontends/narrative/variable_context.js';
 
 const variableContext = createPromptVariableContext({
   layers: [

@@ -2,7 +2,7 @@ import type { DataCleanerInput, DataCleanerOutput } from '@yidhras/contracts'
 
 import type { ServerPluginHostApi } from '../../../../src/plugins/runtime.js'
 import type { DataCleaner } from '../../../../src/plugins/extensions/data_cleaner_registry.js'
-import { render } from '../../../../src/parser/index.js'
+import { render } from '../../../../src/template_engine/frontends/data_cleaner/index.js'
 
 const cleaner: DataCleaner = {
   key: 'data_cleaner.template',

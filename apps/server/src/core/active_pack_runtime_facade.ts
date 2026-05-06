@@ -3,12 +3,12 @@ import type { RuntimeClockProjectionSnapshot } from '../app/runtime/runtime_cloc
 import type { ActivePackRuntimeFacade } from '../app/services/app_context_ports.js';
 import { ChronosEngine } from '../clock/engine.js';
 import type { CalendarConfig } from '../clock/types.js';
-import { renderNarrativeTemplate } from '../narrative/resolver.js';
+import { renderNarrativeTemplate } from '../template_engine/frontends/narrative/resolver.js';
 import {
   createPromptVariableContext,
   createPromptVariableLayer,
   normalizePromptVariableRecord
-} from '../narrative/variable_context.js';
+} from '../template_engine/frontends/narrative/variable_context.js';
 import type { PackManifestLoader, WorldPack } from '../packs/manifest/loader.js';
 import type { PermissionContext } from '../permission/types.js';
 import { createLogger } from '../utils/logger.js';

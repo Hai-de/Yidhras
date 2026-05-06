@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { createParser, parseTemplate, render } from '../../src/parser/index.js'
-import { tokenize } from '../../src/parser/lexer.js'
-import { parse } from '../../src/parser/parser.js'
-import { BUILTIN_BLOCK_HANDLERS, BUILTIN_MODIFIERS } from '../../src/parser/builtins.js'
-import { renderAst } from '../../src/parser/renderer.js'
-import type { AstNode, RenderScope } from '../../src/parser/types.js'
+import { createParser, parseTemplate, render } from '../../src/template_engine/frontends/data_cleaner/index.js'
+import { tokenize } from '../../src/template_engine/core/lexer.js'
+import { parse } from '../../src/template_engine/core/parser.js'
+import { BUILTIN_BLOCK_HANDLERS, BUILTIN_MODIFIERS } from '../../src/template_engine/defaults.js'
+import { renderAst } from '../../src/template_engine/core/renderer.js'
+import type { AstNode, RenderScope } from '../../src/template_engine/core/types.js'
 
 const defaultScope: RenderScope = {
   variables: {},

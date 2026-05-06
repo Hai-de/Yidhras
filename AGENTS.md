@@ -92,7 +92,10 @@ pnpm --filter yidhras-server sim status|pause|resume|speed|login
 pnpm --filter yidhras-server ai models|test
 pnpm --filter yidhras-server diag
 pnpm --filter yidhras-server operator create|list|show|update|delete
+pnpm --filter yidhras-server plugin list|confirm|enable|disable
 pnpm --filter yidhras-server snapshot list|show|delete
+pnpm --filter yidhras-server pack:export <dir> [--output <path>] [--force]
+pnpm --filter yidhras-server pack:import <archive> [--force]
 ```
 
 ### CI baseline

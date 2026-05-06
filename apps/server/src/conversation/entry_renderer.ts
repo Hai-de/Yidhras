@@ -3,7 +3,7 @@
  * Design doc: .limcode/design/multi-turn-conversation-design.md §6.6
  */
 
-import { render } from '../parser/index.js';
+import { render } from '../template_engine/frontends/data_cleaner/index.js';
 import type { SpeakerFormatConfig, TranscriptConfig } from './format_config.js';
 import type { ConversationEntry } from './types.js';
 

@@ -1,4 +1,4 @@
-import type { PromptVariableRecord, PromptVariableValue } from '../narrative/types.js';
+import type { PromptVariableRecord, PromptVariableValue } from '../template_engine/frontends/narrative/types.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

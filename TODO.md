@@ -35,54 +35,38 @@
 #### 阶段三：提示词构建（Prompt Workflow）
 
 > 设计文档：`.limcode/design/prompt-workflow-system-b-advancement-design.md`
-> 推进计划：`.limcode/plans/prompt-workflow-system-b-advancement-plan.md`
+
 
 ##### 多轮对话（Multi-Turn Conversation） — 阶段一 ✅ 完成
 
 > 设计文档：`.limcode/design/multi-turn-conversation-design.md`
-> 阶段一计划：`.limcode/plans/multi-turn-conversation-phase1.md`
 
-阶段一（2026-05-05 完成）：
+阶段二/三待实现：
 
-- [x] `ConversationEntry` + `AgentConversationMemory` 类型定义（含 `kind`、`turn_range`、`modifications` 上限 50）
-- [x] `ConversationStore` 接口 + Prisma 实现（`ConversationMemory` + `ConversationEntryRecord` 表）
-- [x] `ConversationFormatConfig` 类型 + YAML schema + 配置域（`data/configw/conf.d/conversation.yaml`）
-- [x] `ConversationAssembler` 实现（全路径取代旧的 `adaptPromptTreeToAiMessages`，已删除）
-- [x] `conversation_history` slot 加入 `PromptFragmentSlot` 联合类型
-- [x] `runConversationHistoryTrack` 轨道（per-entry draft + `getVisibleEntries` 截断）
-- [x] `InferenceContext` 扩展（`agent_conversation_memory` + `current_agent_id` + `conversation_profile`）
-- [x] `PromptWorkflowProfile` 扩展（`conversation_profile` + `tracks.conversation_history`）
-- [x] 静态 profile（`chat-first-turn`、`chat-follow-up`）+ 轻量路径
-- [x] 滑动窗口截断（`window_turns`）+ token_budget_trim 反转裁剪
-- [x] `source_inference_id` + `derived_from_entry_ids` 写入捕获
-- [x] 推理管线接入（`task_service` 全走 assembler + `executeRunInternal` writeback）+ 双向事务写入
-- [x] 测试：29 集成测试 + 单元覆盖
-
-阶段二/三待实现（设计文档：`.limcode/design/multi-turn-conversation-design.md`）：
-- [ ] 多 agent transcript 嵌入（默认模式）+ 消息级别注入点
-- [ ] 一对一角色映射降级为配置门控简化选项
-- [ ] AI 摘要压缩（Hybrid 方案：截断兜底 + 独立压缩路径 + 写入后触发 + 软归档 + agent opt-in）
-- [ ] 压缩到单一 role + 因果图查询
 - [ ] 自适应轨道选择、per-conversation 配置覆盖
 - [ ] Tag 系统（类型/Prisma schema 已就位，用途尚在讨论中，待决定后激活）
-- [ ] `SlotFunctionRegistry` — 已移出阶段三，作为独立设计项目（涉及图灵完备执行核心、双模块架构）
+
 
 #### 已知技术债务（不阻塞当前阶段）
 
 - `ConversationEntry.archived` 软归档后 entries 数组无限增长 — 需日后实现定期物理归档到冷存储（如按年份归档到独立表、或导出为 JSON 文件并删除 DB 行）
 
-##### 插槽函数（链表）
+##### 插槽函数
 
-- 内置slot既然可以被关闭，那自然可以使用类似的宏语法或者函数名"{{system_core}}"来指代原来已经被禁用的内置slot
-- 内置的slot可以被关闭，但始终存在用来定位， slot 定义加入绝对位置和相对位置的动态定位功能，方便其他的动态的slot在slot之间插入和移除
-> ⚠ 当前 System B 只有 fragment 层面的 anchor/placement，没有 slot 之间的位置关系。Slot 定位系统需要独立设计，`PromptFragmentPlacementMode` 可作为基础类型扩展
+> 模板引擎统一已完成（`.limcode/design/template-engine-unification-design.md`），以下各项的进展标注基于 `template_engine/` 当前能力。
 
-- 引入函数的内联/嵌套/封装/作用域概念，让插槽函数升级为顶层空间，
-- 允许在顶级空间之外定义变量作为全局变量，包括宏定义也是
-> ⚠ 当前 System B 将宏展开限制为单次扁平替换。嵌套/作用域需要独立的宏系统设计
+- [x] 内置slot既然可以被关闭，那自然可以使用类似的宏语法或者函数名"{{system_core}}"来指代原来已经被禁用的内置slot
+> ✅ 已实现 POC：`slot-ref` 块处理器 (`{{#slot-ref "system_core"}}fallback{{/slot-ref}}`)，内联 slot 引用 (`{{system_core}}`) 通过 Narrative `VariableResolver` 查询 slot 注册表分流。实现位于 `template_engine/frontends/slot_function/blocks.ts`
 
-- 高级功能：允许执行（需要图灵完备的）代码，处理： 深度/顺序/触发概率/群组权重/扫描深度/逻辑匹配/始终激活/条件激活/黏性（出发后保留次数）/触发后冷却时间/延迟触发/延迟递归/不可递归/防止进一步递归/无视上下文长度/关键字匹配/向量化触发 等等高级且复杂的功能，尚不确定使用脚本语言lua/js/rust或者是其他方式实现核心模块，但毫无疑问需要被隔离
-> ⚠ `SectionDraft.metadata: Record<string, unknown>` 可作为触发概率、冷却时间等元数据的扩展点，未来 executor 可消费这些字段
+- [ ] 内置的slot可以被关闭，但始终存在用来定位， slot 定义加入绝对位置和相对位置的动态定位功能，方便其他的动态的slot在slot之间插入和移除
+> ⚠ slot 定位系统需要独立设计（`PromptFragmentPlacementMode` 层面），不属于模板引擎统一范围
 
-- 双重模块设置，一个是当前的Prompt Tree V2，另一个是更复杂拥有插槽函数的核心
-> ⚠ 双模块路线与当前 System B 的线性 pipeline 架构有根本性差异（图灵完备 vs 声明式 pipeline），需要在插槽函数核心设计启动时明确边界
+- [x] 引入函数的内联/嵌套/封装/作用域概念，让插槽函数升级为顶层空间
+- [x] 允许在顶级空间之外定义变量作为全局变量，包括宏定义也是
+> ✅ `RenderContext.scopeStack` 已在共享内核实现；`scope` 块接口已定义 (`{{#scope var=val}}...{{/scope}}`)，完整实现待插槽函数核心设计确定
+
+- [ ] 高级功能：允许执行（需要图灵完备的）代码，处理： 深度/顺序/触发概率/群组权重/扫描深度/逻辑匹配/始终激活/条件激活/黏性（出发后保留次数）/触发后冷却时间/延迟触发/延迟递归/不可递归/防止进一步递归/无视上下文长度/关键字匹配/向量化触发 等等高级且复杂的功能，尚不确定使用脚本语言lua/js/rust或者是其他方式实现核心模块，但毫无疑问需要被隔离
+> ⚠ 图灵完备脚本执行需要独立沙箱运行时，不在声明式模板引擎范围内
+
+- [ ] 双重模块设置，一个是当前的Prompt Tree V2，另一个是更复杂拥有插槽函数的核心
+> ⚠ 双模块路线需在插槽函数核心设计启动时明确边界

@@ -7,14 +7,14 @@ import type { AppContextPorts } from '../app/services/app_context_ports.js';
 import { createContextAssemblyPort } from '../app/services/context_memory_ports.js';
 import { getLatestEventEvidenceRecord } from '../app/services/event_evidence_repository.js';
 import type { IdentityContext } from '../identity/types.js';
-import type { PromptVariableContext, PromptVariableNamespace } from '../narrative/types.js';
+import type { PromptVariableContext, PromptVariableNamespace } from '../template_engine/frontends/narrative/types.js';
 import {
   createPromptVariableContext,
   createPromptVariableContextSummary,
   createPromptVariableLayer,
   flattenPromptVariableContextToVisibleVariables,
   normalizePromptVariableRecord
-} from '../narrative/variable_context.js';
+} from '../template_engine/frontends/narrative/variable_context.js';
 import { DEFAULT_PACK_WORLD_ENTITY_ID } from '../packs/runtime/core_models.js';
 import { listPackEntityStateProjectionRecords } from '../packs/storage/entity_state_projection.js';
 import { ApiError } from '../utils/api_error.js';

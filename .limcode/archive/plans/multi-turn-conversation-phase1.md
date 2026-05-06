@@ -4,22 +4,22 @@
 
 | Group | 步骤 | 状态 | 完成日期 |
 |-------|------|------|----------|
-| A 基础层 | A1 核心类型定义 | ⬜ 待开始 | — |
-| | A2 Prisma Schema + 迁移 | ⬜ 待开始 | — |
-| | A3 ConversationStore 接口 + Prisma 实现 | ⬜ 待开始 | — |
-| | A4 ConversationFormatConfig 类型 + YAML 配置域 | ⬜ 待开始 | — |
-| | A5 PromptFragmentSlot 扩展 | ⬜ 待开始 | — |
-| B 核心引擎 | B1 ConversationAssembler 实现 | ⬜ 待开始 | — |
-| | B2 runConversationHistoryTrack 轨道 | ⬜ 待开始 | — |
-| | B3 token_budget_trim 反转裁剪 | ⬜ 待开始 | — |
-| C 集成层 | C1 InferenceContext 扩展 | ⬜ 待开始 | — |
-| | C2 PromptWorkflowProfile 扩展 | ⬜ 待开始 | — |
-| | C3 buildWorkflowPromptBundle 集成 | ⬜ 待开始 | — |
-| | C4 静态 profile + 轻量路径 | ⬜ 待开始 | — |
-| | C5 推理成功双向事务写入 | ⬜ 待开始 | — |
-| | C6 因果链字段写入捕获 | ⬜ 待开始 | — |
-| D 验收 | D1 向后兼容验收测试 | ⬜ 待开始 | — |
-| | D2 端到端集成测试 | ⬜ 待开始 | — |
+| A 基础层 | A1 核心类型定义 | ✅ 完成 | — |
+| | A2 Prisma Schema + 迁移 | ✅ 完成 | — |
+| | A3 ConversationStore 接口 + Prisma 实现 | ✅ 完成 | — |
+| | A4 ConversationFormatConfig 类型 + YAML 配置域 | ✅ 完成 | — |
+| | A5 PromptFragmentSlot 扩展 | ✅ 完成 | — |
+| B 核心引擎 | B1 ConversationAssembler 实现 | ✅ 完成 | — |
+| | B2 runConversationHistoryTrack 轨道 | ✅ 完成 | — |
+| | B3 token_budget_trim 反转裁剪 | ✅ 完成 | — |
+| C 集成层 | C1 InferenceContext 扩展 | ✅ 完成 | — |
+| | C2 PromptWorkflowProfile 扩展 | ✅ 完成 | — |
+| | C3 buildWorkflowPromptBundle 集成 | ✅ 完成 | — |
+| | C4 静态 profile + 轻量路径 | ✅ 完成 | — |
+| | C5 推理成功双向事务写入 | ✅ 完成 | — |
+| | C6 因果链字段写入捕获 | ✅ 完成 | — |
+| D 验收 | D1 向后兼容验收测试 | ✅ 完成 | — |
+| | D2 端到端集成测试 | ✅ 完成 | — |
 
 ---
 
