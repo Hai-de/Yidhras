@@ -23,27 +23,23 @@
 
 #### 测试覆盖
 
-- 23 单元测试（dependency_resolver: 16, data_cleaner_registry: 7）
+- 22 单元测试（dependency_resolver: 15, data_cleaner_registry: 7）
 - 10 集成测试（依赖检查 enable/disable、global-scope、load order）
 - 7 e2e 测试（HTTP API 端到端）
 
 ### 提示词流水线升级
-
-阶段二的 上下文构建（Context Builder）：
-- 项目尚未上线也没有使用者，需要清理上下文构建（Context Builder）中的兼容性别名，且允许提供别名，只要是符合特定的语法（语法设置的方式尚未决定）
 
 #### 阶段三：提示词构建（Prompt Workflow）
 
 > 设计文档：`.limcode/design/prompt-workflow-system-b-advancement-design.md`
 
 
-##### 多轮对话（Multi-Turn Conversation） — 阶段一 ✅ 完成
+##### 多轮对话（Multi-Turn Conversation）
 
 > 设计文档：`.limcode/design/multi-turn-conversation-design.md`
 
-阶段二/三待实现：
-
-- [ ] 自适应轨道选择、per-conversation 配置覆盖
+- [x] 自适应轨道选择（`ProfileResolver` + `chat-first-turn` / `chat-follow-up` 静态策略）
+- [x] per-conversation 配置覆盖（`resolveEffectiveFormatConfig` A+C 混合方案）
 - [ ] Tag 系统（类型/Prisma schema 已就位，用途尚在讨论中，待决定后激活）
 
 
@@ -58,15 +54,18 @@
 - [x] 内置slot既然可以被关闭，那自然可以使用类似的宏语法或者函数名"{{system_core}}"来指代原来已经被禁用的内置slot
 > ✅ 已实现 POC：`slot-ref` 块处理器 (`{{#slot-ref "system_core"}}fallback{{/slot-ref}}`)，内联 slot 引用 (`{{system_core}}`) 通过 Narrative `VariableResolver` 查询 slot 注册表分流。实现位于 `template_engine/frontends/slot_function/blocks.ts`
 
-- [ ] 内置的slot可以被关闭，但始终存在用来定位， slot 定义加入绝对位置和相对位置的动态定位功能，方便其他的动态的slot在slot之间插入和移除
+- [x] 内置的slot可以被关闭，但始终存在用来定位， slot 定义加入绝对位置和相对位置的动态定位功能，方便其他的动态的slot在slot之间插入和移除
 > ⚠ slot 定位系统需要独立设计（`PromptFragmentPlacementMode` 层面），不属于模板引擎统一范围
+> Phase 1 ✅ / Phase 2 ✅ / Phase 3 ✅ / Phase 4 ✅ — 插槽定位系统全部完成
+> ⚠ 已知问题：Phase 3 实现后暂无 track 产出 `before_anchor`/`after_anchor` 的 section draft，锚点解析逻辑仅通过单元测试覆盖，待后续有实际消费需求时接入。
 
 - [x] 引入函数的内联/嵌套/封装/作用域概念，让插槽函数升级为顶层空间
 - [x] 允许在顶级空间之外定义变量作为全局变量，包括宏定义也是
 > ✅ `RenderContext.scopeStack` 已在共享内核实现；`scope` 块接口已定义 (`{{#scope var=val}}...{{/scope}}`)，完整实现待插槽函数核心设计确定
 
-- [ ] 高级功能：允许执行（需要图灵完备的）代码，处理： 深度/顺序/触发概率/群组权重/扫描深度/逻辑匹配/始终激活/条件激活/黏性（出发后保留次数）/触发后冷却时间/延迟触发/延迟递归/不可递归/防止进一步递归/无视上下文长度/关键字匹配/向量化触发 等等高级且复杂的功能，尚不确定使用脚本语言lua/js/rust或者是其他方式实现核心模块，但毫无疑问需要被隔离
+- [ ] 高级功能：允许执行任意代码，处理： 深度/顺序/触发概率/群组权重/扫描深度/逻辑匹配/始终激活/条件激活/黏性（出发后保留次数）/触发后冷却时间/延迟触发/延迟递归/不可递归/防止进一步递归/无视上下文长度/关键字匹配/向量化触发 等等高级且复杂的功能，尚不确定使用脚本语言lua/js/rust或者是其他方式实现核心模块，但毫无疑问需要被隔离
 > ⚠ 图灵完备脚本执行需要独立沙箱运行时，不在声明式模板引擎范围内
 
 - [ ] 双重模块设置，一个是当前的Prompt Tree V2，另一个是更复杂拥有插槽函数的核心
 > ⚠ 双模块路线需在插槽函数核心设计启动时明确边界
+

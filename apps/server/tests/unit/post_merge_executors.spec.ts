@@ -41,6 +41,7 @@ const buildTree = (fragmentsBySlot: Record<string, PromptFragmentV2[]> = {
   task_type: 'agent_decision',
   fragments_by_slot: fragmentsBySlot,
   slot_registry: { system_core: SLOT_SYSTEM },
+  resolved_positions: [],
   metadata: {
     prompt_version: '2',
     profile_id: 'test-profile',
@@ -121,7 +122,17 @@ describe('createPlacementResolutionExecutor', () => {
   });
 
   it('records placement_summary in diagnostics', async () => {
-    const draft: PromptSectionDraft = {
+    const target: PromptSectionDraft = {
+      id: 'target',
+      track: 'template',
+      section_type: 'system_instruction',
+      slot: 'system_core',
+      priority: 0,
+      source_node_ids: [],
+      content_blocks: [],
+      removable: true
+    };
+    const anchored: PromptSectionDraft = {
       id: 'd1',
       track: 'template',
       section_type: 'system_instruction',
@@ -132,10 +143,10 @@ describe('createPlacementResolutionExecutor', () => {
       placement: { placement_mode: 'after_anchor', anchor: { kind: 'fragment_id', value: 'target' } },
       removable: true
     };
-    const state = buildState({ section_drafts: [draft] });
+    const state = buildState({ section_drafts: [target, anchored] });
     await executor.execute({ context: state as never, profile: state.profile, spec: buildSpec('placement_resolution'), state });
     expect(state.diagnostics.placement_summary).toBeDefined();
-    expect(state.diagnostics.placement_summary!.total_fragments).toBe(1);
+    expect(state.diagnostics.placement_summary!.total_fragments).toBe(2);
     expect(state.diagnostics.placement_summary!.resolved_with_anchor).toBe(1);
   });
 });

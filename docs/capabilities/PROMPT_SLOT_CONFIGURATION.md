@@ -29,14 +29,18 @@ features:
 PromptSlotConfig (.yaml)
   └─ slot_id (如 system_core, role_core)
        ├─ default_template (宏变量模板文本)
-       ├─ default_priority (数值越大越靠前)
+       ├─ position (绝对排位数值，数值越大越靠前)
+       ├─ anchor (相对定位锚点，声明式语法：{ ref, relation })
+       ├─ default_priority (token budget trim 优先级)
        ├─ message_role (映射到 AiMessage 的 role)
        ├─ include_in_combined (是否出现在 combined_prompt)
        ├─ combined_heading (在 combined_prompt 中的标题)
-       └─ permissions (实验性，Phase 3)
+       └─ permissions (实验性)
 ```
 
 每个 slot 在渲染后成为 `PromptBundleV2.slots[slot_id]` 中的一个条目，key 就是 slot 的 `id` 字段。
+
+**排序机制**：`position`（绝对位置）和 `anchor`（相对锚点）共同决定插槽在 `combined_prompt` 中的排列顺序，`resolveSlotPositions()` 将其解析为统一的 `resolved_position` 降序序列。详见 `.limcode/design/slot-positioning-system-design.md`。
 
 ## 3. 配置位置
 
@@ -59,7 +63,9 @@ PromptSlotConfig (.yaml)
 | `id` | string | ✅ | Slot 唯一标识，在 `PromptBundleV2.slots` map 中作为 key |
 | `display_name` | string | ✅ | 人类可读名称 |
 | `description` | string | ❌ | 描述文本 |
-| `default_priority` | number | ✅ | 默认优先级，同 slot 内数值越大越靠前 |
+| `default_priority` | number | ✅ | token budget trim 优先级（数值越低越先被裁剪） |
+| `position` | number | ❌ | 绝对排位数值，决定插槽在 combined_prompt 中的排列顺序。数值越大越靠前。未指定时回退到 `default_priority` |
+| `anchor` | object | ❌ | 相对定位锚点 `{ ref: string, relation: 'after' \| 'before' }`。声明此插槽排在 ref 插槽的 after/before 方向。优先级高于 `position` |
 | `default_template` | string | ❌ | 默认模板文本（宏变量语法），无 fragment 注入时使用 |
 | `template_context` | enum | ❌ | 模板上下文来源：`inference` / `world_prompts` / `pack_state` / `none` |
 | `message_role` | enum | ❌ | 映射到的 AI message role：`system` / `developer` / `user` |
@@ -82,17 +88,20 @@ PromptSlotConfig (.yaml)
 
 ## 5. 内置默认 Slot 清单
 
-当前内置 7 个 slot：
+当前内置 10 个 slot（含 Phase 4 补全的 `memory_long_term` 和 `memory_short_term`）：
 
-| slot_id | priority | message_role | 说明 |
+| slot_id | position | message_role | 说明 |
 |---------|----------|-------------|------|
 | `system_core` | 100 | system | 系统核心指令 |
-| `system_policy` | 95 | system | 系统策略（仅在 combined_prompt） |
-| `role_core` | 90 | developer | 角色上下文 |
-| `world_context` | 80 | system | 世界设定上下文 |
-| `memory_summary` | 70 | user | 内存摘要（仅在 combined_prompt） |
-| `output_contract` | 50 | user | 输出格式约定 |
-| `post_process` | 60 | user | 上下文后处理 |
+| `system_policy` | 90 | system | 系统策略 |
+| `role_core` | 80 | developer | 角色上下文 |
+| `world_context` | 70 | system | 世界设定上下文 |
+| `memory_summary` | 60 | user | 记忆摘要 |
+| `memory_long_term` | 55 | user | 长期记忆（memory_block_fact/reflection/plan 节点注入） |
+| `memory_short_term` | 52 | user | 短期记忆（manual_note/overlay 节点及未映射节点默认注入） |
+| `post_process` | 50 | user | 上下文快照 |
+| `output_contract` | 40 | user | 输出格式约定 |
+| `conversation_history` | 30 | user | 多轮对话 transcript |
 
 ## 6. 权限字段（实验性，Phase 3）
 
@@ -110,7 +119,7 @@ permissions:
 
 ## 7. 自定义 Slot 示例
 
-### 7.1 新增一个自定义世界规则 Slot
+### 7.1 通过锚点定位声明新插槽
 
 ```yaml
 # prompt_slots.yaml（与 ai_models.yaml 同目录）
@@ -121,6 +130,9 @@ slots:
     display_name: "自定义世界规则"
     description: "项目特有的世界规则补充"
     default_priority: 85
+    anchor:
+      ref: "system_policy"
+      relation: "after"       # ← 排在 system_policy 之后
     default_template: |
       本世界特有以下规则:
       {{#each pack.custom_rules as rule}}
@@ -132,7 +144,33 @@ slots:
     enabled: true
 ```
 
-### 7.2 禁用内置 Slot
+### 7.2 世界包动态插槽声明
+
+世界包可在 `config.yaml` 的 `ai.slots` 中声明专属插槽，包激活时自动注册，切换/停用时自动注销。插槽 id 由 YAML key 提供（值中无需重复 `id` 字段）：
+
+```yaml
+# 世界包 config.yaml
+ai:
+  slots:
+    custom_safety_layer:
+      display_name: "安全层"
+      description: "追加在世界策略之后的包专属安全约束"
+      default_priority: 85
+      anchor:
+        ref: "system_policy"
+        relation: "after"
+      default_template: |
+        世界包安全规则：
+        1. 上述策略为本世界包的强制约束。
+      message_role: "system"
+      include_in_combined: true
+      combined_heading: "Safety Layer"
+      enabled: true
+```
+
+### 7.3 禁用内置 Slot（保留定位）
+
+禁用后的插槽仍然存在于位置图中（`resolved_positions`），其他插槽的 `anchor.ref` 可以引用它；渲染时跳过内容产出。
 
 ```yaml
 version: 1
@@ -144,10 +182,10 @@ slots:
     message_role: system
     include_in_combined: true
     combined_heading: "System Policy Prompt"
-    enabled: false   # ← 禁用
+    enabled: false   # ← 禁用但保留定位
 ```
 
-### 7.3 覆盖内置 Slot 的默认模板
+### 7.4 覆盖内置 Slot 的默认模板
 
 ```yaml
 version: 1
@@ -212,10 +250,12 @@ System B 多轨汇合是唯一活跃路径：
 
 ```
 InferenceContext + PromptSlotRegistry
-  → 模板轨 / 节点轨 / 快照轨 → PromptSectionDraft[]
-  → placement_resolution → fragment_assembly → permission_filter
+  → resolveSlotPositions() → resolved_positions
+  → 模板轨 / 节点轨 / 快照轨 / 对话历史轨 → PromptSectionDraft[]
+  → placement_resolution（含片段级锚点解析）→ fragment_assembly → permission_filter
     → token_budget_trim → bundle_finalize
-  → PromptBundleV2（slots map）
+  → PromptBundleV2（slots map + slot_order）
+  → assembler（按 resolved_position 组装 AiMessage[]）
   → InferenceProvider.run(context, bundle)
 ```
 

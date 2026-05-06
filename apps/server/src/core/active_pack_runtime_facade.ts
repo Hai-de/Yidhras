@@ -3,14 +3,14 @@ import type { RuntimeClockProjectionSnapshot } from '../app/runtime/runtime_cloc
 import type { ActivePackRuntimeFacade } from '../app/services/app_context_ports.js';
 import { ChronosEngine } from '../clock/engine.js';
 import type { CalendarConfig } from '../clock/types.js';
+import type { PackManifestLoader, WorldPack } from '../packs/manifest/loader.js';
+import type { PermissionContext } from '../permission/types.js';
 import { renderNarrativeTemplate } from '../template_engine/frontends/narrative/resolver.js';
 import {
   createPromptVariableContext,
   createPromptVariableLayer,
   normalizePromptVariableRecord
 } from '../template_engine/frontends/narrative/variable_context.js';
-import type { PackManifestLoader, WorldPack } from '../packs/manifest/loader.js';
-import type { PermissionContext } from '../permission/types.js';
 import { createLogger } from '../utils/logger.js';
 import { PackRuntimeInstance } from './pack_runtime_instance.js';
 import type { PackRuntimeRegistry } from './pack_runtime_registry.js';
@@ -97,6 +97,13 @@ export class DefaultActivePackRuntimeFacade implements ActivePackRuntimeFacade {
 
   public getActivePack(): WorldPack | undefined {
     return this.activePack;
+  }
+
+  /** Returns world pack slot declarations from `ai.slots`, or null if none declared. */
+  public getPackSlotDeclarations(): Record<string, Record<string, unknown>> | null {
+    const slots = this.activePack?.ai?.slots;
+    if (!slots) return null;
+    return slots;
   }
 
   public getClock(): ChronosEngine {

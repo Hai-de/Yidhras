@@ -1,5 +1,7 @@
 import type { PromptWorkflowStepExecutor } from '../registry.js';
 import type {
+  AnchorDiagnostic,
+  PromptSectionDraft,
   PromptWorkflowPlacementSummary,
   PromptWorkflowState,
   PromptWorkflowStepTrace,
@@ -13,6 +15,53 @@ const emptySummary = (state: PromptWorkflowState): StepSnapshotSummary => ({
   denied_fragment_count: 0,
   working_set_node_count: state.working_set.length
 });
+
+/**
+ * Find the index of a target draft in the working list for anchoring.
+ * Returns -1 if not found.
+ */
+function findAnchorTarget(
+  working: PromptSectionDraft[],
+  kind: string,
+  value: string
+): number {
+  switch (kind) {
+    case 'slot_start':
+      return 0;
+    case 'slot_end':
+      return working.length - 1;
+    // NOTE: 'fragment_id' matches PromptSectionDraft.id at this pipeline stage
+    // (pre fragment_assembly). The naming is inherited from PromptFragmentAnchorKind.
+    case 'fragment_id':
+      return working.findIndex((d) => d.id === value);
+    case 'source':
+      return working.findIndex((d) => {
+        if (d.source_node_ids.includes(value)) return true;
+        const meta: Record<string, unknown> | undefined = d.metadata;
+        if (meta && meta.source === value) return true;
+        return false;
+      });
+    default:
+      return -1;
+  }
+}
+
+/**
+ * Insert a draft into an ordered list at the position determined by its
+ * placement.order (descending). Used for fallback positioning when anchor
+ * resolution fails.
+ */
+function insertByOrder(ordered: PromptSectionDraft[], draft: PromptSectionDraft): void {
+  const draftOrder = draft.placement?.order ?? 0;
+  for (let i = 0; i < ordered.length; i++) {
+    const wOrder = ordered[i].placement?.order ?? 0;
+    if (draftOrder > wOrder) {
+      ordered.splice(i, 0, draft);
+      return;
+    }
+  }
+  ordered.push(draft);
+}
 
 export const createPlacementResolutionExecutor = (): PromptWorkflowStepExecutor => ({
   kind: 'placement_resolution',
@@ -34,7 +83,7 @@ export const createPlacementResolutionExecutor = (): PromptWorkflowStepExecutor 
     }
 
     // Group by slot
-    const bySlot = new Map<string, typeof state.section_drafts>();
+    const bySlot = new Map<string, PromptSectionDraft[]>();
     for (const draft of state.section_drafts) {
       const existing = bySlot.get(draft.slot);
       if (existing) {
@@ -46,11 +95,13 @@ export const createPlacementResolutionExecutor = (): PromptWorkflowStepExecutor 
 
     let resolvedWithAnchor = 0;
     let fallbackCount = 0;
+    const anchorDiagnostics: AnchorDiagnostic[] = [];
 
     for (const [slotId, drafts] of bySlot) {
-      const prepend: typeof drafts = [];
-      const append: typeof drafts = [];
-      const middle: typeof drafts = [];
+      const prepend: PromptSectionDraft[] = [];
+      const append: PromptSectionDraft[] = [];
+      const anchored: PromptSectionDraft[] = [];
+      const middle: PromptSectionDraft[] = [];
 
       for (const draft of drafts) {
         const mode = draft.placement?.placement_mode;
@@ -59,28 +110,108 @@ export const createPlacementResolutionExecutor = (): PromptWorkflowStepExecutor 
         } else if (mode === 'append') {
           append.push(draft);
         } else if (mode === 'before_anchor' || mode === 'after_anchor') {
-          const anchor = draft.placement?.anchor;
-          if (anchor?.value) {
-            resolvedWithAnchor++;
-            middle.push(draft);
-          } else {
-            fallbackCount++;
-            middle.push(draft);
-          }
+          anchored.push(draft);
         } else {
           middle.push(draft);
         }
       }
 
-      // Sort middle by priority descending
+      // Sort middle by order descending
       middle.sort((a, b) => (b.placement?.order ?? 0) - (a.placement?.order ?? 0));
 
-      // Rebuild slot array: prepend → middle → append
-      bySlot.set(slotId, [...prepend, ...middle, ...append]);
+      // Sort anchored by order descending for deterministic resolution
+      anchored.sort((a, b) => (b.placement?.order ?? 0) - (a.placement?.order ?? 0));
+
+      // Build the ordered list: prepend → middle(sorted) → append.
+      // Anchored drafts are spliced into this list at their resolved positions.
+      const ordered: PromptSectionDraft[] = [...prepend, ...middle, ...append];
+
+      for (const draft of anchored) {
+        const anchor = draft.placement?.anchor;
+        const mode = draft.placement?.placement_mode;
+
+        if (!anchor) {
+          fallbackCount++;
+          insertByOrder(ordered, draft);
+          anchorDiagnostics.push({
+            draft_id: draft.id,
+            slot_id: slotId,
+            anchor_kind: 'unknown',
+            anchor_value: '',
+            code: 'target_not_found',
+            message: 'Anchor is missing; degraded to middle group'
+          });
+          continue;
+        }
+
+        // tag kind — scaffold only, degrade with diagnostic
+        if (anchor.kind === 'tag') {
+          fallbackCount++;
+          insertByOrder(ordered, draft);
+          anchorDiagnostics.push({
+            draft_id: draft.id,
+            slot_id: slotId,
+            anchor_kind: 'tag',
+            anchor_value: anchor.value,
+            code: 'tag_not_implemented',
+            message: 'tag anchor kind is not yet implemented; degraded to middle group'
+          });
+          continue;
+        }
+
+        // slot_start / slot_end don't require a value; fragment_id / source do
+        const needsValue = anchor.kind === 'fragment_id' || anchor.kind === 'source';
+        if (needsValue && !anchor.value) {
+          fallbackCount++;
+          insertByOrder(ordered, draft);
+          anchorDiagnostics.push({
+            draft_id: draft.id,
+            slot_id: slotId,
+            anchor_kind: anchor.kind,
+            anchor_value: anchor.value,
+            code: 'target_not_found',
+            message: 'Anchor has no value; degraded to middle group'
+          });
+          continue;
+        }
+
+        const targetIdx = findAnchorTarget(ordered, anchor.kind, anchor.value ?? '');
+
+        if (targetIdx === -1) {
+          fallbackCount++;
+          insertByOrder(ordered, draft);
+          anchorDiagnostics.push({
+            draft_id: draft.id,
+            slot_id: slotId,
+            anchor_kind: anchor.kind,
+            anchor_value: anchor.value,
+            code: 'target_not_found',
+            message: `Anchor target not found in slot '${slotId}': kind=${anchor.kind}, value=${anchor.value}`
+          });
+          continue;
+        }
+
+        // Insert at resolved position
+        if (mode === 'before_anchor') {
+          ordered.splice(targetIdx, 0, draft);
+        } else {
+          ordered.splice(targetIdx + 1, 0, draft);
+        }
+        resolvedWithAnchor++;
+        anchorDiagnostics.push({
+          draft_id: draft.id,
+          slot_id: slotId,
+          anchor_kind: anchor.kind,
+          anchor_value: anchor.value,
+          code: 'resolved'
+        });
+      }
+
+      bySlot.set(slotId, ordered);
     }
 
     // Flatten back: maintain slot grouping order from original array
-    const placed: typeof state.section_drafts = [];
+    const placed: PromptSectionDraft[] = [];
     const processedSlots = new Set<string>();
     for (const draft of state.section_drafts) {
       if (!processedSlots.has(draft.slot)) {
@@ -97,7 +228,8 @@ export const createPlacementResolutionExecutor = (): PromptWorkflowStepExecutor 
     const placementSummary: PromptWorkflowPlacementSummary = {
       total_fragments: state.section_drafts.length,
       resolved_with_anchor: resolvedWithAnchor,
-      fallback_count: fallbackCount
+      fallback_count: fallbackCount,
+      anchor_diagnostics: anchorDiagnostics.length > 0 ? anchorDiagnostics : undefined
     };
     state.diagnostics.placement_summary = placementSummary;
 

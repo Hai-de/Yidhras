@@ -25,6 +25,7 @@ export interface ActivePackRuntimeFacade {
   getCurrentRevision(): bigint;
   getAllTimes(): unknown;
   step(amount?: bigint): Promise<void>;
+  getPackSlotDeclarations(): Record<string, Record<string, unknown>> | null;
 }
 
 export interface HostRuntimeKernelFacade extends ActivePackRuntimeFacade, ActivePackRuntimeProjectionPort {}

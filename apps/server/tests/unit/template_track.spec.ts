@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { resolveSlotPositions } from '../../src/inference/slot_position_resolver.js';
 import type { PromptSlotConfig } from '../../src/inference/prompt_slot_config.js';
 import type { InferenceContext } from '../../src/inference/types.js';
 import { runTemplateTrack } from '../../src/context/workflow/tracks/template_track.js';
@@ -44,7 +45,7 @@ describe('runTemplateTrack', () => {
     const context = buildContext({ strategy: 'mock' });
     const registry: Record<string, PromptSlotConfig> = { system_core: slot };
 
-    const { result, trace } = runTemplateTrack(registry, context);
+    const { result, trace } = runTemplateTrack(registry, resolveSlotPositions(registry).resolved_positions, context);
 
     expect(result).toHaveLength(1);
     const draft = result[0];
@@ -66,7 +67,7 @@ describe('runTemplateTrack', () => {
     const context = buildContext();
     const registry: Record<string, PromptSlotConfig> = { memory_short_term: slot };
 
-    const { result } = runTemplateTrack(registry, context);
+    const { result } = runTemplateTrack(registry, resolveSlotPositions(registry).resolved_positions, context);
 
     expect(result).toHaveLength(0);
   });
@@ -80,7 +81,7 @@ describe('runTemplateTrack', () => {
     const context = buildContext();
     const registry: Record<string, PromptSlotConfig> = { system_core: slot };
 
-    const { result } = runTemplateTrack(registry, context);
+    const { result } = runTemplateTrack(registry, resolveSlotPositions(registry).resolved_positions, context);
 
     expect(result).toHaveLength(0);
   });
@@ -94,7 +95,7 @@ describe('runTemplateTrack', () => {
     const context = buildContext();
     const registry: Record<string, PromptSlotConfig> = { world_context: slot };
 
-    const { result } = runTemplateTrack(registry, context);
+    const { result } = runTemplateTrack(registry, resolveSlotPositions(registry).resolved_positions, context);
 
     expect(result).toHaveLength(1);
     expect(result[0].section_type).toBe('world_context');
@@ -112,7 +113,7 @@ describe('runTemplateTrack', () => {
       output_contract: buildSlot({ id: 'output_contract', default_template: 'oc' })
     };
 
-    const { result } = runTemplateTrack(registry, context);
+    const { result } = runTemplateTrack(registry, resolveSlotPositions(registry).resolved_positions, context);
 
     const types = result.map(d => `${d.slot}:${d.section_type}`);
     expect(types).toContain('system_core:system_instruction');
@@ -127,7 +128,7 @@ describe('runTemplateTrack', () => {
     const context = buildContext();
     const registry: Record<string, PromptSlotConfig> = { output_contract: slot };
 
-    const { result } = runTemplateTrack(registry, context);
+    const { result } = runTemplateTrack(registry, resolveSlotPositions(registry).resolved_positions, context);
 
     expect(result).toHaveLength(1);
     expect(result[0].slot).toBe('output_contract');
@@ -143,7 +144,7 @@ describe('runTemplateTrack', () => {
     };
     const context = buildContext();
 
-    const { trace } = runTemplateTrack(registry, context);
+    const { trace } = runTemplateTrack(registry, resolveSlotPositions(registry).resolved_positions, context);
 
     expect(trace.track).toBe('template');
     expect(trace.input_summary.slot_count).toBe(3);

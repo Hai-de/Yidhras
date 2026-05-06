@@ -4,7 +4,12 @@ import type {
   PromptFragmentAnchor,
   PromptFragmentPlacementMode
 } from '../../inference/prompt_fragment_v2.js';
-import type { PromptFragmentSlot, PromptSlotConfig } from '../../inference/prompt_slot_config.js';
+import type {
+  PromptFragmentSlot,
+  PromptSlotConfig,
+  ResolvedSlotPosition,
+  SlotPositionDiagnostics
+} from '../../inference/prompt_slot_config.js';
 import type { PromptTree } from '../../inference/prompt_tree.js';
 import type {
   InferenceActorRef,
@@ -149,10 +154,20 @@ export interface PromptWorkflowStepTrace {
   notes?: Record<string, unknown>;
 }
 
+export interface AnchorDiagnostic {
+  draft_id: string;
+  slot_id: string;
+  anchor_kind: string;
+  anchor_value: string;
+  code: 'resolved' | 'target_not_found' | 'tag_not_implemented';
+  message?: string;
+}
+
 export interface PromptWorkflowPlacementSummary {
   total_fragments: number;
   resolved_with_anchor: number;
   fallback_count: number;
+  anchor_diagnostics?: AnchorDiagnostic[];
 }
 
 export interface TrackTrace {
@@ -172,6 +187,7 @@ export interface PromptWorkflowDiagnostics {
   section_summary?: Record<string, unknown>;
   section_budget?: PromptWorkflowSectionBudgetSummary;
   placement_summary?: PromptWorkflowPlacementSummary;
+  slot_position_diagnostics?: SlotPositionDiagnostics;
   track_traces?: TrackTrace[];
 }
 
@@ -191,6 +207,7 @@ export interface PromptWorkflowState {
   tree?: PromptTree;
   bundle?: PromptBundleV2;
   slot_registry?: Record<string, PromptSlotConfig>;
+  resolved_positions?: ResolvedSlotPosition[];
   diagnostics: PromptWorkflowDiagnostics;
 }
 
@@ -238,6 +255,7 @@ export const createInitialPromptWorkflowState = (input: {
     grouped_nodes: {},
     section_drafts: [],
     tree: input.tree,
+    resolved_positions: input.tree?.resolved_positions ?? [],
     diagnostics: createPromptWorkflowDiagnostics(input.profile)
   };
 };

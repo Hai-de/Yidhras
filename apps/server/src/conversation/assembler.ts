@@ -131,8 +131,16 @@ function extractNonConversationSlots(bundle: PromptBundleV2): SlotEntry[] {
     return [];
   }
 
+  // Build resolved_position lookup from PromptTree
+  const positionMap = new Map<string, number>();
+  for (const r of bundle.tree?.resolved_positions ?? []) {
+    positionMap.set(r.slot_id, r.resolved_position);
+  }
+
   const slots: SlotEntry[] = [];
-  for (const slotId of Object.keys(registry)) {
+  // Use slot_order for traversal order; fall back to Object.keys(registry)
+  const order = bundle.slot_order ?? Object.keys(registry);
+  for (const slotId of order) {
     if (slotId === 'conversation_history') {
       continue;
     }
@@ -152,7 +160,8 @@ function extractNonConversationSlots(bundle: PromptBundleV2): SlotEntry[] {
     slots.push({
       id: slotId,
       priority:
-        typeof config.default_priority === 'number' ? config.default_priority : 0,
+        positionMap.get(slotId) ??
+        (typeof config.default_priority === 'number' ? config.default_priority : 0),
       heading:
         config.combined_heading != null && typeof config.combined_heading === 'string'
           ? config.combined_heading
@@ -195,7 +204,15 @@ export function assembleConversationMessages(input: ConversationAssemblerInput):
   };
 
   for (const slot of standardSlots) {
-    const targetRole = slotRoleMap.get(slot.id) ?? 'user';
+    let targetRole = slotRoleMap.get(slot.id);
+    if (!targetRole) {
+      // Implicit fallback: use PromptSlotConfig.message_role
+      const config = bundle.tree?.slot_registry?.[slot.id];
+      const msgRole = isRecord(config) && typeof config.message_role === 'string'
+        ? config.message_role
+        : null;
+      targetRole = msgRole ?? 'user';
+    }
     if (targetRole === 'system' || targetRole === 'developer' || targetRole === 'user') {
       groups[targetRole].push(slot);
     }

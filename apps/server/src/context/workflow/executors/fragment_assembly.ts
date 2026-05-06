@@ -112,6 +112,7 @@ export const createFragmentAssemblyExecutor = (): PromptWorkflowStepExecutor => 
       task_type: state.task_type,
       fragments_by_slot: fragmentsBySlot,
       slot_registry: state.slot_registry ?? state.tree?.slot_registry ?? {},
+      resolved_positions: state.resolved_positions ?? [],
       metadata: {
         prompt_version: PROMPT_VERSION,
         profile_id: state.profile.id,

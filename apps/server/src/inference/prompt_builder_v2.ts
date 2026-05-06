@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { resolveSlotPositions } from './slot_position_resolver.js';
 import type { PromptBlock } from './prompt_block.js';
 import { buildContextPromptPayload, buildOutputContractPrompt } from './prompt_builder.js';
 import type { PromptBundleV2 } from './prompt_bundle_v2.js';
@@ -117,11 +118,17 @@ export function buildPromptTree(
   context: PromptContext,
   slotRegistry: Record<string, ParsedPromptSlotConfig>
 ): PromptTree {
+  const { resolved_positions } = resolveSlotPositions(slotRegistry);
   const fragmentsBySlot: Record<string, PromptFragmentV2[]> = {};
   const sourceKeys: string[] = [];
 
-  for (const slotConfig of Object.values(slotRegistry)) {
-    if (!slotConfig.enabled) {
+  for (const resolved of resolved_positions) {
+    const slotConfig = slotRegistry[resolved.slot_id];
+    if (!slotConfig) continue;
+
+    if (!resolved.enabled) {
+      // 禁用插槽保留位置但不产出渲染内容
+      fragmentsBySlot[resolved.slot_id] = [];
       continue;
     }
 
@@ -179,6 +186,7 @@ export function buildPromptTree(
     task_type: 'agent_decision',
     fragments_by_slot: fragmentsBySlot,
     slot_registry: slotRegistry,
+    resolved_positions,
     metadata: {
       prompt_version: PROMPT_VERSION,
       profile_id: null,
@@ -194,24 +202,24 @@ export function buildPromptTree(
 export function buildPromptBundleV2(tree: PromptTree, _context: PromptContext): PromptBundleV2 {
   const slots: Record<string, string> = {};
   const combinedParts: string[] = [];
+  const slotOrder: string[] = [];
+  const resolvedPositions = tree.resolved_positions ?? [];
 
-  for (const slotId of Object.keys(tree.slot_registry)) {
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
-    const config = tree.slot_registry[slotId];
+  for (const resolved of resolvedPositions) {
+    const config = tree.slot_registry[resolved.slot_id];
     if (!config || !config.enabled) {
       continue;
     }
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
-    const fragments = tree.fragments_by_slot[slotId] ?? [];
+    const fragments = tree.fragments_by_slot[resolved.slot_id] ?? [];
     const allDenied = fragments.length > 0 && fragments.every(f => f.permission_denied === true);
     if (allDenied) {
       continue;
     }
 
 
-    const text = renderSlotText(tree.fragments_by_slot, slotId);
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
-    slots[slotId] = text;
+    const text = renderSlotText(tree.fragments_by_slot, resolved.slot_id);
+    slots[resolved.slot_id] = text;
+    slotOrder.push(resolved.slot_id);
     
 
     if (config.include_in_combined && text.trim().length > 0) {
@@ -238,6 +246,7 @@ export function buildPromptBundleV2(tree: PromptTree, _context: PromptContext): 
 
   return {
     slots,
+    slot_order: slotOrder,
     combined_prompt: combinedParts.join('\n\n'),
     metadata,
     tree

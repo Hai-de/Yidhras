@@ -2,6 +2,7 @@ version: 1
 slots:
   system_core:
     id: "system_core"
+    position: 100
     display_name: "系统核心指令"
     description: "推理服务的系统级指令与身份声明"
     default_priority: 100
@@ -15,6 +16,7 @@ slots:
 
   system_policy:
     id: "system_policy"
+    position: 90
     display_name: "系统策略"
     description: "访问控制与策略约束"
     default_priority: 95
@@ -31,6 +33,7 @@ slots:
 
   role_core:
     id: "role_core"
+    position: 80
     display_name: "角色核心"
     description: "当前 Actor 的角色定义与上下文"
     default_priority: 90
@@ -47,6 +50,7 @@ slots:
 
   world_context:
     id: "world_context"
+    position: 70
     display_name: "世界上下文"
     description: "World Pack 提供的世界观与规则说明"
     default_priority: 80
@@ -58,6 +62,7 @@ slots:
 
   memory_summary:
     id: "memory_summary"
+    position: 60
     display_name: "记忆摘要"
     description: "短期/长期记忆的摘要注入"
     default_priority: 70
@@ -68,6 +73,7 @@ slots:
 
   output_contract:
     id: "output_contract"
+    position: 40
     display_name: "输出契约"
     description: "预期输出格式与约束"
     default_priority: 50
@@ -79,8 +85,31 @@ slots:
     combined_heading: "Output Contract Prompt"
     enabled: true
 
+  memory_long_term:
+    id: "memory_long_term"
+    position: 55
+    display_name: "长期记忆"
+    description: "memory_block_fact/reflection/plan 类型节点的注入槽位"
+    default_priority: 65
+    message_role: user
+    include_in_combined: true
+    combined_heading: "Long-term Memory"
+    enabled: true
+
+  memory_short_term:
+    id: "memory_short_term"
+    position: 52
+    display_name: "短期记忆"
+    description: "manual_note/overlay 类型节点及未映射节点的默认注入槽位"
+    default_priority: 55
+    message_role: user
+    include_in_combined: true
+    combined_heading: "Short-term Memory"
+    enabled: true
+
   post_process:
     id: "post_process"
+    position: 50
     display_name: "上下文快照"
     description: "当前推理上下文的 JSON 快照"
     default_priority: 60
@@ -91,6 +120,7 @@ slots:
 
   conversation_history:
     id: "conversation_history"
+    position: 30
     display_name: "对话历史"
     description: "多轮对话 transcript 注入槽位"
     default_priority: 50

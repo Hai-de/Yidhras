@@ -32,6 +32,7 @@ const SIMPLE_SLOT_REGISTRY = {
   system_core: {
     id: 'system_core',
     display_name: 'System Core',
+    position: 100,
     default_priority: 100,
     default_template: 'You are a test system.',
     message_role: 'system' as const,
@@ -42,6 +43,7 @@ const SIMPLE_SLOT_REGISTRY = {
   role_core: {
     id: 'role_core',
     display_name: 'Role Core',
+    position: 90,
     default_priority: 90,
     default_template: 'You are {{ actor.display_name }}.',
     message_role: 'developer' as const,
@@ -52,6 +54,7 @@ const SIMPLE_SLOT_REGISTRY = {
   output_contract: {
     id: 'output_contract',
     display_name: 'Output Contract',
+    position: 50,
     default_priority: 50,
     default_template: 'Return JSON.',
     message_role: 'user' as const,
@@ -84,6 +87,7 @@ describe('PromptBundleV2', () => {
       custom_slot: {
         id: 'custom_slot',
         display_name: 'Custom',
+        position: 50,
         default_priority: 50,
         default_template: 'Custom content.',
         message_role: 'user' as const,
@@ -100,13 +104,14 @@ describe('PromptBundleV2', () => {
     expect(v2.slots['custom_slot']).toContain('Custom content');
   });
 
-  it('T4: disabled slot does not appear in bundle', () => {
+  it('T4: disabled slot retains position in tree but not in bundle slots', () => {
     const ctx = createMinimalContext();
     const registry = {
       system_core: { ...SIMPLE_SLOT_REGISTRY.system_core },
       disabled_slot: {
         id: 'disabled_slot',
         display_name: 'Disabled',
+        position: 10,
         default_priority: 10,
         default_template: 'Should not appear.',
         message_role: 'user' as const,
@@ -119,7 +124,15 @@ describe('PromptBundleV2', () => {
     const tree = buildPromptTree(ctx, registry);
     const v2 = buildPromptBundleV2(tree, ctx);
 
+    // Disabled slot does not appear in rendered bundle slots
     expect(v2.slots).not.toHaveProperty('disabled_slot');
+    // But retains position in tree (as structural anchor)
+    expect(tree.fragments_by_slot).toHaveProperty('disabled_slot');
+    expect(tree.fragments_by_slot['disabled_slot']).toEqual([]);
+    // And appears in resolved_positions with enabled=false
+    const disabledPos = tree.resolved_positions.find(p => p.slot_id === 'disabled_slot');
+    expect(disabledPos).toBeDefined();
+    expect(disabledPos!.enabled).toBe(false);
   });
 
   it('T5: walkPromptBlocks traverses nested conditional blocks', () => {

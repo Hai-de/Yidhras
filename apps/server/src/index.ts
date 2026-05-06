@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
 
+import { listDynamicSlots, registerDynamicSlot, unregisterDynamicSlot } from './ai/registry.js';
 import { startAiRegistryWatcher } from './ai/registry_watcher.js';
 import { createInferenceProviders } from './app/composition/inference.js';
 import type { AppContext, RouteRegistrar, RuntimeLoopDiagnostics } from './app/context.js';
@@ -373,6 +374,18 @@ const start = async (): Promise<void> => {
       }
 
       await appContext.activePackRuntime!.init(selectedPack, openingId);
+
+      // Register world pack dynamic slots
+      const packSlots = appContext.activePackRuntime!.getPackSlotDeclarations();
+      if (packSlots) {
+        for (const slotId of listDynamicSlots().map(s => s.id)) {
+          unregisterDynamicSlot(slotId);
+        }
+        for (const [slotId, slotConfig] of Object.entries(packSlots)) {
+          registerDynamicSlot({ id: slotId, ...slotConfig } as Parameters<typeof registerDynamicSlot>[0]);
+        }
+      }
+
       const activePack = appContext.activePack.getActivePack();
       const activePackId = activePack?.metadata.id ?? selectedPack;
       appContext.runtimeClockProjection?.rebuildFromRuntimeSeed({

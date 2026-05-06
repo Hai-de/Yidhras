@@ -1,4 +1,5 @@
 import { getPromptSlotRegistry } from '../../ai/registry.js';
+import { resolveSlotPositions } from '../../inference/slot_position_resolver.js';
 import { resolveConversationFormatConfig } from '../../conversation/format_config.js';
 import type { InferenceContext } from '../../inference/types.js';
 import { createBundleFinalizeExecutor } from './executors/bundle_finalize.js';
@@ -43,11 +44,16 @@ export const buildWorkflowPromptBundle = async (input: {
   });
   state.slot_registry = slotRegistry.slots;
 
+  const { resolved_positions, diagnostics: posDiagnostics } =
+    resolveSlotPositions(slotRegistry.slots);
+  state.resolved_positions = resolved_positions;
+  state.diagnostics.slot_position_diagnostics = posDiagnostics;
+
   const trackResults = [];
   const tracksEnabled = profile.tracks ?? { template: true, node: true, snapshot: true };
 
   if (tracksEnabled.template !== false) {
-    const r = runTemplateTrack(slotRegistry.slots, input.context);
+    const r = runTemplateTrack(slotRegistry.slots, resolved_positions, input.context);
     state.section_drafts.push(...r.result);
     trackResults.push(r.trace);
   }
@@ -67,6 +73,7 @@ export const buildWorkflowPromptBundle = async (input: {
     const r = runConversationHistoryTrack({
       memory: input.context.agent_conversation_memory,
       slotRegistry: slotRegistry.slots,
+      resolvedPositions: resolved_positions,
       formatConfig,
       currentAgentId: input.context.current_agent_id ?? 'unknown'
     });

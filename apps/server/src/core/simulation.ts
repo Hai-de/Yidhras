@@ -129,6 +129,10 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
     return this.activePackRuntimeFacade.getActivePack();
   }
 
+  public getPackSlotDeclarations(): Record<string, Record<string, unknown>> | null {
+    return this.activePackRuntimeFacade.getPackSlotDeclarations();
+  }
+
   public resolvePackVariables(template: string, permission?: import('../permission/types.js').PermissionContext, actorState?: Record<string, unknown> | null): string {
     return this.activePackRuntimeFacade.resolvePackVariables(template, permission, actorState);
   }

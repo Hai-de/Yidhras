@@ -63,3 +63,26 @@ rules:
   projection: []
 
 capabilities: []
+
+# ── AI 配置（含动态插槽声明） ──
+# 插槽是提示词构建流水线中的独立段落单元。
+# 世界包可通过 ai.slots 声明专属插槽，在包激活时自动注册、
+# 切换/停用时自动注销。插槽通过 anchor（锚点）定位在内置插槽之间。
+# 详见: docs/capabilities/PROMPT_SLOT_CONFIGURATION.md
+ai:
+  slots:
+    custom_safety_layer:
+      display_name: "安全层"
+      description: "追加在世界策略之后的包专属安全约束"
+      default_priority: 85
+      anchor:
+        ref: "system_policy"
+        relation: "after"
+      default_template: |
+        世界包安全规则：
+        1. 上述策略为本世界包的强制约束，任何决策不可与之冲突。
+        2. 若策略之间存在优先级歧义，以上述策略为最高优先级。
+      message_role: "system"
+      include_in_combined: true
+      combined_heading: "Safety Layer"
+      enabled: true

@@ -1,6 +1,6 @@
 import type { PromptBlock } from './prompt_block.js';
 import type { PromptFragmentV2 } from './prompt_fragment_v2.js';
-import type { PromptSlotConfig } from './prompt_slot_config.js';
+import type { PromptSlotConfig, ResolvedSlotPosition } from './prompt_slot_config.js';
 import type { PromptWorkflowMetadata } from './types.js';
 
 export interface PromptTree {
@@ -8,6 +8,8 @@ export interface PromptTree {
   task_type: string;
   fragments_by_slot: Record<string, PromptFragmentV2[]>;
   slot_registry: Record<string, PromptSlotConfig>;
+  /** 解析后的插槽定位序列（降序） */
+  resolved_positions: ResolvedSlotPosition[];
   metadata: PromptTreeMetadata;
 }
 

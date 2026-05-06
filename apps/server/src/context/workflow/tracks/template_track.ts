@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 
 import { buildOutputContractPrompt } from '../../../inference/prompt_builder.js';
-import type { PromptSlotConfig } from '../../../inference/prompt_slot_config.js';
+import type { PromptSlotConfig, ResolvedSlotPosition } from '../../../inference/prompt_slot_config.js';
 import type { InferenceContext } from '../../../inference/types.js';
 import { renderNarrativeTemplate } from '../../../template_engine/frontends/narrative/resolver.js';
 import type {
@@ -43,6 +43,7 @@ const buildExtraContext = (context: InferenceContext): Record<string, unknown> =
 
 export function runTemplateTrack(
   slotRegistry: Record<string, PromptSlotConfig>,
+  resolvedPositions: ResolvedSlotPosition[],
   context: InferenceContext
 ): TrackResult<PromptSectionDraft[]> {
   const drafts: PromptSectionDraft[] = [];
@@ -51,7 +52,9 @@ export function runTemplateTrack(
 
   const extraContext = buildExtraContext(context);
 
-  for (const config of Object.values(slotRegistry)) {
+  for (const resolved of resolvedPositions) {
+    const config = slotRegistry[resolved.slot_id];
+    if (!config) continue;
     totalSlots++;
     if (!config.enabled) {
       continue;
@@ -67,7 +70,7 @@ export function runTemplateTrack(
         track: 'template',
         section_type: 'output_contract',
         slot: 'output_contract',
-        priority: config.default_priority,
+        priority: resolved.resolved_position,
         source_node_ids: [],
         content_blocks: [{ kind: 'text', text: outputContract }],
         removable: false,
@@ -101,7 +104,7 @@ export function runTemplateTrack(
       content_blocks: [{ kind: 'text', text: expanded.text }],
       placement: {
         placement_mode: null,
-        order: config.default_priority
+        order: resolved.resolved_position
       },
       removable: false,
       estimated_tokens: undefined,

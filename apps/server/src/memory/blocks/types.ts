@@ -1,4 +1,3 @@
-import type { PromptFragmentSlot } from '../../inference/prompt_slot_config.js';
 import type { InferenceActorRef } from '../../inference/types.js';
 
 export type MemoryBlockKind =
@@ -53,10 +52,8 @@ export interface MemoryMutationPolicy {
   allow_delete: boolean;
 }
 
-export type MemoryPlacementSlot = Extract<
-  PromptFragmentSlot,
-  'system_policy' | 'role_core' | 'world_context' | 'memory_short_term' | 'memory_long_term' | 'memory_summary' | 'post_process'
->;
+/** Memory placement target slots. Phase 4: PromptFragmentSlot is now string. */
+export type MemoryPlacementSlot = string;
 
 export type MemoryPlacementAnchorKind = 'slot_start' | 'slot_end' | 'source' | 'tag' | 'fragment_id';
 

@@ -150,7 +150,33 @@ const aiPackConfigSchema = z
   .object({
     defaults: aiPackDefaultsSchema.optional(),
     memory_loop: aiPackMemoryLoopSchema.optional(),
-    tasks: z.partialRecord(aiTaskTypeSchema, aiTaskOverrideSchema).optional()
+    tasks: z.partialRecord(aiTaskTypeSchema, aiTaskOverrideSchema).optional(),
+    slots: z
+      .record(z.string(),
+        z
+          .object({
+            display_name: nonEmptyStringSchema,
+            description: nonEmptyStringSchema.optional(),
+            default_priority: z.number().int().min(0),
+            position: z.number().int().nullable().optional(),
+            anchor: z
+              .object({
+                ref: z.string().min(1),
+                relation: z.enum(['after', 'before'])
+              })
+              .nullable()
+              .optional(),
+            default_template: nonEmptyStringSchema.nullish(),
+            template_context: z.enum(['inference', 'world_prompts', 'pack_state', 'none']).optional(),
+            message_role: z.enum(['system', 'developer', 'user']).optional(),
+            include_in_combined: z.boolean(),
+            combined_heading: nonEmptyStringSchema.nullish(),
+            enabled: z.boolean(),
+            metadata: z.record(z.string(), z.unknown()).optional()
+          })
+          .strict()
+      )
+      .optional()
   })
   .strict();
 

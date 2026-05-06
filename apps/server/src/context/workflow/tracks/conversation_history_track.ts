@@ -8,7 +8,7 @@ import crypto from 'node:crypto';
 import { renderEntryText } from '../../../conversation/entry_renderer.js';
 import type { CompressionConfig, ConversationFormatConfig } from '../../../conversation/format_config.js';
 import type { AgentConversationMemory, ConversationEntry } from '../../../conversation/types.js';
-import type { PromptSlotConfig } from '../../../inference/prompt_slot_config.js';
+import type { PromptSlotConfig, ResolvedSlotPosition } from '../../../inference/prompt_slot_config.js';
 import type { PromptSectionDraft, TrackResult } from '../types.js';
 
 // ── Visible Entry Selection ────────────────────────────────
@@ -72,6 +72,7 @@ export function resolveEntryRole(
 export function runConversationHistoryTrack(input: {
   memory: AgentConversationMemory;
   slotRegistry: Record<string, PromptSlotConfig>;
+  resolvedPositions?: ResolvedSlotPosition[];
   formatConfig: ConversationFormatConfig;
   currentAgentId: string;
 }): TrackResult<PromptSectionDraft[]> {

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { readYamlFileIfExists, resolveWorkspaceRoot } from '../config/loader.js';
 import { deepMerge } from '../config/merge.js';
 import { getAiModelsConfigPath } from '../config/runtime_config.js';
+import type { PromptSlotConfig } from '../inference/prompt_slot_config.js';
 import {
   AI_AUDIT_LEVELS,
   AI_MODEL_AVAILABILITY,
@@ -587,6 +588,14 @@ const promptSlotConfigSchema = z
     display_name: nonEmptyStringSchema,
     description: nonEmptyStringSchema.optional(),
     default_priority: z.number().int().min(0),
+    position: z.number().int().nullable().optional(),
+    anchor: z
+      .object({
+        ref: z.string().min(1),
+        relation: z.enum(['after', 'before'])
+      })
+      .nullable()
+      .optional(),
     default_template: nonEmptyStringSchema.nullish(),
     template_context: z.enum(['inference', 'world_prompts', 'pack_state', 'none']).optional(),
     message_role: z.enum(['system', 'developer', 'user']).optional(),
@@ -616,9 +625,23 @@ export const promptSlotRegistrySchema = z
   })
   .strict();
 
+export const BUILTIN_SLOT_IDS = new Set([
+  'system_core',
+  'system_policy',
+  'role_core',
+  'world_context',
+  'memory_short_term',
+  'memory_long_term',
+  'memory_summary',
+  'output_contract',
+  'post_process',
+  'conversation_history'
+]);
+
 interface PromptSlotRegistryCache {
   config: { version: number; slots: Record<string, ParsedPromptSlotConfig> };
   metadata: { workspaceRoot: string; configPath: string; loadedFromFile: boolean };
+  dynamic_slots: Map<string, ParsedPromptSlotConfig>;
 }
 
 export const BUILTIN_PROMPT_SLOTS_PATH = 'apps/server/src/ai/schemas/prompt_slots.default.yaml';
@@ -638,7 +661,8 @@ const loadPromptSlotRegistry = (): PromptSlotRegistryCache => {
     : defaultParsed;
   return {
     config: merged,
-    metadata: { workspaceRoot, configPath, loadedFromFile: hasOverride }
+    metadata: { workspaceRoot, configPath, loadedFromFile: hasOverride },
+    dynamic_slots: new Map()
   };
 };
 
@@ -654,10 +678,66 @@ export const resetPromptSlotRegistryCache = (): void => {
 };
 
 export const getPromptSlotRegistry = (): { version: number; slots: Record<string, ParsedPromptSlotConfig> } => {
-  return getPromptSlotRegistryCache().config;
+  const cache = getPromptSlotRegistryCache();
+  const merged: Record<string, ParsedPromptSlotConfig> = { ...cache.config.slots };
+  for (const [id, config] of cache.dynamic_slots) {
+    // YAML 声明优先：同名不覆盖
+    if (!(id in merged)) {
+      merged[id] = config;
+    }
+  }
+  return { version: cache.config.version, slots: merged };
 };
 
 export const getPromptSlotRegistryMetadata = (): PromptSlotRegistryCache['metadata'] => {
   return getPromptSlotRegistryCache().metadata;
+};
+
+/**
+ * 运行时注册新插槽。同名插槽不会覆盖 YAML 声明（YAML 优先）。
+ * 内置插槽 ID 不可注册为动态插槽。
+ */
+export const registerDynamicSlot = (config: PromptSlotConfig): boolean => {
+  const cache = getPromptSlotRegistryCache();
+  if (BUILTIN_SLOT_IDS.has(config.id)) return false;
+  // YAML 优先：同名不覆盖
+  if (config.id in cache.config.slots) return false;
+  const parsed = promptSlotConfigSchema.parse(config);
+  cache.dynamic_slots.set(config.id, parsed);
+  return true;
+};
+
+/**
+ * 注销动态插槽。内置插槽和 YAML 声明的插槽不可注销。
+ */
+export const unregisterDynamicSlot = (slotId: string): boolean => {
+  const cache = getPromptSlotRegistryCache();
+  if (BUILTIN_SLOT_IDS.has(slotId)) return false;
+  if (slotId in cache.config.slots) return false;
+  return cache.dynamic_slots.delete(slotId);
+};
+
+/**
+ * 启用/禁用插槽（禁用时保留为结构性锚点）。
+ * 对内置插槽、YAML 覆盖插槽、动态插槽均生效。
+ */
+export const setSlotEnabled = (slotId: string, enabled: boolean): boolean => {
+  const cache = getPromptSlotRegistryCache();
+  const dynamic = cache.dynamic_slots.get(slotId);
+  if (dynamic) {
+    dynamic.enabled = enabled;
+    return true;
+  }
+  if (slotId in cache.config.slots) {
+    // eslint-disable-next-line security/detect-object-injection
+    cache.config.slots[slotId].enabled = enabled;
+    return true;
+  }
+  return false;
+};
+
+/** 列出所有动态注册的插槽（不含 YAML 声明插槽）。 */
+export const listDynamicSlots = (): ParsedPromptSlotConfig[] => {
+  return [...getPromptSlotRegistryCache().dynamic_slots.values()];
 };
 
