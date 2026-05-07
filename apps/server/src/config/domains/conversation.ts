@@ -1,5 +1,5 @@
-import type { ConversationDomainConfig } from '../../conversation/format_config.js';
-import { ConversationDomainConfigSchema } from '../../conversation/format_config.js';
+import type { ConversationDomainConfig } from '../../conversation/format_config_schemas.js';
+import { ConversationDomainConfigSchema } from '../../conversation/format_config_schemas.js';
 
 /**
  * Config domain for conversation profiles.

@@ -25,9 +25,9 @@ Key concepts:
 
 本文件不负责：
 
-- DataCleaner 注册表与插件生命周期：看 `docs/capabilities/PLUGIN_RUNTIME.md`
-- Prompt Workflow 中 slot 与 section draft 的关系：看 `docs/capabilities/PROMPT_WORKFLOW.md`
-- Narrative 变量上下文的 8 层命名空间解析细节：看 `docs/LOGIC.md`
+- DataCleaner 注册表与插件生命周期：看 `PLUGIN_RUNTIME.md`
+- Prompt Workflow 中 slot 与 section draft 的关系：看 `PROMPT_WORKFLOW.md`
+- Narrative 变量上下文的 8 层命名空间解析细节：看 `../LOGIC.md`
 
 ## 2. 架构概览
 

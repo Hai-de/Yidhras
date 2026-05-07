@@ -23,6 +23,8 @@ const buildBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => {
       steps: [
         { key: 'placement', kind: 'placement_resolution' },
         { key: 'assembly', kind: 'fragment_assembly' },
+        { key: 'behavior', kind: 'behavior_control' },
+        { key: 'transform', kind: 'content_transform' },
         { key: 'permission', kind: 'permission_filter' },
         { key: 'budget_trim', kind: 'token_budget_trim' },
         { key: 'finalize', kind: 'bundle_finalize' }
@@ -40,6 +42,8 @@ const buildBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => {
       steps: [
         { key: 'placement', kind: 'placement_resolution' },
         { key: 'assembly', kind: 'fragment_assembly' },
+        { key: 'behavior', kind: 'behavior_control' },
+        { key: 'transform', kind: 'content_transform' },
         { key: 'permission', kind: 'permission_filter' },
         { key: 'budget_trim', kind: 'token_budget_trim' },
         { key: 'finalize', kind: 'bundle_finalize' }
@@ -57,6 +61,8 @@ const buildBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => {
       steps: [
         { key: 'placement', kind: 'placement_resolution' },
         { key: 'assembly', kind: 'fragment_assembly' },
+        { key: 'behavior', kind: 'behavior_control' },
+        { key: 'transform', kind: 'content_transform' },
         { key: 'permission', kind: 'permission_filter' },
         { key: 'budget_trim', kind: 'token_budget_trim' },
         { key: 'finalize', kind: 'bundle_finalize' }
@@ -80,6 +86,8 @@ const buildBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => {
       steps: [
         { key: 'placement', kind: 'placement_resolution' },
         { key: 'assembly', kind: 'fragment_assembly' },
+        { key: 'behavior', kind: 'behavior_control' },
+        { key: 'transform', kind: 'content_transform' },
         { key: 'permission', kind: 'permission_filter' },
         { key: 'budget_trim', kind: 'token_budget_trim' },
         { key: 'finalize', kind: 'bundle_finalize' }
@@ -103,6 +111,8 @@ const buildBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => {
       steps: [
         { key: 'placement', kind: 'placement_resolution' },
         { key: 'assembly', kind: 'fragment_assembly' },
+        { key: 'behavior', kind: 'behavior_control' },
+        { key: 'transform', kind: 'content_transform' },
         { key: 'permission', kind: 'permission_filter' },
         { key: 'budget_trim', kind: 'token_budget_trim' },
         { key: 'finalize', kind: 'bundle_finalize' }

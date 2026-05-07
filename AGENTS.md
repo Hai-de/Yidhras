@@ -172,16 +172,16 @@ Prefer linking over duplicating.
 - `README.md` — repository entry, startup, high-frequency commands.
 - `docs/INDEX.md` — doc navigation and layer descriptions.
 - `AGENTS.md` — this file.
-- `docs/API.md` — public API contracts and error codes.
+- `docs/specs/API.md` — public API contracts and error codes.
 - `docs/ARCH.md` — architecture boundaries and module ownership.
 - `docs/ARCH_DIAGRAM.md` — system structure and call-flow diagrams.
 - `docs/LOGIC.md` — business rules and domain semantics.
-- `docs/WORLD_PACK.md` — world-pack packaging and release guidance.
+- `docs/specs/WORLD_PACK.md` — world-pack packaging and release guidance.
 - `docs/ENHANCEMENTS.md` — redirect stub; actual backlog at `.limcode/enhancements-backlog.md`.
-- `docs/THEME.md` — frontend theme contract.
-- `docs/capabilities/PROMPT_WORKFLOW.md` — prompt workflow runtime details.
-- `docs/capabilities/AI_GATEWAY.md` — AI gateway and invocation observability.
-- `docs/capabilities/PLUGIN_RUNTIME.md` — pack-local plugin runtime and governance.
+- `docs/specs/THEME.md` — frontend theme contract.
+- `docs/subsystems/PROMPT_WORKFLOW.md` — prompt workflow runtime details.
+- `docs/subsystems/AI_GATEWAY.md` — AI gateway and invocation observability.
+- `docs/subsystems/PLUGIN_RUNTIME.md` — pack-local plugin runtime and governance.
 - `docs/guides/COMMANDS.md` — full command matrix.
 - `docs/guides/DB_OPERATIONS.md` — DB migration, init, path changes.
 - `docs/guides/PLUGIN_OPERATIONS.md` — plugin governance operations.
@@ -210,7 +210,7 @@ When multiple docs disagree:
 2. `ARCH_DIAGRAM.md` — system structure and call flows
 3. `ARCH.md` — architecture boundaries
 4. `LOGIC.md` — business semantics
-5. `capabilities/*` — subsystem-specific detail
+5. `subsystems/*` — subsystem-specific detail
 6. `guides/DB_OPERATIONS.md` — deployment and DB operations
 7. Latest `.limcode/review/` / `.limcode/plans/` / `.limcode/progress.md` — in-progress conclusions
 8. `docs/history/` — historical migration and archival records

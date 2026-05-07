@@ -207,7 +207,7 @@ slots:
 
 ## 8. 模板宏变量语法
 
-Slot 的 `default_template` 使用现有 Prompt Workflow 的宏变量语法，详见 `docs/capabilities/PROMPT_WORKFLOW.md` §7。
+Slot 的 `default_template` 使用现有 Prompt Workflow 的宏变量语法，详见 `PROMPT_WORKFLOW.md` §7。
 
 ### 8.1 基础插值
 
@@ -252,18 +252,98 @@ System B 多轨汇合是唯一活跃路径：
 InferenceContext + PromptSlotRegistry
   → resolveSlotPositions() → resolved_positions
   → 模板轨 / 节点轨 / 快照轨 / 对话历史轨 → PromptSectionDraft[]
-  → placement_resolution（含片段级锚点解析）→ fragment_assembly → permission_filter
-    → token_budget_trim → bundle_finalize
+  → placement_resolution → fragment_assembly → behavior_control
+    → content_transform → permission_filter → token_budget_trim
+    → bundle_finalize
   → PromptBundleV2（slots map + slot_order）
   → assembler（按 resolved_position 组装 AiMessage[]）
   → InferenceProvider.run(context, bundle)
 ```
 
-> 完整管线细节见 `docs/capabilities/PROMPT_WORKFLOW.md`。
+> 完整管线细节见 `PROMPT_WORKFLOW.md`。
 
-## 10. 相关文档
+## 10. 插槽行为控制（Slot Behavior Control）
 
-- Prompt Workflow Runtime：`docs/capabilities/PROMPT_WORKFLOW.md`
-- 系统架构边界：`docs/ARCH.md`
+每个插槽可以声明行为控制元数据，在 `behavior_control` 管线步骤中决定插槽的激活/禁用、递归约束、token 预算行为。
+
+### 10.1 配置位置
+
+```yaml
+# data/configw/default.yaml
+slot_behaviors:
+  system_core:
+    always_active: true
+    no_recursion: true
+    ignore_context_length: true
+
+  memory_summary:
+    trigger_probability: 0.8
+    conditions:
+      - type: conversation_turn
+        operator: gt
+        value: 3
+    sticky:
+      max_activations: 5
+    cooldown:
+      ticks: 10
+    max_depth: 2
+    state_scope: conversation
+```
+
+### 10.2 行为控制字段
+
+| 类别 | 字段 | 说明 |
+|------|------|------|
+| **激活控制** | `always_active` | 跳过所有条件检查，始终激活 |
+| | `trigger_probability` | 0.0–1.0，FNV-1a 确定性采样 |
+| | `conditions` | 条件列表（AND/OR 语义） |
+| | `condition_combination` | `and`（默认）或 `or` |
+| | `evaluator_failure_policy` | 评估失败策略：`activate`（默认）、`deactivate`、`abort` |
+| **深度/递归** | `max_depth` | slot-ref 嵌套最大深度 |
+| | `no_recursion` | 禁止自引用 |
+| | `prevent_further_recursion` | 被引用时不再解析子 slot-ref |
+| **顺序/群组** | `group_id` / `group_weight` | 群组标识与权重（互斥选择） |
+| | `group_mode` | `exclusive`（默认）、`priority`、`budget` |
+| | `render_order` | 排序优先级覆盖 |
+| **状态性规则** | `sticky` | 触发后保留指定次数激活（`max_activations`） |
+| | `cooldown` | 触发后冷却指定世界 tick 数（`ticks`） |
+| | `delayed_trigger` | 条件满足后延迟指定 tick 数才激活（`delay_ticks`） |
+| **上下文控制** | `ignore_context_length` | 不参与 token budget trim（80% 硬上限保护） |
+| **状态生命周期** | `state_scope` | `conversation`（默认）、`inference`、`persistent` |
+| **插件扩展** | `condition_evaluator` | 自定义条件评估器 key（per-pack 注册） |
+
+### 10.3 内置条件类型
+
+| 类型 | 字段 | 说明 |
+|------|------|------|
+| `keyword_match` | `keywords`, `match_mode` | 匹配 `last_user_message` 中的关键字 |
+| `logic_match` | `expression` | DSL 逻辑表达式（eq/neq/gt/lt/gte/lte/contains/exists/and/or/not） |
+| `context_length` | `operator`, `value` | 对比 `token_budget.remaining` |
+| `conversation_turn` | `operator`, `value` | 对比 `conversation_meta.turn_count` |
+| `custom` | `evaluator_key`, `options` | 通过插件注册表查询 per-pack 评估器 |
+
+### 10.4 状态机
+
+5 状态模型（对齐 memory_trigger sidecar）：
+
+```
+Pending → [条件满足] → Active → [sticky] → Retained → [cooldown] → Cooling → Pending
+Pending → [条件满足+delay] → Delayed → [delay_elapsed] → Active
+```
+
+Cooling 优先级最高：即使 sticky 仍有次数，冷却期也不激活。
+
+### 10.5 配置约束
+
+- `always_active` + `conditions` → 配置错误（加载时拒绝）
+- `always_active` + `group_id` → 配置错误（加载时拒绝）
+- 所有 `ignore_context_length` 插槽的 token 总和不超过模型上下文窗口 80%
+
+> 完整设计见 `.limcode/design/slot-function-advanced-design.md`。
+
+## 11. 相关文档
+
+- Prompt Workflow Runtime：`PROMPT_WORKFLOW.md`
+- 系统架构边界：`../ARCH.md`
 - 设计文档：`.limcode/design/prompt-bundle-componentized-refactoring-design.md`
 - 实施计划：`.limcode/archive/plans/prompt-bundle-componentized-refactoring-phase1.md`

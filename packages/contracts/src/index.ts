@@ -17,6 +17,7 @@ export * from './projections.js'
 export * from './relational.js'
 export * from './scalars.js'
 export * from './scheduler.js'
+export * from './slot_condition_evaluator.js'
 export * from './social.js'
 
 export * from './system.js'

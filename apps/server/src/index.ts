@@ -3,6 +3,7 @@ import path from 'path';
 
 import { listDynamicSlots, registerDynamicSlot, unregisterDynamicSlot } from './ai/registry.js';
 import { startAiRegistryWatcher } from './ai/registry_watcher.js';
+import { createMemoryBehaviorStateStore, setBehaviorStateStore } from './app/behavior_state_store.js';
 import { createInferenceProviders } from './app/composition/inference.js';
 import type { AppContext, RouteRegistrar, RuntimeLoopDiagnostics } from './app/context.js';
 import { createApp } from './app/create_app.js';
@@ -125,6 +126,9 @@ const assertRuntimeReady = createRuntimeReadyGuard({
 });
 
 const packScopeResolver = new PackScopeResolver(sim.getPackRuntimeRegistry());
+
+// Initialize behavior state store (Phase 2: stateful slot trigger rules)
+setBehaviorStateStore(createMemoryBehaviorStateStore());
 
 const appContext: AppContext = {
   repos,

@@ -371,7 +371,8 @@ describe('pack snapshot integration', () => {
         pack: packMock,
         sim: context.sim,
         activePackRuntime: context.activePackRuntime,
-        notifications: context.notifications
+        notifications: context.notifications,
+        applyClockProjection: () => {}
       });
 
       // Verify data is restored

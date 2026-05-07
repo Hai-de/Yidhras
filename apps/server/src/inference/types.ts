@@ -2,12 +2,12 @@ import type { ContextRun } from '../context/types.js';
 import type { AgentConversationMemory } from '../conversation/types.js';
 import type { IdentityContext } from '../identity/types.js';
 import type { MemoryContextPack } from '../memory/types.js';
+import type { WorldPackAiConfig, WorldPackValue } from '../packs/schema/constitution_schema.js';
 import type {
   PromptVariableContext,
   PromptVariableContextSummary,
   PromptVariableRecord
 } from '../template_engine/frontends/narrative/types.js';
-import type { WorldPackAiConfig, WorldPackValue } from '../packs/schema/constitution_schema.js';
 import type { PromptBundleV2 } from './prompt_bundle_v2.js';
 
 export type InferenceStrategy = 'mock' | 'rule_based' | 'model_routed';

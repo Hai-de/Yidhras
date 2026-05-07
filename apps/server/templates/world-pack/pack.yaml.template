@@ -68,7 +68,7 @@ capabilities: []
 # 插槽是提示词构建流水线中的独立段落单元。
 # 世界包可通过 ai.slots 声明专属插槽，在包激活时自动注册、
 # 切换/停用时自动注销。插槽通过 anchor（锚点）定位在内置插槽之间。
-# 详见: docs/capabilities/PROMPT_SLOT_CONFIGURATION.md
+# 详见: docs/subsystems/PROMPT_SLOT_CONFIGURATION.md
 ai:
   slots:
     custom_safety_layer:

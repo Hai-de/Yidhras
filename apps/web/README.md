@@ -77,7 +77,7 @@ pnpm --filter web preview
 - 通知只用于关键结果与重要失败，不制造轮询噪声。
 - 业务页面优先复用 `App*` primitives 与主题 token，不直接依赖第三方组件库的默认视觉。
 - 主题来源优先级为：`presentation.theme` > registered world-pack theme > `DEFAULT_APP_THEME`。
-- 主题 contract、provider override 与调试方式统一收口到 `docs/THEME.md`。
+- 主题 contract、provider override 与调试方式统一收口到 `docs/specs/THEME.md`。
 
 ## 文件锚点
 
@@ -111,8 +111,8 @@ pnpm --filter web preview
 ## 相关文档
 
 - 根目录 `README.md`：仓库入口与命令导航
-- `docs/API.md`：后端接口契约
+- `docs/specs/API.md`：后端接口契约
 - `docs/ARCH.md`：架构边界与模块职责
 - `docs/LOGIC.md`：业务规则与 tick / workflow 语义
-- `docs/THEME.md`：前端主题系统说明
+- `docs/specs/THEME.md`：前端主题系统说明
 - `docs/ENHANCEMENTS.md`：延后增强项

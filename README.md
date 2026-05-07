@@ -111,12 +111,12 @@ pnpm --filter yidhras-server reset:dev-db
 
 ### 稳定参考
 
-- `docs/API.md`：公共接口契约与错误码
+- `docs/specs/API.md`：公共接口契约与错误码
 - `docs/ARCH_DIAGRAM.md`：系统架构图总览与关键调用流
 - `docs/ARCH.md`：架构边界、模块职责、宿主关系
 - `docs/LOGIC.md`：业务规则、执行主线、领域语义
-- `docs/WORLD_PACK.md`：world pack 项目化与发布规范
-- `docs/THEME.md`：前端主题系统说明
+- `docs/specs/WORLD_PACK.md`：world pack 项目化与发布规范
+- `docs/specs/THEME.md`：前端主题系统说明
 - `docs/ENHANCEMENTS.md`：延期增强项收纳池
 - `apps/web/README.md`：前端应用范围、结构与约束
 
@@ -142,7 +142,7 @@ pnpm --filter yidhras-server reset:dev-db
 - **想启动项目**：看本文件的“快速开始”与 `docs/guides/COMMANDS.md`
 - **想处理数据库迁移或更换数据库文件路径**：看 `docs/guides/DB_OPERATIONS.md`
 - **想调整 runtime config / scheduler / sqlite / prompt workflow 默认参数**：看 `docs/guides/COMMANDS.md`
-- **想理解接口**：看 `docs/API.md`
+- **想理解接口**：看 `docs/specs/API.md`
 - **想理解架构边界**：看 `docs/ARCH.md`
 - **想理解业务语义**：看 `docs/LOGIC.md`
 - **想操作插件治理**：看 `docs/guides/PLUGIN_OPERATIONS.md`

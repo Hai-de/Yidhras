@@ -98,7 +98,7 @@ export function runTemplateTrack(
       id: randomUUID(),
       track: 'template',
       section_type: sectionType,
-      slot: config.id as PromptSectionDraft['slot'],
+      slot: config.id,
       priority: config.default_priority,
       source_node_ids: [],
       content_blocks: [{ kind: 'text', text: expanded.text }],

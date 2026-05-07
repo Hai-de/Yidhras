@@ -13,6 +13,10 @@ import type { PromptWorkflowStepExecutor } from '../context/workflow/registry.js
 import { resolveLoadOrder } from './dependency_resolver.js';
 import type { DataCleaner } from './extensions/data_cleaner_registry.js';
 import { dataCleanerRegistry } from './extensions/data_cleaner_registry.js';
+import type { SlotConditionEvaluator } from './extensions/slot_condition_registry.js';
+import { slotConditionRegistry } from './extensions/slot_condition_registry.js';
+import type { SlotContentTransformer } from './extensions/slot_content_transformer.js';
+import { slotContentTransformRegistry } from './extensions/slot_content_transformer.js';
 type Ctx = AppInfrastructure & { getHttpApp?(): Express | null };
 
 export interface ServerPluginHostApi {
@@ -23,6 +27,8 @@ export interface ServerPluginHostApi {
   registerRuleContributor(contributor: RuleContributor, capabilityKey?: string): void;
   registerQueryContributor(contributor: QueryContributor, capabilityKey?: string): void;
   registerDataCleaner(cleaner: DataCleaner, capabilityKey?: string): void;
+  registerSlotConditionEvaluator(evaluator: SlotConditionEvaluator, capabilityKey?: string): void;
+  registerSlotContentTransformer(transformer: SlotContentTransformer, capabilityKey?: string): void;
 }
 
 export interface RegisteredServerPluginRuntime {
@@ -97,6 +103,20 @@ const createServerPluginHostApi = (runtime: RegisteredServerPluginRuntime): Serv
       }
 
       dataCleanerRegistry.register(cleaner);
+    },
+    registerSlotConditionEvaluator(evaluator, capabilityKey) {
+      if (!hasCapability(runtime.granted_capabilities, capabilityKey)) {
+        return;
+      }
+
+      slotConditionRegistry.register(runtime.pack_id, evaluator);
+    },
+    registerSlotContentTransformer(transformer, capabilityKey) {
+      if (!hasCapability(runtime.granted_capabilities, capabilityKey)) {
+        return;
+      }
+
+      slotContentTransformRegistry.register(runtime.pack_id, transformer);
     }
   };
 };

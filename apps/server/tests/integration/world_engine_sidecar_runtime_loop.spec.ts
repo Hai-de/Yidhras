@@ -1,3 +1,7 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
@@ -9,11 +13,16 @@ import {
 import { createPackHostApi } from '../../src/app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from '../../src/app/runtime/world_engine_snapshot.js';
 import { SimulationManager } from '../../src/core/simulation.js';
+import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
+import { createNotificationManager } from '../../src/utils/notifications.js';
 import {
   createIsolatedRuntimeEnvironment,
   createPrismaClientForEnvironment,
   migrateIsolatedDatabase
 } from '../helpers/runtime.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SIDECAR_BINARY_PATH = path.join(__dirname, '..', '..', 'rust', 'world_engine_sidecar', 'target', 'debug', 'world_engine_sidecar');
 
 const DEATH_NOTE_PACK_REF = 'death_note';
 const DEATH_NOTE_PACK_ID = 'world-death-note';
@@ -25,7 +34,7 @@ const packSummary = (summary: unknown): Record<string, unknown> => {
   return summary as Record<string, unknown>;
 };
 
-describe('world engine sidecar runtime loop integration', () => {
+describe.skipIf(!existsSync(SIDECAR_BINARY_PATH), 'world engine sidecar runtime loop integration', () => {
   let sim: SimulationManager;
   let prisma: ReturnType<typeof createPrismaClientForEnvironment>;
   let cleanup: (() => Promise<void>) | null = null;
@@ -48,7 +57,11 @@ describe('world engine sidecar runtime loop integration', () => {
     process.env.APP_ENV = environment.envOverrides.APP_ENV;
 
     prisma = createPrismaClientForEnvironment(environment);
-    sim = new SimulationManager({ prisma });
+    sim = new SimulationManager({
+      prisma,
+      packStorageAdapter: new SqlitePackStorageAdapter(),
+      notifications: createNotificationManager()
+    });
 
     await sim.init('death_note');
     context = {
@@ -68,6 +81,8 @@ describe('world engine sidecar runtime loop integration', () => {
         available_world_packs: [packId],
         errors: []
       },
+      isPaused: () => false,
+      isRuntimeReady: () => true,
       getRuntimeReady: () => true,
       setRuntimeReady: () => {},
       getPaused: () => false,

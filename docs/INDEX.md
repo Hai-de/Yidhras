@@ -14,33 +14,42 @@
 | [AGENTS.md](../AGENTS.md) | 协作规则、工程约束、文档治理原则 |
 | [TODO.md](../TODO.md) | 当前 backlog 与优先级 |
 
-## 2. 稳定参考层
+## 2. 架构与语义层
 
-用于长期参考，尽量只写相对稳定的事实与边界。
+系统全局结构、边界定义与业务执行规则。三者各有独立视角，互不重复：
+
+| 文档 | 视角 | 定位 |
+|------|------|------|
+| [ARCH.md](ARCH.md) | 结构 | 系统分层、模块边界、宿主关系、依赖方向、持久化归属 |
+| [ARCH_DIAGRAM.md](ARCH_DIAGRAM.md) | 视觉 | Mermaid 全局结构图、调用流、状态机（图 + 简短图注） |
+| [LOGIC.md](LOGIC.md) | 行为 | 业务执行主线、语义规则、权限模型、projection 可见性 |
+
+阅读建议：先看 ARCH_DIAGRAM 建立全局印象 → ARCH 理解边界 → LOGIC 理解执行规则。
+
+## 3. 接口规范层
+
+系统对外承诺的形式接口与合约。
 
 | 文档 | 定位 |
 |------|------|
-| [API.md](API.md) | 公共 HTTP contract、错误码、调用边界 |
-| [ARCH_DIAGRAM.md](ARCH_DIAGRAM.md) | 系统全局结构图、模块关系图、调用流 |
-| [ARCH.md](ARCH.md) | 系统分层、模块边界、宿主关系、依赖方向 |
-| [LOGIC.md](LOGIC.md) | 业务规则、执行主线、领域语义 |
-| [THEME.md](THEME.md) | 前端主题 contract、解析链路、调试入口 |
-| [WORLD_PACK.md](WORLD_PACK.md) | world-pack 项目化、README 标配、发布规范 |
+| [specs/API.md](specs/API.md) | 公共 HTTP contract、错误码、调用边界 |
+| [specs/THEME.md](specs/THEME.md) | 前端主题 token contract、解析链路、调试入口 |
+| [specs/WORLD_PACK.md](specs/WORLD_PACK.md) | world-pack 项目化、README 标配、发布规范 |
 | [apps/web/README.md](../apps/web/README.md) | 前端应用范围、结构与开发约束 |
 
-## 3. 专题能力层
+## 4. 子系统层
 
 深入子系统的高耦合细节，每个专题有独立职责边界。
 
 | 文档 | 定位 |
 |------|------|
-| [capabilities/PROMPT_WORKFLOW.md](capabilities/PROMPT_WORKFLOW.md) | Prompt Workflow Runtime：prompt 组装管道、profile、section draft |
-| [capabilities/PROMPT_SLOT_CONFIGURATION.md](capabilities/PROMPT_SLOT_CONFIGURATION.md) | Prompt Slot 配置指南：声明式 YAML slot 定义、模板语法、自定义 slot |
-| [capabilities/AI_GATEWAY.md](capabilities/AI_GATEWAY.md) | AI Gateway：任务路由、模型调度、调用观测 |
-| [capabilities/PLUGIN_RUNTIME.md](capabilities/PLUGIN_RUNTIME.md) | Plugin Runtime：pack-local 插件生命周期、治理、前后端承接 |
-| [capabilities/STRUCTURED_PARSER.md](capabilities/STRUCTURED_PARSER.md) | Structured Parser：可配置模板解析引擎、修饰符链、块语法、DataCleaner 适配 |
+| [subsystems/PROMPT_WORKFLOW.md](subsystems/PROMPT_WORKFLOW.md) | Prompt Workflow Runtime：prompt 组装管道、profile、section draft |
+| [subsystems/PROMPT_SLOT_CONFIGURATION.md](subsystems/PROMPT_SLOT_CONFIGURATION.md) | Prompt Slot 配置指南：声明式 YAML slot 定义、模板语法、自定义 slot |
+| [subsystems/AI_GATEWAY.md](subsystems/AI_GATEWAY.md) | AI Gateway：任务路由、模型调度、调用观测、弹性层 |
+| [subsystems/PLUGIN_RUNTIME.md](subsystems/PLUGIN_RUNTIME.md) | Plugin Runtime：pack-local 插件生命周期、治理、前后端承接 |
+| [subsystems/STRUCTURED_PARSER.md](subsystems/STRUCTURED_PARSER.md) | Structured Parser：可配置模板解析引擎、修饰符链、块语法、DataCleaner 适配 |
 
-## 4. 操作手册层
+## 5. 操作手册层
 
 以命令和操作步骤为核心，不是架构论述。
 
@@ -51,7 +60,7 @@
 | [guides/PLUGIN_OPERATIONS.md](guides/PLUGIN_OPERATIONS.md) | 插件治理 HTTP API / GUI 流程 |
 | [guides/SNAPSHOT.md](guides/SNAPSHOT.md) | 世界包快照系统：存档/恢复的原理、API 与使用工作流 |
 
-## 5. 过程资产层
+## 6. 过程资产层
 
 `.limcode/` 下存放阶段性计划、评审、设计，不是长期稳定事实源。详见 [`.limcode/README.md`](../.limcode/README.md)。
 
@@ -63,6 +72,12 @@
 | [archive/](../.limcode/archive/) | 已完成过程资产与历史草案归档 |
 | [progress.md](../.limcode/progress.md) | 里程碑进度记录 |
 
-## 6. 历史归档
+## 7. 历史归档
 
-> 历史归档目录 `docs/history/` 尚未建立。规划完成后将在此添加索引。
+`docs/history/` 存放面向读者的稳定历史背景文档：已完成迁移记录、设计决策历史、系统演进上下文。
+
+| 文档 | 定位 |
+|------|------|
+| [history/INDEX.md](history/INDEX.md) | 历史归档目的说明与条目索引 |
+
+> 与 `.limcode/archive/` 的区别：`history/` 面向所有读者，记录已成事实的历史背景；`.limcode/archive/` 面向内部维护者，归档过程资产。

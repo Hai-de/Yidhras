@@ -1,0 +1,44 @@
+manifest_version: "plugin/v1"
+id: "slot-condition-builtin"
+name: "Slot Condition Built-in Evaluators"
+version: "1.0.0"
+kind: "slot_condition"
+
+entrypoints:
+  server:
+    source: "server.js"
+    runtime: "node_esm"
+
+compatibility:
+  yidhras: ">=0.1.0"
+  pack_id: "yidhras-system"
+
+requested_capabilities: []
+
+contributions:
+  server:
+    context_sources: []
+    prompt_workflow_steps: []
+    intent_grounders: []
+    pack_projections: []
+    api_routes: []
+    step_contributors: []
+    rule_contributors: []
+    query_contributors: []
+
+load:
+  priority: 100
+
+provides:
+  - key: "slot_condition.keyword_match"
+    version: "1.0.0"
+  - key: "slot_condition.logic_match"
+    version: "1.0.0"
+  - key: "slot_condition.conversation_turn"
+    version: "1.0.0"
+  - key: "slot_condition.context_length"
+    version: "1.0.0"
+
+metadata:
+  author: "Yidhras"
+  description: "内置插槽条件评估器：keyword_match、logic_match、conversation_turn、context_length"

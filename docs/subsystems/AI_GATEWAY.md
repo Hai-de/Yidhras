@@ -29,9 +29,9 @@ Key concepts:
 
 本文件不负责：
 
-- 公共 `/api/inference/*` 的完整 contract：看 `docs/API.md`
-- 整体系统模块边界：看 `docs/ARCH.md`
-- 推理与世界执行的业务语义：看 `docs/LOGIC.md`
+- 公共 `/api/inference/*` 的完整 contract：看 `../specs/API.md`
+- 整体系统模块边界：看 `../ARCH.md`
+- 推理与世界执行的业务语义：看 `../LOGIC.md`
 
 ## 2. 内部执行层概览
 

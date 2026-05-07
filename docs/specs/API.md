@@ -5,7 +5,7 @@
 - **Global** — 直接注册在 Express app 上，无 pack 前缀
 - **Pack-scoped** — 挂载于 `/:packId`，经过 `packScopeMiddleware` 校验 pack 状态。非 `ready` 状态的 pack 返回 503（loading/unloading/degraded）或 404（gone）
 
-> 模块分层与宿主关系见 `ARCH.md` · 业务执行语义见 `LOGIC.md` · 专题细节见 `docs/capabilities/`
+> 模块分层与宿主关系见 `../ARCH.md` · 业务执行语义见 `../LOGIC.md` · 专题细节见 `../subsystems/`
 
 ## 通用说明
 
@@ -508,7 +508,7 @@
 
 错误码：`PLUGIN_WEB_ASSET_NOT_ENABLED`, `PLUGIN_WEB_ASSET_FORBIDDEN`, `PLUGIN_WEB_ASSET_NOT_FOUND`, `PLUGIN_WEB_ENTRYPOINT_NOT_FOUND`, `PLUGIN_QUERY_INVALID`
 
-更详细的治理与运行时说明见 `docs/guides/PLUGIN_OPERATIONS.md` 和 `docs/capabilities/PLUGIN_RUNTIME.md`。
+更详细的治理与运行时说明见 `../guides/PLUGIN_OPERATIONS.md` 和 `../subsystems/PLUGIN_RUNTIME.md`。
 
 ---
 

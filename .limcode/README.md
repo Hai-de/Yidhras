@@ -6,10 +6,10 @@
 
 - `README.md`
 - `docs/INDEX.md`
-- `docs/API.md`
+- `docs/specs/API.md`
 - `docs/ARCH.md`
 - `docs/LOGIC.md`
-- `docs/capabilities/*`
+- `docs/subsystems/*`
 
 ## 当前分层
 

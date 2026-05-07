@@ -12,6 +12,7 @@ import { PLUGINS_DEFAULTS, PluginsConfigSchema } from './plugins.js';
 import { PROMPT_WORKFLOW_DEFAULTS, PromptWorkflowConfigSchema } from './prompt_workflow.js';
 import { RUNTIME_DEFAULTS, RuntimeConfig_DomainSchema } from './runtime.js';
 import { SCHEDULER_DEFAULTS, SchedulerConfigSchema } from './scheduler.js';
+import { SLOT_BEHAVIOR_DEFAULTS, SlotBehaviorConfigSchema } from './slot_behavior.js';
 import { STARTUP_DEFAULTS, StartupConfigSchema } from './startup.js';
 import { WORLD_DEFAULTS, WorldConfigSchema } from './world.js';
 import { WORLD_ENGINE_DEFAULTS, WorldEngineConfigSchema } from './world_engine.js';
@@ -33,7 +34,8 @@ export const RuntimeConfigSchema = z
     prompt_workflow: PromptWorkflowConfigSchema,
     conversation: ConversationConfigSchema,
     runtime: RuntimeConfig_DomainSchema,
-    features: FeaturesConfigSchema
+    features: FeaturesConfigSchema,
+    slot_behaviors: SlotBehaviorConfigSchema
   })
   .strict();
 
@@ -55,7 +57,8 @@ export const BUILTIN_DEFAULTS: RuntimeConfig = {
   prompt_workflow: PROMPT_WORKFLOW_DEFAULTS,
   conversation: CONVERSATION_CONFIG_DEFAULTS,
   runtime: RUNTIME_DEFAULTS,
-  features: FEATURES_DEFAULTS
+  features: FEATURES_DEFAULTS,
+  slot_behaviors: SLOT_BEHAVIOR_DEFAULTS
 };
 
 export {
@@ -83,6 +86,8 @@ export {
   RuntimeConfig_DomainSchema,
   SCHEDULER_DEFAULTS,
   SchedulerConfigSchema,
+  SLOT_BEHAVIOR_DEFAULTS,
+  SlotBehaviorConfigSchema,
   STARTUP_DEFAULTS,
   StartupConfigSchema,
   WORLD_DEFAULTS,
@@ -103,6 +108,7 @@ export type { PluginsConfig } from './plugins.js';
 export type { PromptWorkflowConfig } from './prompt_workflow.js';
 export type { RuntimeConfig_Domain } from './runtime.js';
 export type { SchedulerConfig } from './scheduler.js';
+export type { SlotBehaviorConfig, SlotBehaviorProfile } from './slot_behavior.js';
 export type { StartupConfig } from './startup.js';
 export type { WorldConfig } from './world.js';
 export type { WorldEngineConfig } from './world_engine.js';

@@ -35,6 +35,7 @@ export const CONFIG_DOMAIN_TIERS: Record<string, ConfigTier> = {
   'scheduler.observability': ConfigTier.CAUTION,
   'scheduler.enabled': ConfigTier.CAUTION,
   'prompt_workflow': ConfigTier.CAUTION,
+  'slot_behaviors': ConfigTier.CAUTION,
   'clock.max_step_ticks': ConfigTier.CAUTION,
 
   // Dangerous — requires restart

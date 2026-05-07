@@ -1,3 +1,4 @@
+import type { PermissionContext } from '../../permission/types.js';
 import { renderNarrativeTemplate } from '../../template_engine/frontends/narrative/resolver.js';
 import type { PromptVariableContext, PromptVariableRecord } from '../../template_engine/frontends/narrative/types.js';
 import {
@@ -5,7 +6,6 @@ import {
   createPromptVariableLayer,
   normalizePromptVariableRecord
 } from '../../template_engine/frontends/narrative/variable_context.js';
-import type { PermissionContext } from '../../permission/types.js';
 
 export const renderTemplateWithVisibleVariables = (
   template: string,

@@ -1,8 +1,12 @@
 import { getPromptSlotRegistry } from '../../ai/registry.js';
-import { resolveSlotPositions } from '../../inference/slot_position_resolver.js';
+import { getRuntimeConfig } from '../../config/runtime_config.js';
 import { resolveConversationFormatConfig } from '../../conversation/format_config.js';
+import { loadSlotBehaviorConfig, validateSlotBehaviorConfig } from '../../inference/slot_behavior.js';
+import { resolveSlotPositions } from '../../inference/slot_position_resolver.js';
 import type { InferenceContext } from '../../inference/types.js';
+import { createBehaviorControlExecutor } from './executors/behavior_control.js';
 import { createBundleFinalizeExecutor } from './executors/bundle_finalize.js';
+import { createContentTransformExecutor } from './executors/content_transform.js';
 import { createFragmentAssemblyExecutor } from './executors/fragment_assembly.js';
 import { createPermissionFilterExecutor } from './executors/permission_filter.js';
 import { createPlacementResolutionExecutor } from './executors/placement_resolution.js';
@@ -82,9 +86,35 @@ export const buildWorkflowPromptBundle = async (input: {
   }
   state.diagnostics.track_traces = trackResults;
 
+  // Load slot behavior config and inject into state
+  const slotBehaviorConfig = loadSlotBehaviorConfig(getRuntimeConfig());
+  const slotIds = Object.keys(slotRegistry.slots);
+  const behaviorProfiles = slotIds
+    .map((id) => {
+      // eslint-disable-next-line security/detect-object-injection
+      return slotBehaviorConfig[id];
+    })
+    .filter((p): p is NonNullable<typeof p> => p !== undefined);
+  if (behaviorProfiles.length > 0) {
+    const validationErrors = validateSlotBehaviorConfig(slotBehaviorConfig);
+    if (validationErrors.length > 0) {
+      state.diagnostics.step_traces.push({
+        key: 'behavior_config',
+        kind: 'behavior_control' as const,
+        status: 'failed',
+        before: { section_drafts_count: 0, fragment_count: 0, total_estimated_tokens: 0, denied_fragment_count: 0, working_set_node_count: 0 },
+        after: { section_drafts_count: 0, fragment_count: 0, total_estimated_tokens: 0, denied_fragment_count: 0, working_set_node_count: 0 },
+        notes: { validation_errors: validationErrors }
+      });
+    }
+    state.behavior_profiles = behaviorProfiles;
+  }
+
   const stepRegistry = createPromptWorkflowStepRegistry([
     createPlacementResolutionExecutor(),
     createFragmentAssemblyExecutor(),
+    createBehaviorControlExecutor(),
+    createContentTransformExecutor(),
     createPermissionFilterExecutor(),
     createTokenBudgetTrimExecutor(),
     createBundleFinalizeExecutor()

@@ -24,10 +24,10 @@ Key concepts:
 
 本文件不负责：
 
-- 仓库命令矩阵：看 `docs/guides/COMMANDS.md`
-- 操作步骤：看 `docs/guides/PLUGIN_OPERATIONS.md`
-- 公开 API contract：看 `docs/API.md`
-- 整体系统分层：看 `docs/ARCH.md`
+- 仓库命令矩阵：看 `../guides/COMMANDS.md`
+- 操作步骤：看 `../guides/PLUGIN_OPERATIONS.md`
+- 公开 API contract：看 `../specs/API.md`
+- 整体系统分层：看 `../ARCH.md`
 
 ## 2. 核心范围
 
@@ -242,7 +242,25 @@ CLI 与 GUI 复用同一组治理语义：
 - enable acknowledgement checkbox 与 warning text 展示
 - confirm / enable / disable 完整提交流程
 
-## 9. 当前边界与限制
+## 9. Server Plugin Host API
+
+插件通过 `activate(host: ServerPluginHostApi)` 入口点注册能力。当前可用的注册方法：
+
+| 方法 | 能力 key 前缀 | 说明 |
+|------|--------------|------|
+| `registerContextSource` | `server.context_source.register` | 注册上下文源适配器 |
+| `registerPromptWorkflowStep` | `server.prompt_workflow.register` | 注册自定义管线步骤执行器 |
+| `registerPackRoute` | `server.api_route.register` | 注册 pack 级 Express 路由 |
+| `registerStepContributor` | `server.step_contributor.register` | 注册世界引擎步骤贡献器 |
+| `registerRuleContributor` | `server.rule_contributor.register` | 注册世界引擎规则贡献器 |
+| `registerQueryContributor` | `server.query_contributor.register` | 注册世界引擎查询贡献器 |
+| `registerDataCleaner` | `data_cleaner.<name>` | 注册数据清洗器（全局单例） |
+| `registerSlotConditionEvaluator` | `slot_condition.<name>` | 注册插槽条件评估器（per-pack 注册） |
+| `registerSlotContentTransformer` | `slot_transform.<name>` | 注册插槽内容变换器（per-pack 注册） |
+
+`registerSlotConditionEvaluator` 和 `registerSlotContentTransformer` 采用 per-pack 命名空间隔离：同 pack 内 key 冲突抛错，不同 pack 允许同名 key。内置评估器（keyword_match、logic_match、conversation_turn、context_length）以系统包插件形式提供，位于 `builtin/system_pack/plugins/slot-condition-builtin/`。
+
+## 10. 当前边界与限制
 
 当前仍存在的边界：
 
@@ -255,7 +273,7 @@ CLI 与 GUI 复用同一组治理语义：
 - server-side pack route registration 仍以保守兼容为主，而不是完整平台化插件容器
 - 更深的 multi-pack operator ergonomics 已记录在 `.limcode/enhancements-backlog.md`
 
-## 10. 相关文档
+## 11. 相关文档
 
 - 操作步骤：`../guides/PLUGIN_OPERATIONS.md`
 - 命令入口：`../guides/COMMANDS.md`

@@ -2,7 +2,7 @@
 
 本文档用于说明 Yidhras 中**业务执行主线、状态转移语义、领域规则与可见性语义**。
 
-> 公共 HTTP contract 见 `API.md` · 系统分层与宿主关系见 `ARCH.md` · 专题细节见 `docs/capabilities/`
+> 公共 HTTP contract 见 `specs/API.md` · 系统分层与宿主关系见 `ARCH.md` · 专题细节见 `docs/subsystems/`
 
 ## 核心术语
 
@@ -242,14 +242,14 @@ Memory Block Runtime 当前形成最小闭环：
 
 Tool calling 使模型能够在单次推理中进行多轮工具调用（包括跨 agent 查询），但它属于 host-side 受控执行能力，不作为对外公开 contract。Tool loop 由 `ToolLoopRunner` 驱动，受 `ToolPermissionPolicy` 约束，模型无法绕过权限校验或无限循环。
 
-完整分层与 public boundary 说明见 → [`AI_GATEWAY.md`](capabilities/AI_GATEWAY.md)
+完整分层与 public boundary 说明见 → [`AI_GATEWAY.md`](subsystems/AI_GATEWAY.md)
 
 ## 9. Prompt Workflow 与 Plugin Runtime 的专题说明
 
 以下两类高耦合主题已拆到专题文档：
 
-- Prompt Workflow Runtime -> `docs/capabilities/PROMPT_WORKFLOW.md`
-- Pack-local Plugin Runtime -> `docs/capabilities/PLUGIN_RUNTIME.md`
+- Prompt Workflow Runtime -> `docs/subsystems/PROMPT_WORKFLOW.md`
+- Pack-local Plugin Runtime -> `docs/subsystems/PLUGIN_RUNTIME.md`
 
 在 Logic 中只保留其业务语义结论：
 
@@ -305,7 +305,7 @@ Agent 自主产生的 ActionIntent 不再自动视为 root：
 ## 12. 相关文档
 
 - 系统边界：`ARCH.md`
-- 公共接口：`API.md`
-- Prompt Workflow：`docs/capabilities/PROMPT_WORKFLOW.md`
-- AI Gateway：`docs/capabilities/AI_GATEWAY.md`
-- Plugin Runtime：`docs/capabilities/PLUGIN_RUNTIME.md`
+- 公共接口：`specs/API.md`
+- Prompt Workflow：`docs/subsystems/PROMPT_WORKFLOW.md`
+- AI Gateway：`docs/subsystems/AI_GATEWAY.md`
+- Plugin Runtime：`docs/subsystems/PLUGIN_RUNTIME.md`

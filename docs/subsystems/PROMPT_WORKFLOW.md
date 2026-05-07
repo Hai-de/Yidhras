@@ -15,7 +15,7 @@ Key concepts:
 
 The V1 flat prompt system (`PromptBundle` with 6 fixed string fields, flat `PromptFragment[]`, legacy `PromptProcessor` bridge) has been fully removed. The system operates exclusively on the V2 tree-based pipeline.
 
-本文档集中说明 Prompt Workflow Runtime 的结构、语义与边界，承接原先散落在 `docs/ARCH.md`、`docs/LOGIC.md` 与 `docs/API.md` 中的高耦合细节。
+本文档集中说明 Prompt Workflow Runtime 的结构、语义与边界，承接原先散落在 `../ARCH.md`、`../LOGIC.md` 与 `../specs/API.md` 中的高耦合细节。
 
 ## 1. 文档定位
 
@@ -28,9 +28,9 @@ The V1 flat prompt system (`PromptBundle` with 6 fixed string fields, flat `Prom
 
 本文件不负责：
 
-- 公共 HTTP contract 的完整定义：看 `docs/API.md`
-- 整个系统模块边界：看 `docs/ARCH.md`
-- 世界规则与业务语义主线：看 `docs/LOGIC.md`
+- 公共 HTTP contract 的完整定义：看 `../specs/API.md`
+- 整个系统模块边界：看 `../ARCH.md`
+- 世界规则与业务语义主线：看 `../LOGIC.md`
 - Slot 配置细节：看 `./PROMPT_SLOT_CONFIGURATION.md`
 
 ## 2. 目标
@@ -60,19 +60,24 @@ InferenceContext + PromptSlotRegistry
   → runNodeTrack(context_run.nodes, taskType)   → TrackResult<SectionDraft[]>
   → runSnapshotTrack(context, slotRegistry)     → TrackResult<SectionDraft[]>
   ── 汇合后 pipeline ──
-  → placement_resolution → fragment_assembly → permission_filter
-    → token_budget_trim → bundle_finalize
+  → placement_resolution → fragment_assembly → behavior_control
+    → content_transform → permission_filter → token_budget_trim
+    → bundle_finalize
   → PromptBundleV2
   → InferenceProvider.run(context, bundle) → ProviderDecisionRaw
 ```
+
+**插槽行为控制**：`behavior_control` 步骤在 fragment 组装之后执行，根据 `slot_behaviors` 配置（`data/configw/default.yaml`）决定每个插槽的激活/禁用。支持的条件类型：`keyword_match`、`logic_match`、`context_length`、`conversation_turn`、`custom`。状态性规则（sticky、cooldown、delayed_trigger）跨推理调用持久化。详见 `.limcode/design/slot-function-advanced-design.md`。
+
+**内容变换**：`content_transform` 步骤在激活决策之后、权限过滤之前执行，允许插件注册 `SlotContentTransformer` 对已激活插槽的内容进行变换。
 
 相关实现：
 
 - `apps/server/src/context/workflow/orchestrator.ts` — `buildWorkflowPromptBundle()` 编排入口
 - `apps/server/src/context/workflow/tracks/` — 三条内容轨道（template / node / snapshot）
-- `apps/server/src/context/workflow/executors/` — 五个汇合后 executor
+- `apps/server/src/context/workflow/executors/` — 七个汇合后 executor（新增 `behavior_control`、`content_transform`）
 - `apps/server/src/context/workflow/pipeline_runner.ts` — 薄 runner，调度 executor 链
-- `apps/server/src/context/workflow/profiles.ts` — `selectPromptWorkflowProfile()`，3 个内置 profile
+- `apps/server/src/context/workflow/profiles.ts` — `selectPromptWorkflowProfile()`，5 个内置 profile
 - `apps/server/src/context/workflow/types.ts` — `PromptWorkflowState`, `PromptSectionDraft`, `StepSnapshotSummary` 等
 - `apps/server/src/context/workflow/registry.ts` — `PromptWorkflowStepRegistry`
 - `apps/server/src/inference/prompt_builder_v2.ts` — `buildPromptBundleV2()` 最终渲染
@@ -84,11 +89,13 @@ InferenceContext + PromptSlotRegistry
 
 ## 4. Profile 与 task-aware 入口
 
-当前内置 3 个 profile，每个 profile 声明了适用的 task_type / strategy / pack_id、默认参数（`token_budget`、`safety_margin_tokens`）、启用的轨道（`tracks`）、以及汇合后步骤序列：
+当前内置 5 个 profile，每个 profile 声明了适用的 task_type / strategy / pack_id、默认参数（`token_budget`、`safety_margin_tokens`）、启用的轨道（`tracks`）、以及汇合后步骤序列：
 
 - `agent-decision-default` — `task_types: ['agent_decision']`，三轨全启，默认 budget 2200 / margin 80
 - `context-summary-default` — `task_types: ['context_summary']`，三轨全启，默认 budget 1600 / margin 60
 - `memory-compaction-default` — `task_types: ['memory_compaction']`，三轨全启，默认 budget 1800 / margin 60
+- `chat-first-turn` — `task_types: ['agent_decision']`，四轨全启（含 conversation_history），conversation_profile: `chat-first-turn`
+- `chat-follow-up` — `task_types: ['agent_decision']`，轻量路径（template + conversation_history），conversation_profile: `chat-follow-up`
 
 Profile 选择逻辑（`selectPromptWorkflowProfile`）按 specificity 排序：`task_types` 匹配权重 4 > `strategies` 匹配权重 2 > `pack_ids` 匹配权重 1。
 

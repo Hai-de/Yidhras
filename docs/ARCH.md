@@ -2,7 +2,7 @@
 
 本文档用于描述 Yidhras 的**系统分层、模块边界、宿主关系与职责划分**。
 
-> 图形化总览与调用流见 `ARCH_DIAGRAM.md` · 公共 HTTP contract 见 `API.md` · 业务执行语义见 `LOGIC.md` · 专题细节见 `docs/capabilities/`
+> 图形化总览与调用流见 `ARCH_DIAGRAM.md` · 公共 HTTP contract 见 `specs/API.md` · 业务执行语义见 `LOGIC.md` · 专题细节见 `docs/subsystems/`
 
 ## 核心术语
 
@@ -487,9 +487,9 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 
 以下主题已从 ARCH 主体中抽离为 capability 文档，以减少与 LOGIC / API 的重叠：
 
-- Prompt Workflow Runtime -> `docs/capabilities/PROMPT_WORKFLOW.md`
-- AI Gateway / Invocation Observability -> `docs/capabilities/AI_GATEWAY.md`
-- Pack-local Plugin Runtime -> `docs/capabilities/PLUGIN_RUNTIME.md`
+- Prompt Workflow Runtime -> `docs/subsystems/PROMPT_WORKFLOW.md`
+- AI Gateway / Invocation Observability -> `docs/subsystems/AI_GATEWAY.md`
+- Pack-local Plugin Runtime -> `docs/subsystems/PLUGIN_RUNTIME.md`
 
 在 ARCH 中只保留它们的边界性结论：
 

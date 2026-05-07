@@ -42,12 +42,12 @@ class MemSchedulerStorage implements SchedulerStorageAdapter {
     return input;
   }
 
-  writeCandidateDecision(packId: string, _schedulerRunId: string, input: Record<string, unknown>): Record<string, unknown> {
+  writeCandidateDecision(packId: string, schedulerRunId: string, input: Record<string, unknown>): Record<string, unknown> {
     if (!this.decisionsByPack.has(packId)) this.decisionsByPack.set(packId, []);
     const candidateReasons = Array.isArray(input.candidate_reasons)
       ? JSON.stringify(input.candidate_reasons)
       : String(input.candidate_reasons ?? '[]');
-    this.decisionsByPack.get(packId)!.push({ ...input, candidate_reasons: candidateReasons });
+    this.decisionsByPack.get(packId)!.push({ ...input, scheduler_run_id: schedulerRunId, candidate_reasons: candidateReasons });
     return input;
   }
 

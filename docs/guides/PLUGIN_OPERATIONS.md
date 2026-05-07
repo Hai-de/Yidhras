@@ -4,8 +4,8 @@
 
 > 事实源约定：
 > - 命令入口以 `apps/server/package.json` 与 `docs/guides/COMMANDS.md` 为准。
-> - HTTP contract 以 `docs/API.md` 为准。
-> - 架构与 runtime 边界以 `docs/ARCH.md` 为准。
+> - HTTP contract 以 `../specs/API.md` 为准。
+> - 架构与 runtime 边界以 `../ARCH.md` 为准。
 > - 本文档负责解释“怎么操作”和“操作顺序是什么”。
 
 ## 1. 范围
@@ -184,7 +184,7 @@ curl -H "Authorization: Bearer $YIDHRAS_TOKEN" \
 - `GET /runtime/web`：读取当前已启用 web runtime manifest
 - `GET /runtime/web/:installationId/*`：访问启用插件的同源 web 资产
 
-更精确的 body / 返回结构请看 `docs/API.md`。
+更精确的 body / 返回结构请看 `../specs/API.md`。
 
 ## 7. acknowledgement 说明
 

@@ -6,3 +6,4 @@ order:
   - "string-methods"
   - "regex-engine"
   - "template-engine"
+  - "slot-condition-builtin"

@@ -130,6 +130,8 @@ const buildProjectionTestContext = (
       available_world_packs: [pack.metadata.id],
       errors: []
     },
+    isPaused: () => false,
+    isRuntimeReady: () => true,
     assertRuntimeReady() {
       // noop
     },

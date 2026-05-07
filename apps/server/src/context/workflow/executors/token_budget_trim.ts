@@ -91,6 +91,13 @@ export const createTokenBudgetTrimExecutor = (
     let remaining = effectiveBudget;
     for (const { fragments } of sortedSlots) {
       for (const fragment of fragments) {
+        // Phase 4: ignore_context_length — skip trimming for marked fragments
+        const ignoreContextLength = fragment.metadata?.['ignore_context_length'] === true;
+        if (ignoreContextLength) {
+          remaining -= fragment.estimated_tokens ?? 0;
+          continue;
+        }
+
         if (remaining <= 0 && fragment.removable) {
           fragment.permission_denied = true;
           fragment.denial = fragment.denial ?? [];

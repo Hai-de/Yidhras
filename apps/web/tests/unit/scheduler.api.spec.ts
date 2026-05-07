@@ -1,3 +1,4 @@
+import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSchedulerApi } from '../../composables/api/useSchedulerApi'
@@ -10,6 +11,7 @@ vi.mock('../../lib/http/client', () => ({
 
 describe('useSchedulerApi', () => {
   beforeEach(() => {
+    setActivePinia(createPinia())
     requestApiDataMock.mockReset()
     requestApiDataMock.mockResolvedValue(null)
   })
@@ -19,7 +21,10 @@ describe('useSchedulerApi', () => {
 
     await api.getOperatorProjection({ sampleRuns: 12, recentLimit: 6 })
 
-    expect(requestApiDataMock).toHaveBeenCalledWith('/api/runtime/scheduler/operator?sample_runs=12&recent_limit=6')
+    expect(requestApiDataMock).toHaveBeenCalledWith(
+      '/api/runtime/scheduler/operator?sample_runs=12&recent_limit=6',
+      { packId: undefined }
+    )
   })
 
   it('builds scheduler ownership, workers, and rebalance queries', async () => {
@@ -37,12 +42,18 @@ describe('useSchedulerApi', () => {
 
     expect(requestApiDataMock).toHaveBeenNthCalledWith(
       1,
-      '/api/runtime/scheduler/ownership?worker_id=worker-a&partition_id=p2&status=assigned'
+      '/api/runtime/scheduler/ownership?worker_id=worker-a&partition_id=p2&status=assigned',
+      { packId: undefined }
     )
-    expect(requestApiDataMock).toHaveBeenNthCalledWith(2, '/api/runtime/scheduler/workers?worker_id=worker-a&status=active')
+    expect(requestApiDataMock).toHaveBeenNthCalledWith(
+      2,
+      '/api/runtime/scheduler/workers?worker_id=worker-a&status=active',
+      { packId: undefined }
+    )
     expect(requestApiDataMock).toHaveBeenNthCalledWith(
       3,
-      '/api/runtime/scheduler/rebalance/recommendations?limit=5&worker_id=worker-a&partition_id=p2&status=applied&suppress_reason=worker_unhealthy'
+      '/api/runtime/scheduler/rebalance/recommendations?limit=5&worker_id=worker-a&partition_id=p2&status=applied&suppress_reason=worker_unhealthy',
+      { packId: undefined }
     )
   })
 
@@ -51,6 +62,9 @@ describe('useSchedulerApi', () => {
 
     await api.getAgentProjection('agent-9', { limit: 20 })
 
-    expect(requestApiDataMock).toHaveBeenCalledWith('/api/agent/agent-9/scheduler/projection?limit=20')
+    expect(requestApiDataMock).toHaveBeenCalledWith(
+      '/api/agent/agent-9/scheduler/projection?limit=20',
+      { packId: undefined }
+    )
   })
 })

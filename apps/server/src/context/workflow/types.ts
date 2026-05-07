@@ -11,6 +11,8 @@ import type {
   SlotPositionDiagnostics
 } from '../../inference/prompt_slot_config.js';
 import type { PromptTree } from '../../inference/prompt_tree.js';
+import type { SlotBehaviorProfile } from '../../inference/slot_behavior.js';
+import type { SlotBehaviorState } from '../../inference/slot_behavior_state.js';
 import type {
   InferenceActorRef,
   InferenceStrategy
@@ -32,6 +34,8 @@ export type PromptWorkflowStepKind =
   | 'token_budget_trim'
   | 'placement_resolution'
   | 'fragment_assembly'
+  | 'behavior_control'
+  | 'content_transform'
   | 'permission_filter'
   | 'bundle_finalize';
 
@@ -191,6 +195,13 @@ export interface PromptWorkflowDiagnostics {
   track_traces?: TrackTrace[];
 }
 
+export interface SlotBehaviorDiagnostic {
+  profiles_evaluated: number;
+  slots_activated: string[];
+  slots_disabled: string[];
+  evaluation_errors: { slot_id: string; error: string }[];
+}
+
 export interface PromptWorkflowState {
   context_run: ContextRun | null;
   actor_ref: InferenceActorRef;
@@ -209,6 +220,9 @@ export interface PromptWorkflowState {
   slot_registry?: Record<string, PromptSlotConfig>;
   resolved_positions?: ResolvedSlotPosition[];
   diagnostics: PromptWorkflowDiagnostics;
+  behavior_profiles?: SlotBehaviorProfile[];
+  behavior_states?: Record<string, SlotBehaviorState>;
+  slot_behavior_diagnostics?: SlotBehaviorDiagnostic;
 }
 
 export interface PromptWorkflowSelectionInput {
