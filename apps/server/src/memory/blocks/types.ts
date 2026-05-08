@@ -42,6 +42,8 @@ export interface MemoryBlock {
   importance: number;
   salience: number;
   confidence: number | null;
+  embedding: number[] | null;
+  embedding_model: string | null;
   created_at_tick: string;
   updated_at_tick: string;
 }
@@ -110,7 +112,19 @@ export interface MemoryRecentSourceTrigger {
   score?: number;
 }
 
-export type MemoryTrigger = MemoryKeywordTrigger | MemoryLogicTrigger | MemoryRecentSourceTrigger;
+export interface MemorySemanticTrigger {
+  type: 'semantic';
+  threshold: number;
+  query_template?: string;
+  fields?: Array<'content_text' | 'content_structured'>;
+  score?: number;
+}
+
+export type MemoryTrigger =
+  | MemoryKeywordTrigger
+  | MemoryLogicTrigger
+  | MemoryRecentSourceTrigger
+  | MemorySemanticTrigger;
 
 export interface MemoryActivationRule {
   mode: MemoryActivationMode;
@@ -208,6 +222,7 @@ export interface MemoryEvaluationContext {
     intent?: MemoryRecentSourceRecord[];
     event?: MemoryRecentSourceRecord[];
   };
+  query_embedding?: number[];
 }
 
 export type MemoryTriggerEngineMode = 'rust_primary';
@@ -265,3 +280,19 @@ export interface MemoryTriggerSourceEvaluateResult {
 export type MemoryTriggerEngineEvaluationMetadata = {
   provider: MemoryTriggerEngineMode;
 };
+
+// -- Vector search types --
+
+export interface MemoryVectorSearchInput {
+  owner_agent_id: string;
+  pack_id?: string | null;
+  query_text?: string;
+  query_embedding?: number[];
+  threshold?: number;
+  limit: number;
+}
+
+export interface MemoryVectorSearchResult {
+  block: MemoryBlock;
+  similarity: number;
+}

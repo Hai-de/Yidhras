@@ -9,6 +9,7 @@ import type { LongTermMemoryStore, MemoryContextPack, MemorySelectionResult } fr
 export interface BuildMemoryContextInput {
   actor_ref: InferenceActorRef;
   resolved_agent_id: string | null;
+  query_embedding?: number[];
 }
 
 export interface MemoryService {
@@ -35,6 +36,7 @@ export const createMemoryService = ({
       });
       const longTerm = await longTermStore.search({
         actor_ref: input.actor_ref,
+        query_embedding: input.query_embedding,
         limit: 4
       });
       const summaries = await createNoopMemorySummarizer().summarize(shortTerm, 2);

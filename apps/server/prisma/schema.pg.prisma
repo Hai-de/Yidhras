@@ -406,6 +406,8 @@ model MemoryBlock {
   importance        Float
   salience          Float
   confidence        Float?
+  embedding         String?
+  embedding_model   String?
   created_at_tick   BigInt
   updated_at_tick   BigInt
 

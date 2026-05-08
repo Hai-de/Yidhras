@@ -6,6 +6,45 @@ use crate::models::{
 };
 use serde_json::{json, Value};
 
+fn cosine_similarity(a: &[f64], b: &[f64]) -> f64 {
+    if a.len() != b.len() || a.is_empty() {
+        return 0.0;
+    }
+
+    let mut dot = 0.0;
+    let mut norm_a = 0.0;
+    let mut norm_b = 0.0;
+    for i in 0..a.len() {
+        dot += a[i] * b[i];
+        norm_a += a[i] * a[i];
+        norm_b += b[i] * b[i];
+    }
+
+    let denom = (norm_a * norm_b).sqrt();
+    if denom == 0.0 {
+        0.0
+    } else {
+        dot / denom
+    }
+}
+
+fn evaluate_semantic_trigger(
+    block: &MemoryBlockDto,
+    context: &MemoryEvaluationContextDto,
+    threshold: f64,
+) -> bool {
+    let block_embedding = match &block.embedding {
+        Some(e) if !e.is_empty() => e,
+        _ => return false,
+    };
+    let query_embedding = match &context.query_embedding {
+        Some(e) if !e.is_empty() => e,
+        _ => return false,
+    };
+
+    cosine_similarity(block_embedding, query_embedding) >= threshold
+}
+
 fn contains_keyword(value: &str, keyword: &str, case_sensitive: bool) -> bool {
     if case_sensitive {
         value.contains(keyword)
@@ -208,6 +247,9 @@ pub fn evaluate_trigger(
             r#match.value.as_ref(),
             r#match.values.as_ref(),
         ),
+        MemoryTriggerDto::Semantic { threshold, .. } => {
+            evaluate_semantic_trigger(block, context, *threshold)
+        }
     }
 }
 
@@ -238,13 +280,15 @@ pub fn compute_matched_triggers(
             let score = match trigger {
                 MemoryTriggerDto::Keyword { score, .. }
                 | MemoryTriggerDto::Logic { score, .. }
-                | MemoryTriggerDto::RecentSource { score, .. } => score.unwrap_or(1.0),
+                | MemoryTriggerDto::RecentSource { score, .. }
+                | MemoryTriggerDto::Semantic { score, .. } => score.unwrap_or(1.0),
             };
 
             let label = match trigger {
                 MemoryTriggerDto::Keyword { .. } => format!("keyword:{}", index),
                 MemoryTriggerDto::Logic { .. } => format!("logic:{}", index),
                 MemoryTriggerDto::RecentSource { .. } => format!("recent_source:{}", index),
+                MemoryTriggerDto::Semantic { .. } => format!("semantic:{}", index),
             };
 
             Some((label, score))
@@ -309,6 +353,8 @@ mod tests {
             importance: 0.9,
             salience: 0.8,
             confidence: Some(0.7),
+            embedding: None,
+            embedding_model: None,
             created_at_tick: "1".to_string(),
             updated_at_tick: "1".to_string(),
         }
@@ -322,6 +368,7 @@ mod tests {
             current_tick: "10".to_string(),
             attributes: None,
             pack_state: None,
+            query_embedding: None,
             recent: Some(MemoryRecentSourcesDto {
                 trace: Some(vec![MemoryRecentSourceRecordDto {
                     id: "trace-1".to_string(),
@@ -380,5 +427,115 @@ mod tests {
         let behavior = sample_behavior(vec![], MemoryActivationModeDto::Always);
         assert!(should_treat_as_always(&behavior));
         assert_eq!(compute_matched_triggers(&sample_block(), &behavior, &sample_context()), vec![("always".to_string(), 1.0)]);
+    }
+
+    #[test]
+    fn cosine_similarity_identical_returns_one() {
+        let v = vec![0.3, 0.5, 0.8, 0.1];
+        let result = super::cosine_similarity(&v, &v);
+        assert!((result - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn cosine_similarity_orthogonal_returns_zero() {
+        let a = vec![1.0, 0.0, 0.0];
+        let b = vec![0.0, 1.0, 0.0];
+        let result = super::cosine_similarity(&a, &b);
+        assert!((result - 0.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn cosine_similarity_opposite_returns_negative_one() {
+        let a = vec![1.0, 2.0, 3.0];
+        let b = vec![-1.0, -2.0, -3.0];
+        let result = super::cosine_similarity(&a, &b);
+        assert!((result + 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn semantic_trigger_matches_above_threshold() {
+        let block = MemoryBlockDto {
+            embedding: Some(vec![0.8, 0.6, 0.1, 0.3]),
+            ..sample_block()
+        };
+        let mut context = sample_context();
+        context.query_embedding = Some(vec![0.7, 0.65, 0.15, 0.25]);
+
+        let trigger = MemoryTriggerDto::Semantic {
+            threshold: 0.9,
+            score: Some(1.0),
+        };
+
+        assert!(evaluate_trigger(&block, &context, &trigger));
+    }
+
+    #[test]
+    fn semantic_trigger_rejects_below_threshold() {
+        let block = MemoryBlockDto {
+            embedding: Some(vec![0.8, 0.6, 0.1, 0.3]),
+            ..sample_block()
+        };
+        let mut context = sample_context();
+        context.query_embedding = Some(vec![0.1, 0.2, 0.9, 0.7]);
+
+        let trigger = MemoryTriggerDto::Semantic {
+            threshold: 0.5,
+            score: None,
+        };
+
+        assert!(!evaluate_trigger(&block, &context, &trigger));
+    }
+
+    #[test]
+    fn semantic_trigger_rejects_when_block_has_no_embedding() {
+        let block = sample_block();
+        let mut context = sample_context();
+        context.query_embedding = Some(vec![0.7, 0.65, 0.15, 0.25]);
+
+        let trigger = MemoryTriggerDto::Semantic {
+            threshold: 0.5,
+            score: None,
+        };
+
+        assert!(!evaluate_trigger(&block, &context, &trigger));
+    }
+
+    #[test]
+    fn semantic_trigger_rejects_when_context_has_no_query_embedding() {
+        let block = MemoryBlockDto {
+            embedding: Some(vec![0.8, 0.6, 0.1, 0.3]),
+            ..sample_block()
+        };
+        let context = sample_context();
+
+        let trigger = MemoryTriggerDto::Semantic {
+            threshold: 0.5,
+            score: None,
+        };
+
+        assert!(!evaluate_trigger(&block, &context, &trigger));
+    }
+
+    #[test]
+    fn compute_matched_triggers_labels_semantic_correctly() {
+        let block = MemoryBlockDto {
+            embedding: Some(vec![0.8, 0.6, 0.1, 0.3]),
+            ..sample_block()
+        };
+        let mut context = sample_context();
+        context.query_embedding = Some(vec![0.7, 0.65, 0.15, 0.25]);
+
+        let behavior = sample_behavior(
+            vec![MemoryTriggerDto::Semantic {
+                threshold: 0.9,
+                score: Some(1.5),
+            }],
+            MemoryActivationModeDto::Keyword,
+        );
+
+        let matched = compute_matched_triggers(&block, &behavior, &context);
+        assert_eq!(matched.len(), 1);
+        assert_eq!(matched[0].0, "semantic:0");
+        assert!((matched[0].1 - 1.5).abs() < 1e-10);
     }
 }

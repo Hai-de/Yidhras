@@ -7,7 +7,9 @@ import type {
   MemoryBlockCandidateQuery,
   MemoryBlockRecord,
   MemoryBlockUpsertInput,
-  MemoryRuntimeState
+  MemoryRuntimeState,
+  MemoryVectorSearchInput,
+  MemoryVectorSearchResult
 } from '../../../memory/blocks/types.js';
 import { createPrismaLongTermMemoryStore } from '../../../memory/long_term_store.js';
 import type {
@@ -15,6 +17,7 @@ import type {
   LongTermMemoryStore,
   MemoryEntry
 } from '../../../memory/types.js';
+import { createVectorStore, type VectorStore } from '../../../memory/vector/vector_store.js';
 import type { AppInfrastructure } from '../../context.js';
 import type { AppContextPorts } from '../app_context_ports.js';
 
@@ -38,16 +41,20 @@ export interface MemoryRepository {
   upsertCompactionState(input: { agent_id: string; pack_id?: string | null; inference_count_since_summary: number; inference_count_since_compaction: number; updated_at_tick: bigint }): Promise<{ inference_count_since_summary: number; inference_count_since_compaction: number; last_summary_tick: bigint | null; last_compaction_tick: bigint | null }>;
   updateCompactionState(agentId: string, data: Record<string, unknown>): Promise<{ inference_count_since_summary: number; inference_count_since_compaction: number; last_summary_tick: bigint | null; last_compaction_tick: bigint | null }>;
   listActiveMemoryBlocks(packId?: string | null, limit?: number): Promise<Array<{ id: string; kind: string; title: string | null; content_text: string; tags: string; created_at_tick: bigint; updated_at_tick: bigint }>>;
+
+  searchBySimilarity(input: MemoryVectorSearchInput): Promise<MemoryVectorSearchResult[]>;
 }
 
 export class PrismaMemoryRepository implements MemoryRepository {
   private readonly blockStore: LongMemoryBlockStore;
   private readonly longTermStore: LongTermMemoryStore;
+  private readonly vectorStore: VectorStore;
 
   constructor(private readonly prisma: PrismaClient) {
     const ctx = { prisma } as AppInfrastructure & Pick<AppContextPorts, 'activePackRuntime'>;
     this.blockStore = createPrismaLongMemoryBlockStore(ctx);
     this.longTermStore = createPrismaLongTermMemoryStore(ctx);
+    this.vectorStore = createVectorStore(prisma);
   }
 
   async listCandidateBlocks(input: MemoryBlockCandidateQuery): Promise<MemoryBlockRecord[]> {
@@ -105,5 +112,9 @@ export class PrismaMemoryRepository implements MemoryRepository {
       orderBy: [{ updated_at_tick: 'desc' }, { created_at_tick: 'desc' }],
       take: limit ?? 10
     });
+  }
+
+  async searchBySimilarity(input: MemoryVectorSearchInput): Promise<MemoryVectorSearchResult[]> {
+    return this.vectorStore.searchByEmbedding(input);
   }
 }

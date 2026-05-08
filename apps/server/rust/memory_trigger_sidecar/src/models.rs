@@ -65,6 +65,10 @@ pub struct MemoryBlockDto {
     pub salience: f64,
     #[serde(default)]
     pub confidence: Option<f64>,
+    #[serde(default)]
+    pub embedding: Option<Vec<f64>>,
+    #[serde(default)]
+    pub embedding_model: Option<String>,
     pub created_at_tick: String,
     pub updated_at_tick: String,
 }
@@ -215,6 +219,11 @@ pub enum MemoryTriggerDto {
         #[serde(default)]
         score: Option<f64>,
     },
+    Semantic {
+        threshold: f64,
+        #[serde(default)]
+        score: Option<f64>,
+    },
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -319,6 +328,8 @@ pub struct MemoryEvaluationContextDto {
     pub pack_state: Option<MemoryPackStateDto>,
     #[serde(default)]
     pub recent: Option<MemoryRecentSourcesDto>,
+    #[serde(default)]
+    pub query_embedding: Option<Vec<f64>>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]

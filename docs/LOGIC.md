@@ -13,7 +13,7 @@
 | Intent Grounder | 把模型开放语义映射为系统可执行结果的组件，产出 exact/translated/narrativized/blocked 四类结果 |
 | Narrativized fallback | 语义上表现为失败尝试的正式结果，而非简单异常 |
 | Overlay | 临时、可写入的上下文补充，不是世界状态的 source-of-truth |
-| Memory Block | 可触发（always/keyword/logic/recent-source）的长期记忆片段，触发后物化为上下文节点 |
+| Memory Block | 可触发（always/keyword/logic/recent-source/semantic）的长期记忆片段，支持向量嵌入与余弦相似度语义检索，触发后物化为上下文节点 |
 | Projection | 数据的只读聚合视图（entity overview、pack timeline 等），面向前端/operator |
 | Canonical read surface | 稳定的公开只读 API 端点，如 `/api/packs/:packId/overview` |
 | Objective enforcement | Rust sidecar 执行的世界规则匹配与状态变更 |
@@ -192,6 +192,7 @@ Memory Block Runtime 当前形成最小闭环：
 - `keyword`
 - `logic`
 - `recent_source`
+- `semantic` — 基于余弦相似度的向量语义匹配。block 端依赖 `MemoryBlock.embedding`（由 AI Gateway `text-embedding-3-small` 在写入时生成），查询端由 context source adapter 在触发评估前自动调用 AI Gateway 生成 `query_embedding`，经 Rust sidecar 完成余弦比对，threshold 以上即匹配。缺失 embedding 或 query_embedding 时不抛错，静默降级为不匹配。
 
 逻辑 DSL 当前支持：
 

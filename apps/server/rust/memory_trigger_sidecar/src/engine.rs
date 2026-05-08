@@ -340,6 +340,8 @@ mod tests {
             importance: 1.0,
             salience: 1.0,
             confidence: Some(1.0),
+            embedding: None,
+            embedding_model: None,
             created_at_tick: "1".to_string(),
             updated_at_tick: "1".to_string(),
         }
@@ -353,6 +355,7 @@ mod tests {
             current_tick: current_tick.to_string(),
             attributes: None,
             pack_state: None,
+            query_embedding: None,
             recent: Some(MemoryRecentSourcesDto {
                 trace: Some(vec![MemoryRecentSourceRecordDto {
                     id: "trace-1".to_string(),

@@ -8,6 +8,18 @@
  * Design doc: .limcode/design/multi-turn-conversation-design.md §6.4
  */
 
+export type {
+  CompressionConfig,
+  ConversationDomainConfig,
+  ConversationFormatConfig,
+  MessageAssemblyConfig,
+  MessageAssemblyInjection,
+  MessageAssemblyInjectionField,
+  MessageAssemblySlotMapping,
+  RoleFormatConfig,
+  SpeakerFormatConfig,
+  TranscriptConfig
+} from './format_config_schemas.js';
 export {
   CompressionConfigSchema,
   ConversationDomainConfigSchema,
@@ -22,26 +34,10 @@ export {
   TranscriptConfigSchema
 } from './format_config_schemas.js';
 
-export type {
-  CompressionConfig,
-  ConversationDomainConfig,
-  ConversationFormatConfig,
-  MessageAssemblyConfig,
-  MessageAssemblyInjection,
-  MessageAssemblyInjectionField,
-  MessageAssemblySlotMapping,
-  RoleFormatConfig,
-  SpeakerFormatConfig,
-  TranscriptConfig
-} from './format_config_schemas.js';
-
 import { getRuntimeConfig } from '../config/runtime_config.js';
-
-import { ConversationFormatConfigSchema,DEFAULT_CONVERSATION_FORMAT_CONFIG } from './format_config_schemas.js';
-
-import type { AgentConversationMemory, ConversationMemoryMetadata } from './types.js';
-
 import type { ConversationFormatConfig } from './format_config_schemas.js';
+import { ConversationFormatConfigSchema,DEFAULT_CONVERSATION_FORMAT_CONFIG } from './format_config_schemas.js';
+import type { AgentConversationMemory, ConversationMemoryMetadata } from './types.js';
 
 // ── Resolution ──────────────────────────────────────────────
 

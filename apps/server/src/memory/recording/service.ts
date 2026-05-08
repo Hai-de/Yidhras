@@ -222,6 +222,8 @@ const buildMemoryBlockInput = (input: {
     importance: input.kind === 'reflection' ? 0.82 : 0.75,
     salience: input.kind === 'reflection' ? 0.8 : 0.72,
     confidence: null,
+    embedding: null,
+    embedding_model: null,
     created_at_tick: input.tick,
     updated_at_tick: input.tick
   },

@@ -103,6 +103,25 @@ const normalizeSourceRef = (value: unknown): MemoryBlockSourceRef | null => {
   return toJsonSafe(value) as MemoryBlockSourceRef;
 };
 
+const parseEmbedding = (raw: string | null): number[] | null => {
+  if (!raw || raw.trim().length === 0) {
+    return null;
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      Array.isArray(parsed) &&
+      parsed.length > 0 &&
+      parsed.every((v): v is number => typeof v === 'number' && Number.isFinite(v))
+    ) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 const toMemoryBlock = (record: {
   id: string;
   owner_agent_id: string;
@@ -118,6 +137,8 @@ const toMemoryBlock = (record: {
   importance: number;
   salience: number;
   confidence: number | null;
+  embedding: string | null;
+  embedding_model: string | null;
   created_at_tick: bigint;
   updated_at_tick: bigint;
 }): MemoryBlock => {
@@ -136,6 +157,8 @@ const toMemoryBlock = (record: {
     importance: record.importance,
     salience: record.salience,
     confidence: record.confidence,
+    embedding: parseEmbedding(record.embedding),
+    embedding_model: record.embedding_model,
     created_at_tick: record.created_at_tick.toString(),
     updated_at_tick: record.updated_at_tick.toString()
   };
@@ -238,6 +261,8 @@ export const createPrismaLongMemoryBlockStore = (context: MemoryBlockStoreContex
               importance: input.block.importance,
               salience: input.block.salience,
               confidence: input.block.confidence,
+              embedding: Array.isArray(input.block.embedding) ? JSON.stringify(input.block.embedding) : null,
+              embedding_model: input.block.embedding_model ?? null,
               updated_at_tick: BigInt(input.block.updated_at_tick)
             },
             create: {
@@ -258,6 +283,8 @@ export const createPrismaLongMemoryBlockStore = (context: MemoryBlockStoreContex
               importance: input.block.importance,
               salience: input.block.salience,
               confidence: input.block.confidence,
+              embedding: Array.isArray(input.block.embedding) ? JSON.stringify(input.block.embedding) : null,
+              embedding_model: input.block.embedding_model ?? null,
               created_at_tick: BigInt(input.block.created_at_tick),
               updated_at_tick: BigInt(input.block.updated_at_tick)
             }

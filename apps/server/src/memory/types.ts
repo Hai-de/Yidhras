@@ -75,6 +75,7 @@ export interface MemoryContextPack {
 export interface LongTermMemorySearchInput {
   actor_ref: InferenceActorRef;
   query?: string;
+  query_embedding?: number[];
   tags?: string[];
   limit: number;
 }
