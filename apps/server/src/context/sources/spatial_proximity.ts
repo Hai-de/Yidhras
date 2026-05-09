@@ -54,7 +54,7 @@ export const buildSpatialProximityContextNodes = async (input: {
       can_hide: false
     },
     placement_policy: {
-      preferred_slot: 'world_state',
+      preferred_slot: 'world_context',
       locked: false,
       tier: 'world'
     },

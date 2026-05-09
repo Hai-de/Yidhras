@@ -1,9 +1,19 @@
 # 地基增强实施计划
 
 > 来源: `.limcode/design/prototype-world-pack-implementation.md` §11 评审结论
-> 状态: Stage 1-4 完成
+> 状态: 全部完成 (平台 Stage 1-4 + Pack 配置 Phase 1-3)
 > 创建: 2026-05-08
 > 最后更新: 2026-05-09
+>
+> 产出物:
+> - `data/world_packs/snowbound_mansion/config.yaml` — 原型世界包
+> - `apps/server/src/spatial/` — 空间运行时
+> - `apps/server/src/perception/` — 感知管线
+> - `apps/server/src/template_engine/core/prng.ts` — PRNG
+> - `apps/server/src/context/sources/spatial_proximity.ts` — 空间上下文源
+> - `apps/server/src/app/runtime/perception_pipeline.ts` — sim loop step 6
+> - Prisma 迁移: `20260508233605_add_spatial_fields_to_event`
+> - 新增测试: 62 个 (macro 30 + spatial 16 + perception 6 + predicate 10)
 
 ## 目标
 

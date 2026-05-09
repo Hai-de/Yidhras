@@ -138,12 +138,14 @@ _pack 作者视角的关键要点：_
 | 宏 | 语法 | 返回类型 | 说明 |
 |----|------|----------|------|
 | `roll` | `{{roll count=2 sides=6}}` | number → string | NdN 骰子求和。`count` 默认 1 |
-| `pick` | `{{pick from=a,b,c count=3}}` | string 或 string[] | 从列表中不放回随机选取。`count` 默认 1 |
+| `pick` | `{{pick from=a,b,c count=3}}` | string | 从列表中不放回随机选取。`count` 默认 1。`from` 接受逗号分隔字符串 |
 | `int` | `{{int min=0 max=99}}` | number → string | 区间内随机整数 |
 | `float` | `{{float min=0 max=1}}` | number → string | 区间内随机浮点数 |
 | `seed` | `{{seed}}` | string | 返回当前物化阶段使用的 PRNG 种子值（只读），用于问题排查与可复现性确认 |
 
 **设计原则**：随机性决定模拟状态，不是作为提示词噪声。AI 推理时读到的是宏展开后的确定性值。
+
+> **当前类型限制**：宏处理器签名限定所有参数为 `Record<string, string>`，即所有参数值（包括 `count`、`sides`、`min`、`max` 等数值型参数）均以字符串形式传递，宏处理器内部执行 `parseInt`/`parseFloat` 转换。`pick` 宏的 `from` 参数接受逗号分隔字符串（如 `from=a,b,c`），返回结果为字符串而非数组（如 `"a"` 而非 `["a"]`）。返回值类型标注（如 "string 或 string[]"）表示语义期望，实际全部为字符串。
 
 **可重现性**：在 `variables.seed` 中指定种子字符串，相同 YAML 配置 + 相同种子产生相同世界。未提供时使用 `crypto.randomUUID()` 自动生成并记录到世界包元数据（`meta` state 中的 `seed` 字段）。
 
@@ -177,9 +179,78 @@ rules:
 
 两者可组合使用（AND 语义）。未声明 `location` 条件的规则不受影响，保持现有行为。无空间配置的世界包不触发预过滤。
 
+### 2.3.3 变量类型支持
+
+`variables` 段的值类型为 `WorldPackVariableValue`，支持以下类型：
+
+| 类型 | 示例 |
+|------|------|
+| `string` | `name: "张三"` |
+| `number` | `max_players: 12` |
+| `boolean` | `debug_mode: false` |
+| `array` | `names: ["张三", "李娜", "王刚"]` |
+| `record` | `config: { key: "value" }` |
+
+数组支持（`z.array()`）于 2026-05-09 新增，此前仅支持 `string | number | boolean | Record`。`snowbound_mansion` 等原型包可利用原生 YAML 数组定义 trait 池，替代逗号分隔字符串的绕过方式。
+
+注：`pick` 宏的 `from` 参数当前仍接受逗号分隔字符串（macro handler 签名限定 `args: Record<string, string>`），包作者可在 entity state 的 `{{pick from=a,b,c}}` 中使用逗号分隔写法。`variables` 中的数组主要面向外部工具读取及后续直接引用场景。
+
 ---
 
-## 2.4 Schema 校验规则
+## 2.4 权限与 target_selector
+
+### 2.4.1 target_selector 类型
+
+`authorities[].target_selector` 的 `kind` 字段支持以下值，用于匹配授权目标：
+
+| kind | 必需字段 | 匹配逻辑 |
+|------|----------|----------|
+| `direct_entity` | `entity_id` | 精确匹配单个 entity |
+| `holder_of` | `entity_id` | 匹配持有指定物品的实体 |
+| `subject_entity` | `entity_id` 或 `identity_id` | 匹配指定 entity 或 identity |
+| `all_actors` | 无 | 匹配所有 `entity_kind: actor` 的实体 |
+| `entity_type_is` | `entity_type` | 匹配指定 `entity_type` 的所有实体 |
+| `binding_of` | `entity_id` | 匹配通过 mediator 绑定的实体 |
+| `domain_owner` | `entity_id` | 匹配 domain 所有者 |
+| `ritual_participant` | — | 匹配 ritual 参与者 |
+
+`subject_entity` 于 2026-05-09 新增 `entity_id` 匹配路径（原仅支持 `identity_id`），允许直接对实体授权而不需要通过 identity 映射。
+
+`all_actors` 和 `entity_type_is` 于同日新增，解决批量授权场景。示例：
+
+```yaml
+# 替换逐角色逐一授权（12 条 → 1 条）
+authorities:
+  - id: "grant-investigate-all"
+    source_entity_id: "__world__"
+    target_selector: { kind: "all_actors" }
+    capability_key: "invoke.investigate"
+    grant_type: "intrinsic"
+    priority: 100
+```
+
+```yaml
+# 按 entity_type 批量授权
+authorities:
+  - id: "grant-location-access"
+    source_entity_id: "__world__"
+    target_selector: { kind: "entity_type_is", entity_type: "location" }
+    capability_key: "perceive.environment"
+    grant_type: "intrinsic"
+    priority: 100
+```
+
+### 2.4.2 感知解析器扩展
+
+感知管线（sim loop step 6）默认使用平台内置的 `spatial_proximity` 解析器（同地点 public 事件 → full，private 事件仅 target → full，其他 → none）。
+
+插件可通过 `host.registerPerceptionResolver()` 注册自定义感知解析器，实现声学衰减传播、社交网络传播、光速延迟等非标准感知模型。管线在运行时优先使用插件注册的解析器，未注册时回退默认实现。
+
+详见 → [`../subsystems/PLUGIN_RUNTIME.md`](../subsystems/PLUGIN_RUNTIME.md) 第 9 节
+
+---
+
+## 2.5 Schema 校验规则
 
 当前运行时 schema 对 pack constitution 执行以下跨字段校验：
 

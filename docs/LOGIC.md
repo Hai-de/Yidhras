@@ -314,6 +314,8 @@ Yidhras 支持可插拔的空间模型，由 world pack 声明，不同世界可
 - 实体空间状态通过 EntityState 的 `spatial` namespace 约定存储（A 层: `{location: location_id}`）
 - 空间规则谓词（`location.in`、`location.adjacent_to`）扩展 enforcement engine 的 `when` 条件
 
+A 层基础设施（SpatialRuntime、PerceptionPipeline、enforcement 空间谓词、move intent 接地）均已完成。AI agent 可以感知空间信息（在 context assembly 中看到当前位置和邻接地点），并能自主决定移动到邻接地点。
+
 详细设计见 → [`.limcode/design/spatial-semantics-design.md`](../.limcode/design/spatial-semantics-design.md)
 
 ### 12.2 感知管线原则

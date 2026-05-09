@@ -161,12 +161,28 @@ const createMemoryBlockSourceAdapter = (
 const createSpatialProximitySourceAdapter = (spatialRuntime: import('../packs/runtime/spatial_runtime.js').SpatialRuntime): ContextSourceAdapter => ({
   name: 'spatial-proximity',
   async buildNodes(input) {
-    const actorRef = input.actor_ref;
-    if (!actorRef || typeof actorRef.entity_id !== 'string') {
+    // Resolve entity_id from actor_ref (agent_id) or resolved_agent_id, using pack_id for prefix stripping.
+    // agent IDs follow the pattern `{pack_id}:{entity_name}`, so we strip the `{pack_id}:` prefix.
+    const rawAgentId: string | null =
+      (input.actor_ref && typeof input.actor_ref === 'object' && 'agent_id' in input.actor_ref)
+        ? (input.actor_ref as Record<string, unknown>).agent_id as string | null
+        : input.resolved_agent_id;
+
+    if (typeof rawAgentId !== 'string' || !rawAgentId) {
       return [];
     }
+
+    const packPrefix = input.pack_id ? `${input.pack_id}:` : '';
+    const entityId = packPrefix && rawAgentId.startsWith(packPrefix)
+      ? rawAgentId.slice(packPrefix.length)
+      : rawAgentId;
+
+    if (!entityId) {
+      return [];
+    }
+
     return buildSpatialProximityContextNodes({
-      entityId: actorRef.entity_id,
+      entityId,
       spatialRuntime,
       tick: input.tick.toString()
     });

@@ -9,14 +9,21 @@ import type {
 const AGENT_DECISION_SCHEMA: Record<string, unknown> = {
   type: 'object',
   properties: {
-    action_type: { type: 'string' },
+    action_type: {
+      type: 'string',
+      description: '动作类型：trigger_event(触发事件)、post_message(发布消息)、adjust_relationship(调整关系)、adjust_snr(调整信噪比)、move(移动到邻接地点，payload需含entity_id和target_location)',
+      enum: ['trigger_event', 'post_message', 'adjust_relationship', 'adjust_snr', 'move']
+    },
     target_ref: {
       anyOf: [
         { type: 'object' },
         { type: 'null' }
       ]
     },
-    payload: { type: 'object' },
+    payload: {
+      type: 'object',
+      description: '动作载荷。move 类型时需含 entity_id(移动的实体ID) 和 target_location(目标地点名称)'
+    },
     confidence: { type: 'number' },
     delay_hint_ticks: {
       anyOf: [

@@ -66,6 +66,7 @@ export interface AppInfrastructure extends RuntimeSource {
   readonly notifications: NotificationStore;
   readonly startupHealth: StartupHealth;
   assertRuntimeReady(feature: string): void;
+  requestPluginInference?(input: import('../plugins/runtime.js').PluginInferenceRequest): Promise<import('../plugins/runtime.js').PluginInferenceResult>;
 }
 
 export interface AppContext extends AppInfrastructure, AppContextPorts {

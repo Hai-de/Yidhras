@@ -3,6 +3,7 @@ import type { PrismaClient } from '@prisma/client';
 import { createContextOverlayStore } from '../../context/overlay/store.js';
 import { createSpatialProximityResolver } from '../../perception/index.js';
 import type { PerceptionResolver, ResolvePerceptionInput } from '../../perception/types.js';
+import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import type { AppContext } from '../context.js';
 
 interface SpatialEventRow {
@@ -108,7 +109,9 @@ export const runPerceptionPipeline = async (context: AppContext): Promise<void> 
     return;
   }
 
-  const resolver: PerceptionResolver = createSpatialProximityResolver();
+  const pluginResolvers = pluginRuntimeRegistry.getPerceptionResolvers(packId);
+  const resolver: PerceptionResolver =
+    pluginResolvers.length > 0 ? pluginResolvers[0] : createSpatialProximityResolver();
   const overlayStore = createContextOverlayStore(context);
   const tickStr = tick.toString();
 

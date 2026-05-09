@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
 
+import { createAiTaskService } from './ai/task_service.js';
 import { listDynamicSlots, registerDynamicSlot, unregisterDynamicSlot } from './ai/registry.js';
 import { startAiRegistryWatcher } from './ai/registry_watcher.js';
 import { createMemoryBehaviorStateStore, setBehaviorStateStore } from './app/behavior_state_store.js';
@@ -223,6 +224,33 @@ const inferenceService = createInferenceService({
   providers: createInferenceProviders({ context: appContext }),
   traceSink: createPrismaInferenceTraceSink(appContext)
 });
+
+// Plugin inference uses its own AiTaskService with independent circuit breakers
+const pluginAiTaskService = createAiTaskService({ context: appContext });
+appContext.requestPluginInference = async (input) => {
+  const result = await pluginAiTaskService.runTask({
+    task_id: `plugin:${input.purpose}`,
+    task_type: 'agent_decision',
+    input: {},
+    prompt_context: {
+      messages: [
+        { role: 'system', parts: [{ type: 'text', text: input.systemPrompt }] },
+        { role: 'user', parts: [{ type: 'text', text: input.userPrompt }] }
+      ]
+    },
+    output_contract: { mode: 'free_text' },
+    route_hints: input.maxTokens
+      ? { determinism_tier: 'balanced' }
+      : undefined
+  });
+  return {
+    content: result.invocation.output.text ?? '',
+    usage: {
+      inputTokens: result.invocation.usage?.input_tokens ?? 0,
+      outputTokens: result.invocation.usage?.output_tokens ?? 0
+    }
+  };
+};
 
 const multiPackLoopHost = new MultiPackLoopHost({
   context: appContext,

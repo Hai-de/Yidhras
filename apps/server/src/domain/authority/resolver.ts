@@ -2,6 +2,7 @@ import type { AppInfrastructure } from '../../app/context.js';
 import { packEntityIdFromResolvedAgentId } from '../../inference/context_builder.js';
 import { listPackAuthorityGrants } from '../../packs/storage/authority_repo.js';
 import { listPackEntityStates } from '../../packs/storage/entity_state_repo.js';
+import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js';
 
 export interface ResolvedCapabilityItem {
@@ -16,7 +17,7 @@ export interface ResolvedCapabilityItem {
     authority_id: string;
     source_entity_id: string;
     mediated_by_entity_id: string | null;
-    matched_via: 'direct_actor_ref' | 'holder_of' | 'subject_entity';
+    matched_via: 'direct_actor_ref' | 'holder_of' | 'subject_entity' | 'all_actors' | 'entity_type_is';
   };
 }
 
@@ -74,7 +75,7 @@ const resolveTargetSelectorMatch = async (
   packId: string,
   subjectEntityId: string | null,
   targetSelector: Record<string, unknown>
-): Promise<'direct_actor_ref' | 'holder_of' | 'subject_entity' | null> => {
+): Promise<'direct_actor_ref' | 'holder_of' | 'subject_entity' | 'all_actors' | 'entity_type_is' | null> => {
   if (!subjectEntityId || !isRecord(targetSelector)) {
     return null;
   }
@@ -106,9 +107,33 @@ const resolveTargetSelectorMatch = async (
     return candidateEntityIds.includes(holderId) ? 'holder_of' : null;
   }
 
-  if (kind === 'subject_entity' && typeof targetSelector.identity_id === 'string') {
-    const currentIdentityId = (context as AppInfrastructure & { identity?: { id?: string } }).identity?.id;
-    return targetSelector.identity_id === currentIdentityId ? 'subject_entity' : null;
+  if (kind === 'subject_entity') {
+    if (typeof targetSelector.entity_id === 'string') {
+      return candidateEntityIds.includes(targetSelector.entity_id) ? 'subject_entity' : null;
+    }
+    if (typeof targetSelector.identity_id === 'string') {
+      const currentIdentityId = (context as AppInfrastructure & { identity?: { id?: string } }).identity?.id;
+      return targetSelector.identity_id === currentIdentityId ? 'subject_entity' : null;
+    }
+    return null;
+  }
+
+  if (kind === 'all_actors') {
+    const entities = await listPackWorldEntities(context.packStorageAdapter, packId);
+    const isActor = entities.some(
+      e => candidateEntityIds.includes(e.id) && e.entity_kind === 'actor'
+    );
+    return isActor ? 'all_actors' : null;
+  }
+
+  if (kind === 'entity_type_is' && typeof targetSelector.entity_type === 'string') {
+    const entities = await listPackWorldEntities(context.packStorageAdapter, packId);
+    const matches = entities.some(
+      e =>
+        candidateEntityIds.includes(e.id) &&
+        e.entity_type === targetSelector.entity_type
+    );
+    return matches ? 'entity_type_is' : null;
   }
 
   return null;

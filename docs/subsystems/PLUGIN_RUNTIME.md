@@ -257,8 +257,47 @@ CLI 与 GUI 复用同一组治理语义：
 | `registerDataCleaner` | `data_cleaner.<name>` | 注册数据清洗器（全局单例） |
 | `registerSlotConditionEvaluator` | `slot_condition.<name>` | 注册插槽条件评估器（per-pack 注册） |
 | `registerSlotContentTransformer` | `slot_transform.<name>` | 注册插槽内容变换器（per-pack 注册） |
+| `registerPerceptionResolver` | `server.perception_resolver.register` | 注册自定义感知解析器，替换 sim loop step 6 的默认 spatial_proximity 解析器 |
+| `requestInference` | `server.inference.request` | 发起 AI 推理调用，走独立 AiTaskService 实例（独立熔断器），返回 `{ content, usage }` |
 
 `registerSlotConditionEvaluator` 和 `registerSlotContentTransformer` 采用 per-pack 命名空间隔离：同 pack 内 key 冲突抛错，不同 pack 允许同名 key。内置评估器（keyword_match、logic_match、conversation_turn、context_length）以系统包插件形式提供，位于 `builtin/system_pack/plugins/slot-condition-builtin/`。
+
+### 9.1 registerPerceptionResolver
+
+注册自定义感知解析器，替换 sim loop step 6（感知管线）的默认 `spatial_proximity` 解析器。解析器接口：
+
+```typescript
+interface PerceptionResolver {
+  resolve(
+    event: ResolvePerceptionInput,
+    observerEntityId: string,
+    spatialRuntime: SpatialRuntime
+  ): Promise<PerceptionResult>;
+}
+```
+
+管线每 tick 查询 `pluginRuntimeRegistry.getPerceptionResolvers(packId)`，若存在已注册解析器则使用第一个，否则回退默认实现。适用于声学衰减传播、社交网络传播、光速延迟等非标准感知模型。
+
+### 9.2 requestInference
+
+发起 AI 推理调用。独立于 agent 推理管线：
+- 使用独立的 `AiTaskService` 实例，拥有独立熔断器和 rate limiter
+- 需要 capability `server.inference.request`
+- 调用方通过 `AppInfrastructure.requestPluginInference` 注入执行器
+
+```typescript
+interface PluginInferenceRequest {
+  purpose: string;        // 推理用途标识，用于 observability
+  systemPrompt: string;
+  userPrompt: string;
+  maxTokens?: number;
+}
+
+interface PluginInferenceResult {
+  content: string;
+  usage: { inputTokens: number; outputTokens: number };
+}
+```
 
 ## 10. 当前边界与限制
 

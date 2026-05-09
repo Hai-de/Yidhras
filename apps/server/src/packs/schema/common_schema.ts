@@ -8,7 +8,9 @@ export const packReferenceKindSchema = z.enum([
   'subject_entity',
   'direct_entity',
   'ritual_participant',
-  'domain_owner'
+  'domain_owner',
+  'all_actors',
+  'entity_type_is'
 ]);
 
 export const packEntityKindSchema = z.enum([

@@ -20,7 +20,7 @@
   - [x] 客规执行谓词扩展：`location_in`、`adjacent_to` — enforcement engine 侧预过滤
   - [ ] 前端最小地图/位置视图（原型阶段不需要）
   - [ ] 原型世界包验证（题材已在整理中）
-  - [ ] `move` intent 接地逻辑 — dispatcher 分支已实现，AI → intent 的解析（"走向厨房" → `move(target='kitchen')`）后续由 prompt 工程处理
+  - [x] `move` intent 接地逻辑 — dispatcher 分支已实现，AI → intent 的解析（"走向厨房" → `move(target='kitchen')`）已通过 intent_grounder 直通 + spatial_proximity 上下文注入 + output schema enum 完成
 - [ ] B 层：连续几何（坐标 + 度量函数）— 依赖 A 层完成，需求驱动
   - [ ] 实体携带 (x, y[, z]) 连续坐标
   - [ ] 可配置距离函数（欧氏 / 曼哈顿 / 自定义）
@@ -60,6 +60,15 @@
 
 - `ConversationEntry.archived` 软归档后 entries 数组无限增长 — 需日后实现定期物理归档到冷存储（如按年份归档到独立表、或导出为 JSON 文件并删除 DB 行）
 - `tests/integration/death-note-memory-loop.spec.ts` > `records revise_judgement_plan as overlay and plan memory block during action dispatch` — 预存 flaky 测试，`expected undefined to be truthy`。不阻塞当前阶段，需单独排查 memory overlay 记录逻辑
+
+##### 原型世界包问题
+- `variables` schema 不支持数组（`WorldPackVariableValue = string | number | boolean | Record`），包作者无法使用列表。`snowbound_mansion` 用逗号分隔字符串绕过。需评估是否扩展 schema 支持 `z.array()`
+- `target_selector` kind `subject_entity` 要求 `identity_id` 而非 `entity_id`，无法直接对实体授权。当前必须使用 `direct_entity` 逐个列出
+- 无批量/wildcard 授权机制 — 12 个角色 × 1 个能力 = 12 条 authority 声明。需要 `kind: all_actors` 或类似批量选择器
+- 插件 `StepContributor` 运行在 world engine step (sim loop step 2)，不能挂钩 sim loop 的其他阶段。无法在 action dispatch 之后或 AI 推理之前执行游戏逻辑
+- [x] 插件 host API AI 推理接口 — `requestInference` 已实现（`plugins/runtime.ts`），独立 AiTaskService 实例
+- [x] 插件 API `registerPerceptionResolver` — 已实现（`plugins/runtime.ts`），替换 sim loop step 6 的默认 spatial_proximity 解析器
+- 插件 manifest `contributions.server.*` 字段为 `string[]`，只做声明式登记。实际注册在 `activate()` 中调用 host API
 
 ##### 插槽函数
 

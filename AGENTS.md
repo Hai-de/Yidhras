@@ -139,7 +139,7 @@ pnpm --filter yidhras-server pack:import <archive> [--force]
 
 ### Scheduler
 
-- Partition-aware, multi-worker. Lease and cursor state are partition-scoped.
+- Partition-aware scheduler. Lease and cursor state are partition-scoped, all workers run within a single Node process.
 
 ### World packs
 

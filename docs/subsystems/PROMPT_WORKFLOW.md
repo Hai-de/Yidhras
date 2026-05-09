@@ -99,6 +99,8 @@ InferenceContext + PromptSlotRegistry
 
 Profile 选择逻辑（`selectPromptWorkflowProfile`）按 specificity 排序：`task_types` 匹配权重 4 > `strategies` 匹配权重 2 > `pack_ids` 匹配权重 1。
 
+> **注意**：`chat-first-turn` 和 `chat-follow-up` profile 依赖多轮对话基础设施（Tag 系统、ConversationEntry 的完整读写链路），该基础设施尚未激活。当前实际生产路径仅有前 3 个 profile（`agent-decision-default`、`context-summary-default`、`memory-compaction-default`）。
+
 ### 4.1 轨道配置
 
 每个 profile 的 `tracks` 字段控制哪些内容轨道启用：

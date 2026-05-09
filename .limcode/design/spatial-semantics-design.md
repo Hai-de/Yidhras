@@ -1,10 +1,11 @@
 # 空间语义层设计草案
 
-> 状态: 草案 · A 层 Phase 1 实现完成
+> 状态: 完成 · A 层 Phase 1 全部实现，原型世界包 `snowbound_mansion` 已部署
 > 关联: TODO.md — 上层语义变迁 · 空间语义层
 > 前置: world pack constitution schema、PackSimulationLoop、context assembly pipeline、enforcement engine、模板引擎宏处理器（P0）
-> 评估时间: 2026-05-08
-> 最近评审: 2026-05-09 — A 层 Phase 1 完成，见 `.limcode/plans/foundation-enhancements-from-prototype-evaluation.md`
+> 评估时间: 2026-05-08 · 最终更新: 2026-05-09
+> 实施记录: `.limcode/plans/foundation-enhancements-from-prototype-evaluation.md`
+> 设计评审: `.limcode/design/prototype-world-pack-implementation.md` §11
 
 ## 1. 问题陈述
 

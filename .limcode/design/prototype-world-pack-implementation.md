@@ -1,9 +1,11 @@
 # 原型世界包实施方案草案
 
-> 状态: 草案 · 平台基础设施完成 (Phase 0-2 实现)
-> 关联: `.limcode/design/spatial-semantics-design.md`、`# 原型世界包.md`
-> 评估时间: 2026-05-08 · 最后更新: 2026-05-09
-> 最后更新: 2026-05-08
+> 状态: 完成 · 平台基础设施 (Phase 0) + Pack 配置 (Phase 1-3) 已实现
+> 关联: `.limcode/design/spatial-semantics-design.md`、`# 原型世界包.md`、`data/world_packs/snowbound_mansion/`
+> 评估时间: 2026-05-08 · 最终更新: 2026-05-09
+>
+> 实施记录: `.limcode/plans/foundation-enhancements-from-prototype-evaluation.md`
+> 暴露问题: `TODO.md` 已知技术债务
 
 ## 1. 已确认决策
 

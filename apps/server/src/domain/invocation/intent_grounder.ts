@@ -220,7 +220,8 @@ export const groundDecisionIntent = async (
     directAction === 'trigger_event' ||
     directAction === 'post_message' ||
     directAction === 'adjust_relationship' ||
-    directAction === 'adjust_snr';
+    directAction === 'adjust_snr' ||
+    directAction === 'move';
 
   if (directAction.startsWith('invoke.') || isDirectKernelAction) {
     return {

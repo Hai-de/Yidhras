@@ -1,8 +1,10 @@
 # AI Gateway / Invocation Observability
 
-When the system sends a prompt to an AI model, the request doesn't go straight to the provider. It passes through a layered internal pipeline: a task-level service decides what kind of AI call is needed, a route resolver picks the right model and provider, and a gateway handles the actual dispatch and response handling. This layered design gives the system control over routing, fallback, rate limits, and observability without exposing those concerns to the caller.
+When the system sends a prompt to an AI model, the request doesn't go straight to the provider. It passes through a layered internal pipeline: a task-level service decides what kind of AI call is needed, a route resolver picks the model, and a gateway handles the actual dispatch and response handling. This layered design gives the system control over routing, rate limits, and observability without exposing those concerns to the caller.
 
-The other side of this subsystem is **knowing what happened after the fact**: every AI invocation leaves a record — which model was used, how long it took, whether it fell back to a different provider, what the token usage was. This observability surface is exposed through `AiInvocationRecord`, a kernel-side persistence model that serves as evidence of what the AI layer did, independent of any specific inference result.
+**当前 provider 现实**：系统唯一可用的真实 AI provider adapter 是 OpenAI。`ai_models.yaml` 默认仅配置 OpenAI 模型。弹性层（circuit breaker、rate limiter、backoff）在单 provider 下提供保护但无法实现真正的 provider 级 fallback——当 OpenAI 不可用时，系统退化为 mock/rule_based 模式。多 provider 路由在架构层面已预留（`RouteResolver` 支持多 route），但需要额外的 provider adapter 实现（如 Anthropic、DeepSeek、Ollama 等）才能发挥作用。
+
+The other side of this subsystem is **knowing what happened after the fact**: every AI invocation leaves a record — which model was used, how long it took, what the token usage was. This observability surface is exposed through `AiInvocationRecord`, a kernel-side persistence model that serves as evidence of what the AI layer did, independent of any specific inference result.
 
 Key concepts:
 
@@ -125,6 +127,7 @@ world-pack **不能**：
 - 对外 API 的稳定说明仍是 `mock | rule_based`
 - gateway path 是服务端内部的执行底座
 - 其 public 化程度目前主要停留在**只读观测面**
+- `model_routed` 路径当前只有 OpenAI 一个真实 provider adapter；其他 provider（Anthropic、DeepSeek、Ollama 等）尚未实现
 
 ## 6. Workflow metadata 透传
 
@@ -328,7 +331,7 @@ AiTaskService (task_config.tools / task_config.tool_policy)
 
 当前已成立的边界：
 
-- `model_routed` 仍是 internal / controlled capability
+- `model_routed` 仍是 internal / controlled capability，当前仅 OpenAI 一个真实 provider adapter
 - public `/api/inference/*` 不以 provider-specific contract 对外承诺
 - world-pack 的 AI 定制能力是 declarative 的，不是任意执行能力
 - 更复杂的 AI 行为扩展应继续走 server-side registered extension

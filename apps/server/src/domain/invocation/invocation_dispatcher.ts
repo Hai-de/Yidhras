@@ -121,7 +121,7 @@ const resolveSubjectEntityId = async (
   return null
 }
 
-const KERNEL_INTENT_TYPES = ['trigger_event', 'post_message', 'adjust_relationship', 'adjust_snr'] as const
+const KERNEL_INTENT_TYPES = ['trigger_event', 'post_message', 'adjust_relationship', 'adjust_snr', 'move'] as const
 
 const shouldBridgeToInvocation = (context: AppInfrastructure, intent: DispatchableActionIntentLike): boolean => {
   const pack = context.activePack.getActivePack()

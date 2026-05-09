@@ -15,6 +15,7 @@ export type WorldPackVariableValue =
   | string
   | number
   | boolean
+  | WorldPackVariableValue[]
   | {
       [key: string]: WorldPackVariableValue;
     };
@@ -46,7 +47,13 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 };
 
 const worldPackVariableValueSchema: z.ZodType<WorldPackVariableValue> = z.lazy(() =>
-  z.union([z.string(), z.number(), z.boolean(), z.record(z.string(), worldPackVariableValueSchema)])
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.array(worldPackVariableValueSchema),
+    z.record(z.string(), worldPackVariableValueSchema)
+  ])
 );
 
 const worldPackValueSchema: z.ZodType<WorldPackValue> = z.lazy(() =>
@@ -355,7 +362,8 @@ const targetSelectorSchema = z
     kind: packReferenceKindSchema,
     entity_id: nonEmptyStringSchema.optional(),
     identity_id: nonEmptyStringSchema.optional(),
-    mediator_id: nonEmptyStringSchema.optional()
+    mediator_id: nonEmptyStringSchema.optional(),
+    entity_type: nonEmptyStringSchema.optional()
   })
   .strict()
   .superRefine((value, ctx) => {
@@ -372,10 +380,16 @@ const targetSelectorSchema = z
         });
       }
     }
-    if (value.kind === 'subject_entity' && !value.identity_id) {
+    if (value.kind === 'subject_entity' && !value.entity_id && !value.identity_id) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'target selector kind=subject_entity requires identity_id'
+        message: 'target selector kind=subject_entity requires entity_id or identity_id'
+      });
+    }
+    if (value.kind === 'entity_type_is' && !value.entity_type) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'target selector kind=entity_type_is requires entity_type'
       });
     }
   });

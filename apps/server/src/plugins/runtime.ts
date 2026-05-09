@@ -17,7 +17,20 @@ import type { SlotConditionEvaluator } from './extensions/slot_condition_registr
 import { slotConditionRegistry } from './extensions/slot_condition_registry.js';
 import type { SlotContentTransformer } from './extensions/slot_content_transformer.js';
 import { slotContentTransformRegistry } from './extensions/slot_content_transformer.js';
+import type { PerceptionResolver } from '../perception/types.js';
 type Ctx = AppInfrastructure & { getHttpApp?(): Express | null };
+
+export interface PluginInferenceRequest {
+  purpose: string;
+  systemPrompt: string;
+  userPrompt: string;
+  maxTokens?: number;
+}
+
+export interface PluginInferenceResult {
+  content: string;
+  usage: { inputTokens: number; outputTokens: number };
+}
 
 export interface ServerPluginHostApi {
   registerContextSource(adapter: ContextSourceAdapter, capabilityKey?: string): void;
@@ -29,6 +42,8 @@ export interface ServerPluginHostApi {
   registerDataCleaner(cleaner: DataCleaner, capabilityKey?: string): void;
   registerSlotConditionEvaluator(evaluator: SlotConditionEvaluator, capabilityKey?: string): void;
   registerSlotContentTransformer(transformer: SlotContentTransformer, capabilityKey?: string): void;
+  registerPerceptionResolver(resolver: PerceptionResolver, capabilityKey?: string): void;
+  requestInference(input: PluginInferenceRequest): Promise<PluginInferenceResult>;
 }
 
 export interface RegisteredServerPluginRuntime {
@@ -43,6 +58,8 @@ export interface RegisteredServerPluginRuntime {
   step_contributors: StepContributor[];
   rule_contributors: RuleContributor[];
   query_contributors: QueryContributor[];
+  perception_resolvers: PerceptionResolver[];
+  inferenceExecutor?: (input: PluginInferenceRequest) => Promise<PluginInferenceResult>;
 }
 
 const hasCapability = (grantedCapabilities: string[], capabilityKey: string | undefined): boolean => {
@@ -117,6 +134,22 @@ const createServerPluginHostApi = (runtime: RegisteredServerPluginRuntime): Serv
       }
 
       slotContentTransformRegistry.register(runtime.pack_id, transformer);
+    },
+    registerPerceptionResolver(resolver, capabilityKey) {
+      if (!hasCapability(runtime.granted_capabilities, capabilityKey)) {
+        return;
+      }
+
+      runtime.perception_resolvers.push(resolver);
+    },
+    async requestInference(input) {
+      if (!hasCapability(runtime.granted_capabilities, 'server.inference.request')) {
+        throw new Error('Plugin does not have capability: server.inference.request');
+      }
+      if (!runtime.inferenceExecutor) {
+        throw new Error('Inference executor not available for plugin runtime');
+      }
+      return runtime.inferenceExecutor(input);
     }
   };
 };
@@ -162,6 +195,10 @@ class PluginRuntimeRegistry {
     return this.listRuntimes(packId).flatMap(runtime => runtime.query_contributors);
   }
 
+  public getPerceptionResolvers(packId: string): PerceptionResolver[] {
+    return this.listRuntimes(packId).flatMap(runtime => runtime.perception_resolvers);
+  }
+
   public applyPackRoutes(packId: string, app: Express, context: Ctx): void {
     for (const runtime of this.listRuntimes(packId)) {
       runtime.pack_routes.forEach((register, index) => {
@@ -197,7 +234,8 @@ const createRuntimeForManifest = (input: {
     pack_routes: [],
     step_contributors: [],
     rule_contributors: [],
-    query_contributors: []
+    query_contributors: [],
+    perception_resolvers: []
   };
 };
 
@@ -379,6 +417,10 @@ export const refreshPackPluginRuntime = async (
     });
     registerManifestContributions(runtime);
     runtimes.push(runtime);
+
+    if (context.requestPluginInference) {
+      runtime.inferenceExecutor = (input) => context.requestPluginInference!(input);
+    }
 
     // Load server entrypoint for plugins that have one
     const serverEntrypoint = manifest.entrypoints?.server;
