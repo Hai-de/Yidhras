@@ -55,6 +55,12 @@ export interface ModifierSpec {
 
 export type ModifierFn = (value: unknown, ...args: string[]) => unknown;
 
+export type MacroHandlerFn = (
+  name: string,
+  args: Record<string, string>,
+  scope: RenderScope
+) => string;
+
 export type BlockHandlerFn = (
   condition: string,
   body: AstNode[],
@@ -63,10 +69,17 @@ export type BlockHandlerFn = (
   renderFn: (nodes: AstNode[], scope: RenderScope) => string
 ) => string;
 
+export interface PRNGLike {
+  next(): number;
+  getSeed(): string;
+}
+
 export interface RenderScope {
   variables: Record<string, unknown>;
   modifiers: Record<string, ModifierFn>;
   blockHandlers: Record<string, BlockHandlerFn>;
+  macroHandlers?: Record<string, MacroHandlerFn>;
+  prng?: PRNGLike;
   depth: number;
   maxDepth: number;
 }

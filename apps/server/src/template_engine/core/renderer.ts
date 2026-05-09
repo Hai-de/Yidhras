@@ -84,7 +84,12 @@ const renderNodes = (nodes: AstNode[], scope: RenderScope): string => {
       }
 
       case 'macro': {
-        parts.push('');
+        const handler = scope.macroHandlers?.[node.name];
+        if (handler) {
+          parts.push(handler(node.name, node.args, scope));
+        } else {
+          parts.push('');
+        }
         break;
       }
 

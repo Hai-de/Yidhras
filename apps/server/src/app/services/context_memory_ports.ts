@@ -26,7 +26,8 @@ export const createContextAssemblyPort = (context: AppContext): ContextAssemblyP
   const contextService: ContextService = createContextService({
     context,
     memoryService: createMemoryService({ context }),
-    longMemoryBlockStore: createPrismaLongMemoryBlockStore(context)
+    longMemoryBlockStore: createPrismaLongMemoryBlockStore(context),
+    spatialRuntime: context.getSpatialRuntime?.() ?? null
   });
 
   return {

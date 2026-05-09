@@ -122,15 +122,60 @@ metadata:
 
 world-pack 作者可以在 `variables`、`prompts.*` 及部分 runtime/rule 文本字段中使用 Prompt Workflow 的统一模板语法。
 
--pack 作者视角的关键要点：_
+_pack 作者视角的关键要点：_
 
 - **优先使用命名空间写法**：`pack.*`、`actor.*`、`runtime.*`、`request.*`、`system.*`、`app.*`、`plugin.<pluginId>.*`
 - **避免裸 key 别名**：旧写法如 `{{ actor_name }}`、`{{ world_name }}` 仅为兼容桥接，不推荐新增
 - **支持受控宏**：基础插值 `{{ ... }}`、默认值 `| default(...)` 、条件块 `{{#if}}`、列表展开 `{{#each}}`
-- **不支持**：任意脚本/JS 表达式/自定义宏函数/通用模板编程
+- **内置宏函数**：模板引擎支持以下宏，用于在物化阶段将随机性展开为确定性值
+- **不支持**：任意脚本/JS 表达式/通用模板编程
 - **上手建议**：静态信息放 `metadata`/`variables`，取值优先 `pack.metadata.*`/`pack.variables.*`，不稳定字段补 `default(...)`
 
-完整的命名空间列表、alias fallback 顺序、宏语法详解与诊断方法，见 → [`../subsystems/PROMPT_WORKFLOW.md`](../subsystems/PROMPT_WORKFLOW.md) 第 7 节
+### 2.3.1 内置宏函数
+
+宏函数使用命名参数语法，在物化阶段（`materializePackRuntimeCoreModels`）展开为具体值，展开结果写入 runtime DB。后续推理读到的是已确定的状态，不再经过模板引擎。
+
+| 宏 | 语法 | 返回类型 | 说明 |
+|----|------|----------|------|
+| `roll` | `{{roll count=2 sides=6}}` | number → string | NdN 骰子求和。`count` 默认 1 |
+| `pick` | `{{pick from=a,b,c count=3}}` | string 或 string[] | 从列表中不放回随机选取。`count` 默认 1 |
+| `int` | `{{int min=0 max=99}}` | number → string | 区间内随机整数 |
+| `float` | `{{float min=0 max=1}}` | number → string | 区间内随机浮点数 |
+| `seed` | `{{seed}}` | string | 返回当前物化阶段使用的 PRNG 种子值（只读），用于问题排查与可复现性确认 |
+
+**设计原则**：随机性决定模拟状态，不是作为提示词噪声。AI 推理时读到的是宏展开后的确定性值。
+
+**可重现性**：在 `variables.seed` 中指定种子字符串，相同 YAML 配置 + 相同种子产生相同世界。未提供时使用 `crypto.randomUUID()` 自动生成并记录到世界包元数据（`meta` state 中的 `seed` 字段）。
+
+完整的命名空间列表、alias fallback 顺序、模板语法详解与诊断方法，见 → [`../subsystems/PROMPT_WORKFLOW.md`](../subsystems/PROMPT_WORKFLOW.md) 第 7 节
+
+宏处理器架构与扩展机制，见 → [`../subsystems/STRUCTURED_PARSER.md`](../subsystems/STRUCTURED_PARSER.md) 第 11 节
+
+### 2.3.2 空间谓词
+
+在 `rules.objective_enforcement[*].when` 中可使用以下空间条件，执行引擎在调用世界引擎侧车前做预过滤：
+
+```yaml
+rules:
+  objective_enforcement:
+    - id: investigate_rule
+      when:
+        invocation_type: invoke.investigate
+        location:
+          in: [kitchen, library]       # subject 必须在指定地点之一
+          adjacent_to: basement         # subject 必须与指定地点邻接（或在其内）
+      then:
+        emit_events:
+          - title: 发现线索
+            description: 你在房间里发现了可疑的痕迹
+```
+
+| 谓词 | 语法 | 说明 |
+|------|------|------|
+| `location.in` | `in: [location_id, ...]` | subject 当前所在地必须是数组中之一 |
+| `location.adjacent_to` | `adjacent_to: location_id` | subject 必须在该地点的邻接节点上（含该地点本身） |
+
+两者可组合使用（AND 语义）。未声明 `location` 条件的规则不受影响，保持现有行为。无空间配置的世界包不触发预过滤。
 
 ---
 

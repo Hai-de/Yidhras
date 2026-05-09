@@ -7,6 +7,7 @@ import { getErrorMessage } from '../http/errors.js';
 import { runActionDispatcher } from './action_dispatcher_runner.js';
 import { runAgentScheduler } from './agent_scheduler.js';
 import { runDecisionJobRunner } from './job_runner.js';
+import { runPerceptionPipeline } from './perception_pipeline.js';
 import {
   createDefaultWorldEnginePersistencePort,
   executeWorldEnginePreparedStep
@@ -223,6 +224,7 @@ export const startSimulationLoop = ({
         context,
         workerId: actionDispatcherWorkerId
       });
+      await runPerceptionPipeline(context);
 
       const latest = getLoopDiagnostics(context);
       setLoopDiagnostics(context, buildLoopDiagnostics(latest, {

@@ -1,4 +1,4 @@
-import type { AstNode, BlockHandlerFn, ModifierFn , RenderScope,SyntaxConfig  } from './core/types.js';
+import type { AstNode, BlockHandlerFn, MacroHandlerFn, ModifierFn, RenderScope, SyntaxConfig } from './core/types.js';
 
 export const DEFAULT_SYNTAX: SyntaxConfig = {
   delimiters: {
@@ -84,6 +84,73 @@ const isTruthy = (value: unknown): boolean => {
 const resolveVar = (name: string, scope: RenderScope): unknown => {
   return scope.variables[name];
 };
+
+// === Built-in macro handlers ===
+
+const resolveRng = (scope: RenderScope): (() => number) => {
+  if (scope.prng) {
+    return () => scope.prng!.next();
+  }
+  return Math.random;
+};
+
+const fisherYatesShuffle = <T>(arr: T[], rng: () => number): T[] => {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+};
+
+export const BUILTIN_MACRO_HANDLERS: Record<string, MacroHandlerFn> = {
+  roll: (_name: string, args: Record<string, string>, scope: RenderScope): string => {
+    const rng = resolveRng(scope);
+    const count = Math.max(1, parseInt(args.count ?? '1', 10) || 1);
+    const sides = Math.max(1, parseInt(args.sides ?? '6', 10) || 6);
+    let total = 0;
+    for (let i = 0; i < count; i++) {
+      total += Math.floor(rng() * sides) + 1;
+    }
+    return String(total);
+  },
+
+  pick: (_name: string, args: Record<string, string>, scope: RenderScope): string => {
+    const rng = resolveRng(scope);
+    const from = (args.from ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+    if (from.length === 0) {
+      return '';
+    }
+    const count = Math.max(1, parseInt(args.count ?? '1', 10) || 1);
+    if (count >= from.length) {
+      return fisherYatesShuffle(from, rng).join(',');
+    }
+    const shuffled = fisherYatesShuffle(from, rng);
+    return shuffled.slice(0, count).join(',');
+  },
+
+  int: (_name: string, args: Record<string, string>, scope: RenderScope): string => {
+    const rng = resolveRng(scope);
+    const min = parseInt(args.min ?? '0', 10) || 0;
+    const max = parseInt(args.max ?? '100', 10) || 100;
+    const result = Math.floor(rng() * (max - min + 1)) + min;
+    return String(result);
+  },
+
+  float: (_name: string, args: Record<string, string>, scope: RenderScope): string => {
+    const rng = resolveRng(scope);
+    const min = parseFloat(args.min ?? '0');
+    const max = parseFloat(args.max ?? '1');
+    const result = rng() * (max - min) + min;
+    return String(result);
+  },
+
+  seed: (_name: string, _args: Record<string, string>, scope: RenderScope): string => {
+    return scope.prng?.getSeed() ?? '';
+  }
+};
+
+// === Built-in block handlers ===
 
 export const BUILTIN_BLOCK_HANDLERS: Record<string, BlockHandlerFn> = {
   if: (condition: string, body: AstNode[], elseBody: AstNode[] | undefined, scope: RenderScope, renderFn) => {

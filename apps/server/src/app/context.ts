@@ -75,6 +75,7 @@ export interface AppContext extends AppInfrastructure, AppContextPorts {
   readonly packScope?: PackScopeResolver;
 
   // Lifecycle / runtime methods
+  getSpatialRuntime?(): import('../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
   isRuntimeReady?(): boolean;
   setRuntimeReady?(ready: boolean): void;
   isPaused?(): boolean;

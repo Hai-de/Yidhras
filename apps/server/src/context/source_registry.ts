@@ -11,6 +11,7 @@ import { buildContextNodesFromMemoryBlocks } from './sources/memory_blocks.js';
 import { buildContextNodesFromMemorySelection } from './sources/memory_selection.js';
 import { buildContextNodesFromOverlayEntries } from './sources/overlay.js';
 import { buildRuntimeStateContextNodes } from './sources/runtime_state.js';
+import { buildSpatialProximityContextNodes } from './sources/spatial_proximity.js';
 import type { ContextNode } from './types.js';
 
 export interface ContextSourceAdapterInput {
@@ -38,6 +39,7 @@ export interface CreateContextSourceAdaptersOptions {
   context?: AppInfrastructure;
   overlayStore?: ContextOverlayStore | null;
   longMemoryBlockStore?: LongMemoryBlockStore | null;
+  spatialRuntime?: import('../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
 }
 
 const toInferenceActorRef = (actorRef: Record<string, unknown> | null, resolvedAgentId: string | null): InferenceActorRef | null => {
@@ -156,12 +158,28 @@ const createMemoryBlockSourceAdapter = (
   }
 });
 
+const createSpatialProximitySourceAdapter = (spatialRuntime: import('../packs/runtime/spatial_runtime.js').SpatialRuntime): ContextSourceAdapter => ({
+  name: 'spatial-proximity',
+  async buildNodes(input) {
+    const actorRef = input.actor_ref;
+    if (!actorRef || typeof actorRef.entity_id !== 'string') {
+      return [];
+    }
+    return buildSpatialProximityContextNodes({
+      entityId: actorRef.entity_id,
+      spatialRuntime,
+      tick: input.tick.toString()
+    });
+  }
+});
+
 export const createDefaultContextSourceAdapters = (options: CreateContextSourceAdaptersOptions = {}): ContextSourceAdapter[] => {
   return [
     createMemorySelectionSourceAdapter(),
     createRuntimeStateSourceAdapter(),
     ...(options.longMemoryBlockStore && options.context ? [createMemoryBlockSourceAdapter(options.context, options.longMemoryBlockStore)] : []),
-    ...(options.overlayStore ? [createOverlaySourceAdapter(options.overlayStore)] : [])
+    ...(options.overlayStore ? [createOverlaySourceAdapter(options.overlayStore)] : []),
+    ...(options.spatialRuntime ? [createSpatialProximitySourceAdapter(options.spatialRuntime)] : [])
   ];
 };
 

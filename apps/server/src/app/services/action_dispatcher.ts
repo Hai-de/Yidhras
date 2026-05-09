@@ -120,8 +120,49 @@ const dispatchTriggerEventIntent = async (context: AppContext, intent: ActionInt
     type: payload.event_type,
     impact_data: JSON.stringify(impactData),
     source_action_intent_id: intent.id,
-    created_at: now
+    created_at: now,
+    location_id: payload.location_id ?? null,
+    visibility: payload.visibility ?? null
   });
+};
+
+const resolveMovePayload = (payload: unknown): { entity_id: string; target_location: string } => {
+  if (!isRecord(payload)) {
+    throw new ApiError(500, 'ACTION_MOVE_INVALID', 'move payload must be an object');
+  }
+  if (typeof payload.entity_id !== 'string' || payload.entity_id.trim().length === 0) {
+    throw new ApiError(500, 'ACTION_MOVE_INVALID', 'move payload.entity_id is required');
+  }
+  if (typeof payload.target_location !== 'string' || payload.target_location.trim().length === 0) {
+    throw new ApiError(500, 'ACTION_MOVE_INVALID', 'move payload.target_location is required');
+  }
+  return {
+    entity_id: payload.entity_id.trim(),
+    target_location: payload.target_location.trim()
+  };
+};
+
+const dispatchMoveIntent = async (context: AppContext, intent: ActionIntentRecord): Promise<void> => {
+  const payload = resolveMovePayload(intent.payload);
+  const now = context.activePackRuntime!.getCurrentTick();
+
+  const spatialRuntime = context.getSpatialRuntime?.();
+  if (!spatialRuntime) {
+    throw new ApiError(500, 'ACTION_MOVE_FAIL', 'Spatial runtime is not available; pack may not have spatial configuration');
+  }
+
+  const currentLocation = await spatialRuntime.getLocation(payload.entity_id);
+  const neighbors = spatialRuntime.neighbors(payload.target_location);
+
+  if (currentLocation !== payload.target_location && !neighbors.includes(currentLocation ?? '')) {
+    throw new ApiError(500, 'ACTION_MOVE_INVALID', 'Move target is not adjacent to current location', {
+      entity_id: payload.entity_id,
+      current_location: currentLocation ?? null,
+      target_location: payload.target_location
+    });
+  }
+
+  await spatialRuntime.moveEntity(payload.entity_id, payload.target_location, now);
 };
 
 const dispatchAdjustSnrIntent = async (context: AppContext, intent: ActionIntentRecord): Promise<void> => {
@@ -298,6 +339,14 @@ export const dispatchActionIntent = async (
 
   if (intent.intent_type === 'adjust_relationship') {
     await dispatchAdjustRelationshipIntent(context, intent);
+    return {
+      outcome: 'completed',
+      reason: null
+    };
+  }
+
+  if (intent.intent_type === 'move') {
+    await dispatchMoveIntent(context, intent);
     return {
       outcome: 'completed',
       reason: null

@@ -20,5 +20,6 @@ export * from './scheduler.js'
 export * from './slot_condition_evaluator.js'
 export * from './social.js'
 
+export * from './spatial.js'
 export * from './system.js'
 export * from './world_engine.js'

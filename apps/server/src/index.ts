@@ -141,6 +141,7 @@ const appContext: AppContext = {
   runtimeBootstrap: sim,
   activePackRuntime: sim,
   packScope: packScopeResolver,
+  getSpatialRuntime: () => sim.getSpatialRuntime(),
   isRuntimeReady: () => sim.isRuntimeReady(),
   setRuntimeReady: ready => sim.setRuntimeReady(ready),
   isPaused: () => sim.isPaused(),

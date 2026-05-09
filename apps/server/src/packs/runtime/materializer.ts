@@ -1,5 +1,10 @@
+import { randomUUID } from 'node:crypto';
+
 import type { PrismaClient } from '@prisma/client';
 
+import { createPRNG } from '../../template_engine/core/prng.js';
+import type { RenderScope } from '../../template_engine/core/types.js';
+import { BUILTIN_MACRO_HANDLERS } from '../../template_engine/defaults.js';
 import type { WorldPack } from '../schema/constitution_schema.js';
 import { upsertPackAuthorityGrant } from '../storage/authority_repo.js';
 import { upsertPackWorldEntity } from '../storage/entity_repo.js';
@@ -14,6 +19,7 @@ import {
   type PackRuntimeMediatorBindingInput,
   type PackRuntimeWorldEntityInput
 } from './core_models.js';
+import { expandStateJson } from './template_expander.js';
 
 const buildWorldEntityId = (packId: string, entityId: string): string => `${packId}:entity:${entityId}`;
 const buildEntityStateId = (packId: string, entityId: string, namespace: string): string => `${packId}:state:${entityId}:${namespace}`;
@@ -185,6 +191,18 @@ export const materializePackRuntimeCoreModels = async (
     });
   }
 
+  const seed = (pack.variables?.seed as string | undefined) ?? randomUUID();
+  const prng = createPRNG(seed);
+  const expandScope: RenderScope = {
+    variables: {},
+    modifiers: {},
+    blockHandlers: {},
+    macroHandlers: BUILTIN_MACRO_HANDLERS,
+    prng,
+    depth: 0,
+    maxDepth: 32
+  };
+
   for (const initialState of pack.bootstrap?.initial_states ?? []) {
     if (initialState.entity_id === DEFAULT_PACK_WORLD_ENTITY_ID) {
       putWorldEntity(
@@ -194,12 +212,13 @@ export const materializePackRuntimeCoreModels = async (
         })
       );
     }
+    const expandedStateJson = expandStateJson(initialState.state_json, expandScope);
     putEntityState(
       createEntityStateInput(
         packId,
         initialState.entity_id,
         initialState.state_namespace,
-        initialState.state_json,
+        expandedStateJson,
         now
       )
     );
@@ -213,7 +232,8 @@ export const materializePackRuntimeCoreModels = async (
     state_namespace: 'meta',
     state_json: {
       applied_opening_id: appliedOpeningId ?? null,
-      materialized_at: String(now)
+      materialized_at: String(now),
+      seed
     },
     now
   });

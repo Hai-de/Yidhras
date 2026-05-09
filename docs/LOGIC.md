@@ -303,7 +303,42 @@ Agent 自主产生的 ActionIntent 不再自动视为 root：
 
 ---
 
-## 12. 相关文档
+## 12. 空间语义与感知管线
+
+### 12.1 空间语义层
+
+Yidhras 支持可插拔的空间模型，由 world pack 声明，不同世界可选用不同抽象层级。当前实现 A 层（离散位置 + 邻接图）。
+
+- 不声明 `spatial` 段的世界包，行为完全不变（零空间语义保证）
+- 空间模型作为 world pack 可选声明，通过 Constitution schema 的 `spatial` 段配置
+- 实体空间状态通过 EntityState 的 `spatial` namespace 约定存储（A 层: `{location: location_id}`）
+- 空间规则谓词（`location.in`、`location.adjacent_to`）扩展 enforcement engine 的 `when` 条件
+
+详细设计见 → [`.limcode/design/spatial-semantics-design.md`](../.limcode/design/spatial-semantics-design.md)
+
+### 12.2 感知管线原则
+
+事件经过空间感知过滤后才进入 context assembly，这是平台级管线约束，不是包级可选行为。
+
+感知规则通过 `PerceptionResolver` 插槽实现：
+
+- 管线约束（事件必经感知过滤）由平台保证
+- 感知逻辑（谁能看到什么、看到多少）由包配置或插件提供
+- 默认实现：同地点 + public → 完整可见；private → 仅目标可见；其他 → 不可见
+
+这意味着：信息不对称由系统控制而非依赖 AI 自律。即使 AI 模型"知道"某些信息，如果感知管线未将该事件传递给该 agent，其 context assembly 中不会包含该信息。
+
+### 12.3 模拟状态确定性原则
+
+随机性应决定模拟中的实际状态，而非作为提示词噪声注入 AI context。
+
+这一原则与已有 inference pipeline 的变量分层逻辑同构：信息系统在确定性架构上运行，把不确定性留给用户可观察的层面。具体表现：
+
+- 世界包加载时，宏（roll/pick/int/float/seed）展开为具体值，展开结果写入 runtime DB
+- AI 推理时读到的是已确定的状态，而非宏表达式
+- 随机性物化在 entity state 层面，AI 的工作是扮演已有属性的角色而非发明属性
+
+## 13. 相关文档
 
 - 系统边界：`ARCH.md`
 - 公共接口：`specs/API.md`

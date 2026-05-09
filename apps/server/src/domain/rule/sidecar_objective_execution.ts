@@ -56,6 +56,7 @@ export const buildSidecarObjectiveExecutionRequest = async (
     invocation: InvocationRequest;
     effectiveMediatorId: string | null;
     packStorageAdapter: PackStorageAdapter;
+    filteredRules?: Array<{ id: string; when?: unknown; then?: unknown }> | null;
   }
 ): Promise<WorldRuleExecuteObjectiveRequest> => {
   const pack = context.activePack.getActivePack();
@@ -66,12 +67,13 @@ export const buildSidecarObjectiveExecutionRequest = async (
   }
 
   const worldEntities = await listPackWorldEntities(input.packStorageAdapter, input.invocation.pack_id);
+  const rules = input.filteredRules ?? pack.rules?.objective_enforcement ?? [];
   return {
     protocol_version: 'world_engine/v1alpha1',
     pack_id: input.invocation.pack_id,
     invocation: toObjectiveInvocation(input.invocation),
     effective_mediator_id: input.effectiveMediatorId,
-    objective_rules: (pack.rules?.objective_enforcement ?? []).map(toObjectiveRuleDefinition),
+    objective_rules: rules.map(toObjectiveRuleDefinition),
     world_entities: worldEntities.map(entity => toObjectiveWorldEntity(input.invocation.pack_id, entity))
   };
 };

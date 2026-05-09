@@ -163,11 +163,16 @@ model Event {
   source_action_intent_id String?
   created_at   BigInt
 
+  // 空间作用域 (可选，向后兼容)
+  location_id  String?  // 事件发生的位置实体 ID，null 表示全局事件
+  visibility   String?  // public | private | null (null 等价于向所有人可见)
+
   source_action_intent ActionIntent? @relation(fields: [source_action_intent_id], references: [id])
 
   @@index([tick])
   @@index([type, tick])
   @@index([source_action_intent_id, tick])
+  @@index([location_id, tick])
 }
 
 model WorldVariable {

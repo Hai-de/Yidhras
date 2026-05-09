@@ -471,7 +471,25 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 
 访问。`context.sim` 已移除，不再作为公共访问路径。
 
-### 5.2 Overlay / Memory Block
+### 5.2 Template Engine 宏扩展点
+
+模板引擎（详见 `docs/subsystems/STRUCTURED_PARSER.md`）的 AST 已支持 `MacroNode`——`{{roll count=2 sides=6}}` 被解析为 `{name: "roll", args: {count: "2", sides: "6"}}`。
+
+宏处理器注册机制已实现。world pack 在物化阶段（`materializer.ts`）展开 `bootstrap.initial_states[].state_json` 中的宏模板，将随机性展开为确定性状态值写入 runtime DB，后续推理读到的是已确定的数值而非模板表达式。
+
+| 已实现 | 位置 | 说明 |
+|--------|------|------|
+| `MacroHandlerFn` 类型 | `template_engine/core/types.ts` | 宏处理器函数签名 `(name, args, scope) => string` |
+| `macroHandlers` 注册表 | `RenderScope`（可选字段） | 宏名到处理器的映射，无处理器时宏展开为空字符串 |
+| `BUILTIN_MACRO_HANDLERS` | `template_engine/defaults.ts` | 内置宏：roll、pick、int、float、seed（只读） |
+| `case 'macro'` 分支 | `core/renderer.ts` | 调用 `scope.macroHandlers[name]`，未命中回退空字符串 |
+| 叙事前端回退 | `frontends/narrative/resolver.ts` | 先查 `macroHandlers`，未命中回退到变量解析路径 |
+| PRNG 可重现性 | `template_engine/core/prng.ts` | mulberry32 实现，种子由 `variables.seed` 提供或自动生成 |
+| 物化集成 | `packs/runtime/materializer.ts` | 创建 PRNG → 递归展开 state_json → 种子写入 meta state |
+
+宏只允许在 `state_json`（最终存储的事实）中展开。运行时推理模板（`PROMPT_WORKFLOW.md` §7）使用独立的变量解析系统，不走宏处理器。
+
+### 5.3 Overlay / Memory Block
 
 - overlay 是 **kernel-side working-layer object**
 - `ContextOverlayEntry` 持久化在 kernel Prisma，再 re-materialize 为 `ContextNode`
@@ -482,6 +500,21 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 
 - pack runtime 管世界治理状态
 - kernel memory subsystem 管工作层上下文与长期记忆物化
+
+### 5.4 Perception Pipeline / Spatial Predicates
+
+空间感知管线是 sim loop 的第 6 步，位于 action dispatcher 之后。核心接口与模块：
+
+| 组件 | 位置 | 说明 |
+|------|------|------|
+| `PerceptionResolver` 接口 | `perception/types.ts` | `resolve(event, observer, spatialRuntime) → PerceptionResult` |
+| `createSpatialProximityResolver()` | `perception/default_resolver.ts` | 默认 A 层实现：同 location + public → full；private 仅 actor 可见 |
+| `runPerceptionPipeline()` | `app/runtime/perception_pipeline.ts` | 每 tick 收集空间事件 → 枚举 agent → 逐对解析 → 写入 overlay entry |
+| `spatialPredicateMatches()` | `domain/rule/enforcement_engine.ts` | `when.location.in` / `adjacent_to` 预过滤，在调用世界引擎侧车前执行 |
+
+感知结果以 overlay entry（`overlay_type: system_summary`）形式持久化，现有 overlay context source 自动消费。
+
+空间谓词 `when.location.in` / `when.location.adjacent_to` 在 TS 端 enforcement engine 做预过滤，不依赖 Rust 侧车修改。满足条件的规则才会被发送到侧车求值。
 
 ## 6. Prompt Workflow / AI Gateway / Plugin Runtime 的专题化边界
 

@@ -379,7 +379,49 @@ Slot Function 前端提供 `slot-ref` 块处理器，支持在模板中引用 sl
 - 内联形式：`{{slot_name}}` 通过 Narrative 前端 `VariableResolver` 分流
 - 块形式：`{{#slot-ref "slot_id"}}fallback{{/slot-ref}}` 支持回退内容
 
-## 11. 约束与限制
+## 11. 宏处理器扩展点
+
+模板引擎的 AST 已支持 `MacroNode`（`{{roll count=2 sides=6}}` 解析为 `{name: "roll", args: {count: "2", sides: "6"}}`）。当前渲染器对宏节点输出空字符串——这是预留给宏处理器注册机制的扩展点。
+
+### 11.1 MacroHandlerFn 注册机制
+
+```typescript
+type MacroHandlerFn = (
+  name: string,
+  args: Record<string, string>,
+  scope: RenderScope,
+) => string;
+```
+
+`RenderScope` 和 `RenderContext` 将增加 `macroHandlers` 字段。渲染器遇到 `case 'macro'` 时，查找 `scope.macroHandlers[name]` 并调用，无匹配处理器时输出空字符串。
+
+### 11.2 内置宏
+
+| 宏名 | 参数 | 返回类型 | 说明 |
+|------|------|----------|------|
+| `roll` | `count`（默认 1）、`sides` | number → string | NdN 骰子求和 |
+| `pick` | `from`（逗号分割）、`count`（默认 1） | string 或 string[] | 不放回随机选取 |
+| `int` | `min`、`max` | number → string | 区间内随机整数 |
+| `float` | `min`、`max` | number → string | 区间内随机浮点数 |
+| `seed` | `value` | 空字符串 | 设定 PRNG 种子（副作用宏） |
+
+### 11.3 加载时展开
+
+宏在世界包物化阶段（`materializer.ts`）展开，而非 YAML 解析阶段。展开后的具体值写入 runtime DB 的 entity state。后续 AI 推理读到的是已确定的状态，不再经过模板引擎。
+
+PRNG 种子可通过世界包配置提供（可重现），未提供时使用 `crypto.randomUUID()` 生成并记录到世界包元数据中。
+
+### 11.4 设计原则
+
+**随机性决定模拟状态，不是提示词噪声。** 宏的职责是在加载时将随机性物化为确定的状态值。AI 的工作是扮演已有属性的角色，而非从裸数字推断属性。
+
+## 13. 相关文档
+
+- 系统架构：`docs/ARCH.md`
+- 业务逻辑原则：`docs/LOGIC.md` §12.3 模拟状态确定性原则
+- World Pack 宏模板规范：`docs/specs/WORLD_PACK.md` §2.3
+
+## 12. 约束与限制
 
 - **最大递归深度 32** — 嵌套块超过此深度返回空字符串
 - **变量缺失不报错** — 未找到的变量渲染为空字符串（Data Cleaner）或在 diagnostics 中记录（Narrative）

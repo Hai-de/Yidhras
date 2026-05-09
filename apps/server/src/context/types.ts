@@ -17,7 +17,8 @@ export type ContextNodeSourceKind =
   | 'policy_summary'
   | 'pack_state'
   | 'world_state'
-  | 'overlay';
+  | 'overlay'
+  | 'spatial_proximity';
 
 export type ContextVisibilityLevel =
   | 'hidden_mandatory'

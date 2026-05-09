@@ -86,6 +86,12 @@ const renderNarrativeAst = (
       }
 
       case 'macro': {
+        const handler = scope.macroHandlers?.[node.name];
+        if (handler) {
+          parts.push(handler(node.name, node.args, scope));
+          break;
+        }
+
         const macroName = node.name;
         const parsed = parseModifierExpression(macroName);
         const result = createNarrativeVariableResolver(

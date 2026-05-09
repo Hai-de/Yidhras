@@ -42,6 +42,7 @@ export interface CreateContextServiceOptions {
   memoryService?: MemoryService;
   overlayStore?: ContextOverlayStore | null;
   longMemoryBlockStore?: LongMemoryBlockStore | null;
+  spatialRuntime?: import('../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
 }
 
 const buildNodeCountsByType = (nodeTypes: string[]): Record<string, number> => {
@@ -66,7 +67,8 @@ export const createContextService = ({
   context,
   memoryService = createMemoryService({ context }),
   overlayStore = createContextOverlayStore(context),
-  longMemoryBlockStore = createPrismaLongMemoryBlockStore(context)
+  longMemoryBlockStore = createPrismaLongMemoryBlockStore(context),
+  spatialRuntime = null
 }: CreateContextServiceOptions): ContextService => {
   return {
     async buildContextRun(input) {
@@ -77,7 +79,7 @@ export const createContextService = ({
 
       const pluginAdapters = input.pack_id ? pluginRuntimeRegistry.getContextSourceAdapters(input.pack_id) : [];
       const adapters = [
-        ...createDefaultContextSourceAdapters({ context, overlayStore, longMemoryBlockStore }),
+        ...createDefaultContextSourceAdapters({ context, overlayStore, longMemoryBlockStore, spatialRuntime }),
         ...pluginAdapters
       ];
       const built = await buildContextNodesFromSources(adapters, {

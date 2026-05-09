@@ -289,9 +289,20 @@ Prompt Workflow Runtime 正式引入：
 
 Prompt Workflow 在这里的目标是"受控模板运行时"，不是"任意脚本模板引擎"。
 
-### 6.5 使用建议
+### 6.5 与加载时宏展开的区分
 
-对于 Prompt Workflow profile、world prompts、perception templates，推荐按以下方式书写：
+本节描述的模板系统用于**运行时推理 prompt 构建**（变量解析、条件块、列表展开）。世界包还有一套独立的**加载时宏展开**系统，用于在物化阶段（`materializer.ts`）将 `bootstrap.initial_states[].state_json` 中的 `{{macro}}` 模板展开为确定性状态值。
+
+| 维度 | 运行时变量解析（本节） | 加载时宏展开 |
+|------|----------------------|-------------|
+| 触发时机 | 每次 AI 推理 prompt 构建 | 世界包首次物化时，仅一次 |
+| 展开对象 | prompt 模板中的 `{{pack.*}}`、`{{actor.*}}` 等 | `state_json` 中的 `{{roll}}`、`{{pick}}`、`{{int}}`、`{{float}}`、`{{seed}}` |
+| 核心机制 | `VariableResolver` + `PromptVariableContext` | `MacroHandlerFn` + `PRNG` |
+| 变量来源 | 分层上下文（system/app/pack/runtime/actor/request） | 无变量——宏处理器内部产生随机数 |
+| 宏语法差异 | `{{variable.path}}` 通过命名空间解析 | `{{roll count=2 sides=6}}` 通过 `BUILTIN_MACRO_HANDLERS` |
+| 文档 | 本节 | `ARCH.md` §5.2、`WORLD_PACK.md` §2.3.1 |
+
+两者互不依赖。加载时宏展开的结果以字符串形式写入 runtime DB，运行时模板读取的是已确定的值。
 
 1. **优先带 namespace**
 2. **缺省值用 `default(...)`，不要依赖缺失占位符**

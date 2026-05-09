@@ -36,6 +36,8 @@ export const resolveTriggerEventPayload = (payload: unknown): {
   title: string;
   description: string;
   impact_data: Record<string, unknown> | null;
+  location_id?: string | null;
+  visibility?: string | null;
 } => {
   if (!isRecord(payload)) {
     throw new ApiError(500, 'ACTION_EVENT_INVALID', 'trigger_event payload must be an object');
@@ -65,11 +67,22 @@ export const resolveTriggerEventPayload = (payload: unknown): {
     throw new ApiError(500, 'ACTION_EVENT_INVALID', 'trigger_event impact_data must be an object when provided');
   }
 
+  const locationId = 'location_id' in payload && payload.location_id !== null ? payload.location_id : undefined;
+  if (locationId !== undefined && typeof locationId !== 'string') {
+    throw new ApiError(500, 'ACTION_EVENT_INVALID', 'trigger_event location_id must be a string when provided');
+  }
+  const visibility = 'visibility' in payload && payload.visibility !== null ? payload.visibility : undefined;
+  if (visibility !== undefined && visibility !== 'public' && visibility !== 'private') {
+    throw new ApiError(500, 'ACTION_EVENT_INVALID', "trigger_event visibility must be 'public' or 'private' when provided");
+  }
+
   return {
     event_type: payload.event_type as 'history' | 'interaction' | 'system',
     title: payload.title.trim(),
     description: payload.description.trim(),
-    impact_data: isRecord(payload.impact_data) ? payload.impact_data : null
+    impact_data: isRecord(payload.impact_data) ? payload.impact_data : null,
+    location_id: typeof locationId === 'string' ? locationId.trim() || null : null,
+    visibility: visibility === 'public' || visibility === 'private' ? visibility : null
   };
 };
 
@@ -179,6 +192,8 @@ export const createEventEvidence = async (
     impact_data: string;
     source_action_intent_id: string;
     created_at: bigint;
+    location_id?: string | null;
+    visibility?: string | null;
   }
 ) => {
   return context.prisma.event.create({

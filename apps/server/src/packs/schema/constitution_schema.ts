@@ -512,6 +512,31 @@ const stateTransformSchema = z
     }
   });
 
+export const spatialDiscreteLocationSchema = z
+  .object({
+    id: nonEmptyStringSchema
+  })
+  .strict();
+
+export const spatialDiscreteEdgeSchema = z
+  .object({
+    from: nonEmptyStringSchema,
+    to: nonEmptyStringSchema,
+    type: z.enum(['bidirectional', 'directed']).default('bidirectional'),
+    weight: z.number().positive().default(1)
+  })
+  .strict();
+
+export const spatialDiscreteSchema = z
+  .object({
+    model: z.literal('discrete'),
+    locations: z.array(spatialDiscreteLocationSchema).min(1),
+    edges: z.array(spatialDiscreteEdgeSchema).default([])
+  })
+  .strict();
+
+export const spatialSchema = z.discriminatedUnion('model', [spatialDiscreteSchema]);
+
 export const worldPackConstitutionSchema = z
   .object({
     metadata: metadataSchema,
@@ -533,7 +558,8 @@ export const worldPackConstitutionSchema = z
       })
       .optional(),
     bootstrap: bootstrapSchema.optional(),
-    state_transforms: z.array(stateTransformSchema).optional()
+    state_transforms: z.array(stateTransformSchema).optional(),
+    spatial: spatialSchema.optional()
   })
   .superRefine((value, ctx) => {
     if ('actions' in value) {
@@ -554,6 +580,18 @@ export const worldPackConstitutionSchema = z
       for (const actor of value.entities.actors ?? []) {
         entityIds.add(actor.id);
       }
+      for (const domain of value.entities.domains ?? []) {
+        entityIds.add(domain.id);
+      }
+      for (const artifact of value.entities.artifacts ?? []) {
+        entityIds.add(artifact.id);
+      }
+      for (const institution of value.entities.institutions ?? []) {
+        entityIds.add(institution.id);
+      }
+      for (const mediator of value.entities.mediators ?? []) {
+        entityIds.add(mediator.id);
+      }
     }
 
     if (value.identities) {
@@ -563,6 +601,35 @@ export const worldPackConstitutionSchema = z
             code: z.ZodIssueCode.custom,
             message: `identity "${identity.id}" references unknown actor "${identity.subject_entity_id}" in subject_entity_id`,
             path: ['identities']
+          });
+        }
+      }
+    }
+
+    if (value.spatial && value.entities?.domains) {
+      const domainIds = new Set(value.entities.domains.map((d) => d.id));
+      for (const location of value.spatial.locations) {
+        if (!domainIds.has(location.id)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `spatial.location "${location.id}" must reference an entity in entities.domains`,
+            path: ['spatial', 'locations']
+          });
+        }
+      }
+      for (const edge of value.spatial.edges) {
+        if (!domainIds.has(edge.from)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `spatial.edge.from "${edge.from}" must reference an entity in entities.domains`,
+            path: ['spatial', 'edges']
+          });
+        }
+        if (!domainIds.has(edge.to)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `spatial.edge.to "${edge.to}" must reference an entity in entities.domains`,
+            path: ['spatial', 'edges']
           });
         }
       }

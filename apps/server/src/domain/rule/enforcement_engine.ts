@@ -7,7 +7,9 @@ import {
 import type { AppInfrastructure } from '../../app/context.js';
 import type { AppContextPorts } from '../../app/services/app_context_ports.js';
 
-type EnforcementContext = AppInfrastructure & Pick<AppContextPorts, 'worldEngine'>;
+type EnforcementContext = AppInfrastructure & Pick<AppContextPorts, 'worldEngine'> & {
+  getSpatialRuntime?(): import('../../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
+};
 import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage/entity_state_repo.js';
 import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { ApiError } from '../../utils/api_error.js';
@@ -229,6 +231,28 @@ const emitObjectiveEvents = async (
   return emittedEvents;
 };
 
+export const spatialPredicateMatches = (
+  locationCondition: Record<string, unknown>,
+  subjectLocation: string | null,
+  spatialRuntime: import('../../packs/runtime/spatial_runtime.js').SpatialRuntime
+): boolean => {
+  if (Array.isArray(locationCondition.in)) {
+    if (!subjectLocation || !locationCondition.in.includes(subjectLocation)) {
+      return false;
+    }
+  }
+  if (typeof locationCondition.adjacent_to === 'string') {
+    if (!subjectLocation) {
+      return false;
+    }
+    const neighbors = spatialRuntime.neighbors(locationCondition.adjacent_to);
+    if (subjectLocation !== locationCondition.adjacent_to && !neighbors.includes(subjectLocation)) {
+      return false;
+    }
+  }
+  return true;
+};
+
 export const enforceInvocationRequest = async (
   context: EnforcementContext,
   invocation: InvocationRequest
@@ -242,25 +266,48 @@ export const enforceInvocationRequest = async (
     });
   };
 
-  const resolvePlan = async (mediatorId: string | null) => {
-    if (!context.worldEngine) {
-      throw new ApiError(503, 'WORLD_ENGINE_NOT_READY', 'World engine is not available');
-    }
-    const sidecarRequest = await buildSidecarObjectiveExecutionRequest(context, {
-      invocation,
-      effectiveMediatorId: mediatorId,
-      packStorageAdapter: context.packStorageAdapter
-    });
-    const sidecarResult = normalizeObjectiveRuleSidecarResult(
-      await context.worldEngine.executeObjectiveRule(sidecarRequest)
-    );
-    return toObjectiveRulePlanFromSidecarResult(sidecarResult);
-  };
-
   try {
     const capabilityGrant = await resolveEffectiveCapabilityGrant(context, invocation);
     const mediatorId = resolveEffectiveMediatorId(invocation, capabilityGrant);
     await validateMediatorBinding(context, invocation.pack_id, mediatorId);
+
+    const spatialRuntime = context.getSpatialRuntime?.() ?? null;
+    const subjectEntityId = invocation.subject_entity_id;
+    let filteredRules: Array<{ id: string; when?: unknown; then?: unknown }> | null = null;
+
+    if (spatialRuntime && subjectEntityId) {
+      const activePack = context.activePack.getActivePack();
+      const allRules = activePack?.rules?.objective_enforcement;
+      if (allRules && allRules.length > 0) {
+        const subjectLocation = await spatialRuntime.getLocation(subjectEntityId);
+        filteredRules = allRules.filter((rule) => {
+          const when = isRecord(rule.when) ? rule.when : null;
+          if (!when) {
+            return true;
+          }
+          if (when.location) {
+            return spatialPredicateMatches(when.location as Record<string, unknown>, subjectLocation, spatialRuntime);
+          }
+          return true;
+        });
+      }
+    }
+
+    const resolvePlan = async (mediatorId: string | null) => {
+      if (!context.worldEngine) {
+        throw new ApiError(503, 'WORLD_ENGINE_NOT_READY', 'World engine is not available');
+      }
+      const sidecarRequest = await buildSidecarObjectiveExecutionRequest(context, {
+        invocation,
+        effectiveMediatorId: mediatorId,
+        packStorageAdapter: context.packStorageAdapter,
+        filteredRules
+      });
+      const sidecarResult = normalizeObjectiveRuleSidecarResult(
+        await context.worldEngine.executeObjectiveRule(sidecarRequest)
+      );
+      return toObjectiveRulePlanFromSidecarResult(sidecarResult);
+    };
 
     const plan = await resolvePlan(mediatorId);
 

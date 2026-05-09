@@ -18,6 +18,7 @@ import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
 import { PackManifestLoader, type WorldPack } from '../packs/manifest/loader.js';
 import { DefaultPackCatalogService } from '../packs/orchestration/pack_catalog_service.js';
 import { DefaultPackRuntimeRegistryService } from '../packs/orchestration/pack_runtime_registry_service.js';
+import { createSpatialRuntime, type SpatialRuntime } from '../packs/runtime/spatial_runtime.js';
 import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
 import type { ActivePackProvider } from './active_pack_provider.js';
 import { DefaultActivePackRuntimeFacade, type DefaultActivePackRuntimeFacadeOptions } from './active_pack_runtime_facade.js';
@@ -42,6 +43,8 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
   private readonly packCatalogService: DefaultPackCatalogService;
   private readonly activePackRuntimeFacade: DefaultActivePackRuntimeFacade;
   private readonly packRuntimeRegistryService: DefaultPackRuntimeRegistryService;
+  private readonly packStorageAdapter: PackStorageAdapter;
+  private spatialRuntime: SpatialRuntime | null = null;
   private runtimeReady = false;
   private paused = false;
 
@@ -49,6 +52,7 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
     this.packsDir = getWorldPacksDir();
 
     this.prisma = options.prisma;
+    this.packStorageAdapter = options.packStorageAdapter;
     this.loader = new PackManifestLoader(this.packsDir);
     this.clock = new ChronosEngine({
       calendarConfigs: [],
@@ -123,6 +127,18 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
   public async init(packFolderName: string, openingId?: string): Promise<void> {
     await this.activePackRuntimeFacade.init(packFolderName, openingId);
     this.syncClockFromActiveRuntime();
+
+    const activePack = this.activePackRuntimeFacade.getActivePack();
+    const spatialConfig = activePack?.spatial;
+    if (spatialConfig?.model === 'discrete') {
+      this.spatialRuntime = createSpatialRuntime(spatialConfig, activePack!.metadata.id, this.packStorageAdapter);
+    } else {
+      this.spatialRuntime = null;
+    }
+  }
+
+  public getSpatialRuntime(): SpatialRuntime | null {
+    return this.spatialRuntime;
   }
 
   public getActivePack(): WorldPack | undefined {
