@@ -1,5 +1,5 @@
 import { ApiError } from '../../utils/api_error.js';
-import type { RateLimitHints, RateLimiter, RateLimiterConfig, RateLimiterSnapshot } from './types.js';
+import type { RateLimiter, RateLimiterConfig, RateLimiterSnapshot,RateLimitHints } from './types.js';
 import { DEFAULT_RL_CONFIG } from './types.js';
 
 interface QueueEntry {

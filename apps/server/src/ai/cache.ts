@@ -30,11 +30,11 @@ const TASK_TTL_OVERRIDES: Partial<Record<AiTaskType, number>> = {
 const CACHE_DEFAULT_TTL_MS = 120_000; // 2 分钟
 
 const resolveTtl = (taskType: string): number => {
-  // eslint-disable-next-line security/detect-object-injection
+   
   return TASK_TTL_OVERRIDES[taskType as AiTaskType] ?? CACHE_DEFAULT_TTL_MS;
 };
 
-export const buildCacheKey = (request: ModelGatewayRequest): string => {
+export const buildCacheKey = (request: ModelGatewayRequest, packId?: string | null): string => {
   const payload = JSON.stringify({
     provider: request.provider_hint ?? null,
     model: request.model_hint ?? null,
@@ -52,7 +52,7 @@ export const buildCacheKey = (request: ModelGatewayRequest): string => {
     tools: request.tools?.map(t => t.name) ?? null,
     tool_policy: request.tool_policy?.mode ?? null,
     task_type: request.task_type,
-    pack_id: (request.metadata as Record<string, unknown> | undefined)?.pack_id ?? null
+    pack_id: packId ?? null
   });
 
   return createHash('sha256').update(payload).digest('hex');

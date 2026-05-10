@@ -258,7 +258,7 @@ HTTP Request
 - scheduler 是 partition-aware，在同一 Node 进程内以逻辑 partition 分组调度
 - lease 与 cursor state 以 partition 为作用域，存储于 pack-local SQLite（via `SchedulerStorageAdapter`）
 - 每个 pack 拥有独立的 `PackSimulationLoop` 实例，由 `MultiPackLoopHost` 统一管理生命周期
-- pack load 时自动启动 loop，pack unload 时停止 loop 并 kill sidecar 进程
+- pack load 时自动启动 loop，pack unload 时停止 loop 并优雅关闭 sidecar 进程（stdin EOF → 自然退出 → 3s 后 SIGKILL 兜底）
 - runtime readiness 通过 `AppContext.assertRuntimeReady(feature)` 统一门控
 
 当前 scheduler 相关的宿主级运行参数已收口进 runtime config，而不是继续散落为局部常量：
@@ -387,6 +387,8 @@ HTTP Request
   - 只暴露受控读面（pack summary、current tick、world state query），不暴露内核控制能力
   - 长期语义是 host-accepted / host-projected truth，不是 sidecar internal truth
 - `WorldEngineSidecarClient`：本地 stdio + JSON-RPC transport implementation，不是公开 contract
+	  - 基于 `StdioJsonRpcTransport` 共享基类，提供心跳检测、进程 crash 自动重连（指数退避）、stdin 背压处理、优雅关闭（stdin EOF → SIGKILL 兜底）
+	  - 同基类同时服务于 `scheduler_decision_sidecar` 和 `memory_trigger_sidecar`，消除三处 IPC 实现重复
 
 边界结论：
 
@@ -403,13 +405,23 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 
 ### 3.3.3 Rust Sidecar 定位
 
-三个 Rust sidecar 通过 stdio JSON-RPC 与宿主通信，承担有限的计算密集型任务。总量约 4,500 行 Rust 代码，均作为 **执行器** 而非完整引擎：
+三个 Rust sidecar 通过 stdio JSON-RPC（NDJSON 帧分隔）与宿主通信，承担有限的计算密集型任务。总量约 4,500 行 Rust 代码，均作为 **执行器** 而非完整引擎。
 
-| Sidecar | 职责 | 行数 |
-|---------|------|------|
-| `world_engine_sidecar` | step prepare/commit/abort、objective 匹配与执行、state query | ~1,700 |
-| `scheduler_decision_sidecar` | 决策内核运算 | ~800 |
-| `memory_trigger_sidecar` | memory trigger 匹配与触发判定 | ~2,000 |
+**传输层**（`StdioJsonRpcTransport`，`apps/server/src/app/runtime/sidecar/stdio_jsonrpc_transport.ts`）提供统一的 IPC 基础设施：
+
+- **NDJSON 帧解析**：换行分隔 JSON，与 LSP/Docker API 等生态一致
+- **请求/响应映射**：JSON-RPC id 关联，支持并发交错响应
+- **心跳检测**：可配置间隔（world engine 10s，scheduler/memory trigger 5s），连续失败达到阈值后 emit `unhealthy` 事件
+- **自动重连**：进程 crash 后指数退避自动重连（默认最多 3 次，基数 500ms），成功后 emit `restarted` 事件
+- **背压处理**：`stdin.write()` 返回 false 时等待 `drain` 事件
+- **优雅关闭**：先关闭 stdin（Rust 侧 EOF 自然退出），3 秒超时后 SIGKILL 兜底
+- **事件通知**：`unhealthy` / `restarted` 事件供上层 client 触发 pack 重载或状态恢复
+
+| Sidecar | 职责 | 行数 | 心跳间隔 | 请求超时 |
+|---------|------|------|---------|---------|
+| `world_engine_sidecar` | step prepare/commit/abort、objective 匹配与执行、state query | ~1,700 | 10s | 5s |
+| `scheduler_decision_sidecar` | 决策内核运算 | ~800 | 5s | 500ms |
+| `memory_trigger_sidecar` | memory trigger 匹配与触发判定 | ~2,000 | 5s | 500ms |
 
 当前执行路径：
 

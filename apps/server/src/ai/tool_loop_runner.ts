@@ -1,6 +1,6 @@
 import type { ModelGateway, ModelGatewayExecutionInput } from './gateway.js';
-import { createTokenCounter } from './token_counter.js';
 import type { TokenCounter } from './token_counter.js';
+import { createTokenCounter } from './token_counter.js';
 import type { ToolExecutionContext, ToolRegistry } from './tool_executor.js';
 import type { AiMessage, AiToolLoopTrace, ModelGatewayRequest, ModelGatewayResponse } from './types.js';
 
@@ -107,11 +107,9 @@ export const createToolLoopRunner = (): ToolLoopRunner => {
       let currentRequest = input.request;
       let lastResponse: ModelGatewayResponse | null = null;
       let allAttemptedModels: string[] = [];
-      let cumulativeTokens = tokenCounter.countMessagesTokens(
-        currentRequest.messages as { role: string; parts: { type: string; text?: string; json?: Record<string, unknown> }[] }[],
-        provider,
-        model
-      );
+      // cumulativeTokens 在首轮 gateway 响应后由 total_tokens 初始化
+      let cumulativeTokens = 0;
+      let tokenBudgetInitialized = false;
 
       for (let round = 0; round < config.max_rounds; round += 1) {
         if (Date.now() - startedAt > config.total_timeout_ms) {
@@ -130,8 +128,8 @@ export const createToolLoopRunner = (): ToolLoopRunner => {
           return buildLoopErrorResponse(currentRequest, allAttemptedModels, 'TOOL_LOOP_TIMEOUT', 'Tool loop timed out before any response', trace);
         }
 
-        // token 预算检查：进入下一轮前先确认
-        if (cumulativeTokens > maxTotalTokens) {
+        // token 预算检查：仅首轮响应后生效
+        if (tokenBudgetInitialized && cumulativeTokens > maxTotalTokens) {
           const trace: AiToolLoopTrace = { rounds: traceRounds, total_rounds: round, exhausted: false };
           return buildLoopErrorResponse(
             currentRequest, allAttemptedModels,
@@ -151,15 +149,13 @@ export const createToolLoopRunner = (): ToolLoopRunner => {
         allAttemptedModels = [...new Set([...allAttemptedModels, ...response.attempted_models])];
         lastResponse = response;
 
-        // 累计本轮 input/output tokens
-        if (response.usage?.input_tokens) {
-          cumulativeTokens += response.usage.input_tokens;
-        }
-        if (response.usage?.output_tokens) {
-          cumulativeTokens += response.usage.output_tokens;
-        }
-        if (response.usage?.thinking_tokens) {
-          cumulativeTokens += response.usage.thinking_tokens;
+        // 用 API 返回的 total_tokens 作为当前上下文总量基准
+        // total_tokens = input_tokens + output_tokens，天然包含完整历史消息
+        if (!tokenBudgetInitialized) {
+          cumulativeTokens = response.usage?.total_tokens ?? 0;
+          tokenBudgetInitialized = true;
+        } else {
+          cumulativeTokens = response.usage?.total_tokens ?? cumulativeTokens;
         }
 
         if (response.status !== 'completed') {

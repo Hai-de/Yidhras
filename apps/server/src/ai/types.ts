@@ -83,6 +83,7 @@ export interface ModelGatewayRequest {
     max_output_tokens?: number;
     stop?: string[];
     seed?: number;
+    extensions?: Record<string, unknown>;
   };
   execution?: {
     timeout_ms: number;

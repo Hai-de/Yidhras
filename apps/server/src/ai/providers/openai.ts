@@ -1,26 +1,9 @@
 import { ApiError } from '../../utils/api_error.js';
 import { createOpenAiCompatibleAdapter } from './openai_compatible.js';
+import { encodeMessageText, getEnv, isRecord, mapMessageRole } from './shared.js';
 import type { AiProviderAdapter, AiProviderAdapterRequest, AiProviderAdapterResult } from './types.js';
 
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
-
-const getEnv = (name: string | null | undefined): string | null => {
-  if (!name) {
-    return null;
-  }
-
-  // eslint-disable-next-line security/detect-object-injection
-  const value = process.env[name];
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    return null;
-  }
-
-  return value.trim();
-};
 
 // ── OpenAI 特有的认证逻辑 ──────────────────────────────────────────────
 
@@ -221,26 +204,6 @@ const normalizeResponsesApiResponse = (payload: Record<string, unknown>, respons
 
 // ── Embeddings ─────────────────────────────────────────────────────────
 
-const encodeMessageText = (message: import('../types.js').AiMessage): string => {
-  return message.parts
-    .map(part => {
-      switch (part.type) {
-        case 'text':
-          return part.text;
-        case 'json':
-          return JSON.stringify(part.json, null, 2);
-        case 'image_url':
-          return `[image] ${part.url}`;
-        case 'file_ref':
-          return `[file:${part.file_id}]`;
-        default:
-          return '';
-      }
-    })
-    .filter(text => text.trim().length > 0)
-    .join('\n\n');
-};
-
 const buildEmbeddingsRequestBody = (input: AiProviderAdapterRequest) => {
   const textInput = input.request.messages.map(message => encodeMessageText(message)).filter(text => text.trim().length > 0).join('\n\n');
   return {
@@ -280,20 +243,6 @@ const normalizeEmbeddingsResponse = (payload: Record<string, unknown>, response:
     },
     error: null
   };
-};
-
-// ── shared ─────────────────────────────────────────────────────────────
-
-const mapMessageRole = (role: import('../types.js').AiMessage['role']): 'system' | 'user' | 'assistant' | 'tool' => {
-  if (role === 'developer') {
-    return 'system';
-  }
-
-  if (role === 'system' || role === 'assistant' || role === 'tool') {
-    return role;
-  }
-
-  return 'user';
 };
 
 // ── OpenAI 特有的 endpoint 调度 ────────────────────────────────────────
@@ -506,6 +455,20 @@ export const createOpenAiProviderAdapter = (): AiProviderAdapter => {
       }
 
       return normalizeResponsesApiResponse(payload, response);
+    },
+
+    async *executeStream(input, signal) {
+      // Chat Completions → 委托给通用 adapter 的流式实现
+      if (input.model_entry.endpoint_kind === 'chat_completions') {
+        if (openAiChatCompletionsAdapter.executeStream) {
+          yield* openAiChatCompletionsAdapter.executeStream(input, signal);
+        } else {
+          yield { type: 'error', code: 'STREAM_NOT_SUPPORTED', message: 'OpenAI Chat Completions streaming not available' };
+        }
+        return;
+      }
+      // Responses API / Embeddings 暂不支持流式
+      yield { type: 'error', code: 'STREAM_NOT_SUPPORTED', message: 'OpenAI Responses API and Embeddings do not support streaming' };
     }
   };
 };

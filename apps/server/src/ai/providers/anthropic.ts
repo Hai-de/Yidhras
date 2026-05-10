@@ -1,22 +1,11 @@
 import { ApiError } from '../../utils/api_error.js';
 import type { AiMessage, AiToolSpec, ModelGatewayResponse } from '../types.js';
+import { getEnv, isRecord } from './shared.js';
 import type { AiProviderAdapter, AiProviderAdapterRequest, AiProviderAdapterResult } from './types.js';
 
 const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1';
 const ANTHROPIC_VERSION = '2023-06-01';
 const STRUCTURED_OUTPUT_TOOL_NAME = '__structured_output';
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
-
-const getEnv = (name: string | null | undefined): string | null => {
-  if (!name) return null;
-  // eslint-disable-next-line security/detect-object-injection
-  const value = process.env[name];
-  if (typeof value !== 'string' || value.trim().length === 0) return null;
-  return value.trim();
-};
 
 // ── Role mapping ───────────────────────────────────────────────────────
 
@@ -175,11 +164,6 @@ const buildStructuredOutputTool = (
   };
 };
 
-// ── Prompt injection for json_object ───────────────────────────────────
-
-const JSON_OBJECT_INSTRUCTION =
-  '\n\nIMPORTANT: Respond with a valid JSON object only. Do not wrap it in markdown code fences (```json ... ```). Do not include any text before or after the JSON object. Your entire response must be parseable by JSON.parse().';
-
 // ── Messages API request builder ───────────────────────────────────────
 
 interface AnthropicMessagesRequest {
@@ -231,12 +215,20 @@ const buildAnthropicRequest = (
     ?? input.model_entry.capabilities.max_output_tokens
     ?? 4096;
 
+  const messages: { role: 'user' | 'assistant'; content: AnthropicContentBlock[] }[] = [
+    ...buildMessagesBody(rest),
+    ...buildToolResultMessages(input.request.messages)
+  ];
+
+  // json_object 模式：使用 assistant prefill 引导模型输出 JSON，
+  // 避免修改 system prompt 破坏上下文注意力
+  if (input.request.response_mode === 'json_object') {
+    messages.push({ role: 'assistant', content: [{ type: 'text', text: '{' }] });
+  }
+
   const body: AnthropicMessagesRequest = {
     model: input.model_entry.model,
-    messages: [
-      ...buildMessagesBody(rest),
-      ...buildToolResultMessages(input.request.messages)
-    ],
+    messages,
     max_tokens: maxTokens
   };
 
@@ -281,14 +273,16 @@ const buildAnthropicRequest = (
     body.tool_choice = { type: 'auto' };
   }
 
-  // Threading
-  const thinking = (input.request.sampling as Record<string, unknown> | undefined)
-    ?.extensions as { thinking?: { enabled?: boolean; budget_tokens?: number } } | undefined;
-  if (thinking?.thinking?.enabled) {
-    body.thinking = {
-      type: 'enabled',
-      budget_tokens: thinking.thinking.budget_tokens ?? 1024
-    };
+  // Thinking (extended capacity)
+  const ext = input.request.sampling?.extensions;
+  if (ext && isRecord(ext.thinking)) {
+    const thinking = ext.thinking as { enabled?: boolean; budget_tokens?: number };
+    if (thinking.enabled) {
+      body.thinking = {
+        type: 'enabled',
+        budget_tokens: thinking.budget_tokens ?? 1024
+      };
+    }
   }
 
   return body;
@@ -351,8 +345,8 @@ const parseAnthropicResponse = (payload: Record<string, unknown>, response: Resp
       input_tokens: usage.input_tokens,
       output_tokens: usage.output_tokens,
       total_tokens: usage.input_tokens + usage.output_tokens,
-      cached_input_tokens: usage.cache_read_input_tokens,
-      thinking_tokens: undefined  // Anthropic 在 streaming 中单独报告 thinking tokens
+      cached_input_tokens: usage.cache_read_input_tokens
+      // Anthropic API 的 thinking tokens 已计入 output_tokens，无论流式还是非流式
     } : undefined,
     safety: {
       blocked,
@@ -415,7 +409,7 @@ const parseErrorPayload = async (response: Response): Promise<{ code: string; me
   };
 };
 
-// ── JSON parse with retry (json_object prompt injection path) ──────────
+// ── JSON parse helpers ──────────────────────────────────────────────────
 
 const tryParseJsonFromText = (text: string): Record<string, unknown> | null => {
   // 尝试直接解析
@@ -536,11 +530,11 @@ export const createAnthropicProviderAdapter = (): AiProviderAdapter => {
 
       const result = parseAnthropicResponse(payload, response);
 
-      // json_object 模式 → 尝试 JSON.parse，失败重试一次（提示词注入路径）
+      // json_object 模式：prefill 已引导模型输出 JSON，尝试解析即可
       if (
         result.status === 'completed' &&
         input.request.response_mode === 'json_object' &&
-        result.output.mode === 'free_text' &&  // 非 tool_call 路径
+        result.output.mode === 'free_text' &&
         result.output.text
       ) {
         const parsed = tryParseJsonFromText(result.output.text);
@@ -551,7 +545,6 @@ export const createAnthropicProviderAdapter = (): AiProviderAdapter => {
           };
         }
 
-        // 首次解析失败 → 重试一次（在后续消息中追加更强约束）
         return {
           status: 'failed',
           finish_reason: 'error',
@@ -562,7 +555,7 @@ export const createAnthropicProviderAdapter = (): AiProviderAdapter => {
           error: {
             code: 'AI_PROVIDER_DECODE_FAIL',
             message: 'Anthropic response is not valid JSON in json_object mode',
-            retryable: true,
+            retryable: false,
             stage: 'provider'
           }
         };
@@ -618,6 +611,7 @@ const parseAnthropicSseStream = async function* (
   const decoder = new TextDecoder();
   let buffer = '';
   const toolCallBuf = new Map<number, { name: string; call_id: string; arguments_acc: string }>();
+  const contentBlockIndexMap = new Map<number, number>(); // Anthropic content_block index → toolCallIdx
   let toolCallIdx = 0;
   let finishReason = 'stop';
   let usageOutputTokens: number | undefined;
@@ -664,10 +658,14 @@ const parseAnthropicSseStream = async function* (
 
             case 'content_block_start': {
               const block = isRecord(data.content_block) ? data.content_block : null;
+              const blockIndex = typeof data.index === 'number' ? data.index : null;
               if (block?.type === 'tool_use') {
                 const name = typeof block.name === 'string' ? block.name : 'unknown_tool';
                 const callId = typeof block.id === 'string' ? block.id : `toolu_${toolCallIdx}`;
                 toolCallBuf.set(toolCallIdx, { name, call_id: callId, arguments_acc: '' });
+                if (blockIndex !== null) {
+                  contentBlockIndexMap.set(blockIndex, toolCallIdx);
+                }
                 yield { type: 'tool_call_start', index: toolCallIdx, call_id: callId, name };
                 toolCallIdx += 1;
               }
@@ -683,12 +681,16 @@ const parseAnthropicSseStream = async function* (
               } else if (delta.type === 'thinking_delta' && typeof delta.thinking === 'string') {
                 yield { type: 'thinking_delta', text: delta.thinking };
               } else if (delta.type === 'input_json_delta' && typeof delta.partial_json === 'string') {
-                // Find the current tool call index (Anthropic sends one tool_use at a time)
-                const currentIdx = toolCallIdx - 1;
-                const existing = toolCallBuf.get(currentIdx);
-                if (existing) {
-                  existing.arguments_acc += delta.partial_json;
-                  yield { type: 'tool_call_delta', index: currentIdx, arguments_fragment: delta.partial_json };
+                const blockIndex = typeof data.index === 'number' ? data.index : null;
+                const currentIdx = blockIndex !== null
+                  ? contentBlockIndexMap.get(blockIndex)
+                  : toolCallIdx - 1;
+                if (currentIdx !== undefined) {
+                  const existing = toolCallBuf.get(currentIdx);
+                  if (existing) {
+                    existing.arguments_acc += delta.partial_json;
+                    yield { type: 'tool_call_delta', index: currentIdx, arguments_fragment: delta.partial_json };
+                  }
                 }
               }
               break;

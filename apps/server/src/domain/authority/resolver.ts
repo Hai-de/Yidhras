@@ -1,8 +1,8 @@
 import type { AppInfrastructure } from '../../app/context.js';
 import { packEntityIdFromResolvedAgentId } from '../../inference/context_builder.js';
 import { listPackAuthorityGrants } from '../../packs/storage/authority_repo.js';
-import { listPackEntityStates } from '../../packs/storage/entity_state_repo.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
+import { listPackEntityStates } from '../../packs/storage/entity_state_repo.js';
 import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js';
 
 export interface ResolvedCapabilityItem {

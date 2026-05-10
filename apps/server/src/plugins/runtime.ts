@@ -10,6 +10,7 @@ import type {
 } from '../app/runtime/world_engine_contributors.js';
 import type { ContextSourceAdapter } from '../context/source_registry.js';
 import type { PromptWorkflowStepExecutor } from '../context/workflow/registry.js';
+import type { PerceptionResolver } from '../perception/types.js';
 import { resolveLoadOrder } from './dependency_resolver.js';
 import type { DataCleaner } from './extensions/data_cleaner_registry.js';
 import { dataCleanerRegistry } from './extensions/data_cleaner_registry.js';
@@ -17,7 +18,6 @@ import type { SlotConditionEvaluator } from './extensions/slot_condition_registr
 import { slotConditionRegistry } from './extensions/slot_condition_registry.js';
 import type { SlotContentTransformer } from './extensions/slot_content_transformer.js';
 import { slotContentTransformRegistry } from './extensions/slot_content_transformer.js';
-import type { PerceptionResolver } from '../perception/types.js';
 type Ctx = AppInfrastructure & { getHttpApp?(): Express | null };
 
 export interface PluginInferenceRequest {

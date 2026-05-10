@@ -1,9 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
 
-import { createAiTaskService } from './ai/task_service.js';
 import { listDynamicSlots, registerDynamicSlot, unregisterDynamicSlot } from './ai/registry.js';
 import { startAiRegistryWatcher } from './ai/registry_watcher.js';
+import { createAiTaskService } from './ai/task_service.js';
 import { createMemoryBehaviorStateStore, setBehaviorStateStore } from './app/behavior_state_store.js';
 import { createInferenceProviders } from './app/composition/inference.js';
 import type { AppContext, RouteRegistrar, RuntimeLoopDiagnostics } from './app/context.js';

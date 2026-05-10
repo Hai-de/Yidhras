@@ -1,7 +1,7 @@
 import type { AppInfrastructure } from '../app/context.js';
 import { ApiError } from '../utils/api_error.js';
-import { createInMemoryPromptCache, buildCacheKey, resolveCacheTtl } from './cache.js';
 import type { PromptCache } from './cache.js';
+import { buildCacheKey, createInMemoryPromptCache, resolveCacheTtl } from './cache.js';
 import type { CircuitBreaker, RateLimiter } from './elasticity/index.js';
 import {
   createCircuitBreaker,
@@ -300,7 +300,7 @@ export const createModelGateway = ({
         input.request.response_mode !== 'embedding';
 
       if (isCacheable) {
-        const cacheKey = buildCacheKey(input.request);
+        const cacheKey = buildCacheKey(input.request, input.task_request.pack_id);
         const cachedEntry = cache.get(cacheKey);
         if (cachedEntry) {
           const cachedResponse = cachedEntry.result as ModelGatewayResponse;
@@ -317,7 +317,7 @@ export const createModelGateway = ({
               ...(cachedResponse.usage ?? {}),
               estimated_cost_usd: 0
             }
-          } as ModelGatewayResponse;
+          };
         }
       }
 
@@ -451,7 +451,7 @@ export const createModelGateway = ({
 
               // 写入缓存
               if (isCacheable) {
-                const cacheKey = buildCacheKey(input.request);
+                const cacheKey = buildCacheKey(input.request, input.task_request.pack_id);
                 const ttl = resolveCacheTtl(input.request.task_type);
                 cache.set(cacheKey, {
                   key: cacheKey,
@@ -542,7 +542,6 @@ export const createModelGateway = ({
       }, resolvedRegistry ?? undefined);
 
       const route = routeSelection.route;
-      const timeoutMs = input.request.execution?.timeout_ms ?? route.defaults?.timeout_ms ?? 30000;
       const candidates = [
         ...routeSelection.primary_model_candidates,
         ...(route.defaults?.allow_fallback !== false ? routeSelection.fallback_model_candidates : [])
@@ -566,11 +565,34 @@ export const createModelGateway = ({
             if (result?.status === 'completed' && result.output.text) {
               yield { type: 'text_delta', text: result.output.text };
               yield { type: 'finish', finish_reason: result.finish_reason, usage: result.usage };
+              await recordAiInvocation(context, {
+                invocation_id: input.request.invocation_id,
+                task_id: input.request.task_id,
+                task_type: input.request.task_type,
+                provider: candidate.provider,
+                model: candidate.model,
+                route_id: route.route_id,
+                fallback_used: true,
+                attempted_models: [`${candidate.provider}:${candidate.model}`],
+                status: 'completed',
+                finish_reason: result.finish_reason,
+                output: result.output,
+                usage: result.usage
+              }, {
+                sourceInferenceId: input.task_request.metadata?.inference_id ?? null
+              });
               return;
             }
           } catch {
             // continue to next candidate
           }
+          continue;
+        }
+
+        const cb = getOrCreate(cbMap, candidate.provider, (provider) =>
+          createCircuitBreaker(provider, resolveCircuitBreakerConfig(route.defaults)),
+        );
+        if (!cb.allowRequest()) {
           continue;
         }
 
@@ -609,12 +631,14 @@ export const createModelGateway = ({
             output: { mode: input.request.response_mode },
             usage: { latency_ms: Date.now() - streamStart }
           }, {
-            sourceInferenceId: input.task_request.metadata?.inference_id as string | undefined ?? null
+            sourceInferenceId: input.task_request.metadata?.inference_id ?? null
           });
 
+          cb.recordSuccess();
           rl.release();
           return;
-        } catch (err) {
+        } catch {
+          cb.recordFailure();
           rl.release();
           // 尝试下一个 candidate
         }

@@ -238,13 +238,24 @@ stdio JSON-RPC 是一个**极其脆弱的 IPC 机制**。它要求：
 更重要的是，**三个 Rust sidecar 是独立的进程**。world_engine_sidecar、scheduler_decision_sidecar、memory_trigger_sidecar 各自 spawn。这意味着每个 pack 需要 3 个 Rust 进程。如果同时加载 10 个 pack，就是 30 个进程。每个进程的内存开销是多少？文档未提供基准测试数据。
 
 **Gaps**：
-- [ ] stdio IPC 的健壮性评估和替代方案（Unix domain socket / TCP loopback）
-- [ ] Sidecar 进程 crash 恢复和 pending 请求处理
+- [x] stdio IPC 的健壮性评估和替代方案（Unix domain socket / TCP loopback） — **已完成：方案 A 原地加固，无需替换**
+- [x] Sidecar 进程 crash 恢复和 pending 请求处理 — **已完成：指数退避自动重连 + pending 请求 reject 通知**
 - [ ] 多 pack 场景下的内存和 CPU 开销基准测试
 - [ ] Rust sidecar 的构建和分发流程（CI 中是否编译 Rust？部署时是否包含 Rust 二进制？）
 - [ ] Sidecar 协议版本兼容性（`WORLD_ENGINE_PROTOCOL_VERSION` 变更时的滚动升级策略）
 
-**Verdict**：Rust sidecar 的实现规模（<4,500 行）与其在架构文档中的重要性不成比例。IPC 机制选择（stdio JSON-RPC）在原型阶段可接受，但在生产环境中是**技术债务**。更关键的是，**大量"世界引擎"逻辑实际上仍在 TS 侧**，Rust 只是一个执行远程命令的薄客户端/服务器。
+**Verdict**：Rust sidecar 的实现规模（<4,500 行）与其在架构文档中的重要性不成比例。更关键的是，**大量"世界引擎"逻辑实际上仍在 TS 侧**，Rust 只是一个执行远程命令的薄客户端/服务器。
+
+> **2026-05-10 更新**：§4.2 中指出的 IPC 工程完备性缺口已通过方案 A（原地加固）修复。详见 `docs/ARCH.md` §3.3.3：
+> - 提取 `StdioJsonRpcTransport` 共享基类，消除三处 85% 重复的 transport 实现
+> - 增加心跳检测（可配置间隔 + 连续失败阈值 → `unhealthy` 事件）
+> - 增加进程 crash 后指数退避自动重连（默认 3 次，基数 500ms）
+> - 增加 stdin 背压处理（`drain` 事件）
+> - 优雅关闭替代 SIGTERM 强杀（stdin EOF → 自然退出 → 3s 后 SIGKILL 兜底）
+> - Rust 侧 world engine 在 stdin EOF 退出前检查 pending prepared state 并输出 warning
+>
+> 审计中"stderr 污染协议流""无连接复用""10 pack = 30 进程"三项指控经验证不成立或夸大。
+> 相关文件：`apps/server/src/app/runtime/sidecar/stdio_jsonrpc_transport.ts`（共享基类），`apps/server/rust/*/src/main.rs`（优雅关闭）。
 
 ---
 

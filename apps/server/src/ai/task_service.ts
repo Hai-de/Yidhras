@@ -32,7 +32,7 @@ export interface CreateAiTaskServiceOptions {
   context?: AppInfrastructure;
 }
 
-const buildInlineOverrideFromRequest = (request: AiTaskRequest): AiTaskOverride | null => {
+export const buildInlineOverrideFromRequest = (request: AiTaskRequest): AiTaskOverride | null => {
   const hasOutputOverride = request.output_contract?.mode !== undefined || request.output_contract?.json_schema !== undefined;
   if (!hasOutputOverride) {
     return null;
@@ -46,7 +46,7 @@ const buildInlineOverrideFromRequest = (request: AiTaskRequest): AiTaskOverride 
   };
 };
 
-const buildGatewayRequest = (
+export const buildGatewayRequest = (
   request: AiTaskRequest,
   messages: ModelGatewayRequest['messages'],
   taskConfig: AiResolvedTaskConfig

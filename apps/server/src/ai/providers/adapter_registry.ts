@@ -1,5 +1,5 @@
 import { createLogger } from '../../utils/logger.js';
-import type { AiProviderTemplate, AiRegistryConfig } from '../types.js';
+import type { AiRegistryConfig } from '../types.js';
 import { createAnthropicProviderAdapter } from './anthropic.js';
 import { createDeepSeekProviderAdapter } from './deepseek.js';
 import { createMockAiProviderAdapter } from './mock.js';

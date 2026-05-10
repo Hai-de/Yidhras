@@ -165,7 +165,7 @@ const createSpatialProximitySourceAdapter = (spatialRuntime: import('../packs/ru
     // agent IDs follow the pattern `{pack_id}:{entity_name}`, so we strip the `{pack_id}:` prefix.
     const rawAgentId: string | null =
       (input.actor_ref && typeof input.actor_ref === 'object' && 'agent_id' in input.actor_ref)
-        ? (input.actor_ref as Record<string, unknown>).agent_id as string | null
+        ? (input.actor_ref).agent_id as string | null
         : input.resolved_agent_id;
 
     if (typeof rawAgentId !== 'string' || !rawAgentId) {

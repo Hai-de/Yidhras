@@ -1,5 +1,6 @@
 import { ApiError } from '../../utils/api_error.js';
-import type { AiMessage, AiToolSpec, ModelGatewayResponse } from '../types.js';
+import type { AiMessage, AiToolSpec } from '../types.js';
+import { encodeMessageText, getEnv, isRecord, mapMessageRole } from './shared.js';
 import type { AiProviderAdapter, AiProviderAdapterRequest, AiProviderAdapterResult } from './types.js';
 
 export interface OpenAiCompatibleCapabilityOverrides {
@@ -20,56 +21,6 @@ export interface OpenAiCompatibleConfig {
   buildHeaders?(input: AiProviderAdapterRequest): Record<string, string>;
   capabilityOverrides?: OpenAiCompatibleCapabilityOverrides;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
-
-export const getEnv = (name: string | null | undefined): string | null => {
-  if (!name) {
-    return null;
-  }
-
-  // eslint-disable-next-line security/detect-object-injection
-  const value = process.env[name];
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    return null;
-  }
-
-  return value.trim();
-};
-
-const mapMessageRole = (role: AiMessage['role']): 'system' | 'user' | 'assistant' | 'tool' => {
-  if (role === 'developer') {
-    return 'system';
-  }
-
-  if (role === 'system' || role === 'assistant' || role === 'tool') {
-    return role;
-  }
-
-  return 'user';
-};
-
-const encodeMessageText = (message: AiMessage): string => {
-  return message.parts
-    .map(part => {
-      switch (part.type) {
-        case 'text':
-          return part.text;
-        case 'json':
-          return JSON.stringify(part.json, null, 2);
-        case 'image_url':
-          return `[image] ${part.url}`;
-        case 'file_ref':
-          return `[file:${part.file_id}]`;
-        default:
-          return '';
-      }
-    })
-    .filter(text => text.trim().length > 0)
-    .join('\n\n');
-};
 
 const buildChatMessages = (messages: AiMessage[]) => {
   return messages.map(message => ({
@@ -157,7 +108,7 @@ const buildChatCompletionsRequestBody = (
   if (typeof input.request.sampling?.max_output_tokens === 'number') {
     const field = overrides?.maxTokensField ?? 'max_completion_tokens';
     // eslint-disable-next-line security/detect-object-injection
-    body[field] = input.request.sampling!.max_output_tokens;
+    body[field] = input.request.sampling.max_output_tokens;
   }
 
   const hasSeed = typeof input.request.sampling?.seed === 'number';
@@ -375,7 +326,7 @@ const parseChatCompletionsSseChunk = async function* (
         try {
           const json = JSON.parse(trimmed.slice(6)) as Record<string, unknown>;
           const choices = Array.isArray(json.choices) ? json.choices : [];
-          const choice = choices.find((c: unknown) => isRecord(c)) as Record<string, unknown> | undefined;
+          const choice = choices.find((c: unknown) => isRecord(c));
 
           // Usage (final chunk)
           if (isRecord(json.usage)) {

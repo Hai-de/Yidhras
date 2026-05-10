@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import {
   aiInvocationIdParamsSchema,
   aiInvocationsQuerySchema,
@@ -7,7 +9,11 @@ import {
   inferenceRequestSchema
 } from '@yidhras/contracts';
 import type { Express, NextFunction, Request, Response } from 'express';
+import { z } from 'zod';
 
+import { createModelGateway } from '../../ai/gateway.js';
+import { resolveAiTaskConfig } from '../../ai/task_definitions.js';
+import type { AiMessage, AiResponseMode, AiTaskRequest, AiTaskType, ModelGatewayRequest } from '../../ai/types.js';
 import type { InferenceService } from '../../inference/service.js';
 import type { OperatorRequest } from '../../operator/auth/types.js';
 import type { AppContext } from '../context.js';
@@ -249,6 +255,108 @@ export const registerInferenceRoutes = (
       const workflow = await getWorkflowSnapshotByJobId(context, params.id);
 
       jsonOk(res, toJsonSafe(workflow));
+    })
+  );
+
+  app.post(
+    '/api/inference/stream',
+    requireAuth(),
+    deps.asyncHandler(async (req, res) => {
+      context.assertRuntimeReady('inference stream');
+
+      const streamRequestSchema = z.object({
+        task_id: z.string().min(1),
+        task_type: z.string().min(1),
+        pack_id: z.string().nullish(),
+        messages: z.array(z.object({
+          role: z.enum(['system', 'developer', 'user', 'assistant', 'tool']),
+          parts: z.array(z.union([
+            z.object({ type: z.literal('text'), text: z.string() }),
+            z.object({ type: z.literal('json'), json: z.record(z.string(), z.unknown()) }),
+            z.object({ type: z.literal('image_url'), url: z.string() }),
+            z.object({ type: z.literal('file_ref'), file_id: z.string(), mime_type: z.string().optional() })
+          ])),
+          name: z.string().optional(),
+          metadata: z.record(z.string(), z.unknown()).optional()
+        })),
+        provider_hint: z.string().nullish(),
+        model_hint: z.string().nullish(),
+        response_mode: z.enum(['free_text', 'json_object', 'json_schema', 'tool_call']).default('free_text'),
+        temperature: z.number().min(0).max(2).optional(),
+        max_output_tokens: z.number().int().positive().optional(),
+        structured_output_schema: z.record(z.string(), z.unknown()).optional(),
+        tool_names: z.array(z.string()).optional(),
+        tool_policy_mode: z.enum(['disabled', 'allowed', 'required']).optional()
+      });
+
+      const body = parseBody(streamRequestSchema, req.body, 'STREAM_INPUT_INVALID');
+
+      const messages = body.messages as AiMessage[];
+      const taskType = body.task_type as AiTaskType;
+      const responseMode = body.response_mode as AiResponseMode;
+
+      const taskConfig = resolveAiTaskConfig({ taskType });
+
+      const taskRequest: AiTaskRequest = {
+        task_id: body.task_id,
+        task_type: taskType,
+        pack_id: body.pack_id ?? null,
+        input: {},
+        prompt_context: { messages },
+        output_contract: { mode: responseMode, json_schema: body.structured_output_schema },
+        route_hints: { provider: body.provider_hint ?? undefined, model: body.model_hint ?? undefined },
+        tools: body.tool_names?.map(name => ({ name, description: '', input_schema: {} })) ?? [],
+        tool_policy: body.tool_policy_mode ? { mode: body.tool_policy_mode } : null
+      };
+
+      const gatewayRequest: ModelGatewayRequest = {
+        invocation_id: randomUUID(),
+        task_id: body.task_id,
+        task_type: taskType,
+        provider_hint: body.provider_hint ?? null,
+        model_hint: body.model_hint ?? null,
+        route_id: null,
+        messages,
+        response_mode: responseMode,
+        structured_output: body.structured_output_schema
+          ? { schema_name: `${taskType}_schema`, json_schema: body.structured_output_schema }
+          : null,
+        tools: body.tool_names?.map(name => ({ name, description: '', input_schema: {} })) ?? undefined,
+        tool_policy: body.tool_policy_mode ? { mode: body.tool_policy_mode } : null,
+        sampling: {
+          temperature: body.temperature,
+          max_output_tokens: body.max_output_tokens
+        },
+        execution: { timeout_ms: 60000, retry_limit: 0, allow_fallback: true }
+      };
+
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no'
+      });
+
+      const abortController = new AbortController();
+
+      req.on('close', () => {
+        abortController.abort();
+      });
+
+      try {
+        const gateway = createModelGateway({ context });
+        for await (const chunk of gateway.executeStream(
+          { request: gatewayRequest, task_request: taskRequest, task_config: taskConfig },
+          abortController.signal
+        )) {
+          res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+        }
+        res.end();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        res.write(`data: ${JSON.stringify({ type: 'error', code: 'STREAM_ERROR', message })}\n\n`);
+        res.end();
+      }
     })
   );
 };

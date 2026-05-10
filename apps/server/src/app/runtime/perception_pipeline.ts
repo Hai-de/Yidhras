@@ -51,7 +51,7 @@ const getSpatialEvents = async (prisma: PrismaClient, tick: bigint): Promise<Spa
       source_action_intent_id: true
     }
   });
-  return rows as SpatialEventRow[];
+  return rows;
 };
 
 const getActiveAgents = async (prisma: PrismaClient): Promise<string[]> => {

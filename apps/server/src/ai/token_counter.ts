@@ -34,7 +34,7 @@ const isOpenAiCompatible = (provider: string): boolean => {
   return provider === 'openai' || provider === 'deepseek' || provider === 'ollama';
 };
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+ 
 const safeRequire = (id: string): unknown => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports

@@ -82,9 +82,8 @@ fn main() {
     let mut state = AppState::new();
 
     for line in stdin.lock().lines() {
-        let line = match line {
-            Ok(value) => value,
-            Err(_) => break,
+        let Ok(line) = line else {
+            break;
         };
 
         if line.trim().is_empty() {
@@ -104,5 +103,15 @@ fn main() {
         let payload = serde_json::to_string(&response).expect("response serialization");
         writeln!(stdout, "{}", payload).expect("write response");
         stdout.flush().expect("flush response");
+    }
+
+    // stdin closed — graceful shutdown. Warn if any pack has pending prepared state.
+    for (pack_id, session) in state.sessions.iter() {
+        if session.pending_prepared_token.is_some() {
+            eprintln!(
+                "WARNING: pending prepared state for pack {} will be discarded on shutdown",
+                pack_id
+            );
+        }
     }
 }

@@ -1,4 +1,5 @@
-import { getEnv, createOpenAiCompatibleAdapter } from './openai_compatible.js';
+import { createOpenAiCompatibleAdapter } from './openai_compatible.js';
+import { getEnv } from './shared.js';
 import type { AiProviderAdapter } from './types.js';
 
 export const createDeepSeekProviderAdapter = (): AiProviderAdapter => {
