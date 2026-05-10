@@ -1,7 +1,7 @@
 import { tokenize } from '../../template_engine/core/lexer.js';
 import { parse } from '../../template_engine/core/parser.js';
 import { renderAst } from '../../template_engine/core/renderer.js';
-import type { RenderScope,SyntaxConfig  } from '../../template_engine/core/types.js';
+import type { MacroValue, RenderScope, SyntaxConfig } from '../../template_engine/core/types.js';
 
 const TEMPLATE_PATTERN = /\{\{/;
 
@@ -27,10 +27,31 @@ const MACRO_ONLY_SYNTAX: SyntaxConfig = {
   }
 };
 
-const renderTemplate = (template: string, scope: RenderScope): string => {
+const isSingleMacroTemplate = (
+  template: string
+): boolean => {
+  const trimmed = template.trim();
+  return trimmed.startsWith('{{') && trimmed.endsWith('}}')
+    && trimmed.indexOf('{{', 2) === -1
+    && trimmed.lastIndexOf('}}') === trimmed.length - 2;
+};
+
+const expandMacroValue = (
+  template: string,
+  scope: RenderScope
+): MacroValue | string => {
   try {
     const tokens = tokenize(template, MACRO_ONLY_SYNTAX);
     const { nodes } = parse(tokens, MACRO_ONLY_SYNTAX);
+
+    if (
+      nodes.length === 1 &&
+      nodes[0].type === 'macro' &&
+      scope.macroHandlers?.[nodes[0].name]
+    ) {
+      return scope.macroHandlers[nodes[0].name](nodes[0].name, nodes[0].args, scope);
+    }
+
     return renderAst(nodes, scope);
   } catch {
     return template;
@@ -39,7 +60,14 @@ const renderTemplate = (template: string, scope: RenderScope): string => {
 
 const expandValue = (value: unknown, scope: RenderScope): unknown => {
   if (typeof value === 'string' && TEMPLATE_PATTERN.test(value)) {
-    return renderTemplate(value, scope);
+    if (isSingleMacroTemplate(value)) {
+      const result = expandMacroValue(value, scope);
+      if (typeof result !== 'string') {
+        return result;
+      }
+      return result;
+    }
+    return expandMacroValue(value, scope);
   }
   if (Array.isArray(value)) {
     return value.map((v) => expandValue(v, scope));

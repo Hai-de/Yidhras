@@ -88,14 +88,14 @@ describe('roll macro', () => {
 describe('pick macro', () => {
   it('returns single item from list', () => {
     const scope = buildScope('pick-single');
-    const result = render('{{pick from=alpha,beta,gamma}}', scope);
+    const result = render('{{pick from=["alpha","beta","gamma"]}}', scope);
     expect(['alpha', 'beta', 'gamma']).toContain(result);
   });
 
-  it('returns comma-joined items when count specified', () => {
+  it('returns array of items when count specified (text renders as JSON)', () => {
     const scope = buildScope('pick-count');
-    const result = render('{{pick from=a,b,c count=2}}', scope);
-    const items = result.split(',');
+    const result = render('{{pick from=["a","b","c"] count=2}}', scope);
+    const items: string[] = JSON.parse(result);
     expect(items).toHaveLength(2);
     for (const item of items) {
       expect(['a', 'b', 'c']).toContain(item);
@@ -104,8 +104,8 @@ describe('pick macro', () => {
 
   it('returns all items shuffled when count >= length', () => {
     const scope = buildScope('pick-all');
-    const result = render('{{pick from=x,y count=3}}', scope);
-    const items = result.split(',');
+    const result = render('{{pick from=["x","y"] count=3}}', scope);
+    const items: string[] = JSON.parse(result);
     expect(items).toHaveLength(2);
     expect(items).toContain('x');
     expect(items).toContain('y');
@@ -113,12 +113,12 @@ describe('pick macro', () => {
 
   it('returns empty string for empty from', () => {
     const scope = buildScope('pick-empty');
-    expect(render('{{pick from=}}', scope)).toBe('');
+    expect(render('{{pick from=[]}}', scope)).toBe('');
   });
 
   it('is deterministic with same seed', () => {
-    const a = render('{{pick from=d,e,f,g,h count=3}}', buildScope('det-pick'));
-    const b = render('{{pick from=d,e,f,g,h count=3}}', buildScope('det-pick'));
+    const a = render('{{pick from=["d","e","f","g","h"] count=3}}', buildScope('det-pick'));
+    const b = render('{{pick from=["d","e","f","g","h"] count=3}}', buildScope('det-pick'));
     expect(a).toBe(b);
   });
 });
@@ -204,11 +204,12 @@ describe('core renderer backward compatibility', () => {
 describe('expandStateJson', () => {
   const scope = buildScope('expand-test');
 
-  it('expands macros in flat object', () => {
+  it('expands macros in flat object — typed output preserved', () => {
     const input = { count: '{{int min=1 max=10}}', name: 'fixed' };
     const result = expandStateJson(input, scope);
     expect(result.name).toBe('fixed');
-    const count = parseInt(result.count as string, 10);
+    expect(typeof result.count).toBe('number');
+    const count = result.count as number;
     expect(count).toBeGreaterThanOrEqual(1);
     expect(count).toBeLessThanOrEqual(10);
   });
@@ -216,7 +217,7 @@ describe('expandStateJson', () => {
   it('expands macros in nested objects', () => {
     const input = {
       outer: {
-        inner: '{{pick from=cat,dog,fish}}'
+        inner: '{{pick from=["cat","dog","fish"]}}'
       }
     };
     const result = expandStateJson(input, scope);
@@ -226,7 +227,7 @@ describe('expandStateJson', () => {
 
   it('expands macros in arrays', () => {
     const input = {
-      items: ['{{pick from=red,blue}}', '{{pick from=green,yellow}}']
+      items: ['{{pick from=["red","blue"]}}', '{{pick from=["green","yellow"]}}']
     };
     const result = expandStateJson(input, scope);
     const items = result.items as string[];
@@ -247,18 +248,18 @@ describe('expandStateJson', () => {
     expect(result.json).toBe('{not a template}');
   });
 
-  it('leaves unrecognized macros unchanged', () => {
-    const input = { unknown: '{{nonexistent_macro arg=val}}' };
+  it('leaves unrecognized macros as empty string', () => {
+    const input = { unknown: '{{nonexistent_macro arg="val"}}' };
     const result = expandStateJson(input, scope);
     expect(result.unknown).toBe('');
   });
 
-  it('is deterministic with same seed', () => {
+  it('is deterministic with same seed — typed output', () => {
     const sa = buildScope('det-expand');
     const sb = buildScope('det-expand');
     const input = {
       a: '{{int min=1 max=100}}',
-      b: '{{pick from=x,y,z}}'
+      b: '{{pick from=["x","y","z"]}}'
     };
     expect(expandStateJson(input, sa)).toEqual(expandStateJson(input, sb));
   });

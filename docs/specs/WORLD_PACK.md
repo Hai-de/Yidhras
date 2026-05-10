@@ -193,7 +193,7 @@ rules:
 
 数组支持（`z.array()`）于 2026-05-09 新增，此前仅支持 `string | number | boolean | Record`。`snowbound_mansion` 等原型包可利用原生 YAML 数组定义 trait 池，替代逗号分隔字符串的绕过方式。
 
-注：`pick` 宏的 `from` 参数当前仍接受逗号分隔字符串（macro handler 签名限定 `args: Record<string, string>`），包作者可在 entity state 的 `{{pick from=a,b,c}}` 中使用逗号分隔写法。`variables` 中的数组主要面向外部工具读取及后续直接引用场景。
+`pick` 宏的 `from` 参数使用数组字面量语法：`{{pick from=["a","b","c"]}}`。macro handler 签名 `args: Record<string, MacroValue>` 支持 number、boolean、array 等完整类型。
 
 ---
 

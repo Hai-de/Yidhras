@@ -62,7 +62,7 @@
 - `tests/integration/death-note-memory-loop.spec.ts` > `records revise_judgement_plan as overlay and plan memory block during action dispatch` — 预存 flaky 测试，`expected undefined to be truthy`。不阻塞当前阶段，需单独排查 memory overlay 记录逻辑
 
 ##### 原型世界包问题
-- `variables` schema 不支持数组（`WorldPackVariableValue = string | number | boolean | Record`），包作者无法使用列表。`snowbound_mansion` 用逗号分隔字符串绕过。需评估是否扩展 schema 支持 `z.array()`
+- [x] ~~`variables` schema 不支持数组~~ — 已解决：2026-05-09 schema 扩展支持 array，2026-05-11 宏系统升级为 `MacroValue` typed 体系（`.limcode/design/macro-typed-value-system-design.md`）
 - `target_selector` kind `subject_entity` 要求 `identity_id` 而非 `entity_id`，无法直接对实体授权。当前必须使用 `direct_entity` 逐个列出
 - 无批量/wildcard 授权机制 — 12 个角色 × 1 个能力 = 12 条 authority 声明。需要 `kind: all_actors` 或类似批量选择器
 - 插件 `StepContributor` 运行在 world engine step (sim loop step 2)，不能挂钩 sim loop 的其他阶段。无法在 action dispatch 之后或 AI 推理之前执行游戏逻辑

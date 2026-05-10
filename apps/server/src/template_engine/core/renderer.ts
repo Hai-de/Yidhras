@@ -1,4 +1,4 @@
-import type { AstNode, RenderScope } from './types.js';
+import type { AstNode, MacroValue, RenderScope } from './types.js';
 
 const DEFAULT_MAX_DEPTH = 32;
 
@@ -44,7 +44,7 @@ const resolveVariable = (name: string, scope: RenderScope): unknown => {
   return current;
 };
 
-const applyModifiers = (value: unknown, node: { name: string; modifiers: { name: string; args: string[] }[] }, scope: RenderScope): string => {
+const applyModifiers = (value: unknown, node: { name: string; modifiers: { name: string; args: MacroValue[] }[] }, scope: RenderScope): string => {
   let current: unknown = value;
 
   for (const modifier of node.modifiers) {
@@ -86,7 +86,8 @@ const renderNodes = (nodes: AstNode[], scope: RenderScope): string => {
       case 'macro': {
         const handler = scope.macroHandlers?.[node.name];
         if (handler) {
-          parts.push(handler(node.name, node.args, scope));
+          const result: MacroValue = handler(node.name, node.args, scope);
+          parts.push(toString(result));
         } else {
           parts.push('');
         }

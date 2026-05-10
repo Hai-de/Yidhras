@@ -498,19 +498,21 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 
 ### 5.2 Template Engine 宏扩展点
 
-模板引擎（详见 `docs/subsystems/STRUCTURED_PARSER.md`）的 AST 已支持 `MacroNode`——`{{roll count=2 sides=6}}` 被解析为 `{name: "roll", args: {count: "2", sides: "6"}}`。
+模板引擎（详见 `docs/subsystems/STRUCTURED_PARSER.md`）的 AST 已支持 `MacroNode`——`{{roll count=2 sides=6}}` 被解析为 `{name: "roll", args: {count: 2, sides: 6}}`。
 
-宏处理器注册机制已实现。world pack 在物化阶段（`materializer.ts`）展开 `bootstrap.initial_states[].state_json` 中的宏模板，将随机性展开为确定性状态值写入 runtime DB，后续推理读到的是已确定的数值而非模板表达式。
+宏处理器注册机制已实现。world pack 在物化阶段（`materializer.ts`）展开 `bootstrap.initial_states[].state_json` 中的宏模板，将随机性展开为确定性状态值写入 runtime DB，后续推理读到的是已确定的数值而非模板表达式。展开后的值保留原始类型（number、boolean、array 不再强转字符串）。
 
 | 已实现 | 位置 | 说明 |
 |--------|------|------|
-| `MacroHandlerFn` 类型 | `template_engine/core/types.ts` | 宏处理器函数签名 `(name, args, scope) => string` |
+| `MacroHandlerFn` 类型 | `template_engine/core/types.ts` | 宏处理器函数签名 `(name, args, scope) => MacroValue`，args 为 `Record<string, MacroValue>` |
+| `MacroValue` 类型 | `template_engine/core/types.ts` | `string | number | boolean | null | MacroValue[] | { [key: string]: MacroValue }` |
 | `macroHandlers` 注册表 | `RenderScope`（可选字段） | 宏名到处理器的映射，无处理器时宏展开为空字符串 |
-| `BUILTIN_MACRO_HANDLERS` | `template_engine/defaults.ts` | 内置宏：roll、pick、int、float、seed（只读） |
+| `BUILTIN_MACRO_HANDLERS` | `template_engine/defaults.ts` | 内置宏：roll/int/float 返回 number，pick 返回 string（单元素）或 string[]（多元素），seed 返回 string |
 | `case 'macro'` 分支 | `core/renderer.ts` | 调用 `scope.macroHandlers[name]`，未命中回退空字符串 |
 | 叙事前端回退 | `frontends/narrative/resolver.ts` | 先查 `macroHandlers`，未命中回退到变量解析路径 |
 | PRNG 可重现性 | `template_engine/core/prng.ts` | mulberry32 实现，种子由 `variables.seed` 提供或自动生成 |
-| 物化集成 | `packs/runtime/materializer.ts` | 创建 PRNG → 递归展开 state_json → 种子写入 meta state |
+| 物化集成 | `packs/runtime/materializer.ts` | 创建 PRNG → 递归展开 state_json（类型保留）→ 种子写入 meta state |
+| 类型保留展开 | `packs/runtime/template_expander.ts` | 单宏模板返回非 string 时替换 JSON 值类型；混合文本 toString() 内联 |
 
 宏只允许在 `state_json`（最终存储的事实）中展开。运行时推理模板（`PROMPT_WORKFLOW.md` §7）使用独立的变量解析系统，不走宏处理器。
 

@@ -1,4 +1,4 @@
-import type { AstNode, BlockHandlerFn, MacroHandlerFn, ModifierFn, RenderScope, SyntaxConfig } from './core/types.js';
+import type { AstNode, BlockHandlerFn, MacroHandlerFn, MacroValue, ModifierFn, RenderScope, SyntaxConfig } from './core/types.js';
 
 export const DEFAULT_SYNTAX: SyntaxConfig = {
   delimiters: {
@@ -41,6 +41,15 @@ const toString = (value: unknown): string => {
   }
 };
 
+const toNumber = (value: MacroValue, fallback: number): number => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const n = parseInt(value, 10);
+    return isNaN(n) ? fallback : n;
+  }
+  return fallback;
+};
+
 
 export const BUILTIN_MODIFIERS: Record<string, ModifierFn> = {
   upper: (value: unknown) => toString(value).toUpperCase(),
@@ -51,21 +60,21 @@ export const BUILTIN_MODIFIERS: Record<string, ModifierFn> = {
     if (str.length === 0) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
   },
-  pad: (value: unknown, length: string) => {
+  pad: (value: unknown, length: MacroValue) => {
     const str = toString(value);
-    const n = parseInt(length, 10);
-    if (isNaN(n) || n <= str.length) return str;
+    const n = toNumber(length, 0);
+    if (n <= str.length) return str;
     return str.padEnd(n, ' ');
   },
-  truncate: (value: unknown, length: string) => {
+  truncate: (value: unknown, length: MacroValue) => {
     const str = toString(value);
-    const n = parseInt(length, 10);
-    if (isNaN(n) || n >= str.length) return str;
+    const n = toNumber(length, 0);
+    if (n >= str.length) return str;
     return str.slice(0, n);
   },
-  default: (value: unknown, fallback: string) => {
+  default: (value: unknown, fallback: MacroValue) => {
     const str = toString(value);
-    return str.length > 0 ? str : (fallback ?? '');
+    return str.length > 0 ? str : toString(fallback);
   }
 };
 
@@ -104,48 +113,60 @@ const fisherYatesShuffle = <T>(arr: T[], rng: () => number): T[] => {
 };
 
 export const BUILTIN_MACRO_HANDLERS: Record<string, MacroHandlerFn> = {
-  roll: (_name: string, args: Record<string, string>, scope: RenderScope): string => {
+  roll: (_name: string, args: Record<string, MacroValue>, scope: RenderScope): MacroValue => {
     const rng = resolveRng(scope);
-    const count = Math.max(1, parseInt(args.count ?? '1', 10) || 1);
-    const sides = Math.max(1, parseInt(args.sides ?? '6', 10) || 6);
+    const count = Math.max(1, toNumber(args.count ?? 1, 1));
+    const sides = Math.max(1, toNumber(args.sides ?? 6, 6));
     let total = 0;
     for (let i = 0; i < count; i++) {
       total += Math.floor(rng() * sides) + 1;
     }
-    return String(total);
+    return total;
   },
 
-  pick: (_name: string, args: Record<string, string>, scope: RenderScope): string => {
+  pick: (_name: string, args: Record<string, MacroValue>, scope: RenderScope): MacroValue => {
     const rng = resolveRng(scope);
-    const from = (args.from ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+    const fromRaw = args.from;
+
+    let from: string[];
+    if (Array.isArray(fromRaw)) {
+      from = fromRaw.map((v) => toString(v)).filter(Boolean);
+    } else if (typeof fromRaw === 'string') {
+      from = fromRaw.split(',').map((s) => s.trim()).filter(Boolean);
+    } else {
+      return '';
+    }
+
     if (from.length === 0) {
       return '';
     }
-    const count = Math.max(1, parseInt(args.count ?? '1', 10) || 1);
+    const count = Math.max(1, toNumber(args.count ?? 1, 1));
     if (count >= from.length) {
-      return fisherYatesShuffle(from, rng).join(',');
+      const shuffled = fisherYatesShuffle(from, rng);
+      return shuffled.length === 1 ? shuffled[0] : shuffled;
     }
     const shuffled = fisherYatesShuffle(from, rng);
-    return shuffled.slice(0, count).join(',');
+    const picked = shuffled.slice(0, count);
+    return picked.length === 1 ? picked[0] : picked;
   },
 
-  int: (_name: string, args: Record<string, string>, scope: RenderScope): string => {
+  int: (_name: string, args: Record<string, MacroValue>, scope: RenderScope): MacroValue => {
     const rng = resolveRng(scope);
-    const min = parseInt(args.min ?? '0', 10) || 0;
-    const max = parseInt(args.max ?? '100', 10) || 100;
+    const min = toNumber(args.min ?? 0, 0);
+    const max = toNumber(args.max ?? 100, 100);
     const result = Math.floor(rng() * (max - min + 1)) + min;
-    return String(result);
+    return result;
   },
 
-  float: (_name: string, args: Record<string, string>, scope: RenderScope): string => {
+  float: (_name: string, args: Record<string, MacroValue>, scope: RenderScope): MacroValue => {
     const rng = resolveRng(scope);
-    const min = parseFloat(args.min ?? '0');
-    const max = parseFloat(args.max ?? '1');
+    const min = typeof args.min === 'number' ? args.min : parseFloat(String(args.min ?? '0')) || 0;
+    const max = typeof args.max === 'number' ? args.max : parseFloat(String(args.max ?? '1')) || 1;
     const result = rng() * (max - min) + min;
-    return String(result);
+    return result;
   },
 
-  seed: (_name: string, _args: Record<string, string>, scope: RenderScope): string => {
+  seed: (_name: string, _args: Record<string, MacroValue>, scope: RenderScope): MacroValue => {
     return scope.prng?.getSeed() ?? '';
   }
 };

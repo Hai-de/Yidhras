@@ -2,10 +2,10 @@ import type { PermissionContext } from '../../../permission/types.js';
 import { createLogger } from '../../../utils/logger.js';
 import { tokenize } from '../../core/lexer.js';
 import { parse } from '../../core/parser.js';
-import type { AstNode, BlockHandlerFn, RenderDiagnostics, RenderResult, RenderScope, SyntaxConfig } from '../../core/types.js';
+import type { AstNode, BlockHandlerFn, MacroValue, RenderDiagnostics, RenderResult, RenderScope, SyntaxConfig } from '../../core/types.js';
 import { BUILTIN_MODIFIERS } from '../../defaults.js';
 import { createNarrativeBlockHandlers } from './blocks.js';
-import { createNarrativeVariableResolver } from './resolvers.js';
+import { createNarrativeVariableResolver, parseLiteralValue } from './resolvers.js';
 import type { PromptVariableContext } from './types.js';
 
 const logger = createLogger('narrative-resolver');
@@ -44,10 +44,10 @@ const toString = (value: unknown): string => {
   try { return JSON.stringify(value); } catch { return ''; }
 };
 
-const parseModifierExpression = (expression: string): { path: string; modifiers: { name: string; args: string[] }[] } => {
+const parseModifierExpression = (expression: string): { path: string; modifiers: { name: string; args: MacroValue[] }[] } => {
   const parts = expression.split('|');
   const path = (parts[0] ?? '').trim();
-  const modifiers: { name: string; args: string[] }[] = [];
+  const modifiers: { name: string; args: MacroValue[] }[] = [];
 
   for (let i = 1; i < parts.length; i++) {
     const part = (parts[i] ?? '').trim();
@@ -56,7 +56,7 @@ const parseModifierExpression = (expression: string): { path: string; modifiers:
       const modName = part.slice(0, argOpenIdx).trim();
       const argCloseIdx = part.indexOf(')', argOpenIdx);
       const argsStr = argCloseIdx !== -1 ? part.slice(argOpenIdx + 1, argCloseIdx) : part.slice(argOpenIdx + 1);
-      const args = argsStr.split(',').map((a) => a.trim()).filter(Boolean);
+      const args: MacroValue[] = argsStr.split(',').map((a) => a.trim()).filter(Boolean).map((a) => parseLiteralValue(a) as MacroValue);
       modifiers.push({ name: modName, args });
     } else {
       modifiers.push({ name: part, args: [] });
@@ -88,7 +88,7 @@ const renderNarrativeAst = (
       case 'macro': {
         const handler = scope.macroHandlers?.[node.name];
         if (handler) {
-          parts.push(handler(node.name, node.args, scope));
+          parts.push(toString(handler(node.name, node.args, scope)));
           break;
         }
 

@@ -345,7 +345,7 @@ interface VariableNode {
 interface MacroNode {
   type: 'macro'
   name: string
-  args: Record<string, string>
+  args: Record<string, MacroValue>
   body?: AstNode[]
 }
 
@@ -359,7 +359,7 @@ interface BlockNode {
 
 interface ModifierSpec {
   name: string
-  args: string[]
+  args: MacroValue[]
 }
 ```
 
@@ -381,33 +381,37 @@ Slot Function 前端提供 `slot-ref` 块处理器，支持在模板中引用 sl
 
 ## 11. 宏处理器扩展点
 
-模板引擎的 AST 已支持 `MacroNode`（`{{roll count=2 sides=6}}` 解析为 `{name: "roll", args: {count: "2", sides: "6"}}`）。当前渲染器对宏节点输出空字符串——这是预留给宏处理器注册机制的扩展点。
+模板引擎的 AST 已支持 `MacroNode`（`{{roll count=2 sides=6}}` 解析为 `{name: "roll", args: {count: 2, sides: 6}}`）。渲染器在文本模板中对宏结果调用 `toString()`，在 `expandStateJson` 中保留原始类型。
 
 ### 11.1 MacroHandlerFn 注册机制
 
 ```typescript
+type MacroValue = string | number | boolean | null | MacroValue[] | { [key: string]: MacroValue };
+
 type MacroHandlerFn = (
   name: string,
-  args: Record<string, string>,
+  args: Record<string, MacroValue>,
   scope: RenderScope,
-) => string;
+) => MacroValue;
 ```
 
-`RenderScope` 和 `RenderContext` 将增加 `macroHandlers` 字段。渲染器遇到 `case 'macro'` 时，查找 `scope.macroHandlers[name]` 并调用，无匹配处理器时输出空字符串。
+`RenderScope` 携带 `macroHandlers` 字段。渲染器遇到 `case 'macro'` 时，查找 `scope.macroHandlers[name]` 并调用，无匹配处理器时输出空字符串。
 
 ### 11.2 内置宏
 
 | 宏名 | 参数 | 返回类型 | 说明 |
 |------|------|----------|------|
-| `roll` | `count`（默认 1）、`sides` | number → string | NdN 骰子求和 |
-| `pick` | `from`（逗号分割）、`count`（默认 1） | string 或 string[] | 不放回随机选取 |
-| `int` | `min`、`max` | number → string | 区间内随机整数 |
-| `float` | `min`、`max` | number → string | 区间内随机浮点数 |
-| `seed` | `value` | 空字符串 | 设定 PRNG 种子（副作用宏） |
+| `roll` | `count`（默认 1）、`sides`（默认 6） | `number` | NdN 骰子求和 |
+| `pick` | `from`（数组字面量 `["a","b"]`）、`count`（默认 1） | `string` 或 `string[]` | 不放回随机选取；单元素返回 string，多元素返回 string[] |
+| `int` | `min`（默认 0）、`max`（默认 100） | `number` | 区间内随机整数 |
+| `float` | `min`（默认 0）、`max`（默认 1） | `number` | 区间内随机浮点数 |
+| `seed` | 无 | `string` | 返回当前 PRNG 种子字符串 |
+
+宏参数语法支持字面量：数字 `42`、布尔 `true`/`false`、null、双/单引号字符串、数组 `["a","b"]`、浅层对象 `{k1: v1, k2: v2}`。裸标识符（无引号）作为字符串处理。
 
 ### 11.3 加载时展开
 
-宏在世界包物化阶段（`materializer.ts`）展开，而非 YAML 解析阶段。展开后的具体值写入 runtime DB 的 entity state。后续 AI 推理读到的是已确定的状态，不再经过模板引擎。
+宏在世界包物化阶段（`materializer.ts`）展开，而非 YAML 解析阶段。展开后的具体值写入 runtime DB 的 entity state，**保留原始类型**（number 写为 number，array 写为 array，不再强制转换字符串）。后续 AI 推理读到的是已确定的值，不再经过模板引擎。
 
 PRNG 种子可通过世界包配置提供（可重现），未提供时使用 `crypto.randomUUID()` 生成并记录到世界包元数据中。
 

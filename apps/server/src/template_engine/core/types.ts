@@ -16,6 +16,11 @@ export interface Token {
   position: number;
 }
 
+// === Value types ===
+
+export type MacroPrimitive = string | number | boolean | null;
+export type MacroValue = MacroPrimitive | MacroValue[] | { [key: string]: MacroValue };
+
 // === AST types ===
 
 export type AstNode = TextNode | VariableNode | MacroNode | BlockNode;
@@ -34,7 +39,7 @@ export interface VariableNode {
 export interface MacroNode {
   type: 'macro';
   name: string;
-  args: Record<string, string>;
+  args: Record<string, MacroValue>;
   body?: AstNode[];
 }
 
@@ -48,18 +53,18 @@ export interface BlockNode {
 
 export interface ModifierSpec {
   name: string;
-  args: string[];
+  args: MacroValue[];
 }
 
 // === Render scope (used internally by renderer) ===
 
-export type ModifierFn = (value: unknown, ...args: string[]) => unknown;
+export type ModifierFn = (value: unknown, ...args: MacroValue[]) => unknown;
 
 export type MacroHandlerFn = (
   name: string,
-  args: Record<string, string>,
+  args: Record<string, MacroValue>,
   scope: RenderScope
-) => string;
+) => MacroValue;
 
 export type BlockHandlerFn = (
   condition: string,

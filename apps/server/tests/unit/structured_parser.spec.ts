@@ -116,7 +116,7 @@ describe('Parser', () => {
     expect(node).toMatchObject({
       type: 'variable',
       name: 'name',
-      modifiers: [{ name: 'truncate', args: ['10'] }]
+      modifiers: [{ name: 'truncate', args: [10] }]
     })
   })
 
