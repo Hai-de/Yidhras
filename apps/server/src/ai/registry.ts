@@ -169,6 +169,33 @@ export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
       metadata: {
         strategy: 'openai_first'
       }
+    },
+    {
+      provider: 'anthropic',
+      api_key_env: 'ANTHROPIC_API_KEY',
+      base_url: 'https://api.anthropic.com/v1',
+      enabled: true,
+      metadata: {
+        strategy: 'anthropic_first'
+      }
+    },
+    {
+      provider: 'deepseek',
+      api_key_env: 'DEEPSEEK_API_KEY',
+      base_url: 'https://api.deepseek.com/v1',
+      enabled: true,
+      metadata: {
+        strategy: 'deepseek_first'
+      }
+    },
+    {
+      provider: 'ollama',
+      api_key_env: null,
+      base_url: 'http://localhost:11434/v1',
+      enabled: false,
+      metadata: {
+        strategy: 'local_first'
+      }
     }
   ],
   models: [
@@ -245,6 +272,99 @@ export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
       defaults: {
         timeout_ms: 15000
       }
+    },
+    {
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-6',
+      endpoint_kind: 'messages',
+      capabilities: {
+        text_generation: true,
+        structured_output: 'json_schema',
+        tool_calling: true,
+        vision_input: true,
+        embeddings: false,
+        rerank: false,
+        max_context_tokens: 200000,
+        max_output_tokens: 8192
+      },
+      tags: ['default', 'structured', 'anthropic-first'],
+      availability: 'active',
+      pricing: {
+        input_per_1m_usd: 3,
+        output_per_1m_usd: 15
+      },
+      defaults: {
+        timeout_ms: 30000,
+        temperature: 0.2,
+        max_output_tokens: 4096
+      }
+    },
+    {
+      provider: 'deepseek',
+      model: 'deepseek-chat',
+      endpoint_kind: 'chat_completions',
+      capabilities: {
+        text_generation: true,
+        structured_output: 'json_object',
+        tool_calling: true,
+        vision_input: false,
+        embeddings: false,
+        rerank: false,
+        max_context_tokens: 131072,
+        max_output_tokens: 8192
+      },
+      tags: ['default', 'structured', 'deepseek-first'],
+      availability: 'active',
+      pricing: {
+        input_per_1m_usd: 0.14,
+        output_per_1m_usd: 0.56
+      },
+      defaults: {
+        timeout_ms: 30000,
+        temperature: 0.2,
+        max_output_tokens: 4096
+      }
+    },
+    {
+      provider: 'ollama',
+      model: 'llama3.2',
+      endpoint_kind: 'chat_completions',
+      capabilities: {
+        text_generation: true,
+        structured_output: 'none',
+        tool_calling: false,
+        vision_input: false,
+        embeddings: false,
+        rerank: false,
+        max_context_tokens: 131072,
+        max_output_tokens: 4096
+      },
+      tags: ['local', 'on_device', 'self_hosted'],
+      availability: 'active',
+      defaults: {
+        timeout_ms: 60000,
+        temperature: 0.2,
+        max_output_tokens: 4096
+      }
+    },
+    {
+      provider: 'ollama',
+      model: 'nomic-embed-text',
+      endpoint_kind: 'embeddings',
+      capabilities: {
+        text_generation: false,
+        structured_output: 'none',
+        tool_calling: false,
+        vision_input: false,
+        embeddings: true,
+        rerank: false,
+        max_context_tokens: 8192
+      },
+      tags: ['local', 'embedding', 'self_hosted'],
+      availability: 'active',
+      defaults: {
+        timeout_ms: 30000
+      }
     }
   ],
   routes: [
@@ -252,7 +372,11 @@ export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
       route_id: 'default.agent_decision',
       task_types: ['agent_decision'],
       preferred_models: [{ provider: 'openai', model: 'gpt-4.1-mini' }],
-      fallback_models: [{ provider: 'openai', model: 'gpt-4.1' }],
+      fallback_models: [
+        { provider: 'openai', model: 'gpt-4.1' },
+        { provider: 'anthropic', model: 'claude-sonnet-4-6' },
+        { provider: 'deepseek', model: 'deepseek-chat' }
+      ],
       constraints: {
         require_structured_output: true,
         privacy_tier: 'trusted_cloud',
@@ -270,7 +394,11 @@ export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
       route_id: 'default.context_summary',
       task_types: ['intent_grounding_assist', 'context_summary', 'memory_compaction', 'narrative_projection', 'entity_extraction', 'classification', 'rerank'],
       preferred_models: [{ provider: 'openai', model: 'gpt-4.1-mini' }],
-      fallback_models: [{ provider: 'openai', model: 'gpt-4.1' }],
+      fallback_models: [
+        { provider: 'openai', model: 'gpt-4.1' },
+        { provider: 'anthropic', model: 'claude-sonnet-4-6' },
+        { provider: 'deepseek', model: 'deepseek-chat' }
+      ],
       constraints: {
         require_structured_output: true,
         privacy_tier: 'trusted_cloud'
@@ -286,7 +414,10 @@ export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
       route_id: 'default.moderation',
       task_types: ['moderation'],
       preferred_models: [{ provider: 'openai', model: 'gpt-4.1-mini' }],
-      fallback_models: [{ provider: 'openai', model: 'gpt-4.1' }],
+      fallback_models: [
+        { provider: 'openai', model: 'gpt-4.1' },
+        { provider: 'anthropic', model: 'claude-sonnet-4-6' }
+      ],
       constraints: {
         require_structured_output: true,
         privacy_tier: 'trusted_cloud',
@@ -303,7 +434,7 @@ export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
       route_id: 'default.embedding',
       task_types: ['embedding'],
       preferred_models: [{ provider: 'openai', model: 'text-embedding-3-small' }],
-      fallback_models: [],
+      fallback_models: [{ provider: 'ollama', model: 'nomic-embed-text' }],
       constraints: {
         privacy_tier: 'trusted_cloud',
         response_modes: ['embedding']
@@ -311,7 +442,7 @@ export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
       defaults: {
         timeout_ms: 15000,
         retry_limit: 0,
-        allow_fallback: false,
+        allow_fallback: true,
         audit_level: 'minimal'
       }
     }

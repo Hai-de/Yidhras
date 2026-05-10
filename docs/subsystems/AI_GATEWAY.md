@@ -2,7 +2,7 @@
 
 When the system sends a prompt to an AI model, the request doesn't go straight to the provider. It passes through a layered internal pipeline: a task-level service decides what kind of AI call is needed, a route resolver picks the model, and a gateway handles the actual dispatch and response handling. This layered design gives the system control over routing, rate limits, and observability without exposing those concerns to the caller.
 
-**当前 provider 现实**：系统唯一可用的真实 AI provider adapter 是 OpenAI。`ai_models.yaml` 默认仅配置 OpenAI 模型。弹性层（circuit breaker、rate limiter、backoff）在单 provider 下提供保护但无法实现真正的 provider 级 fallback——当 OpenAI 不可用时，系统退化为 mock/rule_based 模式。多 provider 路由在架构层面已预留（`RouteResolver` 支持多 route），但需要额外的 provider adapter 实现（如 Anthropic、DeepSeek、Ollama 等）才能发挥作用。
+**当前 provider 生态**：系统内置 4 个真实 AI provider adapter：OpenAI、Anthropic、DeepSeek、Ollama。路由默认以 OpenAI 为主，Anthropic/DeepSeek 为 fallback，Ollama 为本地部署路径。弹性层（circuit breaker、rate limiter、backoff）在多 provider 下实现真正的 provider 级故障转移——当 OpenAI 不可用时，系统自动切换到 Anthropic → DeepSeek 链。Circuit breaker 状态跨请求保持，rate limiter 按 provider 独立计速。
 
 The other side of this subsystem is **knowing what happened after the fact**: every AI invocation leaves a record — which model was used, how long it took, what the token usage was. This observability surface is exposed through `AiInvocationRecord`, a kernel-side persistence model that serves as evidence of what the AI layer did, independent of any specific inference result.
 
@@ -12,8 +12,11 @@ Key concepts:
 - **RouteResolver** — decides which model and provider to use based on task type, configuration, and route hints from the world-pack
 - **ModelGateway** — the dispatch layer that actually calls the provider adapter and handles the request/response lifecycle
 - **AiInvocationRecord** — a kernel-side persistence record of each AI call, capturing provider, model, usage, latency, and audit data; it is evidence, not a public execution contract
-- **Elasticity layer** — circuit breaker, rate limiter, and exponential backoff mounted at the gateway level, transparent to adapters
-- **Tool Calling** — cross-agent tool bridge, tool executor, tool loop runner, and tool permission system for controlled multi-step model interactions
+- **Elasticity layer** — circuit breaker, rate limiter (with dynamic 429 calibration), and exponential backoff mounted at the gateway level, transparent to adapters
+- **Tool Calling** — cross-agent tool bridge, tool executor, tool loop runner (with token budget management), and tool permission system for controlled multi-step model interactions
+- **Token Counter** — unified token counting with tiktoken (OpenAI-compatible) and char-based estimation (Anthropic)
+- **Response Caching** — LRU in-memory cache with per-task-type TTL, reducing redundant deterministic inference costs
+- **Streaming** — provider adapter executeStream() with gateway-level SSE pass-through for real-time text/tool_call/thinking deltas
 
 本文档集中说明内部 AI task / gateway 执行层，以及 `AiInvocationRecord` 相关观测能力。
 
@@ -58,6 +61,10 @@ Key concepts:
 - `apps/server/src/ai/registry_watcher.ts`
 - `apps/server/src/ai/providers/mock.ts`
 - `apps/server/src/ai/providers/openai.ts`
+- `apps/server/src/ai/providers/openai_compatible.ts`
+- `apps/server/src/ai/providers/anthropic.ts`
+- `apps/server/src/ai/providers/deepseek.ts`
+- `apps/server/src/ai/providers/ollama.ts`
 - `apps/server/src/ai/providers/gateway_backed.ts`
 - `apps/server/src/ai/elasticity/circuit_breaker.ts`
 - `apps/server/src/ai/elasticity/rate_limiter.ts`
@@ -65,6 +72,8 @@ Key concepts:
 - `apps/server/src/ai/elasticity/config_resolver.ts`
 - `apps/server/src/ai/elasticity/types.ts`
 - `apps/server/src/ai/elasticity/index.ts`
+- `apps/server/src/ai/token_counter.ts`
+- `apps/server/src/ai/cache.ts`
 - `apps/server/src/ai/cross_agent_tool.ts`
 - `apps/server/src/ai/tool_executor.ts`
 - `apps/server/src/ai/tool_loop_runner.ts`
@@ -127,7 +136,7 @@ world-pack **不能**：
 - 对外 API 的稳定说明仍是 `mock | rule_based`
 - gateway path 是服务端内部的执行底座
 - 其 public 化程度目前主要停留在**只读观测面**
-- `model_routed` 路径当前只有 OpenAI 一个真实 provider adapter；其他 provider（Anthropic、DeepSeek、Ollama 等）尚未实现
+- `model_routed` 路径当前有 4 个真实 provider adapter：OpenAI、Anthropic、DeepSeek、Ollama
 
 ## 6. Workflow metadata 透传
 
@@ -210,13 +219,20 @@ Per-provider 状态机，防止对已失败 provider 的持续调用：
 
 ### 9.2 Rate Limiter（并发限流器）
 
-Per-provider 并发计数器 + Promise 等待队列：
+Per-provider 并发计数器 + Promise 等待队列 + 动态校准：
 
-- `maxConcurrent`：最大在途并发请求数（默认 10）
+- `maxConcurrent`：最大在途并发请求数（默认 10，可通过 `adjustFromHints()` 动态调整）
 - `queueMaxSize`：等待队列最大长度（默认 50）
 - `queueTimeoutMs`：排队最大等待时间（默认 30s）
 
 超出入队上限返回 `AI_RATE_LIMIT_QUEUE_FULL`，排队超时返回 `AI_RATE_LIMIT_QUEUE_TIMEOUT`。
+
+**动态校准**（`adjustFromHints`）：provider adapter 在收到 HTTP 429 响应时解析 `Retry-After` / `x-ratelimit-remaining` / `x-ratelimit-limit` 头，通过 `rate_limit_hints` 字段传递给 gateway。gateway 调用 `RateLimiter.adjustFromHints()`：
+- 立即：`maxConcurrent` 降至 `max(1, active)`
+- 冷却期（`retry-after` 秒后）：恢复到原始值的 50%
+- 逐步升压：每 60s +1，恢复到原始值
+
+未返回 rate limit 头的 provider 保持静态配置。
 
 ### 9.3 Exponential Backoff（指数退避）
 
@@ -331,21 +347,63 @@ AiTaskService (task_config.tools / task_config.tool_policy)
 
 当前已成立的边界：
 
-- `model_routed` 仍是 internal / controlled capability，当前仅 OpenAI 一个真实 provider adapter
+- `model_routed` 仍是 internal / controlled capability，当前有 4 个真实 provider adapter（OpenAI、Anthropic、DeepSeek、Ollama）
 - public `/api/inference/*` 不以 provider-specific contract 对外承诺
+- 多 provider fallback 链默认：OpenAI → Anthropic → DeepSeek（可通过 `ai_models.yaml` 配置路由）
 - world-pack 的 AI 定制能力是 declarative 的，不是任意执行能力
 - 更复杂的 AI 行为扩展应继续走 server-side registered extension
 - 弹性层对 adapter 透明，adapter 无需感知 circuit breaker / rate limiter / backoff
 - tool calling 属于 host-side 受控执行能力，tool 注册与权限校验均在 host 侧完成
 - 注册表热加载保证配置变更不中断运行中服务
+- Streaming 为内部能力，后端 adapter + gateway 已实现，SSE endpoint 待前端接入
+- Response caching 为 gateway 层内部优化，对 adapter 透明；缓存命中写入审计记录（`provider: 'cache'`）
 
-## 13. 相关文档
+## 13. Token Counter (Token 计数)
+
+`token_counter.ts` 提供统一的 token 计数抽象，供 tool loop token 预算等子系统使用。
+
+- **`TokenCounter` 接口**：`countTokens(text, provider, model)` / `countMessagesTokens(messages, provider, model)`
+- **OpenAI 兼容 provider**（openai / deepseek / ollama）：使用 `tiktoken`（`o200k_base` / `cl100k_base` encoding），精确计数
+- **Anthropic**：字符数 / 3.5 粗略估算（Anthropic tokenizer 无 JS 原生库，误差 ±15%）
+- **其他 provider**：字符数 / 4 fallback 估算
+- **`tiktoken` 加载**：惰性加载（`require('tiktoken')`），首次使用时初始化 encoding 缓存
+- **当前缺失**：Anthropic 精确 tokenizer（需 `@anthropic-ai/tokenizer`）。
+
+## 14. Response Caching (响应缓存)
+
+`cache.ts` 提供基于 LRU 的内存缓存，减少确定性推理的重复 API 调用。
+
+- **`InMemoryPromptCache`**：LRU 淘汰策略，max 500 entries
+- **Cache key**：`SHA-256(provider, model, messages[], temperature, response_mode, structured_output_schema, tools, tool_policy, pack_id, task_type)`
+- **TTL 策略**：per-task-type TTL（`agent_decision`: 60s, `context_summary`: 300s, `embedding`: 3600s, 默认 120s）
+- **缓存条件**：仅对 `temperature=0` + `response_mode` 为 `json_schema`/`json_object` + 非 `tool_call` 模式 + 非 streaming 请求
+- **缓存命中**：跳过 adapter 调用，直接返回缓存结果（`cached: true`），写入 `AiInvocationRecord`（`provider: 'cache'`, `cost_usd: 0`）
+- **当前缺失**：分布式缓存（Redis 等）。缓存 key 不含 `agent_id`（pack 内 agent 共享，`messages[]` 已区分不同 agent 请求）。
+
+## 15. Streaming / SSE (流式响应)
+
+Provider adapter 支持流式响应，gateway 透传 SSE。前端 SSE 消费待后续实现。
+
+- **`AiProviderAdapter.executeStream()`**：可选方法，返回 `AsyncIterable<AiProviderAdapterChunk>`。不支持的 adapter（如 mock）不实现此方法，gateway 退化到非流式调用
+- **Chunk 类型**：`start` / `text_delta` / `thinking_delta` / `tool_call_start` / `tool_call_delta` / `finish` / `error`
+- **已实现 streaming**：`openai_compatible.ts`（Chat Completions SSE）、`anthropic.ts`（Messages SSE with typed events）
+- **Streaming 绕行**：`ModelGateway.executeStream()` 绕过 AiTaskService（task 层逻辑对增量流式场景过重），直接由 SSE endpoint 调用
+- **Tool call 流式累积**：adapter 内部维护 tool call buffer（增量到达 → 累积 → finish 时组装完整 tool_calls），tool loop 不使用流式模式
+- **流式 observability**：流开始前写 pending 记录 → 流结束后 upsert 完整记录
+- **当前缺失**：
+  - OpenAI Responses API streaming（仅 Chat Completions 路径支持）
+  - SSE endpoint（`POST /api/inference/stream`）前端接入
+  - Tool loop 流式模式
+  - Ollama streaming 本地验证
+
+## 16. 相关文档
 
 - 公共接口契约：`../API.md`
 - 架构边界：`../ARCH.md`
 - 业务语义：`../LOGIC.md`
 - Prompt Workflow：`./PROMPT_WORKFLOW.md`
 - 共享类型契约：`packages/contracts/src/ai_shared.ts`（PromptBundleMetadata、PromptWorkflowSnapshot 等 AI/inference 桥接类型）
+- 实施设计与计划：`.limcode/design/ai-gateway-completion-draft.md`、`.limcode/plans/ai-gateway-completion-plan.md`
 - 相关设计资产：`.limcode/archive/historical/design/multi-model-gateway-and-unified-ai-task-contract-design.md`
 - 重构设计：`.limcode/design/ai-three-layer-directory-refactoring.md`
 - Tool Calling 设计：`.limcode/archive/design/ai-tool-calling-enablement.md`

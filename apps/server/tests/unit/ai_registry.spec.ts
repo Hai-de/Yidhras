@@ -180,14 +180,15 @@ describe('ai registry', () => {
       expect(route!.task_types.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('embedding route has no fallback models', () => {
+    it('embedding route has ollama fallback model', () => {
       const routes = listAiRoutePolicies('embedding');
 
       expect(routes.length).toBeGreaterThanOrEqual(1);
       const route = routes.find(r => r.route_id === 'default.embedding');
       expect(route).toBeDefined();
-      expect(route!.fallback_models).toHaveLength(0);
-      expect(route!.defaults?.allow_fallback).toBe(false);
+      expect(route!.fallback_models.length).toBeGreaterThanOrEqual(1);
+      expect(route!.fallback_models.some(m => m.provider === 'ollama')).toBe(true);
+      expect(route!.defaults?.allow_fallback).toBe(true);
     });
 
     it('all default routes have non-empty task_types', () => {

@@ -139,6 +139,8 @@ export interface ModelGatewayResponse {
   model: string;
   route_id: string | null;
   fallback_used: boolean;
+  /** 指示此响应来自缓存而非 provider 调用 */
+  cached?: boolean;
   attempted_models: string[];
   status: 'completed' | 'failed' | 'blocked' | 'timeout';
   finish_reason: 'stop' | 'length' | 'tool_call' | 'safety' | 'error' | 'unknown';
@@ -158,6 +160,7 @@ export interface ModelGatewayResponse {
     output_tokens?: number;
     total_tokens?: number;
     cached_input_tokens?: number;
+    thinking_tokens?: number;
     estimated_cost_usd?: number;
     latency_ms?: number;
   };

@@ -52,6 +52,15 @@ export interface RateLimiterSnapshot {
   maxConcurrent: number;
 }
 
+export interface RateLimitHints {
+  /** Retry-After header 值（秒） */
+  retryAfterSeconds?: number;
+  /** x-ratelimit-remaining 剩余配额 */
+  remainingQuota?: number;
+  /** x-ratelimit-limit 总配额 */
+  limitQuota?: number;
+}
+
 export interface RateLimiter {
   readonly provider: string;
 
@@ -60,6 +69,9 @@ export interface RateLimiter {
 
   /** 释放许可。请求完成后必须调用 */
   release(): void;
+
+  /** 根据 provider 返回的限流提示动态调整并发上限 */
+  adjustFromHints(hints: RateLimitHints): void;
 
   /** 当前状态快照 */
   snapshot(): RateLimiterSnapshot;

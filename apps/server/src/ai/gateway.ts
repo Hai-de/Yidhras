@@ -1,5 +1,7 @@
 import type { AppInfrastructure } from '../app/context.js';
 import { ApiError } from '../utils/api_error.js';
+import { createInMemoryPromptCache, buildCacheKey, resolveCacheTtl } from './cache.js';
+import type { PromptCache } from './cache.js';
 import type { CircuitBreaker, RateLimiter } from './elasticity/index.js';
 import {
   createCircuitBreaker,
@@ -11,9 +13,12 @@ import {
   resolveRateLimiterConfig,
 } from './elasticity/index.js';
 import { recordAiInvocation } from './observability.js';
+import { createAnthropicProviderAdapter } from './providers/anthropic.js';
+import { createDeepSeekProviderAdapter } from './providers/deepseek.js';
 import { createMockAiProviderAdapter } from './providers/mock.js';
+import { createOllamaProviderAdapter } from './providers/ollama.js';
 import { createOpenAiProviderAdapter } from './providers/openai.js';
-import type { AiProviderAdapter, AiProviderAdapterResult } from './providers/types.js';
+import type { AiProviderAdapter, AiProviderAdapterChunk, AiProviderAdapterResult } from './providers/types.js';
 import { getAiProviderConfig } from './registry.js';
 import { resolveAiRoute } from './route_resolver.js';
 import type { AiAuditLevel, AiInvocationAttemptRecord, AiRegistryConfig, AiResolvedTaskConfig, AiTaskRequest, ModelGatewayRequest, ModelGatewayResponse } from './types.js';
@@ -26,6 +31,7 @@ export interface ModelGatewayExecutionInput {
 
 export interface ModelGateway {
   execute(input: ModelGatewayExecutionInput): Promise<ModelGatewayResponse>;
+  executeStream(input: ModelGatewayExecutionInput, signal?: AbortSignal): AsyncIterable<AiProviderAdapterChunk>;
 }
 
 export interface CreateModelGatewayOptions {
@@ -243,7 +249,13 @@ const finalizeProviderResponse = (
 };
 
 export const createModelGateway = ({
-  adapters = [createMockAiProviderAdapter(), createOpenAiProviderAdapter()],
+  adapters = [
+    createMockAiProviderAdapter(),
+    createOpenAiProviderAdapter(),
+    createAnthropicProviderAdapter(),
+    createDeepSeekProviderAdapter(),
+    createOllamaProviderAdapter()
+  ],
   context,
   registryConfig
 }: CreateModelGatewayOptions = {}): ModelGateway => {
@@ -254,6 +266,18 @@ export const createModelGateway = ({
       return resolvedRegistry.providers.find(entry => entry.provider === provider) ?? null;
     }
     return getAiProviderConfig(provider);
+  };
+
+  const cbMap = new Map<string, CircuitBreaker>();
+  const rlMap = new Map<string, RateLimiter>();
+  const cache: PromptCache = createInMemoryPromptCache(500);
+
+  const getOrCreate = <T>(map: Map<string, T>, key: string, factory: (key: string) => T): T => {
+    const existing = map.get(key);
+    if (existing) return existing;
+    const created = factory(key);
+    map.set(key, created);
+    return created;
   };
 
   return {
@@ -276,22 +300,41 @@ export const createModelGateway = ({
         ...(allowFallback ? routeSelection.fallback_model_candidates : [])
       ];
 
+      // 缓存检查：仅对确定性请求（temperature=0, 非 tool_call, 非 streaming）
+      const isCacheable =
+        (input.request.sampling?.temperature ?? 0) === 0 &&
+        input.request.response_mode !== 'tool_call' &&
+        input.request.response_mode !== 'embedding';
+
+      if (isCacheable) {
+        const cacheKey = buildCacheKey(input.request);
+        const cachedEntry = cache.get(cacheKey);
+        if (cachedEntry) {
+          const cachedResponse = cachedEntry.result as ModelGatewayResponse;
+          await recordAiInvocation(context, {
+            ...cachedResponse,
+            cached: true
+          }, {
+            sourceInferenceId: cachedResponse.trace?.source_inference_id ?? null
+          });
+          return {
+            ...cachedResponse,
+            cached: true,
+            usage: {
+              ...(cachedResponse.usage ?? {}),
+              estimated_cost_usd: 0
+            }
+          } as ModelGatewayResponse;
+        }
+      }
+
       let lastFailure: ModelGatewayResponse | null = null;
       const attemptedModels: string[] = [];
       const attempts: AiInvocationAttemptRecord[] = [];
-      const cbMap = new Map<string, CircuitBreaker>();
-      const rlMap = new Map<string, RateLimiter>();
       const backoff = createExponentialBackoff({
         ...DEFAULT_BACKOFF_CONFIG,
         ...resolveBackoffConfig(route.defaults),
       });
-      const getOrCreate = <T>(map: Map<string, T>, key: string, factory: (key: string) => T): T => {
-        const existing = map.get(key);
-        if (existing) return existing;
-        const created = factory(key);
-        map.set(key, created);
-        return created;
-      };
 
       for (const candidate of candidates) {
         attemptedModels.push(`${candidate.provider}:${candidate.model}`);
@@ -384,6 +427,10 @@ export const createModelGateway = ({
               }),
               timeoutMs
             );
+            if (result.rate_limit_hints && Object.keys(result.rate_limit_hints).length > 0) {
+              rl.adjustFromHints(result.rate_limit_hints);
+            }
+
             const latencyMs = typeof result.usage?.latency_ms === 'number' ? result.usage.latency_ms : Date.now() - startedAt;
             attempts.push(buildAttemptRecord(candidate, result.status, result.finish_reason, {
               latencyMs,
@@ -408,6 +455,19 @@ export const createModelGateway = ({
             if (finalized.status === 'completed') {
               cb.recordSuccess();
               rl.release();
+
+              // 写入缓存
+              if (isCacheable) {
+                const cacheKey = buildCacheKey(input.request);
+                const ttl = resolveCacheTtl(input.request.task_type);
+                cache.set(cacheKey, {
+                  key: cacheKey,
+                  result: finalized,
+                  createdAt: Date.now(),
+                  ttlMs: ttl
+                });
+              }
+
               return finalized;
             }
 
@@ -477,6 +537,101 @@ export const createModelGateway = ({
       });
 
       return finalFailure;
+    },
+
+    async *executeStream(input, signal) {
+      const routeSelection = resolveAiRoute({
+        task_type: input.task_request.task_type,
+        pack_id: input.task_request.pack_id,
+        response_mode: input.request.response_mode,
+        route_hint: input.task_config.route,
+        task_override: input.task_config.override
+      }, resolvedRegistry ?? undefined);
+
+      const route = routeSelection.route;
+      const timeoutMs = input.request.execution?.timeout_ms ?? route.defaults?.timeout_ms ?? 30000;
+      const candidates = [
+        ...routeSelection.primary_model_candidates,
+        ...(route.defaults?.allow_fallback !== false ? routeSelection.fallback_model_candidates : [])
+      ];
+
+      for (const candidate of candidates) {
+        const providerConfig = resolveProviderConfig(candidate.provider);
+        if (!providerConfig?.enabled) continue;
+
+        const adapter = adapterByProvider.get(candidate.provider);
+        if (!adapter?.executeStream) {
+          // 不支持流式的 adapter → 退化到非流式
+          try {
+            const result = await adapter?.execute?.({
+              request: input.request,
+              task_request: input.task_request,
+              task_config: input.task_config,
+              model_entry: candidate,
+              provider_config: providerConfig
+            });
+            if (result?.status === 'completed' && result.output.text) {
+              yield { type: 'text_delta', text: result.output.text };
+              yield { type: 'finish', finish_reason: result.finish_reason, usage: result.usage };
+              return;
+            }
+          } catch {
+            // continue to next candidate
+          }
+          continue;
+        }
+
+        const rl = getOrCreate(rlMap, candidate.provider, (provider) =>
+          createRateLimiter(provider, resolveRateLimiterConfig(route.defaults)),
+        );
+
+        try {
+          await rl.acquire();
+        } catch {
+          continue;
+        }
+
+        try {
+          const streamStart = Date.now();
+          yield* adapter.executeStream({
+            request: input.request,
+            task_request: input.task_request,
+            task_config: input.task_config,
+            model_entry: candidate,
+            provider_config: providerConfig
+          }, signal);
+
+          // 记录流式调用（简化版，不含完整 trace）
+          await recordAiInvocation(context, {
+            invocation_id: input.request.invocation_id,
+            task_id: input.request.task_id,
+            task_type: input.request.task_type,
+            provider: candidate.provider,
+            model: candidate.model,
+            route_id: route.route_id,
+            fallback_used: false,
+            attempted_models: [`${candidate.provider}:${candidate.model}`],
+            status: 'completed',
+            finish_reason: 'stop',
+            output: { mode: input.request.response_mode },
+            usage: { latency_ms: Date.now() - streamStart }
+          }, {
+            sourceInferenceId: input.task_request.metadata?.inference_id as string | undefined ?? null
+          });
+
+          rl.release();
+          return;
+        } catch (err) {
+          rl.release();
+          // 尝试下一个 candidate
+        }
+      }
+
+      yield {
+        type: 'error',
+        code: 'STREAM_NO_PROVIDER',
+        message: 'No streaming provider available'
+      };
     }
   };
 };

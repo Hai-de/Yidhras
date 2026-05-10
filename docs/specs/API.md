@@ -406,7 +406,7 @@
 
 ### 14.4 稳定边界
 
-- 公开 inference strategy 只稳定承诺 `mock` 与 `rule_based`；`model_routed` 为内部/受控能力
+- 公开 inference strategy 只稳定承诺 `mock` 与 `rule_based`；`model_routed` 为内部/受控能力（内部已配备 4 个真实 provider adapter 及多 provider fallback 链）
 - `GET /api/inference/ai-invocations*` 为公开只读 observability surface
 
 ---

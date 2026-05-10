@@ -192,7 +192,7 @@ Memory Block Runtime 当前形成最小闭环：
 - `keyword`
 - `logic`
 - `recent_source`
-- `semantic` — 基于余弦相似度的向量语义匹配。block 端依赖 `MemoryBlock.embedding`（由 AI Gateway `text-embedding-3-small` 在写入时生成），查询端由 context source adapter 在触发评估前自动调用 AI Gateway 生成 `query_embedding`，经 Rust sidecar 完成余弦比对，threshold 以上即匹配。缺失 embedding 或 query_embedding 时不抛错，静默降级为不匹配。
+- `semantic` — 基于余弦相似度的向量语义匹配。block 端依赖 `MemoryBlock.embedding`（由 AI Gateway embedding route 在写入时生成，主 provider 为 OpenAI `text-embedding-3-small`，fallback 为 Ollama `nomic-embed-text`），查询端由 context source adapter 在触发评估前自动调用 AI Gateway 生成 `query_embedding`，经 Rust sidecar 完成余弦比对，threshold 以上即匹配。缺失 embedding 或 query_embedding 时不抛错，静默降级为不匹配。注意：跨 provider embedding 混用会导致维度不匹配（OpenAI 1536 维 vs nomic-embed-text 768 维），需在运维层面保持一致。
 
 逻辑 DSL 当前支持：
 
@@ -239,9 +239,9 @@ Memory Block Runtime 当前形成最小闭环：
 
 ## 8. AI task / gateway 的业务语义边界
 
-从业务语义上，AI gateway 是内部执行底座与观测层，而非正式公开的 provider-specific contract。当前对外只稳定承诺 `mock | rule_based`；`model_routed` 为内部 / 受控能力。
+从业务语义上，AI gateway 是内部执行底座与观测层，而非正式公开的 provider-specific contract。当前对外只稳定承诺 `mock | rule_based`；`model_routed` 为内部 / 受控能力。内部 `model_routed` 路径已配备 4 个真实 provider adapter（OpenAI、Anthropic、DeepSeek、Ollama）及多 provider fallback 链，但对外 API 的稳定契约边界不变。
 
-Tool calling 使模型能够在单次推理中进行多轮工具调用（包括跨 agent 查询），但它属于 host-side 受控执行能力，不作为对外公开 contract。Tool loop 由 `ToolLoopRunner` 驱动，受 `ToolPermissionPolicy` 约束，模型无法绕过权限校验或无限循环。
+Tool calling 使模型能够在单次推理中进行多轮工具调用（包括跨 agent 查询），但它属于 host-side 受控执行能力，不作为对外公开 contract。Tool loop 由 `ToolLoopRunner` 驱动，受 `ToolPermissionPolicy` 约束和 token 预算管理，模型无法绕过权限校验或无限循环。
 
 完整分层与 public boundary 说明见 → [`AI_GATEWAY.md`](subsystems/AI_GATEWAY.md)
 

@@ -1,3 +1,4 @@
+import type { RateLimitHints } from '../elasticity/types.js';
 import type {
   AiModelRegistryEntry,
   AiProviderConfig,
@@ -10,7 +11,19 @@ import type {
 export type AiProviderAdapterResult = Pick<
   ModelGatewayResponse,
   'status' | 'finish_reason' | 'output' | 'usage' | 'safety' | 'raw_ref' | 'error'
->;
+> & {
+  /** Provider 返回的 rate limit 提示，用于动态校准限流器 */
+  rate_limit_hints?: RateLimitHints;
+};
+
+export type AiProviderAdapterChunk =
+  | { type: 'start'; usage?: { input_tokens?: number } }
+  | { type: 'text_delta'; text: string }
+  | { type: 'thinking_delta'; text: string }
+  | { type: 'tool_call_start'; index: number; call_id?: string; name: string }
+  | { type: 'tool_call_delta'; index: number; arguments_fragment: string }
+  | { type: 'finish'; finish_reason: string; usage?: { input_tokens?: number; output_tokens?: number; total_tokens?: number } }
+  | { type: 'error'; code: string; message: string };
 
 export interface AiProviderAdapterRequest {
   request: ModelGatewayRequest;
@@ -23,4 +36,6 @@ export interface AiProviderAdapterRequest {
 export interface AiProviderAdapter {
   readonly provider: string;
   execute(input: AiProviderAdapterRequest): Promise<AiProviderAdapterResult>;
+  /** 流式推理。不支持的 adapter 可不实现，gateway 将退化到 execute() */
+  executeStream?(input: AiProviderAdapterRequest, signal?: AbortSignal): AsyncIterable<AiProviderAdapterChunk>;
 }

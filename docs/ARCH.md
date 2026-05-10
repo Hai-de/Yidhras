@@ -547,10 +547,13 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 
 ### 6.2 AI Gateway
 
-- model/provider routing 属于 host-side orchestration
+- model/provider routing 属于 host-side orchestration，内置 4 个真实 provider adapter（OpenAI、Anthropic、DeepSeek、Ollama）
+- 多 provider fallback 链：OpenAI → Anthropic → DeepSeek（可通过 `ai_models.yaml` 配置）
 - invocation observability、audit、retry/recovery 仍留在 Node/TS host
-- elasticity（circuit breaker、rate limiter、exponential backoff）挂载在 gateway 层，对 adapter 透明
-- tool calling（cross_agent_tool、tool_executor、tool_loop_runner、tool_permissions）属于 host-side 受控执行能力
+- elasticity（circuit breaker — 状态跨请求保持、rate limiter — 含 429 动态校准、exponential backoff）挂载在 gateway 层，对 adapter 透明
+- tool calling（cross_agent_tool、tool_executor、tool_loop_runner、tool_permissions）属于 host-side 受控执行能力；tool loop 含 token 预算管理（`tiktoken` 精确计数 + Anthropic 字符估算）
+- response caching：LRU 内存缓存 + per-task-type TTL，减少确定性推理重复调用成本
+- streaming：provider adapter 支持流式响应（Chat Completions SSE / Anthropic Messages SSE），gateway 层透传；SSE endpoint 待前端接入
 - registry 支持 fs.watch 热加载（`registry_watcher.ts`），ai_models.yaml 与 prompt_slots.yaml 变更后自动校验重载
 - Rust world engine 若引入，不承接 AI gateway 本体
 
@@ -558,11 +561,17 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 
 | 目录 | 职责 |
 |------|------|
-| `ai/` | AI 网关层：gateway、task_service、task_definitions、task_decoder、task_prompt_builder、route_resolver、registry、registry_watcher、observability、providers（含 gateway_backed）、adapters、schemas |
+| `ai/` | AI 网关层：gateway、task_service、task_definitions、task_decoder、task_prompt_builder、route_resolver、registry、registry_watcher、observability、providers、token_counter、cache |
 | `ai/elasticity/` | 网关弹性层：circuit_breaker、rate_limiter、backoff、config_resolver |
 | `ai/tool_*.ts` | Tool Calling 系统：cross_agent_tool、tool_executor、tool_loop_runner、tool_permissions |
 | `inference/` | 推理流水线：context_builder、prompt builders、processors、tokenizers、types（inference 专用） |
 | `packages/contracts/src/ai_shared.ts` | AI/inference 共享类型契约：PromptBundleMetadata、PromptWorkflowSnapshot 等 |
+
+**当前缺失**：
+- 分布式缓存（当前仅内存 LRU）
+- Anthropic 精确 tokenizer（`@anthropic-ai/tokenizer`，当前字符数/3.5 估算）
+- OpenAI Responses API streaming（仅 Chat Completions 路径支持）
+- SSE endpoint 前端接入（后端 adapter + gateway 已实现）
 
 
 ### 6.3 Plugin Runtime

@@ -1,5 +1,5 @@
 import { ApiError } from '../../utils/api_error.js';
-import type { AiMessage, AiToolSpec, ModelGatewayResponse } from '../types.js';
+import { createOpenAiCompatibleAdapter } from './openai_compatible.js';
 import type { AiProviderAdapter, AiProviderAdapterRequest, AiProviderAdapterResult } from './types.js';
 
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
@@ -13,7 +13,7 @@ const getEnv = (name: string | null | undefined): string | null => {
     return null;
   }
 
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+  // eslint-disable-next-line security/detect-object-injection
   const value = process.env[name];
   if (typeof value !== 'string' || value.trim().length === 0) {
     return null;
@@ -22,109 +22,45 @@ const getEnv = (name: string | null | undefined): string | null => {
   return value.trim();
 };
 
-const resolveBaseUrl = (input: AiProviderAdapterRequest): string => {
-  return input.model_entry.base_url ?? input.provider_config.base_url ?? OPENAI_BASE_URL;
-};
+// ── OpenAI 特有的认证逻辑 ──────────────────────────────────────────────
 
-const resolveApiKey = (input: AiProviderAdapterRequest): string | null => {
-  return getEnv(input.provider_config.api_key_env);
-};
-
-const buildAuthMissingResult = (input: AiProviderAdapterRequest): AiProviderAdapterResult => {
-  return {
-    status: 'failed',
-    finish_reason: 'error',
-    output: {
-      mode: input.request.response_mode
-    },
-    usage: undefined,
-    safety: {
-      blocked: false,
-      reason_code: null,
-      provider_signal: null
-    },
-    raw_ref: undefined,
-    error: {
-      code: 'AI_PROVIDER_AUTH_MISSING',
-      message: 'OpenAI API key is not configured',
-      retryable: false,
-      stage: 'provider'
-    }
+const buildOpenAiHeaders = (input: AiProviderAdapterRequest): Record<string, string> => {
+  const headers: Record<string, string> = {
+    ...input.provider_config.default_headers
   };
-};
 
-const mapMessageRole = (role: AiMessage['role']): 'system' | 'user' | 'assistant' | 'tool' => {
-  if (role === 'developer') {
-    return 'system';
+  const organization = getEnv(input.provider_config.organization_env);
+  if (organization) {
+    headers['OpenAI-Organization'] = organization;
   }
 
-  if (role === 'system' || role === 'assistant' || role === 'tool') {
-    return role;
+  const project = getEnv(input.provider_config.project_env);
+  if (project) {
+    headers['OpenAI-Project'] = project;
   }
 
-  return 'user';
+  return headers;
 };
 
-const encodeMessageText = (message: AiMessage): string => {
-  return message.parts
-    .map(part => {
-      switch (part.type) {
-        case 'text':
-          return part.text;
-        case 'json':
-          return JSON.stringify(part.json, null, 2);
-        case 'image_url':
-          return `[image] ${part.url}`;
-        case 'file_ref':
-          return `[file:${part.file_id}]`;
-        default:
-          return '';
-      }
-    })
-    .filter(text => text.trim().length > 0)
-    .join('\n\n');
-};
+// ── Responses API ──────────────────────────────────────────────────────
 
-const buildResponsesInput = (messages: AiMessage[]) => {
+const buildResponsesInput = (messages: import('../types.js').AiMessage[]) => {
   return messages.map(message => ({
     role: mapMessageRole(message.role),
     content: message.parts.map(part => {
       switch (part.type) {
         case 'text':
-          return { type: 'input_text', text: part.text };
+          return { type: 'input_text' as const, text: part.text };
         case 'json':
-          return { type: 'input_text', text: JSON.stringify(part.json, null, 2) };
+          return { type: 'input_text' as const, text: JSON.stringify(part.json, null, 2) };
         case 'image_url':
-          return { type: 'input_image', image_url: part.url };
+          return { type: 'input_image' as const, image_url: part.url };
         case 'file_ref':
-          return { type: 'input_file', file_id: part.file_id };
+          return { type: 'input_file' as const, file_id: part.file_id };
         default:
-          return { type: 'input_text', text: '' };
+          return { type: 'input_text' as const, text: '' };
       }
     })
-  }));
-};
-
-const buildChatMessages = (messages: AiMessage[]) => {
-  return messages.map(message => ({
-    role: mapMessageRole(message.role),
-    content: encodeMessageText(message)
-  }));
-};
-
-const buildOpenAiTools = (tools: AiToolSpec[] | undefined) => {
-  if (!Array.isArray(tools) || tools.length === 0) {
-    return undefined;
-  }
-
-  return tools.map(tool => ({
-    type: 'function',
-    function: {
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.input_schema,
-      strict: tool.strict ?? false
-    }
   }));
 };
 
@@ -138,29 +74,6 @@ const buildResponsesToolChoice = (mode: 'disabled' | 'allowed' | 'required' | un
   return undefined;
 };
 
-const buildResponseFormat = (input: AiProviderAdapterRequest) => {
-  switch (input.request.response_mode) {
-    case 'json_schema':
-      if (!input.request.structured_output) {
-        return undefined;
-      }
-      return {
-        type: 'json_schema',
-        json_schema: {
-          name: input.request.structured_output.schema_name,
-          schema: input.request.structured_output.json_schema,
-          strict: input.request.structured_output.strict ?? false
-        }
-      };
-    case 'json_object':
-      return {
-        type: 'json_object'
-      };
-    default:
-      return undefined;
-  }
-};
-
 const buildResponsesFormat = (input: AiProviderAdapterRequest) => {
   switch (input.request.response_mode) {
     case 'json_schema':
@@ -169,7 +82,7 @@ const buildResponsesFormat = (input: AiProviderAdapterRequest) => {
       }
       return {
         format: {
-          type: 'json_schema',
+          type: 'json_schema' as const,
           name: input.request.structured_output.schema_name,
           schema: input.request.structured_output.json_schema,
           strict: input.request.structured_output.strict ?? false
@@ -178,7 +91,7 @@ const buildResponsesFormat = (input: AiProviderAdapterRequest) => {
     case 'json_object':
       return {
         format: {
-          type: 'json_object'
+          type: 'json_object' as const
         }
       };
     default:
@@ -211,9 +124,9 @@ const extractResponsesOutputText = (payload: Record<string, unknown>): string =>
   return chunks.join('\n').trim();
 };
 
-const extractResponsesToolCalls = (payload: Record<string, unknown>): NonNullable<ModelGatewayResponse['output']['tool_calls']> => {
+const extractResponsesToolCalls = (payload: Record<string, unknown>): NonNullable<import('../types.js').ModelGatewayResponse['output']['tool_calls']> => {
   const output = Array.isArray(payload.output) ? payload.output : [];
-  const calls: NonNullable<ModelGatewayResponse['output']['tool_calls']> = [];
+  const calls: NonNullable<import('../types.js').ModelGatewayResponse['output']['tool_calls']> = [];
 
   for (const item of output) {
     if (!isRecord(item) || item.type !== 'function_call') {
@@ -240,7 +153,7 @@ const extractResponsesToolCalls = (payload: Record<string, unknown>): NonNullabl
   return calls;
 };
 
-const normalizeFinishReason = (
+const normalizeResponsesFinishReason = (
   finishReason: unknown,
   hasToolCalls: boolean,
   isBlocked: boolean
@@ -260,148 +173,80 @@ const normalizeFinishReason = (
   return 'stop';
 };
 
+const normalizeResponsesApiResponse = (payload: Record<string, unknown>, response: Response): AiProviderAdapterResult => {
+  const toolCalls = extractResponsesToolCalls(payload);
+  const text = extractResponsesOutputText(payload);
+  const usageRecord = isRecord(payload.usage) ? payload.usage : null;
+  const incompleteDetails = isRecord(payload.incomplete_details) ? payload.incomplete_details : null;
+  const incompleteReason = typeof incompleteDetails?.reason === 'string' ? incompleteDetails.reason : null;
+  const blocked = incompleteReason === 'content_filter' || incompleteReason === 'safety';
+  const status = blocked ? 'blocked' : 'completed';
+
+  return {
+    status,
+    finish_reason: normalizeResponsesFinishReason(incompleteReason, toolCalls.length > 0, blocked),
+    output: {
+      mode: toolCalls.length > 0 ? 'tool_call' : text.trim().startsWith('{') ? 'json_schema' : 'free_text',
+      text: text.length > 0 ? text : undefined,
+      tool_calls: toolCalls.length > 0 ? toolCalls : undefined
+    },
+    usage: {
+      input_tokens: typeof usageRecord?.input_tokens === 'number' ? usageRecord.input_tokens : undefined,
+      output_tokens: typeof usageRecord?.output_tokens === 'number' ? usageRecord.output_tokens : undefined,
+      total_tokens: typeof usageRecord?.total_tokens === 'number' ? usageRecord.total_tokens : undefined,
+      cached_input_tokens:
+        isRecord(usageRecord?.input_tokens_details) && typeof usageRecord.input_tokens_details.cached_tokens === 'number'
+          ? usageRecord.input_tokens_details.cached_tokens
+          : undefined
+    },
+    safety: {
+      blocked,
+      reason_code: blocked ? incompleteReason : null,
+      provider_signal: incompleteDetails ?? null
+    },
+    raw_ref: {
+      provider_request_id: response.headers.get('x-request-id'),
+      provider_response_id: typeof payload.id === 'string' ? payload.id : null
+    },
+    error: blocked
+      ? {
+          code: 'AI_PROVIDER_SAFETY_BLOCK',
+          message: 'OpenAI response was blocked by safety policy',
+          retryable: false,
+          stage: 'safety'
+        }
+      : null
+  };
+};
+
+// ── Embeddings ─────────────────────────────────────────────────────────
+
+const encodeMessageText = (message: import('../types.js').AiMessage): string => {
+  return message.parts
+    .map(part => {
+      switch (part.type) {
+        case 'text':
+          return part.text;
+        case 'json':
+          return JSON.stringify(part.json, null, 2);
+        case 'image_url':
+          return `[image] ${part.url}`;
+        case 'file_ref':
+          return `[file:${part.file_id}]`;
+        default:
+          return '';
+      }
+    })
+    .filter(text => text.trim().length > 0)
+    .join('\n\n');
+};
+
 const buildEmbeddingsRequestBody = (input: AiProviderAdapterRequest) => {
   const textInput = input.request.messages.map(message => encodeMessageText(message)).filter(text => text.trim().length > 0).join('\n\n');
   return {
     model: input.model_entry.model,
     input: textInput
   };
-};
-
-const buildResponsesRequestBody = (input: AiProviderAdapterRequest) => {
-  const body: Record<string, unknown> = {
-    model: input.model_entry.model,
-    input: buildResponsesInput(input.request.messages)
-  };
-
-  if (typeof input.request.sampling?.temperature === 'number') {
-    body.temperature = input.request.sampling.temperature;
-  }
-  if (typeof input.request.sampling?.top_p === 'number') {
-    body.top_p = input.request.sampling.top_p;
-  }
-  if (typeof input.request.sampling?.max_output_tokens === 'number') {
-    body.max_output_tokens = input.request.sampling.max_output_tokens;
-  }
-  if (typeof input.request.sampling?.seed === 'number') {
-    body.seed = input.request.sampling.seed;
-  }
-
-  const text = buildResponsesFormat(input);
-  if (text) {
-    body.text = text;
-  }
-
-  const tools = buildOpenAiTools(input.request.tools);
-  if (tools) {
-    body.tools = tools.map(tool => ({
-      type: 'function',
-      name: tool.function.name,
-      description: tool.function.description,
-      parameters: tool.function.parameters,
-      strict: tool.function.strict
-    }));
-    const toolChoice = buildResponsesToolChoice(input.request.tool_policy?.mode);
-    if (toolChoice) {
-      body.tool_choice = toolChoice;
-    }
-  }
-
-  return body;
-};
-
-const buildChatCompletionsRequestBody = (input: AiProviderAdapterRequest) => {
-  const body: Record<string, unknown> = {
-    model: input.model_entry.model,
-    messages: buildChatMessages(input.request.messages)
-  };
-
-  if (typeof input.request.sampling?.temperature === 'number') {
-    body.temperature = input.request.sampling.temperature;
-  }
-  if (typeof input.request.sampling?.top_p === 'number') {
-    body.top_p = input.request.sampling.top_p;
-  }
-  if (typeof input.request.sampling?.max_output_tokens === 'number') {
-    body.max_completion_tokens = input.request.sampling.max_output_tokens;
-  }
-
-  const responseFormat = buildResponseFormat(input);
-  if (responseFormat) {
-    body.response_format = responseFormat;
-  }
-
-  const tools = buildOpenAiTools(input.request.tools);
-  if (tools) {
-    body.tools = tools;
-    body.tool_choice = input.request.tool_policy?.mode === 'required'
-      ? 'required'
-      : input.request.tool_policy?.mode === 'disabled'
-        ? 'none'
-        : 'auto';
-  }
-
-  return body;
-};
-
-const buildHeaders = (input: AiProviderAdapterRequest): HeadersInit => {
-  const apiKey = resolveApiKey(input)!;
-  const headers: Record<string, string> = {
-    Authorization: `Bearer ${apiKey}`,
-    'Content-Type': 'application/json',
-    ...input.provider_config.default_headers
-  };
-
-  const organization = getEnv(input.provider_config.organization_env);
-  if (organization) {
-    headers['OpenAI-Organization'] = organization;
-  }
-
-  const project = getEnv(input.provider_config.project_env);
-  if (project) {
-    headers['OpenAI-Project'] = project;
-  }
-
-  return headers;
-};
-
-const parseErrorPayload = async (response: Response): Promise<{ code: string; message: string }> => {
-  try {
-    const payload = (await response.json()) as unknown;
-    if (isRecord(payload) && isRecord(payload.error)) {
-      const code = typeof payload.error.code === 'string' ? payload.error.code : 'AI_PROVIDER_FAIL';
-      const message = typeof payload.error.message === 'string' ? payload.error.message : `OpenAI request failed with ${response.status}`;
-      return { code, message };
-    }
-  } catch {
-    // ignore parse failure
-  }
-
-  return {
-    code: 'AI_PROVIDER_FAIL',
-    message: `OpenAI request failed with HTTP ${String(response.status)}`
-  };
-};
-
-const performRequest = async (input: AiProviderAdapterRequest): Promise<Response> => {
-  const baseUrl = resolveBaseUrl(input);
-  const endpoint = input.model_entry.endpoint_kind === 'embeddings'
-    ? '/embeddings'
-    : input.model_entry.endpoint_kind === 'chat_completions'
-      ? '/chat/completions'
-      : '/responses';
-
-  const body = input.model_entry.endpoint_kind === 'embeddings'
-    ? buildEmbeddingsRequestBody(input)
-    : input.model_entry.endpoint_kind === 'chat_completions'
-      ? buildChatCompletionsRequestBody(input)
-      : buildResponsesRequestBody(input);
-
-  return fetch(`${baseUrl}${endpoint}`, {
-    method: 'POST',
-    headers: buildHeaders(input),
-    body: JSON.stringify(body)
-  });
 };
 
 const normalizeEmbeddingsResponse = (payload: Record<string, unknown>, response: Response): AiProviderAdapterResult => {
@@ -437,136 +282,206 @@ const normalizeEmbeddingsResponse = (payload: Record<string, unknown>, response:
   };
 };
 
-const normalizeChatCompletionsResponse = (payload: Record<string, unknown>, response: Response): AiProviderAdapterResult => {
-  const choices = Array.isArray(payload.choices) ? payload.choices : [];
-  const firstChoice = choices.find(choice => isRecord(choice));
-  if (!firstChoice || !isRecord(firstChoice.message)) {
-    throw new ApiError(500, 'AI_PROVIDER_DECODE_FAIL', 'OpenAI chat completion response is missing choices[0].message');
+// ── shared ─────────────────────────────────────────────────────────────
+
+const mapMessageRole = (role: import('../types.js').AiMessage['role']): 'system' | 'user' | 'assistant' | 'tool' => {
+  if (role === 'developer') {
+    return 'system';
   }
 
-  const message = firstChoice.message;
-  const content = typeof message.content === 'string' ? message.content : '';
-  const toolCalls = Array.isArray(message.tool_calls)
-    ? message.tool_calls.flatMap(call => {
-        if (!isRecord(call) || !isRecord(call.function)) {
-          return [];
-        }
-        const argumentsText = typeof call.function.arguments === 'string' ? call.function.arguments : '{}';
-        let parsedArguments: Record<string, unknown> = {};
-        try {
-          const parsed = JSON.parse(argumentsText) as unknown;
-          if (isRecord(parsed)) {
-            parsedArguments = parsed;
-          }
-        } catch {
-          parsedArguments = {};
-        }
+  if (role === 'system' || role === 'assistant' || role === 'tool') {
+    return role;
+  }
 
-        return [{
-          name: typeof call.function.name === 'string' ? call.function.name : 'unknown_tool',
-          arguments: parsedArguments,
-          call_id: typeof call.id === 'string' ? call.id : undefined
-        }];
-      })
-    : [];
-  const usageRecord = isRecord(payload.usage) ? payload.usage : null;
-  const finishReason = typeof firstChoice.finish_reason === 'string' ? firstChoice.finish_reason : null;
+  return 'user';
+};
+
+// ── OpenAI 特有的 endpoint 调度 ────────────────────────────────────────
+
+const buildResponsesRequestBody = (input: AiProviderAdapterRequest) => {
+  const body: Record<string, unknown> = {
+    model: input.model_entry.model,
+    input: buildResponsesInput(input.request.messages)
+  };
+
+  if (typeof input.request.sampling?.temperature === 'number') {
+    body.temperature = input.request.sampling.temperature;
+  }
+  if (typeof input.request.sampling?.top_p === 'number') {
+    body.top_p = input.request.sampling.top_p;
+  }
+  if (typeof input.request.sampling?.max_output_tokens === 'number') {
+    body.max_output_tokens = input.request.sampling.max_output_tokens;
+  }
+  if (typeof input.request.sampling?.seed === 'number') {
+    body.seed = input.request.sampling.seed;
+  }
+
+  const text = buildResponsesFormat(input);
+  if (text) {
+    body.text = text;
+  }
+
+  const tools = buildResponsesTools(input.request.tools);
+  if (tools) {
+    body.tools = tools;
+    const toolChoice = buildResponsesToolChoice(input.request.tool_policy?.mode);
+    if (toolChoice) {
+      body.tool_choice = toolChoice;
+    }
+  }
+
+  return body;
+};
+
+const buildResponsesTools = (tools: import('../types.js').AiToolSpec[] | undefined) => {
+  if (!Array.isArray(tools) || tools.length === 0) {
+    return undefined;
+  }
+
+  return tools.map(tool => ({
+    type: 'function' as const,
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.input_schema,
+    strict: tool.strict ?? false
+  }));
+};
+
+const parseErrorPayload = async (response: Response): Promise<{ code: string; message: string }> => {
+  try {
+    const payload = (await response.json()) as unknown;
+    if (isRecord(payload) && isRecord(payload.error)) {
+      const code = typeof payload.error.code === 'string' ? payload.error.code : 'AI_PROVIDER_FAIL';
+      const message = typeof payload.error.message === 'string' ? payload.error.message : `OpenAI request failed with ${String(response.status)}`;
+      return { code, message };
+    }
+  } catch {
+    // ignore parse failure
+  }
 
   return {
-    status: 'completed',
-    finish_reason: normalizeFinishReason(finishReason, toolCalls.length > 0, false),
-    output: {
-      mode: toolCalls.length > 0 ? 'tool_call' : 'free_text',
-      text: content,
-      tool_calls: toolCalls.length > 0 ? toolCalls : undefined
-    },
-    usage: {
-      input_tokens: typeof usageRecord?.prompt_tokens === 'number' ? usageRecord.prompt_tokens : undefined,
-      output_tokens: typeof usageRecord?.completion_tokens === 'number' ? usageRecord.completion_tokens : undefined,
-      total_tokens: typeof usageRecord?.total_tokens === 'number' ? usageRecord.total_tokens : undefined
-    },
-    safety: {
-      blocked: false,
-      reason_code: null,
-      provider_signal: null
-    },
-    raw_ref: {
-      provider_request_id: response.headers.get('x-request-id'),
-      provider_response_id: typeof payload.id === 'string' ? payload.id : null
-    },
-    error: null
+    code: 'AI_PROVIDER_FAIL',
+    message: `OpenAI request failed with HTTP ${String(response.status)}`
   };
 };
 
-const normalizeResponsesApiResponse = (payload: Record<string, unknown>, response: Response): AiProviderAdapterResult => {
-  const toolCalls = extractResponsesToolCalls(payload);
-  const text = extractResponsesOutputText(payload);
-  const usageRecord = isRecord(payload.usage) ? payload.usage : null;
-  const incompleteDetails = isRecord(payload.incomplete_details) ? payload.incomplete_details : null;
-  const incompleteReason = typeof incompleteDetails?.reason === 'string' ? incompleteDetails.reason : null;
-  const blocked = incompleteReason === 'content_filter' || incompleteReason === 'safety';
-  const status = blocked ? 'blocked' : 'completed';
+const performOpenAiRequest = async (input: AiProviderAdapterRequest): Promise<Response> => {
+  const baseUrl = input.model_entry.base_url ?? input.provider_config.base_url ?? OPENAI_BASE_URL;
+  const endpoint = input.model_entry.endpoint_kind === 'embeddings'
+    ? '/embeddings'
+    : input.model_entry.endpoint_kind === 'chat_completions'
+      ? '/chat/completions'
+      : '/responses';
 
-  return {
-    status,
-    finish_reason: normalizeFinishReason(incompleteReason, toolCalls.length > 0, blocked),
-    output: {
-      mode: toolCalls.length > 0 ? 'tool_call' : text.trim().startsWith('{') ? 'json_schema' : 'free_text',
-      text: text.length > 0 ? text : undefined,
-      tool_calls: toolCalls.length > 0 ? toolCalls : undefined
+  const body = input.model_entry.endpoint_kind === 'embeddings'
+    ? buildEmbeddingsRequestBody(input)
+    : input.model_entry.endpoint_kind === 'chat_completions'
+      ? null  // Chat Completions 委托给 openai_compatible
+      : buildResponsesRequestBody(input);
+
+  // Chat Completions 路径不再通过此函数
+  if (body === null) {
+    throw new ApiError(500, 'AI_PROVIDER_DECODE_FAIL', 'Chat Completions should be delegated to openai_compatible adapter');
+  }
+
+  return fetch(`${baseUrl}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${getEnv(input.provider_config.api_key_env)!}`,
+      'Content-Type': 'application/json',
+      ...buildOpenAiHeaders(input)
     },
-    usage: {
-      input_tokens: typeof usageRecord?.input_tokens === 'number' ? usageRecord.input_tokens : undefined,
-      output_tokens: typeof usageRecord?.output_tokens === 'number' ? usageRecord.output_tokens : undefined,
-      total_tokens: typeof usageRecord?.total_tokens === 'number' ? usageRecord.total_tokens : undefined,
-      cached_input_tokens:
-        isRecord(usageRecord?.input_tokens_details) && typeof usageRecord.input_tokens_details.cached_tokens === 'number'
-          ? usageRecord.input_tokens_details.cached_tokens
-          : undefined
-    },
-    safety: {
-      blocked,
-      reason_code: blocked ? incompleteReason : null,
-      provider_signal: incompleteDetails ?? null
-    },
-    raw_ref: {
-      provider_request_id: response.headers.get('x-request-id'),
-      provider_response_id: typeof payload.id === 'string' ? payload.id : null
-    },
-    error: blocked
-      ? {
-          code: 'AI_PROVIDER_SAFETY_BLOCK',
-          message: 'OpenAI response was blocked by safety policy',
-          retryable: false,
-          stage: 'safety'
-        }
-      : null
-  };
+    body: JSON.stringify(body)
+  });
 };
+
+// ── Rate limit hints ───────────────────────────────────────────────────
+
+const extractOpenAiRateLimitHints = (response: Response): import('../elasticity/types.js').RateLimitHints => {
+  const hints: import('../elasticity/types.js').RateLimitHints = {};
+
+  const retryAfter = response.headers.get('retry-after');
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds > 0) {
+      hints.retryAfterSeconds = seconds;
+    }
+  }
+
+  const remaining = response.headers.get('x-ratelimit-remaining');
+  if (remaining) {
+    const n = Number(remaining);
+    if (Number.isFinite(n)) {
+      hints.remainingQuota = n;
+    }
+  }
+
+  const limit = response.headers.get('x-ratelimit-limit');
+  if (limit) {
+    const n = Number(limit);
+    if (Number.isFinite(n)) {
+      hints.limitQuota = n;
+    }
+  }
+
+  return hints;
+};
+
+// ── Chat Completions 委托 adapter ─────────────────────────────────────
+
+const openAiChatCompletionsAdapter = createOpenAiCompatibleAdapter({
+  provider: 'openai',
+  resolveApiKey(input) {
+    return getEnv(input.provider_config.api_key_env);
+  },
+  resolveBaseUrl(input) {
+    return input.model_entry.base_url ?? input.provider_config.base_url ?? OPENAI_BASE_URL;
+  },
+  buildHeaders: buildOpenAiHeaders
+});
+
+// ── 主 adapter ─────────────────────────────────────────────────────────
 
 export const createOpenAiProviderAdapter = (): AiProviderAdapter => {
   return {
     provider: 'openai',
     async execute(input: AiProviderAdapterRequest): Promise<AiProviderAdapterResult> {
-      if (!resolveApiKey(input)) {
-        return buildAuthMissingResult(input);
-      }
-
-      const response = await performRequest(input);
-      if (!response.ok) {
-        const { code, message } = await parseErrorPayload(response);
+      if (!getEnv(input.provider_config.api_key_env)) {
         return {
           status: 'failed',
           finish_reason: 'error',
-          output: {
-            mode: input.request.response_mode
-          },
+          output: { mode: input.request.response_mode },
           usage: undefined,
-          safety: {
-            blocked: false,
-            reason_code: null,
-            provider_signal: null
-          },
+          safety: { blocked: false, reason_code: null, provider_signal: null },
+          raw_ref: undefined,
+          error: {
+            code: 'AI_PROVIDER_AUTH_MISSING',
+            message: 'OpenAI API key is not configured',
+            retryable: false,
+            stage: 'provider'
+          }
+        };
+      }
+
+      // Chat Completions → 委托给通用 adapter
+      if (input.model_entry.endpoint_kind === 'chat_completions') {
+        return openAiChatCompletionsAdapter.execute(input);
+      }
+
+      // Responses API / Embeddings → OpenAI 特有路径
+      const response = await performOpenAiRequest(input);
+      if (!response.ok) {
+        const { code, message } = await parseErrorPayload(response);
+        const rateLimitHints = response.status === 429
+          ? extractOpenAiRateLimitHints(response)
+          : undefined;
+        return {
+          status: 'failed',
+          finish_reason: 'error',
+          output: { mode: input.request.response_mode },
+          usage: undefined,
+          safety: { blocked: false, reason_code: null, provider_signal: null },
           raw_ref: {
             provider_request_id: response.headers.get('x-request-id'),
             provider_response_id: null
@@ -575,8 +490,9 @@ export const createOpenAiProviderAdapter = (): AiProviderAdapter => {
             code,
             message,
             retryable: response.status >= 500 || response.status === 429,
-            stage: response.status === 429 ? 'provider' : 'provider'
-          }
+            stage: 'provider'
+          },
+          rate_limit_hints: rateLimitHints
         };
       }
 
@@ -587,10 +503,6 @@ export const createOpenAiProviderAdapter = (): AiProviderAdapter => {
 
       if (input.model_entry.endpoint_kind === 'embeddings') {
         return normalizeEmbeddingsResponse(payload, response);
-      }
-
-      if (input.model_entry.endpoint_kind === 'chat_completions') {
-        return normalizeChatCompletionsResponse(payload, response);
       }
 
       return normalizeResponsesApiResponse(payload, response);

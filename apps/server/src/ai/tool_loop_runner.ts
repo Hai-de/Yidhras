@@ -1,4 +1,6 @@
 import type { ModelGateway, ModelGatewayExecutionInput } from './gateway.js';
+import { createTokenCounter } from './token_counter.js';
+import type { TokenCounter } from './token_counter.js';
 import type { ToolExecutionContext, ToolRegistry } from './tool_executor.js';
 import type { AiMessage, AiToolLoopTrace, ModelGatewayRequest, ModelGatewayResponse } from './types.js';
 
@@ -9,7 +11,14 @@ export interface ToolLoopConfig {
   termination_tools: string[];
   termination_finish_reasons: string[];
   fallback_on_exhaustion: 'return_last' | 'error';
+  /** 整个 loop 的 token 预算上限（默认取模型 max_context_tokens * 0.85） */
+  max_total_tokens?: number;
+  /** 单个 tool result 截断长度（字符数，默认 4096） */
+  max_tool_result_chars?: number;
 }
+
+const DEFAULT_MAX_TOOL_RESULT_CHARS = 4096;
+const TOKEN_BUDGET_RATIO = 0.85;
 
 const DEFAULT_LOOP_CONFIG: ToolLoopConfig = {
   max_rounds: 5,
@@ -27,6 +36,8 @@ export interface ToolLoopOptions {
   termination_tools?: string[];
   termination_finish_reasons?: string[];
   fallback_on_exhaustion?: 'return_last' | 'error';
+  max_total_tokens?: number;
+  max_tool_result_chars?: number;
 }
 
 export interface ToolLoopRunner {
@@ -39,10 +50,15 @@ export interface ToolLoopRunner {
   ): Promise<ModelGatewayResponse>;
 }
 
-const buildToolResultMessage = (name: string, callId: string | undefined, result: unknown): AiMessage => {
+const buildToolResultMessage = (name: string, callId: string | undefined, result: unknown, maxChars: number): AiMessage => {
+  const resultStr = JSON.stringify(result);
+  const truncated = resultStr.length > maxChars
+    ? resultStr.slice(0, maxChars) + `...[truncated ${resultStr.length - maxChars} chars]`
+    : resultStr;
+
   return {
     role: 'tool',
-    parts: [{ type: 'text', text: JSON.stringify(result) }],
+    parts: [{ type: 'text', text: truncated }],
     name,
     metadata: callId ? { call_id: callId } : undefined
   };
@@ -71,15 +87,31 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T
 };
 
 export const createToolLoopRunner = (): ToolLoopRunner => {
+  const tokenCounter: TokenCounter = createTokenCounter();
+
   return {
     async run(gateway, input, executor, ctx, options) {
       const config = { ...DEFAULT_LOOP_CONFIG, ...options };
       const startedAt = Date.now();
       const traceRounds: AiToolLoopTrace['rounds'] = [];
 
+      const maxToolResultChars = config.max_tool_result_chars ?? DEFAULT_MAX_TOOL_RESULT_CHARS;
+      const provider = input.request.provider_hint ?? 'openai';
+      const model = input.request.model_hint ?? 'unknown';
+
+      // token 预算：优先使用显式配置，否则取模型 max_context_tokens * 0.85
+      const tc = input.task_config as unknown as { model_entry?: { capabilities?: { max_context_tokens?: number } } } | undefined;
+      const modelMaxTokens = tc?.model_entry?.capabilities?.max_context_tokens ?? 131072;
+      const maxTotalTokens = config.max_total_tokens ?? Math.floor(modelMaxTokens * TOKEN_BUDGET_RATIO);
+
       let currentRequest = input.request;
       let lastResponse: ModelGatewayResponse | null = null;
       let allAttemptedModels: string[] = [];
+      let cumulativeTokens = tokenCounter.countMessagesTokens(
+        currentRequest.messages as { role: string; parts: { type: string; text?: string; json?: Record<string, unknown> }[] }[],
+        provider,
+        model
+      );
 
       for (let round = 0; round < config.max_rounds; round += 1) {
         if (Date.now() - startedAt > config.total_timeout_ms) {
@@ -98,6 +130,17 @@ export const createToolLoopRunner = (): ToolLoopRunner => {
           return buildLoopErrorResponse(currentRequest, allAttemptedModels, 'TOOL_LOOP_TIMEOUT', 'Tool loop timed out before any response', trace);
         }
 
+        // token 预算检查：进入下一轮前先确认
+        if (cumulativeTokens > maxTotalTokens) {
+          const trace: AiToolLoopTrace = { rounds: traceRounds, total_rounds: round, exhausted: false };
+          return buildLoopErrorResponse(
+            currentRequest, allAttemptedModels,
+            'TOOL_LOOP_TOKEN_BUDGET_EXCEEDED',
+            `Token budget exceeded (${cumulativeTokens}/${maxTotalTokens})`,
+            trace
+          );
+        }
+
         const roundStart = Date.now();
         const response = await gateway.execute({
           request: currentRequest,
@@ -107,6 +150,17 @@ export const createToolLoopRunner = (): ToolLoopRunner => {
 
         allAttemptedModels = [...new Set([...allAttemptedModels, ...response.attempted_models])];
         lastResponse = response;
+
+        // 累计本轮 input/output tokens
+        if (response.usage?.input_tokens) {
+          cumulativeTokens += response.usage.input_tokens;
+        }
+        if (response.usage?.output_tokens) {
+          cumulativeTokens += response.usage.output_tokens;
+        }
+        if (response.usage?.thinking_tokens) {
+          cumulativeTokens += response.usage.thinking_tokens;
+        }
 
         if (response.status !== 'completed') {
           return {
@@ -151,7 +205,7 @@ export const createToolLoopRunner = (): ToolLoopRunner => {
           const toolLatency = Date.now() - toolStart;
           roundTraceCalls.push({ name: tc.name, latency_ms: toolLatency, success: execResult.success === true });
 
-          toolResultMessages.push(buildToolResultMessage(tc.name, tc.call_id, execResult));
+          toolResultMessages.push(buildToolResultMessage(tc.name, tc.call_id, execResult, maxToolResultChars));
 
           if (config.termination_tools.includes(tc.name)) {
             shouldTerminate = true;
@@ -175,9 +229,16 @@ export const createToolLoopRunner = (): ToolLoopRunner => {
           };
         }
 
+        const newMessages = [...cloneMessages(currentRequest.messages), assistantMessage, ...toolResultMessages];
+        cumulativeTokens += tokenCounter.countMessagesTokens(
+          [assistantMessage, ...toolResultMessages] as { role: string; parts: { type: string; text?: string; json?: Record<string, unknown> }[] }[],
+          provider,
+          model
+        );
+
         currentRequest = {
           ...currentRequest,
-          messages: [...cloneMessages(currentRequest.messages), assistantMessage, ...toolResultMessages]
+          messages: newMessages
         };
       }
 
