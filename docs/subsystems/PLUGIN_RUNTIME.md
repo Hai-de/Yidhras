@@ -318,4 +318,3 @@ interface PluginInferenceResult {
 - 命令入口：`../guides/COMMANDS.md`
 - API 契约：`../API.md`
 - 架构边界：`../ARCH.md`
-- 相关设计资产：`.limcode/archive/design/pack-local-plugin-unified-management-design.md`

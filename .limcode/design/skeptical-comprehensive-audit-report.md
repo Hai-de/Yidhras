@@ -4,7 +4,6 @@
 > 审查范围：仓库全部源代码、文档、设计稿、测试与配置。
 > 审查日期：2026-05-09
 > 最后更新：2026-05-10（更正事实性错误、更新已过时的论述、为模糊论断添加语境。关键变更：多 provider 落地、代码量修正、move intent/Tag 系统/agent 权限论述添加 nuance。保留有争议的判定，标注为争议点。）
-> 产出位置：`.limcode/plans/skeptical-comprehensive-audit-report.md`
 
 ---
 

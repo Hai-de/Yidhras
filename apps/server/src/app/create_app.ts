@@ -1,10 +1,12 @@
 import cors from 'cors';
 import express from 'express';
+import helmet from 'helmet';
 
 import { identityInjector } from '../identity/middleware.js';
 import { pluginRuntimeRegistry } from '../plugins/runtime.js';
 import type { AppContext, RouteRegistrar } from './context.js';
 import { operatorAuthMiddleware } from './middleware/operator_auth.js';
+import { authRateLimiter, globalRateLimiter } from './middleware/rate_limit.js';
 import { requestIdMiddleware } from './middleware/request_id.js';
 
 export interface CreateAppOptions {
@@ -19,8 +21,12 @@ export const createApp = ({ context, registerRoutes }: CreateAppOptions) => {
     context.setHttpApp(app);
   }
 
+  app.use(helmet());
   app.use(cors());
-  app.use(express.json());
+  app.use(globalRateLimiter);
+  app.use('/api/auth/login', authRateLimiter);
+  app.use('/api/auth/refresh', authRateLimiter);
+  app.use(express.json({ limit: '1mb' }));
   app.use((req, res, next) => { void operatorAuthMiddleware(context)(req, res, next); });
   app.use(identityInjector());
   app.use(requestIdMiddleware());

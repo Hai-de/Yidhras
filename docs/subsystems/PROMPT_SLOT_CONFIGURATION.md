@@ -345,5 +345,3 @@ Cooling 优先级最高：即使 sticky 仍有次数，冷却期也不激活。
 
 - Prompt Workflow Runtime：`PROMPT_WORKFLOW.md`
 - 系统架构边界：`../ARCH.md`
-- 设计文档：`.limcode/design/prompt-bundle-componentized-refactoring-design.md`
-- 实施计划：`.limcode/archive/plans/prompt-bundle-componentized-refactoring-phase1.md`

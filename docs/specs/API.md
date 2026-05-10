@@ -13,6 +13,9 @@
 - query / params 不满足约束时返回 `400`
 - 返回结构统一为 `{ success: true, data: ... }`，分页接口额外包含 `meta.pagination`
 - BigInt 值通过 HTTP 以字符串形式传输
+- 全局限流：1000 req / 15 min / IP。超限返回 `429`。响应头含 `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`
+- 认证路由（`/api/auth/login`, `/api/auth/refresh`）额外限制：20 req / 15 min / IP
+- 请求体大小限制：1 MB
 
 ---
 

@@ -448,9 +448,4 @@ provider_templates:
 - 业务语义：`../LOGIC.md`
 - Prompt Workflow：`./PROMPT_WORKFLOW.md`
 - 共享类型契约：`packages/contracts/src/ai_shared.ts`（PromptBundleMetadata、PromptWorkflowSnapshot 等 AI/inference 桥接类型）
-- 实施设计与计划：`.limcode/design/ai-gateway-completion-draft.md`、`.limcode/plans/ai-gateway-completion-plan.md`
-- 相关设计资产：`.limcode/archive/historical/design/multi-model-gateway-and-unified-ai-task-contract-design.md`
-- 重构设计：`.limcode/design/ai-three-layer-directory-refactoring.md`
-- Tool Calling 设计：`.limcode/archive/design/ai-tool-calling-enablement.md`
-- 弹性层设计：`.limcode/archive/design/ai-elasticity-circuit-breaker-rate-limiter-backoff.md`
-- 热加载设计：`.limcode/archive/design/ai-registry-hot-reload.md`
+

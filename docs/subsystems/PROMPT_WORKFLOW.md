@@ -436,4 +436,3 @@ Prompt Workflow 保持以下宿主边界：
 - 业务语义：`../LOGIC.md`
 - API 读面：`../API.md`
 - Slot 配置指南：`./PROMPT_SLOT_CONFIGURATION.md`
-- 相关设计资产：`.limcode/archive/historical/design/prompt-workflow-formalization-design.md`

@@ -72,12 +72,3 @@
 | [archive/](../.limcode/archive/) | 已完成过程资产与历史草案归档 |
 | [progress.md](../.limcode/progress.md) | 里程碑进度记录 |
 
-## 7. 历史归档
-
-`docs/history/` 存放面向读者的稳定历史背景文档：已完成迁移记录、设计决策历史、系统演进上下文。
-
-| 文档 | 定位 |
-|------|------|
-| [history/INDEX.md](history/INDEX.md) | 历史归档目的说明与条目索引 |
-
-> 与 `.limcode/archive/` 的区别：`history/` 面向所有读者，记录已成事实的历史背景；`.limcode/archive/` 面向内部维护者，归档过程资产。

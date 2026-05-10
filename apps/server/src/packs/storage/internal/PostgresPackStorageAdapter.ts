@@ -300,7 +300,16 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
   constructor(private readonly prisma: PrismaClient) {}
 
   private schemaName(packId: string): string {
+    this.validatePackId(packId);
     return `pack_${packId.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase()}`;
+  }
+
+  private validatePackId(packId: string): void {
+    if (!/^[a-zA-Z0-9_-]+$/.test(packId)) {
+      throw new Error(
+        `Invalid pack ID: "${packId}". Pack IDs must only contain [a-zA-Z0-9_-].`
+      );
+    }
   }
 
   private qualifiedName(packId: string, tableName: string): string {
