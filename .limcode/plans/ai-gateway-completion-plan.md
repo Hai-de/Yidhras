@@ -259,3 +259,144 @@ packages/contracts/src/
 | CP4: Phase 3 完成 | adapter streaming + gateway executeStream | Day 15.5 | ✅ 完成 |
 
 每个检查点必须通过 `pnpm typecheck && pnpm lint && pnpm test`。
+
+---
+
+## Phase 4：可插拔 Provider 配置文件扩展（新增）
+
+> 设计依据：`.limcode/design/ai-gateway-completion-draft.md` §4
+> 工期：约 1.5 天
+
+### 目标
+
+当前 `gateway.ts` 的 adapter 列表为硬编码 5 个（mock / openai / anthropic / deepseek / ollama）。新增 OpenAI-compatible 渠道（OpenRouter、SiliconFlow、Groq 等）需修改源码重新部署。本 Phase 实现配置驱动：用户通过 `ai_models.yaml` 的 `provider_templates` 段零代码添加新渠道，利用现有热加载即时生效。
+
+### 已决策项
+
+| 决策 | 选择 | 说明 |
+|------|------|------|
+| D1 覆盖内置 | A：允许 | template 可按 name 覆盖内置 adapter；覆盖 `openai` 会丧失 Responses API/Embeddings，文档需显式警告 |
+| D2 配置分离 | A：templates 与 providers 独立 | template 描述"如何构建 adapter"，provider config 描述"运行时参数" |
+| D3 碎片文件 | A：单文件 | 当前所有配置在 `ai_models.yaml`；provider > 10 时再考虑 `ai_providers.d/` |
+| D4 schema 校验 | A：zod enum | `builtin_name` 使用 `z.enum(['mock','openai','anthropic','deepseek','ollama'])`，新增内置 adapter 时同步更新 enum |
+| D5 自定义 adapter | C：外部 HTTP 代理 | 私有模型通过 litellm/one-api 暴露 OpenAI 兼容接口后接入，不通过 plugin 加载 adapter 代码 |
+| D6 流式声明 | A：默认全支持 | `openai_compatible` template 自动继承流式能力；遇到不兼容 provider 时再追加 override 字段 |
+
+### P4-1: YAML Schema 扩展
+
+**文件**：`apps/server/src/ai/registry.ts`
+
+**内容**：
+1. 新增 `AiProviderTemplate` 类型和 `providerTemplateSchema` zod schema
+2. `aiRegistryConfigSchema` 新增 `provider_templates: z.array(providerTemplateSchema).default([])`
+3. 新增 `mergeProviderTemplates()` 合并函数（按 `name` key deep-merge）
+4. 内置 `BUILTIN_AI_REGISTRY_CONFIG.provider_templates` 为空数组
+
+**验收**：
+- [ ] `pnpm typecheck` 通过
+- [ ] `getAiRegistryConfig()` 返回空 `provider_templates`
+
+### P4-2: adapter_registry.ts
+
+**文件**：`apps/server/src/ai/providers/adapter_registry.ts`（新建）
+
+**内容**：
+1. `builtinFactories` Map：mock / openai / anthropic / deepseek / ollama → factory functions
+2. `buildAdaptersFromRegistry(registryConfig)`：
+   - 加载所有内置 adapter（默认启用）
+   - 遍历 `provider_templates`：`kind: openai_compatible` → `createOpenAiCompatibleAdapterFromTemplate()`；`kind: builtin` → 从 `builtinFactories` 查找并以 `template.name` 为 provider 名重建
+3. `listBuiltinAdapterNames()` 辅助函数
+
+**验收**：
+- [ ] `buildAdaptersFromRegistry(getAiRegistryConfig())` 返回 5 个默认 adapter
+- [ ] 单元测试：空 `provider_templates` 时行为与硬编码一致
+
+### P4-3: createOpenAiCompatibleAdapterFromTemplate
+
+**文件**：`apps/server/src/ai/providers/openai_compatible.ts`
+
+**内容**：
+在现有 `createOpenAiCompatibleAdapter()` 基础上新增工厂函数，从 `AiProviderTemplate` 配置构建 adapter：
+
+```typescript
+export const createOpenAiCompatibleAdapterFromTemplate = (
+  template: AiProviderTemplate
+): AiProviderAdapter => {
+  return createOpenAiCompatibleAdapter({
+    provider: template.name,
+    resolveApiKey(input) {
+      const envName = input.provider_config.api_key_env ?? template.api_key_env;
+      return getEnv(envName);
+    },
+    resolveBaseUrl(input) {
+      return input.model_entry.base_url
+        ?? input.provider_config.base_url
+        ?? template.base_url
+        ?? 'https://api.openai.com/v1';
+    },
+    buildHeaders(input) {
+      return { ...template.default_headers, ...input.provider_config.default_headers };
+    },
+    capabilityOverrides: template.capability_overrides
+  });
+};
+```
+
+**验收**：
+- [ ] 单元测试：通过 template 创建的 adapter 与硬编码 adapter 行为一致
+
+### P4-4: gateway.ts 动态构建
+
+**文件**：`apps/server/src/ai/gateway.ts`
+
+**内容**：
+```typescript
+// 修改前
+adapters = [createMockAiProviderAdapter(), createOpenAiProviderAdapter(), ...]
+
+// 修改后
+adapters // 保留参数供测试注入；未提供时从 registry 动态构建
+```
+
+默认值改为 `adapters = undefined`，内部使用 `buildAdaptersFromRegistry(resolvedRegistry)`。
+
+**验收**：
+- [ ] 现有测试零回归（测试通过注入 adapters 参数，不依赖默认值）
+- [ ] 新集成测试：`ai_models.yaml` 添加一个 `openai_compatible` template → gateway 自动构建其 adapter
+
+### P4-5: 热加载与集成验证
+
+**文件**：`apps/server/tests/integration/ai-gateway-template.spec.ts`（新建）
+
+**内容**：
+1. 通过测试 registry config（含 `provider_templates`）验证 `buildAdaptersFromRegistry()` 正确构建
+2. 验证 template adapter 参与 fallback 链
+3. 验证 `kind: builtin` 的 alias 行为（如 `name: claude, kind: builtin, builtin_name: anthropic`）
+4. 验证未知 `builtin_name` 的 warn log + 跳过行为
+
+**验收**：
+- [ ] 集成测试：template provider 在 fallback 链中正常工作
+- [ ] 集成测试：template adapter 的 `capabilityOverrides` 生效
+
+---
+
+### 文件变更清单（Phase 4）
+
+```
+apps/server/src/ai/
+├── registry.ts                             # 修改：+provider_templates schema + 合并
+├── gateway.ts                              # 修改：默认 adapter 改为 registry 驱动
+├── providers/
+│   ├── adapter_registry.ts                 # 新建：builtin factory map + buildAdaptersFromRegistry
+│   ├── openai_compatible.ts               # 修改：+createOpenAiCompatibleAdapterFromTemplate
+│   └── types.ts                            # 修改：+AiProviderTemplate 类型导出
+app/server/tests/
+├── integration/
+│   └── ai-gateway-template.spec.ts         # 新建：template adapter 集成测试
+```
+
+### 检查点
+
+| 检查点 | 完成条件 | 预计日期 | 状态 |
+|--------|---------|---------|------|
+| CP5: Phase 4 完成 | YAML → adapter 零代码添加，集成测试全绿 | Day 17 | ✅ 完成 |

@@ -13,13 +13,9 @@ import {
   resolveRateLimiterConfig,
 } from './elasticity/index.js';
 import { recordAiInvocation } from './observability.js';
-import { createAnthropicProviderAdapter } from './providers/anthropic.js';
-import { createDeepSeekProviderAdapter } from './providers/deepseek.js';
-import { createMockAiProviderAdapter } from './providers/mock.js';
-import { createOllamaProviderAdapter } from './providers/ollama.js';
-import { createOpenAiProviderAdapter } from './providers/openai.js';
+import { buildAdaptersFromRegistry } from './providers/adapter_registry.js';
 import type { AiProviderAdapter, AiProviderAdapterChunk, AiProviderAdapterResult } from './providers/types.js';
-import { getAiProviderConfig } from './registry.js';
+import { getAiProviderConfig, getAiRegistryConfig } from './registry.js';
 import { resolveAiRoute } from './route_resolver.js';
 import type { AiAuditLevel, AiInvocationAttemptRecord, AiRegistryConfig, AiResolvedTaskConfig, AiTaskRequest, ModelGatewayRequest, ModelGatewayResponse } from './types.js';
 
@@ -249,18 +245,15 @@ const finalizeProviderResponse = (
 };
 
 export const createModelGateway = ({
-  adapters = [
-    createMockAiProviderAdapter(),
-    createOpenAiProviderAdapter(),
-    createAnthropicProviderAdapter(),
-    createDeepSeekProviderAdapter(),
-    createOllamaProviderAdapter()
-  ],
+  adapters,
   context,
   registryConfig
 }: CreateModelGatewayOptions = {}): ModelGateway => {
-  const adapterByProvider = new Map(adapters.map(adapter => [adapter.provider, adapter]));
   const resolvedRegistry = registryConfig ?? null;
+  const activeAdapters = adapters ?? (resolvedRegistry
+    ? buildAdaptersFromRegistry(resolvedRegistry)
+    : buildAdaptersFromRegistry(getAiRegistryConfig()));
+  const adapterByProvider = new Map(activeAdapters.map(adapter => [adapter.provider, adapter]));
   const resolveProviderConfig = (provider: string) => {
     if (resolvedRegistry) {
       return resolvedRegistry.providers.find(entry => entry.provider === provider) ?? null;

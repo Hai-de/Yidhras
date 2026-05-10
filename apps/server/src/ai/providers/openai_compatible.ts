@@ -557,3 +557,30 @@ export const createOpenAiCompatibleAdapter = (
     }
   };
 };
+
+// ── Template-based factory ─────────────────────────────────────────────
+
+export const createOpenAiCompatibleAdapterFromTemplate = (
+  template: import('../types.js').AiProviderTemplate
+): import('./types.js').AiProviderAdapter => {
+  return createOpenAiCompatibleAdapter({
+    provider: template.name,
+    resolveApiKey(input) {
+      const envName = input.provider_config.api_key_env ?? template.api_key_env;
+      return getEnv(envName);
+    },
+    resolveBaseUrl(input) {
+      return input.model_entry.base_url
+        ?? input.provider_config.base_url
+        ?? template.base_url
+        ?? 'https://api.openai.com/v1';
+    },
+    buildHeaders(input) {
+      return {
+        ...(template.default_headers ?? {}),
+        ...(input.provider_config.default_headers ?? {})
+      };
+    },
+    capabilityOverrides: template.capability_overrides
+  });
+};

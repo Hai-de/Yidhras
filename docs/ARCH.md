@@ -554,7 +554,8 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 - tool calling（cross_agent_tool、tool_executor、tool_loop_runner、tool_permissions）属于 host-side 受控执行能力；tool loop 含 token 预算管理（`tiktoken` 精确计数 + Anthropic 字符估算）
 - response caching：LRU 内存缓存 + per-task-type TTL，减少确定性推理重复调用成本
 - streaming：provider adapter 支持流式响应（Chat Completions SSE / Anthropic Messages SSE），gateway 层透传；SSE endpoint 待前端接入
-- registry 支持 fs.watch 热加载（`registry_watcher.ts`），ai_models.yaml 与 prompt_slots.yaml 变更后自动校验重载
+- provider templates：`ai_models.yaml` 的 `provider_templates` 段支持零代码添加 OpenAI-compatible 渠道（OpenRouter、SiliconFlow 等），`adapter_registry.ts` 动态构建 adapter 列表
+- registry 支持 fs.watch 热加载（`registry_watcher.ts`），ai_models.yaml 与 prompt_slots.yaml 变更后自动校验重载（provider_templates 变更同受热加载覆盖）
 - Rust world engine 若引入，不承接 AI gateway 本体
 
 **目录边界**：
@@ -572,6 +573,7 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 - Anthropic 精确 tokenizer（`@anthropic-ai/tokenizer`，当前字符数/3.5 估算）
 - OpenAI Responses API streaming（仅 Chat Completions 路径支持）
 - SSE endpoint 前端接入（后端 adapter + gateway 已实现）
+- 非 OpenAI-compatible 的代码 adapter kind（`azure_openai`、`vertex_ai`、`bedrock`）
 
 
 ### 6.3 Plugin Runtime

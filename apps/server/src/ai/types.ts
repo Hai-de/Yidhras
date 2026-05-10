@@ -329,10 +329,26 @@ export interface AiRoutePolicy {
 
 export interface AiRegistryConfig {
   version: number;
+  provider_templates?: AiProviderTemplate[];
   providers: AiProviderConfig[];
   models: AiModelRegistryEntry[];
   routes: AiRoutePolicy[];
   tools?: AiToolRegistryEntry[];
+}
+
+export interface AiProviderTemplate {
+  name: string;
+  kind: 'openai_compatible' | 'builtin';
+  base_url?: string | null;
+  api_key_env?: string | null;
+  capability_overrides?: {
+    disallowTempWithTopP?: boolean;
+    maxTokensField?: 'max_completion_tokens' | 'max_tokens';
+    supportsSeed?: boolean;
+    maxStructuredOutput?: 'none' | 'json_object' | 'json_schema';
+  };
+  default_headers?: Record<string, string>;
+  builtin_name?: string | null;
 }
 
 export const AI_TOOL_SANDBOX_LEVELS = ['strict', 'readonly_world', 'mutation'] as const;

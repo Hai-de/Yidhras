@@ -14,6 +14,7 @@ import {
   AI_TASK_TYPES,
   type AiModelRegistryEntry,
   type AiProviderConfig,
+  type AiProviderTemplate,
   type AiRegistryConfig,
   type AiRoutePolicy,
   type AiToolRegistryEntry,
@@ -135,9 +136,35 @@ const aiToolRegistryEntrySchema = z
   })
   .strict();
 
+export const BUILTIN_ADAPTER_NAMES = ['mock', 'openai', 'anthropic', 'deepseek', 'ollama'] as const;
+export type BuiltinAdapterName = (typeof BUILTIN_ADAPTER_NAMES)[number];
+
+export const AI_PROVIDER_TEMPLATE_KINDS = ['openai_compatible', 'builtin'] as const;
+export type AiProviderTemplateKind = (typeof AI_PROVIDER_TEMPLATE_KINDS)[number];
+
+const aiProviderTemplateSchema = z
+  .object({
+    name: nonEmptyStringSchema,
+    kind: z.enum(AI_PROVIDER_TEMPLATE_KINDS),
+    base_url: nonEmptyStringSchema.nullish(),
+    api_key_env: nonEmptyStringSchema.nullish(),
+    capability_overrides: z
+      .object({
+        disallowTempWithTopP: z.boolean().optional(),
+        maxTokensField: z.enum(['max_completion_tokens', 'max_tokens']).optional(),
+        supportsSeed: z.boolean().optional(),
+        maxStructuredOutput: z.enum(['none', 'json_object', 'json_schema']).optional()
+      })
+      .optional(),
+    default_headers: z.record(z.string(), z.string()).optional(),
+    builtin_name: z.enum(BUILTIN_ADAPTER_NAMES).nullish()
+  })
+  .strict();
+
 export const aiRegistryConfigSchema = z
   .object({
     version: z.number().int().positive().default(1),
+    provider_templates: z.array(aiProviderTemplateSchema).default([]),
     providers: z.array(aiProviderConfigSchema).default([]),
     models: z.array(aiModelRegistryEntrySchema).default([]),
     routes: z.array(aiRoutePolicySchema).default([]),
@@ -158,6 +185,7 @@ interface AiRegistryCache {
 
 export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
   version: 1,
+  provider_templates: [],
   providers: [
     {
       provider: 'openai',
@@ -602,9 +630,29 @@ const mergeToolEntries = (base: AiToolRegistryEntry[], overrides: AiToolRegistry
   return Array.from(mergedByToolId.values());
 };
 
+const mergeProviderTemplates = (
+  base: AiProviderTemplate[],
+  overrides: AiProviderTemplate[]
+): AiProviderTemplate[] => {
+  const mergedByName = new Map(base.map(t => [t.name, structuredClone(t)]));
+  for (const override of overrides) {
+    const existing = mergedByName.get(override.name);
+    if (!existing) {
+      mergedByName.set(override.name, structuredClone(override));
+      continue;
+    }
+    mergedByName.set(
+      override.name,
+      deepMerge(existing as unknown as Record<string, unknown>, override as unknown as Record<string, unknown>) as unknown as AiProviderTemplate
+    );
+  }
+  return Array.from(mergedByName.values());
+};
+
 export const mergeAiRegistryConfig = (base: AiRegistryConfig, override: AiRegistryConfig): AiRegistryConfig => {
   return {
     version: override.version,
+    provider_templates: mergeProviderTemplates(base.provider_templates ?? [], override.provider_templates ?? []),
     providers: mergeProviderConfigs(base.providers, override.providers),
     models: mergeModelRegistryEntries(base.models, override.models),
     routes: mergeRoutePolicies(base.routes, override.routes),
