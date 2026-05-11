@@ -10,6 +10,7 @@ import type { SchedulerStorageAdapter } from '../packs/storage/SchedulerStorageA
 import type { NotificationLevel, SystemMessage } from '../utils/notifications.js';
 import type { PackScopeResolver } from './runtime/PackScopeResolver.js';
 import type { AppContextPorts } from './services/app_context_ports.js';
+import type { MultiPackRuntimePort, PackRuntimePort } from './services/pack_runtime_ports.js';
 import type { Repositories } from './services/repositories/index.js';
 
 export type HealthLevel = 'ok' | 'degraded' | 'fail';
@@ -74,6 +75,16 @@ export interface AppContext extends AppInfrastructure, AppContextPorts {
    * PackScopeResolver — preferred path for pack-scoped context resolution.
    */
   readonly packScope?: PackScopeResolver;
+
+  /**
+   * Per-pack runtime port (new — replaces activePackRuntime in later phases).
+   */
+  packRuntime?: PackRuntimePort;
+
+  /**
+   * Multi-pack aggregation port (new — replaces global clock in later phases).
+   */
+  multiPackRuntime?: MultiPackRuntimePort;
 
   // Lifecycle / runtime methods
   getSpatialRuntime?(): import('../packs/runtime/spatial_runtime.js').SpatialRuntime | null;

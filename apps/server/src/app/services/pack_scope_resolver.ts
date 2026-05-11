@@ -13,8 +13,9 @@ const normalizeRequestedPackId = (packId: string): string => {
   return normalizedPackId;
 };
 
-export const createPackScopeResolver = (context: AppContext): PackScopeResolver => {
+export const createPackScopeResolver = (context: AppContext): PackScopeResolver & { resolvePackScope(packId: string, feature: string): string } => {
   return {
+    /** Legacy mode-dependent resolver — to be removed in Phase 3. */
     assertPackScope(packId: string, mode: PackRuntimeScopeMode, feature: string): string {
       if (mode === 'stable') {
         const { resolvedPackId } = resolvePackProjectionTarget(context, {
@@ -35,6 +36,22 @@ export const createPackScopeResolver = (context: AppContext): PackScopeResolver 
       });
       if (!lookup.hasPackRuntime(normalizedPackId)) {
         throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', `Experimental pack runtime not found for ${feature}`, {
+          pack_id: normalizedPackId,
+          feature
+        });
+      }
+
+      return normalizedPackId;
+    },
+
+    /** Unified pack scope resolution — mode-agnostic, registry-based. Will become the sole path in Phase 3. */
+    resolvePackScope(packId: string, feature: string): string {
+      const normalizedPackId = normalizeRequestedPackId(packId);
+      const lookup = getPackRuntimeLookupPort({
+        packRuntimeLookup: context.packRuntimeLookup
+      });
+      if (!lookup.hasPackRuntime(normalizedPackId)) {
+        throw new ApiError(404, 'PACK_RUNTIME_NOT_FOUND', `Pack runtime not found for ${feature}`, {
           pack_id: normalizedPackId,
           feature
         });
