@@ -83,7 +83,8 @@ export const updateOperator = async (
     is_root?: boolean
   },
   updatedByOperatorId?: string,
-  clientIp?: string
+  clientIp?: string,
+  packRuntime?: PackRuntimePort
 ) => {
   const operator = await context.repos.identityOperator.findOperatorById(operatorId)
 
