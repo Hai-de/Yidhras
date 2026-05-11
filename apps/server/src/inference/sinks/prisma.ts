@@ -262,6 +262,7 @@ export const createPrismaInferenceTraceSink = (context: AppInfrastructure): Infe
               intent_grounding: event.intent_grounding ?? null
             }),
             decision: event.decision ? toJsonValue(event.decision) : undefined,
+            pack_id: event.input.pack_id ?? null,
             created_at: now,
             updated_at: now
           }
@@ -305,6 +306,7 @@ export const createPrismaInferenceTraceSink = (context: AppInfrastructure): Infe
               transmission_drop_chance: event.action_intent_draft.transmission_drop_chance,
               drop_reason: event.action_intent_draft.drop_reason,
               status: 'pending',
+              pack_id: event.input.pack_id ?? null,
               created_at: now,
               updated_at: now
             }

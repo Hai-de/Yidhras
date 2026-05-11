@@ -12,6 +12,7 @@ export interface RelationshipAdjustmentLogInput {
   new_weight: number;
   reason: string | null;
   created_at: bigint;
+  pack_id?: string | null;
 }
 
 export interface RelationshipTargetAgentRecord {
@@ -140,6 +141,7 @@ export const createRelationship = async (
     weight: number;
     created_at: bigint;
     updated_at: bigint;
+    pack_id?: string | null;
   }
 ): Promise<RelationshipRecord> => {
   return context.prisma.relationship.create({

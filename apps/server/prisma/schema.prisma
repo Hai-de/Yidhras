@@ -16,11 +16,12 @@ model Agent {
   id              String   @id @default(uuid())
   name            String
   type            String   // "active", "noise", "system"
-  
+  pack_id         String?
+
   // Value Dynamics
   snr             Float    @default(0.5) // 信噪比 (0.0 - 1.0)
   is_pinned       Boolean  @default(false)
-  
+
   // Relations
   posts           Post[]
   snr_adjustment_logs SNRAdjustmentLog[]
@@ -28,15 +29,17 @@ model Agent {
   relationships_to   Relationship[] @relation("ToNode")
 
   identity_bindings IdentityNodeBinding[]
-  
+
   // Atmosphere Nodes (Sockpuppets)
   atmosphere_nodes AtmosphereNode[]
-  
+
   // Circles (Permissions)
   circle_memberships CircleMember[]
 
   created_at      BigInt
   updated_at      BigInt
+
+  @@index([pack_id, type])
 }
 
 model AtmosphereNode {
@@ -44,11 +47,14 @@ model AtmosphereNode {
   name            String
   owner_id        String
   owner           Agent    @relation(fields: [owner_id], references: [id])
+  pack_id         String?
 
   identity_bindings IdentityNodeBinding[]
-  
+
   expires_at      BigInt?  // 自动回收时间
   created_at      BigInt
+
+  @@index([pack_id])
 }
 
 // --- Permission System ---
@@ -58,17 +64,22 @@ model Circle {
   name        String
   level       Int            // AccessLevel Enum (0-3)
   description String?
-  
+  pack_id     String?
+
   members     CircleMember[]
+
+  @@index([pack_id])
 }
 
 model CircleMember {
   agent_id    String
   circle_id   String
+  pack_id     String?
   agent       Agent    @relation(fields: [agent_id], references: [id])
   circle      Circle   @relation(fields: [circle_id], references: [id])
 
   @@id([agent_id, circle_id])
+  @@index([pack_id])
 }
 
 // --- L2: Relationship Graph ---
@@ -79,7 +90,8 @@ model Relationship {
   to_id       String
   type        String   // "friend", "enemy", "command", "transfer"
   weight      Float    @default(1.0)
-  
+  pack_id     String?
+
   from        Agent    @relation("FromNode", fields: [from_id], references: [id])
   to          Agent    @relation("ToNode", fields: [to_id], references: [id])
   adjustment_logs RelationshipAdjustmentLog[]
@@ -88,6 +100,7 @@ model Relationship {
   updated_at  BigInt
 
   @@unique([from_id, to_id, type])
+  @@index([pack_id, from_id])
 }
 
 model RelationshipAdjustmentLog {
@@ -101,6 +114,7 @@ model RelationshipAdjustmentLog {
   old_weight       Float?
   new_weight       Float
   reason           String?
+  pack_id          String?
   created_at       BigInt
 
   action_intent    ActionIntent @relation(fields: [action_intent_id], references: [id])
@@ -109,6 +123,7 @@ model RelationshipAdjustmentLog {
   @@index([action_intent_id, created_at])
   @@index([relationship_id, created_at])
   @@index([from_id, to_id, type, created_at])
+  @@index([pack_id, created_at])
 }
 
 model SNRAdjustmentLog {
@@ -120,6 +135,7 @@ model SNRAdjustmentLog {
   baseline_value   Float
   resolved_value   Float
   reason           String?
+  pack_id          String?
   created_at       BigInt
 
   action_intent    ActionIntent @relation(fields: [action_intent_id], references: [id])
@@ -127,6 +143,7 @@ model SNRAdjustmentLog {
 
   @@index([action_intent_id, created_at])
   @@index([agent_id, created_at])
+  @@index([pack_id, agent_id])
 }
 
 // --- L1: Social Layer ---
@@ -136,17 +153,19 @@ model Post {
   author_id   String
   source_action_intent_id String?
   content     String
-  
+  pack_id     String?
+
   // L4 Transmission Props
   noise_level Float    @default(0.0)
   is_encrypted Boolean @default(false)
-  
+
   author      Agent    @relation(fields: [author_id], references: [id])
   source_action_intent ActionIntent? @relation(fields: [source_action_intent_id], references: [id])
-  
+
   created_at  BigInt
 
   @@index([source_action_intent_id, created_at])
+  @@index([pack_id])
 }
 
 // --- L3: Narrative Layer ---
@@ -157,7 +176,8 @@ model Event {
   description String
   tick        BigInt   // 发生时的绝对时间
   type        String   // "history", "interaction", "system"
-  
+  pack_id     String?
+
   // 影响范围 (JSON)
   impact_data String?  // 存储 JSON: { "snr_delta": ..., "affected_nodes": [] }
   source_action_intent_id String?
@@ -173,12 +193,16 @@ model Event {
   @@index([type, tick])
   @@index([source_action_intent_id, tick])
   @@index([location_id, tick])
+  @@index([pack_id, tick])
 }
 
 model WorldVariable {
   key         String   @id
   value       String
+  pack_id     String?
   updated_at  BigInt
+
+  @@index([pack_id, key])
 }
 
 // --- Identity Layer ---
@@ -191,6 +215,7 @@ model Identity {
   status     String  @default("active")
   claims     Json?
   metadata   Json?
+  pack_id    String?
   created_at BigInt
   updated_at BigInt
 
@@ -198,6 +223,8 @@ model Identity {
   bindings   IdentityNodeBinding[]
 
   operator    Operator?
+
+  @@index([pack_id])
 }
 
 model IdentityNodeBinding {
@@ -232,6 +259,7 @@ model Policy {
   field         String
   conditions    Json?
   priority      Int      @default(0)
+  pack_id       String?
   created_at    BigInt
   updated_at    BigInt
 
@@ -240,6 +268,7 @@ model Policy {
   @@index([resource, action])
   @@index([subject_id])
   @@index([subject_type])
+  @@index([pack_id, resource, action])
 }
 
 model InferenceTrace {
@@ -253,6 +282,7 @@ model InferenceTrace {
   prompt_bundle    Json
   trace_metadata   Json
   decision         Json?
+  pack_id          String?
   created_at       BigInt
   updated_at       BigInt
 
@@ -263,6 +293,7 @@ model InferenceTrace {
 
   @@index([kind, created_at])
   @@index([strategy, provider])
+  @@index([pack_id, created_at])
 }
 
 model ActionIntent {
@@ -286,6 +317,7 @@ model ActionIntent {
   drop_reason           String?
   dispatch_error_code   String?
   dispatch_error_message String?
+  pack_id               String?
   created_at            BigInt
   updated_at            BigInt
 
@@ -298,6 +330,7 @@ model ActionIntent {
 
   @@index([status, created_at])
   @@index([status, lock_expires_at])
+  @@index([pack_id, status])
 }
 
 model DecisionJob {
@@ -364,6 +397,7 @@ model AiInvocationRecord {
   error_message       String?
   error_stage         String?
   audit_level         String
+  pack_id             String?
   created_at          BigInt
   completed_at        BigInt?
 
@@ -373,6 +407,7 @@ model AiInvocationRecord {
   @@index([task_type, created_at])
   @@index([provider, model, created_at])
   @@index([status, created_at])
+  @@index([pack_id, created_at])
 }
 
 model ContextOverlayEntry {
@@ -656,12 +691,14 @@ model ConversationMemory {
   display_name    String?
   summary         String?
   metadata_json   String?
+  pack_id         String?
   created_at      BigInt
   updated_at      BigInt
 
   entries         ConversationEntryRecord[]
 
   @@unique([owner_agent_id, conversation_id])
+  @@index([pack_id])
 }
 
 model ConversationEntryRecord {

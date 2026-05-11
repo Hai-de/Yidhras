@@ -13,6 +13,7 @@ export interface RegisterIdentityInput {
   name?: string;
   claims?: unknown;
   metadata?: unknown;
+  packId?: string | null;
 }
 
 export interface CreateIdentityBindingInput {
@@ -22,6 +23,7 @@ export interface CreateIdentityBindingInput {
   role?: string;
   status?: string;
   expires_at?: unknown;
+  packId?: string | null;
 }
 
 export interface QueryIdentityBindingsInput {
@@ -50,7 +52,7 @@ export const registerIdentity = async (
   context: AppContext,
   input: RegisterIdentityInput
 ) => {
-  const { id, type, name, claims, metadata } = input;
+  const { id, type, name, claims, metadata, packId } = input;
 
   if (!id || !type) {
     throw new ApiError(400, 'IDENTITY_INVALID', 'id and type are required');
@@ -66,6 +68,7 @@ export const registerIdentity = async (
       status: 'active',
       claims: claims ?? undefined,
       metadata: metadata ?? undefined,
+      pack_id: packId ?? null,
       created_at: now,
       updated_at: now
     }
@@ -77,7 +80,7 @@ export const createIdentityBinding = async (
   input: CreateIdentityBindingInput,
   deps: IdentityServiceDependencies
 ) => {
-  const { identity_id, agent_id, atmosphere_node_id, role, status, expires_at } = input;
+  const { identity_id, agent_id, atmosphere_node_id, role, status, expires_at, packId } = input;
 
   if (!identity_id) {
     throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'identity_id is required');
@@ -126,6 +129,7 @@ export const createIdentityBinding = async (
       atmosphere_node_id: hasAtmosphere ? atmosphere_node_id : null,
       role: role as IdentityBindingRole,
       status: normalizedStatus as IdentityBindingStatus,
+      pack_id: packId ?? null,
       expires_at: expiresAt ?? undefined,
       created_at: now,
       updated_at: now

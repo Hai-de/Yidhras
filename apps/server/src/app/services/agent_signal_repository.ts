@@ -175,6 +175,7 @@ export const createSnrAdjustmentLog = async (
     resolved_value: number;
     reason: string | null;
     created_at: bigint;
+    pack_id?: string | null;
   }
 ) => {
   return context.prisma.sNRAdjustmentLog.create({
@@ -194,6 +195,7 @@ export const createEventEvidence = async (
     created_at: bigint;
     location_id?: string | null;
     visibility?: string | null;
+    pack_id?: string | null;
   }
 ) => {
   return context.prisma.event.create({

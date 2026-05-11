@@ -18,8 +18,8 @@ export interface NarrativeEventRepository {
     source_action_intent_id: string;
     created_at: bigint;
   }): Promise<unknown>;
-  getWorldVariable(key: string): Promise<string | null>;
-  setWorldVariable(key: string, value: string, updatedAt: bigint): Promise<void>;
+  getWorldVariable(key: string, packId?: string | null): Promise<string | null>;
+  setWorldVariable(key: string, value: string, updatedAt: bigint, packId?: string | null): Promise<void>;
   listRecentEvents(limit?: number): Promise<Array<{ id: string; title: string; description: string; tick: bigint; type: string; impact_data: string | null; source_action_intent_id: string | null; created_at: bigint }>>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   queryEvents(input: { where?: Record<string, unknown>; orderBy?: any; take?: number; include?: Record<string, unknown> }): Promise<any[]>;
@@ -48,16 +48,18 @@ export class PrismaNarrativeEventRepository implements NarrativeEventRepository 
     return createEventEvidence(this.ctx(), input);
   }
 
-  async getWorldVariable(key: string): Promise<string | null> {
-    const record = await this.prisma.worldVariable.findUnique({ where: { key } });
+  async getWorldVariable(key: string, packId?: string | null): Promise<string | null> {
+    const record = await this.prisma.worldVariable.findFirst({
+      where: { key, pack_id: packId ?? null }
+    });
     return record?.value ?? null;
   }
 
-  async setWorldVariable(key: string, value: string, updatedAt: bigint): Promise<void> {
+  async setWorldVariable(key: string, value: string, updatedAt: bigint, packId?: string | null): Promise<void> {
     await this.prisma.worldVariable.upsert({
       where: { key },
-      create: { key, value, updated_at: updatedAt },
-      update: { value, updated_at: updatedAt }
+      create: { key, value, updated_at: updatedAt, pack_id: packId ?? null },
+      update: { value, updated_at: updatedAt, pack_id: packId ?? null }
     });
   }
 
