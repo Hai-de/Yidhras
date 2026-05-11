@@ -11,6 +11,8 @@ import type {
 import type { ContextSourceAdapter } from '../context/source_registry.js';
 import type { PromptWorkflowStepExecutor } from '../context/workflow/registry.js';
 import type { PerceptionResolver } from '../perception/types.js';
+import { createLogger } from '../utils/logger.js';
+import { getPluginSandboxConfig } from './context.js';
 import { resolveLoadOrder } from './dependency_resolver.js';
 import type { DataCleaner } from './extensions/data_cleaner_registry.js';
 import { dataCleanerRegistry } from './extensions/data_cleaner_registry.js';
@@ -18,6 +20,9 @@ import type { SlotConditionEvaluator } from './extensions/slot_condition_registr
 import { slotConditionRegistry } from './extensions/slot_condition_registry.js';
 import type { SlotContentTransformer } from './extensions/slot_content_transformer.js';
 import { slotContentTransformRegistry } from './extensions/slot_content_transformer.js';
+
+const runtimeLogger = createLogger('plugin-sandbox-runtime');
+
 type Ctx = AppInfrastructure & { getHttpApp?(): Express | null };
 
 export interface PluginInferenceRequest {
@@ -77,6 +82,15 @@ const createServerPluginHostApi = (runtime: RegisteredServerPluginRuntime): Serv
         return;
       }
 
+      const config = getPluginSandboxConfig();
+      if (runtime.context_sources.length >= config.maxContextSources) {
+        runtimeLogger.warn(
+          `Plugin ${runtime.plugin_id} (${runtime.installation_id}) exceeded max context sources ` +
+          `(${config.maxContextSources}). Skipping context source registration.`
+        );
+        return;
+      }
+
       runtime.context_sources.push(adapter);
     },
     registerPromptWorkflowStep(executor, capabilityKey) {
@@ -88,6 +102,15 @@ const createServerPluginHostApi = (runtime: RegisteredServerPluginRuntime): Serv
     },
     registerPackRoute(register, capabilityKey) {
       if (!hasCapability(runtime.granted_capabilities, capabilityKey)) {
+        return;
+      }
+
+      const config = getPluginSandboxConfig();
+      if (runtime.pack_routes.length >= config.maxRoutes) {
+        runtimeLogger.warn(
+          `Plugin ${runtime.plugin_id} (${runtime.installation_id}) exceeded max routes ` +
+          `(${config.maxRoutes}). Skipping route registration.`
+        );
         return;
       }
 

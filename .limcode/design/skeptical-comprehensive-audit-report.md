@@ -3,7 +3,7 @@
 > 审查视角：以落地为唯一标准，对所有文档主张、架构承诺和代码实现进行对抗性验证。
 > 审查范围：仓库全部源代码、文档、设计稿、测试与配置。
 > 审查日期：2026-05-09
-> 最后更新：2026-05-10（更正事实性错误、更新已过时的论述、为模糊论断添加语境。关键变更：多 provider 落地、代码量修正、move intent/Tag 系统/agent 权限论述添加 nuance。保留有争议的判定，标注为争议点。）
+> 最后更新：2026-05-11（更正 §4.7 插件系统：`requestInference` 与 `registerPerceptionResolver` 已验证为已实现，Gaps 列表同步更新）
 
 ---
 
@@ -27,7 +27,7 @@
 | AI Gateway | "分层内部管道" | 多 provider 刚落地 | 5 | Anthropic/DeepSeek/Ollama 适配器 2026-05-10 新增，多 provider 生态稳定性待验证 |
 | Prompt Workflow Runtime | "V2 树形管道 exclusive" | 有实现但过度设计 | 6 | 五个 profile，但实际只用到前三个 |
 | 调度器 Scheduler | "partition-aware / multi-worker" | SQLite 上的 lease 表 | 6 | 多 worker 但没有真正的分布式，全在单机上 |
-| 插件系统 Plugin Runtime | "pack-local governance" | 无沙箱、无隔离 | 8 | 插件可以注册 Express 路由，但没有资源限制 |
+| 插件系统 Plugin Runtime | "pack-local governance" | 中等，AI 推理/感知注册已补齐 | 7 | 11 个注册方法 + AI 推理可用，但无资源限制 enforce、无前端 CSP、无进程级隔离 |
 | 空间语义 Spatial | "A 层 Phase 1 全部完成" | B/C 层为零 | 7 | A 层代码链路完整（含 move intent），但端到端 AI 行为未验证，前端无空间可视化 |
 | 多轮对话 Multi-Turn | "设计文档 50KB" | 数据/持久化层就绪，路由层未激活 | 8 | Conversation 模块 ~2,368 行 TS，Tag 在 DB 层已激活但未用于多轮路由 |
 | 前端 Web | "Nuxt 4 + Vue 3" | ~6,100 行 Vue SFC + ~25,400 行 TS | 7 | 纯管理后台，无实时交互，无游戏画面 |
@@ -436,7 +436,7 @@ stdio JSON-RPC 是一个**极其脆弱的 IPC 机制**。它要求：
 
 **Evidence**：
 - `plugins/discovery.ts`、`store.ts`、`service.ts`、`runtime.ts`
-- `ServerPluginHostApi`：提供 9 个注册方法
+- `ServerPluginHostApi`：提供 11 个注册方法 + AI 推理接口
 - Web runtime manifest 和同源 asset 路由
 - Plugin management GUI 页面
 
@@ -459,17 +459,24 @@ stdio JSON-RPC 是一个**极其脆弱的 IPC 机制**。它要求：
 - 没有插件脚本的签名验证
 - 插件可以访问前端的所有 API（因为它是动态 import 到同一作用域的）
 
-**Host API 的 AI 推理缺失**：`TODO.md` 明确列出"插件 host API 无 AI 推理接口"和"插件 API 无 `registerPerceptionResolver`"。这意味着插件无法触发 AI 调用，也无法自定义感知规则。对于一个声称"插件扩展世界包能力"的系统，这是**核心能力缺口**。
+**Host API 的 AI 推理与感知注册**（审查日期后已补齐）：审查日期时 `TODO.md` 列出"插件 host API 无 AI 推理接口"和"插件 API 无 `registerPerceptionResolver`"。两项均已在此后的开发中实现：
+
+- `requestInference`（`runtime.ts:145-153`）：带 `server.inference.request` capability 校验，通过独立 `AiTaskService` 实例执行（独立熔断器，与主推理链路隔离）。入口在 `index.ts:246`。
+- `registerPerceptionResolver`（`runtime.ts:138-143`）：带 `server.perception_resolver.register` capability 校验，插件注册的解析器接入 `perception_pipeline.ts:112`，优先于默认 `spatial_proximity` 解析器。
+
+两项在 `TODO.md` 以及 `PLUGIN_RUNTIME.md` §9.1–§9.2 中均已标记完成。
+
+**资源限制的纸面配置**：`context.ts` 定义了 `PluginSandboxConfig`，包含 `maxManifestSizeBytes`、`maxManifestDepth`、`maxRoutes`、`maxContextSources` 等字段，配置 schema 中有默认值（1MB、深度 20、16 路由、32 context source）。但这些值**仅在 config 层定义，运行时未 enforce**。`discovery.ts` 不检查 manifest 大小/深度，`runtime.ts` 的 `registerPackRoute`/`registerContextSource` 不对照上限校验。`capabilityLevel`（readonly/pack_scoped/full）裁剪的是 API 表面（`createPluginContext`），不是 CPU/内存/网络资源限制。
 
 **Gaps**：
 - [ ] 插件代码沙箱（VM2 已废弃，isolated-vm 或 WASM 是可能方向）
-- [ ] 插件资源限制（CPU 时间、内存、网络访问）
-- [ ] 插件 AI 推理接口（`requestInference`）
-- [ ] 插件自定义感知解析器注册（`registerPerceptionResolver`）
+- [ ] 插件资源限制的运行时 enforce（config 中已定义 `maxManifestSizeBytes`/`maxRoutes`/`maxContextSources` 等上限，但 `discovery.ts`/`runtime.ts` 未对照校验）
+- [x] 插件 AI 推理接口（`requestInference` — 已实现，独立 AiTaskService 实例）
+- [x] 插件自定义感知解析器注册（`registerPerceptionResolver` — 已实现，接入感知管线）
 - [ ] 前端插件脚本的 CSP 和签名验证
-- [ ] 插件崩溃时的宿主隔离（一个插件抛错不应影响其他插件或宿主）
+- [ ] 插件崩溃时的宿主隔离（`activatePluginEntrypoint` 有 try/catch，`PluginRenderBoundary.vue` 有 `onErrorCaptured`；无限循环/`process.exit()` 等进程级破坏无防护，本质上依赖沙箱）
 
-**Verdict**：插件系统是一个**没有安全边界的扩展机制**。它提供了丰富的注册点，但没有隔离、没有资源限制、没有 AI 接口。在生产环境中，启用第三方插件等于授予其对宿主系统的完全访问权限。
+**Verdict**：插件系统在审查日期时的两项核心能力缺口（AI 推理接口 `requestInference`、感知解析器注册 `registerPerceptionResolver`）已补齐。`ServerPluginHostApi` 现提供 11 个注册方法 + AI 推理。剩余实质性缺口集中在**安全边界**：资源限制仅有纸面配置未经运行时 enforce、前端 web bundle 无 CSP/签名校验、无进程级隔离（`activatePluginEntrypoint` 有 try/catch 但无限循环等进程级破坏无防护）。`capabilityLevel` 的 API 表面裁剪不足以构成安全沙箱。
 
 ---
 
@@ -812,6 +819,7 @@ Server 内部分层：Routes → Services → Workflow/Runtime → PackRuntime/G
 - flaky test `death-note-memory-loop.spec.ts`
 - ~~variables schema 不支持数组~~（已解决：2026-05-09 新增 array 支持，2026-05-11 宏类型系统升级）
 - ~~插件 Host API 无 AI 推理接口~~（已解决：`requestInference` 已实现）
+- ~~插件 API 无 `registerPerceptionResolver`~~（已解决：已实现并接入感知管线）
 
 这种标记创造了一个**虚假的进度感**："我们知道这些问题，但它们不紧急"。但实际上，这些问题中的每一个都会在未来成为阻塞性障碍。~~例如，variables 不支持数组意味着所有世界包的配置必须使用逗号分隔字符串，这会在世界包生态扩大时成为兼容性噩梦。~~ 此项已不存在。
 

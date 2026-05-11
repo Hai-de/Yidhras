@@ -1,11 +1,15 @@
 # TODO
 
-> 本文件只记录用户当前想要最近一段时间的待处理事项，完成后用户会直接移除。
+> 本文件只记录用户当前想要最近一段时间的待处理事项，完成后用户会直接移除，没有记录价值。
 > 稳定架构事实看 `docs/ARCH.md`，业务语义看 `docs/LOGIC.md`，接口契约看 `docs/specs/API.md`，设计/计划/评审过程看 `.limcode/`。
 
 ## 当前重点 / Current Focus
 
 ### 大型任务
+
+
+### 原型世界包
+- 基于世界包预设身份/权限/能力安排的世界观提示词派生/权限过滤
 
 #### 上层语义变迁 — 空间语义层
 
@@ -62,23 +66,15 @@
 - `tests/integration/death-note-memory-loop.spec.ts` > `records revise_judgement_plan as overlay and plan memory block during action dispatch` — 预存 flaky 测试，`expected undefined to be truthy`。不阻塞当前阶段，需单独排查 memory overlay 记录逻辑
 
 ##### 原型世界包问题
-- [x] ~~`variables` schema 不支持数组~~ — 已解决：2026-05-09 schema 扩展支持 array，2026-05-11 宏系统升级为 `MacroValue` typed 体系（`.limcode/design/macro-typed-value-system-design.md`）
-- `target_selector` kind `subject_entity` 要求 `identity_id` 而非 `entity_id`，无法直接对实体授权。当前必须使用 `direct_entity` 逐个列出
-- 无批量/wildcard 授权机制 — 12 个角色 × 1 个能力 = 12 条 authority 声明。需要 `kind: all_actors` 或类似批量选择器
 - 插件 `StepContributor` 运行在 world engine step (sim loop step 2)，不能挂钩 sim loop 的其他阶段。无法在 action dispatch 之后或 AI 推理之前执行游戏逻辑
-- [x] 插件 host API AI 推理接口 — `requestInference` 已实现（`plugins/runtime.ts`），独立 AiTaskService 实例
-- [x] 插件 API `registerPerceptionResolver` — 已实现（`plugins/runtime.ts`），替换 sim loop step 6 的默认 spatial_proximity 解析器
 - 插件 manifest `contributions.server.*` 字段为 `string[]`，只做声明式登记。实际注册在 `activate()` 中调用 host API
 
 ##### 插槽函数
-
-> 模板引擎统一已完成（`.limcode/design/template-engine-unification-design.md`），以下各项的进展标注基于 `template_engine/` 当前能力。
-
 - [x] 高级功能 — Phase 1–5 完成
 > 设计：`.limcode/design/slot-function-advanced-design.md` | 计划：`.limcode/plans/slot-function-advanced-phase1-4.md`、`slot-function-advanced-phase5.md`
 > 剩余：
 >   - [ ] Phase 6+: Rust + wasmtime WASM 沙箱（需求驱动）
 >   - [ ] 功能 B：双重模块设置（决策推迟）
-- [ ] 双重模块设置，一个是当前的Prompt Tree V2，另一个是更复杂拥有插槽函数的核心
+- [ ] 双重模块设置，一个是当前的Prompt Tree，另一个是更复杂拥有插槽函数的核心
 > ⚠ 决策推迟至功能 A Phase 1-5 复杂度评估完成后
 

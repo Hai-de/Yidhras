@@ -1,6 +1,6 @@
 # 原型世界包实施方案草案
 
-> 状态: 完成 · 平台基础设施 (Phase 0) + Pack 配置 (Phase 1-3) 已实现
+> 状态: 完成 · 平台基础设施 (Phase 0) + A 层空间语义 (Phase 1) 已实现，原型世界包已部署
 > 关联: `.limcode/design/spatial-semantics-design.md`、`# 原型世界包.md`、`data/world_packs/snowbound_mansion/`
 > 评估时间: 2026-05-08 · 最终更新: 2026-05-09
 >
@@ -324,7 +324,7 @@ variables:
 
 ## 8. 实施阶段
 
-### Phase 0: 宏系统 (P0 + P1)
+### Phase 0: 宏系统 (P0 + P1) ✅ (完成于 2026-05-08)
 
 **变动文件：**
 
@@ -336,11 +336,11 @@ variables:
 | `apps/server/src/template_engine/frontends/narrative/resolver.ts` | 同上 |
 | `apps/server/src/packs/runtime/materializer.ts` | bootstrap 物化前展开模板宏 |
 
-### Phase 1: 空间 A 层 (P2-P8)
+### Phase 1: 空间 A 层 (P2-P8) ✅ (完成于 2026-05-09)
 
 对应 `spatial-semantics-design.md` Phase 1，限定为原型世界包所需的最小功能集。
 
-### Phase 2: 原型世界包 (P9)
+### Phase 2: 原型世界包 (P9) ✅ (完成于 2026-05-09)
 
 编写 `data/world_packs/snowbound_mansion/config.yaml`，端到端验证。
 

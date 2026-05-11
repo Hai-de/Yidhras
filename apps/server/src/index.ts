@@ -233,6 +233,7 @@ appContext.worldEngine = createWorldEngineSidecarClient({
   timeoutMs: worldEngineConfig.timeout_ms,
   autoRestart: worldEngineConfig.auto_restart
 });
+sim.setWorldEngine(appContext.worldEngine);
 appContext.packHostApi = createPackHostApi(appContext);
 
 const inferenceService = createInferenceService({

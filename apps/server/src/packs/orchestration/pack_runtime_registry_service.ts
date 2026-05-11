@@ -1,7 +1,10 @@
 import type { PrismaClient } from '@prisma/client';
+import { serializeWorldPackSnapshotRecord } from '@yidhras/contracts';
 import path from 'path';
 
+import { getErrorMessage } from '../../app/http/errors.js';
 import type { MultiPackLoopHost } from '../../app/runtime/MultiPackLoopHost.js';
+import type { WorldEnginePort } from '../../app/runtime/world_engine_ports.js';
 import { ChronosEngine } from '../../clock/engine.js';
 import type { CalendarConfig } from '../../clock/types.js';
 import { getRuntimeMultiPackConfig } from '../../config/runtime_config.js';
@@ -20,8 +23,13 @@ import { createLogger } from '../../utils/logger.js';
 import { safeFs } from '../../utils/safe_fs.js';
 import type { WorldPack } from '../manifest/loader.js';
 import { teardownActorBridges } from '../runtime/materializer.js';
+import { listPackAuthorityGrants } from '../storage/authority_repo.js';
+import { listPackWorldEntities } from '../storage/entity_repo.js';
+import { listPackEntityStates } from '../storage/entity_state_repo.js';
+import { listPackMediatorBindings } from '../storage/mediator_repo.js';
 import { resolvePackRuntimeDatabaseLocation } from '../storage/pack_db_locator.js';
 import type { PackStorageAdapter } from '../storage/PackStorageAdapter.js';
+import { listPackRuleExecutionRecords } from '../storage/rule_execution_repo.js';
 import type { DefaultPackCatalogService } from './pack_catalog_service.js';
 import { materializePackRuntime } from './pack_materializer.js';
 
@@ -37,6 +45,7 @@ export interface DefaultPackRuntimeRegistryServiceOptions {
   getStartupLevel: () => 'ok' | 'degraded' | 'fail';
   onBeforeUnload?: (packId: string) => Promise<void>;
   multiPackLoopHost?: MultiPackLoopHost;
+  worldEngine?: WorldEnginePort;
 }
 
 export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, PackRuntimeObservation, PackRuntimeControl {
@@ -49,6 +58,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
   private readonly getStartupLevelRef: () => 'ok' | 'degraded' | 'fail';
   private readonly onBeforeUnload?: (packId: string) => Promise<void>;
   private multiPackLoopHost?: MultiPackLoopHost;
+  private worldEngine?: WorldEnginePort;
 
   constructor(options: DefaultPackRuntimeRegistryServiceOptions) {
     this.registry = options.registry;
@@ -60,10 +70,15 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     this.getStartupLevelRef = options.getStartupLevel;
     this.onBeforeUnload = options.onBeforeUnload;
     this.multiPackLoopHost = options.multiPackLoopHost;
+    this.worldEngine = options.worldEngine;
   }
 
   public setMultiPackLoopHost(host: MultiPackLoopHost): void {
     this.multiPackLoopHost = host;
+  }
+
+  public setWorldEngine(worldEngine: WorldEnginePort): void {
+    this.worldEngine = worldEngine;
   }
 
   public listLoadedPackIds(): string[] {
@@ -103,7 +118,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       current_tick: handle.getClockSnapshot().current_tick,
       runtime_speed: handle.getRuntimeSpeedSnapshot(),
       startup_level: this.getStartupLevelRef(),
-      runtime_ready: this.getActivePackId() === packId,
+      runtime_ready: handle.getHealthSnapshot().status === 'running' || handle.getHealthSnapshot().status === 'loaded',
       message: handle.getHealthSnapshot().message ?? null
     };
   }
@@ -197,6 +212,32 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       this.multiPackLoopHost.startLoop(resolved.pack.metadata.id, clock);
     }
 
+    // Load pack into world engine sidecar session
+    if (this.worldEngine) {
+      const tick = clock.getTicks().toString();
+      const [worldEntities, entityStates, authorityGrants, mediatorBindings, ruleExecutionRecords] = await Promise.all([
+        listPackWorldEntities(this.packStorageAdapter, packId),
+        listPackEntityStates(this.packStorageAdapter, packId),
+        listPackAuthorityGrants(this.packStorageAdapter, packId),
+        listPackMediatorBindings(this.packStorageAdapter, packId),
+        listPackRuleExecutionRecords(this.packStorageAdapter, packId)
+      ]);
+      const snapshot = serializeWorldPackSnapshotRecord({
+        pack_id: packId,
+        clock: { current_tick: tick, current_revision: tick },
+        world_entities: worldEntities,
+        entity_states: entityStates,
+        authority_grants: authorityGrants,
+        mediator_bindings: mediatorBindings,
+        rule_execution_records: ruleExecutionRecords
+      });
+      await this.worldEngine.loadPack({
+        pack_id: packId,
+        mode: 'active',
+        hydrate: { source: 'host_snapshot', snapshot }
+      });
+    }
+
     return {
       handle: host.getHandle(),
       loaded: true,
@@ -210,15 +251,20 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       return false;
     }
 
-    if (this.getActivePackId() === packId) {
-      throw new Error('cannot unload active pack runtime from stable runtime host');
-    }
-
     this.registry.transitionTo(packId, 'unloading');
 
     // Stop per-pack simulation loop before disposal
     if (this.multiPackLoopHost) {
       this.multiPackLoopHost.stopLoop(packId);
+    }
+
+    // Unload pack from world engine sidecar session
+    if (this.worldEngine) {
+      try {
+        await this.worldEngine.unloadPack({ pack_id: packId });
+      } catch (err) {
+        logger.warn(`Failed to unload pack ${packId} from world engine: ${getErrorMessage(err)}`);
+      }
     }
 
     if (this.onBeforeUnload) {

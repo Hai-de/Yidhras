@@ -191,8 +191,6 @@ rules:
 | `array` | `names: ["张三", "李娜", "王刚"]` |
 | `record` | `config: { key: "value" }` |
 
-数组支持（`z.array()`），此前仅支持 `string | number | boolean | Record`。`snowbound_mansion` 等原型包可利用原生 YAML 数组定义 trait 池，替代逗号分隔字符串的绕过方式。
-
 `pick` 宏的 `from` 参数使用数组字面量语法：`{{pick from=["a","b","c"]}}`。macro handler 签名 `args: Record<string, MacroValue>` 支持 number、boolean、array 等完整类型。
 
 ---

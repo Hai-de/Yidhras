@@ -6,9 +6,12 @@ import YAML from 'yaml';
 import type { WorldPack } from '../packs/schema/constitution_schema.js';
 import { ApiError } from '../utils/api_error.js';
 import { safeFs } from '../utils/safe_fs.js';
+import { getPluginSandboxConfig } from './context.js';
 import {
   parsePluginManifest,
-  PLUGIN_MANIFEST_INVALID_CODE} from './contracts.js';
+  PLUGIN_MANIFEST_DEPTH_EXCEEDED_CODE,
+  PLUGIN_MANIFEST_INVALID_CODE,
+  PLUGIN_MANIFEST_SIZE_EXCEEDED_CODE} from './contracts.js';
 import { createPluginManagerService } from './service.js';
 import type { PluginStoreContext } from './store.js';
 import { createPluginStore } from './store.js';
@@ -86,9 +89,59 @@ const validatePackCompatibility = (pack: WorldPack, manifestPackId: string): voi
   }
 };
 
+const calculateJsonDepth = (value: unknown, currentDepth = 0): number => {
+  if (currentDepth > 200) return currentDepth;
+
+  if (Array.isArray(value)) {
+    const arr = value as unknown[];
+    return arr.reduce(
+      (max, item) => Math.max(max, calculateJsonDepth(item, currentDepth + 1)),
+      currentDepth + 1
+    );
+  }
+
+  if (value !== null && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    const keys = Object.keys(obj);
+    if (keys.length === 0) return currentDepth + 1;
+    // keys come from Object.keys on a YAML-parsed manifest — safe against injection
+    return keys.reduce(
+      // eslint-disable-next-line security/detect-object-injection
+      (max, k) => Math.max(max, calculateJsonDepth(obj[k], currentDepth + 1)),
+      currentDepth + 1
+    );
+  }
+
+  return currentDepth + 1;
+};
+
 const loadManifestFromCandidate = (candidate: DiscoveredPluginCandidate) => {
   const manifestContent = safeFs.readFileSync(candidate.plugin_dir_path, candidate.manifest_path, 'utf-8');
-  const manifest = parsePluginManifest(YAML.parse(manifestContent) as unknown);
+
+  const sandboxConfig = getPluginSandboxConfig();
+  const contentSizeBytes = Buffer.byteLength(manifestContent, 'utf-8');
+  if (contentSizeBytes > sandboxConfig.maxManifestSizeBytes) {
+    throw new ApiError(
+      400,
+      PLUGIN_MANIFEST_SIZE_EXCEEDED_CODE,
+      `Plugin manifest at ${candidate.manifest_path} exceeds max size of ${sandboxConfig.maxManifestSizeBytes} bytes (actual: ${contentSizeBytes})`,
+      { size_bytes: contentSizeBytes, max_size_bytes: sandboxConfig.maxManifestSizeBytes }
+    );
+  }
+
+  const parsed = YAML.parse(manifestContent) as unknown;
+
+  const depth = calculateJsonDepth(parsed);
+  if (depth > sandboxConfig.maxManifestDepth) {
+    throw new ApiError(
+      400,
+      PLUGIN_MANIFEST_DEPTH_EXCEEDED_CODE,
+      `Plugin manifest at ${candidate.manifest_path} exceeds max depth of ${sandboxConfig.maxManifestDepth} levels (actual: ${depth})`,
+      { depth, max_depth: sandboxConfig.maxManifestDepth }
+    );
+  }
+
+  const manifest = parsePluginManifest(parsed);
 
   return {
     manifest,

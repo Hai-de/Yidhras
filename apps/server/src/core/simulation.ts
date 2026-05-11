@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import type { MultiPackLoopHost } from '../app/runtime/MultiPackLoopHost.js';
 import type { RuntimeDatabaseBootstrap } from '../app/runtime/runtime_bootstrap.js';
 import type { RuntimeClockProjectionSnapshot } from '../app/runtime/runtime_clock_projection.js';
+import type { WorldEnginePort } from '../app/runtime/world_engine_ports.js';
 import type {
   HostRuntimeKernelFacade,
   PackCatalogService
@@ -44,6 +45,7 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
   private readonly activePackRuntimeFacade: DefaultActivePackRuntimeFacade;
   private readonly packRuntimeRegistryService: DefaultPackRuntimeRegistryService;
   private readonly packStorageAdapter: PackStorageAdapter;
+  private worldEngine: WorldEnginePort | null = null;
   private spatialRuntime: SpatialRuntime | null = null;
   private runtimeReady = false;
   private paused = false;
@@ -98,6 +100,11 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
 
   public setMultiPackLoopHost(host: MultiPackLoopHost): void {
     this.packRuntimeRegistryService.setMultiPackLoopHost(host);
+  }
+
+  public setWorldEngine(worldEngine: WorldEnginePort): void {
+    this.worldEngine = worldEngine;
+    this.packRuntimeRegistryService.setWorldEngine(worldEngine);
   }
 
   public isRuntimeReady(): boolean {

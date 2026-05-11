@@ -1,8 +1,8 @@
 # 多 Worker 横向扩展设计
 
-> 状态：草案
+> 状态：已完成 (Phase 1+2)
 > 日期：2026-05-11
-> 范围：Phase 1 (worker 感知) + Phase 2 (多进程启动) + 世界引擎 sidecar 进程隔离
+> 实现：Phase 1+2 已落地。已知限制见 §8。Phase 3 (跨机部署) 不在本次范围。
 
 ---
 
@@ -16,8 +16,8 @@
 
 - **调度器分区系统已具备多 worker 基础设施**：`scheduler_partitioning.ts` 支持 `SCHEDULER_WORKER_TOTAL`、`SCHEDULER_WORKER_INDEX`、`SCHEDULER_WORKER_PARTITIONS` 三个环境变量做 worker ↔ partition 分配。`resolveOwnedSchedulerPartitionIds()` 实现了显式指定 / 取模轮询 / 全量回退三种策略。
 - **分布式协调层已落地**：`scheduler_lease.ts`(256 行) 做 partition-scoped lease 获取，`scheduler_ownership.ts`(438 行) 做 worker ↔ partition 归属追踪和迁移，`scheduler_rebalance.ts`(394 行) 做自动再平衡。这些模块在单进程场景下是过度设计，但在多 worker 场景下是正确的分布式调度基础设施。
-- **两个模拟循环共存**：旧版 `simulation_loop.ts`（全局单循环，含感知管线）和 `PackSimulationLoop.ts`（per-pack 循环，不含感知管线）。两者的 world engine 步长、workerId 策略、故障隔离机制都不同。
-- **世界引擎 sidecar 共享**：`createWorldEngineSidecarClient` 在 `index.ts:215` 创建一次，所有 pack 的 step 调用共享同一个 Rust 进程。
+- **两个模拟循环共存**（已于 Phase 1 统一）：旧版 `simulation_loop.ts` 已删除，active pack 和 bootstrap_list pack 均通过 `MultiPackLoopHost` → `PackSimulationLoop`（6 步，含感知管线）统一管理。
+- **世界引擎 sidecar 共享**（已于 Phase 2 隔离）：每个 worker 进程独立 spawn 自己的 world engine sidecar，worker crash 不影响其他 worker。
 
 ### 1.2 目标
 
@@ -30,7 +30,6 @@
 
 - 跨机器分布式部署（Phase 3，不在本次范围）
 - PostgreSQL 迁移（SQLite WAL 模式足以支持单机多 worker 并发读）
-- 旧版模拟循环重写（保持兼容，见决策 3）
 
 ---
 
@@ -87,11 +86,11 @@ const schedulerPartitionIds = resolveOwnedSchedulerPartitionIds({
 | B. 保持旧版，使其分区感知 | 旧版循环也传 `partitionIds` | 改动最小 | 两套循环长期并存，维护负担 |
 | C. 保持旧版不变 | 只有 MultiPackLoopHost 的循环做分区过滤 | 零风险 | 旧版循环仍处理所有分区，多 worker 时旧版路径冲突 |
 
-**推荐 A**。旧版和 per-pack 循环的差异（世界引擎步长、感知管线、故障隔离）已经造成事实上的行为不一致。统一到 `MultiPackLoopHost` + `PackSimulationLoop` 消除这种不一致。涉及变更：
-- 将 `runPerceptionPipeline` 加入 `PackSimulationLoop` 的步骤
-- Active pack 在 `init()` 完成后也调用 `multiPackLoopHost.startLoop()`
-- 删除 `simulation_loop.ts` 的 `startSimulationLoop` 调用
-- 保留 `simulation_loop.ts` 文件但标记 deprecated（后续 PR 删除）
+**已选择 A 并落地**。旧版和 per-pack 循环的差异（世界引擎步长、感知管线、故障隔离）已统一。实现变更：
+- `runPerceptionPipeline` 已加入 `PackSimulationLoop` 步骤 6
+- Active pack 在 `init()` 完成后通过 `multiPackLoopHost.startLoop()` 启动
+- 旧版 `startSimulation()` 函数和 `startSimulationLoop` 调用已删除
+- `simulation_loop.ts` 文件已删除
 
 ---
 
@@ -141,7 +140,7 @@ const schedulerPartitionIds = resolveOwnedSchedulerPartitionIds({
 | B. World engine step 幂等 | 确保 Rust sidecar 的 step 操作是幂等的（同一 tick 多次调用无副作用） | 无需协调 | 需要修改 Rust sidecar 逻辑 |
 | C. 固定 worker 执行 | 指定 worker-0 执行步骤 2，其他 worker 跳过 | 简单 | 单点故障，worker-0 crash 后步骤 2 不执行 |
 
-**推荐 A**。World engine step 使用与 scheduler 相同的 lease 机制，在当前 tick 只有一个 worker 执行步骤 2。步骤 2 完成后，所有 worker 各自执行步骤 3-5（只处理自己分区的 agent）。这与 scheduler 的 partition lease 模式一致，不引入新概念。
+**已选择 B 并落地**。Rust 侧通过 `AppState.committed_ticks: HashMap<(PackId, Tick), CacheEntry>` 实现幂等——同一 tick 第二次 prepare 直接返回缓存结果，commit 时写入缓存并清理超过 5 tick 的旧条目。TS 侧预留了 DB 层 `(pack_id, tick)` UNIQUE 约束作为兜底（后续补充）。
 
 ---
 
@@ -151,8 +150,8 @@ const schedulerPartitionIds = resolveOwnedSchedulerPartitionIds({
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                   单机 / 单容器                            │
-│                                                          │
+│                   单机 / 单容器                           │
+│                                                           │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
 │  │  Worker 0    │  │  Worker 1    │  │  Worker 2    │   │
 │  │  port 3001   │  │  port 3002   │  │  port 3003   │   │
@@ -287,7 +286,7 @@ docker-compose up --scale server=3
 |------|------|
 | `index.ts` | 新增 `--worker-index` / `--worker-total` CLI 参数解析；将 `schedulerPartitionIds` 注入 `AppContext`；active pack 也走 `multiPackLoopHost.startLoop()`；删除旧版 `startSimulation()` 调用 |
 | `PackSimulationLoop.ts` | 新增步骤 `runPerceptionPipeline`；world engine step 无需 lease（依赖幂等） |
-| `simulation_loop.ts` | 标记 `@deprecated`，保留文件但不被调用 |
+| `simulation_loop.ts` | 已删除 |
 | `MultiPackLoopHost.ts` | 新增 `worldEngine` 参数；active pack 的 `startLoop` 由外部调用 |
 | `scheduler_partitioning.ts` | 已有的 `resolveOwnedSchedulerPartitionIds` 在 `runAgentScheduler` 内部正确调用 |
 | `agent_scheduler.ts` | 在 `runAgentScheduler` 入口处读取 `context.schedulerPartitionIds`（从 AppContext 注入）并传给 `resolveSchedulerOwnershipSnapshot` 的 `bootstrapPartitionIds` |
@@ -352,7 +351,44 @@ docker-compose up --scale server=3
 |---|------|------|
 | 1 | Worker 身份识别 | CLI 参数覆盖环境变量（`--worker-index`, `--worker-total`） |
 | 2 | HTTP 路由 | 不同端口（worker-0→3001, worker-1→3002, ...） |
-| 3 | 旧版循环 | 统一到 MultiPackLoopHost，删除旧版循环调用 |
-| 4 | 世界引擎隔离 | Per-worker sidecar 进程 |
+| 3 | 旧版循环 | 统一到 MultiPackLoopHost，`simulation_loop.ts` 已删除 |
+| 4 | 世界引擎隔离 | Per-worker sidecar 进程（多进程架构天然支持） |
 | 5 | Pack 加载 | 全量加载（每个 worker 加载所有 pack） |
-| 6 | World engine step 协调 | 幂等性（Rust + TS 双端去重），不使用 lease |
+| 6 | World engine step 协调 | 幂等性（Rust `committed_ticks` HashMap 缓存 + TS 预留 DB 去重） |
+
+---
+
+## 8. 实现落地状态
+
+### 8.1 已完成的变更
+
+| 层 | 文件 | 变更 |
+|------|------|------|
+| TS | `index.ts` | CLI 参数解析；worker 端口偏移；旧版循环替换为 `multiPackLoopHost.startLoop()`；优雅关闭改用 `multiPackLoopHost.shutdown()` |
+| TS | `PackSimulationLoop.ts` | 新增步骤 6 `runPerceptionPipeline`；新增 `worldEngine`/`schedulerPartitionIds` 参数；分区过滤传给 `runAgentScheduler` |
+| TS | `MultiPackLoopHost.ts` | 新增 `worldEngine` 参数传递 |
+| TS | `world_engine_persistence.ts` | 多 worker 幂等性 TODO 注释 |
+| TS | `start-dev.sh` | 新增 `--workers N` 多 worker 启动 |
+| TS | `package.json` | 新增 `dev:workers` 脚本 |
+| Rust | `models.rs` | 新增 `CommittedTickCacheEntry` + `AppState.committed_ticks` HashMap + `prune_committed_ticks` |
+| Rust | `step.rs` | `handle_step_prepare` 缓存命中直接返回；`handle_step_commit` 写入缓存并清理 |
+| Docs | `AGENTS.md`, `CLAUDE.md`, `ARCH.md`, `ARCH_DIAGRAM.md`, `COMMANDS.md` | 同步 runtime loop 引用、多 worker 命令、架构约束 |
+
+### 8.2 验证结果
+
+- Typecheck: 0 新增错误 (22 预存在 `store_prisma.ts` 错误不变)
+- Lint: 0 新增警告
+- Unit tests: 1001 passed, 0 failed
+- 2 worker smoke: 分区分配 p0,p2 vs p1,p3 正确；worker 各自监听 3001/3002
+- Rust build: 通过
+
+### 8.3 已知限制
+
+**非首个 worker 的 `runtime_ready=False`**：多 worker 共享同一 SQLite 数据库时，`SimulationManager` 和 `activePackRuntime` 的初始化是单例模式——Worker 0 先完成 init，Worker 1 的 init 因 pack 已初始化而跳过。不影响分区调度（Worker 1 仍能获取正确分区并参与 lease 竞争）。
+
+**Bootstrap pack 的 worldEngine.loadPack**：当前仅 active pack 调用 `worldEngine.loadPack()`。Bootstrap pack 的 step 会因 `PACK_NOT_LOADED` 失败。需要后续在 `PackRuntimeRegistryService.load()` 中补上 loadPack 调用。
+
+**下一步 (Phase 3，不在本次范围)**：
+- Pack init 可重入
+- Bootstrap pack worldEngine.loadPack
+- 跨机部署（PostgreSQL 迁移、容器化）

@@ -21,7 +21,27 @@ export const createApp = ({ context, registerRoutes }: CreateAppOptions) => {
     context.setHttpApp(app);
   }
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: false,
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrcAttr: ["'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          styleSrcAttr: ["'unsafe-inline'"],
+          connectSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'blob:'],
+          fontSrc: ["'self'", 'data:'],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+          objectSrc: ["'none'"],
+          upgradeInsecureRequests: []
+        }
+      }
+    })
+  );
   app.use(cors());
   app.use(globalRateLimiter);
   app.use('/api/auth/login', authRateLimiter);
