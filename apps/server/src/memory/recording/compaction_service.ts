@@ -3,6 +3,7 @@ import type { AiTaskService } from '../../ai/task_service.js';
 import { createAiTaskService } from '../../ai/task_service.js';
 import type { AppInfrastructure } from '../../app/context.js';
 import type { AppContextPorts } from '../../app/services/app_context_ports.js';
+import type { PackRuntimePort } from '../../app/services/pack_runtime_ports.js';
 import { isAiGatewayEnabled } from '../../config/runtime_config.js';
 import { createContextOverlayStore } from '../../context/overlay/store.js';
 import { buildWorkflowPromptBundle } from '../../context/workflow/orchestrator.js';
@@ -65,8 +66,9 @@ const emptyMutations = (): MemoryRecordingMutationBundle => ({
 export const createMemoryCompactionService = ({
   context,
   aiTaskService = createAiTaskService({ context }),
-  longMemoryBlockStore = createPrismaLongMemoryBlockStore(context)
-}: CreateMemoryCompactionServiceOptions): MemoryCompactionService => {
+  longMemoryBlockStore = createPrismaLongMemoryBlockStore(context),
+  packRuntime
+}: CreateMemoryCompactionServiceOptions & { packRuntime?: PackRuntimePort }): MemoryCompactionService => {
   return {
     getThresholdsForPack(packAiConfig: unknown): MemoryCompactionThresholds {
       const memoryLoop = isRecord(packAiConfig) && isRecord(packAiConfig.memory_loop) ? packAiConfig.memory_loop : null;
@@ -101,7 +103,7 @@ export const createMemoryCompactionService = ({
         };
       }
 
-      const now = context.activePackRuntime!.getCurrentTick();
+      const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
       const state = await context.repos.memory.upsertCompactionState({
         agent_id: input.agent_id,
         pack_id: pack.metadata.id,

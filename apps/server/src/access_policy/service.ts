@@ -1,4 +1,5 @@
 import type { AppInfrastructure } from '../app/context.js';
+import type { PackRuntimePort } from '../app/services/pack_runtime_ports.js';
 import type { IdentityContext } from '../identity/types.js';
 import { ApiError } from '../utils/api_error.js';
 import { evaluateFieldPolicies, resolveAllowedFields, resolveFieldDecision } from './policy_engine.js';
@@ -214,7 +215,8 @@ const createPolicyAccessContext = (
 
 export const createAccessPolicy = async (
   context: AppInfrastructure,
-  input: CreatePolicyInput
+  input: CreatePolicyInput,
+  packRuntime?: PackRuntimePort
 ) => {
   const { effect, subject_id, subject_type, resource, action, field, conditions, priority } = input;
 
@@ -226,7 +228,7 @@ export const createAccessPolicy = async (
     throw new ApiError(400, 'POLICY_INVALID', 'effect must be allow or deny');
   }
 
-  const now = context.clock.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.clock.getCurrentTick());
 
   return context.repos.identityOperator.createPolicy({
     effect,

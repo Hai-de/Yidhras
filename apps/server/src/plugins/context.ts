@@ -1,6 +1,7 @@
 import type { Express } from 'express';
 
 import type { AppContext , NotificationStore } from '../app/context.js';
+import type { PackRuntimePort } from '../app/services/pack_runtime_ports.js';
 import { getRuntimeConfig } from '../config/runtime_config.js';
 import type { ActivePackProvider } from '../core/active_pack_provider.js';
 import type { ClockProvider } from '../core/clock_provider.js';
@@ -68,9 +69,9 @@ export type FullPluginContext = AppContext;
 
 export type PluginContext = ReadonlyPluginContext | PackScopedPluginContext | FullPluginContext;
 
-const createReadonlyContext = (context: AppContext): ReadonlyPluginContext => ({
+const createReadonlyContext = (context: AppContext, packRuntime?: PackRuntimePort): ReadonlyPluginContext => ({
   notifications: context.notifications,
-  clock: { getCurrentTick: () => context.activePackRuntime!.getCurrentTick() },
+  clock: { getCurrentTick: () => (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick()) },
   activePack: {
     getActivePack: () => context.activePackRuntime!.getActivePack(),
     getCurrentRevision: () => context.activePackRuntime!.getCurrentRevision()

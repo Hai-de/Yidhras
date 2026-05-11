@@ -1,22 +1,24 @@
 import { ApiError } from '../../../utils/api_error.js'
 import type { AppContext } from '../../context.js';
+import type { PackRuntimePort } from '../pack_runtime_ports.js';
 import {
   DEFAULT_RELATIONSHIP_LOG_LIMIT,
   type ListAtmosphereNodesInput,
   type ListRelationshipAdjustmentLogsInput,
   MAX_RELATIONSHIP_LOG_LIMIT} from './types.js'
 
-export const listRelationalCircles = async (context: AppContext) => {
+export const listRelationalCircles = async (context: AppContext, packRuntime?: PackRuntimePort) => {
   return context.repos.agent.listCircles();
 };
 
 export const listAtmosphereNodes = async (
   context: AppContext,
-  input: ListAtmosphereNodesInput
+  input: ListAtmosphereNodesInput,
+  packRuntime?: PackRuntimePort
 ) => {
   const ownerId = typeof input.owner_id === 'string' ? input.owner_id.trim() : '';
   const includeExpired = input.include_expired === true;
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
 
   return context.repos.agent.listAtmosphereNodes(
     {
