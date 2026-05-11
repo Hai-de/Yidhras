@@ -171,7 +171,7 @@ const appContext: AppContext = {
     getPackSlotDeclarations: () => null,
     resolvePackVariables: (t: string) => t
   },
-  clock: { getCurrentTick: () => 0n },
+  clock: { getCurrentTick: () => { const ids = sim.listLoadedPackRuntimeIds(); if (ids.length === 0) return 0n; const h = sim.getPackRuntimeHandle(ids[0]); return h ? BigInt(h.getClockSnapshot().current_tick) : 0n; } },
   activePack: { getActivePack: () => undefined, getCurrentRevision: () => 0n },
   getPackRuntimeHandle: packId => sim.getPackRuntimeHandle(packId),
   listLoadedPackRuntimeIds: () => sim.listLoadedPackRuntimeIds(),

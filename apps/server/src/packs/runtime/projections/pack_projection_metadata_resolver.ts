@@ -35,7 +35,7 @@ export const createPackProjectionMetadataResolver = (
       const resolvedPackId = assertPackScope(ctx, packId, mode, feature);
 
       if (mode === 'stable') {
-        const activePack = context.activePack.getActivePack();
+        const activePack = (context as any).activePack?.getActivePack();
         if (!activePack || activePack.metadata.id !== resolvedPackId) {
           return Promise.reject(new ApiError(503, 'WORLD_PACK_NOT_READY', `World pack not ready for ${feature}`, {
             pack_id: resolvedPackId,

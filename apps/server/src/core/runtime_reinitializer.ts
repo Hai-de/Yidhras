@@ -1,13 +1,11 @@
 import type { PrismaClient } from '@prisma/client';
 
-import type { ActivePackRuntimeFacade } from '../app/services/app_context_ports.js';
 import { teardownActorBridges } from '../packs/runtime/materializer.js';
 import { clearPackRuntimeStorage } from '../packs/runtime/teardown.js';
 import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
 import type { NotificationPort } from './runtime_activation.js';
 
 export interface ReinitializePackRuntimeInput {
-  activePackRuntime: ActivePackRuntimeFacade;
   packFolderName: string;
   packId: string;
   openingId: string;

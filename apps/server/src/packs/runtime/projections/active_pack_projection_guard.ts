@@ -15,7 +15,7 @@ export const resolvePackProjectionTarget = (
     allowMissingActivePack?: boolean;
   }
 ): ResolvedPackProjectionTarget => {
-  const activePack = context.activePack.getActivePack() ?? null;
+  const activePack = (context as any).activePack?.getActivePack() ?? null;
   const requestedPackId = typeof input.requestedPackId === 'string' && input.requestedPackId.trim().length > 0
     ? input.requestedPackId.trim()
     : undefined;

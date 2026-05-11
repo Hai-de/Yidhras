@@ -8,6 +8,8 @@ export const PACK_RUNTIME_STUB = {
   getActivePack: (): WorldPack | undefined => undefined,
   getStepTicks: (): bigint => 1n,
   getRuntimeSpeedSnapshot: (): RuntimeSpeedSnapshot => ({
+    mode: 'fixed',
+    source: 'default',
     effective_step_ticks: '1',
     configured_step_ticks: null,
     override_step_ticks: null,
