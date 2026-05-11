@@ -2,7 +2,8 @@ import { logOperatorAudit } from '../../operator/audit/logger.js'
 import { hashPassword } from '../../operator/auth/password.js'
 import { AUDIT_ACTION, OPERATOR_STATUS } from '../../operator/constants.js'
 import { ApiError } from '../../utils/api_error.js'
-import type { AppContext } from '../context.js'
+import type { AppContext } from '../context.js';
+import type { PackRuntimePort } from './pack_runtime_ports.js';
 
 export const createOperator = async (
   context: AppContext,
@@ -13,7 +14,8 @@ export const createOperator = async (
     is_root?: boolean
   },
   createdByOperatorId?: string,
-  clientIp?: string
+  clientIp?: string,
+  packRuntime?: PackRuntimePort
 ) => {
   const existing = await context.repos.identityOperator.findOperatorByUsername(input.username)
 
@@ -22,7 +24,7 @@ export const createOperator = async (
   }
 
   const passwordHash = await hashPassword(input.password)
-  const now = context.activePackRuntime!.getCurrentTick()
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick())
 
   // 创建 Identity
   const identity = await context.repos.identityOperator.createIdentity({
@@ -89,7 +91,7 @@ export const updateOperator = async (
     throw new ApiError(404, 'OPERATOR_NOT_FOUND', 'Operator not found')
   }
 
-  const now = context.activePackRuntime!.getCurrentTick()
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick())
   const data: Record<string, unknown> = { updated_at: now }
 
   if (input.status !== undefined) {
@@ -128,7 +130,8 @@ export const deleteOperator = async (
   context: AppContext,
   operatorId: string,
   deletedByOperatorId?: string,
-  clientIp?: string
+  clientIp?: string,
+  packRuntime?: PackRuntimePort
 ) => {
   const operator = await context.repos.identityOperator.findOperatorById(operatorId)
 
@@ -136,7 +139,7 @@ export const deleteOperator = async (
     throw new ApiError(404, 'OPERATOR_NOT_FOUND', 'Operator not found')
   }
 
-  const now = context.activePackRuntime!.getCurrentTick()
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick())
 
   const updated = await context.repos.identityOperator.updateOperator(operatorId, {
     status: OPERATOR_STATUS.DISABLED,
