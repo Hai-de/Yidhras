@@ -7,6 +7,9 @@ import { getErrorMessage } from '../http/errors.js';
 import { runActionDispatcher } from './action_dispatcher_runner.js';
 import { runAgentScheduler } from './agent_scheduler.js';
 import { runDecisionJobRunner } from './job_runner.js';
+import { runPerceptionPipeline } from './perception_pipeline.js';
+import { resolveOwnedSchedulerPartitionIds } from './scheduler_partitioning.js';
+import type { WorldEngineSidecarClient } from './sidecar/world_engine_sidecar_client.js';
 import {
   createDefaultWorldEnginePersistencePort,
   executeWorldEnginePreparedStep
@@ -33,6 +36,7 @@ export interface PackSimulationLoopOptions {
   inferenceService: InferenceService;
   decisionWorkerId: string;
   actionDispatcherWorkerId: string;
+  worldEngine: WorldEngineSidecarClient;
   schedulerWorkerId?: string;
   intervalMs?: number;
   crashThreshold?: number;
@@ -70,7 +74,9 @@ export class PackSimulationLoop {
   private readonly inferenceService: InferenceService;
   private readonly decisionWorkerId: string;
   private readonly actionDispatcherWorkerId: string;
+  private readonly worldEngine: WorldEngineSidecarClient;
   private readonly schedulerWorkerId: string;
+  private readonly schedulerPartitionIds: string[];
   private readonly intervalMs: number;
   private readonly crashThreshold: number;
   private readonly onDegraded?: (packId: string, reason: string) => void;
@@ -83,7 +89,9 @@ export class PackSimulationLoop {
     this.inferenceService = options.inferenceService;
     this.decisionWorkerId = options.decisionWorkerId;
     this.actionDispatcherWorkerId = options.actionDispatcherWorkerId;
+    this.worldEngine = options.worldEngine;
     this.schedulerWorkerId = options.schedulerWorkerId ?? `scheduler:${options.packId}:${process.pid}`;
+    this.schedulerPartitionIds = resolveOwnedSchedulerPartitionIds({ workerId: this.schedulerWorkerId });
     this.intervalMs = options.intervalMs ?? 1000;
     this.crashThreshold = options.crashThreshold ?? SCHEDULER_CRASH_THRESHOLD;
     this.onDegraded = options.onDegraded;
@@ -175,12 +183,13 @@ export class PackSimulationLoop {
       await expirePackIdentityBindings(this.context);
 
       // 2. Step world engine
-      await stepPackWorldEngine(this.context, this.packId);
+      await stepPackWorldEngine(this.context, this.packId, this.worldEngine);
 
       // 3. Run agent scheduler
       await runAgentScheduler({
         context: this.context,
         workerId: this.schedulerWorkerId,
+        partitionIds: this.schedulerPartitionIds,
         packId: this.packId
       });
 
@@ -196,6 +205,9 @@ export class PackSimulationLoop {
         context: this.context,
         workerId: this.actionDispatcherWorkerId
       });
+
+      // 6. Run perception pipeline
+      await runPerceptionPipeline(this.context);
 
       // Kernel success — reset failure counter
       this.consecutiveFailures = 0;
@@ -244,16 +256,16 @@ const expirePackIdentityBindings = async (context: AppContext): Promise<void> =>
   await context.repos.identityOperator.expireBindings(now);
 };
 
-const stepPackWorldEngine = async (context: AppContext, packId: string): Promise<void> => {
-  if (!context.worldEngine) {
-    throw new Error('[PackSimulationLoop] World engine is not available');
-  }
-
+const stepPackWorldEngine = async (
+  context: AppContext,
+  packId: string,
+  worldEngine: WorldEngineSidecarClient
+): Promise<void> => {
   const stepTicks = '1';
 
   await executeWorldEnginePreparedStep({
     context,
-    worldEngine: context.worldEngine,
+    worldEngine,
     persistence: createDefaultWorldEnginePersistencePort(),
     prepareInput: {
       protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,

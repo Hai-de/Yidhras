@@ -124,7 +124,7 @@ pnpm --filter yidhras-server pack:import <archive> [--force]
 ### Runtime / simulation
 
 - `src/core/simulation.ts` owns: Prisma init, SQLite pragmas, world-pack loading, clock, narrative resolver, dynamics, runtime speed, graph access. **Do not turn `SimulationManager` into a generic bucket.**
-- Runtime loop: `src/app/runtime/simulation_loop.ts` — serialized.
+- Runtime loop: `src/app/runtime/PackSimulationLoop.ts` — per-pack 6-step serialized loop, managed by `MultiPackLoopHost.ts`.
 - Runtime readiness: `AppContext.assertRuntimeReady(feature)`.
 - `src/app/context.ts` defines `AppContext` — the shared runtime state shell.
 

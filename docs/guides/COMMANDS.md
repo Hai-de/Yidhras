@@ -39,6 +39,26 @@ pnpm dev:web
   - Linux / macOS：`./start-dev.sh`
   - Windows：`start-dev.bat`
 
+### 2.2.1 多 Worker 启动（横向扩展）
+
+```bash
+# 启动 2 个 server worker（各自监听 3001, 3002）
+./start-dev.sh --workers=2
+
+# 通过环境变量启动
+WORKERS=2 pnpm dev:workers
+
+# 手动启动单个 worker
+SCHEDULER_WORKER_INDEX=0 SCHEDULER_WORKER_TOTAL=2 tsx apps/server/src/index.ts
+SCHEDULER_WORKER_INDEX=1 SCHEDULER_WORKER_TOTAL=2 tsx apps/server/src/index.ts
+```
+
+说明：
+- 多 worker 模式下每个进程独立 spawn 世界引擎 sidecar，实现故障隔离
+- Worker 端口 = `APP_PORT + workerIndex`（默认 3001, 3002, ...）
+- 分区通过 `SCHEDULER_WORKER_TOTAL` / `SCHEDULER_WORKER_INDEX` 取模分配
+- 单 worker 模式（默认）行为不受影响
+
 ### 2.3 构建与质量检查
 
 ```bash

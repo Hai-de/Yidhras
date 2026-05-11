@@ -34,7 +34,6 @@ import {
   createWorldEngineSidecarClient,
   WorldEngineSidecarClient
 } from './app/runtime/sidecar/world_engine_sidecar_client.js';
-import { type SimulationLoopHandle, startSimulationLoop } from './app/runtime/simulation_loop.js';
 import {
   createRuntimeReadyGuard,
   createStartupHealth,
@@ -83,6 +82,23 @@ import { safeFs } from './utils/safe_fs.js';
 
 const logger = createLogger('yidhras-server');
 
+// -- CLI 参数解析：--worker-index=<n> --worker-total=<n> 覆盖环境变量 --
+const parseCliInt = (key: string): string | undefined => {
+  const arg = process.argv.find(a => a.startsWith(`--${key}=`));
+  if (!arg) return undefined;
+  const value = arg.slice(key.length + 3);
+  if (!/^\d+$/.test(value)) {
+    logger.warn(`Invalid --${key} value: "${value}", expected non-negative integer. Ignoring.`);
+    return undefined;
+  }
+  return value;
+};
+const cliWorkerIndex = parseCliInt('worker-index');
+const cliWorkerTotal = parseCliInt('worker-total');
+if (cliWorkerIndex !== undefined) process.env.SCHEDULER_WORKER_INDEX = cliWorkerIndex;
+if (cliWorkerTotal !== undefined) process.env.SCHEDULER_WORKER_TOTAL = cliWorkerTotal;
+// -- end CLI --
+
 const prisma = new PrismaClient();
 const repos = createPrismaRepositories(prisma);
 const conversationStore = new PrismaConversationStore(prisma);
@@ -94,7 +110,8 @@ const schedulerStorage = new SqliteSchedulerStorageAdapter();
 const notifications = createNotificationManager();
 const sim = new SimulationManager({ prisma, packStorageAdapter, notifications });
 
-const port = getAppPort();
+const workerIndex = parseInt(process.env.SCHEDULER_WORKER_INDEX ?? '0', 10) || 0;
+const port = getAppPort() + workerIndex;
 const worldPacksDir = getWorldPacksDir();
 const preferredWorldPack = getPreferredWorldPack();
 const startupPolicy = getStartupPolicy();
@@ -111,7 +128,6 @@ const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
   last_error_message: null
 };
 
-let timer: SimulationLoopHandle | null = null;
 let httpServer: ReturnType<typeof app.listen> | null = null;
 let runtimeLoopDiagnostics: RuntimeLoopDiagnostics = { ...DEFAULT_RUNTIME_LOOP_DIAGNOSTICS };
 let httpApp: import('express').Express | null = null;
@@ -257,6 +273,7 @@ const multiPackLoopHost = new MultiPackLoopHost({
   inferenceService,
   decisionWorkerId,
   actionDispatcherWorkerId,
+  worldEngine: appContext.worldEngine as WorldEngineSidecarClient,
   intervalMs: simulationLoopIntervalMs
 });
 sim.setMultiPackLoopHost(multiPackLoopHost);
@@ -307,59 +324,14 @@ const isDatabaseTimeoutError = (message: string): boolean => {
 
 const handleSimulationStepError = (err: unknown): void => {
   const message = getErrorMessage(err);
-  const runtimeLoop = appContext.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
-  const dbHealth = appContext.getDatabaseHealth?.() ?? null;
-  const details = {
-    runtime_loop_status: runtimeLoop.status,
-    runtime_loop_in_flight: runtimeLoop.in_flight,
-    runtime_loop_iteration_count: runtimeLoop.iteration_count,
-    runtime_loop_overlap_skipped_count: runtimeLoop.overlap_skipped_count,
-    runtime_loop_last_duration_ms: runtimeLoop.last_duration_ms,
-    db_provider: dbHealth?.provider ?? null,
-    db_connected: dbHealth?.connected ?? null,
-    ...(dbHealth?.sqlite ? {
-      sqlite_journal_mode: dbHealth.sqlite.journal_mode,
-      sqlite_busy_timeout: dbHealth.sqlite.busy_timeout,
-      sqlite_synchronous: dbHealth.sqlite.synchronous
-    } : {})
-  };
-
   appContext.notifications.push(
     'error',
     isDatabaseTimeoutError(message)
       ? `模拟步进失败（数据库锁竞争或查询超时）: ${message}`
       : `模拟步进失败: ${message}`,
     'SIM_STEP_ERR',
-    details
+    { error: message }
   );
-  appContext.setPaused?.(true);
-  const latestDiagnostics = appContext.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
-  appContext.setRuntimeLoopDiagnostics?.({
-    ...latestDiagnostics,
-    status: 'paused',
-    in_flight: false,
-    last_error_message: message
-  });
-};
-
-const startSimulation = (): void => {
-  if (!appContext.isRuntimeReady?.()) {
-    return;
-  }
-
-  if (timer) {
-    timer.stop();
-  }
-
-  timer = startSimulationLoop({
-    context: appContext,
-    inferenceService,
-    decisionWorkerId,
-    actionDispatcherWorkerId,
-    schedulerWorkerId,
-    intervalMs: simulationLoopIntervalMs,
-    onStepError: handleSimulationStepError
-  });
 };
 
 const start = async (): Promise<void> => {
@@ -482,7 +454,7 @@ const start = async (): Promise<void> => {
         'SYS_INIT_OK',
         { ai_gateway_enabled: isAiGatewayEnabled() }
       );
-      startSimulation();
+      multiPackLoopHost.startLoop(activePackId, appContext.clock as unknown as import('./clock/engine.js').ChronosEngine);
     }
   } catch (err: unknown) {
     sim.setRuntimeReady(false);
@@ -517,11 +489,7 @@ const start = async (): Promise<void> => {
     }, 10_000);
 
     try {
-      timer?.stop();
-      appContext.setRuntimeLoopDiagnostics?.({
-        ...(appContext.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS),
-        status: 'stopped'
-      });
+      multiPackLoopHost.shutdown();
 
       httpServer?.close();
 

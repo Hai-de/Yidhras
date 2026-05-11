@@ -3,12 +3,14 @@ import type { InferenceService } from '../../inference/service.js';
 import type { AppContext } from '../context.js';
 import type { PackLoopDiagnostics } from './PackSimulationLoop.js';
 import { PackSimulationLoop } from './PackSimulationLoop.js';
+import type { WorldEngineSidecarClient } from './sidecar/world_engine_sidecar_client.js';
 
 export interface MultiPackLoopHostOptions {
   context: AppContext;
   inferenceService: InferenceService;
   decisionWorkerId: string;
   actionDispatcherWorkerId: string;
+  worldEngine: WorldEngineSidecarClient;
   intervalMs?: number;
 }
 
@@ -18,6 +20,7 @@ export class MultiPackLoopHost {
   private readonly inferenceService: InferenceService;
   private readonly decisionWorkerId: string;
   private readonly actionDispatcherWorkerId: string;
+  private readonly worldEngine: WorldEngineSidecarClient;
   private readonly intervalMs: number;
 
   constructor(options: MultiPackLoopHostOptions) {
@@ -25,6 +28,7 @@ export class MultiPackLoopHost {
     this.inferenceService = options.inferenceService;
     this.decisionWorkerId = options.decisionWorkerId;
     this.actionDispatcherWorkerId = options.actionDispatcherWorkerId;
+    this.worldEngine = options.worldEngine;
     this.intervalMs = options.intervalMs ?? 1000;
   }
 
@@ -41,6 +45,7 @@ export class MultiPackLoopHost {
       inferenceService: this.inferenceService,
       decisionWorkerId: this.decisionWorkerId,
       actionDispatcherWorkerId: this.actionDispatcherWorkerId,
+      worldEngine: this.worldEngine,
       intervalMs: this.intervalMs,
       onDegraded: (degradedPackId, reason) => {
         this.onPackDegraded(degradedPackId, reason);

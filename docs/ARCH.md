@@ -251,21 +251,24 @@ HTTP Request
 ### 3.2 Runtime / scheduler 层
 
 - `apps/server/src/app/runtime/*.ts`
-  - `PackSimulationLoop.ts` — 每个 pack 独立的 5 步模拟循环（expire → world engine → scheduler → decision jobs → action dispatcher）
-  - `MultiPackLoopHost.ts` — 管理所有 per-pack loop 的启停/暂停/恢复
+  - `MultiPackLoopHost.ts` — 统一管理所有 per-pack loop 的启停/暂停/恢复。active pack 和 bootstrap_list pack 均通过同一入口启动
+  - `PackSimulationLoop.ts` — 每个 pack 独立的 6 步模拟循环（expire → world engine → scheduler → decision jobs → action dispatcher → perception pipeline）
+  - `perception_pipeline.ts` — 感知管线（agent 感知范围计算与事件过滤）
   - `scheduler_sidecar_pool.ts` — Rust 决策内核 sidecar 进程池，`max_processes` 上限
   - `agent_scheduler.ts` — 调度主逻辑（partition-aware，per-pack 调用）
   - `job_runner.ts` / `action_dispatcher_runner.ts` — 决策执行与动作分发
   - `scheduler_lease.ts` / `scheduler_ownership.ts` / `scheduler_rebalance.ts` — lease/ownership/rebalance 逻辑
-  - `simulation_loop.ts` — active pack 全局单循环，与 `MultiPackLoopHost` 并存
+  - `scheduler_partitioning.ts` — 分区 ID 解析、哈希映射、worker ↔ partition 分配（支持 `SCHEDULER_WORKER_INDEX` / `SCHEDULER_WORKER_TOTAL` 环境变量和 `--worker-index` / `--worker-total` CLI 参数）
 
 关键约束：
 
-- scheduler 是 partition-aware，在同一 Node 进程内以逻辑 partition 分组调度
-- lease 与 cursor state 以 partition 为作用域，存储于 pack-local SQLite（via `SchedulerStorageAdapter`）
+- scheduler 是 partition-aware。单机单进程时所有分区由同一 worker 处理；多 worker 模式下每个 worker 仅处理自己拥有的分区（通过 `resolveOwnedSchedulerPartitionIds` 分配）
+- lease 与 cursor state 以 partition 为作用域，存储于 pack-local SQLite（via `SchedulerStorageAdapter`）。多 worker 通过数据库层协调 partition 所有权
 - 每个 pack 拥有独立的 `PackSimulationLoop` 实例，由 `MultiPackLoopHost` 统一管理生命周期
 - pack load 时自动启动 loop，pack unload 时停止 loop 并优雅关闭 sidecar 进程（stdin EOF → 自然退出 → 3s 后 SIGKILL 兜底）
 - runtime readiness 通过 `AppContext.assertRuntimeReady(feature)` 统一门控
+- 多 worker 模式下每个 worker 独立 spawn 自己的世界引擎 sidecar 进程，实现故障隔离
+- 世界引擎 step 在 Rust 侧通过 `(packId, tick)` 缓存实现幂等，多 worker 重复调用同一 tick 不会导致双重变更
 
 当前 scheduler 相关的宿主级运行参数已收口进 runtime config，而不是继续散落为局部常量：
 
@@ -356,7 +359,7 @@ HTTP Request
 - `/api/experimental/` 路由前缀已移除；附加包的路由通过统一的 `/:packId/` 前缀访问，scope mode 由 `PackScopeResolver` 内部判断
 - 主包与附加包共享相同的 pack 状态机、路由和观测接口，仅在 world engine 接入方式和初始加载路径上有区别
 
-- 每个 pack 拥有独立的 `PackSimulationLoop`（完整 5 步循环）
+- 每个 pack 拥有独立的 `PackSimulationLoop`（完整 6 步循环）
 - pack-scoped 路由通过 `/:packId` 前缀挂载，由 `packScopeMiddleware` 做状态门控
 - pack 状态机：`loading → ready → degraded → unloading → gone`
 

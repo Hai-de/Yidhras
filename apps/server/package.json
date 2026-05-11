@@ -4,6 +4,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:workers": "bash -c 'for i in $(seq 0 $((${WORKERS:-2} - 1))); do SCHEDULER_WORKER_INDEX=$i SCHEDULER_WORKER_TOTAL=${WORKERS:-2} tsx src/index.ts & done; wait'",
     "serve:test-server": "tsx src/index.ts",
     "prepare:runtime": "pnpm exec prisma migrate deploy --schema=prisma/schema.${PRISMA_DB_PROVIDER:-sqlite}.prisma && pnpm run init:runtime && pnpm run seed:identity && pnpm run seed:operator",
     "reset:dev-db": "tsx src/init/reset_dev_db.ts",

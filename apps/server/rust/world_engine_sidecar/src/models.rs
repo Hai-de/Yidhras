@@ -45,9 +45,22 @@ pub struct SessionState {
     pub prepared_state: Option<PreparedSessionState>,
 }
 
+#[derive(Debug, Clone)]
+pub struct CommittedTickCacheEntry {
+    pub next_revision: String,
+    pub emitted_events: Vec<Value>,
+    pub observability: Vec<Value>,
+    pub summary: PreparedStepSummary,
+    pub artifacts: PreparedStepArtifacts,
+}
+
 pub struct AppState {
     pub started_at: Instant,
     pub sessions: HashMap<String, SessionState>,
+    /// Multi-worker idempotency: caches committed (pack_id, tick) results.
+    /// When a second worker calls prepare for the same (pack_id, tick),
+    /// the cached result is returned without re-executing mutations.
+    pub committed_ticks: HashMap<(String, String), CommittedTickCacheEntry>,
 }
 
 impl AppState {
@@ -55,6 +68,15 @@ impl AppState {
         Self {
             started_at: Instant::now(),
             sessions: HashMap::new(),
+            committed_ticks: HashMap::new(),
         }
+    }
+
+    /// Clean committed_ticks entries older than `retain_ticks` from the given tick.
+    pub fn prune_committed_ticks(&mut self, current_tick: u64, retain_ticks: u64) {
+        let cutoff = if current_tick > retain_ticks { current_tick - retain_ticks } else { 0 };
+        self.committed_ticks.retain(|(_pack_id, tick_str), _value| {
+            tick_str.parse::<u64>().unwrap_or(0) >= cutoff
+        });
     }
 }

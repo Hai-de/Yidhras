@@ -96,7 +96,7 @@ flowchart TB
 
         subgraph PackContainer["Per-pack container (× N loaded packs)"]
             direction LR
-            PackLoop[PackSimulationLoop\n5-step cycle]
+            PackLoop[PackSimulationLoop\n6-step cycle]
             SchedAdapter[SchedulerStorageAdapter\nlease / cursor / ownership]
             WEP[WorldEnginePort]
             HostAPI[PackHostApi\ncontrolled read surface]

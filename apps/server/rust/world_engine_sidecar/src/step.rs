@@ -1,9 +1,9 @@
-use crate::models::{AppState, PreparedSessionState, PreparedStepArtifacts, PreparedStepSummary};
+use crate::models::{AppState, CommittedTickCacheEntry, PreparedSessionState, PreparedStepArtifacts, PreparedStepSummary};
 use crate::protocol::{
     get_optional_string, get_required_string, rpc_error, rpc_result, RpcResponse,
 };
 use crate::state::{
-    build_runtime_step_state, find_entity_state, parse_u64_or_default, session_or_error_mut,
+    build_runtime_step_state, find_entity_state, parse_u64_or_default, session_or_error, session_or_error_mut,
     upsert_entity_state,
 };
 use crate::PROTOCOL_VERSION;
@@ -192,6 +192,68 @@ pub fn handle_step_prepare(
         Err(message) => return rpc_error(request_id, -32602, &message, None),
     };
     let step_ticks_number = step_ticks.parse::<u64>().unwrap_or(1);
+
+    // Multi-worker idempotency: if this (pack_id, tick) was already committed
+    // by another worker, return the cached result immediately.
+    // Must check BEFORE borrowing session mutably (to avoid borrow conflict).
+    {
+        let session = match session_or_error(state, request_id.clone(), &pack_id) {
+            Ok(s) => s,
+            Err(response) => return response,
+        };
+        let current_tick = session.current_tick.parse::<u64>().unwrap_or(0);
+        let next_tick = (current_tick + step_ticks_number).to_string();
+        let cache_key = (pack_id.clone(), next_tick.clone());
+        if let Some(cached) = state.committed_ticks.get(&cache_key) {
+            return rpc_result(
+                request_id,
+                json!({
+                    "prepared_token": format!("prepared:{}:{}", pack_id, next_tick),
+                    "pack_id": pack_id,
+                    "base_revision": session.current_revision,
+                    "next_revision": cached.next_revision,
+                    "next_tick": next_tick,
+                    "cached": true,
+                    "state_delta": {
+                        "operations": [
+                            {
+                                "op": "upsert_entity_state",
+                                "target_ref": "__world__",
+                                "namespace": "world",
+                                "payload": {
+                                    "next": cached.artifacts.next_world_state,
+                                    "previous": json!({}),
+                                    "reason": "cached_replay"
+                                }
+                            },
+                            {
+                                "op": "append_rule_execution",
+                                "target_ref": "__world__",
+                                "namespace": "rule_execution_records",
+                                "payload": {
+                                    "next": cached.artifacts.rule_execution_record,
+                                    "reason": "cached_replay"
+                                }
+                            },
+                            {
+                                "op": "set_clock",
+                                "payload": {
+                                    "next": {
+                                        "previous_tick": session.current_tick,
+                                        "next_tick": next_tick,
+                                        "previous_revision": session.current_revision,
+                                        "next_revision": cached.next_revision
+                                    },
+                                    "reason": "cached_replay"
+                                }
+                            }
+                        ]
+                    }
+                }),
+            );
+        }
+    }
+
     let session = match session_or_error_mut(state, request_id.clone(), &pack_id) {
         Ok(session) => session,
         Err(response) => return response,
@@ -418,6 +480,19 @@ pub fn handle_step_commit(
     session.rule_execution_records = prepared_state.rule_execution_records.clone();
     session.pending_prepared_token = None;
     session.prepared_state = None;
+
+    // Multi-worker idempotency: cache this committed tick so other workers
+    // that call prepare for the same (pack_id, tick) get the cached result.
+    let committed_tick = prepared_state.next_tick.parse::<u64>().unwrap_or(0);
+    let cache_key = (pack_id.clone(), prepared_state.next_tick.clone());
+    state.committed_ticks.insert(cache_key, CommittedTickCacheEntry {
+        next_revision: persisted_revision.clone(),
+        emitted_events: prepared_state.emitted_events.clone(),
+        observability: prepared_state.observability.clone(),
+        summary: prepared_state.summary.clone(),
+        artifacts: prepared_state.artifacts.clone(),
+    });
+    state.prune_committed_ticks(committed_tick, 5);
 
     rpc_result(
         request_id,

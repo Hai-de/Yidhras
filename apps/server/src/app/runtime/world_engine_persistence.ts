@@ -350,6 +350,10 @@ export const executeWorldEnginePreparedStep = async (input: {
   const packId = input.prepareInput.pack_id.trim();
   coordinator.assertNotTainted(packId);
   coordinator.assertSingleFlightAvailable(packId);
+  // NOTE: Multi-worker idempotency — when multiple workers call step 2,
+  // the Rust sidecar needs (packId, tick) → result caching so that the
+  // second+ call returns the cached result without re-executing mutations.
+  // See: .limcode/design/multi-worker-horizontal-scaling-design.md §3.3
 
   let prepared: PreparedWorldStep | null = null;
 
