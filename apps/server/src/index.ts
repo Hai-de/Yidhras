@@ -44,6 +44,7 @@ import { createWorldEngineStepCoordinator } from './app/runtime/world_engine_per
 import { createPackHostApi } from './app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from './app/runtime/world_engine_snapshot.js';
 import { getRuntimeBootstrap } from './app/services/app_context_ports.js';
+import { DefaultPackRuntimePort } from './packs/orchestration/default_pack_runtime_port.js';
 import { createContextAssemblyPort } from './app/services/context_memory_ports.js';
 import { createPrismaRepositories } from './app/services/repositories/index.js';
 import { ensureSchedulerBootstrapOwnership, resetDevelopmentRuntimeState } from './app/services/system.js';
@@ -455,7 +456,11 @@ const start = async (): Promise<void> => {
         'SYS_INIT_OK',
         { ai_gateway_enabled: isAiGatewayEnabled() }
       );
-      multiPackLoopHost.startLoop(activePackId, appContext.clock as unknown as import('./clock/engine.js').ChronosEngine);
+      const activePackHost = sim.getPackRuntimeRegistry().getHost(activePackId);
+      if (activePackHost) {
+        const activePackRuntime = new DefaultPackRuntimePort(activePackHost);
+        multiPackLoopHost.startLoop(activePackId, appContext.clock as unknown as import('./clock/engine.js').ChronosEngine, activePackRuntime);
+      }
     }
   } catch (err: unknown) {
     sim.setRuntimeReady(false);

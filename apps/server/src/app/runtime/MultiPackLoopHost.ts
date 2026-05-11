@@ -1,6 +1,7 @@
 import type { ChronosEngine } from '../../clock/engine.js';
 import type { InferenceService } from '../../inference/service.js';
 import type { AppContext } from '../context.js';
+import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
 import type { PackLoopDiagnostics } from './PackSimulationLoop.js';
 import { PackSimulationLoop } from './PackSimulationLoop.js';
 import type { WorldEngineSidecarClient } from './sidecar/world_engine_sidecar_client.js';
@@ -32,7 +33,11 @@ export class MultiPackLoopHost {
     this.intervalMs = options.intervalMs ?? 1000;
   }
 
-  public startLoop(packId: string, clock: ChronosEngine): PackSimulationLoop {
+  public startLoop(
+    packId: string,
+    clock: ChronosEngine,
+    packRuntime: PackRuntimePort
+  ): PackSimulationLoop {
     const existing = this.loops.get(packId);
     if (existing) {
       return existing;
@@ -46,6 +51,7 @@ export class MultiPackLoopHost {
       decisionWorkerId: this.decisionWorkerId,
       actionDispatcherWorkerId: this.actionDispatcherWorkerId,
       worldEngine: this.worldEngine,
+      packRuntime,
       intervalMs: this.intervalMs,
       onDegraded: (degradedPackId, reason) => {
         this.onPackDegraded(degradedPackId, reason);

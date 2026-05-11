@@ -5,6 +5,7 @@ import { createSpatialProximityResolver } from '../../perception/index.js';
 import type { PerceptionResolver, ResolvePerceptionInput } from '../../perception/types.js';
 import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import type { AppContext } from '../context.js';
+import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
 
 interface SpatialEventRow {
   id: string;
@@ -84,20 +85,24 @@ const buildPerceptionOverlayText = (event: SpatialEventRow, locationId: string |
   return event.description;
 };
 
-export const runPerceptionPipeline = async (context: AppContext): Promise<void> => {
+export const runPerceptionPipeline = async (
+  context: AppContext,
+  packRuntime?: PackRuntimePort
+): Promise<void> => {
   const spatialRuntime = context.getSpatialRuntime?.();
   if (!spatialRuntime) {
     return;
   }
 
-  const activePack = context.activePackRuntime?.getActivePack();
-  if (!activePack) {
+  const packId = packRuntime?.getPackId()
+    ?? context.activePackRuntime?.getActivePack()?.metadata.id;
+  if (!packId) {
     return;
   }
-  const packId = activePack.metadata.id;
   const packPrefix = `${packId}:`;
 
-  const tick = context.activePackRuntime!.getCurrentTick();
+  const tick = packRuntime?.getCurrentTick()
+    ?? context.activePackRuntime!.getCurrentTick();
 
   const spatialEvents = await getSpatialEvents(context.prisma, tick);
   if (spatialEvents.length === 0) {

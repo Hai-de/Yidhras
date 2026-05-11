@@ -15,6 +15,7 @@ import { recordPackRuleExecution } from '../../packs/storage/rule_execution_repo
 import { ApiError } from '../../utils/api_error.js';
 import { createLogger } from '../../utils/logger.js';
 import type { AppContext } from '../context.js';
+import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
 import type {
   RuntimeClockProjectionSnapshot,
   WorldEngineCommitProjectionInput
@@ -320,6 +321,7 @@ const applyCommittedClockProjection = (input: {
   packId: string;
   committed: WorldEngineCommitResult;
   persisted: PackRuntimeCoreDeltaPersistenceResult;
+  packRuntime?: PackRuntimePort;
 }): RuntimeClockProjectionSnapshot | null => {
   const projectionPort = input.context.runtimeClockProjection;
   if (!projectionPort) {
@@ -335,7 +337,11 @@ const applyCommittedClockProjection = (input: {
   };
 
   const snapshot = projectionPort.applyWorldEngineCommitProjection(projectionInput);
-  input.context.applyClockProjection?.(snapshot);
+  if (input.packRuntime) {
+    input.packRuntime.applyClockProjection(snapshot);
+  } else {
+    input.context.applyClockProjection?.(snapshot);
+  }
   return snapshot;
 };
 
@@ -345,6 +351,7 @@ export const executeWorldEnginePreparedStep = async (input: {
   persistence: WorldEnginePersistencePort;
   prepareInput: WorldStepPrepareRequest;
   coordinator?: WorldEngineStepCoordinator;
+  packRuntime?: PackRuntimePort;
 }): Promise<WorldEngineCommitResult> => {
   const coordinator = input.coordinator ?? getContextCoordinator(input.context);
   const packId = input.prepareInput.pack_id.trim();
@@ -450,7 +457,7 @@ export const executeWorldEnginePreparedStep = async (input: {
     };
 
     const committed = await input.worldEngine.commitPreparedStep(commitInput);
-    applyCommittedClockProjection({ context: input.context, packId, committed, persisted });
+    applyCommittedClockProjection({ context: input.context, packId, committed, persisted, packRuntime: input.packRuntime });
     coordinator.clearSingleFlightState(packId);
     coordinator.clearTaintedPackId(packId);
     return committed;

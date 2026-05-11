@@ -2,6 +2,7 @@ import { getSchedulerRunnerConfig } from '../../config/runtime_config.js';
 import type { InferenceService } from '../../inference/service.js';
 import { createLogger } from '../../utils/logger.js';
 import type { AppContext } from '../context.js';
+import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
 import {
   claimDecisionJob,
   listRunnableDecisionJobs,
@@ -16,6 +17,7 @@ export interface RunDecisionJobRunnerOptions {
   context: AppContext;
   inferenceService: InferenceService;
   workerId: string;
+  packRuntime?: PackRuntimePort;
   limit?: number;
   concurrency?: number;
   lockTicks?: bigint;

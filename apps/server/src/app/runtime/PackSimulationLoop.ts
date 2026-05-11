@@ -3,6 +3,7 @@ import { WORLD_ENGINE_PROTOCOL_VERSION } from '@yidhras/contracts';
 import type { ChronosEngine } from '../../clock/engine.js';
 import type { InferenceService } from '../../inference/service.js';
 import type { AppContext } from '../context.js';
+import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
 import { getErrorMessage } from '../http/errors.js';
 import { runActionDispatcher } from './action_dispatcher_runner.js';
 import { runAgentScheduler } from './agent_scheduler.js';
@@ -37,6 +38,7 @@ export interface PackSimulationLoopOptions {
   decisionWorkerId: string;
   actionDispatcherWorkerId: string;
   worldEngine: WorldEngineSidecarClient;
+  packRuntime: PackRuntimePort;
   schedulerWorkerId?: string;
   intervalMs?: number;
   crashThreshold?: number;
@@ -75,6 +77,7 @@ export class PackSimulationLoop {
   private readonly decisionWorkerId: string;
   private readonly actionDispatcherWorkerId: string;
   private readonly worldEngine: WorldEngineSidecarClient;
+  private readonly packRuntime: PackRuntimePort;
   private readonly schedulerWorkerId: string;
   private readonly schedulerPartitionIds: string[];
   private readonly intervalMs: number;
@@ -90,6 +93,7 @@ export class PackSimulationLoop {
     this.decisionWorkerId = options.decisionWorkerId;
     this.actionDispatcherWorkerId = options.actionDispatcherWorkerId;
     this.worldEngine = options.worldEngine;
+    this.packRuntime = options.packRuntime;
     this.schedulerWorkerId = options.schedulerWorkerId ?? `scheduler:${options.packId}:${process.pid}`;
     this.schedulerPartitionIds = resolveOwnedSchedulerPartitionIds({ workerId: this.schedulerWorkerId });
     this.intervalMs = options.intervalMs ?? 1000;
@@ -180,34 +184,37 @@ export class PackSimulationLoop {
 
     try {
       // 1. Expire identity bindings
-      await expirePackIdentityBindings(this.context);
+      await expirePackIdentityBindings(this.packRuntime, this.context);
 
       // 2. Step world engine
-      await stepPackWorldEngine(this.context, this.packId, this.worldEngine);
+      await stepPackWorldEngine(this.context, this.packId, this.worldEngine, this.packRuntime);
 
       // 3. Run agent scheduler
       await runAgentScheduler({
         context: this.context,
         workerId: this.schedulerWorkerId,
         partitionIds: this.schedulerPartitionIds,
-        packId: this.packId
+        packId: this.packId,
+        packRuntime: this.packRuntime
       });
 
       // 4. Run decision job runner
       await runDecisionJobRunner({
         context: this.context,
         inferenceService: this.inferenceService,
-        workerId: this.decisionWorkerId
+        workerId: this.decisionWorkerId,
+        packRuntime: this.packRuntime
       });
 
       // 5. Run action dispatcher
       await runActionDispatcher({
         context: this.context,
-        workerId: this.actionDispatcherWorkerId
+        workerId: this.actionDispatcherWorkerId,
+        packRuntime: this.packRuntime
       });
 
       // 6. Run perception pipeline
-      await runPerceptionPipeline(this.context);
+      await runPerceptionPipeline(this.context, this.packRuntime);
 
       // Kernel success — reset failure counter
       this.consecutiveFailures = 0;
@@ -251,15 +258,19 @@ export class PackSimulationLoop {
   }
 }
 
-const expirePackIdentityBindings = async (context: AppContext): Promise<void> => {
-  const now = context.activePackRuntime!.getCurrentTick();
+const expirePackIdentityBindings = async (
+  packRuntime: PackRuntimePort,
+  context: AppContext
+): Promise<void> => {
+  const now = packRuntime.getCurrentTick();
   await context.repos.identityOperator.expireBindings(now);
 };
 
 const stepPackWorldEngine = async (
   context: AppContext,
   packId: string,
-  worldEngine: WorldEngineSidecarClient
+  worldEngine: WorldEngineSidecarClient,
+  packRuntime: PackRuntimePort
 ): Promise<void> => {
   const stepTicks = '1';
 
@@ -272,6 +283,7 @@ const stepPackWorldEngine = async (
       pack_id: packId,
       step_ticks: stepTicks,
       reason: 'runtime_loop'
-    }
+    },
+    packRuntime
   });
 };

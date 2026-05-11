@@ -1,6 +1,7 @@
 import { getSchedulerAgentConfig, getSchedulerDecisionKernelConfig, getSchedulerEntityConcurrencyConfig, getSchedulerTickBudgetConfig } from '../../config/runtime_config.js';
 import type { InferenceRequestInput } from '../../inference/types.js';
 import type { AppContext } from '../context.js';
+import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
 import {
   createPendingDecisionJob,
   getDecisionJobByIdempotencyKey,
@@ -75,6 +76,7 @@ export interface RunAgentSchedulerOptions {
   strategy?: 'mock' | 'rule_based';
   schedulerReason?: SchedulerReason;
   packId?: string;
+  packRuntime?: PackRuntimePort;
 }
 
 interface PartitionSchedulerRunResult extends AgentSchedulerRunResult {
@@ -306,7 +308,8 @@ const runAgentSchedulerForPartition = async ({
   schedulerReason,
   now,
   startedAt,
-  packId
+  packId,
+  packRuntime
 }: {
   context: AppContext;
   workerId: string;
@@ -318,6 +321,7 @@ const runAgentSchedulerForPartition = async ({
   now: bigint;
   startedAt: bigint;
   packId?: string;
+  packRuntime?: PackRuntimePort;
 }): Promise<PartitionSchedulerRunResult> => {
   const leaseResult = acquireSchedulerLease(context, {
     workerId,
@@ -366,7 +370,7 @@ const runAgentSchedulerForPartition = async ({
       leaseExpiresAtSnapshot: leaseResult.expires_at,
       tick: now,
       startedAt,
-      finishedAt: context.activePackRuntime!.getCurrentTick(),
+      finishedAt: (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick()),
       summary,
       candidateDecisions
     }, packId);
@@ -520,7 +524,7 @@ const runAgentSchedulerForPartition = async ({
     leaseExpiresAtSnapshot: leaseResult.expires_at,
     tick: now,
     startedAt,
-    finishedAt: context.activePackRuntime!.getCurrentTick(),
+    finishedAt: (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick()),
     summary,
     candidateDecisions
   }, packId);
@@ -554,10 +558,11 @@ export const runAgentScheduler = async ({
   cooldownTicks = BigInt(getSchedulerAgentConfig().cooldown_ticks),
   strategy = 'rule_based',
   schedulerReason = 'periodic_tick',
-  packId
+  packId,
+  packRuntime
 }: RunAgentSchedulerOptions): Promise<AgentSchedulerRunResult> => {
-  const startedAt = context.activePackRuntime!.getCurrentTick();
-  const now = context.activePackRuntime!.getCurrentTick();
+  const startedAt = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   refreshSchedulerWorkerRuntimeLiveness(context, now, packId);
 
   const initialOwnershipSnapshot = resolveSchedulerOwnershipSnapshot(context, {
@@ -600,6 +605,7 @@ export const runAgentScheduler = async ({
         strategy,
         schedulerReason,
         now,
+        packRuntime,
         startedAt,
         packId
       })

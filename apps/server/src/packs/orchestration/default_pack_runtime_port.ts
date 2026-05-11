@@ -1,6 +1,6 @@
 import type { RuntimeClockProjectionSnapshot } from '../../app/runtime/runtime_clock_projection.js';
 import type { PackRuntimePort } from '../../app/services/pack_runtime_ports.js';
-import type { PackRuntimeInstance } from '../../core/pack_runtime_instance.js';
+import type { PackRuntimeHost } from '../../core/pack_runtime_host.js';
 import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
 import type { WorldPack } from '../manifest/loader.js';
 import { renderNarrativeTemplate } from '../../template_engine/frontends/narrative/resolver.js';
@@ -12,22 +12,22 @@ import {
 import type { PermissionContext } from '../../permission/types.js';
 
 export class DefaultPackRuntimePort implements PackRuntimePort {
-  constructor(private readonly instance: PackRuntimeInstance) {}
+  constructor(private readonly host: PackRuntimeHost) {}
 
   getPackId(): string {
-    return this.instance.getPackId();
+    return this.host.getPackId();
   }
 
   getCurrentTick(): bigint {
-    return this.instance.getCurrentTick();
+    return this.host.getCurrentTick();
   }
 
   getCurrentRevision(): bigint {
-    return this.instance.getCurrentRevision();
+    return this.host.getCurrentRevision();
   }
 
   getPack(): WorldPack {
-    return this.instance.getPack();
+    return this.host.getPack();
   }
 
   resolvePackVariables(
@@ -35,7 +35,7 @@ export class DefaultPackRuntimePort implements PackRuntimePort {
     permission?: PermissionContext,
     actorState?: Record<string, unknown> | null
   ): string {
-    const pack = this.instance.getPack();
+    const pack = this.host.getPack();
     const layers = [
       createPromptVariableLayer({
         namespace: 'pack',
@@ -94,34 +94,34 @@ export class DefaultPackRuntimePort implements PackRuntimePort {
   }
 
   getStepTicks(): bigint {
-    return this.instance.getStepTicks();
+    return this.host.getStepTicks();
   }
 
   getRuntimeSpeedSnapshot(): RuntimeSpeedSnapshot {
-    return this.instance.getRuntimeSpeedSnapshot();
+    return this.host.getRuntimeSpeedSnapshot();
   }
 
   setRuntimeSpeedOverride(stepTicks: bigint): void {
-    this.instance.setRuntimeSpeedOverride(stepTicks);
+    this.host.setRuntimeSpeedOverride(stepTicks);
   }
 
   clearRuntimeSpeedOverride(): void {
-    this.instance.clearRuntimeSpeedOverride();
+    this.host.clearRuntimeSpeedOverride();
   }
 
   getAllTimes(): unknown {
-    return this.instance.getAllTimes();
+    return this.host.getAllTimes();
   }
 
   async step(amount?: bigint): Promise<void> {
-    await this.instance.step(amount);
+    await this.host.step(amount);
   }
 
   getPackSlotDeclarations(): Record<string, Record<string, unknown>> | null {
-    return this.instance.getPackSlotDeclarations();
+    return this.host.getPackSlotDeclarations();
   }
 
   applyClockProjection(snapshot: RuntimeClockProjectionSnapshot): void {
-    this.instance.applyClockProjection(snapshot);
+    this.host.applyClockProjection(snapshot);
   }
 }

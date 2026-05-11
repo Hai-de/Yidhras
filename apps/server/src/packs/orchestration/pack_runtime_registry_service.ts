@@ -15,6 +15,7 @@ import { PackRuntimeInstance } from '../../core/pack_runtime_instance.js';
 import type { PackRuntimeControl, PackRuntimeLocator, PackRuntimeObservation } from '../../core/pack_runtime_ports.js';
 import type { PackRuntimeRegistry } from '../../core/pack_runtime_registry.js';
 import { RuntimeSpeedPolicy } from '../../core/runtime_speed.js';
+import { DefaultPackRuntimePort } from './default_pack_runtime_port.js';
 import { getWorldPackRuntimeConfig } from '../../core/world_pack_runtime.js';
 import { discoverPackLocalPlugins } from '../../plugins/discovery.js';
 import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
@@ -209,7 +210,8 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
 
     // Start per-pack simulation loop
     if (this.multiPackLoopHost) {
-      this.multiPackLoopHost.startLoop(resolved.pack.metadata.id, clock);
+      const packRuntimePort = new DefaultPackRuntimePort(host);
+      this.multiPackLoopHost.startLoop(resolved.pack.metadata.id, clock, packRuntimePort);
     }
 
     // Load pack into world engine sidecar session
