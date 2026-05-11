@@ -69,6 +69,83 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, PackCatalogS
     this.packRuntimeRegistryService.setWorldEngine(worldEngine);
   }
 
+  /** @deprecated Use loadExperimentalPackRuntime instead */
+  public async init(packFolderName: string, _openingId?: string): Promise<void> {
+    await this.prepareDatabase();
+    await this.loadExperimentalPackRuntime(packFolderName);
+  }
+
+  /** @deprecated Use registry handle instead */
+  public getActivePack() {
+    const ids = this.listLoadedPackRuntimeIds();
+    return ids.length > 0 ? this.getPackRuntimeHandle(ids[0])?.pack : undefined;
+  }
+
+  /** @deprecated Use PackRuntimePort instead */
+  public getCurrentTick(): bigint {
+    const ids = this.listLoadedPackRuntimeIds();
+    if (ids.length === 0) return 0n;
+    const handle = this.getPackRuntimeHandle(ids[0]);
+    return handle ? BigInt(handle.getClockSnapshot().current_tick) : 0n;
+  }
+
+  /** @deprecated Use PackRuntimePort instead */
+  public getCurrentRevision(): bigint {
+    return this.getCurrentTick();
+  }
+
+  /** @deprecated Use PackRuntimePort instead */
+  public getPackSlotDeclarations() {
+    const ids = this.listLoadedPackRuntimeIds();
+    if (ids.length === 0) return null;
+    return this.getPackRuntimeHandle(ids[0])?.pack.ai?.slots ?? null;
+  }
+
+  /** @deprecated Use PackRuntimePort instead */
+  public resolvePackVariables(template: string): string {
+    return template;
+  }
+
+  /** @deprecated Use PackRuntimePort instead */
+  public getStepTicks(): bigint {
+    return 1n;
+  }
+
+  /** @deprecated Use PackRuntimePort instead */
+  public getRuntimeSpeedSnapshot() {
+    return { effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null };
+  }
+
+  /** @deprecated Use PackRuntimePort instead */
+  public setRuntimeSpeedOverride(_stepTicks: bigint): void {}
+
+  /** @deprecated Use PackRuntimePort instead */
+  public clearRuntimeSpeedOverride(): void {}
+
+  /** @deprecated Use PackRuntimePort instead */
+  public getAllTimes() { return []; }
+
+  /** @deprecated Use PackRuntimePort instead */
+  public async step(_amount?: bigint): Promise<void> {}
+
+  /** @deprecated Use PackRuntimePort instead */
+  public applyClockProjection(_snapshot: unknown): void {}
+
+  /** @deprecated */
+  public isRuntimeReady(): boolean { return this.listLoadedPackRuntimeIds().length > 0; }
+
+  /** @deprecated */
+  public setRuntimeReady(_ready: boolean): void {}
+
+  /** @deprecated */
+  public isPaused(): boolean { return false; }
+
+  /** @deprecated */
+  public setPaused(_paused: boolean): void {}
+
+  /** @deprecated */
+  public getSpatialRuntime() { return null; }
+
   public async prepareDatabase(): Promise<DatabaseHealthSnapshot> {
     return this.runtimeBootstrap.prepareDatabase();
   }

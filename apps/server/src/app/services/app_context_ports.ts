@@ -124,8 +124,14 @@ export const readVisibleClockSnapshot = (input: {
   clock: { getCurrentTick(): bigint };
   runtimeClockProjection?: RuntimeClockProjectionService;
   packId?: string;
+  activePackRuntime?: { getActivePack(): { metadata: { id: string } } | undefined };
+  activePack?: { getActivePack(): { metadata: { id: string } } | undefined };
 }): VisibleClockSnapshot => {
-  const projected = input.packId ? input.runtimeClockProjection?.readFormattedClock(input.packId) : null;
+  const resolvedPackId = input.packId
+    ?? input.activePackRuntime?.getActivePack()?.metadata.id
+    ?? input.activePack?.getActivePack()?.metadata.id
+    ?? null;
+  const projected = resolvedPackId ? input.runtimeClockProjection?.readFormattedClock(resolvedPackId) : null;
 
   if (projected) {
     return {
