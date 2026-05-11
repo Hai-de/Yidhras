@@ -1,5 +1,6 @@
 import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
 import type { AppContext, RuntimeLoopDiagnostics } from '../context.js';
+import type { PackRuntimePort } from './pack_runtime_ports.js';
 
 export interface RuntimeControlSnapshot {
   status: 'paused' | 'running';
@@ -16,9 +17,9 @@ const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
   last_error_message: null
 };
 
-export const overrideRuntimeSpeed = (context: AppContext, stepTicks: bigint): RuntimeSpeedSnapshot => {
-  context.activePackRuntime!.setRuntimeSpeedOverride(stepTicks);
-  const snapshot = context.activePackRuntime!.getRuntimeSpeedSnapshot();
+export const overrideRuntimeSpeed = (context: AppContext, stepTicks: bigint, packRuntime?: PackRuntimePort): RuntimeSpeedSnapshot => {
+  (packRuntime ?? context.activePackRuntime!).setRuntimeSpeedOverride(stepTicks);
+  const snapshot = (packRuntime ?? context.activePackRuntime!).getRuntimeSpeedSnapshot();
 
   context.notifications.push('info', `运行时步进已覆盖为 ${stepTicks.toString()}`, 'RUNTIME_SPEED_OVERRIDE', {
     step_ticks: stepTicks.toString(),
@@ -28,9 +29,9 @@ export const overrideRuntimeSpeed = (context: AppContext, stepTicks: bigint): Ru
   return snapshot;
 };
 
-export const clearRuntimeSpeedOverride = (context: AppContext): RuntimeSpeedSnapshot => {
-  context.activePackRuntime!.clearRuntimeSpeedOverride();
-  const snapshot = context.activePackRuntime!.getRuntimeSpeedSnapshot();
+export const clearRuntimeSpeedOverride = (context: AppContext, packRuntime?: PackRuntimePort): RuntimeSpeedSnapshot => {
+  (packRuntime ?? context.activePackRuntime!).clearRuntimeSpeedOverride();
+  const snapshot = (packRuntime ?? context.activePackRuntime!).getRuntimeSpeedSnapshot();
 
   context.notifications.push('info', '运行时步进覆盖已清除', 'RUNTIME_SPEED_OVERRIDE_CLEAR', {
     override_since: null

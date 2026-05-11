@@ -1,5 +1,6 @@
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
+import type { PackRuntimePort } from './pack_runtime_ports.js';
 
 export interface ActionIntentRecord {
   id: string;
@@ -44,9 +45,10 @@ export const DEFAULT_ACTION_INTENT_LOCK_TICKS = 5n;
 
 export const listDispatchableActionIntents = async (
   context: AppContext,
-  limit = 10
+  limit = 10,
+  packRuntime?: PackRuntimePort
 ): Promise<ActionIntentRecord[]> => {
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
 
   return context.prisma.actionIntent.findMany({
     where: {
@@ -72,9 +74,11 @@ export const claimActionIntent = async (
     worker_id: string;
     now?: bigint;
     lock_ticks?: bigint;
+    packRuntime?: PackRuntimePort;
   }
 ): Promise<ActionIntentRecord | null> => {
-  const now = input.now ?? context.activePackRuntime!.getCurrentTick();
+  const packRuntime = input.packRuntime;
+  const now = input.now ?? (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   const lockTicks = input.lock_ticks ?? 5n;
   const existing = await context.prisma.actionIntent.findUnique({
     where: {
@@ -132,6 +136,7 @@ export const releaseActionIntentLock = async (
   input: {
     intent_id: string;
     worker_id?: string;
+    packRuntime?: PackRuntimePort;
   }
 ): Promise<ActionIntentRecord | null> => {
   const existing = await context.prisma.actionIntent.findUnique({
@@ -148,6 +153,7 @@ export const releaseActionIntentLock = async (
     return existing;
   }
 
+  const packRuntime = input.packRuntime;
   return context.prisma.actionIntent.update({
     where: {
       id: existing.id
@@ -156,7 +162,7 @@ export const releaseActionIntentLock = async (
       locked_by: null,
       locked_at: null,
       lock_expires_at: null,
-      updated_at: context.activePackRuntime!.getCurrentTick()
+      updated_at: (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick())
     }
   });
 };
@@ -172,9 +178,10 @@ export const assertActionIntentLockOwnership = (intent: ActionIntentRecord, work
 
 export const markActionIntentDispatching = async (
   context: AppContext,
-  intentId: string
+  intentId: string,
+  packRuntime?: PackRuntimePort
 ): Promise<ActionIntentRecord> => {
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
 
   return context.prisma.actionIntent.update({
     where: {
@@ -193,9 +200,10 @@ export const markActionIntentDispatching = async (
 
 export const markActionIntentCompleted = async (
   context: AppContext,
-  intentId: string
+  intentId: string,
+  packRuntime?: PackRuntimePort
 ): Promise<ActionIntentRecord> => {
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
 
   return context.prisma.actionIntent.update({
     where: {
@@ -219,9 +227,10 @@ export const markActionIntentFailed = async (
   context: AppContext,
   intentId: string,
   reason: string | null = null,
-  code: string | null = 'ACTION_DISPATCH_FAIL'
+  code: string | null = 'ACTION_DISPATCH_FAIL',
+  packRuntime?: PackRuntimePort
 ): Promise<ActionIntentRecord> => {
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
 
   return context.prisma.actionIntent.update({
     where: {
@@ -242,9 +251,10 @@ export const markActionIntentFailed = async (
 export const markActionIntentDropped = async (
   context: AppContext,
   intentId: string,
-  reason: string | null
+  reason: string | null,
+  packRuntime?: PackRuntimePort
 ): Promise<ActionIntentRecord> => {
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
 
   return context.prisma.actionIntent.update({
     where: {

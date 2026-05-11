@@ -1,6 +1,7 @@
 import { dispatchInvocationFromActionIntent } from '../../domain/invocation/invocation_dispatcher.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
+import type { PackRuntimePort } from './pack_runtime_ports.js';
 import { type ActionIntentRecord,assertActionIntentLockOwnership } from './action_intent_repository.js';
 import {
   createEventEvidence,
@@ -98,10 +99,10 @@ const resolveDropDecision = (
   };
 };
 
-const dispatchTriggerEventIntent = async (context: AppContext, intent: ActionIntentRecord): Promise<void> => {
+const dispatchTriggerEventIntent = async (context: AppContext, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
   const actor = resolveTriggerEventActor(intent.actor_ref);
   const payload = resolveTriggerEventPayload(intent.payload);
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
 
   const activePack = context.activePackRuntime?.getActivePack();
   const impactData = {
@@ -142,9 +143,9 @@ const resolveMovePayload = (payload: unknown): { entity_id: string; target_locat
   };
 };
 
-const dispatchMoveIntent = async (context: AppContext, intent: ActionIntentRecord): Promise<void> => {
+const dispatchMoveIntent = async (context: AppContext, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
   const payload = resolveMovePayload(intent.payload);
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
 
   const spatialRuntime = context.getSpatialRuntime?.();
   if (!spatialRuntime) {
@@ -165,11 +166,11 @@ const dispatchMoveIntent = async (context: AppContext, intent: ActionIntentRecor
   await spatialRuntime.moveEntity(payload.entity_id, payload.target_location, now);
 };
 
-const dispatchAdjustSnrIntent = async (context: AppContext, intent: ActionIntentRecord): Promise<void> => {
+const dispatchAdjustSnrIntent = async (context: AppContext, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
   resolveAdjustSnrActorAgentId(intent.actor_ref);
   const targetAgentId = resolveAdjustSnrTargetAgentId(intent.target_ref);
   const payload = resolveAdjustSnrPayload(intent.payload);
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
 
   const targetAgent = await getAgentSnrTargetById(context, targetAgentId);
   if (!targetAgent) {
@@ -206,11 +207,11 @@ const dispatchAdjustSnrIntent = async (context: AppContext, intent: ActionIntent
   });
 };
 
-const dispatchAdjustRelationshipIntent = async (context: AppContext, intent: ActionIntentRecord): Promise<void> => {
+const dispatchAdjustRelationshipIntent = async (context: AppContext, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
   const actorAgentId = resolveActiveAgentIdFromActorRef(intent.actor_ref);
   const targetAgentId = await resolveRelationshipTargetAgentId(context, intent.target_ref, actorAgentId);
   const payload = resolveAdjustRelationshipPayload(intent.payload);
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
 
   const existing = await getRelationshipByCompositeKey(context, {
     from_id: actorAgentId,
@@ -305,9 +306,10 @@ export {
 
 export const dispatchActionIntent = async (
   context: AppContext,
-  intent: ActionIntentRecord
+  intent: ActionIntentRecord,
+  packRuntime?: PackRuntimePort
 ): Promise<{ outcome: 'completed' | 'dropped'; reason: string | null }> => {
-  assertActionIntentLockOwnership(intent, intent.locked_by ?? '', context.activePackRuntime!.getCurrentTick());
+  assertActionIntentLockOwnership(intent, intent.locked_by ?? '', (packRuntime?.getCurrentTick() ?? (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick())));
 
   const invocationResult = await dispatchInvocationFromActionIntent(context, {
     id: intent.id,
@@ -322,7 +324,7 @@ export const dispatchActionIntent = async (
   }
 
   if (intent.intent_type === 'trigger_event') {
-    await dispatchTriggerEventIntent(context, intent);
+    await dispatchTriggerEventIntent(context, intent, packRuntime);
     return {
       outcome: 'completed',
       reason: null
@@ -330,7 +332,7 @@ export const dispatchActionIntent = async (
   }
 
   if (intent.intent_type === 'adjust_snr') {
-    await dispatchAdjustSnrIntent(context, intent);
+    await dispatchAdjustSnrIntent(context, intent, packRuntime);
     return {
       outcome: 'completed',
       reason: null
@@ -338,7 +340,7 @@ export const dispatchActionIntent = async (
   }
 
   if (intent.intent_type === 'adjust_relationship') {
-    await dispatchAdjustRelationshipIntent(context, intent);
+    await dispatchAdjustRelationshipIntent(context, intent, packRuntime);
     return {
       outcome: 'completed',
       reason: null
@@ -346,7 +348,7 @@ export const dispatchActionIntent = async (
   }
 
   if (intent.intent_type === 'move') {
-    await dispatchMoveIntent(context, intent);
+    await dispatchMoveIntent(context, intent, packRuntime);
     return {
       outcome: 'completed',
       reason: null

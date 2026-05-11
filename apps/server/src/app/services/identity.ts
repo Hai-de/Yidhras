@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { IdentityBindingRole, IdentityBindingStatus } from '../../identity/types.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
+import type { PackRuntimePort } from './pack_runtime_ports.js';
 
 const bindingRoles: IdentityBindingRole[] = ['active', 'atmosphere'];
 const bindingStatuses: IdentityBindingStatus[] = ['active', 'inactive', 'expired'];
@@ -50,7 +51,8 @@ export interface IdentityServiceDependencies {
 
 export const registerIdentity = async (
   context: AppContext,
-  input: RegisterIdentityInput
+  input: RegisterIdentityInput,
+  packRuntime?: PackRuntimePort
 ) => {
   const { id, type, name, claims, metadata, packId } = input;
 
@@ -58,7 +60,7 @@ export const registerIdentity = async (
     throw new ApiError(400, 'IDENTITY_INVALID', 'id and type are required');
   }
 
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   return context.prisma.identity.create({
     data: {
       id,
@@ -78,7 +80,8 @@ export const registerIdentity = async (
 export const createIdentityBinding = async (
   context: AppContext,
   input: CreateIdentityBindingInput,
-  deps: IdentityServiceDependencies
+  deps: IdentityServiceDependencies,
+  packRuntime?: PackRuntimePort
 ) => {
   const { identity_id, agent_id, atmosphere_node_id, role, status, expires_at, packId } = input;
 
@@ -120,7 +123,7 @@ export const createIdentityBinding = async (
   }
 
   const expiresAt = deps.parseOptionalTick(expires_at, 'expires_at');
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
 
   return context.prisma.identityNodeBinding.create({
     data: {
@@ -188,7 +191,8 @@ export const queryIdentityBindings = async (
 
 export const unbindIdentityBinding = async (
   context: AppContext,
-  input: UnbindIdentityBindingInput
+  input: UnbindIdentityBindingInput,
+  packRuntime?: PackRuntimePort
 ) => {
   const { binding_id, status } = input;
 
@@ -207,7 +211,7 @@ export const unbindIdentityBinding = async (
     throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'status must be active, inactive, or expired');
   }
 
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   return context.prisma.identityNodeBinding.update({
     where: { id: binding_id },
     data: {
@@ -219,7 +223,8 @@ export const unbindIdentityBinding = async (
 
 export const expireIdentityBinding = async (
   context: AppContext,
-  input: ExpireIdentityBindingInput
+  input: ExpireIdentityBindingInput,
+  packRuntime?: PackRuntimePort
 ) => {
   const { binding_id } = input;
 
@@ -234,7 +239,7 @@ export const expireIdentityBinding = async (
     throw new ApiError(404, 'IDENTITY_BINDING_NOT_FOUND', 'Binding not found', { binding_id });
   }
 
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   return context.prisma.identityNodeBinding.update({
     where: { id: binding_id },
     data: {
