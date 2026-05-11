@@ -1,6 +1,6 @@
 # API 说明
 
-本文档描述当前对外 HTTP contract。路由分为两层：
+本文档描述对外 HTTP contract。路由分为两层：
 
 - **Global** — 直接注册在 Express app 上，无 pack 前缀
 - **Pack-scoped** — 挂载于 `/:packId`，经过 `packScopeMiddleware` 校验 pack 状态。非 `ready` 状态的 pack 返回 503（loading/unloading/degraded）或 404（gone）
@@ -286,7 +286,7 @@
 
 - **POST `/api/packs/openings/:openingId/apply`**
   - 鉴权：packAccessGuard
-  - 说明：应用一个 opening。若 pack 当前 active，需 `confirm_data_loss: true`
+  - 说明：应用一个 opening。若 pack 处于 active 状态，需 `confirm_data_loss: true`
   - body：`{ confirm_data_loss?: boolean }`
   - 错误码：`OPENING_APPLY_INVALID`, `OPENING_APPLY_BODY_INVALID`, `OPENING_DATA_LOSS_UNCONFIRMED`
 
@@ -308,14 +308,14 @@
 
 - **POST `/api/packs/snapshots`**
   - 鉴权：packAccessGuard
-  - 说明：创建当前运行时状态快照（自动暂停→捕获→恢复）
+  - 说明：创建运行时状态快照（自动暂停→捕获→恢复）
   - body：`{ label?: string }` — 最长 256 字符
   - 返回：`{ snapshot_id, pack_id, captured_at_tick, prisma_record_count, runtime_db_size_bytes }`
   - 错误码：`SNAPSHOT_CREATE_INVALID`, `SNAPSHOT_CREATE_BODY_INVALID`, `SNAPSHOT_NOT_AVAILABLE`
 
 - **POST `/api/packs/snapshots/:snapshotId/restore`**
   - 鉴权：packAccessGuard
-  - 说明：从快照恢复 pack 运行时。会清除当前所有运行时数据
+  - 说明：从快照恢复 pack 运行时。会清除所有运行时数据
   - body：`{ confirm_data_loss: boolean }` — 必须为 `true`
   - 返回：`{ restored: true, pack_id, snapshot_id, restored_at_tick }`
   - 错误码：`SNAPSHOT_RESTORE_INVALID`, `SNAPSHOT_RESTORE_BODY_INVALID`, `SNAPSHOT_DATA_LOSS_UNCONFIRMED`, `SNAPSHOT_NOT_AVAILABLE`, `PACK_NOT_LOADED`, `PACK_ID_MISMATCH`
@@ -550,7 +550,7 @@
 - 不替代 canonical stable API
 - `:packId` 需先进入 experimental runtime registry（显式 load 或已存在于 loaded set）
 - stable/experimental projection 路径共享 `pack-scoped core service + scope adapter`，但 stable active-pack guard 保持不变
-- inference/context 当前只新增 internal pack-scoped contract，不新增 public inference multi-pack run API
+- inference/context 只新增 internal pack-scoped contract，不新增 public inference multi-pack run API
 
 ---
 

@@ -10,7 +10,7 @@
 
 本文档只覆盖 `apps/web` 前端主题开发。
 
-- 平台维护一套默认主题（当前为 VSCode-like dark workbench）
+- 平台维护一套默认主题（为 VSCode-like dark workbench）
 - World-pack provider 可通过 `presentation.theme` 提供自定义主题
 - 平台负责：默认主题、稳定 token contract、runtime resolve/apply、validate/clamp/fallback/diagnostics
 - Provider 可定义自己的视觉风格，平台不对 provider 主题做审美调整
@@ -176,7 +176,7 @@ presentation: {
 
 ## 8. Debugging
 
-### 查看当前主题来源
+### 查看运行中的主题来源
 
 ```js
 document.documentElement.dataset.themeId

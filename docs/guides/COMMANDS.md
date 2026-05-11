@@ -233,7 +233,7 @@ pnpm --filter yidhras-server dev
 
 ### 3.5.3 Experimental multi-pack runtime 启动示例
 
-多包 runtime 当前为 **experimental / default off / operator test-only**。架构边界与约束见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。
+多包 runtime 为 **experimental / default off / operator test-only**。架构边界与约束见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。
 
 多包运行时通过 `runtime.multi_pack.*` 配置，详见 [`ARCH.md`](../ARCH.md) 第 3.3.1 节。
 
@@ -430,7 +430,7 @@ pnpm --filter yidhras-server pack:import <archive> [--force] [--json]
 ```
 
 说明：
-- `export`：将 world pack 打包为 `<id>-<version>.tar.gz`，同时生成 `.sha256` 校验文件。默认输出到当前目录，`--output` 指定输出路径。导出前自动运行 validate:pack 校验，校验失败则拒绝（`--force` 跳过）。
+- `export`：将 world pack 打包为 `<id>-<version>.tar.gz`，同时生成 `.sha256` 校验文件。默认输出到工作目录，`--output` 指定输出路径。导出前自动运行 validate:pack 校验，校验失败则拒绝（`--force` 跳过）。
 - `import`：从 `.tar.gz` 归档安装 world pack 到 `data/world_packs/<id>/`。自动校验归档内容，目标目录已存在时需 `--force` 覆盖。
 - 排除项：`.git`、`node_modules`、`runtime/`、临时文件。
 - 支持 `--json` 机器可读输出。

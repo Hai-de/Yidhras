@@ -6,10 +6,10 @@ The core design principle is that **plugin governance is a kernel-side concern**
 
 Key concepts:
 
-- **PluginArtifact / PluginInstallation / PluginActivationSession / PluginEnableAcknowledgement** — the kernel-side persistence models that track what was discovered, what was imported, what's currently active, and whether the operator has acknowledged the enable warning
+- **PluginArtifact / PluginInstallation / PluginActivationSession / PluginEnableAcknowledgement** — the kernel-side persistence models that track what was discovered, what was imported, what's active, and whether the operator has acknowledged the enable warning
 - **PackHostApi** — the read-only contract through which plugins and workflows access world state, owned by the TS host kernel; it is not a migration bridge but a long-term host contract
 - **PackRuntimeLookupPort / PackScopeResolver** — the unified scope resolution mechanism that prevents plugin runtime, web routes, and projection logic from each inventing their own lookup
-- **pack-local** — the current formal boundary: a plugin belongs to exactly one pack, and its lifecycle and visibility are scoped accordingly
+- **pack-local** — the formal boundary: a plugin belongs to exactly one pack, and its lifecycle and visibility are scoped accordingly
 
 本文档集中说明 pack-local plugin 的 runtime、治理语义与前后端承接边界。
 
@@ -20,7 +20,7 @@ Key concepts:
 - pack-local plugin 的 runtime 与治理边界是什么
 - CLI / GUI / API 如何指向同一组治理语义
 - web runtime manifest、同源资产路由、route host 的角色是什么
-- server-side 与 web-side 当前分别接入了哪些能力
+- server-side 与 web-side 分别接入了哪些能力
 
 本文件不负责：
 
@@ -31,7 +31,7 @@ Key concepts:
 
 ## 2. 核心范围
 
-当前插件能力的核心范围，是 **pack-local plugin**：
+插件能力的核心范围是 **pack-local plugin**：
 
 - discovery
 - import confirmation
@@ -42,13 +42,13 @@ Key concepts:
 - 同源 web 资产暴露
 - pack-local route host
 
-当前不把 `global` 作为正式运行范围；它仅保留为领域模型预留位。
+`global` 不作为正式运行范围；它仅保留为领域模型预留位。
 
 ## 3. 治理记录与宿主
 
 插件治理记录持久化在 **kernel-side Prisma**，而不是 pack runtime sqlite。
 
-当前相关记录包括：
+相关记录包括：
 
 - `PluginArtifact`
 - `PluginInstallation`
@@ -66,7 +66,7 @@ Key concepts:
 - `apps/server/src/plugins/service.ts`
 - `apps/server/src/plugins/runtime.ts`
 
-当前治理语义：
+治理语义：
 
 1. 插件先被发现（discovered）
 2. 导入后进入 `pending_confirmation`
@@ -88,7 +88,7 @@ CLI 与 GUI 复用同一组治理语义：
 - `plugins.enable_warning.require_acknowledgement`
 - `PLUGIN_ENABLE_WARNING_TEXT`
 
-当前 `/api/packs/:packId/plugins` 会返回 `enable_warning` runtime snapshot，包括：
+`/api/packs/:packId/plugins` 会返回 `enable_warning` runtime snapshot，包括：
 
 - `enabled`
 - `require_acknowledgement`
@@ -99,11 +99,11 @@ CLI 与 GUI 复用同一组治理语义：
 
 - canonical warning 文本只由后端维护
 - GUI / CLI 不复制另一份独立文案来源
-- acknowledgement 提交时要与当前 canonical hash 保持一致
+- acknowledgement 提交时要与 canonical hash 保持一致
 
 ## 6. Web runtime
 
-当前 plugin runtime web surface 分为两层：
+plugin runtime web surface 分为两层：
 
 ### Stable active-pack surface
 
@@ -112,7 +112,7 @@ CLI 与 GUI 复用同一组治理语义：
 
 约束：
 
-- 继续绑定当前 active pack
+- 继续绑定 active pack
 - 多包运行时不自动放宽 stable surface 的作用域
 - stable surface 的 pack 解析继续受 active-pack guard 控制
 
@@ -126,11 +126,7 @@ CLI 与 GUI 复用同一组治理语义：
 - 目标 pack 必须已经加载到 runtime registry
 - experimental surface 的 pack 解析通过统一 `PackRuntimeLookupPort` / `PackScopeResolver` 校验
 
-当前 web runtime snapshot 由：
-
-- `apps/server/src/app/services/plugin_runtime_web.ts`
-
-负责提供。
+web runtime snapshot 由 `apps/server/src/app/services/plugin_runtime_web.ts` 负责提供。
 
 其作用包括：
 
@@ -140,7 +136,7 @@ CLI 与 GUI 复用同一组治理语义：
 - 为前端提供 browser-side dynamic import 所需的信息
 - 并保持 stable / experimental route namespace 分层
 
-当前每个 plugin item 典型会暴露：
+每个 plugin item 典型会暴露：
 
 - `web_bundle_url`
 - `runtime_module`
@@ -149,17 +145,13 @@ CLI 与 GUI 复用同一组治理语义：
 
 ## 7. 同源资产与 route host
 
-当前插件 web 资产通过：
-
-- `GET /api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`
-
-进行暴露，并校验：
+插件 web 资产通过 `GET /api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*` 进行暴露，并校验：
 
 - installation 必须 `enabled`
 - scope / path 必须合法
 - asset path 必须落在允许的 runtime root 内
 
-浏览器侧当前通过动态 import 加载 `web_bundle_url`，并在 pack-local route host 下挂载路由贡献：
+浏览器侧通过动态 import 加载 `web_bundle_url`，并在 pack-local route host 下挂载路由贡献：
 
 - `/packs/:packId/plugins/:pluginId/*`
 
@@ -181,34 +173,34 @@ CLI 与 GUI 复用同一组治理语义：
 
 ## 8. Server-side / Web-side 承接边界
 
-### Server-side 当前已接入的受控扩展点
+### Server-side 已接入的受控扩展点
 
 - context source adapters
 - prompt workflow step executors
 - pack-local API routes
 
-### Startup lifecycle 当前已接入
+### Startup lifecycle 已接入
 
 - `createApp()` 阶段把 Express app 注入 `AppContext`
 - `sim.init(selectedPack)` 后执行 `syncActivePackPluginRuntime(...)`
 - registry refresh 与 pack-local route mounting 走统一同步入口
 - route 挂载带去重，避免 enable / disable / startup 多次同步时重复注册
 
-当前多包运行时补充了：
+多包运行时补充了：
 
 - `refreshPackPluginRuntime(context, packId)`
 - `syncExperimentalPackPluginRuntime(context, packId)`
 - 按 pack-local scope 刷新 experiment-loaded pack 的 plugin runtime registry
 
-### Host 边界当前约束
+### Host 边界约束
 
-当前 plugin runtime 继续由 **Node/TS host** 承接，而不是进入 Rust world engine：
+plugin runtime 由 **Node/TS host** 承接，而不是进入 Rust world engine：
 
 - plugin host 不直接依赖 Rust / TS world engine internal object
 - pack scope resolve 统一通过 `PackRuntimeLookupPort` / `PackScopeResolver`
 - pack runtime web surface 与 projection scope 不再各自发明一套 lookup 逻辑
 - 后续若引入 Rust world engine，plugin host 应通过 Host API / lookup port 与之交互
-- 第一阶段新增的宿主读面是 `PackHostApi`
+- 宿主读面是 `PackHostApi`
   - `getPackSummary(...)`
   - `getCurrentTick(...)`
   - `queryWorldState(...)`
@@ -217,16 +209,16 @@ CLI 与 GUI 复用同一组治理语义：
 
 这意味着：
 
-- plugin host / workflow host / scheduler 不是第一阶段 Rust 迁移目标
+- plugin host / workflow host / scheduler 不是 Rust 迁移目标
 - 插件侧扩展点继续留在 Node/TS 宿主
 - world engine 只替换 pack runtime / world rule execution 内核，而不吞掉 plugin host
-- Phase 1B 已完成后，这一约束继续成立：即使 sidecar 已具备 Host snapshot hydrate、Rust session/query 与 prepare/commit/abort 闭环，插件层仍只应读取 Host API，而不是依赖 sidecar 内部协议细节
+- sidecar 具备 Host snapshot hydrate、Rust session/query 与 prepare/commit/abort 闭环，插件层仍只应读取 Host API，而不是依赖 sidecar 内部协议细节
 - 插件与 workflow 不应直接持有 `WorldEnginePort`、`WorldEngineSidecarClient`、prepared token 或 raw JSON-RPC transport
 - 若未来插件需要更多世界态读能力，应继续加在 Host API 上，而不是让插件直接越过宿主边界
-- plugin extension model 当前应视为 **TS-host-only by default**；是否建立 Rust-consumable contributor bridge 属于单独立项问题，而不是默认 roadmap
-- 因此，`PackHostApi` 不应再被描述为迁移期桥接壳，而应被视为插件系统长期依赖的 host contract 之一
+- plugin extension model 视为 **TS-host-only by default**；是否建立 Rust-consumable contributor bridge 属于单独立项问题，而不是默认 roadmap
+- 因此，`PackHostApi` 被视为插件系统长期依赖的 host contract 之一
 
-### Web-side 当前已具备
+### Web-side 已具备
 
 - runtime manifest 读面
 - 浏览器侧动态 bundle loader
@@ -235,7 +227,7 @@ CLI 与 GUI 复用同一组治理语义：
 - pack-local route host
 - `/plugins` 管理页面
 
-### Plugin management GUI 当前已具备
+### Plugin management GUI 已具备
 
 - installation inventory
 - capability grant 勾选式 confirm import
@@ -244,7 +236,7 @@ CLI 与 GUI 复用同一组治理语义：
 
 ## 9. Server Plugin Host API
 
-插件通过 `activate(host: ServerPluginHostApi)` 入口点注册能力。当前可用的注册方法：
+插件通过 `activate(host: ServerPluginHostApi)` 入口点注册能力。可用的注册方法：
 
 | 方法 | 能力 key 前缀 | 说明 |
 |------|--------------|------|
@@ -299,18 +291,17 @@ interface PluginInferenceResult {
 }
 ```
 
-## 10. 当前边界与限制
+## 10. 边界与限制
 
-当前仍存在的边界：
+存在的边界：
 
 - GUI 测试主要仍以 composable / unit 为主，页面级交互测试还可继续补强
 - plugin runtime module contract 校验仍偏轻量
 - sandbox / isolation 能力仍不算强
-- 当前范围仍以 `pack_local` 为正式边界
+- 范围以 `pack_local` 为正式边界
 - 多包运行时 plugin runtime 通过 operator API 访问
-- 当前不会把 stable active-pack plugin runtime surface 直接升级为任意 loaded pack 可读
+- 不会把 stable active-pack plugin runtime surface 直接升级为任意 loaded pack 可读
 - server-side pack route registration 仍以保守兼容为主，而不是完整平台化插件容器
-- 更深的 multi-pack operator ergonomics 已记录在 `.limcode/enhancements-backlog.md`
 
 ## 11. 相关文档
 

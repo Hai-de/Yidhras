@@ -177,7 +177,7 @@ Prefer linking over duplicating.
 - `docs/ARCH_DIAGRAM.md` — system structure and call-flow diagrams.
 - `docs/LOGIC.md` — business rules and domain semantics.
 - `docs/specs/WORLD_PACK.md` — world-pack packaging and release guidance.
-- `docs/ENHANCEMENTS.md` — redirect stub; actual backlog at `.limcode/enhancements-backlog.md`.
+- `docs/ENHANCEMENTS.md` — redirect stub; backlog 不在稳定文档中维护。
 - `docs/specs/THEME.md` — frontend theme contract.
 - `docs/subsystems/PROMPT_WORKFLOW.md` — prompt workflow runtime details.
 - `docs/subsystems/AI_GATEWAY.md` — AI gateway and invocation observability.
@@ -187,6 +187,20 @@ Prefer linking over duplicating.
 - `docs/guides/PLUGIN_OPERATIONS.md` — plugin governance operations.
 
 When behavior changes, update the most appropriate primary doc in the same change.
+
+### Stable reference doc iron rules
+
+`docs/` 下的文档是**稳定事实源**，不是项目周报、过程记录或里程碑汇报。任何修改 `docs/` 的变更必须遵守以下铁律：
+
+1. **去时间化** — 禁止一切将事实锚定在时间轴上的描述。禁用：`当前`、`目前`、`现已`、`已完全移除`、`Phase X 已完成`、`本阶段`、`尚未激活`、`将在...实现`、`当前缺失`、`当前实现状态` 等。文档只描述 timeless 的事实。
+
+2. **去过程化** — `docs/` 与 `.limcode/` 完全隔离。稳定文档中不得出现 `.limcode/` 路径引用、不得出现 `Phase X`、`组件化重构` 等项目过程术语、不得引用设计草案或实施计划。
+
+3. **去汇报化** — 禁止周报语气。禁用 `**当前实现状态**：...`、`**当前缺失**：...`、`**已完成**：...`、`系统始终：` 等格式。禁止解释"我们为什么这样设计"，只陈述"系统是这样工作的"。
+
+4. **符号与格式净化** — 禁止 `§` 符号（改用标准 Markdown 锚点或标题引用）。禁止冗余括号注释（如 `（V1 已完全移除）`、`（含 Phase X...）`）。禁止用 `>` 引用块包裹核心定义。
+
+5. **术语统一** — 同一篇文档内术语必须一致（如 `world-pack` / `世界包` 不得混用）。文档开头必须明确"本文档说明什么"和"本文档不说明什么"。
 
 ### Source-of-truth rules
 

@@ -42,7 +42,7 @@ data/world_packs/<pack_id>/snapshots/<snapshot_id>/
 ### 恢复流程
 
 ```
-暂停 → 卸载世界引擎 sidecar → 清除当前 runtime.sqlite → 
+暂停 → 卸载世界引擎 sidecar → 清除 runtime.sqlite → 
 拆除 kernel 桥接（Agent/Identity/Binding）→ 删除 pack-scoped Prisma 记录 → 
 复制快照的 runtime.sqlite 和 storage-plan.json → 读取 applied_opening_id →
 在事务中重建所有 Prisma 记录 → 恢复时钟 tick → 
@@ -114,7 +114,7 @@ curl -X DELETE http://localhost:3001/api/packs/death-note/snapshots/<snapshot_id
 
 | 特性 | 快照 (Snapshot) | 开局 (Opening) |
 |------|----------------|----------------|
-| 数据来源 | 运行时当前状态 | pack YAML 预定义 |
+| 数据来源 | 运行时状态 | pack YAML 预定义 |
 | 定义者 | 操作员随时创建 | 包作者提前编写 |
 | 恢复行为 | 精确回到存档点 | 销毁数据，从 YAML 重新物化 |
 | 保留内容 | 完整世界状态 + 社交数据 + 记忆 | 仅初始 entities/states/variables |
@@ -124,8 +124,8 @@ curl -X DELETE http://localhost:3001/api/packs/death-note/snapshots/<snapshot_id
 
 ## 限制与注意事项
 
-- **恢复不可逆**：`confirm_data_loss: true` 后当前运行时数据被清除，无法撤销。建议恢复前先创建一个快照。
-- **Sidecar 依赖**：恢复需要世界引擎 sidecar 可用且支持 unload/load。如果 sidecar 不在运行或 pack 未加载，恢复会失败。
+- **恢复不可逆**：`confirm_data_loss: true` 后运行时数据被清除，无法撤销。建议恢复前先创建一个快照。
+- **Sidecar 依赖**：恢复需要 sidecar 可用且支持 unload/load。如果 sidecar 不在运行或 pack 未加载，恢复会失败。
 - **Pack 定义变更**：如果 pack YAML 在快照后发生了结构性变更（实体增删、表结构变化），恢复仍会成功（因为 SQLite 自带 schema），但新 YAML 定义的实体不会出现在恢复后的状态中。如有需要，可在恢复后重新 apply opening。
 - **磁盘空间**：每个快照是 runtime.sqlite 的完整副本。大包（>100MB SQLite）的快照会显著占用磁盘。上限 20 个，可手动删除不需要的快照。
 - **不包含 AI 推理历史**：InferenceTrace、ActionIntent、DecisionJob 等操作审计记录不包含在快照中，恢复后这些记录不会重现。Post 和 Event 等叙事内容会被保留。

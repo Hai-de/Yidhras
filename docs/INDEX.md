@@ -12,7 +12,7 @@
 |------|------|
 | [README.md](../README.md) | 仓库入口、最小启动方式、高频命令 |
 | [AGENTS.md](../AGENTS.md) | 协作规则、工程约束、文档治理原则 |
-| [TODO.md](../TODO.md) | 当前 backlog 与优先级 |
+| [TODO.md](../TODO.md) | backlog 与优先级 |
 
 ## 2. 架构与语义层
 
@@ -60,15 +60,6 @@
 | [guides/PLUGIN_OPERATIONS.md](guides/PLUGIN_OPERATIONS.md) | 插件治理 HTTP API / GUI 流程 |
 | [guides/SNAPSHOT.md](guides/SNAPSHOT.md) | 世界包快照系统：存档/恢复的原理、API 与使用工作流 |
 
-## 6. 过程资产层
+## 6. 过程资产
 
-`.limcode/` 下存放阶段性计划、评审、设计，不是长期稳定事实源。详见 [`.limcode/README.md`](../.limcode/README.md)。
-
-| 文档 | 定位 |
-|------|------|
-| [design/](../.limcode/design/) | 当前活跃/参考设计草案 |
-| [plans/](../.limcode/plans/) | 当前活跃/参考执行计划与任务拆解 |
-| [review/](../.limcode/review/) | 当前活跃/参考评审记录 |
-| [archive/](../.limcode/archive/) | 已完成过程资产与历史草案归档 |
-| [progress.md](../.limcode/progress.md) | 里程碑进度记录 |
-
+`.limcode/` 下存放阶段性计划、评审、设计与历史归档，不是长期稳定事实源。过程资产不在 `docs/` 中重复维护。

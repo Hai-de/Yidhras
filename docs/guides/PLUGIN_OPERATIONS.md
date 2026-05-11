@@ -6,19 +6,19 @@
 > - 命令入口以 `apps/server/package.json` 与 `docs/guides/COMMANDS.md` 为准。
 > - HTTP contract 以 `../specs/API.md` 为准。
 > - 架构与 runtime 边界以 `../ARCH.md` 为准。
-> - 本文档负责解释“怎么操作”和“操作顺序是什么”。
+> - 本文档负责解释"怎么操作"和"操作顺序是什么"。
 
 ## 1. 范围
 
-当前项目中的插件治理，指的是 **pack-local plugin** 的导入确认、启用、禁用、重扫描与基础诊断。
+项目中的插件治理，指的是 **pack-local plugin** 的导入确认、启用、禁用、重扫描与基础诊断。
 
-当前已支持的主要入口：
+已支持的主要入口：
 
 - GUI：前端 `/plugins` 页面
 - API：`/api/packs/:packId/plugins*`
 - CLI：`pnpm --filter yidhras-server plugin list|confirm|enable|disable`（直接操作 Prisma，不需要服务器运行）
 
-当前边界：
+边界：
 
 - 只支持 `pack_local` scope
 - 插件不会因为被扫描到就自动启用
@@ -56,7 +56,7 @@ BASE=http://localhost:3001
 
 ### 4. 常见操作
 
-### 4.1 查看当前 pack 的插件列表
+### 4.1 查看 pack 的插件列表
 
 ```bash
 curl -H "Authorization: Bearer $YIDHRAS_TOKEN" \
@@ -64,7 +64,7 @@ curl -H "Authorization: Bearer $YIDHRAS_TOKEN" \
 ```
 
 适用场景：
-- 看当前 pack 下有哪些 installation
+- 看 pack 下有哪些 installation
 - 看 lifecycle state
 - 看 requested / granted capabilities
 
@@ -78,7 +78,7 @@ curl -H "Authorization: Bearer $YIDHRAS_TOKEN" \
 适用场景：
 - 查看 manifest 信息
 - 查看 capability 请求
-- 检查当前状态与来源
+- 检查状态与来源
 
 ### 4.3 确认导入插件
 
@@ -147,7 +147,7 @@ curl -H "Authorization: Bearer $YIDHRAS_TOKEN" \
 
 ## 5. GUI 操作说明
 
-当前前端已提供：
+前端已提供：
 
 - 页面：`/plugins`
 - 功能：
@@ -166,7 +166,7 @@ curl -H "Authorization: Bearer $YIDHRAS_TOKEN" \
 
 ## 6. API 入口
 
-当前相关接口包括：
+相关接口包括：
 
 - `GET /api/packs/:packId/plugins`
 - `POST /api/packs/:packId/plugins/:installationId/confirm`
@@ -181,25 +181,25 @@ curl -H "Authorization: Bearer $YIDHRAS_TOKEN" \
 - `POST /confirm`：确认导入并可提交 granted capabilities
 - `POST /enable`：启用 installation，并在需要时提交 acknowledgement
 - `POST /disable`：停用 installation
-- `GET /runtime/web`：读取当前已启用 web runtime manifest
+- `GET /runtime/web`：读取已启用 web runtime manifest
 - `GET /runtime/web/:installationId/*`：访问启用插件的同源 web 资产
 
 更精确的 body / 返回结构请看 `../specs/API.md`。
 
 ## 7. acknowledgement 说明
 
-enable warning 与 acknowledgement 的完整语义（canonical text/hash 维护、ack 提交要求）见 [`PLUGIN_RUNTIME.md`](../capabilities/PLUGIN_RUNTIME.md) 第 5 节。
+enable warning 与 acknowledgement 的完整语义（canonical text/hash 维护、ack 提交要求）见 [`PLUGIN_RUNTIME.md`](../subsystems/PLUGIN_RUNTIME.md) 第 5 节。
 
 操作层面要点：
 
 - 系统可能要求在 enable 前提交 acknowledgement
 - GUI / CLI 都消费同一份后端下发的 canonical warning text/hash
-- acknowledge 时提交的 `reminder_text_hash` 必须与服务端当前 canonical warning 匹配
+- acknowledge 时提交的 `reminder_text_hash` 必须与服务端 canonical warning 匹配
 
 enable 失败时优先检查：
 
-1. 当前 installation 是否已 confirm
-2. 当前状态是否允许 enable
+1. installation 是否已 confirm
+2. 状态是否允许 enable
 3. 是否缺少 acknowledgement
 4. `reminder_text_hash` 是否仍与服务端匹配
 
@@ -223,11 +223,11 @@ enable 失败时优先检查：
 
 ### 问题 3：本地替换了插件文件，但行为没变化
 
-尝试通过前端 GUI `/plugins` 页面重新扫描，或重启服务器。必要时结合 logs 与 GUI 页面重新确认当前 installation 状态。
+尝试通过前端 GUI `/plugins` 页面重新扫描，或重启服务器。必要时结合 logs 与 GUI 页面重新确认 installation 状态。
 
 ## 9. 相关文档
 
 - 命令入口：[`COMMANDS.md`](./COMMANDS.md)
 - HTTP contract：[`API.md`](../API.md)
 - Runtime 架构与边界：[`ARCH.md`](../ARCH.md)
-- 插件 runtime 语义：[`PLUGIN_RUNTIME.md`](../capabilities/PLUGIN_RUNTIME.md)
+- 插件 runtime 语义：[`PLUGIN_RUNTIME.md`](../subsystems/PLUGIN_RUNTIME.md)

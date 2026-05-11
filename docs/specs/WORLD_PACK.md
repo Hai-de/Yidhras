@@ -6,7 +6,7 @@ Yidhras 核心只定义 world-pack 框架、合约与运行边界，不内建任
 
 本规范不替代运行时合约（runtime contract）；运行时实际读取的配置源文件仍为 `config.yaml`、`config.yml`、`pack.yaml` 或 `pack.yml`。不过，从作者协作、发布交付、版本管理与二次分发等环节考量，建议一个 world-pack 不仅包含一份 YAML 配置，还应具备基本的项目说明与配套资产。
 
-> 说明：当前运行时直接消费 pack 配置文件；README、附加文档、素材目录等内容主要面向作者、发布者、协作者及使用者。
+> 说明：运行时直接消费 pack 配置文件；README、附加文档、素材目录等内容主要面向作者、发布者、协作者及使用者。
 >
 > 说明：项目级文档只说明通用 world-pack 规范；某个具体包的世界观、语义动作、AI 策略与设计取舍应优先收口在该包目录内。
 
@@ -29,7 +29,7 @@ Yidhras 核心只定义 world-pack 框架、合约与运行边界，不内建任
 
 ## 1.1 发布元数据字段规范
 
-为使 world-pack 具备更完整的项目属性，建议在 `metadata` 区块中包含以下发布相关字段。
+为使 world-pack 更完整，建议在 `metadata` 区块中包含以下发布相关字段。
 
 推荐字段列表：
 
@@ -78,7 +78,7 @@ metadata:
 
 ### 2.1 运行时最小要求
 
-当前运行时识别以下文件之一作为配置入口：
+运行时识别以下文件之一作为配置入口：
 
 - `config.yaml`
 - `config.yml`
@@ -141,11 +141,11 @@ _pack 作者视角的关键要点：_
 | `pick` | `{{pick from=a,b,c count=3}}` | string | 从列表中不放回随机选取。`count` 默认 1。`from` 接受逗号分隔字符串 |
 | `int` | `{{int min=0 max=99}}` | number → string | 区间内随机整数 |
 | `float` | `{{float min=0 max=1}}` | number → string | 区间内随机浮点数 |
-| `seed` | `{{seed}}` | string | 返回当前物化阶段使用的 PRNG 种子值（只读），用于问题排查与可复现性确认 |
+| `seed` | `{{seed}}` | string | 返回物化阶段使用的 PRNG 种子值（只读），用于问题排查与可复现性确认 |
 
 **设计原则**：随机性决定模拟状态，不是作为提示词噪声。AI 推理时读到的是宏展开后的确定性值。
 
-> **当前类型限制**：宏处理器签名限定所有参数为 `Record<string, string>`，即所有参数值（包括 `count`、`sides`、`min`、`max` 等数值型参数）均以字符串形式传递，宏处理器内部执行 `parseInt`/`parseFloat` 转换。`pick` 宏的 `from` 参数接受逗号分隔字符串（如 `from=a,b,c`），返回结果为字符串而非数组（如 `"a"` 而非 `["a"]`）。返回值类型标注（如 "string 或 string[]"）表示语义期望，实际全部为字符串。
+> **类型限制**：宏处理器签名限定所有参数为 `Record<string, string>`，即所有参数值（包括 `count`、`sides`、`min`、`max` 等数值型参数）均以字符串形式传递，宏处理器内部执行 `parseInt`/`parseFloat` 转换。`pick` 宏的 `from` 参数接受逗号分隔字符串（如 `from=a,b,c`），返回结果为字符串而非数组（如 `"a"` 而非 `["a"]`）。返回值类型标注（如 "string 或 string[]"）表示语义期望，实际全部为字符串。
 
 **可重现性**：在 `variables.seed` 中指定种子字符串，相同 YAML 配置 + 相同种子产生相同世界。未提供时使用 `crypto.randomUUID()` 自动生成并记录到世界包元数据（`meta` state 中的 `seed` 字段）。
 
@@ -174,7 +174,7 @@ rules:
 
 | 谓词 | 语法 | 说明 |
 |------|------|------|
-| `location.in` | `in: [location_id, ...]` | subject 当前所在地必须是数组中之一 |
+| `location.in` | `in: [location_id, ...]` | subject 所在地必须是数组中之一 |
 | `location.adjacent_to` | `adjacent_to: location_id` | subject 必须在该地点的邻接节点上（含该地点本身） |
 
 两者可组合使用（AND 语义）。未声明 `location` 条件的规则不受影响，保持现有行为。无空间配置的世界包不触发预过滤。
@@ -191,7 +191,7 @@ rules:
 | `array` | `names: ["张三", "李娜", "王刚"]` |
 | `record` | `config: { key: "value" }` |
 
-数组支持（`z.array()`）于 2026-05-09 新增，此前仅支持 `string | number | boolean | Record`。`snowbound_mansion` 等原型包可利用原生 YAML 数组定义 trait 池，替代逗号分隔字符串的绕过方式。
+数组支持（`z.array()`），此前仅支持 `string | number | boolean | Record`。`snowbound_mansion` 等原型包可利用原生 YAML 数组定义 trait 池，替代逗号分隔字符串的绕过方式。
 
 `pick` 宏的 `from` 参数使用数组字面量语法：`{{pick from=["a","b","c"]}}`。macro handler 签名 `args: Record<string, MacroValue>` 支持 number、boolean、array 等完整类型。
 
@@ -214,9 +214,9 @@ rules:
 | `domain_owner` | `entity_id` | 匹配 domain 所有者 |
 | `ritual_participant` | — | 匹配 ritual 参与者 |
 
-`subject_entity` 于 2026-05-09 新增 `entity_id` 匹配路径（原仅支持 `identity_id`），允许直接对实体授权而不需要通过 identity 映射。
+`subject_entity` 支持 `entity_id` 匹配路径，允许直接对实体授权而不需要通过 identity 映射。
 
-`all_actors` 和 `entity_type_is` 于同日新增，解决批量授权场景。示例：
+`all_actors` 和 `entity_type_is` 支持批量授权场景。示例：
 
 ```yaml
 # 替换逐角色逐一授权（12 条 → 1 条）
@@ -252,7 +252,7 @@ authorities:
 
 ## 2.5 Schema 校验规则
 
-当前运行时 schema 对 pack constitution 执行以下跨字段校验：
+运行时 schema 对 pack constitution 执行以下跨字段校验：
 
 - `identities[].subject_entity_id` 必须引用一个已声明的 `entities.actors[].id`
   - 若引用不存在的 actor ID，schema 校验将失败并返回自定义错误
@@ -314,7 +314,7 @@ authorities:
 
 1. YAML 格式更适合机器解析，不适合作为项目说明入口。
 2. 发布者的设计意图、题材背景、使用方式难以被快速理解。
-3. 使用者难以判断 pack 是否适用于当前运行环境。
+3. 使用者难以判断 pack 是否适用于其运行环境。
 4. 协作者难以在不完全阅读合约内容的前提下参与维护。
 5. 缺少版本升级、兼容性变更、注意事项的稳定记录位置。
 
@@ -327,7 +327,7 @@ authorities:
 1. **Pack 名称与一句话简介**
 2. **题材 / 世界背景前提**
 3. **核心机制摘要**
-4. **当前版本与兼容性说明**
+4. **版本与兼容性说明**
 5. **目录结构说明**
 6. **安装、使用与启动方式**
 7. **关键实体、身份、能力、媒介、规则概览**
@@ -358,7 +358,7 @@ README.md 宜明确区分：
 - Pack ID:
 - Version:
 - 题材:
-- 当前状态:
+- 状态:
 - 兼容的 Yidhras 版本:
 
 ## 世界前提
@@ -379,7 +379,7 @@ README.md 宜明确区分：
 
 ## 插件
 - 如果 pack 目录内包含 `plugins/` 子目录，运行时会扫描其中的 `plugin.manifest.yaml` / `plugin.manifest.yml`。
-- 当前仅支持 pack-local 插件；扫描后创建为 `pending_confirmation`，需先 confirm import 再 enable。
+- 仅支持 pack-local 插件；扫描后创建为 `pending_confirmation`，需先 confirm import 再 enable。
 - 插件治理流程、acknowledgement 语义、Web runtime 与同源路由详见 → [`../subsystems/PLUGIN_RUNTIME.md`](../subsystems/PLUGIN_RUNTIME.md)。
 - 推荐插件目录结构：
   - `plugins/<plugin-dir>/plugin.manifest.yaml`
@@ -389,7 +389,7 @@ README.md 宜明确区分：
 说明哪些行为由 pack 声明控制，哪些仍由平台或 kernel 控制。
 
 ## 已知限制
-列出当前未覆盖的规则、前端能力缺口、暂未产品化的功能等。
+列出未覆盖的规则、前端能力缺口、暂未实现的功能等。
 
 ## 版本记录
 链接至 `CHANGELOG.md`。
@@ -441,9 +441,9 @@ README.md 宜明确区分：
 
 ---
 
-## 7. 当前仓库落地规范
+## 7. 仓库落地规范
 
-基于当前仓库结构，建议采用以下分层方式。
+基于仓库结构，建议采用以下分层方式。
 
 ### 7.1 版本管理模板
 
@@ -491,7 +491,7 @@ README.md 宜明确区分：
 
 ## 7.4 新建 world-pack 项目脚手架命令
 
-当前仓库提供基础脚手架命令，完整参数列表与使用说明见 → [`docs/guides/COMMANDS.md`](guides/COMMANDS.md) 第 2.5 节 / 第 3.5 节。
+仓库提供基础脚手架命令，完整参数列表与使用说明见 → [`docs/guides/COMMANDS.md`](guides/COMMANDS.md) 第 2.5 节 / 第 3.5 节。
 
 ```bash
 pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"
@@ -501,11 +501,11 @@ pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"
 
 ## 8. 参考实现与 bundled example
 
-当前仓库可以包含一个或多个 bundled example world-pack，用来展示完整 contract 的一种实现方式。它们的定位是参考实例，不是宿主核心默认语义。
+仓库可以包含一个或多个 bundled example world-pack，用来展示完整 contract 的一种实现方式。它们的定位是参考实例，不是宿主核心默认语义。
 
 - 例如 `death_note` 可以作为参考实例：
   - 运行时合约文件：`data/world_packs/death_note/config.yaml`
   - 模板来源：`apps/server/templates/world-pack/death_note.yaml`
   - 包内说明建议收口在：`data/world_packs/death_note/README.md`、`CHANGELOG.md`、`DESIGN.md`
 
-项目级文档只应说明 world-pack 的通用规范；具体包的世界观、题材语义、动作链与设计取舍，应以该包目录中的文档为准。
+项目级文档只应说明 world-pack 的通用建议；具体包的世界观、题材语义、动作链与设计取舍，应以该包目录中的文档为准。

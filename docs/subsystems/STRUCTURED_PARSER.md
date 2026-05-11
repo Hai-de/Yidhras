@@ -405,7 +405,7 @@ type MacroHandlerFn = (
 | `pick` | `from`（数组字面量 `["a","b"]`）、`count`（默认 1） | `string` 或 `string[]` | 不放回随机选取；单元素返回 string，多元素返回 string[] |
 | `int` | `min`（默认 0）、`max`（默认 100） | `number` | 区间内随机整数 |
 | `float` | `min`（默认 0）、`max`（默认 1） | `number` | 区间内随机浮点数 |
-| `seed` | 无 | `string` | 返回当前 PRNG 种子字符串 |
+| `seed` | 无 | `string` | 返回物化阶段使用的 PRNG 种子字符串 |
 
 宏参数语法支持字面量：数字 `42`、布尔 `true`/`false`、null、双/单引号字符串、数组 `["a","b"]`、浅层对象 `{k1: v1, k2: v2}`。裸标识符（无引号）作为字符串处理。
 
@@ -422,8 +422,8 @@ PRNG 种子可通过世界包配置提供（可重现），未提供时使用 `c
 ## 13. 相关文档
 
 - 系统架构：`docs/ARCH.md`
-- 业务逻辑原则：`docs/LOGIC.md` §12.3 模拟状态确定性原则
-- World Pack 宏模板规范：`docs/specs/WORLD_PACK.md` §2.3
+- 业务逻辑原则：`docs/LOGIC.md` "模拟状态确定性原则"
+- World Pack 宏模板规范：`docs/specs/WORLD_PACK.md` "变量与宏模板"
 
 ## 12. 约束与限制
 
