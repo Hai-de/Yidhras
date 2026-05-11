@@ -1,4 +1,5 @@
 import type { AppContext } from '../context.js';
+import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
 import {
   getSchedulerPartitionCount,
   listSchedulerPartitionIds,
@@ -134,6 +135,7 @@ export const refreshSchedulerWorkerRuntimeState = (
     ownedPartitionIds: string[];
     capacityHint?: number | null;
     now?: bigint;
+    packRuntime?: PackRuntimePort;
   },
   packId?: string
 ): SchedulerWorkerRuntimeStateRecord => {
@@ -143,7 +145,8 @@ export const refreshSchedulerWorkerRuntimeState = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = input.now ?? context.activePackRuntime!.getCurrentTick();
+  const packRuntime = input.packRuntime;
+  const now = input.now ?? (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   const activeMigrationCount = adapter.countMigrationsInProgress(packId, input.workerId);
 
   const existing = adapter.getWorkerState(packId, input.workerId);
@@ -165,7 +168,8 @@ export const refreshSchedulerWorkerRuntimeState = (
 export const refreshSchedulerWorkerRuntimeLiveness = (
   context: AppContext,
   now?: bigint,
-  packId?: string
+  packId?: string,
+  packRuntime?: PackRuntimePort
 ): void => {
   if (!packId) {
     throw new Error('[scheduler_ownership] packId is required');
@@ -173,7 +177,7 @@ export const refreshSchedulerWorkerRuntimeLiveness = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const currentTick = now ?? context.activePackRuntime!.getCurrentTick();
+  const currentTick = now ?? (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   const staleThreshold = BigInt(process.env.SCHEDULER_WORKER_STALE_TICKS ?? DEFAULT_SCHEDULER_WORKER_STALE_TICKS.toString());
   const deadThreshold = BigInt(process.env.SCHEDULER_WORKER_DEAD_TICKS ?? DEFAULT_SCHEDULER_WORKER_DEAD_TICKS.toString());
   const workerStates = listSchedulerWorkerRuntimeStates(context, packId);
@@ -193,7 +197,8 @@ export const reconcileSchedulerBootstrapAssignments = (
   context: AppContext,
   workerId: string,
   partitionIds?: string[],
-  packId?: string
+  packId?: string,
+  packRuntime?: PackRuntimePort
 ): void => {
   if (!packId) {
     throw new Error('[scheduler_ownership] packId is required');
@@ -201,7 +206,7 @@ export const reconcileSchedulerBootstrapAssignments = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   const partitionCount = getSchedulerPartitionCount();
   const bootstrapPartitionIds = resolveOwnedSchedulerPartitionIds({
     explicitPartitionIds: partitionIds,
@@ -304,6 +309,7 @@ export const createSchedulerOwnershipMigration = (
     toWorkerId: string;
     reason?: string | null;
     requestedByWorkerId?: string | null;
+    packRuntime?: PackRuntimePort;
   },
   packId?: string
 ): SchedulerOwnershipMigrationRecord => {
@@ -313,7 +319,8 @@ export const createSchedulerOwnershipMigration = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = context.activePackRuntime!.getCurrentTick();
+  const packRuntime = input.packRuntime;
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   const existingAssignment = adapter.getPartition(packId, input.partitionId);
 
   const migration = adapter.createMigration(packId, {
@@ -356,7 +363,8 @@ export const createSchedulerOwnershipMigration = (
 export const markSchedulerOwnershipMigrationInProgress = (
   context: AppContext,
   migrationId: string,
-  packId?: string
+  packId?: string,
+  packRuntime?: PackRuntimePort
 ): void => {
   if (!packId) {
     throw new Error('[scheduler_ownership] packId is required');
@@ -364,7 +372,7 @@ export const markSchedulerOwnershipMigrationInProgress = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   adapter.updateMigration(packId, {
     id: migrationId,
     status: 'in_progress',
@@ -377,6 +385,7 @@ export const completeActiveSchedulerOwnershipMigration = (
   input: {
     partitionId: string;
     toWorkerId: string;
+    packRuntime?: PackRuntimePort;
   },
   packId?: string
 ): void => {
@@ -386,7 +395,8 @@ export const completeActiveSchedulerOwnershipMigration = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = context.activePackRuntime!.getCurrentTick();
+  const packRuntime = input.packRuntime;
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   const migration = adapter.findLatestActiveMigrationForPartition(
     packId,
     input.partitionId,
@@ -407,7 +417,8 @@ export const completeActiveSchedulerOwnershipMigration = (
 export const completeSchedulerOwnershipMigration = (
   context: AppContext,
   migrationId: string,
-  packId?: string
+  packId?: string,
+  packRuntime?: PackRuntimePort
 ): void => {
   if (!packId) {
     throw new Error('[scheduler_ownership] packId is required');
@@ -415,7 +426,7 @@ export const completeSchedulerOwnershipMigration = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   const migration = adapter.getMigrationById(packId, migrationId);
   if (!migration) {
     return;

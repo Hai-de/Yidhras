@@ -1,5 +1,6 @@
 import { getSchedulerAutomaticRebalanceConfig } from '../../config/runtime_config.js';
 import type { AppContext } from '../context.js';
+import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
 import {
   createSchedulerOwnershipMigration,
   getSchedulerPartitionAssignment,
@@ -159,6 +160,7 @@ export const applySchedulerAutomaticRebalanceForWorker = (
     workerId: string;
     now?: bigint;
     maxApply?: number;
+    packRuntime?: PackRuntimePort;
   },
   packId?: string
 ): ApplySchedulerAutomaticRebalanceResult => {
@@ -168,7 +170,8 @@ export const applySchedulerAutomaticRebalanceForWorker = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = input.now ?? context.activePackRuntime!.getCurrentTick();
+  const packRuntime = input.packRuntime;
+  const now = input.now ?? (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   const config = getSchedulerAutomaticRebalanceConfig();
   const maxApply = Math.max(input.maxApply ?? config.max_apply, 1);
   const recommendations = adapter.listPendingRecommendationsForWorker(
@@ -248,6 +251,7 @@ export const evaluateSchedulerAutomaticRebalance = (
     now?: bigint;
     maxRecommendations?: number;
     migrationBacklogLimit?: number;
+    packRuntime?: PackRuntimePort;
   },
   packId?: string
 ): EvaluateSchedulerAutomaticRebalanceResult => {
@@ -257,7 +261,8 @@ export const evaluateSchedulerAutomaticRebalance = (
   const adapter = requireAdapter(context);
   adapter.open(packId);
 
-  const now = input?.now ?? context.activePackRuntime!.getCurrentTick();
+  const packRuntime = input?.packRuntime;
+  const now = input?.now ?? (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   const config = getSchedulerAutomaticRebalanceConfig();
   const maxRecommendations = Math.max(input?.maxRecommendations ?? config.max_recommendations, 1);
   const migrationBacklogLimit = Math.max(

@@ -1,5 +1,6 @@
 import { getSchedulerLeaseTicks } from '../../config/runtime_config.js';
 import type { AppContext } from '../context.js';
+import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
 import {
   DEFAULT_SCHEDULER_PARTITION_ID,
   isSchedulerPartitionId
@@ -56,6 +57,7 @@ export const acquireSchedulerLease = (
     partitionId?: string;
     now?: bigint;
     leaseTicks?: bigint;
+    packRuntime?: PackRuntimePort;
   },
   packId?: string
 ): SchedulerLeaseAcquireResult => {
@@ -67,7 +69,8 @@ export const acquireSchedulerLease = (
   adapter.open(packId);
 
   const partitionId = normalizePartitionId(input.partitionId);
-  const now = input.now ?? context.activePackRuntime!.getCurrentTick();
+  const packRuntime = input.packRuntime;
+  const now = input.now ?? (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
   const leaseTicks = input.leaseTicks ?? getSchedulerLeaseTicks();
   const expiresAt = now + leaseTicks;
   const key = buildSchedulerLeaseKey(partitionId);
@@ -173,6 +176,7 @@ export const renewSchedulerLease = (
     partitionId?: string;
     now?: bigint;
     leaseTicks?: bigint;
+    packRuntime?: PackRuntimePort;
   },
   packId?: string
 ): SchedulerLeaseAcquireResult => {
@@ -205,6 +209,7 @@ export const updateSchedulerCursor = (
     lastScannedTick: bigint;
     lastSignalTick: bigint;
     now?: bigint;
+    packRuntime?: PackRuntimePort;
   },
   packId?: string
 ): void => {
@@ -217,7 +222,8 @@ export const updateSchedulerCursor = (
 
   const id = normalizePartitionId(input.partitionId);
   const key = buildSchedulerCursorKey(id);
-  const now = input.now ?? context.activePackRuntime!.getCurrentTick();
+  const packRuntime = input.packRuntime;
+  const now = input.now ?? (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
 
   adapter.upsertCursor(packId, {
     key,
