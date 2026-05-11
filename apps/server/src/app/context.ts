@@ -2,8 +2,6 @@ import type { PrismaClient } from '@prisma/client';
 import type { Express } from 'express';
 
 import type { ConversationStore } from '../conversation/store.js';
-import type { ActivePackProvider } from '../core/active_pack_provider.js';
-import type { ClockProvider } from '../core/clock_provider.js';
 import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
 import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
 import type { SchedulerStorageAdapter } from '../packs/storage/SchedulerStorageAdapter.js';
@@ -48,17 +46,7 @@ export interface RuntimeLoopDiagnostics {
   last_error_message: string | null;
 }
 
-export interface ClockSource {
-  readonly clock: ClockProvider;
-}
-
-export interface ActivePackSource {
-  readonly activePack: ActivePackProvider;
-}
-
-export interface RuntimeSource extends ClockSource, ActivePackSource {}
-
-export interface AppInfrastructure extends RuntimeSource {
+export interface AppInfrastructure {
   readonly repos: Repositories;
   readonly prisma: PrismaClient;
   readonly conversationStore: ConversationStore;
@@ -71,31 +59,35 @@ export interface AppInfrastructure extends RuntimeSource {
 }
 
 export interface AppContext extends AppInfrastructure, AppContextPorts {
-  /**
-   * PackScopeResolver — preferred path for pack-scoped context resolution.
-   */
   readonly packScope?: PackScopeResolver;
-
-  /**
-   * Per-pack runtime port (new — replaces activePackRuntime in later phases).
-   */
   packRuntime?: PackRuntimePort;
-
-  /**
-   * Multi-pack aggregation port (new — replaces global clock in later phases).
-   */
   multiPackRuntime?: MultiPackRuntimePort;
 
-  // Lifecycle / runtime methods
-  getSpatialRuntime?(): import('../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
+  /** @deprecated Backward-compat stub — migrate to packRuntime */
+  readonly activePackRuntime?: {
+    getCurrentTick(): bigint;
+    getCurrentRevision(): bigint;
+    getActivePack(): import('../packs/manifest/loader.js').WorldPack | undefined;
+    getStepTicks(): bigint;
+    getRuntimeSpeedSnapshot(): import('../core/runtime_speed.js').RuntimeSpeedSnapshot;
+    setRuntimeSpeedOverride(stepTicks: bigint): void;
+    clearRuntimeSpeedOverride(): void;
+    getAllTimes(): unknown;
+    step(amount?: bigint): Promise<void>;
+    getPackSlotDeclarations(): Record<string, Record<string, unknown>> | null;
+    resolvePackVariables(template: string, permission?: unknown, actorState?: Record<string, unknown> | null): string;
+  };
+  /** @deprecated Backward-compat stub — migrate to packRuntime */
+  readonly clock: { getCurrentTick(): bigint };
+  /** @deprecated Backward-compat stub — migrate to packRuntime.getPack() */
+  readonly activePack: { getActivePack(): import('../packs/manifest/loader.js').WorldPack | undefined; getCurrentRevision(): bigint };
+
+  getPackRuntimeHandle?(packId: string): import('../core/pack_runtime_handle.js').PackRuntimeHandle | null;
+  listLoadedPackRuntimeIds?(): string[];
   isRuntimeReady?(): boolean;
   setRuntimeReady?(ready: boolean): void;
   isPaused?(): boolean;
   setPaused?(paused: boolean): void;
-  getPackRuntimeHandle?(packId: string): import('../core/pack_runtime_handle.js').PackRuntimeHandle | null;
-  getPackRuntimeHost?(packId: string): import('../core/pack_runtime_host.js').PackRuntimeHost | null;
-  listLoadedPackRuntimeIds?(): string[];
-  reinitializePackRuntime?(packId: string, openingId: string): Promise<void>;
   applyClockProjection?(snapshot: import('./runtime/runtime_clock_projection.js').RuntimeClockProjectionSnapshot): void;
 
   getRuntimeLoopDiagnostics?(): RuntimeLoopDiagnostics;

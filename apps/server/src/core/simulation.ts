@@ -4,96 +4,59 @@ import { PrismaClient } from '@prisma/client';
 
 import type { MultiPackLoopHost } from '../app/runtime/MultiPackLoopHost.js';
 import type { RuntimeDatabaseBootstrap } from '../app/runtime/runtime_bootstrap.js';
-import type { RuntimeClockProjectionSnapshot } from '../app/runtime/runtime_clock_projection.js';
 import type { WorldEnginePort } from '../app/runtime/world_engine_ports.js';
-import type {
-  HostRuntimeKernelFacade,
-  PackCatalogService
-} from '../app/services/app_context_ports.js';
-import { ChronosEngine } from '../clock/engine.js';
+import type { PackCatalogService } from '../app/services/app_context_ports.js';
 import {
-  getRuntimeConfig,
   getWorldPacksDir
 } from '../config/runtime_config.js';
 import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
-import { PackManifestLoader, type WorldPack } from '../packs/manifest/loader.js';
+import { PackManifestLoader } from '../packs/manifest/loader.js';
 import { DefaultPackCatalogService } from '../packs/orchestration/pack_catalog_service.js';
 import { DefaultPackRuntimeRegistryService } from '../packs/orchestration/pack_runtime_registry_service.js';
-import { createSpatialRuntime, type SpatialRuntime } from '../packs/runtime/spatial_runtime.js';
 import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
-import type { ActivePackProvider } from './active_pack_provider.js';
-import { DefaultActivePackRuntimeFacade, type DefaultActivePackRuntimeFacadeOptions } from './active_pack_runtime_facade.js';
-import type { ClockProvider } from './clock_provider.js';
 import { getGraphData } from './graph_data.js';
 import type { PackRuntimeHandle } from './pack_runtime_handle.js';
 import type { ExperimentalPackRuntimeStatusRecord, PackRuntimeStatusSnapshot } from './pack_runtime_health.js';
 import type { PackRuntimeHost } from './pack_runtime_host.js';
 import { InMemoryPackRuntimeRegistry, type PackRuntimeRegistry } from './pack_runtime_registry.js';
 import { PrismaRuntimeDatabaseBootstrap } from './runtime_database_bootstrap.js';
-import { RuntimeSpeedPolicy, type RuntimeSpeedSnapshot } from './runtime_speed.js';
 
-export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeKernelFacade, PackCatalogService, ClockProvider, ActivePackProvider {
+export class SimulationManager implements RuntimeDatabaseBootstrap, PackCatalogService {
   private prisma: PrismaClient;
-  public clock!: ChronosEngine;
-
   private readonly loader: PackManifestLoader;
-  private readonly runtimeSpeed: RuntimeSpeedPolicy;
   private readonly packsDir: string;
   private readonly packRuntimeRegistry: PackRuntimeRegistry;
   private readonly runtimeBootstrap: RuntimeDatabaseBootstrap;
   private readonly packCatalogService: DefaultPackCatalogService;
-  private readonly activePackRuntimeFacade: DefaultActivePackRuntimeFacade;
   private readonly packRuntimeRegistryService: DefaultPackRuntimeRegistryService;
-  private readonly packStorageAdapter: PackStorageAdapter;
-  private worldEngine: WorldEnginePort | null = null;
-  private spatialRuntime: SpatialRuntime | null = null;
-  private runtimeReady = false;
-  private paused = false;
 
-  constructor(options: { prisma: PrismaClient; packStorageAdapter: PackStorageAdapter; notifications: DefaultActivePackRuntimeFacadeOptions['notifications']; multiPackLoopHost?: MultiPackLoopHost }) {
+  constructor(options: { prisma: PrismaClient; packStorageAdapter: PackStorageAdapter; multiPackLoopHost?: MultiPackLoopHost }) {
     this.packsDir = getWorldPacksDir();
-
     this.prisma = options.prisma;
-    this.packStorageAdapter = options.packStorageAdapter;
     this.loader = new PackManifestLoader(this.packsDir);
-    this.clock = new ChronosEngine({
-      calendarConfigs: [],
-      initialTicks: 0n,
-      monotonic: getRuntimeConfig().clock.monotonic_enabled,
-      maxStepTicks: BigInt(getRuntimeConfig().clock.max_step_ticks)
-    });
-    this.runtimeSpeed = new RuntimeSpeedPolicy(1n);
     this.packRuntimeRegistry = new InMemoryPackRuntimeRegistry();
-    this.runtimeBootstrap = new PrismaRuntimeDatabaseBootstrap({
-      prisma: this.prisma
-    });
-    this.activePackRuntimeFacade = new DefaultActivePackRuntimeFacade({
-      loader: this.loader,
-      prisma: this.prisma,
-      packStorageAdapter: options.packStorageAdapter,
-      packsDir: this.packsDir,
-      runtimeSpeed: this.runtimeSpeed,
-      runtimeBootstrap: this.runtimeBootstrap,
-      runtimeRegistry: this.packRuntimeRegistry,
-      notifications: options.notifications
-    });
+    this.runtimeBootstrap = new PrismaRuntimeDatabaseBootstrap({ prisma: this.prisma });
+
+    const getFirstPack = () => {
+      const ids = this.packRuntimeRegistryService?.listLoadedPackIds() ?? [];
+      return ids.length > 0 ? this.packRuntimeRegistryService?.getHandle(ids[0])?.pack : undefined;
+    };
+
     this.packCatalogService = new DefaultPackCatalogService({
       packsDir: this.packsDir,
       loader: this.loader,
-      getActivePack: () => this.activePackRuntimeFacade.getActivePack()
+      getActivePack: getFirstPack
     });
+
     this.packRuntimeRegistryService = new DefaultPackRuntimeRegistryService({
       registry: this.packRuntimeRegistry,
       packCatalog: this.packCatalogService,
       prisma: this.prisma,
       packStorageAdapter: options.packStorageAdapter,
       packsDir: this.packsDir,
-      getActivePack: () => this.activePackRuntimeFacade.getActivePack(),
-      getStartupLevel: () => this.startupHealthLevel(),
-      onBeforeUnload: async (_packId: string) => {
-        // Scheduler data is in per-pack SQLite which is deleted on unload.
-        // No Prisma cleanup needed.
-      },
+      getActivePack: getFirstPack,
+      getStartupLevel: () => getFirstPack() ? 'ok' : 'degraded',
+      onBeforeUnload: async () => {},
       multiPackLoopHost: options.multiPackLoopHost
     });
   }
@@ -103,24 +66,7 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
   }
 
   public setWorldEngine(worldEngine: WorldEnginePort): void {
-    this.worldEngine = worldEngine;
     this.packRuntimeRegistryService.setWorldEngine(worldEngine);
-  }
-
-  public isRuntimeReady(): boolean {
-    return this.runtimeReady;
-  }
-
-  public setRuntimeReady(ready: boolean): void {
-    this.runtimeReady = ready;
-  }
-
-  public isPaused(): boolean {
-    return this.paused;
-  }
-
-  public setPaused(paused: boolean): void {
-    this.paused = paused;
   }
 
   public async prepareDatabase(): Promise<DatabaseHealthSnapshot> {
@@ -129,73 +75,6 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
 
   public getDatabaseHealth(): DatabaseHealthSnapshot | null {
     return this.runtimeBootstrap.getDatabaseHealth();
-  }
-
-  public async init(packFolderName: string, openingId?: string): Promise<void> {
-    await this.activePackRuntimeFacade.init(packFolderName, openingId);
-    this.syncClockFromActiveRuntime();
-
-    const activePack = this.activePackRuntimeFacade.getActivePack();
-    const spatialConfig = activePack?.spatial;
-    if (spatialConfig?.model === 'discrete') {
-      this.spatialRuntime = createSpatialRuntime(spatialConfig, activePack!.metadata.id, this.packStorageAdapter);
-    } else {
-      this.spatialRuntime = null;
-    }
-  }
-
-  public getSpatialRuntime(): SpatialRuntime | null {
-    return this.spatialRuntime;
-  }
-
-  public getActivePack(): WorldPack | undefined {
-    return this.activePackRuntimeFacade.getActivePack();
-  }
-
-  public getPackSlotDeclarations(): Record<string, Record<string, unknown>> | null {
-    return this.activePackRuntimeFacade.getPackSlotDeclarations();
-  }
-
-  public resolvePackVariables(template: string, permission?: import('../permission/types.js').PermissionContext, actorState?: Record<string, unknown> | null): string {
-    return this.activePackRuntimeFacade.resolvePackVariables(template, permission, actorState);
-  }
-
-  public getStepTicks(): bigint {
-    return this.activePackRuntimeFacade.getStepTicks();
-  }
-
-  public getRuntimeSpeedSnapshot(): RuntimeSpeedSnapshot {
-    return this.activePackRuntimeFacade.getRuntimeSpeedSnapshot();
-  }
-
-  public setRuntimeSpeedOverride(stepTicks: bigint): void {
-    this.activePackRuntimeFacade.setRuntimeSpeedOverride(stepTicks);
-  }
-
-  public clearRuntimeSpeedOverride(): void {
-    this.activePackRuntimeFacade.clearRuntimeSpeedOverride();
-  }
-
-  public getCurrentTick(): bigint {
-    return this.activePackRuntimeFacade.getCurrentTick();
-  }
-
-  public getCurrentRevision(): bigint {
-    return this.activePackRuntimeFacade.getCurrentRevision();
-  }
-
-  public getAllTimes() {
-    return this.activePackRuntimeFacade.getAllTimes();
-  }
-
-  public async step(amount: bigint = 1n): Promise<void> {
-    await this.activePackRuntimeFacade.step(amount);
-    this.syncClockFromActiveRuntime();
-  }
-
-  public applyClockProjection(snapshot: RuntimeClockProjectionSnapshot): void {
-    this.activePackRuntimeFacade.applyClockProjection(snapshot);
-    this.syncClockFromActiveRuntime();
   }
 
   public async getGraphData(): ReturnType<typeof getGraphData> {
@@ -260,13 +139,5 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, HostRuntimeK
 
   public async unloadExperimentalPackRuntime(packId: string): Promise<boolean> {
     return this.packRuntimeRegistryService.unload(packId);
-  }
-
-  private startupHealthLevel(): 'ok' | 'degraded' | 'fail' {
-    return this.getActivePack() ? 'ok' : 'degraded';
-  }
-
-  private syncClockFromActiveRuntime(): void {
-    this.clock = this.activePackRuntimeFacade.getClock();
   }
 }

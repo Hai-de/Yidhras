@@ -6,8 +6,6 @@ import type {
 import type { PackRuntimeStatusSnapshot } from './pack_runtime_health.js';
 import type { RuntimeSpeedSnapshot } from './runtime_speed.js';
 
-export type PackRuntimeScopeMode = 'stable' | 'experimental';
-
 export interface PackRuntimeSummary {
   pack_id: string;
   pack_folder_name?: string | null;
@@ -46,10 +44,10 @@ export interface PackRuntimeObservation {
 export interface PackRuntimeLookupPort {
   getActivePackId(): string | null;
   hasPackRuntime(packId: string): boolean;
-  assertPackScope(packId: string, mode: PackRuntimeScopeMode, feature: string): string;
+  assertPackScope(packId: string, feature: string): string;
   getPackRuntimeSummary(packId: string): PackRuntimeSummary | null;
 }
 
 export interface PackScopeResolver {
-  assertPackScope(packId: string, mode: PackRuntimeScopeMode, feature: string): string;
+  assertPackScope(packId: string, feature: string): string;
 }

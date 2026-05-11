@@ -3,32 +3,12 @@ import type {
   PackRuntimeLookupPort,
   PackRuntimeObservation
 } from '../../core/pack_runtime_ports.js';
-import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
-import type { WorldPack } from '../../packs/manifest/loader.js';
 import type { RuntimeDatabaseBootstrap } from '../runtime/runtime_bootstrap.js';
 import type {
-  ActivePackRuntimeProjectionPort,
   RuntimeClockProjectionService
 } from '../runtime/runtime_clock_projection.js';
 import type { PackHostApi, WorldEnginePort } from '../runtime/world_engine_ports.js';
 import type { ContextAssemblyPort } from './context_memory_ports.js';
-
-export interface ActivePackRuntimeFacade {
-  init(packFolderName: string, openingId?: string): Promise<void>;
-  getActivePack(): WorldPack | undefined;
-  resolvePackVariables(template: string, permission?: unknown, actorState?: Record<string, unknown> | null): string;
-  getStepTicks(): bigint;
-  getRuntimeSpeedSnapshot(): RuntimeSpeedSnapshot;
-  setRuntimeSpeedOverride(stepTicks: bigint): void;
-  clearRuntimeSpeedOverride(): void;
-  getCurrentTick(): bigint;
-  getCurrentRevision(): bigint;
-  getAllTimes(): unknown;
-  step(amount?: bigint): Promise<void>;
-  getPackSlotDeclarations(): Record<string, Record<string, unknown>> | null;
-}
-
-export interface HostRuntimeKernelFacade extends ActivePackRuntimeFacade, ActivePackRuntimeProjectionPort {}
 
 export interface PackCatalogService {
   listAvailablePacks(): string[];
@@ -53,7 +33,6 @@ export interface PluginHostPort {
 
 export interface AppContextPorts {
   runtimeBootstrap?: RuntimeDatabaseBootstrap;
-  activePackRuntime?: ActivePackRuntimeFacade;
   packRuntimeObservation?: PackRuntimeObservation;
   packRuntimeControl?: PackRuntimeControl;
   packRuntimeLookup?: PackRuntimeLookupPort;
@@ -68,25 +47,6 @@ export interface VisibleClockSnapshot {
   calendars: unknown;
   source: 'host_projection' | 'clock_fallback';
 }
-
-const resolveVisibleClockPackId = (input: {
-  activePackRuntime?: { getActivePack(): WorldPack | undefined };
-  activePack?: { getActivePack(): WorldPack | undefined };
-}): string | null => {
-  return input.activePackRuntime?.getActivePack()?.metadata.id?.trim()
-    ?? input.activePack?.getActivePack()?.metadata.id?.trim()
-    ?? null;
-};
-
-export const getActivePackRuntimeFacade = (input: {
-  activePackRuntime?: ActivePackRuntimeFacade;
-}): ActivePackRuntimeFacade => {
-  if (input.activePackRuntime) {
-    return input.activePackRuntime;
-  }
-
-  throw new Error('[app_context_ports] activePackRuntime port is required but not provided');
-};
 
 export const getRuntimeBootstrap = (input: {
   runtimeBootstrap?: RuntimeDatabaseBootstrap;
@@ -162,15 +122,10 @@ export const hasPackHostApi = (context: AppContextPorts): context is AppContextP
 
 export const readVisibleClockSnapshot = (input: {
   clock: { getCurrentTick(): bigint };
-  activePack?: { getActivePack(): WorldPack | undefined };
-  activePackRuntime?: { getActivePack(): WorldPack | undefined };
   runtimeClockProjection?: RuntimeClockProjectionService;
+  packId?: string;
 }): VisibleClockSnapshot => {
-  const packId = resolveVisibleClockPackId({
-    activePackRuntime: input.activePackRuntime,
-    activePack: input.activePack
-  });
-  const projected = packId ? input.runtimeClockProjection?.readFormattedClock(packId) : null;
+  const projected = input.packId ? input.runtimeClockProjection?.readFormattedClock(input.packId) : null;
 
   if (projected) {
     return {

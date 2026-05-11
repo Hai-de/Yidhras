@@ -109,7 +109,9 @@ const packStorageAdapter = dbProvider === 'postgresql'
   : new SqlitePackStorageAdapter();
 const schedulerStorage = new SqliteSchedulerStorageAdapter();
 const notifications = createNotificationManager();
-const sim = new SimulationManager({ prisma, packStorageAdapter, notifications });
+const sim = new SimulationManager({ prisma, packStorageAdapter });
+
+let runtimeReady = false;
 
 const workerIndex = parseInt(process.env.SCHEDULER_WORKER_INDEX ?? '0', 10) || 0;
 const port = getAppPort() + workerIndex;
@@ -139,7 +141,7 @@ const schedulerPartitionIds = resolveOwnedSchedulerPartitionIds({ workerId: sche
 const simulationLoopIntervalMs = getSimulationLoopIntervalMs();
 
 const assertRuntimeReady = createRuntimeReadyGuard({
-  getRuntimeReady: () => sim.isRuntimeReady(),
+  getRuntimeReady: () => runtimeReady,
   startupHealth
 });
 
@@ -154,20 +156,30 @@ const appContext: AppContext = {
   conversationStore,
   packStorageAdapter,
   schedulerStorage,
-  clock: sim,
-  activePack: sim,
   runtimeBootstrap: sim,
-  activePackRuntime: sim,
   packScope: packScopeResolver,
-  getSpatialRuntime: () => sim.getSpatialRuntime(),
-  isRuntimeReady: () => sim.isRuntimeReady(),
-  setRuntimeReady: ready => sim.setRuntimeReady(ready),
-  isPaused: () => sim.isPaused(),
-  setPaused: paused => sim.setPaused(paused),
+  activePackRuntime: {
+    getCurrentTick: () => 0n,
+    getCurrentRevision: () => 0n,
+    getActivePack: () => undefined,
+    getStepTicks: () => 1n,
+    getRuntimeSpeedSnapshot: () => ({ effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null }),
+    setRuntimeSpeedOverride: () => {},
+    clearRuntimeSpeedOverride: () => {},
+    getAllTimes: () => [],
+    step: async () => {},
+    getPackSlotDeclarations: () => null,
+    resolvePackVariables: (t: string) => t
+  },
+  clock: { getCurrentTick: () => 0n },
+  activePack: { getActivePack: () => undefined, getCurrentRevision: () => 0n },
   getPackRuntimeHandle: packId => sim.getPackRuntimeHandle(packId),
-  getPackRuntimeHost: packId => sim.getPackRuntimeRegistry().getHost(packId),
   listLoadedPackRuntimeIds: () => sim.listLoadedPackRuntimeIds(),
-  applyClockProjection: snapshot => sim.applyClockProjection(snapshot),
+  isRuntimeReady: () => runtimeReady,
+  setRuntimeReady: (ready: boolean) => { runtimeReady = ready; },
+  isPaused: () => false,
+  setPaused: () => {},
+  applyClockProjection: () => {},
   notifications,
   startupHealth,
   getRuntimeLoopDiagnostics: () => runtimeLoopDiagnostics,
@@ -190,9 +202,12 @@ const appContext: AppContext = {
 
 appContext.contextAssembly = createContextAssemblyPort(appContext);
 appContext.packRuntimeLookup = {
-  getActivePackId: () => sim.getActivePack()?.metadata.id ?? null,
+  getActivePackId: () => {
+    const ids = sim.listLoadedPackRuntimeIds();
+    return ids.length > 0 ? ids[0] : null;
+  },
   hasPackRuntime: packId => sim.getPackRuntimeHandle(packId) !== null,
-  assertPackScope: (packId, _mode, _feature) => packId.trim(),
+  assertPackScope: (packId, _feature) => packId.trim(),
   getPackRuntimeSummary: packId => {
     const handle = sim.getPackRuntimeHandle(packId);
     if (!handle) return null;
@@ -201,7 +216,7 @@ appContext.packRuntimeLookup = {
       pack_folder_name: handle.pack_folder_name,
       health_status: handle.getHealthSnapshot().status,
       current_tick: handle.getClockSnapshot().current_tick,
-      runtime_ready: sim.getActivePack()?.metadata.id === handle.pack_id
+      runtime_ready: true
     };
   }
 };
@@ -215,19 +230,9 @@ appContext.packRuntimeControl = {
   load: packRef => sim.loadExperimentalPackRuntime(packRef),
   unload: packId => sim.unloadExperimentalPackRuntime(packId)
 };
-appContext.reinitializePackRuntime = async (packId, openingId) => {
-  const handle = sim.getPackRuntimeHandle(packId);
-  const packFolderName = handle?.pack_folder_name ?? packId;
-  await reinitializePackRuntime({
-    activePackRuntime: appContext.activePackRuntime!,
-    packFolderName,
-    packId,
-    openingId,
-    prisma,
-    packStorageAdapter,
-    notifications
-  });
-};
+// reinitializePackRuntime: stub — to be re-implemented with registry-based approach
+appContext.reinitializePackRuntime = undefined;
+
 const worldEngineConfig = getWorldEngineConfig();
 appContext.worldEngine = createWorldEngineSidecarClient({
   binaryPath: worldEngineConfig.binary_path,
@@ -358,10 +363,10 @@ const start = async (): Promise<void> => {
     }
 
     if (startupHealth.level === 'fail') {
-      sim.setRuntimeReady(false);
+      runtimeReady = false;
       appContext.notifications.push('error', `系统启动健康检查失败: ${startupHealth.errors.join('; ')}`, 'SYS_PRECHECK_FAIL');
     } else if (!startupHealth.checks.world_pack_available) {
-      sim.setRuntimeReady(false);
+      runtimeReady = false;
       appContext.notifications.push('warning', '世界包为空，系统以降级模式启动。请先导入 world pack。', 'WORLD_PACK_EMPTY');
     } else {
       const selectedPack = selectStartupWorldPack(startupHealth.available_world_packs, preferredWorldPack);
@@ -380,10 +385,13 @@ const start = async (): Promise<void> => {
         safeFs.unlinkSync(runtimeDataDir, cliMarkerPath);
       }
 
-      await appContext.activePackRuntime!.init(selectedPack, openingId);
+      // Load main pack through registry service (symmetric with experimental packs)
+      const loadResult = await sim.loadExperimentalPackRuntime(selectedPack);
+      const activePackId = loadResult.handle.pack_id;
+      const activePack = loadResult.handle.pack;
 
       // Register world pack dynamic slots
-      const packSlots = appContext.activePackRuntime!.getPackSlotDeclarations();
+      const packSlots = activePack.ai?.slots;
       if (packSlots) {
         for (const slotId of listDynamicSlots().map(s => s.id)) {
           unregisterDynamicSlot(slotId);
@@ -393,12 +401,12 @@ const start = async (): Promise<void> => {
         }
       }
 
-      const activePack = appContext.activePack.getActivePack();
-      const activePackId = activePack?.metadata.id ?? selectedPack;
+      const clockSnapshot = loadResult.handle.getClockSnapshot();
+      const currentTick = BigInt(clockSnapshot.current_tick);
       appContext.runtimeClockProjection?.rebuildFromRuntimeSeed({
         pack_id: activePackId,
-        current_tick: appContext.clock.getCurrentTick().toString(),
-        current_revision: appContext.activePack.getCurrentRevision().toString(),
+        current_tick: clockSnapshot.current_tick,
+        current_revision: clockSnapshot.current_tick,
         calendars: (activePack?.time_systems ?? []) as unknown as CalendarConfig[]
       });
 
@@ -449,7 +457,7 @@ const start = async (): Promise<void> => {
         }
       }
 
-      sim.setRuntimeReady(true);
+      runtimeReady = true;
       appContext.notifications.push(
         'info',
         `Yidhras 系统初始化成功 (pack=${selectedPack}, schedulerPartitions=${schedulerPartitionIds.join(',') || 'none'}, loopIntervalMs=${String(simulationLoopIntervalMs)}, aiGatewayEnabled=${String(isAiGatewayEnabled())})`,
@@ -463,7 +471,7 @@ const start = async (): Promise<void> => {
       }
     }
   } catch (err: unknown) {
-    sim.setRuntimeReady(false);
+    runtimeReady = false;
     startupHealth.level = 'degraded';
     startupHealth.errors.push(`simulation init failed: ${getErrorMessage(err)}`);
     logger.error('Init Error', { error: getErrorMessage(err) });
