@@ -13,6 +13,7 @@ import { createPlacementResolutionExecutor } from './executors/placement_resolut
 import { createTokenBudgetTrimExecutor } from './executors/token_budget_trim.js';
 import { runPipeline } from './pipeline_runner.js';
 import { selectPromptWorkflowProfile } from './profiles.js';
+import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import { createPromptWorkflowStepRegistry } from './registry.js';
 import { runConversationHistoryTrack } from './tracks/conversation_history_track.js';
 import { runNodeTrack } from './tracks/node_track.js';
@@ -119,6 +120,12 @@ export const buildWorkflowPromptBundle = async (input: {
     createTokenBudgetTrimExecutor(),
     createBundleFinalizeExecutor()
   ]);
+
+  // Register plugin-provided workflow step executors
+  const packId = input.context.world_pack.id;
+  for (const executor of pluginRuntimeRegistry.getPromptWorkflowStepExecutors(packId)) {
+    stepRegistry.register(executor);
+  }
 
   const { state: finalState } = await runPipeline({
     context: input.context,

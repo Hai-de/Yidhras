@@ -1,95 +1,69 @@
-# 通用能力 P0-P1 实施计划
+# 通用能力实施计划
 
 > 基于: `.limcode/design/generic-capability-development-draft.md`
-> 状态: 进行中
+> 状态: P0-P2 全部完成 + P3 测试基础设施完成。剩余 P3 大型基础设施未实施
 
 ---
 
-## P0 — 阻塞原型世界包验证
+## P0 — 阻塞原型世界包验证 ✓
 
-### 1. StepContributor 接入 sim loop
+- [x] StepContributor 接入 sim loop — `world_engine_persistence.ts`
+- [x] activate() 错误处理修复 — `runtime.ts`
+- [x] intent_grounders + pack_projections 删除 — `contracts/src/plugins.ts`
 
-**文件:** `apps/server/src/app/runtime/world_engine_persistence.ts`
+## P1 — 原型世界包需要的通用能力 ✓
 
-在 `executeWorldEnginePreparedStep` 中，`evaluateStateTransforms` 之后、`persistPreparedStep` 之前，调用 `getStepContributors()` 并合并 delta operations。
+- [x] 能力键注册表 + 枚举类型 — `capability_keys.ts`
+- [x] Manifest 完全结构化 + 判别联合 + kind 枚举化 — `contracts/src/plugins.ts`, `runtime.ts`
+- [x] Sim loop 步骤钩子 + 错误隔离 — `PackSimulationLoop.ts`
+- [x] deactivate() 钩子 — `runtime.ts`
+- [x] DataCleaner 消费者接入 — `PackSimulationLoop.ts`
 
-具体步骤:
-1. 将 :377-380 的 `worldEntities`/`entityStates` 查询提取到 StepContributor 循环之前（共享数据，避免重复查询）
-2. 构建 `WorldEngineSessionContext`（从已查询数据组装）
-3. 遍历 `pluginRuntimeRegistry.getStepContributors(packId)`，调用每个 contributor 的 `contributePrepare()`
-4. 将返回的 `delta_operations`、`emitted_events`、`observability` 合并到 `prepared.state_delta`
-5. 每个 contributor 独立 try/catch，单个失败不阻塞其他
+## P2 — 平台健康运行需要 ✓
 
-依赖: `pluginRuntimeRegistry` 已在 `runtime.ts` 导出，可直接 import。
+- [x] 权限层级统一 — `capability_keys.ts`, `runtime.ts`
+- [x] Action dispatch 注册表驱动 — `action_dispatcher.ts`
+- [x] state_transform_evaluator → StepContributor — `StateTransformContributor.ts`, `world_engine_persistence.ts`
+- [x] RuleContributor / QueryContributor 适配层 — `plugin_contributor_adapter.ts`
+- [x] PromptWorkflowStep 注册表合并 — `orchestrator.ts`
+- [x] Host API 版本管理 — `capability_keys.ts`, `contracts/src/plugins.ts`, `runtime.ts`
+- [x] 插件超时保护（短期隔离） — `runtime.ts`
+- [x] 类型安全缺口枚举化 — `context/types.ts`, `world_engine.ts`, `prompt_slot_config.ts`
 
-### 2. activate() 错误处理修复
+## P3 — 测试基础设施 ✓
 
-**文件:** `apps/server/src/plugins/runtime.ts`
+- [x] 时间操控辅助函数 — `tests/helpers/clock.ts`
+- [x] Mock AI Provider 故障场景增强 — `ai/providers/mock.ts`
+- [x] 快照种子化测试辅助 — `tests/helpers/snapshot.ts`
+- [x] 属性测试 fast-check 集成 — `tests/unit/property_based.spec.ts`
 
-修复 :455-457 空 catch 块:
-1. 用 `runtimeLogger.error` 记录错误
-2. 写入 `PluginInstallation.last_error`（需验证 repo 方法是否存在）
+## P3 — 未实施（长期基础设施）
 
-### 3. intent_grounders + pack_projections 删除
+- [ ] Prometheus 指标端点 (prom-client + GET /metrics)
+- [ ] 边车健康暴露到 health API
+- [ ] 运行时状态 dump CLI (sim dump)
+- [ ] Worker 线程插件隔离
+- [ ] 数据迁移框架 (pack schema version)
 
-**文件:** `packages/contracts/src/plugins.ts`
+## 新建/修改文件清单
 
-从 `pluginServerContributionsSchema` 中移除这两个字段。
-
----
-
-## P1 — 原型世界包需要的通用能力
-
-### 4. Sim loop 步骤钩子 + 错误隔离
-
-**文件:** `apps/server/src/app/runtime/PackSimulationLoop.ts`
-
-1. 定义 `PackLoopHooks` 接口（beforeStep1-6 / afterStep1-6 / onLoopStateChange）
-2. 在 `PackSimulationLoopOptions` 中增加 `hooks?` 字段
-3. 重构 `runIteration()`: 每个步骤包裹独立 try/catch，步骤前后调用钩子
-4. 钩子独立 try/catch，单个失败不阻塞
-
-### 5. Manifest 完全结构化 + 判别联合
-
-**文件:** `packages/contracts/src/plugins.ts`
-
-1. 定义各贡献类型的独立 schema（context_sources, step_contributors, rule_contributors, query_contributors, prompt_workflow_steps, api_routes, data_cleaners）
-2. 重写 `pluginServerContributionsSchema`
-3. `kind` 字段枚举化（`z.enum([...])`），未知值直接拒绝
-
-**文件:** `apps/server/src/plugins/runtime.ts`
-
-4. 重写 `registerManifestContributions` — 基于结构化元数据而非 stub 生成
-
-### 6. deactivate() 钩子
-
-**文件:** `apps/server/src/plugins/runtime.ts`
-
-1. 定义 `PluginActivateResult` 类型
-2. `activatePluginEntrypoint` 捕获返回值并存储 deactivate 函数
-3. `clearRuntimes()` 在清空前调用 deactivate
-
-### 7. DataCleaner 消费者接入
-
-**文件:** `apps/server/src/app/runtime/PackSimulationLoop.ts`
-
-在 step 6 之后调用 `dataCleanerRegistry.getForPack()` 并执行。
-
-### 8. 能力键注册表 + 枚举类型
-
-**文件:** 新文件 `apps/server/src/plugins/capability_keys.ts`
-
-1. 定义 `PLUGIN_CAPABILITY_KEY` 常量对象
-2. 定义 `CAPABILITY_KEY_MIN_LEVEL` 映射表
-3. 更新 `hasCapability()` 增加 sandbox 级别检查
-
----
-
-## 执行顺序
-
-```
-P0: 3 (简单删除) → 2 (简单修复) → 1 (核心接入)
-P1: 8 (注册表) → 5 (manifest) → 4 (钩子) → 6 (deactivate) → 7 (data cleaner)
-```
-
-P0 全部完成后运行 `pnpm test:unit` + `pnpm typecheck` 验证。
+| 文件 | 类型 |
+|------|------|
+| `apps/server/src/plugins/capability_keys.ts` | 新建 |
+| `apps/server/src/app/runtime/StateTransformContributor.ts` | 新建 |
+| `apps/server/src/app/runtime/plugin_contributor_adapter.ts` | 新建 |
+| `apps/server/tests/helpers/clock.ts` | 新建 |
+| `apps/server/tests/helpers/snapshot.ts` | 新建 |
+| `apps/server/tests/unit/property_based.spec.ts` | 新建 |
+| `packages/contracts/src/plugins.ts` | 修改 |
+| `packages/contracts/src/world_engine.ts` | 修改 |
+| `apps/server/src/plugins/runtime.ts` | 修改 |
+| `apps/server/src/plugins/context.ts` | 间接 |
+| `apps/server/src/app/runtime/PackSimulationLoop.ts` | 修改 |
+| `apps/server/src/app/runtime/world_engine_persistence.ts` | 修改 |
+| `apps/server/src/app/services/action_dispatcher.ts` | 修改 |
+| `apps/server/src/ai/providers/mock.ts` | 修改 |
+| `apps/server/src/context/workflow/orchestrator.ts` | 修改 |
+| `apps/server/src/context/types.ts` | 修改 |
+| `apps/server/src/inference/prompt_slot_config.ts` | 修改 |
+| 多个测试文件 + YAML manifest | 修改 |

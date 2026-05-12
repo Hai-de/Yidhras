@@ -1,6 +1,7 @@
 import { getSchedulerRunnerConfig } from '../../config/runtime_config.js';
 import { createMemoryCompactionService } from '../../memory/recording/compaction_service.js';
 import { createMemoryRecordingService } from '../../memory/recording/service.js';
+import { recordActionIntentDispatched } from '../../observability/metrics.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
 import { resolveActivePack, resolvePackTick } from '../services/pack_runtime_resolution.js';
@@ -67,6 +68,8 @@ export const runActionDispatcher = async ({
       assertActionIntentLockOwnership(claimedIntent, workerId, resolvePackTick(context, packRuntime));
 
       const result = await dispatchActionIntent(context, claimedIntent);
+      const recordPackId = packRuntime?.getPackId() ?? resolveActivePack(context, packRuntime)?.metadata.id ?? 'unknown-pack';
+      recordActionIntentDispatched(recordPackId, claimedIntent.intent_type, result.outcome);
       if (claimedIntent.intent_type === 'trigger_event') {
         const latestIntent = await getActionIntentForDispatchReflection(context, claimedIntent.id);
         const latestEvent = latestIntent?.event_summaries[0]?.title ?? null;
@@ -165,6 +168,9 @@ export const runActionDispatcher = async ({
       if (!claimedIntent) {
         return 0;
       }
+
+      const failPackId = packRuntime?.getPackId() ?? resolveActivePack(context, packRuntime)?.metadata.id ?? 'unknown-pack';
+      recordActionIntentDispatched(failPackId, claimedIntent.intent_type, 'failed');
 
       const errorCode = err instanceof Error && 'code' in err && typeof err.code === 'string'
         ? err.code

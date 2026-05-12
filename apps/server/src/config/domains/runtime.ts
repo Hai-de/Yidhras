@@ -14,7 +14,8 @@ export const RuntimeMultiPackSchema = z
 
 export const RuntimeConfig_DomainSchema = z
   .object({
-    multi_pack: RuntimeMultiPackSchema
+    multi_pack: RuntimeMultiPackSchema,
+    metrics_port: z.number().int().min(1024).max(65535).default(9090)
   })
   .strict();
 
@@ -25,5 +26,6 @@ export const RUNTIME_DEFAULTS: RuntimeConfig_Domain = {
     max_loaded_packs: 2,
     start_mode: 'manual',
     bootstrap_packs: []
-  }
+  },
+  metrics_port: 9090
 };

@@ -467,6 +467,12 @@ const start = async (): Promise<void> => {
     logger.info(`Scheduler worker=${schedulerWorkerId} partitions=${schedulerPartitionIds.join(',') || 'none'} loopIntervalMs=${String(simulationLoopIntervalMs)}`);
   });
 
+  const metricsPort = getRuntimeConfig().runtime.metrics_port;
+  if (metricsPort > 0) {
+    const { startMetricsServer } = await import('./observability/metrics_server.js');
+    startMetricsServer(metricsPort);
+  }
+
   const registryWatcher = startAiRegistryWatcher({
     aiModelsConfigPath: getAiModelsConfigPath(),
     promptSlotsDefaultPath: resolveWorkspacePath(

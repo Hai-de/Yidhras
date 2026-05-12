@@ -11,6 +11,7 @@ entrypoints:
 
 compatibility:
   yidhras: ">=0.1.0"
+  host_api: "1.0.0"
   pack_id: "yidhras-system"
 
 requested_capabilities: []

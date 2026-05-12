@@ -62,10 +62,27 @@ export const worldPackClockSnapshotSchema = z.object({
   current_revision: nonNegativeBigIntStringSchema
 })
 
+// Pack-defined entity subtypes (e.g. "actor:player") use colon-prefix notation.
+// The base kinds are enumerable; subtypes extend via string suffix.
+const WORLD_ENTITY_BASE_KINDS = ['actor', 'artifact', 'domain', 'institution', 'table', 'mediator', 'state_transform', 'identity'] as const;
+
+const worldEntityKindSchema = z.string().trim().min(1).refine(
+  (v) => {
+    const colonIndex = v.indexOf(':');
+    const base = colonIndex >= 0 ? v.slice(0, colonIndex) : v;
+    return (WORLD_ENTITY_BASE_KINDS as readonly string[]).includes(base);
+  },
+  { message: `entity_kind must use a recognized base kind (${WORLD_ENTITY_BASE_KINDS.join(', ')})` }
+);
+
+const worldGrantTypeSchema = z.enum(['mediated', 'intrinsic']);
+
+const worldBindingKindSchema = z.enum(['direct_entity', 'holder_of', 'subject_entity', 'all_actors', 'entity_type_is']);
+
 export const worldEntitySnapshotSchema = z.object({
   id: nonEmptyStringSchema,
   pack_id: nonEmptyStringSchema,
-  entity_kind: nonEmptyStringSchema,
+  entity_kind: worldEntityKindSchema,
   entity_type: nonEmptyStringSchema.nullable(),
   label: z.string(),
   tags: z.array(z.string()).default([]),
@@ -91,7 +108,7 @@ export const worldAuthorityGrantSnapshotSchema = z.object({
   source_entity_id: nonEmptyStringSchema,
   target_selector_json: stringRecordSchema,
   capability_key: nonEmptyStringSchema,
-  grant_type: nonEmptyStringSchema,
+  grant_type: worldGrantTypeSchema,
   mediated_by_entity_id: nonEmptyStringSchema.nullable(),
   scope_json: stringRecordSchema.nullable(),
   conditions_json: stringRecordSchema.nullable(),
@@ -107,7 +124,7 @@ export const worldMediatorBindingSnapshotSchema = z.object({
   pack_id: nonEmptyStringSchema,
   mediator_id: nonEmptyStringSchema,
   subject_entity_id: nonEmptyStringSchema.nullable(),
-  binding_kind: nonEmptyStringSchema,
+  binding_kind: worldBindingKindSchema,
   status: nonEmptyStringSchema,
   metadata_json: stringRecordSchema.nullable(),
   created_at: nonNegativeBigIntStringSchema,

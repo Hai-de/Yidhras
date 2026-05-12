@@ -305,6 +305,47 @@ export {
   releaseActionIntentLock
 } from './action_intent_repository.js';
 
+type IntentHandler = (
+  context: AppContext,
+  intent: ActionIntentRecord,
+  packRuntime?: PackRuntimePort
+) => Promise<{ outcome: 'completed' | 'dropped'; reason: string | null }>;
+
+const KERNEL_INTENT_TYPES = new Set([
+  'trigger_event',
+  'adjust_snr',
+  'adjust_relationship',
+  'move',
+  'post_message'
+]);
+
+const intentHandlerRegistry = new Map<string, IntentHandler>();
+
+export const registerIntentHandler = (intentType: string, handler: IntentHandler): void => {
+  if (KERNEL_INTENT_TYPES.has(intentType)) {
+    throw new Error(`Cannot override kernel intent type: ${intentType}`);
+  }
+  if (intentType.startsWith('invoke.')) {
+    throw new Error(`invoke.* intents must use the invocation pipeline, not registerIntentHandler: ${intentType}`);
+  }
+  intentHandlerRegistry.set(intentType, handler);
+};
+
+const postMessageHandler: IntentHandler = async (context, intent, packRuntime) => {
+  const dropDecision = resolveDropDecision(intent);
+  if (dropDecision.dropped) {
+    return { outcome: 'dropped', reason: dropDecision.reason };
+  }
+
+  const identity = await resolveIdentityContext(context, intent.actor_ref);
+  const content = resolvePostMessagePayload(intent.payload);
+
+  await createSocialPost(context, identity, content, {
+    source_action_intent_id: intent.id
+  });
+  return { outcome: 'completed', reason: null };
+};
+
 export const dispatchActionIntent = async (
   context: AppContext,
   intent: ActionIntentRecord,
@@ -312,6 +353,7 @@ export const dispatchActionIntent = async (
 ): Promise<{ outcome: 'completed' | 'dropped'; reason: string | null }> => {
   assertActionIntentLockOwnership(intent, intent.locked_by ?? '', resolvePackTick(context, packRuntime));
 
+  // 1. invoke.* pipeline
   const invocationResult = await dispatchInvocationFromActionIntent(context, {
     id: intent.id,
     source_inference_id: intent.source_inference_id,
@@ -321,64 +363,35 @@ export const dispatchActionIntent = async (
     payload: intent.payload
   });
   if (invocationResult) {
-    return { outcome: invocationResult.outcome, reason: invocationResult.reason };
+    return invocationResult;
   }
 
-  if (intent.intent_type === 'trigger_event') {
-    await dispatchTriggerEventIntent(context, intent, packRuntime);
-    return {
-      outcome: 'completed',
-      reason: null
-    };
+  // 2. Plugin-registered custom handlers
+  const registeredHandler = intentHandlerRegistry.get(intent.intent_type);
+  if (registeredHandler) {
+    return registeredHandler(context, intent, packRuntime);
   }
 
-  if (intent.intent_type === 'adjust_snr') {
-    await dispatchAdjustSnrIntent(context, intent, packRuntime);
-    return {
-      outcome: 'completed',
-      reason: null
-    };
+  // 3. Kernel intent types
+  switch (intent.intent_type) {
+    case 'trigger_event':
+      await dispatchTriggerEventIntent(context, intent, packRuntime);
+      return { outcome: 'completed', reason: null };
+    case 'adjust_snr':
+      await dispatchAdjustSnrIntent(context, intent, packRuntime);
+      return { outcome: 'completed', reason: null };
+    case 'adjust_relationship':
+      await dispatchAdjustRelationshipIntent(context, intent, packRuntime);
+      return { outcome: 'completed', reason: null };
+    case 'move':
+      await dispatchMoveIntent(context, intent, packRuntime);
+      return { outcome: 'completed', reason: null };
+    case 'post_message':
+      return postMessageHandler(context, intent, packRuntime);
+    default:
+      throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'Unsupported action intent type', {
+        intent_id: intent.id,
+        intent_type: intent.intent_type
+      });
   }
-
-  if (intent.intent_type === 'adjust_relationship') {
-    await dispatchAdjustRelationshipIntent(context, intent, packRuntime);
-    return {
-      outcome: 'completed',
-      reason: null
-    };
-  }
-
-  if (intent.intent_type === 'move') {
-    await dispatchMoveIntent(context, intent, packRuntime);
-    return {
-      outcome: 'completed',
-      reason: null
-    };
-  }
-
-  if (intent.intent_type !== 'post_message') {
-    throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'Unsupported action intent type', {
-      intent_id: intent.id,
-      intent_type: intent.intent_type
-    });
-  }
-
-  const dropDecision = resolveDropDecision(intent);
-  if (dropDecision.dropped) {
-    return {
-      outcome: 'dropped',
-      reason: dropDecision.reason
-    };
-  }
-
-  const identity = await resolveIdentityContext(context, intent.actor_ref);
-  const content = resolvePostMessagePayload(intent.payload);
-
-  await createSocialPost(context, identity, content, {
-    source_action_intent_id: intent.id
-  });
-  return {
-    outcome: 'completed',
-    reason: null
-  };
 };

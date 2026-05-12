@@ -8,13 +8,13 @@ import {
   WorldStepPrepareRequest} from '@yidhras/contracts';
 
 import type { PackRuntimeEntityStateRecord, PackRuntimeRuleExecutionRecord } from '../../packs/runtime/core_models.js';
-import { evaluateStateTransforms } from '../../packs/runtime/state_transform_evaluator.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage/entity_state_repo.js';
 import { listPackAuthorityGrants } from '../../packs/storage/authority_repo.js';
 import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js';
 import { listPackRuleExecutionRecords, recordPackRuleExecution } from '../../packs/storage/rule_execution_repo.js';
 import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
+import { StateTransformContributor } from './StateTransformContributor.js';
 import type { WorldEngineSessionContext } from './world_engine_contributors.js';
 import { ApiError } from '../../utils/api_error.js';
 import { createLogger } from '../../utils/logger.js';
@@ -375,9 +375,8 @@ export const executeWorldEnginePreparedStep = async (input: {
       updated_at: Date.now()
     });
 
-    // Fetch world state snapshot: shared by state_transform_evaluator and
-    // StepContributors to avoid redundant DB queries.
-    const logger = createLogger('state_transform_evaluator');
+    // Fetch world state snapshot for StepContributors (both built-in and plugin).
+    const logger = createLogger('world_engine_step');
     const [
       worldEntities,
       entityStates,
@@ -392,98 +391,46 @@ export const executeWorldEnginePreparedStep = async (input: {
       listPackRuleExecutionRecords(input.context.packStorageAdapter, packId)
     ]);
 
-    const actorEntityIds = new Set(
-      worldEntities
-        .filter(e => {
-          const kind = typeof e.entity_kind === 'string' ? e.entity_kind : '';
-          return kind === 'actor' || kind.startsWith('actor:');
-        })
-        .map(e => e.id)
-    );
+    const sessionContext: WorldEngineSessionContext = {
+      pack_id: packId,
+      mode: 'active',
+      current_tick: input.packRuntime?.getCurrentTick()?.toString() ?? input.prepareInput.step_ticks,
+      current_revision: input.prepareInput.base_revision ?? '0',
+      world_entities: worldEntities as unknown as ReadonlyArray<Record<string, unknown>>,
+      entity_states: entityStates as unknown as ReadonlyArray<Record<string, unknown>>,
+      authority_grants: authorityGrants as unknown as ReadonlyArray<Record<string, unknown>>,
+      mediator_bindings: mediatorBindings as unknown as ReadonlyArray<Record<string, unknown>>,
+      rule_execution_records: ruleExecutionRecords as unknown as ReadonlyArray<Record<string, unknown>>
+    };
 
-    const actorStates = entityStates
-      .filter(
-        s =>
-          s.state_namespace === 'core' &&
-          actorEntityIds.has(s.entity_id) &&
-          typeof s.state_json === 'object' &&
-          s.state_json !== null &&
-          !Array.isArray(s.state_json)
-      )
-      .map(s => ({
-        entity_id: s.entity_id,
-        state_json: s.state_json
-      }));
+    // Built-in contributors run first, then plugin-registered contributors.
+    const allContributors = [
+      StateTransformContributor,
+      ...pluginRuntimeRegistry.getStepContributors(packId)
+    ];
 
-    const transformDefs = worldEntities
-      .filter(e => e.entity_kind === 'state_transform')
-      .map(e => {
-        const payload = (e.payload_json ?? {});
-        return {
-          source: typeof payload.source === 'string' ? payload.source : '',
-          ranges: (Array.isArray(payload.ranges) ? payload.ranges : []) as Array<{
-            min: number;
-            max: number;
-            label: string;
-          }>,
-          target: typeof payload.target === 'string' ? payload.target : ''
-        };
-      })
-      .filter(t => t.source.length > 0 && t.target.length > 0 && t.ranges.length > 0);
-
-    if (transformDefs.length > 0 && actorStates.length > 0) {
-      const transformOps = evaluateStateTransforms({
-        packId,
-        actorStates,
-        transformDefs,
-        logDebug: (message, meta) => logger.debug(message, meta),
-        logWarn: (message, meta) => logger.warn(message, meta)
-      });
-
-      if (transformOps.length > 0) {
-        prepared.state_delta.operations.push(...transformOps);
-      }
-    }
-
-    // StepContributors: iterate registered plugin contributors and merge their
-    // delta operations into the prepared step before persistence.
-    const stepContributors = pluginRuntimeRegistry.getStepContributors(packId);
-    if (stepContributors.length > 0) {
-      const sessionContext: WorldEngineSessionContext = {
-        pack_id: packId,
-        mode: 'active',
-        current_tick: input.packRuntime?.getCurrentTick()?.toString() ?? input.prepareInput.step_ticks,
-        current_revision: input.prepareInput.base_revision ?? '0',
-        world_entities: worldEntities as unknown as ReadonlyArray<Record<string, unknown>>,
-        entity_states: entityStates as unknown as ReadonlyArray<Record<string, unknown>>,
-        authority_grants: authorityGrants as unknown as ReadonlyArray<Record<string, unknown>>,
-        mediator_bindings: mediatorBindings as unknown as ReadonlyArray<Record<string, unknown>>,
-        rule_execution_records: ruleExecutionRecords as unknown as ReadonlyArray<Record<string, unknown>>
-      };
-
-      for (const contributor of stepContributors) {
-        try {
-          const contribution = await contributor.contributePrepare(
-            input.prepareInput,
-            sessionContext
-          );
-          if (contribution) {
-            if (contribution.delta_operations.length > 0) {
-              prepared.state_delta.operations.push(...contribution.delta_operations);
-            }
-            if (contribution.emitted_events.length > 0) {
-              prepared.emitted_events.push(...contribution.emitted_events);
-            }
-            if (contribution.observability.length > 0) {
-              prepared.observability.push(...contribution.observability);
-            }
+    for (const contributor of allContributors) {
+      try {
+        const contribution = await contributor.contributePrepare(
+          input.prepareInput,
+          sessionContext
+        );
+        if (contribution) {
+          if (contribution.delta_operations.length > 0) {
+            prepared.state_delta.operations.push(...contribution.delta_operations);
           }
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          logger.warn(
-            `StepContributor ${contributor.name} failed for pack ${packId}: ${message}`
-          );
+          if (contribution.emitted_events.length > 0) {
+            prepared.emitted_events.push(...contribution.emitted_events);
+          }
+          if (contribution.observability.length > 0) {
+            prepared.observability.push(...contribution.observability);
+          }
         }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        logger.warn(
+          `StepContributor ${contributor.name} failed for pack ${packId}: ${message}`
+        );
       }
     }
 

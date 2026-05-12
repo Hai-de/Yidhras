@@ -96,6 +96,8 @@ pnpm --filter yidhras-server plugin list|confirm|enable|disable
 pnpm --filter yidhras-server snapshot list|show|delete
 pnpm --filter yidhras-server pack:export <dir> [--output <path>] [--force]
 pnpm --filter yidhras-server pack:import <archive> [--force]
+pnpm --filter yidhras-server sim:dump <packId> [--type agent|relation|memory|all]
+pnpm --filter yidhras-server db:migrate-pack <packId> [--target-version <n>]
 ```
 
 ### CI baseline

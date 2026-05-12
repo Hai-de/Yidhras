@@ -4,7 +4,15 @@ import type { PromptFragmentPermissions } from './prompt_fragment_v2.js';
  * Slot identifier used to categorize prompt fragments by role.
  * Shared across both slot configuration and fragment placement.
  */
-/** 插槽标识符。Phase 4 起由闭合联合类型开放为 string，支持动态注册插槽。 */
+/**
+ * 插槽标识符。Phase 4 起由闭合联合类型开放为 string，支持动态注册插槽。
+ *
+ * 已知内置插槽（仅供引用，不做编译期约束）:
+ *   system_header | agent_context | world_state | memory_context |
+ *   perception_feed | social_feed | output_instruction | post_process
+ *
+ * 插件可注册任意新插槽名，因此此类型保持为 string。
+ */
 export type PromptFragmentSlot = string;
 
 /**

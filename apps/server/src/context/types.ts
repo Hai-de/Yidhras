@@ -65,9 +65,27 @@ export interface ContextNodeProvenance {
   parent_node_ids?: string[];
 }
 
+// Known node_type values — kept as constants for discoverability.
+// Dynamic node types (memory blocks, overlays, plugins) are allowed.
+export const KNOWN_CONTEXT_NODE_TYPES = {
+  SPATIAL_PROXIMITY: 'spatial_proximity',
+  POLICY_SUMMARY: 'policy_summary',
+  PACK_ACTOR_STATE: 'pack_actor_state_snapshot',
+  PACK_WORLD_STATE: 'pack_world_state_snapshot',
+  OWNED_ARTIFACTS: 'owned_artifacts_snapshot',
+  PACK_LATEST_EVENT: 'pack_latest_event_snapshot',
+  MEMORY_BLOCK: 'memory_block',
+  OVERLAY: 'overlay_node',
+  TRACE: 'trace',
+  CONVERSATION_TURN: 'conversation_turn',
+  NARRATIVE_EVENT: 'narrative_event'
+} as const;
+
+export type ContextNodeType = (typeof KNOWN_CONTEXT_NODE_TYPES)[keyof typeof KNOWN_CONTEXT_NODE_TYPES] | string;
+
 export interface ContextNode {
   id: string;
-  node_type: string;
+  node_type: ContextNodeType;
   scope: ContextNodeScope;
   source_kind: ContextNodeSourceKind;
   source_ref: Record<string, unknown> | null;
@@ -91,7 +109,7 @@ export interface ContextDroppedNode {
   node_id: string;
   reason: string;
   source_kind?: ContextNodeSourceKind | null;
-  node_type?: string | null;
+  node_type?: ContextNodeType | null;
 }
 
 export interface ContextSelectionResult {
@@ -220,7 +238,7 @@ export interface ContextRunDiagnostics {
   submitted_directives?: ContextDirectiveRequest[];
   approved_directives?: ContextApprovedDirective[];
   denied_directives?: ContextDeniedDirective[];
-  selected_node_summaries?: Array<{ id: string; node_type: string; source_kind: ContextNodeSourceKind; preferred_slot: PromptFragmentSlot | null }>;
+  selected_node_summaries?: Array<{ id: string; node_type: ContextNodeType; source_kind: ContextNodeSourceKind; preferred_slot: PromptFragmentSlot | null }>;
   orchestration?: Record<string, unknown>;
   prompt_assembly?: ContextPromptAssemblySummary | null;
 }

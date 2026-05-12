@@ -1,5 +1,7 @@
 import type { PluginCapabilityLevel } from './context.js';
 
+export const PLUGIN_HOST_API_VERSION = '1.0.0';
+
 export const PLUGIN_CAPABILITY_KEY = {
   CONTEXT_SOURCE_REGISTER: 'server.context_source.register',
   PROMPT_WORKFLOW_REGISTER: 'server.prompt_workflow.register',

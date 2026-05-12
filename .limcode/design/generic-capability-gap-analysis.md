@@ -280,3 +280,51 @@ executeWorldEnginePreparedStep 内部:
 - **标记为预留**: 在 schema 注释中标明为未来预留，但在文档中明确说明当前不可用
 
 当前两字段处于"既未删除也未实现"的中间态，对包作者造成困惑。推荐短期删除、中期按需实现。
+
+---
+
+## 十二、实施追踪（2026-05-12）
+
+> 基于本分析识别的缺口，已生成开发草案 `.limcode/design/generic-capability-development-draft.md` 并按优先级实施。以下标注各缺口的解决状态。
+
+### 已解决 (P0-P2 完成)
+
+| 缺口 | 涉及 § | 解决方案 |
+|------|--------|---------|
+| StepContributor 未接入 sim loop | §二 | `executeWorldEnginePreparedStep` 统一迭代 builtin + plugin 贡献者 |
+| state_transform_evaluator 专有路径 | §二旁注 | 迁移为 `StateTransformContributor`，消除硬编码 |
+| RuleContributor / QueryContributor 未接入 | §二 | `plugin_contributor_adapter.ts` 适配层 |
+| PromptWorkflowStep 两套注册表 | §二 | `orchestrator.ts` 从 PluginRuntimeRegistry 注册到 pipeline registry |
+| DataCleaner 无消费者 | §二 | `PackSimulationLoop` step 6 之后执行 |
+| Sim loop 零钩子 | §三 | `PackLoopHooks` 步骤级钩子数组 + per-step 错误隔离 |
+| Action dispatch 硬编码 if-else | §四 | 注册表驱动 + 三条处理路径 |
+| manifest `contributions.server.*` 全 `string[]` | §五 | 完全结构化 + 判别联合 |
+| `kind` 无枚举约束 | §五 | `pluginKindSchema` z.enum，未知值拒绝 |
+| `intent_grounders`/`pack_projections` 零引用 | §二/§十一 | 从 schema 删除 |
+| 两层权限互不关联 | §六 | 分层优先级模型 + `CAPABILITY_KEY_MIN_LEVEL` |
+| 能力键裸字符串无注册表 | §十一 | `PLUGIN_CAPABILITY_KEY` 常量注册表 |
+| 无 deactivate() 钩子 | §十一 | activate 返回值捕获 + `clearRuntimes` 调用 |
+| activate() 失败静默 | §十一 | 日志 + `last_error` 写入 |
+| `last_error` 从不写入 | §十一 | 已在 activate 和 host_api 兼容性检查路径上写入 |
+| Host API 无版本字段 | §十一 | `PLUGIN_HOST_API_VERSION` + `compatibility.host_api` |
+| 无插件超时保护 | §十一 | `activate()` 30s / `requestInference()` 60s |
+| entity_kind/grant_type/binding_kind 裸字符串 | §十一 | Zod enum/refine 约束 |
+| node_type 裸字符串 | §十一 | `KNOWN_CONTEXT_NODE_TYPES` + `ContextNodeType` |
+| 无时间操控测试辅助 | §八 | `tests/helpers/clock.ts` |
+| mock AI provider 故障场景不足 | §八 | force_timeout/force_partial_response/force_token_limit |
+| 无快照种子化测试 | §八 | `tests/helpers/snapshot.ts` |
+| 无属性测试 | §八 | `tests/unit/property_based.spec.ts` (fast-check, 13 tests) |
+
+### 未实施（长期 P3）
+
+| 缺口 | 涉及 § | 说明 |
+|------|--------|------|
+| 结构化指标/Prometheus | §七 | 计划引入 prom-client，尚未实施 |
+| 边车健康暴露 | §七 | `StdioJsonRpcTransport` 已有心跳，未暴露到 health API |
+| 运行时状态 dump CLI | §七 | 未实施 |
+| 全模拟可复现/确定性 | §七 | 未实施 |
+| 日志传输层 | §七 | 未实施 |
+| 自动快照 | §七 | 未实施 |
+| Worker 线程插件隔离 | §十一 | 短期超时保护已实施，Worker 隔离未实施 |
+| 热重载 | §十一 | 未实施 |
+| 数据迁移框架 | §十一 | 未实施 |

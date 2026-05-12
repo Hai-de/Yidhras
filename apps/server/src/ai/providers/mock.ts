@@ -132,25 +132,113 @@ export const createMockAiProviderAdapter = (): AiProviderAdapter => {
     execute(input) {
       const taskInput = input.task_request.input;
 
+      // Network partition / timeout simulation: delays response past typical test timeout.
+      // Use setTimeoutMs to control the delay (default 120000ms — long enough to trigger
+      // caller-side timeout without hanging the test indefinitely).
+      if (getBooleanFlag(taskInput, 'force_timeout')) {
+        const delayMs = typeof taskInput.timeout_ms === 'number' ? taskInput.timeout_ms : 120000;
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve({
+              status: 'failed',
+              finish_reason: 'error',
+              output: { mode: input.request.response_mode },
+              usage: { latency_ms: delayMs },
+              safety: { blocked: false, reason_code: null, provider_signal: null },
+              raw_ref: { provider_request_id: 'mock-timeout', provider_response_id: null },
+              error: {
+                code: 'AI_PROVIDER_TIMEOUT',
+                message: `Simulated network partition — no response for ${delayMs}ms`,
+                retryable: true,
+                stage: 'provider'
+              }
+            });
+          }, delayMs);
+        });
+      }
+
+      // Partial / incomplete response: returns JSON that is structurally valid
+      // but missing required fields, simulating a model truncation.
+      if (getBooleanFlag(taskInput, 'force_partial_response')) {
+        return Promise.resolve({
+          status: 'completed',
+          finish_reason: 'length',
+          output: {
+            mode: input.request.response_mode,
+            json: {
+              action_type: null,
+              target_ref: null,
+              payload: {},
+              confidence: 0.5,
+              // reasoning and meta intentionally omitted — simulates truncation
+              _truncated: true
+            }
+          },
+          usage: {
+            input_tokens: 2048,
+            output_tokens: 128,
+            total_tokens: 2176,
+            estimated_cost_usd: 0,
+            latency_ms: 12
+          },
+          safety: { blocked: false, reason_code: null, provider_signal: null },
+          raw_ref: {
+            provider_request_id: 'mock-partial',
+            provider_response_id: 'mock-partial-response'
+          },
+          error: null
+        });
+      }
+
+      // Token limit exceeded: returns with finish_reason 'length' and a
+      // warning-level error, simulating hitting the model's max output tokens.
+      if (getBooleanFlag(taskInput, 'force_token_limit')) {
+        const maxTokens = typeof taskInput.max_tokens === 'number' ? taskInput.max_tokens : 4096;
+        return Promise.resolve({
+          status: 'completed',
+          finish_reason: 'length',
+          output: {
+            mode: input.request.response_mode,
+            json: {
+              action_type: 'post_message',
+              target_ref: null,
+              payload: {
+                content: '[TRUNCATED — token limit reached]'
+              },
+              confidence: 0.4,
+              reasoning: 'Response truncated due to token limit.',
+              meta: { token_limit_hit: true, max_tokens: maxTokens }
+            }
+          },
+          usage: {
+            input_tokens: 1024,
+            output_tokens: maxTokens,
+            total_tokens: 1024 + maxTokens,
+            estimated_cost_usd: 0,
+            latency_ms: 25
+          },
+          safety: { blocked: false, reason_code: null, provider_signal: null },
+          raw_ref: {
+            provider_request_id: 'mock-token-limit',
+            provider_response_id: 'mock-token-limit-response'
+          },
+          error: {
+            code: 'TOKEN_LIMIT_REACHED',
+            message: `Output exceeded max_tokens limit of ${maxTokens}`,
+            retryable: false,
+            stage: 'provider'
+          }
+        });
+      }
+
       if (getBooleanFlag(taskInput, 'force_provider_fail') || getBooleanFlag(taskInput, 'force_fail')) {
         return Promise.resolve({
           status: 'failed',
           finish_reason: 'error',
-          output: {
-            mode: input.request.response_mode
-          },
-          usage: {
-            latency_ms: 3
-          },
-          safety: {
-            blocked: false,
-            reason_code: null,
-            provider_signal: null
-          },
-          raw_ref: {
-            provider_request_id: 'mock-request',
-            provider_response_id: null
-          },
+          output: { mode: input.request.response_mode },
+          usage: { latency_ms: 3 },
+          safety: { blocked: false, reason_code: null, provider_signal: null },
+          raw_ref: { provider_request_id: 'mock-request', provider_response_id: null },
           error: {
             code: 'AI_PROVIDER_FAIL',
             message: 'Forced mock AI provider failure',

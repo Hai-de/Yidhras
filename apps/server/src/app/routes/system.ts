@@ -64,10 +64,25 @@ export const registerSystemRoutes = (app: Express, context: AppContext): void =>
     }
   )
 
-  app.get('/api/health', (_req, res) => {
+  app.get('/api/health', async (_req, res) => {
     const snapshot = getStartupHealthSnapshot(context)
-    startupHealthDataSchema.parse(snapshot.body)
-    res.status(snapshot.statusCode)
-    jsonOk(res, snapshot.body)
+
+    // Include sidecar health if world engine is available
+    let sidecars: Record<string, { alive: boolean }> | undefined;
+    try {
+      if (context.worldEngine) {
+        const weHealth = await context.worldEngine.getHealth();
+        sidecars = {
+          world_engine: { alive: weHealth.engine_status === 'ready' || weHealth.engine_status === 'degraded' }
+        };
+      }
+    } catch {
+      sidecars = { world_engine: { alive: false } };
+    }
+
+    const body = { ...snapshot.body, ...(sidecars ? { sidecars } : {}) };
+    startupHealthDataSchema.parse(snapshot.body);
+    res.status(snapshot.statusCode);
+    jsonOk(res, body);
   })
 }

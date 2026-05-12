@@ -170,6 +170,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     'PLUGIN_ENABLE_WARNING_REQUIRE_ACKNOWLEDGEMENT',
     process.env.PLUGIN_ENABLE_WARNING_REQUIRE_ACKNOWLEDGEMENT
   )
+  const observabilityMetricsPort = parseIntegerEnv('OBSERVABILITY_METRICS_PORT', process.env.OBSERVABILITY_METRICS_PORT)
 
   const overrides: Record<string, unknown> = {
     app: {
@@ -214,7 +215,8 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
         ...(runtimeMultiPackMaxLoadedPacks !== undefined ? { max_loaded_packs: runtimeMultiPackMaxLoadedPacks } : {}),
         ...(runtimeMultiPackStartMode !== undefined ? { start_mode: runtimeMultiPackStartMode } : {}),
         ...(runtimeMultiPackBootstrapPacks !== undefined ? { bootstrap_packs: runtimeMultiPackBootstrapPacks } : {})
-      }
+      },
+      ...(observabilityMetricsPort !== undefined ? { metrics_port: observabilityMetricsPort } : {})
     }
   }
 

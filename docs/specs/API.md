@@ -64,8 +64,9 @@
 
 - **GET `/api/health`**
   - 鉴权：无
-  - 说明：启动与运行健康检查
-  - 返回：`{ success: true, data: { healthy, level, runtime_ready, checks, available_world_packs, errors } }`
+  - 说明：启动与运行健康检查，包含边车存活状态
+  - 返回：`{ success: true, data: { healthy, level, runtime_ready, checks, available_world_packs, errors, sidecars?: { world_engine: { alive: boolean } } } }`
+  - `sidecars` 字段仅在 world engine 可用时存在，`alive` 为 false 表示边车不可达
 
 - **GET `/api/status`**
   - 鉴权：root

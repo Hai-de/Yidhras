@@ -16,6 +16,7 @@ import { createLogger } from '../utils/logger.js';
 import {
   CAPABILITY_KEY_MIN_LEVEL,
   PLUGIN_CAPABILITY_KEY,
+  PLUGIN_HOST_API_VERSION,
   type PluginCapabilityKey
 } from './capability_keys.js';
 import { getPluginSandboxConfig } from './context.js';
@@ -28,6 +29,15 @@ import type { SlotContentTransformer } from './extensions/slot_content_transform
 import { slotContentTransformRegistry } from './extensions/slot_content_transformer.js';
 
 const runtimeLogger = createLogger('plugin-sandbox-runtime');
+
+const withTimeout = <T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs)
+    )
+  ]);
+};
 
 type Ctx = AppInfrastructure & { getHttpApp?(): Express | null };
 
@@ -193,7 +203,11 @@ const createServerPluginHostApi = (runtime: RegisteredServerPluginRuntime): Serv
       if (!runtime.inferenceExecutor) {
         throw new Error('Inference executor not available for plugin runtime');
       }
-      return runtime.inferenceExecutor(input);
+      return withTimeout(
+        runtime.inferenceExecutor(input),
+        60000,
+        `Plugin ${runtime.plugin_id} requestInference()`
+      );
     }
   };
 };
@@ -420,6 +434,27 @@ export const syncExperimentalPackPluginRuntime = async (
   pluginRuntimeRegistry.applyPackRoutes(packId, app, context);
 };
 
+const parseSemver = (version: string): { major: number; minor: number; patch: number } | null => {
+  const match = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (!match) return null;
+  return {
+    major: parseInt(match[1], 10),
+    minor: parseInt(match[2], 10),
+    patch: parseInt(match[3], 10)
+  };
+};
+
+const isHostApiCompatible = (serverVersion: string, requiredVersion: string): boolean => {
+  const server = parseSemver(serverVersion);
+  const required = parseSemver(requiredVersion);
+  if (!server || !required) return false;
+  // Same major version, server >= required
+  if (server.major !== required.major) return false;
+  if (server.minor > required.minor) return true;
+  if (server.minor === required.minor && server.patch >= required.patch) return true;
+  return false;
+};
+
 export const refreshActivePackPluginRuntime = async (context: Ctx): Promise<void> => {
   const activePack = resolveActivePack(context);
   if (!activePack) {
@@ -475,6 +510,34 @@ export const refreshPackPluginRuntime = async (
     const manifest = manifests.get(installation.installation_id);
     if (!manifest) continue;
 
+    // Check Host API version compatibility
+    const requiredHostApi = manifest.compatibility.host_api;
+    if (!isHostApiCompatible(PLUGIN_HOST_API_VERSION, requiredHostApi)) {
+      runtimeLogger.error(
+        `Plugin ${installation.plugin_id} requires host_api ${requiredHostApi} ` +
+        `but server provides ${PLUGIN_HOST_API_VERSION}. Skipping activation.`
+      );
+      await context.repos.plugin
+        .upsertInstallation({
+          installation_id: installation.installation_id,
+          plugin_id: installation.plugin_id,
+          artifact_id: installation.artifact_id,
+          version: installation.version,
+          scope_type: installation.scope_type,
+          scope_ref: installation.scope_ref,
+          lifecycle_state: installation.lifecycle_state,
+          requested_capabilities: installation.requested_capabilities,
+          granted_capabilities: installation.granted_capabilities,
+          trust_mode: installation.trust_mode,
+          confirmed_at: installation.confirmed_at,
+          enabled_at: installation.enabled_at,
+          disabled_at: installation.disabled_at,
+          last_error: `Incompatible host_api: requires ${requiredHostApi}, server provides ${PLUGIN_HOST_API_VERSION}`
+        })
+        .catch(() => {});
+      continue;
+    }
+
     const runtime = createRuntimeForManifest({
       installation_id: installation.installation_id,
       plugin_id: installation.plugin_id,
@@ -495,7 +558,11 @@ export const refreshPackPluginRuntime = async (
       try {
         const entrypointPath = path.join(artifact.source_path, serverEntrypoint.source);
         const host = createServerPluginHostApi(runtime);
-        const result = await activatePluginEntrypoint(entrypointPath, host);
+        const result = await withTimeout(
+          activatePluginEntrypoint(entrypointPath, host),
+          30000,
+          `Plugin ${installation.plugin_id} activate()`
+        );
         if (typeof result === 'function') {
           runtime.deactivate = result;
         } else if (result && typeof (result as { deactivate?: () => void }).deactivate === 'function') {

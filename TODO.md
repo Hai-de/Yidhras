@@ -65,9 +65,6 @@
 - `ConversationEntry.archived` 软归档后 entries 数组无限增长 — 需日后实现定期物理归档到冷存储（如按年份归档到独立表、或导出为 JSON 文件并删除 DB 行）
 - `tests/integration/death-note-memory-loop.spec.ts` > `records revise_judgement_plan as overlay and plan memory block during action dispatch` — 预存 flaky 测试，`expected undefined to be truthy`。不阻塞当前阶段，需单独排查 memory overlay 记录逻辑
 
-##### 原型世界包问题
-- 插件 `StepContributor` 运行在 world engine step (sim loop step 2)，不能挂钩 sim loop 的其他阶段。无法在 action dispatch 之后或 AI 推理之前执行游戏逻辑
-- 插件 manifest `contributions.server.*` 字段为 `string[]`，只做声明式登记。实际注册在 `activate()` 中调用 host API
 
 ##### 插槽函数
 - [x] 高级功能 — Phase 1–5 完成

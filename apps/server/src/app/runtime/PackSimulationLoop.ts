@@ -2,10 +2,11 @@ import { WORLD_ENGINE_PROTOCOL_VERSION } from '@yidhras/contracts';
 
 import type { ChronosEngine } from '../../clock/engine.js';
 import type { InferenceService } from '../../inference/service.js';
-import type { AppContext } from '../context.js';
-import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
+import { recordTickCompleted } from '../../observability/metrics.js';
 import { dataCleanerRegistry } from '../../plugins/extensions/data_cleaner_registry.js';
+import type { AppContext } from '../context.js';
 import { getErrorMessage } from '../http/errors.js';
+import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
 import { runActionDispatcher } from './action_dispatcher_runner.js';
 import { runAgentScheduler } from './agent_scheduler.js';
 import { runDecisionJobRunner } from './job_runner.js';
@@ -246,15 +247,18 @@ export class PackSimulationLoop {
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
       const stepNum = i + 1;
+      const stepStartedAt = Date.now();
 
       try {
         await this.runHooks(`beforeStep${stepNum}`, hookCtx);
         await step.fn();
         await this.runHooks(`afterStep${stepNum}`, hookCtx);
+        recordTickCompleted(this.packId, step.name, Date.now() - stepStartedAt, 'success');
       } catch (err: unknown) {
         const message = getErrorMessage(err);
         this.diagnostics.last_step_errors.push({ step: step.name, error: message });
         anyStepFailed = true;
+        recordTickCompleted(this.packId, step.name, Date.now() - stepStartedAt, 'failed');
 
         if (this.onStepError) {
           this.onStepError(err);

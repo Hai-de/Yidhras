@@ -190,6 +190,7 @@ export const pluginManifestSchema = z.object({
     }),
   compatibility: z.object({
     yidhras: nonEmptyStringSchema,
+    host_api: semverStringSchema,
     pack_id: nonEmptyStringSchema
   }),
   requested_capabilities: z.array(pluginCapabilityKeySchema).default([]),

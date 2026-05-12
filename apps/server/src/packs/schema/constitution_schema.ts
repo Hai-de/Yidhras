@@ -553,6 +553,7 @@ export const spatialSchema = z.discriminatedUnion('model', [spatialDiscreteSchem
 
 export const worldPackConstitutionSchema = z
   .object({
+    schema_version: z.number().int().nonnegative().default(0),
     metadata: metadataSchema,
     constitution: constitutionSchema.optional(),
     variables: z.record(z.string(), worldPackVariableValueSchema).optional(),
