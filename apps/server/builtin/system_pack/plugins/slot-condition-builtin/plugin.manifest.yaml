@@ -2,7 +2,7 @@ manifest_version: "plugin/v1"
 id: "slot-condition-builtin"
 name: "Slot Condition Built-in Evaluators"
 version: "1.0.0"
-kind: "slot_condition"
+kind: "tool_provider"
 
 entrypoints:
   server:
@@ -19,8 +19,6 @@ contributions:
   server:
     context_sources: []
     prompt_workflow_steps: []
-    intent_grounders: []
-    pack_projections: []
     api_routes: []
     step_contributors: []
     rule_contributors: []

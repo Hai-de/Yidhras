@@ -115,5 +115,5 @@ const stateTransformSchema = z.object({
 - [x] 物化：存储为 `PackWorldEntity`，`entity_kind = 'state_transform'`
 - [x] 物化结果中的摘要计数（`state_transform_count`）
 - [x] 跨 transform 的重复 `target` 校验
-- [ ] 求值引擎：Rust sidecar step prepare 阶段的 per-tick 求值
+- [x] 求值引擎：Rust sidecar step prepare 阶段的 per-tick 求值
 - [x] 模板变量解析：`{{actor_state.<target>}}` 通过现有插值解析（无需引擎改动）

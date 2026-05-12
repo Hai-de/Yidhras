@@ -4,6 +4,7 @@ import type { ChronosEngine } from '../../clock/engine.js';
 import type { InferenceService } from '../../inference/service.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
+import { dataCleanerRegistry } from '../../plugins/extensions/data_cleaner_registry.js';
 import { getErrorMessage } from '../http/errors.js';
 import { runActionDispatcher } from './action_dispatcher_runner.js';
 import { runAgentScheduler } from './agent_scheduler.js';
@@ -28,6 +29,29 @@ export interface PackLoopDiagnostics {
   last_finished_at: number | null;
   last_duration_ms: number | null;
   last_error_message: string | null;
+  last_step_errors: Array<{ step: string; error: string }>;
+}
+
+export interface HookContext {
+  packId: string;
+  tick: string;
+  diagnostics: PackLoopDiagnostics;
+}
+
+export interface PackLoopHooks {
+  beforeStep1?: Array<(ctx: HookContext) => Promise<void>>;
+  afterStep1?: Array<(ctx: HookContext) => Promise<void>>;
+  beforeStep2?: Array<(ctx: HookContext) => Promise<void>>;
+  afterStep2?: Array<(ctx: HookContext) => Promise<void>>;
+  beforeStep3?: Array<(ctx: HookContext) => Promise<void>>;
+  afterStep3?: Array<(ctx: HookContext) => Promise<void>>;
+  beforeStep4?: Array<(ctx: HookContext) => Promise<void>>;
+  afterStep4?: Array<(ctx: HookContext) => Promise<void>>;
+  beforeStep5?: Array<(ctx: HookContext) => Promise<void>>;
+  afterStep5?: Array<(ctx: HookContext) => Promise<void>>;
+  beforeStep6?: Array<(ctx: HookContext) => Promise<void>>;
+  afterStep6?: Array<(ctx: HookContext) => Promise<void>>;
+  onLoopStateChange?: Array<(from: string, to: string) => void>;
 }
 
 export interface PackSimulationLoopOptions {
@@ -42,6 +66,7 @@ export interface PackSimulationLoopOptions {
   schedulerWorkerId?: string;
   intervalMs?: number;
   crashThreshold?: number;
+  hooks?: PackLoopHooks;
   onDegraded?: (packId: string, reason: string) => void;
   onStepError?: (err: unknown) => void;
 }
@@ -60,7 +85,8 @@ const createDefaultDiagnostics = (): PackLoopDiagnostics => ({
   last_started_at: null,
   last_finished_at: null,
   last_duration_ms: null,
-  last_error_message: null
+  last_error_message: null,
+  last_step_errors: []
 });
 
 export class PackSimulationLoop {
@@ -82,6 +108,7 @@ export class PackSimulationLoop {
   private readonly schedulerPartitionIds: string[];
   private readonly intervalMs: number;
   private readonly crashThreshold: number;
+  private readonly hooks?: PackLoopHooks;
   private readonly onDegraded?: (packId: string, reason: string) => void;
   private readonly onStepError?: (err: unknown) => void;
 
@@ -98,6 +125,7 @@ export class PackSimulationLoop {
     this.schedulerPartitionIds = resolveOwnedSchedulerPartitionIds({ workerId: this.schedulerWorkerId });
     this.intervalMs = options.intervalMs ?? 1000;
     this.crashThreshold = options.crashThreshold ?? SCHEDULER_CRASH_THRESHOLD;
+    this.hooks = options.hooks;
     this.onDegraded = options.onDegraded;
     this.onStepError = options.onStepError;
   }
@@ -179,56 +207,64 @@ export class PackSimulationLoop {
       in_flight: true,
       iteration_count: this.diagnostics.iteration_count + 1,
       last_started_at: startedAt,
-      last_error_message: null
+      last_error_message: null,
+      last_step_errors: []
     };
 
-    try {
-      // 1. Expire identity bindings
-      await expirePackIdentityBindings(this.packRuntime, this.context);
+    const hookCtx: HookContext = {
+      packId: this.packId,
+      tick: this.packRuntime.getCurrentTick().toString(),
+      diagnostics: this.diagnostics
+    };
 
-      // 2. Step world engine
-      await stepPackWorldEngine(this.context, this.packId, this.worldEngine, this.packRuntime);
-
-      // 3. Run agent scheduler
-      await runAgentScheduler({
+    const steps: Array<{ name: string; fn: () => Promise<unknown> }> = [
+      { name: 'step1_expireBindings', fn: () => expirePackIdentityBindings(this.packRuntime, this.context) },
+      { name: 'step2_worldEngine', fn: () => stepPackWorldEngine(this.context, this.packId, this.worldEngine, this.packRuntime) },
+      { name: 'step3_agentScheduler', fn: () => runAgentScheduler({
         context: this.context,
         workerId: this.schedulerWorkerId,
         partitionIds: this.schedulerPartitionIds,
         packId: this.packId,
         packRuntime: this.packRuntime
-      });
-
-      // 4. Run decision job runner
-      await runDecisionJobRunner({
+      }) },
+      { name: 'step4_decisionJobs', fn: () => runDecisionJobRunner({
         context: this.context,
         inferenceService: this.inferenceService,
         workerId: this.decisionWorkerId,
         packRuntime: this.packRuntime
-      });
-
-      // 5. Run action dispatcher
-      await runActionDispatcher({
+      }) },
+      { name: 'step5_actionDispatch', fn: () => runActionDispatcher({
         context: this.context,
         workerId: this.actionDispatcherWorkerId,
         packRuntime: this.packRuntime
-      });
+      }) },
+      { name: 'step6_perception', fn: () => runPerceptionPipeline(this.context, this.packRuntime) }
+    ];
 
-      // 6. Run perception pipeline
-      await runPerceptionPipeline(this.context, this.packRuntime);
+    let anyStepFailed = false;
 
-      // Kernel success — reset failure counter
-      this.consecutiveFailures = 0;
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      const stepNum = i + 1;
 
-      this.diagnostics = {
-        ...this.diagnostics,
-        status: 'idle',
-        in_flight: false,
-        consecutive_failures: 0,
-        last_finished_at: Date.now(),
-        last_duration_ms: Date.now() - startedAt,
-        last_error_message: null
-      };
-    } catch (err: unknown) {
+      try {
+        await this.runHooks(`beforeStep${stepNum}`, hookCtx);
+        await step.fn();
+        await this.runHooks(`afterStep${stepNum}`, hookCtx);
+      } catch (err: unknown) {
+        const message = getErrorMessage(err);
+        this.diagnostics.last_step_errors.push({ step: step.name, error: message });
+        anyStepFailed = true;
+
+        if (this.onStepError) {
+          this.onStepError(err);
+        }
+      }
+    }
+
+    const finishedAt = Date.now();
+
+    if (anyStepFailed) {
       this.consecutiveFailures += 1;
 
       this.diagnostics = {
@@ -236,24 +272,68 @@ export class PackSimulationLoop {
         status: 'idle',
         in_flight: false,
         consecutive_failures: this.consecutiveFailures,
-        last_finished_at: Date.now(),
-        last_duration_ms: Date.now() - startedAt,
-        last_error_message: getErrorMessage(err)
+        last_finished_at: finishedAt,
+        last_duration_ms: finishedAt - startedAt,
+        last_error_message: this.diagnostics.last_step_errors[0]?.error ?? null
       };
 
       if (this.consecutiveFailures >= this.crashThreshold) {
         this.paused = true;
-        const reason = getErrorMessage(err);
         if (this.onDegraded) {
-          this.onDegraded(this.packId, reason);
+          this.onDegraded(this.packId, this.diagnostics.last_error_message ?? 'unknown error');
         }
       }
+    } else {
+      this.consecutiveFailures = 0;
 
-      if (this.onStepError) {
-        this.onStepError(err);
+      this.diagnostics = {
+        ...this.diagnostics,
+        status: 'idle',
+        in_flight: false,
+        consecutive_failures: 0,
+        last_finished_at: finishedAt,
+        last_duration_ms: finishedAt - startedAt,
+        last_error_message: null
+      };
+    }
+
+    // Run registered data cleaners
+    const cleaners = dataCleanerRegistry.list();
+    if (cleaners.length > 0) {
+      const packTick = this.packRuntime.getCurrentTick().toString();
+      for (const cleaner of cleaners) {
+        try {
+          await dataCleanerRegistry.clean(cleaner.key, {
+            text: `[pack=${this.packId}, tick=${packTick}]`,
+            options: { pack_id: this.packId, tick: packTick }
+          });
+        } catch {
+          // Single cleaner failure does not block the loop
+        }
       }
-    } finally {
-      this.scheduleNext();
+    }
+
+    this.scheduleNext();
+  }
+
+  private async runHooks(hookName: string, ctx: HookContext): Promise<void> {
+    // Only step hooks use HookContext; onLoopStateChange has a different signature
+    // and is handled separately via its own call site.
+    if (hookName.startsWith('on')) {
+      return;
+    }
+
+    const hooks = this.hooks?.[hookName as Exclude<keyof PackLoopHooks, 'onLoopStateChange'>];
+    if (!hooks || hooks.length === 0) {
+      return;
+    }
+
+    for (const hook of hooks) {
+      try {
+        await (hook as (ctx: HookContext) => Promise<void>)(ctx);
+      } catch {
+        // Single hook failure does not block other hooks or the step
+      }
     }
   }
 }

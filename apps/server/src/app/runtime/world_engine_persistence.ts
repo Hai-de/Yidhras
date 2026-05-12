@@ -11,7 +11,11 @@ import type { PackRuntimeEntityStateRecord, PackRuntimeRuleExecutionRecord } fro
 import { evaluateStateTransforms } from '../../packs/runtime/state_transform_evaluator.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage/entity_state_repo.js';
-import { recordPackRuleExecution } from '../../packs/storage/rule_execution_repo.js';
+import { listPackAuthorityGrants } from '../../packs/storage/authority_repo.js';
+import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js';
+import { listPackRuleExecutionRecords, recordPackRuleExecution } from '../../packs/storage/rule_execution_repo.js';
+import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
+import type { WorldEngineSessionContext } from './world_engine_contributors.js';
 import { ApiError } from '../../utils/api_error.js';
 import { createLogger } from '../../utils/logger.js';
 import type { AppContext } from '../context.js';
@@ -371,12 +375,21 @@ export const executeWorldEnginePreparedStep = async (input: {
       updated_at: Date.now()
     });
 
-    // Evaluate state_transforms: compute range-based derived state keys
-    // for all actors and append the resulting delta operations before persist.
+    // Fetch world state snapshot: shared by state_transform_evaluator and
+    // StepContributors to avoid redundant DB queries.
     const logger = createLogger('state_transform_evaluator');
-    const [worldEntities, entityStates] = await Promise.all([
+    const [
+      worldEntities,
+      entityStates,
+      authorityGrants,
+      mediatorBindings,
+      ruleExecutionRecords
+    ] = await Promise.all([
       listPackWorldEntities(input.context.packStorageAdapter, packId),
-      listPackEntityStates(input.context.packStorageAdapter, packId)
+      listPackEntityStates(input.context.packStorageAdapter, packId),
+      listPackAuthorityGrants(input.context.packStorageAdapter, packId),
+      listPackMediatorBindings(input.context.packStorageAdapter, packId),
+      listPackRuleExecutionRecords(input.context.packStorageAdapter, packId)
     ]);
 
     const actorEntityIds = new Set(
@@ -429,6 +442,48 @@ export const executeWorldEnginePreparedStep = async (input: {
 
       if (transformOps.length > 0) {
         prepared.state_delta.operations.push(...transformOps);
+      }
+    }
+
+    // StepContributors: iterate registered plugin contributors and merge their
+    // delta operations into the prepared step before persistence.
+    const stepContributors = pluginRuntimeRegistry.getStepContributors(packId);
+    if (stepContributors.length > 0) {
+      const sessionContext: WorldEngineSessionContext = {
+        pack_id: packId,
+        mode: 'active',
+        current_tick: input.packRuntime?.getCurrentTick()?.toString() ?? input.prepareInput.step_ticks,
+        current_revision: input.prepareInput.base_revision ?? '0',
+        world_entities: worldEntities as unknown as ReadonlyArray<Record<string, unknown>>,
+        entity_states: entityStates as unknown as ReadonlyArray<Record<string, unknown>>,
+        authority_grants: authorityGrants as unknown as ReadonlyArray<Record<string, unknown>>,
+        mediator_bindings: mediatorBindings as unknown as ReadonlyArray<Record<string, unknown>>,
+        rule_execution_records: ruleExecutionRecords as unknown as ReadonlyArray<Record<string, unknown>>
+      };
+
+      for (const contributor of stepContributors) {
+        try {
+          const contribution = await contributor.contributePrepare(
+            input.prepareInput,
+            sessionContext
+          );
+          if (contribution) {
+            if (contribution.delta_operations.length > 0) {
+              prepared.state_delta.operations.push(...contribution.delta_operations);
+            }
+            if (contribution.emitted_events.length > 0) {
+              prepared.emitted_events.push(...contribution.emitted_events);
+            }
+            if (contribution.observability.length > 0) {
+              prepared.observability.push(...contribution.observability);
+            }
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          logger.warn(
+            `StepContributor ${contributor.name} failed for pack ${packId}: ${message}`
+          );
+        }
       }
     }
 

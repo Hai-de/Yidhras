@@ -29,7 +29,7 @@ describe('plugin runtime experimental pack scope integration', () => {
           id: 'plugin.experimental.alpha',
           name: 'Plugin Experimental Alpha',
           version: '0.1.0',
-          kind: 'operator',
+          kind: 'ui_panel',
           entrypoints: {
             web: {
               runtime: 'browser_esm',
@@ -45,8 +45,6 @@ describe('plugin runtime experimental pack scope integration', () => {
             server: {
               context_sources: [],
               prompt_workflow_steps: [],
-              intent_grounders: [],
-              pack_projections: [],
               api_routes: []
             },
             web: {

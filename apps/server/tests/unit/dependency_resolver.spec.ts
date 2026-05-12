@@ -29,7 +29,7 @@ const makeManifest = (overrides: Partial<PluginManifest> = {}): PluginManifest =
     id: 'test-plugin',
     name: 'Test Plugin',
     version: '1.0.0',
-    kind: 'test',
+    kind: 'other',
     compatibility: {
       yidhras: '>=0.1.0',
       pack_id: 'test-pack'

@@ -34,7 +34,7 @@ describe('plugin runtime web integration', () => {
           id: 'plugin.alpha',
           name: 'Plugin Alpha',
           version: '0.1.0',
-          kind: 'operator',
+          kind: 'ui_panel',
           entrypoints: {
             web: {
               runtime: 'browser_esm',
@@ -50,8 +50,6 @@ describe('plugin runtime web integration', () => {
             server: {
               context_sources: [],
               prompt_workflow_steps: [],
-              intent_grounders: [],
-              pack_projections: [],
               api_routes: []
             },
             web: {
@@ -133,7 +131,7 @@ describe('plugin runtime web integration', () => {
           id: 'plugin.experimental.web.alpha',
           name: 'Plugin Experimental Web Alpha',
           version: '0.1.0',
-          kind: 'operator',
+          kind: 'ui_panel',
           entrypoints: {
             web: {
               runtime: 'browser_esm',
@@ -149,8 +147,6 @@ describe('plugin runtime web integration', () => {
             server: {
               context_sources: [],
               prompt_workflow_steps: [],
-              intent_grounders: [],
-              pack_projections: [],
               api_routes: []
             },
             web: {
@@ -256,7 +252,7 @@ describe('plugin runtime web integration', () => {
           id: 'plugin.beta',
           name: 'Plugin Beta',
           version: '0.1.0',
-          kind: 'operator',
+          kind: 'ui_panel',
           entrypoints: {
             web: {
               runtime: 'browser_esm',
@@ -272,8 +268,6 @@ describe('plugin runtime web integration', () => {
             server: {
               context_sources: [],
               prompt_workflow_steps: [],
-              intent_grounders: [],
-              pack_projections: [],
               api_routes: []
             },
             web: {

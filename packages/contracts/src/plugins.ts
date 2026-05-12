@@ -63,15 +63,78 @@ export const pluginAuditEventCodeSchema = z.enum([
   'plugin_reconfirmation_required'
 ])
 
+// Structured contribution schemas — each contribution type carries type-specific
+// metadata so manifest declarations are self-describing, not just name stubs.
+
+const contributionBaseSchema = z.object({
+  name: nonEmptyStringSchema,
+  priority: z.number().int().default(0)
+})
+
+export const contextSourceContributionSchema = contributionBaseSchema.extend({
+  adapterType: z.enum(['entity_state', 'world_state', 'relationship', 'custom']).default('custom'),
+  config: z.record(z.string(), z.unknown()).default({})
+})
+
+export const promptWorkflowStepContributionSchema = contributionBaseSchema.extend({
+  stepKind: z.enum([
+    'memory_projection',
+    'node_working_set_filter',
+    'node_grouping',
+    'summary_compaction',
+    'token_budget_trim',
+    'placement_resolution',
+    'fragment_assembly',
+    'behavior_control',
+    'content_transform',
+    'permission_filter',
+    'bundle_finalize'
+  ]),
+  config: z.record(z.string(), z.unknown()).default({})
+})
+
+export const apiRouteContributionSchema = contributionBaseSchema.extend({
+  path: nonEmptyStringSchema,
+  method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).default('GET')
+})
+
+export const stepContributorContributionSchema = contributionBaseSchema.extend({
+  config: z.record(z.string(), z.unknown()).default({})
+})
+
+export const ruleContributorContributionSchema = contributionBaseSchema.extend({
+  supportsRuleIds: z.array(nonEmptyStringSchema).default([]),
+  config: z.record(z.string(), z.unknown()).default({})
+})
+
+export const queryContributorContributionSchema = contributionBaseSchema.extend({
+  supportsQueryNames: z.array(nonEmptyStringSchema).default([]),
+  config: z.record(z.string(), z.unknown()).default({})
+})
+
+export const dataCleanerContributionSchema = contributionBaseSchema.extend({
+  trigger: z.enum(['on_tick', 'on_unload']).default('on_tick'),
+  config: z.record(z.string(), z.unknown()).default({})
+})
+
+export const pluginKindSchema = z.enum([
+  'game_loop',
+  'context_provider',
+  'rule_engine',
+  'perception',
+  'ui_panel',
+  'tool_provider',
+  'other'
+])
+
 export const pluginServerContributionsSchema = z.object({
-  context_sources: z.array(nonEmptyStringSchema).default([]),
-  prompt_workflow_steps: z.array(nonEmptyStringSchema).default([]),
-  intent_grounders: z.array(nonEmptyStringSchema).default([]),
-  pack_projections: z.array(nonEmptyStringSchema).default([]),
-  api_routes: z.array(nonEmptyStringSchema).default([]),
-  step_contributors: z.array(nonEmptyStringSchema).default([]),
-  rule_contributors: z.array(nonEmptyStringSchema).default([]),
-  query_contributors: z.array(nonEmptyStringSchema).default([])
+  context_sources: z.array(contextSourceContributionSchema).default([]),
+  prompt_workflow_steps: z.array(promptWorkflowStepContributionSchema).default([]),
+  api_routes: z.array(apiRouteContributionSchema).default([]),
+  step_contributors: z.array(stepContributorContributionSchema).default([]),
+  rule_contributors: z.array(ruleContributorContributionSchema).default([]),
+  query_contributors: z.array(queryContributorContributionSchema).default([]),
+  data_cleaners: z.array(dataCleanerContributionSchema).default([])
 })
 
 export const pluginWebPanelContributionSchema = z.object({
@@ -110,7 +173,7 @@ export const pluginManifestSchema = z.object({
   id: nonEmptyStringSchema,
   name: nonEmptyStringSchema,
   version: semverStringSchema,
-  kind: nonEmptyStringSchema,
+  kind: pluginKindSchema,
   entrypoints: z
     .object({
       server: pluginEntrypointSchema.optional(),
@@ -134,12 +197,11 @@ export const pluginManifestSchema = z.object({
     server: pluginServerContributionsSchema.default({
       context_sources: [],
       prompt_workflow_steps: [],
-      intent_grounders: [],
-      pack_projections: [],
       api_routes: [],
       step_contributors: [],
       rule_contributors: [],
-      query_contributors: []
+      query_contributors: [],
+      data_cleaners: []
     }),
     web: pluginWebContributionsSchema.default({
       panels: [],

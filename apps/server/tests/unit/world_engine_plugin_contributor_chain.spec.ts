@@ -44,12 +44,11 @@ describe('world engine plugin contributor chain', () => {
             server: {
               context_sources: [],
               prompt_workflow_steps: [],
-              intent_grounders: [],
-              pack_projections: [],
               api_routes: [],
-              step_contributors: ['mock_plugin_step'],
+              step_contributors: [{ name: 'mock_plugin_step', priority: 0, config: {} }],
               rule_contributors: [],
-              query_contributors: []
+              query_contributors: [],
+              data_cleaners: []
             },
             web: { panels: [], routes: [], menu_items: [] }
           }

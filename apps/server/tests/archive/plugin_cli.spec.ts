@@ -63,7 +63,7 @@ const createCliContext = (): PluginCliContext => ({
           id: 'plugin.alpha',
           name: 'Plugin Alpha',
           version: '0.1.0',
-          kind: 'operator',
+          kind: 'ui_panel',
           entrypoints: {
             server: {
               runtime: 'node_esm',
@@ -79,8 +79,6 @@ const createCliContext = (): PluginCliContext => ({
             server: {
               context_sources: [],
               prompt_workflow_steps: [],
-              intent_grounders: [],
-              pack_projections: [],
               api_routes: []
             },
             web: {

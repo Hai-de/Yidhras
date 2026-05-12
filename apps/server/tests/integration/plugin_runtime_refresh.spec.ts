@@ -27,7 +27,7 @@ describe('plugin runtime refresh integration', () => {
           id: 'plugin.runtime.alpha',
           name: 'Plugin Runtime Alpha',
           version: '0.1.0',
-          kind: 'operator',
+          kind: 'ui_panel',
           entrypoints: {
             server: {
               runtime: 'node_esm',
@@ -47,9 +47,7 @@ describe('plugin runtime refresh integration', () => {
             server: {
               context_sources: [],
               prompt_workflow_steps: [],
-              intent_grounders: [],
-              pack_projections: [],
-              api_routes: ['/api/packs/:packId/plugins/:pluginId/runtime-alpha']
+              api_routes: [{ name: 'runtime-alpha', path: '/api/packs/:packId/plugins/:pluginId/runtime-alpha', method: 'GET', priority: 0 }]
             },
             web: {
               panels: [{ target: 'operator.pack_overview', panel_id: 'runtime_alpha_panel' }],

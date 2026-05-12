@@ -32,7 +32,7 @@ const createArtifact = (input: ArtifactInput) => ({
     id: input.plugin_id,
     name: input.plugin_id,
     version: '1.0.0',
-    kind: 'test',
+    kind: 'other',
     entrypoints: {},
     compatibility: { yidhras: '>=0.5.0', pack_id: PACK_ID },
     requested_capabilities: [],
@@ -40,8 +40,6 @@ const createArtifact = (input: ArtifactInput) => ({
       server: {
         context_sources: [],
         prompt_workflow_steps: [],
-        intent_grounders: [],
-        pack_projections: [],
         api_routes: [],
         step_contributors: [],
         rule_contributors: [],

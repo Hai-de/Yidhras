@@ -1,8 +1,11 @@
 # 项目通用能力缺口分析
 
 > 评估时间: 2026-05-11
+> 复审时间: 2026-05-12（多包对等重构完成后）
 > 触发: TODO.md 原型世界包插件问题审查 — StepContributor 未接入 sim loop、manifest 字段全为 `string[]`
 > 关联: `.limcode/design/prototype-world-pack-implementation.md`、`.limcode/design/spatial-semantics-design.md`、`TODO.md`
+>
+> **复审说明**: 多包对等重构（Phase 0-3, 8 commits: `0ec423b..369670d`）将 `SimulationManager` 拆分为 per-pack `PackRuntimePort` + `MultiPackLoopHost`，但不改变本文档识别的任何能力缺口。§11 已根据重构后的架构更新讨论。
 
 ## 一、发现的缺口总览
 
@@ -22,7 +25,9 @@
 | `prompt_workflow_steps` | `host.registerPromptWorkflowStep()` → `PluginRuntimeRegistry` | `getPromptWorkflowStepExecutors()` 无外部调用者；管线使用独立的 `PromptWorkflowStepRegistry`，两套注册表未合并 |
 | `data_cleaner` | `host.registerDataCleaner()` → `DataCleanerRegistry` | `DataCleanerRegistry` 无消费者；无管线读取它 |
 
-另外两个字段（`intent_grounders`、`pack_projections`）存在于 schema 中但连 Host API 注册方法都没有——全代码库零引用。
+另外两个字段（`intent_grounders`、`pack_projections`）存在于 schema 中但连 Host API 注册方法都没有——全代码库零引用。处置建议：要么从 schema 中删除并标记为预留字段，要么实现对应的 Host API 注册方法 + 消费者。当前"存在但无用"的状态会增加新贡献者的困惑。
+
+**旁注: `state_transform_evaluator` 的奇怪位置。** `state_transform_evaluator.ts` 是完整接入的求值逻辑，但既不通过 Rust 边车，也不通过 PluginRuntimeRegistry 的 StepContributor 机制。它直接硬编码在 `executeWorldEnginePreparedStep`（`world_engine_persistence.ts:376-433`）。这构成了第三种集成模式——功能完整但走专有路径。它应改为 StepContributor，作为验证 StepContributor 接入机制的试用案例。
 
 **现状影响:** `snowbound_mansion` 的 `snowbound-game-loop` 插件注册了一个每日循环 StepContributor，该逻辑永远不会执行。
 
@@ -117,7 +122,7 @@ Web 端已经有结构化类型: `panels: z.array(pluginWebPanelContributionSche
 
 ## 八、测试基础设施缺口
 
-- 无 mock AI provider（推理测试依赖真实模型或手动 mock）
+- mock AI provider 已存在（`ai/providers/mock.ts` + `inference/providers/mock.ts`），但缺失特定故障场景（网络分区、部分响应、token 限制触发）
 - 无时间操控辅助函数（不能快进 tick）
 - 无快照种子化测试（必须从模板 pack 复制）
 - 无基于属性的测试 / 模糊测试基础设施
@@ -129,7 +134,7 @@ Web 端已经有结构化类型: `panels: z.array(pluginWebPanelContributionSche
 
 ### P0 — 阻塞原型世界包验证
 
-1. **StepContributor 接入 sim loop**: 在 `stepPackWorldEngine` 中调用 `getStepContributors()` 并执行 `contributePrepare()`
+1. **StepContributor 接入 sim loop**: 在 `executeWorldEnginePreparedStep` 中（`world_engine_persistence.ts`，Rust 边车返回后、持久化前）调用 `getStepContributors()` 并执行每个 contributor 的 `contributePrepare()`，将返回的 delta operations 合并到 prepared step。建议先将 `state_transform_evaluator` 实现为第一个 StepContributor 以验证路径。
 2. **RuleContributor / QueryContributor 接入**: 桥接 PluginRuntimeRegistry 到世界引擎规则/查询执行
 
 ### P1 — 原型世界包需要的通用能力
@@ -179,12 +184,13 @@ Web 端已经有结构化类型: `panels: z.array(pluginWebPanelContributionSche
 
 **"Web 端已经有结构化类型"（第五节）夸大。** 实际上 `pluginWebContributionsSchema` 的三个字段中只有 `panels` 是结构化对象 `{ target, panel_id }`，`routes` 和 `menu_items` 同样是 `z.array(nonEmptyStringSchema)`。Server 端 7 个字段全部是 `string[]`，Web 端 3 个字段 1 个结构化。对比应精确为"Web 端 panels 已结构化 vs Server 端全部未结构化"，不宜暗示 Web 端已全面领先。
 
-**第十节称 PerceptionResolver 是"少数完整接入的插件扩展点"。** 实际还有两个同样完整接入的扩展点被遗漏：
+**第十节称 PerceptionResolver 是"少数完整接入的插件扩展点"。** 实际还有多个同样完整接入的扩展点被遗漏：
 
 - `SlotConditionRegistry` — `apps/server/src/inference/slot_condition_evaluators.ts:417` 消费
 - `SlotContentTransformRegistry` — `apps/server/src/context/workflow/executors/content_transform.ts:65` 消费
+- `state_transform_evaluator` — `apps/server/src/app/runtime/world_engine_persistence.ts:376-433` 消费
 
-这两个是已验证可工作的正面参考模式，应一并列出。
+**共同问题**: 所有四个扩展点都以不同方式接入管线——没有一个通过统一的 `PluginRuntimeRegistry` contributor 机制。PerceptionResolver 走 `perception_pipeline.ts` 直连，两个 Slot 注册表走 context workflow 管线，`state_transform_evaluator` 硬编码在 `executeWorldEnginePreparedStep`。这意味着每新增一个扩展点类型就在管线中开一个特定插槽，缺乏通用接入约定。`StepContributor` 接口本应是这个约定，但它没有任何消费者。
 
 ### 11.3 重大盲点：插件生命周期
 
@@ -222,6 +228,8 @@ Web 端已经有结构化类型: `panels: z.array(pluginWebPanelContributionSche
 - 包无法在 manifest 中声明对另一个包的依赖
 - 唯一的跨包能力是叙事投影服务（`pack_narrative_projection_service.ts`）对其它包数据的只读视图
 
+**2026-05-12 更新**: 多包对等重构完成了必要的基础层——每包现在有独立的 `PackRuntimePort` 句柄和 `MultiPackLoopHost` 作为统一的 loop 管理器。跨包通信仍是缺失的，但重构提供了清晰的边界：每个包的运行时状态、时钟、loop 均通过 `PackRuntimePort` 隔离，未来任何跨包机制（事件总线、状态共享）可以在这层边界上以明确定义的接口构建，而非侵入单体 `SimulationManager`。
+
 ### 11.7 重大盲点：类型安全缺口比描述的更广
 
 第五节只聚焦 manifest schema，以下区域同样是裸字符串无枚举约束：
@@ -242,7 +250,23 @@ Web 端已经有结构化类型: `panels: z.array(pluginWebPanelContributionSche
 
 ### 11.9 文档内部逻辑断裂
 
-**P0→P1 递进存在架构张力未讨论。** P0 要接入 StepContributor 到 sim loop，而 StepContributor 的 `contributePrepare()` 调用的自然位置是 step 2（Rust 边车步）。这就产生了一个选择：在 Rust 边车前后插入 JS 贡献者（破坏边车原子性），还是让 Rust 边车回调 JS（需新增 IPC 协议）。文档未讨论这个架构决策。
+**P0→P1 递进存在架构张力已部分解决。** P0 要接入 StepContributor 到 sim loop，而 StepContributor 的 `contributePrepare()` 调用的自然位置是 step 2（世界引擎步）。原分析提出的两难——破坏 Rust 边车原子性 vs 新增 IPC 回调——现在有第三条路径，已验证可工作：
+
+`executeWorldEnginePreparedStep`（`world_engine_persistence.ts:346-484`）的流程是：① Rust 边车 `prepareStep` 返回 → ② **TS 侧注入附加 delta 操作**（`evaluateStateTransforms` 在 :376-433）→ ③ 持久化合并后的 delta → ④ commit。StepContributor 的 `contributePrepare()` 可以在同一个位置（步骤②之后）调用——Rust 边车返回基础的 `__world__` 时钟 delta，TS-side StepContributors 追加 actor-level 操作，合并后一起持久化。这不需要修改 Rust 协议，不破坏边车原子性（边车的 prepared state 是自包含的），且利用了现有的 TS 侧注入点。
+
+具体接入方案：
+```
+executeWorldEnginePreparedStep 内部:
+  1. worldEngine.prepareStep(input)           // Rust 边车返回 base delta
+  2. evaluateStateTransforms(...)              // 现有的 TS 侧注入
+  3. for contributor of getStepContributors(): // 新增：遍历已注册贡献者
+       contribution = contributor.contributePrepare(input, context)
+       prepared.state_delta.operations.push(...contribution.delta_operations)
+  4. persistence.persistPreparedStep(...)      // 合并持久化
+  5. worldEngine.commitPreparedStep(...)       // 提交
+```
+
+建议先将 `state_transform_evaluator` 迁移为第一个 StepContributor，以验证该机制并消除专有代码路径。
 
 **`kind` 字段枚举化的向后兼容未处理。** 第五节提了、P1 列了 `kind` 枚举化，但已有插件如果 `kind: "game_loop"` 不在新枚举中怎么办——拒绝加载还是静默映射？未说明。
 
@@ -250,4 +274,9 @@ Web 端已经有结构化类型: `panels: z.array(pluginWebPanelContributionSche
 
 **优先级排序缺少可观测性前置。** P2 的"结构化指标基础设施"是验证 P0/P1 改动效果的前提——没有 tick 延迟指标，接入 StepContributor 后无法评估性能影响。可观测性通常应先于功能改动或用同一批次交付。
 
-**`intent_grounders` 和 `pack_projections` 未给出处置建议。** 第二节末尾指出它们"全代码库零引用"（连 Host API 注册方法都没有），但在优先级建议中完全消失。应明确：删除、实现、还是标记为预留字段暂缓？
+**`intent_grounders` 和 `pack_projections` 未给出处置建议。** 第二节末尾指出它们"全代码库零引用"（连 Host API 注册方法都没有），但在优先级建议中完全消失。处置选择：
+- **删除**: 从 `pluginServerContributionsSchema` 中移除这两个字段，在需要时重新添加
+- **实现**: 为它们添加 Host API 注册方法 + 消费者（类似于 PerceptionResolver 的接入模式）
+- **标记为预留**: 在 schema 注释中标明为未来预留，但在文档中明确说明当前不可用
+
+当前两字段处于"既未删除也未实现"的中间态，对包作者造成困惑。推荐短期删除、中期按需实现。

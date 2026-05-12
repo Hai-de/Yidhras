@@ -66,7 +66,7 @@ const seedPlugin = async (
       id: seed.plugin_id,
       name: seed.plugin_id,
       version: '1.0.0',
-      kind: 'test',
+      kind: 'other',
       entrypoints: {},
       compatibility: { yidhras: '>=0.5.0', pack_id: PACK_ID },
       requested_capabilities: [],
@@ -74,8 +74,6 @@ const seedPlugin = async (
         server: {
           context_sources: [],
           prompt_workflow_steps: [],
-          intent_grounders: [],
-          pack_projections: [],
           api_routes: [],
           step_contributors: [],
           rule_contributors: [],

@@ -2,7 +2,7 @@ manifest_version: "plugin/v1"
 id: "template-engine"
 name: "Template Engine Cleaner"
 version: "1.0.0"
-kind: "data_cleaner"
+kind: "tool_provider"
 
 entrypoints:
   server:
@@ -19,8 +19,6 @@ contributions:
   server:
     context_sources: []
     prompt_workflow_steps: []
-    intent_grounders: []
-    pack_projections: []
     api_routes: []
     step_contributors: []
     rule_contributors: []
