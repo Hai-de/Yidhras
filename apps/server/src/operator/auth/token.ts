@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import * as jwt from 'jsonwebtoken'
 
 import type { AppInfrastructure } from '../../app/context.js'
+import { resolvePackTick } from '../../app/services/pack_runtime_resolution.js';
 import { getOperatorAuthConfig } from '../../config/runtime_config.js'
 import type { JwtPayload, OperatorContext } from './types.js'
 
@@ -50,14 +51,14 @@ export const createSession = async (
   const decoded = jwt.decode(token) as JwtPayload | null
   const expiresAt = decoded?.exp
     ? BigInt(decoded.exp * 1000)
-    : context.clock.getCurrentTick()
+    : resolvePackTick(context)
 
   await context.repos.identityOperator.createSession({
     operator_id: operatorId,
     token_hash: tokenHash,
     pack_id: packId ?? null,
     expires_at: expiresAt,
-    created_at: context.clock.getCurrentTick()
+    created_at: resolvePackTick(context)
   })
 }
 
@@ -77,7 +78,7 @@ export const findActiveSession = async (
   token: string
 ): Promise<{ operatorId: string; packId: string | null } | null> => {
   const tokenHash = computeTokenHash(token)
-  const now = context.clock.getCurrentTick()
+  const now = resolvePackTick(context)
 
   const session = await context.repos.identityOperator.findSessionByTokenHash(tokenHash, now)
 

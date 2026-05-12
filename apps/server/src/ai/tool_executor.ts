@@ -1,5 +1,6 @@
 import type { AppContext } from '../app/context.js';
 import type { PackRuntimePort } from '../app/services/pack_runtime_ports.js';
+import { resolveAllTimes, resolvePackTick } from '../app/services/pack_runtime_resolution.js';
 import { listActiveSchedulerAgents } from '../app/services/inference_workflow/scheduler_signal_repository.js';
 import { listPackWorldEntities } from '../packs/storage/entity_repo.js';
 import type { ToolPermissionPolicy } from './tool_permissions.js';
@@ -231,10 +232,9 @@ export const createToolRegistry = (toolEntries?: AiToolRegistryEntry[], permissi
 
   registerWithSchema('get_clock_state', {
     execute(_args, ctx) {
-      const tick = ctx.context.activePackRuntime?.getCurrentTick()
-        ?? ctx.context.clock.getCurrentTick();
+      const tick = resolvePackTick(ctx.context);
 
-      const times = ctx.context.activePackRuntime?.getAllTimes?.() ?? [];
+      const times = resolveAllTimes(ctx.context);
 
       return Promise.resolve({
         current_tick: tick.toString(),

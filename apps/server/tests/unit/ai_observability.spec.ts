@@ -30,13 +30,10 @@ const createMockAppContext = (overrides?: {
     aiInvocationRecord: { upsert: upsertFn }
   } as unknown as AppContext['prisma'];
 
-  const clock = { getCurrentTick: () => overrides?.tick ?? 1000n, getAllTimes: () => [], tick: () => {}, setTicks: () => {}, getTicks: () => overrides?.tick ?? 1000n };
+  const testTick = overrides?.tick ?? 1000n;
   return {
     repos: wrapPrismaAsRepositories(prisma as PrismaClient),
     prisma,
-    clock: { getCurrentTick: () => overrides?.tick ?? 1000n } as AppContext['clock'],
-    clock: clock as AppContext['clock'],
-    activePack: { getActivePack: () => undefined, getCurrentRevision: () => 0n } as AppContext['activePack'],
     notifications: { push: vi.fn(), getMessages: vi.fn(() => []), clear: vi.fn() },
     startupHealth: {
       level: 'ok' as const,
@@ -57,7 +54,36 @@ const createMockAppContext = (overrides?: {
     setRuntimeLoopDiagnostics: vi.fn(),
     getHttpApp: vi.fn(() => null),
     setHttpApp: vi.fn(),
-    worldEngineStepCoordinator: null as unknown as AppContext['worldEngineStepCoordinator']
+    worldEngineStepCoordinator: null as unknown as AppContext['worldEngineStepCoordinator'],
+    packRuntimeLookup: {
+      getActivePackId: () => 'test-pack',
+      hasPackRuntime: () => true,
+      assertPackScope: (id: string) => id,
+      getPackRuntimeSummary: () => null
+    },
+    getPackRuntimeHandle: () => null,
+    getPackRuntimeHost: (id: string) => ({
+      getCurrentTick: () => testTick,
+      getCurrentRevision: () => testTick,
+      getPack: () => ({ metadata: { id, name: 'test', version: '0.0.0' } }),
+      getStepTicks: () => 1n,
+      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null }),
+      setRuntimeSpeedOverride: vi.fn(),
+      clearRuntimeSpeedOverride: vi.fn(),
+      getAllTimes: () => [],
+      step: vi.fn().mockResolvedValue(undefined),
+      getPackSlotDeclarations: () => null,
+      applyClockProjection: vi.fn(),
+      getHealthSnapshot: () => ({ status: 'ok', message: null }),
+      getClockSnapshot: () => ({ current_tick: testTick.toString(), current_revision: testTick.toString() }),
+      getHandle: vi.fn(),
+      getClock: vi.fn(),
+      load: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+      dispose: vi.fn(),
+      getPackId: () => id
+    }) as unknown as import('../../src/core/pack_runtime_host.js').PackRuntimeHost
   } as unknown as AppContext;
 };
 

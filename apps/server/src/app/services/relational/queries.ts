@@ -1,6 +1,7 @@
 import { ApiError } from '../../../utils/api_error.js'
 import type { AppContext } from '../../context.js';
 import type { PackRuntimePort } from '../pack_runtime_ports.js';
+import { resolvePackTick } from '../pack_runtime_resolution.js';
 import {
   DEFAULT_RELATIONSHIP_LOG_LIMIT,
   type ListAtmosphereNodesInput,
@@ -18,7 +19,7 @@ export const listAtmosphereNodes = async (
 ) => {
   const ownerId = typeof input.owner_id === 'string' ? input.owner_id.trim() : '';
   const includeExpired = input.include_expired === true;
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = resolvePackTick(context, packRuntime);
 
   return context.repos.agent.listAtmosphereNodes(
     {

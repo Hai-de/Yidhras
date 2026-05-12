@@ -3,6 +3,7 @@ import type { Express, Request, Response } from 'express';
 import path from 'path';
 
 import type { AppInfrastructure } from '../app/context.js';
+import { resolveActivePack } from '../app/services/pack_runtime_resolution.js';
 import type {
   QueryContributor,
   RuleContributor,
@@ -347,7 +348,7 @@ const activatePluginEntrypoint = async (
 };
 
 export const syncActivePackPluginRuntime = async (context: Ctx): Promise<void> => {
-  const activePackId = context.activePack.getActivePack()?.metadata.id;
+  const activePackId = resolveActivePack(context)?.metadata.id;
   if (!activePackId) {
     return;
   }
@@ -377,7 +378,7 @@ export const syncExperimentalPackPluginRuntime = async (
 };
 
 export const refreshActivePackPluginRuntime = async (context: Ctx): Promise<void> => {
-  const activePack = context.activePack.getActivePack();
+  const activePack = resolveActivePack(context);
   if (!activePack) {
     return;
   }

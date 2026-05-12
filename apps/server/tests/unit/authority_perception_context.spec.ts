@@ -48,9 +48,6 @@ describe('authority/perception/context assembly', () => {
 
     const appContext: AppContext & { identity?: { id: string; type: 'agent'; name: string } } = {
       sim,
-      clock: sim as AppContext['clock'],
-      activePack: sim as AppContext['activePack'],
-      activePackRuntime: sim as AppContext['activePackRuntime'],
       prisma,
       packStorageAdapter: new SqlitePackStorageAdapter(),
       repos: createPrismaRepositories(prisma),
@@ -79,7 +76,31 @@ describe('authority/perception/context assembly', () => {
       },
       assertRuntimeReady(): void {
         // noop for unit test
-      }
+      },
+      packRuntimeLookup: {
+        getActivePackId: () => {
+          const ids = sim.listLoadedPackRuntimeIds();
+          return ids.length > 0 ? ids[0] : null;
+        },
+        hasPackRuntime: packId => sim.listLoadedPackRuntimeIds().includes(packId),
+        assertPackScope: (id: string) => id,
+        getPackRuntimeSummary: packId => {
+          const handle = sim.getPackRuntimeHandle(packId);
+          if (!handle) return null;
+          return {
+            pack_id: handle.pack_id,
+            pack_folder_name: handle.pack_folder_name,
+            health_status: handle.getHealthSnapshot().status,
+            current_tick: handle.getClockSnapshot().current_tick,
+            runtime_ready: true
+          };
+        }
+      },
+      getPackRuntimeHost: packId => {
+        const host = sim.getPackRuntimeRegistry().getHost(packId);
+        return host ?? null;
+      },
+      getPackRuntimeHandle: packId => sim.getPackRuntimeHandle(packId) ?? null
     };
 
     appContext.identity = {

@@ -9,6 +9,7 @@ import type { IdentityContext } from '../../identity/types.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from './pack_runtime_ports.js';
+import { resolvePackTick } from './pack_runtime_resolution.js';
 
 export interface ListSocialFeedInput {
   limit?: number | string;
@@ -447,6 +448,6 @@ export const createSocialPost = async (
     author_id: resolvedIdentity.id,
     source_action_intent_id: options?.source_action_intent_id ?? null,
     content,
-    created_at: (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick())
+    created_at: resolvePackTick(context, packRuntime)
   });
 };

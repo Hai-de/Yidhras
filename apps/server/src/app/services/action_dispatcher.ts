@@ -2,6 +2,7 @@ import { dispatchInvocationFromActionIntent } from '../../domain/invocation/invo
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from './pack_runtime_ports.js';
+import { resolveActivePack, resolvePackTick } from './pack_runtime_resolution.js';
 import { type ActionIntentRecord,assertActionIntentLockOwnership } from './action_intent_repository.js';
 import {
   createEventEvidence,
@@ -102,9 +103,9 @@ const resolveDropDecision = (
 const dispatchTriggerEventIntent = async (context: AppContext, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
   const actor = resolveTriggerEventActor(intent.actor_ref);
   const payload = resolveTriggerEventPayload(intent.payload);
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = resolvePackTick(context, packRuntime);
 
-  const activePack = context.activePackRuntime?.getActivePack();
+  const activePack = resolveActivePack(context, packRuntime);
   const impactData = {
     ...(payload.impact_data ?? {}),
     pack_id: activePack?.metadata.id ?? null,
@@ -145,7 +146,7 @@ const resolveMovePayload = (payload: unknown): { entity_id: string; target_locat
 
 const dispatchMoveIntent = async (context: AppContext, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
   const payload = resolveMovePayload(intent.payload);
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = resolvePackTick(context, packRuntime);
 
   const spatialRuntime = context.getSpatialRuntime?.();
   if (!spatialRuntime) {
@@ -170,7 +171,7 @@ const dispatchAdjustSnrIntent = async (context: AppContext, intent: ActionIntent
   resolveAdjustSnrActorAgentId(intent.actor_ref);
   const targetAgentId = resolveAdjustSnrTargetAgentId(intent.target_ref);
   const payload = resolveAdjustSnrPayload(intent.payload);
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = resolvePackTick(context, packRuntime);
 
   const targetAgent = await getAgentSnrTargetById(context, targetAgentId);
   if (!targetAgent) {
@@ -211,7 +212,7 @@ const dispatchAdjustRelationshipIntent = async (context: AppContext, intent: Act
   const actorAgentId = resolveActiveAgentIdFromActorRef(intent.actor_ref);
   const targetAgentId = await resolveRelationshipTargetAgentId(context, intent.target_ref, actorAgentId);
   const payload = resolveAdjustRelationshipPayload(intent.payload);
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = resolvePackTick(context, packRuntime);
 
   const existing = await getRelationshipByCompositeKey(context, {
     from_id: actorAgentId,
@@ -309,7 +310,7 @@ export const dispatchActionIntent = async (
   intent: ActionIntentRecord,
   packRuntime?: PackRuntimePort
 ): Promise<{ outcome: 'completed' | 'dropped'; reason: string | null }> => {
-  assertActionIntentLockOwnership(intent, intent.locked_by ?? '', (packRuntime?.getCurrentTick() ?? (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick())));
+  assertActionIntentLockOwnership(intent, intent.locked_by ?? '', resolvePackTick(context, packRuntime));
 
   const invocationResult = await dispatchInvocationFromActionIntent(context, {
     id: intent.id,

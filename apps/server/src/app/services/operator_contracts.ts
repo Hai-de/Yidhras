@@ -1,6 +1,7 @@
 import { getPackEntityOverviewProjection } from '../../packs/runtime/projections/entity_overview_service.js';
 import type { AppContext } from '../context.js';
 import { buildExtendedInferenceContext } from './context_assembler.js';
+import { resolveActivePack } from './pack_runtime_resolution.js';
 
 export interface OperatorAuthorityInspectorSnapshot {
   pack: {
@@ -44,7 +45,7 @@ export interface OperatorAdvancedContractsSnapshot {
 }
 
 const resolvePackMetadata = (context: AppContext) => {
-  const pack = context.activePackRuntime?.getActivePack();
+  const pack = resolveActivePack(context);
   if (!pack) {
     throw new Error('World pack not ready for operator advanced contracts');
   }

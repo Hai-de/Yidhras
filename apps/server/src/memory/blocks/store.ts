@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 
 import type { AppInfrastructure } from '../../app/context.js';
 import { getErrorMessage } from '../../app/http/errors.js';
+import { resolvePackTick } from '../../app/services/pack_runtime_resolution.js';
 import { toJsonSafe } from '../../app/http/json.js';
 import type { AppContextPorts } from '../../app/services/app_context_ports.js';
 import type {
@@ -205,7 +206,7 @@ const isMissingMemoryBlockTablesError = (error: unknown): boolean => {
   );
 };
 
-type MemoryBlockStoreContext = AppInfrastructure & Pick<AppContextPorts, 'activePackRuntime'>;
+type MemoryBlockStoreContext = AppInfrastructure;
 
 export const createPrismaLongMemoryBlockStore = (context: MemoryBlockStoreContext): LongMemoryBlockStore => {
   return {
@@ -368,7 +369,6 @@ export const createPrismaLongMemoryBlockStore = (context: MemoryBlockStoreContex
 
     async hardDeleteBlock(input: DeleteMemoryBlockInput): Promise<void> {
       try {
-        const activePackRuntime = context.activePackRuntime!;
         await context.prisma.$transaction(async prisma => {
           await prisma.memoryBlockDeletionAudit.create({
             data: {
@@ -377,7 +377,7 @@ export const createPrismaLongMemoryBlockStore = (context: MemoryBlockStoreContex
               deleted_by: input.deleted_by,
               actor_id: null,
               reason: input.reason ?? null,
-              deleted_at_tick: activePackRuntime.getCurrentTick()
+              deleted_at_tick: resolvePackTick(context)
             }
           });
 

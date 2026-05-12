@@ -116,35 +116,11 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, PackCatalogS
     return { effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null };
   }
 
-  /** @deprecated Use PackRuntimePort instead */
-  public setRuntimeSpeedOverride(_stepTicks: bigint): void {}
-
-  /** @deprecated Use PackRuntimePort instead */
-  public clearRuntimeSpeedOverride(): void {}
-
-  /** @deprecated Use PackRuntimePort instead */
-  public getAllTimes() { return []; }
-
-  /** @deprecated Use PackRuntimePort instead */
-  public async step(_amount?: bigint): Promise<void> {}
-
-  /** @deprecated Use PackRuntimePort instead */
-  public applyClockProjection(_snapshot: unknown): void {}
-
   /** @deprecated */
   public isRuntimeReady(): boolean { return this.listLoadedPackRuntimeIds().length > 0; }
 
   /** @deprecated */
-  public setRuntimeReady(_ready: boolean): void {}
-
-  /** @deprecated */
   public isPaused(): boolean { return false; }
-
-  /** @deprecated */
-  public setPaused(_paused: boolean): void {}
-
-  /** @deprecated */
-  public getSpatialRuntime() { return null; }
 
   public async prepareDatabase(): Promise<DatabaseHealthSnapshot> {
     return this.runtimeBootstrap.prepareDatabase();

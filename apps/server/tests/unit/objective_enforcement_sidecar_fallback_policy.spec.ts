@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
 
 import type { AppContext } from '../../src/app/context.js';
+import type { PackRuntimeHost } from '../../src/core/pack_runtime_host.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 import { dispatchInvocationFromActionIntent } from '../../src/domain/invocation/invocation_dispatcher.js';
 import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
@@ -108,6 +109,31 @@ const buildTestContext = (
     assertRuntimeReady() {
       // noop
     },
+    packRuntimeLookup: {
+      getActivePackId: () => pack.metadata.id,
+      hasPackRuntime: (packId: string) => packId.trim() === pack.metadata.id,
+      assertPackScope: (packId: string) => packId.trim(),
+      getPackRuntimeSummary: () => null
+    },
+    getPackRuntimeHost: (_packId: string) =>
+      ({
+        getCurrentTick: () => now,
+        getCurrentRevision: () => now,
+        getPack: () => pack,
+        getRuntimeSpeedSnapshot: () => ({
+          mode: 'fixed' as const,
+          source: 'default' as const,
+          configured_step_ticks: null,
+          override_step_ticks: null,
+          override_since: null,
+          effective_step_ticks: '1'
+        }),
+        getAllTimes: () => [],
+        getPackId: () => _packId,
+        getStepTicks: () => 1n,
+        step: async () => {},
+        applyClockProjection: () => {}
+      }) as PackRuntimeHost,
     worldEngine: options?.worldEngine
   };
 };

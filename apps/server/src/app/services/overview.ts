@@ -74,7 +74,7 @@ const hasPropagationIntent = (entry: AuditViewEntry): boolean => {
 };
 
 const readProjectedWorldTime = (context: AppContext): { tick: string; calendars: unknown } => {
-  const visibleClock = readVisibleClockSnapshot(context);
+  const visibleClock = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId: context.packRuntimeLookup?.getActivePackId() ?? undefined });
 
   return {
     tick: visibleClock.absolute_ticks,

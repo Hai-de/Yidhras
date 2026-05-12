@@ -4,6 +4,7 @@ import { logOperatorAudit } from '../../operator/audit/logger.js'
 import { AUDIT_ACTION } from '../../operator/constants.js'
 import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js'
+import { resolvePackTick } from './pack_runtime_resolution.js';
 
 export const createOperatorGrant = async (
   context: AppContext,
@@ -18,7 +19,7 @@ export const createOperatorGrant = async (
   },
   clientIp?: string
 ) => {
-  const now = context.activePackRuntime!.getCurrentTick()
+  const now = resolvePackTick(context)
 
   // 检查 expires_at 有效性
   if (options?.expires_at && options.expires_at <= now) {

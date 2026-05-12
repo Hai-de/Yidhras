@@ -69,8 +69,8 @@
 
 - **GET `/api/status`**
   - 鉴权：root
-  - 说明：运行时状态快照（含 active pack 元数据）
-  - 返回：`{ success: true, data: { status, runtime_ready, runtime_speed, scheduler, health_level, world_pack, has_error, startup_errors } }`
+  - 说明：运行时状态快照（含当前活跃 pack 元数据）。多包场景下 `world_pack` 返回首个已加载 pack 的信息，各 pack 独立状态通过 `GET /api/experimental/runtime/packs` 获取。
+  - 返回：`{ success: true, data: { status, runtime_ready, runtime_speed, runtime_loop, database, scheduler, ai, health_level, world_pack, has_error, startup_errors } }`
 
 - **GET `/api/system/notifications`**
   - 鉴权：root
@@ -501,12 +501,12 @@
 ### 18.2 Plugin Runtime Web（global 命名空间）
 
 分层原则：
-- `/api/packs/:packId/plugins/runtime/web` — stable，走 active-pack scope（`mode: 'stable'`）
-- `/api/experimental/runtime/packs/:packId/plugins/runtime/web` — experimental（`mode: 'experimental'`）
+- `/api/packs/:packId/plugins/runtime/web` — stable surface，仅限当前活跃包（active pack）
+- `/api/experimental/runtime/packs/:packId/plugins/runtime/web` — experimental surface，任意已加载包
 
-- **GET `/api/packs/:packId/plugins/runtime/web`** — 读取 active pack 的已启用 web plugin runtime manifest
+- **GET `/api/packs/:packId/plugins/runtime/web`** — 读取指定 pack 的已启用 web plugin runtime manifest（stable 仅允许活跃包）
 - **GET `/api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`** — 访问 stable 同源 web 资产
-- **GET `/api/experimental/runtime/packs/:packId/plugins/runtime/web`** — 读取 loaded pack 的 web plugin runtime snapshot（experimental）
+- **GET `/api/experimental/runtime/packs/:packId/plugins/runtime/web`** — 读取 loaded pack 的 web plugin runtime snapshot（不限制包）
 - **GET `/api/experimental/runtime/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`** — 访问 experimental 同源 web 资产
 
 错误码：`PLUGIN_WEB_ASSET_NOT_ENABLED`, `PLUGIN_WEB_ASSET_FORBIDDEN`, `PLUGIN_WEB_ASSET_NOT_FOUND`, `PLUGIN_WEB_ENTRYPOINT_NOT_FOUND`, `PLUGIN_QUERY_INVALID`
@@ -522,7 +522,7 @@
 ### 19.1 Experimental Runtime（pack-scoped，`:packId/api/experimental/runtime/*`）
 
 - **GET `/api/experimental/runtime/system/health`** — 系统健康快照（无 packId 依赖）
-- **GET `/api/experimental/runtime/packs`** — control-plane snapshot（含 active_pack_id, system_health_level, runtime_ready, per-pack status/clock/scheduler/plugin 摘要）
+- **GET `/api/experimental/runtime/packs`** — control-plane snapshot（含 primary_pack_id（首个已加载 pack）, system_health_level, runtime_ready, per-pack status/clock/scheduler/plugin 摘要）
 - **POST `/api/experimental/runtime/packs/load`** — 加载 pack 到 experimental runtime registry。鉴权：packAccessGuard + `INVOKE_SCHEDULER_CONTROL`
 - **POST `/api/experimental/runtime/packs/unload`** — 卸载。鉴权：同上
 - **POST `/api/experimental/runtime/packs/step`** — 手动推进 pack 时钟。body：`{ amount?: number }`。鉴权：同上

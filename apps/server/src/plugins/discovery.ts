@@ -94,7 +94,7 @@ const calculateJsonDepth = (value: unknown, currentDepth = 0): number => {
 
   if (Array.isArray(value)) {
     const arr = value as unknown[];
-    return arr.reduce(
+    return arr.reduce<number>(
       (max, item) => Math.max(max, calculateJsonDepth(item, currentDepth + 1)),
       currentDepth + 1
     );
@@ -105,7 +105,7 @@ const calculateJsonDepth = (value: unknown, currentDepth = 0): number => {
     const keys = Object.keys(obj);
     if (keys.length === 0) return currentDepth + 1;
     // keys come from Object.keys on a YAML-parsed manifest — safe against injection
-    return keys.reduce(
+    return keys.reduce<number>(
       // eslint-disable-next-line security/detect-object-injection
       (max, k) => Math.max(max, calculateJsonDepth(obj[k], currentDepth + 1)),
       currentDepth + 1

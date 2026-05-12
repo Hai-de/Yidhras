@@ -1,6 +1,7 @@
 import { getSchedulerLeaseTicks } from '../../config/runtime_config.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
+import { resolvePackTick } from '../services/pack_runtime_resolution.js';
 import {
   DEFAULT_SCHEDULER_PARTITION_ID,
   isSchedulerPartitionId
@@ -70,7 +71,7 @@ export const acquireSchedulerLease = (
 
   const partitionId = normalizePartitionId(input.partitionId);
   const packRuntime = input.packRuntime;
-  const now = input.now ?? (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = input.now ?? resolvePackTick(context, packRuntime);
   const leaseTicks = input.leaseTicks ?? getSchedulerLeaseTicks();
   const expiresAt = now + leaseTicks;
   const key = buildSchedulerLeaseKey(partitionId);
@@ -223,7 +224,7 @@ export const updateSchedulerCursor = (
   const id = normalizePartitionId(input.partitionId);
   const key = buildSchedulerCursorKey(id);
   const packRuntime = input.packRuntime;
-  const now = input.now ?? (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = input.now ?? resolvePackTick(context, packRuntime);
 
   adapter.upsertCursor(packId, {
     key,

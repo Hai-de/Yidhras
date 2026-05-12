@@ -54,18 +54,34 @@ const createContext = (): AppContext => {
     countActiveAgents: vi.fn(async () => 0)
   } as unknown as typeof repos.agent;
 
+  const mockHost = {
+    getCurrentTick: () => 7n,
+    getCurrentRevision: () => 7n,
+    getPack: () => ({ metadata: { id: 'world-test-pack', name: 'test', version: '0.0.0' } }),
+    getStepTicks: () => 1n,
+    getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null }),
+    setRuntimeSpeedOverride: vi.fn(),
+    clearRuntimeSpeedOverride: vi.fn(),
+    getAllTimes: () => [],
+    step: vi.fn().mockResolvedValue(undefined),
+    getPackSlotDeclarations: () => null,
+    applyClockProjection: vi.fn(),
+    getHealthSnapshot: () => ({ status: 'ok', message: null }),
+    getClockSnapshot: () => ({ current_tick: '7', current_revision: '7' }),
+    getHandle: vi.fn(),
+    getClock: vi.fn(),
+    load: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn(),
+    dispose: vi.fn(),
+    getPackId: () => 'world-test-pack'
+  } as unknown as import('../../../src/core/pack_runtime_host.js').PackRuntimeHost;
+
   return {
     repos,
     prisma: mockPrisma,
     isRuntimeReady: () => true,
     isPaused: () => false,
-    clock: {
-      getCurrentTick: () => 1n
-    } as AppContext['clock'],
-    activePack: { getActivePack: () => undefined, getCurrentRevision: () => 1n } as AppContext['activePack'],
-    activePackRuntime: {
-      getActivePack: () => ({ metadata: { id: 'world-test-pack' } })
-    } as never,
     runtimeClockProjection: projection,
     notifications: {
       push: vi.fn() as never,
@@ -82,7 +98,22 @@ const createContext = (): AppContext => {
     setRuntimeReady: vi.fn(),
     getPaused: () => false,
     setPaused: vi.fn(),
-    assertRuntimeReady: vi.fn()
+    assertRuntimeReady: vi.fn(),
+    packRuntimeLookup: {
+      getActivePackId: () => 'world-test-pack',
+      hasPackRuntime: () => true,
+      assertPackScope: (id: string) => id,
+      getPackRuntimeSummary: () => null
+    },
+    getPackRuntimeHost: () => mockHost,
+    getPackRuntimeHandle: (id: string) => ({
+      pack_id: id,
+      pack_folder_name: 'test',
+      pack: { metadata: { id, name: 'test', version: '0.0.0' } } as unknown as import('../../../src/packs/manifest/loader.js').WorldPack,
+      getHealthSnapshot: () => ({ status: 'ok', message: null }),
+      getClockSnapshot: () => ({ current_tick: '7', current_revision: '7' }),
+      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null })
+    })
   } as unknown as AppContext;
 };
 
@@ -107,24 +138,14 @@ describe('overview summary world time projection', () => {
     expect(Array.isArray(summary.world_time.calendars)).toBe(true);
   });
 
-  it('falls back to visible sim clock when host projection is unavailable but sim still has an active pack', async () => {
+  it('returns 0 as fallback when host projection is unavailable', async () => {
     const context = createContext();
     context.runtimeClockProjection = createRuntimeClockProjectionService();
-    context.activePackRuntime = undefined;
-    context.sim = {
-      getCurrentTick: () => 7n,
-      getAllTimes: () => [{ calendar_id: 'sim-only', display: 'sim-only-time', units: {} }],
-      getActivePack: () => ({ metadata: { id: 'world-test-pack' } }),
-      isRuntimeReady: () => true,
-      isPaused: () => false
-    } as never;
-    (context as AppContext).clock = { getCurrentTick: () => 7n } as AppContext['clock'];
-    (context as AppContext).activePack = { getActivePack: () => ({ metadata: { id: 'world-test-pack' } } as never), getCurrentRevision: () => 7n };
 
     const summary = await getOverviewSummary(context);
 
     expect(summary.world_time).toEqual({
-      tick: '7',
+      tick: '0',
       calendars: []
     });
   });

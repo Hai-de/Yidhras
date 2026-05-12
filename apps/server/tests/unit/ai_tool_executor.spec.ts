@@ -23,20 +23,42 @@ const buildMockContext = (overrides?: Record<string, unknown>): AppContext => {
   return {
     prisma,
     repos,
-    clock: { getCurrentTick: vi.fn().mockReturnValue(42n) },
-    activePackRuntime: {
-      init: vi.fn().mockResolvedValue(undefined),
-      getActivePack: vi.fn().mockReturnValue(undefined),
-      resolvePackVariables: vi.fn().mockReturnValue(''),
-      getStepTicks: vi.fn().mockReturnValue(1n),
-      getRuntimeSpeedSnapshot: vi.fn().mockReturnValue({ step_ticks: '1', is_default: true }),
+    packRuntimeLookup: {
+      getActivePackId: () => 'test-pack',
+      hasPackRuntime: () => true,
+      assertPackScope: (id: string) => id,
+      getPackRuntimeSummary: () => null
+    },
+    getPackRuntimeHost: (id: string) => ({
+      getCurrentTick: () => 100n,
+      getCurrentRevision: () => 0n,
+      getPack: () => ({ metadata: { id, name: 'test', version: '0.0.0' } }),
+      getStepTicks: () => 1n,
+      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null }),
       setRuntimeSpeedOverride: vi.fn(),
       clearRuntimeSpeedOverride: vi.fn(),
-      getCurrentTick: vi.fn().mockReturnValue(100n),
-      getCurrentRevision: vi.fn().mockReturnValue(0n),
-      getAllTimes: vi.fn().mockReturnValue([]),
-      step: vi.fn().mockResolvedValue(undefined)
-    },
+      getAllTimes: () => [],
+      step: vi.fn().mockResolvedValue(undefined),
+      getPackSlotDeclarations: () => null,
+      applyClockProjection: vi.fn(),
+      getHealthSnapshot: () => ({ status: 'ok', message: null }),
+      getClockSnapshot: () => ({ current_tick: '100', current_revision: '0' }),
+      getHandle: vi.fn(),
+      getClock: vi.fn(),
+      load: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+      dispose: vi.fn(),
+      getPackId: () => id
+    }) as unknown as import('../../src/core/pack_runtime_host.js').PackRuntimeHost,
+    getPackRuntimeHandle: (id: string) => ({
+      pack_id: id,
+      pack_folder_name: 'test',
+      pack: { metadata: { id, name: 'test', version: '0.0.0' } } as unknown as import('../../src/packs/manifest/loader.js').WorldPack,
+      getHealthSnapshot: () => ({ status: 'ok', message: null }),
+      getClockSnapshot: () => ({ current_tick: '100', current_revision: '0' }),
+      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null })
+    }),
     ...overrides
   } as unknown as AppContext;
 };
@@ -548,15 +570,15 @@ describe('builtin system tools', () => {
       expect((result.data as Record<string, unknown>).current_tick).toBe('100');
     });
 
-    it('falls back to context.clock when activePackRuntime is unavailable', async () => {
+    it('resolves clock state from pack runtime host', async () => {
       const ctx = {
-        context: buildMockContext({ activePackRuntime: undefined }),
+        context: buildMockContext(),
         pack_id: null
       };
 
       const result = await registry.execute('get_clock_state', {}, ctx);
       expect(result.success).toBe(true);
-      expect((result.data as Record<string, unknown>).current_tick).toBe('42');
+      expect((result.data as Record<string, unknown>).current_tick).toBe('100');
     });
   });
 

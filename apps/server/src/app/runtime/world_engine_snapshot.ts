@@ -21,21 +21,10 @@ const normalizePackId = (packId: string): string => {
   return normalized;
 };
 
-const getActiveRuntimeFacade = (context: AppContext) => context.activePackRuntime!;
-
 const resolveSnapshotClock = (context: AppContext, packId: string): { current_tick: string; current_revision: string } => {
-  const activePackId = getActiveRuntimeFacade(context).getActivePack()?.metadata.id ?? null;
-  if (activePackId === packId) {
-    const currentTick = getActiveRuntimeFacade(context).getCurrentTick().toString();
-    return {
-      current_tick: currentTick,
-      current_revision: currentTick
-    };
-  }
-
-  const experimentalHandle = context.getPackRuntimeHandle?.(packId);
-  if (experimentalHandle) {
-    const currentTick = experimentalHandle.getClockSnapshot().current_tick;
+  const handle = context.getPackRuntimeHandle?.(packId);
+  if (handle) {
+    const currentTick = handle.getClockSnapshot().current_tick;
     return {
       current_tick: currentTick,
       current_revision: currentTick

@@ -9,6 +9,7 @@ import type {
 import { createWorldEngineStepCoordinator } from '../../src/app/runtime/world_engine_persistence.js';
 import { ChronosEngine } from '../../src/clock/engine.js';
 import type { SimulationManager } from '../../src/core/simulation.js';
+import type { PackRuntimeHost } from '../../src/core/pack_runtime_host.js';
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
 import { createNotificationManager } from '../../src/utils/notifications.js';
@@ -107,8 +108,6 @@ export const createTestAppContext = (
     repos: wrapPrismaAsRepositories(prisma),
     prisma,
     sim,
-    clock: sim as unknown as AppContext['clock'],
-    activePack: sim as unknown as AppContext['activePack'],
     notifications: createNotificationManager(),
     startupHealth: options.startupHealth ?? createDefaultStartupHealth(),
     getRuntimeReady: () => runtimeReady,
@@ -133,8 +132,10 @@ export const createTestAppContext = (
         const pack = sim.getActivePack();
         return pack ? (pack as { metadata: { id: string } }).metadata.id : null;
       },
-      hasPackRuntime: (packId: string) =>
-        loadedExperimentalPackIds.has(packId.trim()) || sim.getPackRuntimeHandle(packId.trim()) !== null,
+      hasPackRuntime: (packId: string) => {
+        const activeId = (sim.getActivePack() as { metadata?: { id?: string } } | undefined)?.metadata?.id;
+        return packId.trim() === activeId || loadedExperimentalPackIds.has(packId.trim()) || sim.getPackRuntimeHandle(packId.trim()) !== null;
+      },
       assertPackScope: (packId: string) => packId.trim(),
       getPackRuntimeSummary: () => null
     },
@@ -144,23 +145,6 @@ export const createTestAppContext = (
       getClockSnapshot: () => null,
       getRuntimeSpeedSnapshot: () => null
     },
-    activePackRuntime: {
-      getActivePack() {
-        return sim.getActivePack();
-      },
-      getRuntimeSpeedSnapshot: () => ({
-        mode: 'fixed' as const,
-        source: 'default' as const,
-        configured_step_ticks: null,
-        override_step_ticks: null,
-        override_since: null,
-        effective_step_ticks: '1'
-      }),
-      getCurrentRevision: () => clock.getTicks(),
-      resolvePackVariables: (template: string) => template,
-      getStepTicks: () => 1n,
-      getCurrentTick: () => clock.getTicks()
-    } as unknown as AppContext['activePackRuntime'],
     packRuntimeControl: {
       load: async (packRef: string) => {
         loadedExperimentalPackIds.add(packRef.trim());
@@ -176,6 +160,20 @@ export const createTestAppContext = (
       }
     },
     assertRuntimeReady: () => {},
+    getPackRuntimeHost: (packId: string) =>
+      ({
+        getCurrentTick: () => sim.getCurrentTick(),
+        getCurrentRevision: () => sim.getCurrentRevision(),
+        getPack: () => sim.getActivePack(),
+        getRuntimeSpeedSnapshot: () => sim.getRuntimeSpeedSnapshot(),
+        getAllTimes: () => sim.getAllTimes(),
+        getPackId: () => packId,
+        getStepTicks: () => sim.getStepTicks(),
+        step: async () => {},
+        applyClockProjection: (snapshot: { current_tick: string }) => {
+          sim.applyClockProjection(snapshot);
+        }
+      }) as PackRuntimeHost,
     packStorageAdapter: {
       backend: 'sqlite',
       ping: async () => true,

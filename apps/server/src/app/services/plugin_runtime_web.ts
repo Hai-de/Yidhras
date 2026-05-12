@@ -109,7 +109,20 @@ const resolvePackRuntimeWebScope = (
   feature: string,
   surface: PluginRuntimeWebSurface
 ): string => {
-  return assertPackScope(context, packId, surface === 'experimental' ? 'experimental' : 'stable', feature);
+  const scopedPackId = assertPackScope(context, packId, feature);
+
+  if (surface === 'stable') {
+    const activePackId = context.packRuntimeLookup?.getActivePackId?.() ?? null;
+    if (activePackId && scopedPackId !== activePackId) {
+      throw new ApiError(403, 'PACK_ROUTE_ACTIVE_PACK_MISMATCH', `Pack "${scopedPackId}" is not the active pack for stable surface`, {
+        pack_id: scopedPackId,
+        active_pack_id: activePackId,
+        feature
+      });
+    }
+  }
+
+  return scopedPackId;
 };
 
 const buildPluginWebAssetRuntimeUrl = (surface: PluginRuntimeWebSurface, input: {

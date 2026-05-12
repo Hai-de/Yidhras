@@ -97,12 +97,14 @@ export const registerPackSnapshotRoutes = (
         return handle?.getClockSnapshot().current_tick ?? null;
       };
 
+      const packHost = context.getPackRuntimeHost?.(params.packId);
+
       const result = await capturePackSnapshot({
         packId: params.packId,
         label: body.label,
         prisma: context.prisma,
         packStorageAdapter: context.packStorageAdapter,
-        activePackRuntime: context.activePackRuntime,
+        activePackRuntime: packHost ?? undefined,
         getExperimentalTick,
         getExperimentalRevision
       });
@@ -143,12 +145,11 @@ export const registerPackSnapshotRoutes = (
         );
       }
 
-      const activePack = context.activePackRuntime?.getActivePack();
-      const activeRuntimePack = context.activePackRuntime?.getActivePack();
-      const pack = activeRuntimePack ?? activePack;
+      const packHost = context.getPackRuntimeHost?.(params.packId);
+      const pack = packHost?.getPack();
 
       if (!pack) {
-        throw new ApiError(404, 'PACK_NOT_LOADED', 'No active pack is currently loaded');
+        throw new ApiError(404, 'PACK_NOT_LOADED', 'No pack runtime is loaded for this pack');
       }
 
       if (pack.metadata.id !== params.packId) {
@@ -166,9 +167,9 @@ export const registerPackSnapshotRoutes = (
         packStorageAdapter: context.packStorageAdapter,
         pack,
         applyClockProjection: snapshot => context.applyClockProjection?.(snapshot),
-        activePackRuntime: context.activePackRuntime,
         worldEngine: context.worldEngine,
-        notifications: context.notifications
+        notifications: context.notifications,
+        getPackRuntimeHandle: id => context.getPackRuntimeHandle?.(id) ?? null
       });
 
       context.setPaused?.(false);

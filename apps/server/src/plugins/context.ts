@@ -2,6 +2,7 @@ import type { Express } from 'express';
 
 import type { AppContext , NotificationStore } from '../app/context.js';
 import type { PackRuntimePort } from '../app/services/pack_runtime_ports.js';
+import { resolveActivePack, resolvePackRevision, resolvePackTick } from '../app/services/pack_runtime_resolution.js';
 import { getRuntimeConfig } from '../config/runtime_config.js';
 import type { ActivePackProvider } from '../core/active_pack_provider.js';
 import type { ClockProvider } from '../core/clock_provider.js';
@@ -71,12 +72,12 @@ export type PluginContext = ReadonlyPluginContext | PackScopedPluginContext | Fu
 
 const createReadonlyContext = (context: AppContext, packRuntime?: PackRuntimePort): ReadonlyPluginContext => ({
   notifications: context.notifications,
-  clock: { getCurrentTick: () => (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick()) },
+  clock: { getCurrentTick: () => resolvePackTick(context, packRuntime) },
   activePack: {
-    getActivePack: () => context.activePackRuntime!.getActivePack(),
-    getCurrentRevision: () => context.activePackRuntime!.getCurrentRevision()
+    getActivePack: () => resolveActivePack(context, packRuntime),
+    getCurrentRevision: () => resolvePackRevision(context, packRuntime)
   },
-  getActivePackId: () => context.activePackRuntime?.getActivePack()?.metadata.id ?? null
+  getActivePackId: () => resolveActivePack(context, packRuntime)?.metadata.id ?? null
 });
 
 const createPackScopedContext = (context: AppContext): PackScopedPluginContext => ({

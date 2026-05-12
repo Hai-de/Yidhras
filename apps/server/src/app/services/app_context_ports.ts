@@ -121,16 +121,10 @@ export const hasPackHostApi = (context: AppContextPorts): context is AppContextP
 };
 
 export const readVisibleClockSnapshot = (input: {
-  clock: { getCurrentTick(): bigint };
   runtimeClockProjection?: RuntimeClockProjectionService;
   packId?: string;
-  activePackRuntime?: { getActivePack(): { metadata: { id: string } } | undefined };
-  activePack?: { getActivePack(): { metadata: { id: string } } | undefined };
 }): VisibleClockSnapshot => {
-  const resolvedPackId = input.packId
-    ?? input.activePackRuntime?.getActivePack()?.metadata.id
-    ?? input.activePack?.getActivePack()?.metadata.id
-    ?? null;
+  const resolvedPackId = input.packId ?? null;
   const projected = resolvedPackId ? input.runtimeClockProjection?.readFormattedClock(resolvedPackId) : null;
 
   if (projected) {
@@ -142,7 +136,7 @@ export const readVisibleClockSnapshot = (input: {
   }
 
   return {
-    absolute_ticks: input.clock.getCurrentTick().toString(),
+    absolute_ticks: '0',
     calendars: [],
     source: 'clock_fallback'
   };

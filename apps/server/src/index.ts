@@ -67,7 +67,7 @@ import {
 } from './config/runtime_config.js';
 import { startConfigWatcher } from './config/watcher.js';
 import { PrismaConversationStore } from './conversation/store_prisma.js';
-import { reinitializePackRuntime } from './core/runtime_reinitializer.js';
+
 import { SimulationManager } from './core/simulation.js';
 import { createInferenceService } from './inference/service.js';
 import { createPrismaInferenceTraceSink } from './inference/sinks/prisma.js';
@@ -158,28 +158,12 @@ const appContext: AppContext = {
   schedulerStorage,
   runtimeBootstrap: sim,
   packScope: packScopeResolver,
-  activePackRuntime: {
-    getCurrentTick: () => 0n,
-    getCurrentRevision: () => 0n,
-    getActivePack: () => undefined,
-    getStepTicks: () => 1n,
-    getRuntimeSpeedSnapshot: () => ({ effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null }),
-    setRuntimeSpeedOverride: () => {},
-    clearRuntimeSpeedOverride: () => {},
-    getAllTimes: () => [],
-    step: async () => {},
-    getPackSlotDeclarations: () => null,
-    resolvePackVariables: (t: string) => t
-  },
-  clock: { getCurrentTick: () => { const ids = sim.listLoadedPackRuntimeIds(); if (ids.length === 0) return 0n; const h = sim.getPackRuntimeHandle(ids[0]); return h ? BigInt(h.getClockSnapshot().current_tick) : 0n; } },
-  activePack: { getActivePack: () => undefined, getCurrentRevision: () => 0n },
   getPackRuntimeHandle: packId => sim.getPackRuntimeHandle(packId),
   listLoadedPackRuntimeIds: () => sim.listLoadedPackRuntimeIds(),
   isRuntimeReady: () => runtimeReady,
   setRuntimeReady: (ready: boolean) => { runtimeReady = ready; },
   isPaused: () => false,
   setPaused: () => {},
-  applyClockProjection: () => {},
   notifications,
   startupHealth,
   getRuntimeLoopDiagnostics: () => runtimeLoopDiagnostics,
@@ -230,8 +214,6 @@ appContext.packRuntimeControl = {
   load: packRef => sim.loadExperimentalPackRuntime(packRef),
   unload: packId => sim.unloadExperimentalPackRuntime(packId)
 };
-// reinitializePackRuntime: stub — to be re-implemented with registry-based approach
-appContext.reinitializePackRuntime = undefined;
 
 const worldEngineConfig = getWorldEngineConfig();
 appContext.worldEngine = createWorldEngineSidecarClient({
@@ -466,8 +448,8 @@ const start = async (): Promise<void> => {
       );
       const activePackHost = sim.getPackRuntimeRegistry().getHost(activePackId);
       if (activePackHost) {
-        const activePackRuntime = new DefaultPackRuntimePort(activePackHost);
-        multiPackLoopHost.startLoop(activePackId, appContext.clock as unknown as import('./clock/engine.js').ChronosEngine, activePackRuntime);
+        const activePackRuntimePort = new DefaultPackRuntimePort(activePackHost);
+        multiPackLoopHost.startLoop(activePackId, activePackHost.getClock(), activePackRuntimePort);
       }
     }
   } catch (err: unknown) {

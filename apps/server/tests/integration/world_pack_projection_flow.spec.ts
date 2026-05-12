@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
 
 import type { AppContext } from '../../src/app/context.js';
+import type { PackRuntimeHost } from '../../src/core/pack_runtime_host.js';
+import type { PackRuntimeHandle } from '../../src/core/pack_runtime_handle.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { dispatchInvocationFromActionIntent } from '../../src/domain/invocation/invocation_dispatcher.js';
@@ -314,7 +316,48 @@ const buildProjectionTestContext = (
       listRuns: () => [],
       listCandidateDecisions: () => [],
       getAgentDecisions: () => []
-    } as AppContext['schedulerStorage']
+    } as AppContext['schedulerStorage'],
+    packRuntimeLookup: {
+      getActivePackId: () => pack.metadata.id,
+      hasPackRuntime: (packId: string) => packId.trim() === pack.metadata.id,
+      assertPackScope: (packId: string) => packId.trim(),
+      getPackRuntimeSummary: () => null
+    },
+    getPackRuntimeHost: (packId: string) =>
+      ({
+        getCurrentTick: () => now,
+        getCurrentRevision: () => 0n,
+        getPack: () => pack,
+        getRuntimeSpeedSnapshot: () => ({
+          mode: 'fixed' as const,
+          source: 'default' as const,
+          configured_step_ticks: null,
+          override_step_ticks: null,
+          override_since: null,
+          effective_step_ticks: '1'
+        }),
+        getAllTimes: () => [],
+        getPackId: () => packId,
+        getStepTicks: () => 1n,
+        step: async () => {},
+        applyClockProjection: () => {}
+      }) as PackRuntimeHost,
+    getPackRuntimeHandle: (packId: string) =>
+      ({
+        pack_id: packId,
+        pack_folder_name: packId,
+        pack,
+        getClockSnapshot: () => ({ current_tick: String(now) }),
+        getRuntimeSpeedSnapshot: () => ({
+          mode: 'fixed' as const,
+          source: 'default' as const,
+          configured_step_ticks: null,
+          override_step_ticks: null,
+          override_since: null,
+          effective_step_ticks: '1'
+        }),
+        getHealthSnapshot: () => ({ status: 'running' as const, message: null })
+      }) as PackRuntimeHandle
   };
 };
 

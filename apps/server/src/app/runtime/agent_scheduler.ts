@@ -2,6 +2,7 @@ import { getSchedulerAgentConfig, getSchedulerDecisionKernelConfig, getScheduler
 import type { InferenceRequestInput } from '../../inference/types.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
+import { resolvePackTick } from '../services/pack_runtime_resolution.js';
 import {
   createPendingDecisionJob,
   getDecisionJobByIdempotencyKey,
@@ -370,7 +371,7 @@ const runAgentSchedulerForPartition = async ({
       leaseExpiresAtSnapshot: leaseResult.expires_at,
       tick: now,
       startedAt,
-      finishedAt: (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick()),
+      finishedAt: resolvePackTick(context, packRuntime),
       summary,
       candidateDecisions
     }, packId);
@@ -524,7 +525,7 @@ const runAgentSchedulerForPartition = async ({
     leaseExpiresAtSnapshot: leaseResult.expires_at,
     tick: now,
     startedAt,
-    finishedAt: (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick()),
+    finishedAt: resolvePackTick(context, packRuntime),
     summary,
     candidateDecisions
   }, packId);
@@ -561,8 +562,8 @@ export const runAgentScheduler = async ({
   packId,
   packRuntime
 }: RunAgentSchedulerOptions): Promise<AgentSchedulerRunResult> => {
-  const startedAt = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const startedAt = resolvePackTick(context, packRuntime);
+  const now = resolvePackTick(context, packRuntime);
   refreshSchedulerWorkerRuntimeLiveness(context, now, packId);
 
   const initialOwnershipSnapshot = resolveSchedulerOwnershipSnapshot(context, {

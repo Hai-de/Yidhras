@@ -161,13 +161,13 @@ export const getRuntimeStatusSnapshot = async (
     schedulerPartitionIds?: string[];
   }
 ): Promise<RuntimeStatusSnapshot> => {
-  const packId = options?.packId ?? context.activePackRuntime?.getActivePack()?.metadata.id;
+  const packId = options?.packId ?? context.packRuntimeLookup?.getActivePackId();
   if (!packId) {
     throw new Error('packId is required for getRuntimeStatusSnapshot');
   }
   const pack = context.getPackRuntimeHandle?.(packId)?.pack ?? null;
   const schedulerWorkerId = options?.schedulerWorkerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
-  const visibleClock = readVisibleClockSnapshot(context);
+  const visibleClock = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId });
   const runtimeKernel = createRuntimeKernelService(context, packId);
   const ownershipSnapshot = await runtimeKernel.getOwnershipSnapshot({
     workerId: schedulerWorkerId,
@@ -178,7 +178,7 @@ export const getRuntimeStatusSnapshot = async (
   return {
     status: context.isPaused!() ? 'paused' : 'running',
     runtime_ready: context.isRuntimeReady!(),
-    runtime_speed: context.activePackRuntime!.getRuntimeSpeedSnapshot(),
+    runtime_speed: context.getPackRuntimeHost?.(packId)?.getRuntimeSpeedSnapshot() ?? { mode: 'fixed', source: 'default', configured_step_ticks: null, override_step_ticks: null, override_since: null, effective_step_ticks: '1' },
     runtime_loop: runtimeLoop,
     database: context.getDatabaseHealth?.() ?? null,
     scheduler: {

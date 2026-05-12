@@ -81,24 +81,8 @@ const normalizePackId = (packId: string): string => {
   return normalized;
 };
 
-const getActiveRuntimeFacade = (context: AppContext, feature: string) => {
-  if (context.activePackRuntime) {
-    return context.activePackRuntime;
-  }
-
-  throw new ApiError(
-    503,
-    'ACTIVE_PACK_RUNTIME_NOT_READY',
-    'activePackRuntime is required for world engine host operations',
-    {
-      feature,
-      fallback_blocked: true
-    }
-  );
-};
-
 const getActivePackId = (context: AppContext): string | null => {
-  return getActiveRuntimeFacade(context, 'world_engine_ports.getActivePackId').getActivePack()?.metadata.id ?? null;
+  return context.packRuntimeLookup?.getActivePackId() ?? null;
 };
 
 const getProjectedCurrentTick = (context: AppContext, packId: string): string | null => {
@@ -116,7 +100,8 @@ const getActiveCurrentTick = (context: AppContext): string | null => {
     return null;
   }
 
-  return getActiveRuntimeFacade(context, 'world_engine_ports.getActiveCurrentTick').getCurrentTick().toString();
+  const handle = context.getPackRuntimeHandle?.(activePackId);
+  return handle?.getClockSnapshot().current_tick ?? null;
 };
 
 const getExperimentalRuntimeSummary = (context: AppContext, packId: string): PackRuntimeSummary | null => {
@@ -334,7 +319,7 @@ export const createPackHostApi = (context: AppContext): PackHostApi => {
         pack_id: packId,
         query_name: input.query_name,
         current_tick: summary?.current_tick ?? null,
-        current_revision: context.activePackRuntime?.getCurrentRevision().toString() ?? null,
+        current_revision: context.getPackRuntimeHandle?.(packId)?.getClockSnapshot().current_tick ?? null,
         data,
         next_cursor: null,
         warnings: []

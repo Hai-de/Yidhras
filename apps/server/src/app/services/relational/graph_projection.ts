@@ -1,4 +1,5 @@
 import type { AppContext } from '../../context.js';
+import { resolvePackTick } from '../pack_runtime_resolution.js';
 import { parseGraphViewFilters } from './graph_filters.js';
 import { buildContainerNodeId, buildRelayNodeId, getNeighborhoodNodeIds } from './graph_traversal.js';
 import type { GraphEdgeView, GraphNodeView, GraphViewInput, GraphViewSnapshot } from './types.js';
@@ -57,7 +58,7 @@ export const getGraphView = async (
   input: GraphViewInput
 ): Promise<GraphViewSnapshot> => {
   const filters = parseGraphViewFilters(input);
-  const now = context.activePackRuntime!.getCurrentTick();
+  const now = resolvePackTick(context);
 
   const [agents, relationships, atmosphereNodes, activeBindings, actionIntents] = await Promise.all([
     context.repos.agent.listAgents({ created_at: 'asc' }),

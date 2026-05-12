@@ -48,19 +48,32 @@ const createContext = (): AppContext => {
     calendars: []
   });
 
-  const sim = {
+  const mockHost = {
     getCurrentTick: () => 1n,
-    getAllTimes: () => [{ calendar_id: 'fallback', display: 'fallback-time', units: {} }]
-  };
+    getCurrentRevision: () => 1n,
+    getPack: () => ({ metadata: { id: 'world-test-pack', name: 'test', version: '0.0.0' } }),
+    getStepTicks: () => 1n,
+    getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null }),
+    setRuntimeSpeedOverride: vi.fn(),
+    clearRuntimeSpeedOverride: vi.fn(),
+    getAllTimes: () => [],
+    step: vi.fn().mockResolvedValue(undefined),
+    getPackSlotDeclarations: () => null,
+    applyClockProjection: vi.fn(),
+    getHealthSnapshot: () => ({ status: 'ok', message: null }),
+    getClockSnapshot: () => ({ current_tick: '1', current_revision: '1' }),
+    getHandle: vi.fn(),
+    getClock: vi.fn(),
+    load: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn(),
+    dispose: vi.fn(),
+    getPackId: () => 'world-test-pack'
+  } as unknown as import('../../../src/core/pack_runtime_host.js').PackRuntimeHost;
+
   return {
     repos: wrapPrismaAsRepositories({} as PrismaClient),
     prisma: {} as never,
-    sim: sim as never,
-    clock: sim as AppContext['clock'],
-    activePack: { getActivePack: () => undefined, getCurrentRevision: () => 1n } as AppContext['activePack'],
-    activePackRuntime: {
-      getActivePack: () => ({ metadata: { id: 'world-test-pack' } })
-    } as never,
     runtimeClockProjection: projection,
     notifications: {
       push: vi.fn() as never,
@@ -77,7 +90,22 @@ const createContext = (): AppContext => {
     setRuntimeReady: vi.fn(),
     getPaused: () => false,
     setPaused: vi.fn(),
-    assertRuntimeReady: vi.fn()
+    assertRuntimeReady: vi.fn(),
+    packRuntimeLookup: {
+      getActivePackId: () => 'world-test-pack',
+      hasPackRuntime: () => true,
+      assertPackScope: (id: string) => id,
+      getPackRuntimeSummary: () => null
+    },
+    getPackRuntimeHost: () => mockHost,
+    getPackRuntimeHandle: (id: string) => ({
+      pack_id: id,
+      pack_folder_name: 'test',
+      pack: { metadata: { id, name: 'test', version: '0.0.0' } } as unknown as import('../../../src/packs/manifest/loader.js').WorldPack,
+      getHealthSnapshot: () => ({ status: 'ok', message: null }),
+      getClockSnapshot: () => ({ current_tick: '1', current_revision: '1' }),
+      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null })
+    })
   } as unknown as AppContext;
 };
 
@@ -146,7 +174,7 @@ describe('clock routes host projection read path', () => {
     });
   });
 
-  it('falls back to simulation clock when no host projection exists', () => {
+  it('returns 0 as fallback when no host projection exists', () => {
     const context = createContext();
     context.runtimeClockProjection = createRuntimeClockProjectionService();
     const { app, gets } = createFakeApp();
@@ -166,23 +194,15 @@ describe('clock routes host projection read path', () => {
     expect(body.value).toEqual({
       success: true,
       data: {
-        absolute_ticks: '1',
+        absolute_ticks: '0',
         calendars: []
       }
     });
   });
 
-  it('falls back to simulation clock when activePackRuntime is absent but sim still has an active pack', () => {
+  it('returns 0 as fallback when projection is unavailable', () => {
     const context = createContext();
     context.runtimeClockProjection = createRuntimeClockProjectionService();
-    context.activePackRuntime = undefined;
-    (context as AppContext).clock = { getCurrentTick: () => 9n } as AppContext['clock'];
-    (context as AppContext).activePack = { getActivePack: () => ({ metadata: { id: 'world-test-pack' } } as never), getCurrentRevision: () => 9n };
-    context.sim = {
-      getCurrentTick: () => 9n,
-      getAllTimes: () => [{ calendar_id: 'sim-only', display: 'sim-only-time', units: {} }],
-      getActivePack: () => ({ metadata: { id: 'world-test-pack' } })
-    } as never;
     const { app, gets } = createFakeApp();
 
     registerClockRoutes(app as never, context, {
@@ -198,7 +218,7 @@ describe('clock routes host projection read path', () => {
     expect(body.value).toEqual({
       success: true,
       data: {
-        absolute_ticks: '9',
+        absolute_ticks: '0',
         calendars: []
       }
     });

@@ -2,6 +2,7 @@ import { logOperatorAudit } from '../../operator/audit/logger.js'
 import { AUDIT_ACTION } from '../../operator/constants.js'
 import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js'
+import { resolvePackTick } from './pack_runtime_resolution.js';
 
 export const createPackBinding = async (
   context: AppContext,
@@ -24,7 +25,7 @@ export const createPackBinding = async (
     throw new ApiError(409, 'BINDING_ALREADY_EXISTS', 'Operator already bound to this pack')
   }
 
-  const now = context.activePackRuntime!.getCurrentTick()
+  const now = resolvePackTick(context)
 
   const binding = await context.prisma.operatorPackBinding.create({
     data: {

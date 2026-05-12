@@ -10,6 +10,7 @@ import { checkPackAccess } from '../../operator/guard/pack_access.js'
 import type { CapabilityCheckResult, CapabilityGuardOptions } from '../../operator/guard/types.js'
 import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js'
+import { resolvePackTick } from '../services/pack_runtime_resolution.js';
 
 /**
  * 检查 Operator 是否拥有指定 capability。
@@ -50,7 +51,7 @@ export const checkCapability = async (
   }
 
   // 查 OperatorGrant 委托
-  const now = context.activePackRuntime!.getCurrentTick()
+  const now = context.getPackRuntimeHost?.(packId)?.getCurrentTick() ?? resolvePackTick(context)
   const grant = await context.repos.identityOperator.findOperatorGrant({
     receiver_identity_id: operator.identity_id,
     pack_id: packId,

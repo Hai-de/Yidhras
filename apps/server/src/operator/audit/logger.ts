@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client'
 
 import type { AppInfrastructure } from '../../app/context.js'
+import { resolvePackTick } from '../../app/services/pack_runtime_resolution.js';
 import type { AuditAction } from '../constants.js'
 
 export interface OperatorAuditEntry {
@@ -16,7 +17,7 @@ export const logOperatorAudit = async (
   context: AppInfrastructure,
   entry: OperatorAuditEntry
 ): Promise<void> => {
-  const now = context.clock.getCurrentTick()
+  const now = resolvePackTick(context)
 
   await context.repos.identityOperator.createAuditLog({
     operator_id: entry.operator_id ?? null,

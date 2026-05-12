@@ -1,5 +1,6 @@
 import type { AppInfrastructure } from '../../app/context.js'
 import { logOperatorAudit } from '../../operator/audit/logger.js'
+import { resolveActivePack, resolvePackTick } from '../../app/services/pack_runtime_resolution.js';
 import { AUDIT_ACTION } from '../../operator/constants.js'
 import { resolveSubjectForAgentAction } from '../../operator/guard/subject_resolver.js'
 import { createLogger } from '../../utils/logger.js'
@@ -95,13 +96,13 @@ const resolveSubjectEntityId = async (
       return agentId
     }
 
-    const pack = context.activePack.getActivePack()
+    const pack = resolveActivePack(context)
     const packId = pack?.metadata.id ?? 'default'
     const cacheKey = `${packId}:${agentId}`
 
     // P3-2: 缓存同一 tick 内的解析结果
     const cached = subjectResolutionCache.get(cacheKey)
-    const now = context.clock.getCurrentTick()
+    const now = resolvePackTick(context)
     if (cached && cached.resolvedAt === now) {
       return cached.subjectEntityId
     }
@@ -124,7 +125,7 @@ const resolveSubjectEntityId = async (
 const KERNEL_INTENT_TYPES = ['trigger_event', 'post_message', 'adjust_relationship', 'adjust_snr', 'move'] as const
 
 const shouldBridgeToInvocation = (context: AppInfrastructure, intent: DispatchableActionIntentLike): boolean => {
-  const pack = context.activePack.getActivePack()
+  const pack = resolveActivePack(context)
   if (!pack) {
     return false
   }
@@ -172,7 +173,7 @@ export const buildInvocationRequestFromActionIntent = async (
     return null
   }
 
-  const pack = context.activePack.getActivePack()
+  const pack = resolveActivePack(context)
   if (!pack) {
     return null
   }
@@ -190,7 +191,7 @@ export const buildInvocationRequestFromActionIntent = async (
     payload: normalizeRecord(intent.payload),
     mediator_id: resolveMediatorId(intent),
     actor_ref: actorRef,
-    created_at: context.clock.getCurrentTick()
+    created_at: resolvePackTick(context)
   }
 }
 

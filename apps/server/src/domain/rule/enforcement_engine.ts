@@ -6,6 +6,7 @@ import {
 
 import type { AppInfrastructure } from '../../app/context.js';
 import type { AppContextPorts } from '../../app/services/app_context_ports.js';
+import { resolveActivePack } from '../../app/services/pack_runtime_resolution.js';
 
 type EnforcementContext = AppInfrastructure & Pick<AppContextPorts, 'worldEngine'> & {
   getSpatialRuntime?(): import('../../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
@@ -276,7 +277,7 @@ export const enforceInvocationRequest = async (
     let filteredRules: Array<{ id: string; when?: unknown; then?: unknown }> | null = null;
 
     if (spatialRuntime && subjectEntityId) {
-      const activePack = context.activePack.getActivePack();
+      const activePack = resolveActivePack(context);
       const allRules = activePack?.rules?.objective_enforcement;
       if (allRules && allRules.length > 0) {
         const subjectLocation = await spatialRuntime.getLocation(subjectEntityId);

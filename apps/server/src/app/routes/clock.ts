@@ -33,7 +33,7 @@ export const registerClockRoutes = (
      * Clock routes are external visible read surfaces and therefore should
      * resolve through the host-visible clock helper first.
      */
-    const snapshot = readVisibleClockSnapshot(context);
+    const snapshot = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId: context.packRuntimeLookup?.getActivePackId() ?? undefined });
     return {
       absolute_ticks: snapshot.absolute_ticks,
       calendars: deps.toJsonSafe(snapshot.calendars) as unknown[]

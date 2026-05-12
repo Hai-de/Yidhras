@@ -1,4 +1,5 @@
 import type { AppInfrastructure } from '../../app/context.js';
+import { resolveActivePack } from '../../app/services/pack_runtime_resolution.js';
 import { getRuntimeStatusSnapshot } from '../../app/services/system.js';
 import {
   createPackEntityOverviewProjectionService,
@@ -56,7 +57,7 @@ export const getOperatorOverviewProjection = async (
   const runtime = await getRuntimeStatusSnapshot(context, {
     packId: options.packId
   });
-  const activePack = context.activePack.getActivePack();
+  const activePack = resolveActivePack(context);
 
   if (!activePack && options.packId === undefined) {
     return {

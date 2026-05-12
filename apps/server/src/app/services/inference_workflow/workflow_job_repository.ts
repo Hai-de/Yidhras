@@ -4,6 +4,7 @@ import type { InferenceJobIntentClass, InferenceRequestInput } from '../../../in
 import { ApiError } from '../../../utils/api_error.js';
 import type { PackRuntimePort } from '../pack_runtime_ports.js';
 import type { AppInfrastructure } from '../../context.js';
+import { resolvePackTick } from '../pack_runtime_resolution.js';
 import { toJsonSafe } from '../../http/json.js';
 import { ensureNonEmptyId } from './parsers.js';
 import type { DecisionJobRecord } from './types.js';
@@ -112,7 +113,7 @@ export const listRunnableDecisionJobs = async (
   limit = 10,
   packRuntime?: PackRuntimePort
 ): Promise<DecisionJobRecord[]> => {
-  const now = (packRuntime?.getCurrentTick() ?? context.clock.getCurrentTick());
+  const now = resolvePackTick(context, packRuntime);
 
   return context.prisma.decisionJob.findMany({
     where: {
@@ -146,7 +147,7 @@ export const claimDecisionJob = async (
 ): Promise<DecisionJobRecord | null> => {
   const existing = await getDecisionJobById(context, input.job_id);
   const packRuntime = input.packRuntime;
-  const now = input.now ?? (packRuntime?.getCurrentTick() ?? context.clock.getCurrentTick());
+  const now = input.now ?? resolvePackTick(context, packRuntime);
   const lockTicks = input.lock_ticks ?? DEFAULT_DECISION_JOB_LOCK_TICKS;
 
   if (!RUNNABLE_JOB_STATUSES.includes(existing.status as (typeof RUNNABLE_JOB_STATUSES)[number])) {
@@ -222,7 +223,7 @@ export const releaseDecisionJobLock = async (
       locked_by: null,
       locked_at: null,
       lock_expires_at: null,
-      updated_at: (packRuntime?.getCurrentTick() ?? context.clock.getCurrentTick())
+      updated_at: resolvePackTick(context, packRuntime)
     }
   });
 };
@@ -299,7 +300,7 @@ export const updateDecisionJobState = async (
       intent_class: input.intent_class ?? existing.intent_class,
       scheduled_for_tick: input.scheduled_for_tick === undefined ? existing.scheduled_for_tick : input.scheduled_for_tick,
       action_intent_id: input.action_intent_id === undefined ? existing.action_intent_id : input.action_intent_id,
-      updated_at: (packRuntime?.getCurrentTick() ?? context.clock.getCurrentTick()),
+      updated_at: resolvePackTick(context, packRuntime),
       ...(input.request_input_attributes_patch
         ? { request_input: mergeDecisionJobRequestInputAttributes(existing, input.request_input_attributes_patch) }
         : {}),
@@ -321,7 +322,7 @@ export const createPendingDecisionJob = async (
   }
 ): Promise<DecisionJobRecord> => {
   const packRuntime = input.packRuntime;
-  const now = (packRuntime?.getCurrentTick() ?? context.clock.getCurrentTick());
+  const now = resolvePackTick(context, packRuntime);
 
   return context.prisma.decisionJob.create({
     data: {
@@ -373,7 +374,7 @@ export const createReplayDecisionJob = async (
   }
 ): Promise<DecisionJobRecord> => {
   const packRuntime = input.packRuntime;
-  const now = (packRuntime?.getCurrentTick() ?? context.clock.getCurrentTick());
+  const now = resolvePackTick(context, packRuntime);
   return context.prisma.decisionJob.create({
     data: {
       pending_source_key: buildPendingSourceKey(input.idempotency_key),

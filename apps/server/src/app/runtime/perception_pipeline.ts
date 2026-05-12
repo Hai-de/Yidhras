@@ -6,6 +6,7 @@ import type { PerceptionResolver, ResolvePerceptionInput } from '../../perceptio
 import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
+import { resolveActivePack, resolvePackTick } from '../services/pack_runtime_resolution.js';
 
 interface SpatialEventRow {
   id: string;
@@ -95,14 +96,13 @@ export const runPerceptionPipeline = async (
   }
 
   const packId = packRuntime?.getPackId()
-    ?? context.activePackRuntime?.getActivePack()?.metadata.id;
+    ?? resolveActivePack(context, packRuntime)?.metadata.id;
   if (!packId) {
     return;
   }
   const packPrefix = `${packId}:`;
 
-  const tick = packRuntime?.getCurrentTick()
-    ?? context.activePackRuntime!.getCurrentTick();
+  const tick = resolvePackTick(context, packRuntime);
 
   const spatialEvents = await getSpatialEvents(context.prisma, tick);
   if (spatialEvents.length === 0) {

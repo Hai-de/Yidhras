@@ -2,6 +2,7 @@ import { logOperatorAudit } from '../../operator/audit/logger.js'
 import { AUDIT_ACTION } from '../../operator/constants.js'
 import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js'
+import { resolvePackTick } from './pack_runtime_resolution.js';
 
 export const createAgentBinding = async (
   context: AppContext,
@@ -23,7 +24,7 @@ export const createAgentBinding = async (
     throw new ApiError(409, 'BINDING_ALREADY_EXISTS', 'Agent binding already exists for this operator')
   }
 
-  const now = context.activePackRuntime!.getCurrentTick()
+  const now = resolvePackTick(context)
 
   const binding = await context.prisma.identityNodeBinding.create({
     data: {
@@ -67,7 +68,7 @@ export const unbindAgent = async (
     throw new ApiError(404, 'BINDING_NOT_FOUND', 'Agent binding not found')
   }
 
-  const now = context.activePackRuntime!.getCurrentTick()
+  const now = resolvePackTick(context)
 
   await context.prisma.identityNodeBinding.update({
     where: { id: binding.id },

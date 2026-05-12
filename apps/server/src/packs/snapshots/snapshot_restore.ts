@@ -14,7 +14,6 @@ import { gunzipSync } from 'zlib';
 import type { RuntimeClockProjectionSnapshot } from '../../app/runtime/runtime_clock_projection.js';
 import type { WorldEnginePort } from '../../app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from '../../app/runtime/world_engine_snapshot.js';
-import type { ActivePackRuntimeFacade } from '../../app/services/app_context_ports.js';
 import type { TimeFormatted } from '../../clock/types.js';
 import type { NotificationPort } from '../../core/runtime_activation.js';
 import type { WorldPack } from '../../packs/manifest/loader.js';
@@ -275,10 +274,10 @@ export interface RestorePackSnapshotInput {
   prisma: PrismaClient;
   packStorageAdapter: PackStorageAdapter;
   pack: WorldPack;
-  activePackRuntime?: ActivePackRuntimeFacade;
   applyClockProjection: (snapshot: RuntimeClockProjectionSnapshot) => void;
   worldEngine?: WorldEnginePort;
   notifications: NotificationPort;
+  getPackRuntimeHandle?: (packId: string) => import('../../core/pack_runtime_handle.js').PackRuntimeHandle | null;
 }
 
 export interface RestorePackSnapshotResult {
@@ -288,7 +287,7 @@ export interface RestorePackSnapshotResult {
 }
 
 export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Promise<RestorePackSnapshotResult> => {
-  const { packId, snapshotId, prisma, packStorageAdapter, pack, activePackRuntime, applyClockProjection, worldEngine, notifications } = input;
+  const { packId, snapshotId, prisma, packStorageAdapter, pack, applyClockProjection, worldEngine, notifications, getPackRuntimeHandle } = input;
 
   if (packStorageAdapter.backend !== 'sqlite') {
     throw new Error(
@@ -373,7 +372,7 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
   // 10. Reload sidecar with restored state
   if (worldEngine) {
     const hydrateRequest = await buildWorldPackHydrateRequest(
-      { activePackRuntime } as import('../../app/context.js').AppContext,
+      { packStorageAdapter, getPackRuntimeHandle } as unknown as import('../../app/context.js').AppContext,
       packId
     );
     await worldEngine.loadPack({

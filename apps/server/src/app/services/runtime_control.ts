@@ -17,9 +17,21 @@ const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
   last_error_message: null
 };
 
+const resolveSpeedControl = (context: AppContext, packRuntime?: PackRuntimePort) =>
+  packRuntime ?? context.getPackRuntimeHost?.(context.packRuntimeLookup?.getActivePackId() ?? '');
+
+const requireSpeedControl = (context: AppContext, packRuntime?: PackRuntimePort) => {
+  const control = resolveSpeedControl(context, packRuntime);
+  if (!control) {
+    throw new Error('RUNTIME_CONTROL_NOT_READY: No active pack runtime available for speed control');
+  }
+  return control;
+};
+
 export const overrideRuntimeSpeed = (context: AppContext, stepTicks: bigint, packRuntime?: PackRuntimePort): RuntimeSpeedSnapshot => {
-  (packRuntime ?? context.activePackRuntime!).setRuntimeSpeedOverride(stepTicks);
-  const snapshot = (packRuntime ?? context.activePackRuntime!).getRuntimeSpeedSnapshot();
+  const control = requireSpeedControl(context, packRuntime);
+  control.setRuntimeSpeedOverride(stepTicks);
+  const snapshot = control.getRuntimeSpeedSnapshot();
 
   context.notifications.push('info', `运行时步进已覆盖为 ${stepTicks.toString()}`, 'RUNTIME_SPEED_OVERRIDE', {
     step_ticks: stepTicks.toString(),
@@ -30,8 +42,9 @@ export const overrideRuntimeSpeed = (context: AppContext, stepTicks: bigint, pac
 };
 
 export const clearRuntimeSpeedOverride = (context: AppContext, packRuntime?: PackRuntimePort): RuntimeSpeedSnapshot => {
-  (packRuntime ?? context.activePackRuntime!).clearRuntimeSpeedOverride();
-  const snapshot = (packRuntime ?? context.activePackRuntime!).getRuntimeSpeedSnapshot();
+  const control = requireSpeedControl(context, packRuntime);
+  control.clearRuntimeSpeedOverride();
+  const snapshot = control.getRuntimeSpeedSnapshot();
 
   context.notifications.push('info', '运行时步进覆盖已清除', 'RUNTIME_SPEED_OVERRIDE_CLEAR', {
     override_since: null

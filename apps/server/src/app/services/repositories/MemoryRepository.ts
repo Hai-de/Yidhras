@@ -19,7 +19,6 @@ import type {
 } from '../../../memory/types.js';
 import { createVectorStore, type VectorStore } from '../../../memory/vector/vector_store.js';
 import type { AppInfrastructure } from '../../context.js';
-import type { AppContextPorts } from '../app_context_ports.js';
 
 export type {
   LongTermMemorySearchInput,
@@ -51,7 +50,7 @@ export class PrismaMemoryRepository implements MemoryRepository {
   private readonly vectorStore: VectorStore;
 
   constructor(private readonly prisma: PrismaClient) {
-    const ctx = { prisma } as AppInfrastructure & Pick<AppContextPorts, 'activePackRuntime'>;
+    const ctx = { prisma } as AppInfrastructure;
     this.blockStore = createPrismaLongMemoryBlockStore(ctx);
     this.longTermStore = createPrismaLongTermMemoryStore(ctx);
     this.vectorStore = createVectorStore(prisma);

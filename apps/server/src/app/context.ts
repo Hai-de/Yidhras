@@ -54,10 +54,6 @@ export interface AppInfrastructure {
   readonly schedulerStorage?: SchedulerStorageAdapter;
   readonly notifications: NotificationStore;
   readonly startupHealth: StartupHealth;
-  /** @deprecated Use packRuntime.getCurrentTick() instead */
-  readonly clock: { getCurrentTick(): bigint };
-  /** @deprecated Use packRuntime.getPack() instead */
-  readonly activePack: { getActivePack(): import('../packs/manifest/loader.js').WorldPack | undefined; getCurrentRevision(): bigint };
   assertRuntimeReady(feature: string): void;
   requestPluginInference?(input: import('../plugins/runtime.js').PluginInferenceRequest): Promise<import('../plugins/runtime.js').PluginInferenceResult>;
 }
@@ -67,30 +63,10 @@ export interface AppContext extends AppInfrastructure, AppContextPorts {
   packRuntime?: PackRuntimePort;
   multiPackRuntime?: MultiPackRuntimePort;
 
-  /** @deprecated Backward-compat stub — migrate to packRuntime */
-  readonly activePackRuntime?: {
-    getCurrentTick(): bigint;
-    getCurrentRevision(): bigint;
-    getActivePack(): import('../packs/manifest/loader.js').WorldPack | undefined;
-    getStepTicks(): bigint;
-    getRuntimeSpeedSnapshot(): import('../core/runtime_speed.js').RuntimeSpeedSnapshot;
-    setRuntimeSpeedOverride(stepTicks: bigint): void;
-    clearRuntimeSpeedOverride(): void;
-    getAllTimes(): unknown;
-    step(amount?: bigint): Promise<void>;
-    getPackSlotDeclarations(): Record<string, Record<string, unknown>> | null;
-    resolvePackVariables(template: string, permission?: unknown, actorState?: Record<string, unknown> | null): string;
-  };
-  /** @deprecated Backward-compat stub — migrate to packRuntime */
-  readonly clock: { getCurrentTick(): bigint };
-  /** @deprecated Backward-compat stub — migrate to packRuntime.getPack() */
-  readonly activePack: { getActivePack(): import('../packs/manifest/loader.js').WorldPack | undefined; getCurrentRevision(): bigint };
-
-  getSpatialRuntime?(): unknown;
-  getPackRuntimeHost?(packId: string): unknown;
+  getSpatialRuntime?(): import('../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
+  getPackRuntimeHost?(packId: string): import('../core/pack_runtime_host.js').PackRuntimeHost | null;
   getPackRuntimeHandle?(packId: string): import('../core/pack_runtime_handle.js').PackRuntimeHandle | null;
   listLoadedPackRuntimeIds?(): string[];
-  reinitializePackRuntime?(packId: string, openingId: string): Promise<void>;
   isRuntimeReady?(): boolean;
   setRuntimeReady?(ready: boolean): void;
   isPaused?(): boolean;
@@ -112,11 +88,3 @@ export interface AppContext extends AppInfrastructure, AppContextPorts {
 
 export type RouteRegistrar = (app: Express, context: AppContext) => void;
 
-/** @deprecated Use AppInfrastructure.clock instead */
-export type ClockProvider = AppInfrastructure['clock'];
-/** @deprecated Use AppInfrastructure.activePack instead */
-export type ActivePackProvider = AppInfrastructure['activePack'];
-/** @deprecated Use AppInfrastructure instead */
-export type ClockSource = { readonly clock: ClockProvider };
-/** @deprecated Use AppInfrastructure instead */
-export type ActivePackSource = { readonly activePack: ActivePackProvider };

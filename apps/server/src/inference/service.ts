@@ -2,6 +2,7 @@ import { createModelGateway } from '../ai/gateway.js';
 import { resolveAiTaskConfig } from '../ai/task_definitions.js';
 import type { AppInfrastructure } from '../app/context.js';
 import type { PackRuntimePort } from '../app/services/pack_runtime_ports.js';
+import { resolvePackTick } from '../app/services/pack_runtime_resolution.js';
 import { toJsonSafe } from '../app/http/json.js';
 import {
   assertDecisionJobLockOwnership,
@@ -283,7 +284,7 @@ const executeRunInternal = async (
     const failure = classifyFailure(err);
 
     if (options?.jobId) {
-      const currentTick = (packRuntime?.getCurrentTick() ?? context.clock.getCurrentTick());
+      const currentTick = resolvePackTick(context, packRuntime);
       const existingJob = await getDecisionJobById(context, options.jobId);
       const retryExhausted = existingJob.attempt_count >= existingJob.max_attempts;
       await updateDecisionJobState(context, {
@@ -318,7 +319,7 @@ const executeRunInternal = async (
   } catch (err) {
     if (options?.jobId) {
       const failure = classifyFailure(err);
-      const currentTick = (packRuntime?.getCurrentTick() ?? context.clock.getCurrentTick());
+      const currentTick = resolvePackTick(context, packRuntime);
       const existingJob = await getDecisionJobById(context, options.jobId);
       const retryExhausted = existingJob.attempt_count >= existingJob.max_attempts;
       await updateDecisionJobState(context, {
@@ -666,7 +667,7 @@ export const createInferenceService = ({
         last_error: null,
         last_error_code: null,
         last_error_stage: null,
-        next_retry_at: (packRuntime?.getCurrentTick() ?? context.clock.getCurrentTick()),
+        next_retry_at: resolvePackTick(context, packRuntime),
         locked_by: null,
         locked_at: null,
         lock_expires_at: null,
@@ -695,7 +696,7 @@ export const createInferenceService = ({
     },
     async executeDecisionJob(jobId, options, packRuntime?: PackRuntimePort) {
       const job = await getDecisionJobById(context, jobId);
-      const now = (packRuntime?.getCurrentTick() ?? context.clock.getCurrentTick());
+      const now = resolvePackTick(context, packRuntime);
 
       if (job.status !== 'running') {
         return null;

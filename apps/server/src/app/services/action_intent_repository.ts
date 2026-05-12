@@ -1,6 +1,7 @@
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from './pack_runtime_ports.js';
+import { resolvePackTick } from './pack_runtime_resolution.js';
 
 export interface ActionIntentRecord {
   id: string;
@@ -48,7 +49,7 @@ export const listDispatchableActionIntents = async (
   limit = 10,
   packRuntime?: PackRuntimePort
 ): Promise<ActionIntentRecord[]> => {
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = resolvePackTick(context, packRuntime);
 
   return context.prisma.actionIntent.findMany({
     where: {
@@ -78,7 +79,7 @@ export const claimActionIntent = async (
   }
 ): Promise<ActionIntentRecord | null> => {
   const packRuntime = input.packRuntime;
-  const now = input.now ?? (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = input.now ?? resolvePackTick(context, packRuntime);
   const lockTicks = input.lock_ticks ?? 5n;
   const existing = await context.prisma.actionIntent.findUnique({
     where: {
@@ -162,7 +163,7 @@ export const releaseActionIntentLock = async (
       locked_by: null,
       locked_at: null,
       lock_expires_at: null,
-      updated_at: (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick())
+      updated_at: resolvePackTick(context, packRuntime)
     }
   });
 };
@@ -181,7 +182,7 @@ export const markActionIntentDispatching = async (
   intentId: string,
   packRuntime?: PackRuntimePort
 ): Promise<ActionIntentRecord> => {
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = resolvePackTick(context, packRuntime);
 
   return context.prisma.actionIntent.update({
     where: {
@@ -203,7 +204,7 @@ export const markActionIntentCompleted = async (
   intentId: string,
   packRuntime?: PackRuntimePort
 ): Promise<ActionIntentRecord> => {
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = resolvePackTick(context, packRuntime);
 
   return context.prisma.actionIntent.update({
     where: {
@@ -230,7 +231,7 @@ export const markActionIntentFailed = async (
   code: string | null = 'ACTION_DISPATCH_FAIL',
   packRuntime?: PackRuntimePort
 ): Promise<ActionIntentRecord> => {
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = resolvePackTick(context, packRuntime);
 
   return context.prisma.actionIntent.update({
     where: {
@@ -254,7 +255,7 @@ export const markActionIntentDropped = async (
   reason: string | null,
   packRuntime?: PackRuntimePort
 ): Promise<ActionIntentRecord> => {
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+  const now = resolvePackTick(context, packRuntime);
 
   return context.prisma.actionIntent.update({
     where: {

@@ -2,7 +2,7 @@ import { getPackEntityOverviewProjection } from '../../packs/runtime/projections
 import { PermissionContext } from '../../permission/types.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext, AppInfrastructure } from '../context.js';
-import type { AppContextPorts } from './app_context_ports.js';
+import { resolveActivePack } from './pack_runtime_resolution.js';
 import type { AuditViewEntry } from './audit.js';
 import { listAuditFeed } from './audit.js';
 import { listInferenceJobs } from './inference_workflow.js';
@@ -235,7 +235,7 @@ const toAuditEntries = (entries: AuditViewEntry[], kind: AuditViewEntry['kind'])
   return entries.filter(entry => entry.kind === kind);
 };
 
-export const getAgentContextSnapshot = async (context: AppInfrastructure & Pick<AppContextPorts, 'activePackRuntime'>, agentId: string) => {
+export const getAgentContextSnapshot = async (context: AppInfrastructure, agentId: string) => {
   const agent = await context.repos.agent.findAgentByIdWithCircles(agentId);
 
   if (!agent) {
@@ -243,7 +243,10 @@ export const getAgentContextSnapshot = async (context: AppInfrastructure & Pick<
   }
 
   const permission = buildPermissionContext(agent);
-  const resolvedVariables = context.activePackRuntime?.resolvePackVariables(JSON.stringify(context.activePackRuntime?.getActivePack()?.variables || {}), permission) ?? JSON.stringify({});
+  const pack = resolveActivePack(context);
+  const resolvedVariables = pack?.variables
+    ? JSON.stringify(pack.variables)
+    : JSON.stringify({});
 
   return {
     identity: agent,

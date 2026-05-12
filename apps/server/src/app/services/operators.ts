@@ -4,6 +4,7 @@ import { AUDIT_ACTION, OPERATOR_STATUS } from '../../operator/constants.js'
 import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from './pack_runtime_ports.js';
+import { resolvePackTick } from './pack_runtime_resolution.js';
 
 export const createOperator = async (
   context: AppContext,
@@ -24,7 +25,7 @@ export const createOperator = async (
   }
 
   const passwordHash = await hashPassword(input.password)
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick())
+  const now = resolvePackTick(context, packRuntime)
 
   // 创建 Identity
   const identity = await context.repos.identityOperator.createIdentity({
@@ -92,7 +93,7 @@ export const updateOperator = async (
     throw new ApiError(404, 'OPERATOR_NOT_FOUND', 'Operator not found')
   }
 
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick())
+  const now = resolvePackTick(context, packRuntime)
   const data: Record<string, unknown> = { updated_at: now }
 
   if (input.status !== undefined) {
@@ -140,7 +141,7 @@ export const deleteOperator = async (
     throw new ApiError(404, 'OPERATOR_NOT_FOUND', 'Operator not found')
   }
 
-  const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick())
+  const now = resolvePackTick(context, packRuntime)
 
   const updated = await context.repos.identityOperator.updateOperator(operatorId, {
     status: OPERATOR_STATUS.DISABLED,

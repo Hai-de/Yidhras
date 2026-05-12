@@ -32,11 +32,18 @@ export const createPackProjectionMetadataResolver = (
   const ctx = context as unknown as AppContext;
   return {
     resolve(packId: string, mode: PackProjectionScopeMode, feature: string): Promise<PackProjectionResolution> {
-      const resolvedPackId = assertPackScope(ctx, packId, mode, feature);
+      const resolvedPackId = assertPackScope(ctx, packId, feature);
 
       if (mode === 'stable') {
-        const activePack = (context as any).activePack?.getActivePack();
-        if (!activePack || activePack.metadata.id !== resolvedPackId) {
+        const activePackId = ctx.packRuntimeLookup?.getActivePackId();
+        if (!activePackId || activePackId !== resolvedPackId) {
+          return Promise.reject(new ApiError(503, 'WORLD_PACK_NOT_READY', `World pack not ready for ${feature}`, {
+            pack_id: resolvedPackId,
+            feature
+          }));
+        }
+        const handle = ctx.getPackRuntimeHandle?.(resolvedPackId);
+        if (!handle) {
           return Promise.reject(new ApiError(503, 'WORLD_PACK_NOT_READY', `World pack not ready for ${feature}`, {
             pack_id: resolvedPackId,
             feature
@@ -45,7 +52,7 @@ export const createPackProjectionMetadataResolver = (
 
         return Promise.resolve({
           pack_id: resolvedPackId,
-          pack: toPackProjectionMetadataSnapshot(activePack)
+          pack: toPackProjectionMetadataSnapshot(handle.pack)
         });
       }
 

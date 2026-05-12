@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { AccessPolicyService } from '../access_policy/service.js';
 import type { AppInfrastructure } from '../app/context.js';
+import { resolveActivePack, resolvePackTick } from '../app/services/pack_runtime_resolution.js';
 import { getAgentContextSnapshot } from '../app/services/agent.js';
 import type { AppContextPorts } from '../app/services/app_context_ports.js';
 import { createContextAssemblyPort } from '../app/services/context_memory_ports.js';
@@ -44,7 +45,7 @@ import type {
   InferenceTransmissionProfile
 } from './types.js';
 
-type Ctx = AppInfrastructure & Pick<AppContextPorts, 'activePackRuntime' | 'packRuntimeLookup' | 'contextAssembly'>;
+type Ctx = AppInfrastructure & Pick<AppContextPorts, 'packRuntimeLookup' | 'contextAssembly'>;
 
 const SUPPORTED_STRATEGIES: InferenceStrategy[] = ['mock', 'rule_based', 'model_routed'];
 
@@ -252,7 +253,7 @@ const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?:
       });
     }
 
-    const activePack = context.activePackRuntime?.getActivePack();
+    const activePack = resolveActivePack(context);
     const actorDef = activePack?.entities?.actors?.find(a => a.id === input.actor_entity_id);
     const entityKind = actorDef?.kind ?? 'actor';
 
@@ -539,7 +540,7 @@ const buildPackStateSnapshot = async (
 };
 
 const buildPackRuntimeContract = (context: Ctx): InferencePackRuntimeContract => {
-  const activePack = context.activePackRuntime?.getActivePack();
+  const activePack = resolveActivePack(context);
   if (!activePack) {
     return {};
   }
@@ -563,7 +564,7 @@ const createPackRuntimeContractResolver = (): PackRuntimeContractResolver => {
       }
     ): Promise<InferencePackRuntimeContract> {
       if (input.mode === 'stable') {
-        const activePack = context.activePackRuntime?.getActivePack();
+        const activePack = resolveActivePack(context);
         if (!activePack || activePack.metadata.id !== input.pack_id) {
           return Promise.resolve({});
         }
@@ -672,7 +673,7 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
     async buildForPack(context: Ctx, input: BuildInferenceContextForPackInput): Promise<InferenceContext> {
       context.assertRuntimeReady('inference context');
 
-      const activePack = context.activePackRuntime?.getActivePack();
+      const activePack = resolveActivePack(context);
 
       const stablePack = input.mode === 'stable' ? activePack : undefined;
       const experimentalSummary = input.mode === 'experimental' ? context.packRuntimeLookup?.getPackRuntimeSummary(input.pack_id) : null;
@@ -705,7 +706,7 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
 
       const currentTick = input.mode === 'experimental'
         ? experimentalSummary?.current_tick ?? '0'
-        : context.activePackRuntime!.getCurrentTick().toString();
+        : resolvePackTick(context).toString();
 
       const strategy = selectStrategy(input);
       const attributes = normalizeAttributes(input.attributes);
@@ -794,7 +795,7 @@ export const buildInferenceContext = async (
   context: Ctx,
   input: InferenceRequestInput
 ): Promise<InferenceContext> => {
-  const pack = context.activePackRuntime?.getActivePack();
+  const pack = resolveActivePack(context);
   if (!pack) {
     throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for inference context', {
       startup_level: context.startupHealth.level,

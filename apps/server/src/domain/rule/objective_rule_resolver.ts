@@ -1,4 +1,5 @@
-import type { ActivePackSource } from '../../app/context.js';
+import type { AppInfrastructure } from '../../app/context.js';
+import { resolveActivePack } from '../../app/services/pack_runtime_resolution.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { ApiError } from '../../utils/api_error.js';
@@ -215,12 +216,12 @@ const resolveObjectiveEventEffects = (
 };
 
 const resolveObjectiveRulePlanFromRules = async (
-  context: ActivePackSource,
+  context: AppInfrastructure,
   invocation: InvocationRequest,
   effectiveMediatorId: string | null,
   adapter: PackStorageAdapter
 ): Promise<ObjectiveRulePlan | null> => {
-  const pack = context.activePack.getActivePack();
+  const pack = resolveActivePack(context);
   if (!pack) {
     return null;
   }
@@ -297,7 +298,7 @@ const resolveObjectiveRulePlanFromRules = async (
 };
 
 export const resolveObjectiveRulePlan = async (
-  context: ActivePackSource,
+  context: AppInfrastructure,
   input: {
     invocation: InvocationRequest;
     capabilityGrant: ResolvedCapabilityItem | null;
@@ -305,7 +306,7 @@ export const resolveObjectiveRulePlan = async (
     packStorageAdapter: PackStorageAdapter;
   }
 ): Promise<ObjectiveRulePlan> => {
-  const pack = context.activePack.getActivePack();
+  const pack = resolveActivePack(context);
   if (!pack) {
     throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for objective rule resolution');
   }

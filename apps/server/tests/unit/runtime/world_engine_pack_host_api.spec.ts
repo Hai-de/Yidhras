@@ -69,19 +69,12 @@ describe('PackHostApi host boundary', () => {
       applyWorldEngineCommitProjection: vi.fn() as never,
       rebuildFromRuntimeSeed: vi.fn() as never
     } as never;
-    context.activePackRuntime = {
-      getActivePack: () => ({
-        metadata: {
-          id: 'world-death-note'
-        }
-      }),
-      getCurrentTick: () => 1000n,
-      getCurrentRevision: () => 12n,
-      getAllTimes: () => [],
-      applyClockProjection: vi.fn(),
-      getStepTicks: () => 1n,
-      getRuntimeSpeedSnapshot: () => ({ effective_step_ticks: '1' })
-    } as never;
+    context.packRuntimeLookup = {
+      getActivePackId: () => 'world-death-note',
+      hasPackRuntime: () => true,
+      assertPackScope: (id: string) => id,
+      getPackRuntimeSummary: () => null
+    };
 
     const hostApi = createPackHostApi(context);
     await expect(hostApi.getCurrentTick({ pack_id: 'world-death-note' })).resolves.toBe('4242');

@@ -11,39 +11,11 @@ import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 const TEST_PACK_ID = 'world-test-pack';
 
 const createContext = (): AppContext => {
-  const sim = {
-    getActivePack: () => ({ metadata: { id: TEST_PACK_ID } }),
-    getCurrentTick: () => 1000n,
-    getPackRuntimeHandle: () => null
-  } as unknown as SimulationManager;
-
   const prisma = {} as AppContext['prisma'];
   return {
     repos: wrapPrismaAsRepositories(prisma as PrismaClient),
     prisma,
     packStorageAdapter: new SqlitePackStorageAdapter(),
-    sim,
-    clock: sim as AppContext['clock'],
-    activePack: sim as AppContext['activePack'],
-    activePackRuntime: {
-      init: vi.fn(async () => undefined),
-      getActivePack: () => ({ metadata: { id: TEST_PACK_ID } }) as never,
-      resolvePackVariables: vi.fn(() => ''),
-      getStepTicks: () => 1n,
-      getRuntimeSpeedSnapshot: vi.fn(() => ({
-        mode: 'fixed',
-        source: 'default',
-        configured_step_ticks: null,
-        override_step_ticks: null,
-        override_since: null,
-        effective_step_ticks: '1'
-      })),
-      setRuntimeSpeedOverride: vi.fn(),
-      clearRuntimeSpeedOverride: vi.fn(),
-      getCurrentTick: () => 1000n,
-      getAllTimes: vi.fn(() => ({})),
-      step: vi.fn(async () => undefined)
-    },
     notifications: {
       push: vi.fn() as never,
       getMessages: vi.fn(() => []),
@@ -59,7 +31,15 @@ const createContext = (): AppContext => {
     setRuntimeReady: vi.fn(),
     getPaused: () => false,
     setPaused: vi.fn(),
-    assertRuntimeReady: vi.fn()
+    assertRuntimeReady: vi.fn(),
+    getPackRuntimeHandle: (id: string) => ({
+      pack_id: id,
+      pack_folder_name: 'test',
+      pack: { metadata: { id, name: 'test', version: '0.0.0' } } as unknown as import('../../../src/packs/manifest/loader.js').WorldPack,
+      getHealthSnapshot: () => ({ status: 'ok', message: null }),
+      getClockSnapshot: () => ({ current_tick: '1000', current_revision: '1000' }),
+      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null })
+    })
   } as unknown as AppContext;
 };
 

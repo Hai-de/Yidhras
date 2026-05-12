@@ -4,6 +4,7 @@ import { createAiTaskService } from '../../ai/task_service.js';
 import type { AppInfrastructure } from '../../app/context.js';
 import type { AppContextPorts } from '../../app/services/app_context_ports.js';
 import type { PackRuntimePort } from '../../app/services/pack_runtime_ports.js';
+import { resolveActivePack, resolvePackTick } from '../../app/services/pack_runtime_resolution.js';
 import { isAiGatewayEnabled } from '../../config/runtime_config.js';
 import { createContextOverlayStore } from '../../context/overlay/store.js';
 import { buildWorkflowPromptBundle } from '../../context/workflow/orchestrator.js';
@@ -49,7 +50,7 @@ export interface MemoryCompactionService {
   runForAgent(input: { agent_id: string; identity_id?: string }): Promise<MemoryCompactionRunResult | null>;
 }
 
-type CompactionServiceContext = AppInfrastructure & Pick<AppContextPorts, 'activePackRuntime'>;
+type CompactionServiceContext = AppInfrastructure;
 
 export interface CreateMemoryCompactionServiceOptions {
   context: CompactionServiceContext;
@@ -79,7 +80,7 @@ export const createMemoryCompactionService = ({
     },
 
     async runForAgent(input) {
-      const pack = context.activePackRuntime?.getActivePack();
+      const pack = resolveActivePack(context, packRuntime);
       if (!pack) {
         return null;
       }
@@ -103,7 +104,7 @@ export const createMemoryCompactionService = ({
         };
       }
 
-      const now = (packRuntime?.getCurrentTick() ?? context.activePackRuntime!.getCurrentTick());
+      const now = resolvePackTick(context, packRuntime);
       const state = await context.repos.memory.upsertCompactionState({
         agent_id: input.agent_id,
         pack_id: pack.metadata.id,

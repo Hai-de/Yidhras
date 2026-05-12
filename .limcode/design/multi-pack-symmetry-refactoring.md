@@ -509,3 +509,114 @@ if (this.getActivePackId() === packId) {
 - `'experimental'` → 直接查 `PackRuntimeRegistry`
 
 文档未指定移除后解析逻辑用什么替代（统一走 registry？保留 projection guard？新建第三条路径？）。
+
+### 盲点 5（严重）：数据库核心表缺少 pack_id — 方案 A 的根本性障碍
+
+Prisma schema 中以下核心表**没有** `pack_id` 字段：
+
+| 表 | 影响 |
+|----|------|
+| `Agent` | Agent 查询（`listActiveSchedulerAgents` 等）不按包过滤，拉取所有包的 agent |
+| `Event` | `resolvePackClock()` 查询 `max(event.tick)` 无法按包限定，per-pack 时钟恢复依赖此表 |
+| `ActionIntent` | Action dispatcher 需按包分发，但无法过滤 |
+| `InferenceTrace` | 推理审计无法按包隔离（`DecisionJob` 有 `pack_id` 但 trace 外键不在 `pack_id` 上） |
+| `Relationship` / `RelationshipAdjustmentLog` | 关系数据全局混合 |
+| `WorldVariable` | 全局 KV 存储 |
+| `SNRAdjustmentLog` | 全局 |
+| `Post` | 全局帖子 |
+| `Circle` / `CircleMember` | 全局社交圈 |
+| `Identity` / `Policy` | 全局身份 |
+
+这不仅是"遗漏"——它是方案 A 的**前置阻塞项**。如果 `Event` 表不加 `pack_id`，per-pack 时钟初始化就不可能从 DB 恢复（见补充发现"时钟初始化仍不对称"）。如果 `Agent` 表不加 `pack_id`，scheduler 的 `listActiveSchedulerAgents()` 会返回所有包的 agent，调度器无法按包工作。
+
+方案 A 的影响面估算完全未包含 DB schema migration 和数据回填的工作量。
+
+### 盲点 6（严重）：Inference workflow 无包隔离 — scheduler signal 跨包混合
+
+`apps/server/src/app/services/inference_workflow/` 全部使用 `context.clock.getCurrentTick()`（全局时钟）且无 `pack_id` 过滤：
+
+- `workflow_job_repository.ts`：6 处 `context.clock.getCurrentTick()` 调用（claim、release、update、list 等）
+- `scheduler_signal_repository.ts`：所有查询（latest signal tick、event followups、relationship followups 等）**不按 pack_id 过滤**，读取所有包的数据
+- `claimDecisionJob`、`releaseDecisionJobLock`、`updateDecisionJobState`、`listRunnableDecisionJobs` 均不含 `packId` 参数
+
+虽然 `DecisionJob` 表有 `pack_id` 列，但 scheduler signal 查询不走此过滤。多包运行时，Pack A 的推理 runner 会 claim Pack B 的 job，signal 查询会返回混合数据。
+
+方案 A 的"改造所有 `getCurrentTick()` 调用为 `getCurrentTick(packId)`"仅覆盖了时钟问题，未覆盖 scheduler signal 的数据隔离问题。此处改造深度远超参数追加——需要为所有 signal 查询增加 `WHERE pack_id = ?` 条件，且需评估无 `pack_id` 的关联表（`Event`、`Relationship`）的 join 策略。
+
+### 盲点 7：SimulationManager 的 pause / runtimeReady / spatialRuntime 也是全局单例
+
+文档聚焦于 `clock` 和 `activePack` 的全局状态问题，但 `SimulationManager` 还有三个全局字段未被讨论：
+
+- `paused: boolean` — 暂停是全局的，调用 `setPaused(true)` 会暂停**所有**包的模拟循环
+- `runtimeReady: boolean` — `isRuntimeReady()` 返回单一布尔值，无法表达"Pack A ready、Pack B loading"的状态
+- `spatialRuntime` — 从 active pack 获取的空间运行时，其他包不拥有自己的空间状态
+
+方案 A 的 `SimulationManager` 拆分设计（`PackRuntimeCoordinator` + `PackRuntimePort` + `MultiPackRuntimePort`）中，这三个字段的归属未明确：
+
+- `paused` 应是 per-pack（每个 pack 可独立暂停）还是全局（所有 pack 同步暂停）？
+- `runtimeReady` 在拆分后是 `PackRuntimePort.isReady(packId)` 还是全局的？
+- `spatialRuntime` 是否属于 per-pack 状态？如果是，远超 `PackRuntimePort` 的当前接口定义
+
+### 盲点 8：PackRuntimePort 接口遗漏比文档自审更严重
+
+文档"不诚实断言 4"识别了 `getAllTimes()` 和 `applyClockProjection()` 两个遗漏，但实际遗漏更多：
+
+| `ActivePackRuntimeFacade` 方法 | 在 `PackRuntimePort` 中？ | 重要性 |
+|-------------------------------|--------------------------|--------|
+| `init(packFolderName, openingId?)` | **无** | 高 — 启动 DB bootstrap 和时钟恢复 |
+| `getAllTimes()` | **无** | 中 — 日历格式化时间展示 |
+| `applyClockProjection(snapshot)` | **无** | 关键 — world engine 时钟同步入口 |
+| `getStepTicks()` | **无** | 中 — 返回当前步长 |
+| `clearRuntimeSpeedOverride()` | **无** | 低 — 清除速度覆盖 |
+| `getClock()` | **无** | 高 — 返回 ChronosEngine 实例 |
+| `getPackSlotDeclarations()` | **无** | 中 — AI slot 配置 |
+
+此外，`AppContext` 上通过 `SimulationManager` 暴露的端口（`context.ts:79-101`）还有：
+- `getSpatialRuntime?()` — 空间运行时
+- `isRuntimeReady?()` / `setRuntimeReady?()` — 运行时就绪状态
+- `isPaused?()` / `setPaused?()` — 暂停控制
+- `applyClockProjection?(snapshot)` — 全局时钟投影
+- `worldEngineStepCoordinator?` — WE 步骤协调器
+
+方案 A 的新接口仅覆盖了 `ActivePackRuntimeFacade` 上的 7 个方法中的 5 个，以及 `AppContext` 6+ 方法中的 0 个。这不是"小遗漏"而是**接口设计不完整**。
+
+### 盲点 9：load/unload 竞态条件未设计
+
+方案 A 说"所有 pack 均可卸载"，但不讨论竞态条件：
+
+- Pack 的 `PackSimulationLoop` 正在 step 2（world engine commit）中收到 unload 请求时，如何 graceful shutdown？
+- `unload()` 调用 `worldEngine.unloadPack()` 期间，如果 loop 的下一步开始执行，会产生什么错误？
+- 当前 `MultiPackLoopHost.stopLoop()` 是否等待当前 iteration 完成再停止？
+
+方案 D 日志中 `unload()` 的实现是 `await this.stopLoop(packId)` 后再 `worldEngine.unloadPack()`，但 `stopLoop` 的具体行为（是否等待当前 step 完成）未验证。如果 `stopLoop` 仅设置标志位而非 join，则存在 step 执行到一半时 world engine session 被销毁的风险。
+
+### 盲点 10：两个 PackScopeResolver 的行为差异未识别
+
+代码中存在**两个** `PackScopeResolver`：
+
+1. **`app/services/pack_scope_resolver.ts`** — 路由级使用，`stable` 模式强制匹配 active pack（返回错误如果不匹配），`experimental` 模式直接查 registry
+2. **`app/runtime/PackScopeResolver.ts`** — 核心运行时使用，只检查 registry 成员状态，**不做 stable/experimental 区分**
+
+此外，`pack_runtime_registry_service.ts` 的 `resolveStablePackScope` 和 `resolveExperimentalPackScope` 都是恒等函数（返回原始 `packId`），实际不提供任何解析逻辑。
+
+补充发现"移除 PackRuntimeScopeMode 的连锁反应未分析"只提了路由级 resolver，未意识到核心运行时有一条独立的、更简单的解析路径。移除 `stable/experimental` 区分时需要统一这两条路径，连同 registry 中的恒等函数也需处理。
+
+### 盲点 11：方案 A 的实施步骤缺少 DB migration 前置
+
+方案 A 第 257-263 行的实施顺序中，第 1 步是"定义新的 pack-scoped 接口替代 `ActivePackRuntimeFacade`"。但盲点 5 指出 `Event`、`Agent`、`ActionIntent` 等核心表缺少 `pack_id`。
+
+如果在不修改 schema 的情况下实施接口改造，所有 `WHERE pack_id = ?` 查询都**不可能**写出来——数据层无法按包过滤。DB migration 必须在接口改造**之前**完成（或至少并行）。
+
+数据库 migration 包括：
+1. 为 `Event`、`Agent`、`ActionIntent`、`InferenceTrace`、`Relationship` 等表添加 `pack_id` 字段
+2. 数据回填：为现有记录分配 `pack_id`（主包为 active pack ID）
+3. 创建必要的复合索引
+4. 更新 Prisma schema 及生成 migration
+
+此项工作量未出现在任何影响面估算中。
+
+### 不诚实断言 9：方案 D 实施验证域不足
+
+方案 D 实施记录（第 189-209 行）声明"全量单元测试通过（96 files, 1001 tests, 0 failures）"，但文中已自行指出（不诚实断言 5）单元测试使用 mock，不验证多包并发。
+
+补充一点：**方案 D 也没有任何集成测试或端到端测试验证多包同时运行时 world engine 的行为**。变更涉及 `worldEngine.loadPack()` 和 `worldEngine.unloadPack()` 的生命周期调用——这两个操作的正确性（时序、错误处理、session 管理）只能在实际 sidecar 交互中验证。方案 D 的验证域仅限于 mock 验证的"调用参数正确"，不覆盖真实 sidecar 交互。

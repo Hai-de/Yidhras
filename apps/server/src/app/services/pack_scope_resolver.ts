@@ -1,5 +1,3 @@
-import type { PackRuntimeScopeMode, PackScopeResolver } from '../../core/pack_runtime_ports.js';
-import { resolvePackProjectionTarget } from '../../packs/runtime/projections/active_pack_projection_guard.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import { getPackRuntimeLookupPort } from './app_context_ports.js';
@@ -7,35 +5,22 @@ import { getPackRuntimeLookupPort } from './app_context_ports.js';
 const normalizeRequestedPackId = (packId: string): string => {
   const normalizedPackId = packId.trim();
   if (normalizedPackId.length === 0) {
-    throw new ApiError(400, 'EXPERIMENTAL_PACK_ID_INVALID', 'Experimental runtime pack id is required');
+    throw new ApiError(400, 'PACK_ID_INVALID', 'Pack id is required');
   }
 
   return normalizedPackId;
 };
 
-export const createPackScopeResolver = (context: AppContext): PackScopeResolver & { resolvePackScope(packId: string, feature: string): string } => {
+export const createPackScopeResolver = (context: AppContext) => {
+  const lookup = getPackRuntimeLookupPort({
+    packRuntimeLookup: context.packRuntimeLookup
+  });
+
   return {
-    /** Legacy mode-dependent resolver — to be removed in Phase 3. */
-    assertPackScope(packId: string, mode: PackRuntimeScopeMode, feature: string): string {
-      if (mode === 'stable') {
-        const { resolvedPackId } = resolvePackProjectionTarget(context, {
-          requestedPackId: packId,
-          feature
-        });
-
-        if (!resolvedPackId) {
-          throw new ApiError(503, 'WORLD_PACK_NOT_READY', `World pack not ready for ${feature}`);
-        }
-
-        return resolvedPackId;
-      }
-
+    assertPackScope(packId: string, feature: string): string {
       const normalizedPackId = normalizeRequestedPackId(packId);
-      const lookup = getPackRuntimeLookupPort({
-        packRuntimeLookup: context.packRuntimeLookup
-      });
       if (!lookup.hasPackRuntime(normalizedPackId)) {
-        throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', `Experimental pack runtime not found for ${feature}`, {
+        throw new ApiError(404, 'PACK_RUNTIME_NOT_FOUND', `Pack runtime not found for ${feature}`, {
           pack_id: normalizedPackId,
           feature
         });
@@ -44,12 +29,8 @@ export const createPackScopeResolver = (context: AppContext): PackScopeResolver 
       return normalizedPackId;
     },
 
-    /** Unified pack scope resolution — mode-agnostic, registry-based. Will become the sole path in Phase 3. */
     resolvePackScope(packId: string, feature: string): string {
       const normalizedPackId = normalizeRequestedPackId(packId);
-      const lookup = getPackRuntimeLookupPort({
-        packRuntimeLookup: context.packRuntimeLookup
-      });
       if (!lookup.hasPackRuntime(normalizedPackId)) {
         throw new ApiError(404, 'PACK_RUNTIME_NOT_FOUND', `Pack runtime not found for ${feature}`, {
           pack_id: normalizedPackId,
@@ -65,8 +46,7 @@ export const createPackScopeResolver = (context: AppContext): PackScopeResolver 
 export const assertPackScope = (
   context: AppContext,
   packId: string,
-  mode: PackRuntimeScopeMode,
   feature: string
 ): string => {
-  return createPackScopeResolver(context).assertPackScope(packId, mode, feature);
+  return createPackScopeResolver(context).assertPackScope(packId, feature);
 };

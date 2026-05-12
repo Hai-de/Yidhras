@@ -50,9 +50,9 @@ export const registerSystemRoutes = (app: Express, context: AppContext): void =>
     '/api/status',
     requireRoot,
     (_req, res, next) => {
-      const pack = context.activePackRuntime?.getActivePack();
+      const packId = context.packRuntimeLookup?.getActivePackId() ?? undefined;
       getRuntimeStatusSnapshot(context, {
-        packId: pack ? (pack as { metadata: { id: string } }).metadata.id : undefined,
+        packId,
         schedulerWorkerId: process.env.SCHEDULER_WORKER_ID,
         schedulerPartitionIds: undefined
       })

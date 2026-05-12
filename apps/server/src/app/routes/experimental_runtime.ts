@@ -66,7 +66,7 @@ const translateExperimentalUnloadError = (packId: string, error: unknown): never
 }
 
 const requireExperimentalPackHost = (context: AppContext, packId: string) => {
-  assertPackScope(context, packId, 'experimental', 'experimental runtime pack host')
+  assertPackScope(context, packId,'experimental runtime pack host')
   const host = context.getPackRuntimeHost?.(packId)
   if (!host) {
     throw new ApiError(404, 'EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND', 'Experimental runtime pack not found', {
@@ -78,7 +78,7 @@ const requireExperimentalPackHost = (context: AppContext, packId: string) => {
 }
 
 const requireExperimentalPackHandle = (context: AppContext, packId: string) => {
-  assertPackScope(context, packId, 'experimental', 'experimental runtime pack handle')
+  assertPackScope(context, packId,'experimental runtime pack handle')
   const summary = getPackRuntimeLookupPort({
     packRuntimeLookup: context.packRuntimeLookup
   }).getPackRuntimeSummary(packId)
