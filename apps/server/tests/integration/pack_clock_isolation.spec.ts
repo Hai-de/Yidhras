@@ -37,7 +37,7 @@ describe('pack clock isolation', () => {
     });
 
     await sim.prepareDatabase();
-    await sim.init(DEATH_NOTE_REF);
+    await sim.loadExperimentalPackRuntime(DEATH_NOTE_REF);
     await sim.loadExperimentalPackRuntime(EXAMPLE_PACK_REF);
   });
 

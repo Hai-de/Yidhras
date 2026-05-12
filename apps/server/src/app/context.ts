@@ -55,6 +55,10 @@ export interface AppInfrastructure {
   readonly notifications: NotificationStore;
   readonly startupHealth: StartupHealth;
   assertRuntimeReady(feature: string): void;
+  isRuntimeReady(): boolean;
+  setRuntimeReady(ready: boolean): void;
+  isPaused(): boolean;
+  setPaused(paused: boolean): void;
   requestPluginInference?(input: import('../plugins/runtime.js').PluginInferenceRequest): Promise<import('../plugins/runtime.js').PluginInferenceResult>;
 }
 
@@ -67,11 +71,6 @@ export interface AppContext extends AppInfrastructure, AppContextPorts {
   getPackRuntimeHost?(packId: string): import('../core/pack_runtime_host.js').PackRuntimeHost | null;
   getPackRuntimeHandle?(packId: string): import('../core/pack_runtime_handle.js').PackRuntimeHandle | null;
   listLoadedPackRuntimeIds?(): string[];
-  isRuntimeReady?(): boolean;
-  setRuntimeReady?(ready: boolean): void;
-  isPaused?(): boolean;
-  setPaused?(paused: boolean): void;
-  applyClockProjection?(snapshot: import('./runtime/runtime_clock_projection.js').RuntimeClockProjectionSnapshot): void;
 
   getRuntimeLoopDiagnostics?(): RuntimeLoopDiagnostics;
   setRuntimeLoopDiagnostics?(next: RuntimeLoopDiagnostics): void;

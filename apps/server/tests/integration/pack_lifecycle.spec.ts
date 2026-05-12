@@ -131,7 +131,7 @@ describe('pack lifecycle', () => {
     });
 
     it('unload primary pack (loaded via init()) works normally', async () => {
-      await sim.init(DEATH_NOTE_REF);
+      await sim.loadExperimentalPackRuntime(DEATH_NOTE_REF);
       expect(sim.listLoadedPackRuntimeIds()).toContain(DEATH_NOTE_ID);
 
       const unloaded = await sim.unloadExperimentalPackRuntime(DEATH_NOTE_ID);

@@ -70,7 +70,7 @@ describe('PackHostApi read surface integration', () => {
     process.env.WORLD_PACKS_DIR = environment.worldPacksDir;
     process.env.DATABASE_URL = environment.databaseUrl;
     process.env.APP_ENV = environment.envOverrides.APP_ENV;
-    await context.sim.init?.('death_note');
+    await context.sim.loadExperimentalPackRuntime?.('death_note');
 
     context.worldEngine = sidecar as unknown as AppContext['worldEngine'];
 

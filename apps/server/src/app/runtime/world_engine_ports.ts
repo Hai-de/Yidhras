@@ -127,9 +127,9 @@ const getPackSummary = (context: AppContext, packId: string): PackRuntimeSummary
     return {
       pack_id: normalizedPackId,
       pack_folder_name: null,
-      health_status: context.isPaused?.() ? 'paused' : 'running',
+      health_status: context.isPaused() ? 'paused' : 'running',
       current_tick: projectedTick ?? getActiveCurrentTick(context),
-      runtime_ready: context.isRuntimeReady?.()
+      runtime_ready: context.isRuntimeReady()
     };
   }
 

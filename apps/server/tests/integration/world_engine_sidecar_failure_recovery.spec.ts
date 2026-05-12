@@ -52,7 +52,7 @@ describe.skipIf(!existsSync(SIDECAR_BINARY_PATH), 'world engine sidecar failure 
       notifications: createNotificationManager()
     });
 
-    await sim.init('death_note');
+    await sim.loadExperimentalPackRuntime('death_note');
     context = {
       prisma,
       sim,

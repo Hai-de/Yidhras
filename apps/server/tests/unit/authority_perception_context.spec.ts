@@ -44,7 +44,7 @@ describe('authority/perception/context assembly', () => {
     const sim = new SimulationManager({ prisma, packStorageAdapter: new SqlitePackStorageAdapter(), notifications });
 
     await sim.prepareDatabase();
-    await sim.init('death_note');
+    await sim.loadExperimentalPackRuntime('death_note');
 
     const appContext: AppContext & { identity?: { id: string; type: 'agent'; name: string } } = {
       sim,

@@ -176,8 +176,8 @@ export const getRuntimeStatusSnapshot = async (
   const runtimeLoop = runtimeKernel.getLoopDiagnostics() ?? context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
 
   return {
-    status: context.isPaused!() ? 'paused' : 'running',
-    runtime_ready: context.isRuntimeReady!(),
+    status: context.isPaused() ? 'paused' : 'running',
+    runtime_ready: context.isRuntimeReady(),
     runtime_speed: context.getPackRuntimeHost?.(packId)?.getRuntimeSpeedSnapshot() ?? { mode: 'fixed', source: 'default', configured_step_ticks: null, override_step_ticks: null, override_since: null, effective_step_ticks: '1' },
     runtime_loop: runtimeLoop,
     database: context.getDatabaseHealth?.() ?? null,
@@ -226,7 +226,7 @@ export const getStartupHealthSnapshot = (
     body: {
       healthy: context.startupHealth.level !== 'fail',
       level: context.startupHealth.level,
-      runtime_ready: context.isRuntimeReady!(),
+      runtime_ready: context.isRuntimeReady(),
       checks: context.startupHealth.checks,
       available_world_packs: context.startupHealth.available_world_packs,
       errors: context.startupHealth.errors

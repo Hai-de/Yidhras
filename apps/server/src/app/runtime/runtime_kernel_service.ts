@@ -29,13 +29,13 @@ export interface RuntimeKernelService extends RuntimeKernelFacade, SchedulerObse
 export const createRuntimeKernelService = (context: AppContext, packId: string): RuntimeKernelService => {
   return {
     start() {
-      context.setPaused?.(false);
+      context.setPaused(false);
     },
     stop() {
-      context.setPaused?.(true);
+      context.setPaused(true);
     },
     isRunning() {
-      return context.isPaused!() === false;
+      return context.isPaused() === false;
     },
     getLoopDiagnostics() {
       return context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
@@ -43,8 +43,8 @@ export const createRuntimeKernelService = (context: AppContext, packId: string):
     getHealthSnapshot(): RuntimeKernelHealthSnapshot {
       const diagnostics = context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
       return {
-        runtime_ready: context.isRuntimeReady!(),
-        paused: context.isPaused!(),
+        runtime_ready: context.isRuntimeReady(),
+        paused: context.isPaused(),
         loop_status: diagnostics.status
       };
     },

@@ -54,7 +54,7 @@ export const clearRuntimeSpeedOverride = (context: AppContext, packRuntime?: Pac
 };
 
 export const pauseRuntime = (context: AppContext): RuntimeControlSnapshot => {
-  context.setPaused?.(true);
+  context.setPaused(true);
   const diagnostics = context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
   context.setRuntimeLoopDiagnostics?.({
     ...diagnostics,
@@ -66,7 +66,7 @@ export const pauseRuntime = (context: AppContext): RuntimeControlSnapshot => {
 };
 
 export const resumeRuntime = (context: AppContext): RuntimeControlSnapshot => {
-  context.setPaused?.(false);
+  context.setPaused(false);
   const diagnostics = context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
   context.setRuntimeLoopDiagnostics?.({
     ...diagnostics,

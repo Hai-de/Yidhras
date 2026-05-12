@@ -85,7 +85,7 @@ export const registerPackSnapshotRoutes = (
       const params = parseParams(packIdParamsSchema, req.params, 'SNAPSHOT_CREATE_INVALID');
       const body = parseBody(createSnapshotRequestSchema, req.body, 'SNAPSHOT_CREATE_BODY_INVALID');
 
-      context.setPaused?.(true);
+      context.setPaused(true);
 
       const getExperimentalTick = (packId: string): string | null => {
         const handle = context.getPackRuntimeHandle?.(packId);
@@ -109,7 +109,7 @@ export const registerPackSnapshotRoutes = (
         getExperimentalRevision
       });
 
-      context.setPaused?.(false);
+      context.setPaused(false);
 
       context.notifications.push(
         'info',
@@ -156,7 +156,7 @@ export const registerPackSnapshotRoutes = (
         throw new ApiError(400, 'PACK_ID_MISMATCH', 'Active pack does not match requested packId');
       }
 
-      context.setPaused?.(true);
+      context.setPaused(true);
 
       const { restorePackSnapshot } = await import('../../packs/snapshots/snapshot_restore.js');
 
@@ -166,13 +166,13 @@ export const registerPackSnapshotRoutes = (
         prisma: context.prisma,
         packStorageAdapter: context.packStorageAdapter,
         pack,
-        applyClockProjection: snapshot => context.applyClockProjection?.(snapshot),
+        applyClockProjection: snapshot => context.getPackRuntimeHost?.(params.packId)?.applyClockProjection(snapshot),
         worldEngine: context.worldEngine,
         notifications: context.notifications,
         getPackRuntimeHandle: id => context.getPackRuntimeHandle?.(id) ?? null
       });
 
-      context.setPaused?.(false);
+      context.setPaused(false);
 
       jsonOk(res, {
         restored: true as const,

@@ -45,7 +45,7 @@ describe('multi-pack symmetry', () => {
 
   describe('dual pack loading', () => {
     it('loads primary pack via legacy init()', async () => {
-      await sim.init(DEATH_NOTE_REF);
+      await sim.loadExperimentalPackRuntime(DEATH_NOTE_REF);
       const ids = sim.listLoadedPackRuntimeIds();
       expect(ids.length).toBeGreaterThanOrEqual(1);
       expect(ids).toContain(DEATH_NOTE_ID);

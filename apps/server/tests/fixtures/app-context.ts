@@ -91,18 +91,10 @@ export const createTestAppContext = (
     }),
     setRuntimeSpeedOverride: () => {},
     clearRuntimeSpeedOverride: () => {},
-    isRuntimeReady: () => runtimeReady,
-    setRuntimeReady: (ready: boolean) => {
-      runtimeReady = ready;
-    },
-    isPaused: () => paused,
-    setPaused: (next: boolean) => {
-      paused = next;
-    },
     isExperimentalMultiPackRuntimeEnabled: () => false,
     loadExperimentalPackRuntime: async () => ({ handle: null, loaded: false, already_loaded: false }),
     getPackRuntimeHandle: () => null
-  } as unknown as SimulationManager;
+  };
 
   return {
     repos: wrapPrismaAsRepositories(prisma),
@@ -110,11 +102,11 @@ export const createTestAppContext = (
     sim,
     notifications: createNotificationManager(),
     startupHealth: options.startupHealth ?? createDefaultStartupHealth(),
-    getRuntimeReady: () => runtimeReady,
+    isRuntimeReady: () => runtimeReady,
     setRuntimeReady: ready => {
       runtimeReady = ready;
     },
-    getPaused: () => paused,
+    isPaused: () => paused,
     setPaused: next => {
       paused = next;
     },
