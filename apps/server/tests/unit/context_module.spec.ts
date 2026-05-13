@@ -196,7 +196,8 @@ const runContextBuild = async (service = createService()) => {
     tick: 1000n,
     policy_summary: buildPolicySummary(),
     pack_state: buildPackState(),
-    pack_id: 'world-death-note'
+    pack_id: 'world-death-note',
+    agent_capabilities: ['perceive.mastermind']
   });
 };
 

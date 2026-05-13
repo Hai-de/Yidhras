@@ -777,6 +777,7 @@ const promptSlotConfigSchema = z
       .optional(),
     default_template: nonEmptyStringSchema.nullish(),
     template_context: z.enum(['inference', 'world_prompts', 'pack_state', 'none']).optional(),
+    template_key: nonEmptyStringSchema.nullish(),
     message_role: z.enum(['system', 'developer', 'user']).optional(),
     include_in_combined: z.boolean(),
     combined_heading: nonEmptyStringSchema.nullish(),

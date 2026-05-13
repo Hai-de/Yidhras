@@ -20,6 +20,6 @@ export const FEATURES_DEFAULTS: FeaturesConfig = {
   inference_trace: true,
   notifications: true,
   experimental: {
-    prompt_slot_permissions: false
+    prompt_slot_permissions: true
   }
 };

@@ -1,17 +1,27 @@
 import type { SpatialDiscreteConfig } from '@yidhras/contracts';
 
+import { listPackWorldEntities } from '../storage/entity_repo.js';
 import { listPackEntityStates, upsertPackEntityState } from '../storage/entity_state_repo.js';
 import type { PackStorageAdapter } from '../storage/PackStorageAdapter.js';
 
 const SPATIAL_NAMESPACE = 'spatial';
+const DOMAIN_NAMESPACE = 'domain';
 
 interface SpatialState {
   location: string;
 }
 
+export interface LocationState {
+  label: string;
+  publicDescription: string | null;
+  hiddenDetails: string | null;
+  tags: string[];
+}
+
 export interface SpatialRuntime {
   readonly model: 'discrete';
   getLocation(entityId: string): Promise<string | null>;
+  getLocationState(locationId: string): Promise<LocationState | null>;
   neighbors(locationId: string): string[];
   distance(a: string, b: string): number | null;
   moveEntity(entityId: string, targetLocation: string, now: bigint): Promise<void>;
@@ -91,6 +101,20 @@ export const createSpatialRuntime = (
 ): SpatialRuntime => {
   const adjacency = buildAdjacencyMap(config);
 
+  const labelMap = new Map<string, string>();
+  let labelMapLoaded = false;
+
+  const ensureLabelMap = async (): Promise<void> => {
+    if (labelMapLoaded) return;
+    const entities = await listPackWorldEntities(storageAdapter, packId);
+    for (const entity of entities) {
+      if (entity.entity_kind === 'domain') {
+        labelMap.set(entity.id, entity.label);
+      }
+    }
+    labelMapLoaded = true;
+  };
+
   return {
     model: 'discrete',
 
@@ -103,6 +127,32 @@ export const createSpatialRuntime = (
       }
       const parsed = parseSpatialState(spatialState.state_json);
       return parsed?.location ?? null;
+    },
+
+    async getLocationState(locationId: string): Promise<LocationState | null> {
+      await ensureLabelMap();
+
+      const stateId = `${packId}:state:${locationId}:${DOMAIN_NAMESPACE}`;
+      const states = await listPackEntityStates(storageAdapter, packId);
+      const domainState = states.find((s) => s.id === stateId);
+
+      const label = labelMap.get(locationId) ?? locationId;
+
+      if (!domainState) {
+        return { label, publicDescription: null, hiddenDetails: null, tags: [] };
+      }
+
+      const stateJson = domainState.state_json;
+      const publicDescription =
+        (typeof stateJson.public_description === 'string' ? stateJson.public_description : null) ??
+        (typeof stateJson.description === 'string' ? stateJson.description : null);
+      const hiddenDetails =
+        typeof stateJson.hidden_details === 'string' ? stateJson.hidden_details : null;
+      const tags = Array.isArray(stateJson.tags)
+        ? stateJson.tags.filter((t): t is string => typeof t === 'string')
+        : [];
+
+      return { label, publicDescription, hiddenDetails, tags };
     },
 
     neighbors(locationId: string): string[] {

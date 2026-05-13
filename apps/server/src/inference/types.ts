@@ -246,6 +246,9 @@ export interface InferenceContext extends PromptResolvableContext {
   memory_context: MemoryContextPack;
   pack_runtime: InferencePackRuntimeContract;
 
+  /** 当前 agent 被授予的 capability keys */
+  agent_capabilities: string[];
+
   /** Multi-turn conversation: per-agent conversation memory (Phase 1) */
   agent_conversation_memory?: AgentConversationMemory | null;
   /** Multi-turn conversation: the agent ID of the current inference subject */

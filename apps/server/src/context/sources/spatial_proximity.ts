@@ -1,25 +1,56 @@
-import type { SpatialRuntime } from '../../packs/runtime/spatial_runtime.js';
+import type { LocationState, SpatialRuntime } from '../../packs/runtime/spatial_runtime.js';
 import type { ContextNode } from '../types.js';
 
 export const buildSpatialProximityContextNodes = async (input: {
   entityId: string;
   spatialRuntime: SpatialRuntime;
   tick: string;
+  investigatedLocationIds?: string[];
 }): Promise<ContextNode[]> => {
-  const { entityId, spatialRuntime, tick } = input;
+  const { entityId, spatialRuntime, tick, investigatedLocationIds } = input;
 
   const location = await spatialRuntime.getLocation(entityId);
   if (!location) {
     return [];
   }
 
+  const locationState = await spatialRuntime.getLocationState(location);
   const neighbors = spatialRuntime.neighbors(location);
+  const hasInvestigated = investigatedLocationIds?.includes(location) ?? false;
+
+  // Resolve neighbor labels concurrently
+  const neighborStates = await Promise.all(
+    neighbors.map((n) => spatialRuntime.getLocationState(n))
+  );
+  const neighborLabels = neighborStates.map(
+    (s: LocationState | null, i: number) => s?.label ?? neighbors[i]
+  );
 
   const lines: string[] = [];
-  lines.push(`你当前在: ${location}`);
-  if (neighbors.length > 0) {
-    lines.push(`邻接地点: ${neighbors.join(', ')}`);
+
+  // Current location with label
+  const label = locationState?.label ?? location;
+  lines.push(`你当前在: ${label}`);
+
+  // Public description (always visible)
+  const publicDesc = locationState?.publicDescription ?? '';
+  if (publicDesc) {
+    lines.push(publicDesc);
   }
+
+  // Hidden details (only after investigation)
+  if (hasInvestigated) {
+    const hiddenDetails = locationState?.hiddenDetails;
+    if (hiddenDetails) {
+      lines.push(`[调查发现] ${hiddenDetails}`);
+    }
+  }
+
+  if (neighbors.length > 0) {
+    lines.push(`邻接地点: ${neighborLabels.join(', ')}`);
+  }
+
+  const text = lines.join('\n');
 
   const node: ContextNode = {
     id: `ctx-spatial-proximity:${entityId}:${tick}`,
@@ -29,10 +60,15 @@ export const buildSpatialProximityContextNodes = async (input: {
     source_ref: { entity_id: entityId },
     actor_ref: null,
     content: {
-      text: lines.join('\n'),
+      text,
       structured: {
-        current_location: location,
-        adjacent_locations: neighbors
+        current_location: label,
+        current_location_id: location,
+        adjacent_locations: neighborLabels,
+        adjacent_location_ids: neighbors,
+        public_description: publicDesc || null,
+        hidden_details: hasInvestigated ? (locationState?.hiddenDetails ?? null) : null,
+        has_investigated: hasInvestigated
       }
     },
     tags: ['spatial', 'location', 'pack'],

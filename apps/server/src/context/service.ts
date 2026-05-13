@@ -25,6 +25,7 @@ export interface BuildContextRunInput {
   policy_summary?: InferencePolicySummary | null;
   pack_state?: InferencePackStateSnapshot | null;
   pack_id?: string | null;
+  agent_capabilities?: string[];
 }
 
 export interface ContextServiceBuildResult {
@@ -77,6 +78,50 @@ export const createContextService = ({
         resolved_agent_id: input.resolved_agent_id
       });
 
+      // Pre-compute investigated location IDs for the current agent.
+      // Event has no entity_id column — match via impact_data JSON → subject_entity_id.
+      const packPrefix = input.pack_id ? `${input.pack_id}:` : '';
+      const agentEntityId =
+        input.resolved_agent_id && packPrefix && input.resolved_agent_id.startsWith(packPrefix)
+          ? input.resolved_agent_id.slice(packPrefix.length)
+          : input.resolved_agent_id;
+
+      const investigationEvents = agentEntityId
+        ? await context.prisma.event.findMany({
+            where: {
+              pack_id: input.pack_id ?? undefined,
+              type: 'interaction',
+              location_id: { not: null }
+            },
+            select: {
+              id: true,
+              location_id: true,
+              impact_data: true
+            },
+            take: 500
+          })
+        : [];
+
+      const investigatedLocationIds = investigationEvents
+        .filter((e) => {
+          if (!e.impact_data) return false;
+          try {
+            const parsed: unknown = JSON.parse(e.impact_data);
+            if (typeof parsed !== 'object' || parsed === null) return false;
+            const record = parsed as Record<string, unknown>;
+            return (
+              record['semantic_type'] === 'investigation_conducted' &&
+              record['subject_entity_id'] === agentEntityId
+            );
+          } catch {
+            return false;
+          }
+        })
+        .map((e) => e.location_id)
+        .filter((id): id is string => id !== null);
+
+      const uniqueInvestigatedLocationIds = [...new Set(investigatedLocationIds)];
+
       const pluginAdapters = input.pack_id ? pluginRuntimeRegistry.getContextSourceAdapters(input.pack_id) : [];
       const adapters = [
         ...createDefaultContextSourceAdapters({ context, overlayStore, longMemoryBlockStore, spatialRuntime }),
@@ -90,7 +135,9 @@ export const createContextService = ({
         memory_selection: memoryResult.selection,
         policy_summary: input.policy_summary ?? null,
         pack_state: input.pack_state ?? null,
-        pack_id: input.pack_id ?? null
+        pack_id: input.pack_id ?? null,
+        agent_capabilities: input.agent_capabilities,
+        investigated_location_ids: uniqueInvestigatedLocationIds
       });
 
       const droppedNodes = memoryResult.selection.dropped.map((entry) => ({

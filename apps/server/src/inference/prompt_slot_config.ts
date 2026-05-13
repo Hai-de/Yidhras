@@ -83,6 +83,11 @@ export interface PromptSlotConfig {
 
   default_template?: string | null;
   template_context?: 'inference' | 'world_prompts' | 'pack_state' | 'none';
+  /**
+   * 当 template_context 为 world_prompts 时，指定取哪个 prompt key。
+   * 默认 'global_prefix'。
+   */
+  template_key?: string | null;
   message_role?: 'system' | 'developer' | 'user';
   include_in_combined: boolean;
   combined_heading?: string | null;

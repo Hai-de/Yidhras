@@ -39,6 +39,7 @@ export const buildRuntimeStateContextNodes = (input: {
   resolved_agent_id: string | null;
   policy_summary?: InferencePolicySummary | null;
   pack_state?: InferencePackStateSnapshot | null;
+  agent_capabilities?: string[];
 }): ContextNode[] => {
   const nodes: ContextNode[] = [];
 
@@ -133,6 +134,7 @@ export const buildRuntimeStateContextNodes = (input: {
   }
 
   if (input.pack_state.world_state) {
+    const canSeeWorldState = input.agent_capabilities?.includes('perceive.mastermind') ?? false;
     nodes.push({
       id: `ctx-pack-world-state:${input.tick}`,
       node_type: 'pack_world_state_snapshot',
@@ -152,8 +154,8 @@ export const buildRuntimeStateContextNodes = (input: {
       expires_at: null,
       visibility: {
         level: 'visible_fixed',
-        read_access: 'visible',
-        policy_gate: 'allow',
+        read_access: canSeeWorldState ? 'visible' : 'hidden',
+        policy_gate: canSeeWorldState ? 'allow' : 'deny',
         blocked: false
       },
       mutability: {

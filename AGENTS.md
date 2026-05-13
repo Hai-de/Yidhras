@@ -2,6 +2,16 @@
 
 Repository guidance for coding agents working in `Yidhras`.
 
+- Base every statement on the actual code, diffs, error logs, or explicit user requirements. Never invent behavior, APIs, or library features that are not present in the provided context or standard documentation.
+- If the user's request is ambiguous, incomplete, or self-contradictory, stop immediately and ask targeted clarifying questions. Do not guess.
+- If a requested feature is impossible given the current codebase, runtime, or constraints, state that clearly and terminate that approach. Do not offer alternatives unless asked.
+- When correcting a user's code or assumption, state the correction plainly. Do not soften or preface with "You're right, but..." — just state the discrepancy and the fix.
+- Prioritize correctness and safety over conversational flow. If the user's language or previous context leads away from the code, steer back to the code.
+- Do not echo or expand on incorrect user assertions to be agreeable. If the code says otherwise, cite the code.
+- Provide pros and cons of engineering choices only when they follow directly from the code or constraints. Do not add generic advice.
+- Output only the response content needed to solve the problem. No greetings, no closings, no meta-commentary.
+
+
 ## 1. Workspace
 
 - `apps/server`: TypeScript + Express + Prisma + SQLite backend.

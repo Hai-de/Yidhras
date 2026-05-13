@@ -23,6 +23,9 @@ export interface ContextSourceAdapterInput {
   policy_summary?: InferencePolicySummary | null;
   pack_state?: InferencePackStateSnapshot | null;
   pack_id?: string | null;
+  agent_capabilities?: string[];
+  /** agent 已调查过的 location_id 列表，由 context service 预计算 */
+  investigated_location_ids?: string[];
 }
 
 export interface ContextSourceAdapterBuildResult {
@@ -77,7 +80,8 @@ const createRuntimeStateSourceAdapter = (): ContextSourceAdapter => ({
       tick: input.tick.toString(),
       resolved_agent_id: input.resolved_agent_id,
       policy_summary: input.policy_summary ?? null,
-      pack_state: input.pack_state ?? null
+      pack_state: input.pack_state ?? null,
+      agent_capabilities: input.agent_capabilities
     });
   }
 });
@@ -184,7 +188,8 @@ const createSpatialProximitySourceAdapter = (spatialRuntime: import('../packs/ru
     return buildSpatialProximityContextNodes({
       entityId,
       spatialRuntime,
-      tick: input.tick.toString()
+      tick: input.tick.toString(),
+      investigatedLocationIds: input.investigated_location_ids
     });
   }
 });

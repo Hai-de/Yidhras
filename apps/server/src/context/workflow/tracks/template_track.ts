@@ -23,8 +23,8 @@ const resolveTemplate = (config: PromptSlotConfig, context: InferenceContext): s
     return config.default_template;
   }
   if (config.template_context === 'world_prompts') {
-     
-    return context.world_prompts['global_prefix'] ?? null;
+    const key = config.template_key ?? 'global_prefix';
+    return context.world_prompts[key] ?? null;
   }
   return null;
 };

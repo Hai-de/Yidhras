@@ -8,6 +8,7 @@ import type { AppContextPorts } from '../app/services/app_context_ports.js';
 import { createContextAssemblyPort } from '../app/services/context_memory_ports.js';
 import { getLatestEventEvidenceRecord } from '../app/services/event_evidence_repository.js';
 import type { IdentityContext } from '../identity/types.js';
+import { resolveAuthorityForSubject } from '../domain/authority/resolver.js';
 import { DEFAULT_PACK_WORLD_ENTITY_ID } from '../packs/runtime/core_models.js';
 import { listPackEntityStateProjectionRecords } from '../packs/storage/entity_state_projection.js';
 import type { PromptVariableContext, PromptVariableNamespace } from '../template_engine/frontends/narrative/types.js';
@@ -716,6 +717,14 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
       const config = getInferenceContextConfig(deploymentId);
 
       const packState = await buildPackStateSnapshot(context, pack.metadata.id, resolvedActor.resolved_agent_id, attributes);
+      const authorityResult = await resolveAuthorityForSubject(context, {
+        packId: pack.metadata.id,
+        subjectEntityId: packEntityIdFromResolvedAgentId(
+          pack.metadata.id,
+          resolvedActor.resolved_agent_id
+        )
+      });
+      const agentCapabilities = authorityResult.resolved_capabilities.map(c => c.capability_key);
       const packRuntime = await packRuntimeContractResolver.resolvePackRuntimeContract(context, {
         pack_id: input.pack_id,
         mode: input.mode
@@ -744,7 +753,8 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         tick: BigInt(currentTick),
         policy_summary: policySummary,
         pack_state: packState,
-        pack_id: pack.metadata.id
+        pack_id: pack.metadata.id,
+        agent_capabilities: agentCapabilities
       });
       const variableContext = buildInferenceVariableContext({
         context,
@@ -785,6 +795,7 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         memory_context: contextResult.memory_context,
         pack_state: packState,
         pack_runtime: packRuntime,
+        agent_capabilities: agentCapabilities,
         variable_context_summary: createPromptVariableContextSummary(variableContext)
       };
     }

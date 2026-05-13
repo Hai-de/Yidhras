@@ -12,6 +12,7 @@ export interface PermissionCheckInput {
   actor_identity_id: string;
   actor_agent_id: string | null;
   host_agent_ids: string[];
+  agent_capabilities: string[];
   permission_kind: 'read' | 'write' | 'adjust' | 'visibility';
 }
 
@@ -35,6 +36,18 @@ export function getHostAgentIds(context: InferenceContext): string[] {
     }
   }
   return ids;
+}
+
+const CAPABILITY_TOKEN_PREFIX = 'capability:';
+
+function expandCapabilityTokens(tokens: string[], agentCapabilities: string[]): string[] {
+  return tokens.flatMap(token => {
+    if (token.startsWith(CAPABILITY_TOKEN_PREFIX)) {
+      const capabilityKey = token.slice(CAPABILITY_TOKEN_PREFIX.length);
+      return agentCapabilities.includes(capabilityKey) ? [token] : [];
+    }
+    return [token];
+  });
 }
 
 function resolveTokenValues(tokens: string[], hostAgentIds: string[]): string[] {
@@ -82,7 +95,10 @@ export function resolveSlotPermission(input: PermissionCheckInput): PermissionCh
   }
 
   // string[] for read/write/adjust/visible_to
-  const resolvedTokens = resolveTokenValues(allowedList, input.host_agent_ids);
+  const resolvedTokens = resolveTokenValues(
+    expandCapabilityTokens(allowedList, input.agent_capabilities),
+    input.host_agent_ids
+  );
 
   if (resolvedTokens.length === 0) {
     return { allowed: false, reason: `${input.permission_kind} allowlist is empty` };
@@ -119,7 +135,8 @@ function applyFragmentPermissions(
     fragment,
     actor_identity_id: context.actor_ref.identity_id,
     actor_agent_id: context.actor_ref.agent_id ?? null,
-    host_agent_ids: hostAgentIds
+    host_agent_ids: hostAgentIds,
+    agent_capabilities: context.agent_capabilities ?? []
   };
 
   const readResult = resolveSlotPermission({ ...baseInput, permission_kind: 'read' });
