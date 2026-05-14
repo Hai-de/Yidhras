@@ -1,10 +1,11 @@
 # 空间语义层设计草案
 
-> 状态: 完成 · A 层 Phase 1 全部实现，原型世界包 `snowbound_mansion` 已部署 · §4.5 感知门控已实施（2026-05-13）
+> 状态: 完成 · A 层 Phase 1 全部实现，原型世界包 `snowbound_mansion` 已部署 · §4.5 感知门控已实施 → 感知层统一（2026-05-14）
 > 关联: TODO.md — 上层语义变迁 · 空间语义层
 > 前置: world pack constitution schema、PackSimulationLoop、context assembly pipeline、enforcement engine、模板引擎宏处理器（P0）
-> 评估时间: 2026-05-08 · 最终更新: 2026-05-09 · 实施更新: 2026-05-13
-> 实施记录: `.limcode/plans/foundation-enhancements-from-prototype-evaluation.md` · `.limcode/plans/location-perception-gating.md`
+> 评估时间: 2026-05-08 · 最终更新: 2026-05-09 · 实施更新: 2026-05-13 · 感知统一: 2026-05-14
+> 实施记录: `.limcode/plans/foundation-enhancements-from-prototype-evaluation.md` · `.limcode/plans/perception-pipeline-location-integration.md`
+> 感知设计: `.limcode/design/location-perception-gating.md` → `.limcode/design/perception-pipeline-location-integration.md`
 > 设计评审: `.limcode/design/prototype-world-pack-implementation.md` §11
 
 ## 1. 问题陈述
@@ -302,6 +303,14 @@ perception:
 - `distant`：图距离 ≥ 2
 
 包作者可完全替换解析器（`perception.resolver: custom:my_plugin_id`），实现社交网络传播、光速延迟、维度梯度等完全不同的感知模型。平台只保证管线约束（事件必经感知过滤），不规定传播规则。
+
+> **实施后修订（2026-05-14）：** 实际实现了统一感知层（Tier 3），细节与上述原始设计有偏离：
+> - `PerceptionResolver` 统一为 `resolve(input: PerceptionRuleInput): Promise<PerceptionRuleOutput>`，事件感知 + 环境感知共享同一接口
+> - 感知规则通过 `rules.perception` 在 pack config 声明（类型化 schema），不再用独立的 `perception.resolver` 字段
+> - 内置默认规则集等价于 `spatial_proximity` 语义（同位置公开 → full，不同位置 → none 等）
+> - 环境感知（位置描述渐进揭示）纳入同一 engine，通过 `investigation_count_min` 条件区分
+> - 插件仍可通过 `registerPerceptionResolver` 覆盖默认规则，优先级包规则 > 插件 > 内置默认
+> - 详见 `.limcode/design/perception-pipeline-location-integration.md`
 
 #### 4.4.2 Event 空间作用域
 

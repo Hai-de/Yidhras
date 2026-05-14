@@ -7,7 +7,7 @@
 - Pack ID：`world-example-pack`
 - Version：`1.0.0`
 - 当前状态：bundled example template
-- 运行时主配置：`config.yaml`
+- 运行时主配置：`pack.yaml`（多文件拆分）
 
 ## 定位
 

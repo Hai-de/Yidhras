@@ -439,9 +439,36 @@ const objectiveEnforcementRuleSchema = worldRuleDefinitionSchema.extend({
   when: objectiveEnforcementWhenSchema
 });
 
+const perceptionWhenSchema = z
+  .object({
+    observer_at: z.enum(['same', 'adjacent', 'any']).optional(),
+    event_visibility: z.enum(['public', 'private']).optional(),
+    observer_is_actor: z.boolean().optional(),
+    investigation_count_min: z.number().int().min(0).optional(),
+    observer_has_capability: z.string().optional()
+  })
+  .passthrough();
+
+const perceptionThenSchema = z
+  .object({
+    level: z.enum(['full', 'partial', 'none']),
+    reveal_public: z.boolean().optional(),
+    reveal_hidden: z.boolean().optional(),
+    max_hidden_segments: z.number().int().min(0).optional()
+  })
+  .passthrough();
+
+const perceptionRuleSchema = z
+  .object({
+    id: nonEmptyStringSchema,
+    when: perceptionWhenSchema,
+    then: perceptionThenSchema
+  })
+  .strict();
+
 const rulesSchema = z
   .object({
-    perception: z.array(worldRuleDefinitionSchema).default([]),
+    perception: z.array(perceptionRuleSchema).default([]),
     capability_resolution: z.array(worldRuleDefinitionSchema).default([]),
     invocation: z.array(worldRuleDefinitionSchema).default([]),
     objective_enforcement: z.array(objectiveEnforcementRuleSchema).default([]),
@@ -551,6 +578,35 @@ export const spatialDiscreteSchema = z
 
 export const spatialSchema = z.discriminatedUnion('model', [spatialDiscreteSchema]);
 
+const includeValueSchema = z.string().min(1);
+
+const includeSchema = z.record(z.string().min(1), includeValueSchema).optional();
+
+export const VALID_INCLUDE_SECTION_KEYS = [
+  'schema_version',
+  'metadata',
+  'constitution',
+  'variables',
+  'prompts',
+  'ai',
+  'time_systems',
+  'simulation_time',
+  'entities',
+  'identities',
+  'capabilities',
+  'authorities',
+  'rules',
+  'storage',
+  'scheduler',
+  'bootstrap',
+  'state_transforms',
+  'spatial'
+] as const;
+
+export type ValidIncludeSectionKey = (typeof VALID_INCLUDE_SECTION_KEYS)[number];
+
+export type WorldPackInclude = z.infer<typeof includeSchema>;
+
 export const worldPackConstitutionSchema = z
   .object({
     schema_version: z.number().int().nonnegative().default(0),
@@ -574,7 +630,8 @@ export const worldPackConstitutionSchema = z
       .optional(),
     bootstrap: bootstrapSchema.optional(),
     state_transforms: z.array(stateTransformSchema).optional(),
-    spatial: spatialSchema.optional()
+    spatial: spatialSchema.optional(),
+    include: includeSchema
   })
   .superRefine((value, ctx) => {
     if ('actions' in value) {

@@ -49,7 +49,11 @@
 
 ```text
 {{PACK_DIR}}/
-├─ config.yaml
+├─ pack.yaml
+├─ config/
+│  ├─ variables.yaml
+│  ├─ entities.yaml
+│  └─ ...
 ├─ README.md
 ├─ CHANGELOG.md
 ├─ assets/        # optional

@@ -1,8 +1,16 @@
 import type { PrismaClient } from '@prisma/client';
 
 import { createContextOverlayStore } from '../../context/overlay/store.js';
-import { createSpatialProximityResolver } from '../../perception/index.js';
-import type { PerceptionResolver, ResolvePerceptionInput } from '../../perception/types.js';
+import {
+  BUILTIN_PERCEPTION_RULES,
+  createPerceptionRuleEngine,
+  type PerceptionRuleEngine
+} from '../../perception/index.js';
+import type {
+  PerceptionEventInput,
+  PerceptionObserverRelation,
+  PerceptionRuleDef
+} from '../../perception/types.js';
 import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
@@ -29,7 +37,7 @@ const extractActorEntityId = (impactData: string | null): string | null => {
   try {
     const parsed = JSON.parse(impactData);
     if (parsed && typeof parsed === 'object' && typeof parsed.actor_identity_id === 'string') {
-      return parsed.actor_identity_id;
+      return parsed.actor_identity_id as string;
     }
   } catch {
     // ignore parse errors
@@ -75,6 +83,26 @@ const resolveEntityIdFromAgentId = (agentId: string, packPrefix: string): string
   return entityId;
 };
 
+const computeObserverRelation = (
+  observerLocation: string | null,
+  eventLocation: string | null,
+  neighbors: (locationId: string) => string[]
+): PerceptionObserverRelation => {
+  if (!observerLocation) {
+    return 'no_location';
+  }
+  if (!eventLocation) {
+    return 'no_location';
+  }
+  if (observerLocation === eventLocation) {
+    return 'same';
+  }
+  if (neighbors(observerLocation).includes(eventLocation)) {
+    return 'adjacent';
+  }
+  return 'different';
+};
+
 const buildPerceptionOverlayTitle = (event: SpatialEventRow, level: string): string => {
   return `[${level}] ${event.title}`;
 };
@@ -84,6 +112,17 @@ const buildPerceptionOverlayText = (event: SpatialEventRow, locationId: string |
     return `[地点: ${locationId}] ${event.description}`;
   }
   return event.description;
+};
+
+const buildEngine = (
+  packRules: PerceptionRuleDef[],
+  packId: string
+): PerceptionRuleEngine => {
+  const pluginResolvers = pluginRuntimeRegistry.getPerceptionResolvers(packId);
+  const pluginResolver = pluginResolvers.length > 0 ? pluginResolvers[0] : null;
+
+  const rules = packRules.length > 0 ? packRules : BUILTIN_PERCEPTION_RULES;
+  return createPerceptionRuleEngine(rules, pluginResolver);
 };
 
 export const runPerceptionPipeline = async (
@@ -114,9 +153,20 @@ export const runPerceptionPipeline = async (
     return;
   }
 
-  const pluginResolvers = pluginRuntimeRegistry.getPerceptionResolvers(packId);
-  const resolver: PerceptionResolver =
-    pluginResolvers.length > 0 ? pluginResolvers[0] : createSpatialProximityResolver();
+  // Load pack perception rules
+  const pack = packRuntime?.getPack() ?? resolveActivePack(context, packRuntime);
+  const packRules: PerceptionRuleDef[] = pack?.rules?.perception ?? [];
+  const engine = buildEngine(packRules, packId);
+
+  // Pre-compute observer locations for all agents (batch)
+  const agentLocations = new Map<string, string | null>();
+  for (const agentId of agentIds) {
+    const entityId = resolveEntityIdFromAgentId(agentId, packPrefix);
+    if (entityId) {
+      agentLocations.set(agentId, await spatialRuntime.getLocation(entityId));
+    }
+  }
+
   const overlayStore = createContextOverlayStore(context);
   const tickStr = tick.toString();
 
@@ -125,18 +175,33 @@ export const runPerceptionPipeline = async (
     if (!entityId) {
       continue;
     }
+    const observerLocation = agentLocations.get(agentId) ?? null;
 
     for (const event of spatialEvents) {
-      const input: ResolvePerceptionInput = {
+      const eventLocationId = event.location_id;
+      const observerRelation = computeObserverRelation(
+        observerLocation,
+        eventLocationId,
+        (locId: string) => spatialRuntime.neighbors(locId)
+      );
+
+      const eventInput: PerceptionEventInput = {
         eventId: event.id,
         eventTitle: event.title,
         eventDescription: event.description,
-        locationId: event.location_id,
+        locationId: eventLocationId,
         visibility: event.visibility,
-        eventActorEntityId: extractActorEntityId(event.impact_data)
+        actorEntityId: extractActorEntityId(event.impact_data)
       };
 
-      const result = await resolver.resolve(input, entityId, spatialRuntime);
+      const result = await engine.evaluate({
+        event: eventInput,
+        observerEntityId: entityId,
+        observerRelation,
+        agentCapabilities: [],
+        investigationCount: 0
+      });
+
       if (result.level === 'none') {
         continue;
       }
@@ -152,7 +217,8 @@ export const runPerceptionPipeline = async (
           event_id: event.id,
           perception_level: result.level,
           location_id: event.location_id,
-          visibility: event.visibility
+          visibility: event.visibility,
+          matched_rule_id: result.matchedRuleId
         },
         tags: ['perception', 'spatial'],
         status: 'active',

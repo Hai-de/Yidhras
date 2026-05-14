@@ -1,13 +1,21 @@
 import type { LocationState, SpatialRuntime } from '../../packs/runtime/spatial_runtime.js';
+import type { PerceptionRuleEngine } from '../../perception/rule_engine.js';
 import type { ContextNode } from '../types.js';
 
 export const buildSpatialProximityContextNodes = async (input: {
   entityId: string;
   spatialRuntime: SpatialRuntime;
   tick: string;
-  investigatedLocationIds?: string[];
+  agentCapabilities?: string[];
+  investigationCounts?: Record<string, number>;
+  perceptionRuleEngine?: PerceptionRuleEngine;
 }): Promise<ContextNode[]> => {
-  const { entityId, spatialRuntime, tick, investigatedLocationIds } = input;
+  const {
+    entityId, spatialRuntime, tick,
+    agentCapabilities = [],
+    investigationCounts = {},
+    perceptionRuleEngine
+  } = input;
 
   const location = await spatialRuntime.getLocation(entityId);
   if (!location) {
@@ -16,7 +24,6 @@ export const buildSpatialProximityContextNodes = async (input: {
 
   const locationState = await spatialRuntime.getLocationState(location);
   const neighbors = spatialRuntime.neighbors(location);
-  const hasInvestigated = investigatedLocationIds?.includes(location) ?? false;
 
   // Resolve neighbor labels concurrently
   const neighborStates = await Promise.all(
@@ -26,24 +33,56 @@ export const buildSpatialProximityContextNodes = async (input: {
     (s: LocationState | null, i: number) => s?.label ?? neighbors[i]
   );
 
-  const lines: string[] = [];
+  const investigationCount = investigationCounts[location] ?? 0;
 
-  // Current location with label
+  // Use unified perception engine for environment perception if available
+  let visibleDescription = '';
+  let hiddenDescription: string | null = null;
+  let perceptionLevel: string | null = null;
+  let matchedRuleId: string | null = null;
+
+  if (perceptionRuleEngine) {
+    const result = await perceptionRuleEngine.evaluate({
+      location: {
+        locationId: location,
+        publicDescription: locationState?.publicDescription ?? null,
+        hiddenDetails: locationState?.hiddenDetails ?? null,
+        tags: locationState?.tags ?? []
+      },
+      observerEntityId: entityId,
+      observerRelation: 'same',
+      agentCapabilities,
+      investigationCount
+    });
+
+    perceptionLevel = result.level;
+    visibleDescription = result.visibleDescription;
+    hiddenDescription = result.hiddenDescription;
+    matchedRuleId = result.matchedRuleId;
+  } else {
+    // Fallback when no engine is provided (should not happen in production)
+    const publicDesc = locationState?.publicDescription ?? '';
+    if (publicDesc) {
+      visibleDescription = publicDesc;
+    }
+    if (investigationCount > 0 && locationState?.hiddenDetails) {
+      const hd = locationState.hiddenDetails;
+      hiddenDescription = Array.isArray(hd) ? hd.join(' ') : hd;
+    }
+    perceptionLevel = investigationCount > 0 ? 'full' : 'partial';
+  }
+
+  // Build text representation
+  const lines: string[] = [];
   const label = locationState?.label ?? location;
   lines.push(`你当前在: ${label}`);
 
-  // Public description (always visible)
-  const publicDesc = locationState?.publicDescription ?? '';
-  if (publicDesc) {
-    lines.push(publicDesc);
+  if (visibleDescription) {
+    lines.push(visibleDescription);
   }
 
-  // Hidden details (only after investigation)
-  if (hasInvestigated) {
-    const hiddenDetails = locationState?.hiddenDetails;
-    if (hiddenDetails) {
-      lines.push(`[调查发现] ${hiddenDetails}`);
-    }
+  if (hiddenDescription) {
+    lines.push(`[调查发现] ${hiddenDescription}`);
   }
 
   if (neighbors.length > 0) {
@@ -66,9 +105,11 @@ export const buildSpatialProximityContextNodes = async (input: {
         current_location_id: location,
         adjacent_locations: neighborLabels,
         adjacent_location_ids: neighbors,
-        public_description: publicDesc || null,
-        hidden_details: hasInvestigated ? (locationState?.hiddenDetails ?? null) : null,
-        has_investigated: hasInvestigated
+        public_description: locationState?.publicDescription ?? null,
+        hidden_details: investigationCount > 0 ? (locationState?.hiddenDetails ?? null) : null,
+        has_investigated: investigationCount > 0,
+        perception_level: perceptionLevel,
+        matched_rule_id: matchedRuleId
       }
     },
     tags: ['spatial', 'location', 'pack'],

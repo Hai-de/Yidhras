@@ -19,7 +19,7 @@ export const createStartupHealth = (): StartupHealth => {
 };
 
 const hasPackConfig = (worldPacksDir: string, packDir: string): boolean => {
-  const candidates = ['config.yaml', 'config.yml', 'pack.yaml', 'pack.yml'];
+  const candidates = ['pack.yaml', 'pack.yml'];
   return candidates.some(file => safeFs.existsSync(worldPacksDir, path.join(packDir, file)));
 };
 

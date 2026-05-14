@@ -754,7 +754,8 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         policy_summary: policySummary,
         pack_state: packState,
         pack_id: pack.metadata.id,
-        agent_capabilities: agentCapabilities
+        agent_capabilities: agentCapabilities,
+        perception_rules: pack.rules?.perception ?? []
       });
       const variableContext = buildInferenceVariableContext({
         context,

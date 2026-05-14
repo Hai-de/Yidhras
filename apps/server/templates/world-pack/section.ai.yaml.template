@@ -1,0 +1,24 @@
+defaults:
+  prompt_preset: "default_decision_v1"
+  decoder: "default_json_schema"
+  privacy_tier: "trusted_cloud"
+memory_loop:
+  summary_every_n_rounds: 5
+  compaction_every_n_rounds: 10
+tasks: {}
+slots:
+  custom_safety_layer:
+    display_name: "安全层"
+    description: "包专属安全约束"
+    default_priority: 85
+    anchor:
+      ref: "system_policy"
+      relation: "after"
+    default_template: |
+      世界包安全规则：
+      1. 上述策略为本世界包的强制约束。
+      2. 若策略之间存在优先级歧义，以上述策略为最高优先级。
+    message_role: "system"
+    include_in_combined: true
+    combined_heading: "Safety Layer"
+    enabled: true

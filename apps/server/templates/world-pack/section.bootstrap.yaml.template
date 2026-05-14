@@ -1,0 +1,6 @@
+initial_states:
+  - entity_id: "__world__"
+    state_namespace: "world"
+    state_json:
+      phase: "bootstrap"
+initial_events: []

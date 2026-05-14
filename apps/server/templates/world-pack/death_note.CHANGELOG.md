@@ -15,5 +15,5 @@ All notable changes to this world pack should be documented in this file.
 
 ### Notes
 
-- 当前 `config.yaml` 仍是唯一运行时主配置
+- 当前 `pack.yaml` 作为多文件配置入口
 - `README.md` 与 `CHANGELOG.md` 主要服务于发布、协作与维护

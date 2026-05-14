@@ -13,7 +13,7 @@ import { safeFs } from '../utils/safe_fs.js';
 
 const log = createLogger('world-pack-bootstrap');
 
-const DEFAULT_PACK_CONFIG_FILE = 'config.yaml';
+const DEFAULT_PACK_CONFIG_FILE = 'pack.yaml';
 
 export interface WorldPackBootstrapResult {
   status: 'disabled' | 'skipped' | 'created' | 'updated';

@@ -1,0 +1,30 @@
+schema_version: 1
+
+metadata:
+  id: "{{PACK_ID}}"
+  name: "{{PACK_NAME}}"
+  version: "{{PACK_VERSION}}"
+  description: "{{PACK_DESCRIPTION}}"
+  authors:
+{{PACK_AUTHORS_YAML}}
+  license: "{{PACK_LICENSE}}"
+  homepage: "{{PACK_HOMEPAGE}}"
+  repository: "{{PACK_REPOSITORY}}"
+  tags: {{PACK_TAGS_INLINE_YAML}}
+  published_at: "{{PACK_PUBLISHED_AT}}"
+  status: "{{PACK_STATUS}}"
+
+include:
+  variables: "config/variables.yaml"
+  prompts: "config/prompts.yaml"
+  time_systems: "config/time_systems.yaml"
+  simulation_time: "config/simulation_time.yaml"
+  entities: "config/entities.yaml"
+  identities: "config/identities.yaml"
+  capabilities: "config/capabilities.yaml"
+  authorities: "config/authorities.yaml"
+  rules: "config/rules.yaml"
+  bootstrap: "config/bootstrap.yaml"
+  ai: "config/ai.yaml"
+  spatial: "config/spatial.yaml"
+  storage: "config/storage.yaml"

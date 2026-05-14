@@ -14,7 +14,7 @@ interface SpatialState {
 export interface LocationState {
   label: string;
   publicDescription: string | null;
-  hiddenDetails: string | null;
+  hiddenDetails: string | string[] | null;
   tags: string[];
 }
 
@@ -91,6 +91,15 @@ const parseSpatialState = (stateJson: unknown): SpatialState | null => {
   return null;
 };
 
+const parseHiddenDetails = (raw: unknown): string | string[] | null => {
+  if (typeof raw === 'string') return raw;
+  if (Array.isArray(raw)) {
+    const filtered = raw.filter((d): d is string => typeof d === 'string');
+    return filtered.length > 0 ? filtered : null;
+  }
+  return null;
+};
+
 const buildEntityStateId = (packId: string, entityId: string): string =>
   `${packId}:state:${entityId}:${SPATIAL_NAMESPACE}`;
 
@@ -104,6 +113,9 @@ export const createSpatialRuntime = (
   const labelMap = new Map<string, string>();
   let labelMapLoaded = false;
 
+  // Cache for listPackEntityStates — invalidated on mutation
+  let cachedStates: Awaited<ReturnType<typeof listPackEntityStates>> | null = null;
+
   const ensureLabelMap = async (): Promise<void> => {
     if (labelMapLoaded) return;
     const entities = await listPackWorldEntities(storageAdapter, packId);
@@ -115,12 +127,20 @@ export const createSpatialRuntime = (
     labelMapLoaded = true;
   };
 
+  const getCachedStates = async (): Promise<Awaited<ReturnType<typeof listPackEntityStates>>> => {
+    // Cache is per-request, not per-tick, to avoid stale data within a tick.
+    // Each context assembly run refreshes independently.
+    if (cachedStates) return cachedStates;
+    cachedStates = await listPackEntityStates(storageAdapter, packId);
+    return cachedStates;
+  };
+
   return {
     model: 'discrete',
 
     async getLocation(entityId: string): Promise<string | null> {
       const stateId = buildEntityStateId(packId, entityId);
-      const states = await listPackEntityStates(storageAdapter, packId);
+      const states = await getCachedStates();
       const spatialState = states.find((s) => s.id === stateId);
       if (!spatialState) {
         return null;
@@ -133,7 +153,7 @@ export const createSpatialRuntime = (
       await ensureLabelMap();
 
       const stateId = `${packId}:state:${locationId}:${DOMAIN_NAMESPACE}`;
-      const states = await listPackEntityStates(storageAdapter, packId);
+      const states = await getCachedStates();
       const domainState = states.find((s) => s.id === stateId);
 
       const label = labelMap.get(locationId) ?? locationId;
@@ -146,8 +166,7 @@ export const createSpatialRuntime = (
       const publicDescription =
         (typeof stateJson.public_description === 'string' ? stateJson.public_description : null) ??
         (typeof stateJson.description === 'string' ? stateJson.description : null);
-      const hiddenDetails =
-        typeof stateJson.hidden_details === 'string' ? stateJson.hidden_details : null;
+      const hiddenDetails = parseHiddenDetails(stateJson.hidden_details);
       const tags = Array.isArray(stateJson.tags)
         ? stateJson.tags.filter((t): t is string => typeof t === 'string')
         : [];
@@ -171,6 +190,9 @@ export const createSpatialRuntime = (
       if (!adjacency.has(targetLocation)) {
         throw new Error(`Location "${targetLocation}" not found in spatial config`);
       }
+
+      // Invalidate cache on mutation
+      cachedStates = null;
 
       const input = {
         id: buildEntityStateId(packId, entityId),

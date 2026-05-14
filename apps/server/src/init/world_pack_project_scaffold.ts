@@ -10,12 +10,28 @@ import { safeFs } from '../utils/safe_fs.js';
 const log = createLogger('world-pack-scaffold');
 
 const TEMPLATE_DIR_RELATIVE_PATH = path.join('apps', 'server', 'templates', 'world-pack');
-const DEFAULT_CONFIG_TEMPLATE_BASENAME = 'pack.yaml.template';
+const DEFAULT_ENTRY_TEMPLATE_BASENAME = 'pack.entry.yaml.template';
 const DEFAULT_README_TEMPLATE_BASENAME = 'pack.README.template.md';
 const DEFAULT_CHANGELOG_TEMPLATE_BASENAME = 'pack.CHANGELOG.template.md';
 const DEFAULT_LICENSE_TEMPLATE_BASENAME = 'pack.LICENSE.template';
 const DEFAULT_DOCS_SETTING_TEMPLATE_BASENAME = 'pack.docs.setting.template.md';
 const DEFAULT_EXAMPLES_OVERRIDES_TEMPLATE_BASENAME = 'pack.examples.overrides.template.yaml';
+
+const SECTION_TEMPLATE_MAP: Record<string, string> = {
+  variables: 'section.variables.yaml.template',
+  prompts: 'section.prompts.yaml.template',
+  time_systems: 'section.time_systems.yaml.template',
+  simulation_time: 'section.simulation_time.yaml.template',
+  entities: 'section.entities.yaml.template',
+  identities: 'section.identities.yaml.template',
+  capabilities: 'section.capabilities.yaml.template',
+  authorities: 'section.authorities.yaml.template',
+  rules: 'section.rules.yaml.template',
+  bootstrap: 'section.bootstrap.yaml.template',
+  ai: 'section.ai.yaml.template',
+  spatial: 'section.spatial.yaml.template',
+  storage: 'section.storage.yaml.template'
+};
 
 const DEFAULT_CONFIGW_BASENAME = 'default.yaml';
 
@@ -187,9 +203,9 @@ const updateDefaultRuntimeConfig = (input: {
 
   if (input.setBootstrapTemplate) {
     bootstrap.target_pack_dir = input.packDirName;
-    bootstrap.template_file = `data/world_packs/${input.packDirName}/config.yaml`;
+    bootstrap.template_file = `data/world_packs/${input.packDirName}/pack.yaml`;
     updates.push(`set world.bootstrap.target_pack_dir=${input.packDirName}`);
-    updates.push(`set world.bootstrap.template_file=data/world_packs/${input.packDirName}/config.yaml`);
+    updates.push(`set world.bootstrap.template_file=data/world_packs/${input.packDirName}/pack.yaml`);
   }
 
   if (input.disableBootstrap) {
@@ -277,13 +293,29 @@ export const scaffoldWorldPackProject = (
 
   writeRenderedTemplate({
     workspaceRoot,
-    templatePath: path.join(templateDir, DEFAULT_CONFIG_TEMPLATE_BASENAME),
-    targetPath: path.join(targetPackDir, 'config.yaml'),
+    templatePath: path.join(templateDir, DEFAULT_ENTRY_TEMPLATE_BASENAME),
+    targetPath: path.join(targetPackDir, 'pack.yaml'),
     values,
     overwrite: options.overwrite === true,
     result,
     dryRun: result.dryRun
   });
+
+  if (!result.dryRun) {
+    safeFs.mkdirSync(workspaceRoot, path.join(targetPackDir, 'config'), { recursive: true });
+  }
+
+  for (const [sectionKey, templateBasename] of Object.entries(SECTION_TEMPLATE_MAP)) {
+    writeRenderedTemplate({
+      workspaceRoot,
+      templatePath: path.join(templateDir, templateBasename),
+      targetPath: path.join(targetPackDir, 'config', `${sectionKey}.yaml`),
+      values,
+      overwrite: options.overwrite === true,
+      result,
+      dryRun: result.dryRun
+    });
+  }
 
   writeRenderedTemplate({
     workspaceRoot,
@@ -350,13 +382,27 @@ export const scaffoldWorldPackProject = (
     dryRun: result.dryRun
   });
 
-  const configTemplatePath = path.join(templateDir, DEFAULT_CONFIG_TEMPLATE_BASENAME);
-  if (!safeFs.existsSync(workspaceRoot, configTemplatePath)) {
-    throw new Error(`[world-pack-scaffold] 模板文件不存在: ${configTemplatePath}`);
+  // Validate the generated config
+  const entryTemplatePath = path.join(templateDir, DEFAULT_ENTRY_TEMPLATE_BASENAME);
+  if (!safeFs.existsSync(workspaceRoot, entryTemplatePath)) {
+    throw new Error(`[world-pack-scaffold] 模板文件不存在: ${entryTemplatePath}`);
   }
-  const renderedConfig = renderTemplate(safeFs.readFileSync(workspaceRoot, configTemplatePath, 'utf-8'), values);
-  const generatedPack = YAML.parse(renderedConfig) as Record<string, unknown>;
-  parseWorldPackConstitution(generatedPack, `${targetPackDir}/config.yaml`);
+  const renderedEntry = renderTemplate(safeFs.readFileSync(workspaceRoot, entryTemplatePath, 'utf-8'), values);
+  const entryYaml = YAML.parse(renderedEntry) as Record<string, unknown>;
+
+  // Collect all included section content from rendered templates
+  for (const [sectionKey, templateBasename] of Object.entries(SECTION_TEMPLATE_MAP)) {
+    const sectionTemplatePath = path.join(templateDir, templateBasename);
+    if (!safeFs.existsSync(workspaceRoot, sectionTemplatePath)) {
+      throw new Error(`[world-pack-scaffold] 模板文件不存在: ${sectionTemplatePath}`);
+    }
+    const renderedSection = renderTemplate(safeFs.readFileSync(workspaceRoot, sectionTemplatePath, 'utf-8'), values);
+    const sectionYaml = YAML.parse(renderedSection) as unknown;
+    entryYaml[sectionKey] = sectionYaml;
+  }
+  delete entryYaml.include;
+
+  parseWorldPackConstitution(entryYaml, `${targetPackDir}/pack.yaml`);
 
   return result;
 };

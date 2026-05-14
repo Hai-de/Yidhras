@@ -1,8 +1,9 @@
 # 统一感知层：`rules.perception` 驱动的事件感知 + 环境感知
 
-> 状态: 审核通过 · 待实施
-> 创建: 2026-05-13 · 重写: 2026-05-14
-> 关联计划: `.limcode/plans/perception-pipeline-location-integration.md`
+> 状态: 已实施 · 2026-05-14
+> 创建: 2026-05-13 · 重写: 2026-05-14 · 实施: 2026-05-14
+> 实施计划: `.limcode/plans/perception-pipeline-location-integration.md`
+> 上游: `.limcode/design/location-perception-gating.md`
 
 ---
 

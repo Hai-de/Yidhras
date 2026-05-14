@@ -12,7 +12,7 @@ import { parseWorldPackConstitution } from '../packs/schema/constitution_schema.
 const workspaceRoot = resolveWorkspaceRoot();
 const defaultPacksDir = path.join(workspaceRoot, 'data', 'world_packs');
 
-const CONFIG_CANDIDATES = ['config.yaml', 'config.yml', 'pack.yaml', 'pack.yml'];
+const CONFIG_CANDIDATES = ['pack.yaml', 'pack.yml'];
 
 const EXCLUDE_PATTERNS = ['.git', 'node_modules', 'runtime', '*.tmp', '*.swp', '.DS_Store'];
 
@@ -140,7 +140,7 @@ const cmdExport = (packDir: string, outputPath: string | undefined, force: boole
 
   const metadata = readPackMetadata(resolvedPackDir);
   if (!metadata) {
-    const msg = '无法从 config.yaml 读取 metadata.id 或 metadata.version';
+    const msg = '无法从 pack.yaml 读取 metadata.id 或 metadata.version';
     if (json) emitJson({ success: false, error: msg });
     else console.error(`错误: ${msg}`);
     process.exitCode = 1;

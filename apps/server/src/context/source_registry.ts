@@ -6,6 +6,7 @@ import type {
   InferencePolicySummary} from '../inference/types.js';
 import type { LongMemoryBlockStore } from '../memory/blocks/types.js';
 import type { MemorySelectionResult } from '../memory/types.js';
+import type { PerceptionRuleEngine } from '../perception/rule_engine.js';
 import type { ContextOverlayStore } from './overlay/types.js';
 import { buildContextNodesFromMemoryBlocks } from './sources/memory_blocks.js';
 import { buildContextNodesFromMemorySelection } from './sources/memory_selection.js';
@@ -26,6 +27,10 @@ export interface ContextSourceAdapterInput {
   agent_capabilities?: string[];
   /** agent 已调查过的 location_id 列表，由 context service 预计算 */
   investigated_location_ids?: string[];
+  /** 每个 location 的调查次数 (替代 investigated_location_ids 的精确版本) */
+  investigation_counts?: Record<string, number>;
+  /** 统一感知规则引擎 */
+  perception_rule_engine?: PerceptionRuleEngine;
 }
 
 export interface ContextSourceAdapterBuildResult {
@@ -165,8 +170,6 @@ const createMemoryBlockSourceAdapter = (
 const createSpatialProximitySourceAdapter = (spatialRuntime: import('../packs/runtime/spatial_runtime.js').SpatialRuntime): ContextSourceAdapter => ({
   name: 'spatial-proximity',
   async buildNodes(input) {
-    // Resolve entity_id from actor_ref (agent_id) or resolved_agent_id, using pack_id for prefix stripping.
-    // agent IDs follow the pattern `{pack_id}:{entity_name}`, so we strip the `{pack_id}:` prefix.
     const rawAgentId: string | null =
       (input.actor_ref && typeof input.actor_ref === 'object' && 'agent_id' in input.actor_ref)
         ? (input.actor_ref).agent_id as string | null
@@ -189,7 +192,9 @@ const createSpatialProximitySourceAdapter = (spatialRuntime: import('../packs/ru
       entityId,
       spatialRuntime,
       tick: input.tick.toString(),
-      investigatedLocationIds: input.investigated_location_ids
+      investigationCounts: input.investigation_counts,
+      agentCapabilities: input.agent_capabilities,
+      perceptionRuleEngine: input.perception_rule_engine
     });
   }
 });
@@ -215,15 +220,19 @@ export const buildContextNodesFromSources = (
 
     for (const adapter of adapters) {
       adapterNames.push(adapter.name);
-      const built = await adapter.buildNodes(input);
-      if (Array.isArray(built)) {
-        nodes.push(...built);
-        continue;
-      }
+      try {
+        const built = await adapter.buildNodes(input);
+        if (Array.isArray(built)) {
+          nodes.push(...built);
+          continue;
+        }
 
-      nodes.push(...built.nodes);
-      if (built.diagnostics && typeof built.diagnostics === 'object') {
-        diagnostics[adapter.name] = built.diagnostics;
+        nodes.push(...built.nodes);
+        if (built.diagnostics && typeof built.diagnostics === 'object') {
+          diagnostics[adapter.name] = built.diagnostics;
+        }
+      } catch (error) {
+        diagnostics[adapter.name] = { error: String(error), status: 'failed' };
       }
     }
 

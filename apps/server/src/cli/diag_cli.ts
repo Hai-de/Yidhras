@@ -97,7 +97,7 @@ const buildReport = async (): Promise<DiagReport> => {
   if (existsSync(packsDir)) {
     for (const entry of readdirSync(packsDir, { withFileTypes: true })) {
       if (!entry.isDirectory()) continue;
-      const configPath = path.join(packsDir, entry.name, 'config.yaml');
+      const configPath = path.join(packsDir, entry.name, 'pack.yaml');
       if (existsSync(configPath)) {
         try {
           const yaml = YAML.parse(readFileSync(configPath, 'utf-8')) as Record<string, unknown>;

@@ -10,12 +10,21 @@ import { createPrismaLongMemoryBlockStore } from '../memory/blocks/store.js';
 import type { LongMemoryBlockStore } from '../memory/blocks/types.js';
 import { createMemoryService, type MemoryService } from '../memory/service.js';
 import type { MemoryContextPack, MemoryEntry, MemorySourceKind } from '../memory/types.js';
+import {
+  BUILTIN_PERCEPTION_RULES,
+  createPerceptionRuleEngine,
+  type PerceptionRuleEngine
+} from '../perception/index.js';
+import type { PerceptionRuleDef } from '../perception/types.js';
 import { pluginRuntimeRegistry } from '../plugins/runtime.js';
 import { createContextOverlayStore } from './overlay/store.js';
 import type { ContextOverlayStore } from './overlay/types.js';
 import { applyPolicyDecisionsToSelection, evaluateContextPolicies } from './policy_engine.js';
 import { buildContextNodesFromSources, createDefaultContextSourceAdapters } from './source_registry.js';
 import type { ContextMemoryBlockDiagnostics, ContextOverlayLoadedNode, ContextRun, ContextSelectionResult } from './types.js';
+
+/** Maximum tick look-back for investigation event queries (prevents unbounded scans). */
+const MAX_INVESTIGATION_LOOKBACK_TICK = 2000n;
 
 export interface BuildContextRunInput {
   actor_ref: Record<string, unknown>;
@@ -26,6 +35,8 @@ export interface BuildContextRunInput {
   pack_state?: InferencePackStateSnapshot | null;
   pack_id?: string | null;
   agent_capabilities?: string[];
+  /** Pack-level perception rules (from rules.perception in config.yaml) */
+  perception_rules?: PerceptionRuleDef[];
 }
 
 export interface ContextServiceBuildResult {
@@ -48,8 +59,8 @@ export interface CreateContextServiceOptions {
 
 const buildNodeCountsByType = (nodeTypes: string[]): Record<string, number> => {
   return nodeTypes.reduce<Record<string, number>>((acc, nodeType) => {
- 
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+
+// eslint-disable-next-line security/detect-object-injection -- keys from internal enum
     acc[nodeType] = (acc[nodeType] ?? 0) + 1;
     return acc;
   }, {});
@@ -63,6 +74,16 @@ const emptyMemoryBlockDiagnostics = (): ContextMemoryBlockDiagnostics => ({
   retained: [],
   inactive: []
 });
+
+const buildPerceptionEngine = (
+  packRules: PerceptionRuleDef[] | undefined,
+  packId: string | undefined
+): PerceptionRuleEngine => {
+  const rules = packRules && packRules.length > 0 ? packRules : BUILTIN_PERCEPTION_RULES;
+  const pluginResolvers = packId ? pluginRuntimeRegistry.getPerceptionResolvers(packId) : [];
+  const pluginResolver = pluginResolvers.length > 0 ? pluginResolvers[0] : null;
+  return createPerceptionRuleEngine(rules, pluginResolver);
+};
 
 export const createContextService = ({
   context,
@@ -78,30 +99,38 @@ export const createContextService = ({
         resolved_agent_id: input.resolved_agent_id
       });
 
-      // Pre-compute investigated location IDs for the current agent.
-      // Event has no entity_id column — match via impact_data JSON → subject_entity_id.
+      // Pre-compute investigation counts per location for the current agent.
       const packPrefix = input.pack_id ? `${input.pack_id}:` : '';
       const agentEntityId =
         input.resolved_agent_id && packPrefix && input.resolved_agent_id.startsWith(packPrefix)
           ? input.resolved_agent_id.slice(packPrefix.length)
           : input.resolved_agent_id;
 
+      // Use tick-based window instead of arbitrary take limit to avoid silent truncation
+      const lookbackTick = input.tick - MAX_INVESTIGATION_LOOKBACK_TICK;
       const investigationEvents = agentEntityId
         ? await context.prisma.event.findMany({
             where: {
               pack_id: input.pack_id ?? undefined,
               type: 'interaction',
-              location_id: { not: null }
+              location_id: { not: null },
+              tick: { gte: lookbackTick }
             },
             select: {
               id: true,
               location_id: true,
               impact_data: true
-            },
-            take: 500
+            }
           })
         : [];
 
+      /**
+       * investigationCount semantic:
+       *   Number of distinct `investigation_conducted` semantic events this agent
+       *   has produced at a given location, accumulated across all past ticks
+       *   (up to MAX_INVESTIGATION_LOOKBACK_TICK). Same-tick multiple investigations
+       *   count separately (each produces its own event).
+       */
       const investigatedLocationIds = investigationEvents
         .filter((e) => {
           if (!e.impact_data) return false;
@@ -120,7 +149,20 @@ export const createContextService = ({
         .map((e) => e.location_id)
         .filter((id): id is string => id !== null);
 
+      // Per-location investigation count (not deduplicated Set — preserves count)
+      const investigationCounts: Record<string, number> = {};
+      for (const locId of investigatedLocationIds) {
+        investigationCounts[locId] = (investigationCounts[locId] ?? 0) + 1;
+      }
+
+      // Backward-compat: unique location IDs for adapters still using the old field
       const uniqueInvestigatedLocationIds = [...new Set(investigatedLocationIds)];
+
+      // Build unified perception engine
+      const perceptionRuleEngine = buildPerceptionEngine(
+        input.perception_rules,
+        input.pack_id ?? undefined
+      );
 
       const pluginAdapters = input.pack_id ? pluginRuntimeRegistry.getContextSourceAdapters(input.pack_id) : [];
       const adapters = [
@@ -137,7 +179,9 @@ export const createContextService = ({
         pack_state: input.pack_state ?? null,
         pack_id: input.pack_id ?? null,
         agent_capabilities: input.agent_capabilities,
-        investigated_location_ids: uniqueInvestigatedLocationIds
+        investigated_location_ids: uniqueInvestigatedLocationIds,
+        investigation_counts: investigationCounts,
+        perception_rule_engine: perceptionRuleEngine
       });
 
       const droppedNodes = memoryResult.selection.dropped.map((entry) => ({

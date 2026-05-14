@@ -20,6 +20,7 @@ export const packEntityKindSchema = z.enum([
   'domain',
   'institution',
   'abstract_authority',
+  'state_transform',
   'relay',
   'persona'
 ]);

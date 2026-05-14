@@ -64,7 +64,7 @@ export const worldPackClockSnapshotSchema = z.object({
 
 // Pack-defined entity subtypes (e.g. "actor:player") use colon-prefix notation.
 // The base kinds are enumerable; subtypes extend via string suffix.
-const WORLD_ENTITY_BASE_KINDS = ['actor', 'artifact', 'domain', 'institution', 'table', 'mediator', 'state_transform', 'identity'] as const;
+const WORLD_ENTITY_BASE_KINDS = ['actor', 'artifact', 'domain', 'institution', 'mediator', 'state_transform', 'abstract_authority'] as const;
 
 const worldEntityKindSchema = z.string().trim().min(1).refine(
   (v) => {

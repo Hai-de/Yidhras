@@ -59,9 +59,7 @@ const resolvePackDir = (packId: string): string => {
 };
 
 const resolveConfigPath = (packDir: string): string => {
-  // Try common config file names
-  const candidates = ['config.yaml', 'config.yml'];
-  return join(packDir, candidates[0]); // Use config.yaml as primary
+  return join(packDir, 'pack.yaml');
 };
 
 const runMigration = async (): Promise<void> => {

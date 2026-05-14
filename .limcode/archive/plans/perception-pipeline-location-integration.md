@@ -1,7 +1,8 @@
 # 实施计划：统一感知层
 
 > 关联设计: `.limcode/design/perception-pipeline-location-integration.md`
-> 创建: 2026-05-14
+> 创建: 2026-05-14 · 完成: 2026-05-14
+> 状态: **已完成** — 全部 7 个 Phase 实施完毕
 > 原则: 测试先行 → 接口定义 → 实现 → 接入
 
 ---

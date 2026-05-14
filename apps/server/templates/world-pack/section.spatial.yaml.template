@@ -1,0 +1,8 @@
+# 空间模型 — 离散房间图
+# 需要先在 entities.yaml 中定义 domain 实体，然后在这里引用。
+# model: discrete
+# locations:
+#   - id: room_1
+#   - id: room_2
+# edges:
+#   - { from: room_1, to: room_2, type: bidirectional, weight: 1 }

@@ -9,7 +9,7 @@
 - Version：`0.5.0`
 - 题材：现代悬疑 / 超自然规则媒介 / 调查对抗
 - 当前状态：默认参考样板
-- 运行时主配置：`config.yaml`
+- 运行时主配置：`pack.yaml`（多文件拆分，`config/*.yaml`）
 
 ## 世界前提
 
@@ -84,7 +84,11 @@
 
 ```text
 death_note/
-├─ config.yaml
+├─ pack.yaml
+├─ config/
+│  ├─ variables.yaml
+│  ├─ entities.yaml
+│  └─ ...
 ├─ README.md
 ├─ CHANGELOG.md
 ├─ assets/        # 可选

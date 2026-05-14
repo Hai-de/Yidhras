@@ -79,7 +79,8 @@ export const initSystemPackPlugins = async (
 
       const existingInstallation = await store.getInstallationByScope({
         plugin_id: manifest.id,
-        scope_type: 'global'
+        scope_type: 'pack_local',
+        scope_ref: 'yidhras-system'
       });
 
       if (!existingInstallation || existingInstallation.lifecycle_state === 'archived') {

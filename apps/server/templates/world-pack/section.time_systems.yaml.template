@@ -1,0 +1,13 @@
+- id: "default_clock"
+  name: "默认时钟"
+  is_primary: true
+  tick_rate: 1000
+  units:
+    - name: "second"
+      ratio: 1
+    - name: "minute"
+      ratio: 60
+    - name: "hour"
+      ratio: 60
+    - name: "day"
+      ratio: 24

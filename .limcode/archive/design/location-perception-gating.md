@@ -1,9 +1,10 @@
 # 位置描述全知视角 — 设计草案
 
 > 来源: `.limcode/design/prompt-permission-filtering-gap-analysis.md` W6
-> 状态: 已实施（第一步：schema 拆分 + 调查门控）
+> 状态: 已实施 — 统一感知层（Tier 3），方案 D 全覆盖 A+B
 > 源码验证: 2026-05-13，问题确认存在
-> 实施: 2026-05-13，见 `.limcode/plans/location-perception-gating.md`
+> 实施: 2026-05-14，见 `.limcode/design/perception-pipeline-location-integration.md`
+> 实施计划: `.limcode/plans/perception-pipeline-location-integration.md`
 
 ---
 
@@ -119,3 +120,30 @@ location 描述从静态 state 中移出，改为 perception resolver 根据 age
 - **Event 查询不使用 `entity_id`：** Event 模型无此列。改为查询全 pack interaction event，解析 `impact_data` JSON 匹配 `semantic_type === 'investigation_conducted'` + `subject_entity_id`
 - **Namespace 修正：** domain entity state 的实际 namespace 是 `'domain'`（materializer.ts:130），非 `'core'`
 - **前置依赖（rule engine `location_id` 写入缺失）延后：** 不影响当前实施——调查事件已有 `location_id`（由 Event 创建路径的其他环节填入）
+
+---
+
+## 最终实施（2026-05-14）：统一感知层
+
+原方案 D（感知管线接入）被采纳为最终路径，且升级为 **Tier 3 统一感知层**——不拆分不并行，`rules.perception` 成为事件感知 + 环境感知的单一配置来源。
+
+**实施内容：**
+- `PerceptionRuleEngine` — 统一规则求值器（`perception/rule_engine.ts`）
+- 内置默认规则集 — 等价旧硬编码行为（`perception/default_rules.ts`）
+- `rules.perception` schema 类型化 — `perceptionWhenSchema`/`perceptionThenSchema` 替代泛型 `worldRuleDefinitionSchema`
+- 事件感知管线（step 6）+ 环境感知（context assembly）共享同一 engine
+- `investigationCount` 替代二值 `hasInvestigated`，`Set→Map` 计数，`take:500→tick` 窗口
+- `hiddenDetails: string | string[] | null` 支持分段揭示
+- `SpatialRuntime` 加 tick 级缓存，adapter 循环加 try-catch
+- 插件 `PerceptionResolver` 接口统一为 `resolve(input: PerceptionRuleInput): Promise<PerceptionRuleOutput>`
+
+**原方案对比：**
+- A（拆 schema）→ 已纳入：`public_description`/`hidden_details` 继续使用
+- B（adapter 动态注入）→ 已纳入：`investigationCount` 驱动渐进揭示
+- D（感知管线接入）→ **全量实施为统一感知层**
+
+**不变的部分：**
+- `spatial_proximity` context source 仍负责组装空间上下文节点
+- 邻接地点仅显示 label
+- `description` → `public_description` 回退链保留
+- `content.structured` 字段保留并增加 `perception_level`、`matched_rule_id`

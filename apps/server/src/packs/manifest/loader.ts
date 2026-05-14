@@ -5,6 +5,7 @@ import { createLogger } from '../../utils/logger.js';
 import { safeFs } from '../../utils/safe_fs.js';
 import type { SimulationTimeConfig, WorldPack } from './constitution_loader.js';
 import { parseWorldPackConstitution } from './constitution_loader.js';
+import { resolveIncludes } from './include_resolver.js';
 
 const logger = createLogger('pack-manifest-loader');
 
@@ -18,7 +19,7 @@ export class PackManifestLoader {
       return this.packs.get(folderName)!;
     }
 
-    const potentialFiles = ['config.yaml', 'config.yml', 'pack.yaml', 'pack.yml'];
+    const potentialFiles = ['pack.yaml', 'pack.yml'];
     let packPath: string | null = null;
 
     for (const file of potentialFiles) {
@@ -35,8 +36,24 @@ export class PackManifestLoader {
 
     try {
       const content = safeFs.readFileSync(this.packsDir, packPath, 'utf-8');
-      const parsedYaml = YAML.parse(content) as unknown;
-      const parsed = parseWorldPackConstitution(parsedYaml, packPath);
+      const entryYaml = YAML.parse(content) as Record<string, unknown>;
+
+      if (!entryYaml || typeof entryYaml !== 'object') {
+        throw new Error(`[PackManifestLoader] ${folderName}: entry YAML resolved to non-object`);
+      }
+
+      const packDirAbs = path.resolve(this.packsDir, folderName);
+      const { merged, diagnostics } = resolveIncludes(entryYaml, packDirAbs);
+
+      const errors = diagnostics.filter((d) => d.severity === 'ERROR');
+      if (errors.length > 0) {
+        throw new Error(
+          `[PackManifestLoader] ${folderName}: include resolution failed:\n` +
+            errors.map((e) => `  - ${e.section ? `[${e.section}] ` : ''}${e.message}`).join('\n')
+        );
+      }
+
+      const parsed = parseWorldPackConstitution(merged, packPath);
 
       this.packs.set(folderName, parsed);
       this.packs.set(parsed.metadata.id, parsed);
@@ -62,9 +79,12 @@ export class PackManifestLoader {
       return [];
     }
 
+    const configFiles = ['pack.yaml', 'pack.yml'];
+
     return safeFs
       .readdirSync(this.packsDir, this.packsDir, { withFileTypes: true })
       .filter(entry => entry.isDirectory())
+      .filter(entry => configFiles.some(file => safeFs.existsSync(this.packsDir, path.join(this.packsDir, entry.name, file))))
       .map(entry => entry.name);
   }
 

@@ -1,0 +1,4 @@
+strategy: "isolated_pack_db"
+runtime_db_file: "runtime.sqlite"
+pack_collections: []
+projections: []

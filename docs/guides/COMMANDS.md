@@ -334,7 +334,7 @@ pnpm --filter yidhras-server db status          # 迁移状态 + 文件信息
 pnpm --filter yidhras-server db migrate          # 执行待处理的迁移
 pnpm --filter yidhras-server db integrity         # PRAGMA integrity_check
 pnpm --filter yidhras-server db tables            # 列出所有表及行数
-pnpm --filter yidhras-server db:migrate-pack <packId>  # 迁移世界包 config.yaml 到最新 schema_version
+pnpm --filter yidhras-server db:migrate-pack <packId>  # 迁移世界包 pack.yaml 到最新 schema_version
 ```
 
 ### 6.2 世界包校验 (`validate:pack`)

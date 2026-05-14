@@ -4,7 +4,7 @@
 
 Yidhras 核心只定义 world-pack 框架、合约与运行边界，不内建任何特定世界观语义。具体世界包只应作为该框架上的内容实现，不能反向成为项目级规范中心。
 
-本规范不替代运行时合约（runtime contract）；运行时实际读取的配置源文件仍为 `config.yaml`、`config.yml`、`pack.yaml` 或 `pack.yml`。不过，从作者协作、发布交付、版本管理与二次分发等环节考量，建议一个 world-pack 不仅包含一份 YAML 配置，还应具备基本的项目说明与配套资产。
+本规范不替代运行时合约（runtime contract）。运行时读取 `pack.yaml`（或 `pack.yml`）作为包入口文件；通过入口文件中的 `include` 指令按需加载 `config/*.yaml` 中各语义节的拆分配置。多文件拆分使包作者可以按关注点组织配置，修改实体不需要导航巨型文件。
 
 > 说明：运行时直接消费 pack 配置文件；README、附加文档、素材目录等内容主要面向作者、发布者、协作者及使用者。
 >
@@ -78,33 +78,26 @@ metadata:
 
 ### 2.1 运行时最小要求
 
-运行时识别以下文件之一作为配置入口：
+运行时以 `pack.yaml`（或 `pack.yml`）作为包入口文件。入口文件包含 `metadata` 和 `include` 指令，实际语义节内容按需从 `config/*.yaml` 加载。
 
-- `config.yaml`
-- `config.yml`
-- `pack.yaml`
-- `pack.yml`
-
-上述文件承载 world-pack 的正式合约定义，内容包括：
-
+**入口文件**（`pack.yaml`）承载：
+- `schema_version`
 - `metadata`
-- `variables`
-- `prompts`
-- `time_systems`
-- `simulation_time`
-- `entities`
-- `identities`
-- `capabilities`
-- `authorities`
-- `rules`
-- `storage`
-- `bootstrap`
+- `include` — 映射语义节到拆分文件路径
+
+**拆分配置**（`config/*.yaml`）承载各语义节：
+- `variables`、`prompts`、`time_systems`、`simulation_time`
+- `entities`（actors / artifacts / mediators / domains / institutions）
+- `identities`、`capabilities`、`authorities`
+- `rules`（perception / capability_resolution / invocation / objective_enforcement / projection）
+- `storage`、`scheduler`、`bootstrap`、`state_transforms`、`spatial`、`ai`
 
 ### 2.2 项目化发布最小要求
 
 将 world-pack 作为项目单元进行发布时，建议包含以下文件：
 
-- `config.yaml`：运行时配置与正式合约文件
+- `pack.yaml`：包入口文件（metadata + include 指令）
+- `config/`：拆分配置目录（各语义节 yaml 文件）
 - `README.md`：项目说明文件（推荐必备）
 - `CHANGELOG.md`：版本变更记录（推荐提供）
 - `assets/`：插图、封面、图标等外部素材目录（按需）
@@ -112,11 +105,55 @@ metadata:
 
 各文件用途如下：
 
-- `config.yaml`：面向运行时
+- `pack.yaml`：面向运行时（入口 + 索引）
+- `config/*.yaml`：面向运行时（各语义节的具体内容）
 - `README.md`：面向人类阅读者
 - `CHANGELOG.md`：面向版本管理
 - `assets/`、`docs/`：面向展示、协作与长期维护
 
+### 2.2.1 include 指令格式
+
+`pack.yaml` 中的 `include` 字段将语义节映射到拆分配置文件。每个 key 是顶层 schema 字段名，每个 value 是相对于包目录的文件路径。
+
+```yaml
+# pack.yaml — 入口文件
+metadata:
+  id: "my_world"
+  name: "My World"
+  version: "1.0.0"
+  # ...
+
+include:
+  variables: "config/variables.yaml"
+  prompts: "config/prompts.yaml"
+  time_systems: "config/time_systems.yaml"
+  simulation_time: "config/simulation_time.yaml"
+  entities: "config/entities.yaml"
+  identities: "config/identities.yaml"
+  capabilities: "config/capabilities.yaml"
+  authorities: "config/authorities.yaml"
+  rules: "config/rules.yaml"
+  bootstrap: "config/bootstrap.yaml"
+  spatial: "config/spatial.yaml"
+  ai: "config/ai.yaml"
+  storage: "config/storage.yaml"
+```
+
+**合并规则**：
+- 入口文件中不出现 `include` 以外的语义节内容；`metadata` 始终在入口文件中
+- 每个 include 文件的内容是该 section 的直接值，不需要再嵌套 section key
+- 如果一个文件恰好只有一个 key 且与 section 同名，加载器自动解包
+- 同一文件被多个 section 引用时只读取一次
+- include 路径必须在包目录内（不允许 `..` 穿越）
+
+合法的 section key 列表与 §2.1 中列出的拆分配置一致。使用未识别的 key 会产生警告但不会阻断加载（内容通过 schema passthrough 透传）。
+
+### 2.2.2 加载流程
+
+1. 读取 `pack.yaml`，解析 `include` 指令
+2. 按需加载各 `config/*.yaml`，合并为一个对象
+3. 剥离 `include` 字段，将合并后的对象送入 schema 校验
+4. 校验通过后进入物化管线
 
 ## 2.3 变量与宏模板
 
@@ -267,7 +304,21 @@ authorities:
 
 ```text
 <pack-dir>/
-├─ config.yaml
+├─ pack.yaml                # 包入口（metadata + include 指令）
+├─ config/                  # 拆分配置目录
+│  ├─ variables.yaml
+│  ├─ prompts.yaml
+│  ├─ time_systems.yaml
+│  ├─ simulation_time.yaml
+│  ├─ entities.yaml
+│  ├─ identities.yaml
+│  ├─ capabilities.yaml
+│  ├─ authorities.yaml
+│  ├─ rules.yaml
+│  ├─ bootstrap.yaml
+│  ├─ ai.yaml
+│  ├─ spatial.yaml
+│  └─ storage.yaml
 ├─ README.md
 ├─ CHANGELOG.md
 ├─ LICENSE                  # 可选，公开发布时建议提供
@@ -285,9 +336,13 @@ authorities:
 
 ### 目录职责说明
 
-- `config.yaml`
-  - 作为 pack 的唯一运行时主配置
-  - 用于 schema 校验、加载、物化与运行时执行
+- `pack.yaml`
+  - 包入口文件，包含 `metadata` 和 `include` 指令
+  - `include` 将各语义节映射到 `config/*.yaml` 文件路径
+  - 用于包发现（仅需解析 metadata）和配置加载
+- `config/`
+  - 存放按语义节拆分的 YAML 配置文件
+  - 一个 section 对应一个文件，便于按关注点修改和按需加载
 - `README.md`
   - 作为 pack 的外部入口文档
   - 使首次接触者能够快速了解 pack 的用途与边界
@@ -308,7 +363,7 @@ authorities:
 
 ### 4.1 必要性说明
 
-如果未提供 README.md，使用者通常需要通过直接阅读 `config.yaml` 来获取 pack 信息，这可能带来一些不便：
+如果未提供 README.md，使用者通常需要通过直接阅读 `pack.yaml` 和 `config/*.yaml` 来获取 pack 信息，这可能带来一些不便：
 
 1. YAML 格式更适合机器解析，不适合作为项目说明入口。
 2. 发布者的设计意图、题材背景、使用方式难以被快速理解。
@@ -370,7 +425,7 @@ README.md 宜明确区分：
 - 客观规则
 
 ## 目录结构
-说明 `config.yaml`、`assets/`、`docs/` 等目录的用途。
+说明 `pack.yaml`、`config/`、`assets/`、`docs/` 等目录的用途。
 
 ## 使用方式
 说明将 pack 放入 `data/world_packs/<pack>` 并启动的方法。
@@ -451,14 +506,14 @@ README.md 宜明确区分：
 
 该目录可放置由仓库正式维护的默认模板，例如：
 
-- `pack.config.template.yaml`
+- `pack.entry.yaml.template` — 多文件入口模板
+- `section.<name>.yaml.template` — 各语义节模板
 - `pack.README.template.md`
 - `pack.CHANGELOG.template.md`
-- `example-pack.yaml`
-- `example-pack.README.md`
-- `example-pack.CHANGELOG.md`
+- `example_pack.yaml` / `example_pack.README.md` / `example_pack.CHANGELOG.md`
+- `death_note.yaml` / `death_note.README.md` / `death_note.CHANGELOG.md`
 
-其中 bundled example template 可以是 `death_note`，也可以是其它参考包；它们是示例资源，而不是项目核心默认世界。
+其中 bundled example 可以是 `death_note` 或 `example_pack`；它们是示例资源，而不是项目核心默认世界。
 
 ### 7.2 运行时脚手架镜像
 
@@ -466,7 +521,7 @@ README.md 宜明确区分：
 
 - `data/configw/templates/world-pack/`
 
-该目录为启动时会被脚手架（scaffold）复制至本地运行目录的模板镜像。镜像资源可以包含 bundled example pack，但这不意味着运行时首选世界必须绑定到某个具体包。
+该目录为启动时会被脚手架复制至本地运行目录的模板镜像。
 
 ### 7.3 实际 pack 目录
 
@@ -476,7 +531,8 @@ README.md 宜明确区分：
 
 该目录建议以项目单元形式存在，至少包含：
 
-- `config.yaml`
+- `pack.yaml`（入口文件）
+- `config/*.yaml`（拆分配置）
 - `README.md`
 
 若计划公开发布，建议补充：
@@ -495,15 +551,16 @@ README.md 宜明确区分：
 pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"
 ```
 
-该命令将在 `data/world_packs/<pack-dir>/` 下创建 `config.yaml`、`README.md`、`CHANGELOG.md` 及空目录 `docs/`、`assets/`、`examples/`，并对 `config.yaml` 执行 schema 校验。
+该命令将在 `data/world_packs/<pack-dir>/` 下创建多文件结构（`pack.yaml` + `config/*.yaml`）、`README.md`、`CHANGELOG.md` 及空目录 `docs/`、`assets/`、`examples/`，并对合并后的配置执行 schema 校验。
 
 ## 8. 参考实现与 bundled example
 
 仓库可以包含一个或多个 bundled example world-pack，用来展示完整 contract 的一种实现方式。它们的定位是参考实例，不是宿主核心默认语义。
 
-- 例如 `death_note` 可以作为参考实例：
-  - 运行时合约文件：`data/world_packs/death_note/config.yaml`
+- 例如 `world-death-note` 可以作为参考实例：
+  - 入口文件：`data/world_packs/world-death-note/pack.yaml`
+  - 拆分配置：`data/world_packs/world-death-note/config/*.yaml`
   - 模板来源：`apps/server/templates/world-pack/death_note.yaml`
-  - 包内说明建议收口在：`data/world_packs/death_note/README.md`、`CHANGELOG.md`、`DESIGN.md`
+  - 包内说明建议收口在：`data/world_packs/world-death-note/README.md`、`CHANGELOG.md`
 
 项目级文档只应说明 world-pack 的通用建议；具体包的世界观、题材语义、动作链与设计取舍，应以该包目录中的文档为准。

@@ -1,30 +1,16 @@
-import type { PerceptionResolver, PerceptionResult, ResolvePerceptionInput } from './types.js';
+import type { PerceptionRuleEngine } from './rule_engine.js';
+import type { PerceptionResolver } from './types.js';
 
 /**
- * Default spatial_proximity perception resolver (A layer).
+ * Rule-based perception resolver — thin wrapper around PerceptionRuleEngine.
  *
- * - Public event, same location → full
- * - Private event, observer IS the event actor → full
- * - Private event, observer is NOT the event actor → none
- * - Event with no location_id → full (global event, backward compatible)
- * - Same location but different visibility → none
+ * Delegates all perception decisions to the engine, which evaluates
+ * `rules.perception` from pack config (or built-in defaults).
  */
-export const createSpatialProximityResolver = (): PerceptionResolver => ({
-  async resolve(event: ResolvePerceptionInput, observerEntityId: string, spatialRuntime) {
-    if (!event.locationId) {
-      return { level: 'full' };
-    }
-
-    const observerLocation = await spatialRuntime.getLocation(observerEntityId);
-
-    if (observerLocation !== event.locationId) {
-      return { level: 'none' };
-    }
-
-    if (event.visibility === 'private' && event.eventActorEntityId !== observerEntityId) {
-      return { level: 'none' };
-    }
-
-    return { level: 'full' };
+export const createRuleBasedPerceptionResolver = (
+  engine: PerceptionRuleEngine
+): PerceptionResolver => ({
+  async resolve(input) {
+    return engine.evaluate(input);
   }
 });

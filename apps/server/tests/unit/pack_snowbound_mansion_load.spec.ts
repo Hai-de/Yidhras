@@ -7,7 +7,7 @@ describe('snowbound_mansion world pack', () => {
     const loader = new PackManifestLoader('/home/aimana/文档/AI-related/Yidhras/data/world_packs');
     const pack = loader.loadPack('snowbound_mansion');
 
-    expect(pack.metadata.id).toBe('snowbound-mansion');
+    expect(pack.metadata.id).toBe('snowbound_mansion');
     expect(pack.metadata.name).toBe('暴风雪山庄');
     expect(pack.entities?.domains?.length).toBe(15);
     expect(pack.entities?.actors?.length).toBe(12);

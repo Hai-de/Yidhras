@@ -2,6 +2,8 @@
 
 分析基于 `snowbound_mansion` 世界包的提示词组装全链路，区分 Yidhras 平台架构缺陷与该世界包设计失误。
 
+> **状态更新（2026-05-14）：** 全部 10 项 8 已修复（P1-P8 + W1-W2 + W5-W6），仅 W3/W4（atmosphere/world context 的 visibility 语义）因无实际用例延后。
+
 ---
 
 ## 一、提示词组装全链路
@@ -166,9 +168,16 @@ fragment tree ──► permission_filter.ts
 - `grant-reveal-secret-all` — `invoke.reveal_secret` → 所有 actor
 - `grant-mastermind-perception` — `perceive.mastermind` → `is_mastermind: true` 的 actor（条件授权）
 
-### W6. 位置描述全知视角 — 未修复
+### W6. 位置描述全知视角 — ✅ 已修复（统一感知层，2026-05-14）
 
-需要 location 描述拆分为 `public_description` + `hidden_details`，依赖 agent 的调查历史动态注入。超出本次提示词权限过滤范围，留待后续。
+~~需要 location 描述拆分为 `public_description` + `hidden_details`，依赖 agent 的调查历史动态注入。超出本次提示词权限过滤范围，留待后续。~~
+
+→ 已通过统一感知层完整实施（Tier 3），超出原始修复预期：
+- `rules.perception` 类型化 schema 驱动事件感知 + 环境感知
+- `PerceptionRuleEngine` 统一求值器，内置默认规则集
+- `investigationCount` 替代二值 `hasInvestigated`，支持渐进揭示
+- `hiddenDetails: string | string[] | null` 支持分段隐藏信息
+- 详见 `.limcode/design/perception-pipeline-location-integration.md`
 
 ---
 
@@ -265,7 +274,7 @@ priority_score DESC → scheduled_for_tick ASC → partition_id ASC → agent_id
 | **P2** | W1 | 世界包 | `global_prefix` 元信息泄露 | ✅ 已修复 |
 | **P3** | W2 | 世界包 | `agent_persona` 死代码 | ✅ 已修复 |
 | **P3** | W5 | 世界包 | `authorities` 不完整 | ✅ 已修复 |
-| **P3** | W6 | 世界包 | 位置描述全知视角 | ⬜ 未修复（后续） |
+| **P3** | W6 | 世界包 | 位置描述全知视角 | ✅ 已修复（统一感知层） |
 
 ---
 

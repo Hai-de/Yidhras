@@ -5,6 +5,7 @@ import { pluginManifestSchema } from '@yidhras/contracts';
 import * as YAML from 'yaml';
 
 import { resolveWorkspaceRoot } from '../config/loader.js';
+import { resolveIncludes } from '../packs/manifest/include_resolver.js';
 import { parseWorldPackConstitution } from '../packs/schema/constitution_schema.js';
 
 const workspaceRoot = resolveWorkspaceRoot();
@@ -67,9 +68,95 @@ const readYaml = (filePath: string): unknown => {
   return YAML.parse(content);
 };
 
+const validateIncludes = (parsed: unknown, packDir: string): ValidationIssue[] => {
+  const issues: ValidationIssue[] = [];
+
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return issues;
+  }
+
+  const obj = parsed as Record<string, unknown>;
+  const include = obj.include as Record<string, unknown> | undefined;
+  if (!include || typeof include !== 'object' || Object.keys(include).length === 0) {
+    return issues;
+  }
+
+  const includeEntries = Object.entries(include);
+  issues.push({
+    severity: 'PASS',
+    message: `include 指令: ${includeEntries.length} 个文件引用`
+  });
+
+  const validKeys = new Set([
+    'schema_version', 'metadata', 'constitution', 'variables', 'prompts',
+    'ai', 'time_systems', 'simulation_time', 'entities', 'identities',
+    'capabilities', 'authorities', 'rules', 'storage', 'scheduler',
+    'bootstrap', 'state_transforms', 'spatial'
+  ]);
+
+  for (const [sectionKey, includeValue] of includeEntries) {
+    if (!validKeys.has(sectionKey)) {
+      issues.push({
+        severity: 'WARN',
+        message: `include: 未知 section key "${sectionKey}"`
+      });
+    }
+
+    const filePath = typeof includeValue === 'string'
+      ? includeValue
+      : (includeValue as Record<string, unknown>)?.file as string | undefined;
+
+    if (!filePath || typeof filePath !== 'string') {
+      issues.push({
+        severity: 'FAIL',
+        message: `include.${sectionKey}: 文件路径无效或缺失`
+      });
+      continue;
+    }
+
+    const absolutePath = path.resolve(packDir, filePath);
+    if (!existsSync(absolutePath)) {
+      issues.push({
+        severity: 'FAIL',
+        message: `include.${sectionKey}: 文件不存在 "${filePath}"`
+      });
+      continue;
+    }
+
+    try {
+      const subContent = YAML.parse(readFileSync(absolutePath, 'utf-8'));
+      if (subContent === null || subContent === undefined) {
+        issues.push({
+          severity: 'WARN',
+          message: `include.${sectionKey}: "${filePath}" 解析结果为空`
+        });
+      } else {
+        issues.push({
+          severity: 'PASS',
+          message: `include.${sectionKey}: "${filePath}" 解析成功`
+        });
+      }
+    } catch (error) {
+      issues.push({
+        severity: 'FAIL',
+        message: `include.${sectionKey}: "${filePath}" YAML 解析失败: ${error instanceof Error ? error.message : String(error)}`
+      });
+    }
+
+    if (sectionKey in obj && sectionKey !== 'include') {
+      issues.push({
+        severity: 'WARN',
+        message: `include.${sectionKey}: 入口文件内联定义了 "${sectionKey}"，include 值将覆盖`
+      });
+    }
+  }
+
+  return issues;
+};
+
 const validateConfig = (packDir: string): ValidationIssue[] => {
   const issues: ValidationIssue[] = [];
-  const configFiles = ['config.yaml', 'config.yml', 'pack.yaml', 'pack.yml'];
+  const configFiles = ['pack.yaml', 'pack.yml'];
   const found = configFiles.find((f) => fileExists(packDir, f));
 
   if (!found) {
@@ -92,8 +179,31 @@ const validateConfig = (packDir: string): ValidationIssue[] => {
     return issues;
   }
 
+  const includeIssues = validateIncludes(parsed, packDir);
+  issues.push(...includeIssues);
+  const hasIncludeFail = includeIssues.some((i) => i.severity === 'FAIL');
+
+  let mergedParsed = parsed;
+  if (!hasIncludeFail && typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+    const obj = parsed as Record<string, unknown>;
+    if (obj.include && typeof obj.include === 'object' && Object.keys(obj.include as object).length > 0) {
+      const { merged, diagnostics } = resolveIncludes(obj, packDir);
+      const mergeErrors = diagnostics.filter((d) => d.severity === 'ERROR');
+      if (mergeErrors.length > 0) {
+        for (const d of mergeErrors) {
+          issues.push({
+            severity: 'FAIL',
+            message: `include 解析: ${d.section ? `[${d.section}] ` : ''}${d.message}`
+          });
+        }
+        return issues;
+      }
+      mergedParsed = merged;
+    }
+  }
+
   try {
-    const result = parseWorldPackConstitution(parsed, path.basename(packDir));
+    const result = parseWorldPackConstitution(mergedParsed, path.basename(packDir));
     issues.push({ severity: 'PASS', message: `Schema 校验通过 (id: ${result.metadata.id}, version: ${result.metadata.version})` });
   } catch (error) {
     issues.push({

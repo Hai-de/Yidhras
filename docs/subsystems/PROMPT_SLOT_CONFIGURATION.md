@@ -124,10 +124,10 @@ slots:
 
 ### 6.2 世界包动态插槽声明
 
-世界包可在 `config.yaml` 的 `ai.slots` 中声明专属插槽，包激活时自动注册，切换/停用时自动注销。插槽 id 由 YAML key 提供（值中无需重复 `id` 字段）：
+世界包可在 `config/ai.yaml` 的 `slots` 中声明专属插槽（通过 `pack.yaml` 的 `include.ai` 引用），包激活时自动注册，切换/停用时自动注销。插槽 id 由 YAML key 提供（值中无需重复 `id` 字段）：
 
 ```yaml
-# 世界包 config.yaml
+# 世界包 config/ai.yaml
 ai:
   slots:
     custom_safety_layer:
