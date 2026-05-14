@@ -1,7 +1,7 @@
 import type { MultiPackLoopHost } from '../app/runtime/MultiPackLoopHost.js';
 import type { WorldEnginePort } from '../app/runtime/world_engine_ports.js';
-import type { PackRuntimeHandle } from './pack_runtime_handle.js';
 import type { DefaultPackRuntimeRegistryService } from '../packs/orchestration/pack_runtime_registry_service.js';
+import type { PackRuntimeHandle } from './pack_runtime_handle.js';
 
 /**
  * Multi-pack lifecycle coordinator — extracted from SimulationManager.

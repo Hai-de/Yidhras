@@ -1,13 +1,12 @@
 import {
+  collectDefaultMetrics,
   Counter,
   Gauge,
   Histogram,
-  type Registry,
-  collectDefaultMetrics,
-  register
-} from 'prom-client';
+  register,
+  type Registry} from 'prom-client';
 
-let metricsRegistry: Registry = register;
+const metricsRegistry: Registry = register;
 
 export const getMetricsRegistry = (): Registry => metricsRegistry;
 

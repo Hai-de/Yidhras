@@ -204,17 +204,17 @@ When behavior changes, update the most appropriate primary doc in the same chang
 
 ### Stable reference doc iron rules
 
-`docs/` 下的文档是**稳定事实源**，不是项目周报、过程记录或里程碑汇报。任何修改 `docs/` 的变更必须遵守以下铁律：
+Documents under docs/ are the stable source of truth, not project weekly reports, process records, or milestone reports. Any changes to docs/ must obey the following iron rules:
 
-1. **去时间化** — 禁止一切将事实锚定在时间轴上的描述。禁用：`当前`、`目前`、`现已`、`已完全移除`、`Phase X 已完成`、`本阶段`、`尚未激活`、`将在...实现`、`当前缺失`、`当前实现状态` 等。文档只描述 timeless 的事实。
+1.  No time anchoring — Prohibit any description that anchors facts to a timeline. Forbidden terms: current, currently, now, has been completely removed, Phase X is complete, this phase, not yet active, will be implemented..., currently missing, current implementation status, etc. Documents describe only timeless facts.
 
-2. **去过程化** — `docs/` 与 `.limcode/` 完全隔离。稳定文档中不得出现 `.limcode/` 路径引用、不得出现 `Phase X`、`组件化重构` 等项目过程术语、不得引用设计草案或实施计划。
+2. No process references — docs/ is completely isolated from .limcode/. Stable documents must not contain path references to .limcode/, must not use project process terms such as Phase X or component refactoring, and must not refer to design drafts or implementation plans.
 
-3. **去汇报化** — 禁止周报语气。禁用 `**当前实现状态**：...`、`**当前缺失**：...`、`**已完成**：...`、`系统始终：` 等格式。禁止解释"我们为什么这样设计"，只陈述"系统是这样工作的"。
+3. No status reporting — Prohibit a weekly report tone. Forbidden: **Current implementation status**: ..., **Currently missing**: ..., **Completed**: ..., The system always: , and similar formats. Do not explain “why we designed it this way”; only state “the system works this way”.
 
-4. **符号与格式净化** — 禁止 `§` 符号（改用标准 Markdown 锚点或标题引用）。禁止冗余括号注释（如 `（V1 已完全移除）`、`（含 Phase X...）`）。禁止用 `>` 引用块包裹核心定义。
+3. Symbol and formatting cleanup — Prohibit the § symbol (use standard Markdown anchors or heading references instead). Prohibit redundant parenthetical annotations (e.g., (V1 has been completely removed), (includes Phase X...)). Prohibit wrapping core definitions in > blockquotes.
 
-5. **术语统一** — 同一篇文档内术语必须一致（如 `world-pack` / `世界包` 不得混用）。文档开头必须明确"本文档说明什么"和"本文档不说明什么"。
+4. Terminology consistency — Within a single document, terminology must be consistent (e.g., do not mix world-pack and 世界包). The document's beginning must clearly state what it explains and what it does not explain.
 
 ### Source-of-truth rules
 

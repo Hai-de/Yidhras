@@ -16,7 +16,6 @@ export interface PackRuntimeSummary {
 
 export interface PackRuntimeLocator {
   listLoadedPackIds(): string[];
-  getActivePackId(): string | null;
   getHandle(packId: string): PackRuntimeHandle | null;
   hasPackRuntime(packId: string): boolean;
   resolveStablePackScope(packId: string, feature: string): string;
@@ -42,7 +41,6 @@ export interface PackRuntimeObservation {
 }
 
 export interface PackRuntimeLookupPort {
-  getActivePackId(): string | null;
   hasPackRuntime(packId: string): boolean;
   assertPackScope(packId: string, feature: string): string;
   getPackRuntimeSummary(packId: string): PackRuntimeSummary | null;

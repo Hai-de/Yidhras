@@ -18,7 +18,7 @@ const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
 };
 
 const resolveSpeedControl = (context: AppContext, packRuntime?: PackRuntimePort) =>
-  packRuntime ?? context.getPackRuntimeHost?.(context.packRuntimeLookup?.getActivePackId() ?? '');
+  packRuntime;
 
 const requireSpeedControl = (context: AppContext, packRuntime?: PackRuntimePort) => {
   const control = resolveSpeedControl(context, packRuntime);

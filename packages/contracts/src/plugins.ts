@@ -331,7 +331,7 @@ export const pluginOperationAcknowledgementSchema = z.object({
   installation: pluginSummarySchema
 })
 
-export const activePackPluginRuntimeDataSchema = z.object({
+export const packPluginRuntimeDataSchema = z.object({
   pack_id: nonEmptyStringSchema,
   plugins: z.array(pluginWebManifestItemSchema)
 })

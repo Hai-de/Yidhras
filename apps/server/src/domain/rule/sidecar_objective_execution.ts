@@ -7,7 +7,6 @@ import {
 } from '@yidhras/contracts';
 
 import type { AppInfrastructure } from '../../app/context.js';
-import { resolveActivePack } from '../../app/services/pack_runtime_resolution.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { ApiError } from '../../utils/api_error.js';
@@ -58,9 +57,10 @@ export const buildSidecarObjectiveExecutionRequest = async (
     effectiveMediatorId: string | null;
     packStorageAdapter: PackStorageAdapter;
     filteredRules?: Array<{ id: string; when?: unknown; then?: unknown }> | null;
-  }
+  },
+  packRuntime?: { getPack(): { metadata: { id: string }; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> } } | undefined }
 ): Promise<WorldRuleExecuteObjectiveRequest> => {
-  const pack = resolveActivePack(context);
+  const pack = packRuntime?.getPack();
   if (!pack || pack.metadata.id !== input.invocation.pack_id) {
     throw new ApiError(404, 'PACK_NOT_LOADED', 'World engine pack session is not loaded for objective rule execution', {
       pack_id: input.invocation.pack_id

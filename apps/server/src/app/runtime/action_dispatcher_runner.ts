@@ -3,8 +3,6 @@ import { createMemoryCompactionService } from '../../memory/recording/compaction
 import { createMemoryRecordingService } from '../../memory/recording/service.js';
 import { recordActionIntentDispatched } from '../../observability/metrics.js';
 import type { AppContext } from '../context.js';
-import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
-import { resolveActivePack, resolvePackTick } from '../services/pack_runtime_resolution.js';
 import {
   assertActionIntentLockOwnership,
   claimActionIntent,
@@ -15,6 +13,8 @@ import {
   markActionIntentDropped,
   markActionIntentFailed
 } from '../services/action_dispatcher.js';
+import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
+import { resolvePackTick } from '../services/pack_runtime_resolution.js';
 import { hasActiveWorkflowForActor } from './entity_activity_query.js';
 import { runWithConcurrency } from './runner_concurrency.js';
 
@@ -68,7 +68,7 @@ export const runActionDispatcher = async ({
       assertActionIntentLockOwnership(claimedIntent, workerId, resolvePackTick(context, packRuntime));
 
       const result = await dispatchActionIntent(context, claimedIntent);
-      const recordPackId = packRuntime?.getPackId() ?? resolveActivePack(context, packRuntime)?.metadata.id ?? 'unknown-pack';
+      const recordPackId = packRuntime?.getPackId() ?? 'unknown-pack';
       recordActionIntentDispatched(recordPackId, claimedIntent.intent_type, result.outcome);
       if (claimedIntent.intent_type === 'trigger_event') {
         const latestIntent = await getActionIntentForDispatchReflection(context, claimedIntent.id);
@@ -76,7 +76,7 @@ export const runActionDispatcher = async ({
         if (latestIntent?.semantic_intent_kind === 'record_private_reflection') {
           await memoryRecordingService.recordPrivateReflection({
             actor_id: latestIntent.actor_agent_id,
-            pack_id: (packRuntime?.getPackId() ?? resolveActivePack(context, packRuntime)?.metadata.id ?? 'unknown-pack'),
+            pack_id: (packRuntime?.getPackId() ?? 'unknown-pack'),
             tick: resolvePackTick(context, packRuntime).toString(),
             source_inference_id: latestIntent.source_inference_id,
             reasoning: latestEvent,
@@ -87,7 +87,7 @@ export const runActionDispatcher = async ({
         if (latestIntent?.semantic_intent_kind === 'revise_judgement_plan') {
           await memoryRecordingService.reviseJudgementPlan({
             actor_id: latestIntent.actor_agent_id,
-            pack_id: (packRuntime?.getPackId() ?? resolveActivePack(context, packRuntime)?.metadata.id ?? 'unknown-pack'),
+            pack_id: (packRuntime?.getPackId() ?? 'unknown-pack'),
             tick: resolvePackTick(context, packRuntime).toString(),
             source_inference_id: latestIntent.source_inference_id,
             reasoning: latestEvent,
@@ -99,7 +99,7 @@ export const runActionDispatcher = async ({
         if (latestIntent?.semantic_intent_kind === 'update_target_dossier') {
           await memoryRecordingService.updateTargetDossier({
             actor_id: latestIntent.actor_agent_id,
-            pack_id: (packRuntime?.getPackId() ?? resolveActivePack(context, packRuntime)?.metadata.id ?? 'unknown-pack'),
+            pack_id: (packRuntime?.getPackId() ?? 'unknown-pack'),
             tick: resolvePackTick(context, packRuntime).toString(),
             source_inference_id: latestIntent.source_inference_id,
             reasoning: latestEvent,
@@ -111,7 +111,7 @@ export const runActionDispatcher = async ({
         if (latestIntent?.semantic_intent_kind === 'record_execution_postmortem') {
           await memoryRecordingService.recordExecutionReflection({
             actor_id: latestIntent.actor_agent_id,
-            pack_id: (packRuntime?.getPackId() ?? resolveActivePack(context, packRuntime)?.metadata.id ?? 'unknown-pack'),
+            pack_id: (packRuntime?.getPackId() ?? 'unknown-pack'),
             tick: resolvePackTick(context, packRuntime).toString(),
             source_inference_id: latestIntent.source_inference_id,
             source_action_intent_id: latestIntent.id,
@@ -130,7 +130,7 @@ export const runActionDispatcher = async ({
         if (latestIntent) {
           await memoryRecordingService.recordExecutionReflection({
             actor_id: latestIntent.actor_agent_id,
-            pack_id: (packRuntime?.getPackId() ?? resolveActivePack(context, packRuntime)?.metadata.id ?? 'unknown-pack'),
+            pack_id: (packRuntime?.getPackId() ?? 'unknown-pack'),
             tick: resolvePackTick(context, packRuntime).toString(),
             source_inference_id: latestIntent.source_inference_id,
             source_action_intent_id: latestIntent.id,
@@ -151,7 +151,7 @@ export const runActionDispatcher = async ({
       if (latestIntent) {
         await memoryRecordingService.recordExecutionReflection({
           actor_id: latestIntent.actor_agent_id,
-          pack_id: (packRuntime?.getPackId() ?? resolveActivePack(context, packRuntime)?.metadata.id ?? 'unknown-pack'),
+          pack_id: (packRuntime?.getPackId() ?? 'unknown-pack'),
           tick: resolvePackTick(context, packRuntime).toString(),
           source_inference_id: latestIntent.source_inference_id,
           source_action_intent_id: latestIntent.id,
@@ -169,7 +169,7 @@ export const runActionDispatcher = async ({
         return 0;
       }
 
-      const failPackId = packRuntime?.getPackId() ?? resolveActivePack(context, packRuntime)?.metadata.id ?? 'unknown-pack';
+      const failPackId = packRuntime?.getPackId() ?? 'unknown-pack';
       recordActionIntentDispatched(failPackId, claimedIntent.intent_type, 'failed');
 
       const errorCode = err instanceof Error && 'code' in err && typeof err.code === 'string'
@@ -185,7 +185,7 @@ export const runActionDispatcher = async ({
       if (latestIntent) {
         await memoryRecordingService.recordExecutionReflection({
           actor_id: latestIntent.actor_agent_id,
-          pack_id: (packRuntime?.getPackId() ?? resolveActivePack(context, packRuntime)?.metadata.id ?? 'unknown-pack'),
+          pack_id: (packRuntime?.getPackId() ?? 'unknown-pack'),
           tick: resolvePackTick(context, packRuntime).toString(),
           source_inference_id: latestIntent.source_inference_id,
           source_action_intent_id: latestIntent.id,

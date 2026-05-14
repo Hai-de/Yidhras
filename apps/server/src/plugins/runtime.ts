@@ -3,7 +3,6 @@ import type { Express, Request, Response } from 'express';
 import path from 'path';
 
 import type { AppInfrastructure } from '../app/context.js';
-import { resolveActivePack } from '../app/services/pack_runtime_resolution.js';
 import type {
   QueryContributor,
   RuleContributor,
@@ -404,23 +403,7 @@ const activatePluginEntrypoint = async (
   }
 };
 
-export const syncActivePackPluginRuntime = async (context: Ctx): Promise<void> => {
-  const activePackId = resolveActivePack(context)?.metadata.id;
-  if (!activePackId) {
-    return;
-  }
-
-  await refreshPackPluginRuntime(context, activePackId);
-
-  const app = context.getHttpApp?.() ?? null;
-  if (!app) {
-    return;
-  }
-
-  pluginRuntimeRegistry.applyPackRoutes(activePackId, app, context);
-};
-
-export const syncExperimentalPackPluginRuntime = async (
+export const syncPackPluginRuntime = async (
   context: Ctx,
   packId: string
 ): Promise<void> => {
@@ -453,15 +436,6 @@ const isHostApiCompatible = (serverVersion: string, requiredVersion: string): bo
   if (server.minor > required.minor) return true;
   if (server.minor === required.minor && server.patch >= required.patch) return true;
   return false;
-};
-
-export const refreshActivePackPluginRuntime = async (context: Ctx): Promise<void> => {
-  const activePack = resolveActivePack(context);
-  if (!activePack) {
-    return;
-  }
-
-  await refreshPackPluginRuntime(context, activePack.metadata.id);
 };
 
 export const refreshPackPluginRuntime = async (
@@ -565,7 +539,7 @@ export const refreshPackPluginRuntime = async (
         );
         if (typeof result === 'function') {
           runtime.deactivate = result;
-        } else if (result && typeof (result as { deactivate?: () => void }).deactivate === 'function') {
+        } else if (result && typeof (result).deactivate === 'function') {
           runtime.deactivate = (result as { deactivate: () => void | Promise<void> }).deactivate;
         }
       } catch (err) {

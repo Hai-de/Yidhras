@@ -4,7 +4,7 @@ import { createAiTaskService } from '../../ai/task_service.js';
 import type { AppInfrastructure } from '../../app/context.js';
 import type { AppContextPorts } from '../../app/services/app_context_ports.js';
 import type { PackRuntimePort } from '../../app/services/pack_runtime_ports.js';
-import { resolveActivePack, resolvePackTick } from '../../app/services/pack_runtime_resolution.js';
+import { resolvePackTick } from '../../app/services/pack_runtime_resolution.js';
 import { isAiGatewayEnabled } from '../../config/runtime_config.js';
 import { createContextOverlayStore } from '../../context/overlay/store.js';
 import { buildWorkflowPromptBundle } from '../../context/workflow/orchestrator.js';
@@ -80,7 +80,7 @@ export const createMemoryCompactionService = ({
     },
 
     async runForAgent(input) {
-      const pack = resolveActivePack(context, packRuntime);
+      const pack = packRuntime?.getPack();
       if (!pack) {
         return null;
       }
@@ -141,7 +141,7 @@ export const createMemoryCompactionService = ({
           compaction_run: true,
           compaction_source: 'memory_loop'
         }
-      });
+      }, packRuntime?.getPackId() ?? '');
 
       const recordingService = createMemoryRecordingService({ context, longMemoryBlockStore });
       const overlayStore = createContextOverlayStore(context);

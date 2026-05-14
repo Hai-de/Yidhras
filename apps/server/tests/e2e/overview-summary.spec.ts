@@ -8,7 +8,7 @@ describe('overview summary e2e', () => {
   it('returns runtime, world time and audit aggregates for the operator summary page', async () => {
     await withIsolatedTestServer({
       defaultPort: 3104,
-      activePackRef: 'example_pack',
+      packRef: 'example_pack',
       seededPackRefs: ['example_pack']
     }, async server => {
       const statusResponse = await requestJson(server.baseUrl, '/api/status');

@@ -32,7 +32,7 @@ afterEach(async () => {
 
 describe('authority/perception/context assembly', () => {
   it('resolves capabilities and pack-state visibility for the current subject', async () => {
-    const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test', activePackRef: DEATH_NOTE_PACK_REF, seededPackRefs: [DEATH_NOTE_PACK_REF] });
+    const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test', packRef: DEATH_NOTE_PACK_REF, seededPackRefs: [DEATH_NOTE_PACK_REF] });
     createdRoots.push(environment.rootDir);
     process.env.WORKSPACE_ROOT = environment.rootDir;
     process.env.DATABASE_URL = environment.databaseUrl;

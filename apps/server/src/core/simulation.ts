@@ -37,15 +37,9 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, PackCatalogS
     this.packRuntimeRegistry = new InMemoryPackRuntimeRegistry();
     this.runtimeBootstrap = new PrismaRuntimeDatabaseBootstrap({ prisma: this.prisma });
 
-    const getFirstPack = () => {
-      const ids = this.packRuntimeRegistryService?.listLoadedPackIds() ?? [];
-      return ids.length > 0 ? this.packRuntimeRegistryService?.getHandle(ids[0])?.pack : undefined;
-    };
-
     this.packCatalogService = new DefaultPackCatalogService({
       packsDir: this.packsDir,
-      loader: this.loader,
-      getActivePack: getFirstPack
+      loader: this.loader
     });
 
     this.packRuntimeRegistryService = new DefaultPackRuntimeRegistryService({
@@ -54,8 +48,7 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, PackCatalogS
       prisma: this.prisma,
       packStorageAdapter: options.packStorageAdapter,
       packsDir: this.packsDir,
-      getActivePack: getFirstPack,
-      getStartupLevel: () => getFirstPack() ? 'ok' : 'degraded',
+      getStartupLevel: () => 'ok',
       onBeforeUnload: async () => {},
       multiPackLoopHost: options.multiPackLoopHost
     });

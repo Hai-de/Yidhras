@@ -43,7 +43,7 @@ const isWorkflowSettled = (value: unknown): boolean => {
 
 describe('trigger event e2e', () => {
   it('narrativizes ritual semantic intent and exposes failed-attempt audit data', async () => {
-    await withIsolatedTestServer({ defaultPort: 3110, activePackRef: DEATH_NOTE_PACK_REF }, async server => {
+    await withIsolatedTestServer({ defaultPort: 3110, packRef: DEATH_NOTE_PACK_REF }, async server => {
       const statusResponse = await requestJson(server.baseUrl, '/api/status');
       expect(statusResponse.status).toBe(200);
       const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');
@@ -118,7 +118,7 @@ describe('trigger event e2e', () => {
   });
 
   it('keeps active/system trigger_event workflows in dispatch_pending under replay', async () => {
-    await withIsolatedTestServer({ defaultPort: 3110, activePackRef: DEATH_NOTE_PACK_REF }, async server => {
+    await withIsolatedTestServer({ defaultPort: 3110, packRef: DEATH_NOTE_PACK_REF }, async server => {
       const statusResponse = await requestJson(server.baseUrl, '/api/status');
       expect(statusResponse.status).toBe(200);
       const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');
@@ -205,7 +205,7 @@ describe('trigger event e2e', () => {
   });
 
   it('rejects mismatched pack route for active runtime timeline projection', async () => {
-    await withIsolatedTestServer({ defaultPort: 3110, activePackRef: DEATH_NOTE_PACK_REF }, async server => {
+    await withIsolatedTestServer({ defaultPort: 3110, packRef: DEATH_NOTE_PACK_REF }, async server => {
       const mismatchedTimelineResponse = await requestJson(server.baseUrl, '/api/packs/death_note/projections/timeline');
       expect(mismatchedTimelineResponse.status).toBe(409);
       assertErrorEnvelope(mismatchedTimelineResponse.body, 'PACK_ROUTE_ACTIVE_PACK_MISMATCH', 'mismatched trigger-event pack timeline');

@@ -233,4 +233,122 @@ describe('pack runtime materializer', () => {
     const summary = await installPackRuntime(pack, packStorageAdapter);
     expect(summary.packCollections).toEqual(['target_dossiers', 'judgement_plans']);
   });
+
+  it('expands pick macros with pack.variables.* references in entity state during materialization', async () => {
+    const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test' });
+    createdRoots.push(environment.rootDir);
+    process.env.WORKSPACE_ROOT = environment.rootDir;
+
+    const pack = parseWorldPackConstitution({
+      metadata: {
+        id: 'world-macro-ref-pack',
+        name: '宏变量引用测试',
+        version: '1.0.0'
+      },
+      variables: {
+        names: ['张三', '李四', '王五'],
+        traits: ['勇敢', '谨慎', '狡猾']
+      },
+      entities: {
+        actors: [
+          {
+            id: 'actor-alpha',
+            label: '角色A',
+            kind: 'actor',
+            state: {
+              name: '{{pick from=pack.variables.names}}',
+              trait: '{{pick from=pack.variables.traits}}'
+            }
+          }
+        ]
+      }
+    });
+
+    await installPackRuntime(pack, packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack, 2000n, packStorageAdapter);
+
+    const entityStates = await listPackEntityStates(packStorageAdapter, 'world-macro-ref-pack');
+    const actorState = entityStates.find(
+      (item) => item.entity_id === 'actor-alpha' && item.state_namespace === 'core'
+    );
+
+    expect(actorState).toBeDefined();
+    const stateJson = actorState!.state_json as Record<string, unknown>;
+    const name = String(stateJson.name);
+    const trait = String(stateJson.trait);
+
+    // Should NOT contain raw template strings
+    expect(name).not.toContain('{{pick');
+    expect(name).not.toContain('pack.variables');
+    expect(trait).not.toContain('{{pick');
+    expect(trait).not.toContain('pack.variables');
+
+    // Should be one of the values from the variable pools
+    expect(['张三', '李四', '王五']).toContain(name);
+    expect(['勇敢', '谨慎', '狡猾']).toContain(trait);
+  });
+
+  it('expands pick macros in bootstrap state using pack.variables.* references', async () => {
+    const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test' });
+    createdRoots.push(environment.rootDir);
+    process.env.WORKSPACE_ROOT = environment.rootDir;
+
+    const pack = parseWorldPackConstitution({
+      metadata: {
+        id: 'world-bootstrap-ref-pack',
+        name: 'Bootstrap变量引用测试',
+        version: '1.0.0'
+      },
+      variables: {
+        scenarios: ['暴风雪', '浓雾'],
+        locations: ['别墅', '古堡']
+      },
+      entities: {
+        actors: [
+          {
+            id: 'actor-beta',
+            label: '角色B',
+            kind: 'actor',
+            state: { alive: true }
+          }
+        ]
+      },
+      bootstrap: {
+        initial_states: [
+          {
+            entity_id: '__world__',
+            state_namespace: 'world',
+            state_json: {
+              scenario: '{{pick from=pack.variables.scenarios}}导致被困',
+              location_type: '{{pick from=pack.variables.locations}}'
+            }
+          }
+        ],
+        initial_events: []
+      }
+    });
+
+    await installPackRuntime(pack, packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack, 3000n, packStorageAdapter);
+
+    const entityStates = await listPackEntityStates(packStorageAdapter, 'world-bootstrap-ref-pack');
+    const worldState = entityStates.find(
+      (item) => item.entity_id === '__world__' && item.state_namespace === 'world'
+    );
+
+    expect(worldState).toBeDefined();
+    const stateJson = worldState!.state_json as Record<string, unknown>;
+    const scenario = String(stateJson.scenario);
+    const locationType = String(stateJson.location_type);
+
+    // Should NOT contain raw template strings
+    expect(scenario).not.toContain('{{pick');
+    expect(scenario).not.toContain('pack.variables');
+    expect(locationType).not.toContain('{{pick');
+    expect(locationType).not.toContain('pack.variables');
+
+    // Should have resolved values (scenario ends with 导致被困 after the pick result)
+    expect(scenario).toMatch(/^(暴风雪|浓雾)导致被困$/);
+    expect(['别墅', '古堡']).toContain(locationType);
+  });
 });

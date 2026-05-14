@@ -1,8 +1,6 @@
 import { getSchedulerAgentConfig, getSchedulerDecisionKernelConfig, getSchedulerEntityConcurrencyConfig, getSchedulerTickBudgetConfig } from '../../config/runtime_config.js';
 import type { InferenceRequestInput } from '../../inference/types.js';
 import type { AppContext } from '../context.js';
-import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
-import { resolvePackTick } from '../services/pack_runtime_resolution.js';
 import {
   createPendingDecisionJob,
   getDecisionJobByIdempotencyKey,
@@ -18,6 +16,8 @@ import {
   listRecentScheduledDecisionJobs,
   listRecentSnrFollowupSignals
 } from '../services/inference_workflow.js';
+import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
+import { resolvePackTick } from '../services/pack_runtime_resolution.js';
 import { recordSchedulerRunSnapshot } from '../services/scheduler_observability.js';
 import { listActiveWorkflowActors } from './entity_activity_query.js';
 import type {

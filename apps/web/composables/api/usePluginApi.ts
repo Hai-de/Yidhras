@@ -68,7 +68,7 @@ export interface PluginWebManifestSnapshot {
   }
 }
 
-export interface ActivePackPluginRuntimeSnapshot {
+export interface PackPluginRuntimeSnapshot {
   pack_id: string
   plugins: PluginWebManifestSnapshot[]
 }
@@ -90,7 +90,7 @@ export const usePluginApi = () => {
       requestApiData<PluginOperationAcknowledgementResponse>(`/api/packs/${packId}/plugins/${installationId}/disable`, {
         method: 'POST'
       }),
-    getActivePackPluginRuntime: (packId: string) =>
-      requestApiData<ActivePackPluginRuntimeSnapshot>(`/api/packs/${packId}/plugins/runtime/web`)
+    getPackPluginRuntime: (packId: string) =>
+      requestApiData<PackPluginRuntimeSnapshot>(`/api/packs/${packId}/plugins/runtime/web`)
   }
 }

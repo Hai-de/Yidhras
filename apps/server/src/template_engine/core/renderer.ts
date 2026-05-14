@@ -44,6 +44,24 @@ const resolveVariable = (name: string, scope: RenderScope): unknown => {
   return current;
 };
 
+const resolveMacroArgs = (
+  args: Record<string, MacroValue>,
+  scope: RenderScope
+): Record<string, MacroValue> => {
+  const resolved: Record<string, MacroValue> = {};
+  for (const [key, value] of Object.entries(args)) {
+    if (typeof value === 'string' && value.includes('.') && !value.includes(',')) {
+      const resolvedVal = resolveVariable(value, scope);
+      resolved[key] = resolvedVal !== undefined ? resolvedVal as MacroValue : value;
+    } else {
+      resolved[key] = value;
+    }
+  }
+  return resolved;
+};
+
+export { resolveMacroArgs };
+
 const applyModifiers = (value: unknown, node: { name: string; modifiers: { name: string; args: MacroValue[] }[] }, scope: RenderScope): string => {
   let current: unknown = value;
 
@@ -86,7 +104,8 @@ const renderNodes = (nodes: AstNode[], scope: RenderScope): string => {
       case 'macro': {
         const handler = scope.macroHandlers?.[node.name];
         if (handler) {
-          const result: MacroValue = handler(node.name, node.args, scope);
+          const resolvedArgs = resolveMacroArgs(node.args, scope);
+          const result: MacroValue = handler(node.name, resolvedArgs, scope);
           parts.push(toString(result));
         } else {
           parts.push('');

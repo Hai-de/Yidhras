@@ -10,7 +10,7 @@ const EXAMPLE_ENTITY_ID = 'actor-001';
 
 describe('experimental runtime operator API e2e', () => {
   it('keeps experimental runtime operator API disabled by default', async () => {
-    await withIsolatedTestServer({ defaultPort: 3111, activePackRef: EXAMPLE_PACK_REF, seededPackRefs: [EXAMPLE_PACK_REF] }, async server => {
+    await withIsolatedTestServer({ defaultPort: 3111, packRef: EXAMPLE_PACK_REF, seededPackRefs: [EXAMPLE_PACK_REF] }, async server => {
       const response = await requestJson(server.baseUrl, '/api/experimental/runtime/packs');
       expect(response.status).toBe(404);
       const errorEnvelope = assertRecord(response.body, 'experimental runtime disabled envelope');
@@ -24,7 +24,7 @@ describe('experimental runtime operator API e2e', () => {
     await withIsolatedTestServer(
       {
         defaultPort: 3112,
-        activePackRef: EXAMPLE_PACK_REF,
+        packRef: EXAMPLE_PACK_REF,
         seededPackRefs: [EXAMPLE_PACK_REF],
         envOverrides: {
           EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED: 'true',

@@ -58,7 +58,7 @@ describe('PackHostApi read surface integration', () => {
   let sidecar: WorldEngineSidecarClient;
 
   beforeAll(async () => {
-    const environment = await createIsolatedRuntimeEnvironment({ activePackRef: DEATH_NOTE_PACK_REF, seededPackRefs: [DEATH_NOTE_PACK_REF] });
+    const environment = await createIsolatedRuntimeEnvironment({ packRef: DEATH_NOTE_PACK_REF, seededPackRefs: [DEATH_NOTE_PACK_REF] });
     cleanup = environment.cleanup;
     await migrateIsolatedDatabase(environment);
 

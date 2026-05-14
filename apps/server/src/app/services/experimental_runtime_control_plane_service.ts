@@ -3,7 +3,7 @@ import { getPackRuntimeLookupPort, getPackRuntimeObservation } from './app_conte
 
 export interface ExperimentalPackRuntimeSnapshot {
   pack_id: string;
-  mode: 'active' | 'experimental_loaded';
+  mode: 'loaded';
   runtime_ready: boolean;
   status: 'loaded' | 'running' | 'paused' | 'stopped' | 'failed';
   message: string | null;
@@ -27,7 +27,6 @@ export interface ExperimentalPackRuntimeSnapshot {
 export interface ExperimentalRuntimeControlPlaneSnapshot {
   system_health_level: 'ok' | 'degraded' | 'fail';
   runtime_ready: boolean;
-  active_pack_id: string | null;
   loaded_pack_ids: string[];
   items: ExperimentalPackRuntimeSnapshot[];
   startup_errors: string[];
@@ -68,7 +67,6 @@ export const buildExperimentalRuntimeControlPlaneSnapshot = async (
   });
 
   const loadedPackIds = context.listLoadedPackRuntimeIds!();
-  const activePackId = lookup.getActivePackId();
 
   const items = await Promise.all(
     loadedPackIds.map(async packId => {
@@ -79,8 +77,8 @@ export const buildExperimentalRuntimeControlPlaneSnapshot = async (
 
       return {
         pack_id: packId,
-        mode: activePackId === packId ? 'active' : 'experimental_loaded',
-        runtime_ready: activePackId === packId && context.isRuntimeReady(),
+        mode: 'loaded' as const,
+        runtime_ready: context.isRuntimeReady(),
         status: status?.health_status ?? summary?.health_status ?? 'loaded',
         message: status?.message ?? null,
         current_tick: status?.current_tick ?? summary?.current_tick ?? '0',
@@ -107,7 +105,6 @@ export const buildExperimentalRuntimeControlPlaneSnapshot = async (
   return {
     system_health_level: context.startupHealth.level,
     runtime_ready: context.isRuntimeReady(),
-    active_pack_id: activePackId,
     loaded_pack_ids: loadedPackIds,
     items,
     startup_errors: [...context.startupHealth.errors]

@@ -3,9 +3,7 @@ import express from 'express';
 import helmet from 'helmet';
 
 import { identityInjector } from '../identity/middleware.js';
-import { pluginRuntimeRegistry } from '../plugins/runtime.js';
 import type { AppContext, RouteRegistrar } from './context.js';
-import { resolveActivePack } from './services/pack_runtime_resolution.js';
 import { operatorAuthMiddleware } from './middleware/operator_auth.js';
 import { authRateLimiter, globalRateLimiter } from './middleware/rate_limit.js';
 import { requestIdMiddleware } from './middleware/request_id.js';
@@ -53,11 +51,6 @@ export const createApp = ({ context, registerRoutes }: CreateAppOptions) => {
   app.use(requestIdMiddleware());
 
   registerRoutes(app, context);
-
-  const activePackId = resolveActivePack(context)?.metadata.id;
-  if (activePackId) {
-    pluginRuntimeRegistry.applyPackRoutes(activePackId, app, context);
-  }
 
   return app;
 };

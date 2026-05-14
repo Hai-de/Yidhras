@@ -186,7 +186,7 @@ const validateConfig = (packDir: string): ValidationIssue[] => {
   let mergedParsed = parsed;
   if (!hasIncludeFail && typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
     const obj = parsed as Record<string, unknown>;
-    if (obj.include && typeof obj.include === 'object' && Object.keys(obj.include as object).length > 0) {
+    if (obj.include && typeof obj.include === 'object' && Object.keys(obj.include).length > 0) {
       const { merged, diagnostics } = resolveIncludes(obj, packDir);
       const mergeErrors = diagnostics.filter((d) => d.severity === 'ERROR');
       if (mergeErrors.length > 0) {

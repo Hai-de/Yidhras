@@ -78,7 +78,7 @@ const clearSchedulerPendingBaseline = async (
 describe('workflow replay e2e', () => {
   it('creates replay_recovery jobs with lineage metadata and readable replay snapshots', async () => {
     const environment = await createIsolatedRuntimeEnvironment({
-      activePackRef: DEATH_NOTE_PACK_REF,
+      packRef: DEATH_NOTE_PACK_REF,
       seededPackRefs: [DEATH_NOTE_PACK_REF]
     });
     const prisma = createPrismaClientForEnvironment(environment);

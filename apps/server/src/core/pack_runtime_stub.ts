@@ -1,11 +1,9 @@
-import type { WorldPack } from '../packs/manifest/loader.js';
 import type { RuntimeSpeedSnapshot } from './runtime_speed.js';
 
 /** Stub pack runtime — provides safe defaults when no PackRuntimePort is available. */
 export const PACK_RUNTIME_STUB = {
   getCurrentTick: (): bigint => 0n,
   getCurrentRevision: (): bigint => 0n,
-  getActivePack: (): WorldPack | undefined => undefined,
   getStepTicks: (): bigint => 1n,
   getRuntimeSpeedSnapshot: (): RuntimeSpeedSnapshot => ({
     mode: 'fixed',

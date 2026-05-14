@@ -1,6 +1,6 @@
 import { tokenize } from '../../template_engine/core/lexer.js';
 import { parse } from '../../template_engine/core/parser.js';
-import { renderAst } from '../../template_engine/core/renderer.js';
+import { renderAst, resolveMacroArgs } from '../../template_engine/core/renderer.js';
 import type { MacroValue, RenderScope, SyntaxConfig } from '../../template_engine/core/types.js';
 
 const TEMPLATE_PATTERN = /\{\{/;
@@ -49,7 +49,8 @@ const expandMacroValue = (
       nodes[0].type === 'macro' &&
       scope.macroHandlers?.[nodes[0].name]
     ) {
-      return scope.macroHandlers[nodes[0].name](nodes[0].name, nodes[0].args, scope);
+      const resolvedArgs = resolveMacroArgs(nodes[0].args, scope);
+      return scope.macroHandlers[nodes[0].name](nodes[0].name, resolvedArgs, scope);
     }
 
     return renderAst(nodes, scope);

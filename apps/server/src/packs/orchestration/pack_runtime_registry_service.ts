@@ -15,7 +15,6 @@ import { PackRuntimeInstance } from '../../core/pack_runtime_instance.js';
 import type { PackRuntimeControl, PackRuntimeLocator, PackRuntimeObservation } from '../../core/pack_runtime_ports.js';
 import type { PackRuntimeRegistry } from '../../core/pack_runtime_registry.js';
 import { RuntimeSpeedPolicy } from '../../core/runtime_speed.js';
-import { DefaultPackRuntimePort } from './default_pack_runtime_port.js';
 import { getWorldPackRuntimeConfig } from '../../core/world_pack_runtime.js';
 import { discoverPackLocalPlugins } from '../../plugins/discovery.js';
 import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
@@ -31,6 +30,7 @@ import { listPackMediatorBindings } from '../storage/mediator_repo.js';
 import { resolvePackRuntimeDatabaseLocation } from '../storage/pack_db_locator.js';
 import type { PackStorageAdapter } from '../storage/PackStorageAdapter.js';
 import { listPackRuleExecutionRecords } from '../storage/rule_execution_repo.js';
+import { DefaultPackRuntimePort } from './default_pack_runtime_port.js';
 import type { DefaultPackCatalogService } from './pack_catalog_service.js';
 import { materializePackRuntime } from './pack_materializer.js';
 
@@ -42,7 +42,6 @@ export interface DefaultPackRuntimeRegistryServiceOptions {
   prisma: PrismaClient;
   packStorageAdapter: PackStorageAdapter;
   packsDir: string;
-  getActivePack: () => WorldPack | undefined;
   getStartupLevel: () => 'ok' | 'degraded' | 'fail';
   onBeforeUnload?: (packId: string) => Promise<void>;
   multiPackLoopHost?: MultiPackLoopHost;
@@ -55,7 +54,6 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
   private readonly prisma: PrismaClient;
   private readonly packStorageAdapter: PackStorageAdapter;
   private readonly packsDir: string;
-  private readonly getActivePackRef: () => WorldPack | undefined;
   private readonly getStartupLevelRef: () => 'ok' | 'degraded' | 'fail';
   private readonly onBeforeUnload?: (packId: string) => Promise<void>;
   private multiPackLoopHost?: MultiPackLoopHost;
@@ -67,7 +65,6 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     this.prisma = options.prisma;
     this.packStorageAdapter = options.packStorageAdapter;
     this.packsDir = options.packsDir;
-    this.getActivePackRef = options.getActivePack;
     this.getStartupLevelRef = options.getStartupLevel;
     this.onBeforeUnload = options.onBeforeUnload;
     this.multiPackLoopHost = options.multiPackLoopHost;
@@ -84,10 +81,6 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
 
   public listLoadedPackIds(): string[] {
     return this.registry.listLoadedPackIds();
-  }
-
-  public getActivePackId(): string | null {
-    return this.getActivePackRef()?.metadata.id ?? null;
   }
 
   public getHandle(packId: string): PackRuntimeHandle | null {

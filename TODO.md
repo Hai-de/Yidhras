@@ -11,6 +11,7 @@
 ### 原型世界包
 - 基于世界包预设身份/权限/能力安排的世界观提示词派生/权限过滤
 
+
 #### 上层语义变迁 — 空间语义层
 
 > 设计文档：`.limcode/design/spatial-semantics-design.md`

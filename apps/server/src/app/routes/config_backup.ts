@@ -74,9 +74,9 @@ export const registerConfigBackupRoutes = (
       if (!operator) {
         throw new ApiError(401, 'OPERATOR_REQUIRED', 'Authentication required')
       }
-      const backup = getConfigBackup(req.params.id as string)
+      const backup = getConfigBackup(req.params.id)
       if (!backup) {
-        throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params.id as string} 不存在`)
+        throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params.id} 不存在`)
       }
       jsonOk(res, toJsonSafe(backup))
     }

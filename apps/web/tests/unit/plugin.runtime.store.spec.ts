@@ -51,7 +51,7 @@ describe('usePluginRuntimeStore', () => {
       ]
     })
 
-    expect(store.activePackId).toBe('world-pack-alpha')
+    expect(store.runtime?.pack_id).toBe('world-pack-alpha')
     expect(store.panelPlugins('operator.pack_overview')).toHaveLength(1)
     expect(store.panelPlugins('operator.pack_overview')[0]?.plugin_id).toBe('plugin.alpha')
     expect(store.panelPlugins('operator.timeline')).toHaveLength(1)

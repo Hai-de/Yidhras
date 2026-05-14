@@ -9,7 +9,7 @@ describe('startup smoke e2e', () => {
   it('exposes coherent health and status snapshots after isolated runtime preparation', async () => {
     await withIsolatedTestServer({
       defaultPort: 3101,
-      activePackRef: 'example_pack',
+      packRef: 'example_pack',
       seededPackRefs: ['example_pack']
     }, async server => {
       const healthResponse = await requestJson(server.baseUrl, '/api/health');

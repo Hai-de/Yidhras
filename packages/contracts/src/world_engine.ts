@@ -21,7 +21,7 @@ export const worldEngineMethodNameSchema = z.enum([
   'world.step.commit',
   'world.step.abort'
 ])
-export const worldEnginePackModeSchema = z.enum(['active', 'experimental'])
+export const worldEnginePackModeSchema = z.enum(['active'])
 export const worldEngineSessionStatusSchema = z.enum(['not_loaded', 'loading', 'ready', 'tainted', 'error'])
 export const worldEngineQueryNameSchema = z.enum([
   'pack_summary',

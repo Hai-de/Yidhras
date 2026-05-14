@@ -18,7 +18,7 @@ vi.mock('../../composables/api/usePluginApi', () => ({
     confirmPackPluginImport: confirmPackPluginImportMock,
     enablePackPlugin: enablePackPluginMock,
     disablePackPlugin: disablePackPluginMock,
-    getActivePackPluginRuntime: vi.fn()
+    getPackPluginRuntime: vi.fn()
   })
 }))
 

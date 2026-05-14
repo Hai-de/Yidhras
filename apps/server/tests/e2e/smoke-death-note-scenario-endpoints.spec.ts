@@ -13,7 +13,7 @@ describe('smoke death note scenario endpoints e2e', () => {
     await withIsolatedTestServer(
       {
         defaultPort: 3103,
-        activePackRef: DEATH_NOTE_PACK_REF,
+        packRef: DEATH_NOTE_PACK_REF,
         seededPackRefs: [DEATH_NOTE_PACK_REF]
       },
       async server => {

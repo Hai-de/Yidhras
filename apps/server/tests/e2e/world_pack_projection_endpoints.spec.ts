@@ -9,7 +9,7 @@ const DEATH_NOTE_PACK_REF = 'death_note';
 
 describe('world-pack projection endpoints e2e', () => {
   it('serves pack overview, entity overview and pack narrative projection endpoints', async () => {
-    await withIsolatedTestServer({ defaultPort: 3116, activePackRef: DEATH_NOTE_PACK_REF }, async server => {
+    await withIsolatedTestServer({ defaultPort: 3116, packRef: DEATH_NOTE_PACK_REF }, async server => {
       const statusResponse = await requestJson(server.baseUrl, '/api/status');
       expect(statusResponse.status).toBe(200);
       const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');

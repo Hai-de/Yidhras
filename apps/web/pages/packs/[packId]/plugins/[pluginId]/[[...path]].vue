@@ -88,10 +88,6 @@ const errorMessage = computed(() => {
     return pluginRuntime.errorMessage
   }
 
-  if (packId.value && pluginRuntime.activePackId && pluginRuntime.activePackId !== packId.value) {
-    return `Active plugin runtime is bound to ${pluginRuntime.activePackId}, but route pack is ${packId.value}.`
-  }
-
   const routePlugin = pluginRuntime.runtime?.plugins.find((plugin: { plugin_id: string }) => plugin.plugin_id === pluginId.value) ?? null
   if (!routePlugin) {
     return `Plugin ${pluginId.value} is not present in the active runtime snapshot.`

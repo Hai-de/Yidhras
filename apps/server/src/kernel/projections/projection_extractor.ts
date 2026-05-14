@@ -1,5 +1,4 @@
 import type { AppContext } from '../../app/context.js';
-import { resolveActivePack } from '../../app/services/pack_runtime_resolution.js';
 import { readVisibleClockSnapshot } from '../../app/services/app_context_ports.js';
 import { getPackEntityOverviewProjection } from '../../packs/runtime/projections/entity_overview_service.js';
 import { listPackNarrativeTimelineProjection } from '../../packs/runtime/projections/narrative_projection_service.js';
@@ -14,10 +13,9 @@ export interface GlobalProjectionIndexSnapshot {
   } | null;
 }
 
-export const extractGlobalProjectionIndex = async (context: AppContext): Promise<GlobalProjectionIndexSnapshot> => {
-  const operatorProjection = await getOperatorOverviewProjection(context);
-  const activePack = resolveActivePack(context);
-  const visibleClock = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId: context.packRuntimeLookup?.getActivePackId() ?? undefined });
+export const extractGlobalProjectionIndex = async (context: AppContext, packId?: string): Promise<GlobalProjectionIndexSnapshot> => {
+  const operatorProjection = await getOperatorOverviewProjection(context, { packId });
+  const visibleClock = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId });
 
   /**
    * generated_at is an operator-visible/read-model timestamp and therefore
@@ -25,7 +23,7 @@ export const extractGlobalProjectionIndex = async (context: AppContext): Promise
    * into raw simulation state.
    */
 
-  if (!activePack) {
+  if (!packId) {
     return {
       generated_at: visibleClock.absolute_ticks,
       runtime: operatorProjection.runtime,
@@ -34,8 +32,8 @@ export const extractGlobalProjectionIndex = async (context: AppContext): Promise
   }
 
   const [entityProjection, narrativeProjection] = await Promise.all([
-    getPackEntityOverviewProjection(context, activePack.metadata.id),
-    listPackNarrativeTimelineProjection(context, activePack.metadata.id)
+    getPackEntityOverviewProjection(context, packId),
+    listPackNarrativeTimelineProjection(context, packId)
   ]);
 
   return {

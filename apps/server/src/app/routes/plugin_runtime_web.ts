@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { activePackPluginRuntimeDataSchema, pluginPackParamsSchema } from '@yidhras/contracts';
+import { packPluginRuntimeDataSchema, pluginPackParamsSchema } from '@yidhras/contracts';
 import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { AppContext } from '../context.js';
@@ -48,55 +48,10 @@ export const registerPluginRuntimeWebRoutes = (
     deps.asyncHandler(async (req, res) => {
       const params = parseParams(pluginPackParamsSchema, req.params, 'PLUGIN_QUERY_INVALID');
       const snapshot = await packScopedPluginRuntimeService.getRuntimeWebSnapshot({
-        pack_id: params.packId,
-        mode: 'stable'
+        pack_id: params.packId
       });
-      activePackPluginRuntimeDataSchema.parse(toJsonSafe(snapshot));
+      packPluginRuntimeDataSchema.parse(toJsonSafe(snapshot));
       jsonOk(res, toJsonSafe(snapshot));
-    })
-  );
-
-  app.get(
-    '/api/experimental/runtime/packs/:packId/plugins/runtime/web',
-    deps.asyncHandler(async (req, res) => {
-      const params = parseParams(pluginPackParamsSchema, req.params, 'PLUGIN_QUERY_INVALID');
-      const snapshot = await packScopedPluginRuntimeService.getRuntimeWebSnapshot({
-        pack_id: params.packId,
-        mode: 'experimental'
-      });
-      activePackPluginRuntimeDataSchema.parse(toJsonSafe(snapshot));
-      jsonOk(res, toJsonSafe(snapshot));
-    })
-  );
-
-  app.get(
-    '/api/experimental/runtime/packs/:packId/plugins/:pluginId/runtime/web/:installationId/{*assetPath}',
-    deps.asyncHandler(async (req, res) => {
-      const params = parseParams(
-        pluginWebAssetParamsSchema,
-        {
-          packId: req.params.packId,
-          pluginId: req.params.pluginId,
-          installationId: req.params.installationId
-        },
-        'PLUGIN_QUERY_INVALID'
-      );
-      const wildcardAssetPath = typeof req.params.assetPath === 'string' ? req.params.assetPath : '';
-      const asset = await packScopedPluginRuntimeService.resolveEnabledPluginWebAsset({
-        pack_id: params.packId,
-        plugin_id: params.pluginId,
-        installation_id: params.installationId,
-        asset_path: wildcardAssetPath,
-        mode: 'experimental'
-      });
-
-      const contentType = getContentType(asset.relative_path);
-      if (contentType) {
-        res.type(contentType);
-      }
-
-      res.setHeader('Cache-Control', 'private, max-age=60');
-      res.sendFile(asset.absolute_path);
     })
   );
 
@@ -117,8 +72,7 @@ export const registerPluginRuntimeWebRoutes = (
         pack_id: params.packId,
         plugin_id: params.pluginId,
         installation_id: params.installationId,
-        asset_path: wildcardAssetPath,
-        mode: 'stable'
+        asset_path: wildcardAssetPath
       });
 
       const contentType = getContentType(asset.relative_path);

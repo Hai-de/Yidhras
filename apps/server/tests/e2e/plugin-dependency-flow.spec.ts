@@ -127,14 +127,14 @@ const seedPlugin = async (
  * HTTP API against pre-existing plugin installations.
  */
 const withSeededServer = async <T>(
-  options: TestServerOptions & { activePackRef: string },
+  options: TestServerOptions & { packRef: string },
   seeds: PluginSeed[],
   run: (server: RunningServer) => Promise<T>
 ): Promise<T> => {
   const environment = await createIsolatedRuntimeEnvironment({
     appEnv: 'test',
     seededPackRefs: [PACK_REF],
-    activePackRef: options.activePackRef
+    packRef: options.packRef
   });
 
   try {
@@ -170,7 +170,7 @@ const REMINDER_HASH = '03ee763729f5fe81f03478a3b0f487ff6c8dfc779f7e9b8d88a6d016d
 
 describe('plugin dependency flow e2e', () => {
   it('lists plugin installations for a pack (no plugins)', async () => {
-    await withSeededServer({ defaultPort: 3120, activePackRef: PACK_REF }, [], async server => {
+    await withSeededServer({ defaultPort: 3120, packRef: PACK_REF }, [], async server => {
       const headers = await getRootAuthHeaders(server.baseUrl);
       const res = await requestJson(server.baseUrl, `/api/packs/${PACK_ID}/plugins`, { headers });
 
@@ -184,7 +184,7 @@ describe('plugin dependency flow e2e', () => {
   });
 
   it('returns 404 when enabling a non-existent installation', async () => {
-    await withSeededServer({ defaultPort: 3121, activePackRef: PACK_REF }, [], async server => {
+    await withSeededServer({ defaultPort: 3121, packRef: PACK_REF }, [], async server => {
       const headers = {
         ...await getRootAuthHeaders(server.baseUrl),
         'Content-Type': 'application/json'
@@ -203,7 +203,7 @@ describe('plugin dependency flow e2e', () => {
   });
 
   it('returns 404 when disabling a non-existent installation', async () => {
-    await withSeededServer({ defaultPort: 3122, activePackRef: PACK_REF }, [], async server => {
+    await withSeededServer({ defaultPort: 3122, packRef: PACK_REF }, [], async server => {
       const headers = {
         ...await getRootAuthHeaders(server.baseUrl),
         'Content-Type': 'application/json'
@@ -241,7 +241,7 @@ describe('plugin dependency flow e2e', () => {
       }
     ];
 
-    await withSeededServer({ defaultPort: 3123, activePackRef: PACK_REF }, seeds, async server => {
+    await withSeededServer({ defaultPort: 3123, packRef: PACK_REF }, seeds, async server => {
       const headers = {
         ...await getRootAuthHeaders(server.baseUrl),
         'Content-Type': 'application/json'
@@ -314,7 +314,7 @@ describe('plugin dependency flow e2e', () => {
       }
     ];
 
-    await withSeededServer({ defaultPort: 3124, activePackRef: PACK_REF }, seeds, async server => {
+    await withSeededServer({ defaultPort: 3124, packRef: PACK_REF }, seeds, async server => {
       const headers = {
         ...await getRootAuthHeaders(server.baseUrl),
         'Content-Type': 'application/json'
@@ -365,7 +365,7 @@ describe('plugin dependency flow e2e', () => {
       }
     ];
 
-    await withSeededServer({ defaultPort: 3125, activePackRef: PACK_REF }, seeds, async server => {
+    await withSeededServer({ defaultPort: 3125, packRef: PACK_REF }, seeds, async server => {
       const headers = {
         ...await getRootAuthHeaders(server.baseUrl),
         'Content-Type': 'application/json'
@@ -411,7 +411,7 @@ describe('plugin dependency flow e2e', () => {
       }
     ];
 
-    await withSeededServer({ defaultPort: 3126, activePackRef: PACK_REF }, seeds, async server => {
+    await withSeededServer({ defaultPort: 3126, packRef: PACK_REF }, seeds, async server => {
       const headers = {
         ...await getRootAuthHeaders(server.baseUrl),
         'Content-Type': 'application/json'

@@ -1,12 +1,12 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const getActivePackPluginRuntimeMock = vi.fn()
+const getPackPluginRuntimeMock = vi.fn()
 const loadPluginRuntimeModuleMock = vi.fn()
 
 vi.mock('../../composables/api/usePluginApi', () => ({
   usePluginApi: () => ({
-    getActivePackPluginRuntime: getActivePackPluginRuntimeMock
+    getPackPluginRuntime: getPackPluginRuntimeMock
   })
 }))
 
@@ -22,7 +22,7 @@ import { useRuntimeStore } from '../../stores/runtime'
 describe('usePluginRuntimeBootstrap', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    getActivePackPluginRuntimeMock.mockReset()
+    getPackPluginRuntimeMock.mockReset()
     loadPluginRuntimeModuleMock.mockReset()
   })
 
@@ -58,7 +58,7 @@ describe('usePluginRuntimeBootstrap', () => {
       startup_errors: []
     })
 
-    getActivePackPluginRuntimeMock.mockResolvedValue({
+    getPackPluginRuntimeMock.mockResolvedValue({
       pack_id: 'world-pack-alpha',
       plugins: [
         {
@@ -100,7 +100,7 @@ describe('usePluginRuntimeBootstrap', () => {
     const bootstrap = usePluginRuntimeBootstrap()
     await bootstrap.refresh()
 
-    expect(getActivePackPluginRuntimeMock).toHaveBeenCalledWith('world-pack-alpha')
+    expect(getPackPluginRuntimeMock).toHaveBeenCalledWith('world-pack-alpha')
     expect(loadPluginRuntimeModuleMock).toHaveBeenCalled()
     expect(pluginStore.bundleState('installation-1')?.status).toBe('loaded')
     expect(pluginStore.resolvedPanels('operator.pack_overview')).toHaveLength(1)
@@ -138,7 +138,7 @@ describe('usePluginRuntimeBootstrap', () => {
       startup_errors: []
     })
 
-    getActivePackPluginRuntimeMock.mockResolvedValue({
+    getPackPluginRuntimeMock.mockResolvedValue({
       pack_id: 'world-pack-alpha',
       plugins: [
         {

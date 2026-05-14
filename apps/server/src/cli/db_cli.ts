@@ -6,8 +6,8 @@ import path from 'node:path';
 
 import { PrismaClient } from '@prisma/client';
 
-import { createPrismaClient } from '../db/client.js';
 import { resolveWorkspaceRoot } from '../config/loader.js';
+import { createPrismaClient } from '../db/client.js';
 
 const workspaceRoot = resolveWorkspaceRoot();
 const serverDir = path.join(workspaceRoot, 'apps', 'server');

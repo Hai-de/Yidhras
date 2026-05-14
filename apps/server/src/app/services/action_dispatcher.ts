@@ -1,8 +1,6 @@
 import { dispatchInvocationFromActionIntent } from '../../domain/invocation/invocation_dispatcher.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
-import type { PackRuntimePort } from './pack_runtime_ports.js';
-import { resolveActivePack, resolvePackTick } from './pack_runtime_resolution.js';
 import { type ActionIntentRecord,assertActionIntentLockOwnership } from './action_intent_repository.js';
 import {
   createEventEvidence,
@@ -16,6 +14,8 @@ import {
   updateAgentSnr
 } from './agent_signal_repository.js';
 import { buildMutationResolvedResult } from './mutation_resolved.js';
+import type { PackRuntimePort } from './pack_runtime_ports.js';
+import { resolvePackTick } from './pack_runtime_resolution.js';
 import {
   createRelationship,
   getRelationshipByCompositeKey,
@@ -105,10 +105,10 @@ const dispatchTriggerEventIntent = async (context: AppContext, intent: ActionInt
   const payload = resolveTriggerEventPayload(intent.payload);
   const now = resolvePackTick(context, packRuntime);
 
-  const activePack = resolveActivePack(context, packRuntime);
+  const pack = packRuntime?.getPack();
   const impactData = {
     ...(payload.impact_data ?? {}),
-    pack_id: activePack?.metadata.id ?? null,
+    pack_id: pack?.metadata.id ?? null,
     source_action_intent_id: intent.id,
     actor_identity_id: actor.identity_id,
     actor_agent_id: actor.agent_id,
@@ -361,7 +361,7 @@ export const dispatchActionIntent = async (
     actor_ref: intent.actor_ref,
     target_ref: intent.target_ref,
     payload: intent.payload
-  });
+  }, packRuntime);
   if (invocationResult) {
     return invocationResult;
   }

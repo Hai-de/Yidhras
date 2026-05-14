@@ -381,7 +381,7 @@ Slot Function 前端提供 `slot-ref` 块处理器，支持在模板中引用 sl
 
 ## 11. 宏处理器扩展点
 
-模板引擎的 AST 已支持 `MacroNode`（`{{roll count=2 sides=6}}` 解析为 `{name: "roll", args: {count: 2, sides: 6}}`）。渲染器在文本模板中对宏结果调用 `toString()`，在 `expandStateJson` 中保留原始类型。
+模板引擎的 AST 支持 `MacroNode`（`{{roll count=2 sides=6}}` 解析为 `{name: "roll", args: {count: 2, sides: 6}}`）。渲染器在文本模板中对宏结果调用 `toString()`，在 `expandStateJson` 中保留原始类型。
 
 ### 11.1 MacroHandlerFn 注册机制
 

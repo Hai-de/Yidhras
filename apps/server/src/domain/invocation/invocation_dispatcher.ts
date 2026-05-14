@@ -1,6 +1,6 @@
 import type { AppInfrastructure } from '../../app/context.js'
+import { resolvePackTick } from '../../app/services/pack_runtime_resolution.js';
 import { logOperatorAudit } from '../../operator/audit/logger.js'
-import { resolveActivePack, resolvePackTick } from '../../app/services/pack_runtime_resolution.js';
 import { AUDIT_ACTION } from '../../operator/constants.js'
 import { resolveSubjectForAgentAction } from '../../operator/guard/subject_resolver.js'
 import { createLogger } from '../../utils/logger.js'
@@ -85,7 +85,8 @@ const resolveMediatorId = (intent: DispatchableActionIntentLike): string | null 
 
 const resolveSubjectEntityId = async (
   context: AppInfrastructure,
-  actorRef: Record<string, unknown>
+  actorRef: Record<string, unknown>,
+  packId: string
 ): Promise<string | null> => {
   if (typeof actorRef.agent_id === 'string' && actorRef.agent_id.trim().length > 0) {
     const agentId = actorRef.agent_id.trim()
@@ -96,8 +97,6 @@ const resolveSubjectEntityId = async (
       return agentId
     }
 
-    const pack = resolveActivePack(context)
-    const packId = pack?.metadata.id ?? 'default'
     const cacheKey = `${packId}:${agentId}`
 
     // P3-2: 缓存同一 tick 内的解析结果
@@ -124,8 +123,8 @@ const resolveSubjectEntityId = async (
 
 const KERNEL_INTENT_TYPES = ['trigger_event', 'post_message', 'adjust_relationship', 'adjust_snr', 'move'] as const
 
-const shouldBridgeToInvocation = (context: AppInfrastructure, intent: DispatchableActionIntentLike): boolean => {
-  const pack = resolveActivePack(context)
+const shouldBridgeToInvocation = (context: AppInfrastructure, intent: DispatchableActionIntentLike, packRuntime?: { getPack(): { capabilities?: Array<{ key: string }>; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> } } | undefined }): boolean => {
+  const pack = packRuntime?.getPack()
   if (!pack) {
     return false
   }
@@ -167,13 +166,14 @@ const shouldBridgeToInvocation = (context: AppInfrastructure, intent: Dispatchab
 
 export const buildInvocationRequestFromActionIntent = async (
   context: AppInfrastructure,
-  intent: DispatchableActionIntentLike
+  intent: DispatchableActionIntentLike,
+  packRuntime?: { getPack(): { metadata: { id: string }; capabilities?: Array<{ key: string }>; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> } } | undefined }
 ): Promise<InvocationRequest | null> => {
-  if (!shouldBridgeToInvocation(context, intent)) {
+  if (!shouldBridgeToInvocation(context, intent, packRuntime)) {
     return null
   }
 
-  const pack = resolveActivePack(context)
+  const pack = packRuntime?.getPack()
   if (!pack) {
     return null
   }
@@ -186,7 +186,7 @@ export const buildInvocationRequestFromActionIntent = async (
     source_inference_id: intent.source_inference_id,
     invocation_type: intent.intent_type,
     capability_key: resolveCapabilityKey(intent),
-    subject_entity_id: await resolveSubjectEntityId(context, actorRef),
+    subject_entity_id: await resolveSubjectEntityId(context, actorRef, pack.metadata.id),
     target_ref: isRecord(intent.target_ref) ? intent.target_ref : null,
     payload: normalizeRecord(intent.payload),
     mediator_id: resolveMediatorId(intent),
@@ -197,15 +197,16 @@ export const buildInvocationRequestFromActionIntent = async (
 
 export const dispatchInvocationFromActionIntent = async (
   context: AppInfrastructure,
-  intent: DispatchableActionIntentLike
+  intent: DispatchableActionIntentLike,
+  packRuntime?: Parameters<typeof buildInvocationRequestFromActionIntent>[2]
 ): Promise<InvocationDispatchResult | null> => {
-  const invocationRequest = await buildInvocationRequestFromActionIntent(context, intent)
+  const invocationRequest = await buildInvocationRequestFromActionIntent(context, intent, packRuntime)
   if (!invocationRequest) {
     return null
   }
 
   try {
-    const result = await enforceInvocationRequest(context, invocationRequest)
+    const result = await enforceInvocationRequest(context, invocationRequest, packRuntime)
     return {
       outcome: 'completed',
       reason: null,

@@ -1,8 +1,6 @@
 import { createModelGateway } from '../ai/gateway.js';
 import { resolveAiTaskConfig } from '../ai/task_definitions.js';
 import type { AppInfrastructure } from '../app/context.js';
-import type { PackRuntimePort } from '../app/services/pack_runtime_ports.js';
-import { resolvePackTick } from '../app/services/pack_runtime_resolution.js';
 import { toJsonSafe } from '../app/http/json.js';
 import {
   assertDecisionJobLockOwnership,
@@ -24,6 +22,8 @@ import {
   releaseDecisionJobLock,
   updateDecisionJobState
 } from '../app/services/inference_workflow.js';
+import type { PackRuntimePort } from '../app/services/pack_runtime_ports.js';
+import { resolvePackTick } from '../app/services/pack_runtime_resolution.js';
 import { buildWorkflowPromptBundle } from '../context/workflow/orchestrator.js';
 import { JsonlCompactionAuditStore } from '../conversation/compaction_audit.js';
 import { DefaultConversationCompactionService } from '../conversation/compaction_service.js';
@@ -239,7 +239,7 @@ const executeRunInternal = async (
   },
   packRuntime?: PackRuntimePort
 ): Promise<InferenceRunResult> => {
-  const inferenceContext = await buildInferenceContext(context, input);
+  const inferenceContext = await buildInferenceContext(context, input, packRuntime?.getPackId() ?? '');
   const provider = selectProvider(providers, inferenceContext.strategy);
 
   // Multi-turn conversation: load speaker's memory and attach to inference context
@@ -528,7 +528,7 @@ export const createInferenceService = ({
     phase: 'workflow_baseline',
     ready: true,
     async previewInference(input) {
-      const inferenceContext = await buildInferenceContext(context, input);
+      const inferenceContext = await buildInferenceContext(context, input, input.pack_id ?? '');
       const provider = selectProvider(providers, inferenceContext.strategy);
       const { bundle: prompt } = await buildWorkflowPromptBundle({
         context: inferenceContext,

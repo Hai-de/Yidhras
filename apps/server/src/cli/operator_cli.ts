@@ -5,7 +5,6 @@ import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client'
 
 import { createPrismaClient } from '../db/client.js';
-
 import { hashPassword } from '../operator/auth/password.js';
 
 const COMMANDS = ['create', 'list', 'show', 'update', 'delete'] as const;

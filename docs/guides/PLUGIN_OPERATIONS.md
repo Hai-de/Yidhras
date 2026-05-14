@@ -12,7 +12,7 @@
 
 项目中的插件治理，指的是 **pack-local plugin** 的导入确认、启用、禁用、重扫描与基础诊断。
 
-已支持的主要入口：
+主要入口：
 
 - GUI：前端 `/plugins` 页面
 - API：`/api/packs/:packId/plugins*`

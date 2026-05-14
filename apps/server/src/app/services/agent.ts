@@ -2,7 +2,6 @@ import { getPackEntityOverviewProjection } from '../../packs/runtime/projections
 import { PermissionContext } from '../../permission/types.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext, AppInfrastructure } from '../context.js';
-import { resolveActivePack } from './pack_runtime_resolution.js';
 import type { AuditViewEntry } from './audit.js';
 import { listAuditFeed } from './audit.js';
 import { listInferenceJobs } from './inference_workflow.js';
@@ -235,7 +234,7 @@ const toAuditEntries = (entries: AuditViewEntry[], kind: AuditViewEntry['kind'])
   return entries.filter(entry => entry.kind === kind);
 };
 
-export const getAgentContextSnapshot = async (context: AppInfrastructure, agentId: string) => {
+export const getAgentContextSnapshot = async (context: AppInfrastructure & { getPackRuntimeHost?(packId: string): { getPack(): import('../../packs/manifest/loader.js').WorldPack | undefined } | null }, agentId: string, packId?: string) => {
   const agent = await context.repos.agent.findAgentByIdWithCircles(agentId);
 
   if (!agent) {
@@ -243,7 +242,8 @@ export const getAgentContextSnapshot = async (context: AppInfrastructure, agentI
   }
 
   const permission = buildPermissionContext(agent);
-  const pack = resolveActivePack(context);
+  const host = packId ? context.getPackRuntimeHost?.(packId) : null;
+  const pack = host?.getPack();
   const resolvedVariables = pack?.variables
     ? JSON.stringify(pack.variables)
     : JSON.stringify({});

@@ -502,11 +502,10 @@
 ### 18.2 Plugin Runtime Web（global 命名空间）
 
 分层原则：
-- `/api/packs/:packId/plugins/runtime/web` — stable surface，仅限当前活跃包（active pack）
-- `/api/experimental/runtime/packs/:packId/plugins/runtime/web` — experimental surface，任意已加载包
+- `/api/packs/:packId/plugins/runtime/web` — 统一的 plugin runtime surface，任意已加载包
 
-- **GET `/api/packs/:packId/plugins/runtime/web`** — 读取指定 pack 的已启用 web plugin runtime manifest（stable 仅允许活跃包）
-- **GET `/api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`** — 访问 stable 同源 web 资产
+- **GET `/api/packs/:packId/plugins/runtime/web`** — 读取指定 pack 的已启用 web plugin runtime manifest
+- **GET `/api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`** — 访问 plugin web 资产
 - **GET `/api/experimental/runtime/packs/:packId/plugins/runtime/web`** — 读取 loaded pack 的 web plugin runtime snapshot（不限制包）
 - **GET `/api/experimental/runtime/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`** — 访问 experimental 同源 web 资产
 
@@ -550,7 +549,7 @@
 
 - 不替代 canonical stable API
 - `:packId` 需先进入 experimental runtime registry（显式 load 或已存在于 loaded set）
-- stable/experimental projection 路径共享 `pack-scoped core service + scope adapter`，但 stable active-pack guard 保持不变
+- projection 路径统一使用 `pack-scoped core service + scope adapter`
 - inference/context 只新增 internal pack-scoped contract，不新增 public inference multi-pack run API
 
 ---
@@ -587,7 +586,6 @@
 | `ACTION_DISPATCH_FAIL` | Action 分发失败 |
 | `EVENT_TYPE_UNSUPPORTED` | 不支持的事件类型 |
 | `WORLD_PACK_NOT_READY` | World-pack 未就绪 |
-| `PACK_ROUTE_ACTIVE_PACK_MISMATCH` | Pack 路由不匹配 |
 | `OPERATOR_REQUIRED` | 需要 Operator 认证 |
 | `PACK_ACCESS_DENIED` | Pack 访问拒绝 |
 | `CAPABILITY_DENIED` | 能力不足 |
@@ -645,6 +643,5 @@
 | `EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND` | Experimental pack runtime 不存在 |
 | `EXPERIMENTAL_PACK_RUNTIME_CAPACITY_REACHED` | Experimental pack runtime 容量已满 |
 | `EXPERIMENTAL_PACK_RUNTIME_LOAD_FAILED` | Experimental pack runtime 加载失败 |
-| `EXPERIMENTAL_PACK_RUNTIME_ACTIVE_UNLOAD_FORBIDDEN` | 禁止卸载 active pack |
 | `EXPERIMENTAL_PACK_RUNTIME_UNLOAD_FAILED` | Experimental pack runtime 卸载失败 |
 | `EXPERIMENTAL_PACK_PROJECTION_FAILED` | Experimental pack projection 失败 |

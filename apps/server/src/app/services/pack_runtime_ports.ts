@@ -1,10 +1,10 @@
-import type { RuntimeClockProjectionSnapshot } from '../runtime/runtime_clock_projection.js';
-import type { WorldEnginePort } from '../runtime/world_engine_ports.js';
 import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
 import type { WorldPack } from '../../packs/manifest/loader.js';
+import type { RuntimeClockProjectionSnapshot } from '../runtime/runtime_clock_projection.js';
+import type { WorldEnginePort } from '../runtime/world_engine_ports.js';
 
 /**
- * Per-pack runtime port — replaces ActivePackRuntimeFacade.
+ * Per-pack runtime port.
  * Each loaded pack exposes one of these. No global clock assumption.
  */
 export interface PackRuntimePort {
@@ -33,7 +33,7 @@ export interface AggregatedClockSnapshot {
 }
 
 /**
- * Multi-pack aggregation port — replaces global clock / activePack queries.
+ * Multi-pack aggregation port.
  */
 export interface MultiPackRuntimePort {
   listPacks(): string[];

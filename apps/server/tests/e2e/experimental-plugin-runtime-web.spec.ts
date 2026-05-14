@@ -12,7 +12,7 @@ describe('experimental plugin runtime web e2e', () => {
     await withIsolatedTestServer(
       {
         defaultPort: 3117,
-        activePackRef: DEATH_NOTE_PACK_REF,
+        packRef: DEATH_NOTE_PACK_REF,
         seededPackRefs: [DEATH_NOTE_PACK_REF],
         envOverrides: {
           EXPERIMENTAL_MULTI_PACK_RUNTIME_ENABLED: 'true',

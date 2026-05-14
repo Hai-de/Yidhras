@@ -47,7 +47,7 @@ describe.skipIf(!existsSync(SIDECAR_BINARY_PATH), 'world engine sidecar runtime 
   const originalAppEnv = process.env.APP_ENV;
 
   beforeAll(async () => {
-    const environment = await createIsolatedRuntimeEnvironment({ activePackRef: DEATH_NOTE_PACK_REF, seededPackRefs: [DEATH_NOTE_PACK_REF] });
+    const environment = await createIsolatedRuntimeEnvironment({ packRef: DEATH_NOTE_PACK_REF, seededPackRefs: [DEATH_NOTE_PACK_REF] });
     cleanup = environment.cleanup;
     await migrateIsolatedDatabase(environment);
 

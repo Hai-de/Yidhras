@@ -334,7 +334,7 @@ export class PackSimulationLoop {
 
     for (const hook of hooks) {
       try {
-        await (hook as (ctx: HookContext) => Promise<void>)(ctx);
+        await (hook)(ctx);
       } catch {
         // Single hook failure does not block other hooks or the step
       }

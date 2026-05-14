@@ -11,7 +11,7 @@ describe('agent overview e2e', () => {
   it('returns the overview snapshot for a seeded agent and validates query errors', async () => {
     await withIsolatedTestServer({
       defaultPort: 3105,
-      activePackRef: DEATH_NOTE_PACK_REF,
+      packRef: DEATH_NOTE_PACK_REF,
       seededPackRefs: [DEATH_NOTE_PACK_REF]
     }, async server => {
       const statusResponse = await requestJson(server.baseUrl, '/api/status');

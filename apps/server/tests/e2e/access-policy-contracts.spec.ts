@@ -9,7 +9,7 @@ describe('access-policy contracts e2e', () => {
   it('accepts flat primitive/array conditions and rejects primitive or nested-object conditions', async () => {
     await withIsolatedTestServer({
       defaultPort: 3117,
-      activePackRef: 'example_pack',
+      packRef: 'example_pack',
       seededPackRefs: ['example_pack']
     }, async server => {
       const headers = await getRootAuthHeadersWithIdentity(server.baseUrl, 'system', 'system');

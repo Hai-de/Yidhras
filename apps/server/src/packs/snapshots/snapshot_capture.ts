@@ -15,9 +15,9 @@ import { safeFs } from '../../utils/safe_fs.js';
 import { getPackRootDir, resolvePackRuntimeDatabaseLocation } from '../storage/pack_db_locator.js';
 import type { PackStorageAdapter } from '../storage/PackStorageAdapter.js';
 import {
-  type SnapshotLocation,
   getPackSnapshotsDir,
   resolveSnapshotLocation,
+  type SnapshotLocation,
   writeSnapshotMetadata
 } from './snapshot_locator.js';
 
@@ -26,7 +26,7 @@ export interface CapturePackSnapshotInput {
   label?: string;
   prisma: PrismaClient;
   packStorageAdapter: PackStorageAdapter;
-  activePackRuntime?: {
+  packRuntime?: {
     getCurrentTick(): bigint;
     getCurrentRevision(): bigint;
   };
@@ -188,7 +188,7 @@ const queryPackPrismaData = async (prisma: PrismaClient, packId: string): Promis
 };
 
 export const capturePackSnapshot = async (input: CapturePackSnapshotInput): Promise<CapturePackSnapshotResult> => {
-  const { packId, label, prisma, packStorageAdapter, activePackRuntime, getExperimentalTick, getExperimentalRevision } = input;
+  const { packId, label, prisma, packStorageAdapter, packRuntime, getExperimentalTick, getExperimentalRevision } = input;
 
   if (packStorageAdapter.backend !== 'sqlite') {
     throw new Error(
@@ -196,12 +196,12 @@ export const capturePackSnapshot = async (input: CapturePackSnapshotInput): Prom
     );
   }
 
-  const capturedAtTick = activePackRuntime
-    ? activePackRuntime.getCurrentTick().toString()
+  const capturedAtTick = packRuntime
+    ? packRuntime.getCurrentTick().toString()
     : (getExperimentalTick(packId) ?? '0');
 
-  const capturedAtRevision = activePackRuntime
-    ? activePackRuntime.getCurrentRevision().toString()
+  const capturedAtRevision = packRuntime
+    ? packRuntime.getCurrentRevision().toString()
     : (getExperimentalRevision(packId) ?? capturedAtTick);
 
   const snapshotId = generateSnapshotId();

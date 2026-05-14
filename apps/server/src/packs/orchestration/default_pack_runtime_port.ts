@@ -2,14 +2,14 @@ import type { RuntimeClockProjectionSnapshot } from '../../app/runtime/runtime_c
 import type { PackRuntimePort } from '../../app/services/pack_runtime_ports.js';
 import type { PackRuntimeHost } from '../../core/pack_runtime_host.js';
 import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
-import type { WorldPack } from '../manifest/loader.js';
+import type { PermissionContext } from '../../permission/types.js';
 import { renderNarrativeTemplate } from '../../template_engine/frontends/narrative/resolver.js';
 import {
   createPromptVariableContext,
   createPromptVariableLayer,
   normalizePromptVariableRecord
 } from '../../template_engine/frontends/narrative/variable_context.js';
-import type { PermissionContext } from '../../permission/types.js';
+import type { WorldPack } from '../manifest/loader.js';
 
 export class DefaultPackRuntimePort implements PackRuntimePort {
   constructor(private readonly host: PackRuntimeHost) {}

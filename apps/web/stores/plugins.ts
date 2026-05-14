@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-import type { ActivePackPluginRuntimeSnapshot, PluginWebManifestSnapshot } from '../composables/api/usePluginApi'
+import type { PackPluginRuntimeSnapshot, PluginWebManifestSnapshot } from '../composables/api/usePluginApi'
 
 export interface LoadedPluginPanelContribution {
   target: string
@@ -78,14 +78,12 @@ export const normalizePluginRuntimeModule = (value: unknown): PluginRuntimeModul
 
 export const usePluginRuntimeStore = defineStore('plugin-runtime', {
   state: (): {
-    activePackId: string | null
-    runtime: ActivePackPluginRuntimeSnapshot | null
+    runtime: PackPluginRuntimeSnapshot | null
     isFetching: boolean
     errorMessage: string | null
     lastSyncedAt: number | null
     bundleStates: Record<string, PluginBundleLoadState>
   } => ({
-    activePackId: null,
     runtime: null,
     isFetching: false,
     errorMessage: null,
@@ -108,8 +106,7 @@ export const usePluginRuntimeStore = defineStore('plugin-runtime', {
     bundleState: state => (installationId: string) => state.bundleStates[toLoadKey(installationId)] ?? null
   },
   actions: {
-    applyRuntime(snapshot: ActivePackPluginRuntimeSnapshot) {
-      this.activePackId = snapshot.pack_id
+    applyRuntime(snapshot: PackPluginRuntimeSnapshot) {
       this.runtime = snapshot
       this.lastSyncedAt = Date.now()
 

@@ -16,10 +16,10 @@ export const createPackProjectionScopeAdapter = (
 ): PackProjectionScopeAdapter => {
   return {
     resolveStablePack(packId: string, feature: string): Promise<PackProjectionResolution> {
-      return resolver.resolve(packId, 'stable', feature);
+      return resolver.resolve(packId, feature);
     },
     resolveExperimentalPack(packId: string, feature: string): Promise<PackProjectionResolution> {
-      return resolver.resolve(packId, 'experimental', feature);
+      return resolver.resolve(packId, feature);
     }
   };
 };

@@ -89,6 +89,22 @@ export const materializePackRuntimeCoreModels = async (
     mediatorBindings.set(input.id, input);
   };
 
+  const seed = (pack.variables?.seed as string | undefined) ?? randomUUID();
+  const prng = createPRNG(seed);
+  const expandScope: RenderScope = {
+    variables: {
+      pack: {
+        variables: pack.variables ?? {}
+      }
+    },
+    modifiers: {},
+    blockHandlers: {},
+    macroHandlers: BUILTIN_MACRO_HANDLERS,
+    prng,
+    depth: 0,
+    maxDepth: 32
+  };
+
   for (const actor of pack.entities?.actors ?? []) {
     putWorldEntity(
       createWorldEntityInput(packId, actor.id, actor.kind ?? 'actor', actor.label, now, {
@@ -99,7 +115,8 @@ export const materializePackRuntimeCoreModels = async (
       })
     );
     if (actor.state) {
-      putEntityState(createEntityStateInput(packId, actor.id, 'core', actor.state, now));
+      const expandedState = expandStateJson(actor.state, expandScope);
+      putEntityState(createEntityStateInput(packId, actor.id, 'core', expandedState, now));
     }
   }
 
@@ -113,7 +130,8 @@ export const materializePackRuntimeCoreModels = async (
       })
     );
     if (artifact.state) {
-      putEntityState(createEntityStateInput(packId, artifact.id, 'core', artifact.state, now));
+      const expandedState = expandStateJson(artifact.state, expandScope);
+      putEntityState(createEntityStateInput(packId, artifact.id, 'core', expandedState, now));
     }
   }
 
@@ -127,7 +145,8 @@ export const materializePackRuntimeCoreModels = async (
       })
     );
     if (domain.state) {
-      putEntityState(createEntityStateInput(packId, domain.id, 'domain', domain.state, now));
+      const expandedState = expandStateJson(domain.state, expandScope);
+      putEntityState(createEntityStateInput(packId, domain.id, 'domain', expandedState, now));
     }
   }
 
@@ -141,7 +160,8 @@ export const materializePackRuntimeCoreModels = async (
       })
     );
     if (institution.state) {
-      putEntityState(createEntityStateInput(packId, institution.id, 'core', institution.state, now));
+      const expandedState = expandStateJson(institution.state, expandScope);
+      putEntityState(createEntityStateInput(packId, institution.id, 'core', expandedState, now));
     }
   }
 
@@ -190,18 +210,6 @@ export const materializePackRuntimeCoreModels = async (
       now
     });
   }
-
-  const seed = (pack.variables?.seed as string | undefined) ?? randomUUID();
-  const prng = createPRNG(seed);
-  const expandScope: RenderScope = {
-    variables: {},
-    modifiers: {},
-    blockHandlers: {},
-    macroHandlers: BUILTIN_MACRO_HANDLERS,
-    prng,
-    depth: 0,
-    maxDepth: 32
-  };
 
   for (const initialState of pack.bootstrap?.initial_states ?? []) {
     if (initialState.entity_id === DEFAULT_PACK_WORLD_ENTITY_ID) {

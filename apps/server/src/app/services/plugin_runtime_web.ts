@@ -5,9 +5,7 @@ import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 import { assertPackScope } from './pack_scope_resolver.js';
 
-export type PluginRuntimeWebSurface = 'stable' | 'experimental';
-
-export interface ActivePackPluginRuntimeWebSnapshot {
+export interface PackPluginRuntimeWebSnapshot {
   pack_id: string;
   plugins: Array<{
     installation_id: string;
@@ -94,60 +92,17 @@ export const buildPluginWebAssetUrl = (input: {
   return `/api/packs/${encodeURIComponent(input.pack_id)}/plugins/${encodeURIComponent(input.plugin_id)}/runtime/web/${encodeURIComponent(input.installation_id)}/${input.asset_path}`;
 };
 
-export const buildExperimentalPluginWebAssetUrl = (input: {
-  pack_id: string;
-  plugin_id: string;
-  installation_id: string;
-  asset_path: string;
-}): string => {
-  return `/api/experimental/runtime/packs/${encodeURIComponent(input.pack_id)}/plugins/${encodeURIComponent(input.plugin_id)}/runtime/web/${encodeURIComponent(input.installation_id)}/${input.asset_path}`;
-};
-
-const resolvePackRuntimeWebScope = (
+export const getPackPluginRuntimeWebSnapshot = async (
   context: AppContext,
-  packId: string,
-  feature: string,
-  surface: PluginRuntimeWebSurface
-): string => {
-  const scopedPackId = assertPackScope(context, packId, feature);
-
-  if (surface === 'stable') {
-    const activePackId = context.packRuntimeLookup?.getActivePackId?.() ?? null;
-    if (activePackId && scopedPackId !== activePackId) {
-      throw new ApiError(403, 'PACK_ROUTE_ACTIVE_PACK_MISMATCH', `Pack "${scopedPackId}" is not the active pack for stable surface`, {
-        pack_id: scopedPackId,
-        active_pack_id: activePackId,
-        feature
-      });
-    }
-  }
-
-  return scopedPackId;
-};
-
-const buildPluginWebAssetRuntimeUrl = (surface: PluginRuntimeWebSurface, input: {
-  pack_id: string;
-  plugin_id: string;
-  installation_id: string;
-  asset_path: string;
-}): string => {
-  return surface === 'experimental'
-    ? buildExperimentalPluginWebAssetUrl(input)
-    : buildPluginWebAssetUrl(input);
-};
-
-const getPackPluginRuntimeWebSnapshot = async (
-  context: AppContext,
-  packId: string,
-  surface: PluginRuntimeWebSurface
-): Promise<ActivePackPluginRuntimeWebSnapshot> => {
-  const scopedPackId = resolvePackRuntimeWebScope(context, packId, 'plugin runtime web snapshot', surface);
+  packId: string
+): Promise<PackPluginRuntimeWebSnapshot> => {
+  const scopedPackId = assertPackScope(context, packId, 'plugin runtime web snapshot');
   const installations = await context.repos.plugin.listInstallationsByScope({
     scope_type: 'pack_local',
     scope_ref: scopedPackId
   });
 
-  const plugins = [] as ActivePackPluginRuntimeWebSnapshot['plugins'];
+  const plugins = [] as PackPluginRuntimeWebSnapshot['plugins'];
 
   for (const installation of installations) {
     if (installation.lifecycle_state !== 'enabled') {
@@ -167,7 +122,7 @@ const getPackPluginRuntimeWebSnapshot = async (
       plugin_id: installation.plugin_id,
       pack_id: scopedPackId,
       web_bundle_url: webEntrypoint
-        ? buildPluginWebAssetRuntimeUrl(surface, {
+        ? buildPluginWebAssetUrl({
             pack_id: scopedPackId,
             plugin_id: installation.plugin_id,
             installation_id: installation.installation_id,
@@ -194,31 +149,19 @@ const getPackPluginRuntimeWebSnapshot = async (
   };
 };
 
-export const getActivePackPluginRuntimeWebSnapshot = async (
-  context: AppContext,
-  packId: string
-): Promise<ActivePackPluginRuntimeWebSnapshot> => getPackPluginRuntimeWebSnapshot(context, packId, 'stable');
-
-export const getExperimentalPackPluginRuntimeWebSnapshot = async (
-  context: AppContext,
-  packId: string
-): Promise<ActivePackPluginRuntimeWebSnapshot> => getPackPluginRuntimeWebSnapshot(context, packId, 'experimental');
-
-const resolvePluginWebAssetWithScope = async (
+export const resolveEnabledPluginWebAsset = async (
   context: AppContext,
   input: {
     pack_id: string;
     plugin_id: string;
     installation_id: string;
     asset_path: string;
-  },
-  surface: PluginRuntimeWebSurface
+  }
 ): Promise<ResolvedPluginWebAsset> => {
-  const scopedPackId = resolvePackRuntimeWebScope(
+  const scopedPackId = assertPackScope(
     context,
     input.pack_id,
-    'plugin runtime web asset',
-    surface
+    'plugin runtime web asset'
   );
   const installation = await context.repos.plugin.getInstallationById(input.installation_id);
 
@@ -288,23 +231,3 @@ const resolvePluginWebAssetWithScope = async (
     relative_path: normalizedAssetPath
   };
 };
-
-export const resolveEnabledPluginWebAsset = async (
-  context: AppContext,
-  input: {
-    pack_id: string;
-    plugin_id: string;
-    installation_id: string;
-    asset_path: string;
-  }
-): Promise<ResolvedPluginWebAsset> => resolvePluginWebAssetWithScope(context, input, 'stable');
-
-export const resolveExperimentalEnabledPluginWebAsset = async (
-  context: AppContext,
-  input: {
-    pack_id: string;
-    plugin_id: string;
-    installation_id: string;
-    asset_path: string;
-  }
-): Promise<ResolvedPluginWebAsset> => resolvePluginWebAssetWithScope(context, input, 'experimental');

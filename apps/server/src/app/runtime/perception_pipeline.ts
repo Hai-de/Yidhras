@@ -14,7 +14,7 @@ import type {
 import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
-import { resolveActivePack, resolvePackTick } from '../services/pack_runtime_resolution.js';
+import { resolvePackTick } from '../services/pack_runtime_resolution.js';
 
 interface SpatialEventRow {
   id: string;
@@ -134,8 +134,7 @@ export const runPerceptionPipeline = async (
     return;
   }
 
-  const packId = packRuntime?.getPackId()
-    ?? resolveActivePack(context, packRuntime)?.metadata.id;
+  const packId = packRuntime?.getPackId();
   if (!packId) {
     return;
   }
@@ -154,7 +153,7 @@ export const runPerceptionPipeline = async (
   }
 
   // Load pack perception rules
-  const pack = packRuntime?.getPack() ?? resolveActivePack(context, packRuntime);
+  const pack = packRuntime?.getPack();
   const packRules: PerceptionRuleDef[] = pack?.rules?.perception ?? [];
   const engine = buildEngine(packRules, packId);
 

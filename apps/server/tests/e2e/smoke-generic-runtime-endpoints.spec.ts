@@ -12,7 +12,7 @@ describe('smoke generic runtime endpoints e2e', () => {
     await withIsolatedTestServer(
       {
         defaultPort: 3119,
-        activePackRef: EXAMPLE_PACK_REF,
+        packRef: EXAMPLE_PACK_REF,
         seededPackRefs: [EXAMPLE_PACK_REF]
       },
       async server => {

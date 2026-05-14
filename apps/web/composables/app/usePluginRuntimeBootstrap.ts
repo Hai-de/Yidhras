@@ -25,7 +25,7 @@ export const usePluginRuntimeBootstrap = () => {
 
     pluginRuntimeStore.setFetching(true)
     try {
-      const snapshot = await pluginApi.getActivePackPluginRuntime(packId)
+      const snapshot = await pluginApi.getPackPluginRuntime(packId)
       pluginRuntimeStore.applyRuntime(snapshot)
       pluginRuntimeStore.setErrorMessage(null)
 

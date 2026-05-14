@@ -3,11 +3,10 @@ import 'dotenv/config';
 import { createHash, randomUUID } from 'node:crypto';
 
 import { PrismaClient } from '@prisma/client'
-
-import { createPrismaClient } from '../db/client.js';
 import type { PluginManifest } from '@yidhras/contracts';
 
 import { getRuntimeConfig } from '../config/runtime_config.js';
+import { createPrismaClient } from '../db/client.js';
 import { PLUGIN_ENABLE_WARNING_TEXT } from '../plugins/contracts.js';
 import { checkDependencies, checkReverseDependencies } from '../plugins/dependency_resolver.js';
 import { assertPluginEnableAllowed, createPluginManagerService } from '../plugins/service.js';

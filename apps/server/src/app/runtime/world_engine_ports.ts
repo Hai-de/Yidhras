@@ -81,10 +81,6 @@ const normalizePackId = (packId: string): string => {
   return normalized;
 };
 
-const getActivePackId = (context: AppContext): string | null => {
-  return context.packRuntimeLookup?.getActivePackId() ?? null;
-};
-
 const getProjectedCurrentTick = (context: AppContext, packId: string): string | null => {
   const projected = context.runtimeClockProjection?.getSnapshot(packId);
   if (!projected) {
@@ -94,46 +90,21 @@ const getProjectedCurrentTick = (context: AppContext, packId: string): string | 
   return projected.current_tick;
 };
 
-const getActiveCurrentTick = (context: AppContext): string | null => {
-  const activePackId = getActivePackId(context);
-  if (!activePackId) {
-    return null;
-  }
-
-  const handle = context.getPackRuntimeHandle?.(activePackId);
-  return handle?.getClockSnapshot().current_tick ?? null;
-};
-
-const getExperimentalRuntimeSummary = (context: AppContext, packId: string): PackRuntimeSummary | null => {
-  const handle = context.getPackRuntimeHandle?.(packId);
+const getPackSummary = (context: AppContext, packId: string): PackRuntimeSummary | null => {
+  const normalizedPackId = normalizePackId(packId);
+  const handle = context.getPackRuntimeHandle?.(normalizedPackId);
   if (!handle) {
     return null;
   }
 
+  const projectedTick = getProjectedCurrentTick(context, normalizedPackId);
   return {
-    pack_id: handle.pack_id,
+    pack_id: normalizedPackId,
     pack_folder_name: handle.pack_folder_name,
-    health_status: handle.getHealthSnapshot().status,
-    current_tick: handle.getClockSnapshot().current_tick,
-    runtime_ready: false
+    health_status: context.isPaused() ? 'paused' : handle.getHealthSnapshot().status,
+    current_tick: projectedTick ?? handle.getClockSnapshot().current_tick,
+    runtime_ready: context.isRuntimeReady()
   };
-};
-
-const getPackSummary = (context: AppContext, packId: string): PackRuntimeSummary | null => {
-  const normalizedPackId = normalizePackId(packId);
-  const activePackId = getActivePackId(context);
-  if (activePackId === normalizedPackId) {
-    const projectedTick = getProjectedCurrentTick(context, normalizedPackId);
-    return {
-      pack_id: normalizedPackId,
-      pack_folder_name: null,
-      health_status: context.isPaused() ? 'paused' : 'running',
-      current_tick: projectedTick ?? getActiveCurrentTick(context),
-      runtime_ready: context.isRuntimeReady()
-    };
-  }
-
-  return getExperimentalRuntimeSummary(context, normalizedPackId);
 };
 
 const applyQueryLimit = <T>(items: T[], limit?: number): T[] => {

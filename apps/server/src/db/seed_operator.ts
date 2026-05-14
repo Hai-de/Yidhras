@@ -1,5 +1,3 @@
-import { createPrismaClient } from './client.js'
-
 import { hashPassword } from '../operator/auth/password.js'
 import {
   DEFAULT_BCRYPT_ROUNDS,
@@ -7,6 +5,7 @@ import {
   ROOT_OPERATOR_USERNAME
 } from '../operator/constants.js'
 import { createLogger } from '../utils/logger.js'
+import { createPrismaClient } from './client.js'
 
 const logger = createLogger('seed-operator')
 

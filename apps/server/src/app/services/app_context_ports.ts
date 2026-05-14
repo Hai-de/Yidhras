@@ -16,9 +16,8 @@ export interface PackCatalogService {
 }
 
 export interface PluginHostPort {
-  syncActivePackRuntime?(context: unknown): Promise<void>;
   syncPackRuntime?(context: unknown, packId: string): Promise<void>;
-  getRuntimeWebSnapshot?(context: unknown, packId: string, surface: 'stable' | 'experimental'): Promise<unknown>;
+  getRuntimeWebSnapshot?(context: unknown, packId: string): Promise<unknown>;
   resolveRuntimeWebAsset?(
     context: unknown,
     input: {
@@ -26,7 +25,6 @@ export interface PluginHostPort {
       pluginId: string;
       installationId: string;
       assetPath: string;
-      surface: 'stable' | 'experimental';
     }
   ): Promise<unknown>;
 }

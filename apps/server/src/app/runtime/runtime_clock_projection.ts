@@ -45,7 +45,7 @@ export interface RuntimeClockProjectionPort {
   }): RuntimeClockProjectionSnapshot;
 }
 
-export interface ActivePackRuntimeProjectionPort {
+export interface PackRuntimeProjectionPort {
   getCurrentRevision(): bigint;
   applyClockProjection(snapshot: RuntimeClockProjectionSnapshot): void;
 }

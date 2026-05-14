@@ -1,4 +1,3 @@
-import { createPrismaClient } from './db/client.js';
 import path from 'path';
 
 import { listDynamicSlots, registerDynamicSlot, unregisterDynamicSlot } from './ai/registry.js';
@@ -44,7 +43,6 @@ import { createWorldEngineStepCoordinator } from './app/runtime/world_engine_per
 import { createPackHostApi } from './app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from './app/runtime/world_engine_snapshot.js';
 import { getRuntimeBootstrap } from './app/services/app_context_ports.js';
-import { DefaultPackRuntimePort } from './packs/orchestration/default_pack_runtime_port.js';
 import { createContextAssemblyPort } from './app/services/context_memory_ports.js';
 import { createPrismaRepositories } from './app/services/repositories/index.js';
 import { ensureSchedulerBootstrapOwnership, resetDevelopmentRuntimeState } from './app/services/system.js';
@@ -67,14 +65,15 @@ import {
 } from './config/runtime_config.js';
 import { startConfigWatcher } from './config/watcher.js';
 import { PrismaConversationStore } from './conversation/store_prisma.js';
-
 import { SimulationManager } from './core/simulation.js';
+import { createPrismaClient } from './db/client.js';
 import { createInferenceService } from './inference/service.js';
 import { createPrismaInferenceTraceSink } from './inference/sinks/prisma.js';
+import { DefaultPackRuntimePort } from './packs/orchestration/default_pack_runtime_port.js';
 import { PostgresPackStorageAdapter } from './packs/storage/internal/PostgresPackStorageAdapter.js';
 import { SqlitePackStorageAdapter } from './packs/storage/internal/SqlitePackStorageAdapter.js';
 import { SqliteSchedulerStorageAdapter } from './packs/storage/internal/SqliteSchedulerStorageAdapter.js';
-import { syncActivePackPluginRuntime } from './plugins/runtime.js';
+import { syncPackPluginRuntime } from './plugins/runtime.js';
 import { initSystemPackPlugins } from './plugins/system_pack_init.js';
 import { ApiError } from './utils/api_error.js';
 import { createLogger, setLoggerRuntimeConfig } from './utils/logger.js';
@@ -186,10 +185,6 @@ const appContext: AppContext = {
 
 appContext.contextAssembly = createContextAssemblyPort(appContext);
 appContext.packRuntimeLookup = {
-  getActivePackId: () => {
-    const ids = sim.listLoadedPackRuntimeIds();
-    return ids.length > 0 ? ids[0] : null;
-  },
   hasPackRuntime: packId => sim.getPackRuntimeHandle(packId) !== null,
   assertPackScope: (packId, _feature) => packId.trim(),
   getPackRuntimeSummary: packId => {
@@ -369,35 +364,35 @@ const start = async (): Promise<void> => {
 
       // Load main pack through registry service (symmetric with experimental packs)
       const loadResult = await sim.loadExperimentalPackRuntime(selectedPack);
-      const activePackId = loadResult.handle.pack_id;
-      const activePack = loadResult.handle.pack;
+      const packId = loadResult.handle.pack_id;
+      const pack = loadResult.handle.pack;
 
       // Register world pack dynamic slots
-      const packSlots = activePack.ai?.slots;
+      const packSlots = pack.ai?.slots;
       if (packSlots) {
         for (const slotId of listDynamicSlots().map(s => s.id)) {
           unregisterDynamicSlot(slotId);
         }
         for (const [slotId, slotConfig] of Object.entries(packSlots)) {
-          registerDynamicSlot({ id: slotId, ...slotConfig } as Parameters<typeof registerDynamicSlot>[0]);
+          registerDynamicSlot({ id: slotId, ...slotConfig });
         }
       }
 
       const clockSnapshot = loadResult.handle.getClockSnapshot();
       const currentTick = BigInt(clockSnapshot.current_tick);
       appContext.runtimeClockProjection?.rebuildFromRuntimeSeed({
-        pack_id: activePackId,
+        pack_id: packId,
         current_tick: clockSnapshot.current_tick,
         current_revision: clockSnapshot.current_tick,
-        calendars: (activePack?.time_systems ?? []) as unknown as CalendarConfig[]
+        calendars: (pack?.time_systems ?? []) as unknown as CalendarConfig[]
       });
 
       if (appContext.worldEngine instanceof WorldEngineSidecarClient) {
         await appContext.worldEngine.loadPack({
-          pack_id: activePackId,
+          pack_id: packId,
           pack_ref: selectedPack,
           mode: 'active',
-          hydrate: await buildWorldPackHydrateRequest(appContext, activePackId)
+          hydrate: await buildWorldPackHydrateRequest(appContext, packId)
         });
       }
       const systemPackResult = await initSystemPackPlugins(
@@ -414,9 +409,9 @@ const start = async (): Promise<void> => {
         logger.info(`system pack plugins enabled: ${systemPackResult.enabled.join(', ')}`);
       }
 
-      await syncActivePackPluginRuntime(appContext);
+      await syncPackPluginRuntime(appContext, packId);
       await ensureSchedulerBootstrapOwnership(appContext, {
-        packId: activePackId,
+        packId: packId,
         schedulerWorkerId,
         schedulerPartitionIds
       });
@@ -446,10 +441,10 @@ const start = async (): Promise<void> => {
         'SYS_INIT_OK',
         { ai_gateway_enabled: isAiGatewayEnabled() }
       );
-      const activePackHost = sim.getPackRuntimeRegistry().getHost(activePackId);
-      if (activePackHost) {
-        const activePackRuntimePort = new DefaultPackRuntimePort(activePackHost);
-        multiPackLoopHost.startLoop(activePackId, activePackHost.getClock(), activePackRuntimePort);
+      const packHost = sim.getPackRuntimeRegistry().getHost(packId);
+      if (packHost) {
+        const packRuntimePort = new DefaultPackRuntimePort(packHost);
+        multiPackLoopHost.startLoop(packId, packHost.getClock(), packRuntimePort);
       }
     }
   } catch (err: unknown) {

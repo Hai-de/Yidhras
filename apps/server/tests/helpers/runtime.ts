@@ -53,7 +53,7 @@ export interface CreateIsolatedRuntimeEnvironmentOptions {
   databaseFileName?: string;
   envOverrides?: Record<string, string>;
   seededPackRefs?: SeededPackRef[];
-  activePackRef?: string;
+  packRef?: string;
 }
 
 export interface IsolatedTestServerOptions extends Omit<TestServerOptions, 'prepareRuntime'> {
@@ -61,7 +61,7 @@ export interface IsolatedTestServerOptions extends Omit<TestServerOptions, 'prep
   databaseFileName?: string;
   prepareRuntime?: boolean;
   seededPackRefs?: SeededPackRef[];
-  activePackRef?: string;
+  packRef?: string;
 }
 
 const runServerCommand = async (
@@ -180,7 +180,7 @@ export const createIsolatedRuntimeEnvironment = async (
     SCHEDULER_AGENT_DECISION_KERNEL_BINARY_PATH: schedulerDecisionSidecarBinaryPath,
     MEMORY_TRIGGER_ENGINE_BINARY_PATH: memoryTriggerSidecarBinaryPath,
     WORKSPACE_ROOT: rootDir,
-    ...(options.activePackRef ? { WORLD_PACK: options.activePackRef } : {}),
+    ...(options.packRef ? { WORLD_PACK: options.packRef } : {}),
     WORLD_PACKS_DIR: worldPacksDir,
     ...(options.envOverrides ?? {})
   };
@@ -223,7 +223,7 @@ export const withIsolatedTestServer = async <T>(
     appEnv: options.appEnv,
     databaseFileName: options.databaseFileName,
     seededPackRefs: options.seededPackRefs,
-    activePackRef: options.activePackRef,
+    packRef: options.packRef,
     envOverrides: options.envOverrides
   });
 

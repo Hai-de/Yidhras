@@ -1,451 +1,538 @@
-# snowbound_mansion 世界包升级差距分析
+# snowbound_mansion 世界包升级差距分析与修复方案
 
-> 从世界包开发者视角审视 snowbound_mansion 从原型包升级为正式包所需补齐的内容。
->
 > 参照系：`docs/specs/WORLD_PACK.md` 发布规范、`worldPackConstitutionSchema` 完整合约、scaffold 模板默认结构、`world-death-note` 参考实现。
+>
+> 本文档记录 snowbound_mansion 从原型包升级为正式包所需补齐的内容，每个问题附修复方案。
 
 ---
 
-## 0. 现状摘要
+## 1. 现状摘要
 
 snowbound_mansion 当前文件清单：
 
 ```
 snowbound_mansion/
-├─ config.yaml                              ← 唯一运行时配置（~560 行）
+├─ pack.yaml                                ← 入口清单（schema_version + metadata + include）
+├─ config/
+│  ├─ variables.yaml                        ← 变量池（当前为死数据，未被实体引用）
+│  ├─ prompts.yaml                          ← 提示词模板（6 个模板变量绑定断裂）
+│  ├─ time_systems.yaml                     ← 时间系统定义（game_clock）
+│  ├─ simulation_time.yaml                  ← 模拟时钟参数
+│  ├─ entities.yaml                         ← 实体层（15 地点 + 12 同质化角色，0 artifact/mediator）
+│  ├─ identities.yaml                       ← 身份映射（12 个 agent）
+│  ├─ capabilities.yaml                     ← 能力声明（5 个，远不足）
+│  ├─ authorities.yaml                      ← 权限授予（5 个 intrinsic all_actors）
+│  ├─ rules.yaml                            ← 规则（5 感知 + 0 invocation + 1 空 objective）
+│  ├─ bootstrap.yaml                        ← 初始世界状态 + 空间初始位置（含变量引用错误）
+│  ├─ spatial.yaml                           ← 空间拓扑（15 节点 + 15 条边）
+│  └─ ai.yaml                               ← AI 配置（仅 defaults）
 ├─ runtime.sqlite                           ← 运行时产物
 ├─ runtime.sqlite.storage-plan.json         ← 运行时产物
 └─ plugins/
    ├─ snowbound-game-loop/
-   │  ├─ plugin.manifest.yaml
+   │  ├─ plugin.manifest.yaml               ← source: "server.js" 但文件是 server.ts
    │  └─ server.ts
    └─ snowbound-mastermind/
-      ├─ plugin.manifest.yaml
+      ├─ plugin.manifest.yaml               ← source: "server.js" 但文件是 server.ts
       └─ server.ts
 ```
 
-无 README.md、无 CHANGELOG.md、无 LICENSE、无 docs/、无 assets/、无 examples/。metadata.status = "prototype"。
+缺失：README.md、CHANGELOG.md、LICENSE、docs/、assets/、examples/、storage.yaml。metadata.status = "prototype"。
 
 ---
 
-## 1. 项目化资产缺失
+## 2. P0 — 运行时功能断裂
 
-| 缺失项 | 规范要求 | 优先级 | 说明 |
-|---------|----------|--------|------|
-| `README.md` | 校验器 WARN；WORLD_PACK.md §4 强推 | **P0** | 人类可读的包入口文档。需覆盖世界前提、核心机制、实体/能力/规则概览、已知限制等 10 个章节 |
-| `CHANGELOG.md` | WORLD_PACK.md §6.1 推荐 | P1 | 版本变更记录。从 0.1.0 → 1.0.0 需要一份清晰的 changelog |
-| `LICENSE` | WORLD_PACK.md §6.2 推荐 | P2 | 若计划开放分发 |
-| `docs/setting.md` | scaffold 默认生成 | P1 | 详细世界设定文档：暴风雪山庄的背景故事、建筑历史、NPC 角色设定来源 |
-| `docs/rules.md` | WORLD_PACK.md §6.3 推荐 | P1 | 游戏规则详解：阶段流程、胜负条件、能力使用规则 |
-| `assets/` | scaffold 默认生成 | P2 | 封面图、图标、地图示意图等展示素材 |
-| `examples/overrides.example.yaml` | scaffold 默认生成 | P2 | 覆盖配置示例（如调整角色数量、修改场景类型） |
-| `metadata.status` | 需更新 | P0 | 从 `"prototype"` 改为 `"beta"` 或 `"stable"` |
-| `metadata.presentation` | schema 支持 | P2 | `cover_image`、`icon`、`theme` 展示元数据 |
+### 2.1 模板变量绑定断裂
+
+**问题**：`prompts.yaml` 中 `global_prefix_mastermind` 和 `agent_persona` 使用的 9 个模板变量在运行时解析为空字符串。
+
+模板引擎层顺序为 `system → app → pack → runtime → actor → request`（`context_builder.ts:631`）。不存在 `world` 层。`actor` 层只有 `identity_id`/`display_name`/`role` 等，没有 `state` 子键。
+
+受影响变量：
+
+| prompts.yaml 中的写法 | 解析结果 | 正确路径 |
+|-----------------------|---------|----------|
+| `{{ world.day }}` | 空字符串 | `{{ runtime.world_state.day }}` |
+| `{{ world.total_days }}` | 空字符串 | `{{ runtime.world_state.total_days }}` |
+| `{{ world.alive_count }}` | 空字符串 | `{{ runtime.world_state.alive_count }}` |
+| `{{ world.masterminds_alive }}` | 空字符串 | `{{ runtime.world_state.masterminds_alive }}` |
+| `{{ world.team_dynamic }}` | 空字符串 | `{{ runtime.world_state.team_dynamic }}` |
+| `{{ actor.state.personality }}` | 空字符串 | `{{ runtime.pack_state.actor_state.personality }}` |
+| `{{ actor.state.profession }}` | 空字符串 | `{{ runtime.pack_state.actor_state.profession }}` |
+| `{{ actor.state.secret }}` | 空字符串 | `{{ runtime.pack_state.actor_state.secret }}` |
+| `{{ actor.state.is_mastermind }}` | 空字符串 | `{{ runtime.pack_state.actor_state.is_mastermind }}` |
+
+**影响**：黑幕信息优势机制完全失效；角色身份与行为准则注入全部丢失。
+
+**注意**：`{{ runtime.pack_state.actor_state.* }}` 在每次推理请求中只注入当前 actor 的状态，而非全局角色列表。这意味着 `agent_persona` 中每个角色获取自身属性是可行的，但不能通过此路径获取其他角色的属性。
+
+**修复**：将 `prompts.yaml` 中所有 `{{ world.* }}` 改写为 `{{ runtime.world_state.* }}`，将 `{{ actor.state.* }}` 改写为 `{{ runtime.pack_state.actor_state.* }}`。
+
+### 2.2 bootstrap event_prefix 变量引用错误
+
+**问题**：`bootstrap.yaml:12` 写 `{{pack.variables.location_type_pool}}`，但 `variables.yaml` 中的键名是 `location_types`（非 `location_type_pool`）。模板解析时返回空字符串。
+
+**修复**：改为 `{{ pack.variables.location_types }}`。更好的方案是直接引用 bootstrap 同文件内的世界状态值：改为 `{{ world_state.location_type }}`，因为 `event_prefix` 应该反映实际生成的场景（而非变量池定义）。
+
+### 2.3 rules.invocation 完全缺失
+
+**问题**：声明了 5 个 capabilities + 5 个 authorities，但没有任何 invocation 规则。AI 生成的意图无法落地为能力调用。
+
+**修复**：为每个现有能力补充精确落地规则，并为常见非结构化意图补充翻译和叙述化规则。最小可运行集：
+
+```yaml
+invocation:
+  - id: invocation-move
+    when:
+      semantic_intent.kind: move
+    then:
+      affordance_key: move_to_location
+      requires_capability: move
+      resolution_mode: exact
+      translate_to_capability: move
+      explanation: 将移动意图落地为空间转移。
+  - id: invocation-investigate
+    when:
+      semantic_intent.kind: investigate
+    then:
+      affordance_key: investigate_location
+      requires_capability: invoke.investigate
+      resolution_mode: exact
+      translate_to_capability: invoke.investigate
+      explanation: 将调查意图落地为结构化调查行为。
+  - id: invocation-look-around
+    when:
+      semantic_intent.kind: look_around
+    then:
+      affordance_key: observe_environment
+      resolution_mode: narrativized
+      explanation: 四处看看不改变世界状态，仅生成环境描述。
+      narrativize_event:
+        type: observation
+        title: '{{ actor.id }} 四处观察了当前环境'
+        impact_data:
+          semantic_type: environment_observation
+          failed_attempt: false
+          objective_effect_applied: false
+  - id: invocation-accuse
+    when:
+      semantic_intent.kind: accuse
+    then:
+      affordance_key: accuse_person
+      requires_capability: invoke.accuse
+      resolution_mode: exact
+      translate_to_capability: invoke.accuse
+      explanation: 将指控意图落地为正式公审指控。
+  - id: invocation-reveal-secret
+    when:
+      semantic_intent.kind: reveal_secret
+    then:
+      affordance_key: reveal_secret_to
+      requires_capability: invoke.reveal_secret
+      resolution_mode: exact
+      translate_to_capability: invoke.reveal_secret
+  - id: invocation-mastermind-perception
+    when:
+      semantic_intent.kind: check_mastermind_info
+    then:
+      affordance_key: observe_mastermind_info
+      resolution_mode: narrativized
+      explanation: 黑幕信息通过上下文注入获取，此意图只作为确认标记。
+      narrativize_event:
+        type: history
+        title: '{{ actor.id }} 回顾了只有黑幕才能看到的信息'
+        impact_data:
+          semantic_type: mastermind_info_checked
+          objective_effect_applied: false
+```
+
+### 2.4 rules.objective_enforcement 几乎为空
+
+**问题**：唯一规则 `rule-investigate` 无 mutate 块，不改变任何世界状态。
+
+**修复**：至少补充 3 条核心规则（investigate、accuse、reveal_secret），每条包含完整的 mutate 块和事件发射。参照 world-death-note 的 `objective-execute-death-note` 模式：
+
+```yaml
+objective_enforcement:
+  - id: objective-investigate
+    when:
+      capability: invoke.investigate
+      invocation_type: invoke.investigate
+    then:
+      mutate:
+        subject_state:
+          investigation_count: '{{ subject_state.investigation_count + 1 }}'
+        world_state:
+          last_investigation_tick: '{{ invocation.tick }}'
+      emit_events:
+        - type: history
+          title: '{{ actor.id }} 进行了调查'
+          impact_data:
+            semantic_type: investigation_conducted
+            objective_effect_applied: true
+  - id: objective-accuse
+    when:
+      capability: invoke.accuse
+      invocation_type: invoke.accuse
+      target.kind: actor
+    then:
+      mutate:
+        subject_state:
+          has_accused: true
+          accused_target_id: '{{ invocation.target_entity_id }}'
+        world_state:
+          accusation_count: '{{ world_state.accusation_count + 1 }}'
+      emit_events:
+        - type: history
+          title: '{{ actor.id }} 公开指控 {{ target.id }}'
+          impact_data:
+            semantic_type: accusation_made
+            objective_effect_applied: true
+  - id: objective-reveal-secret
+    when:
+      capability: invoke.reveal_secret
+      invocation_type: invoke.reveal_secret
+      target.kind: actor
+    then:
+      mutate:
+        target_state:
+          knows_secret_of: '{{ invocation.subject_entity_id }}'
+      emit_events:
+        - type: history
+          title: '{{ actor.id }} 向 {{ target.id }} 透露了秘密'
+          impact_data:
+            semantic_type: secret_revealed
+            objective_effect_applied: true
+```
 
 ---
 
-## 2. config.yaml 结构缺陷
+## 3. P0 — 包完整性缺失
 
-### 2.1 实体层缺失
+### 3.1 无 README.md
 
-#### 2.1.1 无 entities.artifacts（物品实体）
+**修复**：创建 `README.md`，按 WORLD_PACK.md 模板覆盖：世界前提、核心机制、实体/能力/规则概览、已知限制、安装方式。
 
-当前 0 个 artifact。暴风雪山庄作为封闭悬疑场景，物品是核心叙事驱动力。
+### 3.2 metadata.status 仍为 "prototype"
 
-**需要补充的物品实体（建议）：**
+**修复**：`pack.yaml` 中将 `metadata.status` 从 `"prototype"` 改为 `"beta"`。
 
-| artifact_id | 说明 | 状态字段 |
-|-------------|------|----------|
-| `weapon_knife` | 厨房剁骨刀 | holder_id, location, blood_stained, discovered |
-| `weapon_poker` | 壁炉拨火棍 | holder_id, location |
+---
+
+## 4. P1 — 规则与 AI 管道缺失
+
+### 4.1 实体层缺失
+
+**artifacts**：0 个。悬疑推理场景的物品是核心叙事驱动力。现有 domain `hidden_details` 暗示了物品存在但未一等实体化。
+
+最少需要 3 个核心物品以验证 mediator 链路：
+
+| artifact_id | 说明 | 核心状态字段 |
+|-------------|------|------------|
+| `weapon_knife` | 厨房剁骨刀 | holder_id, location, blood_stained |
 | `key_master` | 主人房钥匙 | holder_id, used |
-| `key_storage` | 储藏室暗门钥匙 | holder_id, discovered |
-| `flashlight` | 手电筒 | holder_id, battery_level |
-| `radio_broken` | 损坏的收音机 | location, repair_progress |
-| `anonymous_letter` | 匿名信 | holder_id, read_by[] |
-| `medicine_box` | 急救箱 | location, remaining_uses |
-| `diary_old` | 泛黄日记本 | location, pages_read |
-| `rope` | 绳索 | holder_id, location |
+| `anonymous_letter` | 匿名信 | holder_id, read_by |
 
-这些物品在现有 domain hidden_details 中已有暗示（厨房刀架、图书室报纸、储藏室暗门、阁楼箱子），但未作为一等实体存在，无法被持有、传递、用于能力触发。
+**mediators**：0 个。需要至少 1 个 mediator 验证「持有物品 → 获得能力」链路：
 
-#### 2.1.2 无 entities.mediators（调解器）
+| mediator_id | mediator_kind | 触发能力 |
+|-------------|--------------|---------|
+| `mediator-weapon-knife` | `weapon_binding` | 持有 `weapon_knife` → 获得 `invoke.kill` |
 
-当前 0 个 mediator。在 death-note 中，调解器用于建立「持有物品 → 获得能力」的权限溯源链。
+### 4.2 capabilities 不足
 
-snowbound_mansion 中至少需要：
-- 武器类调解器：持有凶器 → 获得 `invoke.kill` 能力
-- 钥匙类调解器：持有钥匙 → 获得 `invoke.unlock` 能力（进入特定房间）
-- 证据类调解器：持有证据 → 获得 `invoke.present_evidence` 能力（公审时出示）
+当前 5 个（move, invoke.investigate, invoke.accuse, invoke.reveal_secret, perceive.mastermind）不足以支撑悬疑推理的核心交互。
 
-若不引入调解器，所有能力只能通过 `intrinsic` + `all_actors` 授予，无法实现基于物品持有的动态权限。
+最小扩充集（P1 必需）：
 
-#### 2.1.3 无 entities.institutions（机构实体）
+| capability_key | category | 说明 |
+|----------------|----------|------|
+| `invoke.kill` | invoke | 暗杀（需 mediator 授权） |
+| `invoke.vote` | invoke | 公审投票 |
 
-对于封闭山庄场景，institutions 是可选的。但可以考虑：
-- 「自治委员会」：玩家自发组织的投票/公审机构
-- 「生存小组」：负责物资管理的组织
+### 4.3 authorities 全部 intrinsic all_actors
 
-优先级 P2，可在后续版本引入。
+所有 5 个权限都是 `intrinsic` + `all_actors`，无法实现条件化授权。需要：
 
----
+- `invoke.kill` 通过 mediator 授权（持有凶器时才获得）
+- `invoke.vote` 条件化（只有 alive 角色可投票）
+- 夜间/发现尸体场景下阶段性开放/关闭能力（通过 capability_resolution 规则或插件实现）
 
-### 2.2 规则层缺陷
+### 4.4 AI 配置极简
 
-#### 2.2.1 rules.invocation 完全缺失
+`ai.yaml` 仅有 `defaults`（3 字段）。需要补充：
 
-**这是最严重的结构性缺陷。**
-
-当前状态：声明了 5 个 capabilities + 5 个 authorities，但 **没有任何 invocation 规则** 定义自由文本意图如何映射到这些能力。
-
-death-note 有 18 条 invocation 规则，覆盖三种分辨率模式（精确、翻译、叙述化）。snowbound_mansion 需要为每个 capability 至少定义一条精确落地规则，并为常见的非结构化意图定义翻译规则。
-
-**需要的 invocation 规则（按能力分组）：**
-
+```yaml
+memory_loop:
+  summary_every_n_rounds: 5
+  compaction_every_n_rounds: 10
+tasks:
+  agent_decision:
+    prompt:
+      preset: snowbound_agent_decision_v1
+      include_sections:
+        - actor_profile
+        - pack_rules
+        - recent_events
+        - overlay_notes
+    parse:
+      decoder: default_json_schema
+    route:
+      route_id: default.agent_decision
+      provider: openai
+      model: gpt-4.1-mini
+  intent_grounding_assist:
+    prompt:
+      preset: snowbound_intent_grounding_v1
+      include_sections:
+        - packRules
+        - recent_events
+    parse:
+      decoder: default_json_schema
+    route:
+      route_id: default.context_summary
+      provider: openai
+      model: gpt-4.1-mini
+  context_summary:
+    prompt:
+      preset: snowbound_context_summary_v1
+      include_sections:
+        - packRules
+        - recent_events
+        - overlay_notes
+  memory_compaction:
+    prompt:
+      preset: snowbound_memory_compaction_v1
+      include_sections:
+        - memory_summary
+        - recent_events
+  classification:
+    prompt:
+      preset: snowbound_classification_v1
 ```
-move:
-  - 精确：move_to_location → move
-  - 翻译：go_upstairs / 去二楼 → move (target: corridor_2f)
 
-invoke.investigate:
-  - 精确：investigate_location → invoke.investigate
-  - 翻译：search_room / 搜查房间 → invoke.investigate
-  - 叙述化：look_around / 四处看看 → 生成叙事描述，不改变世界状态
+### 4.5 storage 缺失
 
-invoke.accuse:
-  - 精确：accuse_person → invoke.accuse
-  - 翻译：point_finger / 指认凶手 → invoke.accuse
+`pack.yaml` 的 `include` 中无 `storage` 条目。
 
-invoke.reveal_secret:
-  - 精确：reveal_secret_to → invoke.reveal_secret
-  - 翻译：confide_in / 向某人坦白 → invoke.reveal_secret
+修复：创建 `config/storage.yaml` 并在 `pack.yaml` 的 `include` 中添加 `storage: "config/storage.yaml"`。最小集合参照 world-death-note 模式：
 
-（新增能力对应的规则见 §2.3）
+```yaml
+strategy: isolated_pack_db
+runtime_db_file: runtime.sqlite
+pack_collections:
+  - key: investigation_logs
+    kind: table
+    primary_key: id
+    fields:
+      - key: id
+        type: string
+        required: true
+      - key: investigator_id
+        type: entity_ref
+        required: true
+      - key: location_id
+        type: entity_ref
+      - key: tick
+        type: string
+      - key: findings
+        type: json
+      - key: hidden_revealed
+        type: boolean
+    indexes:
+      - - investigator_id
+      - - location_id
+  - key: accusation_records
+    kind: table
+    primary_key: id
+    fields:
+      - key: id
+        type: string
+        required: true
+      - key: accuser_id
+        type: entity_ref
+        required: true
+      - key: target_id
+        type: entity_ref
+        required: true
+      - key: tick
+        type: string
+      - key: evidence_refs
+        type: json
+      - key: outcome
+        type: string
+    indexes:
+      - - accuser_id
+      - - target_id
+  - key: death_records
+    kind: table
+    primary_key: id
+    fields:
+      - key: id
+        type: string
+        required: true
+      - key: victim_id
+        type: entity_ref
+        required: true
+      - key: location_id
+        type: entity_ref
+      - key: tick
+        type: string
+        required: true
+      - key: cause
+        type: string
+      - key: discovered_by
+        type: entity_ref
+      - key: discovered_at_tick
+        type: string
+    indexes:
+      - - victim_id
+      - - tick
+install:
+  compile_on_activate: true
+  allow_pack_collections: true
+  allow_raw_sql: false
 ```
 
-#### 2.2.2 rules.objective_enforcement 几乎为空
-
-当前仅 1 条规则 `rule-investigate`，且 **没有 mutate 块**，不改变任何世界状态，只发射一个无实际影响的交互事件。
-
-对比：death-note 有 12 条 objective_enforcement 规则，每条都包含完整的 mutate 块（改变主体/目标/世界状态）+ 结构化事件发射。
-
-**需要为以下核心场景定义客观执行规则：**
-
-| 规则 | 触发能力 | mutate 效果 | 发射事件 |
-|------|----------|-------------|----------|
-| `objective-investigate` | invoke.investigate | investigation_count += 1；若满足条件，reveal hidden_details | investigation_conducted |
-| `objective-kill` | invoke.kill（新增） | target.alive = false; world.alive_count -= 1 | death_occurred |
-| `objective-accuse` | invoke.accuse | 记录指控；若多数同意，进入公审 | accusation_made |
-| `objective-vote` | invoke.vote（新增） | 统计投票；达到阈值则处决/释放 | vote_cast / trial_verdict |
-| `objective-lock-door` | invoke.lock（新增） | door.locked = true | door_locked |
-| `objective-search-person` | invoke.search_person（新增） | 暴露目标持有物品 | person_searched |
-| `objective-sabotage` | invoke.sabotage（新增） | 破坏设施状态 | facility_sabotaged |
-
-#### 2.2.3 rules.capability_resolution 缺失
-
-没有动态能力解析规则。所有权限都是静态的 intrinsic 授予。
-
-需要考虑的动态规则：
-- 死亡角色失去所有 invoke 能力
-- 夜间时段限制移动（如宵禁规则）
-- 某些房间需要钥匙才能进入（条件化 move 权限）
-
-#### 2.2.4 rules.projection 缺失
-
-没有投影规则。投影用于将内部世界状态转换为外部可查询的视图。
-
-至少需要：
-- 存活角色列表投影
-- 各地点当前人员投影
-- 调查进度投影
-
 ---
 
-### 2.3 能力声明不足
+## 5. P1 — 提示词与变量系统
 
-当前 5 个 capabilities 远不够覆盖悬疑推理场景的核心交互。
+### 5.1 提示词硬编码
 
-**需要新增的能力声明：**
+`global_prefix` 硬编码了"暴风雪"和"深山中的独栋别墅"，但 `bootstrap.yaml` 会随机选择场景和地点类型。
 
-| capability_key | category | 说明 | 授权模式 |
-|----------------|----------|------|----------|
-| `invoke.kill` | invoke | 暗杀目标角色 | 仅黑幕 + 条件（夜间 / 无人目击） |
-| `invoke.search_person` | invoke | 搜查目标角色身上的物品 | 需同地点 + 目标不反抗或多数决 |
-| `invoke.vote` | invoke | 在公审中投票 | 存活角色 |
-| `invoke.lock` | invoke | 锁定/解锁门 | 持有钥匙或在门旁 |
-| `invoke.sabotage` | invoke | 破坏设施（电源、通讯、门锁） | 仅黑幕 |
-| `invoke.form_alliance` | invoke | 与他人结盟，建立信任 | 同地点 |
-| `invoke.private_meeting` | invoke | 发起私密对话 | 同地点，限 2-3 人 |
-| `invoke.use_item` | invoke | 使用持有的物品 | 持有对应物品 |
-| `invoke.pick_up` | invoke | 拾取当前地点的物品 | 物品在同地点 |
-| `invoke.give_item` | invoke | 将物品交给同地点的角色 | 持有物品 + 同地点 |
-| `perceive.adjacent_sound` | perceive | 感知相邻房间的声音（尖叫、打斗） | 全体 |
-| `perceive.item_presence` | perceive | 感知当前地点是否有可拾取物品 | 全体 |
-
----
-
-### 2.4 AI 配置极简
-
-#### 2.4.1 无 ai.tasks
-
-当前只有 `ai.defaults` 的 3 个字段。death-note 定义了 5 个 AI 任务，各自带有独立的提示预设、解码器、路由和元数据。
-
-**需要定义的 AI 任务：**
-
-| 任务类型 | 用途 | 说明 |
-|----------|------|------|
-| `agent_decision` | 角色行动决策 | 核心任务。需要专用提示词，指导 AI 在悬疑推理情境中做出符合角色性格的决策 |
-| `intent_grounding_assist` | 意图落地辅助 | 将自由文本意图解析为结构化能力调用 |
-| `context_summary` | 上下文总结 | 压缩历史对话和事件，保留关键线索信息 |
-| `memory_compaction` | 记忆压缩 | 长期记忆的压缩策略，确保推理线索不被丢失 |
-| `classification` | 事件分类 | 将模拟中的事件分类为：线索发现、社交互动、暴力事件、调查行为等 |
-
-#### 2.4.2 无 ai.slots
-
-scaffold 模板默认生成 `custom_safety_layer` 插槽。snowbound_mansion 应声明包专属插槽：
-
-| 插槽 | 用途 |
-|------|------|
-| `world_situation` | 当前世界态势注入（第几天、存活人数、最近事件） |
-| `spatial_awareness` | 当前地点描述、周围环境、同地点角色列表 |
-| `investigation_progress` | 已知线索汇总、怀疑对象列表 |
-| `safety_layer` | 悬疑叙事的安全约束（防止过度暴力描写等） |
-
-#### 2.4.3 无 ai.memory_loop
-
-没有配置 `summary_every_n_rounds` 和 `compaction_every_n_rounds`。悬疑推理高度依赖跨轮次的线索积累，记忆管理策略不可缺。
-
----
-
-### 2.5 存储缺失
-
-当前无 `storage` 节。运行时虽会自动创建 `runtime.sqlite`，但没有 pack-local 结构化集合。
-
-**需要定义的 pack_collections：**
-
-| collection_key | 用途 | 字段 |
-|----------------|------|------|
-| `investigation_logs` | 调查记录 | entity_id, location_id, tick, findings, hidden_revealed |
-| `accusation_records` | 指控记录 | accuser_id, target_id, tick, evidence_refs, outcome |
-| `death_records` | 死亡记录 | victim_id, location_id, tick, cause, discovered_by, discovered_at_tick |
-| `item_transfers` | 物品流转 | item_id, from_entity_id, to_entity_id, tick, transfer_type |
-| `alliance_bonds` | 联盟关系 | entity_a_id, entity_b_id, formed_at_tick, dissolved_at_tick, trust_level |
-
----
-
-### 2.6 提示词系统问题
-
-#### 2.6.1 模板变量未正确使用
-
-`prompts.global_prefix` 硬编码了 "深山中的独栋别墅" 和 "暴风雪"，但 `variables` 中已定义了 `location_types` 和 `scenarios` 列表，`bootstrap` 中也通过 `{{pick}}` 宏随机选择了具体场景。
-
-提示词应改为使用模板变量引用 bootstrap 后的世界状态：
+**修复**：将 `prompts.yaml` 中的硬编码场景文本替换为模板变量引用。`global_prefix` 改为：
 
 ```yaml
 global_prefix: |
-  你正在一个封闭的环境中。{{ world.scenario }}。
-  你所在的地点是{{ world.location_type }}。
-  ...
+  你正在一个封闭的环境中。{{ runtime.world_state.scenario }}，导致与外界的一切联系完全中断。
+  你所在的地点是一个{{ runtime.world_state.location_type }}。
+  与你一同被困在此地的还有另外 11 个人。你们需要在这里生存 7 天，直到救援到来。
+
+  核心规则：
+  - 你只能看到和听到你当前所在位置发生的事情。其他房间发生的事你一无所知，除非有人主动告诉你。
+  - 你的所有对话和行动默认只有同地点的人能看到。私密对话需要明确指定目标。
 ```
 
-#### 2.6.2 bootstrap 引用错误
+`global_prefix_mastermind` 和 `agent_persona` 中的 `{{ world.* }}` 和 `{{ actor.state.* }}` 改为 `{{ runtime.world_state.* }}` 和 `{{ runtime.pack_state.actor_state.* }}`。
 
-`bootstrap.initial_states[0].state_json.event_prefix` 引用了 `{{pack.variables.location_type_pool}}`，但实际变量名为 `location_types`。
+### 5.2 variables.yaml 为死数据
 
-#### 2.6.3 缺少决策导向提示词
+`entities.yaml` 中 12 个角色的 `{{pick from=[...]}}` 全部使用内联数组，与 `variables.yaml` 的 YAML 列表无引用关系。`bootstrap.yaml` 中 scenario/location_type/team_dynamic 同样内联。
 
-当前提示词只描述了角色身份和基本规则，缺少：
-- 行动选择引导（你可以做什么、不能做什么）
-- 推理框架引导（如何分析线索、如何判断可疑行为）
-- 社交策略引导（何时应该结盟、何时应该背叛）
+**修复**：将 `entities.yaml` 和 `bootstrap.yaml` 中的内联列表替换为 `{{pack.variables.*}}` 引用。例如：
 
----
-
-## 3. 角色系统设计问题
-
-### 3.1 高度同质化
-
-12 个角色使用完全相同的 `{{pick}}` 模板，从相同的池中随机选取 name/personality/profession/secret/is_mastermind/initial_location。
-
-**问题：**
-1. **重复风险**：pick 宏对跨实体调用是独立的。char_01 和 char_02 可能抽到相同的名字、相同的职业、相同的秘密。
-2. **缺乏叙事结构**：纯随机无法产生有意义的角色关系（仇人、亲属、旧识），而 `variables.team_dynamics` 中描述了这些关系（如 "至少三人是老相识但有旧怨未了"），但角色定义层面没有任何机制支撑。
-3. **黑幕分配不可控**：每个角色独立 pick `is_mastermind`，概率约 1/11 ≈ 9%。12 人独立抽取可能产生 0 个或 4+ 个黑幕，与 `world.masterminds_alive` 的 `{{int min=1 max=3}}` 脱节。
-
-### 3.2 建议改进方向
-
-- **分层角色池**：将 12 个角色分为 3-4 个预设组（老相识组、陌生人组、可疑人物组），每组内用 pick 随机化细节
-- **关系预置**：在 bootstrap 中定义 2-3 组预设关系（relation entries），如 `char_01 ↔ char_05: old_acquaintance`
-- **黑幕数量受控**：不在每个角色上独立 pick，而是在 bootstrap 阶段使用单一 pick 从角色 ID 池中选出 1-2 个黑幕
-- **角色模板分化**：至少定义 2-3 种角色模板（普通角色、可疑角色、调查型角色），差异化行为约束
-
----
-
-## 4. 插件系统问题
-
-### 4.1 导入路径脆弱
-
-两个插件均使用 5 层相对路径引用引擎类型：
-
-```ts
-import type { ... } from '../../../../../apps/server/src/...';
+```yaml
+name: "{{pick from=pack.variables.names}}"
+personality: "{{pick from=pack.variables.personalities}}"
 ```
 
-若包目录层级变化，所有导入立即断裂。应改为引擎提供的 plugin SDK 导入路径（若已有），或使用 `tsconfig.paths` 别名。
+**注意**：`pick` 宏的 `from` 参数同时支持 JSON 数组字符串和实际数组对象（见 `defaults.ts:127-138`）。`{{pack.variables.names}}` 在模板解析后产生一个数组对象，可以直接作为 `from` 参数使用。但需要确认宏处理器在实体化阶段是否能正确接收模板层解析后的数组引用——如果引擎对 `from` 做了字符串分割而非类型检查，则需要保留内联形式。这是实现计划中需要验证的一个点。
 
-### 4.2 plugin.manifest.yaml 中 source 字段与实际文件不匹配
+如果 `{{ pack.variables.names }}` 路径可行，则消除了 12×5 = 60 处内联重复 + 3 处 bootstrap 重复，使 `variables.yaml` 成为唯一数据源。
 
-两个清单均声明 `source: "server.js"`，但实际文件是 `server.ts`。加载器是否自动处理 `.ts → .js` 映射需要确认。
+### 5.3 bootstrap 与 entities 初始位置集合不一致
 
-### 4.3 game-loop 插件功能不足
+`bootstrap.yaml` 中角色初始位置池不含 `corridor_2f`，但 `entities.yaml` 中各角色的 `initial_location` 含 `corridor_2f`。
 
-当前只实现了日期推进（day counter）。一个完整的暴风雪山庄游戏循环至少需要：
-
-| 阶段 | 触发条件 | 行为 |
-|------|----------|------|
-| 日出 / 新一天 | tick 达到 day boundary | 唤醒所有角色，发射新一天事件 ← **已实现** |
-| 自由活动阶段 | 日出后 | 开放所有 invoke 能力 |
-| 调查阶段 | 发现尸体 / 定时触发 | 增强 investigate 能力、开放搜查 |
-| 公审阶段 | 达到指控阈值 | 发起投票、限制移动 |
-| 夜间阶段 | tick 达到 night boundary | 限制可见性、开放黑幕专属能力 |
-| 终局判定 | 第 7 天 / 黑幕全灭 / 平民全灭 | 结算、发射结局事件 |
-
-### 4.4 mastermind 插件功能有限
-
-当前只注入一段静态文本上下文。没有：
-- 黑幕行动窗口管理
-- 暗杀执行逻辑
-- 黑幕间协调机制（多黑幕场景）
+**修复**：统一为相同的位置池。由于 bootstrap 的空间初始化覆盖 entities 的 `initial_location`，最安全的做法是在 `bootstrap.yaml` 的位置池中也加入 `corridor_2f`（如果允许角色在二楼开始）或从 `entities.yaml` 的 `initial_location` 中移除 `corridor_2f`（如果一楼起始是设计意图）。
 
 ---
 
-## 5. 叙事机制缺失
+## 6. P1 — 角色系统
 
-### 5.1 胜负条件未定义
+### 6.1 高度同质化
 
-config.yaml 中提到 "在这里生存 7 天" 但没有任何规则定义：
-- 什么算"存活"？alive = true？
-- 7 天到了怎么办？自动终止？
-- 黑幕全部被识别/处决 → 平民胜利？
-- 平民死亡到什么程度 → 黑幕胜利？
-- 平局条件？
+12 个角色使用相同 `{{pick}}` 模板，存在三个问题：
 
-### 5.2 环境事件系统缺失
+1. **重复风险**：`pick` 宏对每个调用独立随机（`defaults.ts:127` 用 `fisherYatesShuffle` + `slice`），不同角色可能抽到相同名字/职业/秘密。
+2. **黑幕分配不可控**：每个角色独立 `pick from=['false',..., 'true',...]`，概率约 9%/角色。12 人中 0 个黑幕的概率 ≈ 31.8%，4+ 个黑幕的概率 ≈ 6.1%，与 `world.masterminds_alive` 的 `{{int min=1 max=3}}` 矛盾。
+3. **缺乏叙事结构**：`variables.team_dynamics` 描述了角色关系（如"至少三人是老相识"），但角色层面没有机制支撑。
 
-封闭环境悬疑的核心叙事张力来自「不可控的环境事件」推动情节。当前没有任何环境事件机制。
+**修复**：
 
-**建议的环境事件模板：**
-
-| 事件类型 | 触发方式 | 效果 |
-|----------|----------|------|
-| 停电 | 随机 / 黑幕触发 | 所有房间可见度降为 0，持手电筒者不受影响 |
-| 发现尸体 | 角色进入有尸体的房间 | 自动触发调查阶段 |
-| 暴风雪加剧 | 定时（第 3/5 天） | 某些区域不可进入（如阳台、阁楼） |
-| 神秘声响 | 随机 | 相邻房间角色触发 perceive.adjacent_sound |
-| 食物短缺 | 第 4 天起 | 增加角色焦虑状态，影响决策 |
-| 密道发现 | investigate 储藏室 | 解锁新地点（地下室） |
-
-### 5.3 社交关系机制缺失
-
-当前没有信任/怀疑/联盟的数值化系统。角色间的关系完全依赖 AI 的自由发挥，缺乏结构化追踪。
+- 黑幕分配：将 12 个角色的 `is_mastermind` 固定为 `false`，改为在 `bootstrap.yaml` 的 world state 中用 `{{pick from=['char_03','char_07','char_11'] count=2}}` 一次性选出 1-2 个黑幕角色 ID，然后在 game-loop 插件中将对应角色的 `is_mastermind` 设置为 `true`。
+- 角色模板分化：至少定义 2-3 组差异化角色（黑幕角色、调查型角色、普通角色），用不同的 personality 池和 secret 池。
+- 关系预置：在 bootstrap 中定义 2-3 组预设关系条目。
 
 ---
 
-## 6. 感知规则补充需求
+## 7. P2 — 插件系统
 
-现有 5 条感知规则覆盖了基本的同地点感知。但缺少：
+### 7.1 source 字段与实际文件不匹配
 
-| 需求 | 说明 |
-|------|------|
-| 相邻房间声音传播 | 尖叫、枪声、打斗声应传播到相邻房间（level: partial，只知道有声音，不知道具体内容） |
-| 死亡事件全局感知 | 发现尸体后，消息通过 NPC 传播扩散到全局 |
-| 黑幕间互相识别 | 黑幕应能感知其他黑幕的身份（perceive.mastermind 已有，但 perception 规则未体现） |
-| 物品存在感知 | 进入房间时应感知到可拾取物品（当前只有 hidden_details 但无结构化物品感知） |
+两个插件的 `plugin.manifest.yaml` 均声明 `source: "server.js"`，实际文件为 `server.ts`。
 
----
+加载链路：`runtime.ts:559` 拼接路径后做 `import(entrypointPath)`。开发环境 `tsx` 会回退到 `.ts`，生产环境 `node dist/index.js` 会抛出 `ERR_MODULE_NOT_FOUND`。
 
-## 7. 优先级路线图建议
+当前两个插件只使用了 `import type`，运行时被擦除不会导致导入失败。但如果将来添加 value import（如 `import { someFunction } from '...'`），生产环境将崩溃。
 
-### Phase 1: 结构补全（P0）— 使包能通过完整校验
-- [ ] 补充 README.md（按 WORLD_PACK.md §5 模板）
-- [ ] 补充 CHANGELOG.md
-- [ ] 修复 metadata.status → "beta"
-- [ ] 修复 bootstrap 中 event_prefix 的变量引用错误
-- [ ] 修复 prompts 中硬编码文本 → 使用模板变量
-- [ ] 补充 rules.invocation（至少 5 条精确落地规则）
-- [ ] 补充 rules.objective_enforcement（至少 investigate + kill + accuse）
-- [ ] 补充 ai.tasks（至少 agent_decision）
-- [ ] 补充 ai.memory_loop 配置
+**修复**：将 `plugin.manifest.yaml` 中的 `source: "server.js"` 改为 `source: "server.ts"`，或在打包流程中编译 `.ts` 为 `.js`。
 
-### Phase 2: 实体/能力扩充（P1）— 使包具有完整的悬疑推理玩法
-- [ ] 引入 entities.artifacts（凶器、钥匙、证据等核心物品）
-- [ ] 引入 entities.mediators（物品 → 能力的权限溯源）
-- [ ] 扩充 capabilities（kill, search_person, vote, lock, sabotage 等）
-- [ ] 扩充 authorities（条件化权限：黑幕专属、夜间限定、物品持有等）
-- [ ] 补充 storage.pack_collections（调查记录、死亡记录、物品流转等）
-- [ ] 补充 ai.slots（world_situation, spatial_awareness, investigation_progress）
-- [ ] 补充 rules.capability_resolution（死亡失能、夜间限制等）
-- [ ] 补充 perception 规则（声音传播、物品感知）
+### 7.2 导入路径脆弱
 
-### Phase 3: 叙事机制（P1-P2）— 使包产生有意义的叙事弧线
-- [ ] 定义胜负条件和终局判定规则
-- [ ] 实现游戏阶段循环（自由活动 → 调查 → 公审 → 夜间）
-- [ ] 引入环境事件系统（停电、暴风雪加剧、食物短缺等）
-- [ ] 改进角色生成：分层角色池、预置关系、受控黑幕分配
-- [ ] 补充 invocation 规则的翻译和叙述化模式
+两个插件使用 5 层相对路径：`'../../../../../apps/server/src/...'`。
 
-### Phase 4: 打磨与文档（P2）
-- [ ] 补充 docs/setting.md（详细世界设定）
-- [ ] 补充 docs/rules.md（完整游戏规则）
-- [ ] 补充 examples/overrides.example.yaml
-- [ ] 补充 assets/（地图示意图、封面）
-- [ ] 补充 LICENSE
-- [ ] 引入 entities.institutions（可选）
-- [ ] 优化插件导入路径
-- [ ] 确认 plugin manifest source 字段与实际文件的对齐
-- [ ] rules.projection 投影规则（存活列表、地点人员等）
+**修复**：等待引擎提供 plugin SDK 导出路径后替换。如果引擎已经有 `@yidhras/plugin-sdk` 或类似的包导出，应优先使用。短期可维持现状但加注释标记。
+
+### 7.3 game-loop 插件功能不足
+
+当前只实现了日推进。完整游戏循环需要：自由活动阶段、调查阶段、公审阶段、夜间阶段、终局判定。
+
+**修复**：分步实现。P1 阶段至少补充夜间/白天的能力开放/关闭逻辑和终局判定事件。完整游戏阶段循环为 P2。
 
 ---
 
-## 8. 与 world-death-note 的结构对比矩阵
+## 8. P2 — 项目化资产与文档
+
+| 缺失项 | 修复 |
+|--------|------|
+| `CHANGELOG.md` | 创建，记录从 prototype 到 beta 的所有变更 |
+| `LICENSE` | 如计划开放分发，添加 |
+| `docs/setting.md` | 详细世界设定：暴风雪山庄背景故事、建筑历史 |
+| `docs/rules.md` | 游戏规则详解：阶段流程、胜负条件、能力使用规则 |
+| `examples/overrides.example.yaml` | 覆盖配置示例 |
+| `assets/` | 封面图、地图示意图 |
+| `metadata.presentation` | 填充 cover_image/icon/theme |
+
+---
+
+## 9. 对比矩阵（校正版）
 
 | 维度 | snowbound_mansion | world-death-note | 差距 |
 |------|-------------------|------------------|------|
-| README.md | 无 | 有（4KB） | 需补 |
+| README.md | 无 | 有 | 需补 |
 | CHANGELOG.md | 无 | 有 | 需补 |
-| entities.actors | 12 个（纯随机模板） | 3 个（精心设计） | 质量差距 |
-| entities.artifacts | 0 | 1（death note） | 需补 |
+| entities.actors | 12 个（同质化模板） | 3 个（精心设计） | 质量差距 |
+| entities.artifacts | 0 | 1 | 需补 |
 | entities.mediators | 0 | 1 | 需补 |
-| entities.institutions | 0 | 3 | 可选 |
 | entities.domains | 15 | 3 | snowbound 更丰富 |
 | capabilities | 5 | 11 | 需扩充 |
-| authorities | 5 | 11 | 需扩充 |
+| authorities | 5（全部 intrinsic） | 11（含 mediated + conditional） | 需扩充 |
 | rules.perception | 5 条 | 0 条 | snowbound 更丰富 |
-| rules.invocation | 0 条 | 18 条 | **严重缺失** |
-| rules.objective_enforcement | 1 条（无 mutate） | 12 条（完整 mutate） | **严重缺失** |
+| rules.invocation | 0 条 | 21 条 | **严重缺失** |
+| rules.objective_enforcement | 1 条（无 mutate） | 11 条（完整 mutate） | **严重缺失** |
 | rules.capability_resolution | 0 | 0 | 双方均缺 |
 | rules.projection | 0 | 0 | 双方均缺 |
 | ai.tasks | 0 | 5 | 需补 |
-| ai.slots | 0 | 0 | 双方均缺 |
 | ai.memory_loop | 无 | 有 | 需补 |
 | storage.pack_collections | 0 | 3 | 需补 |
-| spatial | 15 地点 + 18 条边 | 无 | snowbound 更丰富 |
-| plugins | 2 个 TS 插件 | 0 | snowbound 更丰富 |
-| prompts 模板化 | 部分硬编码 | 模板变量引用 | 需修复 |
-| 角色关系系统 | 无 | 无 | 双方均缺 |
-| 环境事件系统 | 无 | dynamics_config | 需补 |
-| 胜负条件 | 无 | 无（隐含在规则中） | 需补 |
+| spatial | 15 地点 + 15 边 | 无 | snowbound 更丰富 |
+| plugins | 2 个（仅 type import） | 0 | snowbound 更丰富 |
+| prompts 模板变量 | 9 个断裂变量 | 正确引用 | **P0 需修** |
+| variables.yaml | 死数据（内联 pick） | 被 `{{ pack.variables.* }}` 引用 | 需修 |
+| 模板变量路径 | 使用不存在的 `{{ world.* }}` | 未使用跨层引用 | **P0 需修** |
 
 ---
 
-## 9. 总结
+## 10. 总结
 
-snowbound_mansion 作为原型包已经验证了空间语义、宏系统、信息不对称和多 agent 自主叙事的核心管线。其空间模型（15 地点 + 18 边 + 5 条感知规则）和插件体系（game-loop + mastermind）是 death-note 所不具备的能力。
+snowbound_mansion 的空间模型和插件体系已经验证了核心管线。升级为正式包的三大核心差距：
 
-但要成为正式的世界包，最大的差距集中在三个方面：
+1. **模板变量管道断裂**（P0）：`prompts.yaml` 中 `{{ world.* }}` 和 `{{ actor.state.* }}` 全部解析为空，导致黑幕信息优势和角色身份注入完全失效。修复路径明确：改用 `{{ runtime.world_state.* }}` 和 `{{ runtime.pack_state.actor_state.* }}`。
 
-1. **意图到世界状态的完整管道**：缺少 invocation 规则 + objective_enforcement 的 mutate 块，导致角色的能力声明和权限授予形同虚设——AI 可以"说"它要做什么，但系统无法将意图转化为世界状态变更。
-2. **一等实体不足**：没有 artifacts 和 mediators，导致物品交互和基于物品的动态权限无法实现，这对悬疑推理场景是致命的。
-3. **AI 推理引导不足**：没有 ai.tasks、ai.slots、ai.memory_loop，导致 AI 在做角色决策时缺乏场景专用的引导和记忆管理。
+2. **意图→状态管道缺失**（P0）：0 条 invocation 规则 + 唯一 objective 规则无 mutate 块，意味着能力声明形同虚设。需要补充最小 5 条 invocation 规则 + 3 条 objective 规则。
 
-建议按 §7 的四阶段路线图推进，Phase 1 目标是使包通过完整校验并具备最小可运行的规则管道，Phase 2 目标是补齐实体和能力层使悬疑推理玩法完整。
+3. **一等实体和动态权限不足**（P1）：没有 artifacts 和 mediators，所有能力只能 intrinsic all_actors 授权，无法实现基于物品的条件化权限。需要至少 3 个 artifacts + 1 个 mediator + 2 个新能力 + 对应 authorities 验证链路。

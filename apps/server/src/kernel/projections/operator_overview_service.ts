@@ -1,5 +1,4 @@
 import type { AppInfrastructure } from '../../app/context.js';
-import { resolveActivePack } from '../../app/services/pack_runtime_resolution.js';
 import { getRuntimeStatusSnapshot } from '../../app/services/system.js';
 import {
   createPackEntityOverviewProjectionService,
@@ -57,9 +56,8 @@ export const getOperatorOverviewProjection = async (
   const runtime = await getRuntimeStatusSnapshot(context, {
     packId: options.packId
   });
-  const activePack = resolveActivePack(context);
 
-  if (!activePack && options.packId === undefined) {
+  if (!options.packId) {
     return {
       runtime,
       pack_projection: {
@@ -75,7 +73,7 @@ export const getOperatorOverviewProjection = async (
 
   const scope = createPackProjectionScopeAdapter(context);
   const resolved = await scope.resolveStablePack(
-    options.packId ?? activePack?.metadata.id ?? '',
+    options.packId,
     options.feature ?? 'operator overview projection'
   );
   const projectionService = createPackEntityOverviewProjectionService(context);

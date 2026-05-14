@@ -4,6 +4,7 @@ import { resolveConversationFormatConfig } from '../../conversation/format_confi
 import { loadSlotBehaviorConfig, validateSlotBehaviorConfig } from '../../inference/slot_behavior.js';
 import { resolveSlotPositions } from '../../inference/slot_position_resolver.js';
 import type { InferenceContext } from '../../inference/types.js';
+import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import { createBehaviorControlExecutor } from './executors/behavior_control.js';
 import { createBundleFinalizeExecutor } from './executors/bundle_finalize.js';
 import { createContentTransformExecutor } from './executors/content_transform.js';
@@ -13,7 +14,6 @@ import { createPlacementResolutionExecutor } from './executors/placement_resolut
 import { createTokenBudgetTrimExecutor } from './executors/token_budget_trim.js';
 import { runPipeline } from './pipeline_runner.js';
 import { selectPromptWorkflowProfile } from './profiles.js';
-import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import { createPromptWorkflowStepRegistry } from './registry.js';
 import { runConversationHistoryTrack } from './tracks/conversation_history_track.js';
 import { runNodeTrack } from './tracks/node_track.js';

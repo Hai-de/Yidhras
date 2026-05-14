@@ -104,7 +104,7 @@ export const registerPackSnapshotRoutes = (
         label: body.label,
         prisma: context.prisma,
         packStorageAdapter: context.packStorageAdapter,
-        activePackRuntime: packHost ?? undefined,
+        packRuntime: packHost ?? undefined,
         getExperimentalTick,
         getExperimentalRevision
       });

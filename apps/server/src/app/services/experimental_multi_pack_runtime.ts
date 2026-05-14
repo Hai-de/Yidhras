@@ -2,7 +2,7 @@ import type { PackRuntimeHandle } from '../../core/pack_runtime_handle.js';
 import type { PackRuntimeStatusSnapshot } from '../../core/pack_runtime_health.js';
 import type { PackRuntimeHost } from '../../core/pack_runtime_host.js';
 import type { PackRuntimeRegistry } from '../../core/pack_runtime_registry.js';
-import { syncExperimentalPackPluginRuntime } from '../../plugins/runtime.js';
+import { syncPackPluginRuntime } from '../../plugins/runtime.js';
 import type { AppContext } from '../context.js';
 import {
   getPackRuntimeControl,
@@ -56,15 +56,12 @@ export const getExperimentalPackRuntimeStatusSnapshot = async (
     return null;
   }
 
-  const runtimeReadyPackId = getPackRuntimeLookupPort({
-    packRuntimeLookup: context.packRuntimeLookup
-  }).getActivePackId();
   const controlPlane = await buildExperimentalPackRuntimeSnapshot(context, packId);
 
   return {
     ...snapshot,
     startup_level: context.startupHealth.level,
-    runtime_ready: runtimeReadyPackId === packId && context.isRuntimeReady(),
+    runtime_ready: context.isRuntimeReady(),
     message: snapshot.message ?? null,
     control_plane: controlPlane ?? undefined
   };
@@ -77,7 +74,7 @@ export const loadExperimentalPackRuntime = async (
   const result = await getPackRuntimeControl({
     packRuntimeControl: context.packRuntimeControl
   }).load(packRef);
-  await syncExperimentalPackPluginRuntime(context, result.handle.pack_id);
+  await syncPackPluginRuntime(context, result.handle.pack_id);
   return result;
 };
 

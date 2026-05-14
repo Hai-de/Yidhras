@@ -17,9 +17,10 @@ export interface ExtendedInferenceContext {
 
 export const buildExtendedInferenceContext = async (
   context: AppContext,
-  input: Parameters<typeof buildInferenceContext>[1]
+  input: Parameters<typeof buildInferenceContext>[1],
+  packId: string
 ): Promise<ExtendedInferenceContext> => {
-  const base = await buildInferenceContext(context, input);
+  const base = await buildInferenceContext(context, input, packId);
 
   const authorityContext = await resolveAuthorityForSubject(context, {
     packId: base.world_pack.id,

@@ -4,10 +4,10 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { createPrismaClient } from '../db/client.js';
 import * as YAML from 'yaml';
 
 import { resolveWorkspaceRoot } from '../config/loader.js';
+import { createPrismaClient } from '../db/client.js';
 
 const workspaceRoot = resolveWorkspaceRoot();
 const dataDir = path.join(workspaceRoot, 'data');

@@ -6,7 +6,6 @@ import {
 
 import type { AppInfrastructure } from '../../app/context.js';
 import type { AppContextPorts } from '../../app/services/app_context_ports.js';
-import { resolveActivePack } from '../../app/services/pack_runtime_resolution.js';
 
 type EnforcementContext = AppInfrastructure & Pick<AppContextPorts, 'worldEngine'> & {
   getSpatialRuntime?(): import('../../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
@@ -256,7 +255,8 @@ export const spatialPredicateMatches = (
 
 export const enforceInvocationRequest = async (
   context: EnforcementContext,
-  invocation: InvocationRequest
+  invocation: InvocationRequest,
+  packRuntime?: { getPack(): { metadata: { id: string }; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> } } | undefined }
 ): Promise<InvocationEnforcementResult> => {
   const now = invocation.created_at;
 
@@ -277,8 +277,8 @@ export const enforceInvocationRequest = async (
     let filteredRules: Array<{ id: string; when?: unknown; then?: unknown }> | null = null;
 
     if (spatialRuntime && subjectEntityId) {
-      const activePack = resolveActivePack(context);
-      const allRules = activePack?.rules?.objective_enforcement;
+      const pack = packRuntime?.getPack();
+      const allRules = pack?.rules?.objective_enforcement;
       if (allRules && allRules.length > 0) {
         const subjectLocation = await spatialRuntime.getLocation(subjectEntityId);
         filteredRules = allRules.filter((rule) => {
@@ -303,7 +303,7 @@ export const enforceInvocationRequest = async (
         effectiveMediatorId: mediatorId,
         packStorageAdapter: context.packStorageAdapter,
         filteredRules
-      });
+      }, packRuntime);
       const sidecarResult = normalizeObjectiveRuleSidecarResult(
         await context.worldEngine.executeObjectiveRule(sidecarRequest)
       );

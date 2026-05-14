@@ -9,18 +9,15 @@ export interface PackResolution {
 export interface DefaultPackCatalogServiceOptions {
   packsDir: string;
   loader?: PackManifestLoader;
-  getActivePack?: () => WorldPack | undefined;
 }
 
 export class DefaultPackCatalogService implements PackCatalogService {
   private readonly packsDir: string;
   private readonly loader: PackManifestLoader;
-  private readonly getActivePackRef: () => WorldPack | undefined;
 
   constructor(options: DefaultPackCatalogServiceOptions) {
     this.packsDir = options.packsDir;
     this.loader = options.loader ?? new PackManifestLoader(this.packsDir);
-    this.getActivePackRef = options.getActivePack ?? (() => undefined);
   }
 
   public listAvailablePacks(): string[] {
@@ -35,16 +32,6 @@ export class DefaultPackCatalogService implements PackCatalogService {
     const normalizedPackRef = packRef.trim();
     if (normalizedPackRef.length === 0) {
       return null;
-    }
-
-    const activePack = this.getActivePackRef();
-    if (activePack && (activePack.metadata.id === normalizedPackRef || activePack.metadata.name === normalizedPackRef)) {
-      return {
-        pack: activePack,
-        packFolderName: normalizedPackRef === activePack.metadata.id
-          ? this.findFolderNameByPackId(activePack.metadata.id) ?? normalizedPackRef
-          : normalizedPackRef
-      };
     }
 
     for (const packFolderName of this.listAvailablePacks()) {

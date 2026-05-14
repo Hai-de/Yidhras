@@ -70,7 +70,7 @@ const clearSchedulerPendingBaseline = async (
 describe('audit workflow lineage e2e', () => {
   it('exposes parent/child workflow lineage through audit workflow detail endpoints', async () => {
     const environment = await createIsolatedRuntimeEnvironment({
-      activePackRef: DEATH_NOTE_PACK_REF,
+      packRef: DEATH_NOTE_PACK_REF,
       seededPackRefs: [DEATH_NOTE_PACK_REF]
     });
     const prisma = createPrismaClientForEnvironment(environment);

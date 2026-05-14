@@ -2,12 +2,12 @@ import { getSchedulerRunnerConfig } from '../../config/runtime_config.js';
 import type { InferenceService } from '../../inference/service.js';
 import { createLogger } from '../../utils/logger.js';
 import type { AppContext } from '../context.js';
-import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
 import {
   claimDecisionJob,
   listRunnableDecisionJobs,
   updateDecisionJobState
 } from '../services/inference_workflow.js';
+import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
 import { hasActiveWorkflowForActor } from './entity_activity_query.js';
 import { runWithConcurrency } from './runner_concurrency.js';
 

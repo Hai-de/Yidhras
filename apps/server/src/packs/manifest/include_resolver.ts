@@ -107,7 +107,7 @@ export function resolveIncludes(
           });
           continue;
         }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+         
         parsed = result as Record<string, unknown>;
         loadedFiles.set(absolutePath, parsed);
       } catch (err) {

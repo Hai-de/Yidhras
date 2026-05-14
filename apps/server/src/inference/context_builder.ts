@@ -2,13 +2,13 @@ import { randomUUID } from 'node:crypto';
 
 import { AccessPolicyService } from '../access_policy/service.js';
 import type { AppInfrastructure } from '../app/context.js';
-import { resolveActivePack, resolvePackTick } from '../app/services/pack_runtime_resolution.js';
 import { getAgentContextSnapshot } from '../app/services/agent.js';
 import type { AppContextPorts } from '../app/services/app_context_ports.js';
 import { createContextAssemblyPort } from '../app/services/context_memory_ports.js';
 import { getLatestEventEvidenceRecord } from '../app/services/event_evidence_repository.js';
-import type { IdentityContext } from '../identity/types.js';
+import { resolvePackTick } from '../app/services/pack_runtime_resolution.js';
 import { resolveAuthorityForSubject } from '../domain/authority/resolver.js';
+import type { IdentityContext } from '../identity/types.js';
 import { DEFAULT_PACK_WORLD_ENTITY_ID } from '../packs/runtime/core_models.js';
 import { listPackEntityStateProjectionRecords } from '../packs/storage/entity_state_projection.js';
 import type { PromptVariableContext, PromptVariableNamespace } from '../template_engine/frontends/narrative/types.js';
@@ -46,7 +46,9 @@ import type {
   InferenceTransmissionProfile
 } from './types.js';
 
-type Ctx = AppInfrastructure & Pick<AppContextPorts, 'packRuntimeLookup' | 'contextAssembly'>;
+type Ctx = AppInfrastructure & Pick<AppContextPorts, 'packRuntimeLookup' | 'contextAssembly'> & {
+  getPackRuntimeHost?(packId: string): { getPack(): import('../packs/manifest/loader.js').WorldPack | undefined } | null;
+};
 
 const SUPPORTED_STRATEGIES: InferenceStrategy[] = ['mock', 'rule_based', 'model_routed'];
 
@@ -165,7 +167,7 @@ export const packEntityIdFromResolvedAgentId = (packId: string, resolvedAgentId:
 
 const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?: string): Promise<ResolvedActor> => {
   if (input.agent_id) {
-    const agentContext = await getAgentContextSnapshot(context, input.agent_id);
+    const agentContext = await getAgentContextSnapshot(context, input.agent_id, packId);
     return {
       identity: agentContext.identity as IdentityContext,
       actor_ref: {
@@ -194,7 +196,7 @@ const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?:
     const binding = bindings[0] ?? null;
 
     if (binding?.agent_id) {
-      const boundAgentContext = await getAgentContextSnapshot(context, binding.agent_id);
+      const boundAgentContext = await getAgentContextSnapshot(context, binding.agent_id, packId);
       return {
         identity,
         actor_ref: {
@@ -254,8 +256,8 @@ const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?:
       });
     }
 
-    const activePack = resolveActivePack(context);
-    const actorDef = activePack?.entities?.actors?.find(a => a.id === input.actor_entity_id);
+    const pack = context.getPackRuntimeHost?.(packId)?.getPack();
+    const actorDef = pack?.entities?.actors?.find(a => a.id === input.actor_entity_id);
     const entityKind = actorDef?.kind ?? 'actor';
 
     const binding = await context.repos.identityOperator.findActiveBindingForAgent(bridgedAgentId);
@@ -540,14 +542,14 @@ const buildPackStateSnapshot = async (
   };
 };
 
-const buildPackRuntimeContract = (context: Ctx): InferencePackRuntimeContract => {
-  const activePack = resolveActivePack(context);
-  if (!activePack) {
+const buildPackRuntimeContract = (context: Ctx, packId: string): InferencePackRuntimeContract => {
+  const pack = context.getPackRuntimeHost?.(packId)?.getPack();
+  if (!pack) {
     return {};
   }
 
   return {
-    invocation_rules: (activePack.rules?.invocation ?? []).map(rule => ({
+    invocation_rules: (pack.rules?.invocation ?? []).map(rule => ({
       id: rule.id,
       when: { ...(rule.when ?? {}) },
       then: { ...(rule.then ?? {}) }
@@ -565,11 +567,7 @@ const createPackRuntimeContractResolver = (): PackRuntimeContractResolver => {
       }
     ): Promise<InferencePackRuntimeContract> {
       if (input.mode === 'stable') {
-        const activePack = resolveActivePack(context);
-        if (!activePack || activePack.metadata.id !== input.pack_id) {
-          return Promise.resolve({});
-        }
-        return Promise.resolve(buildPackRuntimeContract(context));
+        return Promise.resolve(buildPackRuntimeContract(context, input.pack_id));
       }
 
       const summary = context.packRuntimeLookup?.getPackRuntimeSummary(input.pack_id);
@@ -674,30 +672,8 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
     async buildForPack(context: Ctx, input: BuildInferenceContextForPackInput): Promise<InferenceContext> {
       context.assertRuntimeReady('inference context');
 
-      const activePack = resolveActivePack(context);
-
-      const stablePack = input.mode === 'stable' ? activePack : undefined;
-      const experimentalSummary = input.mode === 'experimental' ? context.packRuntimeLookup?.getPackRuntimeSummary(input.pack_id) : null;
-      // NOTE: packRuntimeLookup.getPackRuntimeSummary uses a slimmer shape; the full
-      // pack object for experimental mode is not yet exposed through a focused port.
-      // Experimental mode will need an additional port in a future batch.
-      const pack = stablePack && stablePack.metadata.id === input.pack_id
-        ? stablePack
-        : undefined;
-
+      const pack = context.getPackRuntimeHost?.(input.pack_id)?.getPack();
       if (!pack) {
-        const activePackId = activePack?.metadata.id ?? '(none)';
-        if (input.mode === 'stable') {
-          logger.error(
-            `Pack ID mismatch in stable mode: requested=${input.pack_id}, active=${activePackId}. ` +
-            `Ensure the active pack matches the requested pack_id.`
-          );
-        } else {
-          logger.error(
-            `Pack not found in experimental mode: requested=${input.pack_id}, active=${activePackId}. ` +
-            `Ensure the experimental pack has been loaded via the registry.`
-          );
-        }
         throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for inference context', {
           pack_id: input.pack_id,
           startup_level: context.startupHealth.level,
@@ -705,9 +681,7 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         });
       }
 
-      const currentTick = input.mode === 'experimental'
-        ? experimentalSummary?.current_tick ?? '0'
-        : resolvePackTick(context).toString();
+      const currentTick = resolvePackTick(context).toString();
 
       const strategy = selectStrategy(input);
       const attributes = normalizeAttributes(input.attributes);
@@ -742,7 +716,7 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         attributes,
         config
       );
-      const contextAssembly = context.contextAssembly ?? createContextAssemblyPort(context);
+      const contextAssembly = context.contextAssembly ?? createContextAssemblyPort(context as unknown as import('../app/context.js').AppContext);
       if (!contextAssembly.buildContextRun) {
         throw new ApiError(500, 'CONTEXT_ASSEMBLY_MISSING', 'Context assembly port is not configured with buildContextRun');
       }
@@ -805,19 +779,12 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
 
 export const buildInferenceContext = async (
   context: Ctx,
-  input: InferenceRequestInput
+  input: InferenceRequestInput,
+  packId: string
 ): Promise<InferenceContext> => {
-  const pack = resolveActivePack(context);
-  if (!pack) {
-    throw new ApiError(503, 'WORLD_PACK_NOT_READY', 'World pack not ready for inference context', {
-      startup_level: context.startupHealth.level,
-      available_world_packs: context.startupHealth.available_world_packs
-    });
-  }
-
   return createPackScopedInferenceContextBuilder().buildForPack(context, {
     ...input,
-    pack_id: pack.metadata.id,
+    pack_id: packId,
     mode: 'stable'
   });
 };
