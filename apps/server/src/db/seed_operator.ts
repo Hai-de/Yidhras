@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { createPrismaClient } from './client.js'
 
 import { hashPassword } from '../operator/auth/password.js'
 import {
@@ -10,7 +10,7 @@ import { createLogger } from '../utils/logger.js'
 
 const logger = createLogger('seed-operator')
 
-const prisma = new PrismaClient()
+const prisma = createPrismaClient()
 
 async function main() {
   const rootPassword = process.env.ROOT_PASSWORD || 'changeme-root-password'

@@ -86,7 +86,7 @@ export const registerConfigRoutes = (
     requireRoot,
     deps.asyncHandler(async (req, res) => {
       const body = parseBody(updateConfigSchema, req.body, 'INVALID_CONFIG_UPDATE')
-      const domain = req.params.domain
+      const domain = req.params.domain as string
       const result = updateDomainConfig(domain, body)
 
       if (!result) {

@@ -25,10 +25,8 @@ const ensureRootPackBinding = async (
   databaseUrl: string,
   packId: string
 ): Promise<void> => {
-  const { PrismaClient } = await import('@prisma/client');
-  const prisma = new PrismaClient({
-    datasources: { db: { url: databaseUrl } }
-  });
+  const { createPrismaClient } = await import('../../src/db/client.js');
+  const prisma = createPrismaClient(databaseUrl);
 
   try {
     const rootOp = await prisma.operator.findUnique({ where: { username: 'root' } });
@@ -55,10 +53,8 @@ const seedPlugin = async (
   databaseUrl: string,
   seed: PluginSeed
 ): Promise<void> => {
-  const { PrismaClient } = await import('@prisma/client');
-  const prisma = new PrismaClient({
-    datasources: { db: { url: databaseUrl } }
-  });
+  const { createPrismaClient } = await import('../../src/db/client.js');
+  const prisma = createPrismaClient(databaseUrl);
 
   try {
     const manifestJson = {

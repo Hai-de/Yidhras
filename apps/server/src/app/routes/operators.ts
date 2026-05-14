@@ -67,7 +67,7 @@ export const registerOperatorRoutes = (
     '/api/operators/:id',
     deps.asyncHandler(async (req, res) => {
       requireRoot(req)
-      const operator = await getOperator(context, req.params.id)
+      const operator = await getOperator(context, req.params.id as string)
       jsonOk(res, toJsonSafe(operator))
     })
   )
@@ -81,7 +81,7 @@ export const registerOperatorRoutes = (
 
       const operator = await updateOperator(
         context,
-        req.params.id,
+        req.params.id as string,
         body,
         req.operator?.id,
         req.ip
@@ -98,7 +98,7 @@ export const registerOperatorRoutes = (
       requireRoot(req)
       const operator = await deleteOperator(
         context,
-        req.params.id,
+        req.params.id as string,
         req.operator?.id,
         req.ip
       )

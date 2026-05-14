@@ -74,9 +74,9 @@ export const registerConfigBackupRoutes = (
       if (!operator) {
         throw new ApiError(401, 'OPERATOR_REQUIRED', 'Authentication required')
       }
-      const backup = getConfigBackup(req.params.id)
+      const backup = getConfigBackup(req.params.id as string)
       if (!backup) {
-        throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params.id} 不存在`)
+        throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params.id as string} 不存在`)
       }
       jsonOk(res, toJsonSafe(backup))
     }
@@ -87,9 +87,9 @@ export const registerConfigBackupRoutes = (
     '/api/config/backups/:id/download',
     requireRoot,
     (req, res) => {
-      const backup = getConfigBackup(req.params.id)
+      const backup = getConfigBackup(req.params.id as string)
       if (!backup) {
-        throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params.id} 不存在`)
+        throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params.id as string} 不存在`)
       }
       res.download(backup.path, `${backup.id}.tar.gz`)
     }
@@ -100,9 +100,9 @@ export const registerConfigBackupRoutes = (
     '/api/config/backups/:id',
     requireRoot,
     (req, res) => {
-      const deleted = deleteConfigBackup(req.params.id)
+      const deleted = deleteConfigBackup(req.params.id as string)
       if (!deleted) {
-        throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params.id} 不存在`)
+        throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params.id as string} 不存在`)
       }
       jsonOk(res, { deleted: true })
     }
@@ -114,7 +114,7 @@ export const registerConfigBackupRoutes = (
     requireRoot,
     deps.asyncHandler(async (req, res) => {
       const force = req.query.force === 'true'
-      await restoreConfigBackup(req.params.id, force)
+      await restoreConfigBackup(req.params.id as string, force)
       jsonOk(res, { restored: true })
     })
   )

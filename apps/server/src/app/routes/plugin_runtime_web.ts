@@ -70,7 +70,7 @@ export const registerPluginRuntimeWebRoutes = (
   );
 
   app.get(
-    '/api/experimental/runtime/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*',
+    '/api/experimental/runtime/packs/:packId/plugins/:pluginId/runtime/web/:installationId/{*assetPath}',
     deps.asyncHandler(async (req, res) => {
       const params = parseParams(
         pluginWebAssetParamsSchema,
@@ -81,7 +81,7 @@ export const registerPluginRuntimeWebRoutes = (
         },
         'PLUGIN_QUERY_INVALID'
       );
-      const wildcardAssetPath = typeof req.params[0] === 'string' ? req.params[0] : '';
+      const wildcardAssetPath = typeof req.params.assetPath === 'string' ? req.params.assetPath : '';
       const asset = await packScopedPluginRuntimeService.resolveEnabledPluginWebAsset({
         pack_id: params.packId,
         plugin_id: params.pluginId,
@@ -101,7 +101,7 @@ export const registerPluginRuntimeWebRoutes = (
   );
 
   app.get(
-    '/api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*',
+    '/api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/{*assetPath}',
     deps.asyncHandler(async (req, res) => {
       const params = parseParams(
         pluginWebAssetParamsSchema,
@@ -112,7 +112,7 @@ export const registerPluginRuntimeWebRoutes = (
         },
         'PLUGIN_QUERY_INVALID'
       );
-      const wildcardAssetPath = typeof req.params[0] === 'string' ? req.params[0] : '';
+      const wildcardAssetPath = typeof req.params.assetPath === 'string' ? req.params.assetPath : '';
       const asset = await packScopedPluginRuntimeService.resolveEnabledPluginWebAsset({
         pack_id: params.packId,
         plugin_id: params.pluginId,

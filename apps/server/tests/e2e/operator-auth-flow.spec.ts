@@ -27,10 +27,8 @@ describe('operator auth e2e', () => {
     await prepareIsolatedRuntime(env, 120_000)
 
     // 手动 seed operator 数据
-    const { PrismaClient } = await import('@prisma/client')
-    const prisma = new PrismaClient({
-      datasources: { db: { url: env.databaseUrl } }
-    })
+    const { createPrismaClient } = await import('../../src/db/client.js')
+    const prisma = createPrismaClient(env.databaseUrl)
 
     const now = BigInt(Date.now())
     const rootPasswordHash = await hashPassword(ROOT_PASSWORD, 4)

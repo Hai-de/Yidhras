@@ -1,12 +1,12 @@
 import 'dotenv/config';
 
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from './client.js';
 
 import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger('seed-identity');
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 type PolicySeed = {
   effect: 'allow' | 'deny';

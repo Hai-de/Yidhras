@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from './db/client.js';
 import path from 'path';
 
 import { listDynamicSlots, registerDynamicSlot, unregisterDynamicSlot } from './ai/registry.js';
@@ -100,7 +100,7 @@ if (cliWorkerIndex !== undefined) process.env.SCHEDULER_WORKER_INDEX = cliWorker
 if (cliWorkerTotal !== undefined) process.env.SCHEDULER_WORKER_TOTAL = cliWorkerTotal;
 // -- end CLI --
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const repos = createPrismaRepositories(prisma);
 const conversationStore = new PrismaConversationStore(prisma);
 const dbProvider = process.env.PRISMA_DB_PROVIDER ?? 'sqlite';

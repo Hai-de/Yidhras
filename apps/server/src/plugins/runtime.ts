@@ -511,8 +511,8 @@ export const refreshPackPluginRuntime = async (
     if (!manifest) continue;
 
     // Check Host API version compatibility
-    const requiredHostApi = manifest.compatibility.host_api;
-    if (!isHostApiCompatible(PLUGIN_HOST_API_VERSION, requiredHostApi)) {
+    const requiredHostApi = manifest.compatibility?.host_api;
+    if (requiredHostApi && !isHostApiCompatible(PLUGIN_HOST_API_VERSION, requiredHostApi)) {
       runtimeLogger.error(
         `Plugin ${installation.plugin_id} requires host_api ${requiredHostApi} ` +
         `but server provides ${PLUGIN_HOST_API_VERSION}. Skipping activation.`

@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { PrismaClient } from '@prisma/client';
 
+import { createPrismaClient } from '../db/client.js';
 import { resolveWorkspaceRoot } from '../config/loader.js';
 
 const workspaceRoot = resolveWorkspaceRoot();
@@ -156,7 +157,7 @@ const runCli = async (): Promise<void> => {
 
   try {
     if (needsPrisma) {
-      prisma = new PrismaClient();
+      prisma = createPrismaClient();
       await prisma.$connect();
     }
 

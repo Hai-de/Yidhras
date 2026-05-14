@@ -41,7 +41,7 @@ export const registerPackBindingRoutes = (
 
       const binding = await createPackBinding(
         context,
-        req.params.packId,
+        req.params.packId as string,
         body.operator_id,
         body.binding_type,
         operator.id,
@@ -61,7 +61,7 @@ export const registerPackBindingRoutes = (
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
 
-      const bindings = await listPackBindings(context, req.params.packId)
+      const bindings = await listPackBindings(context, req.params.packId as string)
       jsonOk(res, toJsonSafe(bindings))
     })
   )
@@ -79,8 +79,8 @@ export const registerPackBindingRoutes = (
 
       const binding = await updatePackBinding(
         context,
-        req.params.packId,
-        req.params.operatorId,
+        req.params.packId as string,
+        req.params.operatorId as string,
         body.binding_type,
         operator.id,
         req.ip
@@ -101,8 +101,8 @@ export const registerPackBindingRoutes = (
 
       const result = await removePackBinding(
         context,
-        req.params.packId,
-        req.params.operatorId,
+        req.params.packId as string,
+        req.params.operatorId as string,
         operator.id,
         req.ip
       )

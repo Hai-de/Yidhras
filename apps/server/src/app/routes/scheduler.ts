@@ -262,7 +262,7 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('agent scheduler decisions')
       const packId = req.query.packId as string | undefined
-      const decisions = listAgentSchedulerDecisions(context, req.params.id, undefined, packId)
+      const decisions = listAgentSchedulerDecisions(context, req.params.id as string, undefined, packId)
       jsonOk(res, toJsonSafe(decisions))
     })
   )

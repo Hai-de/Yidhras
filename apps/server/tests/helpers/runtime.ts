@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { PrismaClient } from '@prisma/client';
 
+import { createPrismaClient } from '../../src/db/client.js';
 import type { RunningServer, TestServerOptions } from './server.js';
 import { withTestServer } from './server.js';
 
@@ -121,7 +122,7 @@ const seedBundledWorldPacks = async (worldPacksDir: string, seededPackRefs?: See
     await mkdir(targetPackDir, { recursive: true });
     await copyFile(
       templatePath,
-      join(targetPackDir, 'config.yaml')
+      join(targetPackDir, 'pack.yaml')
     );
   }
 };
@@ -211,13 +212,7 @@ export const prepareIsolatedRuntime = async (
 };
 
 export const createPrismaClientForEnvironment = (environment: IsolatedRuntimeEnvironment): PrismaClient => {
-  return new PrismaClient({
-    datasources: {
-      db: {
-        url: environment.databaseUrl
-      }
-    }
-  });
+  return createPrismaClient(environment.databaseUrl);
 };
 
 export const withIsolatedTestServer = async <T>(

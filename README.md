@@ -1,6 +1,6 @@
 # Yidhras (伊德海拉)
 
-Yidhras 是以 world pack 驱动罗生门模拟的基础设施，被设计用于模拟研究社会情报流转、散播与代理人链路以及供应链相关的基建平台。项目底层提供权限/信息/过滤/审查/控制/阉割/操控agent的上下文达到目的。
+Yidhras 是以 world-pack 驱动罗生门模拟的基础设施，被设计用于模拟研究社会情报流转、散播与代理人链路以及供应链相关的基建平台。项目底层提供权限/信息/过滤/审查/控制/阉割/操控agent的上下文达到目的。
 
 > 本文件只保留仓库入口所需的最小信息：项目概览、启动方式、高频命令与文档导航。更具体的命令矩阵、接口契约、架构边界和专题说明请进入 `docs/`。
 
@@ -90,7 +90,7 @@ pnpm --filter yidhras-server reset:dev-db
 - 工作区单测：`pnpm test:unit`
 - 工作区单测 watch：`pnpm test:unit:watch`
 - 运行时准备：`pnpm prepare:runtime`
-- 新建 world pack：`pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"`
+- 新建world-pack：`pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"`
 - Server 冒烟：`pnpm smoke:server`
 - Runtime 配置说明：`docs/guides/COMMANDS.md`
 
@@ -126,14 +126,6 @@ pnpm --filter yidhras-server reset:dev-db
 - `docs/guides/DB_OPERATIONS.md`：数据库迁移、初始化、更换与常见坑
 - `docs/guides/PLUGIN_OPERATIONS.md`：pack-local plugin 的 CLI / GUI / API 操作说明
 
-### 过程资产
-
-- `.limcode/design/`：当前活跃/参考设计
-- `.limcode/plans/`：当前活跃/参考执行计划
-- `.limcode/review/`：当前活跃/参考评审记录
-- `.limcode/archive/`：已完成资产与历史草案归档
-- `.limcode/README.md`：`.limcode` 分层与归档规则
-
 ## 阅读建议
 
 如果你是：
@@ -145,4 +137,4 @@ pnpm --filter yidhras-server reset:dev-db
 - **想理解接口**：看 `docs/specs/API.md`
 - **想理解架构边界**：看 `docs/ARCH.md`
 - **想理解业务语义**：看 `docs/LOGIC.md`
-- **想操作插件治理**：看 `docs/guides/PLUGIN_OPERATIONS.md`
+- **想操作插件**：看 `docs/guides/PLUGIN_OPERATIONS.md`

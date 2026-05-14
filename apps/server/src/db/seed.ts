@@ -1,12 +1,12 @@
 import 'dotenv/config';
 
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from './client.js';
 
 import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger('seed');
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 async function main() {
   logger.info('开始注入种子数据');

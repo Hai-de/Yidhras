@@ -38,7 +38,7 @@ export const registerAgentBindingRoutes = (
 
       const binding = await createAgentBinding(
         context,
-        req.params.agentId,
+        req.params.agentId as string,
         body.operator_id || operator.identity_id,
         body.role,
         operator.id,
@@ -60,7 +60,7 @@ export const registerAgentBindingRoutes = (
 
       const result = await unbindAgent(
         context,
-        req.params.agentId,
+        req.params.agentId as string,
         operator.identity_id,
         operator.id,
         req.ip
@@ -74,7 +74,7 @@ export const registerAgentBindingRoutes = (
   app.get(
     '/api/agents/:agentId/operators',
     deps.asyncHandler(async (req, res) => {
-      const operators = await listAgentOperators(context, req.params.agentId)
+      const operators = await listAgentOperators(context, req.params.agentId as string)
       jsonOk(res, toJsonSafe(operators))
     })
   )

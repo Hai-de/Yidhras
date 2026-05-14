@@ -10,6 +10,8 @@ import crypto from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { createPrismaClient } from '../../../src/db/client.js';
+
 import { assembleConversationMessages } from '../../../src/conversation/assembler.js';
 import { DEFAULT_CONVERSATION_FORMAT_CONFIG } from '../../../src/conversation/format_config.js';
 import type { ConversationFormatConfig } from '../../../src/conversation/format_config.js';
@@ -24,7 +26,7 @@ import type { AiResolvedTaskConfig } from '../../../src/ai/types.js';
 
 // ── Test Helpers ───────────────────────────────────────────
 
-const TEST_DB_URL = process.env.DATABASE_URL ?? 'file:../../../data/yidhras.sqlite';
+const TEST_DB_URL = process.env.DATABASE_URL ?? 'file:../../data/yidhras.sqlite';
 
 const SLOT_REGISTRY: Record<string, PromptSlotConfig> = {
   system_core: {
@@ -173,9 +175,7 @@ describe('D2 — Conversation flow integration', () => {
   const runId = crypto.randomUUID().slice(0, 8);
 
   beforeAll(() => {
-    prisma = new PrismaClient({
-      datasources: { db: { url: TEST_DB_URL } }
-    });
+    prisma = createPrismaClient(TEST_DB_URL);
     store = new PrismaConversationStore(prisma);
   });
 

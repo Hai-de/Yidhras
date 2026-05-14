@@ -2,7 +2,9 @@ import 'dotenv/config';
 
 import { randomUUID } from 'node:crypto';
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client'
+
+import { createPrismaClient } from '../db/client.js';
 
 import { hashPassword } from '../operator/auth/password.js';
 
@@ -297,7 +299,7 @@ const runCli = async (): Promise<void> => {
     return;
   }
 
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
 
   try {
     await prisma.$connect();

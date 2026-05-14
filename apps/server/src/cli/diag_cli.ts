@@ -4,7 +4,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../db/client.js';
 import * as YAML from 'yaml';
 
 import { resolveWorkspaceRoot } from '../config/loader.js';
@@ -74,7 +74,7 @@ const buildReport = async (): Promise<DiagReport> => {
   let migrationCount = 0;
 
   if (dbExists) {
-    const prisma = new PrismaClient();
+    const prisma = createPrismaClient();
     try {
       await prisma.$connect();
       const rows = await prisma.$queryRawUnsafe<{ integrity_check: string }[]>('PRAGMA integrity_check');

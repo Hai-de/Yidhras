@@ -43,7 +43,7 @@ export const registerGrantRoutes = (
 
       const grant = await createOperatorGrant(
         context,
-        req.params.packId,
+        req.params.packId as string,
         operator.id,
         body.receiver_identity_id,
         body.capability_key,
@@ -68,7 +68,7 @@ export const registerGrantRoutes = (
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
 
-      const grants = await listOperatorGrants(context, req.params.packId, operator.id)
+      const grants = await listOperatorGrants(context, req.params.packId as string, operator.id)
       jsonOk(res, toJsonSafe(grants))
     })
   )
@@ -84,7 +84,7 @@ export const registerGrantRoutes = (
 
       const result = await revokeOperatorGrant(
         context,
-        req.params.grantId,
+        req.params.grantId as string,
         operator.id,
         req.ip
       )
