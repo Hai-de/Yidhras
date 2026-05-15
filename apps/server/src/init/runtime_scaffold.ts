@@ -18,7 +18,8 @@ const DEFAULT_WORLD_PACK_TEMPLATE_BASENAME = 'example_pack.yaml';
 const DEFAULT_WORLD_PACK_README_TEMPLATE_BASENAME = 'example_pack.README.md';
 const DEFAULT_WORLD_PACK_CHANGELOG_TEMPLATE_BASENAME = 'example_pack.CHANGELOG.md';
 const DEFAULT_AI_MODELS_CONFIG_BASENAME = 'ai_models.yaml';
-const VERSION_MANAGED_AI_CONFIG_RELATIVE_PATH = path.join('apps', 'server', 'config', DEFAULT_AI_MODELS_CONFIG_BASENAME);
+const VERSION_MANAGED_AI_CONFIG_TEMPLATE_RELATIVE_PATH = path.join('apps', 'server', 'config', DEFAULT_AI_MODELS_CONFIG_BASENAME);
+const AI_MODELS_CONFIG_TARGET_RELATIVE_PATH = path.join('data', 'configw', DEFAULT_AI_MODELS_CONFIG_BASENAME);
 
 const SEEDED_CONFIG_BASENAMES = [
   DEFAULT_CONFIG_BASENAME,
@@ -73,7 +74,7 @@ export const ensureRuntimeConfigScaffold = (
   const configDir = resolveFromWorkspaceRoot(CONFIG_DIR_RELATIVE_PATH, workspaceRoot);
   const configTemplateDir = resolveFromWorkspaceRoot(VERSION_MANAGED_CONFIG_TEMPLATE_DIR_RELATIVE_PATH, workspaceRoot);
   const worldPackTemplateDir = resolveFromWorkspaceRoot(VERSION_MANAGED_WORLD_PACK_TEMPLATE_DIR_RELATIVE_PATH, workspaceRoot);
-  const aiModelsConfigTemplatePath = resolveFromWorkspaceRoot(VERSION_MANAGED_AI_CONFIG_RELATIVE_PATH, workspaceRoot);
+  const aiModelsConfigTemplatePath = resolveFromWorkspaceRoot(VERSION_MANAGED_AI_CONFIG_TEMPLATE_RELATIVE_PATH, workspaceRoot);
 
   safeFs.mkdirSync(workspaceRoot, configDir, { recursive: true });
 
@@ -113,7 +114,7 @@ export const ensureRuntimeConfigScaffold = (
   }
 
   ensureFileFromTemplate(workspaceRoot,
-    resolveFromWorkspaceRoot(path.join('apps', 'server', 'config', DEFAULT_AI_MODELS_CONFIG_BASENAME), workspaceRoot),
+    resolveFromWorkspaceRoot(AI_MODELS_CONFIG_TARGET_RELATIVE_PATH, workspaceRoot),
     aiModelsConfigTemplatePath,
     result
   );

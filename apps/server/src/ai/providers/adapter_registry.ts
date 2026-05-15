@@ -1,6 +1,6 @@
 import { createLogger } from '../../utils/logger.js';
 import type { AiRegistryConfig } from '../types.js';
-import { createAnthropicProviderAdapter } from './anthropic.js';
+import { createAnthropicCompatibleAdapterFromTemplate, createAnthropicProviderAdapter } from './anthropic.js';
 import { createDeepSeekProviderAdapter } from './deepseek.js';
 import { createMockAiProviderAdapter } from './mock.js';
 import { createOllamaProviderAdapter } from './ollama.js';
@@ -35,6 +35,8 @@ export const buildAdaptersFromRegistry = (registryConfig: AiRegistryConfig): AiP
   for (const template of registryConfig.provider_templates ?? []) {
     if (template.kind === 'openai_compatible') {
       adapters.set(template.name, createOpenAiCompatibleAdapterFromTemplate(template));
+    } else if (template.kind === 'anthropic_compatible') {
+      adapters.set(template.name, createAnthropicCompatibleAdapterFromTemplate(template));
     } else if (template.kind === 'builtin' && template.builtin_name) {
       const factory = builtinFactories.get(template.builtin_name);
       if (factory) {

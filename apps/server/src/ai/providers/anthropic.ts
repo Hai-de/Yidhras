@@ -1,11 +1,34 @@
 import { ApiError } from '../../utils/api_error.js';
-import type { AiMessage, AiToolSpec, ModelGatewayResponse } from '../types.js';
+import type { AiMessage, AiProviderTemplate, AiToolSpec, ModelGatewayResponse } from '../types.js';
 import { getEnv, isRecord } from './shared.js';
 import type { AiProviderAdapter, AiProviderAdapterRequest, AiProviderAdapterResult } from './types.js';
 
 const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1';
 const ANTHROPIC_VERSION = '2023-06-01';
 const STRUCTURED_OUTPUT_TOOL_NAME = '__structured_output';
+
+// ── Config interfaces ────────────────────────────────────────────────────
+
+export interface AnthropicCompatibleCapabilityOverrides {
+  /** 是否启用 extended thinking。内置 anthropic 适配器默认 true */
+  supportsThinking?: boolean;
+  /** 是否支持 base64 图片输入。内置 anthropic 适配器默认 true */
+  supportsImageInput?: boolean;
+  /** 是否支持 tool use（包含 structured output via tool_use） */
+  supportsToolUse?: boolean;
+  /** Anthropic API 版本头。设 null 则不发送。默认 '2023-06-01' */
+  apiVersion?: string | null;
+  /** 认证头方式。默认 'x-api-key' */
+  authHeader?: 'x-api-key' | 'bearer';
+}
+
+export interface AnthropicCompatibleConfig {
+  provider: string;
+  resolveApiKey(input: AiProviderAdapterRequest): string | null;
+  resolveBaseUrl(input: AiProviderAdapterRequest): string;
+  buildHeaders?(input: AiProviderAdapterRequest): Record<string, string>;
+  capabilityOverrides?: AnthropicCompatibleCapabilityOverrides;
+}
 
 // ── Role mapping ───────────────────────────────────────────────────────
 
@@ -207,7 +230,8 @@ const buildToolResultMessages = (
 };
 
 const buildAnthropicRequest = (
-  input: AiProviderAdapterRequest
+  input: AiProviderAdapterRequest,
+  overrides?: AnthropicCompatibleCapabilityOverrides
 ): AnthropicMessagesRequest => {
   const { systemMessages, rest } = extractSystemMessages(input.request.messages);
   const systemPrompt = buildSystemPrompt(systemMessages);
@@ -248,8 +272,11 @@ const buildAnthropicRequest = (
     body.stop_sequences = input.request.sampling.stop;
   }
 
+  const supportsToolUse = overrides?.supportsToolUse !== false;
+
   // Structured output (json_schema) → tool_use
   if (
+    supportsToolUse &&
     input.request.response_mode === 'json_schema' &&
     input.request.structured_output
   ) {
@@ -267,21 +294,23 @@ const buildAnthropicRequest = (
       body.tools = [soTool];
       body.tool_choice = { type: 'tool', name: STRUCTURED_OUTPUT_TOOL_NAME };
     }
-  } else if (Array.isArray(input.request.tools) && input.request.tools.length > 0) {
+  } else if (supportsToolUse && Array.isArray(input.request.tools) && input.request.tools.length > 0) {
     // 仅 tool calling
     body.tools = buildAnthropicTools(input.request.tools);
     body.tool_choice = { type: 'auto' };
   }
 
   // Thinking (extended capacity)
-  const ext = input.request.sampling?.extensions;
-  if (ext && isRecord(ext.thinking)) {
-    const thinking = ext.thinking as { enabled?: boolean; budget_tokens?: number };
-    if (thinking.enabled) {
-      body.thinking = {
-        type: 'enabled',
-        budget_tokens: thinking.budget_tokens ?? 1024
-      };
+  if (overrides?.supportsThinking !== false) {
+    const ext = input.request.sampling?.extensions;
+    if (ext && isRecord(ext.thinking)) {
+      const thinking = ext.thinking as { enabled?: boolean; budget_tokens?: number };
+      if (thinking.enabled) {
+        body.thinking = {
+          type: 'enabled',
+          budget_tokens: thinking.budget_tokens ?? 1024
+        };
+      }
     }
   }
 
@@ -370,18 +399,34 @@ const parseAnthropicResponse = (payload: Record<string, unknown>, response: Resp
 
 const performAnthropicRequest = async (
   input: AiProviderAdapterRequest,
-  apiKey: string
+  config: AnthropicCompatibleConfig
 ): Promise<Response> => {
-  const baseUrl = input.model_entry.base_url ?? input.provider_config.base_url ?? ANTHROPIC_BASE_URL;
-  const body = buildAnthropicRequest(input);
+  const baseUrl = config.resolveBaseUrl(input);
+  const body = buildAnthropicRequest(input, config.capabilityOverrides);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+
+  const apiKey = config.resolveApiKey(input);
+  const authHeader = config.capabilityOverrides?.authHeader ?? 'x-api-key';
+  if (authHeader === 'bearer') {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  } else if (apiKey) {
+    headers['x-api-key'] = apiKey;
+  }
+
+  const apiVersion = config.capabilityOverrides?.apiVersion ?? ANTHROPIC_VERSION;
+  if (apiVersion !== null) {
+    headers['anthropic-version'] = apiVersion;
+  }
+
+  if (config.buildHeaders) {
+    Object.assign(headers, config.buildHeaders(input));
+  }
 
   return fetch(`${baseUrl}/messages`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': ANTHROPIC_VERSION
-    },
+    headers,
     body: JSON.stringify(body)
   });
 };
@@ -477,13 +522,15 @@ const extractRateLimitHintsFromHeaders = (response: Response): import('../elasti
   return hints;
 };
 
-// ── Adapter ────────────────────────────────────────────────────────────
+// ── Config-based adapter factory ────────────────────────────────────────
 
-export const createAnthropicProviderAdapter = (): AiProviderAdapter => {
+export const createAnthropicCompatibleAdapter = (
+  config: AnthropicCompatibleConfig
+): AiProviderAdapter => {
   return {
-    provider: 'anthropic',
+    provider: config.provider,
     async execute(input: AiProviderAdapterRequest): Promise<AiProviderAdapterResult> {
-      const apiKey = getEnv(input.provider_config.api_key_env);
+      const apiKey = config.resolveApiKey(input);
       if (!apiKey) {
         return {
           status: 'failed',
@@ -494,14 +541,14 @@ export const createAnthropicProviderAdapter = (): AiProviderAdapter => {
           raw_ref: undefined,
           error: {
             code: 'AI_PROVIDER_AUTH_MISSING',
-            message: 'Anthropic API key is not configured',
+            message: `${config.provider} API key is not configured`,
             retryable: false,
             stage: 'provider'
           }
         };
       }
 
-      const response = await performAnthropicRequest(input, apiKey);
+      const response = await performAnthropicRequest(input, config);
 
       if (!response.ok) {
         const { code, message, retryable } = await parseErrorPayload(response);
@@ -525,7 +572,7 @@ export const createAnthropicProviderAdapter = (): AiProviderAdapter => {
 
       const payload = (await response.json()) as unknown;
       if (!isRecord(payload)) {
-        throw new ApiError(500, 'AI_PROVIDER_DECODE_FAIL', 'Anthropic response payload is not an object');
+        throw new ApiError(500, 'AI_PROVIDER_DECODE_FAIL', `${config.provider} response payload is not an object`);
       }
 
       const result = parseAnthropicResponse(payload, response);
@@ -554,7 +601,7 @@ export const createAnthropicProviderAdapter = (): AiProviderAdapter => {
           raw_ref: result.raw_ref,
           error: {
             code: 'AI_PROVIDER_DECODE_FAIL',
-            message: 'Anthropic response is not valid JSON in json_object mode',
+            message: `${config.provider} response is not valid JSON in json_object mode`,
             retryable: false,
             stage: 'provider'
           }
@@ -565,35 +612,102 @@ export const createAnthropicProviderAdapter = (): AiProviderAdapter => {
     },
 
     async *executeStream(input, signal) {
-      const apiKey = getEnv(input.provider_config.api_key_env);
+      const apiKey = config.resolveApiKey(input);
       if (!apiKey) {
-        yield { type: 'error', code: 'AI_PROVIDER_AUTH_MISSING', message: 'Anthropic API key is not configured' };
+        yield { type: 'error', code: 'AI_PROVIDER_AUTH_MISSING', message: `${config.provider} API key is not configured` };
         return;
       }
 
-      const response = await performAnthropicStreamingRequest(input, apiKey, signal);
+      const response = await performAnthropicStreamingRequest(input, config, signal);
       yield* parseAnthropicSseStream(response);
     }
   };
+};
+
+// ── Builtin adapter ─────────────────────────────────────────────────────
+
+export const createAnthropicProviderAdapter = (): AiProviderAdapter => {
+  return createAnthropicCompatibleAdapter({
+    provider: 'anthropic',
+    resolveApiKey(input) {
+      return getEnv(input.provider_config.api_key_env);
+    },
+    resolveBaseUrl(input) {
+      return input.model_entry.base_url
+        ?? input.provider_config.base_url
+        ?? ANTHROPIC_BASE_URL;
+    },
+    buildHeaders(input) {
+      return { ...(input.provider_config.default_headers ?? {}) };
+    },
+    capabilityOverrides: {
+      supportsThinking: true,
+      supportsImageInput: true,
+      supportsToolUse: true
+    }
+  });
+};
+
+// ── Template-based factory ──────────────────────────────────────────────
+
+export const createAnthropicCompatibleAdapterFromTemplate = (
+  template: AiProviderTemplate
+): AiProviderAdapter => {
+  return createAnthropicCompatibleAdapter({
+    provider: template.name,
+    resolveApiKey(input) {
+      const envName = input.provider_config.api_key_env ?? template.api_key_env;
+      return getEnv(envName);
+    },
+    resolveBaseUrl(input) {
+      return input.model_entry.base_url
+        ?? input.provider_config.base_url
+        ?? template.base_url
+        ?? ANTHROPIC_BASE_URL;
+    },
+    buildHeaders(input) {
+      return {
+        ...(template.default_headers ?? {}),
+        ...(input.provider_config.default_headers ?? {})
+      };
+    },
+    capabilityOverrides: template.anthropic_overrides
+  });
 };
 
 // ── Anthropic streaming ─────────────────────────────────────────────────
 
 const performAnthropicStreamingRequest = async (
   input: AiProviderAdapterRequest,
-  apiKey: string,
+  config: AnthropicCompatibleConfig,
   signal?: AbortSignal
 ): Promise<Response> => {
-  const baseUrl = input.model_entry.base_url ?? input.provider_config.base_url ?? ANTHROPIC_BASE_URL;
-  const body = { ...buildAnthropicRequest(input), stream: true };
+  const baseUrl = config.resolveBaseUrl(input);
+  const body = { ...buildAnthropicRequest(input, config.capabilityOverrides), stream: true };
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+
+  const apiKey = config.resolveApiKey(input);
+  const authHeader = config.capabilityOverrides?.authHeader ?? 'x-api-key';
+  if (authHeader === 'bearer') {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  } else if (apiKey) {
+    headers['x-api-key'] = apiKey;
+  }
+
+  const apiVersion = config.capabilityOverrides?.apiVersion ?? ANTHROPIC_VERSION;
+  if (apiVersion !== null) {
+    headers['anthropic-version'] = apiVersion;
+  }
+
+  if (config.buildHeaders) {
+    Object.assign(headers, config.buildHeaders(input));
+  }
 
   return fetch(`${baseUrl}/messages`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': ANTHROPIC_VERSION
-    },
+    headers,
     body: JSON.stringify(body),
     signal
   });

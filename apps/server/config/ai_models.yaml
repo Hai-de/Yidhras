@@ -1,52 +1,329 @@
 version: 1
 
-# This file allows workspace-level AI model registry overrides without changing the
-# canonical server-side gateway contract.
+# AI 模型注册表 — 版本管理模板
+# 首次 prepare:runtime 时复制到 data/configw/ai_models.yaml，之后直接编辑 data/ 下的副本即可。
+# 此文件仅作为模板源和升级参考，运行时不从此路径读取。
 #
-# Arrays are merged by stable keys in code:
-# - providers => provider
-# - models => provider + model
-# - routes => route_id
+# 数组按键合并（非替换）：
+# - providers → provider
+# - models → provider + model
+# - routes → route_id
 #
-# Typical usage:
-# providers:
-#   - provider: openai
-#     enabled: true
-# models:
-#   - provider: openai
-#     model: gpt-4.1-mini
-#     availability: active
-# routes:
-#   - route_id: default.agent_decision
-#     preferred_models:
-#       - provider: openai
-#         model: gpt-4.1-mini
+# provider_templates 支持三种 kind：
+# - openai_compatible: 任何遵循 OpenAI Chat Completions API 的提供商
+# - anthropic_compatible: 任何遵循 Anthropic Messages API 的提供商
+# - builtin: 复用内置适配器（可覆盖 base_url / api_key_env）
 #
-# Route-level elasticity defaults (optional, programmatic):
+# 示例 — 接入 Anthropic 兼容提供商（如 AWS Bedrock、Google Vertex 的 Anthropic 端点）：
+# provider_templates:
+#   - name: bedrock-anthropic
+#     kind: anthropic_compatible
+#     base_url: https://bedrock.amazonaws.com/v1
+#     api_key_env: BEDROCK_API_KEY
+#     anthropic_overrides:
+#       supportsThinking: false
+#       authHeader: bearer
 #
-# Each route can carry a `defaults` block to tune circuit breaker,
-# rate limiting, and backoff behaviour for all providers used by
-# that route.  These fields use snake_case to stay consistent with
-# the rest of the YAML schema.
-#
-# routes:
-#   - route_id: default.agent_decision
-#     preferred_models:
-#       - provider: openai
-#         model: gpt-4.1-mini
-#     defaults:
-#       timeout_ms: 30000
-#       retry_limit: 2
-#       allow_fallback: true
-#       audit_level: standard
-#       # ── circuit breaker ─────────────────────────────────────
-#       circuit_breaker:
-#         failure_threshold: 5        # 连续失败 N 次后熔断 (default 5)
-#         recovery_timeout_ms: 30000  # open → half_open 冷却时间 (default 30000)
-#       # ── rate limiter ────────────────────────────────────────
-#       rate_limit:
-#         max_concurrent: 10          # 每个 provider 最大并发请求数 (default 10)
-#       # ── exponential backoff ─────────────────────────────────
-#       backoff:
-#         base_delay_ms: 1000         # 首次重试延迟 (default 1000)
-#         max_delay_ms: 30000         # 退避延迟上限 (default 30000)
+# 示例 — 接入 OpenAI 兼容提供商（如 Groq、Together、vLLM）：
+#   - name: groq
+#     kind: openai_compatible
+#     base_url: https://api.groq.com/openai/v1
+#     api_key_env: GROQ_API_KEY
+#     capability_overrides:
+#       maxTokensField: max_tokens
+
+provider_templates: []
+
+providers:
+  - provider: openai
+    api_key_env: OPENAI_API_KEY
+    base_url: https://api.openai.com/v1
+    organization_env: OPENAI_ORG_ID
+    project_env: OPENAI_PROJECT_ID
+    enabled: true
+    metadata:
+      strategy: openai_first
+
+  - provider: anthropic
+    api_key_env: ANTHROPIC_API_KEY
+    base_url: https://api.anthropic.com/v1
+    enabled: true
+    metadata:
+      strategy: anthropic_first
+
+  - provider: deepseek
+    api_key_env: DEEPSEEK_API_KEY
+    base_url: https://api.deepseek.com/v1
+    enabled: true
+    metadata:
+      strategy: deepseek_first
+
+  - provider: ollama
+    api_key_env: null
+    base_url: http://localhost:11434/v1
+    enabled: false
+    metadata:
+      strategy: local_first
+
+models:
+  - provider: openai
+    model: gpt-4.1-mini
+    endpoint_kind: responses
+    capabilities:
+      text_generation: true
+      structured_output: json_schema
+      tool_calling: true
+      vision_input: true
+      embeddings: false
+      rerank: false
+      max_context_tokens: 1047576
+      max_output_tokens: 32768
+    tags: [default, interactive, structured, openai-first]
+    availability: active
+    pricing:
+      input_per_1m_usd: 0.4
+      output_per_1m_usd: 1.6
+    defaults:
+      timeout_ms: 30000
+      temperature: 0.2
+      max_output_tokens: 4096
+
+  - provider: openai
+    model: gpt-4.1
+    endpoint_kind: responses
+    capabilities:
+      text_generation: true
+      structured_output: json_schema
+      tool_calling: true
+      vision_input: true
+      embeddings: false
+      rerank: false
+      max_context_tokens: 1047576
+      max_output_tokens: 32768
+    tags: [fallback, structured, high_capacity, openai-first]
+    availability: active
+    pricing:
+      input_per_1m_usd: 2
+      output_per_1m_usd: 8
+    defaults:
+      timeout_ms: 45000
+      temperature: 0.2
+      max_output_tokens: 4096
+
+  - provider: openai
+    model: text-embedding-3-small
+    endpoint_kind: embeddings
+    capabilities:
+      text_generation: false
+      structured_output: none
+      tool_calling: false
+      vision_input: false
+      embeddings: true
+      rerank: false
+      max_context_tokens: 8192
+    tags: [default, embedding, openai-first]
+    availability: active
+    pricing:
+      input_per_1m_usd: 0.02
+    defaults:
+      timeout_ms: 15000
+
+  - provider: anthropic
+    model: claude-sonnet-4-6
+    endpoint_kind: messages
+    capabilities:
+      text_generation: true
+      structured_output: json_schema
+      tool_calling: true
+      vision_input: true
+      embeddings: false
+      rerank: false
+      max_context_tokens: 200000
+      max_output_tokens: 8192
+    tags: [default, structured, anthropic-first]
+    availability: active
+    pricing:
+      input_per_1m_usd: 3
+      output_per_1m_usd: 15
+    defaults:
+      timeout_ms: 30000
+      temperature: 0.2
+      max_output_tokens: 4096
+
+  - provider: deepseek
+    model: deepseek-chat
+    endpoint_kind: chat_completions
+    capabilities:
+      text_generation: true
+      structured_output: json_object
+      tool_calling: true
+      vision_input: false
+      embeddings: false
+      rerank: false
+      max_context_tokens: 131072
+      max_output_tokens: 8192
+    tags: [default, structured, deepseek-first]
+    availability: active
+    pricing:
+      input_per_1m_usd: 0.14
+      output_per_1m_usd: 0.56
+    defaults:
+      timeout_ms: 30000
+      temperature: 0.2
+      max_output_tokens: 4096
+
+  - provider: ollama
+    model: llama3.2
+    endpoint_kind: chat_completions
+    capabilities:
+      text_generation: true
+      structured_output: none
+      tool_calling: false
+      vision_input: false
+      embeddings: false
+      rerank: false
+      max_context_tokens: 131072
+      max_output_tokens: 4096
+    tags: [local, on_device, self_hosted]
+    availability: active
+    defaults:
+      timeout_ms: 60000
+      temperature: 0.2
+      max_output_tokens: 4096
+
+  - provider: ollama
+    model: nomic-embed-text
+    endpoint_kind: embeddings
+    capabilities:
+      text_generation: false
+      structured_output: none
+      tool_calling: false
+      vision_input: false
+      embeddings: true
+      rerank: false
+      max_context_tokens: 8192
+    tags: [local, embedding, self_hosted]
+    availability: active
+    defaults:
+      timeout_ms: 30000
+
+routes:
+  - route_id: default.agent_decision
+    task_types: [agent_decision]
+    preferred_models:
+      - provider: openai
+        model: gpt-4.1-mini
+    fallback_models:
+      - provider: openai
+        model: gpt-4.1
+      - provider: anthropic
+        model: claude-sonnet-4-6
+      - provider: deepseek
+        model: deepseek-chat
+    constraints:
+      require_structured_output: true
+      privacy_tier: trusted_cloud
+      response_modes: [json_object, json_schema]
+      allow_tool_calling: true
+    defaults:
+      timeout_ms: 30000
+      retry_limit: 1
+      allow_fallback: true
+      audit_level: standard
+      circuit_breaker:
+        failure_threshold: 5
+        recovery_timeout_ms: 30000
+      rate_limit:
+        max_concurrent: 10
+      backoff:
+        base_delay_ms: 1000
+        max_delay_ms: 30000
+
+  - route_id: default.context_summary
+    task_types:
+      - intent_grounding_assist
+      - context_summary
+      - memory_compaction
+      - narrative_projection
+      - entity_extraction
+      - classification
+      - rerank
+    preferred_models:
+      - provider: openai
+        model: gpt-4.1-mini
+    fallback_models:
+      - provider: openai
+        model: gpt-4.1
+      - provider: anthropic
+        model: claude-sonnet-4-6
+      - provider: deepseek
+        model: deepseek-chat
+    constraints:
+      require_structured_output: true
+      privacy_tier: trusted_cloud
+    defaults:
+      timeout_ms: 45000
+      retry_limit: 1
+      allow_fallback: true
+      audit_level: standard
+      circuit_breaker:
+        failure_threshold: 5
+        recovery_timeout_ms: 30000
+      rate_limit:
+        max_concurrent: 10
+      backoff:
+        base_delay_ms: 1000
+        max_delay_ms: 30000
+
+  - route_id: default.moderation
+    task_types: [moderation]
+    preferred_models:
+      - provider: openai
+        model: gpt-4.1-mini
+    fallback_models:
+      - provider: openai
+        model: gpt-4.1
+      - provider: anthropic
+        model: claude-sonnet-4-6
+    constraints:
+      require_structured_output: true
+      privacy_tier: trusted_cloud
+      response_modes: [json_object, json_schema]
+    defaults:
+      timeout_ms: 20000
+      retry_limit: 1
+      allow_fallback: true
+      audit_level: standard
+      circuit_breaker:
+        failure_threshold: 5
+        recovery_timeout_ms: 30000
+      rate_limit:
+        max_concurrent: 10
+      backoff:
+        base_delay_ms: 1000
+        max_delay_ms: 30000
+
+  - route_id: default.embedding
+    task_types: [embedding]
+    preferred_models:
+      - provider: openai
+        model: text-embedding-3-small
+    fallback_models:
+      - provider: ollama
+        model: nomic-embed-text
+    constraints:
+      privacy_tier: trusted_cloud
+      response_modes: [embedding]
+    defaults:
+      timeout_ms: 15000
+      retry_limit: 0
+      allow_fallback: true
+      audit_level: minimal
+      circuit_breaker:
+        failure_threshold: 5
+        recovery_timeout_ms: 30000
+      rate_limit:
+        max_concurrent: 10
+      backoff:
+        base_delay_ms: 1000
+        max_delay_ms: 30000

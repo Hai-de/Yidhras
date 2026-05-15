@@ -139,7 +139,7 @@ const aiToolRegistryEntrySchema = z
 export const BUILTIN_ADAPTER_NAMES = ['mock', 'openai', 'anthropic', 'deepseek', 'ollama'] as const;
 export type BuiltinAdapterName = (typeof BUILTIN_ADAPTER_NAMES)[number];
 
-export const AI_PROVIDER_TEMPLATE_KINDS = ['openai_compatible', 'builtin'] as const;
+export const AI_PROVIDER_TEMPLATE_KINDS = ['openai_compatible', 'anthropic_compatible', 'builtin'] as const;
 export type AiProviderTemplateKind = (typeof AI_PROVIDER_TEMPLATE_KINDS)[number];
 
 const aiProviderTemplateSchema = z
@@ -154,6 +154,15 @@ const aiProviderTemplateSchema = z
         maxTokensField: z.enum(['max_completion_tokens', 'max_tokens']).optional(),
         supportsSeed: z.boolean().optional(),
         maxStructuredOutput: z.enum(['none', 'json_object', 'json_schema']).optional()
+      })
+      .optional(),
+    anthropic_overrides: z
+      .object({
+        supportsThinking: z.boolean().optional(),
+        supportsImageInput: z.boolean().optional(),
+        supportsToolUse: z.boolean().optional(),
+        apiVersion: z.string().nullable().optional(),
+        authHeader: z.enum(['x-api-key', 'bearer']).optional()
       })
       .optional(),
     default_headers: z.record(z.string(), z.string()).optional(),

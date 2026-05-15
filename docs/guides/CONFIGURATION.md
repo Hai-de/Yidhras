@@ -399,7 +399,9 @@ features:
 
 ## 5. AI 模型注册表
 
-`apps/server/config/ai_models.yaml` 定义 AI 提供商、模型清单和路由规则。
+`data/configw/ai_models.yaml` 定义 AI 提供商、模型清单和路由规则。版本管理的模板源位于 `apps/server/config/ai_models.yaml`，首次 `prepare:runtime` 时自动复制到 `data/configw/`。之后直接编辑 `data/configw/` 下的副本即可，删除后重新运行 `prepare:runtime` 会从模板源重新生成。
+
+`paths.ai_models_config` 默认指向 `data/configw/ai_models.yaml`，可通过 `AI_MODELS_CONFIG_PATH` 环境变量覆盖。文件变更由 `AiRegistryWatcher` 监听，支持热重载。
 
 ### 5.1 结构
 
@@ -444,6 +446,63 @@ routes:
 - **circuit_breaker**：连续失败 N 次后熔断，recovery_timeout_ms 后进入半开状态
 - **rate_limit**：每个 provider 最大并发请求数
 - **backoff**：指数退避的初始延迟和上限
+
+### 5.3 provider_templates — 零代码接入新提供商
+
+`provider_templates` 数组允许声明式接入第三方 AI 提供商，无需编写适配器代码。支持三种 `kind`：
+
+#### openai_compatible
+
+任何遵循 OpenAI Chat Completions API 的提供商。适配器调用 `POST {base_url}/chat/completions`。
+
+```yaml
+provider_templates:
+  - name: groq
+    kind: openai_compatible
+    base_url: https://api.groq.com/openai/v1
+    api_key_env: GROQ_API_KEY
+    capability_overrides:
+      maxTokensField: max_tokens
+      maxStructuredOutput: json_object
+```
+
+`capability_overrides`（均为可选）：
+
+| 字段 | 默认 | 说明 |
+|------|------|------|
+| `disallowTempWithTopP` | false | temperature 和 top_p 互斥时设为 true（如 DeepSeek） |
+| `maxTokensField` | `max_completion_tokens` | 部分提供商要求 `max_tokens` |
+| `supportsSeed` | true | 设为 false 禁用 seed 参数 |
+| `maxStructuredOutput` | `json_schema` | 降级结构化输出能力（`json_object` / `none`） |
+
+#### anthropic_compatible
+
+任何遵循 Anthropic Messages API 的提供商。适配器调用 `POST {base_url}/messages`，使用 Anthropic SSE 流式格式。要求兼容提供商完整实现 Anthropic 的 content block 结构、tool_use 语义和 SSE 事件类型。
+
+```yaml
+provider_templates:
+  - name: bedrock-anthropic
+    kind: anthropic_compatible
+    base_url: https://bedrock.amazonaws.com/v1
+    api_key_env: BEDROCK_API_KEY
+    anthropic_overrides:
+      supportsThinking: false
+      authHeader: bearer
+```
+
+`anthropic_overrides`（均为可选）：
+
+| 字段 | 默认 | 说明 |
+|------|------|------|
+| `supportsThinking` | false | 是否启用 extended thinking |
+| `supportsImageInput` | false | 是否支持 base64 图片输入 |
+| `supportsToolUse` | true | 是否支持 tool use（含 structured output via tool_use） |
+| `apiVersion` | `2023-06-01` | Anthropic API 版本头；`null` 则不发送 |
+| `authHeader` | `x-api-key` | 认证头方式：`x-api-key` 或 `bearer` |
+
+#### builtin
+
+复用内置适配器，可覆盖其 `base_url` 和 `api_key_env`。`builtin_name` 可选值：`mock`、`openai`、`anthropic`、`deepseek`、`ollama`。
 
 AI Gateway 的完整体系见 [AI_GATEWAY.md](../subsystems/AI_GATEWAY.md)。
 

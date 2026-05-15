@@ -6,7 +6,7 @@ const AiModelsConfigPathSchema = z
   .string()
   .trim()
   .min(1)
-  .default('apps/server/config/ai_models.yaml');
+  .default('data/configw/ai_models.yaml');
 
 export const PathsConfigSchema = z
   .object({
@@ -23,5 +23,5 @@ export const PATHS_DEFAULTS: PathsConfig = {
   world_packs_dir: 'data/world_packs',
   assets_dir: 'data/assets',
   plugins_dir: 'data/plugins',
-  ai_models_config: 'apps/server/config/ai_models.yaml'
+  ai_models_config: 'data/configw/ai_models.yaml'
 };

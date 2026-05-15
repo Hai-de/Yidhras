@@ -339,7 +339,7 @@ export interface AiRegistryConfig {
 
 export interface AiProviderTemplate {
   name: string;
-  kind: 'openai_compatible' | 'builtin';
+  kind: 'openai_compatible' | 'anthropic_compatible' | 'builtin';
   base_url?: string | null;
   api_key_env?: string | null;
   capability_overrides?: {
@@ -347,6 +347,14 @@ export interface AiProviderTemplate {
     maxTokensField?: 'max_completion_tokens' | 'max_tokens';
     supportsSeed?: boolean;
     maxStructuredOutput?: 'none' | 'json_object' | 'json_schema';
+  };
+  /** Anthropic 兼容协议特有覆盖项（仅 kind === 'anthropic_compatible' 时生效） */
+  anthropic_overrides?: {
+    supportsThinking?: boolean;
+    supportsImageInput?: boolean;
+    supportsToolUse?: boolean;
+    apiVersion?: string | null;
+    authHeader?: 'x-api-key' | 'bearer';
   };
   default_headers?: Record<string, string>;
   builtin_name?: string | null;
