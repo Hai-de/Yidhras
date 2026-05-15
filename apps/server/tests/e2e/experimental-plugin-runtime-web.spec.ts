@@ -8,7 +8,7 @@ const DEATH_NOTE_PACK_REF = 'death_note';
 const DEATH_NOTE_PACK_ID = 'world-death-note';
 
 describe('experimental plugin runtime web e2e', () => {
-  it('keeps stable plugin runtime web routes active-pack scoped while exposing experimental runtime web routes separately', async () => {
+  it('keeps stable plugin runtime web routes scoped while exposing experimental runtime web routes separately', async () => {
     await withIsolatedTestServer(
       {
         defaultPort: 3117,

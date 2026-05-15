@@ -177,7 +177,7 @@ export const materializePackRuntimeCoreModels = async (
       pack_id: packId,
       mediator_id: mediator.id,
       subject_entity_id: mediator.entity_ref,
-      binding_kind: 'entity_ref',
+      binding_kind: 'direct_entity',
       status: 'active',
       metadata_json: mediator,
       now

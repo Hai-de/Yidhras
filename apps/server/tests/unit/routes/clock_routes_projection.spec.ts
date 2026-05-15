@@ -92,7 +92,6 @@ const createContext = (): AppContext => {
     setPaused: vi.fn(),
     assertRuntimeReady: vi.fn(),
     packRuntimeLookup: {
-      getActivePackId: () => 'world-test-pack',
       hasPackRuntime: () => true,
       assertPackScope: (id: string) => id,
       getPackRuntimeSummary: () => null

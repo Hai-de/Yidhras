@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  getActivePackPluginRuntimeWebSnapshot,
-  getExperimentalPackPluginRuntimeWebSnapshot,
+  getPackPluginRuntimeWebSnapshot,
   resolveEnabledPluginWebAsset,
-  resolveExperimentalEnabledPluginWebAsset
+  resolveEnabledPluginWebAsset
 } from '../../src/app/services/plugin_runtime_web.js';
 import { confirmPackPluginImport, enablePackPlugin } from '../../src/app/services/plugins.js';
 import { PLUGIN_ENABLE_WARNING_TEXT } from '../../src/plugins/contracts.js';
-import { refreshActivePackPluginRuntime, syncExperimentalPackPluginRuntime } from '../../src/plugins/runtime.js';
+import { refreshPackPluginRuntime, syncPackPluginRuntime } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 
@@ -75,7 +74,7 @@ describe('plugin runtime web integration', () => {
         trust_mode: 'trusted'
       });
 
-      fixture.context.sim.getActivePack = () => ({
+      fixture.context.sim.getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
       fixture.context.getPluginEnableWarningConfig = () => ({
@@ -88,9 +87,9 @@ describe('plugin runtime web integration', () => {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'integration'
       });
-      await refreshActivePackPluginRuntime(fixture.context);
+      await refreshPackPluginRuntime(fixture.context);
 
-      const runtimeSnapshot = await getActivePackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-alpha');
+      const runtimeSnapshot = await getPackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-alpha');
       expect(runtimeSnapshot.plugins).toHaveLength(1);
       expect(runtimeSnapshot.plugins[0]?.web_bundle_url).toBe(
         '/api/packs/world-pack-alpha/plugins/plugin.alpha/runtime/web/installation-alpha/death_note.README.md'
@@ -112,7 +111,7 @@ describe('plugin runtime web integration', () => {
     }
   });
 
-  it('keeps stable pack runtime web routes active-pack scoped while exposing experimental pack-local web paths separately', async () => {
+  it('keeps stable pack runtime web routes scoped while exposing experimental pack-local web paths separately', async () => {
     const fixture = await createIsolatedAppContextFixture();
 
     try {
@@ -172,7 +171,7 @@ describe('plugin runtime web integration', () => {
         trust_mode: 'trusted'
       });
 
-      fixture.context.sim.getActivePack = () => ({
+      fixture.context.sim.getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
       fixture.context.getPluginEnableWarningConfig = () => ({
@@ -198,14 +197,14 @@ describe('plugin runtime web integration', () => {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'integration'
       });
-      await refreshActivePackPluginRuntime(fixture.context);
-      await syncExperimentalPackPluginRuntime(fixture.context, 'world-pack-experimental-web');
+      await refreshPackPluginRuntime(fixture.context);
+      await syncPackPluginRuntime(fixture.context, 'world-pack-experimental-web');
 
-      await expect(getActivePackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-experimental-web')).rejects.toMatchObject({
-        code: 'PACK_ROUTE_ACTIVE_PACK_MISMATCH'
+      await expect(getPackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-experimental-web')).rejects.toMatchObject({
+        code: 'PLUGIN_ROUTE_SCOPE_MISMATCH'
       });
 
-      const experimentalSnapshot = await getExperimentalPackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-experimental-web');
+      const experimentalSnapshot = await getPackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-experimental-web');
       expect(experimentalSnapshot.pack_id).toBe('world-pack-experimental-web');
       expect(experimentalSnapshot.plugins).toHaveLength(1);
       expect(experimentalSnapshot.plugins[0]?.web_bundle_url).toBe(
@@ -219,9 +218,9 @@ describe('plugin runtime web integration', () => {
           installation_id: 'installation-experimental-web-alpha',
           asset_path: 'death_note.README.md'
         })
-      ).rejects.toMatchObject({ code: 'PACK_ROUTE_ACTIVE_PACK_MISMATCH' });
+      ).rejects.toMatchObject({ code: 'PLUGIN_ROUTE_SCOPE_MISMATCH' });
 
-      const asset = await resolveExperimentalEnabledPluginWebAsset(fixture.context, {
+      const asset = await resolveEnabledPluginWebAsset(fixture.context, {
         pack_id: 'world-pack-experimental-web',
         plugin_id: 'plugin.experimental.web.alpha',
         installation_id: 'installation-experimental-web-alpha',
@@ -294,7 +293,7 @@ describe('plugin runtime web integration', () => {
         confirmed_at: '1500'
       });
 
-      fixture.context.sim.getActivePack = () => ({
+      fixture.context.sim.getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
 

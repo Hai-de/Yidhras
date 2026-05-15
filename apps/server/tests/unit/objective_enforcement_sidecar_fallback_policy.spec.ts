@@ -53,7 +53,7 @@ const buildTestContext = (
 ): AppContext => {
   const now = options?.now ?? 1000n;
   const sim = {
-    getActivePack(): typeof pack {
+    getPack(): typeof pack {
       return pack;
     },
     getCurrentTick(): bigint {
@@ -72,7 +72,7 @@ const buildTestContext = (
     packStorageAdapter,
     sim,
     clock: sim as AppContext['clock'],
-    activePack: sim as AppContext['activePack'],
+    packRuntime: sim as AppContext['packRuntime'],
     notifications: {
       push(level, content) {
         return { id: 'noop', level, content, timestamp: Date.now() };
@@ -110,7 +110,6 @@ const buildTestContext = (
       // noop
     },
     packRuntimeLookup: {
-      getActivePackId: () => pack.metadata.id,
       hasPackRuntime: (packId: string) => packId.trim() === pack.metadata.id,
       assertPackScope: (packId: string) => packId.trim(),
       getPackRuntimeSummary: () => null

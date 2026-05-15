@@ -83,11 +83,10 @@ const buildProjectionTestContext = (
   };
   return {
     clock: { getCurrentTick() { return now; }, getAllTimes() { return []; } } as unknown as AppContext['clock'],
-    activePack: { getActivePack(): typeof pack { return pack; } } as unknown as AppContext['activePack'],
     prisma,
     repos,
     sim: {
-      getActivePack(): typeof pack {
+      getPack(): typeof pack {
         return pack;
       },
       getCurrentTick(): bigint {
@@ -232,9 +231,12 @@ const buildProjectionTestContext = (
         };
       }
     } as unknown as AppContext['worldEngine'],
-    activePackRuntime: {
-      getActivePack() {
+    packRuntime: {
+      getPack() {
         return pack;
+      },
+      getPackId() {
+        return pack.metadata.id;
       },
       getRuntimeSpeedSnapshot: () => ({
         mode: 'fixed' as const,
@@ -245,7 +247,7 @@ const buildProjectionTestContext = (
         effective_step_ticks: '1'
       }),
       getCurrentRevision: () => 0n
-    } as unknown as AppContext['activePackRuntime'],
+    } as unknown as AppContext['packRuntime'],
     packStorageAdapter: (() => {
       const store = new Map<string, Map<string, Array<Record<string, unknown>>>>();
       const getTable = (packId: string, tableName: string): Array<Record<string, unknown>> => {
@@ -318,7 +320,6 @@ const buildProjectionTestContext = (
       getAgentDecisions: () => []
     } as AppContext['schedulerStorage'],
     packRuntimeLookup: {
-      getActivePackId: () => pack.metadata.id,
       hasPackRuntime: (packId: string) => packId.trim() === pack.metadata.id,
       assertPackScope: (packId: string) => packId.trim(),
       getPackRuntimeSummary: () => null

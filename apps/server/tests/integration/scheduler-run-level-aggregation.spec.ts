@@ -145,8 +145,7 @@ describe('scheduler run level aggregation integration', () => {
     adapter.open(TEST_PACK_ID);
 
     context = createTestAppContext(prisma, {
-      schedulerStorage: adapter as unknown as SchedulerStorageAdapter,
-      activePackId: TEST_PACK_ID
+      schedulerStorage: adapter as unknown as SchedulerStorageAdapter
     });
 
     cleanup = async () => {

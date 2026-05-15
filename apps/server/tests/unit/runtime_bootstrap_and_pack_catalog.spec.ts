@@ -73,8 +73,7 @@ describe('DefaultPackCatalogService', () => {
     } as never;
     const catalog = new DefaultPackCatalogService({
       packsDir: '/tmp/world_packs',
-      loader,
-      getActivePack: () => activePack
+      loader
     });
 
     expect(catalog.resolvePackByIdOrFolder('pack-active')).toEqual({

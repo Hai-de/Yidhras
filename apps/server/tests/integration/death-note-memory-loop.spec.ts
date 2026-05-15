@@ -27,7 +27,7 @@ const TEST_PACK_ID = "test-death-note";
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
     (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter;
-    context.sim.getActivePack = () => ({
+    context.sim.getPack = () => ({
       metadata: { id: 'world-death-note', name: '死亡笔记', version: '0.5.0' },
       ai: {
         memory_loop: {

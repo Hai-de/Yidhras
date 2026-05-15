@@ -56,7 +56,6 @@ const createMockAppContext = (overrides?: {
     setHttpApp: vi.fn(),
     worldEngineStepCoordinator: null as unknown as AppContext['worldEngineStepCoordinator'],
     packRuntimeLookup: {
-      getActivePackId: () => 'test-pack',
       hasPackRuntime: () => true,
       assertPackScope: (id: string) => id,
       getPackRuntimeSummary: () => null

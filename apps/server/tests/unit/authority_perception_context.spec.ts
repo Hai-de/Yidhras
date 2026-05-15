@@ -78,10 +78,6 @@ describe('authority/perception/context assembly', () => {
         // noop for unit test
       },
       packRuntimeLookup: {
-        getActivePackId: () => {
-          const ids = sim.listLoadedPackRuntimeIds();
-          return ids.length > 0 ? ids[0] : null;
-        },
         hasPackRuntime: packId => sim.listLoadedPackRuntimeIds().includes(packId),
         assertPackScope: (id: string) => id,
         getPackRuntimeSummary: packId => {

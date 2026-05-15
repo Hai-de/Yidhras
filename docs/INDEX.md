@@ -56,6 +56,7 @@
 | 文档 | 定位 |
 |------|------|
 | [guides/COMMANDS.md](guides/COMMANDS.md) | 工作区 / server / web 命令、测试矩阵、脚手架 |
+| [guides/CONFIGURATION.md](guides/CONFIGURATION.md) | ConfigW 配置系统：分层合并、域索引、环境变量、AI 模型注册表、世界包配置 |
 | [guides/DB_OPERATIONS.md](guides/DB_OPERATIONS.md) | 数据库迁移、初始化、路径更换 |
 | [guides/PLUGIN_OPERATIONS.md](guides/PLUGIN_OPERATIONS.md) | 插件治理 HTTP API / GUI 流程 |
 | [guides/SNAPSHOT.md](guides/SNAPSHOT.md) | 世界包快照系统：存档/恢复的原理、API 与使用工作流 |

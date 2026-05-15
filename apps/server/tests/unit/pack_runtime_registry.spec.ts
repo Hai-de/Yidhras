@@ -83,7 +83,6 @@ describe('InMemoryPackRuntimeRegistry', () => {
       },
       getRuntimeReady: () => true,
       packRuntimeLookup: {
-        getActivePackId: () => 'pack-a',
         hasPackRuntime: (packId: string) => ['pack-a', 'pack-b'].includes(packId),
         assertPackScope: (packId: string) => packId,
         getPackRuntimeSummary: (packId: string) => {
@@ -177,7 +176,7 @@ describe('InMemoryPackRuntimeRegistry', () => {
         }
       } as never,
       listLoadedPackRuntimeIds: () => registry.listLoadedPackIds(),
-      activePack: { getActivePack: () => ({ metadata: { id: 'pack-a' } }), getCurrentRevision: () => 1n } as AppContext['activePack'],
+      packRuntime: { getPack: () => ({ metadata: { id: 'pack-a' } }), getCurrentRevision: () => 1n } as AppContext['packRuntime'],
       isRuntimeReady: () => true,
       isPaused: () => false
     } as unknown as AppContext;
@@ -185,7 +184,6 @@ describe('InMemoryPackRuntimeRegistry', () => {
     await expect(buildExperimentalPackRuntimeRegistrySnapshot(context)).resolves.toEqual({
       system_health_level: 'ok',
       runtime_ready: true,
-      active_pack_id: 'pack-a',
       loaded_pack_ids: ['pack-a', 'pack-b'],
       items: [
         {
@@ -253,7 +251,6 @@ describe('InMemoryPackRuntimeRegistry', () => {
       getRuntimeReady: () => true,
       prisma: {} as never,
       packRuntimeLookup: {
-        getActivePackId: () => 'pack-a',
         hasPackRuntime: (packId: string) => packId === 'pack-a',
         assertPackScope: (packId: string) => packId,
         getPackRuntimeSummary: (packId: string) => (packId === 'pack-a'
@@ -301,7 +298,7 @@ describe('InMemoryPackRuntimeRegistry', () => {
       } as never,
       getPackRuntimeHandle: (packId: string) => (packId === 'pack-a' ? handle : null),
       listLoadedPackRuntimeIds: () => ['pack-a'],
-      activePack: { getActivePack: () => ({ metadata: { id: 'pack-a' } }), getCurrentRevision: () => 1n } as AppContext['activePack'],
+      packRuntime: { getPack: () => ({ metadata: { id: 'pack-a' } }), getCurrentRevision: () => 1n } as AppContext['packRuntime'],
       isRuntimeReady: () => true,
       isPaused: () => false
     } as unknown as AppContext;

@@ -84,31 +84,34 @@ async function main() {
     logger.info(`PackBinding already exists: ${operator.id} -> ${defaultPackId}`)
   }
 
-  // 4. 为示例 Agent 创建 root 的 IdentityNodeBinding
+  // 4. 为示例 Agent 创建 root 的 IdentityNodeBinding（仅当 Agent 已存在时）
   const defaultAgentId = 'agent-001'
-  const existingAgentBinding = await prisma.identityNodeBinding.findFirst({
-    where: {
-      identity_id: identity.id,
-      agent_id: defaultAgentId,
-      role: 'active'
-    }
-  })
-
-  if (!existingAgentBinding) {
-    await prisma.identityNodeBinding.create({
-      data: {
+  const agentExists = await prisma.agent.findUnique({ where: { id: defaultAgentId } })
+  if (agentExists) {
+    const existingAgentBinding = await prisma.identityNodeBinding.findFirst({
+      where: {
         identity_id: identity.id,
         agent_id: defaultAgentId,
-        role: 'active',
-        status: 'active',
-        created_at: now,
-        updated_at: now
+        role: 'active'
       }
     })
 
-    logger.info(`AgentBinding created: ${identity.id} -> ${defaultAgentId} (active)`)
-  } else {
-    logger.info(`AgentBinding already exists: ${identity.id} -> ${defaultAgentId}`)
+    if (!existingAgentBinding) {
+      await prisma.identityNodeBinding.create({
+        data: {
+          identity_id: identity.id,
+          agent_id: defaultAgentId,
+          role: 'active',
+          status: 'active',
+          created_at: now,
+          updated_at: now
+        }
+      })
+
+      logger.info(`AgentBinding created: ${identity.id} -> ${defaultAgentId} (active)`)
+    } else {
+      logger.info(`AgentBinding already exists: ${identity.id} -> ${defaultAgentId}`)
+    }
   }
 
   logger.info('Operator seed complete')

@@ -5,7 +5,7 @@ import { assertErrorEnvelope, assertRecord, assertSuccessEnvelopeData } from '..
 import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { isRecord, requestJson, sleep } from '../helpers/server.js';
 
-const DEATH_NOTE_ACTIVE_PACK_ID = 'world-death-note';
+const DEATH_NOTE_PACK_ID = 'world-death-note';
 const DEATH_NOTE_PACK_REF = 'death_note';
 
 
@@ -208,9 +208,9 @@ describe('trigger event e2e', () => {
     await withIsolatedTestServer({ defaultPort: 3110, packRef: DEATH_NOTE_PACK_REF }, async server => {
       const mismatchedTimelineResponse = await requestJson(server.baseUrl, '/api/packs/death_note/projections/timeline');
       expect(mismatchedTimelineResponse.status).toBe(409);
-      assertErrorEnvelope(mismatchedTimelineResponse.body, 'PACK_ROUTE_ACTIVE_PACK_MISMATCH', 'mismatched trigger-event pack timeline');
+      assertErrorEnvelope(mismatchedTimelineResponse.body, 'PACK_RUNTIME_NOT_FOUND', 'mismatched trigger-event pack timeline');
 
-      const activeTimelineResponse = await requestJson(server.baseUrl, `/api/packs/${DEATH_NOTE_ACTIVE_PACK_ID}/projections/timeline`);
+      const activeTimelineResponse = await requestJson(server.baseUrl, `/api/packs/${DEATH_NOTE_PACK_ID}/projections/timeline`);
       expect(activeTimelineResponse.status).toBe(200);
     });
   });

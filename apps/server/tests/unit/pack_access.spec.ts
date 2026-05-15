@@ -26,7 +26,7 @@ describe('pack access guard', () => {
       repos,
       sim,
       clock: sim as AppContext['clock'],
-      activePack: sim as AppContext['activePack']
+      packRuntime: sim as AppContext['packRuntime']
     } as AppContext
   })
 

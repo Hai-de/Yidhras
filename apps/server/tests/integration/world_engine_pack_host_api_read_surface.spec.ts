@@ -77,11 +77,11 @@ describe('PackHostApi read surface integration', () => {
     const loader = new PackManifestLoader(environment.worldPacksDir);
     const pack = loader.loadPack(DEATH_NOTE_PACK_REF);
     packId = pack.metadata.id;
-    context.activePackRuntime = {
+    context.packRuntime = {
       async init() {
         // noop
       },
-      getActivePack() {
+      getPack() {
         return pack;
       },
       resolvePackVariables(template: string) {

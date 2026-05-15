@@ -44,7 +44,7 @@ const buildTestContext = (
 ): AppContextWithConcreteSidecar => {
   const now = options?.now ?? 1000n;
   const sim = {
-    getActivePack(): typeof pack {
+    getPack(): typeof pack {
       return pack;
     },
     getCurrentTick(): bigint {
@@ -63,9 +63,8 @@ const buildTestContext = (
     packStorageAdapter,
     sim,
     clock: sim as AppContext['clock'],
-    activePack: sim as AppContext['activePack'],
-    activePackRuntime: {
-      getActivePack(): typeof pack {
+    packRuntime: {
+      getPack(): typeof pack {
         return pack;
       },
       getCurrentTick(): bigint {

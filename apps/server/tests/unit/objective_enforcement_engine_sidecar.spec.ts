@@ -38,7 +38,7 @@ const createTestSidecarClient = (): WorldEngineSidecarClient => {
 
 const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, packStorageAdapter: PackStorageAdapter, now = 1000n): AppContextWithConcreteSidecar => {
   const sim = {
-    getActivePack(): typeof pack {
+    getPack(): typeof pack {
       return pack;
     },
     getCurrentTick(): bigint {
@@ -57,7 +57,7 @@ const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, p
     packStorageAdapter,
     sim,
     clock: sim as AppContext['clock'],
-    activePack: sim as AppContext['activePack'],
+    packRuntime: sim as AppContext['packRuntime'],
     notifications: {
       push(level, content) {
         return { id: 'noop', level, content, timestamp: Date.now() };
@@ -95,7 +95,6 @@ const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, p
       // noop
     },
     packRuntimeLookup: {
-      getActivePackId: () => pack.metadata.id,
       hasPackRuntime: (packId: string) => packId.trim() === pack.metadata.id,
       assertPackScope: (packId: string) => packId.trim(),
       getPackRuntimeSummary: () => null

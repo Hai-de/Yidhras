@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { loadExperimentalPackRuntime } from '../../src/app/services/experimental_multi_pack_runtime.js';
-import { getExperimentalPackPluginRuntimeWebSnapshot } from '../../src/app/services/plugin_runtime_web.js';
+import { getPackPluginRuntimeWebSnapshot } from '../../src/app/services/plugin_runtime_web.js';
 import { confirmPackPluginImport, enablePackPlugin } from '../../src/app/services/plugins.js';
 import { pluginRuntimeRegistry } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
@@ -10,7 +10,7 @@ import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 const REMINDER_HASH = '03ee763729f5fe81f03478a3b0f487ff6c8dfc779f7e9b8d88a6d016dc17edfb';
 
 describe('plugin runtime experimental pack scope integration', () => {
-  it('loads pack-local plugin runtime for an experimentally loaded pack without changing active-pack stable mode', async () => {
+  it('loads pack-local plugin runtime for an experimentally loaded pack without changing stable mode', async () => {
     const fixture = await createIsolatedAppContextFixture();
 
     try {
@@ -70,7 +70,7 @@ describe('plugin runtime experimental pack scope integration', () => {
         trust_mode: 'trusted'
       });
 
-      fixture.context.sim.getActivePack = () => ({
+      fixture.context.sim.getPack = () => ({
         metadata: { id: 'world-pack-runtime', name: 'Runtime Pack', version: '0.1.0' }
       }) as never;
       fixture.context.getPluginEnableWarningConfig = () => ({
@@ -105,12 +105,12 @@ describe('plugin runtime experimental pack scope integration', () => {
 
       await loadExperimentalPackRuntime(fixture.context, 'world-pack-experimental');
 
-      const snapshot = await getExperimentalPackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-experimental');
+      const snapshot = await getPackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-experimental');
       expect(snapshot.pack_id).toBe('world-pack-experimental');
       expect(snapshot.plugins).toHaveLength(1);
       expect(snapshot.plugins[0]?.pack_id).toBe('world-pack-experimental');
       expect(pluginRuntimeRegistry.listRuntimes('world-pack-experimental')).toHaveLength(1);
-      expect(fixture.context.sim.getActivePack()?.metadata.id).toBe('world-pack-runtime');
+      expect(fixture.context.sim.getPack()?.metadata.id).toBe('world-pack-runtime');
     } finally {
       await fixture.cleanup();
     }

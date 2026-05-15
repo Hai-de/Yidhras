@@ -215,7 +215,7 @@ describe('pack snapshot integration', () => {
         packId: TEST_PACK_ID,
         prisma: context.prisma,
         packStorageAdapter: context.packStorageAdapter,
-        activePackRuntime: context.activePackRuntime,
+        packRuntime: context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
@@ -235,7 +235,7 @@ describe('pack snapshot integration', () => {
         packId: TEST_PACK_ID,
         prisma: context.prisma,
         packStorageAdapter: context.packStorageAdapter,
-        activePackRuntime: context.activePackRuntime,
+        packRuntime: context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
@@ -259,7 +259,7 @@ describe('pack snapshot integration', () => {
         label: 'test-snapshot',
         prisma: context.prisma,
         packStorageAdapter: context.packStorageAdapter,
-        activePackRuntime: context.activePackRuntime,
+        packRuntime: context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
@@ -283,7 +283,7 @@ describe('pack snapshot integration', () => {
         packId: TEST_PACK_ID,
         prisma: context.prisma,
         packStorageAdapter: context.packStorageAdapter,
-        activePackRuntime: context.activePackRuntime,
+        packRuntime: context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
@@ -291,7 +291,7 @@ describe('pack snapshot integration', () => {
         packId: TEST_PACK_ID,
         prisma: context.prisma,
         packStorageAdapter: context.packStorageAdapter,
-        activePackRuntime: context.activePackRuntime,
+        packRuntime: context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
@@ -311,7 +311,7 @@ describe('pack snapshot integration', () => {
         packId: TEST_PACK_ID,
         prisma: context.prisma,
         packStorageAdapter: context.packStorageAdapter,
-        activePackRuntime: context.activePackRuntime,
+        packRuntime: context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
@@ -331,7 +331,7 @@ describe('pack snapshot integration', () => {
         packId: TEST_PACK_ID,
         prisma: context.prisma,
         packStorageAdapter: context.packStorageAdapter,
-        activePackRuntime: context.activePackRuntime,
+        packRuntime: context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
@@ -370,7 +370,7 @@ describe('pack snapshot integration', () => {
         packStorageAdapter: context.packStorageAdapter,
         pack: packMock,
         sim: context.sim,
-        activePackRuntime: context.activePackRuntime,
+        packRuntime: context.packRuntime,
         notifications: context.notifications,
         applyClockProjection: () => {}
       });
@@ -400,7 +400,7 @@ describe('pack snapshot integration', () => {
         packId: TEST_PACK_ID,
         prisma: context.prisma,
         packStorageAdapter: context.packStorageAdapter,
-        activePackRuntime: context.activePackRuntime,
+        packRuntime: context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });

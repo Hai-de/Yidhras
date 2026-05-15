@@ -68,7 +68,7 @@ describe.skipIf(!existsSync(SIDECAR_BINARY_PATH), 'world engine sidecar runtime 
       prisma,
       sim,
       runtimeBootstrap: sim,
-      activePackRuntime: sim,
+      packRuntime: sim,
       packCatalog: sim,
       notifications: {
         push: () => ({ id: 'noop', level: 'info', content: 'noop', timestamp: Date.now() }),

@@ -70,7 +70,6 @@ describe('PackHostApi host boundary', () => {
       rebuildFromRuntimeSeed: vi.fn() as never
     } as never;
     context.packRuntimeLookup = {
-      getActivePackId: () => 'world-death-note',
       hasPackRuntime: () => true,
       assertPackScope: (id: string) => id,
       getPackRuntimeSummary: () => null

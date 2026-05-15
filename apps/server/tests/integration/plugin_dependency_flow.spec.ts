@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { PluginManifest } from '@yidhras/contracts';
 
 import { confirmPackPluginImport, disablePackPlugin, enablePackPlugin } from '../../src/app/services/plugins.js';
-import { pluginRuntimeRegistry, refreshActivePackPluginRuntime } from '../../src/plugins/runtime.js';
+import { pluginRuntimeRegistry, refreshPackPluginRuntime } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 
@@ -84,7 +84,7 @@ const createInstall = (input: InstallationInput) => ({
 const setupFixture = async () => {
   const fixture = await createIsolatedAppContextFixture();
 
-  fixture.context.sim.getActivePack = () => ({
+  fixture.context.sim.getPack = () => ({
     metadata: { id: PACK_ID, name: 'Test Dependency Pack', version: '0.1.0' }
   }) as never;
   fixture.context.getPluginEnableWarningConfig = () => ({
@@ -560,7 +560,7 @@ describe('plugin load order in runtime', () => {
         actor_label: 'test'
       });
 
-      await refreshActivePackPluginRuntime(fixture.context);
+      await refreshPackPluginRuntime(fixture.context);
 
       const runtimes = pluginRuntimeRegistry.listRuntimes(PACK_ID);
       expect(runtimes).toHaveLength(2);
@@ -618,7 +618,7 @@ describe('plugin load order in runtime', () => {
         actor_label: 'test'
       });
 
-      await refreshActivePackPluginRuntime(fixture.context);
+      await refreshPackPluginRuntime(fixture.context);
 
       const runtimes = pluginRuntimeRegistry.listRuntimes(PACK_ID);
       expect(runtimes).toHaveLength(2);

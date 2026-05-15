@@ -24,7 +24,6 @@ const buildMockContext = (overrides?: Record<string, unknown>): AppContext => {
     prisma,
     repos,
     packRuntimeLookup: {
-      getActivePackId: () => 'test-pack',
       hasPackRuntime: () => true,
       assertPackScope: (id: string) => id,
       getPackRuntimeSummary: () => null
@@ -559,7 +558,7 @@ describe('builtin system tools', () => {
   });
 
   describe('get_clock_state', () => {
-    it('returns clock state from activePackRuntime when available', async () => {
+    it('returns clock state from packRuntime when available', async () => {
       const ctx = {
         context: buildMockContext(),
         pack_id: null

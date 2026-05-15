@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { confirmPackPluginImport, disablePackPlugin, enablePackPlugin } from '../../src/app/services/plugins.js';
-import { pluginRuntimeRegistry,refreshActivePackPluginRuntime } from '../../src/plugins/runtime.js';
+import { pluginRuntimeRegistry,refreshPackPluginRuntime } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 
@@ -72,7 +72,7 @@ describe('plugin runtime refresh integration', () => {
         trust_mode: 'trusted'
       });
 
-      fixture.context.sim.getActivePack = () => ({
+      fixture.context.sim.getPack = () => ({
         metadata: { id: 'world-pack-runtime', name: 'Runtime Pack', version: '0.1.0' }
       }) as never;
       fixture.context.getPluginEnableWarningConfig = () => ({
@@ -80,7 +80,7 @@ describe('plugin runtime refresh integration', () => {
         require_acknowledgement: true
       });
 
-      await refreshActivePackPluginRuntime(fixture.context);
+      await refreshPackPluginRuntime(fixture.context);
       expect(pluginRuntimeRegistry.listRuntimes('world-pack-runtime')).toHaveLength(0);
 
       await confirmPackPluginImport(fixture.context, 'installation-runtime-alpha', ['server.api_route.register', 'web.panel.register']);
