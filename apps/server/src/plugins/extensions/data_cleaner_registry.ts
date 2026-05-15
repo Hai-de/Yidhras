@@ -1,10 +1,4 @@
-import type { DataCleanerInput, DataCleanerOutput } from '@yidhras/contracts';
-
-export interface DataCleaner {
-  readonly key: string;
-  readonly version: string;
-  clean(input: DataCleanerInput): Promise<DataCleanerOutput>;
-}
+import type { DataCleaner, DataCleanerInput, DataCleanerOutput } from '@yidhras/contracts';
 
 class DataCleanerRegistry {
   private cleaners = new Map<string, DataCleaner>();

@@ -139,7 +139,9 @@ const buildCandidates = (): MemoryBlockRecord[] => {
     salience: 0.7,
     confidence: 0.9,
     created_at_tick: '90',
-    updated_at_tick: '95'
+    updated_at_tick: '95',
+    embedding: null,
+    embedding_model: null
   };
 
   const delayedBlock: MemoryBlock = {
@@ -162,7 +164,9 @@ const buildCandidates = (): MemoryBlockRecord[] => {
     salience: 0.5,
     confidence: 0.7,
     created_at_tick: '91',
-    updated_at_tick: '96'
+    updated_at_tick: '96',
+    embedding: null,
+    embedding_model: null
   };
 
   return [

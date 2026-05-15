@@ -29,7 +29,7 @@ const createMemPackStorageAdapter = (): PackStorageAdapter => {
     destroyPackStorage: async () => {},
     ensureEngineOwnedSchema: async () => {},
     listEngineOwnedRecords: async (packId, tableName) => {
-      return getTable(packId, tableName);
+      return getTable(packId, tableName) as any;
     },
     upsertEngineOwnedRecord: async (packId, tableName, record) => {
       const table = getTable(packId, tableName);
@@ -70,7 +70,7 @@ describe('PackHostApi read surface integration', () => {
     process.env.WORLD_PACKS_DIR = environment.worldPacksDir;
     process.env.DATABASE_URL = environment.databaseUrl;
     process.env.APP_ENV = environment.envOverrides.APP_ENV;
-    await context.sim.loadExperimentalPackRuntime?.('death_note');
+    await context.packRuntimeControl?.load?.('death_note');
 
     context.worldEngine = sidecar as unknown as AppContext['worldEngine'];
 
@@ -78,9 +78,6 @@ describe('PackHostApi read surface integration', () => {
     const pack = loader.loadPack(DEATH_NOTE_PACK_REF);
     packId = pack.metadata.id;
     context.packRuntime = {
-      async init() {
-        // noop
-      },
       getPack() {
         return pack;
       },
@@ -94,8 +91,11 @@ describe('PackHostApi read surface integration', () => {
       getCurrentTick: () => 1000n,
       getCurrentRevision: () => 1000n,
       getAllTimes: () => ({ current_tick: '1000' }),
-      step: async () => {}
-    };
+      step: async () => {},
+      getPackId: () => packId,
+      getPackSlotDeclarations: () => null,
+      applyClockProjection: () => {}
+    } as unknown as AppContext['packRuntime'];
     await installPackRuntime(pack, context.packStorageAdapter);
     await materializePackRuntimeCoreModels(pack, 1000n, context.packStorageAdapter);
     await sidecar.loadPack({

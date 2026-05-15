@@ -20,7 +20,7 @@ import {
 } from './capability_keys.js';
 import { getPluginSandboxConfig } from './context.js';
 import { resolveLoadOrder } from './dependency_resolver.js';
-import type { DataCleaner } from './extensions/data_cleaner_registry.js';
+import type { DataCleaner } from '@yidhras/contracts';
 import { dataCleanerRegistry } from './extensions/data_cleaner_registry.js';
 import type { SlotConditionEvaluator } from './extensions/slot_condition_registry.js';
 import { slotConditionRegistry } from './extensions/slot_condition_registry.js';

@@ -16,7 +16,7 @@ describe('operator grant capability check', () => {
     mockGrantFindFirst = vi.fn()
     const sim = {
       getCurrentTick: () => 1000n
-    } as AppContext['sim']
+    } as any
     const prisma = {
       operator: {
         findUnique: mockOperatorFindUnique
@@ -29,9 +29,9 @@ describe('operator grant capability check', () => {
       repos: wrapPrismaAsRepositories(prisma as PrismaClient),
       prisma,
       sim,
-      clock: sim as AppContext['clock'],
+      clock: sim as any,
       packRuntime: { getCurrentTick: () => 1000n } as AppContext['packRuntime']
-    } as AppContext
+    } as unknown as AppContext
   })
 
   it('allows root operator regardless of grants', async () => {

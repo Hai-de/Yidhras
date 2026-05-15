@@ -29,6 +29,7 @@ describe('buildAiTaskRequestFromInferenceContext', () => {
       resolved_agent_id: 'agent-001',
       agent_snapshot: null,
       tick: 1000n,
+      agent_capabilities: [],
       strategy: 'model_routed',
       attributes: {},
       world_pack: { id: 'world-death-note', name: '死亡笔记', version: '0.4.0' },
@@ -76,14 +77,10 @@ describe('buildAiTaskRequestFromInferenceContext', () => {
       },
       visible_variables: {},
       variable_context: {
-        layers: [],
-        alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
-        strict_namespace: false
+        layers: []
       },
       variable_context_summary: {
         namespaces: [],
-        alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
-        strict_namespace: false,
         layer_count: 0
       },
       policy_summary: {
@@ -107,9 +104,9 @@ describe('buildAiTaskRequestFromInferenceContext', () => {
 
     const contextSummaryRequest = await buildAiTaskRequestFromInferenceContext(inferenceContext, { task_type: 'context_summary' });
     expect(contextSummaryRequest.task_type).toBe('context_summary');
-    expect(contextSummaryRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_task_type).toBe('context_summary');
-    expect(contextSummaryRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_profile_id).toBe('context-summary-default');
-    expect(contextSummaryRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_section_summary).toMatchObject({
+    expect((contextSummaryRequest.prompt_context.prompt_bundle_v2 as any)?.metadata?.workflow_task_type).toBe('context_summary');
+    expect((contextSummaryRequest.prompt_context.prompt_bundle_v2 as any)?.metadata?.workflow_profile_id).toBe('context-summary-default');
+    expect((contextSummaryRequest.prompt_context.prompt_bundle_v2 as any)?.metadata?.workflow_section_summary).toMatchObject({
       task_type: 'context_summary',
       section_scores: expect.any(Array),
       section_policies: ['evidence_first']
@@ -117,9 +114,9 @@ describe('buildAiTaskRequestFromInferenceContext', () => {
 
     const memoryCompactionRequest = await buildAiTaskRequestFromInferenceContext(inferenceContext, { task_type: 'memory_compaction' });
     expect(memoryCompactionRequest.task_type).toBe('memory_compaction');
-    expect(memoryCompactionRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_task_type).toBe('memory_compaction');
-    expect(memoryCompactionRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_profile_id).toBe('memory-compaction-default');
-    expect(memoryCompactionRequest.prompt_context.prompt_bundle_v2?.metadata?.workflow_section_summary).toMatchObject({
+    expect((memoryCompactionRequest.prompt_context.prompt_bundle_v2 as any)?.metadata?.workflow_task_type).toBe('memory_compaction');
+    expect((memoryCompactionRequest.prompt_context.prompt_bundle_v2 as any)?.metadata?.workflow_profile_id).toBe('memory-compaction-default');
+    expect((memoryCompactionRequest.prompt_context.prompt_bundle_v2 as any)?.metadata?.workflow_section_summary).toMatchObject({
       task_type: 'memory_compaction',
       section_scores: expect.any(Array),
       section_policies: ['memory_focused']

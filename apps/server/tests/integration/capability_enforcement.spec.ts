@@ -15,7 +15,7 @@ describe('capability enforcement integration', () => {
     cleanup = fixture.cleanup
     context = fixture.context
 
-    const now = context.sim.getCurrentTick()
+    const now = context.packRuntime!.getCurrentTick()
 
     // 创建 operators
     await context.prisma.identity.createMany({

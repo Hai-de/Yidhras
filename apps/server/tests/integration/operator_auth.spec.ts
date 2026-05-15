@@ -22,7 +22,7 @@ describe('operator auth integration', () => {
     context = fixture.context
 
     // 注入测试 operator
-    const now = context.sim.getCurrentTick()
+    const now = context.packRuntime!.getCurrentTick()
     const passwordHash = await hashPassword('test-password', 4)
     await context.prisma.identity.create({
       data: {

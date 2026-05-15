@@ -1,6 +1,5 @@
 import { bench, describe } from 'vitest';
 
-import { adaptPromptBundleToAiMessages } from '../../src/ai/adapters/prompt_bundle_adapter.js';
 import { assembleConversationMessages } from '../../src/conversation/assembler.js';
 import { DEFAULT_CONVERSATION_FORMAT_CONFIG } from '../../src/conversation/format_config.js';
 import { resolveAiRoute } from '../../src/ai/route_resolver.js';
@@ -17,7 +16,7 @@ const createAgentDecisionRequest = (): AiTaskRequest => ({
   actor_ref: { agent_id: 'agent-001', actor_display_name: '夜神月' },
   input: { world_name: '死亡笔记', attributes: {}, inference_id: 'inf-001' },
   prompt_context: {
-    prompt_bundle: {
+    prompt_bundle_v2: {
       system_prompt: 'System prompt content here.',
       role_prompt: 'Role: Agent X.',
       world_prompt: 'World: Death Note universe.',
@@ -54,7 +53,9 @@ const createTaskConfig = (): AiResolvedTaskConfig => ({
   output: { mode: 'json_schema' },
   prompt: { preset: 'test', system_append: 'append' },
   parse: { decoder: 'default_json_schema' },
-  route: {}
+  route: {},
+  tools: [],
+  tool_policy: { mode: 'disabled' }
 });
 
 const createCompletedResponse = (): ModelGatewayResponse => ({
@@ -87,9 +88,10 @@ const createV2Bundle = (): PromptBundleV2 => ({
     output_contract: 'Return JSON decision.',
     post_process: '{ "snapshot": true }'
   },
+  slot_order: ['system_core', 'system_policy', 'role_core', 'post_process', 'output_contract'],
   combined_prompt: 'Core system instruction.\n\nPolicy content.\n\nRole: Agent X.\n\n{ "snapshot": true }\n\nReturn JSON decision.',
   metadata: { prompt_version: 'phase-c-v1', source_prompt_keys: ['system_core'], workflow_task_type: 'agent_decision', workflow_profile_id: 'agent-decision-default', workflow_profile_version: '1', workflow_step_keys: [] },
-  tree: { inference_id: 'inf-test', task_type: 'agent_decision', fragments_by_slot: {}, slot_registry: BASE_SLOTS as Record<string, never>, metadata: { prompt_version: 'phase-c-v1', profile_id: null, profile_version: null, source_prompt_keys: ['system_core'] } }
+  tree: { inference_id: 'inf-test', task_type: 'agent_decision', fragments_by_slot: {}, slot_registry: BASE_SLOTS as Record<string, never>, resolved_positions: [], metadata: { prompt_version: 'phase-c-v1', profile_id: null, profile_version: null, source_prompt_keys: ['system_core'] } }
 });
 
 // --- Benchmarks ---
@@ -108,16 +110,6 @@ describe('inference benchmarks', () => {
 
     bench('resolve route with pack hint', () => {
       resolveAiRoute({ task_type: 'agent_decision', pack_id: 'world-death-note', response_mode: 'json_schema' });
-    });
-  });
-
-  describe('adaptPromptBundleToAiMessages', () => {
-    const request = createAgentDecisionRequest();
-    const config = createTaskConfig();
-    const bundle = request.prompt_context.prompt_bundle!;
-
-    bench('adapt prompt bundle to messages', () => {
-      adaptPromptBundleToAiMessages({ promptBundle: bundle, taskConfig: config });
     });
   });
 

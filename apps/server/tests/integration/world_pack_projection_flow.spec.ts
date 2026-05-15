@@ -30,7 +30,7 @@ afterEach(() => {
 const buildProjectionTestContext = (
   pack: ReturnType<typeof parseWorldPackConstitution>,
   now = 1000n
-): AppContext => {
+): any => {
   const clock = {
     getTicks(): bigint {
       return now;
@@ -62,8 +62,8 @@ const buildProjectionTestContext = (
       }
     } as unknown as AppContext['prisma'];
   const repos = wrapPrismaAsRepositories(prisma as PrismaClient);
-  repos.narrative = {
-    ...repos.narrative,
+  (repos as any).narrative = {
+    ...(repos as any).narrative,
     async listRecentEvents(limit?: number) {
       const events = await prisma.event.findMany({
         orderBy: { created_at: 'desc' },
@@ -82,7 +82,6 @@ const buildProjectionTestContext = (
     }
   };
   return {
-    clock: { getCurrentTick() { return now; }, getAllTimes() { return []; } } as unknown as AppContext['clock'],
     prisma,
     repos,
     sim: {
@@ -109,9 +108,9 @@ const buildProjectionTestContext = (
           effective_step_ticks: '1'
         };
       }
-    } as unknown as AppContext['sim'],
+    } as any,
     notifications: {
-      push(level, content) {
+      push(level: string, content: string) {
         return { id: 'noop', level, content, timestamp: Date.now() };
       },
       getMessages() {
@@ -205,7 +204,7 @@ const buildProjectionTestContext = (
           uptime_ms: 0
         };
       },
-      async executeObjectiveRule(input) {
+      async executeObjectiveRule(input: any) {
         return {
           protocol_version: 'world_engine/v1alpha1',
           pack_id: input.pack_id,
@@ -262,8 +261,8 @@ const buildProjectionTestContext = (
         ping: async () => true,
         destroyPackStorage: async () => {},
         ensureEngineOwnedSchema: async () => {},
-        listEngineOwnedRecords: async (packId, tableName) => getTable(packId, tableName),
-        upsertEngineOwnedRecord: async (packId, tableName, record) => {
+        listEngineOwnedRecords: async (packId: string, tableName: string) => getTable(packId, tableName) as any,
+        upsertEngineOwnedRecord: async (packId: string, tableName: string, record: unknown) => {
           const table = getTable(packId, tableName);
           const rec = record as Record<string, unknown>;
           const id = String(rec.id ?? '');
@@ -342,7 +341,7 @@ const buildProjectionTestContext = (
         getStepTicks: () => 1n,
         step: async () => {},
         applyClockProjection: () => {}
-      }) as PackRuntimeHost,
+      }) as unknown as PackRuntimeHost,
     getPackRuntimeHandle: (packId: string) =>
       ({
         pack_id: packId,

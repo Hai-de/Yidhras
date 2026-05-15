@@ -15,11 +15,15 @@ const buildMockContext = (overrides?: Record<string, unknown>): AppContext => {
     relationship: { findFirst: vi.fn().mockResolvedValue(null) },
     agent: { findMany: vi.fn().mockResolvedValue([]) }
   };
-  const repos = wrapPrismaAsRepositories(prisma as PrismaClient);
-  repos.memory = {
-    getPrisma: () => prisma as PrismaClient,
-    listActiveMemoryBlocks: vi.fn().mockResolvedValue([])
-  } as unknown as typeof repos.memory;
+  const repos = wrapPrismaAsRepositories(prisma as unknown as PrismaClient);
+  Object.defineProperty(repos, 'memory', {
+    value: {
+      getPrisma: () => prisma as unknown as PrismaClient,
+      listActiveMemoryBlocks: vi.fn().mockResolvedValue([])
+    } as unknown as typeof repos.memory,
+    writable: true,
+    configurable: true
+  });
   return {
     prisma,
     repos,
@@ -643,7 +647,7 @@ describe('builtin system tools', () => {
         context: buildMockContext(),
         pack_id: 'pack-1'
       };
-      (ctx.context.repos.memory as ReturnType<typeof vi.fn> & { listActiveMemoryBlocks: ReturnType<typeof vi.fn> }).listActiveMemoryBlocks = vi.fn().mockResolvedValue(mockBlocks);
+      (ctx.context.repos.memory as unknown as ReturnType<typeof vi.fn> & { listActiveMemoryBlocks: ReturnType<typeof vi.fn> }).listActiveMemoryBlocks = vi.fn().mockResolvedValue(mockBlocks);
 
       const result = await registry.execute('query_memory_blocks', { pack_id: 'pack-1', limit: 5 }, ctx);
       expect(result.success).toBe(true);

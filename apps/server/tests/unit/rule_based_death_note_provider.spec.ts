@@ -6,6 +6,7 @@ import type { InferenceContext } from '../../src/inference/types.js';
 
 const promptBundle: PromptBundleV2 = {
   slots: {},
+  slot_order: [],
   combined_prompt: '',
   metadata: {
     prompt_version: null,
@@ -16,6 +17,7 @@ const promptBundle: PromptBundleV2 = {
     task_type: 'agent_decision',
     fragments_by_slot: {},
     slot_registry: {},
+    resolved_positions: [],
     metadata: {
       prompt_version: '',
       profile_id: null,
@@ -32,6 +34,7 @@ const buildInferenceContext = (input?: {
   latestEventSemanticType?: string | null;
 }): InferenceContext => ({
   inference_id: 'rule-based-death-note-provider-test',
+  agent_capabilities: [],
   actor_ref: {
     identity_id: 'agent-001',
     identity_type: 'agent',
@@ -75,14 +78,10 @@ const buildInferenceContext = (input?: {
   },
   visible_variables: {},
   variable_context: {
-    layers: [],
-    alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
-    strict_namespace: false
+    layers: []
   },
   variable_context_summary: {
     namespaces: [],
-    alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
-    strict_namespace: false,
     layer_count: 0
   },
   policy_summary: {

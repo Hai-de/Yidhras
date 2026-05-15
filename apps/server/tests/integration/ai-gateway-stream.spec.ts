@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createModelGateway } from '../../src/ai/gateway.js';
 import type { AiProviderAdapter, AiProviderAdapterChunk, AiProviderAdapterRequest, AiProviderAdapterResult } from '../../src/ai/providers/types.js';
-import type { AiRegistryConfig, ModelGatewayExecutionInput } from '../../src/ai/types.js';
+import type { ModelGatewayExecutionInput } from '../../src/ai/gateway.js';
+import type { AiRegistryConfig } from '../../src/ai/types.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -47,7 +48,8 @@ const buildStreamInput = (overrides?: Partial<ModelGatewayExecutionInput>): Mode
   task_request: {
     task_id: 'task-1',
     task_type: 'agent_decision',
-    input: {}
+    input: {},
+    prompt_context: {}
   },
   task_config: {
     definition: {

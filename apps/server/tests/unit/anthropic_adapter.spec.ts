@@ -17,7 +17,8 @@ const buildInput = (overrides?: Partial<AiProviderAdapterRequest>): AiProviderAd
   task_request: {
     task_id: 'task-1',
     task_type: 'agent_decision',
-    input: {}
+    input: {},
+    prompt_context: {}
   },
   task_config: {
     definition: {

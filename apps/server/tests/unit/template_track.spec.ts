@@ -56,7 +56,7 @@ describe('runTemplateTrack', () => {
     expect(draft.removable).toBe(false);
     expect(draft.source_node_ids).toEqual([]);
     expect(draft.content_blocks[0]).toMatchObject({ kind: 'text' });
-    expect(draft.content_blocks[0].text).toBe('Strategy: mock');
+    expect((draft.content_blocks[0] as { kind: string; text?: string }).text).toBe('Strategy: mock');
 
     expect(trace.track).toBe('template');
     expect(trace.output_summary.section_drafts_count).toBe(1);
@@ -100,7 +100,7 @@ describe('runTemplateTrack', () => {
     expect(result).toHaveLength(1);
     expect(result[0].section_type).toBe('world_context');
     expect(result[0].slot).toBe('world_context');
-    expect(result[0].content_blocks[0].text).toBe('World prefix text');
+    expect((result[0].content_blocks[0] as { kind: string; text?: string }).text).toBe('World prefix text');
   });
 
   it('maps slot IDs to correct section_type', () => {
@@ -133,7 +133,7 @@ describe('runTemplateTrack', () => {
     expect(result).toHaveLength(1);
     expect(result[0].slot).toBe('output_contract');
     expect(result[0].section_type).toBe('output_contract');
-    expect(result[0].content_blocks[0].text.length).toBeGreaterThan(0);
+    expect((result[0].content_blocks[0] as { kind: string; text?: string }).text?.length).toBeGreaterThan(0);
   });
 
   it('records correct TrackTrace', () => {

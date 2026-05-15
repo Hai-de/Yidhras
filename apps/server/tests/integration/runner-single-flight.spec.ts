@@ -77,7 +77,7 @@ describe('runner single-flight integration', () => {
   });
 
   it('does not dispatch an action intent when another active workflow already exists for the same actor', async () => {
-    const now = context.sim.getCurrentTick();
+    const now = context.packRuntime!.getCurrentTick();
     const traceExisting = `runner-single-flight-existing-${Date.now()}`;
     const traceCandidate = `runner-single-flight-candidate-${Date.now()}`;
 

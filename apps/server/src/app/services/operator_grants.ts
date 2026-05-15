@@ -19,7 +19,7 @@ export const createOperatorGrant = async (
   },
   clientIp?: string
 ) => {
-  const now = resolvePackTick(context)
+  const now = resolvePackTick(context, context.packRuntime)
 
   // 检查 expires_at 有效性
   if (options?.expires_at && options.expires_at <= now) {

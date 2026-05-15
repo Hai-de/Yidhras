@@ -19,15 +19,15 @@ describe('experimental projection compatibility e2e', () => {
         }
       },
       async server => {
-        const stableOverviewResponse = await requestJson(server.baseUrl, `/api/packs/${NON_DEATH_NOTE_PACK_ID}/overview`);
+        const stableOverviewResponse = await requestJson(server.baseUrl, `/api/packs/${'non-death-note-pack'}/overview`);
         expect(stableOverviewResponse.status).toBe(409);
         assertErrorEnvelope(stableOverviewResponse.body, 'PACK_RUNTIME_NOT_FOUND', 'stable mismatched overview under experimental mode');
 
-        const stableTimelineResponse = await requestJson(server.baseUrl, `/api/packs/${NON_DEATH_NOTE_PACK_ID}/projections/timeline`);
+        const stableTimelineResponse = await requestJson(server.baseUrl, `/api/packs/${'non-death-note-pack'}/projections/timeline`);
         expect(stableTimelineResponse.status).toBe(409);
         assertErrorEnvelope(stableTimelineResponse.body, 'PACK_RUNTIME_NOT_FOUND', 'stable mismatched timeline under experimental mode');
 
-        const loadResponse = await requestJson(server.baseUrl, `/api/experimental/runtime/packs/${NON_DEATH_NOTE_PACK_ID}/load`, {
+        const loadResponse = await requestJson(server.baseUrl, `/api/experimental/runtime/packs/${'non-death-note-pack'}/load`, {
           method: 'POST'
         });
         expect(loadResponse.status).toBe(200);

@@ -10,7 +10,7 @@ import { SimulationManager } from '../../src/core/simulation.js';
 import { resolveAuthorityForSubject } from '../../src/domain/authority/resolver.js';
 import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import { resolvePerceptionForSubject } from '../../src/domain/perception/resolver.js';
-import { notifications } from '../../src/utils/notifications.js';
+import { createNotificationManager } from '../../src/utils/notifications.js';
 import {
   createIsolatedRuntimeEnvironment,
   createPrismaClientForEnvironment,
@@ -41,17 +41,16 @@ describe('authority/perception/context assembly', () => {
     await prepareIsolatedRuntime(environment);
 
     const prisma = createPrismaClientForEnvironment(environment);
-    const sim = new SimulationManager({ prisma, packStorageAdapter: new SqlitePackStorageAdapter(), notifications });
+    const notifications = createNotificationManager();
+    const sim = new SimulationManager({ prisma, packStorageAdapter: new SqlitePackStorageAdapter() } as any);
 
     await sim.prepareDatabase();
     await sim.loadExperimentalPackRuntime('death_note');
 
-    const appContext: AppContext & { identity?: { id: string; type: 'agent'; name: string } } = {
-      sim,
+    const appContext = {
       prisma,
       packStorageAdapter: new SqlitePackStorageAdapter(),
       repos: createPrismaRepositories(prisma),
-      notifications,
       startupHealth: {
         level: 'ok',
         checks: {
@@ -62,13 +61,13 @@ describe('authority/perception/context assembly', () => {
         errors: [],
         available_world_packs: [DEATH_NOTE_PACK_REF]
       },
-      getRuntimeReady(): boolean {
+      isRuntimeReady(): boolean {
         return true;
       },
       setRuntimeReady(): void {
         // noop for unit test
       },
-      getPaused(): boolean {
+      isPaused(): boolean {
         return false;
       },
       setPaused(): void {
@@ -78,9 +77,9 @@ describe('authority/perception/context assembly', () => {
         // noop for unit test
       },
       packRuntimeLookup: {
-        hasPackRuntime: packId => sim.listLoadedPackRuntimeIds().includes(packId),
+        hasPackRuntime: (packId: string) => sim.listLoadedPackRuntimeIds().includes(packId),
         assertPackScope: (id: string) => id,
-        getPackRuntimeSummary: packId => {
+        getPackRuntimeSummary: (packId: string) => {
           const handle = sim.getPackRuntimeHandle(packId);
           if (!handle) return null;
           return {
@@ -92,12 +91,12 @@ describe('authority/perception/context assembly', () => {
           };
         }
       },
-      getPackRuntimeHost: packId => {
+      getPackRuntimeHost: (packId: string) => {
         const host = sim.getPackRuntimeRegistry().getHost(packId);
         return host ?? null;
       },
-      getPackRuntimeHandle: packId => sim.getPackRuntimeHandle(packId) ?? null
-    };
+      getPackRuntimeHandle: (packId: string) => sim.getPackRuntimeHandle(packId) ?? null
+    } as unknown as AppContext & { identity?: { id: string; type: 'agent'; name: string } };
 
     appContext.identity = {
       id: 'agent-001',
@@ -114,7 +113,7 @@ describe('authority/perception/context assembly', () => {
     const inferenceContextV2 = await buildExtendedInferenceContext(appContext, {
       identity_id: 'agent-001',
       strategy: 'rule_based'
-    });
+    }, DEATH_NOTE_PACK_ID);
 
     expect(inferenceContextV2.subject_context.resolved_agent_id).toBe('agent-001');
     expect(inferenceContextV2.authority_context.subject_entity_id).toBe('agent-001');

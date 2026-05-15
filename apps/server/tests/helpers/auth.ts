@@ -1,18 +1,12 @@
 import { requestJson } from './server.js'
 
-export interface AuthHeaders {
-  'Content-Type': string
-  Authorization: string
-  'x-m2-identity'?: string
-}
-
 const rootTokenCache = new Map<string, string>()
 
 /**
  * 登录为 root operator 并返回包含 Bearer token 的请求头。
  * token 按 baseUrl 缓存（不同 server 实例有不同的 JWT secret）。
  */
-export const getRootAuthHeaders = async (baseUrl: string): Promise<AuthHeaders> => {
+export const getRootAuthHeaders = async (baseUrl: string): Promise<Record<string, string>> => {
   let token = rootTokenCache.get(baseUrl)
   if (!token) {
     const response = await requestJson(baseUrl, '/api/auth/login', {
@@ -49,7 +43,7 @@ export const getRootAuthHeadersWithIdentity = async (
   baseUrl: string,
   identityId: string,
   type: 'agent' | 'user' | 'system' = 'agent'
-): Promise<AuthHeaders> => {
+): Promise<Record<string, string>> => {
   const headers = await getRootAuthHeaders(baseUrl)
   return {
     ...headers,

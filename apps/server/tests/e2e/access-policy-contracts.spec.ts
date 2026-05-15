@@ -16,7 +16,7 @@ describe('access-policy contracts e2e', () => {
 
       const createResponse = await requestJson(server.baseUrl, '/api/access-policy', {
         method: 'POST',
-        headers,
+        headers: headers,
         body: JSON.stringify({
           effect: 'allow',
           resource: 'social_post',
@@ -37,7 +37,7 @@ describe('access-policy contracts e2e', () => {
 
       const invalidPrimitiveResponse = await requestJson(server.baseUrl, '/api/access-policy', {
         method: 'POST',
-        headers,
+        headers: headers,
         body: JSON.stringify({
           effect: 'allow',
           resource: 'social_post',
@@ -55,7 +55,7 @@ describe('access-policy contracts e2e', () => {
 
       const invalidNestedResponse = await requestJson(server.baseUrl, '/api/access-policy', {
         method: 'POST',
-        headers,
+        headers: headers,
         body: JSON.stringify({
           effect: 'allow',
           resource: 'social_post',

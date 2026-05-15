@@ -18,7 +18,8 @@ const SLOT_SYSTEM: PromptSlotConfig = {
   id: 'system_core',
   default_priority: 100,
   enabled: true,
-  include_in_combined: true
+  include_in_combined: true,
+  display_name: 'Test'
 };
 
 const buildFragment = (overrides: Partial<PromptFragmentV2> = {}): PromptFragmentV2 => ({
@@ -60,7 +61,7 @@ const buildProfile = (): PromptWorkflowProfile => ({
 
 const buildState = (overrides: Partial<PromptWorkflowState> = {}): PromptWorkflowState => ({
   context_run: null,
-  actor_ref: { actor_id: 'a1', actor_type: 'agent', actor_label: 'Test' },
+  actor_ref: { identity_id: 'a1', identity_type: 'agent', role: 'active', agent_id: 'a1', atmosphere_node_id: null },
   task_type: 'agent_decision',
   strategy: 'mock',
   pack_id: 'test_pack',

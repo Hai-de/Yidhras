@@ -13,7 +13,7 @@ const buildMockContext = (): AppContext => {
   const prisma = { memoryBlock: { findMany: vi.fn().mockResolvedValue([]) }, relationship: { findFirst: vi.fn().mockResolvedValue(null) }, agent: { findMany: vi.fn().mockResolvedValue([]) } };
   return {
     prisma,
-    repos: wrapPrismaAsRepositories(prisma as PrismaClient),
+    repos: wrapPrismaAsRepositories(prisma as unknown as PrismaClient),
     clock: { getCurrentTick: vi.fn().mockReturnValue(42n) }
   } as unknown as AppContext;
 };
@@ -83,7 +83,7 @@ describe('createCrossAgentToolHandler', () => {
     const result = await handler.execute(
       { target_agent_id: 'agent-b', task_type: 'agent_decision', query: { question: 'test' } },
       { context: buildMockContext(), pack_id: null }
-    );
+    ) as { success: boolean; target_agent_id?: string; output?: unknown; error?: { code: string; message: string } };
 
     expect(result.success).toBe(true);
     expect(bridge.queryAgent).toHaveBeenCalledWith(

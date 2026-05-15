@@ -3,7 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { createModelGateway } from '../../src/ai/gateway.js';
 import { createAiTaskService } from '../../src/ai/task_service.js';
 import type { AiProviderAdapter, AiProviderAdapterResult } from '../../src/ai/providers/types.js';
-import type { AiRegistryConfig, AiTaskService } from '../../src/ai/types.js';
+import type { AiRegistryConfig } from '../../src/ai/types.js';
+import type { AiTaskService } from '../../src/ai/task_service.js';
 
 // ── Adapter fixtures ───────────────────────────────────────────────────
 
@@ -232,7 +233,7 @@ describe('AI gateway multi-provider fallback', () => {
         input: {},
         prompt_context: {}
       },
-      task_config: {}
+      task_config: {} as any
     });
 
     expect(invocation.status).toBe('failed');

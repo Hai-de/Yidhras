@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { dataCleanerRegistry } from '../../src/plugins/extensions/data_cleaner_registry.js';
-import type { DataCleaner, DataCleanerInput } from '@yidhras/contracts';
+import type { DataCleanerInput } from '@yidhras/contracts';
+import type { DataCleaner } from '../../src/plugins/extensions/data_cleaner_registry.js';
 import { createParser, render } from '../../src/template_engine/frontends/data_cleaner/index.js';
 import { tokenize } from '../../src/template_engine/core/lexer.js';
 import { parse } from '../../src/template_engine/core/parser.js';

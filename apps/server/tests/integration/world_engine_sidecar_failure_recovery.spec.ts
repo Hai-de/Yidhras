@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
@@ -14,16 +13,15 @@ import { createPackHostApi } from '../../src/app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from '../../src/app/runtime/world_engine_snapshot.js';
 import { SimulationManager } from '../../src/core/simulation.js';
 import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
-import { createNotificationManager } from '../../src/utils/notifications.js';
 import { createIsolatedRuntimeEnvironment, createPrismaClientForEnvironment, migrateIsolatedDatabase } from '../helpers/runtime.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SIDECAR_BINARY_PATH = path.join(__dirname, '..', '..', 'rust', 'world_engine_sidecar', 'target', 'debug', 'world_engine_sidecar');
+const __dirname = process.cwd();
+const SIDECAR_BINARY_PATH = path.join(__dirname, 'rust', 'world_engine_sidecar', 'target', 'debug', 'world_engine_sidecar');
 
 const DEATH_NOTE_PACK_REF = 'death_note';
 const DEATH_NOTE_PACK_ID = 'world-death-note';
 
-describe.skipIf(!existsSync(SIDECAR_BINARY_PATH), 'world engine sidecar failure recovery integration', () => {
+describe.skipIf(!existsSync(SIDECAR_BINARY_PATH))('world engine sidecar failure recovery integration', () => {
   let prisma: ReturnType<typeof createPrismaClientForEnvironment>;
   let sim: SimulationManager;
   let cleanup: (() => Promise<void>) | null = null;
@@ -48,8 +46,7 @@ describe.skipIf(!existsSync(SIDECAR_BINARY_PATH), 'world engine sidecar failure 
     prisma = createPrismaClientForEnvironment(environment);
     sim = new SimulationManager({
       prisma,
-      packStorageAdapter: new SqlitePackStorageAdapter(),
-      notifications: createNotificationManager()
+      packStorageAdapter: new SqlitePackStorageAdapter()
     });
 
     await sim.loadExperimentalPackRuntime('death_note');

@@ -38,7 +38,9 @@ describe('memory block stores', () => {
           salience: 0.85,
           confidence: 0.8,
           created_at_tick: '1000',
-          updated_at_tick: '1001'
+          updated_at_tick: '1001',
+          embedding: null,
+          embedding_model: null
         },
         behavior: {
           mutation: {

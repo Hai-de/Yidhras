@@ -24,3 +24,9 @@ export const dataCleanerOutputSchema = z.object({
 export type DataCleanerCapability = z.infer<typeof dataCleanerCapabilitySchema>
 export type DataCleanerInput = z.infer<typeof dataCleanerInputSchema>
 export type DataCleanerOutput = z.infer<typeof dataCleanerOutputSchema>
+
+export interface DataCleaner {
+  readonly key: string
+  readonly version: string
+  clean(input: DataCleanerInput): Promise<DataCleanerOutput>
+}

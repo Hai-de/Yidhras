@@ -146,12 +146,10 @@ describe('adjust snr e2e', () => {
             expect(statusData.runtime_ready).toBe(true);
 
             const activeHeaders = {
-              'Content-Type': 'application/json',
               ...(await getRootAuthHeadersWithIdentity(server.baseUrl, 'agent-001', 'agent'))
             };
 
             const systemHeaders = {
-              'Content-Type': 'application/json',
               ...(await getRootAuthHeadersWithIdentity(server.baseUrl, 'system', 'system'))
             };
 

@@ -28,6 +28,7 @@ const createAgentDecisionPromptBundle = (): PromptBundleV2 => ({
     post_process: 'context prompt',
     output_contract: 'output contract prompt'
   },
+  slot_order: [],
   combined_prompt: 'combined prompt',
   metadata: {
     prompt_version: 'test-v1',
@@ -38,6 +39,7 @@ const createAgentDecisionPromptBundle = (): PromptBundleV2 => ({
     task_type: 'agent_decision',
     fragments_by_slot: {},
     slot_registry: {},
+    resolved_positions: [],
     metadata: {
       prompt_version: '',
       profile_id: null,
@@ -76,14 +78,10 @@ const createMinimalInferenceContext = (): InferenceContext => ({
   world_ai: null,
   visible_variables: {},
   variable_context: {
-    layers: [],
-    alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
-    strict_namespace: false
+    layers: []
   },
   variable_context_summary: {
     namespaces: [],
-    alias_precedence: ['request', 'actor', 'runtime', 'pack', 'app', 'system'],
-    strict_namespace: false,
     layer_count: 0
   },
   policy_summary: {
@@ -132,7 +130,8 @@ const createMinimalInferenceContext = (): InferenceContext => ({
     world_state: null,
     latest_event: null
   },
-  pack_runtime: { invocation_rules: [] }
+  pack_runtime: { invocation_rules: [] },
+  agent_capabilities: []
 });
 
 const createCompletedAdapterResult = (): AiProviderAdapterResult => ({

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { PluginManifest } from '@yidhras/contracts';
 
+import type { PluginInstallationUpsertInput } from '../../src/plugins/types.js';
+
 import { confirmPackPluginImport, disablePackPlugin, enablePackPlugin } from '../../src/app/services/plugins.js';
 import { pluginRuntimeRegistry, refreshPackPluginRuntime } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
@@ -34,7 +36,7 @@ const createArtifact = (input: ArtifactInput) => ({
     version: '1.0.0',
     kind: 'other',
     entrypoints: {},
-    compatibility: { yidhras: '>=0.5.0', pack_id: PACK_ID },
+    compatibility: { yidhras: '>=0.5.0', host_api: '1.0.0', pack_id: PACK_ID },
     requested_capabilities: [],
     contributions: {
       server: {
@@ -55,7 +57,7 @@ const createArtifact = (input: ArtifactInput) => ({
     dependencies: { interfaces: [], plugins: [] },
     provides: [],
     ...(input.manifestOverrides ?? {})
-  } as PluginManifest,
+  } as unknown as PluginManifest,
   imported_at: '1000'
 });
 
@@ -64,11 +66,11 @@ interface InstallationInput {
   plugin_id: string;
   artifact_id: string;
   lifecycle_state?: string;
-  scope_type?: string;
+  scope_type?: 'pack_local' | 'global';
   scope_ref?: string | null;
 }
 
-const createInstall = (input: InstallationInput) => ({
+const createInstall = (input: InstallationInput): PluginInstallationUpsertInput => ({
   installation_id: input.installation_id,
   plugin_id: input.plugin_id,
   artifact_id: input.artifact_id,
@@ -79,12 +81,12 @@ const createInstall = (input: InstallationInput) => ({
   requested_capabilities: [],
   granted_capabilities: [],
   trust_mode: 'trusted' as const
-});
+}) as unknown as PluginInstallationUpsertInput;
 
 const setupFixture = async () => {
   const fixture = await createIsolatedAppContextFixture();
 
-  fixture.context.sim.getPack = () => ({
+  fixture.context.packRuntime!.getPack = () => ({
     metadata: { id: PACK_ID, name: 'Test Dependency Pack', version: '0.1.0' }
   }) as never;
   fixture.context.getPluginEnableWarningConfig = () => ({
@@ -560,7 +562,7 @@ describe('plugin load order in runtime', () => {
         actor_label: 'test'
       });
 
-      await refreshPackPluginRuntime(fixture.context);
+      await refreshPackPluginRuntime(fixture.context, PACK_ID);
 
       const runtimes = pluginRuntimeRegistry.listRuntimes(PACK_ID);
       expect(runtimes).toHaveLength(2);
@@ -618,7 +620,7 @@ describe('plugin load order in runtime', () => {
         actor_label: 'test'
       });
 
-      await refreshPackPluginRuntime(fixture.context);
+      await refreshPackPluginRuntime(fixture.context, PACK_ID);
 
       const runtimes = pluginRuntimeRegistry.listRuntimes(PACK_ID);
       expect(runtimes).toHaveLength(2);

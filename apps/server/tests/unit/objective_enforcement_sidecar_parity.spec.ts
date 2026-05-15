@@ -41,28 +41,13 @@ const buildTestContext = (
   options?: {
     now?: bigint;
   }
-): AppContextWithConcreteSidecar => {
+): any => {
   const now = options?.now ?? 1000n;
-  const sim = {
-    getPack(): typeof pack {
-      return pack;
-    },
-    getCurrentTick(): bigint {
-      return now;
-    },
-    clock: {
-      getTicks(): bigint {
-        return now;
-      }
-    }
-  } as AppContext['sim'];
 
   return {
     repos: wrapPrismaAsRepositories({} as PrismaClient),
     prisma: {} as AppContext['prisma'],
     packStorageAdapter,
-    sim,
-    clock: sim as AppContext['clock'],
     packRuntime: {
       getPack(): typeof pack {
         return pack;
@@ -92,18 +77,19 @@ const buildTestContext = (
       getAllTimes() {
         return { current_tick: now.toString() };
       },
-      async init() {
-        // noop
-      },
       async step() {
         // noop
       },
       resolvePackVariables(template: string) {
         return template;
-      }
-    },
+      },
+      getPackId: () => pack.metadata.id,
+      getCurrentRevision: () => 0n,
+      getPackSlotDeclarations: () => null,
+      applyClockProjection: () => {}
+    } as unknown as AppContext['packRuntime'],
     notifications: {
-      push(level, content) {
+      push(level: string, content: string) {
         return { id: 'noop', level, content, timestamp: Date.now() };
       },
       getMessages() {
@@ -123,7 +109,7 @@ const buildTestContext = (
       available_world_packs: [pack.metadata.id],
       errors: []
     },
-    getRuntimeReady() {
+    isRuntimeReady() {
       return true;
     },
     setRuntimeReady() {

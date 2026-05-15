@@ -35,6 +35,8 @@ const createBaseTaskConfig = (overrides?: Partial<AiResolvedTaskConfig>): AiReso
   prompt: { preset: 'test_preset' },
   parse: { decoder: 'default_json_schema' },
   route: {},
+  tools: [],
+  tool_policy: { mode: 'disabled' },
   ...overrides
 });
 

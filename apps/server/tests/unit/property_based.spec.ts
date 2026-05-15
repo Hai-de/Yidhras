@@ -69,7 +69,7 @@ describe('evaluateStateTransforms — property-based', () => {
       fc.property(
         fc.string(),
         fc.array(arbitraryActorState, { minLength: 1, maxLength: 5 }),
-        fc.constant([]),
+        fc.constant([] as any),
         (packId, actorStates, transformDefs) => {
           const result = evaluateStateTransforms({
             packId,

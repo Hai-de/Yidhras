@@ -5,7 +5,7 @@ import type { AppContext } from '../../src/app/context.js';
 import { dispatchActionIntent } from '../../src/app/services/action_dispatcher.js';
 import { createSpatialRuntime } from '../../src/packs/runtime/spatial_runtime.js';
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
-import type { SpatialDiscreteConfig } from '../../src/packs/schema/constitution_schema.js';
+import type { SpatialDiscreteConfig } from '@yidhras/contracts';
 import { createTestAppContext } from '../fixtures/app-context.js';
 import {
   createIsolatedRuntimeEnvironment,
@@ -18,17 +18,17 @@ const INFERENCE_PREFIX = 'move-e2e-';
 const MANSION_SPATIAL: SpatialDiscreteConfig = {
   model: 'discrete',
   locations: [
-    { id: 'entrance', name: '玄关' },
-    { id: 'living_room', name: '客厅' },
-    { id: 'kitchen', name: '厨房' },
-    { id: 'dining_room', name: '餐厅' },
-    { id: 'study', name: '书房' }
+    { id: 'entrance' },
+    { id: 'living_room' },
+    { id: 'kitchen' },
+    { id: 'dining_room' },
+    { id: 'study' }
   ],
   edges: [
-    { from: 'entrance', to: 'living_room', type: 'bidirectional' },
-    { from: 'living_room', to: 'kitchen', type: 'bidirectional' },
-    { from: 'living_room', to: 'dining_room', type: 'bidirectional' },
-    { from: 'living_room', to: 'study', type: 'bidirectional' }
+    { from: 'entrance', to: 'living_room', type: 'bidirectional', weight: 1 },
+    { from: 'living_room', to: 'kitchen', type: 'bidirectional', weight: 1 },
+    { from: 'living_room', to: 'dining_room', type: 'bidirectional', weight: 1 },
+    { from: 'living_room', to: 'study', type: 'bidirectional', weight: 1 }
   ]
 };
 
@@ -48,7 +48,7 @@ const createMemPackStorageAdapter = (): PackStorageAdapter => {
     ping: async () => true,
     destroyPackStorage: async () => {},
     ensureEngineOwnedSchema: async () => {},
-    listEngineOwnedRecords: async (packId, tableName) => getTable(packId, tableName),
+    listEngineOwnedRecords: async (packId, tableName) => getTable(packId, tableName) as any,
     upsertEngineOwnedRecord: async (packId, tableName, record) => {
       const table = getTable(packId, tableName);
       const rec = record as Record<string, unknown>;
@@ -83,8 +83,8 @@ describe('move intent dispatch', () => {
     const spatialRuntime = createSpatialRuntime(MANSION_SPATIAL, 'test-pack', packStorage);
 
     context = createTestAppContext(prisma);
-    (context as Record<string, unknown>).packStorageAdapter = packStorage;
-    (context as Record<string, unknown>).getSpatialRuntime = () => spatialRuntime;
+    (context as unknown as Record<string, unknown>).packStorageAdapter = packStorage;
+    (context as unknown as Record<string, unknown>).getSpatialRuntime = () => spatialRuntime;
 
     cleanup = async () => {
       await prisma.$disconnect();
@@ -122,7 +122,7 @@ describe('move intent dispatch', () => {
     targetLocation: string,
     suffix: string
   ) => {
-    const now = context.sim.getCurrentTick();
+    const now = context.packRuntime!.getCurrentTick();
     const inferenceId = `${INFERENCE_PREFIX}${suffix}-${Date.now()}`;
 
     await context.prisma.inferenceTrace.create({
@@ -177,7 +177,7 @@ describe('move intent dispatch', () => {
   };
 
   const lockIntent = async (intentId: string) => {
-    const now = context.sim.getCurrentTick();
+    const now = context.packRuntime!.getCurrentTick();
     return context.prisma.actionIntent.update({
       where: { id: intentId },
       data: {
@@ -196,7 +196,7 @@ describe('move intent dispatch', () => {
 
     await seedEntityLocation(entityId, fromLocation);
 
-    const spatialRuntime = context.getSpatialRuntime!();
+    const spatialRuntime = context.getSpatialRuntime!()!;
     expect(await spatialRuntime.getLocation(entityId)).toBe(fromLocation);
 
     const created = await createMoveIntent(entityId, targetLocation, 'basic');
@@ -215,7 +215,7 @@ describe('move intent dispatch', () => {
 
     await seedEntityLocation(entityId, fromLocation);
 
-    const spatialRuntime = context.getSpatialRuntime!();
+    const spatialRuntime = context.getSpatialRuntime!()!;
     expect(await spatialRuntime.getLocation(entityId)).toBe(fromLocation);
 
     const created = await createMoveIntent(entityId, targetLocation, 'non-adj');
@@ -237,7 +237,7 @@ describe('move intent dispatch', () => {
 
     await seedEntityLocation(entityId, fromLocation);
 
-    const spatialRuntime = context.getSpatialRuntime!();
+    const spatialRuntime = context.getSpatialRuntime!()!;
     expect(await spatialRuntime.getLocation(entityId)).toBe(fromLocation);
 
     const created = await createMoveIntent(entityId, targetLocation, 'multi');
@@ -252,7 +252,7 @@ describe('move intent dispatch', () => {
     const entityId = 'player-4';
     const targetLocation = 'study';
 
-    const spatialRuntime = context.getSpatialRuntime!();
+    const spatialRuntime = context.getSpatialRuntime!()!;
     expect(await spatialRuntime.getLocation(entityId)).toBeNull();
 
     const created = await createMoveIntent(entityId, targetLocation, 'no-state');

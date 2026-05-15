@@ -21,7 +21,7 @@ const buildProfile = (): PromptWorkflowProfile => ({
 
 const buildState = (overrides: Partial<PromptWorkflowState> = {}): PromptWorkflowState => ({
   context_run: null,
-  actor_ref: { actor_id: 'a1', actor_type: 'agent', actor_label: 'Test' },
+  actor_ref: { identity_id: 'a1', identity_type: 'agent', role: 'active', agent_id: 'a1', atmosphere_node_id: null },
   task_type: 'agent_decision',
   strategy: 'mock',
   pack_id: 'test_pack',

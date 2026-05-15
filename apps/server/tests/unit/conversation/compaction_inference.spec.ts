@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { ModelGateway, ModelGatewayExecutionInput } from '../../../src/ai/gateway.js';
 import type {
@@ -38,14 +38,14 @@ function makeTaskConfig(): AiResolvedTaskConfig {
       timeout_ms: 60000,
       retry_limit: 1,
       allow_fallback: true
-    } as AiTaskDefinition,
+    } as unknown as AiTaskDefinition,
     override: null,
     output: { mode: 'free_text' },
     prompt: {},
     parse: {},
     route: {},
     tools: [],
-    tool_policy: { allow: [], require_approval: [] }
+    tool_policy: { mode: 'allowed' }
   };
 }
 
@@ -78,7 +78,8 @@ function makeSuccessResponse(overrides: Partial<ModelGatewayResponse> = {}): Mod
 
 function createMockGateway(response: ModelGatewayResponse): ModelGateway {
   return {
-    execute: async (_input: ModelGatewayExecutionInput) => response
+    execute: async (_input: ModelGatewayExecutionInput) => response,
+    executeStream: vi.fn() as never
   };
 }
 
@@ -140,7 +141,8 @@ describe('runCompactionInference', () => {
       execute: async (input: ModelGatewayExecutionInput) => {
         capturedMessages = input.request.messages;
         return makeSuccessResponse();
-      }
+      },
+      executeStream: vi.fn() as never
     };
 
     const entries = [
@@ -172,7 +174,8 @@ describe('runCompactionInference', () => {
       execute: async (input: ModelGatewayExecutionInput) => {
         capturedRequest = input.request;
         return makeSuccessResponse();
-      }
+      },
+      executeStream: vi.fn() as never
     };
 
     await runCompactionInference({
@@ -202,7 +205,8 @@ describe('runCompactionInference', () => {
       execute: async (input: ModelGatewayExecutionInput) => {
         capturedRequest = input.request;
         return makeSuccessResponse();
-      }
+      },
+      executeStream: vi.fn() as never
     };
 
     const entries = [

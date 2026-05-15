@@ -38,7 +38,7 @@ describe('world engine plugin contributor chain', () => {
           version: '1.0.0',
           kind: 'extension',
           entrypoints: { server: { runtime: 'node_esm' } },
-          compatibility: { yidhras: '0.1.0', pack_id: packId },
+          compatibility: { yidhras: '0.1.0', host_api: '1.0.0', pack_id: packId },
           requested_capabilities: [],
           contributions: {
             server: {
@@ -59,7 +59,8 @@ describe('world engine plugin contributor chain', () => {
         pack_routes: [],
         step_contributors: [mockContributor],
         rule_contributors: [],
-        query_contributors: []
+        query_contributors: [],
+        perception_resolvers: []
       }
     ]);
 

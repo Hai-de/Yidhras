@@ -82,7 +82,9 @@ const buildLongMemoryBlockStoreStub = (): LongMemoryBlockStore => ({
       status: 'active', title: 'Long suspicion memo', content_text: 'Suspicion remains high after the latest suspicious death.',
       content_structured: { risk: 'high' }, tags: ['memory-block', 'suspicion'], keywords: ['suspicion', 'death'],
       source_ref: { source_kind: 'trace', source_id: 'trace-1', source_message_id: 'trace-1' },
-      importance: 0.88, salience: 0.77, confidence: 0.81, created_at_tick: '900', updated_at_tick: '999'
+      importance: 0.88, salience: 0.77, confidence: 0.81, created_at_tick: '900', updated_at_tick: '999',
+      embedding: null,
+      embedding_model: null
     };
 
     const behavior: MemoryBehavior = {
@@ -99,7 +101,7 @@ const buildLongMemoryBlockStoreStub = (): LongMemoryBlockStore => ({
   async hardDeleteBlock() { throw new Error('unexpected hardDeleteBlock call in test'); }
 });
 
-const buildContext = (): AppContext => {
+const buildContext = (): any => {
   const prisma = {
     policy: { findMany: async () => [] },
     inferenceTrace: {
@@ -118,17 +120,20 @@ const buildContext = (): AppContext => {
     }
   } as unknown as AppContext['prisma'];
   const repos = wrapPrismaAsRepositories(prisma as PrismaClient);
-  repos.narrative = {
-    getPrisma: () => prisma as PrismaClient,
-    queryEvents: async () => []
-  } as unknown as typeof repos.narrative;
+  Object.defineProperty(repos, 'narrative', {
+    value: {
+      getPrisma: () => prisma as PrismaClient,
+      queryEvents: async () => []
+    } as unknown as typeof repos.narrative,
+    writable: true,
+    configurable: true
+  });
 
   return {
     repos,
     prisma,
-  clock: { getCurrentTick() { return 1000n; } } as AppContext['clock'],
   notifications: {
-    push(level, content) { return { id: 'noop', level, content, timestamp: Date.now() }; },
+    push(level: string, content: string) { return { id: 'noop', level, content, timestamp: Date.now() }; },
     getMessages() { return []; },
     clear() {}
   },
@@ -136,9 +141,9 @@ const buildContext = (): AppContext => {
     level: 'ok', checks: { db: true, world_pack_dir: true, world_pack_available: true },
     available_world_packs: ['world-death-note'], errors: []
   },
-  getRuntimeReady() { return true; },
+  isRuntimeReady() { return true; },
   setRuntimeReady() {},
-  getPaused() { return false; },
+  isPaused() { return false; },
   setPaused() {},
   assertRuntimeReady() {}
   };

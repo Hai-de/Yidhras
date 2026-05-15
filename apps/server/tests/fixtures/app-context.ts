@@ -6,12 +6,15 @@ import type {
   RuntimeLoopDiagnostics,
   StartupHealth
 } from '../../src/app/context.js';
+import type { ConversationStore } from '../../src/conversation/store.js';
 import { createWorldEngineStepCoordinator } from '../../src/app/runtime/world_engine_persistence.js';
 import { ChronosEngine } from '../../src/clock/engine.js';
-import type { SimulationManager } from '../../src/core/simulation.js';
 import type { PackRuntimeHost } from '../../src/core/pack_runtime_host.js';
+import type { RuntimeClockProjectionSnapshot } from '../../src/app/runtime/runtime_clock_projection.js';
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
+import type { PackRuntimePort } from '../../src/app/services/pack_runtime_ports.js';
+import type { WorldPack } from '../../src/packs/manifest/loader.js';
 import { createNotificationManager } from '../../src/utils/notifications.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { DEFAULT_E2E_WORLD_PACK } from '../support/config.js';
@@ -67,25 +70,13 @@ export const createTestAppContext = (
   const loadedPackIds = new Set<string>();
   loadedPackIds.add(defaultPackId);
 
-  const sim = {
-    prisma,
-    clock,
-    getCurrentTick() {
-      return clock.getTicks();
-    },
-    getAllTimes() {
-      return clock.getAllTimes();
-    },
-    getStepTicks: () => 1n,
-    step: async () => {},
-    getPack: (packId?: string) => {
-      const id = packId ?? defaultPackId;
-      return packStore.get(id);
-    },
+  const packRuntime: PackRuntimePort = {
+    getPackId: () => defaultPackId,
+    getCurrentTick: () => clock.getTicks(),
     getCurrentRevision: () => clock.getTicks(),
-    applyClockProjection: (snapshot: { current_tick: string }) => {
-      clock.setTicks(BigInt(snapshot.current_tick));
-    },
+    getPack: () => packStore.get(defaultPackId) as WorldPack,
+    resolvePackVariables: (template: string) => template,
+    getStepTicks: () => 1n,
     getRuntimeSpeedSnapshot: () => ({
       mode: 'fixed' as const,
       source: 'default' as const,
@@ -96,27 +87,45 @@ export const createTestAppContext = (
     }),
     setRuntimeSpeedOverride: () => {},
     clearRuntimeSpeedOverride: () => {},
-    isExperimentalMultiPackRuntimeEnabled: () => false,
-    loadExperimentalPackRuntime: async (packRef: string) => {
-      const packId = packRef.trim();
-      packStore.set(packId, buildMinimalPack(packId));
-      loadedPackIds.add(packId);
-      return {
-        handle: { pack_id: packId, pack: buildMinimalPack(packId) } as never,
-        loaded: true,
-        already_loaded: false
-      };
-    },
-    getPackRuntimeHandle: (packId: string) => {
-      if (!loadedPackIds.has(packId.trim())) return null;
-      return { pack_id: packId.trim(), pack: packStore.get(packId.trim()) } as never;
+    getAllTimes: () => clock.getAllTimes(),
+    step: async () => {},
+    getPackSlotDeclarations: () => null,
+    applyClockProjection: (snapshot: RuntimeClockProjectionSnapshot) => {
+      clock.setTicks(BigInt(snapshot.current_tick));
     }
+  };
+
+  const conversationStore: ConversationStore = {
+    getOrCreate: async () => ({
+      id: '',
+      owner_agent_id: '',
+      conversation_id: '',
+      entries: []
+    }),
+    getById: async () => null,
+    listByAgent: async () => [],
+    create: async params => ({
+      id: params.conversationId,
+      owner_agent_id: params.ownerAgentId,
+      conversation_id: params.conversationId,
+      display_name: params.displayName,
+      entries: [],
+      metadata: params.metadata ?? undefined
+    }),
+    appendEntry: async () => {},
+    appendEntriesInTransaction: async () => {},
+    modifyEntry: async () => {},
+    getEntries: async () => [],
+    updateSummary: async () => {},
+    archiveEntries: async () => {},
+    deleteMemory: async () => {}
   };
 
   return {
     repos: wrapPrismaAsRepositories(prisma),
     prisma,
-    sim,
+    conversationStore,
+    packRuntime,
     notifications: createNotificationManager(),
     startupHealth: options.startupHealth ?? createDefaultStartupHealth(),
     isRuntimeReady: () => runtimeReady,
@@ -166,18 +175,18 @@ export const createTestAppContext = (
     assertRuntimeReady: () => {},
     getPackRuntimeHost: (packId: string) =>
       ({
-        getCurrentTick: () => sim.getCurrentTick(),
-        getCurrentRevision: () => sim.getCurrentRevision(),
-        getPack: () => sim.getPack(packId),
-        getRuntimeSpeedSnapshot: () => sim.getRuntimeSpeedSnapshot(),
-        getAllTimes: () => sim.getAllTimes(),
+        getCurrentTick: () => packRuntime.getCurrentTick(),
+        getCurrentRevision: () => packRuntime.getCurrentRevision(),
+        getPack: () => packRuntime.getPack(),
+        getRuntimeSpeedSnapshot: () => packRuntime.getRuntimeSpeedSnapshot(),
+        getAllTimes: () => packRuntime.getAllTimes(),
         getPackId: () => packId,
-        getStepTicks: () => sim.getStepTicks(),
+        getStepTicks: () => packRuntime.getStepTicks(),
         step: async () => {},
         applyClockProjection: (snapshot: { current_tick: string }) => {
-          sim.applyClockProjection(snapshot);
+          clock.setTicks(BigInt(snapshot.current_tick));
         }
-      }) as PackRuntimeHost,
+      }) as unknown as PackRuntimeHost,
     packStorageAdapter: {
       backend: 'sqlite',
       ping: async () => true,

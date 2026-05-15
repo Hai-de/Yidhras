@@ -24,7 +24,7 @@ describe('scheduler lease integration', () => {
 
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter;
+    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
   });
 
   beforeEach(async () => {
@@ -44,7 +44,7 @@ describe('scheduler lease integration', () => {
       leaseTicks: 5n
     }, TEST_PACK_ID);
     expect(result.acquired).toBe(true);
-    expect(result.lease).not.toBeNull();
+    expect(result.holder).not.toBeNull();
 
     const renewed = await renewSchedulerLease(context, {
       workerId: 'worker-1',

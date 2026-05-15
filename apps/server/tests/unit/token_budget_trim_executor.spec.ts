@@ -14,6 +14,7 @@ import type { PromptTree } from '../../src/inference/prompt_tree.js';
 
 const SLOT_SYSTEM: PromptSlotConfig = {
   id: 'system_core',
+  display_name: 'Test Slot',
   default_priority: 100,
   enabled: true,
   include_in_combined: true
@@ -21,6 +22,7 @@ const SLOT_SYSTEM: PromptSlotConfig = {
 
 const SLOT_MEMORY: PromptSlotConfig = {
   id: 'memory_short_term',
+  display_name: 'Test Slot',
   default_priority: 50,
   enabled: true,
   include_in_combined: true
@@ -28,6 +30,7 @@ const SLOT_MEMORY: PromptSlotConfig = {
 
 const SLOT_LOW: PromptSlotConfig = {
   id: 'post_process',
+  display_name: 'Test Slot',
   default_priority: 10,
   enabled: true,
   include_in_combined: true
@@ -50,6 +53,7 @@ const buildTree = (fragmentsBySlot: Record<string, PromptFragmentV2[]>): PromptT
   inference_id: 'test-id',
   task_type: 'agent_decision',
   fragments_by_slot: fragmentsBySlot,
+  resolved_positions: [],
   slot_registry: {
     system_core: SLOT_SYSTEM,
     memory_short_term: SLOT_MEMORY,
@@ -84,8 +88,8 @@ const buildSpec = (config?: Record<string, unknown>): PromptWorkflowStepSpec => 
 });
 
 const buildState = (tree: PromptTree, profile?: PromptWorkflowProfile): PromptWorkflowState => ({
-  context_run: { nodes: [], diagnostics: { source_adapter_names: [], node_count: 0, node_counts_by_type: {}, selected_node_ids: [], dropped_nodes: [] } },
-  actor_ref: { actor_id: 'a1', actor_type: 'agent', actor_label: 'Test' },
+  context_run: { id: 'ctx-1', created_at_tick: '0', nodes: [], selected_node_ids: [], diagnostics: { source_adapter_names: [], node_count: 0, node_counts_by_type: {}, selected_node_ids: [], dropped_nodes: [] } },
+  actor_ref: { identity_id: 'a1', identity_type: 'agent', role: 'active', agent_id: 'a1', atmosphere_node_id: null },
   task_type: 'agent_decision',
   strategy: 'mock',
   pack_id: 'test_pack',

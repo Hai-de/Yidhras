@@ -230,14 +230,6 @@ routes:
       retry_limit: 1
       allow_fallback: true
       audit_level: standard
-      circuit_breaker:
-        failure_threshold: 5
-        recovery_timeout_ms: 30000
-      rate_limit:
-        max_concurrent: 10
-      backoff:
-        base_delay_ms: 1000
-        max_delay_ms: 30000
 
   - route_id: default.context_summary
     task_types:
@@ -266,14 +258,6 @@ routes:
       retry_limit: 1
       allow_fallback: true
       audit_level: standard
-      circuit_breaker:
-        failure_threshold: 5
-        recovery_timeout_ms: 30000
-      rate_limit:
-        max_concurrent: 10
-      backoff:
-        base_delay_ms: 1000
-        max_delay_ms: 30000
 
   - route_id: default.moderation
     task_types: [moderation]
@@ -294,14 +278,6 @@ routes:
       retry_limit: 1
       allow_fallback: true
       audit_level: standard
-      circuit_breaker:
-        failure_threshold: 5
-        recovery_timeout_ms: 30000
-      rate_limit:
-        max_concurrent: 10
-      backoff:
-        base_delay_ms: 1000
-        max_delay_ms: 30000
 
   - route_id: default.embedding
     task_types: [embedding]
@@ -319,11 +295,3 @@ routes:
       retry_limit: 0
       allow_fallback: true
       audit_level: minimal
-      circuit_breaker:
-        failure_threshold: 5
-        recovery_timeout_ms: 30000
-      rate_limit:
-        max_concurrent: 10
-      backoff:
-        base_delay_ms: 1000
-        max_delay_ms: 30000

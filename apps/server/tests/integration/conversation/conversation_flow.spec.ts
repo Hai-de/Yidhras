@@ -78,7 +78,9 @@ const TASK_CONFIG: AiResolvedTaskConfig = {
   output: { mode: 'json_schema' as const },
   prompt: { preset: 'test_preset' },
   parse: { decoder: 'default_json_schema' },
-  route: {}
+  route: {},
+  tools: [],
+  tool_policy: { mode: 'disabled' as const }
 };
 
 const CHAT_FORMAT_CONFIG: ConversationFormatConfig = {
@@ -142,6 +144,7 @@ function makeBundleWithConversationFragments(
       output_contract: []
     },
     slot_registry: SLOT_REGISTRY,
+    resolved_positions: [],
     metadata: {
       prompt_version: 'phase-c-v1',
       profile_id: null,
@@ -157,6 +160,7 @@ function makeBundleWithConversationFragments(
       conversation_history: slotTexts.conversation_history ?? '',
       output_contract: slotTexts.output_contract ?? ''
     },
+    slot_order: [],
     combined_prompt: Object.values(slotTexts).join('\n\n'),
     metadata: {
       prompt_version: 'phase-c-v1',
@@ -391,7 +395,7 @@ describe('D2 — Conversation flow integration', () => {
         slotRegistry: SLOT_REGISTRY,
         formatConfig: {
           ...CHAT_FORMAT_CONFIG,
-          compression: { window_turns: 5, summary_trigger_turns: 30, preserve_recent: 3 }
+          compression: { enable_ai_summary: false, window_turns: 5, summary_trigger_turns: 30, preserve_recent: 3, compacted_target_role: 'user' as const }
         },
         currentAgentId: 'agent-a'
       });
@@ -429,7 +433,7 @@ describe('D2 — Conversation flow integration', () => {
         slotRegistry: SLOT_REGISTRY,
         formatConfig: {
           ...CHAT_FORMAT_CONFIG,
-          compression: { window_turns: 3, summary_trigger_turns: 30, preserve_recent: 3 }
+          compression: { enable_ai_summary: false, window_turns: 3, summary_trigger_turns: 30, preserve_recent: 3, compacted_target_role: 'user' as const }
         },
         currentAgentId: 'agent-a'
       });

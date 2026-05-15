@@ -1,13 +1,13 @@
 import { config as dotenvConfig } from 'dotenv';
-import { dirname, resolve } from 'path';
-import { fileURLToPath } from 'url';
+import { resolve } from 'path';
 
-dotenvConfig({ path: resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '.env') });
+dotenvConfig({ path: resolve(process.cwd(), '..', '.env') });
 
 import { describe, expect, it } from 'vitest';
 
 import { createModelGateway } from '../../src/ai/gateway.js';
-import type { AiRegistryConfig, ModelGatewayExecutionInput } from '../../src/ai/types.js';
+import type { ModelGatewayExecutionInput } from '../../src/ai/gateway.js';
+import type { AiRegistryConfig } from '../../src/ai/types.js';
 
 const hasApiKey = typeof process.env.DEEPSEEK_API_KEY === 'string' && process.env.DEEPSEEK_API_KEY.trim().length > 0;
 
@@ -78,7 +78,8 @@ const buildInput = (overrides?: Partial<ModelGatewayExecutionInput>): ModelGatew
   task_request: {
     task_id: 'connectivity-task',
     task_type: 'agent_decision',
-    input: {}
+    input: {},
+    prompt_context: {}
   },
   task_config: {
     definition: {

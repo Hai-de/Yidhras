@@ -173,7 +173,7 @@ describe('PerceptionResolver (unified — environment perception)', () => {
 describe('PerceptionRuleEngine (rule matching)', () => {
   it('pack rules override built-in rules', async () => {
     const engine = createPerceptionRuleEngine([
-      { id: 'custom:always-none', when: { observer_at: 'same' }, then: { level: 'none' } }
+      { id: 'custom:always-none', when: { observer_at: 'same' }, then: { level: 'none' as const } }
     ], null);
 
     const result = await engine.evaluate({
@@ -186,7 +186,7 @@ describe('PerceptionRuleEngine (rule matching)', () => {
 
   it('plugin resolver used as fallback when no rule matches', async () => {
     const emptyRules = [
-      { id: 'custom:unreachable', when: { observer_has_capability: 'impossible.cap' }, then: { level: 'full' } }
+      { id: 'custom:unreachable', when: { observer_has_capability: 'impossible.cap' }, then: { level: 'full' as const } }
     ];
     const pluginResolver: PerceptionResolver = {
       async resolve() {
@@ -205,7 +205,7 @@ describe('PerceptionRuleEngine (rule matching)', () => {
 
   it('observer_has_capability filters rules', async () => {
     const rules = [
-      { id: 'custom:needs-cap', when: { observer_has_capability: 'perceive.mastermind' }, then: { level: 'full' } }
+      { id: 'custom:needs-cap', when: { observer_has_capability: 'perceive.mastermind' }, then: { level: 'full' as const } }
     ];
     const engine = createPerceptionRuleEngine(rules, null);
 

@@ -3,7 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { createModelGateway } from '../../src/ai/gateway.js';
 import { buildAdaptersFromRegistry } from '../../src/ai/providers/adapter_registry.js';
 import type { AiProviderAdapter, AiProviderAdapterResult } from '../../src/ai/providers/types.js';
-import type { AiProviderTemplate, AiRegistryConfig, AiTaskService } from '../../src/ai/types.js';
+import type { AiProviderTemplate, AiRegistryConfig } from '../../src/ai/types.js';
+import type { AiTaskService } from '../../src/ai/task_service.js';
 import { createAiTaskService } from '../../src/ai/task_service.js';
 
 // ── Fixtures ───────────────────────────────────────────────────────────
@@ -155,13 +156,13 @@ describe('gateway — template adapter in fallback chain', () => {
     const failingOpenai: AiProviderAdapter = {
       provider: 'openai',
       execute: vi.fn(async () => ({
-        status: 'failed',
-        finish_reason: 'error',
-        output: { mode: 'json_object' },
+        status: 'failed' as const,
+        finish_reason: 'error' as const,
+        output: { mode: 'json_object' as const },
         usage: undefined,
         safety: { blocked: false, reason_code: null, provider_signal: null },
         raw_ref: { provider_request_id: null, provider_response_id: null },
-        error: { code: 'AI_PROVIDER_FAIL', message: 'openai down', retryable: true, stage: 'provider' }
+        error: { code: 'AI_PROVIDER_FAIL', message: 'openai down', retryable: true, stage: 'provider' as const }
       })),
     };
 

@@ -29,7 +29,7 @@ describe('subject resolver', () => {
     mockFindOperatorBindingForAgent = vi.fn()
     const prisma = {} as unknown as AppContext['prisma'];
     const repos = wrapPrismaAsRepositories(prisma as PrismaClient);
-    repos.identityOperator = {
+    (repos as any).identityOperator = {
       getPrisma: () => prisma as PrismaClient,
       findBindingByAgentAndIdentity: mockFindBindingByAgentAndIdentity,
       findDefaultBindingForIdentity: mockFindDefaultBindingForIdentity,
@@ -41,7 +41,7 @@ describe('subject resolver', () => {
       sim: {
         getCurrentTick: () => 1000n
       }
-    } as AppContext
+    } as unknown as AppContext
   })
 
   describe('resolveSubjectForOperator', () => {

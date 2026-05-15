@@ -30,7 +30,7 @@ describe('scheduler automatic rebalance failover compatibility integration', () 
 
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter;
+    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
   });
 
   beforeEach(async () => {
@@ -65,7 +65,15 @@ describe('scheduler automatic rebalance failover compatibility integration', () 
     const cursorBefore = await getSchedulerCursor(context, 'p0', TEST_PACK_ID);
     expect(cursorBefore).not.toBeNull();
 
-    context.sim.applyClockProjection({ current_tick: '1003' });
+    context.packRuntime!.applyClockProjection({
+      pack_id: TEST_PACK_ID,
+      current_tick: '1003',
+      current_revision: '1003',
+      calendars: [],
+      source: 'host_projection',
+      updated_at_ms: Date.now(),
+      generation: 1
+    });
 
     const afterLeaseExpiry = await runAgentScheduler({ context, workerId: 'worker-b', partitionIds: [], limit: 5, packId: TEST_PACK_ID });
     expect(Array.isArray(afterLeaseExpiry.partition_ids)).toBe(true);

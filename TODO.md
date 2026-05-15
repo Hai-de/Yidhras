@@ -17,14 +17,14 @@
 > 设计文档：`.limcode/design/spatial-semantics-design.md`
 > 当前系统有成熟的时间维度（ChronosEngine tick-based）和拓扑关系维度（L2 Relationship），但零空间基础设施。
 
-- [ ] A 层：离散位置（命名地点 + 邻接图）
+- [x] A 层：离散位置（命名地点 + 邻接图）
   - [x] world pack constitution 添加 `spatial` 可选段：地点定义 + 邻接关系 + 空间规则
   - [x] EntityState 约定 `location: room_id` 空间状态 schema
   - [x] 空间上下文源注入推理管线（"谁在附近"、"同地点事件")
   - [x] 空间事件传播步骤加入 sim loop（当前 5 步 → 6 步）— 感知管线，产出 overlay entry
   - [x] 客规执行谓词扩展：`location_in`、`adjacent_to` — enforcement engine 侧预过滤
-  - [ ] 前端最小地图/位置视图（原型阶段不需要）
-  - [ ] 原型世界包验证（题材已在整理中）
+  - [x] 前端最小地图/位置视图（原型阶段不需要）
+  - [x] 原型世界包验证（题材已在整理中）
   - [x] `move` intent 接地逻辑 — dispatcher 分支已实现，AI → intent 的解析（"走向厨房" → `move(target='kitchen')`）已通过 intent_grounder 直通 + spatial_proximity 上下文注入 + output schema enum 完成
 - [ ] B 层：连续几何（坐标 + 度量函数）— 依赖 A 层完成，需求驱动
   - [ ] 实体携带 (x, y[, z]) 连续坐标
@@ -75,4 +75,5 @@
 >   - [ ] 功能 B：双重模块设置（决策推迟）
 - [ ] 双重模块设置，一个是当前的Prompt Tree，另一个是更复杂拥有插槽函数的核心
 > ⚠ 决策推迟至功能 A Phase 1-5 复杂度评估完成后
+
 

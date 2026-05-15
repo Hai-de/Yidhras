@@ -50,7 +50,7 @@ const buildTestContext = (
     now?: bigint;
     worldEngine?: AppContext['worldEngine'];
   }
-): AppContext => {
+): any => {
   const now = options?.now ?? 1000n;
   const sim = {
     getPack(): typeof pack {
@@ -64,17 +64,15 @@ const buildTestContext = (
         return now;
       }
     }
-  } as AppContext['sim'];
+  } as any;
 
   return {
     repos: wrapPrismaAsRepositories({} as PrismaClient),
     prisma: {} as AppContext['prisma'],
     packStorageAdapter,
-    sim,
-    clock: sim as AppContext['clock'],
     packRuntime: sim as AppContext['packRuntime'],
     notifications: {
-      push(level, content) {
+      push(level: string, content: string) {
         return { id: 'noop', level, content, timestamp: Date.now() };
       },
       getMessages() {
@@ -94,13 +92,13 @@ const buildTestContext = (
       available_world_packs: [pack.metadata.id],
       errors: []
     },
-    getRuntimeReady() {
+    isRuntimeReady() {
       return true;
     },
     setRuntimeReady() {
       // noop
     },
-    getPaused() {
+    isPaused() {
       return false;
     },
     setPaused() {
@@ -132,7 +130,7 @@ const buildTestContext = (
         getStepTicks: () => 1n,
         step: async () => {},
         applyClockProjection: () => {}
-      }) as PackRuntimeHost,
+      }) as unknown as PackRuntimeHost,
     worldEngine: options?.worldEngine
   };
 };

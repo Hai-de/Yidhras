@@ -17,7 +17,7 @@ describe('agent binding integration', () => {
     cleanup = fixture.cleanup
     context = fixture.context
 
-    const now = context.sim.getCurrentTick()
+    const now = context.packRuntime!.getCurrentTick()
 
     // 创建 operator
     await context.prisma.identity.create({

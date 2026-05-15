@@ -188,6 +188,11 @@ const ensureGraphFixtures = async (prisma: ReturnType<typeof createPrismaClientF
 
 describe('graph view e2e', () => {
   it('returns graph projections with filters, search, root selection and validation errors', async () => {
+    interface GraphViewData {
+      nodes: Array<Record<string, unknown>>;
+      edges: Array<Record<string, unknown>>;
+      [key: string]: unknown;
+    }
     const environment = await createIsolatedRuntimeEnvironment();
     const prisma = createPrismaClientForEnvironment(environment);
 
@@ -209,7 +214,7 @@ describe('graph view e2e', () => {
 
           const graphViewResponse = await requestJson(server.baseUrl, '/api/graph/view');
           expect(graphViewResponse.status).toBe(200);
-          const graphView = assertSuccessEnvelopeData(graphViewResponse.body, 'graph view response');
+          const graphView = assertSuccessEnvelopeData(graphViewResponse.body, 'graph view response') as unknown as GraphViewData;
           expect(graphView.schema_version).toBe('graph');
           expect(graphView.view).toBe('mesh');
           expect(Array.isArray(graphView.nodes)).toBe(true);
@@ -221,13 +226,13 @@ describe('graph view e2e', () => {
           const responseMeta = assertRecord((graphViewResponse.body as Record<string, unknown>).meta, 'graph view meta');
           expect(responseMeta.schema_version).toBe('graph');
 
-          const hasAgentNode = graphView.nodes.some(node => isRecord(node) && node.kind === 'agent');
-          const hasAtmosphereNode = graphView.nodes.some(node => isRecord(node) && node.kind === 'atmosphere');
-          const hasRelationshipEdge = graphView.edges.some(edge => isRecord(edge) && edge.kind === 'relationship');
-          const hasOwnershipEdge = graphView.edges.some(edge => isRecord(edge) && edge.kind === 'ownership');
-          const hasRelayNode = graphView.nodes.some(node => isRecord(node) && node.kind === 'relay');
-          const hasContainerNode = graphView.nodes.some(node => isRecord(node) && node.kind === 'container');
-          const hasTransmissionEdge = graphView.edges.some(edge => isRecord(edge) && edge.kind === 'transmission');
+          const hasAgentNode = graphView.nodes.some((node: Record<string, unknown>) => isRecord(node) && node.kind === 'agent');
+          const hasAtmosphereNode = graphView.nodes.some((node: Record<string, unknown>) => isRecord(node) && node.kind === 'atmosphere');
+          const hasRelationshipEdge = graphView.edges.some((edge: Record<string, unknown>) => isRecord(edge) && edge.kind === 'relationship');
+          const hasOwnershipEdge = graphView.edges.some((edge: Record<string, unknown>) => isRecord(edge) && edge.kind === 'ownership');
+          const hasRelayNode = graphView.nodes.some((node: Record<string, unknown>) => isRecord(node) && node.kind === 'relay');
+          const hasContainerNode = graphView.nodes.some((node: Record<string, unknown>) => isRecord(node) && node.kind === 'container');
+          const hasTransmissionEdge = graphView.edges.some((edge: Record<string, unknown>) => isRecord(edge) && edge.kind === 'transmission');
 
           expect(hasAgentNode).toBe(true);
           expect(hasAtmosphereNode).toBe(true);
@@ -237,22 +242,22 @@ describe('graph view e2e', () => {
           expect(hasContainerNode).toBe(true);
           expect(hasTransmissionEdge).toBe(true);
 
-          const sampleRelayNode = graphView.nodes.find(node => isRecord(node) && node.kind === 'relay');
+          const sampleRelayNode = graphView.nodes.find((node: Record<string, unknown>) => isRecord(node) && node.kind === 'relay');
           expect(isRecord(sampleRelayNode)).toBe(true);
           expect(isRecord(sampleRelayNode?.metadata)).toBe(true);
           expect('relay_type' in (sampleRelayNode?.metadata as Record<string, unknown>)).toBe(true);
 
-          const sampleContainerNode = graphView.nodes.find(node => isRecord(node) && node.kind === 'container');
+          const sampleContainerNode = graphView.nodes.find((node: Record<string, unknown>) => isRecord(node) && node.kind === 'container');
           expect(isRecord(sampleContainerNode)).toBe(true);
           expect(isRecord(sampleContainerNode?.metadata)).toBe(true);
           expect('container_type' in (sampleContainerNode?.metadata as Record<string, unknown>)).toBe(true);
 
           const kindsResponse = await requestJson(server.baseUrl, '/api/graph/view?kinds=relay&kinds=container');
           expect(kindsResponse.status).toBe(200);
-          const kindsGraph = assertSuccessEnvelopeData(kindsResponse.body, 'graph view filtered kinds');
+          const kindsGraph = assertSuccessEnvelopeData(kindsResponse.body, 'graph view filtered kinds') as unknown as GraphViewData;
           expect(Array.isArray(kindsGraph.nodes)).toBe(true);
           expect(
-            kindsGraph.nodes.every(node => isRecord(node) && (node.kind === 'relay' || node.kind === 'container'))
+            kindsGraph.nodes.every((node: Record<string, unknown>) => isRecord(node) && (node.kind === 'relay' || node.kind === 'container'))
           ).toBe(true);
 
           const noUnresolvedResponse = await requestJson(server.baseUrl, '/api/graph/view?include_unresolved=false');
@@ -260,35 +265,35 @@ describe('graph view e2e', () => {
           const noUnresolvedGraph = assertSuccessEnvelopeData(
             noUnresolvedResponse.body,
             'graph view include_unresolved=false'
-          );
+          ) as unknown as GraphViewData;
           expect(
             Array.isArray(noUnresolvedGraph.nodes) &&
-              noUnresolvedGraph.nodes.every(node => !isRecord(node) || node.kind !== 'container')
+              noUnresolvedGraph.nodes.every((node: Record<string, unknown>) => !isRecord(node) || node.kind !== 'container')
           ).toBe(true);
 
           const rootResponse = await requestJson(server.baseUrl, '/api/graph/view?root_id=agent-001&depth=1');
           expect(rootResponse.status).toBe(200);
-          const rootGraph = assertSuccessEnvelopeData(rootResponse.body, 'graph view rooted response');
+          const rootGraph = assertSuccessEnvelopeData(rootResponse.body, 'graph view rooted response') as unknown as GraphViewData;
           expect(Array.isArray(rootGraph.nodes)).toBe(true);
-          expect(rootGraph.nodes.some(node => isRecord(node) && node.id === 'agent-001')).toBe(true);
+          expect(rootGraph.nodes.some((node: Record<string, unknown>) => isRecord(node) && node.id === 'agent-001')).toBe(true);
 
           const searchResponse = await requestJson(server.baseUrl, '/api/graph/view?search=relay');
           expect(searchResponse.status).toBe(200);
-          const searchGraph = assertSuccessEnvelopeData(searchResponse.body, 'graph view search response');
+          const searchGraph = assertSuccessEnvelopeData(searchResponse.body, 'graph view search response') as unknown as GraphViewData;
           expect(
             Array.isArray(searchGraph.nodes) &&
               searchGraph.nodes.every(
-                node => isRecord(node) && typeof node.label === 'string' && node.label.toLowerCase().includes('relay')
+                (node: Record<string, unknown>) => isRecord(node) && typeof node.label === 'string' && node.label.toLowerCase().includes('relay')
               )
           ).toBe(true);
 
           const qAliasResponse = await requestJson(server.baseUrl, '/api/graph/view?q=relay');
           expect(qAliasResponse.status).toBe(200);
-          const qAliasGraph = assertSuccessEnvelopeData(qAliasResponse.body, 'graph view q alias response');
+          const qAliasGraph = assertSuccessEnvelopeData(qAliasResponse.body, 'graph view q alias response') as unknown as GraphViewData;
           expect(
             Array.isArray(qAliasGraph.nodes) &&
               qAliasGraph.nodes.every(
-                node => isRecord(node) && typeof node.label === 'string' && node.label.toLowerCase().includes('relay')
+                (node: Record<string, unknown>) => isRecord(node) && typeof node.label === 'string' && node.label.toLowerCase().includes('relay')
               )
           ).toBe(true);
 

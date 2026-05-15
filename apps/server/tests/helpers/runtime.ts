@@ -2,7 +2,6 @@ import { spawn } from 'node:child_process';
 import { copyFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { PrismaClient } from '@prisma/client';
 
@@ -10,7 +9,7 @@ import { createPrismaClient } from '../../src/db/client.js';
 import type { RunningServer, TestServerOptions } from './server.js';
 import { withTestServer } from './server.js';
 
-const helpersDirectory = dirname(fileURLToPath(import.meta.url));
+const helpersDirectory = dirname(__filename);
 const serverRoot = resolve(helpersDirectory, '../..');
 const bundledConfigTemplatePaths = {
   default: join(serverRoot, 'templates', 'configw', 'default.yaml'),

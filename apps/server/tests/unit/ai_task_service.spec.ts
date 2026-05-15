@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { AiTaskOverride, AiTaskRequest, AiTaskService, ModelGateway, ModelGatewayExecutionInput, ModelGatewayResponse } from '../../src/ai/types.js';
+import type { AiTaskOverride, AiTaskRequest, ModelGatewayResponse } from '../../src/ai/types.js';
+import type { ModelGateway, ModelGatewayExecutionInput } from '../../src/ai/gateway.js';
+import type { AiTaskService } from '../../src/ai/task_service.js';
 import { createAiTaskService } from '../../src/ai/task_service.js';
 
 const buildCompletedResponse = (input: ModelGatewayExecutionInput): ModelGatewayResponse => ({
@@ -46,10 +48,11 @@ describe('AiTaskService', () => {
   let service: AiTaskService;
 
   const createCapturingGateway = (): ModelGateway => ({
-    async execute(input) {
+    async execute(input: ModelGatewayExecutionInput) {
       capturedRequest = input;
       return buildCompletedResponse(input);
-    }
+    },
+    executeStream: vi.fn()
   });
 
   beforeEach(() => {

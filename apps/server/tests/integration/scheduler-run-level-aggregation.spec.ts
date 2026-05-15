@@ -167,7 +167,7 @@ describe('scheduler run level aggregation integration', () => {
   });
 
   it('aggregates cross-linked workflow state and audit summaries at scheduler run level', async () => {
-    const baseTick = context.sim.clock.getTicks();
+    const baseTick = context.packRuntime!.getCurrentTick();
     const runId = randomUUID();
     const createdJobId = randomUUID();
     const inferenceId = randomUUID();

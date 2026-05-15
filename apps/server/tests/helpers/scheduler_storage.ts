@@ -1,4 +1,9 @@
-import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
+import type {
+  SchedulerOwnershipMigrationRecord,
+  SchedulerRebalanceRecommendationRecord,
+  SchedulerStorageAdapter,
+  SchedulerWorkerStateRecord
+} from '../../src/packs/storage/SchedulerStorageAdapter.js';
 
 // ---------------------------------------------------------------------------
 // In-memory SchedulerStorageAdapter for integration tests
@@ -357,17 +362,41 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     ).length;
   }
 
-  getMigrationById(packId: string, migrationId: string): Record<string, unknown> | null {
+  getMigrationById(packId: string, migrationId: string): SchedulerOwnershipMigrationRecord | null {
     const migration = (this.migrations.get(packId) ?? []).find(m => m.id === migrationId);
     if (!migration) return null;
-    return migration as unknown as Record<string, unknown>;
+    return {
+      id: migration.id,
+      partition_id: migration.partition_id,
+      from_worker_id: migration.from_worker_id,
+      to_worker_id: migration.to_worker_id,
+      status: migration.status,
+      reason: migration.reason,
+      details: migration.details ? JSON.parse(migration.details) : null,
+      created_at: BigInt(migration.created_at),
+      updated_at: BigInt(migration.updated_at),
+      completed_at: migration.completed_at !== null ? BigInt(migration.completed_at) : null
+    };
   }
 
-  findLatestActiveMigrationForPartition(packId: string, partitionId: string, toWorkerId: string): Record<string, unknown> | null {
+  findLatestActiveMigrationForPartition(packId: string, partitionId: string, toWorkerId: string): SchedulerOwnershipMigrationRecord | null {
     const migrations = (this.migrations.get(packId) ?? [])
       .filter(m => m.partition_id === partitionId && m.to_worker_id === toWorkerId && (m.status === 'requested' || m.status === 'in_progress'))
       .sort((a, b) => b.created_at - a.created_at);
-    return migrations.length > 0 ? migrations[0] as unknown as Record<string, unknown> : null;
+    if (migrations.length === 0) return null;
+    const m = migrations[0];
+    return {
+      id: m.id,
+      partition_id: m.partition_id,
+      from_worker_id: m.from_worker_id,
+      to_worker_id: m.to_worker_id,
+      status: m.status,
+      reason: m.reason,
+      details: m.details ? JSON.parse(m.details) : null,
+      created_at: BigInt(m.created_at),
+      updated_at: BigInt(m.updated_at),
+      completed_at: m.completed_at !== null ? BigInt(m.completed_at) : null
+    };
   }
 
   createMigration(packId: string, input: {
@@ -440,10 +469,18 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     }));
   }
 
-  getWorkerState(packId: string, workerId: string): Record<string, unknown> | null {
+  getWorkerState(packId: string, workerId: string): SchedulerWorkerStateRecord | null {
     const w = (this.workers.get(packId) ?? []).find(ws => ws.worker_id === workerId);
     if (!w) return null;
-    return w as unknown as Record<string, unknown>;
+    return {
+      worker_id: w.worker_id,
+      status: w.status,
+      last_heartbeat_at: BigInt(w.last_heartbeat_at),
+      owned_partition_count: w.owned_partition_count,
+      active_migration_count: w.active_migration_count,
+      capacity_hint: w.capacity_hint,
+      updated_at: BigInt(w.updated_at)
+    };
   }
 
   upsertWorkerState(packId: string, input: {
@@ -502,7 +539,7 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     from_worker_id: string | null;
     to_worker_id: string | null;
     suppress_reason: string | null;
-  }): Record<string, unknown> | null {
+  }): SchedulerRebalanceRecommendationRecord | null {
     const recs = this.recommendations.get(packId) ?? [];
     const match = recs.find(r =>
       r.partition_id === input.partition_id &&
@@ -512,7 +549,21 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
       (input.to_worker_id === null ? r.to_worker_id === null : r.to_worker_id === input.to_worker_id) &&
       r.applied_migration_id === null
     );
-    return match ? match as unknown as Record<string, unknown> : null;
+    if (!match) return null;
+    return {
+      id: match.id,
+      partition_id: match.partition_id,
+      from_worker_id: match.from_worker_id,
+      to_worker_id: match.to_worker_id,
+      status: match.status,
+      reason: match.reason,
+      score: match.score,
+      suppress_reason: match.suppress_reason,
+      details: match.details ? JSON.parse(match.details) : null,
+      created_at: BigInt(match.created_at),
+      updated_at: BigInt(match.updated_at),
+      applied_migration_id: match.applied_migration_id
+    };
   }
 
   createRecommendation(packId: string, input: {
@@ -573,9 +624,23 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     }));
   }
 
-  getRecommendationById(packId: string, id: string): Record<string, unknown> | null {
+  getRecommendationById(packId: string, id: string): SchedulerRebalanceRecommendationRecord | null {
     const r = (this.recommendations.get(packId) ?? []).find(rec => rec.id === id);
-    return r ? r as unknown as Record<string, unknown> : null;
+    if (!r) return null;
+    return {
+      id: r.id,
+      partition_id: r.partition_id,
+      from_worker_id: r.from_worker_id,
+      to_worker_id: r.to_worker_id,
+      status: r.status,
+      reason: r.reason,
+      score: r.score,
+      suppress_reason: r.suppress_reason,
+      details: r.details ? JSON.parse(r.details) : null,
+      created_at: BigInt(r.created_at),
+      updated_at: BigInt(r.updated_at),
+      applied_migration_id: r.applied_migration_id
+    };
   }
 
   updateRecommendation(packId: string, input: {
@@ -584,7 +649,7 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     updated_at: bigint;
     applied_migration_id?: string | null;
     details: unknown;
-  }): Record<string, unknown> {
+  }): SchedulerRebalanceRecommendationRecord {
     const recs = this.recommendations.get(packId) ?? [];
     const r = recs.find(rec => rec.id === input.id);
     if (!r) throw new Error(`recommendation not found: ${input.id}`);
@@ -592,15 +657,41 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     r.updated_at = Number(input.updated_at);
     if (input.applied_migration_id !== undefined) r.applied_migration_id = input.applied_migration_id;
     r.details = typeof input.details === 'string' ? input.details : JSON.stringify(input.details);
-    return r as unknown as Record<string, unknown>;
+    return {
+      id: r.id,
+      partition_id: r.partition_id,
+      from_worker_id: r.from_worker_id,
+      to_worker_id: r.to_worker_id,
+      status: r.status,
+      reason: r.reason,
+      score: r.score,
+      suppress_reason: r.suppress_reason,
+      details: r.details ? JSON.parse(r.details) : null,
+      created_at: BigInt(r.created_at),
+      updated_at: BigInt(r.updated_at),
+      applied_migration_id: r.applied_migration_id
+    };
   }
 
-  listPendingRecommendationsForWorker(packId: string, workerId: string, maxApply: number): Array<Record<string, unknown>> {
+  listPendingRecommendationsForWorker(packId: string, workerId: string, maxApply: number): SchedulerRebalanceRecommendationRecord[] {
     const items = (this.recommendations.get(packId) ?? [])
       .filter(r => r.to_worker_id === workerId && r.status === 'recommended')
       .sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || a.created_at - b.created_at)
       .slice(0, maxApply);
-    return items as unknown as Array<Record<string, unknown>>;
+    return items.map(r => ({
+      id: r.id,
+      partition_id: r.partition_id,
+      from_worker_id: r.from_worker_id,
+      to_worker_id: r.to_worker_id,
+      status: r.status,
+      reason: r.reason,
+      score: r.score,
+      suppress_reason: r.suppress_reason,
+      details: r.details ? JSON.parse(r.details) : null,
+      created_at: BigInt(r.created_at),
+      updated_at: BigInt(r.updated_at),
+      applied_migration_id: r.applied_migration_id
+    }));
   }
 
   // -- Observability read methods --
@@ -675,13 +766,13 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
         });
       }
     }
-    return items as Array<Record<string, unknown>>;
+    return items as unknown as Array<Record<string, unknown>>;
   }
 
   getAgentDecisions(packId: string, actorId: string, limit?: number): Array<Record<string, unknown>> {
     let items = (this.decisions.get(packId) ?? []).filter(d => d.actor_id === actorId);
     items.sort((a, b) => compareValues(b.created_at, a.created_at));
     if (limit !== undefined) items = items.slice(0, limit);
-    return items as Array<Record<string, unknown>>;
+    return items as unknown as Array<Record<string, unknown>>;
   }
 }

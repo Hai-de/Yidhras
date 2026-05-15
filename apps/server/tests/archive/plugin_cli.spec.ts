@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Plugin CLI source was removed during backward-compatibility cleanup.
 // Tests preserved for reference; re-enable when CLI is re-implemented.
 import type { PluginInstallation } from '@yidhras/contracts';

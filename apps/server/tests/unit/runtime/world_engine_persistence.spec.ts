@@ -35,13 +35,12 @@ const createMockPackStorageAdapter = (): PackStorageAdapter => ({
   importPackData: async () => {}
 });
 
-const createMinimalContext = (): AppContext => {
+const createMinimalContext = (): any => {
   const prisma = {} as never;
   return {
     repos: wrapPrismaAsRepositories(prisma as unknown as PrismaClient),
     prisma,
     packStorageAdapter: createMockPackStorageAdapter(),
-  sim: {} as never,
   notifications: {
     push: vi.fn() as never,
     getMessages: vi.fn(() => []),
@@ -53,9 +52,9 @@ const createMinimalContext = (): AppContext => {
     available_world_packs: [TEST_PACK_ID],
     errors: []
   },
-  getRuntimeReady: () => true,
+  isRuntimeReady: () => true,
   setRuntimeReady: vi.fn(),
-  getPaused: () => false,
+  isPaused: () => false,
   setPaused: vi.fn(),
   worldEngineStepCoordinator: createWorldEngineStepCoordinator(),
   assertRuntimeReady: vi.fn()
@@ -357,21 +356,21 @@ describe('world engine persistence orchestration', () => {
         updated_at: 0n
       }));
     });
-    const upsertSpy = vi.spyOn(entityStateRepo, 'upsertPackEntityState').mockImplementation(async input => {
-      existingStates.set(`${input.entity_id}:${input.state_namespace}`, {
-        id: input.id,
-        entity_id: input.entity_id,
-        state_namespace: input.state_namespace,
-        state_json: input.state_json
+    const upsertSpy = vi.spyOn(entityStateRepo, 'upsertPackEntityState').mockImplementation(async (_adapter, input: any) => {
+      existingStates.set(`${String(input.entity_id)}:${String(input.state_namespace)}`, {
+        id: String(input.id),
+        entity_id: String(input.entity_id),
+        state_namespace: String(input.state_namespace),
+        state_json: input.state_json as Record<string, unknown>
       });
       return {
-        id: input.id,
-        pack_id: input.pack_id,
-        entity_id: input.entity_id,
-        state_namespace: input.state_namespace,
-        state_json: input.state_json,
-        created_at: input.now,
-        updated_at: input.now
+        id: String(input.id),
+        pack_id: String(input.pack_id),
+        entity_id: String(input.entity_id),
+        state_namespace: String(input.state_namespace),
+        state_json: input.state_json as Record<string, unknown>,
+        created_at: input.now as bigint,
+        updated_at: input.now as bigint
       };
     });
     const recordSpy = vi.spyOn(ruleExecutionRepo, 'recordPackRuleExecution').mockImplementation(async (_adapter, input) => {

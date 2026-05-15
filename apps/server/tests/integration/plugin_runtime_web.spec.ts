@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getPackPluginRuntimeWebSnapshot,
-  resolveEnabledPluginWebAsset,
   resolveEnabledPluginWebAsset
 } from '../../src/app/services/plugin_runtime_web.js';
 import { confirmPackPluginImport, enablePackPlugin } from '../../src/app/services/plugins.js';
@@ -74,7 +73,7 @@ describe('plugin runtime web integration', () => {
         trust_mode: 'trusted'
       });
 
-      fixture.context.sim.getPack = () => ({
+      fixture.context.packRuntime!.getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
       fixture.context.getPluginEnableWarningConfig = () => ({
@@ -87,7 +86,7 @@ describe('plugin runtime web integration', () => {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'integration'
       });
-      await refreshPackPluginRuntime(fixture.context);
+      await refreshPackPluginRuntime(fixture.context, 'world-pack-alpha');
 
       const runtimeSnapshot = await getPackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-alpha');
       expect(runtimeSnapshot.plugins).toHaveLength(1);
@@ -171,22 +170,21 @@ describe('plugin runtime web integration', () => {
         trust_mode: 'trusted'
       });
 
-      fixture.context.sim.getPack = () => ({
+      fixture.context.packRuntime!.getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
       fixture.context.getPluginEnableWarningConfig = () => ({
         enabled: true,
         require_acknowledgement: true
       });
-      fixture.context.sim.isExperimentalMultiPackRuntimeEnabled = () => true;
-      fixture.context.sim.loadExperimentalPackRuntime = async () => ({
+      fixture.context.packRuntimeControl!.load = async (packRef: string) => ({
         handle: {
           pack_id: 'world-pack-experimental-web'
         } as never,
         loaded: true,
         already_loaded: false
       });
-      fixture.context.sim.getPackRuntimeHandle = (packId: string) => {
+      fixture.context.getPackRuntimeHandle = (packId: string) => {
         return packId === 'world-pack-experimental-web'
           ? ({ pack_id: 'world-pack-experimental-web' } as never)
           : null;
@@ -197,7 +195,7 @@ describe('plugin runtime web integration', () => {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'integration'
       });
-      await refreshPackPluginRuntime(fixture.context);
+      await refreshPackPluginRuntime(fixture.context, 'world-pack-experimental-web');
       await syncPackPluginRuntime(fixture.context, 'world-pack-experimental-web');
 
       await expect(getPackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-experimental-web')).rejects.toMatchObject({
@@ -293,7 +291,7 @@ describe('plugin runtime web integration', () => {
         confirmed_at: '1500'
       });
 
-      fixture.context.sim.getPack = () => ({
+      fixture.context.packRuntime!.getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
 

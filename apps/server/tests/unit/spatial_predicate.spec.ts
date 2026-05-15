@@ -9,6 +9,9 @@ const createMockSpatialRuntime = (
   const neighborMap = new Map(Object.entries(neighbors));
   return {
     model: 'discrete',
+    async getLocationState(_entityId: string) {
+      return null;
+    },
     async getLocation(_entityId: string) {
       return null;
     },

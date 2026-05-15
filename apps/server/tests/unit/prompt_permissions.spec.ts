@@ -41,6 +41,7 @@ describe('prompt permissions', () => {
       actor_identity_id: 'actor-001',
       actor_agent_id: 'agent-001',
       host_agent_ids: [],
+      agent_capabilities: [],
       permission_kind: 'read'
     });
     expect(result.allowed).toBe(true);
@@ -64,6 +65,7 @@ describe('prompt permissions', () => {
       actor_identity_id: 'actor-002',
       actor_agent_id: 'agent-002',
       host_agent_ids: [],
+      agent_capabilities: [],
       permission_kind: 'read'
     });
 
@@ -85,6 +87,7 @@ describe('prompt permissions', () => {
       actor_identity_id: 'actor-001',
       actor_agent_id: 'agent-001',
       host_agent_ids: [],
+      agent_capabilities: [],
       permission_kind: 'visibility'
     });
 
@@ -98,6 +101,7 @@ describe('prompt permissions', () => {
       actor_identity_id: 'actor-001',
       actor_agent_id: 'agent-001',
       host_agent_ids: [],
+      agent_capabilities: [],
       permission_kind: 'write'
     });
     expect(result.allowed).toBe(true);

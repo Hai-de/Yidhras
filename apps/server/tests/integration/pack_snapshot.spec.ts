@@ -27,7 +27,7 @@ import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 const TEST_PACK_ID = 'snapshot-integration-pack';
 
 const createMinimalRuntimeDb = (dbPath: string): void => {
-  const db = new DatabaseSync(dbPath, { create: true });
+  const db = new DatabaseSync(dbPath);
   db.exec(`
     CREATE TABLE IF NOT EXISTS pack_world_entities (
       id TEXT PRIMARY KEY,
@@ -369,8 +369,6 @@ describe('pack snapshot integration', () => {
         prisma: context.prisma,
         packStorageAdapter: context.packStorageAdapter,
         pack: packMock,
-        sim: context.sim,
-        packRuntime: context.packRuntime,
         notifications: context.notifications,
         applyClockProjection: () => {}
       });

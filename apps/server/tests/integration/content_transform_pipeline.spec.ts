@@ -29,8 +29,8 @@ function makeTreeWithContent(slotId: string, content: string, estimatedTokens = 
 
 function makeMinimalState(overrides: Partial<PromptWorkflowState> = {}): PromptWorkflowState {
   const base = createInitialPromptWorkflowState({
-    context_run: { run_id: 'run-1', nodes: [], created_at: BigInt(0), metadata: {} },
-    actor_ref: { actor_entity_id: 'e1', actor_role: 'active' },
+    context_run: { id: 'run-1', created_at_tick: '0', nodes: [], selected_node_ids: [], diagnostics: { source_adapter_names: [], node_count: 0, node_counts_by_type: {}, selected_node_ids: [], dropped_nodes: [] } },
+    actor_ref: { identity_id: 'e1', role: 'active', identity_type: 'agent', agent_id: 'agent-1', atmosphere_node_id: null },
     task_type: 'agent_decision',
     strategy: 'mock',
     pack_id: 'test-pack',
@@ -45,11 +45,11 @@ function makeMinimalContext(tick = 100) {
     strategy: 'mock' as const, attributes: {}, world_prompts: {},
     variable_context: { layers: [], summary: { total_variables: 0, layers_merged: 0, namespaces: [] } },
     variable_context_summary: { total_variables: 0, layers_merged: 0, namespaces: [] },
-    context_run: { run_id: 'run-1', nodes: [], created_at: BigInt(0), metadata: {} },
+    context_run: { id: 'run-1', nodes: [], metadata: {} },
     memory_context: { pack_id: 'test-pack', memory_blocks: [], overlays: [], metadata: {} },
     pack_runtime: {},
     world_pack: { id: 'test-pack', name: 'Test', version: '1' },
-    actor_ref: { actor_entity_id: 'e1', actor_role: 'active' as const },
+    actor_ref: { identity_id: 'e1', role: 'active' as const },
     actor_display_name: 'Test', identity: { identity_id: 'id1', name: 'Test', type: 'agent' as const },
     binding_ref: null, resolved_agent_id: null, agent_snapshot: null,
     pack_state: { entities: {}, relationships: [] },

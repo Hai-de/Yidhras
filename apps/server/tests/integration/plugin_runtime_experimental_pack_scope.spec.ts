@@ -70,15 +70,14 @@ describe('plugin runtime experimental pack scope integration', () => {
         trust_mode: 'trusted'
       });
 
-      fixture.context.sim.getPack = () => ({
+      fixture.context.packRuntime!.getPack = () => ({
         metadata: { id: 'world-pack-runtime', name: 'Runtime Pack', version: '0.1.0' }
       }) as never;
       fixture.context.getPluginEnableWarningConfig = () => ({
         enabled: true,
         require_acknowledgement: true
       });
-      fixture.context.sim.isExperimentalMultiPackRuntimeEnabled = () => true;
-      fixture.context.sim.loadExperimentalPackRuntime = async () => ({
+      fixture.context.packRuntimeControl!.load = async (packRef: string) => ({
         handle: {
           pack_id: 'world-pack-experimental',
           pack_folder_name: 'world-pack-experimental',
@@ -89,7 +88,7 @@ describe('plugin runtime experimental pack scope integration', () => {
         loaded: true,
         already_loaded: false
       });
-      fixture.context.sim.getPackRuntimeHandle = (packId: string) => {
+      fixture.context.getPackRuntimeHandle = (packId: string) => {
         return packId === 'world-pack-experimental'
           ? ({
               pack_id: 'world-pack-experimental'
@@ -110,7 +109,7 @@ describe('plugin runtime experimental pack scope integration', () => {
       expect(snapshot.plugins).toHaveLength(1);
       expect(snapshot.plugins[0]?.pack_id).toBe('world-pack-experimental');
       expect(pluginRuntimeRegistry.listRuntimes('world-pack-experimental')).toHaveLength(1);
-      expect(fixture.context.sim.getPack()?.metadata.id).toBe('world-pack-runtime');
+      expect(fixture.context.packRuntime!.getPack()?.metadata.id).toBe('world-pack-runtime');
     } finally {
       await fixture.cleanup();
     }

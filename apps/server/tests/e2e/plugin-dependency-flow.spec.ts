@@ -17,7 +17,7 @@ interface PluginSeed {
   installation_id: string;
   checksum: string;
   manifestOverrides?: Record<string, unknown>;
-  scope_type?: string;
+  scope_type?: 'pack_local' | 'global';
   lifecycle_state?: string;
 }
 
@@ -64,7 +64,7 @@ const seedPlugin = async (
       version: '1.0.0',
       kind: 'other',
       entrypoints: {},
-      compatibility: { yidhras: '>=0.5.0', pack_id: PACK_ID },
+      compatibility: { yidhras: '>=0.5.0', host_api: '1.0.0', pack_id: PACK_ID },
       requested_capabilities: [],
       contributions: {
         server: {
@@ -85,7 +85,7 @@ const seedPlugin = async (
       dependencies: { interfaces: [], plugins: [] },
       provides: [],
       ...(seed.manifestOverrides ?? {})
-    } as PluginManifest;
+    } as unknown as PluginManifest;
 
     await prisma.pluginArtifact.create({
       data: {
@@ -98,7 +98,7 @@ const seedPlugin = async (
         source_path: 'tests/e2e/fixtures',
         checksum: seed.checksum,
         manifest_json: JSON.parse(JSON.stringify(manifestJson)),
-        imported_at: String(Date.now())
+        imported_at: String(Date.now()) as unknown as number
       }
     });
 
@@ -172,14 +172,14 @@ describe('plugin dependency flow e2e', () => {
   it('lists plugin installations for a pack (no plugins)', async () => {
     await withSeededServer({ defaultPort: 3120, packRef: PACK_REF }, [], async server => {
       const headers = await getRootAuthHeaders(server.baseUrl);
-      const res = await requestJson(server.baseUrl, `/api/packs/${PACK_ID}/plugins`, { headers });
+      const res = await requestJson(server.baseUrl, `/api/packs/${PACK_ID}/plugins`, { headers: headers });
 
       expect(res.status).toBe(200);
       const data = assertSuccessEnvelopeData(res.body, 'list plugins');
       expect(data.pack_id).toBe(PACK_ID);
       expect(Array.isArray(data.items)).toBe(true);
       expect(data.items).toHaveLength(0);
-      expect(data.enable_warning.enabled).toBe(true);
+      expect((data.enable_warning as unknown as Record<string, unknown>).enabled).toBe(true);
     });
   });
 

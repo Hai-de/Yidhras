@@ -27,7 +27,7 @@ describe('scheduler cross-link projection integration', () => {
 
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter;
+    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
   });
 
   beforeEach(async () => {
@@ -44,7 +44,7 @@ describe('scheduler cross-link projection integration', () => {
 
   it('enriches scheduler decisions with cross-linked workflow state from decision jobs', async () => {
     const prisma = context.prisma;
-    const baseTick = context.sim.clock.getTicks();
+    const baseTick = context.packRuntime!.getCurrentTick();
     const runId = randomUUID();
     const jobId = randomUUID();
     const inferenceId = randomUUID();

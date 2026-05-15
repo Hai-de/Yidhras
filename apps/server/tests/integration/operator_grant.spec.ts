@@ -18,7 +18,7 @@ describe('operator grant integration', () => {
     cleanup = fixture.cleanup
     context = fixture.context
 
-    const now = context.sim.getCurrentTick()
+    const now = context.packRuntime!.getCurrentTick()
 
     await context.prisma.identity.createMany({
       data: [
@@ -79,7 +79,7 @@ describe('operator grant integration', () => {
   })
 
   it('creates grant with TTL expires_at', async () => {
-    const now = context.sim.getCurrentTick()
+    const now = context.packRuntime!.getCurrentTick()
     const futureTick = now + 1000n
 
     const grant = await createOperatorGrant(context, 'pack-1', 'op-giver', 'identity-receiver', 'perceive.agent.scheduler', {
@@ -90,7 +90,7 @@ describe('operator grant integration', () => {
   })
 
   it('rejects grant with past expires_at', async () => {
-    const pastTick = context.sim.getCurrentTick() - 1n
+    const pastTick = context.packRuntime!.getCurrentTick() - 1n
 
     await expect(
       createOperatorGrant(context, 'pack-1', 'op-giver', 'identity-receiver', 'perceive.agent.scheduler', {

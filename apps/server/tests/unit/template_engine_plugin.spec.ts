@@ -1,4 +1,5 @@
-import type { DataCleaner, DataCleanerInput } from '@yidhras/contracts'
+import type { DataCleanerInput } from '@yidhras/contracts'
+import type { DataCleaner } from '../../src/plugins/extensions/data_cleaner_registry.js'
 import { describe, expect, it } from 'vitest'
 
 import { dataCleanerRegistry } from '../../src/plugins/extensions/data_cleaner_registry.js'

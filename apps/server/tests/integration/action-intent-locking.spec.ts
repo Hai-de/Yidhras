@@ -44,7 +44,7 @@ describe('action intent locking integration', () => {
   });
 
   const createActionIntent = async (suffix: string) => {
-    const now = context.sim.clock.getTicks();
+    const now = context.packRuntime!.getCurrentTick();
     const inferenceId = `${INTENT_SOURCE_PREFIX}${suffix}-${Date.now()}`;
 
     await context.prisma.inferenceTrace.create({

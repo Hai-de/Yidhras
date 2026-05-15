@@ -20,8 +20,8 @@ const createMinimalContext = (): PromptContext => ({
   world_prompts: {
     global_prefix: 'Welcome to Test World. Strategy: {{ request.strategy }}'
   },
-  variable_context: { layers: [], alias_precedence: [], strict_namespace: false },
-  variable_context_summary: { namespaces: [], alias_precedence: [], strict_namespace: false, layer_count: 0 },
+  variable_context: { layers: [] },
+  variable_context_summary: { namespaces: [], layer_count: 0 },
   context_run: null,
   memory_context: null,
   pack_state: { actor_roles: [], actor_state: null, owned_artifacts: [], world_state: null, latest_event: null },

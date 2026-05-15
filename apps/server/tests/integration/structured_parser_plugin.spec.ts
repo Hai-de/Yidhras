@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import type { ServerPluginHostApi } from '../../src/plugins/runtime.js'
 import { dataCleanerRegistry } from '../../src/plugins/extensions/data_cleaner_registry.js'
 
 const buildHost = () => ({
@@ -15,7 +16,7 @@ describe('template-engine plugin integration', () => {
     )
 
     const host = buildHost()
-    activate(host)
+    activate(host as unknown as ServerPluginHostApi)
 
     const cleaner = dataCleanerRegistry.get('data_cleaner.template')
     expect(cleaner).toBeDefined()
@@ -28,7 +29,7 @@ describe('template-engine plugin integration', () => {
       '../../builtin/system_pack/plugins/template-engine/server.js'
     )
 
-    activate(buildHost())
+    activate(buildHost() as unknown as ServerPluginHostApi)
 
     const cleaner = dataCleanerRegistry.get('data_cleaner.template')!
     const output = await cleaner.clean({
@@ -44,7 +45,7 @@ describe('template-engine plugin integration', () => {
       '../../builtin/system_pack/plugins/template-engine/server.js'
     )
 
-    activate(buildHost())
+    activate(buildHost() as unknown as ServerPluginHostApi)
 
     const cleaner = dataCleanerRegistry.get('data_cleaner.template')!
     const output = await cleaner.clean({
@@ -60,7 +61,7 @@ describe('template-engine plugin integration', () => {
       '../../builtin/system_pack/plugins/template-engine/server.js'
     )
 
-    activate(buildHost())
+    activate(buildHost() as unknown as ServerPluginHostApi)
 
     const cleaner = dataCleanerRegistry.get('data_cleaner.template')!
     const output = await cleaner.clean({

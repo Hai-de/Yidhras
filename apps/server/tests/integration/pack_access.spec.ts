@@ -14,7 +14,7 @@ describe('pack access integration', () => {
     cleanup = fixture.cleanup
     context = fixture.context
 
-    const now = context.sim.getCurrentTick()
+    const now = context.packRuntime!.getCurrentTick()
 
     // 创建 operators
     await context.prisma.identity.createMany({
@@ -88,8 +88,8 @@ describe('pack access integration', () => {
         operator_id: 'op-alice',
         pack_id: 'pack-3',
         binding_type: PACK_BINDING_TYPE.SPECTATOR,
-        bound_at: context.sim.getCurrentTick(),
-        created_at: context.sim.getCurrentTick()
+        bound_at: context.packRuntime!.getCurrentTick(),
+        created_at: context.packRuntime!.getCurrentTick()
       }
     })
 

@@ -22,7 +22,7 @@ describe('agent scheduler projection integration', () => {
 
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter;
+    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
   });
 
   beforeEach(async () => {
@@ -35,7 +35,7 @@ describe('agent scheduler projection integration', () => {
   });
 
   it('builds a per-actor scheduler timeline with reason breakdowns', async () => {
-    const baseTick = context.sim.clock.getTicks();
+    const baseTick = context.packRuntime!.getCurrentTick();
     const runId1 = randomUUID();
     const runId2 = randomUUID();
     const decisionId1 = randomUUID();

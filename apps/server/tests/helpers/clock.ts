@@ -30,5 +30,5 @@ export const createMockClock = (initialTicks: bigint = 0n): ChronosEngine => {
     getCurrentTick(): bigint {
       return current;
     }
-  } as ChronosEngine;
+  } as unknown as ChronosEngine;
 };

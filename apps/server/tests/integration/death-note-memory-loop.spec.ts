@@ -26,8 +26,8 @@ const TEST_PACK_ID = "test-death-note";
     cleanup = fixture.cleanup;
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter;
-    context.sim.getPack = () => ({
+    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
+    context.packRuntime!.getPack = () => ({
       metadata: { id: 'world-death-note', name: '死亡笔记', version: '0.5.0' },
       ai: {
         memory_loop: {
@@ -36,7 +36,7 @@ const TEST_PACK_ID = "test-death-note";
         }
       }
     }) as never;
-    context.sim.resolvePackVariables = (value: string) => value;
+    context.packRuntime!.resolvePackVariables = (template: string) => template;
   });
 
   beforeEach(async () => {
@@ -52,7 +52,7 @@ const TEST_PACK_ID = "test-death-note";
     await context.prisma.memoryBlock.deleteMany();
     await context.prisma.memoryCompactionState.deleteMany();
 
-    const baseTick = context.sim.getCurrentTick();
+    const baseTick = context.packRuntime!.getCurrentTick();
     await context.prisma.agent.upsert({
       where: { id: 'agent-001' },
       update: {
@@ -97,7 +97,7 @@ const TEST_PACK_ID = "test-death-note";
   });
 
   it('creates memory mutations after execution and lets scheduler detect them as follow-up signals', async () => {
-    const now = context.sim.getCurrentTick();
+    const now = context.packRuntime!.getCurrentTick();
     const inferenceId = `memory-loop-trace-${Date.now()}`;
     const intentId = `memory-loop-intent-${Date.now()}`;
 
@@ -153,8 +153,8 @@ const TEST_PACK_ID = "test-death-note";
       }
     });
 
-    const dispatchedCount = await runActionDispatcher({ packId: TEST_PACK_ID, 
-      context,
+    const dispatchedCount = await runActionDispatcher({ context,
+      packRuntime: context.packRuntime,
       workerId: 'memory-loop-test-dispatcher',
       limit: 10
     });
@@ -179,7 +179,7 @@ const TEST_PACK_ID = "test-death-note";
       : [];
     expect(traceMemoryMutations.length).toBeGreaterThan(0);
 
-    const schedulerResult = await runAgentScheduler({ packId: TEST_PACK_ID, 
+    const schedulerResult = await runAgentScheduler({ packId: TEST_PACK_ID, packRuntime: context.packRuntime,
       context,
       workerId: 'memory-loop-test-scheduler',
       limit: 10
@@ -189,6 +189,7 @@ const TEST_PACK_ID = "test-death-note";
 
     const compactionService = createMemoryCompactionService({
       context,
+      packRuntime: context.packRuntime,
       aiTaskService: {
         async runTask() {
           return { task_id: 'mock-memory-loop-task', invocation: { invocation_id: inferenceId }, output: { summary: '压缩后的内部记忆摘要' } };
@@ -205,7 +206,7 @@ const TEST_PACK_ID = "test-death-note";
         agent_id: 'agent-001',
         inference_count_since_summary: 999,
         inference_count_since_compaction: 999,
-        updated_at_tick: context.sim.getCurrentTick()
+        updated_at_tick: context.packRuntime!.getCurrentTick()
       }
     });
     const compactionResult = await compactionService.runForAgent({ agent_id: 'agent-001' });
@@ -230,7 +231,7 @@ const TEST_PACK_ID = "test-death-note";
   });
 
   it('records revise_judgement_plan as overlay and plan memory block during action dispatch', async () => {
-    const now = context.sim.getCurrentTick();
+    const now = context.packRuntime!.getCurrentTick();
     const inferenceId = `revise-plan-trace-${Date.now()}`;
     const intentId = `revise-plan-intent-${Date.now()}`;
 
@@ -297,8 +298,8 @@ const TEST_PACK_ID = "test-death-note";
       }
     });
 
-    const dispatchedCount = await runActionDispatcher({ packId: TEST_PACK_ID, 
-      context,
+    const dispatchedCount = await runActionDispatcher({ context,
+      packRuntime: context.packRuntime,
       workerId: 'revise-plan-test-dispatcher',
       limit: 10
     });

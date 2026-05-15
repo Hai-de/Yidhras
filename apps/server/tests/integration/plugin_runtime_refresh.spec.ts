@@ -72,7 +72,7 @@ describe('plugin runtime refresh integration', () => {
         trust_mode: 'trusted'
       });
 
-      fixture.context.sim.getPack = () => ({
+      fixture.context.packRuntime!.getPack = () => ({
         metadata: { id: 'world-pack-runtime', name: 'Runtime Pack', version: '0.1.0' }
       }) as never;
       fixture.context.getPluginEnableWarningConfig = () => ({
@@ -80,7 +80,7 @@ describe('plugin runtime refresh integration', () => {
         require_acknowledgement: true
       });
 
-      await refreshPackPluginRuntime(fixture.context);
+      await refreshPackPluginRuntime(fixture.context, 'world-pack-runtime');
       expect(pluginRuntimeRegistry.listRuntimes('world-pack-runtime')).toHaveLength(0);
 
       await confirmPackPluginImport(fixture.context, 'installation-runtime-alpha', ['server.api_route.register', 'web.panel.register']);

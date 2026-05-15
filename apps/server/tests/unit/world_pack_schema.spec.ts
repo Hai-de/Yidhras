@@ -155,7 +155,7 @@ describe('world pack constitution schema', () => {
     expect(pack.authorities?.[0]?.target_selector.kind).toBe('holder_of');
     expect(pack.metadata.authors?.[0]?.name).toBe('Yidhras Team');
     expect(pack.metadata.license).toBe('MIT');
-    expect(pack.metadata.compatibility?.schema_version).toBe('world-pack/v1');
+    expect((pack.metadata.compatibility as Record<string, unknown>)?.schema_version).toBe('world-pack/v1');
     expect(pack.bootstrap?.initial_states[0]?.state_json.opening_phase).toBe('notebook_unclaimed');
     expect(pack.rules?.invocation[0]?.then.affordance_key).toBe('execute_judgement');
   });

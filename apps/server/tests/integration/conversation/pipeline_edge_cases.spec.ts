@@ -49,7 +49,9 @@ const TASK_CONFIG: AiResolvedTaskConfig = {
   output: { mode: 'json_schema' as const },
   prompt: { preset: 'test' },
   parse: { decoder: 'default_json_schema' },
-  route: {}
+  route: {},
+  tools: [],
+  tool_policy: { mode: 'disabled' as const }
 };
 
 const CHAT_FORMAT_CONFIG: ConversationFormatConfig = {
@@ -104,6 +106,7 @@ function makeBundleWithConversationFragments(
       system_core: [], role_core: [], conversation_history: fragments, output_contract: []
     },
     slot_registry: SLOT_REGISTRY,
+    resolved_positions: [],
     metadata: {
       prompt_version: 'v1', profile_id: null, profile_version: null,
       source_prompt_keys: Object.keys(slotTexts)
@@ -116,6 +119,7 @@ function makeBundleWithConversationFragments(
       conversation_history: slotTexts.conversation_history ?? '',
       output_contract: slotTexts.output_contract ?? ''
     },
+    slot_order: [],
     combined_prompt: Object.values(slotTexts).join('\n\n'),
     metadata: {
       prompt_version: 'v1', source_prompt_keys: Object.keys(slotTexts),
@@ -210,7 +214,7 @@ describe('Conversation pipeline edge cases', () => {
           makeEntry({ turn_number: i + 1, current_content: `Turn ${i + 1}` }))
       };
       const result = getVisibleEntries(memory, {
-        window_turns: 0, summary_trigger_turns: 30, preserve_recent: 3
+        enable_ai_summary: false, window_turns: 0, summary_trigger_turns: 30, preserve_recent: 3, compacted_target_role: 'user' as const
       });
       expect(result).toHaveLength(20);
     });
@@ -228,7 +232,7 @@ describe('Conversation pipeline edge cases', () => {
         ]
       };
       const result = getVisibleEntries(memory, {
-        window_turns: 2, summary_trigger_turns: 30, preserve_recent: 3
+        enable_ai_summary: false, window_turns: 2, summary_trigger_turns: 30, preserve_recent: 3, compacted_target_role: 'user' as const
       });
       // summary (always included) + last 2 original
       expect(result).toHaveLength(3);
@@ -246,7 +250,7 @@ describe('Conversation pipeline edge cases', () => {
         ]
       };
       const result = getVisibleEntries(memory, {
-        window_turns: 10, summary_trigger_turns: 30, preserve_recent: 3
+        enable_ai_summary: false, window_turns: 10, summary_trigger_turns: 30, preserve_recent: 3, compacted_target_role: 'user' as const
       });
       expect(result).toHaveLength(2);
     });

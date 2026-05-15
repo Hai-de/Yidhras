@@ -49,10 +49,14 @@ const createContext = (): AppContext => {
 
   const mockPrisma = {} as unknown as PrismaClient;
   const repos = wrapPrismaAsRepositories(mockPrisma);
-  repos.agent = {
-    getPrisma: () => mockPrisma,
-    countActiveAgents: vi.fn(async () => 0)
-  } as unknown as typeof repos.agent;
+  Object.defineProperty(repos, 'agent', {
+    value: {
+      getPrisma: () => mockPrisma,
+      countActiveAgents: vi.fn(async () => 0)
+    } as unknown as typeof repos.agent,
+    writable: true,
+    configurable: true
+  });
 
   const mockHost = {
     getCurrentTick: () => 7n,

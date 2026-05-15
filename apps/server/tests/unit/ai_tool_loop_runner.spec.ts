@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ModelGateway, ModelGatewayExecutionInput, ModelGatewayResponse } from '../../src/ai/gateway.js';
+import type { ModelGateway, ModelGatewayExecutionInput } from '../../src/ai/gateway.js';
+import type { ModelGatewayResponse } from '../../src/ai/types.js';
 import { createToolLoopRunner } from '../../src/ai/tool_loop_runner.js';
 import type { ToolLoopRunner } from '../../src/ai/tool_loop_runner.js';
 import type { ToolExecutionContext, ToolRegistry } from '../../src/ai/tool_executor.js';
@@ -14,7 +15,7 @@ const buildMockContext = (): AppContext => {
   const prisma = { memoryBlock: { findMany: vi.fn().mockResolvedValue([]) }, relationship: { findFirst: vi.fn().mockResolvedValue(null) }, agent: { findMany: vi.fn().mockResolvedValue([]) } };
   return {
     prisma,
-    repos: wrapPrismaAsRepositories(prisma as PrismaClient),
+    repos: wrapPrismaAsRepositories(prisma as unknown as PrismaClient),
     clock: { getCurrentTick: vi.fn().mockReturnValue(42n) }
   } as unknown as AppContext;
 };
@@ -100,7 +101,7 @@ describe('ToolLoopRunner', () => {
     runner = createToolLoopRunner();
     executor = createToolRegistry();
     ctx = { context: buildMockContext(), pack_id: null };
-    mockGateway = { execute: vi.fn() };
+    mockGateway = { execute: vi.fn(), executeStream: vi.fn() };
   });
 
   describe('non-tool-call response', () => {
