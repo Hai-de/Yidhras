@@ -4,6 +4,7 @@ import {
   CORE_THEME_CSS_VARIABLES,
   LAYOUT_THEME_CSS_VARIABLES
 } from './tokens'
+import { DEFAULT_APP_THEME } from './default-theme'
 
 export const createThemeCssVariableEntries = (theme: AppThemeDefinition): Record<string, string> => {
   return {
@@ -86,4 +87,29 @@ export const applyResolvedTheme = (
       delete target.dataset.themeSourcePath
     }
   }
+}
+
+export const resetToBaseline = (target?: HTMLElement): void => {
+  const el = target ?? document.documentElement
+
+  for (const key of Object.values(CORE_THEME_CSS_VARIABLES)) {
+    el.style.removeProperty(key)
+  }
+
+  for (const key of Object.values(LAYOUT_THEME_CSS_VARIABLES)) {
+    el.style.removeProperty(key)
+  }
+
+  for (const key of Object.values(COMPONENT_THEME_CSS_VARIABLES)) {
+    el.style.removeProperty(key)
+  }
+
+  delete el.dataset.themeId
+  delete el.dataset.themeScheme
+  delete el.dataset.themeSource
+  delete el.dataset.themeSourceLabel
+  delete el.dataset.themeWorldPackId
+  delete el.dataset.themeSourcePath
+
+  applyResolvedTheme(DEFAULT_APP_THEME)
 }

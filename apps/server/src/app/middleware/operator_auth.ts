@@ -38,15 +38,6 @@ export const operatorAuthMiddleware = (context: AppContext) => {
       return
     }
 
-    // 如果 session 关联了 pack，验证 operator 仍持有该 pack 的有效绑定
-    if (session.packId) {
-      const packBinding = await context.repos.identityOperator.findPackBinding(payload.sub, session.packId)
-      if (!packBinding) {
-        next()
-        return
-      }
-    }
-
     // 查 Operator 状态
     const operator = await context.repos.identityOperator.findOperatorById(payload.sub)
 

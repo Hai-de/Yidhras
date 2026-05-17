@@ -366,7 +366,8 @@ const stepPackWorldEngine = async (
       protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
       pack_id: packId,
       step_ticks: stepTicks,
-      reason: 'runtime_loop'
+      reason: 'runtime_loop',
+      base_revision: packRuntime.getCurrentRevision().toString()
     },
     packRuntime
   });

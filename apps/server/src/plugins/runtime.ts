@@ -259,7 +259,9 @@ class PluginRuntimeRegistry {
   }
 
   public getStepContributors(packId: string): StepContributor[] {
-    return this.listRuntimes(packId).flatMap(runtime => runtime.step_contributors);
+    return this.listRuntimes(packId)
+      .flatMap(runtime => runtime.step_contributors)
+      .sort((a, b) => a.priority - b.priority);
   }
 
   public getRuleContributors(packId: string): RuleContributor[] {

@@ -54,7 +54,9 @@ export const worldEngineObservationCodeSchema = z.enum([
   'WORLD_CORE_DELTA_APPLIED',
   'WORLD_CORE_DELTA_ABORTED',
   'WORLD_QUERY_ALLOWLIST_FILTERED',
-  'WORLD_PREPARED_STATE_SUMMARY'
+  'WORLD_PREPARED_STATE_SUMMARY',
+  'WORLD_MASTERMIND_ASSIGNED',
+  'WORLD_DAILY_CYCLE_DAY_ADVANCED'
 ])
 
 export const worldPackClockSnapshotSchema = z.object({

@@ -240,6 +240,14 @@ const metadataPresentationSchema = z
   })
   .strict();
 
+const packFrontendManifestSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('default') }),
+  z.object({
+    type: z.literal('custom'),
+    entry: nonEmptyStringSchema
+  })
+]);
+
 const metadataSchema = z
   .object({
     id: nonEmptyStringSchema,
@@ -252,6 +260,7 @@ const metadataSchema = z
     repository: metadataLinkSchema.optional(),
     tags: z.array(nonEmptyStringSchema).optional(),
     presentation: metadataPresentationSchema.optional(),
+    frontend: packFrontendManifestSchema.optional(),
     published_at: nonEmptyStringSchema.optional(),
     status: nonEmptyStringSchema.optional()
   })

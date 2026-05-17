@@ -141,10 +141,30 @@ export const unwrapApiSuccess = <T>(response: ApiEnvelope<T>): T => {
   return response.data
 }
 
+let authTokenProvider: (() => string | null) | null = null
+
+export const setAuthTokenProvider = (provider: () => string | null) => {
+  authTokenProvider = provider
+}
+
+const resolveAuthHeader = (): Record<string, string> | undefined => {
+  const token = authTokenProvider?.()
+  if (token) {
+    return { Authorization: `Bearer ${token}` }
+  }
+  return undefined
+}
+
 export const requestApi = async <T>(path: string, options: ApiClientOptions = {}): Promise<ApiEnvelope<T>> => {
+  const authHeader = resolveAuthHeader()
   const response = await fetch(buildUrl(path, { baseURL: options.baseURL, packId: options.packId }), {
     method: options.method,
-    headers: buildHeaders(options.headers, options.body),
+    headers: buildHeaders(
+      authHeader
+        ? { ...authHeader, ...(options.headers as Record<string, string>) }
+        : options.headers,
+      options.body
+    ),
     body: normalizeBody(options.body),
     signal: options.signal ?? undefined,
     cache: options.cache,
