@@ -25,6 +25,10 @@
 
 - **Transport / App layer**
   - Express routes、HTTP envelope、query/body parsing、frontend API consumption
+- **Frontend layer**
+  - Shell（`apps/web`）：运营商登录、世界包管理（列表/加载/卸载）、包前端挂载入口
+  - Default pack frontend：平台内置的通用 8 工作区前端（overview / scheduler / social / workflow / timeline / graph / plugins / agents），路由前缀 `/packs/:packId/...`
+  - Custom pack frontend：包目录 `frontend/` 下的独立前端应用，Shell 通过 `createApp` 动态挂载。入口合约：`mount(target, context)` 接收 `ShellContext`（auth_token / pack_id / api_base_url）并返回 Vue App 实例，`unmount(app)` 销毁
 - **Application services / Read models**
   - orchestration、aggregation、operator-facing snapshots、workflow queries
 - **Runtime / Domain execution**
@@ -244,6 +248,7 @@ HTTP Request
 | L3: Policy | `access_policy/` | `Policy` 字段级 allow/deny |
 
 关键约束：
+- Session 不绑定特定 pack；operator 登录后可访问所有已加载 pack
 - root 操作员也必须有显式 `OperatorPackBinding` 才能访问 Pack，确保审计可追溯
 - 三层是递进过滤：L1 拒绝 → 403 直接返回，不查 L2/L3
 - Agent 自主行为通过 `resolveSubjectForAgentAction()` 解析控制 Operator 后再校验 capability

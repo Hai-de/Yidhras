@@ -1,6 +1,10 @@
+import { storeToRefs } from 'pinia'
+
+import { useAuthStore } from '../../stores/auth'
 import { useNotificationsStore } from '../../stores/notifications'
 import { useRuntimeStore } from '../../stores/runtime'
 import { useSystemApi } from '../api/useSystemApi'
+import { resolvePackId } from '../shared/resolvePackId'
 import { useVisibilityPolling } from './useVisibilityPolling'
 
 const getErrorMessage = (error: unknown): string => {
@@ -8,11 +12,14 @@ const getErrorMessage = (error: unknown): string => {
 }
 
 export const useOperatorBootstrap = () => {
+  const auth = useAuthStore()
+  const { isAuthenticated } = storeToRefs(auth)
   const runtime = useRuntimeStore()
   const notifications = useNotificationsStore()
   const systemApi = useSystemApi()
 
   const syncClock = async () => {
+    if (!resolvePackId()) return
     runtime.setClockSyncing(true)
 
     try {
@@ -58,21 +65,24 @@ export const useOperatorBootstrap = () => {
     visibleIntervalMs: 1000,
     hiddenIntervalMs: 2000,
     immediate: true,
-    refreshOnVisible: true
+    refreshOnVisible: true,
+    enabled: isAuthenticated
   })
 
   const runtimeStatusPolling = useVisibilityPolling(syncRuntimeStatus, {
     visibleIntervalMs: 5000,
     hiddenIntervalMs: 10000,
     immediate: true,
-    refreshOnVisible: true
+    refreshOnVisible: true,
+    enabled: isAuthenticated
   })
 
   const notificationsPolling = useVisibilityPolling(syncNotifications, {
     visibleIntervalMs: 5000,
     hiddenIntervalMs: 10000,
     immediate: true,
-    refreshOnVisible: true
+    refreshOnVisible: true,
+    enabled: isAuthenticated
   })
 
   const refreshAll = async () => {

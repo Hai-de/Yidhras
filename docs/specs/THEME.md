@@ -26,6 +26,15 @@ DEFAULT_APP_THEME + world_pack.presentation.theme (optional)
   → Tailwind / theme-default.css / App* primitives / feature pages 消费
 ```
 
+包切换时的主题生命周期：
+
+```
+resetToBaseline()                     // removeProperty 所有 --yd-* 变量，恢复基线
+  → clearRegisteredWorldPackThemeConfig(oldPackId)
+  → resolveThemeWithDiagnostics(newPackTheme)
+  → applyResolvedTheme(newTheme)
+```
+
 四层结构：
 
 
@@ -33,7 +42,7 @@ DEFAULT_APP_THEME + world_pack.presentation.theme (optional)
 | --------------- | -------------------------------------------------------------- |
 | **Contract**    | token 类型、CSS variable key、source descriptor                |
 | **Resolution**  | 合并默认主题与 provider override，产出 final theme             |
-| **Apply**       | 写入 CSS variables 与 root dataset                             |
+| **Apply**       | 写入 CSS variables 与 root dataset；`resetToBaseline()` 在包切换时先移除所有 `--yd-*` 变量再恢复基线                             |
 | **Consumption** | Tailwind、`theme-default.css`、`App*` primitives、feature 页面 |
 
 ---

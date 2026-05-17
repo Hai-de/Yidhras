@@ -1,7 +1,7 @@
 # Shell / Pack Frontend 实施计划
 
 > 基于: `.limcode/design/shell-pack-frontend-decomposition-design.md`
-> 状态: 未开始
+> 状态: Phase 1 完成, Phase 2 完成, Phase 3 待触发
 
 ---
 
@@ -11,34 +11,34 @@
 
 ### 1.1 客户端认证基础设施
 
-- [ ] 新建 `apps/web/pages/login.vue`
+- [x] 新建 `apps/web/pages/login.vue`
   - 表单：operator name + password（可选 pack_id，不填则不绑定）
   - 调用 `POST /api/auth/login`，获取 token
   - 成功后跳转 `/packs`
-- [ ] 新建 `apps/web/stores/auth.ts` — `useAuthStore`
+- [x] 新建 `apps/web/stores/auth.ts` — `useAuthStore`
   - `token: string | null`，持久化到 `localStorage`
   - `login(credentials)` / `logout()` / `isAuthenticated` getter
-- [ ] 修改 `apps/web/lib/http/client.ts`
+- [x] 修改 `apps/web/lib/http/client.ts`
   - 从 authStore 读取 token，注入 `Authorization: Bearer <token>` header
-- [ ] 新建 `apps/web/middleware/auth.ts` — Nuxt route middleware
+- [x] 新建 `apps/web/middleware/auth.ts` — Nuxt route middleware
   - 未认证时重定向到 `/login`
   - 应用到所有 `/packs` 开头的路由
 
 ### 1.2 Session-Pack 解绑
 
-- [ ] 修改 `apps/server/src/app/middleware/operator_auth.ts`
+- [x] 修改 `apps/server/src/app/middleware/operator_auth.ts`
   - session 校验不再强制要求 `pack_id` 匹配当前路由的 pack
   - 或无 token 时仍 `next()`（保持当前匿名访问行为），有 token 时校验 operator 存在即可
-- [ ] `loginRequestSchema` 的 `pack_id` 保持可选，但不强制校验
+- [x] `loginRequestSchema` 的 `pack_id` 保持可选，但不强制校验
 
 ### 1.3 Pack 列表 API
 
-- [ ] 新建 `apps/server/src/app/routes/packs.ts` — `GET /api/packs`
+- [x] 新建 `apps/server/src/app/routes/packs.ts` — `GET /api/packs`
   - 合并三个数据源：文件系统枚举（`PackCatalogService.listAvailablePacks()`）、运行时状态（`MultiPackRuntimePort.listPacks()`）、包 metadata（`presentation` 字段含 icon/cover_image）
   - 返回 `{ packs: Array<{ id, name, version, status, presentation }> }`
-- [ ] 在 `apps/server/src/index.ts` 注册 `/api/packs` 路由
-- [ ] 新建 `apps/web/composables/api/usePackListApi.ts`
-- [ ] 新建 `apps/web/pages/packs.vue` — 包列表页
+- [x] 在 `apps/server/src/index.ts` 注册 `/api/packs` 路由
+- [x] 新建 `apps/web/composables/api/usePackListApi.ts`
+- [x] 新建 `apps/web/pages/packs.vue` — 包列表页
   - 展示已发现包的卡片列表（名称、图标、状态指示）
   - 每个卡片点击进入 `/packs/:packId`
 
@@ -46,66 +46,66 @@
 
 将所有现有页面从 `/xxx` 迁移到 `/packs/:packId/xxx`：
 
-- [ ] `pages/overview.vue` → `pages/packs/[packId]/overview.vue`
-- [ ] `pages/scheduler.vue` → `pages/packs/[packId]/scheduler.vue`
-- [ ] `pages/social.vue` → `pages/packs/[packId]/social.vue`
-- [ ] `pages/workflow.vue` → `pages/packs/[packId]/workflow.vue`
-- [ ] `pages/timeline.vue` → `pages/packs/[packId]/timeline.vue`
-- [ ] `pages/graph.vue` → `pages/packs/[packId]/graph.vue`
-- [ ] `pages/plugins.vue` → `pages/packs/[packId]/plugins.vue`
-- [ ] `pages/agents.vue` / `pages/agents/[id].vue` → `pages/packs/[packId]/agents.vue` / `pages/packs/[packId]/agents/[id].vue`
+- [x] `pages/overview.vue` → `pages/packs/[packId]/overview.vue`
+- [x] `pages/scheduler.vue` → `pages/packs/[packId]/scheduler.vue`
+- [x] `pages/social.vue` → `pages/packs/[packId]/social.vue`
+- [x] `pages/workflow.vue` → `pages/packs/[packId]/workflow.vue`
+- [x] `pages/timeline.vue` → `pages/packs/[packId]/timeline.vue`
+- [x] `pages/graph.vue` → `pages/packs/[packId]/graph.vue`
+- [x] `pages/plugins.vue` → `pages/packs/[packId]/plugins.vue`
+- [x] `pages/agents.vue` / `pages/agents/[id].vue` → `pages/packs/[packId]/agents.vue` / `pages/packs/[packId]/agents/[id].vue`
 
 ### 1.5 包挂载点页面
 
-- [ ] 新建 `pages/packs/[packId].vue` — 包前端挂载入口
+- [x] 新建 `pages/packs/[packId].vue` — 包前端挂载入口
   - 读取 `route.params.packId`，获取 pack manifest
   - `frontend.type === "default"`（或缺失）→ 重定向到 `/packs/:packId/overview`
   - `frontend.type === "custom"` → Phase 2 实现
-- [ ] 新建 `pages/packs/[packId]/index.vue` — 同重定向逻辑
+- [x] 新建 `pages/packs/[packId]/index.vue` — 同重定向逻辑
 
 ### 1.6 导航与 Shell 组件适配
 
-- [ ] 修改 `apps/web/features/shared/navigation.ts`
+- [x] 修改 `apps/web/features/shared/navigation.ts`
   - 所有路由路径从 `/overview` 等改为 `/packs/:packId/overview` 等
   - `useOperatorNavigation` 从当前路由参数读取 packId
-- [ ] 修改 `apps/web/features/shell/components/AppShell.vue`
+- [x] 修改 `apps/web/features/shell/components/AppShell.vue`
   - `ActivityRail` 链接加 packId 前缀
   - `workspaceTitleMap` 键值不变，路径从 route 推断
-- [ ] 修改 `apps/web/features/shell/components/ActivityRail.vue`
+- [x] 修改 `apps/web/features/shell/components/ActivityRail.vue`
   - 导航项 `to` 属性加 packId 前缀
 
 ### 1.7 API Composable packId 传递
 
-- [ ] 修改所有 API composable（`composables/api/use*.ts`）
+- [x] 修改所有 API composable（`composables/api/use*.ts`）
   - 从 `useRuntimeStore().worldPack?.id` 改为 `useRoute().params.packId`
   - `buildUrl` 已有 `/:packId/api/...` 支持，无需改动
-- [ ] 修改 `apps/web/stores/runtime.ts`
+- [x] 修改 `apps/web/stores/runtime.ts`
   - `worldPack` ref 改为从路由参数 + pack 列表 API 获取，而非全局 status 轮询
   - 或拆分为 per-pack 的 runtime 数据获取
 
 ### 1.8 主题 Reset 机制
 
-- [ ] 修改 `apps/web/lib/theme/apply-css-vars.ts`
+- [x] 修改 `apps/web/lib/theme/apply-css-vars.ts`
   - 新增 `resetToBaseline()` — `removeProperty` 所有 `--yd-*` 变量，恢复基线默认值
-- [ ] 修改 `apps/web/lib/theme/source.ts`
+- [x] 修改 `apps/web/lib/theme/source.ts`
   - 新增 `clearRegisteredWorldPackThemeConfig(packId: string)` — 清理注册表中指定包条目
-- [ ] 修改 `apps/web/plugins/theme.ts`
+- [x] 修改 `apps/web/plugins/theme.ts`
   - 在路由变化（包切换）时调用：`resetToBaseline()` → `applyPackTheme(newPack)`
 
 ### 1.9 Schema 更新
 
-- [ ] 修改 `packages/contracts/src/world_pack.ts` 或对应的 metadata schema
+- [x] 修改 `packages/contracts/src/world_pack.ts` 或对应的 metadata schema
   - 添加 `frontend` 字段及 Zod schema（`z.object({ type: z.enum(['default', 'custom']), entry: z.string().optional() })`）
   - `frontend` 缺失时默认 `{ type: 'default' }`
-- [ ] 新建 `packages/contracts/src/shell_context.ts` — `ShellContextSchema`（auth_token, pack_id, api_base_url）
-- [ ] 新建 `packages/contracts/src/pack_frontend_manifest.ts` — `PackFrontendManifest` 类型
+- [x] 新建 `packages/contracts/src/shell_context.ts` — `ShellContextSchema`（auth_token, pack_id, api_base_url）
+- [x] 新建 `packages/contracts/src/pack_frontend_manifest.ts` — `PackFrontendManifest` 类型
 
 ### 1.10 验证
 
-- [ ] `pnpm lint && pnpm typecheck` 通过
-- [ ] `pnpm test` 通过（更新因路由变更失效的测试）
-- [ ] 手动验证：登录 → 包列表 → 进入 default 包 → 8 工作区正常渲染
-- [ ] 手动验证：主题在包切换时正确 reset
+- [x] `pnpm lint && pnpm typecheck` 通过
+- [x] `pnpm test` 通过（更新因路由变更失效的测试）
+- [x] 手动验证：登录 → 包列表 → 进入 default 包 → 8 工作区正常渲染
+- [x] 手动验证：主题在包切换时正确 reset
 
 ---
 
@@ -115,51 +115,51 @@
 
 ### 2.1 Custom 挂载机制
 
-- [ ] 新建 `apps/web/features/shell/components/PackFrontendMount.vue`
+- [x] 新建 `apps/web/features/shell/components/PackFrontendMount.vue`
   - 接收 `packId` prop
   - 读取 pack manifest 的 `frontend` 配置
   - `type === "custom"` 时，动态 `import(entry)` 获取 `mount`/`unmount` 函数
   - `onMounted`：调用 `mount(containerRef.value, shellContext)`
   - `onUnmounted`：调用 `unmount(app)`
   - 加载状态处理（loading/error 边界）
-- [ ] 修改 `pages/packs/[packId].vue`，对 custom 类型使用 `PackFrontendMount`
+- [x] 修改 `pages/packs/[packId].vue`，对 custom 类型使用 `PackFrontendMount`
 
 ### 2.2 服务端静态资源路由
 
-- [ ] 新建 `apps/server/src/app/routes/pack_frontend_assets.ts`
+- [x] 新建 `apps/server/src/app/routes/pack_frontend_assets.ts`
   - `GET /api/packs/:packId/frontend/*` → 映射到 `data/world_packs/<packId>/frontend/dist/*`
   - MIME 类型正确设置（`application/javascript`、`text/css` 等）
   - 安全检查：路径不穿越 pack 目录
-- [ ] 在 `apps/server/src/index.ts` 注册路由
+- [x] 在 `apps/server/src/index.ts` 注册路由
 
 ### 2.3 ShellContext 注入
 
-- [ ] 新建 `apps/web/composables/app/useShellContext.ts`
+- [x] 新建 `apps/web/composables/app/useShellContext.ts`
   - `default` 类型：通过 Vue `provide/inject` 获取
   - `custom` 类型：由 `PackFrontendMount` 在调用 `mount()` 时作为参数传递
-- [ ] Shell 在进入 `/packs/:packId` 时构建 `ShellContext`（从 authStore 读 token，从 route 读 packId，从 config 读 api_base_url）
+- [x] Shell 在进入 `/packs/:packId` 时构建 `ShellContext`（从 authStore 读 token，从 route 读 packId，从 config 读 api_base_url）
 
 ### 2.4 ShellNavigation API
 
-- [ ] 新建 `apps/web/composables/app/useShellNavigation.ts`
+- [x] 新建 `apps/web/composables/app/useShellNavigation.ts`
   - `switchPack(packId)` — `router.push(`/packs/${packId}`)`
   - `goToPacks()` — `router.push('/packs')`
-- [ ] 通过 `provide('shellNavigation')` 暴露给 default 包前端
-- [ ] 通过 `ShellContext` 或独立参数暴露给 custom 包前端（`mount(target, context, navigation)`）
+- [x] 通过 `provide('shellNavigation')` 暴露给 default 包前端
+- [x] 通过 `ShellContext` 或独立参数暴露给 custom 包前端（`mount(target, context, navigation)`）
 
 ### 2.5 脚手架
 
-- [ ] 新建 `apps/server/src/cli/scaffold_pack_frontend.ts` 或扩展现有 scaffold 命令
+- [x] 新建 `apps/server/src/cli/scaffold_pack_frontend.ts` 或扩展现有 scaffold 命令
   - 生成 `frontend/index.ts`（mount/unmount 样板）
   - 生成 `frontend/App.vue`（最小根组件）
   - 生成 `frontend/tsconfig.json`、`frontend/vite.config.ts`
-- [ ] 创建 minimal custom 包前端示例，验证全链路
+- [x] 创建 minimal custom 包前端示例，验证全链路
 
 ### 2.6 验证
 
-- [ ] 创建测试用 custom 包前端（minimal Vue app + 路由）
-- [ ] 验证：进入 custom 包 → 前端加载 → 包内导航 → 切换到 default 包 → custom 前端正确卸载
-- [ ] 验证：主题在 custom 和 default 包间切换时正确 reset
+- [x] 创建测试用 custom 包前端（minimal Vue app + 路由）
+- [x] 验证：进入 custom 包 → 前端加载 → 包内导航 → 切换到 default 包 → custom 前端正确卸载
+- [x] 验证：主题在 custom 和 default 包间切换时正确 reset
 
 ---
 

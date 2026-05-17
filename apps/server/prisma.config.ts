@@ -2,6 +2,6 @@ import { defineConfig } from 'prisma/config'
 
 export default defineConfig({
   datasource: {
-    url: process.env.DATABASE_URL ?? 'file:./data/dev.sqlite'
+    url: process.env.DATABASE_URL ?? 'file:../../data/yidhras.sqlite'
   }
 })

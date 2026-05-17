@@ -63,7 +63,16 @@ metadata:
     notes: "仅作为元数据结构示例，不代表任何特定题材或内建世界。"
   published_at: "2026-04-14"
   status: "stable"
+  frontend:
+    type: "default"
 ```
+
+`frontend` 字段声明包的前端类型：
+
+| `frontend.type` | 说明 |
+|------|------|
+| `default` | 使用平台内置的通用前端（8 工作区布局）。字段缺失时隐含为此值 |
+| `custom` | 包目录下的 `frontend/` 提供独立前端应用，Shell 通过动态挂载加载。需同时声明 `entry` 字段（如 `entry: "index.js"`），指向 `frontend/dist/` 下的入口文件 |
 
 上述字段主要服务于：
 
@@ -329,6 +338,10 @@ authorities:
 │  ├─ setting.md
 │  ├─ rules.md
 │  └─ release-notes.md
+├─ frontend/                # 可选，custom 包前端源码（type: "custom" 时必需）
+│  ├─ index.ts              # 入口，导出 mount(target, context) 和 unmount(app)
+│  ├─ App.vue               # 根组件
+│  └─ dist/                 # 构建产物目录（由 Vite 等工具生成）
 ├─ plugins/                 # 可选，pack-local 插件工件目录
 └─ examples/                # 可选
    └─ overrides.example.yaml
@@ -352,6 +365,9 @@ authorities:
   - 存放非代码、非配置的展示素材
 - `docs/`
   - 存放超出 README 范围的详细说明文档
+- `frontend/`
+  - 存放 custom 包前端源码与构建产物。入口文件导出 `mount(target, context)` 接收 ShellContext 并返回 Vue App 实例，`unmount(app)` 负责销毁
+  - `dist/` 子目录存放构建产物，由服务端静态资源路由 serving
 - `plugins/`
   - 存放 pack-local 插件工件；不会因随 pack 分发而自动启用
 - `examples/`

@@ -1,3 +1,5 @@
+import 'dotenv/config'
+
 import { hashPassword } from '../operator/auth/password.js'
 import {
   DEFAULT_BCRYPT_ROUNDS,
@@ -39,6 +41,7 @@ async function main() {
   const operator = await prisma.operator.upsert({
     where: { username: ROOT_OPERATOR_USERNAME },
     update: {
+      password_hash: passwordHash,
       is_root: true,
       status: 'active',
       updated_at: now

@@ -65,7 +65,8 @@ import { usePackListApi } from '../composables/api/usePackListApi'
 import { useAuthStore } from '../stores/auth'
 
 definePageMeta({
-  layout: false
+  layout: false,
+  middleware: 'auth'
 })
 
 const router = useRouter()

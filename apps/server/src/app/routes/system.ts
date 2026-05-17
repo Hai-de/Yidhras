@@ -11,6 +11,7 @@ import { OPERATOR_ERROR_CODE } from '../../operator/constants.js'
 import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js'
 import { jsonOk } from '../http/json.js'
+import { requireAuth } from '../middleware/require_auth.js'
 import {
   clearSystemNotifications,
   getRuntimeStatusSnapshot,
@@ -28,7 +29,7 @@ const requireRoot = (req: OperatorRequest, _res: Response, next: NextFunction): 
 export const registerSystemRoutes = (app: Express, context: AppContext): void => {
   app.get(
     '/api/system/notifications',
-    requireRoot,
+    requireAuth(),
     (_req, res) => {
       const messages = listSystemNotifications(context)
       systemMessageSchema.array().parse(messages)
@@ -48,7 +49,7 @@ export const registerSystemRoutes = (app: Express, context: AppContext): void =>
 
   app.get(
     '/api/status',
-    requireRoot,
+    requireAuth(),
     (_req, res, next) => {
       const packId = undefined;
       getRuntimeStatusSnapshot(context, {

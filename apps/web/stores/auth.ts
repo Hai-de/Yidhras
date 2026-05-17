@@ -1,7 +1,5 @@
 import { defineStore } from 'pinia'
 
-import { setAuthTokenProvider } from '../lib/http/client'
-
 const AUTH_TOKEN_KEY = 'yd-auth-token'
 
 const readPersistedToken = (): string | null => {
@@ -37,9 +35,4 @@ export const useAuthStore = defineStore('auth', {
       persistToken(null)
     }
   }
-})
-
-setAuthTokenProvider(() => {
-  const auth = useAuthStore()
-  return auth.token
 })

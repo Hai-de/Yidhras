@@ -36,6 +36,8 @@
 | Operator Audit | `/api/audit/logs`, `/api/audit/logs/me` |
 | Plugins (global) | `/api/packs/:packId/plugins`, `/api/packs/:packId/plugins/:installationId/*` |
 | Plugin Web (global) | `/api/packs/:packId/plugins/runtime/web`, `/api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*`, `/api/experimental/runtime/packs/:packId/plugins/runtime/web`, `/api/experimental/runtime/packs/:packId/plugins/:pluginId/runtime/web/:installationId/*` |
+| Pack List | `/api/packs` |
+| Pack Frontend Assets | `/api/packs/:packId/frontend/*` |
 
 ### Pack-scoped 路由（`/:packId/api/...`）
 
@@ -82,6 +84,29 @@
   - 鉴权：root
   - 说明：清空系统通知队列
   - 返回：`{ success: true, data: { acknowledged: true } }`
+
+---
+
+## 1.1 包列表 (Pack List)
+
+**Global** — 无 `/:packId` 前缀。
+
+- **GET `/api/packs`**
+  - 鉴权：无
+  - 说明：列出所有可用的 world-pack（文件系统发现 + 运行时状态合并）。返回每个包的 metadata（含 `presentation` 和 `frontend` 字段）及运行时状态
+  - 返回：`{ success: true, data: { packs: Array<{ id, folder_name, name, version, description, presentation, frontend, runtime_status, health_status, current_tick }> } }`
+
+---
+
+## 1.2 包前端静态资源 (Pack Frontend Assets)
+
+**Global** — 无 `/:packId` 前缀（packId 通过路径参数传递）。
+
+- **GET `/api/packs/:packId/frontend/*`**
+  - 鉴权：无
+  - 说明：为 custom 类型包前端提供静态资源（JS/CSS/图片等），映射到包目录下的 `frontend/dist/*`。包含路径穿越防护
+  - 响应 MIME 类型根据文件扩展名自动设置，缓存头为 `public, max-age=3600`
+  - 错误码：`PACK_NOT_FOUND`, `PATH_TRAVERSAL_DENIED`, `ASSET_NOT_FOUND`
 
 ---
 
@@ -639,6 +664,9 @@
 | `RELATIONSHIP_LOG_QUERY_INVALID` | 关系日志查询参数无效 |
 | `SNR_LOG_QUERY_INVALID` | SNR 日志查询参数无效 |
 | `LOGIN_INVALID` | 登录参数无效 |
+| `INVALID_PACK_ID` | Pack ID 参数无效 |
+| `PATH_TRAVERSAL_DENIED` | 资源路径穿越被拒绝 |
+| `ASSET_NOT_FOUND` | 包前端静态资源不存在 |
 | `EXPERIMENTAL_PACK_ID_INVALID` | Experimental pack ID 无效 |
 | `EXPERIMENTAL_PACK_RUNTIME_NOT_FOUND` | Experimental pack runtime 不存在 |
 | `EXPERIMENTAL_PACK_RUNTIME_CAPACITY_REACHED` | Experimental pack runtime 容量已满 |

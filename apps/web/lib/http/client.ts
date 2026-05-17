@@ -141,17 +141,20 @@ export const unwrapApiSuccess = <T>(response: ApiEnvelope<T>): T => {
   return response.data
 }
 
-let authTokenProvider: (() => string | null) | null = null
-
-export const setAuthTokenProvider = (provider: () => string | null) => {
-  authTokenProvider = provider
-}
+const AUTH_TOKEN_KEY = 'yd-auth-token'
 
 const resolveAuthHeader = (): Record<string, string> | undefined => {
-  const token = authTokenProvider?.()
-  if (token) {
-    return { Authorization: `Bearer ${token}` }
+  if (typeof window === 'undefined') return undefined
+
+  try {
+    const token = window.localStorage.getItem(AUTH_TOKEN_KEY)
+    if (token) {
+      return { Authorization: `Bearer ${token}` }
+    }
+  } catch {
+    // localStorage unavailable
   }
+
   return undefined
 }
 
@@ -176,6 +179,14 @@ export const requestApi = async <T>(path: string, options: ApiClientOptions = {}
     integrity: options.integrity,
     keepalive: options.keepalive
   })
+
+  if (response.status === 401 && typeof window !== 'undefined') {
+    try {
+      window.localStorage.removeItem(AUTH_TOKEN_KEY)
+    } catch {
+      // localStorage unavailable
+    }
+  }
 
   const envelope = (await response.json()) as ApiEnvelope<T> | undefined
 
