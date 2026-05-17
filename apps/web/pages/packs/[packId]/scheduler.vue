@@ -113,14 +113,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import AppButton from '../components/ui/AppButton.vue'
+import AppButton from '../../../components/ui/AppButton.vue'
 import {
   buildSchedulerHighlightGroups,
   buildSchedulerSummaryMetrics,
   buildSchedulerTrendItems
-} from '../features/overview/adapters'
-import SchedulerSummaryCard from '../features/overview/components/SchedulerSummaryCard.vue'
-import SchedulerTrendsCard from '../features/overview/components/SchedulerTrendsCard.vue'
+} from '../../../features/overview/adapters'
+import SchedulerSummaryCard from '../../../features/overview/components/SchedulerSummaryCard.vue'
+import SchedulerTrendsCard from '../../../features/overview/components/SchedulerTrendsCard.vue'
 import {
   buildSchedulerDecisionRows,
   buildSchedulerHighlightCards,
@@ -131,16 +131,16 @@ import {
   buildSchedulerRunRows,
   buildSchedulerWorkerRows,
   buildSchedulerWorkspaceMetrics
-} from '../features/scheduler/adapters'
-import SchedulerHighlightStrip from '../features/scheduler/components/SchedulerHighlightStrip.vue'
-import SchedulerListPanel from '../features/scheduler/components/SchedulerListPanel.vue'
-import SchedulerMetricCard from '../features/scheduler/components/SchedulerMetricCard.vue'
-import SchedulerRunDetailCard from '../features/scheduler/components/SchedulerRunDetailCard.vue'
-import { useSchedulerPage } from '../features/scheduler/composables/useSchedulerPage'
-import SourceContextBanner from '../features/shared/components/SourceContextBanner.vue'
-import WorkspacePageHeader from '../features/shared/components/WorkspacePageHeader.vue'
-import WorkspaceStatusBanner from '../features/shared/components/WorkspaceStatusBanner.vue'
-import { formatFreshnessLabel } from '../features/shared/feedback'
+} from '../../../features/scheduler/adapters'
+import SchedulerHighlightStrip from '../../../features/scheduler/components/SchedulerHighlightStrip.vue'
+import SchedulerListPanel from '../../../features/scheduler/components/SchedulerListPanel.vue'
+import SchedulerMetricCard from '../../../features/scheduler/components/SchedulerMetricCard.vue'
+import SchedulerRunDetailCard from '../../../features/scheduler/components/SchedulerRunDetailCard.vue'
+import { useSchedulerPage } from '../../../features/scheduler/composables/useSchedulerPage'
+import SourceContextBanner from '../../../features/shared/components/SourceContextBanner.vue'
+import WorkspacePageHeader from '../../../features/shared/components/WorkspacePageHeader.vue'
+import WorkspaceStatusBanner from '../../../features/shared/components/WorkspaceStatusBanner.vue'
+import { formatFreshnessLabel } from '../../../features/shared/feedback'
 
 const pageLayoutStyle = {
   gap: 'var(--yd-layout-section-gap)',

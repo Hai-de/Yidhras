@@ -70,15 +70,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import AppButton from '../components/ui/AppButton.vue'
-import SourceContextBanner from '../features/shared/components/SourceContextBanner.vue'
-import WorkspacePageHeader from '../features/shared/components/WorkspacePageHeader.vue'
-import WorkspaceStatusBanner from '../features/shared/components/WorkspaceStatusBanner.vue'
-import { formatFreshnessLabel } from '../features/shared/feedback'
-import WorkflowDetailPanel from '../features/workflow/components/WorkflowDetailPanel.vue'
-import WorkflowFiltersBar from '../features/workflow/components/WorkflowFiltersBar.vue'
-import WorkflowJobsTable from '../features/workflow/components/WorkflowJobsTable.vue'
-import { useWorkflowPage } from '../features/workflow/composables/useWorkflowPage'
+import AppButton from '../../../components/ui/AppButton.vue'
+import SourceContextBanner from '../../../features/shared/components/SourceContextBanner.vue'
+import WorkspacePageHeader from '../../../features/shared/components/WorkspacePageHeader.vue'
+import WorkspaceStatusBanner from '../../../features/shared/components/WorkspaceStatusBanner.vue'
+import { formatFreshnessLabel } from '../../../features/shared/feedback'
+import WorkflowDetailPanel from '../../../features/workflow/components/WorkflowDetailPanel.vue'
+import WorkflowFiltersBar from '../../../features/workflow/components/WorkflowFiltersBar.vue'
+import WorkflowJobsTable from '../../../features/workflow/components/WorkflowJobsTable.vue'
+import { useWorkflowPage } from '../../../features/workflow/composables/useWorkflowPage'
 
 const pageLayoutStyle = {
   gap: 'var(--yd-layout-section-gap)',

@@ -217,14 +217,14 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 
-import AppButton from '../components/ui/AppButton.vue'
-import AppPanel from '../components/ui/AppPanel.vue'
-import OverviewListCard from '../features/overview/components/OverviewListCard.vue'
-import { usePluginManagementPage } from '../features/plugins/composables/usePluginManagementPage'
-import WorkspaceEmptyState from '../features/shared/components/WorkspaceEmptyState.vue'
-import WorkspacePageHeader from '../features/shared/components/WorkspacePageHeader.vue'
-import WorkspaceSectionHeader from '../features/shared/components/WorkspaceSectionHeader.vue'
-import WorkspaceStatusBanner from '../features/shared/components/WorkspaceStatusBanner.vue'
+import AppButton from '../../../components/ui/AppButton.vue'
+import AppPanel from '../../../components/ui/AppPanel.vue'
+import OverviewListCard from '../../../features/overview/components/OverviewListCard.vue'
+import { usePluginManagementPage } from '../../../features/plugins/composables/usePluginManagementPage'
+import WorkspaceEmptyState from '../../../features/shared/components/WorkspaceEmptyState.vue'
+import WorkspacePageHeader from '../../../features/shared/components/WorkspacePageHeader.vue'
+import WorkspaceSectionHeader from '../../../features/shared/components/WorkspaceSectionHeader.vue'
+import WorkspaceStatusBanner from '../../../features/shared/components/WorkspaceStatusBanner.vue'
 
 const pageLayoutStyle = {
   gap: 'var(--yd-layout-section-gap)',

@@ -237,18 +237,30 @@ const panelTabs = [
 }>
 
 const resolveWorkspaceIdFromPath = (path: string): OperatorWorkspaceId => {
-  if (path.startsWith('/scheduler')) return 'scheduler'
-  if (path.startsWith('/social')) return 'social'
-  if (path.startsWith('/workflow')) return 'workflow'
-  if (path.startsWith('/timeline')) return 'timeline'
-  if (path.startsWith('/graph')) return 'graph'
-  if (path.startsWith('/plugins')) return 'plugins'
-  if (path.startsWith('/agents')) return 'agents'
+  // Match /packs/:packId/scheduler etc.
+  const match = path.match(/\/packs\/[^/]+\/([^/?#]+)/)
+  if (match) {
+    const segment = match[1]
+    if (segment === 'scheduler') return 'scheduler'
+    if (segment === 'social') return 'social'
+    if (segment === 'workflow') return 'workflow'
+    if (segment === 'timeline') return 'timeline'
+    if (segment === 'graph') return 'graph'
+    if (segment === 'plugins') return 'plugins'
+    if (segment === 'agents') return 'agents'
+    if (segment === 'overview') return 'overview'
+  }
   return 'overview'
 }
 
+const resolveCurrentPackId = (): string => {
+  return (route.params.packId as string) ?? ''
+}
+
+const packPathPattern = (segment: string) => new RegExp(`/packs/[^/]+/${segment}`)
+
 const recordRecentTargetForRoute = (path: string, fullPath: string) => {
-  if (path.startsWith('/workflow') && route.query.job_id && typeof route.query.job_id === 'string') {
+  if (packPathPattern('workflow').test(path) && route.query.job_id && typeof route.query.job_id === 'string') {
     shell.recordRecentTarget({
       id: `workflow:${route.query.job_id}`,
       label: `Workflow job ${route.query.job_id}`,
@@ -259,7 +271,7 @@ const recordRecentTargetForRoute = (path: string, fullPath: string) => {
     return
   }
 
-  if (path.startsWith('/scheduler') && route.query.run_id && typeof route.query.run_id === 'string') {
+  if (packPathPattern('scheduler').test(path) && route.query.run_id && typeof route.query.run_id === 'string') {
     shell.recordRecentTarget({
       id: `scheduler-run:${route.query.run_id}`,
       label: `Scheduler run ${route.query.run_id}`,
@@ -270,7 +282,7 @@ const recordRecentTargetForRoute = (path: string, fullPath: string) => {
     return
   }
 
-  if (path.startsWith('/scheduler') && route.query.decision_id && typeof route.query.decision_id === 'string') {
+  if (packPathPattern('scheduler').test(path) && route.query.decision_id && typeof route.query.decision_id === 'string') {
     shell.recordRecentTarget({
       id: `scheduler-decision:${route.query.decision_id}`,
       label: `Scheduler decision ${route.query.decision_id}`,
@@ -281,7 +293,7 @@ const recordRecentTargetForRoute = (path: string, fullPath: string) => {
     return
   }
 
-  if (path.startsWith('/scheduler') && route.query.worker_id && typeof route.query.worker_id === 'string') {
+  if (packPathPattern('scheduler').test(path) && route.query.worker_id && typeof route.query.worker_id === 'string') {
     shell.recordRecentTarget({
       id: `scheduler-worker:${route.query.worker_id}`,
       label: `Scheduler worker ${route.query.worker_id}`,
@@ -292,7 +304,7 @@ const recordRecentTargetForRoute = (path: string, fullPath: string) => {
     return
   }
 
-  if (path.startsWith('/scheduler') && route.query.partition_id && typeof route.query.partition_id === 'string') {
+  if (packPathPattern('scheduler').test(path) && route.query.partition_id && typeof route.query.partition_id === 'string') {
     shell.recordRecentTarget({
       id: `scheduler-partition:${route.query.partition_id}`,
       label: `Scheduler partition ${route.query.partition_id}`,
@@ -303,7 +315,7 @@ const recordRecentTargetForRoute = (path: string, fullPath: string) => {
     return
   }
 
-  if (path.startsWith('/social') && route.query.post_id && typeof route.query.post_id === 'string') {
+  if (packPathPattern('social').test(path) && route.query.post_id && typeof route.query.post_id === 'string') {
     shell.recordRecentTarget({
       id: `social:${route.query.post_id}`,
       label: `Social post ${route.query.post_id}`,
@@ -314,7 +326,7 @@ const recordRecentTargetForRoute = (path: string, fullPath: string) => {
     return
   }
 
-  if (path.startsWith('/graph') && route.query.root_id && typeof route.query.root_id === 'string') {
+  if (packPathPattern('graph').test(path) && route.query.root_id && typeof route.query.root_id === 'string') {
     shell.recordRecentTarget({
       id: `graph:${route.query.root_id}`,
       label: `Graph root ${route.query.root_id}`,
@@ -325,7 +337,7 @@ const recordRecentTargetForRoute = (path: string, fullPath: string) => {
     return
   }
 
-  if (path.startsWith('/agents/') && typeof route.params.id === 'string') {
+  if (/\/packs\/[^/]+\/agents\//.test(path) && typeof route.params.id === 'string') {
     shell.recordRecentTarget({
       id: `agent:${route.params.id}`,
       label: `Agent ${route.params.id}`,
@@ -421,25 +433,32 @@ const isOperatorWorkspaceId = (value: string): value is OperatorWorkspaceId => {
 
 const handleWorkspaceSelect = async (workspaceId: string) => {
   if (!isOperatorWorkspaceId(workspaceId)) return
+  const packId = resolveCurrentPackId()
+  if (!packId) return
   shell.setActiveWorkspace(workspaceId)
 
   if (workspaceId === 'agents') {
-    await router.push('/agents')
+    await router.push(`/packs/${packId}/agents`)
     return
   }
 
   if (workspaceId === 'plugins') {
-    await router.push('/plugins')
+    await router.push(`/packs/${packId}/plugins`)
     return
   }
 
-  await router.push(`/${workspaceId}`)
+  await router.push(`/packs/${packId}/${workspaceId}`)
 }
 
 const handleReturnToSource = async () => {
+  const packId = resolveCurrentPackId()
+  if (!packId) return
+
+  const buildPath = (segment: string) => `/packs/${packId}${segment}`
+
   if (sourceContext.source.value.sourcePage === 'social' && sourceContext.source.value.sourcePostId) {
     await router.push({
-      path: '/social',
+      path: buildPath('/social'),
       query: {
         post_id: sourceContext.source.value.sourcePostId
       }
@@ -449,7 +468,7 @@ const handleReturnToSource = async () => {
 
   if (sourceContext.source.value.sourcePage === 'timeline' && sourceContext.source.value.sourceEventId) {
     await router.push({
-      path: '/timeline',
+      path: buildPath('/timeline'),
       query: {
         event_id: sourceContext.source.value.sourceEventId
       }
@@ -459,7 +478,7 @@ const handleReturnToSource = async () => {
 
   if (sourceContext.source.value.sourcePage === 'graph' && sourceContext.source.value.sourceRootId) {
     await router.push({
-      path: '/graph',
+      path: buildPath('/graph'),
       query: {
         root_id: sourceContext.source.value.sourceRootId,
         ...(sourceContext.source.value.sourceNodeId
@@ -471,13 +490,13 @@ const handleReturnToSource = async () => {
   }
 
   if (sourceContext.source.value.sourcePage === 'agent' && sourceContext.source.value.sourceAgentId) {
-    await router.push(`/agents/${sourceContext.source.value.sourceAgentId}`)
+    await router.push(buildPath(`/agents/${sourceContext.source.value.sourceAgentId}`))
     return
   }
 
   if (sourceContext.source.value.sourcePage === 'scheduler') {
     await router.push({
-      path: '/scheduler',
+      path: buildPath('/scheduler'),
       query: {
         ...(sourceContext.source.value.sourceRunId ? { run_id: sourceContext.source.value.sourceRunId } : {}),
         ...(sourceContext.source.value.sourceDecisionId ? { decision_id: sourceContext.source.value.sourceDecisionId } : {}),
@@ -489,18 +508,22 @@ const handleReturnToSource = async () => {
   }
 
   if (sourceContext.source.value.sourcePage === 'workflow') {
-    await router.push('/workflow')
+    await router.push(buildPath('/workflow'))
     return
   }
 
   if (sourceContext.source.value.sourcePage === 'overview') {
-    await router.push('/overview')
+    await router.push(buildPath('/overview'))
   }
 }
 
 const handleShellAction = async (actionId: string) => {
+  const packId = resolveCurrentPackId()
+
   if (actionId === 'go_overview') {
-    await router.push('/overview')
+    if (packId) {
+      await router.push(`/packs/${packId}/overview`)
+    }
     return
   }
 

@@ -1,4 +1,4 @@
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 export type OperatorSourcePage = 'social' | 'timeline' | 'graph' | 'overview' | 'workflow' | 'agent' | 'scheduler' | 'plugins'
 
@@ -23,6 +23,16 @@ export interface SocialFeedNavigationOptions {
   context?: OperatorNavigationSourceContext
 }
 
+const resolvePackPrefix = (): string => {
+  try {
+    const route = useRoute()
+    const packId = route.params.packId as string | undefined
+    return packId ? `/packs/${packId}` : ''
+  } catch {
+    return ''
+  }
+}
+
 export const buildSourceQuery = (context?: OperatorNavigationSourceContext) => {
   if (!context) {
     return {}
@@ -43,7 +53,7 @@ export const buildSourceQuery = (context?: OperatorNavigationSourceContext) => {
 }
 
 export const buildWorkflowJobNavigationTarget = (jobId: string, context?: OperatorNavigationSourceContext) => ({
-  path: '/workflow',
+  path: `${resolvePackPrefix()}/workflow`,
   query: {
     job_id: jobId,
     ...buildSourceQuery(context)
@@ -51,7 +61,7 @@ export const buildWorkflowJobNavigationTarget = (jobId: string, context?: Operat
 })
 
 export const buildWorkflowRunNavigationTarget = (runId: string, context?: OperatorNavigationSourceContext) => ({
-  path: '/workflow',
+  path: `${resolvePackPrefix()}/workflow`,
   query: {
     scheduler_run_id: runId,
     ...buildSourceQuery(context)
@@ -65,7 +75,7 @@ export const buildAgentNavigationTarget = (
     context?: OperatorNavigationSourceContext
   }
 ) => ({
-  path: `/agents/${agentId}`,
+  path: `${resolvePackPrefix()}/agents/${agentId}`,
   query: {
     ...(options?.tab && options.tab !== 'overview' ? { tab: options.tab } : {}),
     ...buildSourceQuery(options?.context)
@@ -81,7 +91,7 @@ export const buildSchedulerNavigationTarget = (
     context?: OperatorNavigationSourceContext
   }
 ) => ({
-  path: '/scheduler',
+  path: `${resolvePackPrefix()}/scheduler`,
   query: {
     ...(options?.partitionId ? { partition_id: options.partitionId } : {}),
     ...(options?.workerId ? { worker_id: options.workerId } : {}),
@@ -93,9 +103,10 @@ export const buildSchedulerNavigationTarget = (
 
 export const useOperatorNavigation = () => {
   const router = useRouter()
+  const prefix = resolvePackPrefix()
 
   return {
-    goToOverview: () => router.push('/overview'),
+    goToOverview: () => router.push(`${prefix}/overview`),
     goToScheduler: (options?: {
       partitionId?: string | null
       workerId?: string | null
@@ -103,7 +114,7 @@ export const useOperatorNavigation = () => {
       decisionId?: string | null
       context?: OperatorNavigationSourceContext
     }) => router.push(buildSchedulerNavigationTarget(options)),
-    goToWorkflow: () => router.push('/workflow'),
+    goToWorkflow: () => router.push(`${prefix}/workflow`),
     goToWorkflowJob: (jobId: string, context?: OperatorNavigationSourceContext) =>
       router.push(buildWorkflowJobNavigationTarget(jobId, context)),
     goToWorkflowTrace: (
@@ -112,7 +123,7 @@ export const useOperatorNavigation = () => {
       context?: OperatorNavigationSourceContext
     ) =>
       router.push({
-        path: '/workflow',
+        path: `${prefix}/workflow`,
         query: {
           trace_id: traceId,
           ...(tab ? { tab } : {}),
@@ -125,7 +136,7 @@ export const useOperatorNavigation = () => {
       context?: OperatorNavigationSourceContext
     ) =>
       router.push({
-        path: '/workflow',
+        path: `${prefix}/workflow`,
         query: {
           action_intent_id: actionIntentId,
           ...(tab ? { tab } : {}),
@@ -136,7 +147,7 @@ export const useOperatorNavigation = () => {
       router.push(buildWorkflowRunNavigationTarget(runId, context)),
     goToSocialFeed: (options?: SocialFeedNavigationOptions) =>
       router.push({
-        path: '/social',
+        path: `${prefix}/social`,
         query: {
           ...(options?.keyword ? { keyword: options.keyword } : {}),
           ...(options?.sourceActionIntentId ? { source_action_intent_id: options.sourceActionIntentId } : {}),
@@ -147,7 +158,7 @@ export const useOperatorNavigation = () => {
       }),
     goToSocialPost: (postId: string, context?: OperatorNavigationSourceContext) =>
       router.push({
-        path: '/social',
+        path: `${prefix}/social`,
         query: {
           post_id: postId,
           ...buildSourceQuery(context)
@@ -155,7 +166,7 @@ export const useOperatorNavigation = () => {
       }),
     goToTimelineEvent: (eventId: string, context?: OperatorNavigationSourceContext) =>
       router.push({
-        path: '/timeline',
+        path: `${prefix}/timeline`,
         query: {
           event_id: eventId,
           ...buildSourceQuery(context)
@@ -169,7 +180,7 @@ export const useOperatorNavigation = () => {
       context?: OperatorNavigationSourceContext
     ) =>
       router.push({
-        path: '/timeline',
+        path: `${prefix}/timeline`,
         query: {
           ...(options.fromTick ? { from_tick: options.fromTick } : {}),
           ...(options.toTick ? { to_tick: options.toTick } : {}),
@@ -185,7 +196,7 @@ export const useOperatorNavigation = () => {
       }
     ) =>
       router.push({
-        path: '/graph',
+        path: `${prefix}/graph`,
         query: {
           root_id: rootId,
           ...(options?.view && options.view !== 'mesh' ? { view: options.view } : {}),

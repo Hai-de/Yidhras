@@ -2,7 +2,7 @@ import type { ApiClientOptions } from '../../lib/http/client'
 import { requestApiData } from '../../lib/http/client'
 import { normalizeOptionalString } from '../../lib/route/query'
 import type { TickString } from '../../lib/time/tick'
-import { useRuntimeStore } from '../../stores/runtime'
+import { resolvePackId } from '../shared/resolvePackId'
 
 export type SchedulerKind = 'periodic' | 'event_driven'
 export type SchedulerReason =
@@ -487,10 +487,8 @@ const buildQueryString = (input: Record<string, string | number | null | undefin
 }
 
 export const useSchedulerApi = () => {
-  const runtime = useRuntimeStore()
-
   const packOpts = (): ApiClientOptions => ({
-    packId: runtime.worldPack?.id
+    packId: resolvePackId()
   })
 
   return {

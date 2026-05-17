@@ -1,5 +1,5 @@
 import { requestApiData } from '../../lib/http/client'
-import { useRuntimeStore } from '../../stores/runtime'
+import { resolvePackId } from '../shared/resolvePackId'
 
 export interface TimelineEventSnapshot {
   id: string
@@ -21,12 +21,11 @@ export interface PackNarrativeProjectionSnapshot {
 }
 
 export const useTimelineApi = () => {
-  const runtime = useRuntimeStore()
 
   return {
     listTimeline: () =>
       requestApiData<PackNarrativeProjectionSnapshot>('/api/packs/projections/timeline', {
-        packId: runtime.worldPack?.id
+        packId: resolvePackId()
       })
   }
 }

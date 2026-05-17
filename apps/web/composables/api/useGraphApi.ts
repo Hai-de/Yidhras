@@ -1,6 +1,6 @@
 import { requestApiData } from '../../lib/http/client'
 import { normalizeOptionalString } from '../../lib/route/query'
-import { useRuntimeStore } from '../../stores/runtime'
+import { resolvePackId } from '../shared/resolvePackId'
 
 export type GraphViewMode = 'mesh' | 'tree'
 export type GraphNodeKind = 'agent' | 'atmosphere' | 'relay' | 'container'
@@ -121,12 +121,11 @@ const buildGraphQueryString = (input: GraphViewQueryInput): string => {
 }
 
 export const useGraphApi = () => {
-  const runtime = useRuntimeStore()
 
   return {
     getView: (input: GraphViewQueryInput = {}) =>
       requestApiData<GraphViewSnapshot>(`/api/graph/view${buildGraphQueryString(input)}`, {
-        packId: runtime.worldPack?.id
+        packId: resolvePackId()
       })
   }
 }

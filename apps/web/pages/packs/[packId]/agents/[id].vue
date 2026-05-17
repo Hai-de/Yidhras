@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import AppPanel from '../../components/ui/AppPanel.vue'
-import AppTabs from '../../components/ui/AppTabs.vue'
+import AppPanel from '../../../../components/ui/AppPanel.vue'
+import AppTabs from '../../../../components/ui/AppTabs.vue'
 import {
   buildAgentSchedulerBreakdownItems,
   buildAgentSchedulerJobLinks,
@@ -10,13 +10,13 @@ import {
   buildAgentSchedulerRunLinks,
   buildAgentSchedulerSkippedReasonList,
   buildAgentSchedulerSummaryMetrics
-} from '../../features/agents/adapters'
-import AgentSchedulerCard from '../../features/agents/components/AgentSchedulerCard.vue'
-import AgentSummaryCard from '../../features/agents/components/AgentSummaryCard.vue'
-import { useAgentPage } from '../../features/agents/composables/useAgentPage'
-import PluginPanelHost from '../../features/plugins/components/PluginPanelHost.vue'
-import SourceContextBanner from '../../features/shared/components/SourceContextBanner.vue'
-import WorkspacePageHeader from '../../features/shared/components/WorkspacePageHeader.vue'
+} from '../../../../features/agents/adapters'
+import AgentSchedulerCard from '../../../../features/agents/components/AgentSchedulerCard.vue'
+import AgentSummaryCard from '../../../../features/agents/components/AgentSummaryCard.vue'
+import { useAgentPage } from '../../../../features/agents/composables/useAgentPage'
+import PluginPanelHost from '../../../../features/plugins/components/PluginPanelHost.vue'
+import SourceContextBanner from '../../../../features/shared/components/SourceContextBanner.vue'
+import WorkspacePageHeader from '../../../../features/shared/components/WorkspacePageHeader.vue'
 
 const pageLayoutStyle = {
   gap: 'var(--yd-layout-section-gap)',

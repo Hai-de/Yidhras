@@ -1,10 +1,10 @@
+import { DEFAULT_APP_THEME } from './default-theme'
 import type { AppThemeDefinition, ThemeSourceDescriptor } from './tokens'
 import {
   COMPONENT_THEME_CSS_VARIABLES,
   CORE_THEME_CSS_VARIABLES,
   LAYOUT_THEME_CSS_VARIABLES
 } from './tokens'
-import { DEFAULT_APP_THEME } from './default-theme'
 
 export const createThemeCssVariableEntries = (theme: AppThemeDefinition): Record<string, string> => {
   return {

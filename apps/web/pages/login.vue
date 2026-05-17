@@ -46,8 +46,8 @@
 </template>
 
 <script setup lang="ts">
-import { useAuthStore } from '../../stores/auth'
-import { requestApiData } from '../../lib/http/client'
+import { requestApiData } from '../lib/http/client'
+import { useAuthStore } from '../stores/auth'
 
 definePageMeta({
   layout: false

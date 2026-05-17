@@ -39,28 +39,32 @@ const workspaceTitleMap = {
   agents: 'Agent Detail'
 } as const
 
+const packPathMatch = (path: string, segment: string): boolean => {
+  return new RegExp(`/packs/[^/]+/${segment}`).test(path)
+}
+
 export const resolveShellFocusLabel = (path: string): string => {
-  if (path.startsWith('/workflow')) {
+  if (packPathMatch(path, 'workflow')) {
     return 'Current focus: workflow records'
   }
 
-  if (path.startsWith('/scheduler')) {
+  if (packPathMatch(path, 'scheduler')) {
     return 'Current focus: scheduler operations'
   }
 
-  if (path.startsWith('/graph')) {
+  if (packPathMatch(path, 'graph')) {
     return 'Current focus: graph projection'
   }
 
-  if (path.startsWith('/social')) {
+  if (packPathMatch(path, 'social')) {
     return 'Current focus: public signal stream'
   }
 
-  if (path.startsWith('/timeline')) {
+  if (packPathMatch(path, 'timeline')) {
     return 'Current focus: narrative event stream'
   }
 
-  if (path.startsWith('/agents')) {
+  if (/\/packs\/[^/]+\/agents/.test(path)) {
     return 'Current focus: agent projection'
   }
 
@@ -68,7 +72,7 @@ export const resolveShellFocusLabel = (path: string): string => {
 }
 
 export const resolveShellFocusMeta = (path: string, search: string): string => {
-  if (path.startsWith('/workflow')) {
+  if (packPathMatch(path, 'workflow')) {
     return search.includes('job_id=')
       ? 'Focused from workflow job selection.'
       : search.includes('trace_id=')
@@ -76,7 +80,7 @@ export const resolveShellFocusMeta = (path: string, search: string): string => {
         : 'Workflow queue and detail panel are active.'
   }
 
-  if (path.startsWith('/scheduler')) {
+  if (packPathMatch(path, 'scheduler')) {
     if (search.includes('run_id=')) {
       return 'Scheduler workspace is focused on a specific run.'
     }
@@ -96,19 +100,19 @@ export const resolveShellFocusMeta = (path: string, search: string): string => {
     return 'Scheduler operator projection is active.'
   }
 
-  if (path.startsWith('/graph')) {
+  if (packPathMatch(path, 'graph')) {
     return search.includes('root_id=') ? 'Graph root is pinned via route state.' : 'Graph workspace is using current route filters.'
   }
 
-  if (path.startsWith('/social')) {
+  if (packPathMatch(path, 'social')) {
     return search.includes('post_id=') ? 'A social post is currently selected.' : 'Social feed filters are active.'
   }
 
-  if (path.startsWith('/timeline')) {
+  if (packPathMatch(path, 'timeline')) {
     return search.includes('event_id=') ? 'A timeline event is currently selected.' : 'Timeline slice filters are active.'
   }
 
-  if (path.startsWith('/agents/')) {
+  if (/\/packs\/[^/]+\/agents\//.test(path)) {
     return 'Agent detail route is active.'
   }
 
@@ -145,7 +149,7 @@ export const useShellContext = () => {
   const sourceContext = useOperatorSourceContext()
 
   const workspaceTitle = computed(() => {
-    return workspaceTitleMap[shell.activeWorkspaceId as keyof typeof workspaceTitleMap] ?? 'Operator Workspace'
+    return workspaceTitleMap[shell.activeWorkspaceId] ?? 'Operator Workspace'
   })
 
   const workspaceSubtitle = computed(() => {

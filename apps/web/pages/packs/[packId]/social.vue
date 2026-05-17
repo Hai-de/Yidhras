@@ -61,15 +61,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import AppButton from '../components/ui/AppButton.vue'
-import SourceContextBanner from '../features/shared/components/SourceContextBanner.vue'
-import WorkspacePageHeader from '../features/shared/components/WorkspacePageHeader.vue'
-import WorkspaceStatusBanner from '../features/shared/components/WorkspaceStatusBanner.vue'
-import { formatFreshnessLabel } from '../features/shared/feedback'
-import SocialFiltersBar from '../features/social/components/SocialFiltersBar.vue'
-import SocialPostDetail from '../features/social/components/SocialPostDetail.vue'
-import SocialPostList from '../features/social/components/SocialPostList.vue'
-import { useSocialPage } from '../features/social/composables/useSocialPage'
+import AppButton from '../../../components/ui/AppButton.vue'
+import SourceContextBanner from '../../../features/shared/components/SourceContextBanner.vue'
+import WorkspacePageHeader from '../../../features/shared/components/WorkspacePageHeader.vue'
+import WorkspaceStatusBanner from '../../../features/shared/components/WorkspaceStatusBanner.vue'
+import { formatFreshnessLabel } from '../../../features/shared/feedback'
+import SocialFiltersBar from '../../../features/social/components/SocialFiltersBar.vue'
+import SocialPostDetail from '../../../features/social/components/SocialPostDetail.vue'
+import SocialPostList from '../../../features/social/components/SocialPostList.vue'
+import { useSocialPage } from '../../../features/social/composables/useSocialPage'
 
 const pageLayoutStyle = {
   gap: 'var(--yd-layout-section-gap)',

@@ -1,6 +1,6 @@
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig()
-  const apiBase: string = (config.public.apiBase as string) || 'http://localhost:3001'
+  const apiBase: string = (config.public.apiBase) || 'http://localhost:3001'
 
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],

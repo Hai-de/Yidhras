@@ -22,6 +22,7 @@ import { registerGrantRoutes } from './app/routes/operator_grants.js';
 import { registerPackBindingRoutes } from './app/routes/operator_pack_bindings.js';
 import { registerOperatorRoutes } from './app/routes/operators.js';
 import { registerPackRoutes } from './app/routes/packs/index.js';
+import { registerPackListRoutes } from './app/routes/packs.js';
 import { registerPluginRuntimeWebRoutes } from './app/routes/plugin_runtime_web.js';
 import { registerPluginRoutes } from './app/routes/plugins.js';
 import { registerSystemRoutes } from './app/routes/system.js';
@@ -268,6 +269,7 @@ const registerRoutes: RouteRegistrar = (application, context) => {
   // -- Global routes (no pack prefix) -- must be registered before /:packId middleware
   // so that /api/* paths match exact routes rather than being caught by the
   // /:packId wildcard (which would resolve "api" as a pack id).
+  registerPackListRoutes(application, context, worldPacksDir);
   registerSystemRoutes(application, context);
   registerConfigBackupRoutes(application, context, { asyncHandler });
   registerConfigRoutes(application, context, { asyncHandler });

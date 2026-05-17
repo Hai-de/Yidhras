@@ -137,8 +137,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import AppButton from '../components/ui/AppButton.vue'
-import AppPanel from '../components/ui/AppPanel.vue'
+import AppButton from '../../../components/ui/AppButton.vue'
+import AppPanel from '../../../components/ui/AppPanel.vue'
 import {
   buildOverviewMetricItems,
   buildSchedulerDecisionListItems,
@@ -148,19 +148,19 @@ import {
   buildSchedulerTrendItems,
   toOverviewAuditListItems,
   toOverviewNotificationListItems
-} from '../features/overview/adapters'
-import OverviewListCard from '../features/overview/components/OverviewListCard.vue'
-import OverviewMetricCard from '../features/overview/components/OverviewMetricCard.vue'
-import SchedulerSummaryCard from '../features/overview/components/SchedulerSummaryCard.vue'
-import SchedulerTrendsCard from '../features/overview/components/SchedulerTrendsCard.vue'
-import { useOverviewPage } from '../features/overview/composables/useOverviewPage'
-import PluginPanelHost from '../features/plugins/components/PluginPanelHost.vue'
-import MetricPill from '../features/shared/components/MetricPill.vue'
-import WorkspaceEmptyState from '../features/shared/components/WorkspaceEmptyState.vue'
-import WorkspacePageHeader from '../features/shared/components/WorkspacePageHeader.vue'
-import WorkspaceSectionHeader from '../features/shared/components/WorkspaceSectionHeader.vue'
-import WorkspaceStatusBanner from '../features/shared/components/WorkspaceStatusBanner.vue'
-import { formatFreshnessLabel } from '../features/shared/feedback'
+} from '../../../features/overview/adapters'
+import OverviewListCard from '../../../features/overview/components/OverviewListCard.vue'
+import OverviewMetricCard from '../../../features/overview/components/OverviewMetricCard.vue'
+import SchedulerSummaryCard from '../../../features/overview/components/SchedulerSummaryCard.vue'
+import SchedulerTrendsCard from '../../../features/overview/components/SchedulerTrendsCard.vue'
+import { useOverviewPage } from '../../../features/overview/composables/useOverviewPage'
+import PluginPanelHost from '../../../features/plugins/components/PluginPanelHost.vue'
+import MetricPill from '../../../features/shared/components/MetricPill.vue'
+import WorkspaceEmptyState from '../../../features/shared/components/WorkspaceEmptyState.vue'
+import WorkspacePageHeader from '../../../features/shared/components/WorkspacePageHeader.vue'
+import WorkspaceSectionHeader from '../../../features/shared/components/WorkspaceSectionHeader.vue'
+import WorkspaceStatusBanner from '../../../features/shared/components/WorkspaceStatusBanner.vue'
+import { formatFreshnessLabel } from '../../../features/shared/feedback'
 
 const pageLayoutStyle = {
   gap: 'var(--yd-layout-section-gap)',

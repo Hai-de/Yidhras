@@ -3,7 +3,7 @@ import type { ApiSuccessMeta } from '@yidhras/contracts'
 import { requestApi } from '../../lib/http/client'
 import { normalizeOptionalString } from '../../lib/route/query'
 import type { TickString } from '../../lib/time/tick'
-import { useRuntimeStore } from '../../stores/runtime'
+import { resolvePackId } from '../shared/resolvePackId'
 
 export interface SocialPostSnapshot {
   id: string
@@ -72,12 +72,11 @@ const buildSocialFeedQueryString = (input: SocialFeedQueryInput): string => {
 }
 
 export const useSocialApi = () => {
-  const runtime = useRuntimeStore()
 
   return {
     listFeed: async (input: SocialFeedQueryInput = {}): Promise<SocialFeedSnapshot> => {
       const envelope = await requestApi<SocialPostSnapshot[]>(`/api/social/feed${buildSocialFeedQueryString(input)}`, {
-        packId: runtime.worldPack?.id
+        packId: resolvePackId()
       })
 
       if (!envelope.success) {
