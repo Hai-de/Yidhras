@@ -123,7 +123,7 @@ const resolveSubjectEntityId = async (
 
 const KERNEL_INTENT_TYPES = ['trigger_event', 'post_message', 'adjust_relationship', 'adjust_snr', 'move'] as const
 
-const shouldBridgeToInvocation = (context: AppInfrastructure, intent: DispatchableActionIntentLike, packRuntime?: { getPack(): { capabilities?: Array<{ key: string }>; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> } } | undefined }): boolean => {
+const shouldBridgeToInvocation = (context: AppInfrastructure, intent: DispatchableActionIntentLike, packRuntime?: { getPack(): { capabilities?: Array<{ key: string }>; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> }; variables?: Record<string, unknown> } | undefined }): boolean => {
   const pack = packRuntime?.getPack()
   if (!pack) {
     return false
@@ -167,7 +167,7 @@ const shouldBridgeToInvocation = (context: AppInfrastructure, intent: Dispatchab
 export const buildInvocationRequestFromActionIntent = async (
   context: AppInfrastructure,
   intent: DispatchableActionIntentLike,
-  packRuntime?: { getPack(): { metadata: { id: string }; capabilities?: Array<{ key: string }>; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> } } | undefined }
+  packRuntime?: { getPack(): { metadata: { id: string }; capabilities?: Array<{ key: string }>; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> }; variables?: Record<string, unknown> } | undefined }
 ): Promise<InvocationRequest | null> => {
   if (!shouldBridgeToInvocation(context, intent, packRuntime)) {
     return null

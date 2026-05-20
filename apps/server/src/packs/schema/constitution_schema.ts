@@ -475,13 +475,41 @@ const perceptionRuleSchema = z
   })
   .strict();
 
+const projectionWhenSchema = z
+  .object({
+    tick_interval: z.number().int().positive().optional(),
+    on_event_type: nonEmptyStringSchema.optional(),
+    entity_type_is: nonEmptyStringSchema.optional()
+  })
+  .passthrough()
+
+const projectionThenSchema = z
+  .object({
+    compute: z.enum(['count', 'sum', 'max', 'min', 'collect']),
+    source_entity_type: nonEmptyStringSchema.optional(),
+    source_state_key: nonEmptyStringSchema.optional(),
+    source_collection: nonEmptyStringSchema.optional(),
+    target_projection: nonEmptyStringSchema,
+    aggregate_by: z.array(nonEmptyStringSchema).optional(),
+    filter_condition: z.record(z.string(), worldPackValueSchema).optional()
+  })
+  .passthrough()
+
+const projectionRuleSchema = z
+  .object({
+    id: nonEmptyStringSchema,
+    when: projectionWhenSchema,
+    then: projectionThenSchema
+  })
+  .strict()
+
 const rulesSchema = z
   .object({
     perception: z.array(perceptionRuleSchema).default([]),
     capability_resolution: z.array(worldRuleDefinitionSchema).default([]),
     invocation: z.array(worldRuleDefinitionSchema).default([]),
     objective_enforcement: z.array(objectiveEnforcementRuleSchema).default([]),
-    projection: z.array(worldRuleDefinitionSchema).default([])
+    projection: z.array(projectionRuleSchema).default([])
   })
   .strict()
   .default({

@@ -11,6 +11,7 @@ import { runActionDispatcher } from './action_dispatcher_runner.js';
 import { runAgentScheduler } from './agent_scheduler.js';
 import { runDecisionJobRunner } from './job_runner.js';
 import { runPerceptionPipeline } from './perception_pipeline.js';
+import { runProjectionPipeline } from './projection_pipeline.js';
 import { resolveOwnedSchedulerPartitionIds } from './scheduler_partitioning.js';
 import type { WorldEngineSidecarClient } from './sidecar/world_engine_sidecar_client.js';
 import {
@@ -52,6 +53,8 @@ export interface PackLoopHooks {
   afterStep5?: Array<(ctx: HookContext) => Promise<void>>;
   beforeStep6?: Array<(ctx: HookContext) => Promise<void>>;
   afterStep6?: Array<(ctx: HookContext) => Promise<void>>;
+  beforeStep7?: Array<(ctx: HookContext) => Promise<void>>;
+  afterStep7?: Array<(ctx: HookContext) => Promise<void>>;
   onLoopStateChange?: Array<(from: string, to: string) => void>;
 }
 
@@ -239,7 +242,8 @@ export class PackSimulationLoop {
         workerId: this.actionDispatcherWorkerId,
         packRuntime: this.packRuntime
       }) },
-      { name: 'step6_perception', fn: () => runPerceptionPipeline(this.context, this.packRuntime) }
+      { name: 'step6_perception', fn: () => runPerceptionPipeline(this.context, this.packRuntime) },
+      { name: 'step7_projection', fn: () => runProjectionPipeline(this.context, this.packRuntime) }
     ];
 
     let anyStepFailed = false;

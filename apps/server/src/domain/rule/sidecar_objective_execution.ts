@@ -1,4 +1,5 @@
 import {
+  WORLD_ENGINE_PROTOCOL_VERSION,
   type WorldObjectiveRuleDefinition,
   type WorldObjectiveRuleInvocation,
   type WorldObjectiveWorldEntity,
@@ -11,7 +12,48 @@ import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { InvocationRequest } from '../invocation/invocation_dispatcher.js';
-import type { ObjectiveRulePlan } from './objective_rule_resolver.js';
+
+export interface ObjectiveEntityStateMutation {
+  kind: 'entity_state';
+  entity_id: string;
+  state_namespace: string;
+  state_patch: Record<string, unknown>;
+}
+
+export interface ObjectiveAuthorityGrantMutation {
+  kind: 'authority_grant';
+  grant_id: string;
+  source_entity_id: string;
+  target_selector_json: Record<string, unknown>;
+  capability_key: string;
+  grant_type: string;
+  mediated_by_entity_id: string | null;
+  scope_json: Record<string, unknown> | null;
+  conditions_json: Record<string, unknown> | null;
+  priority: number;
+  status: string;
+  revocable: boolean;
+}
+
+export type ObjectiveMutationEffect = ObjectiveEntityStateMutation | ObjectiveAuthorityGrantMutation;
+
+export interface ObjectiveEventEffect {
+  type: string;
+  title: string;
+  description: string;
+  impact_data: Record<string, unknown> | null;
+  artifact_id: string | null;
+}
+
+export interface ObjectiveRulePlan {
+  rule_id: string;
+  capability_key: string | null;
+  mediator_id: string | null;
+  target_entity_id: string | null;
+  diagnostics?: Record<string, unknown> | null;
+  mutations: ObjectiveMutationEffect[];
+  emitted_events: ObjectiveEventEffect[];
+}
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -58,7 +100,7 @@ export const buildSidecarObjectiveExecutionRequest = async (
     packStorageAdapter: PackStorageAdapter;
     filteredRules?: Array<{ id: string; when?: unknown; then?: unknown }> | null;
   },
-  packRuntime?: { getPack(): { metadata: { id: string }; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> } } | undefined }
+  packRuntime?: { getPack(): { metadata: { id: string }; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> }; variables?: Record<string, unknown> } | undefined }
 ): Promise<WorldRuleExecuteObjectiveRequest> => {
   const pack = packRuntime?.getPack();
   if (!pack || pack.metadata.id !== input.invocation.pack_id) {
@@ -70,12 +112,13 @@ export const buildSidecarObjectiveExecutionRequest = async (
   const worldEntities = await listPackWorldEntities(input.packStorageAdapter, input.invocation.pack_id);
   const rules = input.filteredRules ?? pack.rules?.objective_enforcement ?? [];
   return {
-    protocol_version: 'world_engine/v1alpha1',
+    protocol_version: WORLD_ENGINE_PROTOCOL_VERSION,
     pack_id: input.invocation.pack_id,
     invocation: toObjectiveInvocation(input.invocation),
     effective_mediator_id: input.effectiveMediatorId,
     objective_rules: rules.map(toObjectiveRuleDefinition),
-    world_entities: worldEntities.map(entity => toObjectiveWorldEntity(input.invocation.pack_id, entity))
+    world_entities: worldEntities.map(entity => toObjectiveWorldEntity(input.invocation.pack_id, entity)),
+    pack_variables: pack.variables ?? null
   };
 };
 

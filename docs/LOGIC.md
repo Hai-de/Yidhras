@@ -16,7 +16,7 @@
 | Memory Block | 可触发（always/keyword/logic/recent-source/semantic）的长期记忆片段，支持向量嵌入与余弦相似度语义检索，触发后物化为上下文节点 |
 | Projection | 数据的只读聚合视图（entity overview、pack timeline 等），面向前端/operator |
 | Canonical read surface | 稳定的公开只读 API 端点，如 `/api/packs/:packId/overview` |
-| Objective enforcement | Rust sidecar 执行的世界规则匹配与状态变更 |
+| Objective enforcement | Rust sidecar 执行的世界规则匹配与状态变更（mutation 为判别联合：`entity_state` + `authority_grant`），模板上下文包含 pack variables |
 | Action dispatch | 把 grounded intent 落地为客观执行（社交、关系调整、能力调用等） |
 
 ## 1. 推理与执行主线
@@ -30,7 +30,7 @@ inference / workflow / world enforcement 主线：
    - translated kernel intent
    - narrativized fallback
 4. `ActionIntentDraft` 持久化为 `ActionIntent`
-5. `ActionDispatcher` / `InvocationDispatcher` / `EnforcementEngine` 落地客观执行
+5. `ActionDispatcher` / `InvocationDispatcher` / `EnforcementEngine` 落地客观执行（支持 entity state mutation 与 authority grant mutation 两种效果类型，模板上下文包含 pack variables）
 6. `InferenceTrace.context_snapshot` / workflow / audit / projections 提供可观测证据
 
 语义重点：
@@ -116,14 +116,39 @@ narrativized fallback 的关键点是：
 
 ## 5. Projection / visibility 语义
 
-projection / visibility 语义：
+projection 系统分为两层：**计算层**（`rules.projection`）和**存储层**（`storage.projections`）。
 
-### 5.1 pack projection
+### 5.1 计算层：rules.projection
+
+projection 规则（`rules.projection`）定义世界状态的派生计算逻辑。每个规则由 `when`（触发条件）和 `then`（计算指令）组成：
+
+- `when` 支持以下触发条件：
+  - `tick_interval`：每 N tick 触发一次
+  - `entity_type_is`：仅当存在匹配 entity_type 的实体时触发
+  - `on_event_type`：特定事件类型触发
+- `then` 支持以下计算指令：
+  - `compute`：聚合函数 — `count` | `sum` | `max` | `min` | `collect`
+  - `source_entity_type`：从哪种 entity 读取数据
+  - `source_state_key`：读取 entity state 的哪个 key（数值型）
+  - `target_projection`：写入哪个 projection key
+  - `aggregate_by`：按哪些 state key 维度分组聚合
+  - `filter_condition`：过滤条件
+
+projection 规则在 sim loop 的第 7 步（step7_projection）执行：读取世界状态（entities、entity states、mediator bindings、authority grants、rule execution records）→ 评估规则 → 将计算结果写入 entity state（`entity_id: '__projection__'`，`state_namespace: <projection_key>`）。
+
+projection 规则使用专用 schema（`projectionRuleSchema`），与 `worldRuleDefinitionSchema` 分离，提供编译期类型检查。
+
+### 5.2 存储层：storage.projections
+
+`storage.projections` 定义投影数据的持久化 schema（表结构、可见性等），由 `StorageProjectionDefinition` 描述。
+
+### 5.3 pack projection
 
 pack runtime projection 覆盖：
 
 - entity overview projection
 - pack narrative timeline projection
+- rules.projection 计算结果（`__projection__` entity state）
 
 其可见证据包括：
 
@@ -134,14 +159,14 @@ pack runtime projection 覆盖：
 - rule execution records
 - event timeline
 
-### 5.2 kernel projection
+### 5.4 kernel projection
 
 kernel projection 覆盖：
 
 - operator overview projection
 - global projection index extraction
 
-### 5.3 canonical read surfaces
+### 5.5 canonical read surfaces
 
 canonical 读接口：
 
@@ -153,6 +178,7 @@ canonical 读接口：
 
 - narrative timeline 的 pack 读面固定到 pack projection surface
 - entity overview 的聚合读面固定到 entity-centric surface
+- rules.projection 计算结果可通过 entity state 读面查询
 
 具体世界包如何利用这些可见性读面，应由对应 pack 的文档说明，而不是在项目级逻辑文档中绑定到某个单独题材。
 

@@ -257,8 +257,9 @@ HTTP Request
 
 - `apps/server/src/app/runtime/*.ts`
   - `MultiPackLoopHost.ts` — 统一管理所有 per-pack loop 的启停/暂停/恢复。所有已加载 pack 通过同一入口启动
-  - `PackSimulationLoop.ts` — 每个 pack 独立的 6 步模拟循环（expire → world engine → scheduler → decision jobs → action dispatcher → perception pipeline）
+  - `PackSimulationLoop.ts` — 每个 pack 独立的 7 步模拟循环（expire → world engine → scheduler → decision jobs → action dispatcher → perception pipeline → projection pipeline）
   - `perception_pipeline.ts` — 感知管线（agent 感知范围计算与事件过滤）
+  - `projection_pipeline.ts` — 投影管线（projection 规则评估与结果持久化）
   - `scheduler_sidecar_pool.ts` — Rust 决策内核 sidecar 进程池，`max_processes` 上限
   - `agent_scheduler.ts` — 调度主逻辑（partition-aware，per-pack 调用）
   - `job_runner.ts` / `action_dispatcher_runner.ts` — 决策执行与动作分发
@@ -359,7 +360,7 @@ runtime kernel 通过以下正式 port 收口：
 
 **对等架构原则：**
 
-- 每个已加载 pack 拥有独立的 `ChronosEngine` 时钟实例、`PackSimulationLoop`（完整 6 步循环）、`RuntimeSpeedPolicy` 速度策略
+- 每个已加载 pack 拥有独立的 `ChronosEngine` 时钟实例、`PackSimulationLoop`（完整 7 步循环）、`RuntimeSpeedPolicy` 速度策略
 - 每个 pack 通过 `world_engine_sidecar` 以 `mode: 'active'` 加载，享有完整的 Rust 世界引擎会话
 - 所有 pack 共享相同的状态机（`loading → ready → degraded → unloading → gone`）、路由前缀、观测接口
 - 所有 pack 完全对等，不存在主包/附加包的架构区分
@@ -442,7 +443,7 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 执行路径：
 
 - World engine step prepare/commit/abort 经 Rust sidecar 执行
-- Objective enforcement（规则匹配、模板渲染、mutation 规划）在 Rust 侧，权限校验与持久化在 TS 侧
+- Objective enforcement（规则匹配、模板渲染、mutation 规划）在 Rust 侧，权限校验与持久化在 TS 侧。Mutations 为判别联合类型（`kind: 'entity_state' | 'authority_grant'`），Rust 侧车产出后由 TS host 按 kind 路由到对应的持久化适配器。模板上下文包含 world pack variables（`variables.*`），规则 `then` 中的 `{{variables.xxx}}` 可在 sidecar 侧直接渲染
 - Scheduler decision kernel 计算在 Rust 侧，调度编排在 TS 侧
 - Memory trigger 匹配在 Rust 侧，memory block 管理与 context materialization 在 TS 侧
 - 以下能力完全由 Node/TS host 持有：HTTP API、runtime orchestration、调度器生命周期、plugin host、workflow host、AI gateway、context assembly、prompt workflow、权限校验、审计日志、前端服务

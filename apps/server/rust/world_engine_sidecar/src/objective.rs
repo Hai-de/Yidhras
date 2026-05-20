@@ -48,6 +48,7 @@ fn build_template_context(
     target_entity_id: Option<&str>,
     artifact_id: Option<&str>,
     effective_mediator_id: Option<&str>,
+    pack_variables: Option<&Value>,
 ) -> Value {
     let subject_entity_id = invocation.get("subject_entity_id").and_then(Value::as_str);
     let invocation_mediator_id = invocation.get("mediator_id").and_then(Value::as_str);
@@ -83,7 +84,8 @@ fn build_template_context(
         },
         "mediator": {
             "id": effective_mediator_id.or(invocation_mediator_id)
-        }
+        },
+        "variables": pack_variables.unwrap_or(&Value::Null)
     })
 }
 
@@ -156,11 +158,15 @@ pub fn handle_execute_objective(request_id: Option<Value>, params: &Value) -> Rp
                 })
             })
     });
+    let pack_variables = params.get("pack_variables").and_then(|v| {
+        if v.is_null() { None } else { Some(v) }
+    });
     let template_context = build_template_context(
         &invocation,
         target_entity_id.as_deref(),
         artifact_id.as_deref(),
         effective_mediator_id.as_deref(),
+        pack_variables,
     );
 
     let mut rendered_template_count: usize = 0;
@@ -226,6 +232,7 @@ pub fn handle_execute_objective(request_id: Option<Value>, params: &Value) -> Rp
                 let state_patch =
                     render_template_value(&Value::Object(subject_state.clone()), &template_context);
                 mutations.push(json!({
+                    "kind": "entity_state",
                     "entity_id": subject_entity_id,
                     "state_namespace": "core",
                     "state_patch": state_patch
@@ -239,6 +246,7 @@ pub fn handle_execute_objective(request_id: Option<Value>, params: &Value) -> Rp
                 let state_patch =
                     render_template_value(&Value::Object(target_state.clone()), &template_context);
                 mutations.push(json!({
+                    "kind": "entity_state",
                     "entity_id": target_id,
                     "state_namespace": "core",
                     "state_patch": state_patch
@@ -251,9 +259,47 @@ pub fn handle_execute_objective(request_id: Option<Value>, params: &Value) -> Rp
             let state_patch =
                 render_template_value(&Value::Object(world_state.clone()), &template_context);
             mutations.push(json!({
+                "kind": "entity_state",
                 "entity_id": "__world__",
                 "state_namespace": "world",
                 "state_patch": state_patch
+            }));
+        }
+
+        if let Some(authority) = mutate.get("authority").and_then(Value::as_object) {
+            rendered_template_count += authority.len();
+            let rendered = render_template_value(&Value::Object(authority.clone()), &template_context);
+            let rendered_obj = rendered.as_object();
+
+            let get_str = |key: &str| -> Option<String> {
+                rendered_obj.and_then(|o| o.get(key)).and_then(Value::as_str).map(|v| v.to_string())
+            };
+            let get_str_nullable = |key: &str| -> Option<String> {
+                rendered_obj.and_then(|o| o.get(key)).and_then(|v| if v.is_null() { None } else { v.as_str().map(|s| s.to_string()) })
+            };
+            let get_record = |key: &str| -> Value {
+                rendered_obj.and_then(|o| o.get(key)).and_then(|v| v.as_object().map(|m| Value::Object(m.clone()))).unwrap_or(Value::Null)
+            };
+            let get_number = |key: &str| -> i64 {
+                rendered_obj.and_then(|o| o.get(key)).and_then(Value::as_i64).unwrap_or(0)
+            };
+            let get_bool = |key: &str| -> bool {
+                rendered_obj.and_then(|o| o.get(key)).and_then(Value::as_bool).unwrap_or(false)
+            };
+
+            mutations.push(json!({
+                "kind": "authority_grant",
+                "grant_id": get_str("grant_id").unwrap_or_default(),
+                "source_entity_id": get_str("source_entity_id").unwrap_or_default(),
+                "target_selector_json": get_record("target_selector_json"),
+                "capability_key": get_str("capability_key").unwrap_or_default(),
+                "grant_type": get_str("grant_type").unwrap_or_else(|| "mediated".to_string()),
+                "mediated_by_entity_id": get_str_nullable("mediated_by_entity_id"),
+                "scope_json": get_record("scope_json"),
+                "conditions_json": get_record("conditions_json"),
+                "priority": get_number("priority"),
+                "status": get_str("status").unwrap_or_else(|| "active".to_string()),
+                "revocable": get_bool("revocable")
             }));
         }
 

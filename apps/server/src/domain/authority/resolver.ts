@@ -153,6 +153,11 @@ export const resolveAuthorityForSubject = async (
   const blocked_authority_ids: string[] = [];
 
   for (const authority of authorityGrants) {
+    if (authority.status && authority.status !== 'active') {
+      blocked_authority_ids.push(authority.id);
+      continue;
+    }
+
     const matchedVia = await resolveTargetSelectorMatch(
       context,
       input.packId,

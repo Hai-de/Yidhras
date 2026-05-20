@@ -1,18 +1,17 @@
 export {
-  type StepContribution,
-  type StepContributor,
-  type RuleContribution,
-  type RuleContributor,
   type QueryContribution,
   type QueryContributor,
+  type RuleContribution,
+  type RuleContributor,
+  type StepContribution,
+  type StepContributor,
   type WorldEngineSessionContext
 } from '@yidhras/contracts';
 
 import type {
-  StepContributor,
+  QueryContributor,
   RuleContributor,
-  QueryContributor
-} from '@yidhras/contracts';
+  StepContributor} from '@yidhras/contracts';
 
 /**
  * Registry that holds all world-engine contributors.

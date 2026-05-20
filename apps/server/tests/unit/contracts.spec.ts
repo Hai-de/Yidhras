@@ -187,4 +187,112 @@ describe('contracts — inference', () => {
       }).success).toBe(true);
     });
   });
+
+  describe('world engine objective mutation discriminated union', () => {
+    it('validates entity_state mutation', () => {
+      const result = contracts.worldObjectiveMutationEffectSchema.safeParse({
+        kind: 'entity_state',
+        entity_id: 'actor-1',
+        state_namespace: 'core',
+        state_patch: { score: 10 }
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('validates authority_grant mutation', () => {
+      const result = contracts.worldObjectiveMutationEffectSchema.safeParse({
+        kind: 'authority_grant',
+        grant_id: 'grant-1',
+        source_entity_id: 'source-1',
+        target_selector_json: { kind: 'all_actors' },
+        capability_key: 'move',
+        grant_type: 'mediated',
+        mediated_by_entity_id: null,
+        scope_json: null,
+        conditions_json: null,
+        priority: 0,
+        status: 'active',
+        revocable: true
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects mutation without kind field', () => {
+      const result = contracts.worldObjectiveMutationEffectSchema.safeParse({
+        entity_id: 'actor-1',
+        state_namespace: 'core',
+        state_patch: {}
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects authority_grant mutation with invalid grant_type', () => {
+      const result = contracts.worldObjectiveMutationEffectSchema.safeParse({
+        kind: 'authority_grant',
+        grant_id: 'grant-1',
+        source_entity_id: 'source-1',
+        target_selector_json: {},
+        capability_key: 'move',
+        grant_type: 'invalid_type',
+        mediated_by_entity_id: null,
+        scope_json: null,
+        conditions_json: null,
+        priority: 0,
+        status: 'active',
+        revocable: true
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('world rule execute objective request — pack_variables', () => {
+    it('accepts optional pack_variables field', () => {
+      const result = contracts.worldRuleExecuteObjectiveRequestSchema.safeParse({
+        protocol_version: contracts.WORLD_ENGINE_PROTOCOL_VERSION,
+        pack_id: 'test-pack',
+        invocation: {
+          id: 'inv-1',
+          pack_id: 'test-pack',
+          source_action_intent_id: 'act-1',
+          source_inference_id: 'inf-1',
+          invocation_type: 'invoke.test',
+          capability_key: 'test_cap',
+          subject_entity_id: 'actor-1',
+          target_ref: null,
+          payload: {},
+          mediator_id: null,
+          actor_ref: {},
+          created_at: '1000'
+        },
+        effective_mediator_id: null,
+        objective_rules: [],
+        world_entities: [],
+        pack_variables: { threshold: 5, nested: { key: 'value' } }
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts request without pack_variables', () => {
+      const result = contracts.worldRuleExecuteObjectiveRequestSchema.safeParse({
+        protocol_version: contracts.WORLD_ENGINE_PROTOCOL_VERSION,
+        pack_id: 'test-pack',
+        invocation: {
+          id: 'inv-1',
+          pack_id: 'test-pack',
+          source_action_intent_id: 'act-1',
+          source_inference_id: 'inf-1',
+          invocation_type: 'invoke.test',
+          capability_key: 'test_cap',
+          subject_entity_id: 'actor-1',
+          target_ref: null,
+          payload: {},
+          mediator_id: null,
+          actor_ref: {},
+          created_at: '1000'
+        },
+        effective_mediator_id: null
+      });
+      expect(result.success).toBe(true);
+    });
+  });
 });

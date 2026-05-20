@@ -10,13 +10,17 @@ import type { AppContextPorts } from '../../app/services/app_context_ports.js';
 type EnforcementContext = AppInfrastructure & Pick<AppContextPorts, 'worldEngine'> & {
   getSpatialRuntime?(): import('../../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
 };
+import { upsertPackAuthorityGrant } from '../../packs/storage/authority_repo.js';
 import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage/entity_state_repo.js';
 import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { ApiError } from '../../utils/api_error.js';
 import { resolveAuthorityForSubject, resolveMediatorBindingsForPack } from '../authority/resolver.js';
 import type { InvocationRequest } from '../invocation/invocation_dispatcher.js';
 import { createObjectiveRuleExecutionRecord } from './execution_recorder.js';
-import { buildSidecarObjectiveExecutionRequest, toObjectiveRulePlanFromSidecarResult } from './sidecar_objective_execution.js';
+import {
+  buildSidecarObjectiveExecutionRequest,
+  type ObjectiveMutationEffect,
+  toObjectiveRulePlanFromSidecarResult} from './sidecar_objective_execution.js';
 
 export interface InvocationEnforcementResult {
   rule_execution_id: string;
@@ -122,7 +126,7 @@ const hasEventBridge = (
   );
 };
 
-const applyMutationEffect = async (
+const applyEntityStateMutation = async (
   input: {
     packId: string;
     entityId: string;
@@ -149,6 +153,78 @@ const applyMutationEffect = async (
     state_json: nextState,
     now: input.now
   });
+};
+
+const applyAuthorityGrantMutation = async (
+  input: {
+    packId: string;
+    grantId: string;
+    sourceEntityId: string;
+    targetSelectorJson: Record<string, unknown>;
+    capabilityKey: string;
+    grantType: string;
+    mediatedByEntityId: string | null;
+    scopeJson: Record<string, unknown> | null;
+    conditionsJson: Record<string, unknown> | null;
+    priority: number;
+    status: string;
+    revocable: boolean;
+    now: bigint;
+    packStorageAdapter: PackStorageAdapter;
+  }
+): Promise<void> => {
+  await upsertPackAuthorityGrant(input.packStorageAdapter, {
+    id: input.grantId,
+    pack_id: input.packId,
+    source_entity_id: input.sourceEntityId,
+    target_selector_json: input.targetSelectorJson,
+    capability_key: input.capabilityKey,
+    grant_type: input.grantType,
+    mediated_by_entity_id: input.mediatedByEntityId,
+    scope_json: input.scopeJson,
+    conditions_json: input.conditionsJson,
+    priority: input.priority,
+    status: input.status,
+    revocable: input.revocable,
+    now: input.now
+  });
+};
+
+const applyMutationEffect = async (
+  mutation: ObjectiveMutationEffect,
+  input: {
+    packId: string;
+    now: bigint;
+    packStorageAdapter: PackStorageAdapter;
+  }
+): Promise<void> => {
+  if (mutation.kind === 'entity_state') {
+    await applyEntityStateMutation({
+      packId: input.packId,
+      entityId: mutation.entity_id,
+      stateNamespace: mutation.state_namespace,
+      statePatch: mutation.state_patch,
+      now: input.now,
+      packStorageAdapter: input.packStorageAdapter
+    });
+  } else {
+    await applyAuthorityGrantMutation({
+      packId: input.packId,
+      grantId: mutation.grant_id,
+      sourceEntityId: mutation.source_entity_id,
+      targetSelectorJson: mutation.target_selector_json,
+      capabilityKey: mutation.capability_key,
+      grantType: mutation.grant_type,
+      mediatedByEntityId: mutation.mediated_by_entity_id,
+      scopeJson: mutation.scope_json,
+      conditionsJson: mutation.conditions_json,
+      priority: mutation.priority,
+      status: mutation.status,
+      revocable: mutation.revocable,
+      now: input.now,
+      packStorageAdapter: input.packStorageAdapter
+    });
+  }
 };
 
 const buildEventBridgeImpactData = (
@@ -256,7 +332,7 @@ export const spatialPredicateMatches = (
 export const enforceInvocationRequest = async (
   context: EnforcementContext,
   invocation: InvocationRequest,
-  packRuntime?: { getPack(): { metadata: { id: string }; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> } } | undefined }
+  packRuntime?: { getPack(): { metadata: { id: string }; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> }; variables?: Record<string, unknown> } | undefined }
 ): Promise<InvocationEnforcementResult> => {
   const now = invocation.created_at;
 
@@ -313,11 +389,8 @@ export const enforceInvocationRequest = async (
     const plan = await resolvePlan(mediatorId);
 
     for (const mutation of plan.mutations) {
-      await applyMutationEffect({
+      await applyMutationEffect(mutation, {
         packId: invocation.pack_id,
-        entityId: mutation.entity_id,
-        stateNamespace: mutation.state_namespace,
-        statePatch: mutation.state_patch,
         now,
         packStorageAdapter: context.packStorageAdapter
       });

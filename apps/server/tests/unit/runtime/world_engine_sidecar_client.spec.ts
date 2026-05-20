@@ -126,6 +126,7 @@ class InMemoryStubTransport implements WorldEngineSidecarTransport {
           target_entity_id: 'artifact-book',
           mutations: [
             {
+              kind: 'entity_state',
               entity_id: 'artifact-book',
               state_namespace: 'core',
               state_patch: {

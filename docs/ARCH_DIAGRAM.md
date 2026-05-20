@@ -96,7 +96,7 @@ flowchart TB
 
         subgraph PackContainer["Per-pack container (× N loaded packs)"]
             direction LR
-            PackLoop[PackSimulationLoop\n6-step cycle]
+            PackLoop[PackSimulationLoop\n7-step cycle]
             SchedAdapter[SchedulerStorageAdapter\nlease / cursor / ownership]
             WEP[WorldEnginePort]
             HostAPI[PackHostApi\ncontrolled read surface]
@@ -171,10 +171,12 @@ sequenceDiagram
     PSL->>SchedStore: writeDetailedSnapshot
     PSL->>PSL: 4. decision jobs
     PSL->>PSL: 5. action dispatcher
+    PSL->>PSL: 6. perception pipeline
+    PSL->>PSL: 7. projection pipeline
     PSL->>Obs: emitAggregatedMetrics
 ```
 
-> 本图展示 per-pack 调度 tick 的 5 步循环：expire stale leases → world engine step → scheduler partition/assign → decision jobs → action dispatcher。Scheduler 运营数据通过 SchedulerStorageAdapter 写入 pack-local SQLite，可观测性拆分为单 pack 调试快照与跨 pack 聚合指标两层。
+> 本图展示 per-pack 调度 tick 的 7 步循环：expire stale leases → world engine step → scheduler partition/assign → decision jobs → action dispatcher → perception pipeline → projection pipeline。Scheduler 运营数据通过 SchedulerStorageAdapter 写入 pack-local SQLite，可观测性拆分为单 pack 调试快照与跨 pack 聚合指标两层。Projection 管线读取世界状态、评估 projection 规则、将计算结果持久化为 entity state。
 
 ## 6. AI Tool Calling 链路
 

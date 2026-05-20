@@ -384,11 +384,32 @@ export const worldObjectiveWorldEntitySchema = z.object({
   entity_kind: nonEmptyStringSchema
 })
 
-export const worldObjectiveMutationEffectSchema = z.object({
+export const worldObjectiveEntityStateMutationSchema = z.object({
+  kind: z.literal('entity_state'),
   entity_id: nonEmptyStringSchema,
   state_namespace: nonEmptyStringSchema,
   state_patch: stringRecordSchema.default({})
 })
+
+export const worldObjectiveAuthorityGrantMutationSchema = z.object({
+  kind: z.literal('authority_grant'),
+  grant_id: nonEmptyStringSchema,
+  source_entity_id: nonEmptyStringSchema,
+  target_selector_json: stringRecordSchema,
+  capability_key: nonEmptyStringSchema,
+  grant_type: worldGrantTypeSchema,
+  mediated_by_entity_id: nonEmptyStringSchema.nullable(),
+  scope_json: stringRecordSchema.nullable(),
+  conditions_json: stringRecordSchema.nullable(),
+  priority: z.number().int(),
+  status: nonEmptyStringSchema,
+  revocable: z.boolean()
+})
+
+export const worldObjectiveMutationEffectSchema = z.discriminatedUnion('kind', [
+  worldObjectiveEntityStateMutationSchema,
+  worldObjectiveAuthorityGrantMutationSchema
+])
 
 export const worldObjectiveEventEffectSchema = z.object({
   type: nonEmptyStringSchema,
@@ -439,7 +460,8 @@ export const worldRuleExecuteObjectiveRequestSchema = worldEnginePackRequestSche
   invocation: worldObjectiveRuleInvocationSchema,
   effective_mediator_id: nonEmptyStringSchema.nullable(),
   objective_rules: z.array(worldObjectiveRuleDefinitionSchema).default([]),
-  world_entities: z.array(worldObjectiveWorldEntitySchema).default([])
+  world_entities: z.array(worldObjectiveWorldEntitySchema).default([]),
+  pack_variables: stringRecordSchema.nullable().optional()
 })
 
 export const worldRuleExecuteObjectiveResultSchema = worldEngineProtocolEnvelopeSchema.extend({
@@ -516,6 +538,8 @@ export type WorldStateQueryResult = z.infer<typeof worldStateQueryResultSchema>
 export type WorldObjectiveRuleInvocation = z.infer<typeof worldObjectiveRuleInvocationSchema>
 export type WorldObjectiveRuleDefinition = z.infer<typeof worldObjectiveRuleDefinitionSchema>
 export type WorldObjectiveWorldEntity = z.infer<typeof worldObjectiveWorldEntitySchema>
+export type WorldObjectiveEntityStateMutation = z.infer<typeof worldObjectiveEntityStateMutationSchema>
+export type WorldObjectiveAuthorityGrantMutation = z.infer<typeof worldObjectiveAuthorityGrantMutationSchema>
 export type WorldObjectiveMutationEffect = z.infer<typeof worldObjectiveMutationEffectSchema>
 export type WorldObjectiveEventEffect = z.infer<typeof worldObjectiveEventEffectSchema>
 export type WorldObjectiveExecutionDiagnostics = z.infer<typeof worldObjectiveExecutionDiagnosticsSchema>

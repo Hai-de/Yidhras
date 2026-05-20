@@ -1,9 +1,9 @@
 import type { Express, Request, Response } from 'express'
 
+import { PackManifestLoader } from '../../packs/manifest/loader.js'
 import type { AppContext } from '../context.js'
 import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk } from '../http/json.js'
-import { PackManifestLoader } from '../../packs/manifest/loader.js'
 
 interface PackListItem {
   id: string
