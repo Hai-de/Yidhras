@@ -1,0 +1,16 @@
+[package]
+name = "memory-trigger"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "memory_trigger_sidecar"
+path = "src/main.rs"
+
+[dependencies]
+sidecar-common = { path = "../sidecar-common" }
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

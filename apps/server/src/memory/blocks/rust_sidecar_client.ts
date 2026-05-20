@@ -45,7 +45,7 @@ class MemoryTriggerTransport extends StdioJsonRpcTransport {
   constructor(options?: MemoryTriggerSidecarClientOptions) {
     const opts: StdioJsonRpcTransportOptions = {
       binaryPath: options?.binaryPath ?? '',
-      projectDir: 'rust/memory_trigger_sidecar',
+      projectDir: 'rust/memory-trigger',
       timeoutMs: options?.timeoutMs ?? 500,
       heartbeatIntervalMs: 5000,
       heartbeatMethod: 'memory_trigger.health.get',

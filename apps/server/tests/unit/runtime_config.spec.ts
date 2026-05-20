@@ -167,7 +167,7 @@ const defaultYamlBase = [
   '      auto_restart: false',
   'world_engine:',
   '  timeout_ms: 1200',
-  '  binary_path: "apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar"',
+  '  binary_path: "apps/server/rust/target/debug/world_engine_sidecar"',
   '  auto_restart: false',
   'prompt_workflow:',
   '  profiles:',
@@ -306,7 +306,7 @@ describe('runtime config YAML migration', () => {
     });
     expect(getWorldEngineConfig()).toEqual({
       timeout_ms: 1200,
-      binary_path: 'apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar',
+      binary_path: 'apps/server/rust/target/debug/world_engine_sidecar',
       auto_restart: false
     });
     expect(getRuntimeMultiPackConfig()).toMatchObject({

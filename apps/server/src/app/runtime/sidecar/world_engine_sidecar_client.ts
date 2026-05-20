@@ -70,7 +70,7 @@ class WorldEngineTransport extends StdioJsonRpcTransport {
   constructor(options?: WorldEngineSidecarClientOptions) {
     const opts: StdioJsonRpcTransportOptions = {
       binaryPath: options?.binaryPath ?? '',
-      projectDir: 'rust/world_engine_sidecar',
+      projectDir: 'rust/world-engine',
       timeoutMs: options?.timeoutMs ?? 5000,
       heartbeatIntervalMs: 10000,
       heartbeatMethod: 'world.health.get',

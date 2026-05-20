@@ -361,7 +361,7 @@ runtime kernel 通过以下正式 port 收口：
 **对等架构原则：**
 
 - 每个已加载 pack 拥有独立的 `ChronosEngine` 时钟实例、`PackSimulationLoop`（完整 7 步循环）、`RuntimeSpeedPolicy` 速度策略
-- 每个 pack 通过 `world_engine_sidecar` 以 `mode: 'active'` 加载，享有完整的 Rust 世界引擎会话
+- 每个 pack 通过 `world-engine` 以 `mode: 'active'` 加载，享有完整的 Rust 世界引擎会话
 - 所有 pack 共享相同的状态机（`loading → ready → degraded → unloading → gone`）、路由前缀、观测接口
 - 所有 pack 完全对等，不存在主包/附加包的架构区分
 
@@ -405,7 +405,7 @@ runtime kernel 通过以下正式 port 收口：
   - 长期语义是 host-accepted / host-projected truth，不是 sidecar internal truth
 - `WorldEngineSidecarClient`：本地 stdio + JSON-RPC transport implementation，不是公开 contract
   - 基于 `StdioJsonRpcTransport` 共享基类，提供心跳检测、进程 crash 自动重连（指数退避）、stdin 背压处理、优雅关闭（stdin EOF → SIGKILL 兜底）
-  - 同基类同时服务于 `scheduler_decision_sidecar` 和 `memory_trigger_sidecar`，消除三处 IPC 实现重复
+  - 同基类同时服务于 `scheduler-decision` 和 `memory-trigger`，消除三处 IPC 实现重复
 
 边界结论：
 
@@ -422,7 +422,7 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 
 ### 3.3.3 Rust Sidecar 定位
 
-三个 Rust sidecar 通过 stdio JSON-RPC（NDJSON 帧分隔）与宿主通信，承担有限的计算密集型任务。总量约 4,500 行 Rust 代码，均作为 **执行器** 而非完整引擎。
+三个 Rust sidecar 通过 stdio JSON-RPC（NDJSON 帧分隔）与宿主通信，承担有限的计算密集型任务。共享 `sidecar-common` crate 提供统一的 protocol/transport/Tick 类型。总量约 4,500 行 Rust 代码，均作为 **执行器** 而非完整引擎。
 
 **传输层**（`StdioJsonRpcTransport`，`apps/server/src/app/runtime/sidecar/stdio_jsonrpc_transport.ts`）提供统一的 IPC 基础设施：
 
@@ -436,9 +436,9 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 
 | Sidecar | 职责 | 行数 | 心跳间隔 | 请求超时 |
 |---------|------|------|---------|---------|
-| `world_engine_sidecar` | step prepare/commit/abort、objective 匹配与执行、state query | ~1,700 | 10s | 5s |
-| `scheduler_decision_sidecar` | 决策内核运算 | ~800 | 5s | 500ms |
-| `memory_trigger_sidecar` | memory trigger 匹配与触发判定 | ~2,000 | 5s | 500ms |
+| `world-engine` | step prepare/commit/abort、objective 匹配与执行、state query | ~1,700 | 10s | 5s |
+| `scheduler-decision` | 决策内核运算 | ~800 | 5s | 500ms |
+| `memory-trigger` | memory trigger 匹配与触发判定 | ~2,000 | 5s | 500ms |
 
 执行路径：
 

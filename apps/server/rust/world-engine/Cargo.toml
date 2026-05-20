@@ -1,0 +1,17 @@
+[package]
+name = "world-engine"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "world_engine_sidecar"
+path = "src/main.rs"
+
+[dependencies]
+sidecar-common = { path = "../sidecar-common" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

@@ -548,7 +548,7 @@ describe('WorldEngineSidecarClient', () => {
     createdRoots.push(workspaceRoot);
     const expectedBinaryPath = path.join(
       workspaceRoot,
-      'apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar'
+      'apps/server/rust/target/debug/world_engine_sidecar'
     );
     await mkdir(path.dirname(expectedBinaryPath), { recursive: true });
     await writeFile(expectedBinaryPath, '#!/bin/sh\nexit 0\n', 'utf8');
@@ -557,7 +557,7 @@ describe('WorldEngineSidecarClient', () => {
     process.env.WORKSPACE_ROOT = workspaceRoot;
 
     const sidecar = createWorldEngineSidecarClient({
-      binaryPath: 'apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar',
+      binaryPath: 'apps/server/rust/target/debug/world_engine_sidecar',
       timeoutMs: 1200,
       autoRestart: false
     });

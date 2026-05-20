@@ -234,7 +234,7 @@ clock:
 ```yaml
 world_engine:
   timeout_ms: 500
-  binary_path: "apps/server/rust/world_engine_sidecar/target/debug/world_engine_sidecar"
+  binary_path: "apps/server/rust/target/debug/world_engine_sidecar"
   auto_restart: true
 ```
 
@@ -294,7 +294,7 @@ scheduler:
     decision_kernel:
       mode: "rust_primary"
       timeout_ms: 500
-      binary_path: "apps/server/rust/scheduler_decision_sidecar/target/debug/scheduler_decision_sidecar"
+      binary_path: "apps/server/rust/target/debug/scheduler_decision_sidecar"
       auto_restart: true
     signal_policy:
       event_followup:
@@ -313,7 +313,7 @@ scheduler:
     trigger_engine:
       mode: "rust_primary"
       timeout_ms: 500
-      binary_path: "apps/server/rust/memory_trigger_sidecar/target/debug/memory_trigger_sidecar"
+      binary_path: "apps/server/rust/target/debug/memory_trigger_sidecar"
       auto_restart: true
 ```
 

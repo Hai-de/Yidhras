@@ -204,7 +204,7 @@ export const SCHEDULER_DEFAULTS: SchedulerConfig = {
       mode: 'rust_primary',
       timeout_ms: 500,
       binary_path:
-        'apps/server/rust/scheduler_decision_sidecar/target/debug/scheduler_decision_sidecar',
+        'apps/server/rust/target/debug/scheduler_decision_sidecar',
       auto_restart: true
     },
     signal_policy: {
@@ -249,7 +249,7 @@ export const SCHEDULER_DEFAULTS: SchedulerConfig = {
       mode: 'rust_primary',
       timeout_ms: 500,
       binary_path:
-        'apps/server/rust/memory_trigger_sidecar/target/debug/memory_trigger_sidecar',
+        'apps/server/rust/target/debug/memory_trigger_sidecar',
       auto_restart: true
     }
   }

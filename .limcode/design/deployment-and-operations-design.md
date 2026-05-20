@@ -41,7 +41,7 @@
 项目是一个 pnpm monorepo，包含：
 - **Node.js 服务**：`apps/server`（Express + Prisma，编译到 `dist/`）
 - **Nuxt 前端**：`apps/web`（CSR-only，`ssr: false`，纯静态输出）
-- **3 个 Rust sidecar 二进制**：`apps/server/rust/world_engine_sidecar`、`scheduler_decision_sidecar`、`memory_trigger_sidecar`
+- **3 个 Rust sidecar 二进制**：`apps/server/rust/world-engine`、`scheduler-decision`、`memory-trigger`（共享 `sidecar-common` crate）
 - **共享包**：`packages/contracts`（无构建步骤，直接导出 `.ts`）
 
 **待解决的根本问题**：上述组件是以单容器运行还是拆分为多容器？如何打包 Rust 二进制？
@@ -58,9 +58,7 @@
 FROM rust:1.85-bookworm AS rust-builder
 WORKDIR /build/rust
 COPY apps/server/rust/ .
-RUN cargo build --release -p world_engine_sidecar \
-    && cargo build --release -p scheduler_decision_sidecar \
-    && cargo build --release -p memory_trigger_sidecar
+RUN cargo build --release --workspace
 
 # Stage 2: Node 构建
 FROM node:22-bookworm AS node-builder
@@ -689,7 +687,7 @@ PR / push to main
 - 仅在 `apps/server/rust/**` 路径变更时编译（条件执行）
 - 日常 PR 可以不编译 Rust（多数 PR 不涉及 Rust 代码），在合并到 main 时统一编译
 
-**盲点**：当前 Rust sidecar 的三个二进制文件（`world_engine_sidecar`、`scheduler_decision_sidecar`、`memory_trigger_sidecar`）是否有**独立的版本号**？CI 构建的镜像如何标记版本（git SHA？git tag？）？如果没有版本号，生产环境中如何确定运行的 sidecar 版本？
+**盲点**：当前 Rust sidecar 的三个二进制文件（`world-engine`、`scheduler-decision`、`memory-trigger`）是否有**独立的版本号**？CI 构建的镜像如何标记版本（git SHA？git tag？）？如果没有版本号，生产环境中如何确定运行的 sidecar 版本？
 
 #### 镜像构建策略
 
@@ -724,11 +722,11 @@ PR / push to main
 **评估**：当前实现覆盖了主要组件，但有几点需要注意：
 
 1. **HTTP server.close() 不等 in-flight 请求**：`server.close()` 停止接受新连接，但不会强制关闭现有连接。需要搭配 `server.closeIdleConnections()`（Node 18.2+）或手动跟踪连接数。
-2. **多 sidecar 的关闭顺序**：当前仅关闭 `worldEngine`。`scheduler_decision_sidecar` 和 `memory_trigger_sidecar` 是否也需要显式关闭？**需要验证**：代码中是否有其他 sidecar client 的 stop 方法。
+2. **多 sidecar 的关闭顺序**：当前仅关闭 `worldEngine`。`scheduler-decision` 和 `memory-trigger` 是否也需要显式关闭？**需要验证**：代码中是否有其他 sidecar client 的 stop 方法。
 3. **10s 超时是否足够**：AI API 调用可能需要 30-60 秒（特别是 tool loop 的场景）。如果正在进行的推理请求被中断，是否需要等待其完成？
 4. **K8s 兼容性**：K8s 发送 SIGTERM 后默认等待 `terminationGracePeriodSeconds`（默认 30s），然后发送 SIGKILL。当前 10s 超时在 30s 内，符合要求。
 
-**待验证**：`scheduler_decision_sidecar` 和 `memory_trigger_sidecar` 的 client 是否有 `stop()` 方法，以及当前是否在 graceful shutdown 中被调用。
+**待验证**：`scheduler-decision` 和 `memory-trigger` 的 client 是否有 `stop()` 方法，以及当前是否在 graceful shutdown 中被调用。
 
 ---
 
@@ -1050,7 +1048,7 @@ yidhras.example.com {
 #### 待验证问题（不阻塞，但需要澄清）
 - [ ] PostgresPackStorageAdapter 在托管 PG（RDS/Cloud SQL）上的可用性
 - [ ] `getStartupHealthSnapshot` 是静态快照还是动态计算？
-- [ ] scheduler_decision_sidecar 和 memory_trigger_sidecar 是否有 `stop()` 方法？
+- [ ] scheduler-decision 和 memory-trigger 是否有 `stop()` 方法？
 - [ ] sidecar 是 per-pack 还是全局共享？
 - [ ] 审计日志是否写入独立数据库表？
 - [ ] Litestream S3 bucket 是否已存在？

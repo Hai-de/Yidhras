@@ -38,7 +38,7 @@ class SchedulerDecisionTransport extends StdioJsonRpcTransport {
   constructor(options?: SchedulerDecisionSidecarClientOptions) {
     const opts: StdioJsonRpcTransportOptions = {
       binaryPath: options?.binaryPath ?? '',
-      projectDir: 'rust/scheduler_decision_sidecar',
+      projectDir: 'rust/scheduler-decision',
       cargoArgs: options?.packId ? ['--pack-id', options.packId] : [],
       timeoutMs: options?.timeoutMs ?? 500,
       heartbeatIntervalMs: 5000,

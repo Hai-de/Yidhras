@@ -1,0 +1,16 @@
+[package]
+name = "scheduler-decision"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "scheduler_decision_sidecar"
+path = "src/main.rs"
+
+[dependencies]
+sidecar-common = { path = "../sidecar-common" }
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true
