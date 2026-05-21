@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 import { nonNegativeBigIntStringSchema } from './scalars.js'
 
-export const inferenceStrategySchema = z.enum(['mock', 'rule_based', 'model_routed'])
+export const inferenceStrategySchema = z.enum(['mock', 'model_routed', 'behavior_tree'])
 export const inferenceJobStatusSchema = z.enum(['pending', 'running', 'completed', 'failed'])
 export const aiInvocationStatusSchema = z.enum(['completed', 'failed', 'blocked', 'timeout'])
 

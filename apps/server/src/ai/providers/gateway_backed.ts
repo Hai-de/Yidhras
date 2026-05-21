@@ -26,6 +26,7 @@ export const createGatewayBackedInferenceProvider = ({
   return {
     name: 'gateway_backed',
     strategies: ['model_routed'],
+    requiresPrompt: true,
     async run(context: InferenceContext, prompt: PromptBundleV2): Promise<ProviderDecisionRaw> {
       const request = await buildAiTaskRequestFromInferenceContextV2(context, {
         task_type: 'agent_decision',

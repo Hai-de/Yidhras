@@ -16,7 +16,7 @@ const buildBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => {
       description: '默认 agent decision prompt workflow。汇合后 pipeline：placement → assembly → permission → budget_trim → finalize。',
       applies_to: {
         task_types: ['agent_decision'],
-        strategies: ['mock', 'rule_based', 'model_routed']
+        strategies: ['mock', 'model_routed']
       },
       defaults: { ...config.prompt_workflow.profiles.agent_decision_default },
       tracks: { template: true, node: true, snapshot: true },

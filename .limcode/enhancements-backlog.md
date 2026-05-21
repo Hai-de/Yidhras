@@ -69,3 +69,108 @@
   4. 群体解散/成员退出时的级联行为
 - **当前 workaround（路径 B）**: 每个参赛者在 `entities.actors` 中单独定义，通过 `entity_type` 或 `tags: ["jailbreaker"]` 标记，authority target_selector 使用 `entity_type_is: "jailbreaker"` 覆盖全体，个体差异通过 per-entity state 表达。
 - **来源**: `.limcode/archive/design/platform-capability-gap-supplement.md` §2.6
+
+---
+
+## 行为树 Parallel 节点
+
+- **评估时间**: 2026-05-21
+- **暂缓原因**: 无状态求值模型下"并行"的语义不清晰——是真正的并发还是顺序求值后合并结果？需要先确定无状态行为树的并行语义定义，以及与调度器 single-flight 策略的交互方式。首版在加载校验阶段直接拒绝 Parallel 节点。
+- **前置条件**:
+  1. 明确无状态求值下 Parallel 的语义（顺序求值 + 结果合并策略，还是真正的并发执行）
+  2. 定义 `policy: require_all / require_one` 的成功策略
+  3. 确定与调度器 cooldown/single-flight 的交互规则（多子节点同时产出多个 action 时如何合并或排队）
+- **来源**: `.limcode/design/behavior-tree-design.md` §3.1
+- **关联**: 链式行为（Parallel 可能同时产出多个 action，需要与链式行为设施协调）
+
+---
+
+## 行为树跨包子树引用
+
+- **评估时间**: 2026-05-21
+- **暂缓原因**: 跨包引用需要先解决包间依赖声明（pack A 引用 pack B 的子树 → pack A 必须声明对 pack B 的依赖）和子树版本化问题（pack B 升级后子树定义变化，pack A 的引用是否受影响）。首版限定同包内 `$ref`。
+- **前置条件**:
+  1. 包间依赖声明机制（`pack.yaml` 中 `dependencies` 字段）
+  2. 子树版本化策略（按树名引用 vs 按版本号引用 vs 快照式引用）
+  3. 跨包树名命名空间设计（`other_pack::tree_name` 语法）
+- **来源**: `.limcode/design/behavior-tree-design.md` §4.2
+
+---
+
+## 行为树 Cooldown 持久化
+
+- **评估时间**: 2026-05-21
+- **暂缓原因**: 重启后几个 tick 内的冷却状态丢失对叙事一致性的影响可忽略。Cooldown 持久化需要引入 pack-local SQLite 写入路径和迁移脚本，增加了实现复杂度但收益有限。先以内存方案验证 cooldown 的实际使用模式。
+- **前置条件**:
+  1. 收集内存 cooldown 方案在生产环境（或长期运行）中的实际表现数据
+  2. 确认重启后冷却丢失确实对叙事产生了不可接受的影响
+  3. 确定持久化粒度（每次 Success 都写入 vs 定时批量刷盘）
+- **来源**: `.limcode/design/behavior-tree-design.md` §3.2, §6
+
+---
+
+## 行为树子树宏/参数化
+
+- **评估时间**: 2026-05-21
+- **暂缓原因**: 先通过 `$ref` 观察子树复用的实际模式，确定最常见的参数化需求后再设计。过早抽象可能导致错误的参数模型（如需要的是泛型条件而非参数替换）。
+- **前置条件**:
+  1. 收集 `$ref` 的实际使用模式（哪些值最常被硬编码在子树中而希望参数化）
+  2. 确定参数化粒度（单个值替换 vs 条件模板 vs 完整子树模板）
+- **来源**: `.limcode/design/behavior-tree-design.md` §6
+
+---
+
+## 行为树 Running 状态持久化
+
+- **评估时间**: 2026-05-21
+- **暂缓原因**: 模拟循环每 tick 重新求值已覆盖绝大多数决策场景。长时行为（跨多 tick 保持 Running 状态）可用事件驱动循环替代——行为树在 tick N 产出"等待条件 X"的 decision，后续 tick 的事件触发重新推理。Running 状态持久化会引入行为树内部状态机，与当前无状态求值模型冲突。
+- **前置条件**:
+  1. 发现事件驱动循环无法覆盖的长时行为场景
+  2. 解决 Running 状态与调度器 cooldown/single-flight 的协调
+  3. 设计 Running 状态的持久化与恢复机制
+- **来源**: `.limcode/design/behavior-tree-design.md` §2.2, §6
+
+---
+
+## 行为树可视化编辑器
+
+- **评估时间**: 2026-05-21
+- **暂缓原因**: 先验证 YAML 定义的人机工程学——包作者是否能通过纯文本高效地编写和调试行为树。可视化编辑器的开发成本高（图形编辑器 + 实时预览 + 决策追踪可视化），应在 YAML 方案的痛点和需求充分暴露后再投入。
+- **前置条件**:
+  1. 至少 3 个世界包使用行为树 YAML 定义了完整的 NPC 决策逻辑
+  2. 包作者反馈 YAML 编辑/调试存在明显的效率瓶颈
+  3. 确定可视化编辑器的核心需求（树结构编辑？决策追踪回放？实时 tick 调试？）
+- **来源**: `.limcode/design/behavior-tree-design.md` §6
+
+---
+
+## 行为树运行时动态修改
+
+- **评估时间**: 2026-05-21
+- **暂缓原因**: 行为树在 pack 加载时编译为不可变 AST，运行时不可变。动态性已通过条件节点的状态检查（`state`、`world_state`、`event_semantic_type` 等）实现——树结构不变，但执行路径随世界状态变化。运行时修改树结构会引入并发安全、持久化、跨 tick 一致性等问题。
+- **前置条件**:
+  1. 发现条件节点状态检查无法覆盖的动态性需求（如 NPC "学会"了新行为模式）
+  2. 解决运行时树修改的并发安全（模拟循环和 API 调用同时修改树）
+  3. 确定修改的持久化语义（修改只在内存中 vs 写回 pack.yaml vs 写入新的 snapshot）
+- **来源**: `.limcode/design/behavior-tree-design.md` §6
+
+---
+
+## 行为树 Sequence 多 action 链式执行（策略 B）
+
+- **评估时间**: 2026-05-21
+- **暂缓原因**: 依赖链式行为基础设施（见本文件"链式行为（复合行为）"条目）。首版限制 Sequence 只能有一个 action 叶子，待链式行为就绪后解除限制并升级为真正的顺序多 action 执行。
+- **前置条件**: 与"链式行为（复合行为）"条目相同
+- **来源**: `.limcode/design/behavior-tree-design.md` §3.1, §7
+
+---
+
+## 行为树 noop 显式跳过与 default_action 兜底
+
+- **评估时间**: 2026-05-21
+- **暂缓原因**: 当前空结果（根节点 Failure → `decision: null`）已表达"本 tick 无事可做"的语义，调度器视为成功的推理周期。`noop`（显式跳过）和 `default_action`（树级兜底动作）解决的是可观测性和配置健壮性问题——让包作者能区分"意外无匹配"和"有意等待"、为"所有条件都不满足"提供安全网。两者均非功能阻塞项。
+- **前置条件**:
+  1. 收集包作者在实际使用中遇到"不知道该让 NPC 做什么"或"分不清无匹配 vs 有意等待"的频率和场景
+  2. 确定 `noop` 是否需要走完整的意图落地管线（触发 invocation rule、写入事件日志），还是作为纯标记
+  3. 确定 `default_action` 的覆盖语义（只覆盖根节点 Failure？还是也覆盖树内部 Failure？）
+- **来源**: `.limcode/design/behavior-tree-design.md` §2.2, §9.6

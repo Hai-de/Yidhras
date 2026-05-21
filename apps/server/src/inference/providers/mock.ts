@@ -70,6 +70,7 @@ export const createMockInferenceProvider = (): InferenceProvider => {
   return {
     name: 'mock',
     strategies: ['mock'],
+    requiresPrompt: false,
     run(context) {
       if (context.attributes.force_fail === true) {
         return Promise.reject(new Error('Forced mock provider failure'));

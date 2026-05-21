@@ -133,9 +133,9 @@ describe('contracts — scheduler', () => {
 
 describe('contracts — inference', () => {
   describe('enum schemas', () => {
-    it('inferenceStrategySchema accepts mock and rule_based', () => {
+    it('inferenceStrategySchema accepts mock, model_routed, and behavior_tree', () => {
       expect(contracts.inferenceStrategySchema.safeParse('mock').success).toBe(true);
-      expect(contracts.inferenceStrategySchema.safeParse('rule_based').success).toBe(true);
+      expect(contracts.inferenceStrategySchema.safeParse('behavior_tree').success).toBe(true);
       expect(contracts.inferenceStrategySchema.safeParse('model_routed').success).toBe(true);
     });
 
@@ -162,7 +162,7 @@ describe('contracts — inference', () => {
 
     it('inferenceJobReplayRequestSchema accepts overrides', () => {
       expect(contracts.inferenceJobReplayRequestSchema.safeParse({
-        reason: 'test replay', overrides: { strategy: 'rule_based' }
+        reason: 'test replay', overrides: { strategy: 'mock' }
       }).success).toBe(true);
     });
 

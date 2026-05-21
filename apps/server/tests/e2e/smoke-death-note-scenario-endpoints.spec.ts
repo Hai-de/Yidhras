@@ -83,12 +83,12 @@ describe('smoke death note scenario endpoints e2e', () => {
           body: JSON.stringify({
             agent_id: 'agent-001',
             identity_id: 'agent-001',
-            strategy: 'rule_based'
+            strategy: 'mock'
           })
         });
         expect(runResponse.status).toBe(200);
         const runData = assertSuccessEnvelopeData(runResponse.body, 'run by mixed actor');
-        expect(runData.provider).toBe('rule_based');
+        expect(runData.provider).toBe('mock');
         const runActorRef = assertRecord(runData.actor_ref, 'run by mixed actor actor_ref');
         expect(runActorRef.role).toBe('active');
         expect(isRecord(runData.decision)).toBe(true);
@@ -102,7 +102,7 @@ describe('smoke death note scenario endpoints e2e', () => {
         const persistedTraceData = assertSuccessEnvelopeData(persistedTraceResponse.body, 'persisted trace');
         expect(persistedTraceData.id).toBe(runData.inference_id);
         expect(persistedTraceData.kind).toBe('run');
-        expect(persistedTraceData.provider).toBe('rule_based');
+        expect(persistedTraceData.provider).toBe('mock');
         expect(isRecord(persistedTraceData.prompt_bundle)).toBe(true);
         expect(isRecord(persistedTraceData.context_snapshot)).toBe(true);
         expect(isRecord(persistedTraceData.decision)).toBe(true);

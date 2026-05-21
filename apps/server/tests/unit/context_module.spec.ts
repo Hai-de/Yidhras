@@ -106,8 +106,8 @@ const buildContext = (): any => {
     policy: { findMany: async () => [] },
     inferenceTrace: {
       findMany: async () => [{
-        id: 'trace-1', actor_ref: { agent_id: 'agent-001' }, strategy: 'rule_based',
-        provider: 'rule_based', decision: { reasoning: 'Investigate the death pattern.' }, updated_at: 999n
+        id: 'trace-1', actor_ref: { agent_id: 'agent-001' }, strategy: 'mock',
+        provider: 'mock', decision: { reasoning: 'Investigate the death pattern.' }, updated_at: 999n
       }]
     },
     actionIntent: { findMany: async () => [] },

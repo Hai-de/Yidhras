@@ -5,6 +5,7 @@ export interface LatestEventEvidenceRecord {
   title: string;
   type: string;
   impact_data: string | null;
+  tick: bigint;
   created_at: bigint;
 }
 
@@ -20,6 +21,7 @@ export const getLatestEventEvidenceRecord = async (
       title: true,
       type: true,
       impact_data: true,
+      tick: true,
       created_at: true
     }
   });

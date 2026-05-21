@@ -406,7 +406,7 @@
 - **POST `/api/inference/preview`**
   - 鉴权：operator
   - 说明：预览推理上下文与结构化 prompt 结果
-  - body：`{ agent_id?, identity_id?, actor_entity_id?, strategy?: "mock"|"rule_based", attributes?, idempotency_key? }`
+  - body：`{ agent_id?, identity_id?, actor_entity_id?, strategy?: "mock"|"behavior_tree", attributes?, idempotency_key? }`
     - 优先级：`agent_id` > `identity_id` > `actor_entity_id` > system fallback
   - 错误码：`INFERENCE_INPUT_INVALID`
 
@@ -435,7 +435,7 @@
 
 ### 14.4 稳定边界
 
-- 公开 inference strategy 只稳定承诺 `mock` 与 `rule_based`；`model_routed` 为内部/受控能力（内部已配备 4 个真实 provider adapter 及多 provider fallback 链）
+- 公开 inference strategy 只稳定承诺 `mock` 与 `behavior_tree`；`model_routed` 为内部/受控能力（内部已配备 4 个真实 provider adapter 及多 provider fallback 链）
 - `GET /api/inference/ai-invocations*` 为公开只读 observability surface
 
 ---

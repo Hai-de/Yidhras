@@ -4,6 +4,8 @@ import path from 'node:path';
 import { pluginManifestSchema } from '@yidhras/contracts';
 import * as YAML from 'yaml';
 
+import { btTreeMapSchema } from '../inference/providers/behavior_tree/schema.js';
+import { TreeRegistry } from '../inference/providers/behavior_tree/tree_registry.js';
 import { resolveWorkspaceRoot } from '../config/loader.js';
 import { resolveIncludes } from '../packs/manifest/include_resolver.js';
 import { parseWorldPackConstitution } from '../packs/schema/constitution_schema.js';
@@ -212,6 +214,12 @@ const validateConfig = (packDir: string): ValidationIssue[] => {
     });
   }
 
+  // Behavior tree validation (if defined)
+  if (typeof mergedParsed === 'object' && mergedParsed !== null && !Array.isArray(mergedParsed)) {
+    const treeIssues = validateBehaviorTrees(mergedParsed as Record<string, unknown>);
+    issues.push(...treeIssues);
+  }
+
   return issues;
 };
 
@@ -277,6 +285,54 @@ const validatePlugins = (packDir: string): ValidationIssue[] => {
         message: `插件 "${pluginDir}" YAML 解析失败: ${error instanceof Error ? error.message : String(error)}`
       });
     }
+  }
+
+  return issues;
+};
+
+const validateBehaviorTrees = (parsedConfig: Record<string, unknown>): ValidationIssue[] => {
+  const issues: ValidationIssue[] = [];
+  const rawTrees = parsedConfig.behavior_trees;
+
+  if (!rawTrees || typeof rawTrees !== 'object' || Array.isArray(rawTrees)) {
+    return issues; // No behavior trees defined — skip
+  }
+
+  // Zod schema validation
+  try {
+    btTreeMapSchema.parse(rawTrees);
+    issues.push({ severity: 'PASS', message: 'behavior_trees 定义 schema 校验通过' });
+  } catch (error) {
+    issues.push({
+      severity: 'FAIL',
+      message: `behavior_trees schema 校验失败: ${error instanceof Error ? error.message : String(error)}`
+    });
+    return issues;
+  }
+
+  // TreeRegistry validation ($ref, cycles, depth, Parallel, Sequence actions)
+  try {
+    const registry = new TreeRegistry('validation');
+    registry.register(rawTrees as Record<string, unknown>);
+    // Verify all trees can be expanded
+    for (const name of registry.list()) {
+      try {
+        registry.get(name);
+      } catch (error) {
+        issues.push({
+          severity: 'FAIL',
+          message: `behavior_tree "${name}" 展开失败: ${error instanceof Error ? error.message : String(error)}`
+        });
+      }
+    }
+    if (issues.filter((i) => i.severity === 'FAIL').length === 0) {
+      issues.push({ severity: 'PASS', message: `behavior_trees 校验通过 (${registry.list().length} 棵树)` });
+    }
+  } catch (error) {
+    issues.push({
+      severity: 'FAIL',
+      message: `behavior_trees 注册失败: ${error instanceof Error ? error.message : String(error)}`
+    });
   }
 
   return issues;

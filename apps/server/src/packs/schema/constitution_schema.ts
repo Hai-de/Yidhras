@@ -274,6 +274,29 @@ const constitutionSchema = z
   .strict()
   .default({ axioms: [], namespaces: [] });
 
+const actorInferenceSchema = z.discriminatedUnion('provider', [
+  z
+    .object({
+      provider: z.literal('behavior_tree'),
+      behavior_tree: nonEmptyStringSchema
+    })
+    .strict(),
+  z
+    .object({
+      provider: z.literal('openai_compatible'),
+      model: nonEmptyStringSchema
+    })
+    .strict(),
+  z
+    .object({
+      provider: z.literal('anthropic'),
+      model: nonEmptyStringSchema
+    })
+    .strict()
+]);
+
+export type ActorInferenceConfig = z.infer<typeof actorInferenceSchema>;
+
 const entityDefinitionSchema = z
   .object({
     id: nonEmptyStringSchema,
@@ -284,7 +307,8 @@ const entityDefinitionSchema = z
     static_schema_ref: nonEmptyStringSchema.optional(),
     state: z.record(z.string(), worldPackValueSchema).optional(),
     claims: z.record(z.string(), worldPackValueSchema).optional(),
-    metadata: z.record(z.string(), worldPackValueSchema).optional()
+    metadata: z.record(z.string(), worldPackValueSchema).optional(),
+    inference: actorInferenceSchema.optional()
   })
   .strict();
 

@@ -136,7 +136,7 @@ export const createMemoryCompactionService = ({
       const inferenceContext = await buildInferenceContext(context, {
         agent_id: input.agent_id,
         identity_id: input.identity_id ?? input.agent_id,
-        strategy: 'rule_based',
+        strategy: 'mock',
         attributes: {
           compaction_run: true,
           compaction_source: 'memory_loop'

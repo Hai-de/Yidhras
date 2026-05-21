@@ -158,7 +158,7 @@ const TEST_PACK_ID = "test-agent-sched";
           pending_source_key: key, job_type: 'inference_run', status: 'pending',
           idempotency_key: key, attempt_count: 0, max_attempts: 3,
           request_input: {
-            agent_id: 'agent-001', identity_id: 'agent-001', strategy: 'rule_based', idempotency_key: key,
+            agent_id: 'agent-001', identity_id: 'agent-001', strategy: 'mock', idempotency_key: key,
             attributes: { scheduler_source: 'runtime_loop', scheduler_kind: 'event_driven', scheduler_reason: 'event_followup', scheduler_secondary_reasons: [], scheduler_priority_score: 30, scheduler_tick: baseTick.toString(), scheduler_scheduled_for_tick: futureTick.toString() }
           },
           scheduled_for_tick: futureTick, created_at: baseTick, updated_at: baseTick
@@ -258,7 +258,7 @@ const TEST_PACK_ID = "test-agent-sched";
         data: { id: `sched-replay-rel-log-${Date.now()}`, action_intent_id: intentId, relationship_id: relId, from_id: 'agent-002', to_id: 'agent-001', type: 'ally', operation: 'set', old_weight: 0.1, new_weight: 0.9, reason: 'replay test', created_at: tick }
       });
       await prisma.decisionJob.create({
-        data: { pending_source_key: replayKey, job_type: 'inference_run', status: 'completed', idempotency_key: replayKey, intent_class: 'replay_recovery', attempt_count: 1, max_attempts: 3, request_input: { agent_id: 'agent-002', identity_id: 'agent-002', strategy: 'rule_based', idempotency_key: reqKey, attributes: { job_intent_class: 'replay_recovery', job_source: 'replay' } }, created_at: tick, updated_at: tick, completed_at: tick }
+        data: { pending_source_key: replayKey, job_type: 'inference_run', status: 'completed', idempotency_key: replayKey, intent_class: 'replay_recovery', attempt_count: 1, max_attempts: 3, request_input: { agent_id: 'agent-002', identity_id: 'agent-002', strategy: 'mock', idempotency_key: reqKey, attributes: { job_intent_class: 'replay_recovery', job_source: 'replay' } }, created_at: tick, updated_at: tick, completed_at: tick }
       });
 
       await prisma.decisionJob.deleteMany({ where: { status: 'pending', idempotency_key: { startsWith: 'sch:agent-002:' } } });
@@ -296,7 +296,7 @@ const TEST_PACK_ID = "test-agent-sched";
         data: { id: `sched-retry-snr-${Date.now()}`, action_intent_id: intentId, agent_id: 'agent-002', operation: 'set', requested_value: 0.4, baseline_value: 0.2, resolved_value: 0.4, reason: 'retry test', created_at: tick }
       });
       await prisma.decisionJob.create({
-        data: { pending_source_key: retryKey, job_type: 'inference_run', status: 'completed', idempotency_key: retryKey, intent_class: 'retry_recovery', attempt_count: 1, max_attempts: 3, request_input: { agent_id: 'agent-002', identity_id: 'agent-002', strategy: 'rule_based', idempotency_key: reqKey, attributes: { job_intent_class: 'retry_recovery', job_source: 'retry' } }, created_at: tick, updated_at: tick, completed_at: tick }
+        data: { pending_source_key: retryKey, job_type: 'inference_run', status: 'completed', idempotency_key: retryKey, intent_class: 'retry_recovery', attempt_count: 1, max_attempts: 3, request_input: { agent_id: 'agent-002', identity_id: 'agent-002', strategy: 'mock', idempotency_key: reqKey, attributes: { job_intent_class: 'retry_recovery', job_source: 'retry' } }, created_at: tick, updated_at: tick, completed_at: tick }
       });
 
       await prisma.decisionJob.deleteMany({ where: { status: 'pending', idempotency_key: { startsWith: 'sch:agent-002:' } } });

@@ -268,11 +268,16 @@ const executeRunInternal = async (
       })
     : undefined;
 
-  const { bundle: prompt } = await buildWorkflowPromptBundle({
-    context: inferenceContext,
-    taskType: 'agent_decision',
-    profileId: conversationProfileId
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prompt = provider.requiresPrompt
+    ? (
+        await buildWorkflowPromptBundle({
+          context: inferenceContext,
+          taskType: 'agent_decision',
+          profileId: conversationProfileId
+        })
+      ).bundle
+    : (null as any);
   const attemptCount = options?.attemptCount ?? 1;
   const maxAttempts = options?.maxAttempts ?? DEFAULT_JOB_MAX_ATTEMPTS;
   const memoryRecordingService = createMemoryRecordingService({ context });

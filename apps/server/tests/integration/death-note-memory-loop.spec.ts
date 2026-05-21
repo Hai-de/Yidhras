@@ -105,8 +105,8 @@ const TEST_PACK_ID = "test-death-note";
       data: {
         id: inferenceId,
         kind: 'final',
-        strategy: 'rule_based',
-        provider: 'rule_based',
+        strategy: 'mock',
+        provider: 'mock',
         actor_ref: {
           identity_id: 'agent-001',
           identity_type: 'agent',
@@ -114,7 +114,7 @@ const TEST_PACK_ID = "test-death-note";
           agent_id: 'agent-001',
           atmosphere_node_id: null
         } as Prisma.InputJsonValue,
-        input: { agent_id: 'agent-001', strategy: 'rule_based' } as Prisma.InputJsonValue,
+        input: { agent_id: 'agent-001', strategy: 'mock' } as Prisma.InputJsonValue,
         context_snapshot: {} as Prisma.InputJsonValue,
         prompt_bundle: {} as Prisma.InputJsonValue,
         trace_metadata: {
@@ -239,8 +239,8 @@ const TEST_PACK_ID = "test-death-note";
       data: {
         id: inferenceId,
         kind: 'final',
-        strategy: 'rule_based',
-        provider: 'rule_based',
+        strategy: 'mock',
+        provider: 'mock',
         actor_ref: {
           identity_id: 'agent-001',
           identity_type: 'agent',
@@ -248,7 +248,7 @@ const TEST_PACK_ID = "test-death-note";
           agent_id: 'agent-001',
           atmosphere_node_id: null
         } as Prisma.InputJsonValue,
-        input: { agent_id: 'agent-001', strategy: 'rule_based' } as Prisma.InputJsonValue,
+        input: { agent_id: 'agent-001', strategy: 'mock' } as Prisma.InputJsonValue,
         context_snapshot: {} as Prisma.InputJsonValue,
         prompt_bundle: {} as Prisma.InputJsonValue,
         trace_metadata: {

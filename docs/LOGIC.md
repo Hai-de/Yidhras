@@ -264,7 +264,7 @@ recent-source 的业务边界：
 
 ## 8. AI task / gateway 的业务语义边界
 
-从业务语义上，AI gateway 是内部执行底座与观测层，而非正式公开的 provider-specific contract。对外稳定承诺 `mock | rule_based`；`model_routed` 为内部 / 受控能力。内部 `model_routed` 路径已配备 4 个真实 provider adapter（OpenAI、Anthropic、DeepSeek、Ollama）及多 provider fallback 链，但对外 API 的稳定契约边界不变。
+从业务语义上，AI gateway 是内部执行底座与观测层，而非正式公开的 provider-specific contract。对外稳定承诺 `mock | behavior_tree`；`model_routed` 为内部 / 受控能力。内部 `model_routed` 路径已配备 4 个真实 provider adapter（OpenAI、Anthropic、DeepSeek、Ollama）及多 provider fallback 链，但对外 API 的稳定契约边界不变。
 
 Tool calling 使模型能够在单次推理中进行多轮工具调用（包括跨 agent 查询），但它属于 host-side 受控执行能力，不作为对外公开 contract。Tool loop 由 `ToolLoopRunner` 驱动，受 `ToolPermissionPolicy` 约束和 token 预算管理，模型无法绕过权限校验或无限循环。
 

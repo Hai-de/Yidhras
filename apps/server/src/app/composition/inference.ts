@@ -2,8 +2,9 @@ import { createGatewayBackedInferenceProvider } from '../../ai/providers/gateway
 import type { AiTaskService } from '../../ai/task_service.js';
 import { createAiTaskService } from '../../ai/task_service.js';
 import type { InferenceProvider } from '../../inference/provider.js';
+import { createBehaviorTreeProvider } from '../../inference/providers/behavior_tree/provider.js';
+import { TreeRegistry } from '../../inference/providers/behavior_tree/tree_registry.js';
 import { createMockInferenceProvider } from '../../inference/providers/mock.js';
-import { createRuleBasedInferenceProvider } from '../../inference/providers/rule_based.js';
 import type { AppContext } from '../context.js';
 
 export interface CreateInferenceProvidersInput {
@@ -19,9 +20,12 @@ export const createInferenceProviders = ({
   context,
   aiTaskService = createAiTaskService({ context })
 }: CreateInferenceProvidersInput): InferenceProvider[] => {
+  // TreeRegistry is populated by pack loading (Phase 8 integration)
+  const treeRegistry = new TreeRegistry('global');
+
   return [
     createMockInferenceProvider(),
-    createRuleBasedInferenceProvider(),
-    createGatewayBackedInferenceProvider({ aiTaskService })
+    createGatewayBackedInferenceProvider({ aiTaskService }),
+    createBehaviorTreeProvider({ treeRegistry })
   ];
 };

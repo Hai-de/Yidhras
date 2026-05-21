@@ -37,6 +37,7 @@ import type {
   InferenceBindingRef,
   InferenceContext,
   InferencePackArtifactSnapshot,
+  InferencePackLatestEventSnapshot,
   InferencePackRuntimeContract,
   InferencePackStateRecord,
   InferencePackStateSnapshot,
@@ -50,7 +51,7 @@ type Ctx = AppInfrastructure & Pick<AppContextPorts, 'packRuntimeLookup' | 'cont
   getPackRuntimeHost?(packId: string): { getPack(): import('../packs/manifest/loader.js').WorldPack | undefined } | null;
 };
 
-const SUPPORTED_STRATEGIES: InferenceStrategy[] = ['mock', 'rule_based', 'model_routed'];
+const SUPPORTED_STRATEGIES: InferenceStrategy[] = ['mock', 'model_routed', 'behavior_tree'];
 
 interface BindingRecord {
   id: string;
@@ -466,6 +467,53 @@ const parsePackStateRecord = (value: unknown): InferencePackStateRecord => {
   return value as InferencePackStateRecord;
 };
 
+const fetchRecentEvents = async (
+  context: Ctx,
+  packId: string,
+  limit: number
+): Promise<InferencePackLatestEventSnapshot[]> => {
+  if (!context.prisma) return [];
+
+  try {
+    const rows = await context.prisma.event.findMany({
+      where: { pack_id: packId },
+      orderBy: { tick: 'desc' },
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        impact_data: true,
+        tick: true,
+        created_at: true
+      }
+    });
+
+    return rows.map((row) => ({
+      event_id: row.id,
+      title: row.title,
+      type: row.type,
+      semantic_type: (() => {
+        if (!row.impact_data || row.impact_data.trim().length === 0) return null;
+        try {
+          const parsed = JSON.parse(row.impact_data) as unknown;
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            const st = (parsed as Record<string, unknown>).semantic_type;
+            return typeof st === 'string' ? st : null;
+          }
+        } catch {
+          return null;
+        }
+        return null;
+      })(),
+      tick: row.tick.toString(),
+      created_at: row.created_at.toString()
+    }));
+  } catch {
+    return [];
+  }
+};
+
 const buildPackStateSnapshot = async (
   context: Ctx,
   packId: string,
@@ -529,16 +577,20 @@ const buildPackStateSnapshot = async (
                 return null;
               })()
             : null,
+        tick: latestEventRecord.tick.toString(),
         created_at: latestEventRecord.created_at.toString()
       }
     : null;
+
+  const recentEvents = await fetchRecentEvents(context, packId, 20);
 
   return {
     actor_roles: actorRoles,
     actor_state: actorState,
     owned_artifacts: artifacts,
     world_state: worldState,
-    latest_event: latestEvent
+    latest_event: latestEvent,
+    recent_events: recentEvents
   };
 };
 
@@ -683,9 +735,27 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
 
       const currentTick = resolvePackTick(context).toString();
 
-      const strategy = selectStrategy(input);
+      let strategy = selectStrategy(input);
       const attributes = normalizeAttributes(input.attributes);
       const resolvedActor = await resolveActor(context, input, pack.metadata.id);
+
+      // Actor-level inference config override
+      if (resolvedActor.actor_ref.agent_id) {
+        const entityId = packEntityIdFromResolvedAgentId(pack.metadata.id, resolvedActor.actor_ref.agent_id);
+        const actorDef = entityId
+          ? pack.entities?.actors?.find((a) => a.id === entityId)
+          : undefined;
+        const inf = actorDef?.inference as Record<string, unknown> | undefined;
+        if (inf?.provider === 'behavior_tree') {
+          strategy = 'behavior_tree';
+          attributes.behavior_tree = inf.behavior_tree;
+        } else if (inf?.provider === 'openai_compatible' || inf?.provider === 'anthropic') {
+          strategy = 'model_routed';
+          // Actor-level LLM config: model detail stored for provider resolution
+          attributes.actor_model = inf.model;
+          attributes.actor_provider = inf.provider;
+        }
+      }
 
       const deploymentId = process.env.YIDHRAS_DEPLOYMENT_ID?.trim() || undefined;
       const config = getInferenceContextConfig(deploymentId);

@@ -74,7 +74,7 @@ export interface RunAgentSchedulerOptions {
   partitionIds?: string[];
   limit?: number;
   cooldownTicks?: bigint;
-  strategy?: 'mock' | 'rule_based';
+  strategy?: 'mock' | 'model_routed' | 'behavior_tree';
   schedulerReason?: SchedulerReason;
   packId?: string;
   packRuntime?: PackRuntimePort;
@@ -159,7 +159,7 @@ const buildScheduledInferenceRequestInput = (
   reason: SchedulerReason,
   secondaryReasons: SchedulerReason[],
   priorityScore: number,
-  strategy: 'mock' | 'rule_based',
+  strategy: 'mock' | 'model_routed' | 'behavior_tree',
   partitionId: string
 ): InferenceRequestInput => {
   return {
@@ -317,7 +317,7 @@ const runAgentSchedulerForPartition = async ({
   partitionId: string;
   limit: number;
   cooldownTicks: bigint;
-  strategy: 'mock' | 'rule_based';
+  strategy: 'mock' | 'model_routed' | 'behavior_tree';
   schedulerReason: SchedulerReason;
   now: bigint;
   startedAt: bigint;
@@ -557,7 +557,7 @@ export const runAgentScheduler = async ({
   partitionIds,
   limit = getSchedulerAgentConfig().limit,
   cooldownTicks = BigInt(getSchedulerAgentConfig().cooldown_ticks),
-  strategy = 'rule_based',
+  strategy = 'mock',
   schedulerReason = 'periodic_tick',
   packId,
   packRuntime

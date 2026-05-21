@@ -119,7 +119,7 @@ world-pack **不能**：
 公开 HTTP inference contract 稳定承诺：
 
 - `mock`
-- `rule_based`
+- `behavior_tree`
 
 内部虽然已经存在：
 
@@ -133,7 +133,7 @@ world-pack **不能**：
 
 换言之：
 
-- 对外 API 的稳定说明仍是 `mock | rule_based`
+- 对外 API 的稳定说明仍是 `mock | behavior_tree`
 - gateway path 是服务端内部的执行底座
 - 其 public 化程度主要停留在**只读观测面**
 - `model_routed` 路径有 4 个真实 provider adapter：OpenAI、Anthropic、DeepSeek、Ollama

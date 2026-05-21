@@ -112,7 +112,7 @@ describe('authority/perception/context assembly', () => {
 
     const inferenceContextV2 = await buildExtendedInferenceContext(appContext, {
       identity_id: 'agent-001',
-      strategy: 'rule_based'
+      strategy: 'mock'
     }, DEATH_NOTE_PACK_ID);
 
     expect(inferenceContextV2.subject_context.resolved_agent_id).toBe('agent-001');

@@ -51,9 +51,9 @@ const buildVariableContext = () => {
         namespace: 'request',
         values: normalizePromptVariableRecord({
           task_type: 'agent_decision',
-          strategy: 'rule_based'
+          strategy: 'mock'
         }),
-        alias_values: normalizePromptVariableRecord({ task_type: 'agent_decision', strategy: 'rule_based', actor_name: '请求侧别名' }),
+        alias_values: normalizePromptVariableRecord({ task_type: 'agent_decision', strategy: 'mock', actor_name: '请求侧别名' }),
         metadata: { source_label: 'request', trusted: true }
       })
     ]

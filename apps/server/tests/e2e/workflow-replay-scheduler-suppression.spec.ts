@@ -148,7 +148,7 @@ describe('workflow replay scheduler suppression e2e', () => {
             body: JSON.stringify({
               agent_id: agentId,
               identity_id: agentId,
-              strategy: 'rule_based',
+              strategy: 'mock',
               idempotency_key: baseKey
             })
           });

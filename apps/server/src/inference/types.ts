@@ -10,7 +10,7 @@ import type {
 } from '../template_engine/frontends/narrative/types.js';
 import type { PromptBundleV2 } from './prompt_bundle_v2.js';
 
-export type InferenceStrategy = 'mock' | 'rule_based' | 'model_routed';
+export type InferenceStrategy = 'mock' | 'model_routed' | 'behavior_tree';
 export type InferenceActorRole = 'active' | 'atmosphere';
 
 /**
@@ -175,6 +175,7 @@ export interface InferencePackLatestEventSnapshot {
   title: string;
   type: string;
   semantic_type: string | null;
+  tick: string | null;
   created_at: string;
 }
 
@@ -184,6 +185,7 @@ export interface InferencePackStateSnapshot {
   owned_artifacts: InferencePackArtifactSnapshot[];
   world_state: InferencePackStateRecord | null;
   latest_event: InferencePackLatestEventSnapshot | null;
+  recent_events: InferencePackLatestEventSnapshot[];
 }
 
 export interface InferencePackInvocationRule {
@@ -211,7 +213,7 @@ export interface ActorResolvable {
 
 /**
  * Subset of InferenceContext fields needed to resolve pack-level state and runtime contracts.
- * Consumers: context_assembler, intent_grounder, rule_based provider.
+ * Consumers: context_assembler, intent_grounder, behavior_tree provider.
  */
 export interface PackStateResolvable {
   pack_state: InferencePackStateSnapshot;

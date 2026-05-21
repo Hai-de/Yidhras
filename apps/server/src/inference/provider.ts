@@ -4,5 +4,6 @@ import type { InferenceContext, InferenceStrategy, ProviderDecisionRaw } from '.
 export interface InferenceProvider {
   readonly name: string;
   readonly strategies: InferenceStrategy[];
+  readonly requiresPrompt: boolean;
   run(context: InferenceContext, prompt: PromptBundleV2): Promise<ProviderDecisionRaw>;
 }

@@ -96,7 +96,7 @@ describe('audit workflow lineage e2e', () => {
           headers,
           body: JSON.stringify({
             agent_id: DEATH_NOTE_AGENT_ID,
-            strategy: 'rule_based',
+            strategy: 'mock',
             idempotency_key: baseKey
           })
         });
