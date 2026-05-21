@@ -256,7 +256,7 @@ describe('behavior tree provider integration', () => {
     expect(result.action_type).toBe('proceed');
   });
 
-  it('throws for non-existent tree name', () => {
+  it('throws for non-existent tree name', async () => {
     const provider = setupProvider({
       other_tree: { type: 'action', action: { kernel: 'noop' } }
     });
@@ -265,31 +265,6 @@ describe('behavior tree provider integration', () => {
       attributes: { behavior_tree: 'nonexistent_tree' }
     });
 
-    expect(provider.run(ctx, null as never)).rejects.toThrow();
-  });
-
-  it('llm_decision leaf stub returns failure (awaits Phase 6 AI Gateway wiring)', async () => {
-    const provider = setupProvider({
-      test_tree: {
-        type: 'selector',
-        children: [
-          {
-            type: 'llm_decision',
-            prompt_template: 'test',
-            provider: 'openai_compatible',
-            model: 'test-model'
-          },
-          {
-            type: 'action',
-            action: { semantic_intent: 'fallback_action' }
-          }
-        ]
-      }
-    });
-
-    const ctx = createMinimalInferenceContext();
-    const result = await provider.run(ctx, null as never);
-    // llm_decision stub returns failure → Selector falls through to action
-    expect(result.action_type).toBe('fallback_action');
+    await expect(provider.run(ctx, null as never)).rejects.toThrow();
   });
 });

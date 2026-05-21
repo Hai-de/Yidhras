@@ -5,14 +5,22 @@ import { TreeRegistry } from './tree_registry.js';
 import type { BTEvalContext, BTCooldownState } from './types.js';
 
 export interface BehaviorTreeProviderDeps {
-  treeRegistry: TreeRegistry;
+  treeRegistry?: TreeRegistry;
+  resolveTreeRegistry?: (context: InferenceContext) => TreeRegistry;
 }
 
 export const createBehaviorTreeProvider = ({
-  treeRegistry
+  treeRegistry,
+  resolveTreeRegistry
 }: BehaviorTreeProviderDeps): InferenceProvider => {
   // Cooldown state persists across run() calls per agent per tree
   const cooldownStore = new Map<string, BTCooldownState>();
+
+  const getTreeRegistry = (context: InferenceContext): TreeRegistry => {
+    if (resolveTreeRegistry) return resolveTreeRegistry(context);
+    if (treeRegistry) return treeRegistry;
+    throw new Error('Behavior tree provider requires treeRegistry or resolveTreeRegistry');
+  };
 
   return {
     name: 'behavior_tree',
@@ -31,7 +39,7 @@ export const createBehaviorTreeProvider = ({
         };
       }
 
-      const treeDef = treeRegistry.get(treeName);
+      const treeDef = getTreeRegistry(context).get(treeName);
       const agentId = context.actor_ref?.agent_id ?? 'unknown';
 
       const evalCtx: BTEvalContext = {

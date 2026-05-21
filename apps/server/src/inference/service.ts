@@ -281,6 +281,7 @@ const executeRunInternal = async (
   const attemptCount = options?.attemptCount ?? 1;
   const maxAttempts = options?.maxAttempts ?? DEFAULT_JOB_MAX_ATTEMPTS;
   const memoryRecordingService = createMemoryRecordingService({ context });
+  const promptVersion = provider.requiresPrompt ? prompt.metadata.prompt_version : null;
 
   let rawDecision: ProviderDecisionRaw;
   try {
@@ -395,7 +396,7 @@ const executeRunInternal = async (
     tick,
     inferenceContext.world_pack.id,
     inferenceContext.binding_ref,
-    prompt.metadata.prompt_version
+    promptVersion
   );
   const semanticIntentKind =
     grounded.semantic_intent.kind ??

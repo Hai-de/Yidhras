@@ -29,7 +29,7 @@ export class TreeRegistry {
     const expanded = this.expandNode(raw, treeName, 0, visiting);
     return {
       name: treeName,
-      root: expanded,
+      root: this.assignNodePaths(expanded, treeName),
       sourcePackId: this.packId
     };
   }
@@ -100,12 +100,37 @@ export class TreeRegistry {
     return expanded;
   }
 
-  private readonly SUPPORTED_TYPES = ['selector', 'sequence', 'condition', 'action', 'llm_decision'];
+  private assignNodePaths(node: BTNodeDef, path: string): BTNodeDef {
+    const withPath: BTNodeDef = {
+      ...node,
+      __node_path: path
+    };
+
+    if (node.children) {
+      withPath.children = node.children.map((child, index) =>
+        this.assignNodePaths(child, `${path}.children[${index}]`)
+      );
+    }
+
+    if (node.child) {
+      withPath.child = this.assignNodePaths(node.child, `${path}.child`);
+    }
+
+    return withPath;
+  }
+
+  private readonly SUPPORTED_TYPES = ['selector', 'sequence', 'condition', 'action'];
 
   private validateNode(node: BTNodeDef, treeName: string): void {
     if (!node.type && !node.$ref && !node.decorators) {
       throw new Error(
         `Tree "${treeName}": root node must have a "type" (selector, sequence, condition, action, llm_decision) or "$ref".`
+      );
+    }
+    if (node.type === 'llm_decision') {
+      throw new Error(
+        `Tree "${treeName}": llm_decision nodes are not supported until AI Gateway wiring is implemented. ` +
+        `Use a deterministic action node or remove this branch.`
       );
     }
     if (node.type && !this.SUPPORTED_TYPES.includes(node.type)) {

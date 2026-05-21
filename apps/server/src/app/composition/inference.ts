@@ -12,6 +12,9 @@ export interface CreateInferenceProvidersInput {
   aiTaskService?: AiTaskService;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
 /**
  * 创建 inference provider 组合。
  * 集中所有 provider 的实例化与注入逻辑，作为 inference 子系统的组装根。
@@ -20,12 +23,28 @@ export const createInferenceProviders = ({
   context,
   aiTaskService = createAiTaskService({ context })
 }: CreateInferenceProvidersInput): InferenceProvider[] => {
-  // TreeRegistry is populated by pack loading (Phase 8 integration)
-  const treeRegistry = new TreeRegistry('global');
+  const registryCache = new Map<string, TreeRegistry>();
+
+  const resolveTreeRegistry = (packId: string, rawTrees: unknown): TreeRegistry => {
+    const cached = registryCache.get(packId);
+    if (cached) return cached;
+
+    const registry = new TreeRegistry(packId);
+    if (isRecord(rawTrees)) {
+      registry.register(rawTrees);
+    }
+    registryCache.set(packId, registry);
+    return registry;
+  };
 
   return [
     createMockInferenceProvider(),
     createGatewayBackedInferenceProvider({ aiTaskService }),
-    createBehaviorTreeProvider({ treeRegistry })
+    createBehaviorTreeProvider({
+      resolveTreeRegistry: (inferenceContext) => {
+        const packId = inferenceContext.world_pack.id;
+        return resolveTreeRegistry(packId, inferenceContext.world_pack.behavior_trees);
+      }
+    })
   ];
 };

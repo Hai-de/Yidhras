@@ -62,6 +62,8 @@ export interface BTNodeDef {
   provider?: string;
   model?: string;
   $ref?: string;
+  /** Internal runtime path assigned after $ref expansion; not accepted from YAML schema. */
+  __node_path?: string;
 }
 
 export interface BTEvalContext {

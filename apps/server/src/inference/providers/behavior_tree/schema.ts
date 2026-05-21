@@ -2,17 +2,20 @@ import { z } from 'zod';
 
 const nonEmptyStringSchema = z.string().min(1);
 
+const btConditionScalarSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+
 const btConditionExprSchema: z.ZodType<Record<string, unknown>> = z.lazy(() =>
-  z.record(
-    z.string(),
-    z.union([z.string(), z.number(), z.boolean(), z.null()])
-  )
+  z.record(z.string(), btConditionScalarSchema)
+);
+
+const btConditionSchema: z.ZodType<Record<string, unknown>> = z.lazy(() =>
+  z.union([btConditionExprSchema, btCompoundConditionSchema])
 );
 
 const btCompoundConditionSchema: z.ZodType<{ all?: Record<string, unknown>[]; any?: Record<string, unknown>[] }> = z.lazy(() =>
   z.object({
-    all: z.array(btConditionExprSchema).optional(),
-    any: z.array(btConditionExprSchema).optional()
+    all: z.array(btConditionSchema).optional(),
+    any: z.array(btConditionSchema).optional()
   }).refine(
     (val) => val.all !== undefined || val.any !== undefined,
     { message: 'Compound condition must have at least one of "all" or "any"' }
@@ -55,7 +58,7 @@ export const btNodeDefSchema: z.ZodType<Record<string, unknown>> = z.lazy(() =>
     children: z.array(z.lazy(() => btNodeDefSchema)).optional(),
     decorators: z.array(btDecoratorDefSchema).optional(),
     child: z.lazy(() => btNodeDefSchema).optional(),
-    condition: z.union([btCompoundConditionSchema, btConditionExprSchema]).optional(),
+    condition: btConditionSchema.optional(),
     action: btActionDefSchema.optional(),
     prompt_template: z.string().optional(),
     provider: z.string().optional(),

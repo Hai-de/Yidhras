@@ -46,6 +46,7 @@
 | [subsystems/PROMPT_WORKFLOW.md](subsystems/PROMPT_WORKFLOW.md) | Prompt Workflow Runtime：prompt 组装管道、profile、section draft |
 | [subsystems/PROMPT_SLOT_CONFIGURATION.md](subsystems/PROMPT_SLOT_CONFIGURATION.md) | Prompt Slot 配置指南：声明式 YAML slot 定义、模板语法、自定义 slot |
 | [subsystems/AI_GATEWAY.md](subsystems/AI_GATEWAY.md) | AI Gateway：任务路由、模型调度、调用观测、弹性层 |
+| [subsystems/BEHAVIOR_TREE.md](subsystems/BEHAVIOR_TREE.md) | Behavior Tree InferenceProvider：确定性行为树配置、注册、求值、装饰器与限制 |
 | [subsystems/PLUGIN_RUNTIME.md](subsystems/PLUGIN_RUNTIME.md) | Plugin Runtime：pack-local 插件生命周期、治理、前后端承接 |
 | [subsystems/STRUCTURED_PARSER.md](subsystems/STRUCTURED_PARSER.md) | Structured Parser：可配置模板解析引擎、修饰符链、块语法、DataCleaner 适配 |
 

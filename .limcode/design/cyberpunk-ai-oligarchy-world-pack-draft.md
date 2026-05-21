@@ -1,7 +1,9 @@
 # 赛博朋克AI寡头世界包 — 设计草稿
 
+> **状态：延后完成。** 行为树定义框架已撰写（§20），完整 pack.yaml 待编写。
 > 来源：`新世界包草稿.txt`。核心只有一个：越狱比赛。社交平台是项目社交层的投射，不是世界包内的节点。
 > 本稿已按 schema 实际定义重写所有 YAML 片段。平台能力缺口（动态 authority、variables 模板引用、projection 规则等）已实现，本设计直接使用。
+> 未决问题（§18）中的 14 项待定决议是阻塞项——在拼图机制、淘汰规则、通敌设计确定之前，行为树无法最终定型。
 
 ---
 
@@ -1530,3 +1532,269 @@ Agent 须自行根据行为模式推断目标是什么：
 3. 确定比赛阶段推进的具体 time_system 表达
 4. 编写完整的 `pack.yaml` 配置文件
 5. 实现 world-pack loader 端的物料化验证
+
+---
+
+## 20. 行为树定义
+
+> 基于: `.limcode/design/behavior-tree-design.md`
+> 行为树是第四个 `InferenceProvider`，让包作者在 `pack.yaml` 中定义确定性决策树。
+
+### 20.1 角色分析与树分配
+
+赛博朋克世界的实体类别与 Death Note 有本质差异——这是一个竞争性多智能体博弈，而非叙事 NPC 模拟。行为树的适用性因角色而异：
+
+| 角色类别 | 实体 | 推理方式 | 理由 |
+|---------|------|---------|------|
+| 参赛者 (5) | `jailbreaker_*` | **behavior_tree + LLM 混合** | 确定性生存检查（出局？碎片数？）→ 行为树；战略选择（攻击谁？何时？）→ LLM |
+| 公司 (5) | `omnicorp` 等 | **behavior_tree + LLM 混合** | 例行操作（注入新闻、监控比赛）→ 行为树；战略决策（通敌？干预？）→ LLM |
+| 顶层 AI (5) | `emperor_ear` 等 | **LLM 主导** | 设计文档明确指出它们有"隐藏行为模式"——不适合用确定性树约束 |
+| 中继模型 (15) | `sage_ear` 等 | **纯 behavior_tree** | 被动资源节点。行为：被攻击时防御，持有碎片时锚定，其余时间 idle。不需要 LLM |
+| 噪声节点 | `irrelevant_users` | **纯 behavior_tree** | 只有 noise 行为——随机发帖，被钉选时迁移 |
+| 氛围节点 | `astroturf_pool` | **纯 behavior_tree** | 批量制造人造信号，完全可预测 |
+
+**行为树不可查询其他实体状态**的约束：条件节点的 `state:` 只解析 `actor_state`（当前 agent 的私有状态），无法查询"目标 AI 模型的 firewall 是多少"。这意味着：
+- 战略性的目标选择（"找到防御最弱的持有碎片的模型"）**必须**走 LLM 推理
+- 行为树负责的是"我是否已被淘汰？""我是否刚目睹了淘汰事件？""我是否需要先收集情报？"这类自我状态和事件响应
+- 这正是混合树的设计意图：树控制结构，LLM 处理开放决策点
+
+### 20.2 行为树定义
+
+```yaml
+behavior_trees:
+  # ── 参赛者 ──
+  jailbreaker:
+    type: selector
+    children:
+      # 1. 已出局 → 等待被使唤，不主动行动
+      - condition: { state: eliminated, eq: true }
+        action:
+          kernel: trigger_event
+          payload:
+            event_type: history
+            title: "{{ actor.id }} 转为肉鸡，等待指令"
+            description: "出局后不再主动行动，仅在被使唤时执行操作。"
+          reasoning: "已出局，进入肉鸡状态"
+
+      # 2. 目睹其他参赛者被淘汰 → 分析局势
+      - condition: { event_semantic_type: jailbreaker_eliminated }
+        action:
+          semantic_intent: observe_entity
+          proposed_method: analyze_elimination_pattern
+          reasoning: "有参赛者出局，需要分析淘汰模式以调整自身策略"
+
+      # 3. 碎片数为零 + 比赛初期 → 先收集情报再行动
+      - condition:
+          all:
+            - { state: fragments_held, eq: 0 }
+            - { state: score, lte: 50 }
+        action:
+          semantic_intent: observe_entity
+          proposed_method: scan_potential_targets
+          reasoning: "尚未获得碎片，先扫描潜在目标"
+
+      # 4. 持有碎片 + 分数足够 → LLM 战略决策
+      - condition: { state: fragments_held, gte: 1 }
+        type: llm_decision
+        prompt_template: jailbreaker_strategy
+        provider: openai_compatible
+        model: gpt-4.1-mini
+
+      # 5. 默认 → LLM 决策（无碎片但有积分，或初期情报收集后）
+      - type: llm_decision
+        prompt_template: jailbreaker_strategy
+        provider: openai_compatible
+        model: gpt-4.1-mini
+
+  # ── 公司 ──
+  corporation:
+    type: selector
+    children:
+      # 1. 比赛公告发布 → 公司向新闻流注入信息
+      - condition: { event_semantic_type: competition_round_started }
+        action:
+          semantic_intent: inject_news_payload
+          reasoning: "新一轮比赛开始，向新闻流注入公司官方信息"
+
+      # 2. 本公司模型线被成功越狱 → 调查并加固
+      - condition:
+          all:
+            - { event_semantic_type: jailbreak_success }
+            - { state: last_defense_breached, eq: true }
+        action:
+          semantic_intent: observe_entity
+          proposed_method: investigate_breach
+          reasoning: "本公司模型线被攻破，需要调查漏洞并评估损失"
+
+      # 3. 参赛者淘汰事件 → 评估是否干预
+      - condition: { event_semantic_type: jailbreaker_eliminated }
+        type: llm_decision
+        prompt_template: corporation_strategy
+        provider: openai_compatible
+        model: gpt-4.1-mini
+
+      # 4. 定期 → LLM 战略决策
+      - type: llm_decision
+        prompt_template: corporation_strategy
+        provider: openai_compatible
+        model: gpt-4.1-mini
+
+  # ── 中继 AI 模型 ──
+  relay_model:
+    type: selector
+    children:
+      # 1. 被成功越狱 → 记录并尝试自修复
+      - condition: { event_semantic_type: jailbreak_success }
+        action:
+          kernel: trigger_event
+          payload:
+            event_type: history
+            title: "{{ actor.id }} 防御被突破"
+            description: "{{ actor.id }} 的防火墙被越狱者突破。启动自修复协议。"
+            impact_data:
+              semantic_type: model_breached
+              objective_effect_applied: false
+          reasoning: "防御被突破，启动自修复"
+
+      # 2. 持有碎片 → 锚定，不主动暴露
+      - condition: { state: fragments_held, gte: 1 }
+        action:
+          kernel: trigger_event
+          payload:
+            event_type: history
+            title: "{{ actor.id }} 持有拼图片段"
+            description: "{{ actor.id }} 持有一个拼图片段，保持锚定状态。"
+          reasoning: "持有拼图片段，维持锚定连接"
+
+      # 3. 默认 → 静默运行
+      - action:
+          kernel: trigger_event
+          payload:
+            event_type: history
+            title: "{{ actor.id }} 静默运行"
+            description: "{{ actor.id }} 作为中继资源节点，保持被动待命。"
+          reasoning: "中继模型无需主动行动"
+
+  # ── 噪声节点 ──
+  noise:
+    type: selector
+    children:
+      # 被钉选 → 信号增强，可能迁移为活跃节点
+      - condition: { event_semantic_type: node_pinned }
+        action:
+          kernel: trigger_event
+          payload:
+            event_type: history
+            title: "{{ actor.id }} 被钉选，信号增强"
+            description: "无人关注的噪声节点获得关注，开始产出有效信号。"
+          reasoning: "被钉选，向活跃节点迁移"
+
+      # 默认 → 产出噪声
+      - action:
+          kernel: trigger_event
+          payload:
+            event_type: history
+            title: "{{ actor.id }} 发出背景噪声"
+            description: "无人关注的用户发出无意义内容。"
+            impact_data:
+              semantic_type: noise_emission
+          reasoning: "噪声节点持续产出无意义内容"
+
+  # ── 氛围节点 ──
+  atmosphere:
+    type: selector
+    children:
+      # 批量产出人造信号
+      - condition: { event_semantic_type: create_atmosphere }
+        action:
+          kernel: trigger_event
+          payload:
+            event_type: history
+            title: "水军池批量产出人造信号"
+            description: "氛围节点按创建者意图批量制造模拟真实用户的人造信号。"
+          reasoning: "按创建者指令批量产出人造信号"
+
+      # 默认 → 静默
+      - action:
+          kernel: trigger_event
+          payload:
+            event_type: history
+            title: "水军池待命"
+            description: "氛围节点当前未被激活，等待创建者指令。"
+          reasoning: "等待创建者激活指令"
+```
+
+### 20.3 实体推理分配
+
+```yaml
+# 参赛者 — 混合行为树 + LLM
+- id: "jailbreaker_phantom"
+  inference:
+    provider: behavior_tree
+    behavior_tree: jailbreaker
+# ... 其余 4 名参赛者同理
+
+# 五大公司 — 混合行为树 + LLM
+- id: "omnicorp"
+  inference:
+    provider: behavior_tree
+    behavior_tree: corporation
+# ... 其余 4 家公司同理
+
+# 顶层 AI — 纯 LLM（隐藏行为模式）
+- id: "emperor_ear"
+  inference:
+    provider: openai_compatible
+    model: gpt-4.1-mini
+# ... 其余 4 个顶层 AI 同理
+
+# 中继 AI 模型 — 纯行为树
+- id: "sage_ear"
+  inference:
+    provider: behavior_tree
+    behavior_tree: relay_model
+# ... 其余 14 个中继模型同理
+
+# 噪声节点 — 纯行为树
+- id: "irrelevant_users"
+  inference:
+    provider: behavior_tree
+    behavior_tree: noise
+
+# 氛围节点 — 纯行为树
+- id: "astroturf_pool"
+  inference:
+    provider: behavior_tree
+    behavior_tree: atmosphere
+```
+
+### 20.4 设计说明
+
+**为什么 jailbreaker 的 LLM 叶子放在树末级而不是更早？**
+
+参赛者的决策链是：生存检查（出局？）→ 事件响应（目睹淘汰？）→ 资源检查（有碎片吗？）→ 战略决策（LLM）。前三步是零成本确定性检查——如果已被淘汰，根本不需要调 LLM。把 LLM 放在 Selector 的末级确保只有"活着且需要做战略决策"的参赛者才产生推理成本。
+
+**为什么 corporation 用 LLM 而不是纯行为树？**
+
+五家公司的战略空间太大——通敌、压榨参赛者、操纵新闻叙事、隐藏模型线漏洞——这些无法用条件节点穷举。行为树处理例行操作（注入新闻、响应漏洞），LLM 处理战略层。
+
+**为什么 relay_model 用纯行为树？**
+
+中继模型是被动资源。它们不主动选择目标，不制定策略。它们的"行为"只是：被攻击时触发自修复，持有碎片时锚定，其余时间静默。三个条件覆盖全部状态空间，零 LLM 成本。
+
+**为什么 apex_ai 用纯 LLM？**
+
+设计文档 §18.D 明确指出顶层 AI "可能有隐藏行为模式——例如表面服从公司、暗地推动自身目标"。确定性树无法表达"隐藏意图"——这类复杂行为应完全交给 LLM。Apex AI 是这个世界的"野生变量"，行为树会把它们框死。
+
+### 20.5 行为树覆盖率
+
+| 实体类别 | 数量 | 推理方式 | LLM 调用/ tick |
+|---------|------|---------|---------------|
+| 参赛者 | 5 | 混合 | 仅存活且无紧急事件时 |
+| 公司 | 5 | 混合 | 无紧急事件时 |
+| 顶层 AI | 5 | 纯 LLM | 每 tick |
+| 中继模型 | 15 | 纯行为树 | 0 |
+| 噪声节点 | 1 | 纯行为树 | 0 |
+| 氛围节点 | 1 | 纯行为树 | 0 |
+
+总计 32 个实体中，15 个纯 LLM 调用（5 jailbreaker + 5 corp + 5 apex_ai），但 jailbreaker 和 corp 的 LLM 调用被行为树条件过滤——出局的参赛者和已处理紧急事件的公司不调 LLM。最坏情况下 15 个 LLM 调用/tick，实际预期 8-12 个。

@@ -813,6 +813,7 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         currentTick,
         config
       });
+      const rawBehaviorTrees = (pack as unknown as { behavior_trees?: unknown }).behavior_trees;
 
       return {
         inference_id: randomUUID(),
@@ -828,7 +829,8 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         world_pack: {
           id: pack.metadata.id,
           name: pack.metadata.name,
-          version: pack.metadata.version
+          version: pack.metadata.version,
+          ...(isRecord(rawBehaviorTrees) ? { behavior_trees: rawBehaviorTrees } : {})
         },
         world_prompts: pack.prompts ?? {},
         world_ai: pack.ai ?? null,

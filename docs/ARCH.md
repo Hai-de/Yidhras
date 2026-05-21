@@ -564,6 +564,7 @@ world-pack 在物化阶段（`materializer.ts`）展开 `bootstrap.initial_state
 
 - Prompt Workflow Runtime -> `docs/subsystems/PROMPT_WORKFLOW.md`
 - AI Gateway / Invocation Observability -> `docs/subsystems/AI_GATEWAY.md`
+- Behavior Tree InferenceProvider -> `docs/subsystems/BEHAVIOR_TREE.md`
 - Pack-local Plugin Runtime -> `docs/subsystems/PLUGIN_RUNTIME.md`
 
 在 ARCH 中只保留它们的边界性结论：
@@ -597,7 +598,13 @@ world-pack 在物化阶段（`materializer.ts`）展开 `bootstrap.initial_state
 | `inference/` | 推理流水线：context_builder、prompt builders、processors、tokenizers、types（inference 专用） |
 | `packages/contracts/src/ai_shared.ts` | AI/inference 共享类型契约：PromptBundleMetadata、PromptWorkflowSnapshot 等 |
 
-### 6.3 Plugin Runtime
+### 6.3 Behavior Tree
+
+- behavior_tree 是确定性 InferenceProvider，不依赖 Prompt Workflow bundle，不直接调用 AI Gateway
+- world-pack 通过顶层 `behavior_trees` 和 actor 级 `inference.provider: behavior_tree` 绑定树定义
+- TreeRegistry / evaluator / decorators 的具体语义收口在 `docs/subsystems/BEHAVIOR_TREE.md`
+
+### 6.4 Plugin Runtime
 
 - plugin host 继续留在 Node/TS
 - Plugin runtime surface（`/api/packs/:packId/plugins/runtime/web`）对所有已加载 pack 统一可用

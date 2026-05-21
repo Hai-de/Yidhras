@@ -230,9 +230,9 @@ inference: actorInferenceSchema.optional()
 
 ### 阶段一验证
 
-- [ ] `pnpm typecheck` 通过（新类型定义无编译错误）
-- [ ] 现有测试全部通过（接口变更后 mock/rule_based/LLM provider 编译通过）
-- [ ] `pnpm lint` 通过
+- [x] `pnpm typecheck` 通过（新类型定义无编译错误）
+- [x] 现有测试全部通过（接口变更后 mock/rule_based/LLM provider 编译通过）
+- [x] `pnpm lint` 通过
 
 ---
 
@@ -298,9 +298,9 @@ function resolveContextValue(
 
 ### 阶段二验证
 
-- [ ] 25 个测试用例全部通过
-- [ ] `pnpm typecheck` 通过
-- [ ] `pnpm lint` 通过
+- [x] 25 个测试用例全部通过
+- [x] `pnpm typecheck` 通过
+- [x] `pnpm lint` 通过
 
 ---
 
@@ -390,11 +390,11 @@ async function tickLLMDecision(llm: BTLLMDecisionDef, ctx: BTEvalContext): Promi
 
 ### 阶段三验证
 
-- [ ] 组合节点 8 个测试用例全部通过
-- [ ] 装饰节点 12 个测试用例全部通过
-- [ ] 叶子节点 6 个测试用例全部通过
-- [ ] `pnpm typecheck` 通过
-- [ ] `pnpm lint` 通过
+- [x] 组合节点 8 个测试用例全部通过
+- [x] 装饰节点 12 个测试用例全部通过
+- [x] 叶子节点 6 个测试用例全部通过
+- [x] `pnpm typecheck` 通过
+- [x] `pnpm lint` 通过
 
 ---
 
@@ -472,9 +472,9 @@ expand(node, registry, depth, visiting):
 
 ### 阶段四验证
 
-- [ ] 13 个测试用例全部通过
-- [ ] `pnpm typecheck` 通过
-- [ ] `pnpm lint` 通过
+- [x] 13 个测试用例全部通过
+- [x] `pnpm typecheck` 通过
+- [x] `pnpm lint` 通过
 
 ---
 
@@ -517,9 +517,9 @@ async function evaluateTree(
 
 ### 阶段五验证
 
-- [ ] 10 个测试用例全部通过
-- [ ] `pnpm typecheck` 通过
-- [ ] `pnpm lint` 通过
+- [x] 10 个测试用例全部通过
+- [x] `pnpm typecheck` 通过
+- [x] `pnpm lint` 通过
 
 ---
 
@@ -569,9 +569,9 @@ export const createBehaviorTreeProvider = (deps: BehaviorTreeProviderDeps): Infe
 
 ### 阶段六验证
 
-- [ ] 5 个测试用例全部通过
-- [ ] `pnpm typecheck` 通过
-- [ ] `pnpm lint` 通过
+- [x] 5 个测试用例全部通过
+- [x] `pnpm typecheck` 通过
+- [x] `pnpm lint` 通过
 
 ---
 
@@ -608,9 +608,9 @@ async function fetchRecentEvents(
 
 ### 阶段七验证
 
-- [ ] 5 个测试用例全部通过
-- [ ] `pnpm typecheck` 通过
-- [ ] `pnpm lint` 通过
+- [x] 5 个测试用例全部通过
+- [x] `pnpm typecheck` 通过
+- [x] `pnpm lint` 通过
 
 ---
 
@@ -652,10 +652,10 @@ async function fetchRecentEvents(
 
 ### 阶段八验证
 
-- [ ] 9 个测试用例全部通过
-- [ ] `pnpm typecheck` 通过
-- [ ] `pnpm lint` 通过
-- [ ] `pnpm validate:pack --all` 对现有 pack 不报错（现有 pack 无 `behavior_trees` 键，应跳过校验）
+- [x] 9 个测试用例全部通过
+- [x] `pnpm typecheck` 通过
+- [x] `pnpm lint` 通过
+- [x] `pnpm validate:pack --all` 对现有 pack 不报错（现有 pack 无 `behavior_trees` 键，应跳过校验）
 
 ---
 
@@ -675,10 +675,10 @@ async function fetchRecentEvents(
 
 ### 阶段九验证
 
-- [ ] 5 个集成测试用例全部通过
-- [ ] `pnpm typecheck` 通过
-- [ ] `pnpm lint` 通过
-- [ ] `pnpm test:integration` 全部通过
+- [x] 5 个集成测试用例全部通过
+- [x] `pnpm typecheck` 通过
+- [x] `pnpm lint` 通过
+- [x] `pnpm test:integration` 全部通过
 
 ---
 
@@ -696,8 +696,8 @@ async function fetchRecentEvents(
 
 ### 阶段十验证
 
-- [ ] Death Note pack 使用行为树 provider 后，行为与 `rule_based` 一致（手动对比 decision trace）
-- [ ] 现有 Death Note 相关测试通过
+- [x] Death Note pack 使用行为树 provider 后，行为与 `rule_based` 一致（手动对比 decision trace）
+- [x] 现有 Death Note 相关测试通过
 
 ---
 
@@ -743,11 +743,11 @@ async function fetchRecentEvents(
 
 ### 11.5 验证
 
-- [ ] `docs/subsystems/AI_GATEWAY.md` 中 `behavior_tree` 描述准确、无时间锚定
-- [ ] `docs/ARCH.md` inference 目录描述更新
-- [ ] `.limcode/enhancements-backlog.md` 所有条目格式一致、暂缓原因明确
-- [ ] `.limcode/design/behavior-tree-design.md` 顶部有实现计划链接
-- [ ] 文档无 §、无"当前/现在/已完成"等时间锚定词
+- [x] `docs/subsystems/AI_GATEWAY.md` 中 `behavior_tree` 描述准确、无时间锚定
+- [x] `docs/ARCH.md` inference 目录描述更新
+- [x] `.limcode/enhancements-backlog.md` 所有条目格式一致、暂缓原因明确
+- [x] `.limcode/design/behavior-tree-design.md` 顶部有实现计划链接
+- [x] 文档无 §、无"当前/现在/已完成"等时间锚定词
 
 ---
 

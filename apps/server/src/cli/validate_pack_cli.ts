@@ -93,7 +93,8 @@ const validateIncludes = (parsed: unknown, packDir: string): ValidationIssue[] =
     'schema_version', 'metadata', 'constitution', 'variables', 'prompts',
     'ai', 'time_systems', 'simulation_time', 'entities', 'identities',
     'capabilities', 'authorities', 'rules', 'storage', 'scheduler',
-    'bootstrap', 'state_transforms', 'spatial'
+    'bootstrap', 'state_transforms', 'spatial',
+    'behavior_trees', 'dynamics_config'
   ]);
 
   for (const [sectionKey, includeValue] of includeEntries) {

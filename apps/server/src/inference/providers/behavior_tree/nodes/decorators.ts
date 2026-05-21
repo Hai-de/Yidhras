@@ -22,7 +22,7 @@ export async function tickDecorated(
 
   const [outermost, ...rest] = decorators;
   const innerNode: BTNodeDef = rest.length > 0
-    ? { decorators: rest, child }
+    ? { decorators: rest, child, __node_path: child.__node_path }
     : child;
 
   switch (outermost.type) {
@@ -47,7 +47,7 @@ async function applyCooldown(
   ctx: BTEvalContext,
   cooldownStore: Map<string, BTCooldownState>
 ): Promise<BTStatus> {
-  const key = buildCooldownKey(ctx);
+  const key = buildNodeScopedKey(ctx, child);
   const state = cooldownStore.get(key);
   const currentTick = ctx.inferenceContext.tick;
   const cooldownTicks = decorator.cooldown_ticks ?? 0;
@@ -65,10 +65,12 @@ async function applyCooldown(
   return status;
 }
 
-function buildCooldownKey(ctx: BTEvalContext): string {
+function buildNodeScopedKey(ctx: BTEvalContext, node: BTNodeDef): string {
   const agentId = (ctx.blackboard['__agent_id'] as string) ?? 'unknown';
   const treeName = (ctx.blackboard['__tree_name'] as string) ?? 'unknown';
-  return `${agentId}::${treeName}`;
+  return node.__node_path
+    ? `${agentId}::${treeName}::${node.__node_path}`
+    : `${agentId}::${treeName}`;
 }
 
 async function applyProbability(
@@ -77,7 +79,7 @@ async function applyProbability(
   ctx: BTEvalContext
 ): Promise<BTStatus> {
   const weight = decorator.weight ?? 0;
-  const seed = `${ctx.inferenceContext.actor_ref?.agent_id ?? 'unknown'}_${ctx.inferenceContext.tick}`;
+  const seed = buildNodeScopedKey(ctx, child) + `::${ctx.inferenceContext.tick.toString()}`;
   const hash = simpleHash(seed);
   const roll = (hash % 10000) / 10000;
 

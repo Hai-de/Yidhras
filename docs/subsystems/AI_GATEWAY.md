@@ -38,6 +38,7 @@ Key concepts:
 - 公共 `/api/inference/*` 的完整 contract：看 `../specs/API.md`
 - 整体系统模块边界：看 `../ARCH.md`
 - 推理与世界执行的业务语义：看 `../LOGIC.md`
+- `behavior_tree` provider 的内部注册和求值语义：看 `BEHAVIOR_TREE.md`
 
 ## 2. 内部执行层概览
 

@@ -160,6 +160,7 @@ export interface InferenceWorldPackRef {
   id: string;
   name: string;
   version: string;
+  behavior_trees?: Record<string, unknown>;
 }
 
 export type InferencePackStateValue = WorldPackValue;
