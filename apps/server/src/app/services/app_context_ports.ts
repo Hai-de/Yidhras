@@ -8,7 +8,7 @@ import type {
   RuntimeClockProjectionService
 } from '../runtime/runtime_clock_projection.js';
 import type { PackHostApi, WorldEnginePort } from '../runtime/world_engine_ports.js';
-import type { ContextAssemblyPort } from './context_memory_ports.js';
+import type { ContextAssemblyPort } from './context/context_memory_ports.js';
 
 export interface PackCatalogService {
   listAvailablePacks(): string[];

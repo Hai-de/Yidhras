@@ -15,7 +15,7 @@ import {
   listMyPackBindings,
   listPackBindings,
   removePackBinding,
-  updatePackBinding} from '../services/operator_pack_bindings.js'
+  updatePackBinding} from '../services/operator/operator_pack_bindings.js'
 
 export interface PackBindingRouteDependencies {
   asyncHandler(

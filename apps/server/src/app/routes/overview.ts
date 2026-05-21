@@ -9,7 +9,7 @@ import { packAccessGuard } from '../../operator/guard/pack_access.js'
 import type { AppContext } from '../context.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseParams } from '../http/zod.js'
-import { getOverviewSummary, getPackOverviewProjectionSummary } from '../services/overview.js'
+import { getOverviewSummary, getPackOverviewProjectionSummary } from '../services/overview/overview.js'
 
 export interface OverviewRouteDependencies {
   asyncHandler(

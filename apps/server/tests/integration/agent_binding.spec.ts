@@ -4,7 +4,7 @@ import type { AppContext } from '../../src/app/context.js'
 import {
   createAgentBinding,
   listAgentOperators,
-  unbindAgent} from '../../src/app/services/operator_agent_bindings.js'
+  unbindAgent} from '../../src/app/services/operator/operator_agent_bindings.js'
 import { OPERATOR_STATUS } from '../../src/operator/constants.js'
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js'
 

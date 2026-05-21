@@ -17,7 +17,7 @@ import {
   queryIdentityBindings,
   registerIdentity,
   unbindIdentityBinding
-} from '../services/identity.js';
+} from '../services/identity/identity.js';
 
 export interface IdentityRouteDependencies {
   asyncHandler(

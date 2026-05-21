@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { ApiError } from '../../utils/api_error.js';
-import type { AppContext } from '../context.js';
-import { assertPackScope } from './pack_scope_resolver.js';
+import { ApiError } from '../../../utils/api_error.js';
+import type { AppContext } from '../../context.js';
+import { assertPackScope } from '../pack/pack_scope_resolver.js';
 
 export interface PackPluginRuntimeWebSnapshot {
   pack_id: string;

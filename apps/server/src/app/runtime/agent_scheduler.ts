@@ -16,9 +16,9 @@ import {
   listRecentScheduledDecisionJobs,
   listRecentSnrFollowupSignals
 } from '../services/inference_workflow.js';
-import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
-import { resolvePackTick } from '../services/pack_runtime_resolution.js';
-import { recordSchedulerRunSnapshot } from '../services/scheduler_observability.js';
+import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
+import { resolvePackTick } from '../services/pack/pack_runtime_resolution.js';
+import { recordSchedulerRunSnapshot } from '../services/scheduler/writes.js';
 import { listActiveWorkflowActors } from './entity_activity_query.js';
 import type {
   AgentSchedulerCandidateDecisionSnapshot,

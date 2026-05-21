@@ -1,6 +1,6 @@
-import { ApiError } from '../../utils/api_error.js';
-import type { AppContext } from '../context.js';
-import { getPackRuntimeLookupPort } from './app_context_ports.js';
+import { ApiError } from '../../../utils/api_error.js';
+import type { AppContext } from '../../context.js';
+import { getPackRuntimeLookupPort } from '../app_context_ports.js';
 
 const normalizeRequestedPackId = (packId: string): string => {
   const normalizedPackId = packId.trim();

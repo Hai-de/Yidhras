@@ -9,7 +9,7 @@ import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseBody, parseQuery } from '../http/zod.js';
 import { requireAuth } from '../middleware/require_auth.js';
-import { createSocialPost, listSocialFeed } from '../services/social.js';
+import { createSocialPost, listSocialFeed } from '../services/social/social.js';
 
 export interface SocialRouteDependencies {
   asyncHandler(

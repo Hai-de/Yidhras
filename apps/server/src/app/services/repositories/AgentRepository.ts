@@ -17,7 +17,7 @@ export class PrismaAgentRepository implements AgentRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async getEntityOverview(entityId: string, options?: { limit?: number }): Promise<unknown> {
-    const { getEntityOverview: impl } = await import('../agent.js');
+    const { getEntityOverview: impl } = await import('../agent/agent.js');
     return impl({ prisma: this.prisma } as AppContext, entityId, options);
   }
 
@@ -25,7 +25,7 @@ export class PrismaAgentRepository implements AgentRepository {
     agent_id?: string;
     limit?: number;
   }): Promise<unknown[]> {
-    const { listSnrAdjustmentLogs: impl } = await import('../agent.js');
+    const { listSnrAdjustmentLogs: impl } = await import('../agent/agent.js');
     return impl({ prisma: this.prisma } as AppContext, input);
   }
 

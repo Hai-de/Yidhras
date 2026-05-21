@@ -1,5 +1,5 @@
 import type { AppInfrastructure } from '../../app/context.js'
-import { resolvePackTick } from '../../app/services/pack_runtime_resolution.js';
+import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution.js';
 import { logOperatorAudit } from '../../operator/audit/logger.js'
 import { AUDIT_ACTION } from '../../operator/constants.js'
 import { resolveSubjectForAgentAction } from '../../operator/guard/subject_resolver.js'

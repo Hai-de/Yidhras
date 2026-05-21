@@ -15,7 +15,7 @@ import {
   deleteOperator,
   getOperator,
   listOperators,
-  updateOperator} from '../services/operators.js'
+  updateOperator} from '../services/operator/operators.js'
 
 export interface OperatorCrudRouteDependencies {
   asyncHandler(

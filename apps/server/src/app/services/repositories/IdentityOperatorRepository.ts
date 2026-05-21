@@ -7,31 +7,31 @@ import type {
   IdentityServiceDependencies,
   QueryIdentityBindingsInput,
   RegisterIdentityInput
-} from '../identity.js';
+} from '../identity/identity.js';
 import {
   createIdentityBinding,
   expireIdentityBinding,
   queryIdentityBindings,
   registerIdentity,
   unbindIdentityBinding
-} from '../identity.js';
+} from '../identity/identity.js';
 import {
   createAgentBinding,
   listAgentOperators,
   unbindAgent
-} from '../operator_agent_bindings.js';
+} from '../operator/operator_agent_bindings.js';
 import {
   createOperatorGrant,
   listOperatorGrants,
   revokeOperatorGrant
-} from '../operator_grants.js';
+} from '../operator/operator_grants.js';
 import {
   createPackBinding,
   listMyPackBindings,
   listPackBindings,
   removePackBinding,
   updatePackBinding
-} from '../operator_pack_bindings.js';
+} from '../operator/operator_pack_bindings.js';
 
 export interface IdentityOperatorRepository {
   // -- Identity (existing delegates) --

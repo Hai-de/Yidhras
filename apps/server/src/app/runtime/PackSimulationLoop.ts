@@ -6,7 +6,7 @@ import { recordTickCompleted } from '../../observability/metrics.js';
 import { dataCleanerRegistry } from '../../plugins/extensions/data_cleaner_registry.js';
 import type { AppContext } from '../context.js';
 import { getErrorMessage } from '../http/errors.js';
-import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
+import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import { runActionDispatcher } from './action_dispatcher_runner.js';
 import { runAgentScheduler } from './agent_scheduler.js';
 import { runDecisionJobRunner } from './job_runner.js';

@@ -4,7 +4,7 @@ import {
   getSchedulerSummarySnapshot,
   listSchedulerOwnershipAssignments,
   listSchedulerWorkers
-} from '../services/scheduler_observability.js';
+} from '../services/scheduler/queries.js';
 import type {
   RuntimeKernelFacade,
   RuntimeKernelHealthSnapshot,

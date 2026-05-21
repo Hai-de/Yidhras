@@ -6,7 +6,7 @@ import type { Express, NextFunction, Request, Response } from 'express';
 import type { AppContext } from '../context.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseParams } from '../http/zod.js';
-import { createPackScopedPluginRuntimeService } from '../services/pack_scoped_plugin_runtime_service.js';
+import { createPackScopedPluginRuntimeService } from '../services/pack/pack_scoped_plugin_runtime_service.js';
 
 export interface PluginRuntimeWebRouteDependencies {
   asyncHandler(

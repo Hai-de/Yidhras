@@ -1,7 +1,7 @@
 import type { ChronosEngine } from '../../clock/engine.js';
 import type { InferenceService } from '../../inference/service.js';
 import type { AppContext } from '../context.js';
-import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
+import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import type { PackLoopDiagnostics } from './PackSimulationLoop.js';
 import { PackSimulationLoop } from './PackSimulationLoop.js';
 import type { WorldEngineSidecarClient } from './sidecar/world_engine_sidecar_client.js';

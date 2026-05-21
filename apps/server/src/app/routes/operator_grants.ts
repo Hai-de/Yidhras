@@ -13,7 +13,7 @@ import {
   createOperatorGrant,
   listOperatorGrants,
   revokeOperatorGrant
-} from '../services/operator_grants.js'
+} from '../services/operator/operator_grants.js'
 
 export interface GrantRouteDependencies {
   asyncHandler(

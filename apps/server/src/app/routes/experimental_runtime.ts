@@ -8,14 +8,14 @@ import { jsonOk, toJsonSafe } from '../http/json.js'
 import { capabilityGuard } from '../middleware/capability.js'
 import { createRuntimeKernelService } from '../runtime/runtime_kernel_service.js'
 import { getPackRuntimeLookupPort } from '../services/app_context_ports.js'
+import { assertPackScope } from '../services/pack/pack_scope_resolver.js'
 import {
   buildExperimentalPackRuntimeRegistrySnapshot,
   buildExperimentalSystemHealthSnapshot,
   getExperimentalPackRuntimeStatusSnapshot,
   loadExperimentalPackRuntime,
   unloadExperimentalPackRuntime
-} from '../services/experimental_multi_pack_runtime.js'
-import { assertPackScope } from '../services/pack_scope_resolver.js'
+} from '../services/runtime/experimental_multi_pack_runtime.js'
 
 export interface ExperimentalRuntimeRouteDependencies {
   asyncHandler(

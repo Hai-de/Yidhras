@@ -17,7 +17,7 @@ import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import { ApiError } from '../../utils/api_error.js';
 import { createLogger } from '../../utils/logger.js';
 import type { AppContext } from '../context.js';
-import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
+import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import type {
   RuntimeClockProjectionSnapshot,
   WorldEngineCommitProjectionInput

@@ -22,8 +22,8 @@ import {
   releaseDecisionJobLock,
   updateDecisionJobState
 } from '../app/services/inference_workflow.js';
-import type { PackRuntimePort } from '../app/services/pack_runtime_ports.js';
-import { resolvePackTick } from '../app/services/pack_runtime_resolution.js';
+import type { PackRuntimePort } from '../app/services/pack/pack_runtime_ports.js';
+import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
 import { buildWorkflowPromptBundle } from '../context/workflow/orchestrator.js';
 import { JsonlCompactionAuditStore } from '../conversation/compaction_audit.js';
 import { DefaultConversationCompactionService } from '../conversation/compaction_service.js';

@@ -10,7 +10,7 @@ import {
   getLatestSchedulerRunReadModel,
   getSchedulerRunReadModelById,
   getSchedulerSummarySnapshot
-} from '../../src/app/services/scheduler_observability.js';
+} from '../../src/app/services/scheduler/queries.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 
 describe('agent scheduler integration', () => {

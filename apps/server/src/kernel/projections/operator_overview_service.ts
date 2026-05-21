@@ -1,5 +1,5 @@
 import type { AppInfrastructure } from '../../app/context.js';
-import { getRuntimeStatusSnapshot } from '../../app/services/system.js';
+import { getRuntimeStatusSnapshot } from '../../app/services/system/system.js';
 import {
   createPackEntityOverviewProjectionService,
   type PackEntityProjectionSnapshot

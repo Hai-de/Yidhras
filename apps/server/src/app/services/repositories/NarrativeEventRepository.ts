@@ -1,9 +1,9 @@
 import type { PrismaClient } from '@prisma/client';
 
 import type { AppContext } from '../../context.js';
-import { createEventEvidence } from '../agent_signal_repository.js';
-import type { LatestEventEvidenceRecord } from '../event_evidence_repository.js';
-import { getLatestEventEvidenceRecord } from '../event_evidence_repository.js';
+import { createEventEvidence } from '../agent/agent_signal_repository.js';
+import type { LatestEventEvidenceRecord } from '../mutation/event_evidence_repository.js';
+import { getLatestEventEvidenceRecord } from '../mutation/event_evidence_repository.js';
 
 export type { LatestEventEvidenceRecord };
 

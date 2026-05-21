@@ -19,7 +19,7 @@ import {
   disablePackPlugin,
   enablePackPlugin,
   listPackPluginInstallations
-} from '../services/plugins.js'
+} from '../services/plugin/plugins.js'
 
 export interface PluginRouteDependencies {
   asyncHandler(

@@ -7,7 +7,7 @@ import {
   claimActionIntent,
   listDispatchableActionIntents,
   releaseActionIntentLock
-} from '../../src/app/services/action_dispatcher.js';
+} from '../../src/app/services/action/action_dispatcher.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 
 const INTENT_SOURCE_PREFIX = 'intent-lock-source-';

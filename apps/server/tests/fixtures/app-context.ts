@@ -13,7 +13,7 @@ import type { PackRuntimeHost } from '../../src/core/pack_runtime_host.js';
 import type { RuntimeClockProjectionSnapshot } from '../../src/app/runtime/runtime_clock_projection.js';
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
-import type { PackRuntimePort } from '../../src/app/services/pack_runtime_ports.js';
+import type { PackRuntimePort } from '../../src/app/services/pack/pack_runtime_ports.js';
 import type { WorldPack } from '../../src/packs/manifest/loader.js';
 import { createNotificationManager } from '../../src/utils/notifications.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';

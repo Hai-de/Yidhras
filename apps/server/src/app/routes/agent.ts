@@ -13,8 +13,8 @@ import type { AppContext } from '../context.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseParams, parseQuery } from '../http/zod.js'
 import { capabilityGuard } from '../middleware/capability.js'
-import { getAgentContextSnapshot, getEntityOverview, listSnrAdjustmentLogs } from '../services/agent.js'
-import { getAgentSchedulerProjection } from '../services/scheduler_observability.js'
+import { getAgentContextSnapshot, getEntityOverview, listSnrAdjustmentLogs } from '../services/agent/agent.js'
+import { getAgentSchedulerProjection } from '../services/scheduler/queries.js'
 
 export interface AgentRouteDependencies {
   asyncHandler(

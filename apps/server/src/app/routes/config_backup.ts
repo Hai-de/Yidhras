@@ -17,7 +17,7 @@ import {
   getConfigBackup,
   listConfigBackups,
   restoreConfigBackup
-} from '../services/config_backup.js'
+} from '../services/config/config_backup.js'
 
 const requireRoot = (req: OperatorRequest, _res: Response, next: NextFunction): void => {
   if (!req.operator?.is_root) {

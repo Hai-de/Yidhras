@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 
 import type { AppInfrastructure } from '../app/context.js';
 import { getErrorMessage } from '../app/http/errors.js';
-import { resolvePackTick } from '../app/services/pack_runtime_resolution.js';
+import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
 import { createLogger } from '../utils/logger.js';
 import type { AiInvocationTrace, ModelGatewayResponse } from './types.js';
 

@@ -2,14 +2,14 @@ import { randomUUID } from 'node:crypto';
 
 import type { PluginInstallation, PluginListResponseData, PluginManifest } from '@yidhras/contracts';
 
-import { getRuntimeConfig } from '../../config/runtime_config.js';
-import { PLUGIN_ENABLE_ACK_REQUIRED_CODE, PLUGIN_ENABLE_WARNING_TEXT } from '../../plugins/contracts.js';
-import { checkDependencies, checkReverseDependencies } from '../../plugins/dependency_resolver.js';
-import { assertPluginEnableAllowed, createPluginManagerService } from '../../plugins/service.js';
-import { ApiError } from '../../utils/api_error.js';
-import { createLogger } from '../../utils/logger.js';
-import type { AppContext } from '../context.js';
-import { createPackScopedPluginRuntimeService } from './pack_scoped_plugin_runtime_service.js';
+import { getRuntimeConfig } from '../../../config/runtime_config.js';
+import { PLUGIN_ENABLE_ACK_REQUIRED_CODE, PLUGIN_ENABLE_WARNING_TEXT } from '../../../plugins/contracts.js';
+import { checkDependencies, checkReverseDependencies } from '../../../plugins/dependency_resolver.js';
+import { assertPluginEnableAllowed, createPluginManagerService } from '../../../plugins/service.js';
+import { ApiError } from '../../../utils/api_error.js';
+import { createLogger } from '../../../utils/logger.js';
+import type { AppContext } from '../../context.js';
+import { createPackScopedPluginRuntimeService } from '../pack/pack_scoped_plugin_runtime_service.js';
 
 const refreshScopedPluginRuntime = async (context: AppContext, packId: string | null | undefined): Promise<void> => {
   const normalizedPackId = typeof packId === 'string' ? packId.trim() : '';

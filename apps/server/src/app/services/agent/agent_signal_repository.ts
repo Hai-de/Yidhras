@@ -1,5 +1,5 @@
-import { ApiError } from '../../utils/api_error.js';
-import type { AppContext } from '../context.js';
+import { ApiError } from '../../../utils/api_error.js';
+import type { AppContext } from '../../context.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);

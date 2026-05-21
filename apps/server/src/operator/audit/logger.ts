@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client'
 
 import type { AppInfrastructure } from '../../app/context.js'
-import { resolvePackTick } from '../../app/services/pack_runtime_resolution.js';
+import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution.js';
 import type { AuditAction } from '../constants.js'
 
 export interface OperatorAuditEntry {

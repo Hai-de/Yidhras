@@ -6,7 +6,7 @@ import {
   getConfigBackup,
   listConfigBackups,
   restoreConfigBackup
-} from '../app/services/config_backup.js'
+} from '../app/services/config/config_backup.js'
 
 const COMMANDS = ['create', 'list', 'info', 'restore', 'delete', 'policy', 'cleanup'] as const
 

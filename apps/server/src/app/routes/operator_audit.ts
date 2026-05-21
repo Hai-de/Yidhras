@@ -9,7 +9,7 @@ import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseQuery } from '../http/zod.js'
-import { queryAuditLogs } from '../services/operator_audit.js'
+import { queryAuditLogs } from '../services/operator/operator_audit.js'
 
 export interface AuditRouteDependencies {
   asyncHandler(

@@ -7,7 +7,7 @@ import type { AppContext } from '../../src/app/context.js';
 import {
   getLatestSchedulerRunReadModel,
   getSchedulerRunReadModelById
-} from '../../src/app/services/scheduler_observability.js';
+} from '../../src/app/services/scheduler/queries.js';
 import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
 import { createTestAppContext } from '../fixtures/app-context.js';
 import {

@@ -1,16 +1,16 @@
-import { getOperatorOverviewProjection } from '../../kernel/projections/operator_overview_service.js';
-import { extractGlobalProjectionIndex } from '../../kernel/projections/projection_extractor.js';
-import type { AppContext } from '../context.js';
-import { toJsonSafe } from '../http/json.js';
-import { readVisibleClockSnapshot } from './app_context_ports.js';
-import type { AuditViewEntry } from './audit.js';
-import { listAuditFeed } from './audit.js';
+import { getOperatorOverviewProjection } from '../../../kernel/projections/operator_overview_service.js';
+import { extractGlobalProjectionIndex } from '../../../kernel/projections/projection_extractor.js';
+import type { AppContext } from '../../context.js';
+import { toJsonSafe } from '../../http/json.js';
+import { readVisibleClockSnapshot } from '../app_context_ports.js';
+import type { AuditViewEntry } from '../audit/audit.js';
+import { listAuditFeed } from '../audit/audit.js';
 
 export interface OverviewSummarySnapshot {
   runtime: {
     status: 'paused' | 'running';
     runtime_ready: boolean;
-    runtime_speed: import('../../core/runtime_speed.js').RuntimeSpeedSnapshot;
+    runtime_speed: import('../../../core/runtime_speed.js').RuntimeSpeedSnapshot;
     health_level: AppContext['startupHealth']['level'];
     world_pack:
       | {

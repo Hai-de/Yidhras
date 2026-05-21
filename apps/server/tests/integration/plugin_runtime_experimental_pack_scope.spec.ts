@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { loadExperimentalPackRuntime } from '../../src/app/services/experimental_multi_pack_runtime.js';
-import { getPackPluginRuntimeWebSnapshot } from '../../src/app/services/plugin_runtime_web.js';
-import { confirmPackPluginImport, enablePackPlugin } from '../../src/app/services/plugins.js';
+import { loadExperimentalPackRuntime } from '../../src/app/services/runtime/experimental_multi_pack_runtime.js';
+import { getPackPluginRuntimeWebSnapshot } from '../../src/app/services/plugin/plugin_runtime_web.js';
+import { confirmPackPluginImport, enablePackPlugin } from '../../src/app/services/plugin/plugins.js';
 import { pluginRuntimeRegistry } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';

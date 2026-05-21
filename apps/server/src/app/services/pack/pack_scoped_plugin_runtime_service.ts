@@ -1,13 +1,13 @@
-import { refreshPackPluginRuntime, syncPackPluginRuntime } from '../../plugins/runtime.js';
-import type { AppContext } from '../context.js';
+import { refreshPackPluginRuntime, syncPackPluginRuntime } from '../../../plugins/runtime.js';
+import type { AppContext } from '../../context.js';
 import type {
   PackPluginRuntimeWebSnapshot,
   ResolvedPluginWebAsset
-} from './plugin_runtime_web.js';
+} from '../plugin/plugin_runtime_web.js';
 import {
   getPackPluginRuntimeWebSnapshot,
   resolveEnabledPluginWebAsset
-} from './plugin_runtime_web.js';
+} from '../plugin/plugin_runtime_web.js';
 
 export interface GetPackPluginRuntimeSnapshotInput {
   pack_id: string;

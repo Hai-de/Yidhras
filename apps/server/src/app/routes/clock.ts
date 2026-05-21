@@ -15,7 +15,7 @@ import {
   overrideRuntimeSpeed,
   pauseRuntime,
   resumeRuntime
-} from '../services/runtime_control.js';
+} from '../services/runtime/runtime_control.js';
 
 export interface ClockRouteDependencies {
   parsePositiveStepTicks(value: unknown): bigint;

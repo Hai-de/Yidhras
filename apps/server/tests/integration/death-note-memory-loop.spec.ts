@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { AppContext } from '../../src/app/context.js';
 import { runActionDispatcher } from '../../src/app/runtime/action_dispatcher_runner.js';
 import { runAgentScheduler } from '../../src/app/runtime/agent_scheduler.js';
-import { getLatestSchedulerRunReadModel } from '../../src/app/services/scheduler_observability.js';
+import { getLatestSchedulerRunReadModel } from '../../src/app/services/scheduler/queries.js';
 import type { SchedulerStorageAdapter } from "../../src/packs/storage/SchedulerStorageAdapter.js";
 import { MemSchedulerStorage } from "../helpers/scheduler_storage.js";
 import { createMemoryCompactionService } from '../../src/memory/recording/compaction_service.js';

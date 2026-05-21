@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import * as jwt from 'jsonwebtoken'
 
 import type { AppInfrastructure } from '../../app/context.js'
-import { resolvePackTick } from '../../app/services/pack_runtime_resolution.js';
+import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution.js';
 import { getOperatorAuthConfig } from '../../config/runtime_config.js'
 import type { JwtPayload, OperatorContext } from './types.js'
 

@@ -45,9 +45,9 @@ import { createWorldEngineStepCoordinator } from './app/runtime/world_engine_per
 import { createPackHostApi } from './app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from './app/runtime/world_engine_snapshot.js';
 import { getRuntimeBootstrap } from './app/services/app_context_ports.js';
-import { createContextAssemblyPort } from './app/services/context_memory_ports.js';
+import { createContextAssemblyPort } from './app/services/context/context_memory_ports.js';
 import { createPrismaRepositories } from './app/services/repositories/index.js';
-import { ensureSchedulerBootstrapOwnership, resetDevelopmentRuntimeState } from './app/services/system.js';
+import { ensureSchedulerBootstrapOwnership, resetDevelopmentRuntimeState } from './app/services/system/system.js';
 import type { CalendarConfig } from './clock/types.js';
 import {
   getAiModelsConfigPath,

@@ -12,9 +12,9 @@ import {
   markActionIntentCompleted,
   markActionIntentDropped,
   markActionIntentFailed
-} from '../services/action_dispatcher.js';
-import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
-import { resolvePackTick } from '../services/pack_runtime_resolution.js';
+} from '../services/action/action_dispatcher.js';
+import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
+import { resolvePackTick } from '../services/pack/pack_runtime_resolution.js';
 import { hasActiveWorkflowForActor } from './entity_activity_query.js';
 import { runWithConcurrency } from './runner_concurrency.js';
 

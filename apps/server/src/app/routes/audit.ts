@@ -10,7 +10,7 @@ import { parseParams, parseQuery } from '../http/zod.js';
 import {
   getAuditEntryById,
   listAuditFeed
-} from '../services/audit.js';
+} from '../services/audit/audit.js';
 
 export interface AuditRouteDependencies {
   asyncHandler(

@@ -8,7 +8,7 @@ import { resolveSchedulerPartitionId } from '../../src/app/runtime/scheduler_par
 import {
   listSchedulerDecisions,
   listSchedulerRuns
-} from '../../src/app/services/scheduler_observability.js';
+} from '../../src/app/services/scheduler/queries.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 
 const findAgentIdsByPartition = (): Map<string, string> => {

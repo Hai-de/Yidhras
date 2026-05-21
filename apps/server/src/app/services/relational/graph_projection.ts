@@ -1,5 +1,5 @@
 import type { AppContext } from '../../context.js';
-import { resolvePackTick } from '../pack_runtime_resolution.js';
+import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 import { parseGraphViewFilters } from './graph_filters.js';
 import { buildContainerNodeId, buildRelayNodeId, getNeighborhoodNodeIds } from './graph_traversal.js';
 import type { GraphEdgeView, GraphNodeView, GraphViewInput, GraphViewSnapshot } from './types.js';

@@ -7,7 +7,7 @@ import {
   listRunnableDecisionJobs,
   updateDecisionJobState
 } from '../services/inference_workflow.js';
-import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
+import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import { hasActiveWorkflowForActor } from './entity_activity_query.js';
 import { runWithConcurrency } from './runner_concurrency.js';
 

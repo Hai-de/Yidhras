@@ -6,7 +6,7 @@ import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage
 import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js'
 import { listPackRuleExecutionRecords } from '../../packs/storage/rule_execution_repo.js'
 import type { AppContext } from '../context.js'
-import type { PackRuntimePort } from '../services/pack_runtime_ports.js'
+import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js'
 
 const buildProjectionEntityStateId = (packId: string, projectionKey: string): string => {
   return `${packId}:state:__projection__:${projectionKey}`

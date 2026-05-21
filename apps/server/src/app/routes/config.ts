@@ -13,7 +13,7 @@ import {
   getMaskedConfig,
   listConfigDomains,
   updateDomainConfig
-} from '../services/config.js'
+} from '../services/config/config.js'
 
 const requireRoot = (req: OperatorRequest, _res: Response, next: NextFunction): void => {
   if (!req.operator?.is_root) {

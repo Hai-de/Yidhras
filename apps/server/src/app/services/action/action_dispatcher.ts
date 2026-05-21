@@ -1,7 +1,6 @@
-import { dispatchInvocationFromActionIntent } from '../../domain/invocation/invocation_dispatcher.js';
-import { ApiError } from '../../utils/api_error.js';
-import type { AppContext } from '../context.js';
-import { type ActionIntentRecord,assertActionIntentLockOwnership } from './action_intent_repository.js';
+import { dispatchInvocationFromActionIntent } from '../../../domain/invocation/invocation_dispatcher.js';
+import { ApiError } from '../../../utils/api_error.js';
+import type { AppContext } from '../../context.js';
 import {
   createEventEvidence,
   createSnrAdjustmentLog,
@@ -12,10 +11,8 @@ import {
   resolveTriggerEventActor,
   resolveTriggerEventPayload,
   updateAgentSnr
-} from './agent_signal_repository.js';
-import { buildMutationResolvedResult } from './mutation_resolved.js';
-import type { PackRuntimePort } from './pack_runtime_ports.js';
-import { resolvePackTick } from './pack_runtime_resolution.js';
+} from '../agent/agent_signal_repository.js';
+import { buildMutationResolvedResult } from '../mutation/mutation_resolved.js';
 import {
   createRelationship,
   getRelationshipByCompositeKey,
@@ -24,8 +21,11 @@ import {
   resolveRelationshipTargetAgentId,
   updateRelationshipWeight,
   writeRelationshipAdjustmentLog
-} from './relationship_mutation_repository.js';
-import { createSocialPost } from './social.js';
+} from '../mutation/relationship_mutation_repository.js';
+import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
+import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
+import { createSocialPost } from '../social/social.js';
+import { type ActionIntentRecord,assertActionIntentLockOwnership } from './action_intent_repository.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);

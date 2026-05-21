@@ -1,5 +1,5 @@
-import type { AppContext } from '../context.js';
-import { getPackRuntimeLookupPort, getPackRuntimeObservation } from './app_context_ports.js';
+import type { AppContext } from '../../context.js';
+import { getPackRuntimeLookupPort, getPackRuntimeObservation } from '../app_context_ports.js';
 
 export interface ExperimentalPackRuntimeSnapshot {
   pack_id: string;

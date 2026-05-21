@@ -1,5 +1,5 @@
 import type { RuntimeClockProjectionSnapshot } from '../../app/runtime/runtime_clock_projection.js';
-import type { PackRuntimePort } from '../../app/services/pack_runtime_ports.js';
+import type { PackRuntimePort } from '../../app/services/pack/pack_runtime_ports.js';
 import type { PackRuntimeHost } from '../../core/pack_runtime_host.js';
 import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
 import type { PermissionContext } from '../../permission/types.js';

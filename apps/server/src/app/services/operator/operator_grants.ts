@@ -1,10 +1,10 @@
 import type { Prisma } from '@prisma/client'
 
-import { logOperatorAudit } from '../../operator/audit/logger.js'
-import { AUDIT_ACTION } from '../../operator/constants.js'
-import { ApiError } from '../../utils/api_error.js'
-import type { AppContext } from '../context.js'
-import { resolvePackTick } from './pack_runtime_resolution.js';
+import { logOperatorAudit } from '../../../operator/audit/logger.js'
+import { AUDIT_ACTION } from '../../../operator/constants.js'
+import { ApiError } from '../../../utils/api_error.js'
+import type { AppContext } from '../../context.js'
+import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 
 export const createOperatorGrant = async (
   context: AppContext,

@@ -1,6 +1,6 @@
-import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
-import type { AppContext, RuntimeLoopDiagnostics } from '../context.js';
-import type { PackRuntimePort } from './pack_runtime_ports.js';
+import type { RuntimeSpeedSnapshot } from '../../../core/runtime_speed.js';
+import type { AppContext, RuntimeLoopDiagnostics } from '../../context.js';
+import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
 
 export interface RuntimeControlSnapshot {
   status: 'paused' | 'running';

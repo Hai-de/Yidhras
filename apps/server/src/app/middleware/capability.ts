@@ -10,7 +10,7 @@ import { checkPackAccess } from '../../operator/guard/pack_access.js'
 import type { CapabilityCheckResult, CapabilityGuardOptions } from '../../operator/guard/types.js'
 import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js'
-import { resolvePackTick } from '../services/pack_runtime_resolution.js';
+import { resolvePackTick } from '../services/pack/pack_runtime_resolution.js';
 
 /**
  * 检查 Operator 是否拥有指定 capability。

@@ -12,7 +12,7 @@ import {
   loginOperator,
   logoutOperator,
   refreshToken
-} from '../services/operator_auth.js'
+} from '../services/operator/operator_auth.js'
 
 export interface OperatorAuthRouteDependencies {
   asyncHandler(

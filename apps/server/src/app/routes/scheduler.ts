@@ -27,7 +27,7 @@ import {
   listSchedulerOwnershipMigrations,
   listSchedulerRebalanceRecommendations,
   listSchedulerRuns
-} from '../services/scheduler_observability.js'
+} from '../services/scheduler/queries.js'
 
 export interface SchedulerRouteDependencies {
   asyncHandler(

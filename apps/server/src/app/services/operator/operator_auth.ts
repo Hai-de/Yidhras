@@ -1,13 +1,13 @@
-import { logOperatorAudit } from '../../operator/audit/logger.js'
-import { comparePassword } from '../../operator/auth/password.js'
+import { logOperatorAudit } from '../../../operator/audit/logger.js'
+import { comparePassword } from '../../../operator/auth/password.js'
 import {
   createSession,
   destroySession,
-  signToken} from '../../operator/auth/token.js'
-import type { LoginResponse, OperatorContext, SessionResponse } from '../../operator/auth/types.js'
-import { AUDIT_ACTION,OPERATOR_STATUS  } from '../../operator/constants.js'
-import { ApiError } from '../../utils/api_error.js'
-import type { AppContext } from '../context.js'
+  signToken} from '../../../operator/auth/token.js'
+import type { LoginResponse, OperatorContext, SessionResponse } from '../../../operator/auth/types.js'
+import { AUDIT_ACTION,OPERATOR_STATUS  } from '../../../operator/constants.js'
+import { ApiError } from '../../../utils/api_error.js'
+import type { AppContext } from '../../context.js'
 
 export const loginOperator = async (
   context: AppContext,

@@ -1,10 +1,10 @@
-import { createPackEntityOverviewProjectionService } from '../../packs/runtime/projections/pack_entity_overview_projection_service.js';
-import { createPackNarrativeProjectionService } from '../../packs/runtime/projections/pack_narrative_projection_service.js';
-import { createPackProjectionScopeAdapter } from '../../packs/runtime/projections/pack_projection_scope_adapter.js';
-import { ApiError } from '../../utils/api_error.js';
-import type { AppContext } from '../context.js';
-import { getPackOverviewProjectionSummary } from './overview.js';
-import { listPackPluginInstallations } from './plugins.js';
+import { createPackEntityOverviewProjectionService } from '../../../packs/runtime/projections/pack_entity_overview_projection_service.js';
+import { createPackNarrativeProjectionService } from '../../../packs/runtime/projections/pack_narrative_projection_service.js';
+import { createPackProjectionScopeAdapter } from '../../../packs/runtime/projections/pack_projection_scope_adapter.js';
+import { ApiError } from '../../../utils/api_error.js';
+import type { AppContext } from '../../context.js';
+import { getPackOverviewProjectionSummary } from '../overview/overview.js';
+import { listPackPluginInstallations } from '../plugin/plugins.js';
 
 const requireExperimentalPackResolution = async (context: AppContext, packId: string, feature: string) => {
   const scope = createPackProjectionScopeAdapter(context);

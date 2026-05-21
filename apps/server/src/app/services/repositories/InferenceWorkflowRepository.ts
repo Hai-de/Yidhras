@@ -11,7 +11,7 @@ import {
   markActionIntentDispatching,
   markActionIntentDropped,
   markActionIntentFailed,
-  releaseActionIntentLock} from '../action_intent_repository.js';
+  releaseActionIntentLock} from '../action/action_intent_repository.js';
 import type {
   ActionIntentRecord as ActionIntentRecordFull,
   AiInvocationRecord,

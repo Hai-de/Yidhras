@@ -4,7 +4,7 @@
 import type { PluginInstallation } from '@yidhras/contracts';
 import { describe, expect, it, vi } from 'vitest';
 
-import * as pluginService from '../../src/app/services/plugins.js';
+import * as pluginService from '../../src/app/services/plugin/plugins.js';
 import type { PluginDiscoveryResult } from '../../src/plugins/discovery.js';
 
 const createInstallation = (overrides: Partial<PluginInstallation> = {}): PluginInstallation => ({

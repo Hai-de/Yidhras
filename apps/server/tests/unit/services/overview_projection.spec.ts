@@ -5,7 +5,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { AppContext } from '../../../src/app/context.js';
 import { createRuntimeClockProjectionService } from '../../../src/app/runtime/runtime_clock_projection.js';
 import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
-import { getOverviewSummary } from '../../../src/app/services/overview.js';
+import { getOverviewSummary } from '../../../src/app/services/overview/overview.js';
 
 vi.mock('../../../src/kernel/projections/operator_overview_service.js', () => ({
   getOperatorOverviewProjection: vi.fn(async () => ({
@@ -34,7 +34,7 @@ vi.mock('../../../src/kernel/projections/projection_extractor.js', () => ({
   extractGlobalProjectionIndex: vi.fn(async () => ({ packs: [] }))
 }));
 
-vi.mock('../../../src/app/services/audit.js', () => ({
+vi.mock('../../../src/app/services/audit/audit.js', () => ({
   listAuditFeed: vi.fn(async () => ({ entries: [] }))
 }));
 

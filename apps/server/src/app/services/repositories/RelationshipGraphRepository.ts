@@ -9,7 +9,7 @@ import {
   resolveAdjustSnrPayload,
   resolveAdjustSnrTargetAgentId,
   updateAgentSnr
-} from '../agent_signal_repository.js';
+} from '../agent/agent_signal_repository.js';
 import {
   clampRelationshipWeight,
   createRelationship,
@@ -17,7 +17,7 @@ import {
   type RelationshipAdjustmentLogInput,
   type RelationshipRecord,
   updateRelationshipWeight,
-  writeRelationshipAdjustmentLog} from '../relationship_mutation_repository.js';
+  writeRelationshipAdjustmentLog} from '../mutation/relationship_mutation_repository.js';
 
 export type { RelationshipAdjustmentLogInput, RelationshipRecord };
 

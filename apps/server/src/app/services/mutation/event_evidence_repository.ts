@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../context.js';
+import type { AppInfrastructure } from '../../context.js';
 
 export interface LatestEventEvidenceRecord {
   id: string;

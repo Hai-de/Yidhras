@@ -2,11 +2,11 @@ import { randomUUID } from 'node:crypto';
 
 import { AccessPolicyService } from '../access_policy/service.js';
 import type { AppInfrastructure } from '../app/context.js';
-import { getAgentContextSnapshot } from '../app/services/agent.js';
+import { getAgentContextSnapshot } from '../app/services/agent/agent.js';
 import type { AppContextPorts } from '../app/services/app_context_ports.js';
-import { createContextAssemblyPort } from '../app/services/context_memory_ports.js';
-import { getLatestEventEvidenceRecord } from '../app/services/event_evidence_repository.js';
-import { resolvePackTick } from '../app/services/pack_runtime_resolution.js';
+import { createContextAssemblyPort } from '../app/services/context/context_memory_ports.js';
+import { getLatestEventEvidenceRecord } from '../app/services/mutation/event_evidence_repository.js';
+import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
 import { resolveAuthorityForSubject } from '../domain/authority/resolver.js';
 import type { IdentityContext } from '../identity/types.js';
 import { DEFAULT_PACK_WORLD_ENTITY_ID } from '../packs/runtime/core_models.js';

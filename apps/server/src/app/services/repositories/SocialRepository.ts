@@ -50,7 +50,7 @@ export class PrismaSocialRepository implements SocialRepository {
     items: Array<Record<string, unknown>>;
     page_info: { has_next_page: boolean; next_cursor: string | null };
   }> {
-    const { listSocialFeed } = await import('../social.js');
+    const { listSocialFeed } = await import('../social/social.js');
     return listSocialFeed(
       { prisma: this.prisma } as AppContext,
       undefined,
@@ -62,7 +62,7 @@ export class PrismaSocialRepository implements SocialRepository {
     content?: string,
     options?: { source_action_intent_id?: string | null }
   ): Promise<unknown> {
-    const { createSocialPost } = await import('../social.js');
+    const { createSocialPost } = await import('../social/social.js');
     return createSocialPost(
       { prisma: this.prisma } as AppContext,
       undefined,

@@ -8,7 +8,7 @@ import {
   getAgentSchedulerProjection,
   getLatestSchedulerRunReadModel,
   listSchedulerDecisions
-} from '../../src/app/services/scheduler_observability.js';
+} from '../../src/app/services/scheduler/queries.js';
 import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { MemSchedulerStorage } from '../helpers/scheduler_storage.js';

@@ -1,12 +1,12 @@
 import type {
   BuildContextRunInput,
   ContextService,
-  ContextServiceBuildResult} from '../../context/service.js';
-import { createContextService } from '../../context/service.js';
-import { createPrismaLongMemoryBlockStore } from '../../memory/blocks/store.js';
-import type { BuildMemoryContextInput, MemoryService } from '../../memory/service.js';
-import { createMemoryService } from '../../memory/service.js';
-import type { AppContext } from '../context.js';
+  ContextServiceBuildResult} from '../../../context/service.js';
+import { createContextService } from '../../../context/service.js';
+import { createPrismaLongMemoryBlockStore } from '../../../memory/blocks/store.js';
+import type { BuildMemoryContextInput, MemoryService } from '../../../memory/service.js';
+import { createMemoryService } from '../../../memory/service.js';
+import type { AppContext } from '../../context.js';
 
 export interface ContextAssemblyPort {
   buildPromptVariableContext?(input: unknown): unknown;

@@ -1,14 +1,14 @@
-import type { PackRuntimeHandle } from '../../core/pack_runtime_handle.js';
-import type { PackRuntimeStatusSnapshot } from '../../core/pack_runtime_health.js';
-import type { PackRuntimeHost } from '../../core/pack_runtime_host.js';
-import type { PackRuntimeRegistry } from '../../core/pack_runtime_registry.js';
-import { syncPackPluginRuntime } from '../../plugins/runtime.js';
-import type { AppContext } from '../context.js';
+import type { PackRuntimeHandle } from '../../../core/pack_runtime_handle.js';
+import type { PackRuntimeStatusSnapshot } from '../../../core/pack_runtime_health.js';
+import type { PackRuntimeHost } from '../../../core/pack_runtime_host.js';
+import type { PackRuntimeRegistry } from '../../../core/pack_runtime_registry.js';
+import { syncPackPluginRuntime } from '../../../plugins/runtime.js';
+import type { AppContext } from '../../context.js';
 import {
   getPackRuntimeControl,
   getPackRuntimeLookupPort,
   getPackRuntimeObservation
-} from './app_context_ports.js';
+} from '../app_context_ports.js';
 import {
   buildExperimentalPackRuntimeSnapshot,
   buildExperimentalRuntimeControlPlaneSnapshot,

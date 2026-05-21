@@ -1,5 +1,5 @@
-import { ApiError } from '../../utils/api_error.js';
-import type { AppContext } from '../context.js';
+import { ApiError } from '../../../utils/api_error.js';
+import type { AppContext } from '../../context.js';
 
 export interface RelationshipAdjustmentLogInput {
   action_intent_id: string;

@@ -1,5 +1,5 @@
 import type { AppContext, AppInfrastructure } from '../../../app/context.js';
-import { assertPackScope } from '../../../app/services/pack_scope_resolver.js';
+import { assertPackScope } from '../../../app/services/pack/pack_scope_resolver.js';
 import { ApiError } from '../../../utils/api_error.js';
 import type { WorldPack } from '../../manifest/loader.js';
 

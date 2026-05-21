@@ -8,7 +8,7 @@ import type { SchedulerStorageAdapter } from '../packs/storage/SchedulerStorageA
 import type { NotificationLevel, SystemMessage } from '../utils/notifications.js';
 import type { PackScopeResolver } from './runtime/PackScopeResolver.js';
 import type { AppContextPorts } from './services/app_context_ports.js';
-import type { MultiPackRuntimePort, PackRuntimePort } from './services/pack_runtime_ports.js';
+import type { MultiPackRuntimePort, PackRuntimePort } from './services/pack/pack_runtime_ports.js';
 import type { Repositories } from './services/repositories/index.js';
 
 export type HealthLevel = 'ok' | 'degraded' | 'fail';

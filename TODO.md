@@ -76,21 +76,4 @@
 - [ ] 双重模块设置，一个是当前的Prompt Tree，另一个是更复杂拥有插槽函数的核心
 > ⚠ 决策推迟至功能 A Phase 1-5 复杂度评估完成后
 
-### `worldEngineObservationCodeSchema` 新增枚举值补齐
-
-### `worldEngineObservationCodeSchema` 新增枚举值 + snowbound_mansion 审计
-
-> 审计范围：`data/world_packs/snowbound_mansion/`（19 个文件）+ 服务端交叉引用。
-> 结论：无后门，无特权。致命问题是平台基础设施未接通。
-
-- [ ] **命名约定**：`MASTERMIND_ASSIGNED` / `DAILY_CYCLE_DAY_ADVANCED` 缺少 `WORLD_` 前缀，与已有 8 个枚举值不一致
-- [ ] **Dead code — StepContributor 管线未接通**：`game-loop/server.ts` 注册了 StepContributor，但 `PackSimulationLoop` 走 Rust sidecar，从未调用 `getStepContributors()`。导致：
-  - 两个观测码永远不会被 emit
-  - `is_mastermind: true` 永远不设置到任何角色实体上
-  - `perceive.mastermind` / `invoke.kill` 权限永久失效
-  - `global_prefix_mastermind` 提示词分支永不触发
-  - `mediator-weapon-knife` 绑定永不匹配
-- [ ] **bootstrap mastermind 指派无效**：`bootstrap.yaml` 向 `__world__` 写了 `mastermind_ids: "char_03"`，但 `char_03.is_mastermind` 仍为 `false`，state flag 从未翻转
-- [ ] **存储计划过期**：`runtime.sqlite.storage-plan.json` 中 `pack_collections: []`，与 `storage.yaml` 定义的 `investigation_logs` / `accusation_records` / `death_records` 三张表不一致
-
 

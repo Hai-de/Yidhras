@@ -17,7 +17,7 @@ import {
   getRuntimeStatusSnapshot,
   getStartupHealthSnapshot,
   listSystemNotifications
-} from '../services/system.js'
+} from '../services/system/system.js'
 
 const requireRoot = (req: OperatorRequest, _res: Response, next: NextFunction): void => {
   if (!req.operator?.is_root) {

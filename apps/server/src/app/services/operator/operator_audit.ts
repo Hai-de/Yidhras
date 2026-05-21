@@ -1,4 +1,4 @@
-import type { AppContext } from '../context.js'
+import type { AppContext } from '../../context.js'
 
 export const queryAuditLogs = async (
   context: AppContext,

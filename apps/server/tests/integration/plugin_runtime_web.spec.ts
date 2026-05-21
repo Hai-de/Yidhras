@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   getPackPluginRuntimeWebSnapshot,
   resolveEnabledPluginWebAsset
-} from '../../src/app/services/plugin_runtime_web.js';
-import { confirmPackPluginImport, enablePackPlugin } from '../../src/app/services/plugins.js';
+} from '../../src/app/services/plugin/plugin_runtime_web.js';
+import { confirmPackPluginImport, enablePackPlugin } from '../../src/app/services/plugin/plugins.js';
 import { PLUGIN_ENABLE_WARNING_TEXT } from '../../src/plugins/contracts.js';
 import { refreshPackPluginRuntime, syncPackPluginRuntime } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';

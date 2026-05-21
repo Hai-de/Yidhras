@@ -4,8 +4,8 @@ import type { InferenceJobIntentClass, InferenceRequestInput } from '../../../in
 import { ApiError } from '../../../utils/api_error.js';
 import type { AppInfrastructure } from '../../context.js';
 import { toJsonSafe } from '../../http/json.js';
-import type { PackRuntimePort } from '../pack_runtime_ports.js';
-import { resolvePackTick } from '../pack_runtime_resolution.js';
+import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
+import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 import { ensureNonEmptyId } from './parsers.js';
 import type { DecisionJobRecord } from './types.js';
 import {

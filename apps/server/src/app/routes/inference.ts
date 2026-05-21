@@ -31,7 +31,7 @@ import {
   listAiInvocations,
   listInferenceJobs
 } from '../services/inference_workflow.js';
-import { getOperatorPackIds } from '../services/operator_pack_bindings.js';
+import { getOperatorPackIds } from '../services/operator/operator_pack_bindings.js';
 
 export interface InferenceRouteDependencies {
   asyncHandler(

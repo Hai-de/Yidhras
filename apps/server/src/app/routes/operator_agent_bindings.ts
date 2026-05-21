@@ -12,7 +12,7 @@ import { parseBody } from '../http/zod.js'
 import {
   createAgentBinding,
   listAgentOperators,
-  unbindAgent} from '../services/operator_agent_bindings.js'
+  unbindAgent} from '../services/operator/operator_agent_bindings.js'
 
 export interface AgentBindingRouteDependencies {
   asyncHandler(

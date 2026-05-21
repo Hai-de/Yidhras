@@ -1,8 +1,8 @@
 import type { Express } from 'express';
 
 import type { AppContext , NotificationStore } from '../app/context.js';
-import type { PackRuntimePort } from '../app/services/pack_runtime_ports.js';
-import { resolvePackTick } from '../app/services/pack_runtime_resolution.js';
+import type { PackRuntimePort } from '../app/services/pack/pack_runtime_ports.js';
+import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
 import { getRuntimeConfig } from '../config/runtime_config.js';
 import type { ClockProvider } from '../core/clock_provider.js';
 import { createLogger } from '../utils/logger.js';

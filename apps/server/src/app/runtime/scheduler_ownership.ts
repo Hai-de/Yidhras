@@ -1,6 +1,6 @@
 import type { AppContext } from '../context.js';
-import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
-import { resolvePackTick } from '../services/pack_runtime_resolution.js';
+import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
+import { resolvePackTick } from '../services/pack/pack_runtime_resolution.js';
 import {
   getSchedulerPartitionCount,
   listSchedulerPartitionIds,

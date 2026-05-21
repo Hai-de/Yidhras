@@ -13,7 +13,7 @@ import {
   getExperimentalPackNarrativeProjection,
   getExperimentalPackOverviewProjection,
   getExperimentalPackPluginInstallations
-} from '../services/experimental_projection_runtime.js'
+} from '../services/runtime/experimental_projection_runtime.js'
 
 const packIdParamsSchema = z.object({
   packId: z.string().min(1, 'packId is required')

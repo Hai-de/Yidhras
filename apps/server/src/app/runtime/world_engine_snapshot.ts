@@ -11,7 +11,7 @@ import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js';
 import { listPackRuleExecutionRecords } from '../../packs/storage/rule_execution_repo.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
-import type { PackRuntimePort } from '../services/pack_runtime_ports.js';
+import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 
 const normalizePackId = (packId: string): string => {
   const normalized = packId.trim();

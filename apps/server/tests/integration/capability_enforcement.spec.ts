@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import type { AppContext } from '../../src/app/context.js'
 import { checkCapability } from '../../src/app/middleware/capability.js'
-import { createOperatorGrant } from '../../src/app/services/operator_grants.js'
+import { createOperatorGrant } from '../../src/app/services/operator/operator_grants.js'
 import { OPERATOR_STATUS, PACK_BINDING_TYPE } from '../../src/operator/constants.js'
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js'
 

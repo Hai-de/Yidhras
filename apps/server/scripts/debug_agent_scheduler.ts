@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import type { AppContext } from '../src/app/context.js';
 import { runAgentScheduler } from '../src/app/runtime/agent_scheduler.js';
 import { claimDecisionJob } from '../src/app/services/inference_workflow.js';
-import { getSchedulerRunReadModelById } from '../src/app/services/scheduler_observability.js';
+import { getSchedulerRunReadModelById } from '../src/app/services/scheduler/queries.js';
 import { createIsolatedAppContextFixture } from '../tests/fixtures/isolated-db.js';
 
 const main = async (): Promise<void> => {

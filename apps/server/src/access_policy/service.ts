@@ -1,6 +1,6 @@
 import type { AppInfrastructure } from '../app/context.js';
-import type { PackRuntimePort } from '../app/services/pack_runtime_ports.js';
-import { resolvePackTick } from '../app/services/pack_runtime_resolution.js';
+import type { PackRuntimePort } from '../app/services/pack/pack_runtime_ports.js';
+import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
 import type { IdentityContext } from '../identity/types.js';
 import { ApiError } from '../utils/api_error.js';
 import { evaluateFieldPolicies, resolveAllowedFields, resolveFieldDecision } from './policy_engine.js';

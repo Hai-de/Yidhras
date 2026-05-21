@@ -1,10 +1,10 @@
-import { isAiGatewayEnabled } from '../../config/runtime_config.js';
-import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
-import type { DatabaseHealthSnapshot } from '../../db/sqlite_runtime.js';
-import type { SystemMessage } from '../../utils/notifications.js';
-import type { AppContext, RuntimeLoopDiagnostics } from '../context.js';
-import { createRuntimeKernelService } from '../runtime/runtime_kernel_service.js';
-import { readVisibleClockSnapshot } from './app_context_ports.js';
+import { isAiGatewayEnabled } from '../../../config/runtime_config.js';
+import type { RuntimeSpeedSnapshot } from '../../../core/runtime_speed.js';
+import type { DatabaseHealthSnapshot } from '../../../db/sqlite_runtime.js';
+import type { SystemMessage } from '../../../utils/notifications.js';
+import type { AppContext, RuntimeLoopDiagnostics } from '../../context.js';
+import { createRuntimeKernelService } from '../../runtime/runtime_kernel_service.js';
+import { readVisibleClockSnapshot } from '../app_context_ports.js';
 
 const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
   status: 'idle',

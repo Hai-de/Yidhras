@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
-import { dispatchActionIntent } from '../../src/app/services/action_dispatcher.js';
+import { dispatchActionIntent } from '../../src/app/services/action/action_dispatcher.js';
 import { createSpatialRuntime } from '../../src/packs/runtime/spatial_runtime.js';
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import type { SpatialDiscreteConfig } from '@yidhras/contracts';

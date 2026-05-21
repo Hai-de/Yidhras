@@ -5,9 +5,9 @@ import type {
 import { spawn } from 'child_process'
 import path from 'path'
 
-import { readYamlFileIfExists, resolveWorkspaceRoot } from '../../config/loader.js'
-import { createLogger } from '../../utils/logger.js'
-import { safeFs } from '../../utils/safe_fs.js'
+import { readYamlFileIfExists, resolveWorkspaceRoot } from '../../../config/loader.js'
+import { createLogger } from '../../../utils/logger.js'
+import { safeFs } from '../../../utils/safe_fs.js'
 
 const logger = createLogger('config-backup')
 
