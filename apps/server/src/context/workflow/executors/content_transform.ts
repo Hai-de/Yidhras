@@ -2,6 +2,7 @@ import type { SlotTransformContext } from '@yidhras/contracts';
 
 import { slotContentTransformRegistry } from '../../../plugins/extensions/slot_content_transformer.js';
 import type { PromptWorkflowStepExecutor } from '../registry.js';
+import { resolvePromptWorkflowBudget } from '../token_budget.js';
 import type {
   PromptWorkflowState,
   PromptWorkflowStepTrace,
@@ -45,7 +46,7 @@ function buildSummary(state: PromptWorkflowState): StepSnapshotSummary {
 
 export const createContentTransformExecutor = (): PromptWorkflowStepExecutor => ({
   kind: 'content_transform',
-  async execute({ context, state, spec }) {
+  async execute({ context, profile, state, spec }) {
     const beforeSummary = buildSummary(state);
 
     if (!state.tree) {
@@ -78,6 +79,8 @@ export const createContentTransformExecutor = (): PromptWorkflowStepExecutor => 
     }
 
     const activatedSlots = state.slot_behavior_diagnostics?.slots_activated ?? [];
+    const budgetResolution = resolvePromptWorkflowBudget({ profile, spec });
+    const visibleConversationEntries = context.agent_conversation_memory?.entries.filter((entry) => !entry.archived) ?? [];
     let transformedCount = 0;
 
     for (const [slotId, fragments] of Object.entries(state.tree.fragments_by_slot)) {
@@ -106,11 +109,14 @@ export const createContentTransformExecutor = (): PromptWorkflowStepExecutor => 
           slot_id: slotId,
           variables: {},
           conversation_meta: {
-            turn_count: state.ai_messages?.length ?? 0
+            turn_count: visibleConversationEntries.length,
+            last_message_role: visibleConversationEntries.length > 0
+              ? visibleConversationEntries[visibleConversationEntries.length - 1].speaker_agent_id === context.current_agent_id ? 'assistant' : 'user'
+              : undefined
           },
-          token_budget: { total: 8192, used: 0, remaining: 8192 },
+          token_budget: { total: budgetResolution.modelContextWindow, used: 0, remaining: budgetResolution.effectiveBudget },
           current_tick: Number(context.tick),
-          last_user_message: '',
+          last_user_message: [...visibleConversationEntries].reverse().find((entry) => entry.speaker_agent_id !== context.current_agent_id)?.current_content ?? '',
           original_content: originalContent,
           activation_decision: { active: true }
         };
@@ -146,7 +152,8 @@ export const createContentTransformExecutor = (): PromptWorkflowStepExecutor => 
       after: buildSummary(state),
       notes: {
         transformers_available: transformers.length,
-        fragments_transformed: transformedCount
+        fragments_transformed: transformedCount,
+        budget_sources: budgetResolution.sources
       }
     };
     state.diagnostics.step_traces.push(trace);

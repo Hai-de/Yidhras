@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto';
 
 import type { PromptBlock } from './prompt_block.js';
-import { buildContextPromptPayload, buildOutputContractPrompt } from './prompt_builder.js';
 import type { PromptBundleV2 } from './prompt_bundle_v2.js';
 import type { PromptFragmentV2 } from './prompt_fragment_v2.js';
 import type { PromptSlotConfig } from './prompt_slot_config.js';
 import { type PromptTree,renderSlotText } from './prompt_tree.js';
 import { resolveSlotPositions } from './slot_position_resolver.js';
 import type { InferenceContext, PromptBundleMetadata, PromptResolvableContext } from './types.js';
+import { buildOutputContractPrompt } from './output_contract_prompt.js';
 
 type ParsedPromptSlotConfig = PromptSlotConfig;
 type PromptContext = InferenceContext | PromptResolvableContext;
@@ -43,28 +43,6 @@ function buildDynamicSlotFragments(
   slotRegistry: Record<string, ParsedPromptSlotConfig>
 ): Record<string, PromptFragmentV2[]> {
   const result: Record<string, PromptFragmentV2[]> = {};
-
-  // post_process: JSON snapshot of inference context
-  if (slotRegistry['post_process']?.enabled) {
-    const payload = buildContextPromptPayload(context);
-    const jsonSnapshot = JSON.stringify(payload, null, 2);
-    if (jsonSnapshot.trim().length > 0) {
-      result['post_process'] = [{
-        id: randomUUID(),
-        slot_id: 'post_process',
-        priority: slotRegistry['post_process'].default_priority,
-        source: 'context.snapshot',
-        removable: true,
-        replaceable: true,
-        children: [buildTextBlock(jsonSnapshot, { source: 'context.snapshot' })],
-        anchor: null,
-        placement_mode: null,
-        depth: null,
-        order: null,
-        metadata: {}
-      }];
-    }
-  }
 
   // memory_summary: placeholder (content injected by node track in System B)
   if (slotRegistry['memory_summary']?.enabled) {

@@ -195,8 +195,7 @@ export interface AiTaskRequest {
   actor_ref?: Record<string, unknown> | null;
   input: Record<string, unknown>;
   prompt_context: {
-    messages?: AiMessage[];
-    prompt_bundle_v2?: unknown;
+    prompt_bundle_v2: unknown;
     agent_conversation_memory?: import('../conversation/types.js').AgentConversationMemory | null;
     current_agent_id?: string;
     conversation_profile?: string;

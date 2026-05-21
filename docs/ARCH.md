@@ -574,6 +574,9 @@ world-pack 在物化阶段（`materializer.ts`）展开 `bootstrap.initial_state
 - workflow persistence 留在 kernel-side
 - runtime step execution 不应穿透 pack runtime internal object
 - workflow orchestration 应消费 inference/context/runtime host contracts，而不是直接依赖世界内核实现细节
+- `buildWorkflowPromptBundle()` 是服务端正式 prompt 组装入口；旧 `inference/prompt_builder.ts` 已删除
+- `PromptBundleV2` 是 AI task 强制 prompt 输入结构，`AiTaskRequest.prompt_context` 不再支持直接传 `messages` 绕过 workflow
+- profile selection 不做静默 fallback；`intent_grounding_assist`、多轮对话 chat profiles 均有显式 profile 语义
 
 ### 6.2 AI Gateway
 
@@ -592,10 +595,10 @@ world-pack 在物化阶段（`materializer.ts`）展开 `bootstrap.initial_state
 
 | 目录 | 职责 |
 |------|------|
-| `ai/` | AI 网关层：gateway、task_service、task_definitions、task_decoder、task_prompt_builder、route_resolver、registry、registry_watcher、observability、providers、token_counter、cache |
+| `ai/` | AI 网关层：gateway、task_service、task_definitions、task_decoder、task_prompt_builder、prompt_bundle_from_messages、route_resolver、registry、registry_watcher、observability、providers、token_counter、cache |
 | `ai/elasticity/` | 网关弹性层：circuit_breaker、rate_limiter、backoff、config_resolver |
 | `ai/tool_*.ts` | Tool Calling 系统：cross_agent_tool、tool_executor、tool_loop_runner、tool_permissions |
-| `inference/` | 推理流水线：context_builder、prompt builders、processors、tokenizers、types（inference 专用） |
+| `inference/` | 推理流水线：context_builder、PromptBundleV2 / PromptTree 渲染类型、processors、tokenizers、types（inference 专用） |
 | `packages/contracts/src/ai_shared.ts` | AI/inference 共享类型契约：PromptBundleMetadata、PromptWorkflowSnapshot 等 |
 
 ### 6.3 Behavior Tree

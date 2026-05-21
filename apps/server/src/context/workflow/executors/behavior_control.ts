@@ -1,4 +1,5 @@
 import { getBehaviorStateStore } from '../../../app/behavior_state_store.js';
+import type { ConversationEntry } from '../../../conversation/types.js';
 import type { PromptTree } from '../../../inference/prompt_tree.js';
 import type { SlotBehaviorProfile } from '../../../inference/slot_behavior.js';
 import {
@@ -18,7 +19,9 @@ import {
   resolveSlotGroups
 } from '../../../inference/slot_group_resolver.js';
 import { evaluateTriggerProbability } from '../../../inference/slot_trigger_probability.js';
+import type { InferenceContext } from '../../../inference/types.js';
 import type { PromptWorkflowStepExecutor } from '../registry.js';
+import { resolvePromptWorkflowBudget } from '../token_budget.js';
 import type {
   PromptWorkflowState,
   PromptWorkflowStepTrace,
@@ -28,34 +31,45 @@ import type {
 
 // ── helpers ──
 
-function extractLastUserMessage(state: PromptWorkflowState): string {
-  const messages = state.ai_messages;
-  if (!messages || messages.length === 0) {
+function getVisibleConversationEntries(context: InferenceContext): ConversationEntry[] {
+  const entries = context.agent_conversation_memory?.entries ?? [];
+  return entries
+    .filter((entry) => !entry.archived)
+    .sort((left, right) => left.turn_number - right.turn_number);
+}
+
+function extractLastUserMessage(context: InferenceContext): string {
+  const entries = getVisibleConversationEntries(context);
+  if (entries.length === 0) {
     return '';
   }
-  for (let i = messages.length - 1; i >= 0; i--) {
-    // eslint-disable-next-line security/detect-object-injection
-    const msg = messages[i];
-    if (msg.role === 'user') {
-      const textParts = msg.parts.filter((p) => p.type === 'text');
-      return textParts.map((p) => p.type === 'text' ? p.text : '').join('\n');
+
+  const currentAgentId = context.current_agent_id ?? context.resolved_agent_id ?? context.actor_ref.agent_id ?? context.actor_ref.identity_id;
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i];
+    if (entry.speaker_agent_id !== currentAgentId) {
+      return entry.current_content;
     }
   }
   return '';
 }
 
-function extractConversationMeta(state: PromptWorkflowState): {
+function extractConversationMeta(context: InferenceContext): {
   turn_count: number;
   last_message_role?: string;
 } {
-  const messages = state.ai_messages ?? [];
+  const entries = getVisibleConversationEntries(context);
+  const last = entries[entries.length - 1];
+  const currentAgentId = context.current_agent_id ?? context.resolved_agent_id ?? context.actor_ref.agent_id ?? context.actor_ref.identity_id;
   return {
-    turn_count: messages.length,
-    last_message_role: messages.length > 0 ? messages[messages.length - 1].role : undefined
+    turn_count: entries.length,
+    last_message_role: last
+      ? last.speaker_agent_id === currentAgentId ? 'assistant' : 'user'
+      : undefined
   };
 }
 
-function estimateTokenBudget(tree: PromptTree): {
+function estimateTokenBudget(tree: PromptTree, total: number): {
   total: number;
   used: number;
   remaining: number;
@@ -68,22 +82,23 @@ function estimateTokenBudget(tree: PromptTree): {
       }
     }
   }
-  const total = 8192;
   return { total, used, remaining: Math.max(0, total - used) };
 }
 
 function buildSlotConditionContext(
+  context: InferenceContext,
   state: PromptWorkflowState,
   slotId: string,
-  currentTick: number
+  currentTick: number,
+  modelContextWindow: number
 ): SlotConditionContext {
   return {
     slot_id: slotId,
     variables: {},
-    conversation_meta: extractConversationMeta(state),
-    token_budget: state.tree ? estimateTokenBudget(state.tree) : { total: 0, used: 0, remaining: 0 },
+    conversation_meta: extractConversationMeta(context),
+    token_budget: state.tree ? estimateTokenBudget(state.tree, modelContextWindow) : { total: modelContextWindow, used: 0, remaining: modelContextWindow },
     current_tick: currentTick,
-    last_user_message: extractLastUserMessage(state)
+    last_user_message: extractLastUserMessage(context)
   };
 }
 
@@ -193,8 +208,10 @@ interface ActivationDecision {
 async function evaluateSlotActivation(
   profile: SlotBehaviorProfile,
   behaviorState: SlotBehaviorState | undefined,
+  context: InferenceContext,
   state: PromptWorkflowState,
-  currentTick: number
+  currentTick: number,
+  modelContextWindow: number
 ): Promise<ActivationDecision> {
   // Phase 2: state-based activation gates (Cooling/Delayed)
   if (behaviorState) {
@@ -213,7 +230,7 @@ async function evaluateSlotActivation(
     }
   }
 
-  const ctx = buildSlotConditionContext(state, profile.slot_id, currentTick);
+  const ctx = buildSlotConditionContext(context, state, profile.slot_id, currentTick, modelContextWindow);
 
   // always_active: skip all condition checks
   if (profile.always_active) {
@@ -308,6 +325,7 @@ export const createBehaviorControlExecutor = (): PromptWorkflowStepExecutor => (
     }
 
     const currentTick = Number(context.tick);
+    const budgetResolution = resolvePromptWorkflowBudget({ profile: state.profile, spec });
     const behaviorStates: Record<string, SlotBehaviorState> = { ...state.behavior_states };
     const packId = state.pack_id;
     const stateStore = getBehaviorStateStore();
@@ -348,8 +366,7 @@ export const createBehaviorControlExecutor = (): PromptWorkflowStepExecutor => (
         }
         case 'budget': {
           // 按权重比例分配 token 预算到 fragment metadata
-          const budget = 8192;
-          const allocations = resolveBudgetAllocation(groupProfiles, budget);
+          const allocations = resolveBudgetAllocation(groupProfiles, budgetResolution.effectiveBudget);
           for (const [slotId, allocation] of allocations.entries()) {
             // eslint-disable-next-line security/detect-object-injection
             const fragments = state.tree?.fragments_by_slot[slotId];
@@ -392,8 +409,10 @@ export const createBehaviorControlExecutor = (): PromptWorkflowStepExecutor => (
         let decision = await evaluateSlotActivation(
           profile,
           currentState,
+          context,
           state,
-          currentTick
+          currentTick,
+          budgetResolution.modelContextWindow
         );
 
         // Phase 2: apply state transitions BEFORE activation decision finalization.
@@ -460,7 +479,10 @@ export const createBehaviorControlExecutor = (): PromptWorkflowStepExecutor => (
         profiles_evaluated: diagnostics.profiles_evaluated,
         activated: diagnostics.slots_activated.length,
         disabled: diagnostics.slots_disabled.length,
-        errors: diagnostics.evaluation_errors.length
+        errors: diagnostics.evaluation_errors.length,
+        token_budget: budgetResolution.tokenBudget,
+        effective_budget: budgetResolution.effectiveBudget,
+        budget_sources: budgetResolution.sources
       }
     };
     state.diagnostics.step_traces.push(trace);

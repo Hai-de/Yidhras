@@ -12,6 +12,7 @@ import type { Express, NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 
 import { createModelGateway } from '../../ai/gateway.js';
+import { buildPromptBundleFromAiMessages } from '../../ai/prompt_bundle_from_messages.js';
 import { resolveAiTaskConfig } from '../../ai/task_definitions.js';
 import type { AiMessage, AiResponseMode, AiTaskRequest, AiTaskType, ModelGatewayRequest } from '../../ai/types.js';
 import type { InferenceService } from '../../inference/service.js';
@@ -302,7 +303,9 @@ export const registerInferenceRoutes = (
         task_type: taskType,
         pack_id: body.pack_id ?? null,
         input: {},
-        prompt_context: { messages },
+        prompt_context: {
+          prompt_bundle_v2: buildPromptBundleFromAiMessages({ taskId: body.task_id, taskType, messages })
+        },
         output_contract: { mode: responseMode, json_schema: body.structured_output_schema },
         route_hints: { provider: body.provider_hint ?? undefined, model: body.model_hint ?? undefined },
         tools: body.tool_names?.map(name => ({ name, description: '', input_schema: {} })) ?? [],

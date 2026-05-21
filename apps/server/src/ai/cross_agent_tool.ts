@@ -1,3 +1,4 @@
+import { buildPromptBundleFromAiMessages } from './prompt_bundle_from_messages.js';
 import type { AiTaskService } from './task_service.js';
 import type { ToolExecutionContext, ToolHandler, ToolRegistry } from './tool_executor.js';
 import type { AiTaskRequest, AiTaskType } from './types.js';
@@ -23,22 +24,24 @@ export interface CrossAgentBridge {
 export const createCrossAgentBridge = (aiTaskService: AiTaskService): CrossAgentBridge => {
   return {
     async queryAgent(query, ctx) {
+      const messages = [
+        {
+          role: 'system' as const,
+          parts: [{ type: 'text' as const, text: 'You are responding to a cross-agent query from another agent.' }]
+        },
+        {
+          role: 'user' as const,
+          parts: [{ type: 'text' as const, text: JSON.stringify(query.query) }]
+        }
+      ];
+      const taskId = `cross_agent_${query.target_agent_id}_${Date.now()}`;
       const taskRequest: AiTaskRequest = {
-        task_id: `cross_agent_${query.target_agent_id}_${Date.now()}`,
+        task_id: taskId,
         task_type: query.task_type,
         pack_id: ctx.pack_id,
         input: query.query,
         prompt_context: {
-          messages: [
-            {
-              role: 'system',
-              parts: [{ type: 'text', text: `You are responding to a cross-agent query from another agent.` }]
-            },
-            {
-              role: 'user',
-              parts: [{ type: 'text', text: JSON.stringify(query.query) }]
-            }
-          ]
+          prompt_bundle_v2: buildPromptBundleFromAiMessages({ taskId, taskType: query.task_type, messages })
         }
       };
 

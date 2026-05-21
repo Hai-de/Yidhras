@@ -1,5 +1,9 @@
 import { getRuntimeConfig } from '../../config/runtime_config.js';
 import type { InferenceStrategy } from '../../inference/types.js';
+import {
+  PromptWorkflowProfileNotFoundError,
+  PromptWorkflowProfileSelectionError
+} from './errors.js';
 import type {
   PromptWorkflowProfile,
   PromptWorkflowSelectionInput,
@@ -58,6 +62,25 @@ const buildBuiltInWorkflowProfiles = (): PromptWorkflowProfile[] => {
       },
       defaults: { ...config.prompt_workflow.profiles.memory_compaction_default },
       tracks: { template: true, node: true, snapshot: true },
+      steps: [
+        { key: 'placement', kind: 'placement_resolution' },
+        { key: 'assembly', kind: 'fragment_assembly' },
+        { key: 'behavior', kind: 'behavior_control' },
+        { key: 'transform', kind: 'content_transform' },
+        { key: 'permission', kind: 'permission_filter' },
+        { key: 'budget_trim', kind: 'token_budget_trim' },
+        { key: 'finalize', kind: 'bundle_finalize' }
+      ]
+    },
+    {
+      id: 'intent-grounding-assist-default',
+      version: '1',
+      description: 'Intent grounding assist 任务 profile。轻量上下文路径，不启用 snapshot 轨道。',
+      applies_to: {
+        task_types: ['intent_grounding_assist']
+      },
+      defaults: { ...config.prompt_workflow.profiles.intent_grounding_assist_default },
+      tracks: { template: true, node: true, snapshot: false },
       steps: [
         { key: 'placement', kind: 'placement_resolution' },
         { key: 'assembly', kind: 'fragment_assembly' },
@@ -180,6 +203,7 @@ export const selectPromptWorkflowProfile = (input: PromptWorkflowSelectionInput)
     if (explicit) {
       return explicit;
     }
+    throw new PromptWorkflowProfileNotFoundError(input);
   }
 
   const matching = listBuiltInPromptWorkflowProfiles()
@@ -195,5 +219,8 @@ export const selectPromptWorkflowProfile = (input: PromptWorkflowSelectionInput)
       return left.id.localeCompare(right.id);
     });
 
-  return matching[0] ?? listBuiltInPromptWorkflowProfiles()[0] ?? getBuiltInWorkflowProfiles()[0];
+  if (!matching[0]) {
+    throw new PromptWorkflowProfileSelectionError(input);
+  }
+  return matching[0];
 };

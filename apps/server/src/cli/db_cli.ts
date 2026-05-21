@@ -7,6 +7,7 @@ import path from 'node:path';
 import { PrismaClient } from '@prisma/client';
 
 import { resolveWorkspaceRoot } from '../config/loader.js';
+import { archiveConversationEntriesToColdStorage } from '../conversation/cold_archive_service.js';
 import { createPrismaClient } from '../db/client.js';
 
 const workspaceRoot = resolveWorkspaceRoot();
@@ -16,11 +17,16 @@ const dbPath = path.join(dbDir, 'yidhras.sqlite');
 const walPath = `${dbPath}-wal`;
 const shmPath = `${dbPath}-shm`;
 
-const COMMANDS = ['status', 'migrate', 'integrity', 'tables'] as const;
+const COMMANDS = ['status', 'migrate', 'integrity', 'tables', 'archive-conversations'] as const;
 
 interface ParsedArgs {
   command?: string;
   help?: boolean;
+  memoryId?: string;
+  beforeRecordedAt?: string;
+  beforeTurn?: number;
+  limit?: number;
+  outputDir?: string;
 }
 
 const printHelp = (): void => {
@@ -31,6 +37,8 @@ const printHelp = (): void => {
   pnpm db migrate               执行待处理的迁移
   pnpm db integrity             运行 PRAGMA integrity_check
   pnpm db tables                列出所有表及行数
+  pnpm db archive-conversations [--memory-id <id>] [--before-recorded-at <n>] [--before-turn <n>] [--limit <n>] [--output-dir <path>]
+                                导出 archived conversation entries 到 JSON 冷存储后删除 DB 行
   pnpm db --help                显示此帮助
 `);
 };
@@ -38,11 +46,27 @@ const printHelp = (): void => {
 const parseArgs = (argv: string[]): ParsedArgs => {
   const parsed: ParsedArgs = {};
 
-  for (const arg of argv) {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
     switch (arg) {
       case '--help':
       case '-h':
         parsed.help = true;
+        break;
+      case '--memory-id':
+        parsed.memoryId = argv[++i];
+        break;
+      case '--before-recorded-at':
+        parsed.beforeRecordedAt = argv[++i];
+        break;
+      case '--before-turn':
+        parsed.beforeTurn = Number.parseInt(argv[++i], 10);
+        break;
+      case '--limit':
+        parsed.limit = Number.parseInt(argv[++i], 10);
+        break;
+      case '--output-dir':
+        parsed.outputDir = argv[++i];
         break;
       default:
         if (COMMANDS.includes(arg as (typeof COMMANDS)[number])) {
@@ -143,6 +167,28 @@ const runTables = async (prisma: PrismaClient): Promise<void> => {
   }
 };
 
+const runArchiveConversations = async (prisma: PrismaClient, args: ParsedArgs): Promise<void> => {
+  const result = await archiveConversationEntriesToColdStorage(prisma, {
+    memoryId: args.memoryId,
+    beforeRecordedAt: args.beforeRecordedAt,
+    beforeTurn: args.beforeTurn,
+    limit: args.limit,
+    outputDir: args.outputDir
+  });
+
+  if (result.exportedCount === 0) {
+    console.log('没有找到可归档的 archived conversation entries。');
+    return;
+  }
+
+  console.log('Conversation entries 冷存储归档完成:');
+  console.log(`  Archive ID: ${result.archiveId}`);
+  console.log(`  文件:       ${result.archivePath}`);
+  console.log(`  导出:       ${result.exportedCount}`);
+  console.log(`  删除:       ${result.deletedCount}`);
+  console.log(`  大小:       ${formatBytes(result.sizeBytes)}`);
+};
+
 const runCli = async (): Promise<void> => {
   const args = parseArgs(process.argv.slice(2));
 
@@ -152,7 +198,7 @@ const runCli = async (): Promise<void> => {
     return;
   }
 
-  const needsPrisma = args.command === 'status' || args.command === 'integrity' || args.command === 'tables';
+  const needsPrisma = args.command === 'status' || args.command === 'integrity' || args.command === 'tables' || args.command === 'archive-conversations';
   let prisma: PrismaClient | undefined;
 
   try {
@@ -173,6 +219,9 @@ const runCli = async (): Promise<void> => {
         break;
       case 'tables':
         await runTables(prisma!);
+        break;
+      case 'archive-conversations':
+        await runArchiveConversations(prisma!, args);
         break;
       default:
         console.error(`错误: 未知命令 "${args.command}"。使用 --help 查看帮助。`);

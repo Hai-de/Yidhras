@@ -1,6 +1,6 @@
 # Prompt Workflow Runtime
 
-Prompt Workflow Runtime 将 `ContextNode` 组织为最终 prompt / request。它运行于多轨、slot 驱动的 pipeline：三条内容轨道（template、node、snapshot）产出 `PromptSectionDraft[]`，经汇合后 pipeline 的五个 executor 组装、过滤、裁剪、渲染为 `PromptBundleV2`。
+Prompt Workflow Runtime 是服务端唯一正式提示词组装路径。它将 `InferenceContext` / `ContextNode` 组织为最终 `PromptBundleV2`，运行于多轨、slot 驱动的 pipeline：template、node、snapshot、conversation_history 轨道产出 `PromptSectionDraft[]`，经汇合后 executor 组装、行为控制、内容变换、权限过滤、预算裁剪、渲染为 `PromptBundleV2`。
 
 Key concepts：
 
@@ -38,7 +38,7 @@ Prompt Workflow Runtime 把 prompt 构造路径收敛为可解释、可观察、
 1. 接收 `InferenceContext`（含 `ContextRun`、`MemoryContextPack`、`world_prompts` 等）
 2. 加载 `PromptSlotRegistry`（YAML 驱动的 slot 配置）
 3. 选择 `PromptWorkflowProfile`，创建 `PromptWorkflowState`
-4. 运行三条内容轨道（模板轨 / 节点轨 / 快照轨），产出 `PromptSectionDraft[]`
+4. 按 profile 运行内容轨道（模板轨 / 节点轨 / 快照轨 / 对话历史轨），产出 `PromptSectionDraft[]`
 5. 运行汇合后 pipeline（placement → assembly → permission → budget_trim → finalize）
 6. 渲染最终 `PromptBundleV2`
 7. 将 workflow metadata 透传给 AI task / gateway / trace
@@ -55,6 +55,7 @@ InferenceContext + PromptSlotRegistry
   → runTemplateTrack(slotRegistry, context)     → TrackResult<SectionDraft[]>
   → runNodeTrack(context_run.nodes, taskType)   → TrackResult<SectionDraft[]>
   → runSnapshotTrack(context, slotRegistry)     → TrackResult<SectionDraft[]>
+  → runConversationHistoryTrack(...)            → TrackResult<SectionDraft[]>（仅启用 conversation_history track 的 profile）
   ── 汇合后 pipeline ──
   → placement_resolution → fragment_assembly → behavior_control
     → content_transform → permission_filter → token_budget_trim
@@ -63,17 +64,17 @@ InferenceContext + PromptSlotRegistry
   → InferenceProvider.run(context, bundle) → ProviderDecisionRaw
 ```
 
-**插槽行为控制**：`behavior_control` 步骤在 fragment 组装之后执行，根据 `slot_behaviors` 配置（`data/configw/default.yaml`）决定每个插槽的激活/禁用。支持的条件类型：`keyword_match`、`logic_match`、`context_length`、`conversation_turn`、`custom`。状态性规则（sticky、cooldown、delayed_trigger）跨推理调用持久化。
+**插槽行为控制**：`behavior_control` 步骤在 fragment 组装之后执行，根据 runtime config 中的 `slot_behaviors` 决定每个插槽的激活/禁用。支持的条件类型：`keyword_match`、`logic_match`、`context_length`、`conversation_turn`、`custom`。对话条件从 `InferenceContext.agent_conversation_memory` 读取，不依赖 bundle 之后才生成的 `AiMessage[]`。状态性规则（sticky、cooldown、delayed_trigger）跨推理调用持久化。
 
 **内容变换**：`content_transform` 步骤在激活决策之后、权限过滤之前执行，允许插件注册 `SlotContentTransformer` 对已激活插槽的内容进行变换。
 
 相关实现：
 
 - `apps/server/src/context/workflow/orchestrator.ts` — `buildWorkflowPromptBundle()` 编排入口
-- `apps/server/src/context/workflow/tracks/` — 三条内容轨道（template / node / snapshot）
+- `apps/server/src/context/workflow/tracks/` — 内容轨道（template / node / snapshot / conversation_history）
 - `apps/server/src/context/workflow/executors/` — 七个汇合后 executor（含 `behavior_control`、`content_transform`）
 - `apps/server/src/context/workflow/pipeline_runner.ts` — runner，调度 executor 链
-- `apps/server/src/context/workflow/profiles.ts` — `selectPromptWorkflowProfile()`，5 个内置 profile
+- `apps/server/src/context/workflow/profiles.ts` — `selectPromptWorkflowProfile()`，6 个内置 profile；无匹配时抛错，不静默 fallback
 - `apps/server/src/context/workflow/types.ts` — `PromptWorkflowState`, `PromptSectionDraft`, `StepSnapshotSummary` 等
 - `apps/server/src/context/workflow/registry.ts` — `PromptWorkflowStepRegistry`
 - `apps/server/src/inference/prompt_builder_v2.ts` — `buildPromptBundleV2()` 最终渲染
@@ -85,17 +86,18 @@ InferenceContext + PromptSlotRegistry
 
 ## 4. Profile 与 task-aware 入口
 
-内置 5 个 profile。每个 profile 声明适用的 task_type / strategy / pack_id、默认参数（`token_budget`、`safety_margin_tokens`）、启用的轨道（`tracks`）、以及汇合后步骤序列：
+内置 6 个 profile。每个 profile 声明适用的 task_type / strategy / pack_id、默认参数（`token_budget`、`safety_margin_tokens`）、启用的轨道（`tracks`）、以及汇合后步骤序列：
 
 - `agent-decision-default` — `task_types: ['agent_decision']`，三轨全启，默认 budget 2200 / margin 80
 - `context-summary-default` — `task_types: ['context_summary']`，三轨全启，默认 budget 1600 / margin 60
 - `memory-compaction-default` — `task_types: ['memory_compaction']`，三轨全启，默认 budget 1800 / margin 60
+- `intent-grounding-assist-default` — `task_types: ['intent_grounding_assist']`，template + node，关闭 snapshot，默认 budget 1400 / margin 60
 - `chat-first-turn` — `task_types: ['agent_decision']`，四轨全启（含 conversation_history），conversation_profile: `chat-first-turn`
 - `chat-follow-up` — `task_types: ['agent_decision']`，轻量路径（template + conversation_history），conversation_profile: `chat-follow-up`
 
-Profile 选择逻辑（`selectPromptWorkflowProfile`）按 specificity 排序：`task_types` 匹配权重 4 > `strategies` 匹配权重 2 > `pack_ids` 匹配权重 1。
+Profile 选择逻辑（`selectPromptWorkflowProfile`）按 specificity 排序：`task_types` 匹配权重 4 > `strategies` 匹配权重 2 > `pack_ids` 匹配权重 1。显式 `profile_id` 不存在时抛 `PromptWorkflowProfileNotFoundError`；没有匹配 profile 时抛 `PromptWorkflowProfileSelectionError`，不再 fallback 到默认 profile。
 
-生产路径使用前 3 个 profile（`agent-decision-default`、`context-summary-default`、`memory-compaction-default`）。`chat-first-turn` 和 `chat-follow-up` 依赖多轮对话基础设施（Tag 系统、ConversationEntry 读写链路），在该基础设施就绪前不生效。
+`chat-first-turn` 和 `chat-follow-up` 是正式 profile。推理服务在存在 conversation memory 时可通过 conversation profile resolver 选择它们；调用方也可显式传入 `profileId`。
 
 ### 4.1 轨道配置
 
@@ -106,6 +108,7 @@ tracks?: {
   template?: boolean;  // YAML slot 模板 → section_drafts
   node?: boolean;      // ContextNode → section_drafts（含策略过滤/摘要压缩/节点分组）
   snapshot?: boolean;  // pack_state / variable_context → section_drafts
+  conversation_history?: boolean; // AgentConversationMemory → conversation_history slot
 }
 ```
 
@@ -122,11 +125,11 @@ tracks?: {
 - `agent_decision` → `agent-decision-default`
 - `context_summary` → `context-summary-default`
 - `memory_compaction` → `memory-compaction-default`
-- `intent_grounding_assist` → 无专属 profile，按 specificity 匹配 fallback 到 `agent-decision-default`
+- `intent_grounding_assist` → `intent-grounding-assist-default`
 
 ## 5. 内容轨道
 
-三条轨道在 pipeline runner 之外执行，产出的 `section_drafts` 在 `placement_resolution` 步骤汇合。
+内容轨道在 pipeline runner 之外执行，产出的 `section_drafts` 在 `placement_resolution` 步骤汇合。profile 可启用 template / node / snapshot / conversation_history 的任意组合。
 
 ### 5.1 模板轨（`runTemplateTrack`）
 
@@ -149,6 +152,10 @@ tracks?: {
 ### 5.3 快照轨（`runSnapshotTrack`）
 
 将 `pack_state` / `variable_context` 等运行时状态序列化为 JSON section，写入 `post_process` slot。仅当 `post_process` slot 启用时执行。
+
+### 5.4 对话历史轨（`runConversationHistoryTrack`）
+
+消费 `InferenceContext.agent_conversation_memory`，按 conversation format config 选择可见 entries，渲染为 `conversation_history` slot 的 section draft。该轨道只在 profile 显式启用 `tracks.conversation_history` 且上下文存在 conversation memory 时执行。
 
 ## 6. 汇合后 pipeline
 
@@ -174,7 +181,7 @@ ACL 权限检查（feature flag 门控：`features.experimental.prompt_slot_perm
 
 ### 6.4 token_budget_trim
 
-从 `profile.defaults.token_budget` 获取预算上限，按 slot priority 从低到高遍历，裁剪 `removable = true` 的 fragment（设置 `permission_denied = true`）。配置优先级：`spec.config` > `profile.defaults` > 内置默认（2200 / margin 80）。
+通过 `resolvePromptWorkflowBudget()` 解析预算，配置优先级为 `spec.config` > `profile.defaults` > 内置默认（2200 / margin 80）。当估算 token 数超过预算时，按 slot priority 从低到高遍历，裁剪 `removable = true` 且会超出剩余预算的 fragment（设置 `permission_denied = true`）。`conversation_history` slot 在裁剪前反转遍历，旧轮次优先被裁剪。
 
 ### 6.5 bundle_finalize
 
@@ -341,7 +348,7 @@ workflow diagnostics 稳定输出：
 - `profile_id` / `profile_version`
 - `selected_step_keys`
 - `step_traces` — 每个 pipeline step 的 `StepSnapshotSummary`
-- `track_traces` — 三条内容轨道的 `TrackTrace`（`input_summary` / `output_summary` / `decisions`）
+- `track_traces` — 已启用内容轨道的 `TrackTrace`（`input_summary` / `output_summary` / `decisions`）
 - `section_summary`（可选）
 - `section_budget`（可选）
 - `placement_summary`（可选）

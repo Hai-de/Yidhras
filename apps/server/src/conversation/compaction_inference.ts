@@ -10,6 +10,7 @@
 import crypto from 'node:crypto';
 
 import type { ModelGateway } from '../ai/gateway.js';
+import { buildPromptBundleFromAiMessages } from '../ai/prompt_bundle_from_messages.js';
 import type { AiMessage, AiResolvedTaskConfig, AiTaskRequest, ModelGatewayRequest } from '../ai/types.js';
 import type { ConversationEntry } from './types.js';
 
@@ -96,7 +97,12 @@ export async function runCompactionInference(
     task_type: request.task_type,
     input: {},
     prompt_context: {
-      current_agent_id: agentId
+      current_agent_id: agentId,
+      prompt_bundle_v2: buildPromptBundleFromAiMessages({
+        taskId: request.task_id,
+        taskType: request.task_type,
+        messages: request.messages
+      })
     },
     metadata: {
       prompt_version: null,

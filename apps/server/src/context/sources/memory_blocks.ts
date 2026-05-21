@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { buildPromptBundleFromAiMessages } from '../../ai/prompt_bundle_from_messages.js';
 import { createAiTaskService } from '../../ai/task_service.js';
 import type { AiTaskRequest } from '../../ai/types.js';
 import type { AppInfrastructure } from '../../app/context.js';
@@ -65,17 +66,19 @@ const generateQueryEmbedding = async (
 ): Promise<number[] | null> => {
   const taskService = createAiTaskService({ context });
 
+  const messages = [
+    {
+      role: 'user' as const,
+      parts: [{ type: 'text' as const, text: queryText }]
+    }
+  ];
+  const taskId = randomUUID();
   const request: AiTaskRequest = {
-    task_id: randomUUID(),
+    task_id: taskId,
     task_type: 'embedding',
     input: {},
     prompt_context: {
-      messages: [
-        {
-          role: 'user',
-          parts: [{ type: 'text', text: queryText }]
-        }
-      ]
+      prompt_bundle_v2: buildPromptBundleFromAiMessages({ taskId, taskType: 'embedding', messages })
     }
   };
 

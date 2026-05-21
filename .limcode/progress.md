@@ -1,6 +1,6 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-05-21T16:10:16.012Z
+- Updated At: 2026-05-21T19:13:58.902Z
 - Status: active
 - Phase: implementation
 
@@ -17,13 +17,22 @@
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
 - 设计：`.limcode/design/cyberpunk-ai-oligarchy-world-pack-draft.md`
+- 计划：`.limcode/plans/prompt-workflow-non-compatible-cleanup.md`
 - 审查：`.limcode/review/behavior-tree-logic-audit.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-<!-- 暂无 TODO -->
+- [x] 清点并迁移旧 prompt builder 引用，确立 buildWorkflowPromptBundle 为唯一入口  `#pw-clean-1`
+- [x] 移除 profile 静默 fallback，并补充 intent_grounding_assist 显式 profile  `#pw-clean-2`
+- [x] 修复 behavior_control 对话上下文来源，移除 state.ai_messages 依赖  `#pw-clean-3`
+- [x] 新增统一 token budget resolver，移除 8192 硬编码并收敛 budget trim  `#pw-clean-4`
+- [x] 清理 AiTaskService direct messages 旁路，强制 PromptBundleV2 输入  `#pw-clean-5`
+- [x] 删除或内聚旧 prompt_builder.ts 及相关旧类型/fixture  `#pw-clean-6`
+- [x] 补齐 profile、orchestrator、behavior、budget、task builder 单测  `#pw-clean-7`
+- [x] 更新 PROMPT_WORKFLOW、PROMPT_SLOT_CONFIGURATION、ARCH、TODO 文档  `#pw-clean-8`
+- [x] 运行 prompt 局部测试、typecheck、lint 并记录非 prompt 历史失败  `#pw-clean-9`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -44,6 +53,9 @@
 - 2026-05-15T08:18:59.116Z | created | 初始化项目进度
 - 2026-05-15T08:18:59.116Z | artifact_changed | design | 同步设计文档：.limcode/design/test-type-errors-cleanup.md
 - 2026-05-21T16:10:16.012Z | artifact_changed | review | 同步审查文档：.limcode/review/behavior-tree-logic-audit.md
+- 2026-05-21T18:23:21.013Z | artifact_changed | plan | 同步计划文档：.limcode/plans/prompt-workflow-non-compatible-cleanup.md
+- 2026-05-21T18:40:30.860Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/prompt-workflow-non-compatible-cleanup.md
+- 2026-05-21T19:13:58.902Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/prompt-workflow-non-compatible-cleanup.md
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -53,7 +65,7 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-05-15T08:18:59.116Z",
-  "updatedAt": "2026-05-21T16:10:16.012Z",
+  "updatedAt": "2026-05-21T19:13:58.902Z",
   "status": "active",
   "phase": "implementation",
   "currentFocus": "赛博朋克世界包草稿对接验证",
@@ -62,9 +74,56 @@
   "nextAction": "赛博朋克世界包草稿对接验证（entity kind 迁移路径 B、capability_resolution 规则 P1）",
   "activeArtifacts": {
     "design": ".limcode/design/cyberpunk-ai-oligarchy-world-pack-draft.md",
+    "plan": ".limcode/plans/prompt-workflow-non-compatible-cleanup.md",
     "review": ".limcode/review/behavior-tree-logic-audit.md"
   },
-  "todos": [],
+  "todos": [
+    {
+      "id": "pw-clean-1",
+      "content": "清点并迁移旧 prompt builder 引用，确立 buildWorkflowPromptBundle 为唯一入口",
+      "status": "completed"
+    },
+    {
+      "id": "pw-clean-2",
+      "content": "移除 profile 静默 fallback，并补充 intent_grounding_assist 显式 profile",
+      "status": "completed"
+    },
+    {
+      "id": "pw-clean-3",
+      "content": "修复 behavior_control 对话上下文来源，移除 state.ai_messages 依赖",
+      "status": "completed"
+    },
+    {
+      "id": "pw-clean-4",
+      "content": "新增统一 token budget resolver，移除 8192 硬编码并收敛 budget trim",
+      "status": "completed"
+    },
+    {
+      "id": "pw-clean-5",
+      "content": "清理 AiTaskService direct messages 旁路，强制 PromptBundleV2 输入",
+      "status": "completed"
+    },
+    {
+      "id": "pw-clean-6",
+      "content": "删除或内聚旧 prompt_builder.ts 及相关旧类型/fixture",
+      "status": "completed"
+    },
+    {
+      "id": "pw-clean-7",
+      "content": "补齐 profile、orchestrator、behavior、budget、task builder 单测",
+      "status": "completed"
+    },
+    {
+      "id": "pw-clean-8",
+      "content": "更新 PROMPT_WORKFLOW、PROMPT_SLOT_CONFIGURATION、ARCH、TODO 文档",
+      "status": "completed"
+    },
+    {
+      "id": "pw-clean-9",
+      "content": "运行 prompt 局部测试、typecheck、lint 并记录非 prompt 历史失败",
+      "status": "completed"
+    }
+  ],
   "milestones": [],
   "risks": [],
   "log": [
@@ -84,21 +143,39 @@
       "type": "artifact_changed",
       "refId": "review",
       "message": "同步审查文档：.limcode/review/behavior-tree-logic-audit.md"
+    },
+    {
+      "at": "2026-05-21T18:23:21.013Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/prompt-workflow-non-compatible-cleanup.md"
+    },
+    {
+      "at": "2026-05-21T18:40:30.860Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/prompt-workflow-non-compatible-cleanup.md"
+    },
+    {
+      "at": "2026-05-21T19:13:58.902Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/prompt-workflow-non-compatible-cleanup.md"
     }
   ],
   "stats": {
     "milestonesTotal": 0,
     "milestonesCompleted": 0,
-    "todosTotal": 0,
-    "todosCompleted": 0,
+    "todosTotal": 9,
+    "todosCompleted": 9,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-05-21T16:10:16.012Z",
-    "bodyHash": "sha256:eae47705af3d02d31dff7e5502cbb9d0ddbf7adb0db53e42e4849dffde22e685"
+    "generatedAt": "2026-05-21T19:13:58.902Z",
+    "bodyHash": "sha256:c244585f6ede870e5e0a96c04e35a37a179077e810781733cc3b6ad0980dae61"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

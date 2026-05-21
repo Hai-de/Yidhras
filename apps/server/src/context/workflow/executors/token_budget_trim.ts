@@ -1,10 +1,8 @@
 import type { PromptTokenCounter } from '../../../inference/prompt_tokenizer.js';
 import { getDefaultTokenCounter } from '../../../inference/prompt_tokenizer.js';
 import type { PromptWorkflowStepExecutor } from '../registry.js';
+import { resolvePromptWorkflowBudget } from '../token_budget.js';
 import type { PromptWorkflowState, PromptWorkflowStepTrace, StepSnapshotSummary } from '../types.js';
-
-const DEFAULT_TOKEN_BUDGET = 2200;
-const DEFAULT_SAFETY_MARGIN = 80;
 
 const buildStepSummary = (state: PromptWorkflowState): StepSnapshotSummary => {
   const tree = state.tree;
@@ -40,15 +38,10 @@ export const createTokenBudgetTrimExecutor = (
 ): PromptWorkflowStepExecutor => ({
   kind: 'token_budget_trim',
   async execute({ profile, spec, state }) {
-    const budget =
-      (spec.config?.token_budget as number | undefined) ??
-      profile.defaults?.token_budget ??
-      DEFAULT_TOKEN_BUDGET;
-    const safetyMargin =
-      (spec.config?.safety_margin_tokens as number | undefined) ??
-      profile.defaults?.safety_margin_tokens ??
-      DEFAULT_SAFETY_MARGIN;
-    const effectiveBudget = budget - safetyMargin;
+    const budgetResolution = resolvePromptWorkflowBudget({ profile, spec });
+    const budget = budgetResolution.tokenBudget;
+    const safetyMargin = budgetResolution.safetyMarginTokens;
+    const effectiveBudget = budgetResolution.effectiveBudget;
 
     if (!state.tree) {
       return state;
@@ -64,7 +57,13 @@ export const createTokenBudgetTrimExecutor = (
         status: 'completed',
         before: beforeSummary,
         after: buildStepSummary(state),
-        notes: { budget, safetyMargin, effectiveBudget, trimmed: false }
+        notes: {
+          budget,
+          safetyMargin,
+          effectiveBudget,
+          budget_sources: budgetResolution.sources,
+          trimmed: false
+        }
       };
       state.diagnostics.step_traces.push(trace);
       return state;
@@ -91,14 +90,15 @@ export const createTokenBudgetTrimExecutor = (
     let remaining = effectiveBudget;
     for (const { fragments } of sortedSlots) {
       for (const fragment of fragments) {
+        const fragmentTokens = fragment.estimated_tokens ?? 0;
         // Phase 4: ignore_context_length — skip trimming for marked fragments
         const ignoreContextLength = fragment.metadata?.['ignore_context_length'] === true;
         if (ignoreContextLength) {
-          remaining -= fragment.estimated_tokens ?? 0;
+          remaining -= fragmentTokens;
           continue;
         }
 
-        if (remaining <= 0 && fragment.removable) {
+        if (fragment.removable && (remaining <= 0 || fragmentTokens > remaining)) {
           fragment.permission_denied = true;
           fragment.denial = fragment.denial ?? [];
           fragment.denial.push({
@@ -106,7 +106,7 @@ export const createTokenBudgetTrimExecutor = (
             reason: 'trimmed_by_token_budget'
           });
         } else {
-          remaining -= fragment.estimated_tokens ?? 0;
+          remaining -= fragmentTokens;
         }
       }
     }
@@ -117,7 +117,13 @@ export const createTokenBudgetTrimExecutor = (
       status: 'completed',
       before: beforeSummary,
       after: buildStepSummary(state),
-      notes: { budget, safetyMargin, effectiveBudget, trimmed: true }
+      notes: {
+        budget,
+        safetyMargin,
+        effectiveBudget,
+        budget_sources: budgetResolution.sources,
+        trimmed: true
+      }
     };
     state.diagnostics.step_traces.push(trace);
 

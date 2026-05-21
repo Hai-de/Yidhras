@@ -1,6 +1,7 @@
 import type { PromptWorkflowTaskType } from '../context/workflow/types.js';
 import type { PromptBundleV2 } from '../inference/prompt_bundle_v2.js';
 import type { InferenceContext } from '../inference/types.js';
+import { ApiError } from '../utils/api_error.js';
 import type { AiTaskRequest, AiTaskType } from './types.js';
 
 const PROMPT_WORKFLOW_TASK_TYPES: ReadonlySet<AiTaskType> = new Set([
@@ -68,7 +69,13 @@ export const buildAiTaskRequestFromInferenceContextV2 = (
   context: InferenceContext,
   options: BuildAiTaskRequestFromInferenceOptions
 ): Promise<AiTaskRequest> => {
-  const bundle = options.prompt_bundle!;
+  const bundle = options.prompt_bundle;
+  if (!bundle) {
+    throw new ApiError(400, 'PROMPT_BUNDLE_REQUIRED', 'buildAiTaskRequestFromInferenceContextV2 requires prompt_bundle', {
+      task_type: options.task_type,
+      inference_id: context.inference_id
+    });
+  }
 
   return Promise.resolve({
     task_id: options.task_id ?? context.inference_id,

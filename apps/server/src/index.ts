@@ -1,5 +1,6 @@
 import path from 'path';
 
+import { buildPromptBundleFromAiMessages } from './ai/prompt_bundle_from_messages.js';
 import { listDynamicSlots, registerDynamicSlot, unregisterDynamicSlot } from './ai/registry.js';
 import { startAiRegistryWatcher } from './ai/registry_watcher.js';
 import { createAiTaskService } from './ai/task_service.js';
@@ -230,15 +231,17 @@ const inferenceService = createInferenceService({
 // Plugin inference uses its own AiTaskService with independent circuit breakers
 const pluginAiTaskService = createAiTaskService({ context: appContext });
 appContext.requestPluginInference = async (input) => {
+  const messages = [
+    { role: 'system' as const, parts: [{ type: 'text' as const, text: input.systemPrompt }] },
+    { role: 'user' as const, parts: [{ type: 'text' as const, text: input.userPrompt }] }
+  ];
+  const taskId = `plugin:${input.purpose}`;
   const result = await pluginAiTaskService.runTask({
-    task_id: `plugin:${input.purpose}`,
+    task_id: taskId,
     task_type: 'agent_decision',
     input: {},
     prompt_context: {
-      messages: [
-        { role: 'system', parts: [{ type: 'text', text: input.systemPrompt }] },
-        { role: 'user', parts: [{ type: 'text', text: input.userPrompt }] }
-      ]
+      prompt_bundle_v2: buildPromptBundleFromAiMessages({ taskId, taskType: 'agent_decision', messages })
     },
     output_contract: { mode: 'free_text' },
     route_hints: input.maxTokens

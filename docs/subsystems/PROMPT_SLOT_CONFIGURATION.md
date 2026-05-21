@@ -14,7 +14,7 @@ PromptSlotConfig (.yaml)
        ├─ message_role (映射到 AiMessage 的 role)
        ├─ include_in_combined (是否出现在 combined_prompt)
        ├─ combined_heading (在 combined_prompt 中的标题)
-       └─ permissions (预留接口)
+       └─ permissions (read / visibility 权限配置)
 ```
 
 每个 slot 在渲染后成为 `PromptBundleV2.slots[slot_id]` 中的一个条目，key 为 slot 的 `id` 字段。
@@ -25,7 +25,7 @@ PromptSlotConfig (.yaml)
 
 | 配置文件 | 优先级 | 说明 |
 |----------|--------|------|
-| `apps/server/src/ai/schemas/prompt_slots.default.yaml` | 基础 | 内置默认 7 槽配置，随项目发布 |
+| `apps/server/src/ai/schemas/prompt_slots.default.yaml` | 基础 | 内置默认 11 槽配置，随项目发布 |
 | `<workspace>/<ai_models_config_dir>/prompt_slots.yaml` | 覆盖 | 用户自定义覆盖文件，与 `ai_models.yaml` 同目录 |
 
 合并规则：
@@ -50,7 +50,7 @@ PromptSlotConfig (.yaml)
 | `message_role` | enum | ❌ | 映射到的 AI message role：`system` / `developer` / `user` |
 | `include_in_combined` | boolean | ✅ | 是否在 `combined_prompt` 中包含此 slot |
 | `combined_heading` | string | ❌ | 在 `combined_prompt` 中的标题（`null` 表示无标题） |
-| `permissions` | object | ❌ | 权限默认值（预留接口，默认不生效） |
+| `permissions` | object | ❌ | 权限默认值；在 `features.experimental.prompt_slot_permissions` 启用时由 `permission_filter` 执行 read / visibility 检查 |
 | `enabled` | boolean | ✅ | 是否启用此 slot（`false` 时完全跳过） |
 | `metadata` | object | ❌ | 扩展元数据 |
 
@@ -67,7 +67,7 @@ PromptSlotConfig (.yaml)
 
 ## 4. 内置默认 Slot 清单
 
-内置 10 个 slot：
+内置 11 个 slot：
 
 | slot_id | position | message_role | 说明 |
 |---------|----------|-------------|------|
@@ -75,6 +75,7 @@ PromptSlotConfig (.yaml)
 | `system_policy` | 90 | system | 系统策略 |
 | `role_core` | 80 | developer | 角色上下文 |
 | `world_context` | 70 | system | 世界设定上下文 |
+| `world_context_mastermind` | 69 | system | 特权世界上下文（默认通过权限隐藏） |
 | `memory_summary` | 60 | user | 记忆摘要 |
 | `memory_long_term` | 55 | user | 长期记忆（memory_block_fact/reflection/plan 节点注入） |
 | `memory_short_term` | 52 | user | 短期记忆（manual_note/overlay 节点及未映射节点默认注入） |
@@ -82,7 +83,7 @@ PromptSlotConfig (.yaml)
 | `output_contract` | 40 | user | 输出格式约定 |
 | `conversation_history` | 30 | user | 多轮对话 transcript |
 
-## 5. 权限字段（预留接口）
+## 5. 权限字段
 
 ```yaml
 permissions:
@@ -93,7 +94,7 @@ permissions:
   visible_to: [host_agent]   # 可见性白名单（空 = 对所有主体可见）
 ```
 
-权限字段在 schema 中已定义，但执行层未接入。即使配置了 `permissions`，在 `features.experimental.prompt_slot_permissions: false` 时也会被忽略。
+权限字段由 `permission_filter` executor 接入。`features.experimental.prompt_slot_permissions: true` 时执行 read / visibility 检查；`write` / `adjust` 当前仍允许通过，不作为运行时写入控制。`features.experimental.prompt_slot_permissions: false` 时权限检查整体跳过。
 
 ## 6. 自定义 Slot 示例
 

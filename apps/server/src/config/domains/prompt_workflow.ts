@@ -15,7 +15,8 @@ export const PromptWorkflowConfigSchema = z
       .object({
         agent_decision_default: PromptWorkflowProfileDefaultsSchema,
         context_summary_default: PromptWorkflowProfileDefaultsSchema,
-        memory_compaction_default: PromptWorkflowProfileDefaultsSchema
+        memory_compaction_default: PromptWorkflowProfileDefaultsSchema,
+        intent_grounding_assist_default: PromptWorkflowProfileDefaultsSchema
       })
       .strict()
   })
@@ -35,6 +36,10 @@ export const PROMPT_WORKFLOW_DEFAULTS: PromptWorkflowConfig = {
     },
     memory_compaction_default: {
       token_budget: 1800,
+      safety_margin_tokens: 60
+    },
+    intent_grounding_assist_default: {
+      token_budget: 1400,
       safety_margin_tokens: 60
     }
   }

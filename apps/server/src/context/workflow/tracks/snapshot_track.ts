@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto';
 
-import { buildContextPromptPayload } from '../../../inference/prompt_builder.js';
 import type { PromptSlotConfig } from '../../../inference/prompt_slot_config.js';
 import type { InferenceContext } from '../../../inference/types.js';
+import { buildContextPromptPayload } from '../prompt_payload.js';
 import type { PromptSectionDraft, TrackResult } from '../types.js';
 
 export function runSnapshotTrack(

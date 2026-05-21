@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 
-import { buildOutputContractPrompt } from '../../../inference/prompt_builder.js';
+import { buildOutputContractPrompt } from '../../../inference/output_contract_prompt.js';
 import type { PromptSlotConfig, ResolvedSlotPosition } from '../../../inference/prompt_slot_config.js';
 import type { InferenceContext } from '../../../inference/types.js';
 import { renderNarrativeTemplate } from '../../../template_engine/frontends/narrative/resolver.js';

@@ -55,16 +55,16 @@
 
 ### 提示词流水线升级
 
+##### Prompt Workflow 非兼容式收敛
+
+> 计划：`.limcode/plans/prompt-workflow-non-compatible-cleanup.md`
+> 决策：项目未上线，不保留旧 prompt builder / direct messages 兼容层；`buildWorkflowPromptBundle()` + `PromptBundleV2` 为唯一正式路径。
+- [x] 旧 `inference/prompt_builder.ts` 删除；profile 严格选择；`intent_grounding_assist` 显式 profile；behavior/budget 语义收敛；`AiTaskService` 强制 `prompt_bundle_v2`
+
 ##### 多轮对话（Multi-Turn Conversation）
 
 > 设计文档：`.limcode/design/multi-turn-conversation-design.md`
 - [ ] Tag 系统（类型/Prisma schema 已就位，用途尚在讨论中，待决定后激活）
-
-
-#### 已知技术债务（不阻塞当前阶段）
-
-- `ConversationEntry.archived` 软归档后 entries 数组无限增长 — 需日后实现定期物理归档到冷存储（如按年份归档到独立表、或导出为 JSON 文件并删除 DB 行）
-- `tests/integration/death-note-memory-loop.spec.ts` > `records revise_judgement_plan as overlay and plan memory block during action dispatch` — 预存 flaky 测试，`expected undefined to be truthy`。不阻塞当前阶段，需单独排查 memory overlay 记录逻辑
 
 
 ##### 插槽函数
@@ -72,8 +72,8 @@
 > 设计：`.limcode/design/slot-function-advanced-design.md` | 计划：`.limcode/plans/slot-function-advanced-phase1-4.md`、`slot-function-advanced-phase5.md`
 > 剩余：
 >   - [ ] Phase 6+: Rust + wasmtime WASM 沙箱（需求驱动）
->   - [ ] 功能 B：双重模块设置（决策推迟）
-- [ ] 双重模块设置，一个是当前的Prompt Tree，另一个是更复杂拥有插槽函数的核心
-> ⚠ 决策推迟至功能 A Phase 1-5 复杂度评估完成后
+>   - [x] 功能 B：双重模块设置（已决策：不做双轨）
+- [x] 双重模块设置决策：不做双模块并存；保留 PromptTree / PromptBundleV2 单路径，插槽函数能力并入 Prompt Workflow executor/track 扩展点
+> ✅ 已由 Prompt Workflow 非兼容式收敛计划取代，避免继续保留双轨债务
 
 

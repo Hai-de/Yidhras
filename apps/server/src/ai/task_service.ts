@@ -117,18 +117,20 @@ export const createAiTaskService = ({
         inlineOverride: options?.inlineOverride ?? buildInlineOverrideFromRequest(request)
       });
 
-      const messages = request.prompt_context.messages
-        ?? (request.prompt_context.prompt_bundle_v2
-          ? assembleConversationMessages({
-              bundle: request.prompt_context.prompt_bundle_v2 as PromptBundleV2,
-              memory: request.prompt_context.agent_conversation_memory ?? null,
-              formatConfig: resolveConversationFormatConfig(
-                request.prompt_context.conversation_profile
-              ),
-              currentAgentId: request.prompt_context.current_agent_id,
-              taskConfig
-            })
-          : null);
+      if (!request.prompt_context.prompt_bundle_v2) {
+        throw new ApiError(400, 'PROMPT_BUNDLE_REQUIRED', 'AI task request must contain prompt_bundle_v2', {
+          task_type: request.task_type,
+          task_id: request.task_id
+        });
+      }
+
+      const messages = assembleConversationMessages({
+        bundle: request.prompt_context.prompt_bundle_v2 as PromptBundleV2,
+        memory: request.prompt_context.agent_conversation_memory ?? null,
+        formatConfig: resolveConversationFormatConfig(request.prompt_context.conversation_profile),
+        currentAgentId: request.prompt_context.current_agent_id,
+        taskConfig
+      });
 
       if (!messages || messages.length === 0) {
         throw new ApiError(400, 'AI_TASK_MESSAGES_EMPTY', 'AI task request does not contain messages or prompt bundle content', {

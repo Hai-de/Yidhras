@@ -6,6 +6,9 @@
  */
 
 import crypto from 'node:crypto';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 
 import { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -13,6 +16,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createPrismaClient } from '../../../src/db/client.js';
 
 import { assembleConversationMessages } from '../../../src/conversation/assembler.js';
+import { archiveConversationEntriesToColdStorage } from '../../../src/conversation/cold_archive_service.js';
 import { DEFAULT_CONVERSATION_FORMAT_CONFIG } from '../../../src/conversation/format_config.js';
 import type { ConversationFormatConfig } from '../../../src/conversation/format_config.js';
 import { PrismaConversationStore } from '../../../src/conversation/store_prisma.js';
@@ -501,6 +505,59 @@ describe('D2 — Conversation flow integration', () => {
 
     it('archiveEntries with empty array is a no-op', async () => {
       await expect(store.archiveEntries([])).resolves.toBeUndefined();
+    });
+
+    it('exports archived entries to cold storage before deleting database rows', async () => {
+      const cid = `agent-cold:agent-b:${runId}-archive`;
+      const memory = await store.getOrCreate('agent-cold', cid);
+      const outputDir = await mkdtemp(path.join(os.tmpdir(), 'yidhras-conversation-archive-'));
+
+      try {
+        await store.appendEntry(
+          memory.id,
+          makeEntry({ turn_number: 1, current_content: 'Cold archived entry.' })
+        );
+        await store.appendEntry(
+          memory.id,
+          makeEntry({ turn_number: 2, current_content: 'Still hot entry.' })
+        );
+
+        const beforeArchive = await store.getOrCreate('agent-cold', cid);
+        const archivedEntryId = beforeArchive.entries[0].id;
+        const retainedEntryId = beforeArchive.entries[1].id;
+        await store.archiveEntries([archivedEntryId]);
+
+        const result = await archiveConversationEntriesToColdStorage(prisma, {
+          memoryId: memory.id,
+          outputDir,
+          limit: 100,
+          now: new Date('2026-05-21T00:00:00.000Z')
+        });
+
+        expect(result.exportedCount).toBe(1);
+        expect(result.deletedCount).toBe(1);
+        expect(result.archivePath).toBeTruthy();
+
+        const archiveJson = JSON.parse(await readFile(result.archivePath!, 'utf8')) as {
+          schema: string;
+          total_entries: number;
+          entries: Array<{ id: string; memory_id: string; current_content: string; archived: boolean }>;
+        };
+        expect(archiveJson.schema).toBe('conversation_entries_cold_archive.v1');
+        expect(archiveJson.total_entries).toBe(1);
+        expect(archiveJson.entries[0]).toMatchObject({
+          id: archivedEntryId,
+          memory_id: memory.id,
+          current_content: 'Cold archived entry.',
+          archived: true
+        });
+
+        const rowsAfterArchive = await prisma.conversationEntryRecord.findMany({ where: { memory_id: memory.id } });
+        expect(rowsAfterArchive).toHaveLength(1);
+        expect(rowsAfterArchive[0].id).toBe(retainedEntryId);
+      } finally {
+        await rm(outputDir, { recursive: true, force: true });
+      }
     });
   });
 
