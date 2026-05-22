@@ -19,6 +19,7 @@ export interface OpenAiCompatibleConfig {
   resolveApiKey(input: AiProviderAdapterRequest): string | null;
   resolveBaseUrl(input: AiProviderAdapterRequest): string;
   buildHeaders?(input: AiProviderAdapterRequest): Record<string, string>;
+  resolveUserId?(input: AiProviderAdapterRequest): string | null;
   capabilityOverrides?: OpenAiCompatibleCapabilityOverrides;
 }
 
@@ -83,8 +84,9 @@ const buildResponseFormat = (
 
 const buildChatCompletionsRequestBody = (
   input: AiProviderAdapterRequest,
-  overrides?: OpenAiCompatibleCapabilityOverrides
+  config: OpenAiCompatibleConfig
 ) => {
+  const overrides = config.capabilityOverrides;
   const body: Record<string, unknown> = {
     model: input.model_entry.model,
     messages: buildChatMessages(input.request.messages)
@@ -132,6 +134,11 @@ const buildChatCompletionsRequestBody = (
       : input.request.tool_policy?.mode === 'disabled'
         ? 'none'
         : 'auto';
+  }
+
+  const userId = config.resolveUserId?.(input);
+  if (userId) {
+    body.user_id = userId;
   }
 
   return body;
@@ -274,7 +281,7 @@ const performChatCompletionsRequest = async (
   config: OpenAiCompatibleConfig
 ): Promise<Response> => {
   const baseUrl = config.resolveBaseUrl(input);
-  const body = buildChatCompletionsRequestBody(input, config.capabilityOverrides);
+  const body = buildChatCompletionsRequestBody(input, config);
   const headers: Record<string, string> = {
     'Content-Type': 'application/json'
   };
@@ -421,7 +428,7 @@ const performStreamingRequest = async (
 ): Promise<Response> => {
   const baseUrl = config.resolveBaseUrl(input);
   const body = {
-    ...buildChatCompletionsRequestBody(input, config.capabilityOverrides),
+    ...buildChatCompletionsRequestBody(input, config),
     stream: true,
     stream_options: { include_usage: true }
   };

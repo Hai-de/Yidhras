@@ -36,7 +36,7 @@ export class DefaultPackCatalogService implements PackCatalogService {
 
     for (const packFolderName of this.listAvailablePacks()) {
       const pack = this.loader.loadPack(packFolderName);
-      if (packFolderName === normalizedPackRef || pack.metadata.id === normalizedPackRef) {
+      if (packFolderName === normalizedPackRef || pack.metadata.id === normalizedPackRef || pack.metadata.name === normalizedPackRef) {
         return {
           pack,
           packFolderName

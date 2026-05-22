@@ -36,6 +36,7 @@ export interface WorldEngineCommitProjectionInput {
 
 export interface RuntimeClockProjectionPort {
   getSnapshot(pack_id: string): RuntimeClockProjectionSnapshot | null;
+  getKnownPackIds(): string[];
   applyWorldEngineCommitProjection(input: WorldEngineCommitProjectionInput): RuntimeClockProjectionSnapshot;
   rebuildFromRuntimeSeed(input: {
     pack_id: string;
@@ -114,6 +115,10 @@ export class InMemoryRuntimeClockProjectionService
 
   public getSnapshot(pack_id: string): RuntimeClockProjectionSnapshot | null {
     return this.snapshots.get(pack_id) ?? null;
+  }
+
+  public getKnownPackIds(): string[] {
+    return Array.from(this.snapshots.keys());
   }
 
   public rebuildFromRuntimeSeed(input: {

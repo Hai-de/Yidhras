@@ -122,20 +122,33 @@ export const readVisibleClockSnapshot = (input: {
   runtimeClockProjection?: RuntimeClockProjectionService;
   packId?: string;
 }): VisibleClockSnapshot => {
-  const resolvedPackId = input.packId ?? null;
-  const projected = resolvedPackId ? input.runtimeClockProjection?.readFormattedClock(resolvedPackId) : null;
-
-  if (projected) {
-    return {
-      absolute_ticks: projected.absolute_ticks,
-      calendars: projected.calendars,
-      source: 'host_projection'
-    };
+  const projection = input.runtimeClockProjection;
+  if (!projection) {
+    return { absolute_ticks: '0', calendars: [], source: 'clock_fallback' };
   }
 
-  return {
-    absolute_ticks: '0',
-    calendars: [],
-    source: 'clock_fallback'
-  };
+  if (input.packId) {
+    const projected = projection.readFormattedClock(input.packId);
+    if (projected) {
+      return {
+        absolute_ticks: projected.absolute_ticks,
+        calendars: projected.calendars,
+        source: 'host_projection'
+      };
+    }
+    return { absolute_ticks: '0', calendars: [], source: 'clock_fallback' };
+  }
+
+  for (const packId of projection.getKnownPackIds()) {
+    const projected = projection.readFormattedClock(packId);
+    if (projected) {
+      return {
+        absolute_ticks: projected.absolute_ticks,
+        calendars: projected.calendars,
+        source: 'host_projection'
+      };
+    }
+  }
+
+  return { absolute_ticks: '0', calendars: [], source: 'clock_fallback' };
 };

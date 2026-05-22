@@ -82,7 +82,7 @@ describe('DefaultPackCatalogService', () => {
     });
     expect(catalog.resolvePackByIdOrFolder('Active Pack')).toEqual({
       pack: activePack,
-      packFolderName: 'Active Pack'
+      packFolderName: 'active-folder'
     });
   });
 

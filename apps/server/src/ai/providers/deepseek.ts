@@ -13,6 +13,13 @@ export const createDeepSeekProviderAdapter = (): AiProviderAdapter => {
         ?? input.provider_config.base_url
         ?? 'https://api.deepseek.com/v1';
     },
+    resolveUserId(input) {
+      const actorRef = input.task_request.actor_ref;
+      if (actorRef && typeof actorRef.identity_id === 'string') {
+        return actorRef.identity_id;
+      }
+      return null;
+    },
     capabilityOverrides: {
       disallowTempWithTopP: true,
       maxTokensField: 'max_tokens',
