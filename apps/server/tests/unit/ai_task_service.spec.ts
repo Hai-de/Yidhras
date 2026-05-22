@@ -4,6 +4,7 @@ import type { AiTaskOverride, AiTaskRequest, ModelGatewayResponse } from '../../
 import type { ModelGateway, ModelGatewayExecutionInput } from '../../src/ai/gateway.js';
 import type { AiTaskService } from '../../src/ai/task_service.js';
 import { createAiTaskService } from '../../src/ai/task_service.js';
+import type { PromptBundleV2 } from '../../src/inference/prompt_bundle_v2.js';
 
 const buildCompletedResponse = (input: ModelGatewayExecutionInput): ModelGatewayResponse => ({
   invocation_id: input.request.invocation_id,
@@ -30,15 +31,38 @@ const buildCompletedResponse = (input: ModelGatewayExecutionInput): ModelGateway
   error: null
 });
 
+const buildMinimalPromptBundle = (): PromptBundleV2 => ({
+  slots: { system_slot: 'You are an agent.' },
+  slot_order: ['system_slot'],
+  combined_prompt: 'You are an agent.',
+  metadata: { prompt_version: '1.0', source_prompt_keys: [] },
+  tree: {
+    inference_id: 'test-inf-001',
+    task_type: 'agent_decision',
+    fragments_by_slot: {},
+    slot_registry: {
+      system_slot: {
+        id: 'system_slot',
+        display_name: 'System',
+        default_priority: 100
+      }
+    },
+    resolved_positions: [{ slot_id: 'system_slot', resolved_position: 100 }],
+    metadata: {
+      prompt_version: '1.0',
+      profile_id: null,
+      profile_version: null,
+      source_prompt_keys: []
+    }
+  }
+});
+
 const buildBaseRequest = (overrides?: Partial<AiTaskRequest>): AiTaskRequest => ({
   task_id: 'task-001',
   task_type: 'agent_decision',
   input: {},
   prompt_context: {
-    messages: [
-      { role: 'system', parts: [{ type: 'text', text: 'You are an agent.' }] },
-      { role: 'user', parts: [{ type: 'text', text: 'Decide.' }] }
-    ]
+    prompt_bundle_v2: buildMinimalPromptBundle()
   },
   ...overrides
 });

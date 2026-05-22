@@ -78,12 +78,11 @@ export const createTestAppContext = (
     resolvePackVariables: (template: string) => template,
     getStepTicks: () => 1n,
     getRuntimeSpeedSnapshot: () => ({
-      mode: 'fixed' as const,
+      mode: 'variable' as const,
       source: 'default' as const,
-      configured_step_ticks: null,
-      override_step_ticks: null,
-      override_since: null,
-      effective_step_ticks: '1'
+      strategy: { kind: 'variable' as const, range: { min: 1n, max: 1n }, loopIntervalMs: 1000 },
+      effective_step_ticks: '1',
+      override_since: null
     }),
     setRuntimeSpeedOverride: () => {},
     clearRuntimeSpeedOverride: () => {},
@@ -173,6 +172,18 @@ export const createTestAppContext = (
       }
     },
     assertRuntimeReady: () => {},
+    getPackRuntimeHandle: (packId: string) => {
+      const pack = packStore.get(packId);
+      if (!pack) return null;
+      return {
+        pack_id: packId,
+        pack_folder_name: packId,
+        pack,
+        getClockSnapshot: () => ({ current_tick: packRuntime.getCurrentTick().toString() }),
+        getRuntimeSpeedSnapshot: () => packRuntime.getRuntimeSpeedSnapshot(),
+        getHealthSnapshot: () => ({ status: 'loaded' as const, message: null })
+      };
+    },
     getPackRuntimeHost: (packId: string) =>
       ({
         getCurrentTick: () => packRuntime.getCurrentTick(),

@@ -111,10 +111,14 @@ describe('evaluateProjectionRules', () => {
     expect(results[0].computed_value).toBe(10)
   })
 
-  it('respects tick_interval in when clause — fires only on matching ticks', () => {
+  it('respects tick_interval -- fires when cumulative distance since last execution meets interval', () => {
+    const lastExecutionTicks = new Map<string, bigint>()
+    lastExecutionTicks.set('every-3-ticks', 2n)
+
     const context = buildEmptyContext({
       currentTick: 5n,
-      entities: [{ id: 'e1', entity_kind: 'actor', entity_type: 'player' }]
+      entities: [{ id: 'e1', entity_kind: 'actor', entity_type: 'player' }],
+      lastExecutionTicks
     })
 
     const rules: ProjectionRuleDef[] = [
@@ -125,14 +129,15 @@ describe('evaluateProjectionRules', () => {
       }
     ]
 
-    // tick 5 is not divisible by 3
+    // tick 5, last execution at tick 2: 5 - 2 = 3 >= 3, fires
     const results1 = evaluateProjectionRules(rules, context)
-    expect(results1).toHaveLength(0)
+    expect(results1).toHaveLength(1)
 
-    // tick 6 is divisible by 3
-    const results2 = evaluateProjectionRules(rules, { ...context, currentTick: 6n })
-    expect(results2).toHaveLength(1)
-    expect(results2[0].computed_value).toBe(1)
+    // tick 5, last execution at tick 3: 5 - 3 = 2 < 3, skip
+    const lastExec2 = new Map<string, bigint>()
+    lastExec2.set('every-3-ticks', 3n)
+    const results2 = evaluateProjectionRules(rules, { ...context, currentTick: 5n, lastExecutionTicks: lastExec2 })
+    expect(results2).toHaveLength(0)
   })
 
   it('filters by entity_type_is in when clause', () => {

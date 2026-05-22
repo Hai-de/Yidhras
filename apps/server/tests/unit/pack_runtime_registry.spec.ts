@@ -8,7 +8,14 @@ import {
   registerExperimentalPackRuntimeHost
 } from '../../src/app/services/runtime/experimental_multi_pack_runtime.js';
 import type { PackRuntimeHandle } from '../../src/core/pack_runtime_handle.js';
+import type { RuntimeSpeedSnapshot } from '../../src/core/runtime_speed.js';
 import { InMemoryPackRuntimeRegistry } from '../../src/core/pack_runtime_registry.js';
+
+const defaultStrategy = {
+  kind: 'variable' as const,
+  range: { min: 1n, max: 1n },
+  loopIntervalMs: 1000
+};
 
 const createHandle = (packId: string): PackRuntimeHandle => ({
   pack_id: packId,
@@ -21,15 +28,23 @@ const createHandle = (packId: string): PackRuntimeHandle => ({
     }
   } as never,
   getClockSnapshot: () => ({ current_tick: '0' }),
-  getRuntimeSpeedSnapshot: () => ({
-    mode: 'fixed',
+  getRuntimeSpeedSnapshot: (): RuntimeSpeedSnapshot => ({
+    mode: 'variable',
     source: 'world_pack',
-    configured_step_ticks: '1',
-    override_step_ticks: null,
-    override_since: null,
-    effective_step_ticks: '1'
+    strategy: defaultStrategy,
+    effective_step_ticks: '1',
+    override_since: null
   }),
   getHealthSnapshot: () => ({ status: 'loaded', message: null })
+});
+
+const makeSpeedSnapshot = (overrides: Partial<RuntimeSpeedSnapshot> = {}): RuntimeSpeedSnapshot => ({
+  mode: 'variable',
+  source: 'world_pack',
+  strategy: defaultStrategy,
+  effective_step_ticks: '1',
+  override_since: null,
+  ...overrides
 });
 
 describe('InMemoryPackRuntimeRegistry', () => {
@@ -54,13 +69,12 @@ describe('InMemoryPackRuntimeRegistry', () => {
       getHandle: () => ({
         ...createHandle('pack-b'),
         getClockSnapshot: () => ({ current_tick: '42' }),
-        getRuntimeSpeedSnapshot: () => ({
-          mode: 'fixed' as const,
-          source: 'override' as const,
-          configured_step_ticks: '1',
-          override_step_ticks: '2',
-          override_since: 123,
-          effective_step_ticks: '2'
+        getRuntimeSpeedSnapshot: (): RuntimeSpeedSnapshot => ({
+          mode: 'variable',
+          source: 'override',
+          strategy: { kind: 'variable', range: { min: 1n, max: 2n }, loopIntervalMs: 1000 },
+          effective_step_ticks: '2',
+          override_since: 123
         }),
         getHealthSnapshot: () => ({ status: 'running' as const, message: 'bootstrapped' })
       })
@@ -115,14 +129,7 @@ describe('InMemoryPackRuntimeRegistry', () => {
               pack_folder_name: 'pack-a',
               health_status: 'loaded' as const,
               current_tick: '0',
-              runtime_speed: {
-                mode: 'fixed' as const,
-                source: 'world_pack' as const,
-                configured_step_ticks: '1',
-                override_step_ticks: null,
-                override_since: null,
-                effective_step_ticks: '1'
-              },
+              runtime_speed: makeSpeedSnapshot(),
               startup_level: 'ok' as const,
               runtime_ready: true,
               message: null
@@ -134,14 +141,12 @@ describe('InMemoryPackRuntimeRegistry', () => {
               pack_folder_name: 'pack-b',
               health_status: 'running' as const,
               current_tick: '42',
-              runtime_speed: {
-                mode: 'fixed' as const,
-                source: 'override' as const,
-                configured_step_ticks: '1',
-                override_step_ticks: '2',
-                override_since: 123,
-                effective_step_ticks: '2'
-              },
+              runtime_speed: makeSpeedSnapshot({
+                source: 'override',
+                strategy: { kind: 'variable', range: { min: 1n, max: 2n }, loopIntervalMs: 1000 },
+                effective_step_ticks: '2',
+                override_since: 123
+              }),
               startup_level: 'ok' as const,
               runtime_ready: false,
               message: 'bootstrapped'
@@ -153,24 +158,15 @@ describe('InMemoryPackRuntimeRegistry', () => {
         getClockSnapshot: () => null,
         getRuntimeSpeedSnapshot: (packId: string) => {
           if (packId === 'pack-a') {
-            return {
-              mode: 'fixed' as const,
-              source: 'world_pack' as const,
-              configured_step_ticks: '1',
-              override_step_ticks: null,
-              override_since: null,
-              effective_step_ticks: '1'
-            };
+            return makeSpeedSnapshot();
           }
           if (packId === 'pack-b') {
-            return {
-              mode: 'fixed' as const,
-              source: 'override' as const,
-              configured_step_ticks: '1',
-              override_step_ticks: '2',
-              override_since: 123,
-              effective_step_ticks: '2'
-            };
+            return makeSpeedSnapshot({
+              source: 'override',
+              strategy: { kind: 'variable', range: { min: 1n, max: 2n }, loopIntervalMs: 1000 },
+              effective_step_ticks: '2',
+              override_since: 123
+            });
           }
           return null;
         }
@@ -188,13 +184,15 @@ describe('InMemoryPackRuntimeRegistry', () => {
       items: [
         {
           pack_id: 'pack-a',
-          mode: 'active',
+          mode: 'loaded',
           runtime_ready: true,
           status: 'loaded',
           message: null,
           current_tick: '0',
           runtime_speed: {
+            mode: 'variable',
             step_ticks: '1',
+            range: { min: '1', max: '1' },
             overridden: false
           },
           scheduler: {
@@ -210,13 +208,15 @@ describe('InMemoryPackRuntimeRegistry', () => {
         },
         {
           pack_id: 'pack-b',
-          mode: 'experimental_loaded',
-          runtime_ready: false,
+          mode: 'loaded',
+          runtime_ready: true,
           status: 'running',
           message: 'bootstrapped',
           current_tick: '42',
           runtime_speed: {
+            mode: 'variable',
             step_ticks: '2',
+            range: { min: '1', max: '2' },
             overridden: true
           },
           scheduler: {
@@ -270,14 +270,7 @@ describe('InMemoryPackRuntimeRegistry', () => {
               pack_folder_name: 'pack-a',
               health_status: 'loaded' as const,
               current_tick: '0',
-              runtime_speed: {
-                mode: 'fixed' as const,
-                source: 'world_pack' as const,
-                configured_step_ticks: '1',
-                override_step_ticks: null,
-                override_since: null,
-                effective_step_ticks: '1'
-              },
+              runtime_speed: makeSpeedSnapshot(),
               startup_level: 'degraded' as const,
               runtime_ready: true,
               message: null
@@ -286,14 +279,7 @@ describe('InMemoryPackRuntimeRegistry', () => {
         listStatuses: () => [],
         getClockSnapshot: () => null,
         getRuntimeSpeedSnapshot: (packId: string) => (packId === 'pack-a'
-          ? {
-              mode: 'fixed' as const,
-              source: 'world_pack' as const,
-              configured_step_ticks: '1',
-              override_step_ticks: null,
-              override_since: null,
-              effective_step_ticks: '1'
-            }
+          ? makeSpeedSnapshot()
           : null)
       } as never,
       getPackRuntimeHandle: (packId: string) => (packId === 'pack-a' ? handle : null),
@@ -316,25 +302,26 @@ describe('InMemoryPackRuntimeRegistry', () => {
       health_status: 'loaded',
       current_tick: '0',
       runtime_speed: {
-        mode: 'fixed',
+        mode: 'variable',
         source: 'world_pack',
-        configured_step_ticks: '1',
-        override_step_ticks: null,
-        override_since: null,
-        effective_step_ticks: '1'
+        strategy: defaultStrategy,
+        effective_step_ticks: '1',
+        override_since: null
       },
       startup_level: 'degraded',
       runtime_ready: true,
       message: null,
       control_plane: {
         pack_id: 'pack-a',
-        mode: 'active',
+        mode: 'loaded',
         runtime_ready: true,
         status: 'loaded',
         message: null,
         current_tick: '0',
         runtime_speed: {
+          mode: 'variable',
           step_ticks: '1',
+          range: { min: '1', max: '1' },
           overridden: false
         },
         scheduler: {

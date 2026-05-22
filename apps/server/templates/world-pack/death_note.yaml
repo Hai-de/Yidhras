@@ -30,7 +30,12 @@ simulation_time:
   initial_tick: 1000000000000
   min_tick: 900000000000
   max_tick: 1200000000000
-  step_ticks: 1
+  step:
+    strategy: variable
+    range:
+      min: 1
+      max: 10
+    loop_interval_ms: 1000
 
 time_systems:
   - id: "case_clock"

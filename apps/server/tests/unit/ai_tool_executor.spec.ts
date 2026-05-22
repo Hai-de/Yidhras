@@ -32,12 +32,13 @@ const buildMockContext = (overrides?: Record<string, unknown>): AppContext => {
       assertPackScope: (id: string) => id,
       getPackRuntimeSummary: () => null
     },
+    packRuntime: { getCurrentTick: () => 100n },
     getPackRuntimeHost: (id: string) => ({
       getCurrentTick: () => 100n,
       getCurrentRevision: () => 0n,
       getPack: () => ({ metadata: { id, name: 'test', version: '0.0.0' } }),
       getStepTicks: () => 1n,
-      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null }),
+      getRuntimeSpeedSnapshot: () => ({ mode: 'variable' as const, source: 'default' as const, strategy: { kind: 'variable' as const, range: { min: 1n, max: 1n }, loopIntervalMs: 1000 }, effective_step_ticks: '1', override_since: null }),
       setRuntimeSpeedOverride: vi.fn(),
       clearRuntimeSpeedOverride: vi.fn(),
       getAllTimes: () => [],

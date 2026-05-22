@@ -61,12 +61,13 @@ const createMockAppContext = (overrides?: {
       getPackRuntimeSummary: () => null
     },
     getPackRuntimeHandle: () => null,
+    packRuntime: { getCurrentTick: () => testTick },
     getPackRuntimeHost: (id: string) => ({
       getCurrentTick: () => testTick,
       getCurrentRevision: () => testTick,
       getPack: () => ({ metadata: { id, name: 'test', version: '0.0.0' } }),
       getStepTicks: () => 1n,
-      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null }),
+      getRuntimeSpeedSnapshot: () => ({ mode: 'variable' as const, source: 'default' as const, strategy: { kind: 'variable' as const, range: { min: 1n, max: 1n }, loopIntervalMs: 1000 }, effective_step_ticks: '1', override_since: null }),
       setRuntimeSpeedOverride: vi.fn(),
       clearRuntimeSpeedOverride: vi.fn(),
       getAllTimes: () => [],
