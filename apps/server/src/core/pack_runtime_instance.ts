@@ -5,6 +5,7 @@ import type { WorldPack } from '../packs/manifest/loader.js';
 import type { PackRuntimeClockSnapshot, PackRuntimeHandle, PackRuntimeHealthSnapshot } from './pack_runtime_handle.js';
 import type { PackRuntimeHost } from './pack_runtime_host.js';
 import { RuntimeSpeedPolicy, type RuntimeSpeedSnapshot } from './runtime_speed.js';
+import type { StepContext, StepStrategy } from './step_strategy.js';
 import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
 
 const buildPackRuntimeClock = (pack: WorldPack): ChronosEngine => {
@@ -13,14 +14,13 @@ const buildPackRuntimeClock = (pack: WorldPack): ChronosEngine => {
   return new ChronosEngine({ calendarConfigs: calendars, initialTicks: runtimeConfig.initialTick });
 };
 
-const configureRuntimeSpeedFromPack = (runtimeSpeed: RuntimeSpeedPolicy, pack: WorldPack): void => {
+const buildDefaultStepStrategy = (pack: WorldPack): StepStrategy => {
   const runtimeConfig = getWorldPackRuntimeConfig(pack);
-  if (runtimeConfig.configuredStepTicks !== undefined && runtimeConfig.configuredStepTicks > 0n) {
-    runtimeSpeed.setConfiguredStepTicks(runtimeConfig.configuredStepTicks);
-    return;
-  }
-
-  runtimeSpeed.setConfiguredStepTicks(null);
+  return runtimeConfig.stepStrategy ?? {
+    kind: 'variable',
+    range: { min: 1n, max: 1n },
+    loopIntervalMs: 1000
+  };
 };
 
 export interface PackRuntimeInstanceOptions {
@@ -45,8 +45,7 @@ export class PackRuntimeInstance implements PackRuntimeHost {
     this.pack = options.pack;
     this.packFolderName = options.packFolderName;
     this.clock = options.clock ?? buildPackRuntimeClock(options.pack);
-    this.runtimeSpeed = options.runtimeSpeed ?? new RuntimeSpeedPolicy(1n);
-    configureRuntimeSpeedFromPack(this.runtimeSpeed, this.pack);
+    this.runtimeSpeed = options.runtimeSpeed ?? new RuntimeSpeedPolicy(buildDefaultStepStrategy(options.pack));
     this.health = {
       status: options.initialStatus ?? 'loaded',
       message: options.initialMessage ?? null
@@ -62,34 +61,22 @@ export class PackRuntimeInstance implements PackRuntimeHost {
   }
 
   public load(): Promise<void> {
-    this.health = {
-      status: 'loaded',
-      message: this.health.message ?? null
-    };
+    this.health = { status: 'loaded', message: this.health.message ?? null };
     return Promise.resolve();
   }
 
   public start(): Promise<void> {
-    this.health = {
-      status: 'running',
-      message: this.health.message ?? null
-    };
+    this.health = { status: 'running', message: this.health.message ?? null };
     return Promise.resolve();
   }
 
   public stop(): Promise<void> {
-    this.health = {
-      status: 'stopped',
-      message: this.health.message ?? null
-    };
+    this.health = { status: 'stopped', message: this.health.message ?? null };
     return Promise.resolve();
   }
 
   public dispose(): Promise<void> {
-    this.health = {
-      status: 'stopped',
-      message: null
-    };
+    this.health = { status: 'stopped', message: null };
     return Promise.resolve();
   }
 
@@ -105,6 +92,22 @@ export class PackRuntimeInstance implements PackRuntimeHost {
     return this.clock;
   }
 
+  public getStepStrategy(): StepStrategy {
+    return this.runtimeSpeed.getStrategy();
+  }
+
+  public setStepStrategy(strategy: StepStrategy): void {
+    this.runtimeSpeed.setStrategy(strategy);
+  }
+
+  public getEffectiveStepTicks(ctx: StepContext, requestedStep?: bigint): bigint {
+    return this.runtimeSpeed.getEffectiveStepTicks(ctx, requestedStep);
+  }
+
+  public getLoopIntervalMs(): number {
+    return this.runtimeSpeed.getLoopIntervalMs();
+  }
+
   public getRuntimeSpeedSnapshot(): RuntimeSpeedSnapshot {
     return this.runtimeSpeed.getSnapshot();
   }
@@ -117,10 +120,6 @@ export class PackRuntimeInstance implements PackRuntimeHost {
     return {
       current_tick: this.clock.getTicks().toString()
     };
-  }
-
-  public setRuntimeSpeedOverride(stepTicks: bigint): void {
-    this.runtimeSpeed.setOverrideStepTicks(stepTicks);
   }
 
   public clearRuntimeSpeedOverride(): void {
@@ -144,7 +143,7 @@ export class PackRuntimeInstance implements PackRuntimeHost {
   }
 
   public getStepTicks(): bigint {
-    return this.runtimeSpeed.getEffectiveStepTicks();
+    return this.getStepStrategy().range.min;
   }
 
   public step(amount: bigint = 1n): Promise<void> {

@@ -1,4 +1,5 @@
 export interface ProjectionWhenClause {
+  /** 距离上次执行至少 N tick（累计距离判断，非取模） */
   tick_interval?: number;
   on_event_type?: string;
   entity_type_is?: string;
@@ -28,6 +29,8 @@ export interface ProjectionEvaluationContext {
   mediatorBindings: Array<{ mediator_id: string; subject_entity_id: string | null; binding_kind: string }>;
   authorityGrants: Array<{ id: string; source_entity_id: string; capability_key: string; status: string | null }>;
   ruleExecutionRecords: Array<{ id: string; rule_id: string; execution_status: string; payload_json: Record<string, unknown> | null }>;
+  /** Per-rule last execution tick map, keyed by rule id */
+  lastExecutionTicks?: Map<string, bigint>;
 }
 
 export interface ProjectionEvaluationResult {

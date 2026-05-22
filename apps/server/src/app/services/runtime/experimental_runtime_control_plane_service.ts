@@ -9,7 +9,9 @@ export interface ExperimentalPackRuntimeSnapshot {
   message: string | null;
   current_tick: string;
   runtime_speed: {
+    mode: 'variable' | 'adaptive';
     step_ticks: string;
+    range: { min: string; max: string };
     overridden: boolean;
   };
   scheduler: {
@@ -33,10 +35,17 @@ export interface ExperimentalRuntimeControlPlaneSnapshot {
 }
 
 const toExperimentalRuntimeSpeedSnapshot = (snapshot: {
+  mode: 'variable' | 'adaptive';
   effective_step_ticks: string;
   source: 'default' | 'world_pack' | 'override';
+  strategy: { range: { min: bigint; max: bigint } };
 }): ExperimentalPackRuntimeSnapshot['runtime_speed'] => ({
+  mode: snapshot.mode,
   step_ticks: snapshot.effective_step_ticks,
+  range: {
+    min: snapshot.strategy.range.min.toString(),
+    max: snapshot.strategy.range.max.toString()
+  },
   overridden: snapshot.source === 'override'
 });
 
@@ -84,8 +93,10 @@ export const buildExperimentalRuntimeControlPlaneSnapshot = async (
         current_tick: status?.current_tick ?? summary?.current_tick ?? '0',
         runtime_speed: toExperimentalRuntimeSpeedSnapshot(
           runtimeSpeed ?? {
+            mode: 'variable' as const,
             effective_step_ticks: '1',
-            source: 'default'
+            source: 'default' as const,
+            strategy: { range: { min: 1n, max: 1n } }
           }
         ),
         scheduler: {

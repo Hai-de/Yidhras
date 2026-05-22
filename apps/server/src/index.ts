@@ -12,7 +12,7 @@ import { asyncHandler } from './app/http/async_handler.js';
 import { getErrorMessage } from './app/http/errors.js';
 import { toJsonSafe } from './app/http/json.js';
 import { createPackScopeMiddleware } from './app/http/pack_scope_middleware.js';
-import { parseOptionalTick, parsePositiveStepTicks } from './app/http/runtime.js';
+import { parseOptionalTick } from './app/http/runtime.js';
 import { createGlobalErrorMiddleware } from './app/middleware/error_handler.js';
 import { registerConfigRoutes } from './app/routes/config.js';
 import { registerConfigBackupRoutes } from './app/routes/config_backup.js';
@@ -293,7 +293,6 @@ const registerRoutes: RouteRegistrar = (application, context) => {
     asyncHandler,
     inferenceService,
     parseOptionalTick,
-    parsePositiveStepTicks,
     toJsonSafe,
     getErrorMessage
   });

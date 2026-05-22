@@ -178,7 +178,7 @@ export const getRuntimeStatusSnapshot = async (
   return {
     status: context.isPaused() ? 'paused' : 'running',
     runtime_ready: context.isRuntimeReady(),
-    runtime_speed: context.getPackRuntimeHost?.(packId)?.getRuntimeSpeedSnapshot() ?? { mode: 'fixed', source: 'default', configured_step_ticks: null, override_step_ticks: null, override_since: null, effective_step_ticks: '1' },
+    runtime_speed: context.getPackRuntimeHost?.(packId)?.getRuntimeSpeedSnapshot() ?? { mode: 'variable', source: 'default', strategy: { kind: 'variable', range: { min: 1n, max: 1n }, loopIntervalMs: 1000 }, effective_step_ticks: '1', override_since: null },
     runtime_loop: runtimeLoop,
     database: context.getDatabaseHealth?.() ?? null,
     scheduler: {

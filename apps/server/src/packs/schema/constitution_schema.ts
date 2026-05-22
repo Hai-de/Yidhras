@@ -218,7 +218,23 @@ export const simulationTimeConfigSchema = z
     min_tick: tickLikeSchema.optional(),
     max_tick: tickLikeSchema.optional(),
     initial_tick: tickLikeSchema.optional(),
-    step_ticks: tickLikeSchema.optional()
+    step: z
+      .object({
+        strategy: z.enum(['variable', 'adaptive']),
+        range: z.object({
+          min: tickLikeSchema,
+          max: tickLikeSchema
+        }),
+        loop_interval_ms: z.number().int().positive().optional(),
+        adaptive: z
+          .object({
+            target_loop_ms: z.number().int().positive(),
+            scale_up_threshold_ms: z.number().int().positive(),
+            scale_down_threshold_ms: z.number().int().positive()
+          })
+          .optional()
+      })
+      .optional()
   })
   .strict();
 

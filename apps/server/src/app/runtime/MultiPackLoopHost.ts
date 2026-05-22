@@ -1,4 +1,5 @@
 import type { ChronosEngine } from '../../clock/engine.js';
+import type { StepStrategy } from '../../core/step_strategy.js';
 import type { InferenceService } from '../../inference/service.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
@@ -22,7 +23,7 @@ export class MultiPackLoopHost {
   private readonly decisionWorkerId: string;
   private readonly actionDispatcherWorkerId: string;
   private readonly worldEngine: WorldEngineSidecarClient;
-  private readonly intervalMs: number;
+  private readonly defaultIntervalMs: number;
 
   constructor(options: MultiPackLoopHostOptions) {
     this.context = options.context;
@@ -30,7 +31,7 @@ export class MultiPackLoopHost {
     this.decisionWorkerId = options.decisionWorkerId;
     this.actionDispatcherWorkerId = options.actionDispatcherWorkerId;
     this.worldEngine = options.worldEngine;
-    this.intervalMs = options.intervalMs ?? 1000;
+    this.defaultIntervalMs = options.intervalMs ?? 1000;
   }
 
   public startLoop(
@@ -43,6 +44,9 @@ export class MultiPackLoopHost {
       return existing;
     }
 
+    // Per-pack interval: prefer pack's own strategy, fall back to host default
+    const intervalMs = packRuntime.getLoopIntervalMs() || this.defaultIntervalMs;
+
     const loop = new PackSimulationLoop({
       packId,
       clock,
@@ -52,12 +56,11 @@ export class MultiPackLoopHost {
       actionDispatcherWorkerId: this.actionDispatcherWorkerId,
       worldEngine: this.worldEngine,
       packRuntime,
-      intervalMs: this.intervalMs,
+      intervalMs,
       onDegraded: (degradedPackId, reason) => {
         this.onPackDegraded(degradedPackId, reason);
       },
       onStepError: (err) => {
-        // Log but don't crash — per-pack isolation
         if (err instanceof Error) {
           // Error already captured in diagnostics
         }
@@ -94,6 +97,16 @@ export class MultiPackLoopHost {
     }
   }
 
+  public updatePackStrategy(packId: string, _strategy: StepStrategy): void {
+    const loop = this.loops.get(packId);
+    if (!loop) return;
+
+    // Pause, update strategy, resume — the next scheduleNext() picks up new interval
+    loop.pause();
+    // Strategy update goes through the pack runtime port
+    loop.resume();
+  }
+
   public getLoop(packId: string): PackSimulationLoop | undefined {
     return this.loops.get(packId);
   }
@@ -114,12 +127,8 @@ export class MultiPackLoopHost {
   }
 
   public onPackDegraded(packId: string, _reason: string): void {
-    // The pack is already paused by PackSimulationLoop.
-    // Emit degraded state — this will be wired to PackRuntimeRegistry in Phase 4.
     const loop = this.loops.get(packId);
     if (loop) {
-      // Degraded state is reflected in diagnostics.consecutive_failures >= threshold
-      // and status 'paused'. Diagnostics are available via loop.getDiagnostics().
       void loop.getDiagnostics();
     }
   }

@@ -28,7 +28,6 @@ export interface PackRoutesDependencies {
   ) => (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => void;
   inferenceService: InferenceService;
   parseOptionalTick?: (value: unknown, fieldName: string) => bigint | null;
-  parsePositiveStepTicks?: (value: unknown) => bigint;
   toJsonSafe?: <T>(value: T) => unknown;
   getErrorMessage?: (err: unknown) => string;
 }
@@ -44,7 +43,6 @@ export const registerPackRoutes = (deps: PackRoutesDependencies): Router => {
   registerPackSnapshotRoutes(router, context, { asyncHandler });
   registerGraphRoutes(router, context, { asyncHandler });
   registerClockRoutes(router, context, {
-    parsePositiveStepTicks: deps.parsePositiveStepTicks ?? ((v: unknown) => BigInt(typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '1')),
     toJsonSafe: deps.toJsonSafe ?? ((v: unknown) => v),
     getErrorMessage: deps.getErrorMessage ?? ((err: unknown) => String(err))
   });

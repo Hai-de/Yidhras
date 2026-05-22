@@ -1,6 +1,7 @@
 import { WORLD_ENGINE_PROTOCOL_VERSION } from '@yidhras/contracts';
 
 import type { ChronosEngine } from '../../clock/engine.js';
+import { buildStepContext } from '../../core/step_strategy.js';
 import type { InferenceService } from '../../inference/service.js';
 import { recordTickCompleted } from '../../observability/metrics.js';
 import { dataCleanerRegistry } from '../../plugins/extensions/data_cleaner_registry.js';
@@ -110,7 +111,6 @@ export class PackSimulationLoop {
   private readonly packRuntime: PackRuntimePort;
   private readonly schedulerWorkerId: string;
   private readonly schedulerPartitionIds: string[];
-  private readonly intervalMs: number;
   private readonly crashThreshold: number;
   private readonly hooks?: PackLoopHooks;
   private readonly onDegraded?: (packId: string, reason: string) => void;
@@ -127,11 +127,14 @@ export class PackSimulationLoop {
     this.packRuntime = options.packRuntime;
     this.schedulerWorkerId = options.schedulerWorkerId ?? `scheduler:${options.packId}:${process.pid}`;
     this.schedulerPartitionIds = resolveOwnedSchedulerPartitionIds({ workerId: this.schedulerWorkerId });
-    this.intervalMs = options.intervalMs ?? 1000;
     this.crashThreshold = options.crashThreshold ?? SCHEDULER_CRASH_THRESHOLD;
     this.hooks = options.hooks;
     this.onDegraded = options.onDegraded;
     this.onStepError = options.onStepError;
+  }
+
+  private getIntervalMs(): number {
+    return this.packRuntime.getLoopIntervalMs();
   }
 
   public start(): void {
@@ -180,7 +183,7 @@ export class PackSimulationLoop {
 
     this.timer = setTimeout(() => {
       void this.runIteration();
-    }, this.intervalMs);
+    }, this.getIntervalMs());
   }
 
   private async runIteration(): Promise<void> {
@@ -223,7 +226,7 @@ export class PackSimulationLoop {
 
     const steps: Array<{ name: string; fn: () => Promise<unknown> }> = [
       { name: 'step1_expireBindings', fn: () => expirePackIdentityBindings(this.packRuntime, this.context) },
-      { name: 'step2_worldEngine', fn: () => stepPackWorldEngine(this.context, this.packId, this.worldEngine, this.packRuntime) },
+      { name: 'step2_worldEngine', fn: () => stepPackWorldEngine(this.context, this.packId, this.worldEngine, this.packRuntime, this.diagnostics) },
       { name: 'step3_agentScheduler', fn: () => runAgentScheduler({
         context: this.context,
         workerId: this.schedulerWorkerId,
@@ -358,9 +361,16 @@ const stepPackWorldEngine = async (
   context: AppContext,
   packId: string,
   worldEngine: WorldEngineSidecarClient,
-  packRuntime: PackRuntimePort
+  packRuntime: PackRuntimePort,
+  loopDiagnostics: PackLoopDiagnostics
 ): Promise<void> => {
-  const stepTicks = '1';
+  const ctx = buildStepContext({
+    currentTick: packRuntime.getCurrentTick(),
+    lastLoopDurationMs: loopDiagnostics.last_duration_ms ?? 0,
+    overlapSkippedCount: loopDiagnostics.overlap_skipped_count,
+    pendingEventCount: 0
+  });
+  const stepTicks = packRuntime.getEffectiveStepTicks(ctx).toString();
 
   await executeWorldEnginePreparedStep({
     context,

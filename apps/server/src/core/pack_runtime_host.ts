@@ -3,6 +3,7 @@ import type { ChronosEngine } from '../clock/engine.js';
 import type { WorldPack } from '../packs/manifest/loader.js';
 import type { PackRuntimeClockSnapshot, PackRuntimeHandle, PackRuntimeHealthSnapshot } from './pack_runtime_handle.js';
 import type { RuntimeSpeedSnapshot } from './runtime_speed.js';
+import type { StepContext, StepStrategy } from './step_strategy.js';
 
 export interface PackRuntimeHost {
   load(): Promise<void>;
@@ -20,9 +21,12 @@ export interface PackRuntimeHost {
   step(amount?: bigint): Promise<void>;
   getPackSlotDeclarations(): Record<string, Record<string, unknown>> | null;
   applyClockProjection(snapshot: RuntimeClockProjectionSnapshot): void;
-  setRuntimeSpeedOverride(stepTicks: bigint): void;
-  clearRuntimeSpeedOverride(): void;
+  getStepStrategy(): StepStrategy;
+  setStepStrategy(strategy: StepStrategy): void;
+  getEffectiveStepTicks(ctx: StepContext, requestedStep?: bigint): bigint;
+  getLoopIntervalMs(): number;
   getRuntimeSpeedSnapshot(): RuntimeSpeedSnapshot;
+  clearRuntimeSpeedOverride(): void;
   getHealthSnapshot(): PackRuntimeHealthSnapshot;
   getClockSnapshot(): PackRuntimeClockSnapshot;
 }

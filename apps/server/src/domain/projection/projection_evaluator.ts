@@ -12,9 +12,13 @@ const matchesWhen = (
 
   if (when.tick_interval && when.tick_interval > 0) {
     const tickNum = Number(context.currentTick)
-    if (tickNum % when.tick_interval !== 0) {
-      return false
+    const lastExecTick = context.lastExecutionTicks?.get(rule.id)
+    if (lastExecTick !== undefined) {
+      if (tickNum - Number(lastExecTick) < when.tick_interval) {
+        return false
+      }
     }
+    // First execution: always passes tick_interval check
   }
 
   if (when.entity_type_is) {
@@ -93,6 +97,11 @@ const evaluateSingleRule = (
 ): ProjectionEvaluationResult[] => {
   if (!matchesWhen(rule, context)) {
     return []
+  }
+
+  // Record execution tick for cumulative tick_interval tracking
+  if (context.lastExecutionTicks && rule.when.tick_interval && rule.when.tick_interval > 0) {
+    context.lastExecutionTicks.set(rule.id, context.currentTick);
   }
 
   const { then } = rule

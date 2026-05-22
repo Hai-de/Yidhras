@@ -14,16 +14,6 @@ export const clockDataSchema = z.object({
   calendars: z.array(timeFormattedSchema)
 })
 
-export const runtimeSpeedOverrideRequestSchema = z.discriminatedUnion('action', [
-  z.object({
-    action: z.literal('override'),
-    step_ticks: z.union([positiveBigIntStringSchema, z.number().int().positive()])
-  }),
-  z.object({
-    action: z.literal('clear')
-  })
-])
-
 export const clockControlRequestSchema = z.object({
   action: z.enum(['pause', 'resume'])
 })
@@ -33,15 +23,51 @@ export const clockControlResponseDataSchema = z.object({
   status: z.enum(['paused', 'running'])
 })
 
-export const runtimeSpeedResponseDataSchema = z.object({
-  runtime_speed: z.object({
-    mode: z.literal('fixed'),
-    source: z.enum(['default', 'world_pack', 'override']),
-    configured_step_ticks: positiveBigIntStringSchema.nullable(),
-    override_step_ticks: positiveBigIntStringSchema.nullable(),
-    override_since: z.number().nullable(),
-    effective_step_ticks: positiveBigIntStringSchema
-  })
+export const stepStrategyRangeSchema = z.object({
+  min: positiveBigIntStringSchema,
+  max: positiveBigIntStringSchema
 })
+
+export const adaptiveConfigSchema = z.object({
+  target_loop_ms: z.number().int().positive(),
+  scale_up_threshold_ms: z.number().int().positive(),
+  scale_down_threshold_ms: z.number().int().positive()
+})
+
+export const stepStrategySchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('variable'),
+    range: stepStrategyRangeSchema,
+    loop_interval_ms: z.number().int().positive().optional()
+  }),
+  z.object({
+    kind: z.literal('adaptive'),
+    range: stepStrategyRangeSchema,
+    loop_interval_ms: z.number().int().positive().optional(),
+    adaptive: adaptiveConfigSchema
+  })
+])
+
+export const runtimeSpeedDataSchema = z.object({
+  mode: z.enum(['variable', 'adaptive']),
+  source: z.enum(['default', 'world_pack', 'override']),
+  strategy: stepStrategySchema,
+  effective_step_ticks: positiveBigIntStringSchema,
+  override_since: z.number().nullable()
+})
+
+export const runtimeSpeedResponseDataSchema = z.object({
+  runtime_speed: runtimeSpeedDataSchema
+})
+
+export const runtimeSpeedOverrideRequestSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('set_strategy'),
+    strategy: stepStrategySchema
+  }),
+  z.object({
+    action: z.literal('reset')
+  })
+])
 
 export type TimeFormatted = z.infer<typeof timeFormattedSchema>

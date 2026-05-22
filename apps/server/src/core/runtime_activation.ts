@@ -32,17 +32,11 @@ export interface ActivatedWorldPackRuntime {
   discoveredPlugins: PluginDiscoveryResult;
 }
 
-const configureRuntimeSpeedFromPack = (runtimeSpeed: RuntimeSpeedPolicy, pack: WorldPack, notifications: NotificationPort): void => {
+const configureRuntimeSpeedFromPack = (runtimeSpeed: RuntimeSpeedPolicy, pack: WorldPack, _notifications: NotificationPort): void => {
   const runtimeConfig = getWorldPackRuntimeConfig(pack);
 
-  if (runtimeConfig.configuredStepTicks !== undefined && runtimeConfig.configuredStepTicks > 0n) {
-    runtimeSpeed.setConfiguredStepTicks(runtimeConfig.configuredStepTicks);
-    return;
-  }
-
-  runtimeSpeed.setConfiguredStepTicks(null);
-  if (runtimeConfig.configuredStepTicks !== undefined) {
-    notifications.push('warning', '世界包字段 simulation_time.step_ticks 必须大于 0，已回退为 1', 'PACK_STEP_TICK_INVALID');
+  if (runtimeConfig.stepStrategy) {
+    runtimeSpeed.setStrategy(runtimeConfig.stepStrategy);
   }
 };
 

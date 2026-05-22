@@ -2,6 +2,7 @@ import type { RuntimeClockProjectionSnapshot } from '../../app/runtime/runtime_c
 import type { PackRuntimePort } from '../../app/services/pack/pack_runtime_ports.js';
 import type { PackRuntimeHost } from '../../core/pack_runtime_host.js';
 import type { RuntimeSpeedSnapshot } from '../../core/runtime_speed.js';
+import type { StepContext, StepStrategy } from '../../core/step_strategy.js';
 import type { PermissionContext } from '../../permission/types.js';
 import { renderNarrativeTemplate } from '../../template_engine/frontends/narrative/resolver.js';
 import {
@@ -49,10 +50,7 @@ export class DefaultPackRuntimePort implements PackRuntimePort {
           pack_name: pack?.metadata.name ?? '',
           pack_id: pack?.metadata.id ?? ''
         }),
-        metadata: {
-          source_label: 'simulation-pack',
-          trusted: true
-        }
+        metadata: { source_label: 'simulation-pack', trusted: true }
       }),
       createPromptVariableLayer({
         namespace: 'runtime',
@@ -62,10 +60,7 @@ export class DefaultPackRuntimePort implements PackRuntimePort {
         alias_values: normalizePromptVariableRecord({
           current_tick: this.getCurrentTick().toString()
         }),
-        metadata: {
-          source_label: 'simulation-runtime',
-          trusted: true
-        }
+        metadata: { source_label: 'simulation-runtime', trusted: true }
       })
     ];
 
@@ -75,10 +70,7 @@ export class DefaultPackRuntimePort implements PackRuntimePort {
           namespace: 'actor_state',
           values: normalizePromptVariableRecord(actorState),
           alias_values: normalizePromptVariableRecord(actorState),
-          metadata: {
-            source_label: 'simulation-actor-state',
-            trusted: true
-          }
+          metadata: { source_label: 'simulation-actor-state', trusted: true }
         })
       );
     }
@@ -97,12 +89,24 @@ export class DefaultPackRuntimePort implements PackRuntimePort {
     return this.host.getStepTicks();
   }
 
-  getRuntimeSpeedSnapshot(): RuntimeSpeedSnapshot {
-    return this.host.getRuntimeSpeedSnapshot();
+  getStepStrategy(): StepStrategy {
+    return this.host.getStepStrategy();
   }
 
-  setRuntimeSpeedOverride(stepTicks: bigint): void {
-    this.host.setRuntimeSpeedOverride(stepTicks);
+  setStepStrategy(strategy: StepStrategy): void {
+    this.host.setStepStrategy(strategy);
+  }
+
+  getEffectiveStepTicks(ctx: StepContext, requestedStep?: bigint): bigint {
+    return this.host.getEffectiveStepTicks(ctx, requestedStep);
+  }
+
+  getLoopIntervalMs(): number {
+    return this.host.getLoopIntervalMs();
+  }
+
+  getRuntimeSpeedSnapshot(): RuntimeSpeedSnapshot {
+    return this.host.getRuntimeSpeedSnapshot();
   }
 
   clearRuntimeSpeedOverride(): void {

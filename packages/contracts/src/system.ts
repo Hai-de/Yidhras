@@ -1,15 +1,7 @@
 import { z } from 'zod'
 
-import { nonNegativeBigIntStringSchema, positiveBigIntStringSchema } from './scalars.js'
-
-export const runtimeSpeedSnapshotSchema = z.object({
-  mode: z.literal('fixed'),
-  source: z.enum(['default', 'world_pack', 'override']),
-  configured_step_ticks: positiveBigIntStringSchema.nullable(),
-  override_step_ticks: positiveBigIntStringSchema.nullable(),
-  override_since: z.number().nullable(),
-  effective_step_ticks: positiveBigIntStringSchema
-})
+import { runtimeSpeedDataSchema } from './clock.js'
+import { nonNegativeBigIntStringSchema } from './scalars.js'
 
 export const runtimeLoopDiagnosticsSchema = z.object({
   status: z.enum(['idle', 'scheduled', 'running', 'paused', 'stopped']),
@@ -44,7 +36,7 @@ export const schedulerWorkerConfigSchema = z.object({
 export const runtimeStatusDataSchema = z.object({
   status: z.enum(['running', 'paused']),
   runtime_ready: z.boolean(),
-  runtime_speed: runtimeSpeedSnapshotSchema,
+  runtime_speed: runtimeSpeedDataSchema,
   runtime_loop: runtimeLoopDiagnosticsSchema,
   sqlite: sqliteRuntimePragmaSchema.nullable(),
   scheduler: schedulerWorkerConfigSchema,

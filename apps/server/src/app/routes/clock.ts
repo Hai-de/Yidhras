@@ -11,14 +11,13 @@ import { parseBody } from '../http/zod.js';
 import { requireAuth } from '../middleware/require_auth.js';
 import { readVisibleClockSnapshot } from '../services/app_context_ports.js';
 import {
-  clearRuntimeSpeedOverride,
-  overrideRuntimeSpeed,
   pauseRuntime,
-  resumeRuntime
+  resetPackStepStrategy,
+  resumeRuntime,
+  setPackStepStrategy
 } from '../services/runtime/runtime_control.js';
 
 export interface ClockRouteDependencies {
-  parsePositiveStepTicks(value: unknown): bigint;
   toJsonSafe(value: unknown): unknown;
   getErrorMessage(err: unknown): string;
 }
@@ -29,10 +28,6 @@ export const registerClockRoutes = (
   deps: ClockRouteDependencies
 ): void => {
   const readProjectedClock = () => {
-    /**
-     * Clock routes are external visible read surfaces and therefore should
-     * resolve through the host-visible clock helper first.
-     */
     const snapshot = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId: undefined });
     return {
       absolute_ticks: snapshot.absolute_ticks,
@@ -44,17 +39,30 @@ export const registerClockRoutes = (
     context.assertRuntimeReady('runtime speed control');
     const body = parseBody(runtimeSpeedOverrideRequestSchema, req.body, 'RUNTIME_SPEED_INVALID');
 
-    if (body.action === 'override') {
-      const parsed = deps.parsePositiveStepTicks(body.step_ticks);
-      const runtimeSpeed = overrideRuntimeSpeed(context, parsed);
+    if (body.action === 'set_strategy') {
+      const strategy = body.strategy;
+      const stepStrategy = {
+        kind: strategy.kind,
+        range: {
+          min: BigInt(strategy.range.min),
+          max: BigInt(strategy.range.max)
+        },
+        loopIntervalMs: strategy.loop_interval_ms ?? 1000,
+        adaptive: strategy.kind === 'adaptive' && strategy.adaptive ? {
+          targetLoopMs: strategy.adaptive.target_loop_ms,
+          scaleUpThresholdMs: strategy.adaptive.scale_up_threshold_ms,
+          scaleDownThresholdMs: strategy.adaptive.scale_down_threshold_ms
+        } : undefined
+      };
+      const runtimeSpeed = setPackStepStrategy(context, stepStrategy);
       jsonOk(res, {
         runtime_speed: deps.toJsonSafe(runtimeSpeed)
       });
       return;
     }
 
-    if (body.action === 'clear') {
-      const runtimeSpeed = clearRuntimeSpeedOverride(context);
+    if (body.action === 'reset') {
+      const runtimeSpeed = resetPackStepStrategy(context);
       jsonOk(res, {
         runtime_speed: deps.toJsonSafe(runtimeSpeed)
       });
@@ -62,7 +70,7 @@ export const registerClockRoutes = (
     }
 
     throw new ApiError(400, 'RUNTIME_SPEED_ACTION_INVALID', 'Invalid action', {
-      allowed_actions: ['override', 'clear']
+      allowed_actions: ['set_strategy', 'reset']
     });
   });
 

@@ -171,7 +171,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
 
     const calendars = (resolved.pack.time_systems ?? []) as unknown as CalendarConfig[];
     const clock = new ChronosEngine({ calendarConfigs: calendars, initialTicks: runtimeConfig.initialTick });
-    const runtimeSpeed = new RuntimeSpeedPolicy(runtimeConfig.configuredStepTicks ?? 1n);
+    const runtimeSpeed = new RuntimeSpeedPolicy(runtimeConfig.stepStrategy);
 
     const host = new PackRuntimeInstance({
       pack: resolved.pack,

@@ -1,62 +1,74 @@
+import type { StepContext, StepStrategy } from './step_strategy.js';
+import { computeAdaptiveStep, computeVariableStep } from './step_strategy.js';
+
 export type RuntimeSpeedSource = 'default' | 'world_pack' | 'override';
 
 export interface RuntimeSpeedSnapshot {
-  mode: 'fixed';
+  mode: 'variable' | 'adaptive';
   source: RuntimeSpeedSource;
-  configured_step_ticks: string | null;
-  override_step_ticks: string | null;
-  override_since: number | null;
+  strategy: StepStrategy;
   effective_step_ticks: string;
+  override_since: number | null;
 }
 
 export class RuntimeSpeedPolicy {
-  private readonly defaultStepTicks: bigint;
-  private configuredStepTicks: bigint | null = null;
-  private overrideStepTicks: bigint | null = null;
+  private strategy: StepStrategy;
+  private overrideStrategy: StepStrategy | null = null;
   private overrideSince: number | null = null;
+  private previousStep: bigint;
 
-  constructor(defaultStepTicks: bigint = 1n) {
-    this.defaultStepTicks = defaultStepTicks;
+  constructor(defaultStrategy?: StepStrategy) {
+    this.strategy = defaultStrategy ?? {
+      kind: 'variable',
+      range: { min: 1n, max: 1n },
+      loopIntervalMs: 1000
+    };
+    this.previousStep = this.strategy.range.min;
   }
 
-  public setConfiguredStepTicks(stepTicks: bigint | null): void {
-    this.configuredStepTicks = stepTicks;
-  }
-
-  public setOverrideStepTicks(stepTicks: bigint | null): void {
-    this.overrideStepTicks = stepTicks;
-    this.overrideSince = stepTicks === null ? null : Date.now();
-  }
-
-  public clearOverride(): void {
-    this.overrideStepTicks = null;
+  clearOverride(): void {
+    this.overrideStrategy = null;
     this.overrideSince = null;
   }
 
-  public getEffectiveStepTicks(): bigint {
-    if (this.overrideStepTicks !== null) {
-      return this.overrideStepTicks;
-    }
-
-    if (this.configuredStepTicks !== null) {
-      return this.configuredStepTicks;
-    }
-
-    return this.defaultStepTicks;
+  getStrategy(): StepStrategy {
+    return this.overrideStrategy ?? this.strategy;
   }
 
-  public getSnapshot(): RuntimeSpeedSnapshot {
-    const source: RuntimeSpeedSource = this.overrideStepTicks !== null
+  setStrategy(strategy: StepStrategy): void {
+    this.overrideStrategy = strategy;
+    this.overrideSince = Date.now();
+    this.previousStep = strategy.range.min;
+  }
+
+  getLoopIntervalMs(): number {
+    return this.getStrategy().loopIntervalMs;
+  }
+
+  getEffectiveStepTicks(ctx: StepContext, requestedStep?: bigint): bigint {
+    const active = this.getStrategy();
+
+    if (active.kind === 'adaptive') {
+      const result = computeAdaptiveStep(active, ctx, this.previousStep);
+      this.previousStep = result;
+      return result;
+    }
+
+    return computeVariableStep(active, ctx, requestedStep);
+  }
+
+  getSnapshot(): RuntimeSpeedSnapshot {
+    const active = this.getStrategy();
+    const source: RuntimeSpeedSource = this.overrideStrategy !== null
       ? 'override'
-      : (this.configuredStepTicks !== null ? 'world_pack' : 'default');
+      : 'default';
 
     return {
-      mode: 'fixed',
+      mode: active.kind,
       source,
-      configured_step_ticks: this.configuredStepTicks === null ? null : this.configuredStepTicks.toString(),
-      override_step_ticks: this.overrideStepTicks === null ? null : this.overrideStepTicks.toString(),
-      override_since: this.overrideSince,
-      effective_step_ticks: this.getEffectiveStepTicks().toString()
+      strategy: active,
+      effective_step_ticks: this.previousStep.toString(),
+      override_since: this.overrideSince
     };
   }
 }

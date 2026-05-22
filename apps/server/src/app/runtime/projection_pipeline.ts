@@ -8,6 +8,18 @@ import { listPackRuleExecutionRecords } from '../../packs/storage/rule_execution
 import type { AppContext } from '../context.js'
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js'
 
+/** Per-(pack, rule) last execution tick tracker for cumulative tick_interval */
+const ruleLastExecutionTicks = new Map<string, Map<string, bigint>>();
+
+const getPackLastExecutionTicks = (packId: string): Map<string, bigint> => {
+  let packMap = ruleLastExecutionTicks.get(packId);
+  if (!packMap) {
+    packMap = new Map<string, bigint>();
+    ruleLastExecutionTicks.set(packId, packMap);
+  }
+  return packMap;
+};
+
 const buildProjectionEntityStateId = (packId: string, projectionKey: string): string => {
   return `${packId}:state:__projection__:${projectionKey}`
 }
@@ -47,7 +59,8 @@ export const runProjectionPipeline = async (
     entityStates: entityStates.map(s => ({ entity_id: s.entity_id, state_namespace: s.state_namespace, state_json: s.state_json })),
     mediatorBindings: mediatorBindings.map(b => ({ mediator_id: b.mediator_id, subject_entity_id: b.subject_entity_id, binding_kind: b.binding_kind })),
     authorityGrants: authorityGrants.map(g => ({ id: g.id, source_entity_id: g.source_entity_id, capability_key: g.capability_key, status: g.status })),
-    ruleExecutionRecords: ruleExecutionRecords.map(r => ({ id: r.id, rule_id: r.rule_id, execution_status: r.execution_status, payload_json: r.payload_json }))
+    ruleExecutionRecords: ruleExecutionRecords.map(r => ({ id: r.id, rule_id: r.rule_id, execution_status: r.execution_status, payload_json: r.payload_json })),
+    lastExecutionTicks: getPackLastExecutionTicks(packId)
   }
 
   const parsedRules: ProjectionRuleDef[] = projectionRules.map(rule => ({

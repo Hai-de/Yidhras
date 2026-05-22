@@ -1,4 +1,5 @@
 import type { RuntimeSpeedSnapshot } from '../../../core/runtime_speed.js';
+import type { StepStrategy } from '../../../core/step_strategy.js';
 import type { AppContext, RuntimeLoopDiagnostics } from '../../context.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
 
@@ -28,25 +29,27 @@ const requireSpeedControl = (context: AppContext, packRuntime?: PackRuntimePort)
   return control;
 };
 
-export const overrideRuntimeSpeed = (context: AppContext, stepTicks: bigint, packRuntime?: PackRuntimePort): RuntimeSpeedSnapshot => {
+export const setPackStepStrategy = (context: AppContext, strategy: StepStrategy, packRuntime?: PackRuntimePort): RuntimeSpeedSnapshot => {
   const control = requireSpeedControl(context, packRuntime);
-  control.setRuntimeSpeedOverride(stepTicks);
+  control.setStepStrategy(strategy);
   const snapshot = control.getRuntimeSpeedSnapshot();
 
-  context.notifications.push('info', `运行时步进已覆盖为 ${stepTicks.toString()}`, 'RUNTIME_SPEED_OVERRIDE', {
-    step_ticks: stepTicks.toString(),
+  context.notifications.push('info', `运行时步进策略已更新为 ${strategy.kind}`, 'RUNTIME_STRATEGY_SET', {
+    strategy_kind: strategy.kind,
+    range_min: strategy.range.min.toString(),
+    range_max: strategy.range.max.toString(),
     override_since: snapshot.override_since
   });
 
   return snapshot;
 };
 
-export const clearRuntimeSpeedOverride = (context: AppContext, packRuntime?: PackRuntimePort): RuntimeSpeedSnapshot => {
+export const resetPackStepStrategy = (context: AppContext, packRuntime?: PackRuntimePort): RuntimeSpeedSnapshot => {
   const control = requireSpeedControl(context, packRuntime);
   control.clearRuntimeSpeedOverride();
   const snapshot = control.getRuntimeSpeedSnapshot();
 
-  context.notifications.push('info', '运行时步进覆盖已清除', 'RUNTIME_SPEED_OVERRIDE_CLEAR', {
+  context.notifications.push('info', '运行时步进策略已重置为 world pack 默认', 'RUNTIME_STRATEGY_RESET', {
     override_since: null
   });
 
