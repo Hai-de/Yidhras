@@ -30,7 +30,7 @@ const createContext = (): InferenceContext => ({
   transmission_profile: { policy: 'reliable', drop_reason: null, delay_ticks: '0', drop_chance: 0, derived_from: [] },
   context_run: { id: 'ctx-budget-001', created_at_tick: '1', selected_node_ids: [], nodes: [], diagnostics: { source_adapter_names: [], node_count: 0, node_counts_by_type: {}, selected_node_ids: [], dropped_nodes: [] } },
   memory_context: { short_term: [], long_term: [], summaries: [], diagnostics: { selected_count: 0, skipped_count: 0, memory_selection: { selected_entry_ids: [], dropped: [] } } },
-  pack_state: { actor_roles: [], actor_state: null, owned_artifacts: [], world_state: null, latest_event: null },
+  pack_state: { actor_roles: [], actor_state: null, owned_artifacts: [], world_state: null, latest_event: null, recent_events: [] },
   pack_runtime: { invocation_rules: [] }
 });
 

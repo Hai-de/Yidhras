@@ -1,4 +1,4 @@
-import { refreshPackPluginRuntime, syncPackPluginRuntime } from '../../../plugins/runtime.js';
+import { syncPackPluginRuntime } from '../../../plugins/runtime.js';
 import type { AppContext } from '../../context.js';
 import type {
   PackPluginRuntimeWebSnapshot,

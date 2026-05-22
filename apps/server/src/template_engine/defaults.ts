@@ -91,6 +91,7 @@ const isTruthy = (value: unknown): boolean => {
 };
 
 const resolveVar = (name: string, scope: RenderScope): unknown => {
+  // eslint-disable-next-line security/detect-object-injection -- 模板变量名来自受控渲染作用域，动态访问是模板引擎设计要求
   return scope.variables[name];
 };
 
@@ -107,6 +108,7 @@ const fisherYatesShuffle = <T>(arr: T[], rng: () => number): T[] => {
   const result = [...arr];
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
+    // eslint-disable-next-line security/detect-object-injection -- Fisher-Yates 使用受控整数索引交换数组元素
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
@@ -160,8 +162,20 @@ export const BUILTIN_MACRO_HANDLERS: Record<string, MacroHandlerFn> = {
 
   float: (_name: string, args: Record<string, MacroValue>, scope: RenderScope): MacroValue => {
     const rng = resolveRng(scope);
-    const min = typeof args.min === 'number' ? args.min : parseFloat(String(args.min ?? '0')) || 0;
-    const max = typeof args.max === 'number' ? args.max : parseFloat(String(args.max ?? '1')) || 1;
+    const rawMin = args.min;
+    const rawMax = args.max;
+    const min =
+      typeof rawMin === 'number'
+        ? rawMin
+        : typeof rawMin === 'string'
+          ? parseFloat(rawMin) || 0
+          : 0;
+    const max =
+      typeof rawMax === 'number'
+        ? rawMax
+        : typeof rawMax === 'string'
+          ? parseFloat(rawMax) || 1
+          : 1;
     const result = rng() * (max - min) + min;
     return result;
   },
@@ -193,6 +207,7 @@ export const BUILTIN_BLOCK_HANDLERS: Record<string, BlockHandlerFn> = {
     const arr = items as unknown[];
     const parts: string[] = [];
     for (let i = 0; i < arr.length; i++) {
+      // eslint-disable-next-line security/detect-object-injection -- each block 对已确认数组执行顺序遍历，索引来自受控 for-loop
       const item = arr[i];
       const itemScope: RenderScope = {
         ...scope,

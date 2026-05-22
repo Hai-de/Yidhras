@@ -13,15 +13,17 @@ export const startMetricsServer = (port: number): void => {
     return;
   }
 
-  server = http.createServer(async (_req, res) => {
-    try {
-      const metrics = await getMetricsRegistry().metrics();
-      res.writeHead(200, { 'Content-Type': getMetricsRegistry().contentType });
-      res.end(metrics);
-    } catch (err) {
-      res.writeHead(500);
-      res.end('Failed to collect metrics');
-    }
+  server = http.createServer((_req, res) => {
+    void (async () => {
+      try {
+        const metrics = await getMetricsRegistry().metrics();
+        res.writeHead(200, { 'Content-Type': getMetricsRegistry().contentType });
+        res.end(metrics);
+      } catch {
+        res.writeHead(500);
+        res.end('Failed to collect metrics');
+      }
+    })();
   });
 
   server.listen(port, () => {

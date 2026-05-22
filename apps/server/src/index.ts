@@ -53,7 +53,6 @@ import type { CalendarConfig } from './clock/types.js';
 import {
   getAiModelsConfigPath,
   getAppPort,
-  getPreferredOpening,
   getPreferredWorldPack,
   getRuntimeConfig,
   getRuntimeMultiPackConfig,
@@ -308,23 +307,6 @@ const app = createApp({
 
 app.use(createGlobalErrorMiddleware(appContext));
 
-const isDatabaseTimeoutError = (message: string): boolean => {
-  const normalized = message.toLowerCase();
-  return normalized.includes('socket timeout') || normalized.includes('database failed to respond') || normalized.includes('database is locked');
-};
-
-const handleSimulationStepError = (err: unknown): void => {
-  const message = getErrorMessage(err);
-  appContext.notifications.push(
-    'error',
-    isDatabaseTimeoutError(message)
-      ? `模拟步进失败（数据库锁竞争或查询超时）: ${message}`
-      : `模拟步进失败: ${message}`,
-    'SIM_STEP_ERR',
-    { error: message }
-  );
-};
-
 const start = async (): Promise<void> => {
   validateProductionSecrets();
   setLoggerRuntimeConfig(getRuntimeConfig().logging);
@@ -360,12 +342,7 @@ const start = async (): Promise<void> => {
 
       const runtimeDataDir = resolveWorkspacePath('data/runtime');
       const cliMarkerPath = path.join(runtimeDataDir, 'startup_opening.txt');
-      let openingId = getPreferredOpening();
       if (safeFs.existsSync(runtimeDataDir, cliMarkerPath)) {
-        const cliOpening = safeFs.readFileSync(runtimeDataDir, cliMarkerPath, 'utf-8').trim();
-        if (cliOpening) {
-          openingId = cliOpening;
-        }
         safeFs.unlinkSync(runtimeDataDir, cliMarkerPath);
       }
 
@@ -386,7 +363,6 @@ const start = async (): Promise<void> => {
       }
 
       const clockSnapshot = loadResult.handle.getClockSnapshot();
-      const currentTick = BigInt(clockSnapshot.current_tick);
       appContext.runtimeClockProjection?.rebuildFromRuntimeSeed({
         pack_id: packId,
         current_tick: clockSnapshot.current_tick,

@@ -6,7 +6,6 @@ import { syncPackPluginRuntime } from '../../../plugins/runtime.js';
 import type { AppContext } from '../../context.js';
 import {
   getPackRuntimeControl,
-  getPackRuntimeLookupPort,
   getPackRuntimeObservation
 } from '../app_context_ports.js';
 import {

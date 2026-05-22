@@ -21,7 +21,6 @@ import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import { ApiError } from '../../utils/api_error.js';
 import { createLogger } from '../../utils/logger.js';
 import { safeFs } from '../../utils/safe_fs.js';
-import type { WorldPack } from '../manifest/loader.js';
 import { teardownActorBridges } from '../runtime/materializer.js';
 import { listPackAuthorityGrants } from '../storage/authority_repo.js';
 import { listPackWorldEntities } from '../storage/entity_repo.js';

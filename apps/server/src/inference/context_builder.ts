@@ -20,10 +20,7 @@ import {
   normalizePromptVariableRecord
 } from '../template_engine/frontends/narrative/variable_context.js';
 import { ApiError } from '../utils/api_error.js';
-import { createLogger } from '../utils/logger.js';
 import { getInferenceContextConfig } from './context_config.js';
-
-const logger = createLogger('inference-context-builder');
 import { resolveConfigValues } from './context_config_resolver.js';
 import type { InferenceContextConfig } from './context_config_schema.js';
 import type {

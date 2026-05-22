@@ -33,6 +33,7 @@ export const slotRefBlockHandler: BlockHandlerFn = (
   const slotName = parseSlotRefCondition(condition);
   const sfScope = scope as SlotFunctionRenderScope;
   const slotRegistry = sfScope.slotRegistry;
+  // eslint-disable-next-line security/detect-object-injection -- slot 名来自已解析 block 条件，访问受控 slot 注册表是正式能力
   const slot = slotRegistry?.[slotName];
 
   if (!slot) return '';

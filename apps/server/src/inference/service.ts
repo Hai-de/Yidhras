@@ -34,6 +34,8 @@ import { groundDecisionIntent } from '../domain/invocation/intent_grounder.js';
 import { createMemoryRecordingService } from '../memory/recording/service.js';
 import { ApiError } from '../utils/api_error.js';
 import { buildInferenceContext } from './context_builder.js';
+import type { PromptBundleV2 } from './prompt_bundle_v2.js';
+import type { PromptTree } from './prompt_tree.js';
 import type { InferenceProvider } from './provider.js';
 import { createNoopInferenceTraceSink } from './sinks/noop.js';
 import type { InferenceTraceSink } from './trace_sink.js';
@@ -80,6 +82,24 @@ const assertRecord = (value: unknown, code: string, message: string): Record<str
   }
 
   return value as Record<string, unknown>;
+};
+
+const createEmptyPromptBundle = (inferenceId: string): PromptBundleV2 => {
+  const tree: PromptTree = {
+    inference_id: inferenceId,
+    task_type: 'agent_decision',
+    fragments_by_slot: {},
+    slot_registry: {},
+    resolved_positions: [],
+    metadata: {
+      prompt_version: 'no-prompt',
+      profile_id: null,
+      profile_version: null,
+      source_prompt_keys: []
+    }
+  };
+
+  return { slots: {}, slot_order: [], combined_prompt: '', metadata: { prompt_version: 'no-prompt', source_prompt_keys: [] }, tree };
 };
 
 const normalizeConfidence = (value: unknown): number | undefined => {
@@ -268,7 +288,6 @@ const executeRunInternal = async (
       })
     : undefined;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const prompt = provider.requiresPrompt
     ? (
         await buildWorkflowPromptBundle({
@@ -277,15 +296,19 @@ const executeRunInternal = async (
           profileId: conversationProfileId
         })
       ).bundle
-    : (null as any);
+    : null;
   const attemptCount = options?.attemptCount ?? 1;
   const maxAttempts = options?.maxAttempts ?? DEFAULT_JOB_MAX_ATTEMPTS;
   const memoryRecordingService = createMemoryRecordingService({ context });
-  const promptVersion = provider.requiresPrompt ? prompt.metadata.prompt_version : null;
+  const promptVersion = prompt?.metadata.prompt_version ?? null;
 
   let rawDecision: ProviderDecisionRaw;
   try {
-    rawDecision = await provider.run(inferenceContext, prompt);
+    if (prompt) {
+      rawDecision = await provider.run(inferenceContext, prompt);
+    } else {
+      rawDecision = await provider.run(inferenceContext, createEmptyPromptBundle(inferenceContext.inference_id));
+    }
   } catch (err) {
     const failure = classifyFailure(err);
 
@@ -437,7 +460,7 @@ const executeRunInternal = async (
     actor_ref: inferenceContext.actor_ref,
     input,
     context: inferenceContext,
-    prompt,
+    prompt: prompt ?? createEmptyPromptBundle(inferenceContext.inference_id),
     trace_metadata: traceMetadata,
     decision: grounded.decision,
     semantic_intent: grounded.semantic_intent,

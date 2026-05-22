@@ -1,4 +1,10 @@
-import type { BTConditionExpr, BTCompoundCondition, BTEvalContext, BTConditionKey, BTConditionOperator } from './types.js';
+import type {
+  BTCompoundCondition,
+  BTConditionExpr,
+  BTConditionKey,
+  BTConditionOperator,
+  BTEvalContext
+} from './types.js';
 
 const OPERATORS: BTConditionOperator[] = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'in', 'not_in'];
 
@@ -11,6 +17,7 @@ export const resolveContextValue = (
 
   switch (key) {
     case 'state':
+      // eslint-disable-next-line security/detect-object-injection -- 行为树条件 key 来自受限 DSL，访问 actor_state 的动态字段是正式能力
       return ps.actor_state?.[value];
 
     case 'has_artifact':
@@ -23,6 +30,7 @@ export const resolveContextValue = (
       return ps.recent_events.some((e) => e.semantic_type === value);
 
     case 'world_state':
+      // eslint-disable-next-line security/detect-object-injection -- 行为树条件 key 来自受限 DSL，访问 world_state 的动态字段是正式能力
       return ps.world_state?.[value];
 
     case 'ticks_since_event': {
@@ -83,6 +91,7 @@ const evaluateSimpleCondition = (
   const conditionKey = keys.find((k) => !OPERATORS.includes(k as BTConditionOperator));
   if (!conditionKey) return false;
 
+  // eslint-disable-next-line security/detect-object-injection -- operator/condition key 来自受限 DSL AST，动态读取是解析器正式能力
   const conditionValue = cond[conditionKey] as string;
   const resolved = resolveContextValue(conditionKey as BTConditionKey, conditionValue, ctx);
 
@@ -98,6 +107,7 @@ const evaluateSimpleCondition = (
     return Boolean(resolved);
   }
 
+  // eslint-disable-next-line security/detect-object-injection -- operator 来自受限 DSL AST，动态读取比较值是正式能力
   return applyOperator(resolved, operator, cond[operator]);
 };
 

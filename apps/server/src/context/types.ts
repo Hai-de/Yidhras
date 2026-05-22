@@ -81,7 +81,7 @@ export const KNOWN_CONTEXT_NODE_TYPES = {
   NARRATIVE_EVENT: 'narrative_event'
 } as const;
 
-export type ContextNodeType = (typeof KNOWN_CONTEXT_NODE_TYPES)[keyof typeof KNOWN_CONTEXT_NODE_TYPES] | string;
+export type ContextNodeType = string;
 
 export interface ContextNode {
   id: string;

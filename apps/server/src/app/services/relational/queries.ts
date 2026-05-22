@@ -8,18 +8,18 @@ import {
   type ListRelationshipAdjustmentLogsInput,
   MAX_RELATIONSHIP_LOG_LIMIT} from './types.js'
 
-export const listRelationalCircles = async (context: AppContext, packRuntime?: PackRuntimePort) => {
+export const listRelationalCircles = async (context: AppContext, _packRuntime?: PackRuntimePort) => {
   return context.repos.agent.listCircles();
 };
 
 export const listAtmosphereNodes = async (
   context: AppContext,
   input: ListAtmosphereNodesInput,
-  packRuntime?: PackRuntimePort
+  _packRuntime?: PackRuntimePort
 ) => {
   const ownerId = typeof input.owner_id === 'string' ? input.owner_id.trim() : '';
   const includeExpired = input.include_expired === true;
-  const now = resolvePackTick(context, packRuntime);
+  const now = resolvePackTick(context, _packRuntime);
 
   return context.repos.agent.listAtmosphereNodes(
     {

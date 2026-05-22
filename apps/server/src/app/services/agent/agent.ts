@@ -1,5 +1,4 @@
 import { getPackEntityOverviewProjection } from '../../../packs/runtime/projections/entity_overview_service.js';
-import { PermissionContext } from '../../../permission/types.js';
 import { ApiError } from '../../../utils/api_error.js';
 import type { AppContext, AppInfrastructure } from '../../context.js';
 import type { AuditViewEntry } from '../audit/audit.js';
@@ -167,21 +166,6 @@ const MAX_SNR_LOG_LIMIT = 100;
 const DEFAULT_AGENT_OVERVIEW_LIMIT = 10;
 const AGENT_QUERY_INVALID = 'AGENT_QUERY_INVALID';
 
-const buildPermissionContext = (agent: {
-  id: string;
-  circle_memberships: Array<{
-    circle_id: string;
-    circle: {
-      level: number;
-    };
-  }>;
-}): PermissionContext => {
-  return {
-    agent_id: agent.id,
-    circles: new Set(agent.circle_memberships.map(membership => membership.circle_id)),
-    global_level: Math.max(...agent.circle_memberships.map(membership => membership.circle.level), 0)
-  };
-};
 
 const assertNonEmptyAgentId = (agentId: string): string => {
   if (typeof agentId !== 'string' || agentId.trim().length === 0) {
@@ -241,7 +225,6 @@ export const getAgentContextSnapshot = async (context: AppInfrastructure & { get
     throw new ApiError(404, 'AGENT_NOT_FOUND', 'Agent not found', { agent_id: agentId });
   }
 
-  const permission = buildPermissionContext(agent);
   const host = packId ? context.getPackRuntimeHost?.(packId) : null;
   const pack = host?.getPack();
   const resolvedVariables = pack?.variables

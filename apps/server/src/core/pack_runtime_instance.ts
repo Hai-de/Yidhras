@@ -147,9 +147,10 @@ export class PackRuntimeInstance implements PackRuntimeHost {
     return this.runtimeSpeed.getEffectiveStepTicks();
   }
 
-  public async step(amount: bigint = 1n): Promise<void> {
+  public step(amount: bigint = 1n): Promise<void> {
     this.clock.tick(amount);
     this.currentRevision = this.clock.getTicks();
+    return Promise.resolve();
   }
 
   public applyClockProjection(snapshot: RuntimeClockProjectionSnapshot): void {

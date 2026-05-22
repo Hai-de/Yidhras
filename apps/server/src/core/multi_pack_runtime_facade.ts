@@ -1,7 +1,5 @@
 import type { AggregatedClockSnapshot, MultiPackRuntimePort, PackRuntimePort } from '../app/services/pack/pack_runtime_ports.js';
-import { DefaultPackRuntimePort } from '../packs/orchestration/default_pack_runtime_port.js';
 import type { DefaultPackRuntimeRegistryService } from '../packs/orchestration/pack_runtime_registry_service.js';
-import type { PackRuntimeHandle } from './pack_runtime_handle.js';
 
 /**
  * Multi-pack aggregation facade — extracted from SimulationManager.

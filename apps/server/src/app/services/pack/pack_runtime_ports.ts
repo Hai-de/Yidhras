@@ -1,7 +1,6 @@
 import type { RuntimeSpeedSnapshot } from '../../../core/runtime_speed.js';
 import type { WorldPack } from '../../../packs/manifest/loader.js';
 import type { RuntimeClockProjectionSnapshot } from '../../runtime/runtime_clock_projection.js';
-import type { WorldEnginePort } from '../../runtime/world_engine_ports.js';
 
 /**
  * Per-pack runtime port.

@@ -1,5 +1,5 @@
 import { evaluateCondition } from '../context_resolver.js';
-import type { BTActionDef, BTLLMDecisionDef, BTNodeDef, BTEvalContext, BTStatus } from '../types.js';
+import type { BTActionDef, BTEvalContext, BTLLMDecisionDef, BTNodeDef, BTStatus } from '../types.js';
 
 export function tickCondition(
   condition: BTNodeDef['condition'],
@@ -22,7 +22,7 @@ export async function tickLLMDecision(
   _ctx: BTEvalContext
 ): Promise<BTStatus> {
   // Stub: Phase 6 wires AI Gateway
-  return 'failure';
+  return Promise.resolve('failure');
 }
 
 function buildDecisionResult(action: BTActionDef): Record<string, unknown> {

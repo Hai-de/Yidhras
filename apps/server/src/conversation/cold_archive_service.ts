@@ -243,7 +243,7 @@ export const archiveConversationEntriesToColdStorage = async (
       limit
     },
     total_entries: rows.length,
-    entries: rows.map(row => toArchiveEntry(row as ConversationEntryArchiveRow))
+    entries: rows.map(row => toArchiveEntry(row))
   };
 
   await mkdir(outputDir, { recursive: true });

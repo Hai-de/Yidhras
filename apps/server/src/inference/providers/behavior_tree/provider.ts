@@ -2,7 +2,7 @@ import type { InferenceProvider } from '../../provider.js';
 import type { InferenceContext, ProviderDecisionRaw } from '../../types.js';
 import { evaluateTree } from './evaluator.js';
 import { TreeRegistry } from './tree_registry.js';
-import type { BTEvalContext, BTCooldownState } from './types.js';
+import type { BTCooldownState,BTEvalContext } from './types.js';
 
 export interface BehaviorTreeProviderDeps {
   treeRegistry?: TreeRegistry;

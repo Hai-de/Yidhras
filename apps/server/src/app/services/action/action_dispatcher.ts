@@ -331,7 +331,7 @@ export const registerIntentHandler = (intentType: string, handler: IntentHandler
   intentHandlerRegistry.set(intentType, handler);
 };
 
-const postMessageHandler: IntentHandler = async (context, intent, packRuntime) => {
+const postMessageHandler: IntentHandler = async (context, intent, _packRuntime) => {
   const dropDecision = resolveDropDecision(intent);
   if (dropDecision.dropped) {
     return { outcome: 'dropped', reason: dropDecision.reason };

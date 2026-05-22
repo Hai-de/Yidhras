@@ -108,7 +108,10 @@ const runMigration = async (): Promise<void> => {
   for (const m of result.applied) {
     console.error(`  v${m.version}: ${m.description}`);
   }
-  console.error(`Schema version updated: ${currentVersion} → ${result.config.schema_version}`);
+  const nextSchemaVersion = result.config.schema_version;
+  console.error(
+    `Schema version updated: ${String(currentVersion)} → ${typeof nextSchemaVersion === 'number' ? String(nextSchemaVersion) : 'unknown'}`
+  );
 
   // Output the migrated config to stdout
   console.log(newYaml);

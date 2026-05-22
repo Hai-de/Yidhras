@@ -1,6 +1,6 @@
 import type { ProviderDecisionRaw } from '../../types.js';
 import { tickAction, tickCondition, tickLLMDecision } from './nodes/leaves.js';
-import type { BTNodeDef, BTEvalContext, BTStatus, BTDecisionTrace, BTNodeTrace } from './types.js';
+import type { BTDecisionTrace, BTEvalContext, BTNodeDef, BTNodeTrace,BTStatus } from './types.js';
 
 export async function tick(node: BTNodeDef, ctx: BTEvalContext): Promise<BTStatus> {
   if (node.$ref) {
@@ -75,10 +75,6 @@ async function tickWithTrace(
     return status;
   } finally {
     const durationMs = Date.now() - startMs;
-    const discarded = node.type === 'action' && ctx.blackboard['__last_decision']
-      ? (ctx.blackboard['__last_decision'] as ProviderDecisionRaw)
-      : undefined;
-
     traces.push({
       nodePath,
       nodeType,

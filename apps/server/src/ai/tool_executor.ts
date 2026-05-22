@@ -1,6 +1,5 @@
 import type { AppContext } from '../app/context.js';
 import { listActiveSchedulerAgents } from '../app/services/inference_workflow/scheduler_signal_repository.js';
-import type { PackRuntimePort } from '../app/services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
 import { listPackWorldEntities } from '../packs/storage/entity_repo.js';
 import type { ToolPermissionPolicy } from './tool_permissions.js';

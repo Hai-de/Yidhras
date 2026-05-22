@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { buildOutputContractPrompt } from './output_contract_prompt.js';
 import type { PromptBlock } from './prompt_block.js';
 import type { PromptBundleV2 } from './prompt_bundle_v2.js';
 import type { PromptFragmentV2 } from './prompt_fragment_v2.js';
@@ -7,7 +8,6 @@ import type { PromptSlotConfig } from './prompt_slot_config.js';
 import { type PromptTree,renderSlotText } from './prompt_tree.js';
 import { resolveSlotPositions } from './slot_position_resolver.js';
 import type { InferenceContext, PromptBundleMetadata, PromptResolvableContext } from './types.js';
-import { buildOutputContractPrompt } from './output_contract_prompt.js';
 
 type ParsedPromptSlotConfig = PromptSlotConfig;
 type PromptContext = InferenceContext | PromptResolvableContext;

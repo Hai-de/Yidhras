@@ -50,6 +50,7 @@ const parseModifierExpression = (expression: string): { path: string; modifiers:
   const modifiers: { name: string; args: MacroValue[] }[] = [];
 
   for (let i = 1; i < parts.length; i++) {
+    // eslint-disable-next-line security/detect-object-injection -- 修饰器链按 split 后的受控数组顺序访问
     const part = (parts[i] ?? '').trim();
     const argOpenIdx = part.indexOf('(');
     if (argOpenIdx !== -1) {
@@ -204,6 +205,7 @@ export const renderNarrativeTemplate = (input: {
 
     const blockHandlerWrappers: Record<string, BlockHandlerFn> = {};
     for (const [keyword, handler] of Object.entries(narrativeBlockHandlers)) {
+      // eslint-disable-next-line security/detect-object-injection -- block 关键字来自受控 handler 注册表枚举结果
       blockHandlerWrappers[keyword] = (
         condition: string,
         body: AstNode[],

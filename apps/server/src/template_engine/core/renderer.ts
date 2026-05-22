@@ -27,6 +27,7 @@ const resolveVariable = (name: string, scope: RenderScope): unknown => {
       return undefined;
     }
     if (typeof current === 'object') {
+      // eslint-disable-next-line security/detect-object-injection -- 点路径解析是模板变量查找的正式能力，键来自模板表达式分段
       current = (current as Record<string, unknown>)[part];
     } else {
       return undefined;
@@ -52,8 +53,10 @@ const resolveMacroArgs = (
   for (const [key, value] of Object.entries(args)) {
     if (typeof value === 'string' && value.includes('.') && !value.includes(',')) {
       const resolvedVal = resolveVariable(value, scope);
+      // eslint-disable-next-line security/detect-object-injection -- 宏参数 key 来自解析后的 AST 命名参数，写入受控对象
       resolved[key] = resolvedVal !== undefined ? resolvedVal as MacroValue : value;
     } else {
+      // eslint-disable-next-line security/detect-object-injection -- 宏参数 key 来自解析后的 AST 命名参数，写入受控对象
       resolved[key] = value;
     }
   }

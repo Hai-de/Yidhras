@@ -1,4 +1,4 @@
-import type { BTNodeDef, BTEvalContext, BTStatus } from '../types.js';
+import type { BTEvalContext, BTNodeDef, BTStatus } from '../types.js';
 
 async function getTick(): Promise<(node: BTNodeDef, ctx: BTEvalContext) => Promise<BTStatus>> {
   const { tick } = await import('../evaluator.js');

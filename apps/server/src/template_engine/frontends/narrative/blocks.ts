@@ -76,6 +76,7 @@ export const createNarrativeBlockHandlers = (): Record<string, BlockHandlerFn> =
     const arr = items as unknown[];
     const parts: string[] = [];
     for (let i = 0; i < arr.length; i++) {
+      // eslint-disable-next-line security/detect-object-injection -- each block 顺序遍历已确认数组，索引来自受控 for-loop
       const item = arr[i];
       const itemScope: RenderScope = {
         ...scope,

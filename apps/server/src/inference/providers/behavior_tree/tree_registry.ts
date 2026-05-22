@@ -14,8 +14,8 @@ export class TreeRegistry {
   register(rawTrees: Record<string, unknown>): void {
     for (const [name, rawNode] of Object.entries(rawTrees)) {
       const parsed = btNodeDefSchema.parse(rawNode);
-      this.validateNode(parsed as BTNodeDef, name);
-      this.trees.set(name, parsed as BTNodeDef);
+      this.validateNode(parsed, name);
+      this.trees.set(name, parsed);
     }
   }
 

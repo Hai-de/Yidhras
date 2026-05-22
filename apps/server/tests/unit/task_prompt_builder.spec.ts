@@ -81,7 +81,7 @@ const createInferenceContext = (): InferenceContext => {
       diagnostics: { source_adapter_names: [], node_count: 0, node_counts_by_type: {}, selected_node_ids: [], dropped_nodes: [] }
     },
     memory_context: baseMemoryContext,
-    pack_state: { actor_roles: [], actor_state: null, owned_artifacts: [], world_state: null, latest_event: null },
+    pack_state: { actor_roles: [], actor_state: null, owned_artifacts: [], world_state: null, latest_event: null, recent_events: [] },
     pack_runtime: { invocation_rules: [] }
   } satisfies InferenceContext;
 };

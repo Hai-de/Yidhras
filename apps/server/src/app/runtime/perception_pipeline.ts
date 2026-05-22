@@ -26,18 +26,19 @@ interface SpatialEventRow {
   source_action_intent_id: string | null;
 }
 
-interface AgentRow {
-  id: string;
-}
-
 const extractActorEntityId = (impactData: string | null): string | null => {
   if (!impactData) {
     return null;
   }
   try {
-    const parsed = JSON.parse(impactData);
-    if (parsed && typeof parsed === 'object' && typeof parsed.actor_identity_id === 'string') {
-      return parsed.actor_identity_id as string;
+    const parsed: unknown = JSON.parse(impactData);
+    if (
+      parsed
+      && typeof parsed === 'object'
+      && 'actor_identity_id' in parsed
+      && typeof (parsed as { actor_identity_id?: unknown }).actor_identity_id === 'string'
+    ) {
+      return (parsed as { actor_identity_id: string }).actor_identity_id;
     }
   } catch {
     // ignore parse errors

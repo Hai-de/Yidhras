@@ -4,9 +4,9 @@ import path from 'node:path';
 import { pluginManifestSchema } from '@yidhras/contracts';
 import * as YAML from 'yaml';
 
+import { resolveWorkspaceRoot } from '../config/loader.js';
 import { btTreeMapSchema } from '../inference/providers/behavior_tree/schema.js';
 import { TreeRegistry } from '../inference/providers/behavior_tree/tree_registry.js';
-import { resolveWorkspaceRoot } from '../config/loader.js';
 import { resolveIncludes } from '../packs/manifest/include_resolver.js';
 import { parseWorldPackConstitution } from '../packs/schema/constitution_schema.js';
 
@@ -127,8 +127,10 @@ const validateIncludes = (parsed: unknown, packDir: string): ValidationIssue[] =
     }
 
     try {
-      const subContent = YAML.parse(readFileSync(absolutePath, 'utf-8'));
-      if (subContent === null || subContent === undefined) {
+      const subContent: unknown = YAML.parse(readFileSync(absolutePath, 'utf-8'));
+      const hasSubContent = subContent !== null && subContent !== undefined;
+
+      if (!hasSubContent) {
         issues.push({
           severity: 'WARN',
           message: `include.${sectionKey}: "${filePath}" 解析结果为空`

@@ -2,7 +2,6 @@ import { buildAiTaskRequestFromInferenceContext } from '../../ai/task_prompt_bui
 import type { AiTaskService } from '../../ai/task_service.js';
 import { createAiTaskService } from '../../ai/task_service.js';
 import type { AppInfrastructure } from '../../app/context.js';
-import type { AppContextPorts } from '../../app/services/app_context_ports.js';
 import type { PackRuntimePort } from '../../app/services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution.js';
 import { isAiGatewayEnabled } from '../../config/runtime_config.js';

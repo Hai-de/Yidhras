@@ -47,12 +47,10 @@ const createContext = (overrides: Partial<InferenceContext> = {}): InferenceCont
     nodes: [
       {
         id: 'node-1',
-        source: 'test',
         node_type: 'manual_note',
         scope: 'agent',
         source_kind: 'manual',
         source_ref: null,
-        priority: 10,
         content: { text: 'Important memory note' },
         tags: [],
         importance: 1,
@@ -68,7 +66,7 @@ const createContext = (overrides: Partial<InferenceContext> = {}): InferenceCont
     diagnostics: { source_adapter_names: [], node_count: 1, node_counts_by_type: { manual_note: 1 }, selected_node_ids: ['node-1'], dropped_nodes: [] }
   },
   memory_context: baseMemoryContext,
-  pack_state: { actor_roles: [], actor_state: null, owned_artifacts: [], world_state: null, latest_event: null },
+  pack_state: { actor_roles: [], actor_state: null, owned_artifacts: [], world_state: null, latest_event: null, recent_events: [] },
   pack_runtime: { invocation_rules: [] },
   ...overrides
 });
