@@ -107,7 +107,9 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, PackCatalogS
 
   public getExperimentalPackRuntimeStatusRecords(): Array<ExperimentalPackRuntimeStatusRecord> {
     return this.packRuntimeRegistryService.listStatuses().map(status => ({
-      pack_id: status.pack_id,
+      instance_id: status.instance_id,
+      metadata_id: status.metadata_id,
+      pack_id: status.instance_id,
       status: status.health_status,
       current_tick: status.current_tick,
       message: status.message ?? null

@@ -11,6 +11,7 @@ export interface PackRuntimeDatabaseLocation {
   runtimeDbPath: string;
 }
 
+/** @param packId — instance_id */
 const normalizePackId = (packId: string): string => {
   const normalized = packId.trim();
   if (normalized.length === 0) {

@@ -11,7 +11,8 @@ export interface PackRuntimeHealthSnapshot {
 }
 
 export interface PackRuntimeHandle {
-  pack_id: string;
+  instance_id: string;
+  metadata_id: string;
   pack_folder_name: string;
   pack: WorldPack;
   getClockSnapshot(): PackRuntimeClockSnapshot;

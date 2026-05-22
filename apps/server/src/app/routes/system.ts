@@ -50,8 +50,16 @@ export const registerSystemRoutes = (app: Express, context: AppContext): void =>
   app.get(
     '/api/status',
     requireAuth(),
-    (_req, res, next) => {
-      const packId = undefined;
+    (req, res, next) => {
+      const rawPackId = req.query.packId;
+      const packId = typeof rawPackId === 'string' && rawPackId.trim().length > 0
+        ? rawPackId.trim()
+        : undefined;
+      if (!packId) {
+        next(new ApiError(400, 'PACK_ID_REQUIRED', 'packId query parameter is required'));
+        return;
+      }
+
       getRuntimeStatusSnapshot(context, {
         packId,
         schedulerWorkerId: process.env.SCHEDULER_WORKER_ID,

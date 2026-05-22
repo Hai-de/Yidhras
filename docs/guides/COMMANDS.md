@@ -326,6 +326,7 @@ pnpm --filter web exec vitest run --config vitest.config.ts tests/unit/<file>.sp
 
 以下 CLI 命令均为 `apps/server` 包内脚本，通过 `pnpm --filter yidhras-server <command>` 调用。
 所有命令均不依赖运行中的服务器，可直接离线使用（`sim` 和部分 `snapshot` 操作除外）。
+命令中的 `<packId>` / `--pack <pack-id>` 参数接收 `instance_id`（默认 = 包目录名），非 `metadata.id`。
 
 ### 6.1 数据库管理 (`db`)
 
@@ -443,7 +444,7 @@ pnpm --filter yidhras-server pack:import <archive> [--force] [--json]
 
 说明：
 - `export`：将 world pack 打包为 `<id>-<version>.tar.gz`，同时生成 `.sha256` 校验文件。默认输出到工作目录，`--output` 指定输出路径。导出前自动运行 validate:pack 校验，校验失败则拒绝（`--force` 跳过）。
-- `import`：从 `.tar.gz` 归档安装 world pack 到 `data/world_packs/<id>/`。自动校验归档内容，目标目录已存在时需 `--force` 覆盖。
+- `import`：从 `.tar.gz` 归档安装 world pack 到 `data/world_packs/<instance_id>/`（`<instance_id>` 默认取自归档目录名）。自动校验归档内容，目标目录已存在时需 `--force` 覆盖。
 - 排除项：`.git`、`node_modules`、`runtime/`、临时文件。
 - 支持 `--json` 机器可读输出。
 

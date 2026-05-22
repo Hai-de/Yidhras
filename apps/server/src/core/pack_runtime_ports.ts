@@ -7,12 +7,14 @@ import type { PackRuntimeStatusSnapshot } from './pack_runtime_health.js';
 import type { RuntimeSpeedSnapshot } from './runtime_speed.js';
 
 export interface PackRuntimeSummary {
-  pack_id: string;
+  pack_id: string; // instance_id
   pack_folder_name?: string | null;
   health_status: PackRuntimeHealthSnapshot['status'];
   current_tick?: string | null;
   runtime_ready?: boolean;
 }
+
+/** All method `packId` parameters accept instance_id (not metadata.id). */
 
 export interface PackRuntimeLocator {
   listLoadedPackIds(): string[];

@@ -113,7 +113,7 @@ describe('theme resolver pipeline', () => {
     const result = resolveThemeWithDiagnostics(undefined, {
       worldPackId: 'pack-alpha',
       worldPack: {
-        id: 'pack-alpha',
+        instance_id: 'pack-alpha', metadata_id: 'pack-alpha',
         name: 'Pack Alpha',
         version: '1.0.0'
       }
@@ -132,7 +132,7 @@ describe('theme resolver pipeline', () => {
     const result = resolveThemeWithDiagnostics(undefined, {
       worldPackId: 'pack-provider',
       worldPack: {
-        id: 'pack-provider',
+        instance_id: 'pack-provider', metadata_id: 'pack-provider',
         name: 'Pack Provider',
         version: '1.0.0',
         presentation: {
@@ -165,7 +165,7 @@ describe('theme resolver pipeline', () => {
     const result = resolveThemeWithDiagnostics(undefined, {
       worldPackId: 'pack-default',
       worldPack: {
-        id: 'pack-default',
+        instance_id: 'pack-default', metadata_id: 'pack-default',
         name: 'Pack Default',
         version: '1.0.0'
       }

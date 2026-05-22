@@ -109,6 +109,7 @@ describe('materializePackRuntime', () => {
     const prisma = createMockPrisma();
 
     const result = await materializePackRuntime({
+      instanceId: pack.metadata.id,
       pack,
       prisma,
       packStorageAdapter,
@@ -142,12 +143,14 @@ describe('materializePackRuntime', () => {
     const prisma = createMockPrisma();
 
     const first = await materializePackRuntime({
+      instanceId: pack.metadata.id,
       pack,
       prisma,
       packStorageAdapter,
       initialTick: 0n
     });
     const second = await materializePackRuntime({
+      instanceId: pack.metadata.id,
       pack,
       prisma,
       packStorageAdapter,
@@ -173,6 +176,7 @@ describe('materializePackRuntime', () => {
     const prisma = createMockPrisma();
 
     const result = await materializePackRuntime({
+      instanceId: pack.metadata.id,
       pack,
       prisma,
       packStorageAdapter,
@@ -200,6 +204,7 @@ describe('materializePackRuntime', () => {
     const prisma = createMockPrisma();
 
     await materializePackRuntime({
+      instanceId: pack.metadata.id,
       pack,
       prisma,
       packStorageAdapter,
@@ -236,6 +241,7 @@ describe('materializePackRuntime', () => {
     const prisma = createMockPrisma();
 
     const result = await materializePackRuntime({
+      instanceId: pack.metadata.id,
       pack,
       prisma,
       packStorageAdapter,
@@ -257,6 +263,7 @@ describe('materializePackRuntime', () => {
     const prisma = createMockPrisma();
 
     const result = await materializePackRuntime({
+      instanceId: pack.metadata.id,
       pack,
       prisma,
       packStorageAdapter,

@@ -14,7 +14,8 @@ export interface OverviewSummarySnapshot {
     health_level: AppContext['startupHealth']['level'];
     world_pack:
       | {
-          id: string;
+          instance_id: string;
+          metadata_id: string;
           name: string;
           version: string;
         }

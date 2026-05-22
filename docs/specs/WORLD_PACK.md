@@ -33,6 +33,8 @@ Yidhras 核心只定义 world-pack 框架、合约与运行边界，不内建任
 
 推荐字段列表：
 
+- `metadata.id` — 世界包类型标识（type/template identity），多个实例可共享同一类型 ID
+- `metadata.instance_id` — 实例标识（instance identity），默认等于包目录名。显式声明后不随目录重命名而改变，用于区分同一世界包的多个开发/测试/实验副本
 - `metadata.authors`
 - `metadata.license`
 - `metadata.homepage`
@@ -80,6 +82,23 @@ metadata:
 - 版本兼容性声明
 - 前端界面或 operator 的信息展示
 - 第三方收录与资产管理
+
+---
+
+## 1.2 instance_id 与 metadata.id 的分工
+
+系统通过两个标识符区分"世界包类型"与"运行实例"：
+
+| 字段 | 来源 | 语义 | 唯一性 |
+|------|------|------|--------|
+| `metadata.id` | `pack.yaml` | 世界包类型/模板身份。同一世界包的不同副本共享此值 | 不要求全局唯一 |
+| `instance_id` | `metadata.instance_id` ?? 目录名 | 运行实例标识。路由、存储、权限绑定、时钟等全系统以此为操作主键 | 全局唯一 |
+
+- **默认行为**：`instance_id` = 包目录名（文件系统天然唯一）。现有单实例 pack 零配置兼容。
+- **显式覆盖**：`pack.yaml` 中声明 `metadata.instance_id` 可锁定实例标识，不受目录重命名影响。
+- **API 响应**：`GET /api/packs` 返回 `instance_id` + `metadata_id` + `folder_name`。原单一的 `id` 字段已废弃。
+- **路由**：`/:packId` 承载的是 `instance_id`，不再是 `metadata.id`。
+- **数据库路径**：`data/world_packs/<instance_id>/runtime.sqlite`。
 
 ---
 
@@ -573,10 +592,10 @@ pnpm scaffold:world-pack -- --dir my_pack --name "My Pack" --author "Your Name"
 
 仓库可以包含一个或多个 bundled example world-pack，用来展示完整 contract 的一种实现方式。它们的定位是参考实例，不是宿主核心默认语义。
 
-- 例如 `world-death-note` 可以作为参考实例：
-  - 入口文件：`data/world_packs/world-death-note/pack.yaml`
-  - 拆分配置：`data/world_packs/world-death-note/config/*.yaml`
+- 例如 `death_note` 可以作为参考实例（目录名 = instance_id，`metadata.id` = `world-death-note`）：
+  - 入口文件：`data/world_packs/death_note/pack.yaml`
+  - 拆分配置：`data/world_packs/death_note/config/*.yaml`
   - 模板来源：`apps/server/templates/world-pack/death_note.yaml`
-  - 包内说明建议收口在：`data/world_packs/world-death-note/README.md`、`CHANGELOG.md`
+  - 包内说明建议收口在：`data/world_packs/death_note/README.md`、`CHANGELOG.md`
 
 项目级文档只应说明 world-pack 的通用建议；具体包的世界观、题材语义、动作链与设计取舍，应以该包目录中的文档为准。

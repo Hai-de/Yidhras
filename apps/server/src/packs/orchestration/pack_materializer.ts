@@ -8,6 +8,7 @@ import { type ActorBridgeSummary,materializeActorBridges, materializePackRuntime
 import type { PackStorageAdapter } from '../storage/PackStorageAdapter.js';
 
 export interface MaterializePackRuntimeInput {
+  instanceId: string;
   pack: WorldPack;
   prisma: PrismaClient;
   packStorageAdapter: PackStorageAdapter;
@@ -36,11 +37,11 @@ export interface MaterializePackRuntimeOutput {
 export async function materializePackRuntime(
   input: MaterializePackRuntimeInput
 ): Promise<MaterializePackRuntimeOutput> {
-  const { pack, prisma, packStorageAdapter, initialTick, appliedOpeningId } = input;
+  const { instanceId, pack, prisma, packStorageAdapter, initialTick, appliedOpeningId } = input;
 
-  const install = await installPackRuntime(pack, packStorageAdapter);
-  const coreModels = await materializePackRuntimeCoreModels(pack, initialTick, packStorageAdapter, appliedOpeningId);
-  const actorBridges = await materializeActorBridges(pack, prisma, initialTick);
+  const install = await installPackRuntime(instanceId, pack, packStorageAdapter);
+  const coreModels = await materializePackRuntimeCoreModels(instanceId, pack, initialTick, packStorageAdapter, appliedOpeningId);
+  const actorBridges = await materializeActorBridges(instanceId, pack, prisma, initialTick);
 
   return { install, coreModels, actorBridges };
 }

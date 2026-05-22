@@ -201,7 +201,7 @@ const packId = resolvePackIdParam(req.params.packId)
       jsonOk(
         res,
         toJsonSafe({
-          pack_id: handle.pack_id,
+          pack_id: handle.instance_id,
           clock: handle.getClockSnapshot(),
           runtime_speed: handle.getRuntimeSpeedSnapshot()
         })

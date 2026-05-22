@@ -50,7 +50,7 @@ describe('usePluginRuntimeBootstrap', () => {
       },
       health_level: 'ok',
       world_pack: {
-        id: 'world-pack-alpha',
+        instance_id: 'world-pack-alpha', metadata_id: 'world-pack-alpha',
         name: 'Pack Alpha',
         version: '0.1.0'
       },
@@ -130,7 +130,7 @@ describe('usePluginRuntimeBootstrap', () => {
       },
       health_level: 'ok',
       world_pack: {
-        id: 'world-pack-alpha',
+        instance_id: 'world-pack-alpha', metadata_id: 'world-pack-alpha',
         name: 'Pack Alpha',
         version: '0.1.0'
       },

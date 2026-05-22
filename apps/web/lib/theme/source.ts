@@ -38,7 +38,7 @@ const resolveProviderThemeFromCarrier = (worldPack?: RuntimeWorldMetadata | null
 
   return {
     config: candidate,
-    source: buildProviderMetadataSource(worldPack.id)
+    source: buildProviderMetadataSource(worldPack.instance_id)
   }
 }
 
@@ -59,7 +59,7 @@ export const resolveWorldPackThemeConfig = (
     return providerTheme
   }
 
-  const candidateId = worldPackId ?? worldPack?.id ?? null
+  const candidateId = worldPackId ?? worldPack?.instance_id ?? null
   if (!candidateId) {
     return undefined
   }

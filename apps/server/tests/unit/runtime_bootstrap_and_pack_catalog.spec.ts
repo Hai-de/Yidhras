@@ -59,60 +59,68 @@ describe('DefaultPackCatalogService', () => {
     expect(catalog.getPacksDir()).toBe('/tmp/world_packs');
   });
 
-  it('resolves active pack by id or name before falling back to catalog scan', () => {
+  it('resolves pack by instance_id or folder_name', () => {
     const activePack = createPack('pack-active', 'Active Pack');
+    // instance_id = folder_name (default derivation)
+    const instanceMap: Record<string, string> = {
+      'active-folder': 'active-folder',
+      'other-folder': 'other-folder'
+    };
     const loader = {
       listAvailablePacks: () => ['active-folder', 'other-folder'],
       loadPack: vi.fn((folderName: string) => {
-        if (folderName === 'active-folder') {
-          return activePack;
-        }
-
+        if (folderName === 'active-folder') return activePack;
         return createPack('pack-other', 'Other Pack');
-      })
+      }),
+      getFolderNameByInstanceId: (id: string) => instanceMap[id] ?? null,
+      deriveInstanceId: (_pack: WorldPack, folderName: string) => folderName
     } as never;
     const catalog = new DefaultPackCatalogService({
       packsDir: '/tmp/world_packs',
       loader
     });
 
-    expect(catalog.resolvePackByIdOrFolder('pack-active')).toEqual({
+    // match by instance_id (which equals folder_name here)
+    expect(catalog.resolvePackByIdOrFolder('active-folder')).toEqual({
       pack: activePack,
       packFolderName: 'active-folder'
     });
-    expect(catalog.resolvePackByIdOrFolder('Active Pack')).toEqual({
+    // match by folder_name directly
+    expect(catalog.resolvePackByIdOrFolder('active-folder')).toEqual({
       pack: activePack,
       packFolderName: 'active-folder'
     });
   });
 
-  it('falls back to loader scan and finds folder name by pack id', () => {
+  it('falls back to folder name match when instance_id not found', () => {
     const alphaPack = createPack('pack-alpha', 'Alpha');
     const betaPack = createPack('pack-beta', 'Beta');
+    const instanceMap: Record<string, string> = {
+      'alpha-folder': 'alpha-folder',
+      'beta-folder': 'beta-folder'
+    };
     const loader = {
       listAvailablePacks: () => ['alpha-folder', 'beta-folder'],
       loadPack: vi.fn((folderName: string) => {
-        if (folderName === 'alpha-folder') {
-          return alphaPack;
-        }
-
-        if (folderName === 'beta-folder') {
-          return betaPack;
-        }
-
+        if (folderName === 'alpha-folder') return alphaPack;
+        if (folderName === 'beta-folder') return betaPack;
         throw new Error(`unexpected folder ${folderName}`);
-      })
+      }),
+      getFolderNameByInstanceId: (id: string) => instanceMap[id] ?? null,
+      deriveInstanceId: (_pack: WorldPack, folderName: string) => folderName
     } as never;
     const catalog = new DefaultPackCatalogService({
       packsDir: '/tmp/world_packs',
       loader
     });
 
-    expect(catalog.resolvePackByIdOrFolder('pack-beta')).toEqual({
+    // match by instance_id
+    expect(catalog.resolvePackByIdOrFolder('beta-folder')).toEqual({
       pack: betaPack,
       packFolderName: 'beta-folder'
     });
-    expect(catalog.findFolderNameByPackId('pack-alpha')).toBe('alpha-folder');
+    expect(catalog.findFolderNameByPackId('alpha-folder'))
+      .toBe('alpha-folder');
     expect(catalog.resolvePackByIdOrFolder('   ')).toBeNull();
     expect(catalog.findFolderNameByPackId('missing-pack')).toBeNull();
   });

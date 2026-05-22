@@ -215,8 +215,8 @@ describe('objective enforcement sidecar diagnostics', () => {
       }
     });
 
-    await installPackRuntime(pack, packStorageAdapter);
-    await materializePackRuntimeCoreModels(pack, 1000n, packStorageAdapter);
+    await installPackRuntime(pack.metadata.id, pack, packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack.metadata.id, pack, 1000n, packStorageAdapter);
 
     const context = buildTestContext(pack, packStorageAdapter);
     await context.worldEngine.loadPack({

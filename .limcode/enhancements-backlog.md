@@ -174,3 +174,28 @@
   2. 确定 `noop` 是否需要走完整的意图落地管线（触发 invocation rule、写入事件日志），还是作为纯标记
   3. 确定 `default_action` 的覆盖语义（只覆盖根节点 Failure？还是也覆盖树内部 Failure？）
 - **来源**: `.limcode/design/behavior-tree-design.md` §2.2, §9.6
+
+
+---
+
+## 同一世界包多副本区分机制
+
+- **评估时间**: 2026-05-22
+- **触发**: 开发环境中同时存在 `death_note` 与 `world-death-note` 两个目录，二者 `metadata.id` 都是 `world-death-note`，导致 World Packs 列表难以区分，且运行时路由、状态查询、权限绑定都以 `metadata.id` 为核心标识。
+- **暂缓原因**: 当前已删除落后的重复目录，短期不阻塞开发。真正支持“同一个世界包的多个实验副本”需要设计稳定的实例级标识，而不是简单用目录名或在列表里去重。
+- **现状限制**:
+  1. 前端列表可以显示 `folder_name` 用于人工区分目录来源。
+  2. 但进入 pack、runtime status、pack scoped API、operator pack binding 仍主要使用 `metadata.id`。
+  3. 如果两个目录声明相同 `metadata.id`，当前系统无法稳定地区分两个独立运行实例。
+- **目标设计**:
+  1. 引入 `pack_instance_id` 或等价概念，用于区分同一 `metadata.id` 的不同开发/测试实例。
+  2. 保留 `metadata.id` 表达世界包类型或模板身份，使用 `folder_name`/`instance_id` 表达具体实例来源。
+  3. `/api/packs` 返回 `metadata_id`、`folder_name`、`instance_id`、`display_name` 等字段，前端列表明确展示。
+  4. pack scoped route 明确选择使用 `instance_id` 还是 `metadata_id`，避免 URL 与权限绑定混淆。
+  5. runtime registry、status、clock、scheduler、plugin runtime、snapshot、operator binding 统一引用实例级标识。
+- **待澄清问题**:
+  1. `instance_id` 是否默认等于目录名，还是由 `pack.yaml` 显式声明。
+  2. 权限绑定应绑定到世界包类型（`metadata.id`）还是具体实例（`instance_id`）。
+  3. snapshot 与 runtime SQLite 应按实例隔离，还是允许多个实例共享模板数据。
+  4. 前端 URL 应使用 `/packs/:instanceId`，还是保留 `/packs/:packId` 并增加 query/namespace。
+- **当前 workaround**: 若需要同时测试同一世界包的两个版本，复制目录后必须修改其中一个 `metadata.id`，例如 `world-death-note-a` / `world-death-note-b`，否则运行时层无法可靠区分。

@@ -96,8 +96,8 @@ describe('PackHostApi read surface integration', () => {
       getPackSlotDeclarations: () => null,
       applyClockProjection: () => {}
     } as unknown as AppContext['packRuntime'];
-    await installPackRuntime(pack, context.packStorageAdapter);
-    await materializePackRuntimeCoreModels(pack, 1000n, context.packStorageAdapter);
+    await installPackRuntime(pack.metadata.id, pack, context.packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack.metadata.id, pack, 1000n, context.packStorageAdapter);
     await sidecar.loadPack({
       pack_id: packId,
       pack_ref: DEATH_NOTE_PACK_REF,

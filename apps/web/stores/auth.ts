@@ -4,15 +4,30 @@ const AUTH_TOKEN_KEY = 'yd-auth-token'
 
 const readPersistedToken = (): string | null => {
   if (typeof window === 'undefined') return null
-  return window.localStorage.getItem(AUTH_TOKEN_KEY)
+
+  try {
+    return window.localStorage.getItem(AUTH_TOKEN_KEY) ?? window.sessionStorage.getItem(AUTH_TOKEN_KEY)
+  } catch {
+    return null
+  }
 }
 
-const persistToken = (token: string | null) => {
+const persistToken = (token: string | null, remember: boolean) => {
   if (typeof window === 'undefined') return
-  if (token) {
-    window.localStorage.setItem(AUTH_TOKEN_KEY, token)
-  } else {
+
+  try {
     window.localStorage.removeItem(AUTH_TOKEN_KEY)
+    window.sessionStorage.removeItem(AUTH_TOKEN_KEY)
+
+    if (!token) return
+
+    if (remember) {
+      window.localStorage.setItem(AUTH_TOKEN_KEY, token)
+    } else {
+      window.sessionStorage.setItem(AUTH_TOKEN_KEY, token)
+    }
+  } catch {
+    // Storage can be unavailable in restricted browser contexts.
   }
 }
 
@@ -26,13 +41,13 @@ export const useAuthStore = defineStore('auth', {
     isAuthenticated: state => state.token !== null
   },
   actions: {
-    setToken(token: string) {
+    setToken(token: string, remember = true) {
       this.token = token
-      persistToken(token)
+      persistToken(token, remember)
     },
     clearToken() {
       this.token = null
-      persistToken(null)
+      persistToken(null, false)
     }
   }
 })

@@ -15,7 +15,7 @@
 主要入口：
 
 - GUI：前端 `/plugins` 页面
-- API：`/api/packs/:packId/plugins*`
+- API：`/api/packs/:packId/plugins*`（`:packId` = `instance_id`）
 - CLI：`pnpm --filter yidhras-server plugin list|confirm|enable|disable`（直接操作 Prisma，不需要服务器运行）
 
 边界：

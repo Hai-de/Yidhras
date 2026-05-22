@@ -18,7 +18,6 @@ import {
 } from '../helpers/runtime.js';
 
 const DEATH_NOTE_PACK_REF = 'death_note';
-const DEATH_NOTE_PACK_ID = 'world-death-note';
 
 const createdRoots: string[] = [];
 
@@ -83,7 +82,7 @@ describe('authority/perception/context assembly', () => {
           const handle = sim.getPackRuntimeHandle(packId);
           if (!handle) return null;
           return {
-            pack_id: handle.pack_id,
+            pack_id: handle.instance_id,
             pack_folder_name: handle.pack_folder_name,
             health_status: handle.getHealthSnapshot().status,
             current_tick: handle.getClockSnapshot().current_tick,
@@ -105,7 +104,7 @@ describe('authority/perception/context assembly', () => {
     };
 
     const authority = await resolveAuthorityForSubject(appContext, {
-      packId: DEATH_NOTE_PACK_ID,
+      packId: DEATH_NOTE_PACK_REF,
       subjectEntityId: 'agent-001'
     });
     expect(Array.isArray(authority.resolved_capabilities)).toBe(true);
@@ -113,7 +112,7 @@ describe('authority/perception/context assembly', () => {
     const inferenceContextV2 = await buildExtendedInferenceContext(appContext, {
       identity_id: 'agent-001',
       strategy: 'mock'
-    }, DEATH_NOTE_PACK_ID);
+    }, DEATH_NOTE_PACK_REF);
 
     expect(inferenceContextV2.subject_context.resolved_agent_id).toBe('agent-001');
     expect(inferenceContextV2.authority_context.subject_entity_id).toBe('agent-001');
@@ -122,7 +121,7 @@ describe('authority/perception/context assembly', () => {
     expect(inferenceContextV2.base.pack_runtime.invocation_rules?.length).toBeGreaterThan(0);
 
     const perception = await resolvePerceptionForSubject(appContext, {
-      packId: DEATH_NOTE_PACK_ID,
+      packId: DEATH_NOTE_PACK_REF,
       packState: inferenceContextV2.base.pack_state
     });
     expect(perception.visible_state_entries.some(entry => entry.entity_id === '__world__')).toBe(true);

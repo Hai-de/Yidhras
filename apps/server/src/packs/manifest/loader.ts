@@ -11,8 +11,14 @@ const logger = createLogger('pack-manifest-loader');
 
 export class PackManifestLoader {
   private packs: Map<string, WorldPack> = new Map();
+  private instanceIndex: Map<string, string> = new Map();
 
   constructor(private packsDir: string) {}
+
+  public deriveInstanceId(pack: WorldPack, folderName: string): string {
+    const explicit = (pack.metadata as Record<string, unknown>).instance_id as string | undefined;
+    return explicit?.trim() || folderName;
+  }
 
   public loadPack(folderName: string): WorldPack {
     if (this.packs.has(folderName)) {
@@ -55,10 +61,18 @@ export class PackManifestLoader {
 
       const parsed = parseWorldPackConstitution(merged, packPath);
 
-      this.packs.set(folderName, parsed);
-      this.packs.set(parsed.metadata.id, parsed);
+      const instanceId = this.deriveInstanceId(parsed, folderName);
+      const existingFolder = this.instanceIndex.get(instanceId);
+      if (existingFolder && existingFolder !== folderName) {
+        throw new Error(
+          `instance_id conflict: "${instanceId}" claimed by both "${existingFolder}" and "${folderName}"`
+        );
+      }
 
-      logger.info(`Loaded pack: ${parsed.metadata.name} (${parsed.metadata.id})`);
+      this.packs.set(folderName, parsed);
+      this.instanceIndex.set(instanceId, folderName);
+
+      logger.info(`Loaded pack: ${parsed.metadata.name} (${parsed.metadata.id}) [instance: ${instanceId}]`);
       return parsed;
     } catch (err) {
       logger.error(`Error parsing ${packPath}`, { error: err instanceof Error ? err.message : String(err) });
@@ -66,12 +80,25 @@ export class PackManifestLoader {
     }
   }
 
-  public getPack(idOrFolderName: string): WorldPack | undefined {
-    return this.packs.get(idOrFolderName);
+  public getPack(folderName: string): WorldPack | undefined {
+    return this.packs.get(folderName);
+  }
+
+  public getPackByFolderName(folderName: string): WorldPack | undefined {
+    return this.packs.get(folderName);
+  }
+
+  public getPackByInstanceId(instanceId: string): WorldPack | undefined {
+    const folderName = this.instanceIndex.get(instanceId);
+    return folderName ? this.packs.get(folderName) : undefined;
+  }
+
+  public getFolderNameByInstanceId(instanceId: string): string | undefined {
+    return this.instanceIndex.get(instanceId);
   }
 
   public getAllPacks(): WorldPack[] {
-    return Array.from(new Set(this.packs.values()));
+    return Array.from(this.packs.values());
   }
 
   public listAvailablePacks(): string[] {

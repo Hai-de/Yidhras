@@ -2,11 +2,11 @@ import type { Express, Request, Response } from 'express'
 
 import { PackManifestLoader } from '../../packs/manifest/loader.js'
 import type { AppContext } from '../context.js'
-import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk } from '../http/json.js'
 
 interface PackListItem {
-  id: string
+  instance_id: string
+  metadata_id: string
   folder_name: string
   name: string
   version: string
@@ -27,7 +27,7 @@ export const registerPackListRoutes = (
 
   app.get(
     '/api/packs',
-    asyncHandler(async (_req: Request, res: Response) => {
+    (_req: Request, res: Response) => {
       const availableFolders = loader.listAvailablePacks()
       const loadedIds = context.listLoadedPackRuntimeIds
         ? context.listLoadedPackRuntimeIds()
@@ -51,10 +51,12 @@ export const registerPackListRoutes = (
       for (const folderName of availableFolders) {
         const pack = loader.loadPack(folderName)
         const metadata = pack.metadata
-        const runtime = runtimeStatusMap.get(metadata.id)
+        const instanceId = loader.deriveInstanceId(pack, folderName)
+        const runtime = runtimeStatusMap.get(instanceId)
 
         packs.push({
-          id: metadata.id,
+          instance_id: instanceId,
+          metadata_id: metadata.id,
           folder_name: folderName,
           name: metadata.name,
           version: metadata.version,
@@ -68,6 +70,6 @@ export const registerPackListRoutes = (
       }
 
       jsonOk(res, { packs })
-    })
+    }
   )
 }

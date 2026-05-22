@@ -460,8 +460,8 @@ describe('world-pack projection flow integration', () => {
     });
 
     const context = buildProjectionTestContext(pack);
-    await installPackRuntime(pack, context.packStorageAdapter);
-    await materializePackRuntimeCoreModels(pack, 1000n, context.packStorageAdapter);
+    await installPackRuntime(pack.metadata.id, pack, context.packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack.metadata.id, pack, 1000n, context.packStorageAdapter);
     await dispatchInvocationFromActionIntent(context, {
       id: 'intent-judgement',
       source_inference_id: 'inference-judgement',

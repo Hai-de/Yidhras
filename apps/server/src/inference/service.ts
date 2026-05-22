@@ -416,7 +416,7 @@ const executeRunInternal = async (
     inferenceContext.strategy,
     provider.name,
     tick,
-    inferenceContext.world_pack.id,
+    inferenceContext.world_pack.instance_id,
     inferenceContext.binding_ref,
     promptVersion
   );
@@ -425,7 +425,7 @@ const executeRunInternal = async (
     (typeof grounded.decision.payload.semantic_intent_kind === 'string' ? grounded.decision.payload.semantic_intent_kind : null);
   const decisionReflection = await memoryRecordingService.recordDecisionReflection({
     actor_id: inferenceContext.resolved_agent_id ?? inferenceContext.actor_ref.agent_id ?? inferenceContext.actor_ref.identity_id,
-    pack_id: inferenceContext.world_pack.id,
+    pack_id: inferenceContext.world_pack.instance_id,
     tick,
     source_inference_id: inferenceContext.inference_id,
     reasoning: grounded.decision.reasoning,
@@ -564,7 +564,7 @@ export const createInferenceService = ({
       });
       const tick = inferenceContext.tick.toString();
       const metadata = {
-        world_pack_id: inferenceContext.world_pack.id,
+        world_pack_id: inferenceContext.world_pack.instance_id,
         binding_ref: inferenceContext.binding_ref,
         prompt_version: prompt.metadata.prompt_version
       };

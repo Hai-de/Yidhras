@@ -94,7 +94,7 @@ export const EXAMPLE_PROVIDER_THEME: WorldPackThemeConfig = {
 }
 
 export const EXAMPLE_PROVIDER_WORLD_PACK: RuntimeWorldMetadata = {
-  id: 'pack-example',
+  instance_id: 'pack-example', metadata_id: 'pack-example',
   name: 'Pack Example',
   version: '1.0.0',
   description: 'Example runtime world metadata carrying a provider-owned theme payload.',

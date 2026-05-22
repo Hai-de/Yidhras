@@ -734,11 +734,11 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
 
       let strategy = selectStrategy(input);
       const attributes = normalizeAttributes(input.attributes);
-      const resolvedActor = await resolveActor(context, input, pack.metadata.id);
+      const resolvedActor = await resolveActor(context, input, input.pack_id);
 
       // Actor-level inference config override
       if (resolvedActor.actor_ref.agent_id) {
-        const entityId = packEntityIdFromResolvedAgentId(pack.metadata.id, resolvedActor.actor_ref.agent_id);
+        const entityId = packEntityIdFromResolvedAgentId(input.pack_id, resolvedActor.actor_ref.agent_id);
         const actorDef = entityId
           ? pack.entities?.actors?.find((a) => a.id === entityId)
           : undefined;
@@ -757,11 +757,11 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
       const deploymentId = process.env.YIDHRAS_DEPLOYMENT_ID?.trim() || undefined;
       const config = getInferenceContextConfig(deploymentId);
 
-      const packState = await buildPackStateSnapshot(context, pack.metadata.id, resolvedActor.resolved_agent_id, attributes);
+      const packState = await buildPackStateSnapshot(context, input.pack_id, resolvedActor.resolved_agent_id, attributes);
       const authorityResult = await resolveAuthorityForSubject(context, {
-        packId: pack.metadata.id,
+        packId: input.pack_id,
         subjectEntityId: packEntityIdFromResolvedAgentId(
-          pack.metadata.id,
+          input.pack_id,
           resolvedActor.resolved_agent_id
         )
       });
@@ -794,7 +794,7 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         tick: BigInt(currentTick),
         policy_summary: policySummary,
         pack_state: packState,
-        pack_id: pack.metadata.id,
+        pack_id: input.pack_id,
         agent_capabilities: agentCapabilities,
         perception_rules: pack.rules?.perception ?? []
       });
@@ -824,7 +824,8 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         strategy,
         attributes,
         world_pack: {
-          id: pack.metadata.id,
+          instance_id: input.pack_id,
+          metadata_id: pack.metadata.id,
           name: pack.metadata.name,
           version: pack.metadata.version,
           ...(isRecord(rawBehaviorTrees) ? { behavior_trees: rawBehaviorTrees } : {})

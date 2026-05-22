@@ -147,7 +147,7 @@ const resolveAuthHeader = (): Record<string, string> | undefined => {
   if (typeof window === 'undefined') return undefined
 
   try {
-    const token = window.localStorage.getItem(AUTH_TOKEN_KEY)
+    const token = window.localStorage.getItem(AUTH_TOKEN_KEY) ?? window.sessionStorage.getItem(AUTH_TOKEN_KEY)
     if (token) {
       return { Authorization: `Bearer ${token}` }
     }
@@ -183,6 +183,7 @@ export const requestApi = async <T>(path: string, options: ApiClientOptions = {}
   if (response.status === 401 && typeof window !== 'undefined') {
     try {
       window.localStorage.removeItem(AUTH_TOKEN_KEY)
+      window.sessionStorage.removeItem(AUTH_TOKEN_KEY)
     } catch {
       // localStorage unavailable
     }

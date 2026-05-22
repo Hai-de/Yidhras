@@ -9,6 +9,7 @@ export interface PackRuntimeState {
   updatedAt: number;
 }
 
+/** All method `packId` parameters accept instance_id (not metadata.id). */
 export interface PackRuntimeRegistry {
   listLoadedPackIds(): string[];
   listHandles(): PackRuntimeHandle[];

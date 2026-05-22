@@ -65,7 +65,7 @@ export const usePluginManagementPage = () => {
   const selectedGrantedCapabilities = ref<string[]>([])
   const enableAcknowledged = ref(false)
 
-  const packId = computed(() => runtime.worldPack?.id ?? null)
+  const packId = computed(() => runtime.worldPack?.instance_id ?? null)
   const selectedInstallation = computed(() => items.value.find(item => item.installation_id === selectedInstallationId.value) ?? null)
   const selectedRiskLevel = computed(() => {
     return selectedInstallation.value ? classifyRiskLabel(selectedInstallation.value.requested_capabilities) : null

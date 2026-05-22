@@ -62,7 +62,7 @@ describe('pack collection repo', () => {
       }
     });
 
-    await installPackRuntime(pack, packStorageAdapter);
+    await installPackRuntime(pack.metadata.id, pack, packStorageAdapter);
 
     const upserted = await upsertDeclaredPackCollectionRecord('world-storage-repo-pack', 'target_dossiers', {
       id: 'dossier-001',

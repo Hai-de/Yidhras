@@ -35,7 +35,7 @@ export const buildWorkflowPromptBundle = async (input: {
   const profile = selectPromptWorkflowProfile({
     task_type: input.taskType,
     strategy: input.context.strategy,
-    pack_id: input.context.world_pack.id,
+    pack_id: input.context.world_pack.instance_id,
     profile_id: input.profileId ?? null
   });
 
@@ -44,7 +44,7 @@ export const buildWorkflowPromptBundle = async (input: {
     actor_ref: input.context.actor_ref,
     task_type: input.taskType,
     strategy: input.context.strategy,
-    pack_id: input.context.world_pack.id,
+    pack_id: input.context.world_pack.instance_id,
     profile
   });
   state.slot_registry = slotRegistry.slots;
@@ -122,7 +122,7 @@ export const buildWorkflowPromptBundle = async (input: {
   ]);
 
   // Register plugin-provided workflow step executors
-  const packId = input.context.world_pack.id;
+  const packId = input.context.world_pack.instance_id;
   for (const executor of pluginRuntimeRegistry.getPromptWorkflowStepExecutors(packId)) {
     stepRegistry.register(executor);
   }

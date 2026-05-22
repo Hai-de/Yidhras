@@ -112,7 +112,7 @@ const hasCapability = async (
   }
 
   const authority = await resolveAuthorityForSubject(context, {
-    packId: actorContext.world_pack.id,
+    packId: actorContext.world_pack.instance_id,
     subjectEntityId: actorContext.resolved_agent_id
   });
   return authority.resolved_capabilities.some(item => item.capability_key === capabilityKey);

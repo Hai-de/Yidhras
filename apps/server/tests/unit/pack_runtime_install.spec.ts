@@ -83,7 +83,7 @@ describe('pack runtime install', () => {
       }
     });
 
-    const summary = await installPackRuntime(pack, packStorageAdapter);
+    const summary = await installPackRuntime(pack.metadata.id, pack, packStorageAdapter);
 
     expect(summary.packId).toBe('world-test-pack');
     expect(summary.runtimeDbCreated).toBe(true);

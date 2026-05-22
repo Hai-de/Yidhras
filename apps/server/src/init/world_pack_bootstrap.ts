@@ -84,7 +84,8 @@ export const ensureBootstrapWorldPack = async (): Promise<WorldPackBootstrapResu
 
   const loader = new PackManifestLoader(worldPacksDir);
   const pack = loader.loadPack(bootstrapConfig.targetPackDirName);
-  result.packRuntime = await installPackRuntime(pack, new SqlitePackStorageAdapter());
+  const instanceId = loader.deriveInstanceId(pack, bootstrapConfig.targetPackDirName);
+  result.packRuntime = await installPackRuntime(instanceId, pack, new SqlitePackStorageAdapter());
   return result;
 };
 

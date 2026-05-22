@@ -157,7 +157,8 @@ export interface InferenceTransmissionProfile {
 }
 
 export interface InferenceWorldPackRef {
-  id: string;
+  instance_id: string;
+  metadata_id: string;
   name: string;
   version: string;
   behavior_trees?: Record<string, unknown>;

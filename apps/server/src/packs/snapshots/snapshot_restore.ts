@@ -355,7 +355,7 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
   // 8. Materialize (idempotent)
   const { materializePackRuntime } = await import('../orchestration/pack_materializer.js');
   const tick = parseBigInt(metadata.captured_at_tick);
-  await materializePackRuntime({ pack, prisma, packStorageAdapter, initialTick: tick, appliedOpeningId: appliedOpeningId ?? undefined });
+  await materializePackRuntime({ instanceId: packId, pack, prisma, packStorageAdapter, initialTick: tick, appliedOpeningId: appliedOpeningId ?? undefined });
 
   // 9. Restore in-memory clock
   const clockSnapshot: RuntimeClockProjectionSnapshot = {

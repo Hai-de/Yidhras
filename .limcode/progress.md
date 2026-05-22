@@ -1,6 +1,6 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-05-21T19:13:58.902Z
+- Updated At: 2026-05-22T18:49:17.890Z
 - Status: active
 - Phase: implementation
 
@@ -16,7 +16,7 @@
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/cyberpunk-ai-oligarchy-world-pack-draft.md`
+- 设计：`.limcode/design/pack-operations-management-page-design.md`
 - 计划：`.limcode/plans/prompt-workflow-non-compatible-cleanup.md`
 - 审查：`.limcode/review/behavior-tree-logic-audit.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
@@ -56,6 +56,7 @@
 - 2026-05-21T18:23:21.013Z | artifact_changed | plan | 同步计划文档：.limcode/plans/prompt-workflow-non-compatible-cleanup.md
 - 2026-05-21T18:40:30.860Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/prompt-workflow-non-compatible-cleanup.md
 - 2026-05-21T19:13:58.902Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/prompt-workflow-non-compatible-cleanup.md
+- 2026-05-22T18:49:17.890Z | artifact_changed | design | 同步设计文档：.limcode/design/pack-operations-management-page-design.md
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -65,7 +66,7 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-05-15T08:18:59.116Z",
-  "updatedAt": "2026-05-21T19:13:58.902Z",
+  "updatedAt": "2026-05-22T18:49:17.890Z",
   "status": "active",
   "phase": "implementation",
   "currentFocus": "赛博朋克世界包草稿对接验证",
@@ -73,7 +74,7 @@
   "currentBlocker": null,
   "nextAction": "赛博朋克世界包草稿对接验证（entity kind 迁移路径 B、capability_resolution 规则 P1）",
   "activeArtifacts": {
-    "design": ".limcode/design/cyberpunk-ai-oligarchy-world-pack-draft.md",
+    "design": ".limcode/design/pack-operations-management-page-design.md",
     "plan": ".limcode/plans/prompt-workflow-non-compatible-cleanup.md",
     "review": ".limcode/review/behavior-tree-logic-audit.md"
   },
@@ -161,6 +162,12 @@
       "type": "artifact_changed",
       "refId": "plan",
       "message": "同步计划 TODO 快照：.limcode/plans/prompt-workflow-non-compatible-cleanup.md"
+    },
+    {
+      "at": "2026-05-22T18:49:17.890Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/pack-operations-management-page-design.md"
     }
   ],
   "stats": {
@@ -174,8 +181,8 @@
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-05-21T19:13:58.902Z",
-    "bodyHash": "sha256:c244585f6ede870e5e0a96c04e35a37a179077e810781733cc3b6ad0980dae61"
+    "generatedAt": "2026-05-22T18:49:17.890Z",
+    "bodyHash": "sha256:dfde7dfe0378456efef78125f5abbde7d0bacb02929fbc5324cb0bfa68e7f15d"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

@@ -97,7 +97,8 @@ interface RuntimeStatus {
     iteration_count: number;
   } | null;
   world_pack: {
-    id: string;
+    instance_id: string;
+    metadata_id: string;
     name: string;
   } | null;
   ai: {
@@ -210,7 +211,7 @@ const doStatus = async (args: CliArgs): Promise<void> => {
 
     if (status.world_pack) {
       const wp = status.world_pack;
-      console.log(`  当前包:     ${wp.name} (id: ${wp.id})`);
+      console.log(`  当前包:     ${wp.name} (instance: ${wp.instance_id}, type: ${wp.metadata_id})`);
     }
 
     if (status.ai) {

@@ -27,7 +27,7 @@ const packListApi = usePackListApi()
 const resolveFrontendType = async () => {
   try {
     const result = await packListApi.listPacks()
-    const pack = result.packs.find(p => p.id === packId.value)
+    const pack = result.packs.find(p => p.instance_id === packId.value)
     frontendType.value = pack?.frontend?.type ?? 'default'
   } catch {
     frontendType.value = 'default'

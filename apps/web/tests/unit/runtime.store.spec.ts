@@ -56,7 +56,7 @@ describe('useRuntimeStore', () => {
         status: 'running', runtime_ready: true,
         runtime_speed: { mode: 'fixed', source: 'default', configured_step_ticks: '1', override_step_ticks: null, override_since: null, effective_step_ticks: '3' },
         scheduler: { worker_id: 'w1', partition_count: 4, owned_partition_ids: ['p0'], assignment_source: 'persisted', migration_in_progress_count: 0 },
-        health_level: 'ok', world_pack: { id: 'pack-alpha', name: 'Pack Alpha', version: '0.1.0' },
+        health_level: 'ok', world_pack: { instance_id: 'pack-alpha', metadata_id: 'pack-alpha', name: 'Pack Alpha', version: '0.1.0' },
         has_error: false, startup_errors: []
       });
       expect(runtime.status).toBe('running');
@@ -71,7 +71,7 @@ describe('useRuntimeStore', () => {
         status: 'running', runtime_ready: false,
         runtime_speed: { mode: 'fixed', source: 'default', configured_step_ticks: '1', override_step_ticks: null, override_since: null, effective_step_ticks: '1' },
         scheduler: { worker_id: 'w1', partition_count: 1, owned_partition_ids: [], assignment_source: 'persisted', migration_in_progress_count: 0 },
-        health_level: 'ok', world_pack: { id: 'p', name: 'P', version: '0.1' },
+        health_level: 'ok', world_pack: { instance_id: 'p', metadata_id: 'p', name: 'P', version: '0.1' },
         has_error: false, startup_errors: []
       });
       expect(runtime.status).toBe('error');

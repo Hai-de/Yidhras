@@ -3,7 +3,7 @@
 本文档描述对外 HTTP contract。路由分为两层：
 
 - **Global** — 直接注册在 Express app 上，无 pack 前缀
-- **Pack-scoped** — 挂载于 `/:packId`，经过 `packScopeMiddleware` 校验 pack 状态。非 `ready` 状态的 pack 返回 503（loading/unloading/degraded）或 404（gone）
+- **Pack-scoped** — 挂载于 `/:packId`（`packId` 为 `instance_id`），经过 `packScopeMiddleware` 校验 pack 状态。非 `ready` 状态的 pack 返回 503（loading/unloading/degraded）或 404（gone）
 
 > 模块分层与宿主关系见 `../ARCH.md` · 业务执行语义见 `../LOGIC.md` · 专题细节见 `../subsystems/`
 
@@ -94,7 +94,7 @@
 - **GET `/api/packs`**
   - 鉴权：无
   - 说明：列出所有可用的 world-pack（文件系统发现 + 运行时状态合并）。返回每个包的 metadata（含 `presentation` 和 `frontend` 字段）及运行时状态
-  - 返回：`{ success: true, data: { packs: Array<{ id, folder_name, name, version, description, presentation, frontend, runtime_status, health_status, current_tick }> } }`
+  - 返回：`{ success: true, data: { packs: Array<{ instance_id, metadata_id, folder_name, name, version, description, presentation, frontend, runtime_status, health_status, current_tick }> } }`
 
 ---
 
@@ -324,7 +324,7 @@
 
 > 快照功能仅支持 SQLite 后端。非 SQLite 后端返回 `501 SNAPSHOT_NOT_AVAILABLE`。
 
-快照是对世界包运行时完整状态的存档，存储在 `data/world_packs/<pack_id>/snapshots/<snapshot_id>/`。每 pack 最多 20 个快照，超出自动淘汰最旧。
+快照是对世界包运行时完整状态的存档，存储在 `data/world_packs/<instance_id>/snapshots/<snapshot_id>/`。每 pack 最多 20 个快照，超出自动淘汰最旧。
 
 - **GET `/api/packs/snapshots`**
   - 鉴权：packAccessGuard

@@ -269,8 +269,8 @@ describe('objective enforcement sidecar parity', () => {
       }
     });
 
-    await installPackRuntime(pack, packStorageAdapter);
-    await materializePackRuntimeCoreModels(pack, 1000n, packStorageAdapter);
+    await installPackRuntime(pack.metadata.id, pack, packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack.metadata.id, pack, 1000n, packStorageAdapter);
 
     const firstContext = buildTestContext(pack, packStorageAdapter);
     await firstContext.worldEngine?.loadPack({
@@ -305,7 +305,7 @@ describe('objective enforcement sidecar parity', () => {
     const firstStates = await listPackEntityStates(packStorageAdapter, pack.metadata.id);
     const firstRecords = await listPackRuleExecutionRecords(packStorageAdapter, pack.metadata.id);
 
-    await materializePackRuntimeCoreModels(pack, 1000n, packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack.metadata.id, pack, 1000n, packStorageAdapter);
 
     await dispatchInvocationFromActionIntent(secondContext, invocation);
     const secondStates = await listPackEntityStates(packStorageAdapter, pack.metadata.id);

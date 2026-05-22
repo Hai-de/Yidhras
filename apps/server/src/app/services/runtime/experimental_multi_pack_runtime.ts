@@ -73,7 +73,7 @@ export const loadExperimentalPackRuntime = async (
   const result = await getPackRuntimeControl({
     packRuntimeControl: context.packRuntimeControl
   }).load(packRef);
-  await syncPackPluginRuntime(context, result.handle.pack_id);
+  await syncPackPluginRuntime(context, result.handle.instance_id);
   return result;
 };
 

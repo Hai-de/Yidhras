@@ -17,7 +17,7 @@ import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
 
 export interface ActivateWorldPackRuntimeOptions {
   packFolderName: string;
-  loader: Pick<PackManifestLoader, 'loadPack'>;
+  loader: Pick<PackManifestLoader, 'loadPack' | 'deriveInstanceId'>;
   prisma: PrismaClient;
   packStorageAdapter: PackStorageAdapter;
   runtimeSpeed: RuntimeSpeedPolicy;
@@ -103,7 +103,8 @@ export const activateWorldPackRuntime = async ({
 
   configureRuntimeSpeedFromPack(runtimeSpeed, pack, notifications);
 
-  await materializePackRuntime({ pack, prisma, packStorageAdapter, initialTick: runtimeConfig.initialTick, appliedOpeningId });
+  const instanceId = loader.deriveInstanceId(pack, packFolderName);
+  await materializePackRuntime({ instanceId, pack, prisma, packStorageAdapter, initialTick: runtimeConfig.initialTick, appliedOpeningId });
 
   const clock = await resolvePackClock({
     calendars,

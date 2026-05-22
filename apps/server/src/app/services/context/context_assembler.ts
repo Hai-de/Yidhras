@@ -23,15 +23,15 @@ export const buildExtendedInferenceContext = async (
   const base = await buildInferenceContext(context, input, packId);
 
   const authorityContext = await resolveAuthorityForSubject(context, {
-    packId: base.world_pack.id,
+    packId: base.world_pack.instance_id,
     subjectEntityId: base.resolved_agent_id
   });
   const perceptionContext = await resolvePerceptionForSubject(context, {
-    packId: base.world_pack.id,
+    packId: base.world_pack.instance_id,
     packState: base.pack_state
   });
   const mediatorBindings = await resolveMediatorBindingsForPack(context, {
-    packId: base.world_pack.id
+    packId: base.world_pack.instance_id
   });
 
   return {

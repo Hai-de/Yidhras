@@ -10,7 +10,7 @@
 
 | 层 | 存储位置 | 内容 |
 |----|---------|------|
-| 世界引擎状态 | `data/world_packs/<pack_id>/runtime.sqlite` | world_entities、entity_states、authority_grants、mediator_bindings、rule_execution_records，以及 pack 作者定义的自定义集合表 |
+| 世界引擎状态 | `data/world_packs/<instance_id>/runtime.sqlite` | world_entities、entity_states、authority_grants、mediator_bindings、rule_execution_records，以及 pack 作者定义的自定义集合表 |
 | Domain 数据 | 中央 Prisma 数据库（SQLite） | Agent、Identity、IdentityNodeBinding、Post、Relationship、MemoryBlock（含 Behavior + RuntimeState 子模型）、ContextOverlayEntry、MemoryCompactionState、ScenarioEntityState（共 11 个模型：9 个顶层查询 + 2 个 MemoryBlock include 子模型） |
 | 内存状态 | 进程内存 | 时钟 tick、revision、runtime speed policy |
 
@@ -19,7 +19,7 @@
 ### 快照目录结构
 
 ```
-data/world_packs/<pack_id>/snapshots/<snapshot_id>/
+data/world_packs/<instance_id>/snapshots/<snapshot_id>/
   metadata.json           — 快照元信息（tick、时间戳、label、记录数等）
   runtime.sqlite          — 运行时 SQLite 数据库的完整文件副本
   prisma.json             — 中央 Prisma 中该 pack 相关的 domain 数据（JSON）
@@ -63,7 +63,7 @@ data/world_packs/<pack_id>/snapshots/<snapshot_id>/
 **创建快照：**
 
 ```bash
-curl -X POST http://localhost:3001/api/packs/death-note/snapshots \
+curl -X POST http://localhost:3001/api/packs/death_note/snapshots \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{"label": "首次存档"}'
@@ -73,7 +73,7 @@ curl -X POST http://localhost:3001/api/packs/death-note/snapshots \
 ```json
 {
   "snapshot_id": "a1b2c3d4-...",
-  "pack_id": "death-note",
+  "pack_id": "death_note",
   "captured_at_tick": "15200",
   "prisma_record_count": 128,
   "runtime_db_size_bytes": 409600
@@ -83,14 +83,14 @@ curl -X POST http://localhost:3001/api/packs/death-note/snapshots \
 **查看快照列表：**
 
 ```bash
-curl http://localhost:3001/api/packs/death-note/snapshots \
+curl http://localhost:3001/api/packs/death_note/snapshots \
   -H "Authorization: Bearer <token>"
 ```
 
 **恢复快照（需确认数据丢失）：**
 
 ```bash
-curl -X POST http://localhost:3001/api/packs/death-note/snapshots/<snapshot_id>/restore \
+curl -X POST http://localhost:3001/api/packs/death_note/snapshots/<snapshot_id>/restore \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
   -d '{"confirm_data_loss": true}'
@@ -99,7 +99,7 @@ curl -X POST http://localhost:3001/api/packs/death-note/snapshots/<snapshot_id>/
 **删除快照：**
 
 ```bash
-curl -X DELETE http://localhost:3001/api/packs/death-note/snapshots/<snapshot_id> \
+curl -X DELETE http://localhost:3001/api/packs/death_note/snapshots/<snapshot_id> \
   -H "Authorization: Bearer <token>"
 ```
 

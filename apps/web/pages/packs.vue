@@ -28,19 +28,18 @@
       <div v-if="packs.length > 0" class="mt-6 grid gap-3">
         <button
           v-for="pack in packs"
-          :key="pack.id"
+          :key="pack.folder_name"
           type="button"
-          class="flex items-start gap-4 rounded-sm border border-yd-border-muted bg-yd-panel px-5 py-4 text-left transition-colors hover:border-yd-state-accent"
-          @click="enterPack(pack.id)"
+          class="rounded-sm border border-yd-border-muted bg-yd-panel px-5 py-4 text-left transition-colors hover:border-yd-state-accent"
+          @click="enterPack(pack.instance_id)"
         >
-          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-yd-app text-sm font-semibold text-yd-text-muted yd-font-mono">
-            {{ pack.name.charAt(0).toUpperCase() }}
-          </div>
           <div class="min-w-0">
             <div class="text-sm font-semibold text-yd-text-primary">{{ pack.name }}</div>
             <div class="mt-1 text-xs text-yd-text-secondary">{{ pack.description ?? 'No description' }}</div>
             <div class="mt-2 flex items-center gap-3 text-[10px] uppercase tracking-[0.12em] yd-font-mono">
               <span class="text-yd-text-muted">v{{ pack.version }}</span>
+              <span class="text-yd-text-muted">{{ pack.instance_id }}</span>
+              <span class="text-yd-text-muted">{{ pack.folder_name }}</span>
               <span
                 :class="pack.runtime_status === 'loaded'
                   ? 'text-yd-state-success'

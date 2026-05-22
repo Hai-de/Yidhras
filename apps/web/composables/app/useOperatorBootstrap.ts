@@ -1,4 +1,5 @@
 import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 
 import { useAuthStore } from '../../stores/auth'
 import { useNotificationsStore } from '../../stores/notifications'
@@ -17,6 +18,8 @@ export const useOperatorBootstrap = () => {
   const runtime = useRuntimeStore()
   const notifications = useNotificationsStore()
   const systemApi = useSystemApi()
+  const hasResolvedPack = computed(() => Boolean(resolvePackId()))
+  const isPackRuntimePollingEnabled = computed(() => isAuthenticated.value && hasResolvedPack.value)
 
   const syncClock = async () => {
     if (!resolvePackId()) return
@@ -34,6 +37,7 @@ export const useOperatorBootstrap = () => {
   }
 
   const syncRuntimeStatus = async () => {
+    if (!resolvePackId()) return
     runtime.setStatusSyncing(true)
 
     try {
@@ -74,7 +78,7 @@ export const useOperatorBootstrap = () => {
     hiddenIntervalMs: 10000,
     immediate: true,
     refreshOnVisible: true,
-    enabled: isAuthenticated
+    enabled: isPackRuntimePollingEnabled
   })
 
   const notificationsPolling = useVisibilityPolling(syncNotifications, {
@@ -86,7 +90,7 @@ export const useOperatorBootstrap = () => {
   })
 
   const refreshAll = async () => {
-    await Promise.all([syncClock(), syncRuntimeStatus(), syncNotifications()])
+    await Promise.all([syncClock(), hasResolvedPack.value ? syncRuntimeStatus() : Promise.resolve(), syncNotifications()])
   }
 
   return {

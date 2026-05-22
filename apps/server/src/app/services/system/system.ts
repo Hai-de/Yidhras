@@ -39,7 +39,8 @@ export interface RuntimeStatusSnapshot {
   health_level: AppContext['startupHealth']['level'];
   world_pack:
     | {
-        id: string;
+        instance_id: string;
+        metadata_id: string;
         name: string;
         version: string;
         description?: string;
@@ -197,7 +198,8 @@ export const getRuntimeStatusSnapshot = async (
     health_level: context.startupHealth.level,
     world_pack: pack
       ? {
-          id: pack.metadata.id,
+          instance_id: packId,
+          metadata_id: pack.metadata.id,
           name: pack.metadata.name,
           version: pack.metadata.version,
           ...(pack.metadata.description ? { description: pack.metadata.description } : {}),

@@ -305,7 +305,7 @@ AiTaskService (task_config.tools / task_config.tool_policy)
 每个工具的权限策略定义：
 
 - `allowed_roles`：允许使用该工具的 agent role 列表
-- `allowed_pack_ids`：允许使用该工具的 pack ID 列表（可选）
+- `allowed_pack_ids`：允许使用该工具的 pack instance_id 列表（可选）
 - `require_capability`：使用该工具需要具备的 capability（可选）
 - `rate_limit`：per-tick 速率限制（max_per_tick / cooldown_ticks，可选）
 

@@ -37,7 +37,7 @@ const logger = createLogger('pack-runtime-registry');
 
 export interface DefaultPackRuntimeRegistryServiceOptions {
   registry: PackRuntimeRegistry;
-  packCatalog: Pick<DefaultPackCatalogService, 'resolvePackByIdOrFolder'>;
+  packCatalog: Pick<DefaultPackCatalogService, 'resolvePackByIdOrFolder' | 'getLoader'>;
   prisma: PrismaClient;
   packStorageAdapter: PackStorageAdapter;
   packsDir: string;
@@ -49,7 +49,7 @@ export interface DefaultPackRuntimeRegistryServiceOptions {
 
 export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, PackRuntimeObservation, PackRuntimeControl {
   private readonly registry: PackRuntimeRegistry;
-  private readonly packCatalog: Pick<DefaultPackCatalogService, 'resolvePackByIdOrFolder'>;
+  private readonly packCatalog: Pick<DefaultPackCatalogService, 'resolvePackByIdOrFolder' | 'getLoader'>;
   private readonly prisma: PrismaClient;
   private readonly packStorageAdapter: PackStorageAdapter;
   private readonly packsDir: string;
@@ -109,7 +109,8 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     }
 
     return {
-      pack_id: handle.pack_id,
+      instance_id: handle.instance_id,
+      metadata_id: handle.metadata_id,
       pack_folder_name: handle.pack_folder_name,
       health_status: handle.getHealthSnapshot().status,
       current_tick: handle.getClockSnapshot().current_tick,
@@ -122,7 +123,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
 
   public listStatuses(): PackRuntimeStatusSnapshot[] {
     return this.registry.listHandles()
-      .map(handle => this.getStatus(handle.pack_id))
+      .map(handle => this.getStatus(handle.instance_id))
       .filter((status): status is PackRuntimeStatusSnapshot => status !== null);
   }
 
@@ -147,9 +148,9 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       });
     }
 
-    const packId = resolved.pack.metadata.id;
+    const instanceId = this.packCatalog.getLoader().deriveInstanceId(resolved.pack, resolved.packFolderName);
 
-    const existing = this.registry.getHandle(packId);
+    const existing = this.registry.getHandle(instanceId);
     if (existing) {
       return {
         handle: existing,
@@ -158,7 +159,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       };
     }
 
-    this.registry.transitionTo(packId, 'loading');
+    this.registry.transitionTo(instanceId, 'loading');
 
     const { max_loaded_packs: maxLoadedPacks } = getRuntimeMultiPackConfig();
     if (this.registry.listLoadedPackIds().length >= maxLoadedPacks) {
@@ -167,6 +168,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
 
     const runtimeConfig = getWorldPackRuntimeConfig(resolved.pack);
     await materializePackRuntime({
+      instanceId,
       pack: resolved.pack,
       prisma: this.prisma,
       packStorageAdapter: this.packStorageAdapter,
@@ -178,6 +180,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     const runtimeSpeed = new RuntimeSpeedPolicy(runtimeConfig.stepStrategy);
 
     const host = new PackRuntimeInstance({
+      instanceId,
       pack: resolved.pack,
       packFolderName: resolved.packFolderName,
       clock,
@@ -186,13 +189,13 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       initialMessage: 'experimental operator-loaded runtime'
     });
     host.load();
-    this.registry.register(resolved.pack.metadata.id, host);
+    this.registry.register(instanceId, host);
 
-    const verifyHandle = this.registry.getHandle(resolved.pack.metadata.id);
+    const verifyHandle = this.registry.getHandle(instanceId);
     if (!verifyHandle) {
       logger.error(
         `Experimental pack registration verification failed: ` +
-        `pack_id=${resolved.pack.metadata.id} was registered but getHandle returned null. ` +
+        `pack_id=${instanceId} was registered but getHandle returned null. ` +
         `This indicates a registry inconsistency.`
       );
     }
@@ -207,21 +210,21 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     // Start per-pack simulation loop
     if (this.multiPackLoopHost) {
       const packRuntimePort = new DefaultPackRuntimePort(host);
-      this.multiPackLoopHost.startLoop(resolved.pack.metadata.id, clock, packRuntimePort);
+      this.multiPackLoopHost.startLoop(instanceId, clock, packRuntimePort);
     }
 
     // Load pack into world engine sidecar session
     if (this.worldEngine) {
       const tick = clock.getTicks().toString();
       const [worldEntities, entityStates, authorityGrants, mediatorBindings, ruleExecutionRecords] = await Promise.all([
-        listPackWorldEntities(this.packStorageAdapter, packId),
-        listPackEntityStates(this.packStorageAdapter, packId),
-        listPackAuthorityGrants(this.packStorageAdapter, packId),
-        listPackMediatorBindings(this.packStorageAdapter, packId),
-        listPackRuleExecutionRecords(this.packStorageAdapter, packId)
+        listPackWorldEntities(this.packStorageAdapter, instanceId),
+        listPackEntityStates(this.packStorageAdapter, instanceId),
+        listPackAuthorityGrants(this.packStorageAdapter, instanceId),
+        listPackMediatorBindings(this.packStorageAdapter, instanceId),
+        listPackRuleExecutionRecords(this.packStorageAdapter, instanceId)
       ]);
       const snapshot = serializeWorldPackSnapshotRecord({
-        pack_id: packId,
+        pack_id: instanceId,
         clock: { current_tick: tick, current_revision: tick },
         world_entities: worldEntities,
         entity_states: entityStates,
@@ -230,7 +233,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
         rule_execution_records: ruleExecutionRecords
       });
       await this.worldEngine.loadPack({
-        pack_id: packId,
+        pack_id: instanceId,
         mode: 'active',
         hydrate: { source: 'host_snapshot', snapshot }
       });

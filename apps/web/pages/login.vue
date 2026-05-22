@@ -1,52 +1,89 @@
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-yd-app px-4">
-    <div class="w-full max-w-sm rounded-sm border border-yd-border-muted bg-yd-panel p-8">
-      <h1 class="text-lg font-semibold text-yd-text-primary yd-font-mono">Yidhras</h1>
-      <p class="mt-2 text-xs text-yd-text-muted yd-font-mono uppercase tracking-[0.12em]">Operator login</p>
+  <main class="yd-login-page yd-grid-surface flex min-h-dvh items-center justify-center px-4 py-8">
+    <section class="yd-login-shell" aria-labelledby="login-title">
+      <div class="yd-login-card yd-panel-surface--elevated yd-tone-info rounded-sm border border-yd-border-muted px-6 py-7 sm:px-8 sm:py-8">
+        <header class="yd-separator-bottom pb-5 text-center">
+          <h1 id="login-title" class="mt-2 text-2xl font-semibold tracking-tight text-yd-text-primary sm:text-3xl">
+            Yidhras
+          </h1>
+          <p class="mt-3 text-xs uppercase tracking-[0.16em] text-yd-text-secondary yd-font-mono">Operator login</p>
+        </header>
 
-      <form class="mt-6 space-y-4" @submit.prevent="handleLogin">
-        <div>
-          <label class="block text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono" for="username">
-            Username
+        <form class="mt-6 space-y-5" @submit.prevent="handleLogin">
+          <div class="space-y-2">
+            <label class="block text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono" for="username">
+              Username
+            </label>
+            <input
+              id="username"
+              ref="usernameInput"
+              v-model.trim="username"
+              type="text"
+              class="yd-login-input h-11 w-full rounded-sm border border-yd-border-muted bg-yd-app px-3 text-sm text-yd-text-primary outline-none transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-yd-text-muted focus:border-yd-state-accent focus:bg-yd-panel focus-visible:outline-none"
+              autocomplete="username"
+              autocapitalize="none"
+              spellcheck="false"
+              :aria-invalid="Boolean(errorMessage)"
+              :aria-describedby="errorMessage ? 'login-error' : undefined"
+            >
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono" for="password">
+              Password
+            </label>
+            <input
+              id="password"
+              ref="passwordInput"
+              v-model="password"
+              type="password"
+              class="yd-login-input h-11 w-full rounded-sm border border-yd-border-muted bg-yd-app px-3 text-sm text-yd-text-primary outline-none transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-yd-text-muted focus:border-yd-state-accent focus:bg-yd-panel focus-visible:outline-none"
+              autocomplete="current-password"
+              :aria-invalid="Boolean(errorMessage)"
+              :aria-describedby="errorMessage ? 'login-error' : undefined"
+            >
+          </div>
+
+          <label
+            class="yd-login-remember flex min-h-11 cursor-pointer items-center gap-3 rounded-sm border border-yd-border-muted bg-yd-app px-3 py-2 text-sm text-yd-text-secondary transition-[border-color,background-color,box-shadow,color] duration-150 hover:border-yd-border-strong hover:bg-yd-elevated hover:text-yd-text-primary"
+            for="remember"
+          >
+            <input
+              id="remember"
+              v-model="rememberMe"
+              type="checkbox"
+              class="h-4 w-4 accent-yd-state-accent"
+            >
+            <span class="flex flex-col gap-0.5">
+              <span class="text-[10px] uppercase tracking-[0.12em] yd-font-mono">Remember me</span>
+              <span class="text-xs text-yd-text-muted">Keep this operator session after the browser closes.</span>
+            </span>
           </label>
-          <input
-            id="username"
-            v-model="username"
-            type="text"
-            class="mt-1 w-full rounded-sm border border-yd-border-muted bg-yd-app px-3 py-2 text-sm text-yd-text-primary focus:border-yd-state-accent focus:outline-none"
-            autocomplete="username"
-          />
-        </div>
 
-        <div>
-          <label class="block text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono" for="password">
-            Password
-          </label>
-          <input
-            id="password"
-            v-model="password"
-            type="password"
-            class="mt-1 w-full rounded-sm border border-yd-border-muted bg-yd-app px-3 py-2 text-sm text-yd-text-primary focus:border-yd-state-accent focus:outline-none"
-            autocomplete="current-password"
-          />
-        </div>
+          <AppAlert v-if="errorMessage" id="login-error" class="yd-login-alert" tone="danger" title="Authentication failed" role="alert">
+            {{ errorMessage }}
+          </AppAlert>
 
-        <p v-if="errorMessage" class="text-xs text-yd-state-danger">{{ errorMessage }}</p>
+          <button
+            type="submit"
+            :disabled="isSubmitting"
+            :aria-busy="isSubmitting"
+            class="yd-login-submit h-11 border-yd-state-accent/60 text-yd-text-primary active:scale-[0.985]"
+          >
+            {{ isSubmitting ? 'Authenticating...' : 'Authenticate' }}
+          </button>
+        </form>
+      </div>
 
-        <button
-          type="submit"
-          :disabled="isSubmitting"
-          class="w-full rounded-sm bg-yd-state-accent px-4 py-2 text-sm font-semibold text-yd-text-inverse transition-opacity disabled:opacity-50"
-        >
-          {{ isSubmitting ? 'Logging in...' : 'Login' }}
-        </button>
-      </form>
-    </div>
-  </div>
+      <p class="mt-4 text-center text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
+        v0.0.0 · Yidhras
+      </p>
+    </section>
+  </main>
 </template>
 
 <script setup lang="ts">
-import { requestApiData } from '../lib/http/client'
+import { ApiClientError, requestApiData } from '../lib/http/client'
 import { useAuthStore } from '../stores/auth'
 
 definePageMeta({
@@ -60,9 +97,43 @@ const username = ref('')
 const password = ref('')
 const errorMessage = ref<string | null>(null)
 const isSubmitting = ref(false)
+const rememberMe = ref(true)
+const usernameInput = ref<HTMLInputElement | null>(null)
+const passwordInput = ref<HTMLInputElement | null>(null)
+
+const focusUsernameInput = async () => {
+  await nextTick()
+  usernameInput.value?.focus()
+}
+
+const focusPasswordInput = async () => {
+  await nextTick()
+  passwordInput.value?.focus()
+}
+
+const validateLoginForm = async (): Promise<boolean> => {
+  if (!username.value) {
+    errorMessage.value = 'Username is required.'
+    await focusUsernameInput()
+    return false
+  }
+
+  if (!password.value) {
+    errorMessage.value = 'Password is required.'
+    await focusPasswordInput()
+    return false
+  }
+
+  return true
+}
 
 const handleLogin = async () => {
   errorMessage.value = null
+  if (isSubmitting.value) return
+
+  const isValid = await validateLoginForm()
+  if (!isValid) return
+
   isSubmitting.value = true
 
   try {
@@ -74,10 +145,17 @@ const handleLogin = async () => {
       }
     })
 
-    auth.setToken(result.token)
+    auth.setToken(result.token, rememberMe.value)
     await router.push('/packs')
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Login failed'
+    if (error instanceof ApiClientError && error.status === 401) {
+      errorMessage.value = 'Invalid username or password.'
+      await focusPasswordInput()
+    } else if (error instanceof Error) {
+      errorMessage.value = error.message
+    } else {
+      errorMessage.value = 'Login failed.'
+    }
   } finally {
     isSubmitting.value = false
   }
@@ -87,3 +165,122 @@ if (auth.isAuthenticated) {
   router.replace('/packs')
 }
 </script>
+
+<style scoped>
+.yd-login-page {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  min-width: 0;
+  background-image:
+    radial-gradient(
+      ellipse at 50% 45%,
+      color-mix(in srgb, var(--yd-color-state-accent) 10%, transparent 90%) 0%,
+      transparent 46%
+    ),
+    linear-gradient(to right, var(--yd-grid-line-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--yd-grid-line-color) 1px, transparent 1px);
+}
+
+.yd-login-shell {
+  width: 100%;
+  max-width: 28rem;
+  margin-inline: auto;
+}
+
+.yd-login-card {
+  --yd-tone-line-idle: color-mix(in srgb, var(--yd-color-state-accent) 52%, transparent 48%);
+  animation: yd-login-enter 260ms ease-out both;
+}
+
+.yd-login-input {
+  display: block;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--yd-color-border-muted) 52%, transparent 48%),
+    inset 0 -1px 0 color-mix(in srgb, var(--yd-color-border-muted) 52%, transparent 48%),
+    inset 2px 0 0 transparent;
+}
+
+.yd-login-input:focus,
+.yd-login-input:focus-visible {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--yd-color-border-strong) 62%, transparent 38%),
+    inset 0 -1px 0 color-mix(in srgb, var(--yd-color-border-strong) 62%, transparent 38%),
+    inset 2px 0 0 color-mix(in srgb, var(--yd-color-state-accent) 72%, transparent 28%),
+    0 0 0 1px color-mix(in srgb, var(--yd-color-state-accent) 18%, transparent 82%),
+    0 0 14px color-mix(in srgb, var(--yd-color-state-accent) 10%, transparent 90%);
+}
+
+.yd-login-remember:focus-within {
+  border-color: color-mix(in srgb, var(--yd-color-state-accent) 62%, transparent 38%);
+  box-shadow:
+    inset 2px 0 0 color-mix(in srgb, var(--yd-color-state-accent) 64%, transparent 36%),
+    0 0 14px color-mix(in srgb, var(--yd-color-state-accent) 9%, transparent 91%);
+}
+
+.yd-login-submit {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  background-color: color-mix(in srgb, var(--yd-color-state-accent) 20%, transparent 80%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--yd-color-state-accent) 38%, transparent 62%),
+    inset 0 -1px 0 color-mix(in srgb, var(--yd-color-border-muted) 42%, transparent 58%),
+    inset 2px 0 0 color-mix(in srgb, var(--yd-color-state-accent) 68%, transparent 32%);
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease,
+    transform 80ms ease;
+}
+
+.yd-login-submit:hover:not(:disabled),
+.yd-login-submit:focus-visible:not(:disabled) {
+  background-color: color-mix(in srgb, var(--yd-color-state-accent) 28%, transparent 72%);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--yd-color-state-accent) 48%, transparent 52%),
+    inset 0 -1px 0 color-mix(in srgb, var(--yd-color-border-strong) 46%, transparent 54%),
+    inset 2px 0 0 color-mix(in srgb, var(--yd-color-state-accent) 82%, transparent 18%),
+    0 0 14px color-mix(in srgb, var(--yd-color-state-accent) 12%, transparent 88%);
+}
+
+.yd-login-alert {
+  animation: yd-login-alert-enter 180ms ease-out both;
+}
+
+@keyframes yd-login-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes yd-login-alert-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yd-login-card,
+  .yd-login-alert {
+    animation: none;
+  }
+}
+</style>

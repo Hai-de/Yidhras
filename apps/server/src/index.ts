@@ -193,7 +193,7 @@ appContext.packRuntimeLookup = {
     const handle = sim.getPackRuntimeHandle(packId);
     if (!handle) return null;
     return {
-      pack_id: handle.pack_id,
+      pack_id: handle.instance_id,
       pack_folder_name: handle.pack_folder_name,
       health_status: handle.getHealthSnapshot().status,
       current_tick: handle.getClockSnapshot().current_tick,
@@ -364,7 +364,7 @@ const start = async (): Promise<void> => {
 
       // Load main pack through registry service (symmetric with experimental packs)
       const loadResult = await sim.loadExperimentalPackRuntime(selectedPack);
-      const packId = loadResult.handle.pack_id;
+      const packId = loadResult.handle.instance_id;
       const pack = loadResult.handle.pack;
 
       // Register world pack dynamic slots
@@ -422,7 +422,7 @@ const start = async (): Promise<void> => {
           try {
             const result = await appContext.packRuntimeControl!.load(packRef);
             if (result.loaded) {
-              logger.info(`bootstrap_list: loaded pack ${packRef} (handle=${result.handle.pack_id})`);
+              logger.info(`bootstrap_list: loaded pack ${packRef} (handle=${result.handle.instance_id})`);
             } else if (result.already_loaded) {
               logger.info(`bootstrap_list: pack ${packRef} already loaded, skipping`);
             }

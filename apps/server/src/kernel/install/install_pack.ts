@@ -11,10 +11,10 @@ export interface InstalledPackRuntimeSummary {
   packCollections: string[];
 }
 
-export const installPackRuntime = async (pack: WorldPack, packStorageAdapter: PackStorageAdapter): Promise<InstalledPackRuntimeSummary> => {
+export const installPackRuntime = async (instanceId: string, pack: WorldPack, packStorageAdapter: PackStorageAdapter): Promise<InstalledPackRuntimeSummary> => {
   const compiledStorage = compilePackStoragePlan(pack);
   const storageEngine = createPackStorageEngine(packStorageAdapter);
-  const materialized = await storageEngine.materializeStoragePlan(pack.metadata.id, {
+  const materialized = await storageEngine.materializeStoragePlan(instanceId, {
     strategy: compiledStorage.strategy,
     runtime_db_file: compiledStorage.runtimeDbFile,
     engine_owned_collections: compiledStorage.engineOwnedCollections,

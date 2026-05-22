@@ -153,8 +153,8 @@ describe('pack runtime materializer', () => {
       }
     });
 
-    await installPackRuntime(pack, packStorageAdapter);
-    const summary = await materializePackRuntimeCoreModels(pack, 1000n, packStorageAdapter);
+    await installPackRuntime(pack.metadata.id, pack, packStorageAdapter);
+    const summary = await materializePackRuntimeCoreModels(pack.metadata.id, pack, 1000n, packStorageAdapter);
 
     expect(summary.pack_id).toBe('world-test-pack');
     expect(summary.world_entity_count).toBeGreaterThanOrEqual(4);
@@ -230,7 +230,7 @@ describe('pack runtime materializer', () => {
       }
     });
 
-    const summary = await installPackRuntime(pack, packStorageAdapter);
+    const summary = await installPackRuntime(pack.metadata.id, pack, packStorageAdapter);
     expect(summary.packCollections).toEqual(['target_dossiers', 'judgement_plans']);
   });
 
@@ -264,8 +264,8 @@ describe('pack runtime materializer', () => {
       }
     });
 
-    await installPackRuntime(pack, packStorageAdapter);
-    await materializePackRuntimeCoreModels(pack, 2000n, packStorageAdapter);
+    await installPackRuntime(pack.metadata.id, pack, packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack.metadata.id, pack, 2000n, packStorageAdapter);
 
     const entityStates = await listPackEntityStates(packStorageAdapter, 'world-macro-ref-pack');
     const actorState = entityStates.find(
@@ -328,8 +328,8 @@ describe('pack runtime materializer', () => {
       }
     });
 
-    await installPackRuntime(pack, packStorageAdapter);
-    await materializePackRuntimeCoreModels(pack, 3000n, packStorageAdapter);
+    await installPackRuntime(pack.metadata.id, pack, packStorageAdapter);
+    await materializePackRuntimeCoreModels(pack.metadata.id, pack, 3000n, packStorageAdapter);
 
     const entityStates = await listPackEntityStates(packStorageAdapter, 'world-bootstrap-ref-pack');
     const worldState = entityStates.find(

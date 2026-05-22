@@ -53,13 +53,13 @@ const resolveEntryUrl = (pack: PackListItem): string => {
     return entry
   }
 
-  return `/api/packs/${pack.id}/frontend/${entry.replace(/^\.?\/?/, '')}`
+  return `/api/packs/${pack.instance_id}/frontend/${entry.replace(/^\.?\/?/, '')}`
 }
 
 const loadPackFrontend = async () => {
   try {
     const result = await packListApi.listPacks()
-    const pack = result.packs.find(p => p.id === props.packId)
+    const pack = result.packs.find(p => p.instance_id === props.packId)
 
     if (!pack) {
       throw new Error(`Pack ${props.packId} not found`)

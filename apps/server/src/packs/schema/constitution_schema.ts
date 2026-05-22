@@ -270,6 +270,7 @@ const metadataSchema = z
     name: nonEmptyStringSchema,
     version: nonEmptyStringSchema,
     description: nonEmptyStringSchema.optional(),
+    instance_id: nonEmptyStringSchema.optional(),
     authors: z.array(metadataAuthorSchema).optional(),
     license: nonEmptyStringSchema.optional(),
     homepage: metadataLinkSchema.optional(),

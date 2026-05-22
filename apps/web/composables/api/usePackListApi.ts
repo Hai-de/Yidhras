@@ -1,7 +1,8 @@
 import { requestApiData } from '../../lib/http/client'
 
 export interface PackListItem {
-  id: string
+  instance_id: string
+  metadata_id: string
   folder_name: string
   name: string
   version: string

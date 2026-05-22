@@ -14,7 +14,7 @@ const PROMPT_WORKFLOW_TASK_TYPES: ReadonlySet<AiTaskType> = new Set([
 const buildDefaultActorRef = (context: InferenceContext): NonNullable<AiTaskRequest['actor_ref']> => ({
   ...context.actor_ref,
   actor_display_name: context.actor_display_name,
-  world_pack_id: context.world_pack.id,
+  world_pack_id: context.world_pack.instance_id,
   inference_id: context.inference_id
 });
 
@@ -80,7 +80,7 @@ export const buildAiTaskRequestFromInferenceContextV2 = (
   return Promise.resolve({
     task_id: options.task_id ?? context.inference_id,
     task_type: options.task_type,
-    pack_id: options.pack_id ?? context.world_pack.id,
+    pack_id: options.pack_id ?? context.world_pack.instance_id,
     actor_ref: options.actor_ref ?? buildDefaultActorRef(context),
     input: options.input ?? buildDefaultTaskInput(context),
     prompt_context: {

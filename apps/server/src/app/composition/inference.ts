@@ -42,7 +42,7 @@ export const createInferenceProviders = ({
     createGatewayBackedInferenceProvider({ aiTaskService }),
     createBehaviorTreeProvider({
       resolveTreeRegistry: (inferenceContext) => {
-        const packId = inferenceContext.world_pack.id;
+        const packId = inferenceContext.world_pack.instance_id;
         return resolveTreeRegistry(packId, inferenceContext.world_pack.behavior_trees);
       }
     })

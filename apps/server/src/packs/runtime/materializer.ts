@@ -65,12 +65,13 @@ const createEntityStateInput = (
 });
 
 export const materializePackRuntimeCoreModels = async (
+  instanceId: string,
   pack: WorldPack,
   now: bigint,
   packStorageAdapter: PackStorageAdapter,
   appliedOpeningId?: string
 ): Promise<PackRuntimeMaterializeSummary> => {
-  const packId = pack.metadata.id;
+  const packId = instanceId;
   const worldEntities = new Map<string, PackRuntimeWorldEntityInput>();
   const entityStates = new Map<string, PackRuntimeEntityStateInput>();
   const authorityGrants = new Map<string, PackRuntimeAuthorityGrantInput>();
@@ -289,11 +290,12 @@ const buildBridgedAgentId = (packId: string, actorId: string): string => `${pack
 const buildBridgedIdentityId = (packId: string, identityId: string): string => `${packId}:identity:${identityId}`;
 
 export const materializeActorBridges = async (
+  instanceId: string,
   pack: WorldPack,
   prisma: PrismaClient,
   now: bigint
 ): Promise<ActorBridgeSummary> => {
-  const packId = pack.metadata.id;
+  const packId = instanceId;
   const actors = pack.entities?.actors ?? [];
   const identities = pack.identities ?? [];
 

@@ -45,13 +45,14 @@ export const registerPackFrontendAssetRoutes = (
         throw new ApiError(400, 'INVALID_PACK_ID', 'packId is required')
       }
 
-      // Resolve pack folder name from pack ID
+      // Resolve pack folder name from instance_id
       const availableFolders = loader.listAvailablePacks()
       let packFolder: string | null = null
 
       for (const folderName of availableFolders) {
         const pack = loader.loadPack(folderName)
-        if (pack.metadata.id === packId) {
+        const instanceId = loader.deriveInstanceId(pack, folderName)
+        if (instanceId === packId) {
           packFolder = folderName
           break
         }

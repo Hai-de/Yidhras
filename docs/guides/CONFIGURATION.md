@@ -350,7 +350,7 @@ runtime:
   multi_pack:
     max_loaded_packs: 2
     start_mode: "manual"               # manual | bootstrap_list
-    bootstrap_packs: []                 # 当 start_mode 为 bootstrap_list 时自动加载的包 ID 列表
+    bootstrap_packs: []                 # 当 start_mode 为 bootstrap_list 时自动加载的包 instance_id 列表（默认 = 目录名）
   metrics_port: 9090
 ```
 

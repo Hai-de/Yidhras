@@ -16,7 +16,8 @@ export interface RuntimeWorldAuthor {
 }
 
 export interface RuntimeWorldMetadata {
-  id: string
+  instance_id: string
+  metadata_id: string
   name: string
   version: string
   description?: string
@@ -97,7 +98,10 @@ const normalizeSystemNotification = (
 
 export const useSystemApi = () => {
   return {
-    getRuntimeStatus: () => requestApiData<RuntimeStatusSnapshot>('/api/status'),
+    getRuntimeStatus: () => {
+      const packId = resolvePackId()
+      return requestApiData<RuntimeStatusSnapshot>(`/api/status?packId=${encodeURIComponent(packId ?? '')}`)
+    },
     getFormattedClock: () =>
       requestApiData<FormattedClockSnapshot>('/api/clock/formatted', {
         packId: resolvePackId()

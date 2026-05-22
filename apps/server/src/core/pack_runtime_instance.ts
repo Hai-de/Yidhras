@@ -26,6 +26,7 @@ const buildDefaultStepStrategy = (pack: WorldPack): StepStrategy => {
 export interface PackRuntimeInstanceOptions {
   pack: WorldPack;
   packFolderName: string;
+  instanceId: string;
   clock?: ChronosEngine;
   runtimeSpeed?: RuntimeSpeedPolicy;
   initialStatus?: PackRuntimeHealthSnapshot['status'];
@@ -51,7 +52,8 @@ export class PackRuntimeInstance implements PackRuntimeHost {
       message: options.initialMessage ?? null
     };
     this.handle = {
-      pack_id: this.pack.metadata.id,
+      instance_id: options.instanceId,
+      metadata_id: this.pack.metadata.id,
       pack_folder_name: this.packFolderName,
       pack: this.pack,
       getClockSnapshot: () => this.getClockSnapshot(),
@@ -123,7 +125,7 @@ export class PackRuntimeInstance implements PackRuntimeHost {
   }
 
   public getPackId(): string {
-    return this.pack.metadata.id;
+    return this.handle.instance_id;
   }
 
   public getCurrentTick(): bigint {

@@ -398,7 +398,7 @@ pnpm prepare:runtime
 Pack runtime DB 同样通过 `PRISMA_DB_PROVIDER` 切换 adapter：
 
 - `sqlite` → `SqlitePackStorageAdapter`（每 pack 独立 SQLite 文件）
-- `postgresql` → `PostgresPackStorageAdapter`（schema-per-pack 策略，`pack_<id>.*` 表）
+- `postgresql` → `PostgresPackStorageAdapter`（schema-per-pack 策略，`pack_<instance_id>.*` 表）
 
 PostgreSQL adapter 使用 Prisma raw SQL（`$queryRaw` / `$executeRaw`），所有 DDL 已从 SQLite 方言适配为 PostgreSQL 方言。
 
