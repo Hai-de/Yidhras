@@ -8,7 +8,7 @@ const cssFiles = [
   '~/assets/css/utilities.css'
 ]
 
-const modules = ['@nuxt/ui', '@nuxtjs/tailwindcss', '@pinia/nuxt', '@vueuse/nuxt']
+const modules = ['@nuxt/ui', '@nuxtjs/tailwindcss', '@pinia/nuxt', '@vueuse/nuxt', '@nuxtjs/i18n']
 
 const runtimeConfig = {
   public: {
@@ -35,5 +35,21 @@ export default defineNuxtConfig({
     optimizeDeps: {
       include: optimizeDepsInclude
     }
+  },
+  i18n: {
+    strategy: 'prefix_except_default',
+    defaultLocale: 'en',
+    locales: [
+      { code: 'en', file: 'en.json', name: 'English' },
+      { code: 'zh-CN', file: 'zh-CN.json', name: '简体中文' },
+      { code: 'zh-TW', file: 'zh-TW.json', name: '繁體中文' },
+      { code: 'ja', file: 'ja.json', name: '日本語' }
+    ],
+    langDir: 'locales',
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'yd_locale',
+      redirectOn: 'root'
+    },
   }
 })

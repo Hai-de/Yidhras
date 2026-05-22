@@ -4,49 +4,42 @@
       <div class="yd-login-card yd-panel-surface--elevated yd-tone-info rounded-sm border border-yd-border-muted px-6 py-7 sm:px-8 sm:py-8">
         <header class="yd-separator-bottom pb-5 text-center">
           <h1 id="login-title" class="mt-2 text-2xl font-semibold tracking-tight text-yd-text-primary sm:text-3xl">
-            Yidhras
+            {{ $t('common.app_name') }}
           </h1>
-          <p class="mt-3 text-xs uppercase tracking-[0.16em] text-yd-text-secondary yd-font-mono">Operator login</p>
+          <p class="mt-3 text-xs uppercase tracking-[0.16em] text-yd-text-secondary yd-font-mono">{{ $t('login.title') }}</p>
         </header>
 
         <form class="mt-6 space-y-5" @submit.prevent="handleLogin">
-          <div class="space-y-2">
-            <label class="block text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono" for="username">
-              Username
-            </label>
-            <input
-              id="username"
-              ref="usernameInput"
-              v-model.trim="username"
-              type="text"
-              class="yd-login-input h-11 w-full rounded-sm border border-yd-border-muted bg-yd-app px-3 text-sm text-yd-text-primary outline-none transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-yd-text-muted focus:border-yd-state-accent focus:bg-yd-panel focus-visible:outline-none"
-              autocomplete="username"
-              autocapitalize="none"
-              spellcheck="false"
-              :aria-invalid="Boolean(errorMessage)"
-              :aria-describedby="errorMessage ? 'login-error' : undefined"
-            >
-          </div>
+          <input
+            id="username"
+            ref="usernameInput"
+            v-model.trim="username"
+            type="text"
+            :placeholder="$t('login.username')"
+            class="yd-login-input h-11 w-full rounded-sm border border-yd-border-muted bg-yd-app px-3 text-sm text-yd-text-primary outline-none transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-yd-text-muted focus:border-yd-state-accent focus:bg-yd-panel focus-visible:outline-none"
+            autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
+            :aria-invalid="Boolean(errorMessage)"
+            :aria-describedby="errorMessage ? 'login-error' : undefined"
+          >
 
-          <div class="space-y-2">
-            <label class="block text-[10px] uppercase tracking-[0.12em] text-yd-text-muted yd-font-mono" for="password">
-              Password
-            </label>
-            <input
-              id="password"
-              ref="passwordInput"
-              v-model="password"
-              type="password"
-              class="yd-login-input h-11 w-full rounded-sm border border-yd-border-muted bg-yd-app px-3 text-sm text-yd-text-primary outline-none transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-yd-text-muted focus:border-yd-state-accent focus:bg-yd-panel focus-visible:outline-none"
-              autocomplete="current-password"
-              :aria-invalid="Boolean(errorMessage)"
-              :aria-describedby="errorMessage ? 'login-error' : undefined"
-            >
-          </div>
+          <input
+            id="password"
+            ref="passwordInput"
+            v-model="password"
+            type="password"
+            :placeholder="$t('login.password')"
+            class="yd-login-input h-11 w-full rounded-sm border border-yd-border-muted bg-yd-app px-3 text-sm text-yd-text-primary outline-none transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-yd-text-muted focus:border-yd-state-accent focus:bg-yd-panel focus-visible:outline-none"
+            autocomplete="current-password"
+            :aria-invalid="Boolean(errorMessage)"
+            :aria-describedby="errorMessage ? 'login-error' : undefined"
+          >
 
           <label
             class="yd-login-remember flex min-h-11 cursor-pointer items-center gap-3 rounded-sm border border-yd-border-muted bg-yd-app px-3 py-2 text-sm text-yd-text-secondary transition-[border-color,background-color,box-shadow,color] duration-150 hover:border-yd-border-strong hover:bg-yd-elevated hover:text-yd-text-primary"
             for="remember"
+            :title="$t('login.remember_hint')"
           >
             <input
               id="remember"
@@ -54,13 +47,10 @@
               type="checkbox"
               class="h-4 w-4 accent-yd-state-accent"
             >
-            <span class="flex flex-col gap-0.5">
-              <span class="text-[10px] uppercase tracking-[0.12em] yd-font-mono">Remember me</span>
-              <span class="text-xs text-yd-text-muted">Keep this operator session after the browser closes.</span>
-            </span>
+            <span class="text-[10px] uppercase tracking-[0.12em] yd-font-mono">{{ $t('login.remember_me') }}</span>
           </label>
 
-          <AppAlert v-if="errorMessage" id="login-error" class="yd-login-alert" tone="danger" title="Authentication failed" role="alert">
+          <AppAlert v-if="errorMessage" id="login-error" class="yd-login-alert" tone="danger" :title="$t('login.auth_failed')" role="alert">
             {{ errorMessage }}
           </AppAlert>
 
@@ -70,19 +60,22 @@
             :aria-busy="isSubmitting"
             class="yd-login-submit h-11 border-yd-state-accent/60 text-yd-text-primary active:scale-[0.985]"
           >
-            {{ isSubmitting ? 'Authenticating...' : 'Authenticate' }}
+            {{ isSubmitting ? $t('login.authenticating') : $t('login.authenticate') }}
           </button>
         </form>
       </div>
 
-      <p class="mt-4 text-center text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
-        v0.0.0 · Yidhras
-      </p>
+      <div class="yd-login-footer mt-4 text-center text-[10px] uppercase tracking-[0.14em] text-yd-text-muted yd-font-mono">
+        <span>v0.0.0</span>
+        <LocaleSwitcher />
+        <span>Yidhras</span>
+      </div>
     </section>
   </main>
 </template>
 
 <script setup lang="ts">
+import LocaleSwitcher from '../features/shared/components/LocaleSwitcher.vue'
 import { ApiClientError, requestApiData } from '../lib/http/client'
 import { useAuthStore } from '../stores/auth'
 
@@ -90,6 +83,7 @@ definePageMeta({
   layout: false
 })
 
+const { t } = useI18n()
 const auth = useAuthStore()
 const router = useRouter()
 
@@ -113,13 +107,13 @@ const focusPasswordInput = async () => {
 
 const validateLoginForm = async (): Promise<boolean> => {
   if (!username.value) {
-    errorMessage.value = 'Username is required.'
+    errorMessage.value = t('login.error_username_required')
     await focusUsernameInput()
     return false
   }
 
   if (!password.value) {
-    errorMessage.value = 'Password is required.'
+    errorMessage.value = t('login.error_password_required')
     await focusPasswordInput()
     return false
   }
@@ -149,12 +143,12 @@ const handleLogin = async () => {
     await router.push('/packs')
   } catch (error) {
     if (error instanceof ApiClientError && error.status === 401) {
-      errorMessage.value = 'Invalid username or password.'
+      errorMessage.value = t('login.error_invalid_credentials')
       await focusPasswordInput()
     } else if (error instanceof Error) {
       errorMessage.value = error.message
     } else {
-      errorMessage.value = 'Login failed.'
+      errorMessage.value = t('login.error_login_failed')
     }
   } finally {
     isSubmitting.value = false
@@ -189,6 +183,14 @@ if (auth.isAuthenticated) {
   width: 100%;
   max-width: 28rem;
   margin-inline: auto;
+}
+
+.yd-login-footer {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
 }
 
 .yd-login-card {

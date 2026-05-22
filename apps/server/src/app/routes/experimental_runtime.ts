@@ -108,14 +108,14 @@ export const registerExperimentalRuntimeRoutes = (
   app.get(
     '/api/experimental/runtime/system/health',
     (_req, res) => {
-jsonOk(res, toJsonSafe(buildExperimentalSystemHealthSnapshot(context)))
+      jsonOk(res, toJsonSafe(buildExperimentalSystemHealthSnapshot(context)))
     }
   )
 
   app.get(
     '/api/experimental/runtime/packs',
     deps.asyncHandler(async (_req, res) => {
-jsonOk(
+      jsonOk(
         res,
         toJsonSafe(await buildExperimentalPackRuntimeRegistrySnapshot(context))
       )
@@ -123,11 +123,11 @@ jsonOk(
   )
 
   app.post(
-    '/api/experimental/runtime/packs/load',
+    '/api/experimental/runtime/packs/:packId/load',
     packGuard,
     controlGuard,
     deps.asyncHandler(async (req, res) => {
-const packId = resolvePackIdParam(req.params.packId)
+      const packId = resolvePackIdParam(req.params.packId)
 
       try {
         const result = await loadExperimentalPackRuntime(context, packId)
@@ -139,11 +139,11 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.post(
-    '/api/experimental/runtime/packs/unload',
+    '/api/experimental/runtime/packs/:packId/unload',
     packGuard,
     controlGuard,
     deps.asyncHandler(async (req, res) => {
-const packId = resolvePackIdParam(req.params.packId)
+      const packId = resolvePackIdParam(req.params.packId)
 
       try {
         jsonOk(res, toJsonSafe(await unloadExperimentalPackRuntime(context, packId)))
@@ -154,11 +154,11 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.post(
-    '/api/experimental/runtime/packs/step',
+    '/api/experimental/runtime/packs/:packId/step',
     packGuard,
     controlGuard,
     (req, res) => {
-const packId = resolvePackIdParam(req.params.packId)
+      const packId = resolvePackIdParam(req.params.packId)
       const host = requireExperimentalPackHost(context, packId)
 
       const amountInput = (req.body as Record<string, unknown> | undefined)?.amount
@@ -180,11 +180,11 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.get(
-    '/api/experimental/runtime/packs/status',
+    '/api/experimental/runtime/packs/:packId/status',
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
-const packId = resolvePackIdParam(req.params.packId)
+      const packId = resolvePackIdParam(req.params.packId)
       const snapshot = await getExperimentalPackRuntimeStatusSnapshot(context, packId)
       requireExperimentalPackHandle(context, packId)
       jsonOk(res, toJsonSafe(snapshot))
@@ -192,11 +192,11 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.get(
-    '/api/experimental/runtime/packs/clock',
+    '/api/experimental/runtime/packs/:packId/clock',
     packGuard,
     observeGuard,
     (req, res) => {
-const packId = resolvePackIdParam(req.params.packId)
+      const packId = resolvePackIdParam(req.params.packId)
       const handle = requireExperimentalPackHandle(context, packId)
       jsonOk(
         res,
@@ -210,11 +210,11 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.get(
-    '/api/experimental/runtime/packs/scheduler/summary',
+    '/api/experimental/runtime/packs/:packId/scheduler/summary',
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
-const packId = resolvePackIdParam(req.params.packId)
+      const packId = resolvePackIdParam(req.params.packId)
       requireExperimentalPackHandle(context, packId)
       const kernel = createRuntimeKernelService(context, packId)
       jsonOk(res, toJsonSafe(await kernel.getSummary?.({})))
@@ -222,11 +222,11 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.get(
-    '/api/experimental/runtime/packs/scheduler/ownership',
+    '/api/experimental/runtime/packs/:packId/scheduler/ownership',
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
-const packId = resolvePackIdParam(req.params.packId)
+      const packId = resolvePackIdParam(req.params.packId)
       requireExperimentalPackHandle(context, packId)
       const kernel = createRuntimeKernelService(context, packId)
       jsonOk(res, toJsonSafe(await kernel.getOwnershipAssignments?.({})))
@@ -234,11 +234,11 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.get(
-    '/api/experimental/runtime/packs/scheduler/workers',
+    '/api/experimental/runtime/packs/:packId/scheduler/workers',
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
-const packId = resolvePackIdParam(req.params.packId)
+      const packId = resolvePackIdParam(req.params.packId)
       requireExperimentalPackHandle(context, packId)
       const kernel = createRuntimeKernelService(context, packId)
       jsonOk(res, toJsonSafe(await kernel.getWorkers?.({})))
@@ -246,11 +246,11 @@ const packId = resolvePackIdParam(req.params.packId)
   )
 
   app.get(
-    '/api/experimental/runtime/packs/scheduler/operator',
+    '/api/experimental/runtime/packs/:packId/scheduler/operator',
     packGuard,
     observeGuard,
     deps.asyncHandler(async (req, res) => {
-const packId = resolvePackIdParam(req.params.packId)
+      const packId = resolvePackIdParam(req.params.packId)
       requireExperimentalPackHandle(context, packId)
       const kernel = createRuntimeKernelService(context, packId)
       jsonOk(res, toJsonSafe(await kernel.getOperatorProjection?.({})))
