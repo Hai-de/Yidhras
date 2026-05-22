@@ -1,7 +1,6 @@
 import { Prisma } from '@prisma/client';
 
 import type { AppInfrastructure } from '../app/context.js';
-import { getErrorMessage } from '../app/http/errors.js';
 import { toJsonSafe } from '../app/http/json.js';
 import type {
   LongTermMemorySearchInput,
@@ -69,15 +68,6 @@ const toMemoryEntry = (record: {
   };
 };
 
-const isMissingMemoryBlockTablesError = (error: unknown): boolean => {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    return error.code === 'P2021';
-  }
-
-  const message = getErrorMessage(error);
-  return message.includes('MemoryBlock') && message.includes('does not exist');
-};
-
 export const createNoopLongTermMemoryStore = (): LongTermMemoryStore => {
   return {
     search(_input: LongTermMemorySearchInput): Promise<MemoryEntry[]> {
@@ -97,24 +87,16 @@ export const createPrismaLongTermMemoryStore = (context: AppInfrastructure): Lon
         return [];
       }
 
-      try {
-        const rows = await context.prisma.memoryBlock.findMany({
-          where: {
-            owner_agent_id: agentId,
-            status: 'active'
-          },
-          orderBy: [{ updated_at_tick: 'desc' }, { created_at_tick: 'desc' }, { id: 'desc' }],
-          take: input.limit
-        });
+      const rows = await context.prisma.memoryBlock.findMany({
+        where: {
+          owner_agent_id: agentId,
+          status: 'active'
+        },
+        orderBy: [{ updated_at_tick: 'desc' }, { created_at_tick: 'desc' }, { id: 'desc' }],
+        take: input.limit
+      });
 
-        return rows.map(toMemoryEntry);
-      } catch (error) {
-        if (isMissingMemoryBlockTablesError(error)) {
-          return [];
-        }
-
-        throw error;
-      }
+      return rows.map(toMemoryEntry);
     },
     save(_entries: MemoryEntry[]): Promise<void> {
       return Promise.resolve();

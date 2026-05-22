@@ -14,7 +14,6 @@ import {
   AI_TASK_TYPES,
   type AiModelRegistryEntry,
   type AiProviderConfig,
-  type AiProviderTemplate,
   type AiRegistryConfig,
   type AiRoutePolicy,
   type AiToolRegistryEntry,
@@ -562,110 +561,36 @@ export const BUILTIN_AI_TOOLS: AiToolRegistryEntry[] = [
 
 let aiRegistryCache: AiRegistryCache | null = null;
 
-const mergeProviderConfigs = (base: AiProviderConfig[], overrides: AiProviderConfig[]): AiProviderConfig[] => {
-  const mergedByProvider = new Map(base.map(entry => [entry.provider, structuredClone(entry)]));
-
+const mergeById = <T>(
+  base: T[],
+  overrides: T[],
+  keyFn: (item: T) => string
+): T[] => {
+  const merged = new Map(base.map(item => [keyFn(item), structuredClone(item)]));
   for (const override of overrides) {
-    const existing = mergedByProvider.get(override.provider);
+    const key = keyFn(override);
+    const existing = merged.get(key);
     if (!existing) {
-      mergedByProvider.set(override.provider, structuredClone(override));
+      merged.set(key, structuredClone(override));
       continue;
     }
-
-    mergedByProvider.set(
-      override.provider,
-      deepMerge(existing as unknown as Record<string, unknown>, override as unknown as Record<string, unknown>) as unknown as AiProviderConfig
-    );
-  }
-
-  return Array.from(mergedByProvider.values());
-};
-
-const mergeModelRegistryEntries = (base: AiModelRegistryEntry[], overrides: AiModelRegistryEntry[]): AiModelRegistryEntry[] => {
-  const mergedByModelKey = new Map(base.map(entry => [`${entry.provider}:${entry.model}`, structuredClone(entry)]));
-
-  for (const override of overrides) {
-    const key = `${override.provider}:${override.model}`;
-    const existing = mergedByModelKey.get(key);
-    if (!existing) {
-      mergedByModelKey.set(key, structuredClone(override));
-      continue;
-    }
-
-    mergedByModelKey.set(
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    merged.set(
       key,
-      deepMerge(existing as unknown as Record<string, unknown>, override as unknown as Record<string, unknown>) as unknown as AiModelRegistryEntry
+      deepMerge(existing as unknown as Record<string, unknown>, override as unknown as Record<string, unknown>) as unknown as T
     );
   }
-
-  return Array.from(mergedByModelKey.values());
-};
-
-const mergeRoutePolicies = (base: AiRoutePolicy[], overrides: AiRoutePolicy[]): AiRoutePolicy[] => {
-  const mergedByRouteId = new Map(base.map(entry => [entry.route_id, structuredClone(entry)]));
-
-  for (const override of overrides) {
-    const existing = mergedByRouteId.get(override.route_id);
-    if (!existing) {
-      mergedByRouteId.set(override.route_id, structuredClone(override));
-      continue;
-    }
-
-    mergedByRouteId.set(
-      override.route_id,
-      deepMerge(existing as unknown as Record<string, unknown>, override as unknown as Record<string, unknown>) as unknown as AiRoutePolicy
-    );
-  }
-
-  return Array.from(mergedByRouteId.values());
-};
-
-const mergeToolEntries = (base: AiToolRegistryEntry[], overrides: AiToolRegistryEntry[]): AiToolRegistryEntry[] => {
-  const mergedByToolId = new Map(base.map(entry => [entry.tool_id, structuredClone(entry)]));
-
-  for (const override of overrides) {
-    const existing = mergedByToolId.get(override.tool_id);
-    if (!existing) {
-      mergedByToolId.set(override.tool_id, structuredClone(override));
-      continue;
-    }
-
-    mergedByToolId.set(
-      override.tool_id,
-      deepMerge(existing as unknown as Record<string, unknown>, override as unknown as Record<string, unknown>) as unknown as AiToolRegistryEntry
-    );
-  }
-
-  return Array.from(mergedByToolId.values());
-};
-
-const mergeProviderTemplates = (
-  base: AiProviderTemplate[],
-  overrides: AiProviderTemplate[]
-): AiProviderTemplate[] => {
-  const mergedByName = new Map(base.map(t => [t.name, structuredClone(t)]));
-  for (const override of overrides) {
-    const existing = mergedByName.get(override.name);
-    if (!existing) {
-      mergedByName.set(override.name, structuredClone(override));
-      continue;
-    }
-    mergedByName.set(
-      override.name,
-      deepMerge(existing as unknown as Record<string, unknown>, override as unknown as Record<string, unknown>) as unknown as AiProviderTemplate
-    );
-  }
-  return Array.from(mergedByName.values());
+  return Array.from(merged.values());
 };
 
 export const mergeAiRegistryConfig = (base: AiRegistryConfig, override: AiRegistryConfig): AiRegistryConfig => {
   return {
     version: override.version,
-    provider_templates: mergeProviderTemplates(base.provider_templates ?? [], override.provider_templates ?? []),
-    providers: mergeProviderConfigs(base.providers, override.providers),
-    models: mergeModelRegistryEntries(base.models, override.models),
-    routes: mergeRoutePolicies(base.routes, override.routes),
-    tools: mergeToolEntries(base.tools ?? [], override.tools ?? [])
+    provider_templates: mergeById(base.provider_templates ?? [], override.provider_templates ?? [], t => t.name),
+    providers: mergeById(base.providers, override.providers, p => p.provider),
+    models: mergeById(base.models, override.models, m => `${m.provider}:${m.model}`),
+    routes: mergeById(base.routes, override.routes, r => r.route_id),
+    tools: mergeById(base.tools ?? [], override.tools ?? [], t => t.tool_id)
   };
 };
 
@@ -846,7 +771,7 @@ const loadPromptSlotRegistry = (): PromptSlotRegistryCache => {
   const overrideRaw = readYamlFileIfExists(configPath.replace('ai_models.yaml', 'prompt_slots.yaml'));
   const hasOverride = Object.keys(overrideRaw).length > 0;
   const merged = hasOverride
-    ? promptSlotRegistrySchema.parse(deepMerge(defaultParsed as unknown as Record<string, unknown>, overrideRaw))
+    ? promptSlotRegistrySchema.parse(deepMerge(defaultParsed, overrideRaw))
     : defaultParsed;
   return {
     config: merged,

@@ -92,11 +92,6 @@ const resolveSubjectEntityId = async (
     const agentId = actorRef.agent_id.trim()
 
     // P3-1: Agent 自主行为 → 查找控制 Operator
-    // 防御性：仅在 identityNodeBinding 可用时才执行 Operator 解析
-    if (!(context.prisma as unknown as Record<string, unknown>)?.identityNodeBinding) {
-      return agentId
-    }
-
     const cacheKey = `${packId}:${agentId}`
 
     // P3-2: 缓存同一 tick 内的解析结果

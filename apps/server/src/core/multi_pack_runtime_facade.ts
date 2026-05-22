@@ -1,4 +1,5 @@
 import type { AggregatedClockSnapshot, MultiPackRuntimePort, PackRuntimePort } from '../app/services/pack/pack_runtime_ports.js';
+import { DefaultPackRuntimePort } from '../packs/orchestration/default_pack_runtime_port.js';
 import type { DefaultPackRuntimeRegistryService } from '../packs/orchestration/pack_runtime_registry_service.js';
 
 /**
@@ -30,7 +31,7 @@ export class MultiPackRuntimeFacade implements MultiPackRuntimePort {
       if (handle) {
         packs[id] = {
           tick: BigInt(handle.getClockSnapshot().current_tick),
-          revision: 0n // revision will be tracked per-pack in later phases
+          revision: 0n
         };
       }
     }
@@ -41,20 +42,11 @@ export class MultiPackRuntimeFacade implements MultiPackRuntimePort {
   }
 
   getPackRuntime(packId: string): PackRuntimePort {
-    const handle = this.registryService.getHandle(packId);
-    if (!handle) {
-      throw new Error(`[MultiPackRuntimeFacade] Pack not loaded: ${packId}`);
+    const host = this.registryService.getHost(packId);
+    if (!host) {
+      throw new Error(`[MultiPackRuntimeFacade] Cannot construct PackRuntimePort for ${packId}: pack host not available`);
     }
-    const instance = (handle as unknown as { instance?: { getPackRuntimePort?: () => PackRuntimePort } }).instance;
-    if (instance?.getPackRuntimePort) {
-      return instance.getPackRuntimePort();
-    }
-    // Fallback: wrap via handle's internal instance (registry-dependent path)
-    throw new Error(
-      `[MultiPackRuntimeFacade] Cannot construct PackRuntimePort for ${packId}: ` +
-      `PackRuntimeInstance.getPackRuntimePort() not available. ` +
-      `Ensure Phase 1.5 enhancements are applied.`
-    );
+    return new DefaultPackRuntimePort(host);
   }
 
   assertRuntimeReady(packId: string, feature: string): void {

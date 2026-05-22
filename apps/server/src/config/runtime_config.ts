@@ -436,7 +436,7 @@ const loadRuntimeConfig = (): RuntimeConfigCache => {
   const envOverrides = buildEnvironmentOverrides(activeEnv)
 
   const merged = deepMergeAll(
-    BUILTIN_DEFAULTS as unknown as Record<string, unknown>,
+    BUILTIN_DEFAULTS,
     ...baseFileOverrides,
     envFileOverride,
     localFileOverride,

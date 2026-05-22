@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 
 import type { AppInfrastructure } from '../../app/context.js';
-import { getErrorMessage } from '../../app/http/errors.js';
 import { toJsonSafe } from '../../app/http/json.js';
 import type {
   ContextOverlayArchiveInput,
@@ -108,124 +107,82 @@ const normalizeLimit = (limit?: number): number => {
   return Math.min(Math.max(Math.trunc(limit), 1), MAX_LIMIT);
 };
 
-const isMissingOverlayTableError = (error: unknown): boolean => {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    return error.code === 'P2021';
-  }
-
-  const message = getErrorMessage(error);
-  return message.includes('ContextOverlayEntry') && message.includes('does not exist');
-};
-
 export const createContextOverlayStore = (context: AppInfrastructure): ContextOverlayStore => {
   return {
     async listEntries(input: ContextOverlayQuery): Promise<ContextOverlayEntry[]> {
-      let rows: Awaited<ReturnType<typeof context.prisma.contextOverlayEntry.findMany>> = [];
-      try {
-        rows = await context.prisma.contextOverlayEntry.findMany({
-          where: {
-            actor_id: input.actor_id,
-            ...(input.pack_id === undefined ? {} : { pack_id: input.pack_id }),
-            status: {
-              in: input.statuses ?? ['active']
-            }
-          },
-          orderBy: [{ updated_at_tick: 'desc' }, { created_at_tick: 'desc' }, { id: 'desc' }],
-          take: normalizeLimit(input.limit)
-        });
-      } catch (error) {
-        if (isMissingOverlayTableError(error)) {
-          return [];
-        }
-
-        throw error;
-      }
+      const rows = await context.prisma.contextOverlayEntry.findMany({
+        where: {
+          actor_id: input.actor_id,
+          ...(input.pack_id === undefined ? {} : { pack_id: input.pack_id }),
+          status: {
+            in: input.statuses ?? ['active']
+          }
+        },
+        orderBy: [{ updated_at_tick: 'desc' }, { created_at_tick: 'desc' }, { id: 'desc' }],
+        take: normalizeLimit(input.limit)
+      });
 
       return rows.map(toOverlayEntry);
     },
     async getEntryById(id: string): Promise<ContextOverlayEntry | null> {
-      try {
-        const row = await context.prisma.contextOverlayEntry.findUnique({
-          where: {
-            id
-          }
-        });
-
-        return row ? toOverlayEntry(row) : null;
-      } catch (error) {
-        if (isMissingOverlayTableError(error)) {
-          return null;
+      const row = await context.prisma.contextOverlayEntry.findUnique({
+        where: {
+          id
         }
+      });
 
-        throw error;
-      }
+      return row ? toOverlayEntry(row) : null;
     },
     async createEntry(input: ContextOverlayCreateInput): Promise<ContextOverlayEntry> {
-      try {
-        const created = await context.prisma.contextOverlayEntry.create({
-          data: {
-            id: input.id ?? randomUUID(),
-            actor_id: input.actor_id,
-            pack_id: input.pack_id ?? null,
-            overlay_type: input.overlay_type,
-            title: input.title ?? null,
-            content_text: input.content_text,
-            content_structured:
-              input.content_structured && Object.keys(input.content_structured).length > 0
-                ? toJsonValue(input.content_structured)
-                : Prisma.JsonNull,
-            tags: stringifyStringArray(input.tags ?? []),
-            status: input.status ?? 'active',
-            persistence_mode: input.persistence_mode ?? 'sticky',
-            source_node_ids: stringifyStringArray(input.source_node_ids ?? []),
-            created_by: input.created_by,
-            created_at_tick: BigInt(input.created_at_tick),
-            updated_at_tick: BigInt(input.updated_at_tick ?? input.created_at_tick)
-          }
-        });
-
-        return toOverlayEntry(created);
-      } catch (error) {
-        if (isMissingOverlayTableError(error)) {
-          throw new Error('ContextOverlayEntry table is not available yet. Run prisma migrate deploy before creating overlay entries.');
+      const created = await context.prisma.contextOverlayEntry.create({
+        data: {
+          id: input.id ?? randomUUID(),
+          actor_id: input.actor_id,
+          pack_id: input.pack_id ?? null,
+          overlay_type: input.overlay_type,
+          title: input.title ?? null,
+          content_text: input.content_text,
+          content_structured:
+            input.content_structured && Object.keys(input.content_structured).length > 0
+              ? toJsonValue(input.content_structured)
+              : Prisma.JsonNull,
+          tags: stringifyStringArray(input.tags ?? []),
+          status: input.status ?? 'active',
+          persistence_mode: input.persistence_mode ?? 'sticky',
+          source_node_ids: stringifyStringArray(input.source_node_ids ?? []),
+          created_by: input.created_by,
+          created_at_tick: BigInt(input.created_at_tick),
+          updated_at_tick: BigInt(input.updated_at_tick ?? input.created_at_tick)
         }
+      });
 
-        throw error;
-      }
+      return toOverlayEntry(created);
     },
     async updateEntry(input: ContextOverlayUpdateInput): Promise<ContextOverlayEntry> {
-      try {
-        const updated = await context.prisma.contextOverlayEntry.update({
-          where: {
-            id: input.id
-          },
-          data: {
-            ...(input.title !== undefined ? { title: input.title } : {}),
-            ...(input.content_text !== undefined ? { content_text: input.content_text } : {}),
-            ...(input.content_structured !== undefined
-              ? {
-                  content_structured:
-                    input.content_structured && Object.keys(input.content_structured).length > 0
-                      ? toJsonValue(input.content_structured)
-                      : Prisma.JsonNull
-                }
-              : {}),
-            ...(input.tags !== undefined ? { tags: stringifyStringArray(input.tags) } : {}),
-            ...(input.status !== undefined ? { status: input.status } : {}),
-            ...(input.persistence_mode !== undefined ? { persistence_mode: input.persistence_mode } : {}),
-            ...(input.source_node_ids !== undefined ? { source_node_ids: stringifyStringArray(input.source_node_ids) } : {}),
-            updated_at_tick: BigInt(input.updated_at_tick)
-          }
-        });
-
-        return toOverlayEntry(updated);
-      } catch (error) {
-        if (isMissingOverlayTableError(error)) {
-          throw new Error('ContextOverlayEntry table is not available yet. Run prisma migrate deploy before updating overlay entries.');
+      const updated = await context.prisma.contextOverlayEntry.update({
+        where: {
+          id: input.id
+        },
+        data: {
+          ...(input.title !== undefined ? { title: input.title } : {}),
+          ...(input.content_text !== undefined ? { content_text: input.content_text } : {}),
+          ...(input.content_structured !== undefined
+            ? {
+                content_structured:
+                  input.content_structured && Object.keys(input.content_structured).length > 0
+                    ? toJsonValue(input.content_structured)
+                    : Prisma.JsonNull
+              }
+            : {}),
+          ...(input.tags !== undefined ? { tags: stringifyStringArray(input.tags) } : {}),
+          ...(input.status !== undefined ? { status: input.status } : {}),
+          ...(input.persistence_mode !== undefined ? { persistence_mode: input.persistence_mode } : {}),
+          ...(input.source_node_ids !== undefined ? { source_node_ids: stringifyStringArray(input.source_node_ids) } : {}),
+          updated_at_tick: BigInt(input.updated_at_tick)
         }
+      });
 
-        throw error;
-      }
+      return toOverlayEntry(updated);
     },
     async archiveEntry(input: ContextOverlayArchiveInput): Promise<ContextOverlayEntry> {
       return this.updateEntry({

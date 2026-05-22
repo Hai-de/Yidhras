@@ -10,9 +10,7 @@ export type {
   PerceptionLocationInput,
   PerceptionObserverRelation,
   PerceptionResolver,
-  PerceptionResult,
   PerceptionRuleDef,
   PerceptionRuleInput,
-  PerceptionRuleOutput,
-  ResolvePerceptionInput
+  PerceptionRuleOutput
 } from './types.js';

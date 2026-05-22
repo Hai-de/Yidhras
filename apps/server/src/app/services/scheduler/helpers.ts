@@ -303,7 +303,7 @@ export const parseDecisionFilters = (input: ListSchedulerDecisionsInput): Schedu
 // Raw row helpers
 // ---------------------------------------------------------------------------
 
-export const castRawRow = <T>(row: Record<string, unknown>): T => row as unknown as T;
+
 
 export const parseSummaryJson = (raw: string): unknown => {
   try {

@@ -227,7 +227,7 @@ const loadGlobalConfig = (): ConfigCacheEntry => {
   const parsed = loadConfigYaml({
     filePath: configFilePath,
     validate: raw => inferenceContextConfigSchema.parse(
-      deepMerge(BUILTIN_DEFAULTS as unknown as Record<string, unknown>, raw)
+      deepMerge(BUILTIN_DEFAULTS as Record<string, unknown>, raw)
     )
   });
 
@@ -250,7 +250,7 @@ const buildFinalConfig = (baseConfig: InferenceContextConfig): InferenceContextC
     return baseConfig;
   }
   const merged = deepMerge(
-    baseConfig as unknown as Record<string, unknown>,
+    baseConfig,
     envOverrides
   );
   return inferenceContextConfigSchema.parse(merged);
@@ -270,7 +270,7 @@ const loadDeploymentConfig = (deploymentId: string): ConfigCacheEntry => {
     merged = globalEntry.config;
   } else {
     merged = deepMerge(
-      globalEntry.config as unknown as Record<string, unknown>,
+      globalEntry.config,
       deploymentOverride
     );
   }

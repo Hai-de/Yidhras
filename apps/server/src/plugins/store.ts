@@ -1,7 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
-import { getErrorMessage } from '../app/http/errors.js';
 import {
   parsePluginActivationSession,
   parsePluginArtifact,
@@ -40,25 +39,6 @@ const toJsonValue = (value: unknown): Prisma.InputJsonValue => {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 };
 
-const isMissingPluginTablesError = (error: unknown): boolean => {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    return error.code === 'P2021';
-  }
-
-  const message = getErrorMessage(error);
-  return (
-    (message.includes('PluginArtifact')
-      || message.includes('PluginInstallation')
-      || message.includes('PluginActivationSession')
-      || message.includes('PluginEnableAcknowledgement'))
-    && message.includes('does not exist')
-  );
-};
-
-const pluginTablesUnavailableError = (): Error => {
-  return new Error('Plugin tables are not available yet. Run prisma migrate deploy before using pack-local plugins.');
-};
-
 export interface PluginStoreContext {
   prisma: PrismaClient;
 }
@@ -66,8 +46,7 @@ export interface PluginStoreContext {
 export const createPluginStore = (context: PluginStoreContext): PluginStore => {
   return {
     async getArtifactById(artifactId) {
-      try {
-        const row = await context.prisma.pluginArtifact.findUnique({
+      const row = await context.prisma.pluginArtifact.findUnique({
           where: {
             artifact_id: artifactId
           }
@@ -89,18 +68,10 @@ export const createPluginStore = (context: PluginStoreContext): PluginStore => {
           manifest_json: row.manifest_json,
           imported_at: row.imported_at.toString()
         });
-      } catch (error) {
-        if (isMissingPluginTablesError(error)) {
-          return null;
-        }
-
-        throw error;
-      }
     },
 
     async getArtifactByChecksum(checksum) {
-      try {
-        const row = await context.prisma.pluginArtifact.findUnique({
+      const row = await context.prisma.pluginArtifact.findUnique({
           where: {
             checksum
           }
@@ -122,18 +93,10 @@ export const createPluginStore = (context: PluginStoreContext): PluginStore => {
           manifest_json: row.manifest_json,
           imported_at: row.imported_at.toString()
         });
-      } catch (error) {
-        if (isMissingPluginTablesError(error)) {
-          return null;
-        }
-
-        throw error;
-      }
     },
 
     async upsertArtifact(input) {
-      try {
-        const row = await context.prisma.pluginArtifact.upsert({
+      const row = await context.prisma.pluginArtifact.upsert({
           where: {
             artifact_id: input.artifact_id
           },
@@ -174,18 +137,10 @@ export const createPluginStore = (context: PluginStoreContext): PluginStore => {
           manifest_json: row.manifest_json,
           imported_at: row.imported_at.toString()
         });
-      } catch (error) {
-        if (isMissingPluginTablesError(error)) {
-          throw pluginTablesUnavailableError();
-        }
-
-        throw error;
-      }
     },
 
     async getInstallationById(installationId) {
-      try {
-        const row = await context.prisma.pluginInstallation.findUnique({
+      const row = await context.prisma.pluginInstallation.findUnique({
           where: {
             installation_id: installationId
           }
@@ -211,18 +166,10 @@ export const createPluginStore = (context: PluginStoreContext): PluginStore => {
           disabled_at: row.disabled_at?.toString(),
           last_error: row.last_error ?? undefined
         });
-      } catch (error) {
-        if (isMissingPluginTablesError(error)) {
-          return null;
-        }
-
-        throw error;
-      }
     },
 
     async getInstallationByScope(input) {
-      try {
-        const row = await context.prisma.pluginInstallation.findFirst({
+      const row = await context.prisma.pluginInstallation.findFirst({
           where: {
             plugin_id: input.plugin_id,
             scope_type: input.scope_type,
@@ -250,18 +197,10 @@ export const createPluginStore = (context: PluginStoreContext): PluginStore => {
           disabled_at: row.disabled_at?.toString(),
           last_error: row.last_error ?? undefined
         });
-      } catch (error) {
-        if (isMissingPluginTablesError(error)) {
-          return null;
-        }
-
-        throw error;
-      }
     },
 
     async listInstallationsByScope(input) {
-      try {
-        const rows = await context.prisma.pluginInstallation.findMany({
+      const rows = await context.prisma.pluginInstallation.findMany({
           where: {
             scope_type: input.scope_type,
             scope_ref: input.scope_ref ?? null
@@ -285,18 +224,10 @@ export const createPluginStore = (context: PluginStoreContext): PluginStore => {
           disabled_at: row.disabled_at?.toString(),
           last_error: row.last_error ?? undefined
         }));
-      } catch (error) {
-        if (isMissingPluginTablesError(error)) {
-          return [];
-        }
-
-        throw error;
-      }
     },
 
     async upsertInstallation(input: PluginInstallationUpsertInput) {
-      try {
-        const row = await context.prisma.pluginInstallation.upsert({
+      const row = await context.prisma.pluginInstallation.upsert({
           where: {
             installation_id: input.installation_id
           },
@@ -351,18 +282,10 @@ export const createPluginStore = (context: PluginStoreContext): PluginStore => {
           disabled_at: row.disabled_at?.toString(),
           last_error: row.last_error ?? undefined
         });
-      } catch (error) {
-        if (isMissingPluginTablesError(error)) {
-          throw pluginTablesUnavailableError();
-        }
-
-        throw error;
-      }
     },
 
     async createActivationSession(input: PluginActivationSessionCreateInput) {
-      try {
-        const row = await context.prisma.pluginActivationSession.create({
+      const row = await context.prisma.pluginActivationSession.create({
           data: {
             activation_id: input.activation_id,
             installation_id: input.installation_id,
@@ -389,18 +312,10 @@ export const createPluginStore = (context: PluginStoreContext): PluginStore => {
           loaded_web_manifest: row.loaded_web_manifest,
           error_message: row.error_message ?? undefined
         });
-      } catch (error) {
-        if (isMissingPluginTablesError(error)) {
-          throw pluginTablesUnavailableError();
-        }
-
-        throw error;
-      }
     },
 
     async updateActivationSession(activationId, patch) {
-      try {
-        const row = await context.prisma.pluginActivationSession.update({
+      const row = await context.prisma.pluginActivationSession.update({
           where: {
             activation_id: activationId
           },
@@ -425,18 +340,10 @@ export const createPluginStore = (context: PluginStoreContext): PluginStore => {
           loaded_web_manifest: row.loaded_web_manifest,
           error_message: row.error_message ?? undefined
         });
-      } catch (error) {
-        if (isMissingPluginTablesError(error)) {
-          throw pluginTablesUnavailableError();
-        }
-
-        throw error;
-      }
     },
 
     async createEnableAcknowledgement(input: PluginEnableAcknowledgementCreateInput) {
-      try {
-        const row = await context.prisma.pluginEnableAcknowledgement.create({
+      const row = await context.prisma.pluginEnableAcknowledgement.create({
           data: {
             acknowledgement_id: input.acknowledgement_id,
             installation_id: input.installation_id,
@@ -461,18 +368,10 @@ export const createPluginStore = (context: PluginStoreContext): PluginStore => {
           actor_label: row.actor_label ?? undefined,
           created_at: row.created_at.toString()
         });
-      } catch (error) {
-        if (isMissingPluginTablesError(error)) {
-          throw pluginTablesUnavailableError();
-        }
-
-        throw error;
-      }
     },
 
     async getLatestEnableAcknowledgement(installationId) {
-      try {
-        const row = await context.prisma.pluginEnableAcknowledgement.findFirst({
+      const row = await context.prisma.pluginEnableAcknowledgement.findFirst({
           where: {
             installation_id: installationId
           },
@@ -494,13 +393,6 @@ export const createPluginStore = (context: PluginStoreContext): PluginStore => {
           actor_label: row.actor_label ?? undefined,
           created_at: row.created_at.toString()
         });
-      } catch (error) {
-        if (isMissingPluginTablesError(error)) {
-          return null;
-        }
-
-        throw error;
-      }
     }
   };
 };

@@ -6,10 +6,10 @@ import type { RuntimeSpeedSnapshot } from './runtime_speed.js';
 import type { StepContext, StepStrategy } from './step_strategy.js';
 
 export interface PackRuntimeHost {
-  load(): Promise<void>;
-  start(): Promise<void>;
-  stop(): Promise<void>;
-  dispose(): Promise<void>;
+  load(): void;
+  start(): void;
+  stop(): void;
+  dispose(): void;
   getHandle(): PackRuntimeHandle;
   getPack(): WorldPack;
   getClock(): ChronosEngine;
@@ -18,7 +18,7 @@ export interface PackRuntimeHost {
   getCurrentRevision(): bigint;
   getStepTicks(): bigint;
   getAllTimes(): unknown;
-  step(amount?: bigint): Promise<void>;
+  step(amount?: bigint): void;
   getPackSlotDeclarations(): Record<string, Record<string, unknown>> | null;
   applyClockProjection(snapshot: RuntimeClockProjectionSnapshot): void;
   getStepStrategy(): StepStrategy;

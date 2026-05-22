@@ -60,24 +60,20 @@ export class PackRuntimeInstance implements PackRuntimeHost {
     };
   }
 
-  public load(): Promise<void> {
+  public load(): void {
     this.health = { status: 'loaded', message: this.health.message ?? null };
-    return Promise.resolve();
   }
 
-  public start(): Promise<void> {
+  public start(): void {
     this.health = { status: 'running', message: this.health.message ?? null };
-    return Promise.resolve();
   }
 
-  public stop(): Promise<void> {
+  public stop(): void {
     this.health = { status: 'stopped', message: this.health.message ?? null };
-    return Promise.resolve();
   }
 
-  public dispose(): Promise<void> {
+  public dispose(): void {
     this.health = { status: 'stopped', message: null };
-    return Promise.resolve();
   }
 
   public getHandle(): PackRuntimeHandle {
@@ -146,10 +142,9 @@ export class PackRuntimeInstance implements PackRuntimeHost {
     return this.getStepStrategy().range.min;
   }
 
-  public step(amount: bigint = 1n): Promise<void> {
+  public step(amount: bigint = 1n): void {
     this.clock.tick(amount);
     this.currentRevision = this.clock.getTicks();
-    return Promise.resolve();
   }
 
   public applyClockProjection(snapshot: RuntimeClockProjectionSnapshot): void {

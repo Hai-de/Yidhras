@@ -92,7 +92,7 @@ const validateAndReloadPromptSlots = (filePath: string, defaultPath: string): vo
     }
 
     const rawDefault = readYamlFileIfExists(defaultPath);
-    const defaultParsed = promptSlotRegistrySchema.parse(rawDefault) as unknown as Record<string, unknown>;
+    const defaultParsed = promptSlotRegistrySchema.parse(rawDefault) as Record<string, unknown>;
     const merged = promptSlotRegistrySchema.parse(deepMerge(defaultParsed, rawOverride));
 
     // The parse above validates the merge. We don't use the result except for logging.

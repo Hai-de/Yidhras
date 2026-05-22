@@ -317,7 +317,24 @@ const start = async (): Promise<void> => {
     startupHealth,
     startupPolicy,
     worldPacksDir,
-    queryDatabaseHealth: () => prisma.$queryRawUnsafe('SELECT 1'),
+    queryDatabaseHealth: async () => {
+      const dbProvider = process.env.PRISMA_DB_PROVIDER ?? 'sqlite';
+      let count: unknown;
+      if (dbProvider === 'postgresql' || dbProvider === 'pg') {
+        const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+          `SELECT 1 FROM information_schema.tables WHERE table_name = '_prisma_migrations'`
+        );
+        count = rows.length;
+      } else {
+        const rows = await prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
+          `SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '_prisma_migrations'`
+        );
+        count = rows.length;
+      }
+      if (!count) {
+        throw new Error('Prisma migrations table not found. Run prisma migrate deploy.');
+      }
+    },
     getErrorMessage
   });
 

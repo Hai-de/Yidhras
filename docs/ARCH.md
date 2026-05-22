@@ -549,7 +549,7 @@ world-pack 在物化阶段（`materializer.ts`）展开 `bootstrap.initial_state
 
 | 组件 | 位置 | 说明 |
 |------|------|------|
-| `PerceptionResolver` 接口 | `perception/types.ts` | `resolve(event, observer, spatialRuntime) → PerceptionResult` |
+| `PerceptionResolver` 接口 | `perception/types.ts` | `resolve(event, observer, spatialRuntime) → PerceptionRuleOutput` |
 | `createSpatialProximityResolver()` | `perception/default_resolver.ts` | 默认 A 层实现：同 location + public → full；private 仅 actor 可见 |
 | `runPerceptionPipeline()` | `app/runtime/perception_pipeline.ts` | 每 tick 收集空间事件 → 枚举 agent → 逐对解析 → 写入 overlay entry |
 | `spatialPredicateMatches()` | `domain/rule/enforcement_engine.ts` | `when.location.in` / `adjacent_to` 预过滤，在调用世界引擎侧车前执行 |

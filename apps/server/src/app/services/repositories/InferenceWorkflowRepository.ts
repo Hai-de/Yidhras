@@ -1,5 +1,6 @@
-import type { PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 
+import type { InferenceJobIntentClass, InferenceRequestInput } from '../../../inference/types.js';
 import type { AppContext } from '../../context.js';
 import {
   type ActionIntentDispatchReflection,
@@ -52,16 +53,16 @@ export interface InferenceWorkflowRepository {
   ): Promise<DecisionJobRecord>;
   createPending(input: {
     idempotencyKey: string;
-    requestInput: unknown;
+    requestInput: InferenceRequestInput;
     maxAttempts?: number;
     scheduledForTick?: bigint | null;
-    intentClass?: string;
+    intentClass?: InferenceJobIntentClass;
     jobSource?: string;
   }): Promise<DecisionJobRecord>;
   createReplay(input: {
     sourceJob: DecisionJobRecord;
     sourceTraceId: string | null;
-    requestInput: unknown;
+    requestInput: InferenceRequestInput;
     idempotencyKey: string;
     reason?: string | null;
     maxAttempts?: number;
@@ -87,16 +88,16 @@ export interface InferenceWorkflowRepository {
   getActionIntentForDispatchReflection(intentId: string): Promise<ActionIntentDispatchReflection | null>;
 
   // Additional direct-Prisma methods
-  listInferenceTraces(input: { orderBy?: Record<string, unknown>; take?: number; where?: Record<string, unknown>; include?: Record<string, unknown> }): Promise<InferenceTraceRecord[]>;
+  listInferenceTraces(input: { orderBy?: Prisma.InferenceTraceOrderByWithRelationInput; take?: number; where?: Prisma.InferenceTraceWhereInput; include?: Prisma.InferenceTraceInclude }): Promise<InferenceTraceRecord[]>;
   findAiInvocationById(id: string): Promise<AiInvocationRecord | null>;
-  listAiInvocations(input: { where?: Record<string, unknown>; orderBy?: unknown; take?: number }): Promise<AiInvocationRecord[]>;
+  listAiInvocations(input: { where?: Prisma.AiInvocationRecordWhereInput; orderBy?: Prisma.AiInvocationRecordOrderByWithRelationInput | Prisma.AiInvocationRecordOrderByWithRelationInput[]; take?: number }): Promise<AiInvocationRecord[]>;
   findDecisionJobsByIds(ids: string[]): Promise<unknown[]>;
-  listActionIntents(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown>; take?: number; select?: Record<string, boolean> }): Promise<ActionIntentRecordFull[]>;
-  findDecisionJobs(input: { where?: Record<string, unknown>; orderBy?: unknown; take?: number; include?: Record<string, unknown>; select?: Record<string, unknown> }): Promise<DecisionJobRecord[]>;
+  listActionIntents(input: { where?: Prisma.ActionIntentWhereInput; orderBy?: Prisma.ActionIntentOrderByWithRelationInput; take?: number; select?: Prisma.ActionIntentSelect }): Promise<ActionIntentRecordFull[]>;
+  findDecisionJobs(input: { where?: Prisma.DecisionJobWhereInput; orderBy?: Prisma.DecisionJobOrderByWithRelationInput | Prisma.DecisionJobOrderByWithRelationInput[]; take?: number; include?: Prisma.DecisionJobInclude; select?: Prisma.DecisionJobSelect }): Promise<DecisionJobRecord[]>;
   findActionIntentByInferenceId(inferenceId: string): Promise<ActionIntentRecordFull | null>;
   findActionIntentById(id: string): Promise<ActionIntentRecordFull | null>;
-  upsertAiInvocation(input: Record<string, unknown>): Promise<unknown>;
-  transaction<T>(fn: (tx: PrismaClient) => Promise<T>): Promise<T>;
+  upsertAiInvocation(input: Prisma.AiInvocationRecordUpsertArgs): Promise<unknown>;
+  transaction<T>(fn: (tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$use' | '$extends'>) => Promise<T>): Promise<T>;
 }
 
 export class PrismaInferenceWorkflowRepository implements InferenceWorkflowRepository {
@@ -146,18 +147,18 @@ export class PrismaInferenceWorkflowRepository implements InferenceWorkflowRepos
 
   async createPending(input: {
     idempotencyKey: string;
-    requestInput: unknown;
+    requestInput: InferenceRequestInput;
     maxAttempts?: number;
     scheduledForTick?: bigint | null;
-    intentClass?: string;
+    intentClass?: InferenceJobIntentClass;
     jobSource?: string;
   }): Promise<DecisionJobRecord> {
     return createPendingDecisionJob(this.ctx(), {
       idempotency_key: input.idempotencyKey,
-      request_input: input.requestInput as never,
+      request_input: input.requestInput,
       max_attempts: input.maxAttempts,
       scheduled_for_tick: input.scheduledForTick,
-      intent_class: input.intentClass as never,
+      intent_class: input.intentClass,
       job_source: input.jobSource
     });
   }
@@ -165,7 +166,7 @@ export class PrismaInferenceWorkflowRepository implements InferenceWorkflowRepos
   async createReplay(input: {
     sourceJob: DecisionJobRecord;
     sourceTraceId: string | null;
-    requestInput: unknown;
+    requestInput: InferenceRequestInput;
     idempotencyKey: string;
     reason?: string | null;
     maxAttempts?: number;
@@ -174,7 +175,7 @@ export class PrismaInferenceWorkflowRepository implements InferenceWorkflowRepos
     return createReplayDecisionJob(this.ctx(), {
       source_job: input.sourceJob,
       source_trace_id: input.sourceTraceId,
-      request_input: input.requestInput as never,
+      request_input: input.requestInput,
       idempotency_key: input.idempotencyKey,
       reason: input.reason,
       max_attempts: input.maxAttempts,
@@ -255,29 +256,25 @@ export class PrismaInferenceWorkflowRepository implements InferenceWorkflowRepos
 
   // -- Additional direct-Prisma methods --
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async listInferenceTraces(input: { orderBy?: Record<string, unknown>; take?: number; where?: Record<string, unknown>; include?: Record<string, unknown> }): Promise<InferenceTraceRecord[]> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    return (this.prisma as any).inferenceTrace.findMany({
+  async listInferenceTraces(input: { orderBy?: Prisma.InferenceTraceOrderByWithRelationInput; take?: number; where?: Prisma.InferenceTraceWhereInput; include?: Prisma.InferenceTraceInclude }): Promise<InferenceTraceRecord[]> {
+    return await this.prisma.inferenceTrace.findMany({
       orderBy: input.orderBy ?? { created_at: 'desc' },
       take: input.take,
       where: input.where,
       include: input.include
-    }) as InferenceTraceRecord[];
+    });
   }
 
   async findAiInvocationById(id: string): Promise<AiInvocationRecord | null> {
     return this.prisma.aiInvocationRecord.findUnique({ where: { id } });
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async listAiInvocations(input: { where?: Record<string, unknown>; orderBy?: unknown; take?: number }): Promise<AiInvocationRecord[]> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    return (this.prisma as any).aiInvocationRecord.findMany({
+  async listAiInvocations(input: { where?: Prisma.AiInvocationRecordWhereInput; orderBy?: Prisma.AiInvocationRecordOrderByWithRelationInput | Prisma.AiInvocationRecordOrderByWithRelationInput[]; take?: number }): Promise<AiInvocationRecord[]> {
+    return await this.prisma.aiInvocationRecord.findMany({
       where: input.where,
       orderBy: input.orderBy ?? { created_at: 'desc' },
       take: input.take
-    }) as AiInvocationRecord[];
+    });
   }
 
   async findDecisionJobsByIds(ids: string[]): Promise<unknown[]> {
@@ -287,14 +284,13 @@ export class PrismaInferenceWorkflowRepository implements InferenceWorkflowRepos
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async listActionIntents(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown>; take?: number; select?: Record<string, boolean> }): Promise<ActionIntentRecordFull[]> {
-    return this.prisma.actionIntent.findMany({
-      where: input.where as never,
-      orderBy: input.orderBy as never,
+  async listActionIntents(input: { where?: Prisma.ActionIntentWhereInput; orderBy?: Prisma.ActionIntentOrderByWithRelationInput; take?: number; select?: Prisma.ActionIntentSelect }): Promise<ActionIntentRecordFull[]> {
+    return await this.prisma.actionIntent.findMany({
+      where: input.where,
+      orderBy: input.orderBy,
       take: input.take,
-      select: input.select as never
-    }) as unknown as ActionIntentRecordFull[];
+      select: input.select
+    });
   }
 
   async findActionIntentByInferenceId(inferenceId: string): Promise<ActionIntentRecordFull | null> {
@@ -305,25 +301,17 @@ export class PrismaInferenceWorkflowRepository implements InferenceWorkflowRepos
     return this.prisma.actionIntent.findUnique({ where: { id } });
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async findDecisionJobs(input: { where?: Record<string, unknown>; orderBy?: unknown; take?: number; include?: Record<string, unknown>; select?: Record<string, unknown> }): Promise<DecisionJobRecord[]> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    return (this.prisma as any).decisionJob.findMany({
-      where: input.where,
-      orderBy: input.orderBy ?? { created_at: 'desc' },
-      take: input.take,
-      include: input.include,
-      select: input.select
-    }) as DecisionJobRecord[];
+  async findDecisionJobs(input: { where?: Prisma.DecisionJobWhereInput; orderBy?: Prisma.DecisionJobOrderByWithRelationInput | Prisma.DecisionJobOrderByWithRelationInput[]; take?: number; include?: Prisma.DecisionJobInclude; select?: Prisma.DecisionJobSelect }): Promise<DecisionJobRecord[]> {
+    const { include, select, ...rest } = input;
+    const args: Prisma.DecisionJobFindManyArgs = { ...rest, ...(include ? { include } : {}), ...(select ? { select } : {}) };
+    return await this.prisma.decisionJob.findMany(args);
   }
 
-  async upsertAiInvocation(input: Record<string, unknown>): Promise<unknown> {
-    return this.prisma.aiInvocationRecord.upsert(input as never);
+  async upsertAiInvocation(input: Prisma.AiInvocationRecordUpsertArgs): Promise<unknown> {
+    return this.prisma.aiInvocationRecord.upsert(input);
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async transaction<T>(fn: (tx: PrismaClient) => Promise<T>): Promise<T> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    return (this.prisma as any).$transaction(fn) as T;
+  async transaction<T>(fn: (tx: Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$use' | '$extends'>) => Promise<T>): Promise<T> {
+    return this.prisma.$transaction(fn);
   }
 }

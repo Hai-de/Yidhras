@@ -37,7 +37,6 @@ import { buildInferenceContext } from './context_builder.js';
 import type { PromptBundleV2 } from './prompt_bundle_v2.js';
 import type { PromptTree } from './prompt_tree.js';
 import type { InferenceProvider } from './provider.js';
-import { createNoopInferenceTraceSink } from './sinks/noop.js';
 import type { InferenceTraceSink } from './trace_sink.js';
 import type {
   ActionIntentDraft,
@@ -551,7 +550,7 @@ const executeRunInternal = async (
 export const createInferenceService = ({
   context,
   providers,
-  traceSink = createNoopInferenceTraceSink()
+  traceSink = { record() { return Promise.resolve() } }
 }: CreateInferenceServiceOptions): InferenceService => {
   const service: InferenceService = {
     phase: 'workflow_baseline',

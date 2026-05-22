@@ -86,6 +86,10 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     return this.registry.getHandle(packId);
   }
 
+  public getHost(packId: string): PackRuntimeHost | null {
+    return this.registry.getHost(packId);
+  }
+
   public hasPackRuntime(packId: string): boolean {
     return this.getHandle(packId) !== null;
   }
@@ -181,7 +185,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       initialStatus: 'loaded',
       initialMessage: 'experimental operator-loaded runtime'
     });
-    await host.load();
+    host.load();
     this.registry.register(resolved.pack.metadata.id, host);
 
     const verifyHandle = this.registry.getHandle(resolved.pack.metadata.id);
@@ -265,7 +269,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       await this.onBeforeUnload(packId);
     }
 
-    await host.dispose();
+    host.dispose();
     const deletedCount = await teardownActorBridges(packId, this.prisma);
     if (deletedCount > 0) {
       logger.info(`Cleaned up ${String(deletedCount)} actor bridge records for unloaded pack ${packId}`);

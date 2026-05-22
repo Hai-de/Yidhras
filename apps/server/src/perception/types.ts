@@ -67,9 +67,4 @@ export interface PerceptionResolver {
   resolve(input: PerceptionRuleInput): Promise<PerceptionRuleOutput>;
 }
 
-// ── Legacy alias (transitional) ──
 
-/** @deprecated Use PerceptionEventInput instead */
-export type ResolvePerceptionInput = PerceptionEventInput;
-/** @deprecated Use PerceptionRuleOutput instead */
-export type PerceptionResult = PerceptionRuleOutput;

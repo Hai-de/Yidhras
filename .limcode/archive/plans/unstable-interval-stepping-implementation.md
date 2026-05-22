@@ -5,14 +5,14 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-- [ ] 阶段一：新类型、接口、Schema 定义，旧字段标记废弃  `#uis-1`
-- [ ] 阶段二：step_strategy 模块 + RuntimeSpeedPolicy 重写  `#uis-2`
-- [ ] 阶段三：PackRuntime 层适配，删除旧接口  `#uis-3`
-- [ ] 阶段四：模拟循环解除硬编码 + MultiPackLoopHost 重构  `#uis-4`
-- [ ] 阶段五：投影管道 tick_interval 语义修复  `#uis-5`
-- [ ] 阶段六：API/HTTP 层 + Contracts 重写  `#uis-6`
-- [ ] 阶段七：World pack 配置迁移 + 插件适配  `#uis-7`
-- [ ] 阶段八：清理旧代码残留 + 全量 typecheck/lint/test  `#uis-8`
+- [x] 阶段一：新类型、接口、Schema 定义，旧字段标记废弃  `#uis-1`
+- [x] 阶段二：step_strategy 模块 + RuntimeSpeedPolicy 重写  `#uis-2`
+- [x] 阶段三：PackRuntime 层适配，删除旧接口  `#uis-3`
+- [x] 阶段四：模拟循环解除硬编码 + MultiPackLoopHost 重构  `#uis-4`
+- [x] 阶段五：投影管道 tick_interval 语义修复  `#uis-5`
+- [x] 阶段六：API/HTTP 层 + Contracts 重写  `#uis-6`
+- [x] 阶段七：World pack 配置迁移 + 插件适配  `#uis-7`
+- [x] 阶段八：清理旧代码残留 + 全量 typecheck/lint/test  `#uis-8`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # 不稳定区间步进实现计划

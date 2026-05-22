@@ -117,8 +117,8 @@ export class DefaultPackRuntimePort implements PackRuntimePort {
     return this.host.getAllTimes();
   }
 
-  async step(amount?: bigint): Promise<void> {
-    await this.host.step(amount);
+  step(amount?: bigint): void {
+    this.host.step(amount);
   }
 
   getPackSlotDeclarations(): Record<string, Record<string, unknown>> | null {

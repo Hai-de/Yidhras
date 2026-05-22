@@ -275,10 +275,10 @@ export const PLUGIN_CAPABILITY_KEY = {
 ```typescript
 interface PerceptionResolver {
   resolve(
-    event: ResolvePerceptionInput,
+    event: PerceptionEventInput,
     observerEntityId: string,
     spatialRuntime: SpatialRuntime
-  ): Promise<PerceptionResult>;
+  ): Promise<PerceptionRuleOutput>;
 }
 ```
 

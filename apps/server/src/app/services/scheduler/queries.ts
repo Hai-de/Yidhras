@@ -11,7 +11,6 @@ import {
   buildRunCursorWhere,
   buildSchedulerDecisionWorkflowLinks,
   buildSchedulerOwnershipSummary,
-  castRawRow,
   encodeSchedulerCursor,
   getFilteredPackIds,
   parseDecisionFilters,
@@ -107,7 +106,7 @@ export const getAgentSchedulerProjection = async (
   for (const pid of packIds) {
     const rows = adapter.getAgentDecisions(pid, resolvedActorId, limit);
     for (const row of rows) {
-      allRawDecisions.push({ decision: castRawRow<RawSchedulerCandidateDecisionRow>(row), packId: pid });
+      allRawDecisions.push({ decision: row as unknown as RawSchedulerCandidateDecisionRow, packId: pid });
     }
   }
 
@@ -139,7 +138,7 @@ export const getAgentSchedulerProjection = async (
     for (const pid of packIds) {
       const rows = adapter.listRuns(pid, { where: { id: runId }, take: 1 });
       if (rows.length > 0) {
-        const run = castRawRow<RawSchedulerRunRow>(rows[0]);
+        const run = rows[0] as unknown as RawSchedulerRunRow;
         runs.push({
           run_id: run.id,
           tick: BigInt(run.tick).toString(),
@@ -232,7 +231,7 @@ export const listAgentSchedulerDecisions = (
   for (const pid of packIds) {
     const rows = adapter.getAgentDecisions(pid, actorId, limit);
     for (const row of rows) {
-      allDecisions.push(castRawRow<RawSchedulerCandidateDecisionRow>(row));
+      allDecisions.push(row as unknown as RawSchedulerCandidateDecisionRow);
     }
   }
 
@@ -274,7 +273,7 @@ export const getLatestSchedulerRunReadModel = async (context: AppContext, packId
   for (const pid of packIds) {
     const rows = adapter.listRuns(pid, { orderBy: { created_at: 'desc' }, take: 1 });
     if (rows.length > 0) {
-      const run = castRawRow<RawSchedulerRunRow>(rows[0]);
+      const run = rows[0] as unknown as RawSchedulerRunRow;
       if (!bestRun || run.created_at > bestRun.created_at) {
         bestRun = run;
         bestPackId = pid;
@@ -290,7 +289,7 @@ export const getLatestSchedulerRunReadModel = async (context: AppContext, packId
     where: { scheduler_run_id: bestRun.id },
     orderBy: { created_at: 'asc' }
   });
-  const decisions = rawDecisions.map(row => castRawRow<RawSchedulerCandidateDecisionRow>(row));
+  const decisions = rawDecisions.map(row => row as unknown as RawSchedulerCandidateDecisionRow);
 
   const workflowLinks = await buildSchedulerDecisionWorkflowLinks(context, decisions.map(d => ({ id: d.id, created_job_id: d.created_job_id })));
   const candidates = decisions.map(decision =>
@@ -346,12 +345,12 @@ export const getSchedulerRunReadModelById = async (
       continue;
     }
 
-    const schedulerRun = castRawRow<RawSchedulerRunRow>(rows[0]);
+    const schedulerRun = rows[0] as unknown as RawSchedulerRunRow;
     const rawDecisions = adapter.listCandidateDecisions(pid, {
       where: { scheduler_run_id: schedulerRun.id },
       orderBy: { created_at: 'asc' }
     });
-    const decisions = rawDecisions.map(row => castRawRow<RawSchedulerCandidateDecisionRow>(row));
+    const decisions = rawDecisions.map(row => row as unknown as RawSchedulerCandidateDecisionRow);
 
     const workflowLinks = await buildSchedulerDecisionWorkflowLinks(context, decisions.map(d => ({ id: d.id, created_job_id: d.created_job_id })));
     const candidates = decisions.map(decision =>
@@ -432,7 +431,7 @@ export const listSchedulerRuns = (
       take: filters.limit + 1
     });
     for (const row of rows) {
-      const run = castRawRow<RawSchedulerRunRow>(row);
+      const run = row as unknown as RawSchedulerRunRow;
       if (filters.worker_id !== null && run.worker_id !== filters.worker_id) continue;
       if (filters.partition_id !== null && run.partition_id !== filters.partition_id) continue;
       if (fromTickNum !== null && run.tick < fromTickNum) continue;
@@ -534,7 +533,7 @@ export const listSchedulerDecisions = async (
       take: filters.limit + 1
     });
     for (const row of rows) {
-      const decision = castRawRow<RawSchedulerCandidateDecisionRow>(row);
+      const decision = row as unknown as RawSchedulerCandidateDecisionRow;
       if (filters.actor_id !== null && decision.actor_id !== filters.actor_id) continue;
       if (filters.kind !== null && decision.kind !== filters.kind) continue;
       if (filters.reason !== null && decision.chosen_reason !== filters.reason) continue;
@@ -623,10 +622,10 @@ export const getSchedulerSummarySnapshot = async (
   if (adapter) {
     for (const pid of packIds) {
       const runs = adapter.listRuns(pid, { orderBy: { created_at: 'desc' }, take: sampleRuns });
-      allRuns.push(...runs.map(row => castRawRow<RawSchedulerRunRow>(row)));
+      allRuns.push(...runs.map(row => row as unknown as RawSchedulerRunRow));
 
       const decisions = adapter.listCandidateDecisions(pid, { orderBy: { created_at: 'desc' }, take: sampleRuns * 10 });
-      allDecisions.push(...decisions.map(row => castRawRow<RawSchedulerCandidateDecisionRow>(row)));
+      allDecisions.push(...decisions.map(row => row as unknown as RawSchedulerCandidateDecisionRow));
     }
     allRuns.sort((a, b) => {
       const av = a.created_at;
@@ -767,7 +766,7 @@ export const getSchedulerTrendsSnapshot = (
 
   for (const pid of packIds) {
     const rows = adapter.listRuns(pid, { orderBy: { created_at: 'desc' }, take: sampleRuns });
-    allRuns.push(...rows.map(row => castRawRow<RawSchedulerRunRow>(row)));
+    allRuns.push(...rows.map(row => row as unknown as RawSchedulerRunRow));
   }
 
   allRuns.sort((a, b) => b.created_at - a.created_at);
@@ -820,7 +819,7 @@ export const listSchedulerOwnershipAssignments = (
   for (const pid of packIds) {
     const partitions = adapter.listPartitions(pid);
     for (const p of partitions) {
-      const partition = castRawRow<RawSchedulerPartitionRow>(p as unknown as Record<string, unknown>);
+      const partition = p as unknown as RawSchedulerPartitionRow;
       if (filters.worker_id !== null && partition.worker_id !== filters.worker_id) continue;
       if (filters.partition_id !== null && partition.partition_id !== filters.partition_id) continue;
       if (filters.status !== null && partition.status !== filters.status) continue;
@@ -829,7 +828,7 @@ export const listSchedulerOwnershipAssignments = (
 
     const migrations = adapter.listMigrations(pid);
     for (const m of migrations) {
-      allMigrations.push(castRawRow<RawSchedulerMigrationRow>(m as unknown as Record<string, unknown>));
+      allMigrations.push(m as unknown as RawSchedulerMigrationRow);
     }
   }
 
@@ -897,7 +896,7 @@ export const listSchedulerOwnershipMigrations = (
   for (const pid of packIds) {
     const migrations = adapter.listMigrations(pid);
     for (const m of migrations) {
-      const migration = castRawRow<RawSchedulerMigrationRow>(m as unknown as Record<string, unknown>);
+      const migration = m as unknown as RawSchedulerMigrationRow;
       if (filters.partition_id !== null && migration.partition_id !== filters.partition_id) continue;
       if (filters.status !== null && migration.status !== filters.status) continue;
       if (filters.worker_id !== null && migration.from_worker_id !== filters.worker_id && migration.to_worker_id !== filters.worker_id) continue;

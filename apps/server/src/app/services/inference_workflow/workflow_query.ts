@@ -161,52 +161,19 @@ interface WorkflowSnapshotBundle {
   replayChildJobsByParentId: Map<string, DecisionJobRecord[]>;
 }
 
-const safeFindInferenceTraceById = async (
-  context: AppInfrastructure,
-  id: string
-): Promise<InferenceTraceRecord | null> => {
+const safeQuery = async <T>(fn: () => Promise<T>, fallback: T): Promise<T> => {
   try {
-    return await context.repos.inference.getInferenceTraceById(id);
+    return await fn();
   } catch {
-    return null;
+    return fallback;
   }
 };
 
-const safeFindActionIntentById = async (
-  context: AppInfrastructure,
-  id: string
-): Promise<ActionIntentRecord | null> => {
+const safeListQuery = async <T>(fn: () => Promise<T[]>, fallback: T[] = []): Promise<T[]> => {
   try {
-    return await context.repos.inference.findActionIntentById(id);
+    return await fn();
   } catch {
-    return null;
-  }
-};
-
-const safeFindActionIntentByInferenceId = async (
-  context: AppInfrastructure,
-  sourceInferenceId: string
-): Promise<ActionIntentRecord | null> => {
-  try {
-    return await context.repos.inference.findActionIntentByInferenceId(sourceInferenceId);
-  } catch {
-    return null;
-  }
-};
-
-const safeFindDecisionJobById = async (context: AppInfrastructure, id: string): Promise<DecisionJobRecord | null> => {
-  try {
-    return await context.repos.inference.getById(id);
-  } catch {
-    return null;
-  }
-};
-
-const safeListReplayChildrenByParentId = async (context: AppInfrastructure, jobId: string): Promise<DecisionJobRecord[]> => {
-  try {
-    return await context.repos.inference.findDecisionJobs({ where: { replay_of_job_id: jobId }, orderBy: { created_at: 'asc' } });
-  } catch {
-    return [];
+    return fallback;
   }
 };
 
@@ -233,24 +200,24 @@ const buildWorkflowSnapshotBundleForJobs = async (
   const [traces, intentsById, intentsByInferenceId, replayParents, replayChildGroups] = await Promise.all([
     inferenceIds.length > 0
       ? Promise.all(
-          inferenceIds.map(id => safeFindInferenceTraceById(context, id))
+          inferenceIds.map(id => safeQuery(() => context.repos.inference.getInferenceTraceById(id), null))
         )
       : Promise.resolve([]),
     intentIds.length > 0
       ? Promise.all(
-          intentIds.map(id => safeFindActionIntentById(context, id))
+          intentIds.map(id => safeQuery(() => context.repos.inference.findActionIntentById(id), null))
         )
       : Promise.resolve([]),
     inferenceIds.length > 0
       ? Promise.all(
-          inferenceIds.map(sourceInferenceId => safeFindActionIntentByInferenceId(context, sourceInferenceId))
+          inferenceIds.map(sourceInferenceId => safeQuery(() => context.repos.inference.findActionIntentByInferenceId(sourceInferenceId), null))
         )
       : Promise.resolve([]),
     replayParentIds.length > 0
-      ? Promise.all(replayParentIds.map(id => safeFindDecisionJobById(context, id)))
+      ? Promise.all(replayParentIds.map(id => safeQuery(() => context.repos.inference.getById(id), null)))
       : Promise.resolve([]),
     jobIds.length > 0
-      ? Promise.all(jobIds.map(jobId => safeListReplayChildrenByParentId(context, jobId)))
+      ? Promise.all(jobIds.map(jobId => safeListQuery(() => context.repos.inference.findDecisionJobs({ where: { replay_of_job_id: jobId }, orderBy: { created_at: 'asc' } }))))
       : Promise.resolve([])
   ]);
 

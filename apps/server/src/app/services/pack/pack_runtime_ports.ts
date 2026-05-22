@@ -21,7 +21,7 @@ export interface PackRuntimePort {
   getRuntimeSpeedSnapshot(): RuntimeSpeedSnapshot;
   clearRuntimeSpeedOverride(): void;
   getAllTimes(): unknown;
-  step(amount?: bigint): Promise<void>;
+  step(amount?: bigint): void;
   getPackSlotDeclarations(): Record<string, Record<string, unknown>> | null;
   applyClockProjection(snapshot: RuntimeClockProjectionSnapshot): void;
 }

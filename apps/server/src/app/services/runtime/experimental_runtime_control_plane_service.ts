@@ -50,10 +50,6 @@ const toExperimentalRuntimeSpeedSnapshot = (snapshot: {
 });
 
 const readEnabledPluginCount = async (context: AppContext, packId: string): Promise<number> => {
-  if (!(context.prisma as unknown as Record<string, unknown>)?.pluginInstallation) {
-    return 0;
-  }
-
   try {
     const installations = await context.repos.plugin.listInstallationsByScope({
       scope_type: 'pack_local',
