@@ -1,6 +1,6 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-05-22T20:59:03.044Z
+- Updated At: 2026-05-23T00:36:36.127Z
 - Status: active
 - Phase: implementation
 
@@ -16,19 +16,21 @@
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/pack-operations-management-page-design.md`
-- 计划：`.limcode/plans/pack-operations-management-page-implementation.md`
+- 设计：`.limcode/design/group-collective-entity-kind-design.md`
+- 计划：`.limcode/plans/group-collective-entity-kind-plan.md`
 - 审查：`.limcode/review/behavior-tree-logic-audit.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 修正 experimental runtime 路由路径，使用 :packId(instance_id)  `#t1`
-- [x] 新增前端 usePackOperationsApi composable  `#t2`
-- [x] 重构 /packs 为 Pack Operations 页面并显示 summary/status/actions  `#t3`
-- [x] 接入 Load/Unload/Refresh/Enter 交互与错误反馈  `#t4`
-- [x] 运行 web/server typecheck 与相关 lint  `#t5`
+- [x] 更新 world engine contract：允许 collective entity kind 与 member_of selector  `#contract`
+- [x] 更新 WORLD_PACK 文档与 cyberpunk 世界包草稿示例  `#docs-and-draft`
+- [x] 更新 runtime materializer：materialize collectives 为 world entity 与 core state，且不桥接为 actor agent  `#materializer`
+- [x] 更新 authority resolver：实现 member_of 匹配逻辑和 matched_via 类型  `#resolver`
+- [x] 更新 pack schema：加入 collective entity kind、collectives 分类、member_of selector 与校验  `#schema`
+- [x] 补充 schema、resolver、materializer/contract 相关测试  `#tests`
+- [x] 运行类型检查与单元测试，修复发现的问题  `#validation`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -58,6 +60,12 @@
 - 2026-05-22T20:52:21.205Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-operations-management-page-implementation.md
 - 2026-05-22T20:57:32.840Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-operations-management-page-implementation.md
 - 2026-05-22T20:59:03.044Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/pack-operations-management-page-implementation.md
+- 2026-05-22T23:45:40.166Z | artifact_changed | design | 同步设计文档：.limcode/design/serious-world-pack-basic-skeleton-draft.md
+- 2026-05-23T00:17:18.240Z | artifact_changed | design | 同步设计文档：.limcode/design/group-collective-entity-mechanism-design.md
+- 2026-05-23T00:20:23.495Z | artifact_changed | design | 同步设计文档：.limcode/design/group-collective-entity-kind-design.md
+- 2026-05-23T00:22:51.873Z | artifact_changed | plan | 同步计划文档：.limcode/plans/group-collective-entity-kind-plan.md
+- 2026-05-23T00:31:10.241Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/group-collective-entity-kind-plan.md
+- 2026-05-23T00:36:36.127Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/group-collective-entity-kind-plan.md
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -67,7 +75,7 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-05-15T08:18:59.116Z",
-  "updatedAt": "2026-05-22T20:59:03.044Z",
+  "updatedAt": "2026-05-23T00:36:36.127Z",
   "status": "active",
   "phase": "implementation",
   "currentFocus": "赛博朋克世界包草稿对接验证",
@@ -75,34 +83,44 @@
   "currentBlocker": null,
   "nextAction": "赛博朋克世界包草稿对接验证（entity kind 迁移路径 B、capability_resolution 规则 P1）",
   "activeArtifacts": {
-    "design": ".limcode/design/pack-operations-management-page-design.md",
-    "plan": ".limcode/plans/pack-operations-management-page-implementation.md",
+    "design": ".limcode/design/group-collective-entity-kind-design.md",
+    "plan": ".limcode/plans/group-collective-entity-kind-plan.md",
     "review": ".limcode/review/behavior-tree-logic-audit.md"
   },
   "todos": [
     {
-      "id": "t1",
-      "content": "修正 experimental runtime 路由路径，使用 :packId(instance_id)",
+      "id": "contract",
+      "content": "更新 world engine contract：允许 collective entity kind 与 member_of selector",
       "status": "completed"
     },
     {
-      "id": "t2",
-      "content": "新增前端 usePackOperationsApi composable",
+      "id": "docs-and-draft",
+      "content": "更新 WORLD_PACK 文档与 cyberpunk 世界包草稿示例",
       "status": "completed"
     },
     {
-      "id": "t3",
-      "content": "重构 /packs 为 Pack Operations 页面并显示 summary/status/actions",
+      "id": "materializer",
+      "content": "更新 runtime materializer：materialize collectives 为 world entity 与 core state，且不桥接为 actor agent",
       "status": "completed"
     },
     {
-      "id": "t4",
-      "content": "接入 Load/Unload/Refresh/Enter 交互与错误反馈",
+      "id": "resolver",
+      "content": "更新 authority resolver：实现 member_of 匹配逻辑和 matched_via 类型",
       "status": "completed"
     },
     {
-      "id": "t5",
-      "content": "运行 web/server typecheck 与相关 lint",
+      "id": "schema",
+      "content": "更新 pack schema：加入 collective entity kind、collectives 分类、member_of selector 与校验",
+      "status": "completed"
+    },
+    {
+      "id": "tests",
+      "content": "补充 schema、resolver、materializer/contract 相关测试",
+      "status": "completed"
+    },
+    {
+      "id": "validation",
+      "content": "运行类型检查与单元测试，修复发现的问题",
       "status": "completed"
     }
   ],
@@ -179,21 +197,57 @@
       "type": "artifact_changed",
       "refId": "plan",
       "message": "同步计划 TODO 快照：.limcode/plans/pack-operations-management-page-implementation.md"
+    },
+    {
+      "at": "2026-05-22T23:45:40.166Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/serious-world-pack-basic-skeleton-draft.md"
+    },
+    {
+      "at": "2026-05-23T00:17:18.240Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/group-collective-entity-mechanism-design.md"
+    },
+    {
+      "at": "2026-05-23T00:20:23.495Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/group-collective-entity-kind-design.md"
+    },
+    {
+      "at": "2026-05-23T00:22:51.873Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/group-collective-entity-kind-plan.md"
+    },
+    {
+      "at": "2026-05-23T00:31:10.241Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/group-collective-entity-kind-plan.md"
+    },
+    {
+      "at": "2026-05-23T00:36:36.127Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/group-collective-entity-kind-plan.md"
     }
   ],
   "stats": {
     "milestonesTotal": 0,
     "milestonesCompleted": 0,
-    "todosTotal": 5,
-    "todosCompleted": 5,
+    "todosTotal": 7,
+    "todosCompleted": 7,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-05-22T20:59:03.044Z",
-    "bodyHash": "sha256:d84bbdde1a10046ca2a28a4da231c23a3156abb9cc3ddfa1593f7e33965557c7"
+    "generatedAt": "2026-05-23T00:36:36.127Z",
+    "bodyHash": "sha256:9c3b81de3900c5fa2087bcb447f219a01f50708d2bdd2eb8de95fae0b07293d6"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

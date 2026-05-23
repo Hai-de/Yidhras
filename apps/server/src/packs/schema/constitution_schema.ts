@@ -355,6 +355,7 @@ const mediatorDefinitionSchema = z
 const entitiesSchema = z
   .object({
     actors: z.array(entityDefinitionSchema).default([]),
+    collectives: z.array(entityDefinitionSchema).default([]),
     artifacts: z.array(entityDefinitionSchema).default([]),
     mediators: z.array(mediatorDefinitionSchema).default([]),
     domains: z.array(entityDefinitionSchema).default([]),
@@ -363,6 +364,7 @@ const entitiesSchema = z
   .strict()
   .default({
     actors: [],
+    collectives: [],
     artifacts: [],
     mediators: [],
     domains: [],
@@ -371,6 +373,7 @@ const entitiesSchema = z
   .superRefine((value, ctx) => {
     const allEntityIds = [
       ...value.actors.map(item => item.id),
+      ...value.collectives.map(item => item.id),
       ...value.artifacts.map(item => item.id),
       ...value.mediators.map(item => item.id),
       ...value.domains.map(item => item.id),
@@ -421,7 +424,8 @@ const targetSelectorSchema = z
       value.kind === 'holder_of' ||
       value.kind === 'binding_of' ||
       value.kind === 'direct_entity' ||
-      value.kind === 'domain_owner'
+      value.kind === 'domain_owner' ||
+      value.kind === 'member_of'
     ) {
       if (!value.entity_id) {
         ctx.addIssue({
@@ -729,6 +733,9 @@ export const worldPackConstitutionSchema = z
     if (value.entities) {
       for (const actor of value.entities.actors ?? []) {
         entityIds.add(actor.id);
+      }
+      for (const collective of value.entities.collectives ?? []) {
+        entityIds.add(collective.id);
       }
       for (const domain of value.entities.domains ?? []) {
         entityIds.add(domain.id);

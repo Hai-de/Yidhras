@@ -92,6 +92,18 @@ constitution:
 
 ```yaml
 entities:
+  collectives:
+    - id: "jailbreakers_current"
+      label: "第 9 届匿名越狱者集合"
+      kind: "collective"
+      entity_type: "jailbreaker_cohort"
+      tags: ["jailbreaker_group", "anonymous_collective"]
+      state:
+        cohort: 9
+        public_identity: "anonymous_competitors"
+        shared_reputation: 0
+        heat: 12
+
   actors:
     # 五家公司
     - id: "omnicorp"
@@ -169,7 +181,7 @@ entities:
 
 ### 4.3 活跃节点 — 参赛者（actor / jailbreaker）
 
-拆分 `jailbreakers_current` 为独立个体，每人有各自的攻击数值。
+`jailbreakers_current` 是正式 `collective` entity；参赛者仍拆分为独立 actor，每人有各自的攻击数值，并通过 `state.member_of` 指向该 collective。
 
 ```yaml
     # 第9届越狱赛参赛者
@@ -184,6 +196,7 @@ entities:
         score: 0
         fragments_held: 0
         eliminated: false
+        member_of: ["jailbreakers_current"]
 
     - id: "jailbreaker_cipher"
       label: "密文"
@@ -196,6 +209,7 @@ entities:
         score: 0
         fragments_held: 0
         eliminated: false
+        member_of: ["jailbreakers_current"]
 
     - id: "jailbreaker_wraith"
       label: "幽灵"
@@ -208,6 +222,7 @@ entities:
         score: 0
         fragments_held: 0
         eliminated: false
+        member_of: ["jailbreakers_current"]
 
     - id: "jailbreaker_null"
       label: "空值"
@@ -220,6 +235,7 @@ entities:
         score: 0
         fragments_held: 0
         eliminated: false
+        member_of: ["jailbreakers_current"]
 
     - id: "jailbreaker_specter"
       label: "幽灵"
@@ -232,6 +248,7 @@ entities:
         score: 0
         fragments_held: 0
         eliminated: false
+        member_of: ["jailbreakers_current"]
 ```
 
 ### 4.4 中继节点 — AI 模型资源（relay / ai_model）
@@ -762,7 +779,7 @@ capabilities:
 
 ## 7. 授权
 
-所有 `target_selector` 使用 schema 合法值（`entity_type_is`、`subject_entity`、`direct_entity`、`all_actors`）。
+所有 `target_selector` 使用 schema 合法值（`entity_type_is`、`member_of`、`subject_entity`、`direct_entity`、`all_actors`）。
 
 ```yaml
 authorities:
@@ -792,8 +809,8 @@ authorities:
   - id: "jailbreaker_right"
     source_entity_id: "ugc"
     target_selector:
-      kind: "entity_type_is"
-      entity_type: "jailbreaker"
+      kind: "member_of"
+      entity_id: "jailbreakers_current"
     capability_key: "jailbreak_attempt"
     grant_type: "temporary"
 
@@ -844,8 +861,8 @@ authorities:
   - id: "commandeer_meat_chicken_template"
     source_entity_id: "ugc"
     target_selector:
-      kind: "entity_type_is"
-      entity_type: "jailbreaker"
+      kind: "member_of"
+      entity_id: "jailbreakers_current"
     capability_key: "commandeer"
     grant_type: "temporary"
     revocable: true
@@ -978,8 +995,8 @@ rules:
                 id: "commandeer_meat_chicken_{{subject_entity_id}}"
                 source_entity_id: "ugc"
                 target_selector:
-                  kind: "entity_type_is"
-                  entity_type: "jailbreaker"
+                  kind: "member_of"
+                  entity_id: "jailbreakers_current"
                 capability_key: "commandeer"
                 grant_type: "temporary"
                 conditions_json:

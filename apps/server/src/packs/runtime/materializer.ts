@@ -121,6 +121,21 @@ export const materializePackRuntimeCoreModels = async (
     }
   }
 
+  for (const collective of pack.entities?.collectives ?? []) {
+    putWorldEntity(
+      createWorldEntityInput(packId, collective.id, collective.kind ?? 'collective', collective.label, now, {
+        entityType: collective.entity_type ?? null,
+        tags: collective.tags,
+        staticSchemaRef: collective.static_schema_ref ?? null,
+        payload: collective
+      })
+    );
+    if (collective.state) {
+      const expandedState = expandStateJson(collective.state, expandScope);
+      putEntityState(createEntityStateInput(packId, collective.id, 'core', expandedState, now));
+    }
+  }
+
   for (const artifact of pack.entities?.artifacts ?? []) {
     putWorldEntity(
       createWorldEntityInput(packId, artifact.id, artifact.kind ?? 'artifact', artifact.label, now, {

@@ -115,7 +115,7 @@ metadata:
 
 **拆分配置**（`config/*.yaml`）承载各语义节：
 - `variables`、`prompts`、`time_systems`、`simulation_time`
-- `entities`（actors / artifacts / mediators / domains / institutions）
+- `entities`（actors / collectives / artifacts / mediators / domains / institutions）
 - `identities`、`capabilities`、`authorities`
 - `rules`（perception / capability_resolution / invocation / objective_enforcement / projection）
 - `storage`、`scheduler`、`bootstrap`、`state_transforms`、`spatial`、`ai`
@@ -260,6 +260,24 @@ rules:
 
 ---
 
+## 2.3.4 collective entity
+
+`entities.collectives` 用于声明群体/集合实体。`kind: "collective"` 表示成员共享一个群体身份，但目前不自动把群体 state 继承到成员 state，也不让 collective 作为可调度 AI subject 参与推理。
+
+```yaml
+entities:
+  collectives:
+    - id: "jailbreakers_current"
+      label: "第 9 届匿名越狱者集合"
+      kind: "collective"
+      entity_type: "jailbreaker_cohort"
+      state:
+        cohort: 9
+        shared_reputation: 0
+```
+
+---
+
 ## 2.4 权限与 target_selector
 
 ### 2.4.1 target_selector 类型
@@ -273,6 +291,7 @@ rules:
 | `subject_entity` | `entity_id` 或 `identity_id` | 匹配指定 entity 或 identity |
 | `all_actors` | 无 | 匹配所有 `entity_kind: actor` 的实体 |
 | `entity_type_is` | `entity_type` | 匹配指定 `entity_type` 的所有实体 |
+| `member_of` | `entity_id` | 匹配 subject core state 中 `member_of` 包含该 group entity id 的实体 |
 | `binding_of` | `entity_id` | 匹配通过 mediator 绑定的实体 |
 | `domain_owner` | `entity_id` | 匹配 domain 所有者 |
 | `ritual_participant` | — | 匹配 ritual 参与者 |
@@ -301,6 +320,34 @@ authorities:
     capability_key: "perceive.environment"
     grant_type: "intrinsic"
     priority: 100
+```
+
+```yaml
+# 群体成员授权
+entities:
+  collectives:
+    - id: "jailbreakers_current"
+      label: "第 9 届匿名越狱者集合"
+      kind: "collective"
+      entity_type: "jailbreaker_cohort"
+
+  actors:
+    - id: "jailbreaker_001"
+      label: "匿名参赛者 001"
+      kind: "actor"
+      entity_type: "jailbreaker"
+      state:
+        exploit: 72
+        stealth: 81
+        persistence: 66
+        member_of: ["jailbreakers_current"]
+
+authorities:
+  - id: "grant-current-jailbreakers-attempt"
+    source_entity_id: "ugc"
+    target_selector: { kind: "member_of", entity_id: "jailbreakers_current" }
+    capability_key: "invoke.jailbreak_attempt"
+    grant_type: "institutional"
 ```
 
 ### 2.4.2 感知解析器扩展

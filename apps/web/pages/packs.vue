@@ -4,7 +4,6 @@
       <header class="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
         <h1 class="mt-2 text-2xl font-semibold tracking-tight text-yd-text-primary yd-font-mono">{{ $t('packs.title') }}</h1>
         <div class="flex flex-wrap items-center gap-2">
-          <LocaleSwitcher />
           <button
             type="button"
             class="yd-industrial-button rounded-sm border border-yd-border-muted px-3 py-2 text-[10px] tracking-[0.12em] text-yd-text-secondary yd-font-mono hover:text-yd-text-primary disabled:cursor-not-allowed disabled:opacity-40"
@@ -147,7 +146,6 @@ import { useRouter } from 'vue-router'
 import type { PackListItem } from '../composables/api/usePackListApi'
 import { usePackListApi } from '../composables/api/usePackListApi'
 import { usePackOperationsApi } from '../composables/api/usePackOperationsApi'
-import LocaleSwitcher from '../features/shared/components/LocaleSwitcher.vue'
 import { useAuthStore } from '../stores/auth'
 
 definePageMeta({

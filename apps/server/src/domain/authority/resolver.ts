@@ -17,9 +17,17 @@ export interface ResolvedCapabilityItem {
     authority_id: string;
     source_entity_id: string;
     mediated_by_entity_id: string | null;
-    matched_via: 'direct_actor_ref' | 'holder_of' | 'subject_entity' | 'all_actors' | 'entity_type_is';
+    matched_via: TargetSelectorMatchKind;
   };
 }
+
+type TargetSelectorMatchKind =
+  | 'direct_actor_ref'
+  | 'holder_of'
+  | 'subject_entity'
+  | 'all_actors'
+  | 'entity_type_is'
+  | 'member_of';
 
 export interface AuthorityResolutionResult {
   subject_entity_id: string | null;
@@ -29,6 +37,16 @@ export interface AuthorityResolutionResult {
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+};
+
+const asStringArray = (value: unknown): string[] => {
+  if (typeof value === 'string') {
+    return [value];
+  }
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string');
+  }
+  return [];
 };
 
 const matchesConditions = (
@@ -75,7 +93,7 @@ const resolveTargetSelectorMatch = async (
   packId: string,
   subjectEntityId: string | null,
   targetSelector: Record<string, unknown>
-): Promise<'direct_actor_ref' | 'holder_of' | 'subject_entity' | 'all_actors' | 'entity_type_is' | null> => {
+): Promise<TargetSelectorMatchKind | null> => {
   if (!subjectEntityId || !isRecord(targetSelector)) {
     return null;
   }
@@ -134,6 +152,23 @@ const resolveTargetSelectorMatch = async (
         e.entity_type === targetSelector.entity_type
     );
     return matches ? 'entity_type_is' : null;
+  }
+
+  if (kind === 'member_of' && typeof targetSelector.entity_id === 'string') {
+    const entities = await listPackWorldEntities(context.packStorageAdapter, packId);
+    const groupExists = entities.some(e => e.id === targetSelector.entity_id);
+    if (!groupExists) {
+      return null;
+    }
+
+    const states = await listPackEntityStates(context.packStorageAdapter, packId);
+    const subjectState = states.find(
+      state =>
+        candidateEntityIds.includes(state.entity_id) &&
+        state.state_namespace === 'core'
+    );
+    const memberships = asStringArray(subjectState?.state_json?.member_of);
+    return memberships.includes(targetSelector.entity_id) ? 'member_of' : null;
   }
 
   return null;

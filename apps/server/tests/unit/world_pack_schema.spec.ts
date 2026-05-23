@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { worldEntitySnapshotSchema } from '@yidhras/contracts';
 import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
 
 describe('world pack constitution schema', () => {
@@ -833,6 +834,124 @@ describe('world pack constitution schema', () => {
     });
 
     expect(pack.rules?.objective_enforcement?.[0]?.when?.invocation_type).toBe('trigger_event');
+  });
+
+  it('accepts collective entities and member_of authorities', () => {
+    const pack = parseWorldPackConstitution({
+      metadata: {
+        id: 'world-collective-pack',
+        name: '群体测试世界',
+        version: '1.0.0'
+      },
+      entities: {
+        collectives: [
+          {
+            id: 'jailbreakers-current',
+            label: '当前越狱者群体',
+            kind: 'collective',
+            entity_type: 'jailbreaker_cohort',
+            state: {
+              shared_reputation: 10
+            }
+          }
+        ],
+        actors: [
+          {
+            id: 'jailbreaker-1',
+            label: '匿名参赛者 1',
+            kind: 'actor',
+            entity_type: 'jailbreaker',
+            state: {
+              member_of: ['jailbreakers-current']
+            }
+          }
+        ]
+      },
+      capabilities: [
+        {
+          key: 'invoke.jailbreak_attempt',
+          category: 'invoke'
+        }
+      ],
+      authorities: [
+        {
+          id: 'grant-current-jailbreakers',
+          source_entity_id: 'jailbreakers-current',
+          target_selector: {
+            kind: 'member_of',
+            entity_id: 'jailbreakers-current'
+          },
+          capability_key: 'invoke.jailbreak_attempt',
+          grant_type: 'institutional'
+        }
+      ]
+    });
+
+    expect(pack.entities?.collectives).toHaveLength(1);
+    expect(pack.entities?.collectives[0]?.kind).toBe('collective');
+    expect(pack.authorities?.[0]?.target_selector.kind).toBe('member_of');
+  });
+
+  it('rejects member_of target selectors without entity_id', () => {
+    expect(() =>
+      parseWorldPackConstitution({
+        metadata: {
+          id: 'world-invalid-member-of-pack',
+          name: '非法群体授权世界',
+          version: '1.0.0'
+        },
+        capabilities: [
+          {
+            key: 'invoke.jailbreak_attempt',
+            category: 'invoke'
+          }
+        ],
+        authorities: [
+          {
+            id: 'grant-invalid-member-of',
+            source_entity_id: 'jailbreakers-current',
+            target_selector: {
+              kind: 'member_of'
+            },
+            capability_key: 'invoke.jailbreak_attempt',
+            grant_type: 'institutional'
+          }
+        ]
+      })
+    ).toThrow(/Target selector kind=member_of requires entity_id/);
+  });
+
+  it('rejects duplicate ids across collectives and other entity groups', () => {
+    expect(() =>
+      parseWorldPackConstitution({
+        metadata: {
+          id: 'world-duplicate-collective-pack',
+          name: '重复群体实体世界',
+          version: '1.0.0'
+        },
+        entities: {
+          collectives: [{ id: 'shared-id', label: '群体', kind: 'collective' }],
+          actors: [{ id: 'shared-id', label: '角色', kind: 'actor' }]
+        }
+      })
+    ).toThrow(/Entity ids must be unique across all entity groups/);
+  });
+
+  it('accepts collective world entity snapshots in the world engine contract', () => {
+    const snapshot = worldEntitySnapshotSchema.parse({
+      id: 'pack:entity:jailbreakers-current',
+      pack_id: 'pack',
+      entity_kind: 'collective',
+      entity_type: 'jailbreaker_cohort',
+      label: '当前越狱者群体',
+      tags: ['jailbreaker_group'],
+      static_schema_ref: null,
+      payload_json: null,
+      created_at: '1',
+      updated_at: '1'
+    });
+
+    expect(snapshot.entity_kind).toBe('collective');
   });
 
   it('requires structured bootstrap initial_states records', () => {

@@ -48,6 +48,18 @@ describe('pack runtime materializer', () => {
             }
           }
         ],
+        collectives: [
+          {
+            id: 'collective-taskforce-observers',
+            label: '对策本部观察者群体',
+            kind: 'collective',
+            entity_type: 'observer_group',
+            state: {
+              shared_reputation: 10,
+              member_count: 2
+            }
+          }
+        ],
         artifacts: [
           {
             id: 'artifact-death-note',
@@ -174,10 +186,12 @@ describe('pack runtime materializer', () => {
     expect(worldEntities.some(item => item.id === 'world-test-pack:entity:domain-investigation' && item.entity_kind === 'domain')).toBe(true);
     expect(worldEntities.some(item => item.id === 'world-test-pack:entity:institution-npa-taskforce' && item.entity_kind === 'institution')).toBe(true);
     expect(worldEntities.some(item => item.id === 'world-test-pack:entity:institution-public-media' && item.entity_kind === 'institution')).toBe(true);
+    expect(worldEntities.some(item => item.id === 'world-test-pack:entity:collective-taskforce-observers' && item.entity_kind === 'collective')).toBe(true);
     expect(entityStates.some(item => item.entity_id === 'actor-light' && item.state_namespace === 'core')).toBe(true);
     expect(entityStates.some(item => item.entity_id === '__world__' && item.state_namespace === 'world')).toBe(true);
     expect(entityStates.some(item => item.entity_id === 'domain-investigation' && item.state_namespace === 'domain')).toBe(true);
     expect(entityStates.some(item => item.entity_id === 'institution-npa-taskforce' && item.state_namespace === 'core')).toBe(true);
+    expect(entityStates.some(item => item.entity_id === 'collective-taskforce-observers' && item.state_namespace === 'core')).toBe(true);
     expect(authorityGrants[0]?.capability_key).toBe('invoke.death_rule');
     expect(mediatorBindings[0]?.subject_entity_id).toBe('artifact-death-note');
   });

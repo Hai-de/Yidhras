@@ -137,4 +137,133 @@ describe('resolveAuthorityForSubject status filtering', () => {
     const result = await resolveAuthorityForSubject(context, { packId: 'test-pack', subjectEntityId: 'actor-1' })
     expect(result.blocked_authority_ids).toEqual(['grant-expired'])
   })
+
+  describe('member_of selector', () => {
+    const buildAuthorityGrant = (id: string, groupId: string) => ({
+      id,
+      pack_id: 'test-pack',
+      source_entity_id: groupId,
+      target_selector_json: { kind: 'member_of', entity_id: groupId },
+      capability_key: `test_cap.${id}`,
+      grant_type: 'institutional',
+      mediated_by_entity_id: null,
+      scope_json: null,
+      conditions_json: null,
+      priority: 0,
+      status: 'active',
+      revocable: true
+    })
+
+    it('resolves capabilities when subject core state member_of array contains the group id', async () => {
+      const context = buildMockContext(
+        [buildAuthorityGrant('grant-group-a', 'group-a')],
+        [
+          { id: 'actor-1', entity_kind: 'actor', entity_type: null },
+          { id: 'group-a', entity_kind: 'collective', entity_type: 'cohort' }
+        ],
+        [
+          { entity_id: 'actor-1', state_namespace: 'core', state_json: { member_of: ['group-a'] } }
+        ]
+      )
+
+      const result = await resolveAuthorityForSubject(context, { packId: 'test-pack', subjectEntityId: 'actor-1' })
+
+      expect(result.resolved_capabilities).toHaveLength(1)
+      expect(result.resolved_capabilities[0]?.provenance.matched_via).toBe('member_of')
+      expect(result.blocked_authority_ids).toHaveLength(0)
+    })
+
+    it('resolves capabilities when subject core state member_of string equals the group id', async () => {
+      const context = buildMockContext(
+        [buildAuthorityGrant('grant-group-a', 'group-a')],
+        [
+          { id: 'actor-1', entity_kind: 'actor', entity_type: null },
+          { id: 'group-a', entity_kind: 'collective', entity_type: 'cohort' }
+        ],
+        [
+          { entity_id: 'actor-1', state_namespace: 'core', state_json: { member_of: 'group-a' } }
+        ]
+      )
+
+      const result = await resolveAuthorityForSubject(context, { packId: 'test-pack', subjectEntityId: 'actor-1' })
+
+      expect(result.resolved_capabilities).toHaveLength(1)
+      expect(result.resolved_capabilities[0]?.provenance.matched_via).toBe('member_of')
+    })
+
+    it('blocks member_of grants when subject membership does not contain the group id', async () => {
+      const context = buildMockContext(
+        [buildAuthorityGrant('grant-group-a', 'group-a')],
+        [
+          { id: 'actor-1', entity_kind: 'actor', entity_type: null },
+          { id: 'group-a', entity_kind: 'collective', entity_type: 'cohort' }
+        ],
+        [
+          { entity_id: 'actor-1', state_namespace: 'core', state_json: { member_of: ['group-b'] } }
+        ]
+      )
+
+      const result = await resolveAuthorityForSubject(context, { packId: 'test-pack', subjectEntityId: 'actor-1' })
+
+      expect(result.resolved_capabilities).toHaveLength(0)
+      expect(result.blocked_authority_ids).toEqual(['grant-group-a'])
+    })
+
+    it('blocks member_of grants when subject has no core state', async () => {
+      const context = buildMockContext(
+        [buildAuthorityGrant('grant-group-a', 'group-a')],
+        [
+          { id: 'actor-1', entity_kind: 'actor', entity_type: null },
+          { id: 'group-a', entity_kind: 'collective', entity_type: 'cohort' }
+        ]
+      )
+
+      const result = await resolveAuthorityForSubject(context, { packId: 'test-pack', subjectEntityId: 'actor-1' })
+
+      expect(result.resolved_capabilities).toHaveLength(0)
+      expect(result.blocked_authority_ids).toEqual(['grant-group-a'])
+    })
+
+    it('blocks member_of grants when the group entity does not exist', async () => {
+      const context = buildMockContext(
+        [buildAuthorityGrant('grant-group-a', 'group-a')],
+        [{ id: 'actor-1', entity_kind: 'actor', entity_type: null }],
+        [
+          { entity_id: 'actor-1', state_namespace: 'core', state_json: { member_of: ['group-a'] } }
+        ]
+      )
+
+      const result = await resolveAuthorityForSubject(context, { packId: 'test-pack', subjectEntityId: 'actor-1' })
+
+      expect(result.resolved_capabilities).toHaveLength(0)
+      expect(result.blocked_authority_ids).toEqual(['grant-group-a'])
+    })
+
+    it('resolves multiple group grants for actors with multiple memberships', async () => {
+      const context = buildMockContext(
+        [
+          buildAuthorityGrant('grant-group-a', 'group-a'),
+          buildAuthorityGrant('grant-group-b', 'group-b')
+        ],
+        [
+          { id: 'actor-1', entity_kind: 'actor', entity_type: null },
+          { id: 'group-a', entity_kind: 'collective', entity_type: 'cohort' },
+          { id: 'group-b', entity_kind: 'institution', entity_type: 'faction' }
+        ],
+        [
+          { entity_id: 'actor-1', state_namespace: 'core', state_json: { member_of: ['group-a', 'group-b'] } }
+        ]
+      )
+
+      const result = await resolveAuthorityForSubject(context, { packId: 'test-pack', subjectEntityId: 'actor-1' })
+
+      expect(result.resolved_capabilities.map(item => item.provenance.authority_id).sort()).toEqual([
+        'grant-group-a',
+        'grant-group-b'
+      ])
+      expect(result.resolved_capabilities.every(item => item.provenance.matched_via === 'member_of')).toBe(true)
+      expect(result.blocked_authority_ids).toHaveLength(0)
+    })
+  })
+
 })
