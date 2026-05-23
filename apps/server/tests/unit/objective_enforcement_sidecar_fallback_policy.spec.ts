@@ -16,6 +16,7 @@ import { listPackRuleExecutionRecords } from '../../src/packs/storage/rule_execu
 import { ApiError } from '../../src/utils/api_error.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
+import { createVariableRuntimeSpeedSnapshot } from '../helpers/runtime_speed.js';
 
 const createdRoots: string[] = [];
 
@@ -66,8 +67,10 @@ const buildTestContext = (
     }
   } as any;
 
+  const repos = wrapPrismaAsRepositories({} as PrismaClient);
+
   return {
-    repos: wrapPrismaAsRepositories({} as PrismaClient),
+    repos: { ...repos, identityOperator: { ...repos.identityOperator, findOperatorBindingForAgent: async () => null } },
     prisma: {} as AppContext['prisma'],
     packStorageAdapter,
     packRuntime: sim as AppContext['packRuntime'],
@@ -117,14 +120,7 @@ const buildTestContext = (
         getCurrentTick: () => now,
         getCurrentRevision: () => now,
         getPack: () => pack,
-        getRuntimeSpeedSnapshot: () => ({
-          mode: 'fixed' as const,
-          source: 'default' as const,
-          configured_step_ticks: null,
-          override_step_ticks: null,
-          override_since: null,
-          effective_step_ticks: '1'
-        }),
+        getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot(),
         getAllTimes: () => [],
         getPackId: () => _packId,
         getStepTicks: () => 1n,

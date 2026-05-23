@@ -26,6 +26,20 @@ import { usePluginManagementPage } from '../../features/plugins/composables/useP
 import { ApiClientError } from '../../lib/http/client'
 import { useNotificationsStore } from '../../stores/notifications'
 import { useRuntimeStore } from '../../stores/runtime'
+import type { RuntimeSpeedSnapshot } from '../../composables/api/useSystemApi'
+
+const createRuntimeSpeedSnapshot = (): RuntimeSpeedSnapshot => ({
+  mode: 'variable',
+  source: 'default',
+  strategy: {
+    kind: 'variable',
+    range: { min: '1', max: '1' },
+    loopIntervalMs: 1000
+  },
+  effective_step_ticks: '1',
+  override_since: null
+})
+
 
 const buildListSnapshot = () => ({
   pack_id: 'world-pack-alpha',
@@ -67,14 +81,7 @@ describe('usePluginManagementPage', () => {
     runtime.applyRuntimeStatusSnapshot({
       status: 'running',
       runtime_ready: true,
-      runtime_speed: {
-        mode: 'fixed',
-        source: 'default',
-        configured_step_ticks: null,
-        override_step_ticks: null,
-        override_since: null,
-        effective_step_ticks: '1'
-      },
+      runtime_speed: createRuntimeSpeedSnapshot(),
       scheduler: {
         worker_id: 'scheduler:test',
         partition_count: 1,

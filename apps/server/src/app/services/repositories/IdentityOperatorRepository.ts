@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 
 import type { IdentityContext } from '../../../identity/types.js';
 import type { AppContext } from '../../context.js';
@@ -36,7 +36,7 @@ import {
 export interface IdentityOperatorRepository {
   // -- Identity (existing delegates) --
   registerIdentity(input: RegisterIdentityInput): Promise<unknown>;
-  createIdentity(input: { id?: string; type?: string; name?: string; provider?: string; status?: string; claims?: unknown; metadata?: unknown; created_at: bigint; updated_at: bigint }): Promise<{ id: string }>;
+  createIdentity(input: Prisma.IdentityUncheckedCreateInput): Promise<{ id: string }>;
   createIdentityBinding(input: CreateIdentityBindingInput, deps: IdentityServiceDependencies): Promise<unknown>;
   queryIdentityBindings(input: QueryIdentityBindingsInput): Promise<unknown>;
   unbindIdentityBinding(input: { binding_id?: string; status?: string }): Promise<unknown>;
@@ -48,8 +48,8 @@ export interface IdentityOperatorRepository {
   getOperatorDetail(id: string): Promise<{ id: string; username: string; password_hash: string; identity_id: string; is_root: boolean; status: string; display_name: string | null; created_at: bigint; updated_at: bigint; pack_bindings: Array<{ pack_id: string; binding_type: string; bound_at: bigint }> } | null>;
   findOperatorByUsername(username: string): Promise<{ id: string; username: string } | null>;
   listOperators(): Promise<unknown>;
-  createOperatorRecord(input: Record<string, unknown>): Promise<{ id: string }>;
-  updateOperator(id: string, data: Record<string, unknown>): Promise<unknown>;
+  createOperatorRecord(input: Prisma.OperatorUncheckedCreateInput): Promise<{ id: string }>;
+  updateOperator(id: string, data: Prisma.OperatorUncheckedUpdateInput): Promise<unknown>;
 
   // -- Operator Pack Bindings (existing delegates + new direct) --
   createPackBinding(packId: string, operatorId: string, bindingType: string, boundByOperatorId?: string, clientIp?: string): Promise<unknown>;
@@ -77,11 +77,11 @@ export interface IdentityOperatorRepository {
   findDefaultBindingForIdentity(identityId: string): Promise<{ agent_id: string | null } | null>;
   findOperatorBindingForAgent(agentId: string): Promise<{ identity: { id: string; type: string } | null } | null>;
   findBindingById(id: string): Promise<unknown>;
-  updateBinding(id: string, data: Record<string, unknown>): Promise<unknown>;
+  updateBinding(id: string, data: Prisma.IdentityNodeBindingUncheckedUpdateInput): Promise<unknown>;
   expireBindings(now: bigint): Promise<{ count: number }>;
 
   // -- Operator Session (direct Prisma) --
-  createSession(input: { operator_id: string; token_hash: string; pack_id?: string | null; expires_at: bigint; created_at: bigint }): Promise<unknown>;
+  createSession(input: Prisma.OperatorSessionUncheckedCreateInput): Promise<unknown>;
   findSessionByTokenHash(tokenHash: string, now?: bigint): Promise<{ operator_id: string; pack_id: string | null } | null>;
   deleteSessionsByTokenHash(tokenHash: string): Promise<{ count: number }>;
 
@@ -91,10 +91,10 @@ export interface IdentityOperatorRepository {
 
   // -- Additional query methods (replacing getPrisma access) --
   findOperatorGrant(input: { receiver_identity_id: string; pack_id: string; capability_key: string; now: bigint }): Promise<{ id: string } | null>;
-  listIdentityBindings(input: { where?: Record<string, unknown>; include?: Record<string, unknown>; orderBy?: Record<string, unknown>; select?: Record<string, unknown> }): Promise<Array<{ id: string; role: string; status: string; atmosphere_node_id: string | null; expires_at: bigint | null; identity?: { id: string; type: string; name: string } | null; agent_id?: string; atmosphere_node?: { id: string; name: string } | null }>>;
-  findActiveBindingForAgent(agentId: string): Promise<{ id: string; role: string; status: string; agent_id: string | null; atmosphere_node_id: string | null; identity: { id: string; type: string; name: string; provider: string | null; status: string | null; claims: unknown } | null } | null>;
-  listPolicies(where: Record<string, unknown>): Promise<Array<{ id: string; effect: string; subject_id: string | null; subject_type: string | null; resource: string; action: string; field: string; conditions: unknown; priority: number; created_at: bigint; updated_at: bigint }>>;
-  createPolicy(data: Record<string, unknown>): Promise<unknown>;
+  listIdentityBindings(input: { where?: Prisma.IdentityNodeBindingWhereInput; include?: Prisma.IdentityNodeBindingInclude; orderBy?: Prisma.IdentityNodeBindingOrderByWithRelationInput; select?: Prisma.IdentityNodeBindingSelect }): Promise<Array<{ id: string; role: string; status: string; atmosphere_node_id: string | null; expires_at: bigint | null; identity?: { id: string; type: string; name: string | null } | null; agent_id?: string | null; atmosphere_node?: { id: string; name: string } | null }>>;
+  findActiveBindingForAgent(agentId: string): Promise<{ id: string; role: string; status: string; agent_id: string | null; atmosphere_node_id: string | null; identity: { id: string; type: string; name: string | null; provider: string | null; status: string; claims: unknown } | null } | null>;
+  listPolicies(where: Prisma.PolicyWhereInput): Promise<Array<{ id: string; effect: string; subject_id: string | null; subject_type: string | null; resource: string; action: string; field: string; conditions: unknown; priority: number; created_at: bigint; updated_at: bigint }>>;
+  createPolicy(data: Prisma.PolicyUncheckedCreateInput): Promise<unknown>;
 }
 
 export class PrismaIdentityOperatorRepository implements IdentityOperatorRepository {
@@ -110,8 +110,8 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
     return registerIdentity(this.ctx(), input);
   }
 
-  async createIdentity(input: { id?: string; type?: string; name?: string; provider?: string; status?: string; claims?: unknown; metadata?: unknown; created_at: bigint; updated_at: bigint }): Promise<{ id: string }> {
-    return this.prisma.identity.create({ data: input as never, select: { id: true } });
+  async createIdentity(input: Prisma.IdentityUncheckedCreateInput): Promise<{ id: string }> {
+    return this.prisma.identity.create({ data: input, select: { id: true } });
   }
 
   async createIdentityBinding(input: CreateIdentityBindingInput, deps: IdentityServiceDependencies): Promise<unknown> {
@@ -164,12 +164,12 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
     });
   }
 
-  async createOperatorRecord(input: Record<string, unknown>): Promise<{ id: string }> {
-    return this.prisma.operator.create({ data: input as never, select: { id: true } });
+  async createOperatorRecord(input: Prisma.OperatorUncheckedCreateInput): Promise<{ id: string }> {
+    return this.prisma.operator.create({ data: input, select: { id: true } });
   }
 
-  async updateOperator(id: string, data: Record<string, unknown>): Promise<unknown> {
-    return this.prisma.operator.update({ where: { id }, data: data as never });
+  async updateOperator(id: string, data: Prisma.OperatorUncheckedUpdateInput): Promise<unknown> {
+    return this.prisma.operator.update({ where: { id }, data });
   }
 
   // -- Operator Pack Bindings (mix of delegates and direct) --
@@ -272,8 +272,8 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
     return this.prisma.identityNodeBinding.findUnique({ where: { id } });
   }
 
-  async updateBinding(id: string, data: Record<string, unknown>): Promise<unknown> {
-    return this.prisma.identityNodeBinding.update({ where: { id }, data: data as never });
+  async updateBinding(id: string, data: Prisma.IdentityNodeBindingUncheckedUpdateInput): Promise<unknown> {
+    return this.prisma.identityNodeBinding.update({ where: { id }, data });
   }
 
   async expireBindings(now: bigint): Promise<{ count: number }> {
@@ -291,8 +291,8 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
 
   // -- Operator Session (direct Prisma) --
 
-  async createSession(input: { operator_id: string; token_hash: string; pack_id?: string | null; expires_at: bigint; created_at: bigint }): Promise<unknown> {
-    return this.prisma.operatorSession.create({ data: input as never });
+  async createSession(input: Prisma.OperatorSessionUncheckedCreateInput): Promise<unknown> {
+    return this.prisma.operatorSession.create({ data: input });
   }
 
   async findSessionByTokenHash(tokenHash: string, now?: bigint): Promise<{ operator_id: string; pack_id: string | null } | null> {
@@ -310,19 +310,31 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
   // -- Operator Audit Log (direct Prisma) --
 
   async listAuditLogs(input: { operator_id?: string; pack_id?: string; action?: string; limit?: number; cursor?: string }): Promise<unknown[]> {
-    const where: Record<string, unknown> = {};
+    const where: Prisma.OperatorAuditLogWhereInput = {};
     if (input.operator_id) where.operator_id = input.operator_id;
     if (input.pack_id) where.pack_id = input.pack_id;
     if (input.action) where.action = input.action;
     return this.prisma.operatorAuditLog.findMany({
-      where: where as never,
+      where,
       orderBy: { created_at: 'desc' },
       take: (input.limit ?? 20) + 1
     });
   }
 
   async createAuditLog(input: { operator_id?: string | null; pack_id?: string | null; action: string; target_id?: string | null; detail_json?: unknown; client_ip?: string | null; created_at: bigint }): Promise<unknown> {
-    return this.prisma.operatorAuditLog.create({ data: input as never });
+    return this.prisma.operatorAuditLog.create({
+      data: {
+        operator_id: input.operator_id ?? null,
+        pack_id: input.pack_id ?? null,
+        action: input.action,
+        target_id: input.target_id ?? null,
+        detail_json: input.detail_json === undefined || input.detail_json === null
+          ? Prisma.JsonNull
+          : (input.detail_json as Prisma.InputJsonValue),
+        client_ip: input.client_ip ?? null,
+        created_at: input.created_at
+      }
+    });
   }
 
   // -- Additional query methods --
@@ -343,29 +355,33 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
     });
   }
 
-  async listIdentityBindings(input: { where?: Record<string, unknown>; include?: Record<string, unknown>; orderBy?: Record<string, unknown>; select?: Record<string, unknown> }): Promise<Array<{ id: string; role: string; status: string; atmosphere_node_id: string | null; expires_at: bigint | null; identity?: { id: string; type: string; name: string } | null; agent_id?: string; atmosphere_node?: { id: string; name: string } | null }>> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    return (this.prisma as any).identityNodeBinding.findMany({
+  async listIdentityBindings(input: { where?: Prisma.IdentityNodeBindingWhereInput; include?: Prisma.IdentityNodeBindingInclude; orderBy?: Prisma.IdentityNodeBindingOrderByWithRelationInput; select?: Prisma.IdentityNodeBindingSelect }): Promise<Array<{ id: string; role: string; status: string; atmosphere_node_id: string | null; expires_at: bigint | null; identity?: { id: string; type: string; name: string | null } | null; agent_id?: string | null; atmosphere_node?: { id: string; name: string } | null }>> {
+    if (input.select) {
+      return this.prisma.identityNodeBinding.findMany({
+        where: input.where,
+        orderBy: input.orderBy,
+        select: input.select
+      });
+    }
+    return this.prisma.identityNodeBinding.findMany({
       where: input.where,
-      include: input.include,
       orderBy: input.orderBy,
-      select: input.select
-    }) as Promise<Array<{ id: string; role: string; status: string; atmosphere_node_id: string | null; expires_at: bigint | null; identity?: { id: string; type: string; name: string } | null; agent_id?: string; atmosphere_node?: { id: string; name: string } | null }>>;
+      include: input.include
+    });
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async findActiveBindingForAgent(agentId: string): Promise<{ id: string; role: string; status: string; agent_id: string | null; atmosphere_node_id: string | null; identity: { id: string; type: string; name: string; provider: string | null; status: string | null; claims: unknown } | null } | null> {
+  async findActiveBindingForAgent(agentId: string): Promise<{ id: string; role: string; status: string; agent_id: string | null; atmosphere_node_id: string | null; identity: { id: string; type: string; name: string | null; provider: string | null; status: string; claims: unknown } | null } | null> {
     return this.prisma.identityNodeBinding.findFirst({
       where: { agent_id: agentId, role: 'active', status: 'active' },
       include: { identity: true }
-    }) as never;
+    });
   }
 
-  async listPolicies(where: Record<string, unknown>): Promise<Array<{ id: string; effect: string; subject_id: string | null; subject_type: string | null; resource: string; action: string; field: string; conditions: unknown; priority: number; created_at: bigint; updated_at: bigint }>> {
-    return this.prisma.policy.findMany({ where: where as never });
+  async listPolicies(where: Prisma.PolicyWhereInput): Promise<Array<{ id: string; effect: string; subject_id: string | null; subject_type: string | null; resource: string; action: string; field: string; conditions: unknown; priority: number; created_at: bigint; updated_at: bigint }>> {
+    return this.prisma.policy.findMany({ where });
   }
 
-  async createPolicy(data: Record<string, unknown>): Promise<unknown> {
-    return this.prisma.policy.create({ data: data as never });
+  async createPolicy(data: Prisma.PolicyUncheckedCreateInput): Promise<unknown> {
+    return this.prisma.policy.create({ data });
   }
 }

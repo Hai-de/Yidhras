@@ -16,6 +16,7 @@ export const buildContextPromptPayload = (context: InferenceContext): Record<str
     context_run: context.context_run,
     binding_ref: context.binding_ref,
     memory_context: context.memory_context,
+    previous_agent_output: context.previous_agent_output ?? null,
     policy_summary: context.policy_summary
   };
 

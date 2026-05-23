@@ -8,7 +8,11 @@ export type {
   WorldPackAiConfig,
   WorldPackBootstrapInitialState,
   WorldPackInclude,
-  WorldPackMetadata
+  WorldPackMetadata,
+  WorldPackWorkflowCondition,
+  WorldPackWorkflowDefinition,
+  WorldPackWorkflowStep,
+  WorldPackWorkflowTrigger
 } from '../schema/constitution_schema.js';
 export { VALID_INCLUDE_SECTION_KEYS } from '../schema/constitution_schema.js';
 export type { WorldPackStorage } from '../schema/storage_schema.js';

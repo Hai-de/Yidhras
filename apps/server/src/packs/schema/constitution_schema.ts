@@ -314,6 +314,147 @@ const actorInferenceSchema = z.discriminatedUnion('provider', [
 
 export type ActorInferenceConfig = z.infer<typeof actorInferenceSchema>;
 
+const workflowTriggerSchema = z.discriminatedUnion('type', [
+  z
+    .object({
+      type: z.literal('manual')
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal('event'),
+      event_types: z.array(nonEmptyStringSchema).min(1)
+    })
+    .strict()
+]);
+
+const workflowConditionSchema = z
+  .object({
+    field: nonEmptyStringSchema,
+    op: z.enum(['eq', 'neq']),
+    value: z.union([z.string(), z.number(), z.boolean(), z.null()])
+  })
+  .strict();
+
+const workflowStepSchema = z
+  .object({
+    id: nonEmptyStringSchema,
+    agent: nonEmptyStringSchema,
+    depends_on: z.array(nonEmptyStringSchema).optional(),
+    input_from: z.array(nonEmptyStringSchema).optional(),
+    condition: workflowConditionSchema.optional(),
+    inference: actorInferenceSchema
+  })
+  .strict();
+
+const validateWorkflowDag = (workflowName: string, steps: Array<z.infer<typeof workflowStepSchema>>, ctx: z.RefinementCtx): void => {
+  const stepIds = steps.map(step => step.id);
+  const stepIdSet = new Set(stepIds);
+  if (stepIdSet.size !== stepIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `workflow "${workflowName}" step ids must be unique`,
+      path: [workflowName, 'steps']
+    });
+  }
+
+  const declaredIndexByStepId = new Map(stepIds.map((stepId, index) => [stepId, index]));
+  const dependencyMap = new Map<string, string[]>();
+
+  for (const [index, step] of steps.entries()) {
+    const dependsOn = step.depends_on ?? [];
+    dependencyMap.set(step.id, dependsOn);
+    for (const dependencyStepId of dependsOn) {
+      if (!stepIdSet.has(dependencyStepId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `workflow "${workflowName}" step "${step.id}" depends_on references unknown step "${dependencyStepId}"`,
+          path: [workflowName, 'steps', index, 'depends_on']
+        });
+      }
+    }
+
+    for (const inputStepId of step.input_from ?? []) {
+      const inputIndex = declaredIndexByStepId.get(inputStepId);
+      if (inputIndex === undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `workflow "${workflowName}" step "${step.id}" input_from references unknown step "${inputStepId}"`,
+          path: [workflowName, 'steps', index, 'input_from']
+        });
+        continue;
+      }
+      if (inputIndex >= index) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `workflow "${workflowName}" step "${step.id}" input_from must reference an earlier step; "${inputStepId}" is not earlier in declaration order`,
+          path: [workflowName, 'steps', index, 'input_from']
+        });
+      }
+    }
+  }
+
+  const collectDependencyClosure = (stepId: string, seen = new Set<string>()): Set<string> => {
+    for (const dependencyStepId of dependencyMap.get(stepId) ?? []) {
+      if (!seen.has(dependencyStepId)) {
+        seen.add(dependencyStepId);
+        collectDependencyClosure(dependencyStepId, seen);
+      }
+    }
+    return seen;
+  };
+
+  for (const [index, step] of steps.entries()) {
+    const dependencyClosure = collectDependencyClosure(step.id);
+    for (const inputStepId of step.input_from ?? []) {
+      if (stepIdSet.has(inputStepId) && !dependencyClosure.has(inputStepId)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `workflow "${workflowName}" step "${step.id}" input_from must reference a dependency predecessor; "${inputStepId}" is not in depends_on closure`,
+          path: [workflowName, 'steps', index, 'input_from']
+        });
+      }
+    }
+  }
+
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const visit = (stepId: string): boolean => {
+    if (visiting.has(stepId)) return false;
+    if (visited.has(stepId)) return true;
+    visiting.add(stepId);
+    for (const dependencyStepId of dependencyMap.get(stepId) ?? []) {
+      if (stepIdSet.has(dependencyStepId) && !visit(dependencyStepId)) return false;
+    }
+    visiting.delete(stepId);
+    visited.add(stepId);
+    return true;
+  };
+
+  for (const stepId of stepIds) {
+    if (!visit(stepId)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `workflow "${workflowName}" depends_on graph must be acyclic`, path: [workflowName, 'steps'] });
+      break;
+    }
+  }
+};
+
+const workflowDefinitionSchema = z
+  .object({
+    trigger: workflowTriggerSchema,
+    steps: z.array(workflowStepSchema).min(1),
+    failure_policy: z.literal('narrativize').optional(),
+    max_ticks: z.number().int().positive(),
+    lock_policy: z.literal('active_steps').optional()
+  })
+  .strict();
+
+const workflowsSchema = z.record(nonEmptyStringSchema, workflowDefinitionSchema).superRefine((workflows, ctx) => {
+  for (const [workflowName, workflow] of Object.entries(workflows)) {
+    validateWorkflowDag(workflowName, workflow.steps, ctx);
+  }
+});
+
 const entityDefinitionSchema = z
   .object({
     id: nonEmptyStringSchema,
@@ -682,7 +823,8 @@ export const VALID_INCLUDE_SECTION_KEYS = [
   'scheduler',
   'bootstrap',
   'state_transforms',
-  'spatial'
+  'spatial',
+  'workflows'
 ] as const;
 
 export type ValidIncludeSectionKey = (typeof VALID_INCLUDE_SECTION_KEYS)[number];
@@ -713,6 +855,7 @@ export const worldPackConstitutionSchema = z
     bootstrap: bootstrapSchema.optional(),
     state_transforms: z.array(stateTransformSchema).optional(),
     spatial: spatialSchema.optional(),
+    workflows: workflowsSchema.optional(),
     include: includeSchema
   })
   .superRefine((value, ctx) => {
@@ -851,6 +994,10 @@ export type WorldPackMetadata = z.infer<typeof metadataSchema>;
 export type WorldPackAiConfig = z.infer<typeof aiPackConfigSchema>;
 export type WorldPackStateTransform = z.infer<typeof stateTransformSchema>;
 export type WorldPack = z.infer<typeof worldPackConstitutionSchema>;
+export type WorldPackWorkflowDefinition = z.infer<typeof workflowDefinitionSchema>;
+export type WorldPackWorkflowStep = z.infer<typeof workflowStepSchema>;
+export type WorldPackWorkflowTrigger = z.infer<typeof workflowTriggerSchema>;
+export type WorldPackWorkflowCondition = z.infer<typeof workflowConditionSchema>;
 
 export { bootstrapInitialEventSchema, worldPackOpeningSchema, worldPackVariablesRecordSchema };
 

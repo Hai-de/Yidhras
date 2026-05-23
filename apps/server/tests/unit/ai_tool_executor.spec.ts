@@ -8,6 +8,7 @@ import type { PrismaClient } from '@prisma/client';
 
 import type { AppContext } from '../../src/app/context.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
+import { createVariableRuntimeSpeedSnapshot } from '../helpers/runtime_speed.js';
 
 const buildMockContext = (overrides?: Record<string, unknown>): AppContext => {
   const prisma = {
@@ -61,7 +62,7 @@ const buildMockContext = (overrides?: Record<string, unknown>): AppContext => {
       pack: { metadata: { id, name: 'test', version: '0.0.0' } } as unknown as import('../../src/packs/manifest/loader.js').WorldPack,
       getHealthSnapshot: () => ({ status: 'ok', message: null }),
       getClockSnapshot: () => ({ current_tick: '100', current_revision: '0' }),
-      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null })
+      getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot()
     }),
     ...overrides
   } as unknown as AppContext;

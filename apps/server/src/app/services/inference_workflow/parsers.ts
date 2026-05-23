@@ -34,13 +34,34 @@ export interface ListInferenceJobsInput {
   pack_ids?: string[] | null;
 }
 
+const workflowSourceSchema = z.object({
+  source_workflow_run_id: z.string().min(1),
+  source_workflow_step_id: z.string().min(1),
+  source_step_attempt: z.number().int().positive()
+});
+
+const previousAgentOutputRecordSchema = z.object({
+  source_type: z.literal('previous_agent_output'),
+  workflow_run_id: z.string().min(1),
+  step_id: z.string().min(1),
+  agent_id: z.string().min(1),
+  content: z.object({
+    reasoning: z.string().nullable(),
+    decision_summary: z.string().nullable(),
+    grounding_result_type: z.enum(['exact', 'translated', 'narrativized', 'blocked']),
+    semantic_intent: z.string().nullable()
+  })
+});
+
 const storedRequestInputSchema = z.object({
   agent_id: z.string().optional(),
   identity_id: z.string().optional(),
   actor_entity_id: z.string().optional(),
   strategy: z.string().optional(),
   attributes: z.record(z.string(), z.unknown()).optional(),
-  idempotency_key: z.string().optional()
+  idempotency_key: z.string().optional(),
+  workflow_source: workflowSourceSchema.optional(),
+  previous_agent_output: z.record(z.string(), previousAgentOutputRecordSchema).optional()
 });
 
 const replayInputSchema = z.object({

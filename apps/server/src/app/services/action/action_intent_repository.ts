@@ -24,6 +24,9 @@ export interface ActionIntentRecord {
   drop_reason: string | null;
   dispatch_error_code: string | null;
   dispatch_error_message: string | null;
+  source_workflow_run_id: string | null;
+  source_workflow_step_id: string | null;
+  source_step_attempt: number | null;
   created_at: bigint;
   updated_at: bigint;
 }

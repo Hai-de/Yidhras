@@ -16,7 +16,8 @@ export type PromptVariableNamespace =
   | 'actor'
   | 'actor_state'
   | 'request'
-  | `plugin.${string}`;
+  | `plugin.${string}`
+  | 'previous_agent_output';
 
 export type PromptVariableResolutionMode = 'namespaced' | 'local';
 export type PromptVariableValueType = 'null' | 'string' | 'number' | 'boolean' | 'array' | 'object' | 'unknown';

@@ -86,11 +86,23 @@ interface RuntimeStatus {
   status: string;
   runtime_ready: boolean;
   runtime_speed: {
-    mode: string;
-    source: string;
+    mode: 'variable' | 'adaptive';
+    source: 'default' | 'world_pack' | 'override';
+    strategy: {
+      kind: 'variable' | 'adaptive';
+      range: {
+        min: string;
+        max: string;
+      };
+      loopIntervalMs: number;
+      adaptive?: {
+        targetLoopMs: number;
+        scaleUpThresholdMs: number;
+        scaleDownThresholdMs: number;
+      };
+    };
     effective_step_ticks: string;
-    configured_step_ticks: string | null;
-    override_step_ticks: string | null;
+    override_since: number | null;
   } | null;
   runtime_loop: {
     status: string;

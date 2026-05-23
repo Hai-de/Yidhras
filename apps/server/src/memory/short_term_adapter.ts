@@ -79,6 +79,18 @@ const buildJobMemoryEntry = (job: {
   };
 };
 
+interface ShortTermDecisionJobLike {
+  id: string;
+  status: string;
+  job_type: string;
+  last_error: string | null;
+  last_error_stage?: string | null;
+  created_at: bigint;
+  updated_at: bigint;
+  source_inference: { actor_ref: unknown } | null;
+  action_intent: { actor_ref: unknown } | null;
+}
+
 const buildIntentMemoryEntry = (intent: {
   id: string;
   intent_type: string;
@@ -215,7 +227,7 @@ export const buildShortTermMemory = async (
       orderBy: { updated_at: 'desc' },
       take: limit * 3
     }),
-    context.repos.inference.findDecisionJobs({
+    context.repos.inference.findDecisionJobs<ShortTermDecisionJobLike>({
       include: {
         source_inference: {
           select: {
@@ -250,8 +262,7 @@ export const buildShortTermMemory = async (
 
   return [
     ...filterTraceForActor(traces, input.actor_ref, limit).map(buildTraceMemoryEntry),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    ...filterJobForActor(jobs as any[], input.actor_ref, limit).map(job => buildJobMemoryEntry(job)),
+    ...filterJobForActor(jobs, input.actor_ref, limit).map(job => buildJobMemoryEntry(job)),
     ...filterTraceForActor(intents, input.actor_ref, limit).map(intent => buildIntentMemoryEntry(intent)),
     ...posts.map(buildPostMemoryEntry),
     ...events.map(buildEventMemoryEntry)

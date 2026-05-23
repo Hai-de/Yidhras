@@ -410,6 +410,12 @@ const executeRunInternal = async (
     actionIntentDraft.scheduled_after_ticks = transmissionDelayTicks;
   }
 
+  if (input.workflow_source) {
+    actionIntentDraft.source_workflow_run_id = input.workflow_source.source_workflow_run_id;
+    actionIntentDraft.source_workflow_step_id = input.workflow_source.source_workflow_step_id;
+    actionIntentDraft.source_step_attempt = input.workflow_source.source_step_attempt;
+  }
+
   const tick = inferenceContext.tick.toString();
   const traceMetadata = buildTraceMetadata(
     inferenceContext.inference_id,
@@ -767,7 +773,10 @@ export const createInferenceService = ({
         transmission_policy: 'reliable',
         transmission_drop_chance: 0,
         drop_reason: null,
-        source_inference_id: sourceInferenceId
+        source_inference_id: sourceInferenceId,
+        source_workflow_run_id: null,
+        source_workflow_step_id: null,
+        source_step_attempt: null
       };
     }
   };

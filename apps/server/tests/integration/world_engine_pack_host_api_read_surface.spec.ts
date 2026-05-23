@@ -9,6 +9,7 @@ import { materializePackRuntimeCoreModels } from '../../src/packs/runtime/materi
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import { createTestAppContext } from '../fixtures/app-context.js';
 import { createIsolatedRuntimeEnvironment, createPrismaClientForEnvironment, migrateIsolatedDatabase } from '../helpers/runtime.js';
+import { createVariableRuntimeSpeedSnapshot } from '../helpers/runtime_speed.js';
 
 const DEATH_NOTE_PACK_REF = 'death_note';
 
@@ -85,7 +86,7 @@ describe('PackHostApi read surface integration', () => {
         return template;
       },
       getStepTicks: () => 1n,
-      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, configured_step_ticks: null, override_step_ticks: null, override_since: null, effective_step_ticks: '1' }),
+      getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot(),
       setRuntimeSpeedOverride: () => {},
       clearRuntimeSpeedOverride: () => {},
       getCurrentTick: () => 1000n,

@@ -14,6 +14,9 @@ const buildContext = (input: {
     },
     actionIntent: {
       findMany: vi.fn(async () => input.intents ?? [])
+    },
+    workflowStepRun: {
+      findMany: vi.fn(async () => [])
     }
   };
   return {

@@ -16,6 +16,7 @@ import { materializePackRuntimeCoreModels } from '../../src/packs/runtime/materi
 import { getPackEntityOverviewProjection } from '../../src/packs/runtime/projections/entity_overview_service.js';
 import { listPackNarrativeTimelineProjection } from '../../src/packs/runtime/projections/narrative_projection_service.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
+import { createVariableRuntimeSpeedSnapshot } from '../helpers/runtime_speed.js';
 
 const createdRoots: string[] = [];
 
@@ -81,6 +82,10 @@ const buildProjectionTestContext = (
       }>;
     }
   };
+  (repos as any).identityOperator = {
+    ...(repos as any).identityOperator,
+    findOperatorBindingForAgent: async () => null
+  };
   return {
     prisma,
     repos,
@@ -98,16 +103,7 @@ const buildProjectionTestContext = (
       isRuntimeReady: () => true,
       isPaused: () => false,
       getPackRuntimeHandle: () => null,
-      getRuntimeSpeedSnapshot() {
-        return {
-          mode: 'fixed' as const,
-          source: 'default' as const,
-          configured_step_ticks: null,
-          override_step_ticks: null,
-          override_since: null,
-          effective_step_ticks: '1'
-        };
-      }
+      getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot()
     } as any,
     notifications: {
       push(level: string, content: string) {
@@ -214,6 +210,7 @@ const buildProjectionTestContext = (
           target_entity_id: 'agent-target',
           mutations: [
             {
+              kind: 'entity_state',
               entity_id: 'agent-target',
               state_namespace: 'default',
               state_patch: { life_status: 'sealed' }
@@ -237,14 +234,10 @@ const buildProjectionTestContext = (
       getPackId() {
         return pack.metadata.id;
       },
-      getRuntimeSpeedSnapshot: () => ({
-        mode: 'fixed' as const,
-        source: 'default' as const,
-        configured_step_ticks: null,
-        override_step_ticks: null,
-        override_since: null,
-        effective_step_ticks: '1'
-      }),
+      getCurrentTick() {
+        return now;
+      },
+      getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot(),
       getCurrentRevision: () => 0n
     } as unknown as AppContext['packRuntime'],
     packStorageAdapter: (() => {
@@ -328,14 +321,7 @@ const buildProjectionTestContext = (
         getCurrentTick: () => now,
         getCurrentRevision: () => 0n,
         getPack: () => pack,
-        getRuntimeSpeedSnapshot: () => ({
-          mode: 'fixed' as const,
-          source: 'default' as const,
-          configured_step_ticks: null,
-          override_step_ticks: null,
-          override_since: null,
-          effective_step_ticks: '1'
-        }),
+        getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot(),
         getAllTimes: () => [],
         getPackId: () => packId,
         getStepTicks: () => 1n,
@@ -344,20 +330,14 @@ const buildProjectionTestContext = (
       }) as unknown as PackRuntimeHost,
     getPackRuntimeHandle: (packId: string) =>
       ({
-        pack_id: packId,
+        instance_id: packId,
+        metadata_id: pack.metadata.id,
         pack_folder_name: packId,
         pack,
         getClockSnapshot: () => ({ current_tick: String(now) }),
-        getRuntimeSpeedSnapshot: () => ({
-          mode: 'fixed' as const,
-          source: 'default' as const,
-          configured_step_ticks: null,
-          override_step_ticks: null,
-          override_since: null,
-          effective_step_ticks: '1'
-        }),
+        getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot(),
         getHealthSnapshot: () => ({ status: 'running' as const, message: null })
-      }) as PackRuntimeHandle
+      }) satisfies PackRuntimeHandle
   };
 };
 
@@ -493,7 +473,7 @@ describe('world-pack projection flow integration', () => {
     const narrativeProjection = await listPackNarrativeTimelineProjection(context, pack.metadata.id);
     expect(narrativeProjection.timeline.some(item => item.kind === 'rule_execution')).toBe(true);
 
-    const globalProjection = await extractGlobalProjectionIndex(context);
+    const globalProjection = await extractGlobalProjectionIndex(context, pack.metadata.id);
     expect(globalProjection.pack?.entity_summary.entity_count).toBe(entityProjection.summary.entity_count);
     expect(globalProjection.pack?.timeline_count).toBe(narrativeProjection.timeline.length);
   });

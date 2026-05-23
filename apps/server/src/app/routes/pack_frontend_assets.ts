@@ -37,7 +37,7 @@ export const registerPackFrontendAssetRoutes = (
 
   app.get(
     '/api/packs/:packId/frontend/{/*assetPath}',
-    asyncHandler(async (req: Request, res: Response) => {
+    asyncHandler((req: Request, res: Response) => {
       const packId = req.params.packId
       const assetPath = typeof req.params.assetPath === 'string' ? req.params.assetPath : ''
 

@@ -7,6 +7,7 @@ import { buildWorldPackHydrateRequest, buildWorldPackSnapshot } from '../../../s
 import type { SimulationManager } from '../../../src/core/simulation.js';
 import { SqlitePackStorageAdapter } from '../../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
+import { createVariableRuntimeSpeedSnapshot } from '../../helpers/runtime_speed.js';
 
 const TEST_PACK_ID = 'world-test-pack';
 
@@ -38,7 +39,7 @@ const createContext = (): AppContext => {
       pack: { metadata: { id, name: 'test', version: '0.0.0' } } as unknown as import('../../../src/packs/manifest/loader.js').WorldPack,
       getHealthSnapshot: () => ({ status: 'ok', message: null }),
       getClockSnapshot: () => ({ current_tick: '1000', current_revision: '1000' }),
-      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null })
+      getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot()
     })
   } as unknown as AppContext;
 };

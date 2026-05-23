@@ -11,7 +11,8 @@ import {
   listDispatchableActionIntents,
   markActionIntentCompleted,
   markActionIntentDropped,
-  markActionIntentFailed
+  markActionIntentFailed,
+  releaseActionIntentLock
 } from '../services/action/action_dispatcher.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../services/pack/pack_runtime_resolution.js';
@@ -61,6 +62,11 @@ export const runActionDispatcher = async ({
           excludeActionIntentIds: [claimedIntent.id]
         });
         if (hasOtherActiveWorkflow) {
+          await releaseActionIntentLock(context, {
+            intent_id: claimedIntent.id,
+            worker_id: workerId,
+            packRuntime
+          });
           return 0;
         }
       }

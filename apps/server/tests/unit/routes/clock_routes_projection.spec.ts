@@ -6,6 +6,7 @@ import type { AppContext } from '../../../src/app/context.js';
 import { registerClockRoutes } from '../../../src/app/routes/clock.js';
 import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 import { createRuntimeClockProjectionService } from '../../../src/app/runtime/runtime_clock_projection.js';
+import { createVariableRuntimeSpeedSnapshot } from '../../helpers/runtime_speed.js';
 
 const createFakeApp = () => {
   const gets = new Map<string, (req: unknown, res: unknown, next?: (error?: unknown) => void) => void>();
@@ -53,7 +54,7 @@ const createContext = (): AppContext => {
     getCurrentRevision: () => 1n,
     getPack: () => ({ metadata: { id: 'world-test-pack', name: 'test', version: '0.0.0' } }),
     getStepTicks: () => 1n,
-    getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null }),
+    getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot(),
     setRuntimeSpeedOverride: vi.fn(),
     clearRuntimeSpeedOverride: vi.fn(),
     getAllTimes: () => [],
@@ -103,7 +104,7 @@ const createContext = (): AppContext => {
       pack: { metadata: { id, name: 'test', version: '0.0.0' } } as unknown as import('../../../src/packs/manifest/loader.js').WorldPack,
       getHealthSnapshot: () => ({ status: 'ok', message: null }),
       getClockSnapshot: () => ({ current_tick: '1', current_revision: '1' }),
-      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null })
+      getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot()
     })
   } as unknown as AppContext;
 };

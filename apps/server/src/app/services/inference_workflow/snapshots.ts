@@ -201,6 +201,9 @@ export const toInferenceActionIntentSnapshot = (
     drop_reason: intent.status === 'failed' ? intent.dispatch_error_message : intent.drop_reason,
     dispatch_error_code: (intent.dispatch_error_code as InferenceActionIntentSnapshot['dispatch_error_code']) ?? null,
     dispatch_error_message: intent.dispatch_error_message,
+    source_workflow_run_id: intent.source_workflow_run_id,
+    source_workflow_step_id: intent.source_workflow_step_id,
+    source_step_attempt: intent.source_step_attempt,
     created_at: intent.created_at.toString(),
     updated_at: intent.updated_at.toString()
   };

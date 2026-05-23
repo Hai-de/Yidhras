@@ -112,7 +112,16 @@ narrativized fallback 的关键点是：
 - scheduler 会结合 active workflow、per-tick activation budget 与 periodic cooldown 做前置抑制
 - runner 在 claim 成功后仍会再次复核同实体是否已有其他 active workflow
 
-如果某个具体 world-pack 已形成特定题材下的完整闭环，应把这类 pack-specific 语义说明收口在该包目录内，而不是在项目逻辑文档中展开。
+
+声明式 agent workflow ：
+
+1. world-pack 在顶层 `workflows` 中声明 DAG、trigger、step inference、`depends_on`、`input_from`、单字段 condition。
+2. scheduler 在事件 signal window 内只创建 event-triggered `WorkflowRun`；manual trigger 通过 workflow trigger service 创建 run。
+3. `PackSimulationLoop` step4 调用中心化 `WorkflowEngine.advance()`，按 budget 在同 tick 内推进 DAG。
+4. step 间数据通过 `previous_agent_output` 从前置 `WorkflowStepRun.result_json` 读取。
+5. Workflow step 产生的 ActionIntent 不立即绕过 runtime，而是进入 step5 action dispatch，与普通 action 共享排序、锁与落地路径。
+
+不支持 model 动态生成 DAG、`whole_workflow` lock、组合 condition 或事务型全工作流回滚。YAML validation 对这些半支持形态直接拒绝。
 
 ## 5. Projection / visibility 语义
 

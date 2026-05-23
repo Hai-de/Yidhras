@@ -174,6 +174,60 @@ describe('TreeRegistry', () => {
     ).toThrow(/action/);
   });
 
+  it('rejects Sequence with more than one action leaf after decorator unwrapping', () => {
+    const registry = new TreeRegistry('pack-1');
+    expect(() =>
+      registry.register({
+        bad_seq: {
+          type: 'sequence',
+          children: [
+            {
+              decorators: [{ type: 'cooldown', cooldown_ticks: 3 }],
+              child: { type: 'action', action: { kernel: 'first' } }
+            },
+            { type: 'action', action: { kernel: 'second' } }
+          ]
+        }
+      })
+    ).toThrow(/after expanding decorators and \$ref nodes/);
+  });
+
+  it('rejects Sequence with more than one action leaf after $ref expansion', () => {
+    const registry = new TreeRegistry('pack-1');
+    expect(() =>
+      registry.register({
+        reusable_action: { type: 'action', action: { kernel: 'first' } },
+        bad_seq: {
+          type: 'sequence',
+          children: [
+            { $ref: 'reusable_action' },
+            { type: 'action', action: { kernel: 'second' } }
+          ]
+        }
+      })
+    ).toThrow(/after expanding decorators and \$ref nodes/);
+  });
+
+  it('rolls back newly registered trees when Sequence $ref action validation fails', () => {
+    const registry = new TreeRegistry('pack-1');
+    registry.register({ existing: { type: 'action', action: { kernel: 'existing' } } });
+
+    expect(() =>
+      registry.register({
+        reusable_action: { type: 'action', action: { kernel: 'first' } },
+        bad_seq: {
+          type: 'sequence',
+          children: [
+            { $ref: 'reusable_action' },
+            { type: 'action', action: { kernel: 'second' } }
+          ]
+        }
+      })
+    ).toThrow(/after expanding decorators and \$ref nodes/);
+
+    expect(registry.list()).toEqual(['existing']);
+  });
+
 
   it('rejects llm_decision until AI Gateway wiring exists', () => {
     const registry = new TreeRegistry('pack-1');

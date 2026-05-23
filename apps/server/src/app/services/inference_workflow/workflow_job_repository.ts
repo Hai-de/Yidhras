@@ -360,6 +360,27 @@ export const createPendingDecisionJob = async (
   });
 };
 
+export const createPendingDecisionJobIdempotent = async (
+  context: AppInfrastructure,
+  input: Parameters<typeof createPendingDecisionJob>[1]
+): Promise<{ job: DecisionJobRecord; created: boolean }> => {
+  try {
+    const job = await createPendingDecisionJob(context, input);
+    return { job, created: true };
+  } catch (err: unknown) {
+    if (!(err instanceof Prisma.PrismaClientKnownRequestError) || err.code !== 'P2002') {
+      throw err;
+    }
+
+    const existing = await getDecisionJobByIdempotencyKey(context, input.idempotency_key);
+    if (!existing) {
+      throw err;
+    }
+
+    return { job: existing, created: false };
+  }
+};
+
 export const createReplayDecisionJob = async (
   context: AppInfrastructure,
   input: {

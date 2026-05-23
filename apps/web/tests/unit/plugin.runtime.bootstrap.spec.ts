@@ -18,6 +18,19 @@ vi.mock('../../features/plugins/runtime/loader', () => ({
 import { usePluginRuntimeBootstrap } from '../../composables/app/usePluginRuntimeBootstrap'
 import { usePluginRuntimeStore } from '../../stores/plugins'
 import { useRuntimeStore } from '../../stores/runtime'
+import type { RuntimeSpeedSnapshot } from '../../composables/api/useSystemApi'
+
+const createRuntimeSpeedSnapshot = (): RuntimeSpeedSnapshot => ({
+  mode: 'variable',
+  source: 'default',
+  strategy: {
+    kind: 'variable',
+    range: { min: '1', max: '1' },
+    loopIntervalMs: 1000
+  },
+  effective_step_ticks: '1',
+  override_since: null
+})
 
 describe('usePluginRuntimeBootstrap', () => {
   beforeEach(() => {
@@ -33,14 +46,7 @@ describe('usePluginRuntimeBootstrap', () => {
     runtimeStore.applyRuntimeStatusSnapshot({
       status: 'running',
       runtime_ready: true,
-      runtime_speed: {
-        mode: 'fixed',
-        source: 'default',
-        configured_step_ticks: null,
-        override_step_ticks: null,
-        override_since: null,
-        effective_step_ticks: '1'
-      },
+      runtime_speed: createRuntimeSpeedSnapshot(),
       scheduler: {
         worker_id: 'scheduler:test',
         partition_count: 1,
@@ -113,14 +119,7 @@ describe('usePluginRuntimeBootstrap', () => {
     runtimeStore.applyRuntimeStatusSnapshot({
       status: 'running',
       runtime_ready: true,
-      runtime_speed: {
-        mode: 'fixed',
-        source: 'default',
-        configured_step_ticks: null,
-        override_step_ticks: null,
-        override_since: null,
-        effective_step_ticks: '1'
-      },
+      runtime_speed: createRuntimeSpeedSnapshot(),
       scheduler: {
         worker_id: 'scheduler:test',
         partition_count: 1,

@@ -5,22 +5,25 @@ import { buildStepContext } from '../../core/step_strategy.js';
 import type { InferenceService } from '../../inference/service.js';
 import { recordTickCompleted } from '../../observability/metrics.js';
 import { dataCleanerRegistry } from '../../plugins/extensions/data_cleaner_registry.js';
+import { createLogger } from '../../utils/logger.js';
 import type { AppContext } from '../context.js';
 import { getErrorMessage } from '../http/errors.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import { runActionDispatcher } from './action_dispatcher_runner.js';
 import { runAgentScheduler } from './agent_scheduler.js';
-import { runDecisionJobRunner } from './job_runner.js';
 import { runPerceptionPipeline } from './perception_pipeline.js';
 import { runProjectionPipeline } from './projection_pipeline.js';
 import { resolveOwnedSchedulerPartitionIds } from './scheduler_partitioning.js';
 import type { WorldEngineSidecarClient } from './sidecar/world_engine_sidecar_client.js';
+import { runWorkflowDecisionStep } from './workflow_decision_step.js';
 import {
   createDefaultWorldEnginePersistencePort,
   executeWorldEnginePreparedStep
 } from './world_engine_persistence.js';
 
 export const SCHEDULER_CRASH_THRESHOLD = 3;
+
+const logger = createLogger('PackSimulationLoop');
 
 export interface PackLoopDiagnostics {
   status: 'idle' | 'scheduled' | 'running' | 'paused' | 'stopped';
@@ -33,6 +36,7 @@ export interface PackLoopDiagnostics {
   last_duration_ms: number | null;
   last_error_message: string | null;
   last_step_errors: Array<{ step: string; error: string }>;
+  last_extension_errors: Array<{ extension_type: 'hook' | 'data_cleaner'; key: string; error: string }>;
 }
 
 export interface HookContext {
@@ -91,7 +95,8 @@ const createDefaultDiagnostics = (): PackLoopDiagnostics => ({
   last_finished_at: null,
   last_duration_ms: null,
   last_error_message: null,
-  last_step_errors: []
+  last_step_errors: [],
+  last_extension_errors: []
 });
 
 export class PackSimulationLoop {
@@ -215,7 +220,8 @@ export class PackSimulationLoop {
       iteration_count: this.diagnostics.iteration_count + 1,
       last_started_at: startedAt,
       last_error_message: null,
-      last_step_errors: []
+      last_step_errors: [],
+      last_extension_errors: []
     };
 
     const hookCtx: HookContext = {
@@ -234,7 +240,7 @@ export class PackSimulationLoop {
         packId: this.packId,
         packRuntime: this.packRuntime
       }) },
-      { name: 'step4_decisionJobs', fn: () => runDecisionJobRunner({
+      { name: 'step4_workflowDecision', fn: () => runWorkflowDecisionStep({
         context: this.context,
         inferenceService: this.inferenceService,
         workerId: this.decisionWorkerId,
@@ -318,7 +324,15 @@ export class PackSimulationLoop {
             text: `[pack=${this.packId}, tick=${packTick}]`,
             options: { pack_id: this.packId, tick: packTick }
           });
-        } catch {
+        } catch (err: unknown) {
+          const error = getErrorMessage(err);
+          this.diagnostics.last_extension_errors.push({ extension_type: 'data_cleaner', key: cleaner.key, error });
+          logger.warn('Data cleaner failed during pack loop cleanup', {
+            pack_id: this.packId,
+            tick: packTick,
+            cleaner_key: cleaner.key,
+            error
+          });
           // Single cleaner failure does not block the loop
         }
       }
@@ -342,7 +356,15 @@ export class PackSimulationLoop {
     for (const hook of hooks) {
       try {
         await (hook)(ctx);
-      } catch {
+      } catch (err: unknown) {
+        const error = getErrorMessage(err);
+        this.diagnostics.last_extension_errors.push({ extension_type: 'hook', key: hookName, error });
+        logger.warn('Pack loop hook failed', {
+          pack_id: ctx.packId,
+          tick: ctx.tick,
+          hook: hookName,
+          error
+        });
         // Single hook failure does not block other hooks or the step
       }
     }

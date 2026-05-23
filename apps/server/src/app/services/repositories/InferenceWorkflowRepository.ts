@@ -93,7 +93,7 @@ export interface InferenceWorkflowRepository {
   listAiInvocations(input: { where?: Prisma.AiInvocationRecordWhereInput; orderBy?: Prisma.AiInvocationRecordOrderByWithRelationInput | Prisma.AiInvocationRecordOrderByWithRelationInput[]; take?: number }): Promise<AiInvocationRecord[]>;
   findDecisionJobsByIds(ids: string[]): Promise<unknown[]>;
   listActionIntents(input: { where?: Prisma.ActionIntentWhereInput; orderBy?: Prisma.ActionIntentOrderByWithRelationInput; take?: number; select?: Prisma.ActionIntentSelect }): Promise<ActionIntentRecordFull[]>;
-  findDecisionJobs(input: { where?: Prisma.DecisionJobWhereInput; orderBy?: Prisma.DecisionJobOrderByWithRelationInput | Prisma.DecisionJobOrderByWithRelationInput[]; take?: number; include?: Prisma.DecisionJobInclude; select?: Prisma.DecisionJobSelect }): Promise<DecisionJobRecord[]>;
+  findDecisionJobs<T = DecisionJobRecord>(input: { where?: Prisma.DecisionJobWhereInput; orderBy?: Prisma.DecisionJobOrderByWithRelationInput | Prisma.DecisionJobOrderByWithRelationInput[]; take?: number; include?: Prisma.DecisionJobInclude; select?: Prisma.DecisionJobSelect }): Promise<T[]>;
   findActionIntentByInferenceId(inferenceId: string): Promise<ActionIntentRecordFull | null>;
   findActionIntentById(id: string): Promise<ActionIntentRecordFull | null>;
   upsertAiInvocation(input: Prisma.AiInvocationRecordUpsertArgs): Promise<unknown>;
@@ -301,10 +301,10 @@ export class PrismaInferenceWorkflowRepository implements InferenceWorkflowRepos
     return this.prisma.actionIntent.findUnique({ where: { id } });
   }
 
-  async findDecisionJobs(input: { where?: Prisma.DecisionJobWhereInput; orderBy?: Prisma.DecisionJobOrderByWithRelationInput | Prisma.DecisionJobOrderByWithRelationInput[]; take?: number; include?: Prisma.DecisionJobInclude; select?: Prisma.DecisionJobSelect }): Promise<DecisionJobRecord[]> {
+  async findDecisionJobs<T = DecisionJobRecord>(input: { where?: Prisma.DecisionJobWhereInput; orderBy?: Prisma.DecisionJobOrderByWithRelationInput | Prisma.DecisionJobOrderByWithRelationInput[]; take?: number; include?: Prisma.DecisionJobInclude; select?: Prisma.DecisionJobSelect }): Promise<T[]> {
     const { include, select, ...rest } = input;
     const args: Prisma.DecisionJobFindManyArgs = { ...rest, ...(include ? { include } : {}), ...(select ? { select } : {}) };
-    return await this.prisma.decisionJob.findMany(args);
+    return await this.prisma.decisionJob.findMany(args) as T[];
   }
 
   async upsertAiInvocation(input: Prisma.AiInvocationRecordUpsertArgs): Promise<unknown> {

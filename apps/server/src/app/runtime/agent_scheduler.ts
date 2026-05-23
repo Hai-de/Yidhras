@@ -2,8 +2,7 @@ import { getSchedulerAgentConfig, getSchedulerDecisionKernelConfig, getScheduler
 import type { InferenceRequestInput } from '../../inference/types.js';
 import type { AppContext } from '../context.js';
 import {
-  createPendingDecisionJob,
-  getDecisionJobByIdempotencyKey,
+  createPendingDecisionJobIdempotent,
   getLatestSchedulerSignalTick,
   listActiveSchedulerAgents,
   listPendingSchedulerActionIntents,
@@ -19,6 +18,7 @@ import {
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../services/pack/pack_runtime_resolution.js';
 import { recordSchedulerRunSnapshot } from '../services/scheduler/writes.js';
+import { triggerEventWorkflows } from '../services/workflow/workflow_trigger_scheduler.js';
 import { listActiveWorkflowActors } from './entity_activity_query.js';
 import type {
   AgentSchedulerCandidateDecisionSnapshot,
@@ -359,6 +359,15 @@ const runAgentSchedulerForPartition = async ({
     .filter(agent => agent.partition_id === partitionId)
     .slice(0, limit);
 
+  if (packRuntime) {
+    await triggerEventWorkflows({
+      context,
+      packRuntime,
+      sinceTick: signalSinceTick,
+      untilTick: now
+    });
+  }
+
   const agentIds = agents.map(agent => agent.id);
   const candidateDecisions: AgentSchedulerCandidateDecisionSnapshot[] = [];
 
@@ -486,8 +495,15 @@ const runAgentSchedulerForPartition = async ({
       continue;
     }
 
-    const existingJob = await getDecisionJobByIdempotencyKey(context, idempotencyKey);
-    if (existingJob) {
+    const createdJob = await createPendingDecisionJobIdempotent(context, {
+      idempotency_key: idempotencyKey,
+      request_input: requestInput,
+      intent_class: draft.intent_class,
+      job_source: draft.job_source,
+      scheduled_for_tick: parseTick(draft.scheduled_for_tick)
+    });
+
+    if (!createdJob.created) {
       summary.created_count -= 1;
       summary.skipped_existing_idempotency_count += 1;
       summary.skipped_by_reason.existing_same_idempotency += 1;
@@ -501,20 +517,13 @@ const runAgentSchedulerForPartition = async ({
       }
       if (decisionSnapshot) {
         decisionSnapshot.skipped_reason = 'existing_same_idempotency';
-        decisionSnapshot.created_job_id = existingJob.id;
+        decisionSnapshot.created_job_id = createdJob.job.id;
       }
       continue;
     }
 
-    const createdJob = await createPendingDecisionJob(context, {
-      idempotency_key: idempotencyKey,
-      request_input: requestInput,
-      intent_class: draft.intent_class,
-      job_source: draft.job_source,
-      scheduled_for_tick: parseTick(draft.scheduled_for_tick)
-    });
     if (decisionSnapshot) {
-      decisionSnapshot.created_job_id = createdJob.id;
+      decisionSnapshot.created_job_id = createdJob.job.id;
     }
   }
 

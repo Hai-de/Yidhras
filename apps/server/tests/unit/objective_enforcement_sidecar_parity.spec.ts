@@ -16,6 +16,7 @@ import { listPackEntityStates } from '../../src/packs/storage/entity_state_repo.
 import { listPackRuleExecutionRecords } from '../../src/packs/storage/rule_execution_repo.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
+import { createVariableRuntimeSpeedSnapshot } from '../helpers/runtime_speed.js';
 
 const createdRoots: string[] = [];
 
@@ -44,8 +45,10 @@ const buildTestContext = (
 ): any => {
   const now = options?.now ?? 1000n;
 
+  const repos = wrapPrismaAsRepositories({} as PrismaClient);
+
   return {
-    repos: wrapPrismaAsRepositories({} as PrismaClient),
+    repos: { ...repos, identityOperator: { ...repos.identityOperator, findOperatorBindingForAgent: async () => null } },
     prisma: {} as AppContext['prisma'],
     packStorageAdapter,
     packRuntime: {
@@ -58,16 +61,7 @@ const buildTestContext = (
       getStepTicks(): bigint {
         return 1n;
       },
-      getRuntimeSpeedSnapshot() {
-        return {
-          mode: 'fixed' as const,
-          source: 'default' as const,
-          configured_step_ticks: null,
-          override_step_ticks: null,
-          override_since: null,
-          effective_step_ticks: '1'
-        };
-      },
+      getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot(),
       setRuntimeSpeedOverride() {
         // noop
       },
@@ -301,13 +295,16 @@ describe('objective enforcement sidecar parity', () => {
       }
     };
 
-    await dispatchInvocationFromActionIntent(firstContext, invocation);
+    const firstResult = await dispatchInvocationFromActionIntent(firstContext, invocation);
+    expect(firstResult?.outcome).toBe('completed');
     const firstStates = await listPackEntityStates(packStorageAdapter, pack.metadata.id);
     const firstRecords = await listPackRuleExecutionRecords(packStorageAdapter, pack.metadata.id);
+    expect(firstRecords.length).toBeGreaterThan(0);
 
     await materializePackRuntimeCoreModels(pack.metadata.id, pack, 1000n, packStorageAdapter);
 
-    await dispatchInvocationFromActionIntent(secondContext, invocation);
+    const secondResult = await dispatchInvocationFromActionIntent(secondContext, invocation);
+    expect(secondResult?.outcome).toBe('completed');
     const secondStates = await listPackEntityStates(packStorageAdapter, pack.metadata.id);
     const secondRecords = await listPackRuleExecutionRecords(packStorageAdapter, pack.metadata.id);
 

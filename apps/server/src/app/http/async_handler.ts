@@ -4,10 +4,14 @@ export type AsyncRequestHandler = (
   req: Request,
   res: Response,
   next: NextFunction
-) => Promise<void>;
+) => void | Promise<void>;
 
 export const asyncHandler = (handler: AsyncRequestHandler) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    void handler(req, res, next).catch(next);
+    try {
+      void Promise.resolve(handler(req, res, next)).catch(next);
+    } catch (error) {
+      next(error);
+    }
   };
 };

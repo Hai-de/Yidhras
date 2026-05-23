@@ -127,6 +127,27 @@ tracks?: {
 - `memory_compaction` → `memory-compaction-default`
 - `intent_grounding_assist` → `intent-grounding-assist-default`
 
+
+## 4.3 Workflow step data channel: `previous_agent_output`
+
+声明式 agent workflow step 通过 `input_from` 读取同一 `WorkflowRun` 内已完成前置 step 的结果。运行时在执行当前 step 前构造 `InferenceRequestInput.previous_agent_output`，并把同名 namespace 注入 prompt variable context。
+
+可用模板路径：
+
+```text
+{{previous_agent_output.<step_id>.reasoning}}
+{{previous_agent_output.<step_id>.decision_summary}}
+{{previous_agent_output.<step_id>.grounding_result_type}}
+{{previous_agent_output.<step_id>.semantic_intent}}
+```
+
+约束：
+
+- 只有 `input_from` 中列出的 step 会进入 `previous_agent_output`。
+- 被引用 step 必须已经 `completed`；否则当前 step 不会进入 ready 状态。
+- 同 tick 快速路径读取的是前置 `WorkflowStepRun.result_json`，不依赖 step5 action dispatch 后的世界状态。
+- `previous_agent_output` 只作为 step 间推理上下文通道，不代表 action 已落地。
+
 ## 5. 内容轨道
 
 内容轨道在 pipeline runner 之外执行，产出的 `section_drafts` 在 `placement_resolution` 步骤汇合。profile 可启用 template / node / snapshot / conversation_history 的任意组合。

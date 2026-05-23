@@ -159,16 +159,26 @@ const shouldBridgeToInvocation = (context: AppInfrastructure, intent: Dispatchab
   return false
 }
 
+type InvocationPackRuntime = NonNullable<Parameters<typeof buildInvocationRequestFromActionIntent>[2]>;
+
+const resolveInvocationPackRuntime = (
+  context: AppInfrastructure,
+  packRuntime?: InvocationPackRuntime
+): InvocationPackRuntime | undefined => {
+  return packRuntime ?? (context as { packRuntime?: InvocationPackRuntime }).packRuntime;
+}
+
 export const buildInvocationRequestFromActionIntent = async (
   context: AppInfrastructure,
   intent: DispatchableActionIntentLike,
   packRuntime?: { getPack(): { metadata: { id: string }; capabilities?: Array<{ key: string }>; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> }; variables?: Record<string, unknown> } | undefined }
 ): Promise<InvocationRequest | null> => {
-  if (!shouldBridgeToInvocation(context, intent, packRuntime)) {
+  const effectivePackRuntime = resolveInvocationPackRuntime(context, packRuntime);
+  if (!shouldBridgeToInvocation(context, intent, effectivePackRuntime)) {
     return null
   }
 
-  const pack = packRuntime?.getPack()
+  const pack = effectivePackRuntime?.getPack()
   if (!pack) {
     return null
   }
@@ -195,13 +205,14 @@ export const dispatchInvocationFromActionIntent = async (
   intent: DispatchableActionIntentLike,
   packRuntime?: Parameters<typeof buildInvocationRequestFromActionIntent>[2]
 ): Promise<InvocationDispatchResult | null> => {
-  const invocationRequest = await buildInvocationRequestFromActionIntent(context, intent, packRuntime)
+  const effectivePackRuntime = resolveInvocationPackRuntime(context, packRuntime);
+  const invocationRequest = await buildInvocationRequestFromActionIntent(context, intent, effectivePackRuntime)
   if (!invocationRequest) {
     return null
   }
 
   try {
-    const result = await enforceInvocationRequest(context, invocationRequest, packRuntime)
+    const result = await enforceInvocationRequest(context, invocationRequest, effectivePackRuntime)
     return {
       outcome: 'completed',
       reason: null,

@@ -33,12 +33,23 @@ export interface RuntimeWorldMetadata {
 }
 
 export interface RuntimeSpeedSnapshot {
-  mode: 'fixed'
+  mode: 'variable' | 'adaptive'
   source: 'default' | 'world_pack' | 'override'
-  configured_step_ticks: TickString | null
-  override_step_ticks: TickString | null
-  override_since: number | null
+  strategy: {
+    kind: 'variable' | 'adaptive'
+    range: {
+      min: TickString
+      max: TickString
+    }
+    loopIntervalMs: number
+    adaptive?: {
+      targetLoopMs: number
+      scaleUpThresholdMs: number
+      scaleDownThresholdMs: number
+    }
+  }
   effective_step_ticks: TickString
+  override_since: number | null
 }
 
 export interface SchedulerWorkerRuntimeSnapshot {

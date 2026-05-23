@@ -7,6 +7,7 @@ import type { AppContextPorts } from '../app/services/app_context_ports.js';
 import { createContextAssemblyPort } from '../app/services/context/context_memory_ports.js';
 import { getLatestEventEvidenceRecord } from '../app/services/mutation/event_evidence_repository.js';
 import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
+import { buildPreviousAgentOutputTemplateScope } from '../app/services/workflow/workflow_previous_output.js';
 import { resolveAuthorityForSubject } from '../domain/authority/resolver.js';
 import type { IdentityContext } from '../identity/types.js';
 import { DEFAULT_PACK_WORLD_ENTITY_ID } from '../packs/runtime/core_models.js';
@@ -665,6 +666,7 @@ const buildInferenceVariableContext = (input: {
       agent_id: input.resolvedActor.resolved_agent_id,
       agent_snapshot: input.resolvedActor.agent_snapshot
     },
+    previous_agent_output: buildPreviousAgentOutputTemplateScope(input.requestInput.previous_agent_output),
     request: {
       strategy: input.strategy,
       attributes: input.attributes,
@@ -704,6 +706,21 @@ const buildInferenceVariableContext = (input: {
       });
     })
     .filter((layer): layer is NonNullable<typeof layer> => layer !== null);
+
+  const previousAgentOutputValues = runtimeObjects.previous_agent_output as Record<string, unknown>;
+  if (Object.keys(previousAgentOutputValues).length > 0) {
+    layers.push(createPromptVariableLayer({
+      namespace: 'previous_agent_output',
+      values: normalizePromptVariableRecord(previousAgentOutputValues),
+      alias_values: {
+        previous_agent_output: normalizePromptVariableRecord(previousAgentOutputValues)
+      },
+      metadata: {
+        source_label: 'workflow-previous-agent-output',
+        trusted: true
+      }
+    }));
+  }
 
   if (layers.length === 0) {
     // No configured layers — variable resolution will be limited.
@@ -841,7 +858,8 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         pack_state: packState,
         pack_runtime: packRuntime,
         agent_capabilities: agentCapabilities,
-        variable_context_summary: createPromptVariableContextSummary(variableContext)
+        variable_context_summary: createPromptVariableContextSummary(variableContext),
+        previous_agent_output: input.previous_agent_output
       };
     }
   };

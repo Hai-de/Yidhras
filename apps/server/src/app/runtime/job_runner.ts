@@ -5,6 +5,7 @@ import type { AppContext } from '../context.js';
 import {
   claimDecisionJob,
   listRunnableDecisionJobs,
+  releaseDecisionJobLock,
   updateDecisionJobState
 } from '../services/inference_workflow.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
@@ -27,6 +28,7 @@ export const runDecisionJobRunner = async ({
   context,
   inferenceService,
   workerId,
+  packRuntime,
   limit = getSchedulerRunnerConfig().decision_job.batch_limit,
   concurrency = getSchedulerRunnerConfig().decision_job.concurrency,
   lockTicks = BigInt(getSchedulerRunnerConfig().decision_job.lock_ticks)
@@ -53,6 +55,11 @@ export const runDecisionJobRunner = async ({
           excludeDecisionJobIds: [claimedJob.id]
         });
         if (hasOtherActiveWorkflow) {
+          await releaseDecisionJobLock(context, {
+            job_id: claimedJob.id,
+            worker_id: workerId,
+            packRuntime
+          });
           return 0;
         }
       }

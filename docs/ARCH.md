@@ -104,7 +104,7 @@ apps/server/src/app/services/repositories/
   index.ts                          # Repositories 聚合类型 + createPrismaRepositories 工厂
 ```
 
-每个接口返回领域类型，不暴露 `PrismaClient` 类型。Prisma 实现类通过构造函数注入 `PrismaClient`，由 `createPrismaRepositories(prisma)` 工厂统一创建。
+Repository 调用方不直接持有 `PrismaClient`；`PrismaClient` 只注入到 Prisma 实现类中，并由 `createPrismaRepositories(prisma)` 工厂统一创建。接口以领域方法收口，但少量仓储方法仍使用 Prisma 生成的 where/select/include/orderBy 类型作为查询参数；这些 Prisma 适配边界必须限制在 repository 接口/实现层，不允许扩散到 service/runtime 层。
 
 `AppInfrastructure.repos: Repositories` 在组合根注入。调用方通过 `context.repos.<domain>.method()` 访问。
 
@@ -475,6 +475,25 @@ Host-managed persistence 覆盖：pack runtime core snapshot hydrate → Rust se
 - inference observability
 
 `ActionIntent` / `InferenceTrace` / `DecisionJob` 仍宿主于 kernel-side Prisma，而不是 pack runtime。
+
+
+### 4.3 声明式 Agent Workflow Engine
+
+声明式 agent workflow 运行在 `apps/server/src/app/services/workflow/**`，runtime glue 位于 `apps/server/src/app/runtime/workflow_decision_step.ts`。
+
+`PackSimulationLoop` 的 step4 统一通过 `runWorkflowDecisionStep()` 进入：
+
+1. `WorkflowEngine.recoverExpiredRuns()` 回收过期 run / step lock。
+2. `WorkflowEngine.advance()` 推进 active workflow run。
+3. `runDecisionJobRunner()` 处理普通 DecisionJob。
+
+边界约束：
+
+- `packs` 只加载和校验 `workflows` YAML，不依赖 workflow engine。
+- `inference` 只接收 `workflow_source` 与 `previous_agent_output` 输入，不依赖 workflow engine。
+- Workflow run / step run 持久化在 kernel-side Prisma：`WorkflowRun` / `WorkflowStepRun`。
+- ActionIntent 继续统一进入 step5 dispatch；workflow action 通过 `source_workflow_run_id`、`source_workflow_step_id`、`source_step_attempt` 追踪来源。
+- single-flight 同时覆盖普通 DecisionJob、pending/dispatching ActionIntent、running WorkflowStepRun。
 
 ## 5. Context / memory / overlay 边界
 

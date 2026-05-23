@@ -73,7 +73,7 @@ describe('runner single-flight integration', () => {
 
     const refreshedCandidate = await context.prisma.decisionJob.findUnique({ where: { id: candidateJob.id } });
     expect(refreshedCandidate?.status).toBe('running');
-    expect(refreshedCandidate?.locked_by).toBe('single-flight-worker');
+    expect(refreshedCandidate?.locked_by).toBeNull();
   });
 
   it('does not dispatch an action intent when another active workflow already exists for the same actor', async () => {
@@ -194,6 +194,6 @@ describe('runner single-flight integration', () => {
 
     const refreshedCandidate = await context.prisma.actionIntent.findUnique({ where: { id: candidateIntent.id } });
     expect(refreshedCandidate?.status).toBe('dispatching');
-    expect(refreshedCandidate?.locked_by).toBe('single-flight-dispatcher');
+    expect(refreshedCandidate?.locked_by).toBeNull();
   });
 });

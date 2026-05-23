@@ -186,6 +186,34 @@ const buildContextSnapshot = (event: InferenceTraceEvent): Prisma.InputJsonValue
   });
 };
 
+const resolveWorkflowSource = (event: InferenceTraceEvent): {
+  source_workflow_run_id: string | null;
+  source_workflow_step_id: string | null;
+  source_step_attempt: number | null;
+} => {
+  const draft = event.action_intent_draft;
+  const inputSource = event.input.workflow_source;
+
+  const sourceWorkflowRunId = draft?.source_workflow_run_id ?? inputSource?.source_workflow_run_id ?? null;
+  const sourceWorkflowStepId = draft?.source_workflow_step_id ?? inputSource?.source_workflow_step_id ?? null;
+  const sourceStepAttempt = draft?.source_step_attempt ?? inputSource?.source_step_attempt ?? null;
+
+  return {
+    source_workflow_run_id:
+      typeof sourceWorkflowRunId === 'string' && sourceWorkflowRunId.trim().length > 0
+        ? sourceWorkflowRunId.trim()
+        : null,
+    source_workflow_step_id:
+      typeof sourceWorkflowStepId === 'string' && sourceWorkflowStepId.trim().length > 0
+        ? sourceWorkflowStepId.trim()
+        : null,
+    source_step_attempt:
+      typeof sourceStepAttempt === 'number' && Number.isInteger(sourceStepAttempt) && sourceStepAttempt > 0
+        ? sourceStepAttempt
+        : null
+  };
+};
+
 const resolveJobPayload = (event: InferenceTraceEvent, now: bigint) => {
   const jobStatus = event.job_status ?? 'completed';
   const jobLastError = event.job_last_error ?? null;
@@ -221,6 +249,7 @@ export const createPrismaInferenceTraceSink = (context: AppInfrastructure): Infe
         scheduledAfterTicks === null ? null : event.context.tick + scheduledAfterTicks;
       const { jobStatus, jobLastError, jobLastErrorCode, jobLastErrorStage, completedAt, idempotencyKey, attemptCount, maxAttempts } =
         resolveJobPayload(event, now);
+      const workflowSource = resolveWorkflowSource(event);
 
       await context.repos.inference.transaction(async prisma => {
         await prisma.inferenceTrace.upsert({
@@ -288,6 +317,9 @@ export const createPrismaInferenceTraceSink = (context: AppInfrastructure): Infe
               transmission_policy: event.action_intent_draft.transmission_policy,
               transmission_drop_chance: event.action_intent_draft.transmission_drop_chance,
               drop_reason: event.action_intent_draft.drop_reason,
+              source_workflow_run_id: workflowSource.source_workflow_run_id,
+              source_workflow_step_id: workflowSource.source_workflow_step_id,
+              source_step_attempt: workflowSource.source_step_attempt,
               status: 'pending',
               updated_at: now
             },
@@ -305,6 +337,9 @@ export const createPrismaInferenceTraceSink = (context: AppInfrastructure): Infe
               transmission_policy: event.action_intent_draft.transmission_policy,
               transmission_drop_chance: event.action_intent_draft.transmission_drop_chance,
               drop_reason: event.action_intent_draft.drop_reason,
+              source_workflow_run_id: workflowSource.source_workflow_run_id,
+              source_workflow_step_id: workflowSource.source_workflow_step_id,
+              source_step_attempt: workflowSource.source_step_attempt,
               status: 'pending',
               pack_id: event.input.pack_id ?? null,
               created_at: now,

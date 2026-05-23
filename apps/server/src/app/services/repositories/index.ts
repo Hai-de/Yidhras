@@ -1,5 +1,9 @@
 import type { PrismaClient } from '@prisma/client';
 
+import type { WorkflowRunRepository } from '../workflow/workflow_run_repository.js';
+import { PrismaWorkflowRunRepository } from '../workflow/workflow_run_repository.js';
+import type { WorkflowStepRunRepository } from '../workflow/workflow_step_repository.js';
+import { PrismaWorkflowStepRunRepository } from '../workflow/workflow_step_repository.js';
 import type { AgentRepository } from './AgentRepository.js';
 import { PrismaAgentRepository } from './AgentRepository.js';
 import type { IdentityOperatorRepository } from './IdentityOperatorRepository.js';
@@ -26,6 +30,8 @@ export interface Repositories {
   readonly plugin: PluginRepository;
   readonly agent: AgentRepository;
   readonly social: SocialRepository;
+  readonly workflowRuns: WorkflowRunRepository;
+  readonly workflowSteps: WorkflowStepRunRepository;
 }
 
 export function createPrismaRepositories(prisma: PrismaClient): Repositories {
@@ -37,6 +43,8 @@ export function createPrismaRepositories(prisma: PrismaClient): Repositories {
     relationship: new PrismaRelationshipGraphRepository(prisma),
     plugin: new PrismaPluginRepository(prisma),
     agent: new PrismaAgentRepository(prisma),
-    social: new PrismaSocialRepository(prisma)
+    social: new PrismaSocialRepository(prisma),
+    workflowRuns: new PrismaWorkflowRunRepository(prisma),
+    workflowSteps: new PrismaWorkflowStepRunRepository(prisma)
   };
 }

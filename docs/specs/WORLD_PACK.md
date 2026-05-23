@@ -118,7 +118,7 @@ metadata:
 - `entities`（actors / collectives / artifacts / mediators / domains / institutions）
 - `identities`、`capabilities`、`authorities`
 - `rules`（perception / capability_resolution / invocation / objective_enforcement / projection）
-- `storage`、`scheduler`、`bootstrap`、`state_transforms`、`spatial`、`ai`
+- `storage`、`scheduler`、`bootstrap`、`state_transforms`、`spatial`、`ai`、`workflows`
 
 ### 2.2 项目化发布最小要求
 
@@ -165,6 +165,7 @@ include:
   spatial: "config/spatial.yaml"
   ai: "config/ai.yaml"
   storage: "config/storage.yaml"
+  workflows: "config/workflows.yaml"
 ```
 
 **合并规则**：
@@ -182,6 +183,96 @@ include:
 2. 按需加载各 `config/*.yaml`，合并为一个对象
 3. 剥离 `include` 字段，将合并后的对象送入 schema 校验
 4. 校验通过后进入物化管线
+
+### 2.2.3 workflows 声明式工作流
+
+`workflows` 是 Phase 1 的声明式 agent 编排入口。工作流只能由 world-pack YAML 预定义；模型不能动态创建任意 workflow DAG。
+
+示例：
+
+```yaml
+proposal_review:
+  trigger:
+    type: manual
+  max_ticks: 10
+  failure_policy: narrativize
+  lock_policy: active_steps
+  steps:
+    - id: draft
+      agent: proposer
+      inference:
+        provider: behavior_tree
+        behavior_tree: draft_proposal
+    - id: review
+      agent: reviewer
+      depends_on: [draft]
+      input_from: [draft]
+      inference:
+        provider: behavior_tree
+        behavior_tree: review_proposal
+    - id: approve
+      agent: approver
+      depends_on: [review]
+      input_from: [review]
+      condition:
+        field: review.grounding_result.type
+        op: eq
+        value: exact
+      inference:
+        provider: anthropic
+        model: claude-test
+```
+
+Trigger：
+
+| trigger | 字段 | 说明 |
+|---|---|---|
+| `manual` | 无额外字段 | 由外部/API/调试工具显式触发。不得配置 `event_types` |
+| `event` | `event_types: string[]` | 由事件类型触发。`event_types` 必须非空 |
+
+Step inference 支持当前已有 provider：
+
+| provider | 必填字段 |
+|---|---|
+| `behavior_tree` | `behavior_tree` |
+| `openai_compatible` | `model` |
+| `anthropic` | `model` |
+
+Phase 1 明确不接受 `model_routed` 作为 workflow step provider。
+
+Validation 规则：
+
+- workflow name、`step.id`、`step.agent` 必须是非空字符串。
+- `steps` 必须非空。
+- 同一 workflow 内 `step.id` 必须唯一。
+- `depends_on` / `input_from` 引用的 step 必须存在。
+- `depends_on` 图必须是 DAG；循环依赖拒绝加载 pack。
+- `input_from` 必须引用当前 step 之前声明且位于 `depends_on` 闭包中的 step。
+- `trigger.type: manual` 时不得配置 `event_types`。
+- `trigger.type: event` 时 `event_types` 必须是非空数组。
+- `failure_policy` Phase 1 只接受缺省或 `narrativize`。
+- `lock_policy` Phase 1 只接受缺省或 `active_steps`。
+- `whole_workflow` 仅为后续内部类型预留；Phase 1 YAML 中出现该值必须拒绝。
+- condition Phase 1 只接受 `{ field, op, value }`。
+- `condition.op` 只接受 `eq` / `neq`。
+- `all_of` / `any_of` 组合条件 Phase 1 拒绝加载。
+
+Condition 字段路径格式：
+
+```text
+<step_id>.<path...>
+```
+
+例如：
+
+```yaml
+condition:
+  field: review.grounding_result.type
+  op: eq
+  value: exact
+```
+
+运行时字段缺失语义固定为 `condition_error`，不能当作 `false`，也不能让 `neq` 成功。`condition_error` 后续按 narrativized fallback 处理。
 
 ## 2.3 变量与宏模板
 

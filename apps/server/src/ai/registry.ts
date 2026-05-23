@@ -574,10 +574,9 @@ const mergeById = <T>(
       merged.set(key, structuredClone(override));
       continue;
     }
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     merged.set(
       key,
-      deepMerge(existing as unknown as Record<string, unknown>, override as unknown as Record<string, unknown>) as unknown as T
+      deepMerge(existing, override as Record<string, unknown>) as unknown as T
     );
   }
   return Array.from(merged.values());

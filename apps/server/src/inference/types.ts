@@ -24,6 +24,27 @@ export type InferenceJobStatus = 'pending' | 'running' | 'completed' | 'failed';
  */
 export type InferenceActionIntentStatus = 'pending' | 'dispatching' | 'completed' | 'failed' | 'dropped';
 
+export interface InferenceWorkflowSource {
+  source_workflow_run_id: string;
+  source_workflow_step_id: string;
+  source_step_attempt: number;
+}
+
+export interface PreviousAgentOutputContent {
+  reasoning: string | null;
+  decision_summary: string | null;
+  grounding_result_type: 'exact' | 'translated' | 'narrativized' | 'blocked';
+  semantic_intent: string | null;
+}
+
+export interface PreviousAgentOutputRecord {
+  source_type: 'previous_agent_output';
+  workflow_run_id: string;
+  step_id: string;
+  agent_id: string;
+  content: PreviousAgentOutputContent;
+}
+
 export interface InferenceRequestInput {
   agent_id?: string;
   identity_id?: string;
@@ -36,6 +57,10 @@ export interface InferenceRequestInput {
   conversation_id?: string;
   /** Multi-turn conversation: the other agent in the conversation */
   listener_agent_id?: string;
+  /** Workflow engine source metadata for trace/action recovery and attribution. */
+  workflow_source?: InferenceWorkflowSource;
+  /** Workflow step input channel keyed by source workflow step id. */
+  previous_agent_output?: Record<string, PreviousAgentOutputRecord>;
 }
 
 export type InferenceJobIntentClass = 'direct_inference' | 'scheduler_periodic' | 'scheduler_event_followup' | 'replay_recovery' | 'retry_recovery' | 'operator_forced';
@@ -259,6 +284,7 @@ export interface InferenceContext extends PromptResolvableContext {
   current_agent_id?: string;
   /** Multi-turn conversation: YAML conversation profile name (e.g. 'chat-first-turn') */
   conversation_profile?: string;
+  previous_agent_output?: Record<string, PreviousAgentOutputRecord>;
 }
 
 export interface InferenceMemoryMutationRecord {
@@ -334,6 +360,9 @@ export interface ActionIntentDraft {
   transmission_drop_chance: number;
   drop_reason: string | null;
   source_inference_id: string;
+  source_workflow_run_id?: string | null;
+  source_workflow_step_id?: string | null;
+  source_step_attempt?: number | null;
 }
 
 export interface InferencePreviewMetadata {
@@ -419,6 +448,9 @@ export interface InferenceActionIntentSnapshot {
   drop_reason: string | null;
   dispatch_error_code: WorkflowFailureCode | null;
   dispatch_error_message: string | null;
+  source_workflow_run_id: string | null;
+  source_workflow_step_id: string | null;
+  source_step_attempt: number | null;
   created_at: string;
   updated_at: string;
 }

@@ -6,13 +6,14 @@ import type { AppContext } from '../../../src/app/context.js';
 import { createRuntimeClockProjectionService } from '../../../src/app/runtime/runtime_clock_projection.js';
 import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 import { getOverviewSummary } from '../../../src/app/services/overview/overview.js';
+import { createVariableRuntimeSpeedSnapshot } from '../../helpers/runtime_speed.js';
 
 vi.mock('../../../src/kernel/projections/operator_overview_service.js', () => ({
   getOperatorOverviewProjection: vi.fn(async () => ({
     runtime: {
       status: 'running',
       runtime_ready: true,
-      runtime_speed: { configured_step_ticks: '1', effective_step_ticks: '1', override_step_ticks: null },
+      runtime_speed: createVariableRuntimeSpeedSnapshot(),
       health_level: 'ok',
       world_pack: null,
       has_error: false,
@@ -63,7 +64,7 @@ const createContext = (): AppContext => {
     getCurrentRevision: () => 7n,
     getPack: () => ({ metadata: { id: 'world-test-pack', name: 'test', version: '0.0.0' } }),
     getStepTicks: () => 1n,
-    getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null }),
+    getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot(),
     setRuntimeSpeedOverride: vi.fn(),
     clearRuntimeSpeedOverride: vi.fn(),
     getAllTimes: () => [],
@@ -115,7 +116,7 @@ const createContext = (): AppContext => {
       pack: { metadata: { id, name: 'test', version: '0.0.0' } } as unknown as import('../../../src/packs/manifest/loader.js').WorldPack,
       getHealthSnapshot: () => ({ status: 'ok', message: null }),
       getClockSnapshot: () => ({ current_tick: '7', current_revision: '7' }),
-      getRuntimeSpeedSnapshot: () => ({ mode: 'fixed' as const, source: 'default' as const, effective_step_ticks: '1', configured_step_ticks: null, override_step_ticks: null, override_since: null })
+      getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot()
     })
   } as unknown as AppContext;
 };
