@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { tick } from '../../src/inference/providers/behavior_tree/evaluator.js';
 import { tickSelector, tickSequence } from '../../src/inference/providers/behavior_tree/nodes/composites.js';
 import type { BTEvalContext, BTNodeDef } from '../../src/inference/providers/behavior_tree/types.js';
 import type { InferenceContext } from '../../src/inference/types.js';
 
-const makeCtx = (overrides: Partial<InferenceContext> = {}): BTEvalContext => ({
+const makeCtx = (_overrides: Partial<InferenceContext> = {}): BTEvalContext => ({
   inferenceContext: {
     tick: BigInt(1),
     pack_state: {
@@ -22,12 +21,6 @@ const makeCtx = (overrides: Partial<InferenceContext> = {}): BTEvalContext => ({
 
 // Action leaf always returns success
 const successAction: BTNodeDef = { type: 'action', action: { kernel: 'noop' } };
-
-// Condition leaf that checks pack_state
-const trueCondition: BTNodeDef = {
-  type: 'condition',
-  condition: { state: 'x', eq: 'x' }
-};
 
 const falseCondition: BTNodeDef = {
   type: 'condition',

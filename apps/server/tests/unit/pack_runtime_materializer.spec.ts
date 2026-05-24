@@ -10,6 +10,7 @@ import { listPackWorldEntities } from '../../src/packs/storage/entity_repo.js';
 import { listPackEntityStates } from '../../src/packs/storage/entity_state_repo.js';
 import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import { listPackMediatorBindings } from '../../src/packs/storage/mediator_repo.js';
+import { expectDefined } from '../helpers/assertions.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 
 const createdRoots: string[] = [];
@@ -286,7 +287,7 @@ describe('pack runtime materializer', () => {
     );
 
     expect(actorState).toBeDefined();
-    const stateJson = actorState!.state_json as Record<string, unknown>;
+    const stateJson = expectDefined(actorState, 'actor alpha state').state_json as Record<string, unknown>;
     const name = String(stateJson.name);
     const trait = String(stateJson.trait);
 
@@ -350,7 +351,7 @@ describe('pack runtime materializer', () => {
     );
 
     expect(worldState).toBeDefined();
-    const stateJson = worldState!.state_json as Record<string, unknown>;
+    const stateJson = expectDefined(worldState, 'world bootstrap state').state_json as Record<string, unknown>;
     const scenario = String(stateJson.scenario);
     const locationType = String(stateJson.location_type);
 

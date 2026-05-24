@@ -4,7 +4,8 @@ import { createModelGateway } from '../../src/ai/gateway.js';
 import type { AiProviderAdapter, AiProviderAdapterResult } from '../../src/ai/providers/types.js';
 import type { AiTaskService } from '../../src/ai/task_service.js';
 import { createAiTaskService } from '../../src/ai/task_service.js';
-import type { AiRegistryConfig } from '../../src/ai/types.js';
+import type { AiRegistryConfig, AiResolvedTaskConfig } from '../../src/ai/types.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 // ── Adapter fixtures ───────────────────────────────────────────────────
 
@@ -46,21 +47,6 @@ const serverErrorResult = (provider: string): AiProviderAdapterResult => ({
   error: {
     code: 'AI_PROVIDER_FAIL',
     message: `${provider} server error`,
-    retryable: true,
-    stage: 'provider'
-  }
-});
-
-const rateLimitResult = (provider: string): AiProviderAdapterResult => ({
-  status: 'failed',
-  finish_reason: 'error',
-  output: { mode: 'json_schema' },
-  usage: undefined,
-  safety: { blocked: false, reason_code: null, provider_signal: null },
-  raw_ref: { provider_request_id: null, provider_response_id: null },
-  error: {
-    code: 'AI_PROVIDER_RATE_LIMIT',
-    message: `${provider} rate limited`,
     retryable: true,
     stage: 'provider'
   }
@@ -122,6 +108,17 @@ const createAiSvc = (adapters: AiProviderAdapter[], registryConfig?: AiRegistryC
   });
 };
 
+const testTaskConfig: AiResolvedTaskConfig = {
+  definition: { task_type: 'agent_decision', default_response_mode: 'json_object', default_prompt_preset: 'default', default_decoder: 'default' },
+  override: null,
+  output: { mode: 'json_object' },
+  prompt: {},
+  parse: {},
+  route: {},
+  tools: [],
+  tool_policy: { mode: 'disabled' }
+};
+
 const runTask = async (svc: AiTaskService) => {
   return svc.runTask({
     task_id: `task-${Date.now()}`,
@@ -129,7 +126,7 @@ const runTask = async (svc: AiTaskService) => {
     pack_id: 'test-pack',
     input: {},
     prompt_context: {
-      messages: [{ role: 'user', parts: [{ type: 'text', text: 'test' }] }]
+      prompt_bundle_v2: { messages: [{ role: 'user', parts: [{ type: 'text', text: 'test' }] }] }
     },
     output_contract: {
       mode: 'json_object'
@@ -216,7 +213,7 @@ describe('AI gateway multi-provider fallback', () => {
     const anthropic = { provider: 'anthropic', execute: vi.fn(async () => completedResult('anthropic')) };
 
     const registry = createMultiProviderRegistry();
-    registry.routes[0].defaults!.allow_fallback = false;
+    expectDefined(registry.routes[0]?.defaults, 'first route defaults').allow_fallback = false;
 
     const gateway = createGateway([openai, anthropic], registry);
     const invocation = await gateway.execute({
@@ -231,9 +228,9 @@ describe('AI gateway multi-provider fallback', () => {
         task_id: 'task-test-allow',
         task_type: 'agent_decision',
         input: {},
-        prompt_context: {}
+        prompt_context: { prompt_bundle_v2: {} }
       },
-      task_config: {} as any
+      task_config: testTaskConfig
     });
 
     expect(invocation.status).toBe('failed');

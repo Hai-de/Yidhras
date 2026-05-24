@@ -34,7 +34,7 @@ const noopRender = (nodes: AstNode[]): string => {
   return nodes.map((n) => (n.type === 'text' ? n.content : '')).join('');
 };
 
-const renderFn = (nodes: AstNode[], scope: RenderScope): string => noopRender(nodes);
+const renderFn = (nodes: AstNode[], _scope: RenderScope): string => noopRender(nodes);
 
 // ── basic functionality ──
 

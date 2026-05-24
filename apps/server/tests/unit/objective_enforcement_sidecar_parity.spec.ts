@@ -13,6 +13,7 @@ import { listPackEntityStates } from '../../src/packs/storage/entity_state_repo.
 import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import { listPackRuleExecutionRecords } from '../../src/packs/storage/rule_execution_repo.js';
+import type { NotificationLevel, SystemMessage } from '../../src/utils/notifications.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 import { createVariableRuntimeSpeedSnapshot } from '../helpers/runtime_speed.js';
@@ -27,13 +28,11 @@ afterEach(() => {
   }
 });
 
-interface AppContextWithConcreteSidecar extends AppContext {
-  worldEngine?: WorldEngineSidecarClient;
-}
-
 const createTestSidecarClient = (): WorldEngineSidecarClient => {
   return new WorldEngineSidecarClient(undefined as WorldEngineSidecarTransport | undefined);
 };
+
+type SidecarTestContext = AppContext & { worldEngine: WorldEngineSidecarClient };
 
 const buildTestContext = (
   pack: ReturnType<typeof parseWorldPackConstitution>,
@@ -41,7 +40,7 @@ const buildTestContext = (
   options?: {
     now?: bigint;
   }
-): any => {
+): SidecarTestContext => {
   const now = options?.now ?? 1000n;
 
   const repos = wrapPrismaAsRepositories({} as PrismaClient);
@@ -82,7 +81,7 @@ const buildTestContext = (
       applyClockProjection: () => {}
     } as unknown as AppContext['packRuntime'],
     notifications: {
-      push(level: string, content: string) {
+      push(level: NotificationLevel, content: string): SystemMessage {
         return { id: 'noop', level, content, timestamp: Date.now() };
       },
       getMessages() {
@@ -108,7 +107,7 @@ const buildTestContext = (
     setRuntimeReady() {
       // noop
     },
-    getPaused() {
+    isPaused() {
       return false;
     },
     setPaused() {
@@ -118,7 +117,7 @@ const buildTestContext = (
       // noop
     },
     worldEngine: createTestSidecarClient()
-  };
+  } as unknown as SidecarTestContext;
 };
 
 describe('objective enforcement sidecar parity', () => {
@@ -319,9 +318,9 @@ describe('objective enforcement sidecar parity', () => {
     expect(secondRecords.at(-1)?.rule_id).toBe(firstRecords.at(-1)?.rule_id);
     expect(secondRecords.at(-1)?.execution_status).toBe(firstRecords.at(-1)?.execution_status);
 
-    await firstContext.worldEngine?.unloadPack({ pack_id: pack.metadata.id });
-    await firstContext.worldEngine?.stop();
-    await secondContext.worldEngine?.unloadPack({ pack_id: pack.metadata.id });
-    await secondContext.worldEngine?.stop();
+    await firstContext.worldEngine.unloadPack({ pack_id: pack.metadata.id });
+    await firstContext.worldEngine.stop();
+    await secondContext.worldEngine.unloadPack({ pack_id: pack.metadata.id });
+    await secondContext.worldEngine.stop();
   });
 });

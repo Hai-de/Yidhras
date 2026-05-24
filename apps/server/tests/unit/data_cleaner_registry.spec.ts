@@ -59,14 +59,14 @@ describe('DataCleanerRegistry', () => {
     const first = {
       key: 'data_cleaner.dedup',
       version: '1.0.0',
-      async clean(input: { text: string; options?: Record<string, unknown> }) {
+      async clean(_input: { text: string; options?: Record<string, unknown> }) {
         return { cleaned: 'first' };
       }
     };
     const second = {
       key: 'data_cleaner.dedup',
       version: '2.0.0',
-      async clean(input: { text: string; options?: Record<string, unknown> }) {
+      async clean(_input: { text: string; options?: Record<string, unknown> }) {
         return { cleaned: 'second' };
       }
     };

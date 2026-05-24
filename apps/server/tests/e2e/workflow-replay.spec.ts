@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { getRootAuthHeadersWithIdentity } from '../helpers/auth.js';
-import { assertRecord, assertStringArrayField, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
+import { assertRecord, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
 import {
   createIsolatedRuntimeEnvironment,
   createPrismaClientForEnvironment,
@@ -15,16 +15,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 
 const DEATH_NOTE_PACK_REF = 'death_note';
 const DEATH_NOTE_AGENT_ID = 'agent-001';
-
-const assertStringArray = (value: unknown, label: string): string[] => {
-  if (!Array.isArray(value) || value.some(item => typeof item !== 'string')) {
-    throw new Error(`${label} should be a string array`);
-  }
-
-  return value;
-};
-
-
 
 const pollJobUntil = async (
   baseUrl: string,

@@ -5,6 +5,7 @@ import type { AppContext } from '../../src/app/context.js';
 import type { PackRuntimePort } from '../../src/app/services/pack/pack_runtime_ports.js';
 import { createPrismaRepositories } from '../../src/app/services/repositories/index.js';
 import { createWorkflowEngine } from '../../src/app/services/workflow/workflow_engine.js';
+import { expectDefined } from '../helpers/assertions.js';
 import type { IsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 import {
   createIsolatedRuntimeEnvironment,
@@ -90,7 +91,7 @@ describe('WorkflowEngine recovery integration', () => {
       }]
     });
     await context.repos.workflowSteps.claimStep({
-      step_run_id: step!.id,
+      step_run_id: expectDefined(step, 'expired workflow step').id,
       worker_id: 'dead-worker',
       now: 95n,
       lock_ticks: 4n

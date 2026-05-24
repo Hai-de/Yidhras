@@ -78,12 +78,11 @@ describe('resolveContextValue', () => {
   });
 
   it('resolves ticks_since_event — event found in recent_events', () => {
-    const ctx = makeEvalCtx();
     // recent_events[0] is post_execution_pressure_feedback at tick... but we don't know the tick.
     // The resolver returns the distance from the *current tick* to the event's tick.
     // For testing without a real tick, we verify the resolver finds the event and returns a number.
     const ctxWithTick = makeEvalCtx();
-    (ctxWithTick.inferenceContext as Record<string, unknown>).tick = BigInt(10);
+    (ctxWithTick.inferenceContext as unknown as Record<string, unknown>).tick = BigInt(10);
     // Set the event tick via the created_at field parsed into tick offsets — actually
     // ticks_since_event needs the actual tick. We'll test through evaluateCondition.
     // This unit test just verifies the resolver returns non-null for found events.
@@ -174,8 +173,6 @@ describe('evaluateCondition', () => {
   });
 
   it('numeric operator on string value → failure (no throw)', () => {
-    const ctx = makeEvalCtx();
-    const cond: BTConditionExpr = { state: 'opening_phase', gte: 0.5 };
     // opening_phase is 'notebook_claimed' at world_state level, but we're querying state (actor_state).
     // Use a string-valued actor_state key instead.
     const ctxWithStr = makeEvalCtx({ actor_state: { name: 'Light' } });
@@ -249,7 +246,7 @@ describe('evaluateCondition', () => {
       { event_id: 'evt-1', title: 'S', type: 'n', semantic_type: 'suspicious_death_occurred', tick: '7', created_at: '2026-01-01T00:00:00Z' }
     ];
     const ctxTick = makeEvalCtx({ recent_events: recentWithTick });
-    (ctxTick.inferenceContext as Record<string, unknown>).tick = BigInt(10);
+    (ctxTick.inferenceContext as unknown as Record<string, unknown>).tick = BigInt(10);
     const cond: BTConditionExpr = { ticks_since_event: 'suspicious_death_occurred', lt: 5 };
     // 10 - 7 = 3 < 5 → success
     expect(evaluateCondition(cond, ctxTick)).toBe(true);
@@ -261,7 +258,7 @@ describe('evaluateCondition', () => {
       { event_id: 'evt-1', title: 'S', type: 'n', semantic_type: 'suspicious_death_occurred', tick: '2', created_at: '2026-01-01T00:00:00Z' }
     ];
     const ctxTick = makeEvalCtx({ recent_events: recentWithTick });
-    (ctxTick.inferenceContext as Record<string, unknown>).tick = BigInt(10);
+    (ctxTick.inferenceContext as unknown as Record<string, unknown>).tick = BigInt(10);
     const cond: BTConditionExpr = { ticks_since_event: 'suspicious_death_occurred', lt: 5 };
     // 10 - 2 = 8 >= 5 → failure
     expect(evaluateCondition(cond, ctxTick)).toBe(false);
@@ -269,7 +266,7 @@ describe('evaluateCondition', () => {
 
   it('ticks_since_event: never occurred → failure', () => {
     const ctx = makeEvalCtx();
-    (ctx.inferenceContext as Record<string, unknown>).tick = BigInt(10);
+    (ctx.inferenceContext as unknown as Record<string, unknown>).tick = BigInt(10);
     const cond: BTConditionExpr = { ticks_since_event: 'never_occurred', lt: 999 };
     expect(evaluateCondition(cond, ctx)).toBe(false);
   });

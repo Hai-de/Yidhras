@@ -5,6 +5,7 @@ import type { AiTaskService } from '../../src/ai/task_service.js';
 import { createAiTaskService } from '../../src/ai/task_service.js';
 import type { AiTaskOverride, AiTaskRequest, ModelGatewayResponse } from '../../src/ai/types.js';
 import type { PromptBundleV2 } from '../../src/inference/prompt_bundle_v2.js';
+import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
 
 const buildCompletedResponse = (input: ModelGatewayExecutionInput): ModelGatewayResponse => ({
   invocation_id: input.request.invocation_id,
@@ -44,10 +45,12 @@ const buildMinimalPromptBundle = (): PromptBundleV2 => ({
       system_slot: {
         id: 'system_slot',
         display_name: 'System',
-        default_priority: 100
+        default_priority: 100,
+        include_in_combined: true,
+        enabled: true
       }
     },
-    resolved_positions: [{ slot_id: 'system_slot', resolved_position: 100 }],
+    resolved_positions: [{ slot_id: 'system_slot', resolved_position: 100, resolution_source: 'explicit', enabled: true }],
     metadata: {
       prompt_version: '1.0',
       profile_id: null,
@@ -92,22 +95,22 @@ describe('AiTaskService', () => {
 
       await service.runTask(buildBaseRequest({ tools }));
 
-      expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest!.request.tools).toEqual(tools);
+      const request = expectDefined(capturedRequest, 'captured request');
+      expect(request.request.tools).toEqual(tools);
     });
 
     it('defaults tools to empty array when not provided', async () => {
       await service.runTask(buildBaseRequest());
 
-      expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest!.request.tools).toEqual([]);
+      const request = expectDefined(capturedRequest, 'captured request');
+      expect(request.request.tools).toEqual([]);
     });
 
     it('defaults tools to empty array when undefined is explicitly passed', async () => {
       await service.runTask(buildBaseRequest({ tools: undefined }));
 
-      expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest!.request.tools).toEqual([]);
+      const request = expectDefined(capturedRequest, 'captured request');
+      expect(request.request.tools).toEqual([]);
     });
   });
 
@@ -117,8 +120,8 @@ describe('AiTaskService', () => {
         tool_policy: { mode: 'allowed', allowed_tool_names: ['get_clock_state'] }
       }));
 
-      expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest!.request.tool_policy).toEqual({
+      const request = expectDefined(capturedRequest, 'captured request');
+      expect(request.request.tool_policy).toEqual({
         mode: 'allowed',
         allowed_tool_names: ['get_clock_state']
       });
@@ -127,15 +130,15 @@ describe('AiTaskService', () => {
     it('defaults tool_policy to disabled when not provided', async () => {
       await service.runTask(buildBaseRequest());
 
-      expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest!.request.tool_policy).toEqual({ mode: 'disabled' });
+      const request = expectDefined(capturedRequest, 'captured request');
+      expect(request.request.tool_policy).toEqual({ mode: 'disabled' });
     });
 
     it('passes tool_policy mode required correctly', async () => {
       await service.runTask(buildBaseRequest({ tool_policy: { mode: 'required' } }));
 
-      expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest!.request.tool_policy).toEqual({ mode: 'required' });
+      const request = expectDefined(capturedRequest, 'captured request');
+      expect(request.request.tool_policy).toEqual({ mode: 'required' });
     });
   });
 
@@ -150,9 +153,9 @@ describe('AiTaskService', () => {
         tool_policy: { mode: 'allowed', max_tool_calls: 5 }
       }));
 
-      expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest!.request.tools).toEqual(tools);
-      expect(capturedRequest!.request.tool_policy).toEqual({ mode: 'allowed', max_tool_calls: 5 });
+      const request = expectDefined(capturedRequest, 'captured request');
+      expect(request.request.tools).toEqual(tools);
+      expect(request.request.tool_policy).toEqual({ mode: 'allowed', max_tool_calls: 5 });
     });
   });
 
@@ -165,11 +168,12 @@ describe('AiTaskService', () => {
 
       await service.runTask(buildBaseRequest(), { inlineOverride: override });
 
-      expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest!.request.tools).toHaveLength(1);
-      expect(capturedRequest!.request.tools![0]!.name).toBe('get_clock_state');
-      expect(capturedRequest!.request.tools![0]!.description).toBe('Get the current simulation clock state including tick and formatted times');
-      expect(capturedRequest!.request.tool_policy).toEqual({ mode: 'allowed' });
+      const request = expectDefined(capturedRequest, 'captured request');
+      expect(request.request.tools).toHaveLength(1);
+      const tool = expectArrayElement(expectDefined(request.request.tools, 'request tools'), 0, 'request tools');
+      expect(tool.name).toBe('get_clock_state');
+      expect(tool.description).toBe('Get the current simulation clock state including tick and formatted times');
+      expect(request.request.tool_policy).toEqual({ mode: 'allowed' });
     });
 
     it('ignores request tools when config has tools', async () => {
@@ -187,10 +191,11 @@ describe('AiTaskService', () => {
         { inlineOverride: override }
       );
 
-      expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest!.request.tools).toHaveLength(1);
-      expect(capturedRequest!.request.tools![0]!.name).toBe('get_clock_state');
-      expect(capturedRequest!.request.tool_policy).toEqual({ mode: 'required' });
+      const request = expectDefined(capturedRequest, 'captured request');
+      expect(request.request.tools).toHaveLength(1);
+      const tool = expectArrayElement(expectDefined(request.request.tools, 'request tools'), 0, 'request tools');
+      expect(tool.name).toBe('get_clock_state');
+      expect(request.request.tool_policy).toEqual({ mode: 'required' });
     });
 
     it('falls back to request tools when config tools is empty', async () => {
@@ -202,9 +207,9 @@ describe('AiTaskService', () => {
         buildBaseRequest({ tools: requestTools, tool_policy: { mode: 'allowed' } })
       );
 
-      expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest!.request.tools).toEqual(requestTools);
-      expect(capturedRequest!.request.tool_policy).toEqual({ mode: 'allowed' });
+      const request = expectDefined(capturedRequest, 'captured request');
+      expect(request.request.tools).toEqual(requestTools);
+      expect(request.request.tool_policy).toEqual({ mode: 'allowed' });
     });
 
     it('resolves multiple tools from registry', async () => {
@@ -215,10 +220,11 @@ describe('AiTaskService', () => {
 
       await service.runTask(buildBaseRequest(), { inlineOverride: override });
 
-      expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest!.request.tools).toHaveLength(2);
-      expect(capturedRequest!.request.tools![0]!.name).toBe('get_clock_state');
-      expect(capturedRequest!.request.tools![1]!.name).toBe('get_entity');
+      const request = expectDefined(capturedRequest, 'captured request');
+      expect(request.request.tools).toHaveLength(2);
+      const tools = expectDefined(request.request.tools, 'request tools');
+      expect(expectArrayElement(tools, 0, 'request tools').name).toBe('get_clock_state');
+      expect(expectArrayElement(tools, 1, 'request tools').name).toBe('get_entity');
     });
 
     it('resolves empty tools when config references nonexistent tool_ids', async () => {
@@ -229,8 +235,8 @@ describe('AiTaskService', () => {
 
       await service.runTask(buildBaseRequest(), { inlineOverride: override });
 
-      expect(capturedRequest).not.toBeNull();
-      expect(capturedRequest!.request.tools).toEqual([]);
+      const request = expectDefined(capturedRequest, 'captured request');
+      expect(request.request.tools).toEqual([]);
     });
   });
 });

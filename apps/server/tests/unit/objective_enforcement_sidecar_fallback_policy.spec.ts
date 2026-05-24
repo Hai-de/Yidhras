@@ -13,6 +13,7 @@ import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/Sqlit
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import { listPackRuleExecutionRecords } from '../../src/packs/storage/rule_execution_repo.js';
 import { ApiError } from '../../src/utils/api_error.js';
+import type { NotificationLevel, SystemMessage } from '../../src/utils/notifications.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 import { createVariableRuntimeSpeedSnapshot } from '../helpers/runtime_speed.js';
@@ -50,7 +51,7 @@ const buildTestContext = (
     now?: bigint;
     worldEngine?: AppContext['worldEngine'];
   }
-): any => {
+): AppContext => {
   const now = options?.now ?? 1000n;
   const sim = {
     getPack(): typeof pack {
@@ -64,7 +65,7 @@ const buildTestContext = (
         return now;
       }
     }
-  } as any;
+  } as unknown as AppContext['packRuntime'];
 
   const repos = wrapPrismaAsRepositories({} as PrismaClient);
 
@@ -74,7 +75,7 @@ const buildTestContext = (
     packStorageAdapter,
     packRuntime: sim as AppContext['packRuntime'],
     notifications: {
-      push(level: string, content: string) {
+      push(level: NotificationLevel, content: string): SystemMessage {
         return { id: 'noop', level, content, timestamp: Date.now() };
       },
       getMessages() {
@@ -127,7 +128,7 @@ const buildTestContext = (
         applyClockProjection: () => {}
       }) as unknown as PackRuntimeHost,
     worldEngine: options?.worldEngine
-  };
+  } as unknown as AppContext;
 };
 
 describe('objective enforcement sidecar fallback policy', () => {

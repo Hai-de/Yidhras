@@ -5,6 +5,7 @@ import type { PromptWorkflowProfile, PromptWorkflowState, PromptWorkflowStepSpec
 import { createInitialPromptWorkflowState } from '../../src/context/workflow/types.js';
 import type { SlotBehaviorProfile } from '../../src/inference/slot_behavior.js';
 import { slotConditionRegistry } from '../../src/plugins/extensions/slot_condition_registry.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 // ── helpers ──
 
@@ -62,6 +63,8 @@ function makeMinimalContext(tick = 100) {
 const minimalProfile: PromptWorkflowProfile = { id: 'p', version: '1', applies_to: {}, steps: [] };
 const minimalSpec: PromptWorkflowStepSpec = { key: 'behavior', kind: 'behavior_control' };
 
+const diagnosticsOf = (state: PromptWorkflowState) => expectDefined(state.slot_behavior_diagnostics, 'slot behavior diagnostics');
+
 // ── tests ──
 
 describe('behavior_control executor — custom evaluator via plugin registry', () => {
@@ -96,7 +99,7 @@ describe('behavior_control executor — custom evaluator via plugin registry', (
       state
     });
 
-    expect(result.slot_behavior_diagnostics!.slots_activated).toContain('test_slot');
+    expect(diagnosticsOf(result).slots_activated).toContain('test_slot');
   });
 
   it('deactivates slot when custom evaluator returns false', async () => {
@@ -125,7 +128,7 @@ describe('behavior_control executor — custom evaluator via plugin registry', (
       state
     });
 
-    expect(result.slot_behavior_diagnostics!.slots_disabled).toContain('test_slot');
+    expect(diagnosticsOf(result).slots_disabled).toContain('test_slot');
   });
 
   it('deactivates slot when custom evaluator not found', async () => {
@@ -148,8 +151,9 @@ describe('behavior_control executor — custom evaluator via plugin registry', (
       state
     });
 
-    expect(result.slot_behavior_diagnostics!.slots_disabled).toContain('test_slot');
-    expect(result.slot_behavior_diagnostics!.evaluation_errors).toHaveLength(0);
+    const diagnostics = diagnosticsOf(result);
+    expect(diagnostics.slots_disabled).toContain('test_slot');
+    expect(diagnostics.evaluation_errors).toHaveLength(0);
   });
 
   it('per-pack isolation: evaluator in other pack is not visible', async () => {
@@ -180,7 +184,7 @@ describe('behavior_control executor — custom evaluator via plugin registry', (
     });
 
     // Evaluator registered in 'other-pack' but state is 'test-pack' → not found → disabled
-    expect(result.slot_behavior_diagnostics!.slots_disabled).toContain('test_slot');
+    expect(diagnosticsOf(result).slots_disabled).toContain('test_slot');
   });
 
   it('evaluator_failure_policy: deactivate on custom evaluator error', async () => {
@@ -207,7 +211,7 @@ describe('behavior_control executor — custom evaluator via plugin registry', (
       state
     });
 
-    expect(result.slot_behavior_diagnostics!.slots_disabled).toContain('test_slot');
+    expect(diagnosticsOf(result).slots_disabled).toContain('test_slot');
   });
 
   it('combines builtin and custom conditions with AND', async () => {
@@ -242,6 +246,6 @@ describe('behavior_control executor — custom evaluator via plugin registry', (
     });
 
     // 'hello' found + 'hello world'.length = 11 > 5 → both true → AND → active
-    expect(result.slot_behavior_diagnostics!.slots_activated).toContain('test_slot');
+    expect(diagnosticsOf(result).slots_activated).toContain('test_slot');
   });
 });

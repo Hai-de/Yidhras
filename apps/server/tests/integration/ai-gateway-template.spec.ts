@@ -6,6 +6,7 @@ import type { AiProviderAdapter, AiProviderAdapterResult } from '../../src/ai/pr
 import type { AiTaskService } from '../../src/ai/task_service.js';
 import { createAiTaskService } from '../../src/ai/task_service.js';
 import type { AiProviderTemplate, AiRegistryConfig } from '../../src/ai/types.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 // ── Fixtures ───────────────────────────────────────────────────────────
 
@@ -58,6 +59,7 @@ const createTestTaskRequest = () => ({
   task_type: 'agent_decision' as const,
   input: {},
   prompt_context: {
+    prompt_bundle_v2: {},
     messages: [{ role: 'user' as const, parts: [{ type: 'text' as const, text: 'test' }] }]
   },
   output_contract: {
@@ -97,8 +99,7 @@ describe('adapter_registry — buildAdaptersFromRegistry', () => {
     const adapters = buildAdaptersFromRegistry(registry);
 
     const custom = adapters.find(a => a.provider === 'custom_provider');
-    expect(custom).toBeDefined();
-    expect(custom!.provider).toBe('custom_provider');
+    expect(expectDefined(custom, 'custom provider adapter').provider).toBe('custom_provider');
   });
 
   it('aliases builtin adapter via template with different name', () => {

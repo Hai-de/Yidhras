@@ -58,17 +58,6 @@ const createMockSpawnedProcess = () => {
   };
 };
 
-/** 查找最近 stdin.write 调用中指定 method 的请求 id */
-const findRpcIdForMethod = (mockProcess: MockProcess, method: string): string | null => {
-  for (let i = mockProcess.stdin.write.mock.calls.length - 1; i >= 0; i--) {
-    const call = mockProcess.stdin.write.mock.calls[i] as [string, ...unknown[]];
-    try {
-      const parsed = JSON.parse(call[0].trim()) as { id: string; method: string };
-      if (parsed.method === method) return parsed.id;
-    } catch { /* skip */ }
-  }
-  return null;
-};
 
 /** Respond to the most recent stdin.write call's request id */
 const respondToLast = (mockProcess: MockProcess, result: unknown) => {
@@ -82,20 +71,6 @@ const respondToLast = (mockProcess: MockProcess, result: unknown) => {
   } catch { /* skip */ }
 };
 
-/** Respond with error to the most recent stdin.write call */
-const respondErrorToLast = (mockProcess: MockProcess, message: string) => {
-  const lastCall = mockProcess.stdin.write.mock.calls[
-    mockProcess.stdin.write.mock.calls.length - 1
-  ] as [string, ...unknown[]] | undefined;
-  if (!lastCall) return;
-  try {
-    const parsed = JSON.parse(lastCall[0].trim()) as { id: string };
-    mockProcess.triggerStdout(
-      JSON.stringify({ jsonrpc: '2.0', id: parsed.id, error: { code: -32603, message } })
-    );
-  } catch { /* skip */ }
-};
-
 const baseOptions: StdioJsonRpcTransportOptions = {
   binaryPath: '',
   projectDir: 'rust/test_sidecar',
@@ -103,8 +78,6 @@ const baseOptions: StdioJsonRpcTransportOptions = {
   heartbeatIntervalMs: 0,
   heartbeatMethod: 'test.health.get',
   heartbeatFailureThreshold: 2,
-  maxRestartAttempts: 3,
-  restartBackoffBaseMs: 50,
   errorCodePrefix: 'TEST_SIDECAR',
   logLabel: 'test-sidecar',
   autoRestart: true

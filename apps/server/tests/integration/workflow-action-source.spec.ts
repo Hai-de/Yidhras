@@ -5,6 +5,7 @@ import type { AppInfrastructure } from '../../src/app/context.js';
 import { createPrismaRepositories } from '../../src/app/services/repositories/index.js';
 import { createPrismaInferenceTraceSink } from '../../src/inference/sinks/prisma.js';
 import type { InferenceTraceEvent } from '../../src/inference/trace_sink.js';
+import { expectDefined } from '../helpers/assertions.js';
 import type { IsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 import {
   createIsolatedRuntimeEnvironment,
@@ -22,6 +23,7 @@ const createTraceEvent = (overrides?: Partial<InferenceTraceEvent>): InferenceTr
       source_adapter_names: [],
       node_count: 0,
       node_counts_by_type: {},
+      selected_node_ids: [],
       selected_node_summaries: [],
       policy_decisions: [],
       blocked_nodes: [],
@@ -35,7 +37,6 @@ const createTraceEvent = (overrides?: Partial<InferenceTraceEvent>): InferenceTr
       approved_directives: [],
       denied_directives: [],
       dropped_nodes: [],
-      orchestration: null,
       prompt_assembly: null
     }
   };
@@ -84,14 +85,39 @@ const createTraceEvent = (overrides?: Partial<InferenceTraceEvent>): InferenceTr
       },
       world_prompts: {},
       visible_variables: {},
+      transmission_profile: {
+        policy: 'reliable',
+        drop_reason: null,
+        delay_ticks: '0',
+        drop_chance: 0,
+        derived_from: []
+      },
+      agent_capabilities: [],
+      variable_context: { layers: [] },
+      variable_context_summary: { namespaces: [], layer_count: 0 },
       policy_summary: {
         social_post_read_allowed: true,
         social_post_readable_fields: [],
         social_post_write_allowed: true,
         social_post_writable_fields: []
       },
-      memory_context: { diagnostics: {} },
-      pack_state: null,
+      memory_context: {
+        short_term: [],
+        long_term: [],
+        summaries: [],
+        diagnostics: {
+          selected_count: 0,
+          skipped_count: 0
+        }
+      },
+      pack_state: {
+        actor_roles: [],
+        actor_state: null,
+        owned_artifacts: [],
+        world_state: null,
+        latest_event: null,
+        recent_events: []
+      },
       pack_runtime: {},
       context_run: contextRun
     } as InferenceTraceEvent['context'],
@@ -106,7 +132,7 @@ const createTraceEvent = (overrides?: Partial<InferenceTraceEvent>): InferenceTr
         fragments_by_slot: {},
         slot_registry: {},
         resolved_positions: [],
-        metadata: { prompt_version: 'test', source_prompt_keys: [] }
+        metadata: { prompt_version: 'test', profile_id: null, profile_version: null, source_prompt_keys: [] }
       }
     },
     trace_metadata: {
@@ -196,7 +222,7 @@ describe('workflow action source persistence', () => {
         }
       },
       action_intent_draft: {
-        ...createTraceEvent().action_intent_draft!,
+        ...expectDefined(createTraceEvent().action_intent_draft, 'default action intent draft'),
         source_inference_id: 'inf-workflow-source-draft',
         source_workflow_run_id: 'wf-run-draft',
         source_workflow_step_id: 'draft-step',

@@ -15,6 +15,7 @@ import {
   executeWorldEnginePreparedStep
 } from '../../../src/app/runtime/world_engine_persistence.js';
 import type { WorldEnginePort } from '../../../src/app/runtime/world_engine_ports.js';
+import type { PackRuntimeEntityStateInput } from '../../../src/packs/runtime/core_models.js';
 import type { PackStorageAdapter } from '../../../src/packs/storage/PackStorageAdapter.js';
 import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 
@@ -34,7 +35,7 @@ const createMockPackStorageAdapter = (): PackStorageAdapter => ({
   importPackData: async () => {}
 });
 
-const createMinimalContext = (): any => {
+const createMinimalContext = (): AppContext => {
   const prisma = {} as never;
   return {
     repos: wrapPrismaAsRepositories(prisma as unknown as PrismaClient),
@@ -57,7 +58,7 @@ const createMinimalContext = (): any => {
   setPaused: vi.fn(),
   worldEngineStepCoordinator: createWorldEngineStepCoordinator(),
   assertRuntimeReady: vi.fn()
-  };
+  } as unknown as AppContext;
 };
 
 const createPreparedEvent = (packId: string, token: string, tick: string): WorldDomainEvent => ({
@@ -355,7 +356,7 @@ describe('world engine persistence orchestration', () => {
         updated_at: 0n
       }));
     });
-    const upsertSpy = vi.spyOn(entityStateRepo, 'upsertPackEntityState').mockImplementation(async (_adapter, input: any) => {
+    const upsertSpy = vi.spyOn(entityStateRepo, 'upsertPackEntityState').mockImplementation(async (_adapter, input: PackRuntimeEntityStateInput) => {
       existingStates.set(`${String(input.entity_id)}:${String(input.state_namespace)}`, {
         id: String(input.id),
         entity_id: String(input.entity_id),

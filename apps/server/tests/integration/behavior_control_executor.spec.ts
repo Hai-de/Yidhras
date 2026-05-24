@@ -4,6 +4,7 @@ import { createBehaviorControlExecutor } from '../../src/context/workflow/execut
 import type { PromptWorkflowProfile, PromptWorkflowState, PromptWorkflowStepSpec  } from '../../src/context/workflow/types.js';
 import { createInitialPromptWorkflowState } from '../../src/context/workflow/types.js';
 import type { SlotBehaviorProfile } from '../../src/inference/slot_behavior.js';
+import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
 
 // ── helpers ──
 
@@ -99,6 +100,12 @@ const makeMinimalContext = () => ({
   transmission_profile: { max_tokens: 4096, temperature: 0.7 }
 });
 
+const diagnosticsOf = (state: PromptWorkflowState) => expectDefined(state.slot_behavior_diagnostics, 'slot behavior diagnostics');
+
+const treeOf = (state: PromptWorkflowState) => expectDefined(state.tree, 'prompt tree');
+
+const fragmentsOf = (state: PromptWorkflowState, slotId: string) => expectDefined(treeOf(state).fragments_by_slot[slotId], `fragments for ${slotId}`);
+
 // ── tests ──
 
 describe('behavior_control executor — integration', () => {
@@ -150,12 +157,12 @@ describe('behavior_control executor — integration', () => {
       state
     });
 
-    expect(result.slot_behavior_diagnostics).toBeDefined();
-    expect(result.slot_behavior_diagnostics!.slots_activated).toContain('always_slot');
-    expect(result.slot_behavior_diagnostics!.slots_disabled).not.toContain('always_slot');
+    const diagnostics = diagnosticsOf(result);
+    expect(diagnostics.slots_activated).toContain('always_slot');
+    expect(diagnostics.slots_disabled).not.toContain('always_slot');
 
     // Fragment should NOT be permission_denied
-    const frags = result.tree!.fragments_by_slot['always_slot'];
+    const frags = fragmentsOf(result, 'always_slot');
     expect(frags?.[0]?.permission_denied).toBe(false);
   });
 
@@ -178,8 +185,8 @@ describe('behavior_control executor — integration', () => {
       state
     });
 
-    expect(result.slot_behavior_diagnostics!.slots_disabled).toContain('test_slot');
-    const frags = result.tree!.fragments_by_slot['test_slot'];
+    expect(diagnosticsOf(result).slots_disabled).toContain('test_slot');
+    const frags = fragmentsOf(result, 'test_slot');
     expect(frags?.[0]?.permission_denied).toBe(true);
   });
 
@@ -202,8 +209,8 @@ describe('behavior_control executor — integration', () => {
       state
     });
 
-    expect(result.slot_behavior_diagnostics!.slots_activated).toContain('test_slot');
-    expect(result.slot_behavior_diagnostics!.slots_disabled).not.toContain('test_slot');
+    expect(diagnosticsOf(result).slots_activated).toContain('test_slot');
+    expect(diagnosticsOf(result).slots_disabled).not.toContain('test_slot');
   });
 
   it('handles evaluator_failure_policy: deactivate (keyword_match fails → slot disabled)', async () => {
@@ -228,7 +235,7 @@ describe('behavior_control executor — integration', () => {
     });
 
     // keyword_match fails → slot should be disabled
-    expect(result.slot_behavior_diagnostics!.slots_disabled).toContain('test_slot');
+    expect(diagnosticsOf(result).slots_disabled).toContain('test_slot');
   });
 
   it('aborts pipeline on evaluator_failure_policy: abort', async () => {
@@ -253,7 +260,7 @@ describe('behavior_control executor — integration', () => {
       state
     });
 
-    expect(result.slot_behavior_diagnostics!.slots_activated).toContain('test_slot');
+    expect(diagnosticsOf(result).slots_activated).toContain('test_slot');
   });
 
   it('evaluates conversation_turn condition', async () => {
@@ -283,7 +290,7 @@ describe('behavior_control executor — integration', () => {
     });
 
     // turn_count = 5 > 3 → activated
-    expect(result.slot_behavior_diagnostics!.slots_activated).toContain('test_slot');
+    expect(diagnosticsOf(result).slots_activated).toContain('test_slot');
   });
 
   it('records diagnostics for each profile', async () => {
@@ -304,9 +311,10 @@ describe('behavior_control executor — integration', () => {
       state
     });
 
-    expect(result.slot_behavior_diagnostics!.profiles_evaluated).toBe(2);
-    expect(result.slot_behavior_diagnostics!.slots_activated).toEqual(['always_slot', 'test_slot']);
-    expect(result.slot_behavior_diagnostics!.evaluation_errors).toEqual([]);
+    const diagnostics = diagnosticsOf(result);
+    expect(diagnostics.profiles_evaluated).toBe(2);
+    expect(diagnostics.slots_activated).toEqual(['always_slot', 'test_slot']);
+    expect(diagnostics.evaluation_errors).toEqual([]);
   });
 
   it('evaluates condition_combination: or', async () => {
@@ -333,7 +341,7 @@ describe('behavior_control executor — integration', () => {
     });
 
     // keyword_match fails but conversation_turn (turn_count=1 > 0) succeeds → OR → active
-    expect(result.slot_behavior_diagnostics!.slots_activated).toContain('test_slot');
+    expect(diagnosticsOf(result).slots_activated).toContain('test_slot');
   });
 
   it('condition_combination: and with both failing', async () => {
@@ -360,7 +368,7 @@ describe('behavior_control executor — integration', () => {
     });
 
     // Both fail → AND → disabled
-    expect(result.slot_behavior_diagnostics!.slots_disabled).toContain('test_slot');
+    expect(diagnosticsOf(result).slots_disabled).toContain('test_slot');
   });
 
   it('evaluates trigger_probability gate', async () => {
@@ -382,7 +390,7 @@ describe('behavior_control executor — integration', () => {
       state
     });
 
-    expect(result.slot_behavior_diagnostics!.slots_disabled).toContain('test_slot');
+    expect(diagnosticsOf(result).slots_disabled).toContain('test_slot');
   });
 });
 
@@ -406,7 +414,7 @@ describe('behavior_control executor — ignore_context_length', () => {
       state
     });
 
-    const frags = result.tree!.fragments_by_slot['test_slot'];
+    const frags = fragmentsOf(result, 'test_slot');
     expect(frags?.[0]?.metadata?.ignore_context_length).toBe(true);
   });
 });
@@ -450,9 +458,9 @@ describe('behavior_control executor — groups', () => {
     });
 
     // slot_b has weight 0 → should be group-disabled
-    expect(result.slot_behavior_diagnostics!.slots_disabled).toContain('slot_b');
+    expect(diagnosticsOf(result).slots_disabled).toContain('slot_b');
     // slot_a should not be disabled
-    const fragsA = result.tree!.fragments_by_slot['slot_a'];
+    const fragsA = fragmentsOf(result, 'slot_a');
     expect(fragsA?.[0]?.permission_denied).toBe(false);
   });
 
@@ -490,8 +498,8 @@ describe('behavior_control executor — groups', () => {
     });
 
     // Both should be activated (priority mode doesn't disable)
-    expect(result.slot_behavior_diagnostics!.slots_activated).toContain('slot_low');
-    expect(result.slot_behavior_diagnostics!.slots_activated).toContain('slot_high');
+    expect(diagnosticsOf(result).slots_activated).toContain('slot_low');
+    expect(diagnosticsOf(result).slots_activated).toContain('slot_high');
   });
 
   it('budget mode: allocates token budget to fragment metadata', async () => {
@@ -528,8 +536,8 @@ describe('behavior_control executor — groups', () => {
     });
 
     // Both activated, with budget allocations on fragments
-    const fragA = result.tree!.fragments_by_slot['slot_a'][0];
-    const fragB = result.tree!.fragments_by_slot['slot_b'][0];
+    const fragA = expectArrayElement(fragmentsOf(result, 'slot_a'), 0, 'slot_a fragments');
+    const fragB = expectArrayElement(fragmentsOf(result, 'slot_b'), 0, 'slot_b fragments');
     // 1:3 ratio from 8192 → ~2048 : ~6144
     expect(fragA?.metadata?.token_budget_allocation).toBe(2048);
     expect(fragB?.metadata?.token_budget_allocation).toBe(6144);

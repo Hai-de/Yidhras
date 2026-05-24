@@ -4,17 +4,19 @@ import type { AppContext } from '../../src/app/context.js'
 import { OPERATOR_STATUS, PACK_BINDING_TYPE } from '../../src/operator/constants.js'
 import { checkPackAccess } from '../../src/operator/guard/pack_access.js'
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js'
+import { expectDefined } from '../helpers/assertions.js'
 
 describe('pack access integration', () => {
   let cleanup: (() => Promise<void>) | null = null
   let context: AppContext
+  const currentTick = () => expectDefined(context.packRuntime, 'pack runtime').getCurrentTick()
 
   beforeAll(async () => {
     const fixture = await createIsolatedAppContextFixture()
     cleanup = fixture.cleanup
     context = fixture.context
 
-    const now = context.packRuntime!.getCurrentTick()
+    const now = currentTick()
 
     // 创建 operators
     await context.prisma.identity.createMany({
@@ -88,8 +90,8 @@ describe('pack access integration', () => {
         operator_id: 'op-alice',
         pack_id: 'pack-3',
         binding_type: PACK_BINDING_TYPE.SPECTATOR,
-        bound_at: context.packRuntime!.getCurrentTick(),
-        created_at: context.packRuntime!.getCurrentTick()
+        bound_at: currentTick(),
+        created_at: currentTick()
       }
     })
 

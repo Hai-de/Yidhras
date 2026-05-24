@@ -71,7 +71,8 @@ describe('contracts — pack_snapshot metadata', () => {
   })
 
   it('rejects missing snapshot_id', () => {
-    const { snapshot_id: _, ...rest } = validMetadata
+    const rest: Partial<typeof validMetadata> = { ...validMetadata }
+    delete rest.snapshot_id
     expect(contracts.packSnapshotMetadataSchema.safeParse(rest).success).toBe(false)
   })
 
@@ -127,7 +128,8 @@ describe('contracts — pack_snapshot prisma data', () => {
   })
 
   it('rejects missing required array', () => {
-    const { agents: _, ...rest } = validPrismaData
+    const rest: Partial<typeof validPrismaData> = { ...validPrismaData }
+    delete rest.agents
     expect(contracts.packSnapshotPrismaDataSchema.safeParse(rest).success).toBe(false)
   })
 

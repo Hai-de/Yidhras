@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { buildPromptBundleV2, buildPromptTree } from '../../src/inference/prompt_builder_v2.js';
 import { walkPromptBlocks } from '../../src/inference/prompt_tree.js';
 import type { InferenceContext, PromptResolvableContext } from '../../src/inference/types.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 type PromptContext = InferenceContext | PromptResolvableContext;
 
@@ -16,7 +17,7 @@ const createMinimalContext = (): PromptContext => ({
   tick: 1n,
   strategy: 'mock' as const,
   attributes: {},
-  world_pack: { id: 'test-pack', name: 'Test Pack', version: '1.0.0' },
+  world_pack: { instance_id: 'test-pack', metadata_id: 'test-pack', name: 'Test Pack', version: '1.0.0' },
   world_prompts: {
     global_prefix: 'Welcome to Test World. Strategy: {{ request.strategy }}'
   },
@@ -24,7 +25,7 @@ const createMinimalContext = (): PromptContext => ({
   variable_context_summary: { namespaces: [], layer_count: 0 },
   context_run: null,
   memory_context: null,
-  pack_state: { actor_roles: [], actor_state: null, owned_artifacts: [], world_state: null, latest_event: null },
+  pack_state: { actor_roles: [], actor_state: null, owned_artifacts: [], world_state: null, latest_event: null, recent_events: [] },
   pack_runtime: { invocation_rules: [] }
 });
 
@@ -131,8 +132,7 @@ describe('PromptBundleV2', () => {
     expect(tree.fragments_by_slot['disabled_slot']).toEqual([]);
     // And appears in resolved_positions with enabled=false
     const disabledPos = tree.resolved_positions.find(p => p.slot_id === 'disabled_slot');
-    expect(disabledPos).toBeDefined();
-    expect(disabledPos!.enabled).toBe(false);
+    expect(expectDefined(disabledPos, 'disabled slot position').enabled).toBe(false);
   });
 
   it('T5: walkPromptBlocks traverses nested conditional blocks', () => {

@@ -13,6 +13,7 @@ import type {
 import type { PromptFragmentV2 } from '../../src/inference/prompt_fragment_v2.js';
 import type { PromptSlotConfig } from '../../src/inference/prompt_slot_config.js';
 import type { PromptTree } from '../../src/inference/prompt_tree.js';
+import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
 
 const SLOT_SYSTEM: PromptSlotConfig = {
   id: 'system_core',
@@ -85,6 +86,14 @@ const buildSpec = (kind: string): PromptWorkflowStepSpec => ({
   kind: kind as PromptWorkflowStepSpec['kind']
 });
 
+const latestTrace = (state: PromptWorkflowState) => expectArrayElement(state.diagnostics.step_traces, 0, 'step traces');
+
+const placementSummaryOf = (state: PromptWorkflowState) => expectDefined(state.diagnostics.placement_summary, 'placement summary');
+
+const treeOf = (state: PromptWorkflowState) => expectDefined(state.tree, 'prompt tree');
+
+const bundleOf = (state: PromptWorkflowState) => expectDefined(state.bundle, 'prompt bundle');
+
 // ── placement_resolution ──
 
 describe('createPlacementResolutionExecutor', () => {
@@ -95,7 +104,7 @@ describe('createPlacementResolutionExecutor', () => {
     await executor.execute({ context: state as never, profile: state.profile, spec: buildSpec('placement_resolution'), state });
     expect(state.section_drafts).toHaveLength(0);
     expect(state.diagnostics.step_traces).toHaveLength(1);
-    expect(state.diagnostics.step_traces[0].notes).toMatchObject({ skipped: true });
+    expect(latestTrace(state).notes).toMatchObject({ skipped: true });
   });
 
   it('preserves slot grouping and orders prepend before append', async () => {
@@ -146,9 +155,9 @@ describe('createPlacementResolutionExecutor', () => {
     };
     const state = buildState({ section_drafts: [target, anchored] });
     await executor.execute({ context: state as never, profile: state.profile, spec: buildSpec('placement_resolution'), state });
-    expect(state.diagnostics.placement_summary).toBeDefined();
-    expect(state.diagnostics.placement_summary!.total_fragments).toBe(2);
-    expect(state.diagnostics.placement_summary!.resolved_with_anchor).toBe(1);
+    const placementSummary = placementSummaryOf(state);
+    expect(placementSummary.total_fragments).toBe(2);
+    expect(placementSummary.resolved_with_anchor).toBe(1);
   });
 });
 
@@ -162,7 +171,7 @@ describe('createFragmentAssemblyExecutor', () => {
     const state = buildState({ section_drafts: [], tree });
     await executor.execute({ context: state as never, profile: state.profile, spec: buildSpec('fragment_assembly'), state });
     expect(state.tree).toBe(tree);
-    expect(state.diagnostics.step_traces[0].notes).toMatchObject({ skipped: true });
+    expect(latestTrace(state).notes).toMatchObject({ skipped: true });
   });
 
   it('builds tree from section_drafts', async () => {
@@ -180,10 +189,11 @@ describe('createFragmentAssemblyExecutor', () => {
     const state = buildState({ section_drafts: [draft], tree });
     await executor.execute({ context: state as never, profile: state.profile, spec: buildSpec('fragment_assembly'), state });
     expect(state.tree).not.toBe(tree);
-    expect(state.tree!.fragments_by_slot['system_core']).toHaveLength(1);
-    const fragment = state.tree!.fragments_by_slot['system_core'][0];
+    const fragments = expectDefined(treeOf(state).fragments_by_slot['system_core'], 'system core fragments');
+    expect(fragments).toHaveLength(1);
+    const fragment = expectArrayElement(fragments, 0, 'system core fragments');
     expect(fragment.slot_id).toBe('system_core');
-    expect(fragment.children[0]).toMatchObject({ kind: 'text' });
+    expect(expectArrayElement(fragment.children, 0, 'fragment children')).toMatchObject({ kind: 'text' });
   });
 });
 
@@ -196,13 +206,13 @@ describe('createPermissionFilterExecutor', () => {
     const tree = buildTree();
     const state = buildState({ tree });
     await executor.execute({ context: state as never, profile: state.profile, spec: buildSpec('permission_filter'), state });
-    expect(state.diagnostics.step_traces[0].notes).toMatchObject({ skipped: true, reason: 'feature flag disabled' });
+    expect(latestTrace(state).notes).toMatchObject({ skipped: true, reason: 'feature flag disabled' });
   });
 
   it('no-ops when tree is missing', async () => {
     const state = buildState({ tree: undefined });
     await executor.execute({ context: state as never, profile: state.profile, spec: buildSpec('permission_filter'), state });
-    expect(state.diagnostics.step_traces[0].notes).toMatchObject({ skipped: true });
+    expect(latestTrace(state).notes).toMatchObject({ skipped: true });
   });
 });
 
@@ -215,24 +225,24 @@ describe('createBundleFinalizeExecutor', () => {
     const tree = buildTree();
     const state = buildState({ tree });
     await executor.execute({ context: state as never, profile: state.profile, spec: buildSpec('bundle_finalize'), state });
-    expect(state.bundle).toBeDefined();
-    expect(state.bundle!.metadata.prompt_version).toBe('2');
-    expect(state.bundle!.tree).toBe(tree);
+    const bundle = bundleOf(state);
+    expect(bundle.metadata.prompt_version).toBe('2');
+    expect(bundle.tree).toBe(tree);
   });
 
   it('backfills workflow metadata into tree', async () => {
     const tree = buildTree();
     const state = buildState({ tree });
     await executor.execute({ context: state as never, profile: state.profile, spec: buildSpec('bundle_finalize'), state });
-    expect(state.tree!.metadata.workflow).toBeDefined();
-    expect(state.tree!.metadata.workflow!.workflow_task_type).toBe('agent_decision');
-    expect(state.tree!.metadata.workflow!.workflow_profile_id).toBe('test-profile');
+    const workflow = expectDefined(treeOf(state).metadata.workflow, 'workflow metadata');
+    expect(workflow.workflow_task_type).toBe('agent_decision');
+    expect(workflow.workflow_profile_id).toBe('test-profile');
   });
 
   it('no-ops when tree is missing', async () => {
     const state = buildState({ tree: undefined });
     await executor.execute({ context: state as never, profile: state.profile, spec: buildSpec('bundle_finalize'), state });
     expect(state.bundle).toBeUndefined();
-    expect(state.diagnostics.step_traces[0].notes).toMatchObject({ skipped: true });
+    expect(latestTrace(state).notes).toMatchObject({ skipped: true });
   });
 });

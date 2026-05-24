@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { SlotContentTransformer } from '../../src/plugins/extensions/slot_content_transformer.js';
 import { slotContentTransformRegistry } from '../../src/plugins/extensions/slot_content_transformer.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 function makeXfm(key: string, version = '1.0.0', append = '_xfm'): SlotContentTransformer {
   return {
@@ -28,8 +29,7 @@ describe('SlotContentTransformRegistry — per-pack isolation', () => {
     slotContentTransformRegistry.register('pack-a', xfm);
 
     const retrieved = slotContentTransformRegistry.get('pack-a', 'slot_transform.test');
-    expect(retrieved).toBeDefined();
-    expect(retrieved!.key).toBe('slot_transform.test');
+    expect(expectDefined(retrieved, 'slot content transformer').key).toBe('slot_transform.test');
   });
 
   it('allows same key in different packs', () => {

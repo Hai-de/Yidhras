@@ -18,7 +18,6 @@ import { getVisibleEntries, runConversationHistoryTrack } from '../../../src/con
 import { assembleConversationMessages } from '../../../src/conversation/assembler.js';
 import { archiveConversationEntriesToColdStorage } from '../../../src/conversation/cold_archive_service.js';
 import type { ConversationFormatConfig } from '../../../src/conversation/format_config.js';
-import { DEFAULT_CONVERSATION_FORMAT_CONFIG } from '../../../src/conversation/format_config.js';
 import { PrismaConversationStore } from '../../../src/conversation/store_prisma.js';
 import type { AgentConversationMemory, ConversationEntry } from '../../../src/conversation/types.js';
 import { createPrismaClient } from '../../../src/db/client.js';
@@ -26,6 +25,7 @@ import type { PromptBundleV2 } from '../../../src/inference/prompt_bundle_v2.js'
 import type { PromptFragmentV2 } from '../../../src/inference/prompt_fragment_v2.js';
 import type { PromptSlotConfig } from '../../../src/inference/prompt_slot_config.js';
 import type { PromptTree } from '../../../src/inference/prompt_tree.js';
+import { expectArrayElement, expectDefined } from '../../helpers/assertions.js';
 
 // ── Test Helpers ───────────────────────────────────────────
 
@@ -312,9 +312,9 @@ describe('D2 — Conversation flow integration', () => {
 
       expect(result.result).toHaveLength(3);
       // embed mode: all entries map to 'transcript'
-      expect(result.result[0].metadata!.entry_role).toBe('transcript');
-      expect(result.result[1].metadata!.entry_role).toBe('transcript');
-      expect(result.result[2].metadata!.entry_role).toBe('transcript');
+      expect(expectDefined(result.result[0].metadata, 'first conversation fragment metadata').entry_role).toBe('transcript');
+      expect(expectDefined(result.result[1].metadata, 'second conversation fragment metadata').entry_role).toBe('transcript');
+      expect(expectDefined(result.result[2].metadata, 'third conversation fragment metadata').entry_role).toBe('transcript');
       expect(result.result[0].removable).toBe(true);
     });
 
@@ -372,8 +372,7 @@ describe('D2 — Conversation flow integration', () => {
       expect(hasAssistant).toBe(true);
 
       const userMsg = messages.find((m) => m.role === 'user');
-      expect(userMsg).toBeDefined();
-      const userText = (userMsg!.parts[0] as { text: string }).text;
+      const userText = (expectArrayElement(expectDefined(userMsg, 'user message').parts, 0, 'user message parts') as { text: string }).text;
       expect(userText).toContain('Hello!');
     });
   });
@@ -442,7 +441,7 @@ describe('D2 — Conversation flow integration', () => {
       });
 
       expect(result.result).toHaveLength(4);
-      expect(result.result[0].metadata!.conversation_entry_kind).toBe('summary');
+      expect(expectDefined(result.result[0].metadata, 'summary fragment metadata').conversation_entry_kind).toBe('summary');
     });
   });
 
@@ -537,7 +536,7 @@ describe('D2 — Conversation flow integration', () => {
         expect(result.deletedCount).toBe(1);
         expect(result.archivePath).toBeTruthy();
 
-        const archiveJson = JSON.parse(await readFile(result.archivePath!, 'utf8')) as {
+        const archiveJson = JSON.parse(await readFile(expectDefined(result.archivePath, 'archive path'), 'utf8')) as {
           schema: string;
           total_entries: number;
           entries: Array<{ id: string; memory_id: string; current_content: string; archived: boolean }>;
@@ -652,8 +651,8 @@ describe('D2 — Conversation flow integration', () => {
       });
 
       // Summary exists → all conversation text folded to developer
-      const devMsg = messages.find((m) => m.role === 'developer')!;
-      const devText = (devMsg.parts[0] as { text: string }).text;
+      const devMsg = expectDefined(messages.find((m) => m.role === 'developer'), 'developer message');
+      const devText = (expectArrayElement(devMsg.parts, 0, 'developer message parts') as { text: string }).text;
       expect(devText).toContain('Summary: early discussion.');
       expect(devText).toContain('Agent A: latest message.');
     });

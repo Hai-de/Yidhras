@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import { dataCleanerRegistry } from '../../src/plugins/extensions/data_cleaner_registry.js'
 import type { ServerPluginHostApi } from '../../src/plugins/runtime.js'
+import { expectDefined } from '../helpers/assertions.js'
+
+const templateCleaner = () => expectDefined(dataCleanerRegistry.get('data_cleaner.template'), 'template cleaner')
 
 const buildHost = () => ({
   registerDataCleaner: (cleaner: Parameters<typeof dataCleanerRegistry.register>[0]) => {
@@ -18,10 +21,9 @@ describe('template-engine plugin integration', () => {
     const host = buildHost()
     activate(host as unknown as ServerPluginHostApi)
 
-    const cleaner = dataCleanerRegistry.get('data_cleaner.template')
-    expect(cleaner).toBeDefined()
-    expect(cleaner!.key).toBe('data_cleaner.template')
-    expect(cleaner!.version).toBe('1.0.0')
+    const cleaner = templateCleaner()
+    expect(cleaner.key).toBe('data_cleaner.template')
+    expect(cleaner.version).toBe('1.0.0')
   })
 
   it('renders template through activated cleaner', async () => {
@@ -31,7 +33,7 @@ describe('template-engine plugin integration', () => {
 
     activate(buildHost() as unknown as ServerPluginHostApi)
 
-    const cleaner = dataCleanerRegistry.get('data_cleaner.template')!
+    const cleaner = templateCleaner()
     const output = await cleaner.clean({
       text: 'Hello {name|upper}, welcome to {place}',
       options: { variables: { name: 'alice', place: 'Wonderland' } }
@@ -47,7 +49,7 @@ describe('template-engine plugin integration', () => {
 
     activate(buildHost() as unknown as ServerPluginHostApi)
 
-    const cleaner = dataCleanerRegistry.get('data_cleaner.template')!
+    const cleaner = templateCleaner()
     const output = await cleaner.clean({
       text: '{{#if show}}yes{{#else}}no{{/if}}',
       options: { variables: { show: true } }
@@ -63,7 +65,7 @@ describe('template-engine plugin integration', () => {
 
     activate(buildHost() as unknown as ServerPluginHostApi)
 
-    const cleaner = dataCleanerRegistry.get('data_cleaner.template')!
+    const cleaner = templateCleaner()
     const output = await cleaner.clean({
       text: 'static content {missing_var}',
       options: {}

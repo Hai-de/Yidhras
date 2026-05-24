@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { hashPassword } from '../../src/operator/auth/password.js'
 import { PACK_BINDING_TYPE } from '../../src/operator/constants.js'
+import { expectDefined } from '../helpers/assertions.js'
 import { createIsolatedRuntimeEnvironment, prepareIsolatedRuntime } from '../helpers/runtime.js'
 import type { RunningServer } from '../support/helpers.js'
 import { isRecord, requestJson } from '../support/helpers.js'
@@ -13,6 +14,8 @@ describe('operator auth e2e', () => {
   let aliceToken = ''
 
   const ROOT_PASSWORD = 'e2e-root-password'
+
+  const serverBaseUrl = () => expectDefined(server, 'running server').baseUrl
 
   beforeAll(async () => {
     const env = await createIsolatedRuntimeEnvironment({
@@ -89,7 +92,7 @@ describe('operator auth e2e', () => {
   })
 
   it('POST /api/auth/login — logs in root operator', async () => {
-    const res = await requestJson(server!.baseUrl, '/api/auth/login', {
+    const res = await requestJson(serverBaseUrl(), '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: 'root', password: ROOT_PASSWORD })
@@ -104,7 +107,7 @@ describe('operator auth e2e', () => {
   })
 
   it('POST /api/auth/login — rejects invalid credentials', async () => {
-    const res = await requestJson(server!.baseUrl, '/api/auth/login', {
+    const res = await requestJson(serverBaseUrl(), '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: 'root', password: 'wrong-password' })
@@ -114,7 +117,7 @@ describe('operator auth e2e', () => {
   })
 
   it('GET /api/auth/session — returns operator info', async () => {
-    const res = await requestJson(server!.baseUrl, '/api/auth/session', {
+    const res = await requestJson(serverBaseUrl(), '/api/auth/session', {
       headers: { Authorization: `Bearer ${rootToken}` }
     })
 
@@ -125,7 +128,7 @@ describe('operator auth e2e', () => {
   })
 
   it('POST /api/operators — root creates operator alice', async () => {
-    const res = await requestJson(server!.baseUrl, '/api/operators', {
+    const res = await requestJson(serverBaseUrl(), '/api/operators', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -139,7 +142,7 @@ describe('operator auth e2e', () => {
 
   it('POST /api/packs/:packId/bindings — root binds alice to pack', async () => {
     const preferredPack = process.env.WORLD_PACK || 'example_pack'
-    const res = await requestJson(server!.baseUrl, `/api/packs/${preferredPack}/bindings`, {
+    const res = await requestJson(serverBaseUrl(), `/api/packs/${preferredPack}/bindings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -152,7 +155,7 @@ describe('operator auth e2e', () => {
   })
 
   it('POST /api/auth/login — alice logs in', async () => {
-    const res = await requestJson(server!.baseUrl, '/api/auth/login', {
+    const res = await requestJson(serverBaseUrl(), '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: 'alice', password: 'alice-password' })
@@ -165,7 +168,7 @@ describe('operator auth e2e', () => {
   })
 
   it('POST /api/auth/logout — logs out alice', async () => {
-    const res = await requestJson(server!.baseUrl, '/api/auth/logout', {
+    const res = await requestJson(serverBaseUrl(), '/api/auth/logout', {
       method: 'POST',
       headers: { Authorization: `Bearer ${aliceToken}` }
     })

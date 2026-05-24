@@ -4,6 +4,7 @@ import { confirmPackPluginImport, disablePackPlugin, enablePackPlugin } from '..
 import { pluginRuntimeRegistry,refreshPackPluginRuntime } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 const REMINDER_HASH = '03ee763729f5fe81f03478a3b0f487ff6c8dfc779f7e9b8d88a6d016dc17edfb';
 
@@ -72,7 +73,7 @@ describe('plugin runtime refresh integration', () => {
         trust_mode: 'trusted'
       });
 
-      fixture.context.packRuntime!.getPack = () => ({
+      expectDefined(fixture.context.packRuntime, 'pack runtime').getPack = () => ({
         metadata: { id: 'world-pack-runtime', name: 'Runtime Pack', version: '0.1.0' }
       }) as never;
       fixture.context.getPluginEnableWarningConfig = () => ({

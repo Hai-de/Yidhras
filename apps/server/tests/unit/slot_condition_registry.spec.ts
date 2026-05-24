@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import type { SlotConditionEvaluator } from '../../src/plugins/extensions/slot_condition_registry.js';
 import { slotConditionRegistry } from '../../src/plugins/extensions/slot_condition_registry.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 function makeEval(key: string, version = '1.0.0', alwaysActive = true): SlotConditionEvaluator {
   return {
     key,
     version,
-    evaluate: async (ctx) => ({ active: alwaysActive, reason: `mock: ${key}` })
+    evaluate: async () => ({ active: alwaysActive, reason: `mock: ${key}` })
   };
 }
 
@@ -26,8 +27,7 @@ describe('SlotConditionRegistry — per-pack isolation', () => {
     slotConditionRegistry.register('pack-a', evaluator);
 
     const retrieved = slotConditionRegistry.get('pack-a', 'slot_condition.test');
-    expect(retrieved).toBeDefined();
-    expect(retrieved!.key).toBe('slot_condition.test');
+    expect(expectDefined(retrieved, 'slot condition evaluator').key).toBe('slot_condition.test');
   });
 
   it('allows same key in different packs', () => {

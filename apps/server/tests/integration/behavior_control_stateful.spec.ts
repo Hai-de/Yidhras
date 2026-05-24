@@ -8,6 +8,7 @@ import { createBehaviorControlExecutor } from '../../src/context/workflow/execut
 import type { PromptWorkflowProfile, PromptWorkflowState, PromptWorkflowStepSpec  } from '../../src/context/workflow/types.js';
 import { createInitialPromptWorkflowState } from '../../src/context/workflow/types.js';
 import type { SlotBehaviorProfile } from '../../src/inference/slot_behavior.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 // ── Helpers ──
 
@@ -83,6 +84,13 @@ function makeMinimalContext(tick = 100) {
   };
 }
 
+const diagnosticsOf = (state: PromptWorkflowState) => expectDefined(state.slot_behavior_diagnostics, 'slot behavior diagnostics');
+
+const behaviorStateOf = (state: PromptWorkflowState, slotId: string) => {
+  const states = expectDefined(state.behavior_states, 'behavior states');
+  return expectDefined(states[slotId], `behavior state ${slotId}`);
+};
+
 // ── Tests ──
 
 describe('behavior_control executor — stateful', () => {
@@ -116,13 +124,13 @@ describe('behavior_control executor — stateful', () => {
       state: state1
     });
 
-    expect(result1.slot_behavior_diagnostics!.slots_activated).toContain('test_slot');
+    expect(diagnosticsOf(result1).slots_activated).toContain('test_slot');
 
     // Verify state is in store
     const stored = store.getState('test_slot', 'test-pack');
-    expect(stored).toBeDefined();
-    expect(stored!.status).toBe('Active');
-    expect(stored!.sticky_remaining).toBe(2);
+    const storedState = expectDefined(stored, 'stored behavior state');
+    expect(storedState.status).toBe('Active');
+    expect(storedState.sticky_remaining).toBe(2);
 
     // Run 2: same slot — should be in Retained state (sticky)
     const state2 = makeMinimalState({
@@ -141,8 +149,8 @@ describe('behavior_control executor — stateful', () => {
     });
 
     // Sticky should still activate (Retained state skips condition eval)
-    expect(result2.slot_behavior_diagnostics!.slots_activated).toContain('test_slot');
-    expect(result2.behavior_states!['test_slot'].sticky_remaining).toBe(1);
+    expect(diagnosticsOf(result2).slots_activated).toContain('test_slot');
+    expect(behaviorStateOf(result2, 'test_slot').sticky_remaining).toBe(1);
   });
 
   it('cooldown prevents activation across runs', async () => {
@@ -164,9 +172,9 @@ describe('behavior_control executor — stateful', () => {
       state: state1
     });
 
-    expect(result1.slot_behavior_diagnostics!.slots_activated).toContain('test_slot');
+    expect(diagnosticsOf(result1).slots_activated).toContain('test_slot');
     // Active → Cooling transition happens at end of activation cycle
-    expect(result1.behavior_states!['test_slot'].status).toBe('Active');
+    expect(behaviorStateOf(result1, 'test_slot').status).toBe('Active');
 
     // Run 2 (tick=3): Active → Cooling (transitions to Cooling, activation overridden)
     const state2 = makeMinimalState({
@@ -185,8 +193,8 @@ describe('behavior_control executor — stateful', () => {
     });
 
     // Post-transition override: Cooling → slot disabled
-    expect(result2.slot_behavior_diagnostics!.slots_disabled).toContain('test_slot');
-    expect(result2.behavior_states!['test_slot'].status).toBe('Cooling');
+    expect(diagnosticsOf(result2).slots_disabled).toContain('test_slot');
+    expect(behaviorStateOf(result2, 'test_slot').status).toBe('Cooling');
 
     // Run 3 (tick=10): Cooling → Pending (cooldown elapsed), slot activated again
     const state3 = makeMinimalState({
@@ -205,7 +213,7 @@ describe('behavior_control executor — stateful', () => {
     });
 
     // cooldown elapsed at tick=10 (cooldown_until_tick was 6 or 8 depending on timing)
-    expect(result3.slot_behavior_diagnostics!.slots_activated).toContain('test_slot');
+    expect(diagnosticsOf(result3).slots_activated).toContain('test_slot');
   });
 
   it('delayed_trigger adds latency across runs', async () => {
@@ -228,8 +236,8 @@ describe('behavior_control executor — stateful', () => {
     });
 
     // Post-transition: Delayed → override to inactive
-    expect(result1.slot_behavior_diagnostics!.slots_disabled).toContain('test_slot');
-    expect(result1.behavior_states!['test_slot'].status).toBe('Delayed');
+    expect(diagnosticsOf(result1).slots_disabled).toContain('test_slot');
+    expect(behaviorStateOf(result1, 'test_slot').status).toBe('Delayed');
 
     // Run 2 (tick=2): Still Delayed (delay_until_tick=4), Delayed check in evaluateSlotActivation catches it
     const state2 = makeMinimalState({
@@ -247,8 +255,8 @@ describe('behavior_control executor — stateful', () => {
       state: state2
     });
 
-    expect(result2.slot_behavior_diagnostics!.slots_disabled).toContain('test_slot');
-    expect(result2.behavior_states!['test_slot'].status).toBe('Delayed');
+    expect(diagnosticsOf(result2).slots_disabled).toContain('test_slot');
+    expect(behaviorStateOf(result2, 'test_slot').status).toBe('Delayed');
 
     // Run 3 (tick=5): Delay elapsed → Active, slot activated
     const state3 = makeMinimalState({
@@ -266,8 +274,8 @@ describe('behavior_control executor — stateful', () => {
       state: state3
     });
 
-    expect(result3.slot_behavior_diagnostics!.slots_activated).toContain('test_slot');
-    expect(result3.behavior_states!['test_slot'].status).toBe('Active');
+    expect(diagnosticsOf(result3).slots_activated).toContain('test_slot');
+    expect(behaviorStateOf(result3, 'test_slot').status).toBe('Active');
   });
 
   it('state store loads previous state across runs', async () => {
@@ -296,9 +304,9 @@ describe('behavior_control executor — stateful', () => {
     });
 
     // Still cooling at tick=10 → should be disabled
-    expect(result.slot_behavior_diagnostics!.slots_disabled).toContain('pre_existing');
+    expect(diagnosticsOf(result).slots_disabled).toContain('pre_existing');
     // Should have loaded the pre-existing state
-    expect(result.behavior_states!['pre_existing'].trigger_count).toBe(5);
+    expect(behaviorStateOf(result, 'pre_existing').trigger_count).toBe(5);
   });
 
   it('clears state for conversation scope', () => {

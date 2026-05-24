@@ -14,6 +14,7 @@ import { listPackEntityStates } from '../../src/packs/storage/entity_state_repo.
 import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import { listPackRuleExecutionRecords } from '../../src/packs/storage/rule_execution_repo.js';
+import type { NotificationLevel, SystemMessage } from '../../src/utils/notifications.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 import { createVariableRuntimeSpeedSnapshot } from '../helpers/runtime_speed.js';
@@ -28,15 +29,13 @@ afterEach(() => {
   }
 });
 
-interface AppContextWithConcreteSidecar extends AppContext {
-  worldEngine: WorldEngineSidecarClient;
-}
-
 const createTestSidecarClient = (): WorldEngineSidecarClient => {
   return new WorldEngineSidecarClient(undefined as WorldEngineSidecarTransport | undefined);
 };
 
-const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, packStorageAdapter: PackStorageAdapter, now = 1000n): any => {
+type SidecarTestContext = AppContext & { worldEngine: WorldEngineSidecarClient };
+
+const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, packStorageAdapter: PackStorageAdapter, now = 1000n): SidecarTestContext => {
   const sim = {
     getPack(): typeof pack {
       return pack;
@@ -49,7 +48,7 @@ const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, p
         return now;
       }
     }
-  } as any;
+  } as unknown as AppContext['packRuntime'];
 
   const repos = wrapPrismaAsRepositories({} as PrismaClient);
 
@@ -59,7 +58,7 @@ const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, p
     packStorageAdapter,
     packRuntime: sim as AppContext['packRuntime'],
     notifications: {
-      push(level: string, content: string) {
+      push(level: NotificationLevel, content: string): SystemMessage {
         return { id: 'noop', level, content, timestamp: Date.now() };
       },
       getMessages() {
@@ -112,7 +111,7 @@ const buildTestContext = (pack: ReturnType<typeof parseWorldPackConstitution>, p
         applyClockProjection: () => {}
       }) as unknown as PackRuntimeHost,
     worldEngine: createTestSidecarClient()
-  };
+  } as unknown as SidecarTestContext;
 };
 
 describe('objective enforcement engine via sidecar', () => {

@@ -18,6 +18,7 @@ import type { PromptBundleV2 } from '../../../src/inference/prompt_bundle_v2.js'
 import type { PromptFragmentV2 } from '../../../src/inference/prompt_fragment_v2.js';
 import type { PromptSlotConfig } from '../../../src/inference/prompt_slot_config.js';
 import type { PromptTree } from '../../../src/inference/prompt_tree.js';
+import { expectArrayElement, expectDefined } from '../../helpers/assertions.js';
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -200,8 +201,7 @@ describe('Conversation pipeline edge cases', () => {
       });
 
       const userMsg = messages.find((m) => m.role === 'user');
-      expect(userMsg).toBeDefined();
-      const text = (userMsg!.parts[0] as { text: string }).text;
+      const text = (expectArrayElement(expectDefined(userMsg, 'user message').parts, 0, 'user message parts') as { text: string }).text;
       expect(text).toContain('Mystery content.');
     });
   });
@@ -297,7 +297,7 @@ describe('Conversation pipeline edge cases', () => {
       });
 
       const userMsg = messages.find((m) => m.role === 'user');
-      const text = (userMsg!.parts[0] as { text: string }).text;
+      const text = (expectArrayElement(expectDefined(userMsg, 'user message').parts, 0, 'user message parts') as { text: string }).text;
       expect(text).toContain('Valid content.');
       expect(text).not.toContain('frag-empty');
     });
@@ -319,7 +319,7 @@ describe('Conversation pipeline edge cases', () => {
       });
 
       const userMsg = messages.find((m) => m.role === 'user');
-      const text = (userMsg!.parts[0] as { text: string }).text;
+      const text = (expectArrayElement(expectDefined(userMsg, 'user message').parts, 0, 'user message parts') as { text: string }).text;
       expect(text).toContain('Should appear.');
       expect(text).not.toContain('Should not appear.');
     });
@@ -390,11 +390,11 @@ describe('Conversation pipeline edge cases', () => {
       expect(messages.some((m) => m.role === 'assistant')).toBe(false);
 
       // Verify content is present
-      const systemMsg = messages.find((m) => m.role === 'system')!;
+      const systemMsg = expectDefined(messages.find((m) => m.role === 'system'), 'system message');
       const systemText = (systemMsg.parts[0] as { text: string }).text;
       expect(systemText).toContain('System core.');
 
-      const userMsg = messages.find((m) => m.role === 'user')!;
+      const userMsg = expectDefined(messages.find((m) => m.role === 'user'), 'user message');
       const userText = (userMsg.parts[0] as { text: string }).text;
       expect(userText).toContain('Return JSON.');
     });
@@ -421,8 +421,7 @@ describe('Conversation pipeline edge cases', () => {
 
       // User message should contain the full transcript (Phase 1: all entries embedded)
       const userMsg = messages.find((m) => m.role === 'user');
-      expect(userMsg).toBeDefined();
-      const userText = (userMsg!.parts[0] as { text: string }).text;
+      const userText = (expectArrayElement(expectDefined(userMsg, 'user message').parts, 0, 'user message parts') as { text: string }).text;
       expect(userText).toContain('Hi from B.');
       expect(userText).toContain('Good, thanks!');
       // In Phase 1, ALL conversation entries (including own agent's) are
@@ -451,7 +450,7 @@ describe('Conversation pipeline edge cases', () => {
 
       // All entries (even assistant role) go into user message in Phase 1
       const userMsg = messages.find((m) => m.role === 'user');
-      const userText = (userMsg!.parts[0] as { text: string }).text;
+      const userText = (expectArrayElement(expectDefined(userMsg, 'user message').parts, 0, 'user message parts') as { text: string }).text;
       expect(userText).toContain('Monologue 1.');
       expect(userText).toContain('Monologue 2.');
       expect(messages.some((m) => m.role === 'assistant')).toBe(true);
@@ -474,8 +473,9 @@ describe('Conversation pipeline edge cases', () => {
       };
 
       // With null memory and null bundle, messages should be null
-      expect(taskRequest.prompt_context!.agent_conversation_memory).toBeNull();
-      expect(taskRequest.prompt_context!.prompt_bundle_v2).toBeNull();
+      const promptContext = expectDefined(taskRequest.prompt_context, 'task request prompt context');
+      expect(promptContext.agent_conversation_memory).toBeNull();
+      expect(promptContext.prompt_bundle_v2).toBeNull();
     });
 
     it('AiTaskRequest with conversation memory carries all required fields', () => {
@@ -494,9 +494,10 @@ describe('Conversation pipeline edge cases', () => {
         }
       };
 
-      expect(taskRequest.prompt_context!.agent_conversation_memory).toBeDefined();
-      expect(taskRequest.prompt_context!.current_agent_id).toBe('agent-a');
-      expect(taskRequest.prompt_context!.conversation_profile).toBe('chat-first-turn');
+      const promptContext = expectDefined(taskRequest.prompt_context, 'task request prompt context');
+      expect(promptContext.agent_conversation_memory).toBeDefined();
+      expect(promptContext.current_agent_id).toBe('agent-a');
+      expect(promptContext.conversation_profile).toBe('chat-first-turn');
     });
   });
 
@@ -672,7 +673,7 @@ describe('Conversation pipeline edge cases', () => {
       });
 
       // Summary exists → conversation text should fold into system
-      const systemMsg = messages.find((m) => m.role === 'system')!;
+      const systemMsg = expectDefined(messages.find((m) => m.role === 'system'), 'system message');
       const systemText = (systemMsg.parts[0] as { text: string }).text;
       expect(systemText).toContain('Summary of early turns.');
       expect(systemText).toContain('Ongoing chat.');
@@ -692,7 +693,7 @@ describe('Conversation pipeline edge cases', () => {
       });
 
       // No summary → conversation should stay in user role
-      const systemMsg = messages.find((m) => m.role === 'system')!;
+      const systemMsg = expectDefined(messages.find((m) => m.role === 'system'), 'system message');
       const systemText = (systemMsg.parts[0] as { text: string }).text;
       expect(systemText).not.toContain('Regular chat.');
     });

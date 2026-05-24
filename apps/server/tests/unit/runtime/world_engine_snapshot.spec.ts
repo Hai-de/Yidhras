@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { AppContext } from '../../../src/app/context.js';
 import { buildWorldPackHydrateRequest, buildWorldPackSnapshot } from '../../../src/app/runtime/world_engine_snapshot.js';
-import type { SimulationManager } from '../../../src/core/simulation.js';
 import { SqlitePackStorageAdapter } from '../../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 import { createVariableRuntimeSpeedSnapshot } from '../../helpers/runtime_speed.js';

@@ -13,10 +13,10 @@ describe('pack access guard', () => {
     mockFindPackBinding = vi.fn()
     const sim = {
       getCurrentTick: () => 1000n
-    } as any
+    } as unknown as AppContext['packRuntime']
     const prisma = {} as unknown as AppContext['prisma'];
     const repos = wrapPrismaAsRepositories(prisma as PrismaClient);
-    (repos as any).identityOperator = {
+    (repos as { identityOperator: typeof repos.identityOperator }).identityOperator = {
       getPrisma: () => prisma as PrismaClient,
       findPackBinding: mockFindPackBinding
     } as unknown as typeof repos.identityOperator;
@@ -25,7 +25,7 @@ describe('pack access guard', () => {
       prisma,
       repos,
       sim,
-      clock: sim as any,
+      clock: sim,
       packRuntime: sim as AppContext['packRuntime']
     } as unknown as AppContext
   })

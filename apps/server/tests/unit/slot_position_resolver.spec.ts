@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { PromptSlotConfig } from '../../src/inference/prompt_slot_config.js';
 import { allocatePosition, resolveSlotPositions } from '../../src/inference/slot_position_resolver.js';
+import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
 
 const mkSlot = (
   id: string,
@@ -21,7 +22,7 @@ const ids = (results: ReturnType<typeof resolveSlotPositions>['resolved_position
 const resolved = (
   results: ReturnType<typeof resolveSlotPositions>['resolved_positions'],
   slotId: string
-) => results.find(r => r.slot_id === slotId);
+) => expectDefined(results.find(r => r.slot_id === slotId), `resolved slot ${slotId}`);
 
 // ═══════════════════════════════════════════════════════════════
 // 1. Pure numeric sorting
@@ -37,8 +38,8 @@ describe('pure numeric position sorting', () => {
     const { resolved_positions } = resolveSlotPositions(configs);
 
     expect(ids(resolved_positions)).toEqual(['b', 'c', 'a']);
-    expect(resolved_positions[0].resolved_position).toBe(100);
-    expect(resolved_positions[2].resolved_position).toBe(30);
+    expect(expectArrayElement(resolved_positions, 0, 'resolved positions').resolved_position).toBe(100);
+    expect(expectArrayElement(resolved_positions, 2, 'resolved positions').resolved_position).toBe(30);
   });
 
   it('marks resolution_source as explicit when position is set', () => {
@@ -48,7 +49,7 @@ describe('pure numeric position sorting', () => {
 
     const { resolved_positions } = resolveSlotPositions(configs);
 
-    expect(resolved_positions[0].resolution_source).toBe('explicit');
+    expect(expectArrayElement(resolved_positions, 0, 'resolved positions').resolution_source).toBe('explicit');
   });
 
   it('falls back to default_priority when position is undefined', () => {
@@ -60,8 +61,8 @@ describe('pure numeric position sorting', () => {
     const { resolved_positions } = resolveSlotPositions(configs);
 
     expect(ids(resolved_positions)).toEqual(['a', 'b']);
-    expect(resolved(resolved_positions, 'a')!.resolution_source).toBe('default');
-    expect(resolved(resolved_positions, 'a')!.resolved_position).toBe(80);
+    expect(resolved(resolved_positions, 'a').resolution_source).toBe('default');
+    expect(resolved(resolved_positions, 'a').resolved_position).toBe(80);
   });
 });
 
@@ -79,7 +80,7 @@ describe('pure anchor sorting', () => {
     const { resolved_positions } = resolveSlotPositions(configs);
 
     // core=100, world=70, custom after core → between 100 and 70 → 85
-    const customPos = resolved(resolved_positions, 'custom')!.resolved_position;
+    const customPos = resolved(resolved_positions, 'custom').resolved_position;
     expect(customPos).toBeLessThan(100);
     expect(customPos).toBeGreaterThan(70);
     expect(ids(resolved_positions)).toEqual(['core', 'custom', 'world']);
@@ -95,7 +96,7 @@ describe('pure anchor sorting', () => {
     const { resolved_positions } = resolveSlotPositions(configs);
 
     // world=70, core=100, custom before world → between 70 and 100 → 85
-    const customPos = resolved(resolved_positions, 'custom')!.resolved_position;
+    const customPos = resolved(resolved_positions, 'custom').resolved_position;
     expect(customPos).toBeGreaterThan(70);
     expect(customPos).toBeLessThan(100);
     expect(ids(resolved_positions)).toEqual(['core', 'custom', 'world']);
@@ -111,7 +112,7 @@ describe('pure anchor sorting', () => {
 
     // last=30, afterLast after last → between 30 and 0 → 15
     expect(ids(resolved_positions)).toEqual(['last', 'afterLast']);
-    expect(resolved(resolved_positions, 'afterLast')!.resolved_position).toBeLessThan(30);
+    expect(resolved(resolved_positions, 'afterLast').resolved_position).toBeLessThan(30);
   });
 
   it('handles before anchor at the first (highest) position', () => {
@@ -124,7 +125,7 @@ describe('pure anchor sorting', () => {
 
     // first=100, beforeFirst before first → between 100 and 110 → 105
     expect(ids(resolved_positions)).toEqual(['beforeFirst', 'first']);
-    expect(resolved(resolved_positions, 'beforeFirst')!.resolved_position).toBeGreaterThan(100);
+    expect(resolved(resolved_positions, 'beforeFirst').resolved_position).toBeGreaterThan(100);
   });
 
   it('marks resolution_source as anchor for resolved anchors', () => {
@@ -135,7 +136,7 @@ describe('pure anchor sorting', () => {
 
     const { resolved_positions } = resolveSlotPositions(configs);
 
-    expect(resolved(resolved_positions, 'custom')!.resolution_source).toBe('anchor');
+    expect(resolved(resolved_positions, 'custom').resolution_source).toBe('anchor');
   });
 
   it('resolves transitive anchor chains', () => {
@@ -150,8 +151,8 @@ describe('pure anchor sorting', () => {
     expect(diagnostics.warnings).toHaveLength(0);
     // core=100, a after core, b after a — b < a < core
     expect(ids(resolved_positions)).toEqual(['core', 'a', 'b']);
-    const aPos = resolved(resolved_positions, 'a')!.resolved_position;
-    const bPos = resolved(resolved_positions, 'b')!.resolved_position;
+    const aPos = resolved(resolved_positions, 'a').resolved_position;
+    const bPos = resolved(resolved_positions, 'b').resolved_position;
     expect(bPos).toBeLessThan(aPos);
   });
 });
@@ -172,7 +173,7 @@ describe('mixed position and anchor', () => {
 
     // custom is after core, not at 999
     expect(ids(resolved_positions)).toEqual(['core', 'custom', 'world']);
-    expect(resolved(resolved_positions, 'custom')!.resolution_source).toBe('anchor');
+    expect(resolved(resolved_positions, 'custom').resolution_source).toBe('anchor');
   });
 
   it('positions resolve relative to each other with mixed strategies', () => {
@@ -212,7 +213,7 @@ describe('disabled slot as anchor target', () => {
     expect(diagnostics.warnings).toHaveLength(0);
     expect(ids(resolved_positions)).toEqual(['core', 'custom', 'world']);
     // disabled slot is still in results
-    expect(resolved(resolved_positions, 'core')!.enabled).toBe(false);
+    expect(resolved(resolved_positions, 'core').enabled).toBe(false);
   });
 
   it('disabled slots remain in resolved_positions', () => {
@@ -224,7 +225,7 @@ describe('disabled slot as anchor target', () => {
     const { resolved_positions } = resolveSlotPositions(configs);
 
     expect(resolved_positions).toHaveLength(2);
-    expect(resolved(resolved_positions, 'a')).toBeDefined();
+    expect(resolved(resolved_positions, 'a').slot_id).toBe('a');
   });
 });
 
@@ -285,11 +286,11 @@ describe('missing anchor ref', () => {
 
     const orphanWarnings = diagnostics.warnings.filter(w => w.slot_id === 'orphan');
     expect(orphanWarnings).toHaveLength(1);
-    expect(orphanWarnings[0].code).toBe('anchor_ref_not_found');
-    expect(orphanWarnings[0].fallback_position).toBe(60);
+    expect(expectArrayElement(orphanWarnings, 0, 'orphan warnings').code).toBe('anchor_ref_not_found');
+    expect(expectArrayElement(orphanWarnings, 0, 'orphan warnings').fallback_position).toBe(60);
     // orphan falls back to its position
-    expect(resolved(resolved_positions, 'orphan')!.resolution_source).toBe('default');
-    expect(resolved(resolved_positions, 'orphan')!.resolved_position).toBe(60);
+    expect(resolved(resolved_positions, 'orphan').resolution_source).toBe('default');
+    expect(resolved(resolved_positions, 'orphan').resolved_position).toBe(60);
   });
 
   it('falls back to default_priority when position is not set and ref is missing', () => {
@@ -304,7 +305,7 @@ describe('missing anchor ref', () => {
     const { diagnostics } = resolveSlotPositions(configs);
 
     const orphanWarnings = diagnostics.warnings.filter(w => w.slot_id === 'orphan');
-    expect(orphanWarnings[0].fallback_position).toBe(40);
+    expect(expectArrayElement(orphanWarnings, 0, 'orphan warnings').fallback_position).toBe(40);
   });
 });
 
@@ -337,8 +338,8 @@ describe('position collision handling', () => {
 
     const collisions = diagnostics.warnings.filter(w => w.code === 'position_collision');
     expect(collisions).toHaveLength(2);
-    expect(collisions[0].message).toContain('b');
-    expect(collisions[1].message).toContain('a');
+    expect(expectArrayElement(collisions, 0, 'collisions').message).toContain('b');
+    expect(expectArrayElement(collisions, 1, 'collisions').message).toContain('a');
   });
 });
 
@@ -366,7 +367,7 @@ describe('deep subdivision limit', () => {
 
     // All inserted slots should be between 90 and 100
     for (let i = 0; i < 10; i++) {
-      const pos = resolved(resolved_positions, `s${i}`)!.resolved_position;
+      const pos = resolved(resolved_positions, `s${i}`).resolved_position;
       expect(pos).toBeLessThan(100);
       expect(pos).toBeGreaterThanOrEqual(90 - 0.01); // linear probing may go slightly below
     }
@@ -385,8 +386,8 @@ describe('backward compatibility', () => {
     const { resolved_positions } = resolveSlotPositions(configs);
 
     expect(resolved_positions).toHaveLength(1);
-    expect(resolved_positions[0].resolved_position).toBe(75);
-    expect(resolved_positions[0].resolution_source).toBe('default');
+    expect(expectArrayElement(resolved_positions, 0, 'resolved positions').resolved_position).toBe(75);
+    expect(expectArrayElement(resolved_positions, 0, 'resolved positions').resolution_source).toBe('default');
   });
 
   it('handles mixed old and new configs', () => {
@@ -399,8 +400,8 @@ describe('backward compatibility', () => {
     const { resolved_positions } = resolveSlotPositions(configs);
 
     expect(resolved_positions).toHaveLength(3);
-    expect(ids(resolved_positions)[0]).toBe('modern');
-    expect(ids(resolved_positions)[2]).toBe('legacy');
+    expect(expectArrayElement(ids(resolved_positions), 0, 'resolved position ids')).toBe('modern');
+    expect(expectArrayElement(ids(resolved_positions), 2, 'resolved position ids')).toBe('legacy');
   });
 
   it('position: null is treated as unset', () => {
@@ -410,8 +411,8 @@ describe('backward compatibility', () => {
 
     const { resolved_positions } = resolveSlotPositions(configs);
 
-    expect(resolved_positions[0].resolved_position).toBe(80);
-    expect(resolved_positions[0].resolution_source).toBe('default');
+    expect(expectArrayElement(resolved_positions, 0, 'resolved positions').resolved_position).toBe(80);
+    expect(expectArrayElement(resolved_positions, 0, 'resolved positions').resolution_source).toBe('default');
   });
 });
 

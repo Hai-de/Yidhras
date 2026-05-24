@@ -1,4 +1,3 @@
-import type { PrismaClient } from '@prisma/client';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
@@ -9,13 +8,11 @@ import { SimulationManager } from '../../src/core/simulation.js';
 import { resolveAuthorityForSubject } from '../../src/domain/authority/resolver.js';
 import { resolvePerceptionForSubject } from '../../src/domain/perception/resolver.js';
 import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
-import { createNotificationManager } from '../../src/utils/notifications.js';
 import {
   createIsolatedRuntimeEnvironment,
   createPrismaClientForEnvironment,
   prepareIsolatedRuntime
 } from '../helpers/runtime.js';
-
 const DEATH_NOTE_PACK_REF = 'death_note';
 
 const createdRoots: string[] = [];
@@ -39,8 +36,7 @@ describe('authority/perception/context assembly', () => {
     await prepareIsolatedRuntime(environment);
 
     const prisma = createPrismaClientForEnvironment(environment);
-    const notifications = createNotificationManager();
-    const sim = new SimulationManager({ prisma, packStorageAdapter: new SqlitePackStorageAdapter() } as any);
+    const sim = new SimulationManager({ prisma, packStorageAdapter: new SqlitePackStorageAdapter() } as unknown as { prisma: AppContext['prisma']; packStorageAdapter: SqlitePackStorageAdapter });
 
     await sim.prepareDatabase();
     await sim.loadExperimentalPackRuntime('death_note');

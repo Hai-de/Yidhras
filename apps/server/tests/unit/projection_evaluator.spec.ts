@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { evaluateProjectionRules } from '../../src/domain/projection/projection_evaluator.js'
 import type { ProjectionEvaluationContext, ProjectionRuleDef } from '../../src/domain/projection/types.js'
+import { expectDefined } from '../helpers/assertions.js'
 
 const buildEmptyContext = (overrides: Partial<ProjectionEvaluationContext> = {}): ProjectionEvaluationContext => ({
   packId: 'test-pack',
@@ -212,10 +213,8 @@ describe('evaluateProjectionRules', () => {
 
     const red = results.find(r => r.dimensions.faction === 'red')
     const blue = results.find(r => r.dimensions.faction === 'blue')
-    expect(red).toBeDefined()
-    expect(blue).toBeDefined()
-    expect(red!.computed_value).toBe(40)
-    expect(blue!.computed_value).toBe(20)
+    expect(expectDefined(red, 'red faction projection').computed_value).toBe(40)
+    expect(expectDefined(blue, 'blue faction projection').computed_value).toBe(20)
   })
 
   it('computes max correctly', () => {

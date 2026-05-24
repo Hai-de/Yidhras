@@ -1,7 +1,6 @@
-import type { DataCleanerInput } from '@yidhras/contracts';
+import type { DataCleaner, DataCleanerInput } from '@yidhras/contracts';
 import { describe, expect, it } from 'vitest';
 
-import type { DataCleaner } from '../../src/plugins/extensions/data_cleaner_registry.js';
 import { dataCleanerRegistry } from '../../src/plugins/extensions/data_cleaner_registry.js';
 import { tokenize } from '../../src/template_engine/core/lexer.js';
 import { parse } from '../../src/template_engine/core/parser.js';
@@ -14,6 +13,7 @@ import { renderNarrativeTemplate } from '../../src/template_engine/frontends/nar
 import { createPromptVariableContext, createPromptVariableLayer, normalizePromptVariableRecord } from '../../src/template_engine/frontends/narrative/variable_context.js';
 import { slotRefBlockHandler } from '../../src/template_engine/frontends/slot_function/blocks.js';
 import type { SlotRegistry } from '../../src/template_engine/frontends/slot_function/types.js';
+import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
 
 const createTemplateCleaner = (): DataCleaner => {
   return {
@@ -123,9 +123,9 @@ describe('template engine — Data Cleaner frontend integration', () => {
     dataCleanerRegistry.register(cleaner);
 
     const retrieved = dataCleanerRegistry.get('data_cleaner.template');
-    expect(retrieved).toBeDefined();
+    const registeredCleaner = expectDefined(retrieved, 'registered template cleaner');
 
-    const output = await retrieved!.clean({
+    const output = await registeredCleaner.clean({
       text: '{greeting}, {target|upper}',
       options: { variables: { greeting: 'Hello', target: 'world' } }
     });
@@ -294,10 +294,6 @@ describe('template engine — slot function integration', () => {
   });
 
   it('nested slot-ref with narrative variable inside fallback', () => {
-    const slotRegistry: SlotRegistry = {
-      disabled_slot: { content: '不应出现', enabled: false }
-    };
-
     const ctx = createPromptVariableContext({
       layers: [
         createPromptVariableLayer({
@@ -354,7 +350,7 @@ describe('template engine — error resilience integration', () => {
 
     // Should return empty text with INVALID_TEMPLATE error, not throw
     expect(result.diagnostics.errors.length).toBeGreaterThan(0);
-    expect(result.diagnostics.errors[0]!.code).toBe('INVALID_TEMPLATE');
+    expect(expectArrayElement(result.diagnostics.errors, 0, 'diagnostic errors').code).toBe('INVALID_TEMPLATE');
   });
 
   it('renderNarrativeTemplate handles empty template', () => {

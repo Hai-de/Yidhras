@@ -14,6 +14,7 @@ import {
 import { listRecentSchedulerRebalanceRecommendations } from '../../src/app/runtime/scheduler_rebalance.js';
 import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
+import { expectDefined } from '../helpers/assertions.js';
 import { MemSchedulerStorage } from '../helpers/scheduler_storage.js';
 
 const TEST_PACK_ID = 'test-failover-compat';
@@ -65,7 +66,7 @@ describe('scheduler automatic rebalance failover compatibility integration', () 
     const cursorBefore = await getSchedulerCursor(context, 'p0', TEST_PACK_ID);
     expect(cursorBefore).not.toBeNull();
 
-    context.packRuntime!.applyClockProjection({
+    expectDefined(context.packRuntime, 'pack runtime').applyClockProjection({
       pack_id: TEST_PACK_ID,
       current_tick: '1003',
       current_revision: '1003',

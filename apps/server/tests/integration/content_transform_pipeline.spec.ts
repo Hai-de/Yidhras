@@ -4,6 +4,7 @@ import { createContentTransformExecutor } from '../../src/context/workflow/execu
 import type { PromptWorkflowState, PromptWorkflowStepSpec } from '../../src/context/workflow/types.js';
 import { createInitialPromptWorkflowState } from '../../src/context/workflow/types.js';
 import { slotContentTransformRegistry } from '../../src/plugins/extensions/slot_content_transformer.js';
+import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
 
 // ── helpers ──
 
@@ -62,6 +63,16 @@ function makeMinimalContext(tick = 100) {
 const minimalProfile = { id: 'p', version: '1', applies_to: {}, steps: [] };
 const minimalSpec: PromptWorkflowStepSpec = { key: 'transform', kind: 'content_transform' };
 
+const transformTraceOf = (state: PromptWorkflowState) =>
+  expectDefined(state.diagnostics.step_traces.find((t) => t.kind === 'content_transform'), 'content transform trace');
+
+const renderedChildOf = (state: PromptWorkflowState, slotId: string) => {
+  const tree = expectDefined(state.tree, 'prompt tree');
+  const fragments = expectDefined(tree.fragments_by_slot[slotId], `${slotId} fragments`);
+  const fragment = expectArrayElement(fragments, 0, `${slotId} fragments`);
+  return expectArrayElement(fragment.children, 0, `${slotId} children`) as { rendered?: string };
+};
+
 // ── tests ──
 
 describe('content_transform executor', () => {
@@ -80,10 +91,8 @@ describe('content_transform executor', () => {
       state
     });
 
-    const traces = result.diagnostics.step_traces;
-    const transformTrace = traces.find((t) => t.kind === 'content_transform');
-    expect(transformTrace).toBeDefined();
-    expect(transformTrace!.notes).toMatchObject({ skipped: true, reason: 'no tree' });
+    const transformTrace = transformTraceOf(result);
+    expect(transformTrace.notes).toMatchObject({ skipped: true, reason: 'no tree' });
   });
 
   it('skips when no transformers registered', async () => {
@@ -128,8 +137,7 @@ describe('content_transform executor', () => {
       state
     });
 
-    const frags = result.tree!.fragments_by_slot['slot_a'];
-    const child = frags?.[0]?.children?.[0] as { rendered?: string } | undefined;
+    const child = renderedChildOf(result, 'slot_a');
     expect(child?.rendered).toBe('HELLO WORLD');
   });
 
@@ -159,8 +167,7 @@ describe('content_transform executor', () => {
     });
 
     // Content of disabled slot should remain unchanged
-    const frags = result.tree!.fragments_by_slot['disabled_slot'];
-    const child = frags?.[0]?.children?.[0] as { rendered?: string } | undefined;
+    const child = renderedChildOf(result, 'disabled_slot');
     expect(child?.rendered).toBe('original');
   });
 
@@ -195,8 +202,7 @@ describe('content_transform executor', () => {
     });
 
     // First uppercase, then bang → 'HELLO!!!'
-    const frags = result.tree!.fragments_by_slot['slot_a'];
-    const child = frags?.[0]?.children?.[0] as { rendered?: string } | undefined;
+    const child = renderedChildOf(result, 'slot_a');
     expect(child?.rendered).toBe('HELLO!!!');
   });
 
@@ -226,8 +232,7 @@ describe('content_transform executor', () => {
     });
 
     // Content preserved despite error
-    const frags = result.tree!.fragments_by_slot['slot_a'];
-    const child = frags?.[0]?.children?.[0] as { rendered?: string } | undefined;
+    const child = renderedChildOf(result, 'slot_a');
     expect(child?.rendered).toBe('important content');
   });
 
@@ -256,9 +261,8 @@ describe('content_transform executor', () => {
       state
     });
 
-    const trace = result.diagnostics.step_traces.find((t) => t.kind === 'content_transform');
-    expect(trace).toBeDefined();
-    expect(trace!.notes).toMatchObject({
+    const trace = transformTraceOf(result);
+    expect(trace.notes).toMatchObject({
       transformers_available: 1,
       fragments_transformed: 1
     });

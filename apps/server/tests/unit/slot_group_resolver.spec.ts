@@ -7,6 +7,7 @@ import {
   resolvePriorityOrder,
   resolveSlotGroups
 } from '../../src/inference/slot_group_resolver.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 // ── helpers ──
 
@@ -79,7 +80,7 @@ describe('resolveExclusiveGroup', () => {
     ];
     const results = new Set<string>();
     for (let i = 0; i < 50; i++) {
-      results.add(resolveExclusiveGroup(profiles, `seed_${i}`)!);
+      results.add(expectDefined(resolveExclusiveGroup(profiles, `seed_${i}`), `winner for seed_${i}`));
     }
     // With 50 different seeds for 2 equally-weighted slots, both should appear
     expect(results.size).toBe(2);
@@ -120,7 +121,7 @@ describe('resolveExclusiveGroup', () => {
     ];
     const results = new Set<string>();
     for (let i = 0; i < 50; i++) {
-      results.add(resolveExclusiveGroup(profiles, `seed_${i}`)!);
+      results.add(expectDefined(resolveExclusiveGroup(profiles, `seed_${i}`), `winner for seed_${i}`));
     }
     expect(results.size).toBe(2);
   });

@@ -6,6 +6,7 @@ import type { AppContext } from '../../src/app/context.js';
 import { getAgentSchedulerProjection } from '../../src/app/services/scheduler/queries.js';
 import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
+import { expectDefined } from '../helpers/assertions.js';
 import { MemSchedulerStorage } from '../helpers/scheduler_storage.js';
 
 const TEST_PACK_ID = 'test-agent-proj';
@@ -14,6 +15,7 @@ describe('agent scheduler projection integration', () => {
   let cleanup: (() => Promise<void>) | null = null;
   let context: AppContext;
   let adapter: MemSchedulerStorage;
+  const currentTick = () => expectDefined(context.packRuntime, 'pack runtime').getCurrentTick();
 
   beforeAll(async () => {
     const fixture = await createIsolatedAppContextFixture();
@@ -35,7 +37,7 @@ describe('agent scheduler projection integration', () => {
   });
 
   it('builds a per-actor scheduler timeline with reason breakdowns', async () => {
-    const baseTick = context.packRuntime!.getCurrentTick();
+    const baseTick = currentTick();
     const runId1 = randomUUID();
     const runId2 = randomUUID();
     const decisionId1 = randomUUID();

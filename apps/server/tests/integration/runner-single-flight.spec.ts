@@ -6,10 +6,12 @@ import { runActionDispatcher } from '../../src/app/runtime/action_dispatcher_run
 import { runDecisionJobRunner } from '../../src/app/runtime/job_runner.js';
 import { createPendingDecisionJob } from '../../src/app/services/inference_workflow.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 describe('runner single-flight integration', () => {
   let cleanup: (() => Promise<void>) | null = null;
   let context: AppContext;
+  const currentTick = () => expectDefined(context.packRuntime, 'pack runtime').getCurrentTick();
 
   beforeAll(async () => {
     const fixture = await createIsolatedAppContextFixture();
@@ -77,7 +79,7 @@ describe('runner single-flight integration', () => {
   });
 
   it('does not dispatch an action intent when another active workflow already exists for the same actor', async () => {
-    const now = context.packRuntime!.getCurrentTick();
+    const now = currentTick();
     const traceExisting = `runner-single-flight-existing-${Date.now()}`;
     const traceCandidate = `runner-single-flight-candidate-${Date.now()}`;
 

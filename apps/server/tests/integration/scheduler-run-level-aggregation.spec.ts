@@ -10,6 +10,7 @@ import {
 } from '../../src/app/services/scheduler/queries.js';
 import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
 import { createTestAppContext } from '../fixtures/app-context.js';
+import { expectDefined } from '../helpers/assertions.js';
 import {
   createIsolatedRuntimeEnvironment,
   createPrismaClientForEnvironment,
@@ -35,19 +36,21 @@ class MemSchedulerStorage implements SchedulerStorageAdapter {
 
   writeDetailedSnapshot(packId: string, input: Record<string, unknown>): Record<string, unknown> {
     if (!this.runsByPack.has(packId)) this.runsByPack.set(packId, []);
+    const packRuns = expectDefined(this.runsByPack.get(packId), `scheduler runs for ${packId}`);
     const summary = typeof input.summary === 'object' && input.summary !== null
       ? JSON.stringify(input.summary)
       : String(input.summary ?? '{}');
-    this.runsByPack.get(packId)!.push({ ...input, summary });
+    packRuns.push({ ...input, summary });
     return input;
   }
 
   writeCandidateDecision(packId: string, schedulerRunId: string, input: Record<string, unknown>): Record<string, unknown> {
     if (!this.decisionsByPack.has(packId)) this.decisionsByPack.set(packId, []);
+    const packDecisions = expectDefined(this.decisionsByPack.get(packId), `scheduler decisions for ${packId}`);
     const candidateReasons = Array.isArray(input.candidate_reasons)
       ? JSON.stringify(input.candidate_reasons)
       : String(input.candidate_reasons ?? '[]');
-    this.decisionsByPack.get(packId)!.push({ ...input, scheduler_run_id: schedulerRunId, candidate_reasons: candidateReasons });
+    packDecisions.push({ ...input, scheduler_run_id: schedulerRunId, candidate_reasons: candidateReasons });
     return input;
   }
 
@@ -135,6 +138,7 @@ describe('scheduler run level aggregation integration', () => {
   let context: AppContext;
   let adapter: MemSchedulerStorage;
   let cleanup: () => Promise<void>;
+  const currentTick = () => expectDefined(context.packRuntime, 'pack runtime').getCurrentTick();
 
   beforeAll(async () => {
     const env = await createIsolatedRuntimeEnvironment();
@@ -167,7 +171,7 @@ describe('scheduler run level aggregation integration', () => {
   });
 
   it('aggregates cross-linked workflow state and audit summaries at scheduler run level', async () => {
-    const baseTick = context.packRuntime!.getCurrentTick();
+    const baseTick = currentTick();
     const runId = randomUUID();
     const createdJobId = randomUUID();
     const inferenceId = randomUUID();

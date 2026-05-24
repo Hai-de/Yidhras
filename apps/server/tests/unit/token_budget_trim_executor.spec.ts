@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { createTokenBudgetTrimExecutor } from '../../src/context/workflow/executors/token_budget_trim.js';
-import type { PromptWorkflowStepExecutor } from '../../src/context/workflow/registry.js';
 import type {
   PromptWorkflowProfile,
   PromptWorkflowState,
@@ -11,6 +10,7 @@ import type { PromptFragmentV2 } from '../../src/inference/prompt_fragment_v2.js
 import type { PromptSlotConfig } from '../../src/inference/prompt_slot_config.js';
 import type { PromptTokenCounter, TokenEstimate } from '../../src/inference/prompt_tokenizer.js';
 import type { PromptTree } from '../../src/inference/prompt_tree.js';
+import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
 
 const SLOT_SYSTEM: PromptSlotConfig = {
   id: 'system_core',
@@ -134,6 +134,9 @@ const createMockCounter = (overrides?: {
   }
 });
 
+const fragmentsOf = (state: PromptWorkflowState, slotId: string) =>
+  expectDefined(expectDefined(state.tree, 'prompt tree').fragments_by_slot[slotId], `${slotId} fragments`);
+
 describe('createTokenBudgetTrimExecutor', () => {
   const execute = (state: PromptWorkflowState, profile?: PromptWorkflowProfile, config?: Record<string, unknown>) => {
     const executor = createTokenBudgetTrimExecutor(createMockCounter());
@@ -154,7 +157,7 @@ describe('createTokenBudgetTrimExecutor', () => {
 
     await execute(state);
 
-    const fragment = state.tree!.fragments_by_slot['system_core'][0];
+    const fragment = expectArrayElement(fragmentsOf(state, 'system_core'), 0, 'system_core fragments');
     expect(fragment.permission_denied).toBe(false);
   });
 
@@ -175,7 +178,7 @@ describe('createTokenBudgetTrimExecutor', () => {
     // f2 (70 tokens): remaining 100 > 0 → remaining = 100 - 70 = 30
     // f3 (70 tokens): remaining 30 > 0 → remaining = 30 - 70 = -40
     // f1 (50 tokens): remaining -40 <= 0 AND removable → denied
-    const f1 = state.tree!.fragments_by_slot['system_core'][0];
+    const f1 = expectArrayElement(fragmentsOf(state, 'system_core'), 0, 'system_core fragments');
     expect(f1.permission_denied).toBe(true);
     expect(f1.denial).toEqual([{ source: 'token_budget_trim', reason: 'trimmed_by_token_budget' }]);
   });
@@ -196,7 +199,7 @@ describe('createTokenBudgetTrimExecutor', () => {
       state
     });
 
-    const fragment = state.tree!.fragments_by_slot['system_core'][0];
+    const fragment = expectArrayElement(fragmentsOf(state, 'system_core'), 0, 'system_core fragments');
     expect(fragment.permission_denied).toBe(false);
   });
 
@@ -214,10 +217,10 @@ describe('createTokenBudgetTrimExecutor', () => {
 
     await execute(state);
 
-    const nonRemovable = state.tree!.fragments_by_slot['post_process'][0];
+    const nonRemovable = expectArrayElement(fragmentsOf(state, 'post_process'), 0, 'post_process fragments');
     expect(nonRemovable.permission_denied).toBe(false);
 
-    const removable = state.tree!.fragments_by_slot['system_core'][0];
+    const removable = expectArrayElement(fragmentsOf(state, 'system_core'), 0, 'system_core fragments');
     expect(removable.permission_denied).toBe(true);
   });
 
@@ -233,7 +236,7 @@ describe('createTokenBudgetTrimExecutor', () => {
 
     // effectiveBudget = 50. post_process (priority 10) first: f2 consumes 200 tokens.
     // system_core (priority 100) second: remaining <= 0, f1 gets denied.
-    const sysFrag = state.tree!.fragments_by_slot['system_core'][0];
+    const sysFrag = expectArrayElement(fragmentsOf(state, 'system_core'), 0, 'system_core fragments');
     expect(sysFrag.permission_denied).toBe(true);
   });
 
@@ -255,11 +258,11 @@ describe('createTokenBudgetTrimExecutor', () => {
     await execute(state);
 
     expect(state.diagnostics.step_traces).toHaveLength(1);
-    const trace = state.diagnostics.step_traces[0];
+    const trace = expectArrayElement(state.diagnostics.step_traces, 0, 'step traces');
     expect(trace.key).toBe('budget_trim');
     expect(trace.kind).toBe('token_budget_trim');
     expect(trace.status).toBe('completed');
-    expect(trace.notes).toBeDefined();
-    expect(trace.notes!.trimmed).toBe(false);
+    const notes = expectDefined(trace.notes, 'trace notes');
+    expect(notes.trimmed).toBe(false);
   });
 });

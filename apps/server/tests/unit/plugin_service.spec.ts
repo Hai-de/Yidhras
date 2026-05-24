@@ -1,13 +1,19 @@
+import type {
+  PluginActivationSession,
+  PluginArtifact,
+  PluginEnableAcknowledgement,
+  PluginInstallation
+} from '@yidhras/contracts';
 import { describe, expect, it } from 'vitest';
 
 import { createPluginManagerService } from '../../src/plugins/service.js';
 import type { PluginStore } from '../../src/plugins/types.js';
 
 const createMemoryPluginStore = (): PluginStore => {
-  const artifacts = new Map<string, any>();
-  const installations = new Map<string, any>();
-  const activations = new Map<string, any>();
-  const acknowledgements = new Map<string, any>();
+  const artifacts = new Map<string, PluginArtifact>();
+  const installations = new Map<string, PluginInstallation>();
+  const activations = new Map<string, PluginActivationSession>();
+  const acknowledgements = new Map<string, PluginEnableAcknowledgement>();
 
   return {
     async getArtifactById(artifactId) {
@@ -30,22 +36,25 @@ const createMemoryPluginStore = (): PluginStore => {
       return Array.from(installations.values()).filter(item => item.scope_type === input.scope_type && item.scope_ref === input.scope_ref);
     },
     async upsertInstallation(input) {
-      installations.set(input.installation_id, input);
-      return input as any;
+      const installation = input as unknown as PluginInstallation;
+      installations.set(input.installation_id, installation);
+      return installation;
     },
     async createActivationSession(input) {
-      activations.set(input.activation_id, input);
-      return input as any;
+      const activation = input as unknown as PluginActivationSession;
+      activations.set(input.activation_id, activation);
+      return activation;
     },
     async updateActivationSession(activationId, patch) {
       const current = activations.get(activationId);
-      const next = { ...current, ...patch };
+      const next = { ...current, ...patch } as PluginActivationSession;
       activations.set(activationId, next);
-      return next as any;
+      return next;
     },
     async createEnableAcknowledgement(input) {
-      acknowledgements.set(input.acknowledgement_id, input);
-      return input as any;
+      const acknowledgement = input as unknown as PluginEnableAcknowledgement;
+      acknowledgements.set(input.acknowledgement_id, acknowledgement);
+      return acknowledgement;
     },
     async getLatestEnableAcknowledgement(installationId) {
       return Array.from(acknowledgements.values()).find(item => item.installation_id === installationId) ?? null;

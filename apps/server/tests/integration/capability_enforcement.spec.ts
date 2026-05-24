@@ -5,17 +5,19 @@ import { checkCapability } from '../../src/app/middleware/capability.js'
 import { createOperatorGrant } from '../../src/app/services/operator/operator_grants.js'
 import { OPERATOR_STATUS, PACK_BINDING_TYPE } from '../../src/operator/constants.js'
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js'
+import { expectDefined } from '../helpers/assertions.js'
 
 describe('capability enforcement integration', () => {
   let cleanup: (() => Promise<void>) | null = null
   let context: AppContext
+  const currentTick = () => expectDefined(context.packRuntime, 'pack runtime').getCurrentTick()
 
   beforeAll(async () => {
     const fixture = await createIsolatedAppContextFixture()
     cleanup = fixture.cleanup
     context = fixture.context
 
-    const now = context.packRuntime!.getCurrentTick()
+    const now = currentTick()
 
     // 创建 operators
     await context.prisma.identity.createMany({

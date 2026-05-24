@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { TreeRegistry } from '../../src/inference/providers/behavior_tree/tree_registry.js';
+import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
 
 describe('TreeRegistry', () => {
   it('registers and retrieves a simple tree without $ref', () => {
@@ -42,7 +43,7 @@ describe('TreeRegistry', () => {
     const tree = registry.get('main_tree');
     expect(tree.root.children).toHaveLength(2);
     // First child should be expanded from $ref
-    const firstChild = tree.root.children![0];
+    const firstChild = expectArrayElement(expectDefined(tree.root.children, 'root children'), 0, 'root children');
     expect(firstChild.$ref).toBeUndefined();
     expect(firstChild.type).toBe('selector');
     expect(firstChild.children).toHaveLength(1);
@@ -62,9 +63,9 @@ describe('TreeRegistry', () => {
       }
     });
     const tree = registry.get('a');
-    const firstChild = tree.root.children![0];
+    const firstChild = expectArrayElement(expectDefined(tree.root.children, 'root children'), 0, 'root children');
     expect(firstChild.type).toBe('sequence');
-    const innerChild = firstChild.children![0];
+    const innerChild = expectArrayElement(expectDefined(firstChild.children, 'first child children'), 0, 'first child children');
     expect(innerChild.type).toBe('action');
   });
 

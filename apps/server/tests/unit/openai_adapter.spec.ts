@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createOpenAiProviderAdapter } from '../../src/ai/providers/openai.js';
 import type { AiProviderAdapterRequest } from '../../src/ai/providers/types.js';
-import type { AiMessage } from '../../src/ai/types.js';
+import type { AiMessage, AiTaskRequestMetadata } from '../../src/ai/types.js';
 
 const createMessage = (role: AiMessage['role'], text: string): AiMessage => ({
   role,
@@ -49,7 +49,7 @@ const createAdapterRequest = (
     prompt_context: { prompt_bundle_v2: null },
     output_contract: undefined,
     route_hints: {},
-    metadata: { prompt_version: '1.0.0', source_prompt_keys: [] } as any,
+    metadata: { prompt_version: '1.0.0', source_prompt_keys: [] } satisfies AiTaskRequestMetadata,
     ...overrides?.task_request,
   },
   task_config: {

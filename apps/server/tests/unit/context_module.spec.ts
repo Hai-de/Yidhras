@@ -99,7 +99,7 @@ const buildLongMemoryBlockStoreStub = (): LongMemoryBlockStore => ({
   async hardDeleteBlock() { throw new Error('unexpected hardDeleteBlock call in test'); }
 });
 
-const buildContext = (): any => {
+const buildContext = (): AppContext => {
   const prisma = {
     policy: { findMany: async () => [] },
     inferenceTrace: {
@@ -144,7 +144,7 @@ const buildContext = (): any => {
   isPaused() { return false; },
   setPaused() {},
   assertRuntimeReady() {}
-  };
+  } as unknown as AppContext;
 };
 
 const buildSelection = (): MemorySelectionResult => ({
@@ -178,7 +178,8 @@ const buildPackState = (): InferencePackStateSnapshot => ({
   actor_state: { knows_notebook_power: true, murderous_intent: true },
   owned_artifacts: [{ id: 'artifact-death-note', state: { holder_agent_id: 'agent-001' } }],
   world_state: { kira_case_phase: 'kira_active' },
-  latest_event: { event_id: 'evt-1', title: 'Suspicious death occurred', type: 'history', semantic_type: 'suspicious_death_occurred', created_at: '999' }
+  latest_event: { event_id: 'evt-1', title: 'Suspicious death occurred', type: 'history', semantic_type: 'suspicious_death_occurred', tick: '999', created_at: '999' },
+  recent_events: [{ event_id: 'evt-1', title: 'Suspicious death occurred', type: 'history', semantic_type: 'suspicious_death_occurred', tick: '999', created_at: '999' }]
 });
 
 const createService = () => {

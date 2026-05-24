@@ -6,6 +6,7 @@ import { parseWorldPackConstitution } from '../../src/packs/manifest/constitutio
 import { materializePackRuntime } from '../../src/packs/orchestration/pack_materializer.js';
 import { countSqliteEngineOwnedRecords } from '../../src/packs/storage/internal/sqlite_engine_owned_store.js';
 import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
+import { expectDefined } from '../helpers/assertions.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 
 const createdRoots: string[] = [];
@@ -279,7 +280,6 @@ describe('materializePackRuntime', () => {
     };
 
     const targetCollection = plan.pack_collections.find(c => c.key === 'death_rule_targets');
-    expect(targetCollection).toBeDefined();
-    expect(targetCollection!.fields.map(f => f.key)).toEqual(['id', 'target_entity_id', 'status']);
+    expect(expectDefined(targetCollection, 'death rule targets collection').fields.map(f => f.key)).toEqual(['id', 'target_entity_id', 'status']);
   });
 });

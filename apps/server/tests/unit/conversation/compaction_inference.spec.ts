@@ -7,6 +7,7 @@ import type {
   ModelGatewayResponse} from '../../../src/ai/types.js';
 import { runCompactionInference } from '../../../src/conversation/compaction_inference.js';
 import type { ConversationEntry } from '../../../src/conversation/types.js';
+import { expectArrayElement } from '../../helpers/assertions.js';
 
 function makeEntry(overrides: Partial<ConversationEntry> = {}): ConversationEntry {
   return {
@@ -168,10 +169,10 @@ describe('runCompactionInference', () => {
   });
 
   it('prompt does not contain conversation_history or persona references', async () => {
-    let capturedRequest: ModelGatewayExecutionInput['request'] | null = null;
+    const capturedRequests: ModelGatewayExecutionInput['request'][] = [];
     const gateway: ModelGateway = {
       execute: async (input: ModelGatewayExecutionInput) => {
-        capturedRequest = input.request;
+        capturedRequests.push(input.request);
         return makeSuccessResponse();
       },
       executeStream: vi.fn() as never
@@ -185,7 +186,7 @@ describe('runCompactionInference', () => {
       taskConfig: makeTaskConfig()
     });
 
-    const request = capturedRequest!;
+    const request = expectArrayElement(capturedRequests, 0, 'captured model gateway requests');
     expect(request.tools).toBeUndefined();
     expect(request.response_mode).toBe('free_text');
 
@@ -199,10 +200,10 @@ describe('runCompactionInference', () => {
   });
 
   it('sorts entries by turn_number in prompt', async () => {
-    let capturedRequest: ModelGatewayExecutionInput['request'] | null = null;
+    const capturedRequests: ModelGatewayExecutionInput['request'][] = [];
     const gateway: ModelGateway = {
       execute: async (input: ModelGatewayExecutionInput) => {
-        capturedRequest = input.request;
+        capturedRequests.push(input.request);
         return makeSuccessResponse();
       },
       executeStream: vi.fn() as never
@@ -222,7 +223,7 @@ describe('runCompactionInference', () => {
       taskConfig: makeTaskConfig()
     });
 
-    const userMsg = capturedRequest!.messages[1];
+    const userMsg = expectArrayElement(expectArrayElement(capturedRequests, 0, 'captured model gateway requests').messages, 1, 'captured request messages');
     const text = userMsg.parts.map((p) => ('text' in p ? p.text : '')).join(' ');
     const firstIdx = text.indexOf('First.');
     const secondIdx = text.indexOf('Second.');

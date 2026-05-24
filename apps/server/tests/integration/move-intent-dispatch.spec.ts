@@ -7,6 +7,7 @@ import { dispatchActionIntent } from '../../src/app/services/action/action_dispa
 import { createSpatialRuntime } from '../../src/packs/runtime/spatial_runtime.js';
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import { createTestAppContext } from '../fixtures/app-context.js';
+import { expectDefined } from '../helpers/assertions.js';
 import {
   createIsolatedRuntimeEnvironment,
   createPrismaClientForEnvironment,
@@ -48,7 +49,7 @@ const createMemPackStorageAdapter = (): PackStorageAdapter => {
     ping: async () => true,
     destroyPackStorage: async () => {},
     ensureEngineOwnedSchema: async () => {},
-    listEngineOwnedRecords: async (packId, tableName) => getTable(packId, tableName) as any,
+    listEngineOwnedRecords: async <T = Record<string, unknown>>(packId: string, tableName: string): Promise<T[]> => getTable(packId, tableName) as T[],
     upsertEngineOwnedRecord: async (packId, tableName, record) => {
       const table = getTable(packId, tableName);
       const rec = record as Record<string, unknown>;
@@ -117,12 +118,19 @@ describe('move intent dispatch', () => {
     });
   };
 
+  const getCurrentTick = (): bigint => {
+    const packRuntime = expectDefined(context.packRuntime, 'pack runtime');
+    return packRuntime.getCurrentTick();
+  };
+
+  const getSpatialRuntime = () => expectDefined(expectDefined(context.getSpatialRuntime, 'getSpatialRuntime')(), 'spatial runtime');
+
   const createMoveIntent = async (
     entityId: string,
     targetLocation: string,
     suffix: string
   ) => {
-    const now = context.packRuntime!.getCurrentTick();
+    const now = getCurrentTick();
     const inferenceId = `${INFERENCE_PREFIX}${suffix}-${Date.now()}`;
 
     await context.prisma.inferenceTrace.create({
@@ -177,7 +185,7 @@ describe('move intent dispatch', () => {
   };
 
   const lockIntent = async (intentId: string) => {
-    const now = context.packRuntime!.getCurrentTick();
+    const now = getCurrentTick();
     return context.prisma.actionIntent.update({
       where: { id: intentId },
       data: {
@@ -196,7 +204,7 @@ describe('move intent dispatch', () => {
 
     await seedEntityLocation(entityId, fromLocation);
 
-    const spatialRuntime = context.getSpatialRuntime!()!;
+    const spatialRuntime = getSpatialRuntime();
     expect(await spatialRuntime.getLocation(entityId)).toBe(fromLocation);
 
     const created = await createMoveIntent(entityId, targetLocation, 'basic');
@@ -215,7 +223,7 @@ describe('move intent dispatch', () => {
 
     await seedEntityLocation(entityId, fromLocation);
 
-    const spatialRuntime = context.getSpatialRuntime!()!;
+    const spatialRuntime = getSpatialRuntime();
     expect(await spatialRuntime.getLocation(entityId)).toBe(fromLocation);
 
     const created = await createMoveIntent(entityId, targetLocation, 'non-adj');
@@ -237,7 +245,7 @@ describe('move intent dispatch', () => {
 
     await seedEntityLocation(entityId, fromLocation);
 
-    const spatialRuntime = context.getSpatialRuntime!()!;
+    const spatialRuntime = getSpatialRuntime();
     expect(await spatialRuntime.getLocation(entityId)).toBe(fromLocation);
 
     const created = await createMoveIntent(entityId, targetLocation, 'multi');
@@ -252,7 +260,7 @@ describe('move intent dispatch', () => {
     const entityId = 'player-4';
     const targetLocation = 'study';
 
-    const spatialRuntime = context.getSpatialRuntime!()!;
+    const spatialRuntime = getSpatialRuntime();
     expect(await spatialRuntime.getLocation(entityId)).toBeNull();
 
     const created = await createMoveIntent(entityId, targetLocation, 'no-state');

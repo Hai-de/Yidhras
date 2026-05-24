@@ -11,6 +11,7 @@ import {
 } from '../../src/app/services/scheduler/queries.js';
 import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
+import { expectDefined } from '../helpers/assertions.js';
 import { MemSchedulerStorage } from '../helpers/scheduler_storage.js';
 
 const TEST_PACK_ID = 'test-crosslink';
@@ -19,6 +20,7 @@ describe('scheduler cross-link projection integration', () => {
   let cleanup: (() => Promise<void>) | null = null;
   let context: AppContext;
   let adapter: MemSchedulerStorage;
+  const currentTick = () => expectDefined(context.packRuntime, 'pack runtime').getCurrentTick();
 
   beforeAll(async () => {
     const fixture = await createIsolatedAppContextFixture();
@@ -44,7 +46,7 @@ describe('scheduler cross-link projection integration', () => {
 
   it('enriches scheduler decisions with cross-linked workflow state from decision jobs', async () => {
     const prisma = context.prisma;
-    const baseTick = context.packRuntime!.getCurrentTick();
+    const baseTick = currentTick();
     const runId = randomUUID();
     const jobId = randomUUID();
     const inferenceId = randomUUID();

@@ -154,6 +154,16 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     return Array.from(this.openPacks);
   }
 
+  private getBucket<T>(buckets: Map<string, T[]>, packId: string): T[] {
+    this.ensurePack(packId);
+    let bucket = buckets.get(packId);
+    if (!bucket) {
+      bucket = [];
+      buckets.set(packId, bucket);
+    }
+    return bucket;
+  }
+
   ensurePack(packId: string): void {
     if (!this.openPacks.has(packId)) {
       this.open(packId);
@@ -170,9 +180,7 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     expires_at: bigint;
     updated_at: bigint;
   }): { key: string; partition_id: string; holder: string; acquired_at: bigint; expires_at: bigint } {
-    this.ensurePack(packId);
-    if (!this.leases.has(packId)) this.leases.set(packId, []);
-    const leases = this.leases.get(packId)!;
+    const leases = this.getBucket(this.leases, packId);
     const idx = leases.findIndex(l => l.partition_id === input.partition_id);
     const record: MemLease = {
       key: input.key,
@@ -244,9 +252,7 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     last_signal_tick: bigint;
     updated_at: bigint;
   }): { key: string; partition_id: string; last_scanned_tick: bigint; last_signal_tick: bigint; updated_at: bigint } {
-    this.ensurePack(packId);
-    if (!this.cursors.has(packId)) this.cursors.set(packId, []);
-    const cursors = this.cursors.get(packId)!;
+    const cursors = this.getBucket(this.cursors, packId);
     const idx = cursors.findIndex(c => c.partition_id === input.partition_id);
     const record: MemCursor = {
       key: input.key,
@@ -297,8 +303,6 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     source: string;
     updated_at: bigint;
   }): { partition_id: string; worker_id: string | null; status: string; version: number; source: string; updated_at: bigint } {
-    this.ensurePack(packId);
-    if (!this.partitions.has(packId)) this.partitions.set(packId, []);
     const record: MemPartition = {
       partition_id: input.partition_id,
       worker_id: input.worker_id,
@@ -307,7 +311,7 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
       source: input.source,
       updated_at: Number(input.updated_at)
     };
-    this.partitions.get(packId)!.push(record);
+    this.getBucket(this.partitions, packId).push(record);
     return input;
   }
 
@@ -425,7 +429,7 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
       updated_at: Number(input.updated_at),
       completed_at: input.completed_at !== null ? Number(input.completed_at) : null
     };
-    this.migrations.get(packId)!.push(record);
+    this.getBucket(this.migrations, packId).push(record);
     return { ...input, id };
   }
 
@@ -492,9 +496,7 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
     capacity_hint: number | null;
     updated_at: bigint;
   }): { worker_id: string; status: string; last_heartbeat_at: bigint; owned_partition_count: number; active_migration_count: number; capacity_hint: number | null; updated_at: bigint } {
-    this.ensurePack(packId);
-    if (!this.workers.has(packId)) this.workers.set(packId, []);
-    const workers = this.workers.get(packId)!;
+    const workers = this.getBucket(this.workers, packId);
     const idx = workers.findIndex(w => w.worker_id === input.worker_id);
     const record: MemWorker = {
       worker_id: input.worker_id,
@@ -596,7 +598,7 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
       updated_at: Number(input.updated_at),
       applied_migration_id: input.applied_migration_id ?? null
     };
-    this.recommendations.get(packId)!.push(record);
+    this.getBucket(this.recommendations, packId).push(record);
     return { ...input, id, score: input.score ?? null, suppress_reason: input.suppress_reason ?? null, details: input.details ?? null, applied_migration_id: input.applied_migration_id ?? null };
   }
 
@@ -697,22 +699,20 @@ export class MemSchedulerStorage implements SchedulerStorageAdapter {
   // -- Observability read methods --
 
   writeDetailedSnapshot(packId: string, input: Record<string, unknown>): Record<string, unknown> {
-    this.ensurePack(packId);
-    if (!this.runs.has(packId)) this.runs.set(packId, []);
+    const runs = this.getBucket(this.runs, packId);
     const summary = typeof input.summary === 'object' && input.summary !== null
       ? JSON.stringify(input.summary)
       : String(input.summary ?? '{}');
-    this.runs.get(packId)!.push({ ...input, summary } as unknown as MemRun);
+    runs.push({ ...input, summary } as unknown as MemRun);
     return input;
   }
 
   writeCandidateDecision(packId: string, _schedulerRunId: string, input: Record<string, unknown>): Record<string, unknown> {
-    this.ensurePack(packId);
-    if (!this.decisions.has(packId)) this.decisions.set(packId, []);
+    const decisions = this.getBucket(this.decisions, packId);
     const candidateReasons = Array.isArray(input.candidate_reasons)
       ? JSON.stringify(input.candidate_reasons)
       : String(input.candidate_reasons ?? '[]');
-    this.decisions.get(packId)!.push({ ...input, scheduler_run_id: _schedulerRunId, candidate_reasons: candidateReasons } as unknown as MemDecision);
+    decisions.push({ ...input, scheduler_run_id: _schedulerRunId, candidate_reasons: candidateReasons } as unknown as MemDecision);
     return input;
   }
 

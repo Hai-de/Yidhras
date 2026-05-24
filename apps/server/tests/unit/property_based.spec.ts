@@ -2,6 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import { evaluateStateTransforms } from '../../src/packs/runtime/state_transform_evaluator.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 // ---- Helpers ---------------------------------------------------------------
 
@@ -9,11 +10,6 @@ const noopLogger = {
   logDebug: () => {},
   logWarn: () => {}
 };
-
-const arbitraryFiniteNumber = fc.oneof(
-  fc.integer({ min: -1000, max: 1000 }),
-  fc.float({ min: -1000, max: 1000, noNaN: true })
-);
 
 const arbitraryStateJson = fc.dictionary(
   fc.string({ minLength: 1, maxLength: 8 }).filter(k => k !== '__proto__' && k !== 'constructor'),
@@ -69,7 +65,7 @@ describe('evaluateStateTransforms — property-based', () => {
       fc.property(
         fc.string(),
         fc.array(arbitraryActorState, { minLength: 1, maxLength: 5 }),
-        fc.constant([] as any),
+        fc.constant([] as Array<{ source: string; ranges: Array<{ min: number; max: number; label: string }>; target: string }>),
         (packId, actorStates, transformDefs) => {
           const result = evaluateStateTransforms({
             packId,
@@ -238,8 +234,8 @@ describe('isHostApiCompatible — property-based', () => {
         arbitrarySemver,
         arbitrarySemver,
         (older, newer) => {
-          const o = parseSemver(older)!;
-          const n = parseSemver(newer)!;
+          const o = expectDefined(parseSemver(older), `parsed semver ${older}`);
+          const n = expectDefined(parseSemver(newer), `parsed semver ${newer}`);
 
           // If newer >= older and same major, must be compatible
           const isNewer =
@@ -260,8 +256,8 @@ describe('isHostApiCompatible — property-based', () => {
         arbitrarySemver,
         arbitrarySemver,
         (v1, v2) => {
-          const a = parseSemver(v1)!;
-          const b = parseSemver(v2)!;
+          const a = expectDefined(parseSemver(v1), `parsed semver ${v1}`);
+          const b = expectDefined(parseSemver(v2), `parsed semver ${v2}`);
 
           if (a.major !== b.major) {
             expect(isHostApiCompatible(v1, v2)).toBe(false);
@@ -359,7 +355,8 @@ describe('findMatchingLabel — property-based', () => {
             expect(result).not.toBeNull();
             // Result must be one of the declared labels
             const labels = new Set(ranges.map(r => r.label));
-            expect(labels.has(result!)).toBe(true);
+            const label = expectDefined(result, 'matching label');
+            expect(labels.has(label)).toBe(true);
           }
           // Note: result can be null even without hasMatch
         }
@@ -385,8 +382,6 @@ describe('findMatchingLabel — property-based', () => {
           const second = findMatchingLabel(value, ranges);
 
           // Shift ranges and run again — labels should be consistent
-          const shifted = [...ranges.slice(2), ...ranges.slice(0, 2)];
-          // Find which original range matched first
           const firstMatchIndex = ranges.findIndex(
             r => value >= r.min && value <= r.max
           );

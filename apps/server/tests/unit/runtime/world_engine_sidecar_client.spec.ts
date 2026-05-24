@@ -11,6 +11,7 @@ import {
   WorldEngineSidecarClient,
   type WorldEngineSidecarTransport
 } from '../../../src/app/runtime/sidecar/world_engine_sidecar_client.js';
+import { expectDefined } from '../../helpers/assertions.js';
 
 vi.mock('node:child_process', () => ({
   spawn: vi.fn()
@@ -147,7 +148,7 @@ class InMemoryStubTransport implements WorldEngineSidecarTransport {
       case 'world.step.prepare': {
         const packId = String(params.pack_id);
         const stepTicks = BigInt(String(params.step_ticks));
-        const session = this.sessions.get(packId)!;
+        const session = expectDefined(this.sessions.get(packId), `session for ${packId}`);
         const nextTick = (BigInt(session.tick) + stepTicks).toString();
         const token = `prepared:${packId}:${nextTick}`;
         session.pending = token;
@@ -263,7 +264,7 @@ class InMemoryStubTransport implements WorldEngineSidecarTransport {
       }
       case 'world.step.commit': {
         const packId = String(params.pack_id);
-        const session = this.sessions.get(packId)!;
+        const session = expectDefined(this.sessions.get(packId), `session for ${packId}`);
         session.pending = null;
         session.tick = String(params.persisted_revision);
         session.revision = String(params.persisted_revision);
@@ -502,7 +503,8 @@ describe('WorldEngineSidecarClient', () => {
 
     expect(result.rule_id).toBe('stub-objective-rule');
     expect(result.mutations).toHaveLength(1);
-    expect(result.mutations[0]?.entity_id).toBe('artifact-book');
+    const entityMutation = expectDefined(result.mutations.find((mutation) => mutation.kind === 'entity_state'), 'entity state mutation');
+    expect(entityMutation.entity_id).toBe('artifact-book');
     expect(result.diagnostics.matched_rule_id).toBe('stub-objective-rule');
   });
 

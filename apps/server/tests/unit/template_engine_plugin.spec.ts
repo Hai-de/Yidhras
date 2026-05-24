@@ -1,8 +1,8 @@
-import type { DataCleanerInput } from '@yidhras/contracts'
+import type { DataCleaner, DataCleanerInput } from '@yidhras/contracts'
 import { describe, expect, it } from 'vitest'
 
-import type { DataCleaner } from '../../src/plugins/extensions/data_cleaner_registry.js'
 import { dataCleanerRegistry } from '../../src/plugins/extensions/data_cleaner_registry.js'
+import { expectDefined } from '../helpers/assertions.js'
 
 describe('data_cleaner.template', () => {
   const createCleaner = (): DataCleaner => {
@@ -35,8 +35,7 @@ describe('data_cleaner.template', () => {
     const cleaner = createCleaner()
     dataCleanerRegistry.register(cleaner)
     const retrieved = dataCleanerRegistry.get('data_cleaner.template')
-    expect(retrieved).toBeDefined()
-    expect(retrieved!.key).toBe('data_cleaner.template')
+    expect(expectDefined(retrieved, 'template data cleaner').key).toBe('data_cleaner.template')
   })
 
   it('T2: clean renders template with variables', async () => {

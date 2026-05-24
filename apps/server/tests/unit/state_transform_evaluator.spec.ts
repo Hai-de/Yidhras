@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
 import { evaluateStateTransforms } from '../../src/packs/runtime/state_transform_evaluator.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 const noopLogger = {
   logDebug: vi.fn(),
@@ -230,8 +231,8 @@ describe('evaluateStateTransforms', () => {
     });
 
     expect(ops).toHaveLength(2);
-    const op1 = ops.find(o => o.target_ref === 'actor-1')!;
-    const op2 = ops.find(o => o.target_ref === 'actor-2')!;
+    const op1 = expectDefined(ops.find(o => o.target_ref === 'actor-1'), 'actor-1 transform op');
+    const op2 = expectDefined(ops.find(o => o.target_ref === 'actor-2'), 'actor-2 transform op');
     expect((op1.payload.next as Record<string, unknown>).public_opinion_stage).toBe('high');
     expect((op2.payload.next as Record<string, unknown>).public_opinion_stage).toBe('low');
   });

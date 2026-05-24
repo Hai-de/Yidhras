@@ -9,8 +9,15 @@ import { PLUGIN_ENABLE_WARNING_TEXT } from '../../src/plugins/contracts.js';
 import { refreshPackPluginRuntime, syncPackPluginRuntime } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 const REMINDER_HASH = '03ee763729f5fe81f03478a3b0f487ff6c8dfc779f7e9b8d88a6d016dc17edfb';
+
+const packRuntimeOf = (context: Awaited<ReturnType<typeof createIsolatedAppContextFixture>>['context']) =>
+  expectDefined(context.packRuntime, 'pack runtime');
+
+const packRuntimeControlOf = (context: Awaited<ReturnType<typeof createIsolatedAppContextFixture>>['context']) =>
+  expectDefined(context.packRuntimeControl, 'pack runtime control');
 
 describe('plugin runtime web integration', () => {
   it('returns canonical bundle URLs and resolves enabled plugin web assets after confirm/enable', async () => {
@@ -73,7 +80,7 @@ describe('plugin runtime web integration', () => {
         trust_mode: 'trusted'
       });
 
-      fixture.context.packRuntime!.getPack = () => ({
+      packRuntimeOf(fixture.context).getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
       fixture.context.getPluginEnableWarningConfig = () => ({
@@ -170,14 +177,14 @@ describe('plugin runtime web integration', () => {
         trust_mode: 'trusted'
       });
 
-      fixture.context.packRuntime!.getPack = () => ({
+      packRuntimeOf(fixture.context).getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
       fixture.context.getPluginEnableWarningConfig = () => ({
         enabled: true,
         require_acknowledgement: true
       });
-      fixture.context.packRuntimeControl!.load = async (packRef: string) => ({
+      packRuntimeControlOf(fixture.context).load = async (_packRef: string) => ({
         handle: {
           pack_id: 'world-pack-experimental-web'
         } as never,
@@ -291,7 +298,7 @@ describe('plugin runtime web integration', () => {
         confirmed_at: '1500'
       });
 
-      fixture.context.packRuntime!.getPack = () => ({
+      packRuntimeOf(fixture.context).getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
 

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { ModelGatewayExecutionInput } from '../../src/ai/gateway.js';
 import { createModelGateway } from '../../src/ai/gateway.js';
@@ -49,7 +49,7 @@ const buildStreamInput = (overrides?: Partial<ModelGatewayExecutionInput>): Mode
     task_id: 'task-1',
     task_type: 'agent_decision',
     input: {},
-    prompt_context: {}
+    prompt_context: { prompt_bundle_v2: {} }
   },
   task_config: {
     definition: {

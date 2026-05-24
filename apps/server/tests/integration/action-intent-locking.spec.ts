@@ -9,12 +9,14 @@ import {
   releaseActionIntentLock
 } from '../../src/app/services/action/action_dispatcher.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 const INTENT_SOURCE_PREFIX = 'intent-lock-source-';
 
 describe('action intent locking integration', () => {
   let cleanup: (() => Promise<void>) | null = null;
   let context: AppContext;
+  const currentTick = () => expectDefined(context.packRuntime, 'pack runtime').getCurrentTick();
 
   beforeAll(async () => {
     const fixture = await createIsolatedAppContextFixture();
@@ -44,7 +46,7 @@ describe('action intent locking integration', () => {
   });
 
   const createActionIntent = async (suffix: string) => {
-    const now = context.packRuntime!.getCurrentTick();
+    const now = currentTick();
     const inferenceId = `${INTENT_SOURCE_PREFIX}${suffix}-${Date.now()}`;
 
     await context.prisma.inferenceTrace.create({

@@ -6,19 +6,21 @@ import {
   listOperatorGrants,
   revokeOperatorGrant
 } from '../../src/app/services/operator/operator_grants.js'
-import { OPERATOR_STATUS, PACK_BINDING_TYPE } from '../../src/operator/constants.js'
+import { OPERATOR_STATUS } from '../../src/operator/constants.js'
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js'
+import { expectDefined } from '../helpers/assertions.js'
 
 describe('operator grant integration', () => {
   let cleanup: (() => Promise<void>) | null = null
   let context: AppContext
+  const currentTick = () => expectDefined(context.packRuntime, 'pack runtime').getCurrentTick()
 
   beforeAll(async () => {
     const fixture = await createIsolatedAppContextFixture()
     cleanup = fixture.cleanup
     context = fixture.context
 
-    const now = context.packRuntime!.getCurrentTick()
+    const now = currentTick()
 
     await context.prisma.identity.createMany({
       data: [
@@ -51,7 +53,7 @@ describe('operator grant integration', () => {
     const grants = await listOperatorGrants(context, 'pack-1', 'op-giver')
 
     expect(grants.length).toBeGreaterThanOrEqual(1)
-    expect(grants[0].giver_operator_id).toBe('op-giver')
+    expect(expectDefined(grants[0], 'first grant').giver_operator_id).toBe('op-giver')
   })
 
   it('revokes a grant', async () => {
@@ -79,7 +81,7 @@ describe('operator grant integration', () => {
   })
 
   it('creates grant with TTL expires_at', async () => {
-    const now = context.packRuntime!.getCurrentTick()
+    const now = currentTick()
     const futureTick = now + 1000n
 
     const grant = await createOperatorGrant(context, 'pack-1', 'op-giver', 'identity-receiver', 'perceive.agent.scheduler', {
@@ -90,7 +92,7 @@ describe('operator grant integration', () => {
   })
 
   it('rejects grant with past expires_at', async () => {
-    const pastTick = context.packRuntime!.getCurrentTick() - 1n
+    const pastTick = currentTick() - 1n
 
     await expect(
       createOperatorGrant(context, 'pack-1', 'op-giver', 'identity-receiver', 'perceive.agent.scheduler', {

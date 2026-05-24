@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildPromptBundleV2,buildPromptTree } from '../../src/inference/prompt_builder_v2.js';
-import type { PromptFragmentPermissions,PromptFragmentV2 } from '../../src/inference/prompt_fragment_v2.js';
-import { applyPermissionFilter, getHostAgentIds, HOST_AGENT_TOKEN,resolveSlotPermission } from '../../src/inference/prompt_permissions.js';
+import { buildPromptBundleV2, buildPromptTree } from '../../src/inference/prompt_builder_v2.js';
+import type { PromptFragmentV2 } from '../../src/inference/prompt_fragment_v2.js';
+import { getHostAgentIds, resolveSlotPermission } from '../../src/inference/prompt_permissions.js';
 import type { PromptSlotConfig } from '../../src/inference/prompt_slot_config.js';
 import type { InferenceContext } from '../../src/inference/types.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 const BASE_SLOT: PromptSlotConfig = {
   id: 'test_slot',
@@ -153,8 +154,7 @@ describe('prompt permissions', () => {
 
     // Fragment 仍存在（不删除），但标记为 permission_denied
     const fragments = tree.fragments_by_slot['restricted_slot'];
-    expect(fragments).toBeDefined();
-    expect(fragments!.length).toBeGreaterThan(0);
+    expect(expectDefined(fragments, 'restricted slot fragments').length).toBeGreaterThan(0);
 
     // T4 验证：完全 denied 的 slot 不进入 bundle
     const v2 = buildPromptBundleV2(tree, ctx);

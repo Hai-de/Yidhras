@@ -11,6 +11,7 @@ import {
   verifyToken} from '../../src/operator/auth/token.js'
 import { OPERATOR_STATUS } from '../../src/operator/constants.js'
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js'
+import { expectDefined } from '../helpers/assertions.js'
 
 describe('operator auth integration', () => {
   let cleanup: (() => Promise<void>) | null = null
@@ -22,7 +23,7 @@ describe('operator auth integration', () => {
     context = fixture.context
 
     // 注入测试 operator
-    const now = context.packRuntime!.getCurrentTick()
+    const now = expectDefined(context.packRuntime, 'pack runtime').getCurrentTick()
     const passwordHash = await hashPassword('test-password', 4)
     await context.prisma.identity.create({
       data: {
@@ -77,10 +78,10 @@ describe('operator auth integration', () => {
 
       const payload = verifyToken(token)
 
-      expect(payload).not.toBeNull()
-      expect(payload!.sub).toBe('op-test-1')
-      expect(payload!.username).toBe('testuser')
-      expect(payload!.is_root).toBe(false)
+      const verifiedPayload = expectDefined(payload, 'verified payload')
+      expect(verifiedPayload.sub).toBe('op-test-1')
+      expect(verifiedPayload.username).toBe('testuser')
+      expect(verifiedPayload.is_root).toBe(false)
     })
 
     it('returns null for invalid token', () => {
@@ -101,9 +102,9 @@ describe('operator auth integration', () => {
       await createSession(context, 'op-test-1', token, 'pack-1')
 
       const session = await findActiveSession(context, token)
-      expect(session).not.toBeNull()
-      expect(session!.operatorId).toBe('op-test-1')
-      expect(session!.packId).toBe('pack-1')
+      const activeSession = expectDefined(session, 'active session')
+      expect(activeSession.operatorId).toBe('op-test-1')
+      expect(activeSession.packId).toBe('pack-1')
     })
 
     it('destroys session and returns null on find', async () => {

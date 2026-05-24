@@ -1,6 +1,7 @@
 import { WORLD_ENGINE_PROTOCOL_VERSION } from '@yidhras/contracts'
 import { describe, expect, it } from 'vitest'
 
+import type { AppInfrastructure } from '../../src/app/context.js'
 import type { InvocationRequest } from '../../src/domain/invocation/invocation_dispatcher.js'
 import { buildSidecarObjectiveExecutionRequest } from '../../src/domain/rule/sidecar_objective_execution.js'
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js'
@@ -36,7 +37,7 @@ const mockContext = {
   packStorageAdapter: {
     listEngineOwnedRecords: async () => []
   } as unknown as PackStorageAdapter
-} as any
+} as unknown as AppInfrastructure
 
 describe('buildSidecarObjectiveExecutionRequest', () => {
   it('includes pack_variables when pack has variables', async () => {

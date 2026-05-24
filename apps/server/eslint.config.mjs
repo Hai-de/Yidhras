@@ -179,8 +179,6 @@ export default tseslint.config(
   },
 
   // Tests — no boundaries constraints, tests may import from any layer.
-  // Quality rules are warn-level (pre-existing violations exist in ~40+ files).
-  // Safety rules (eval, extensions, etc.) remain error.
   {
     files: ['tests/**/*.ts'],
     languageOptions: {
@@ -194,15 +192,15 @@ export default tseslint.config(
     },
     rules: {
       'no-console': 'off',
-      'prefer-const': 'warn',
+      'prefer-const': 'error',
       'no-eval': 'error',
       'no-implied-eval': 'error',
       'no-new-func': 'error',
       'no-prototype-builtins': 'error',
       'no-path-concat': 'error',
       'import-x/no-named-as-default-member': 'off',
-      'simple-import-sort/imports': 'warn',
-      'simple-import-sort/exports': 'warn',
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
       'import-x/extensions': 'off',
       'no-restricted-syntax': [
         'error',
@@ -219,10 +217,10 @@ export default tseslint.config(
           message: 'NodeNext relative exports in tests must end with .js'
         }
       ],
-      '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-non-null-assertion': 'error',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': [
-        'warn',
+        'error',
         { argsIgnorePattern: '^_' }
       ],
       'security/detect-non-literal-fs-filename': 'off'
@@ -230,8 +228,6 @@ export default tseslint.config(
   },
 
   // Scripts — no boundaries constraints, security rules apply (scripts manipulate processes/files).
-  // Quality rules are warn-level (pre-existing violations exist).
-  // Safety rules remain error.
   {
     files: ['scripts/**/*.ts'],
     languageOptions: {
@@ -245,14 +241,14 @@ export default tseslint.config(
     },
     rules: {
       'no-console': 'off',
-      'prefer-const': 'warn',
+      'prefer-const': 'error',
       'no-eval': 'error',
       'no-implied-eval': 'error',
       'no-new-func': 'error',
       'no-prototype-builtins': 'error',
       'no-path-concat': 'error',
-      'simple-import-sort/imports': 'warn',
-      'simple-import-sort/exports': 'warn',
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
       'no-restricted-syntax': [
         'error',
         {
@@ -260,9 +256,9 @@ export default tseslint.config(
           message: 'NodeNext relative imports must end with .js'
         }
       ],
-      '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
+      '@typescript-eslint/no-non-null-assertion': 'error',
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }]
     }
   },
 

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { getRootAuthHeaders } from '../helpers/auth.js';
 import { assertErrorEnvelope, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
-import { createIsolatedRuntimeEnvironment, createPrismaClientForEnvironment, prepareIsolatedRuntime } from '../helpers/runtime.js';
+import { createIsolatedRuntimeEnvironment, prepareIsolatedRuntime } from '../helpers/runtime.js';
 import type { RunningServer, TestServerOptions } from '../helpers/server.js';
 import { requestJson, withTestServer } from '../helpers/server.js';
 

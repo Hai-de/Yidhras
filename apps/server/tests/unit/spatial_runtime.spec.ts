@@ -1,7 +1,7 @@
 import type { SpatialDiscreteConfig } from '@yidhras/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { createSpatialRuntime, type SpatialRuntime } from '../../src/packs/runtime/spatial_runtime.js';
+import { createSpatialRuntime } from '../../src/packs/runtime/spatial_runtime.js';
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 
 const TEST_PACK_ID = 'test-pack';

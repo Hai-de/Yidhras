@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach,beforeEach, describe, expect, it } from 'vitest';
 
 import { SqliteSchedulerStorageAdapter } from '../../../src/packs/storage/internal/SqliteSchedulerStorageAdapter.js';
+import { expectDefined } from '../../helpers/assertions.js';
 
 const PACK_ID = 'test-pack';
 
@@ -116,10 +117,10 @@ describe('SqliteSchedulerStorageAdapter', () => {
     });
 
     const lease = adapter.getLease(PACK_ID, 'p1');
-    expect(lease).not.toBeNull();
-    expect(lease!.holder).toBe('worker-a');
-    expect(lease!.acquired_at).toBe(500n);
-    expect(lease!.expires_at).toBe(1500n);
+    const storedLease = expectDefined(lease, 'stored lease p1');
+    expect(storedLease.holder).toBe('worker-a');
+    expect(storedLease.acquired_at).toBe(500n);
+    expect(storedLease.expires_at).toBe(1500n);
   });
 
   it('updateLeaseIfClaimable updates when lease is expired', () => {
@@ -145,7 +146,7 @@ describe('SqliteSchedulerStorageAdapter', () => {
     expect(result.count).toBe(1);
 
     const lease = adapter.getLease(PACK_ID, 'p0');
-    expect(lease!.holder).toBe('new-worker');
+    expect(expectDefined(lease, 'updated lease').holder).toBe('new-worker');
   });
 
   it('updateLeaseIfClaimable updates when holder is same', () => {
@@ -194,7 +195,7 @@ describe('SqliteSchedulerStorageAdapter', () => {
     expect(result.count).toBe(0);
 
     const lease = adapter.getLease(PACK_ID, 'p0');
-    expect(lease!.holder).toBe('holder-a');
+    expect(expectDefined(lease, 'unchanged lease').holder).toBe('holder-a');
   });
 
   it('deleteLeaseByHolder removes lease for matching holder', () => {
@@ -251,9 +252,9 @@ describe('SqliteSchedulerStorageAdapter', () => {
     });
 
     const cursor = adapter.getCursor(PACK_ID, 'p1');
-    expect(cursor).not.toBeNull();
-    expect(cursor!.last_scanned_tick).toBe(300n);
-    expect(cursor!.last_signal_tick).toBe(250n);
+    const storedCursor = expectDefined(cursor, 'stored cursor p1');
+    expect(storedCursor.last_scanned_tick).toBe(300n);
+    expect(storedCursor.last_signal_tick).toBe(250n);
   });
 
   // -- Partition Assignment --
@@ -269,9 +270,9 @@ describe('SqliteSchedulerStorageAdapter', () => {
     });
 
     const partition = adapter.getPartition(PACK_ID, 'p0');
-    expect(partition).not.toBeNull();
-    expect(partition!.worker_id).toBe('worker-1');
-    expect(partition!.status).toBe('assigned');
+    const storedPartition = expectDefined(partition, 'stored partition p0');
+    expect(storedPartition.worker_id).toBe('worker-1');
+    expect(storedPartition.status).toBe('assigned');
   });
 
   it('listPartitions returns all partitions', () => {
@@ -377,8 +378,7 @@ describe('SqliteSchedulerStorageAdapter', () => {
     expect(migration.status).toBe('requested');
 
     const fetched = adapter.getMigrationById(PACK_ID, migration.id);
-    expect(fetched).not.toBeNull();
-    expect(fetched!.to_worker_id).toBe('w2');
+    expect(expectDefined(fetched, 'fetched migration').to_worker_id).toBe('w2');
   });
 
   it('listMigrations returns migrations ordered by created_at DESC', () => {
@@ -417,9 +417,9 @@ describe('SqliteSchedulerStorageAdapter', () => {
     });
 
     const latest = adapter.findLatestActiveMigrationForPartition(PACK_ID, 'p0', 'w2');
-    expect(latest).not.toBeNull();
-    expect(latest!.status).toBe('in_progress');
-    expect(latest!.created_at).toBe(200n);
+    const latestMigration = expectDefined(latest, 'latest active migration');
+    expect(latestMigration.status).toBe('in_progress');
+    expect(latestMigration.created_at).toBe(200n);
   });
 
   it('updateMigration modifies migration status', () => {
@@ -455,9 +455,9 @@ describe('SqliteSchedulerStorageAdapter', () => {
     expect(rec.id).toBeTruthy();
 
     const fetched = adapter.getRecommendationById(PACK_ID, rec.id);
-    expect(fetched).not.toBeNull();
-    expect(fetched!.reason).toBe('partition_skew');
-    expect(fetched!.score).toBe(0.8);
+    const fetchedRecommendation = expectDefined(fetched, 'fetched recommendation');
+    expect(fetchedRecommendation.reason).toBe('partition_skew');
+    expect(fetchedRecommendation.score).toBe(0.8);
   });
 
   it('findOpenRecommendation finds matching open recommendation', () => {
@@ -585,8 +585,6 @@ describe('SqliteSchedulerStorageAdapter', () => {
   // -- Multi-pack isolation --
 
   it('data is isolated between packs', () => {
-    const PACK_B = 'pack-b';
-    const packBDir = join(rootDir, 'data', 'world_packs', PACK_B);
     // Need to create before we can open — the adapter's open method should handle this
     // Actually, open() calls resolvePackRuntimeDatabaseLocation which resolves the path,
     // then creates a DatabaseSync — but the directory needs to exist.
@@ -605,6 +603,6 @@ describe('SqliteSchedulerStorageAdapter', () => {
     // (we can't test this without setting up a second pack directory)
     // but the current pack's data is still accessible
     const lease = adapter.getLease(PACK_ID, 'p0');
-    expect(lease!.holder).toBe('isolated-worker');
+    expect(expectDefined(lease, 'isolated lease').holder).toBe('isolated-worker');
   });
 });

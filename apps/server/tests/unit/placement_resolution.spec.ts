@@ -8,6 +8,7 @@ import type {
   PromptWorkflowStepSpec
 } from '../../src/context/workflow/types.js';
 import type { PromptFragmentAnchor } from '../../src/inference/prompt_fragment_v2.js';
+import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
 
 const executor = createPlacementResolutionExecutor();
 
@@ -84,9 +85,9 @@ describe('Placement Resolution — Anchor Resolution', () => {
     expect(state.section_drafts[1].id).toBe('existing');
 
     const summary = state.diagnostics.placement_summary;
-    expect(summary).toBeDefined();
-    expect(summary!.resolved_with_anchor).toBe(1);
-    expect(summary!.fallback_count).toBe(0);
+    const placementSummary = expectDefined(summary, 'placement summary');
+    expect(placementSummary.resolved_with_anchor).toBe(1);
+    expect(placementSummary.fallback_count).toBe(0);
   });
 
   it('resolves slot_end anchor — draft placed at end of slot', async () => {
@@ -108,8 +109,9 @@ describe('Placement Resolution — Anchor Resolution', () => {
     expect(state.section_drafts[1].id).toBe('slot-end');
 
     const summary = state.diagnostics.placement_summary;
-    expect(summary!.resolved_with_anchor).toBe(1);
-    expect(summary!.fallback_count).toBe(0);
+    const placementSummary = expectDefined(summary, 'placement summary');
+    expect(placementSummary.resolved_with_anchor).toBe(1);
+    expect(placementSummary.fallback_count).toBe(0);
   });
 
   it('resolves fragment_id anchor (before) — draft placed before target', async () => {
@@ -134,7 +136,8 @@ describe('Placement Resolution — Anchor Resolution', () => {
     expect(state.section_drafts[1].id).toBe('target-draft');
 
     const summary = state.diagnostics.placement_summary;
-    expect(summary!.resolved_with_anchor).toBe(1);
+    const placementSummary = expectDefined(summary, 'placement summary');
+    expect(placementSummary.resolved_with_anchor).toBe(1);
   });
 
   it('resolves fragment_id anchor (after) — draft placed after target', async () => {
@@ -159,7 +162,8 @@ describe('Placement Resolution — Anchor Resolution', () => {
     expect(state.section_drafts[1].id).toBe('anchored');
 
     const summary = state.diagnostics.placement_summary;
-    expect(summary!.resolved_with_anchor).toBe(1);
+    const placementSummary = expectDefined(summary, 'placement summary');
+    expect(placementSummary.resolved_with_anchor).toBe(1);
   });
 
   it('resolves source anchor — draft placed before matching source', async () => {
@@ -187,7 +191,8 @@ describe('Placement Resolution — Anchor Resolution', () => {
     expect(state.section_drafts[1].id).toBe('target-draft');
 
     const summary = state.diagnostics.placement_summary;
-    expect(summary!.resolved_with_anchor).toBe(1);
+    const placementSummary = expectDefined(summary, 'placement summary');
+    expect(placementSummary.resolved_with_anchor).toBe(1);
   });
 
   it('fallback: anchor target not found — degraded to middle sorted by order', async () => {
@@ -221,10 +226,11 @@ describe('Placement Resolution — Anchor Resolution', () => {
     expect(state.section_drafts[0].id).toBe('anchored');
 
     const summary = state.diagnostics.placement_summary;
-    expect(summary!.resolved_with_anchor).toBe(0);
-    expect(summary!.fallback_count).toBe(1);
-    expect(summary!.anchor_diagnostics).toBeDefined();
-    expect(summary!.anchor_diagnostics![0].code).toBe('target_not_found');
+    const placementSummary = expectDefined(summary, 'placement summary');
+    expect(placementSummary.resolved_with_anchor).toBe(0);
+    expect(placementSummary.fallback_count).toBe(1);
+    const diagnostic = expectArrayElement(expectDefined(placementSummary.anchor_diagnostics, 'anchor diagnostics'), 0, 'anchor diagnostics');
+    expect(diagnostic.code).toBe('target_not_found');
   });
 
   it('tag anchor — scaffold only, degrades with tag_not_implemented diagnostic', async () => {
@@ -251,11 +257,11 @@ describe('Placement Resolution — Anchor Resolution', () => {
     expect(state.section_drafts[1].id).toBe('existing');
 
     const summary = state.diagnostics.placement_summary;
-    expect(summary!.fallback_count).toBe(1);
-    expect(summary!.anchor_diagnostics).toBeDefined();
-    const diag = summary!.anchor_diagnostics!.find((d) => d.draft_id === 'tagged');
-    expect(diag).toBeDefined();
-    expect(diag!.code).toBe('tag_not_implemented');
+    const placementSummary = expectDefined(summary, 'placement summary');
+    expect(placementSummary.fallback_count).toBe(1);
+    const diagnostics = expectDefined(placementSummary.anchor_diagnostics, 'anchor diagnostics');
+    const diag = expectDefined(diagnostics.find((d) => d.draft_id === 'tagged'), 'tagged diagnostic');
+    expect(diag.code).toBe('tag_not_implemented');
   });
 
   it('mixed: prepend + anchored(before) + middle + anchored(after) + append — correct final order', async () => {
@@ -315,7 +321,8 @@ describe('Placement Resolution — Anchor Resolution', () => {
     ]);
 
     const summary = state.diagnostics.placement_summary;
-    expect(summary!.resolved_with_anchor).toBe(2); // before-target, after-target
-    expect(summary!.fallback_count).toBe(0);
+    const placementSummary = expectDefined(summary, 'placement summary');
+    expect(placementSummary.resolved_with_anchor).toBe(2); // before-target, after-target
+    expect(placementSummary.fallback_count).toBe(0);
   });
 });

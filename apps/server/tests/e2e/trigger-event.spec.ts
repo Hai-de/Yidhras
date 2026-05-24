@@ -123,10 +123,6 @@ describe('trigger event e2e', () => {
       const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');
       expect(statusData.runtime_ready).toBe(true);
 
-      const activeHeaders = {
-        ...(await getRootAuthHeadersWithIdentity(server.baseUrl, 'agent-001', 'agent'))
-      };
-
       const secondaryActiveHeaders = {
         ...(await getRootAuthHeadersWithIdentity(server.baseUrl, 'agent-002', 'agent'))
       };

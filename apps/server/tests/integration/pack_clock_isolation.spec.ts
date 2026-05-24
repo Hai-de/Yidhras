@@ -3,6 +3,7 @@ import { afterAll,beforeAll, describe, expect, it } from 'vitest';
 
 import { SimulationManager } from '../../src/core/simulation.js';
 import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
+import { expectDefined } from '../helpers/assertions.js';
 import {
   createIsolatedRuntimeEnvironment,
   createPrismaClientForEnvironment,
@@ -48,11 +49,11 @@ describe('pack clock isolation', () => {
       const handleA = sim.getPackRuntimeHandle(DEATH_NOTE_ID);
       const handleB = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
 
-      expect(handleA).not.toBeNull();
-      expect(handleB).not.toBeNull();
+      const deathNoteHandle = expectDefined(handleA, 'death note handle');
+      const exampleHandle = expectDefined(handleB, 'example pack handle');
 
-      const clockA = handleA!.getClockSnapshot();
-      const clockB = handleB!.getClockSnapshot();
+      const clockA = deathNoteHandle.getClockSnapshot();
+      const clockB = exampleHandle.getClockSnapshot();
 
       expect(clockA).toBeTruthy();
       expect(clockB).toBeTruthy();
@@ -66,27 +67,28 @@ describe('pack clock isolation', () => {
       await sim.unloadExperimentalPackRuntime(EXAMPLE_PACK_ID);
 
       const handleA = sim.getPackRuntimeHandle(DEATH_NOTE_ID);
-      expect(handleA).not.toBeNull();
+      const deathNoteHandle = expectDefined(handleA, 'death note handle');
+      const clockBeforeSnapshot = expectDefined(clockBefore, 'clock before');
 
-      const clockAfter = handleA!.getClockSnapshot();
-      expect(clockAfter.current_tick).toBe(clockBefore!.current_tick);
+      const clockAfter = deathNoteHandle.getClockSnapshot();
+      expect(clockAfter.current_tick).toBe(clockBeforeSnapshot.current_tick);
     });
 
     it('reloading pack B does not affect pack A handle', async () => {
       await sim.loadExperimentalPackRuntime(EXAMPLE_PACK_REF);
 
       const handleA = sim.getPackRuntimeHandle(DEATH_NOTE_ID);
-      expect(handleA).not.toBeNull();
-      expect(handleA!.pack_id).toBe(DEATH_NOTE_ID);
+      const deathNoteHandle = expectDefined(handleA, 'death note handle');
+      expect(deathNoteHandle.metadata_id).toBe(DEATH_NOTE_ID);
 
       const handleB = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
-      expect(handleB).not.toBeNull();
-      expect(handleB!.pack_id).toBe(EXAMPLE_PACK_ID);
+      const exampleHandle = expectDefined(handleB, 'example pack handle');
+      expect(exampleHandle.metadata_id).toBe(EXAMPLE_PACK_ID);
     });
 
     it('two packs have distinct clock snapshot values', () => {
-      const clockA = sim.getPackRuntimeHandle(DEATH_NOTE_ID)!.getClockSnapshot();
-      const clockB = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID)!.getClockSnapshot();
+      const clockA = expectDefined(sim.getPackRuntimeHandle(DEATH_NOTE_ID), 'death note handle').getClockSnapshot();
+      const clockB = expectDefined(sim.getPackRuntimeHandle(EXAMPLE_PACK_ID), 'example pack handle').getClockSnapshot();
 
       // Both snapshots exist and have truthy tick values
       expect(clockA.current_tick).toBeTruthy();
@@ -99,25 +101,29 @@ describe('pack clock isolation', () => {
       const handleA = sim.getPackRuntimeHandle(DEATH_NOTE_ID);
       const handleB = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
 
-      expect(handleA!.pack_id).toBe(DEATH_NOTE_ID);
-      expect(handleB!.pack_id).toBe(EXAMPLE_PACK_ID);
-      expect(handleA!.pack_id).not.toBe(handleB!.pack_id);
+      const deathNoteHandle = expectDefined(handleA, 'death note handle');
+      const exampleHandle = expectDefined(handleB, 'example pack handle');
+      expect(deathNoteHandle.metadata_id).toBe(DEATH_NOTE_ID);
+      expect(exampleHandle.metadata_id).toBe(EXAMPLE_PACK_ID);
+      expect(deathNoteHandle.metadata_id).not.toBe(exampleHandle.metadata_id);
     });
 
     it('each pack handle reports its own folder name', () => {
       const handleA = sim.getPackRuntimeHandle(DEATH_NOTE_ID);
       const handleB = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
 
-      expect(typeof handleA!.pack_folder_name).toBe('string');
-      expect(typeof handleB!.pack_folder_name).toBe('string');
+      const deathNoteHandle = expectDefined(handleA, 'death note handle');
+      const exampleHandle = expectDefined(handleB, 'example pack handle');
+      expect(typeof deathNoteHandle.pack_folder_name).toBe('string');
+      expect(typeof exampleHandle.pack_folder_name).toBe('string');
     });
 
     it('speed snapshot is per-pack', () => {
       const handleA = sim.getPackRuntimeHandle(DEATH_NOTE_ID);
       const handleB = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
 
-      const speedA = handleA!.getRuntimeSpeedSnapshot();
-      const speedB = handleB!.getRuntimeSpeedSnapshot();
+      const speedA = expectDefined(handleA, 'death note handle').getRuntimeSpeedSnapshot();
+      const speedB = expectDefined(handleB, 'example pack handle').getRuntimeSpeedSnapshot();
 
       expect(speedA).toBeTruthy();
       expect(speedB).toBeTruthy();
@@ -129,8 +135,8 @@ describe('pack clock isolation', () => {
       const handleA = sim.getPackRuntimeHandle(DEATH_NOTE_ID);
       const handleB = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
 
-      const healthA = handleA!.getHealthSnapshot();
-      const healthB = handleB!.getHealthSnapshot();
+      const healthA = expectDefined(handleA, 'death note handle').getHealthSnapshot();
+      const healthB = expectDefined(handleB, 'example pack handle').getHealthSnapshot();
 
       expect(healthA).toBeTruthy();
       expect(healthB).toBeTruthy();
@@ -148,7 +154,7 @@ describe('pack clock isolation', () => {
       expect(loadedIds.has(EXAMPLE_PACK_ID)).toBe(true);
 
       for (const s of statuses) {
-        expect(loadedIds.has(s.pack_id)).toBe(true);
+        expect(loadedIds.has(s.metadata_id)).toBe(true);
       }
     });
 

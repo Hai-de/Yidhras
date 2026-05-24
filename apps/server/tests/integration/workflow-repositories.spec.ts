@@ -2,6 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createPrismaRepositories } from '../../src/app/services/repositories/index.js';
+import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
 import type { IsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 import {
   createIsolatedRuntimeEnvironment,
@@ -83,7 +84,7 @@ describe('workflow repositories integration', () => {
     expect(claimedRun).toMatchObject({ status: 'running', lock_worker_id: 'worker-1' });
 
     const claimedStep = await repos.workflowSteps.claimStep({
-      step_run_id: runnableSteps[0]!.id,
+      step_run_id: expectArrayElement(runnableSteps, 0, 'runnable steps').id,
       worker_id: 'worker-1',
       now: now + 2n,
       lock_ticks: 5n
@@ -91,7 +92,7 @@ describe('workflow repositories integration', () => {
     expect(claimedStep).toMatchObject({ status: 'running', lock_worker_id: 'worker-1' });
 
     await repos.workflowSteps.completeStep({
-      step_run_id: claimedStep!.id,
+      step_run_id: expectDefined(claimedStep, 'claimed workflow step').id,
       result_json: {
         reasoning: 'draft reasoning',
         decision_summary: 'drafted',

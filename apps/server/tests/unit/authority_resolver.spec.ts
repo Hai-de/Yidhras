@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import type { AppInfrastructure } from '../../src/app/context.js'
 import { resolveAuthorityForSubject } from '../../src/domain/authority/resolver.js'
-
-const buildMockPackStorageAdapter = () => ({
-  listEngineOwnedRecords: vi.fn()
-})
 
 describe('resolveAuthorityForSubject status filtering', () => {
   const buildMockContext = (authorityGrants: Array<Record<string, unknown>>, entities: Array<Record<string, unknown>> = [], entityStates: Array<Record<string, unknown>> = [], mediatorBindings: Array<Record<string, unknown>> = []) => {
@@ -24,7 +21,7 @@ describe('resolveAuthorityForSubject status filtering', () => {
       packStorageAdapter: adapter,
       prisma: {},
       repos: { inference: { transaction: vi.fn() } }
-    } as any
+    } as unknown as AppInfrastructure
   }
 
   it('includes grants with status "active"', async () => {

@@ -15,6 +15,7 @@ import {
   resetAiRegistryCache,
   resolveToolsFromRegistry
 } from '../../src/ai/registry.js';
+import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
 
 describe('ai registry', () => {
   beforeEach(() => {
@@ -77,10 +78,10 @@ describe('ai registry', () => {
     it('getAiProviderConfig returns openai provider', () => {
       const provider = getAiProviderConfig('openai');
 
-      expect(provider).not.toBeNull();
-      expect(provider!.provider).toBe('openai');
-      expect(provider!.enabled).toBe(true);
-      expect(provider!.api_key_env).toBe('OPENAI_API_KEY');
+      const openaiProvider = expectDefined(provider, 'openai provider');
+      expect(openaiProvider.provider).toBe('openai');
+      expect(openaiProvider.enabled).toBe(true);
+      expect(openaiProvider.api_key_env).toBe('OPENAI_API_KEY');
     });
 
     it('getAiProviderConfig returns null for unknown provider', () => {
@@ -100,20 +101,20 @@ describe('ai registry', () => {
     it('finds gpt-4.1-mini via findAiModelRegistryEntry', () => {
       const entry = findAiModelRegistryEntry({ provider: 'openai', model: 'gpt-4.1-mini' });
 
-      expect(entry).not.toBeNull();
-      expect(entry!.provider).toBe('openai');
-      expect(entry!.model).toBe('gpt-4.1-mini');
-      expect(entry!.capabilities.structured_output).toBe('json_schema');
-      expect(entry!.capabilities.tool_calling).toBe(true);
-      expect(entry!.capabilities.text_generation).toBe(true);
+      const model = expectDefined(entry, 'gpt-4.1-mini model');
+      expect(model.provider).toBe('openai');
+      expect(model.model).toBe('gpt-4.1-mini');
+      expect(model.capabilities.structured_output).toBe('json_schema');
+      expect(model.capabilities.tool_calling).toBe(true);
+      expect(model.capabilities.text_generation).toBe(true);
     });
 
     it('finds embedding model via findAiModelRegistryEntry', () => {
       const entry = findAiModelRegistryEntry({ provider: 'openai', model: 'text-embedding-3-small' });
 
-      expect(entry).not.toBeNull();
-      expect(entry!.capabilities.embeddings).toBe(true);
-      expect(entry!.capabilities.text_generation).toBe(false);
+      const model = expectDefined(entry, 'text-embedding-3-small model');
+      expect(model.capabilities.embeddings).toBe(true);
+      expect(model.capabilities.text_generation).toBe(false);
     });
 
     it('returns null for unknown model', () => {
@@ -131,9 +132,9 @@ describe('ai registry', () => {
     it('gpt-4.1 model exists and has tags', () => {
       const entry = findAiModelRegistryEntry({ provider: 'openai', model: 'gpt-4.1' });
 
-      expect(entry).not.toBeNull();
-      expect(Array.isArray(entry!.tags)).toBe(true);
-      expect(entry!.tags.length).toBeGreaterThan(0);
+      const model = expectDefined(entry, 'gpt-4.1 model');
+      expect(Array.isArray(model.tags)).toBe(true);
+      expect(model.tags.length).toBeGreaterThan(0);
     });
   });
 
@@ -164,7 +165,7 @@ describe('ai registry', () => {
       const routes = listAiRoutePolicies('agent_decision');
 
       expect(routes.length).toBeGreaterThan(0);
-      const route = routes[0]!;
+      const route = expectArrayElement(routes, 0, 'agent decision routes');
       expect(route.route_id).toBe('default.agent_decision');
       expect(Array.isArray(route.preferred_models)).toBe(true);
       expect(route.preferred_models.length).toBeGreaterThan(0);
@@ -176,8 +177,8 @@ describe('ai registry', () => {
 
       expect(routes.length).toBeGreaterThanOrEqual(1);
       const route = routes.find(r => r.route_id === 'default.context_summary');
-      expect(route).toBeDefined();
-      expect(route!.task_types.length).toBeGreaterThanOrEqual(2);
+      const contextSummaryRoute = expectDefined(route, 'context summary route');
+      expect(contextSummaryRoute.task_types.length).toBeGreaterThanOrEqual(2);
     });
 
     it('embedding route has ollama fallback model', () => {
@@ -185,10 +186,10 @@ describe('ai registry', () => {
 
       expect(routes.length).toBeGreaterThanOrEqual(1);
       const route = routes.find(r => r.route_id === 'default.embedding');
-      expect(route).toBeDefined();
-      expect(route!.fallback_models.length).toBeGreaterThanOrEqual(1);
-      expect(route!.fallback_models.some(m => m.provider === 'ollama')).toBe(true);
-      expect(route!.defaults?.allow_fallback).toBe(true);
+      const embeddingRoute = expectDefined(route, 'embedding route');
+      expect(embeddingRoute.fallback_models.length).toBeGreaterThanOrEqual(1);
+      expect(embeddingRoute.fallback_models.some(m => m.provider === 'ollama')).toBe(true);
+      expect(embeddingRoute.defaults?.allow_fallback).toBe(true);
     });
 
     it('all default routes have non-empty task_types', () => {
@@ -266,9 +267,9 @@ describe('ai registry', () => {
     it('getAiToolEntry finds a tool by tool_id', () => {
       const tool = getAiToolEntry('sys.get_clock_state');
 
-      expect(tool).not.toBeNull();
-      expect(tool!.name).toBe('get_clock_state');
-      expect(tool!.kind).toBe('system');
+      const clockTool = expectDefined(tool, 'clock tool');
+      expect(clockTool.name).toBe('get_clock_state');
+      expect(clockTool.kind).toBe('system');
     });
 
     it('getAiToolEntry returns null for unknown tool_id', () => {
@@ -278,8 +279,8 @@ describe('ai registry', () => {
     it('findAiToolEntryByName finds a tool by name', () => {
       const tool = findAiToolEntryByName('query_memory_blocks');
 
-      expect(tool).not.toBeNull();
-      expect(tool!.tool_id).toBe('sys.query_memory_blocks');
+      const memoryTool = expectDefined(tool, 'memory tool');
+      expect(memoryTool.tool_id).toBe('sys.query_memory_blocks');
     });
 
     it('findAiToolEntryByName returns null for unknown name', () => {
@@ -294,15 +295,15 @@ describe('ai registry', () => {
       ]);
 
       expect(resolved).toHaveLength(2);
-      expect(resolved[0]!.tool_id).toBe('sys.get_clock_state');
-      expect(resolved[1]!.tool_id).toBe('sys.get_entity');
+      expect(expectArrayElement(resolved, 0, 'resolved tools').tool_id).toBe('sys.get_clock_state');
+      expect(expectArrayElement(resolved, 1, 'resolved tools').tool_id).toBe('sys.get_entity');
     });
 
     it('resolveToolsFromRegistry filters out disabled tools', () => {
       const resolved = resolveToolsFromRegistry(['sys.get_clock_state']);
 
       expect(resolved).toHaveLength(1);
-      expect(resolved[0]!.enabled).toBe(true);
+      expect(expectArrayElement(resolved, 0, 'resolved tools').enabled).toBe(true);
     });
 
     it('resolveToolsFromRegistry returns empty array for empty input', () => {
@@ -315,8 +316,8 @@ describe('ai registry', () => {
       const routes = listAiRoutePolicies('agent_decision');
       const route = routes.find(r => r.route_id === 'default.agent_decision');
 
-      expect(route).toBeDefined();
-      expect(route!.constraints?.allow_tool_calling).toBe(true);
+      const agentDecisionRoute = expectDefined(route, 'agent decision route');
+      expect(agentDecisionRoute.constraints?.allow_tool_calling).toBe(true);
     });
 
     it('other default routes do not have allow_tool_calling set', () => {

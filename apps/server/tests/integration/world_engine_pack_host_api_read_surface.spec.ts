@@ -29,9 +29,7 @@ const createMemPackStorageAdapter = (): PackStorageAdapter => {
     ping: async () => true,
     destroyPackStorage: async () => {},
     ensureEngineOwnedSchema: async () => {},
-    listEngineOwnedRecords: async (packId, tableName) => {
-      return getTable(packId, tableName) as any;
-    },
+    listEngineOwnedRecords: async <T = Record<string, unknown>>(packId: string, tableName: string): Promise<T[]> => getTable(packId, tableName) as T[],
     upsertEngineOwnedRecord: async (packId, tableName, record) => {
       const table = getTable(packId, tableName);
       const rec = record as Record<string, unknown>;

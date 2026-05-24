@@ -11,6 +11,7 @@ import {
 } from '../../src/ai/registry.js';
 import type { PromptSlotConfig } from '../../src/inference/prompt_slot_config.js';
 import { resolveSlotPositions } from '../../src/inference/slot_position_resolver.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 const makeSlot = (overrides: Partial<PromptSlotConfig> = {}): PromptSlotConfig => ({
   id: 'test_dynamic_slot',
@@ -123,11 +124,11 @@ describe('Dynamic Slot Registry', () => {
     const customA = resolved_positions.find((p) => p.slot_id === 'custom_a');
     const customB = resolved_positions.find((p) => p.slot_id === 'custom_b');
 
-    expect(customA).toBeDefined();
-    expect(customB).toBeDefined();
+    const resolvedCustomA = expectDefined(customA, 'custom_a resolved slot');
+    const resolvedCustomB = expectDefined(customB, 'custom_b resolved slot');
     // custom_a (position 85) should appear before custom_b (position 55) in descending order
-    const idxA = resolved_positions.indexOf(customA!);
-    const idxB = resolved_positions.indexOf(customB!);
+    const idxA = resolved_positions.indexOf(resolvedCustomA);
+    const idxB = resolved_positions.indexOf(resolvedCustomB);
     expect(idxA).toBeLessThan(idxB);
   });
 
@@ -139,8 +140,8 @@ describe('Dynamic Slot Registry', () => {
     const { resolved_positions } = resolveSlotPositions(registry.slots);
 
     const slot = resolved_positions.find((p) => p.slot_id === 'disabled_dynamic');
-    expect(slot).toBeDefined();
-    expect(slot!.enabled).toBe(false);
+    const resolvedSlot = expectDefined(slot, 'disabled dynamic resolved slot');
+    expect(resolvedSlot.enabled).toBe(false);
   });
 
   it('listDynamicSlots returns only dynamic slots, not YAML slots', () => {

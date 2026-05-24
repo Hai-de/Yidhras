@@ -5,7 +5,6 @@ import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { requestJson } from '../helpers/server.js';
 
 const DEATH_NOTE_PACK_ID = 'world-death-note';
-const DEATH_NOTE_PACK_REF = 'death_note';
 
 describe('experimental projection compatibility e2e', () => {
   it('preserves stable projection guards while exposing experimental pack-local projection reads', async () => {

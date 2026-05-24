@@ -6,6 +6,7 @@ import { renderAst } from '../../src/template_engine/core/renderer.js'
 import type { AstNode, RenderScope } from '../../src/template_engine/core/types.js'
 import { BUILTIN_BLOCK_HANDLERS, BUILTIN_MODIFIERS } from '../../src/template_engine/defaults.js'
 import { createParser, parseTemplate, render } from '../../src/template_engine/frontends/data_cleaner/index.js'
+import { expectArrayElement, expectDefined } from '../helpers/assertions.js'
 
 const defaultScope: RenderScope = {
   variables: {},
@@ -151,8 +152,8 @@ describe('Parser', () => {
     const block = nodes[0]
     expect(block).toMatchObject({ type: 'block', keyword: 'if', condition: 'cond' })
     expect((block as { body: AstNode[] }).body).toHaveLength(1)
-    expect((block as { elseBody?: AstNode[] }).elseBody).toHaveLength(1)
-    expect((block as { elseBody?: AstNode[] }).elseBody![0]).toMatchObject({ type: 'text', content: 'no' })
+    const elseBody = expectDefined((block as { elseBody?: AstNode[] }).elseBody, 'if block else body')
+    expect(expectArrayElement(elseBody, 0, 'if block else body')).toMatchObject({ type: 'text', content: 'no' })
   })
 
   it('T9: parses each block', () => {

@@ -1,4 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
+import type { WorldRuleExecuteObjectiveRequest } from '@yidhras/contracts';
 import fs from 'fs';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -13,6 +14,7 @@ import { parseWorldPackConstitution } from '../../src/packs/manifest/constitutio
 import { materializePackRuntimeCoreModels } from '../../src/packs/runtime/materializer.js';
 import { getPackEntityOverviewProjection } from '../../src/packs/runtime/projections/entity_overview_service.js';
 import { listPackNarrativeTimelineProjection } from '../../src/packs/runtime/projections/narrative_projection_service.js';
+import type { NotificationLevel, SystemMessage } from '../../src/utils/notifications.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 import { createVariableRuntimeSpeedSnapshot } from '../helpers/runtime_speed.js';
@@ -30,15 +32,7 @@ afterEach(() => {
 const buildProjectionTestContext = (
   pack: ReturnType<typeof parseWorldPackConstitution>,
   now = 1000n
-): any => {
-  const clock = {
-    getTicks(): bigint {
-      return now;
-    },
-    getAllTimes() {
-      return [];
-    }
-  };
+): AppContext => {
   const prisma = {
     event: {
         async findMany() {
@@ -62,8 +56,9 @@ const buildProjectionTestContext = (
       }
     } as unknown as AppContext['prisma'];
   const repos = wrapPrismaAsRepositories(prisma as PrismaClient);
-  (repos as any).narrative = {
-    ...(repos as any).narrative,
+  const mutableRepos = repos as { narrative: typeof repos.narrative; identityOperator: typeof repos.identityOperator };
+  mutableRepos.narrative = {
+    ...repos.narrative,
     async listRecentEvents(limit?: number) {
       const events = await prisma.event.findMany({
         orderBy: { created_at: 'desc' },
@@ -81,31 +76,15 @@ const buildProjectionTestContext = (
       }>;
     }
   };
-  (repos as any).identityOperator = {
-    ...(repos as any).identityOperator,
+  mutableRepos.identityOperator = {
+    ...repos.identityOperator,
     findOperatorBindingForAgent: async () => null
   };
   return {
     prisma,
     repos,
-    sim: {
-      getPack(): typeof pack {
-        return pack;
-      },
-      getCurrentTick(): bigint {
-        return now;
-      },
-      getAllTimes() {
-        return [];
-      },
-      clock,
-      isRuntimeReady: () => true,
-      isPaused: () => false,
-      getPackRuntimeHandle: () => null,
-      getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot()
-    } as any,
     notifications: {
-      push(level: string, content: string) {
+      push(level: NotificationLevel, content: string): SystemMessage {
         return { id: 'noop', level, content, timestamp: Date.now() };
       },
       getMessages() {
@@ -199,7 +178,7 @@ const buildProjectionTestContext = (
           uptime_ms: 0
         };
       },
-      async executeObjectiveRule(input: any) {
+      async executeObjectiveRule(input: WorldRuleExecuteObjectiveRequest) {
         return {
           protocol_version: 'world_engine/v1alpha1',
           pack_id: input.pack_id,
@@ -253,7 +232,7 @@ const buildProjectionTestContext = (
         ping: async () => true,
         destroyPackStorage: async () => {},
         ensureEngineOwnedSchema: async () => {},
-        listEngineOwnedRecords: async (packId: string, tableName: string) => getTable(packId, tableName) as any,
+        listEngineOwnedRecords: async <T = Record<string, unknown>>(packId: string, tableName: string): Promise<T[]> => getTable(packId, tableName) as T[],
         upsertEngineOwnedRecord: async (packId: string, tableName: string, record: unknown) => {
           const table = getTable(packId, tableName);
           const rec = record as Record<string, unknown>;
@@ -337,7 +316,7 @@ const buildProjectionTestContext = (
         getRuntimeSpeedSnapshot: () => createVariableRuntimeSpeedSnapshot(),
         getHealthSnapshot: () => ({ status: 'running' as const, message: null })
       }) satisfies PackRuntimeHandle
-  };
+  } as unknown as AppContext;
 };
 
 describe('world-pack projection flow integration', () => {

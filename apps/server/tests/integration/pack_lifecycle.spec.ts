@@ -3,6 +3,7 @@ import { afterAll,beforeAll, describe, expect, it } from 'vitest';
 
 import { SimulationManager } from '../../src/core/simulation.js';
 import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
+import { expectDefined } from '../helpers/assertions.js';
 import {
   createIsolatedRuntimeEnvironment,
   createPrismaClientForEnvironment,
@@ -47,7 +48,7 @@ describe('pack lifecycle', () => {
 
       const beforeUnload = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
       expect(beforeUnload).not.toBeNull();
-      expect(beforeUnload?.pack_id).toBe(EXAMPLE_PACK_ID);
+      expect(beforeUnload?.metadata_id).toBe(EXAMPLE_PACK_ID);
 
       const unloaded = await sim.unloadExperimentalPackRuntime(EXAMPLE_PACK_ID);
       expect(unloaded).toBe(true);
@@ -60,7 +61,7 @@ describe('pack lifecycle', () => {
 
       const afterReload = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
       expect(afterReload).not.toBeNull();
-      expect(afterReload?.pack_id).toBe(EXAMPLE_PACK_ID);
+      expect(afterReload?.metadata_id).toBe(EXAMPLE_PACK_ID);
     });
 
     it('rapid sequential unload → reload is idempotent over 5 cycles', async () => {
@@ -77,7 +78,7 @@ describe('pack lifecycle', () => {
 
         const handle = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
         expect(handle).not.toBeNull();
-        expect(handle?.pack_id).toBe(EXAMPLE_PACK_ID);
+        expect(handle?.metadata_id).toBe(EXAMPLE_PACK_ID);
 
         const unloaded = await sim.unloadExperimentalPackRuntime(EXAMPLE_PACK_ID);
         expect(unloaded).toBe(true);
@@ -102,7 +103,7 @@ describe('pack lifecycle', () => {
 
       const handle = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
       expect(handle).not.toBeNull();
-      expect(handle?.pack_id).toBe(EXAMPLE_PACK_ID);
+      expect(handle?.metadata_id).toBe(EXAMPLE_PACK_ID);
       expect(typeof handle?.pack_folder_name).toBe('string');
     });
   });
@@ -144,18 +145,18 @@ describe('pack lifecycle', () => {
       await sim.loadExperimentalPackRuntime(EXAMPLE_PACK_REF);
 
       const handle = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
-      expect(handle).not.toBeNull();
+      const runtimeHandle = expectDefined(handle, 'example pack runtime handle');
 
-      const clock = handle!.getClockSnapshot();
+      const clock = runtimeHandle.getClockSnapshot();
       expect(clock).toBeTruthy();
       expect(typeof clock.current_tick).toBe('string');
     });
 
     it('handle returns health snapshot after load', async () => {
       const handle = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
-      expect(handle).not.toBeNull();
+      const runtimeHandle = expectDefined(handle, 'example pack runtime handle');
 
-      const health = handle!.getHealthSnapshot();
+      const health = runtimeHandle.getHealthSnapshot();
       expect(health).toBeTruthy();
       expect(typeof health.status).toBe('string');
     });
@@ -172,7 +173,7 @@ describe('pack lifecycle', () => {
 
       const snapshot = sim.getPackRuntimeStatusSnapshot(EXAMPLE_PACK_ID);
       expect(snapshot).not.toBeNull();
-      expect(snapshot?.pack_id).toBe(EXAMPLE_PACK_ID);
+      expect(snapshot?.metadata_id).toBe(EXAMPLE_PACK_ID);
 
       await sim.unloadExperimentalPackRuntime(EXAMPLE_PACK_ID);
 

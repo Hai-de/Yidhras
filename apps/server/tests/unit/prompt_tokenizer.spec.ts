@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildPromptTree } from '../../src/inference/prompt_builder_v2.js';
 import type { PromptFragmentV2 } from '../../src/inference/prompt_fragment_v2.js';
-import { aggregateFragmentTokens, aggregateTreeTokens,createPromptTokenCounter } from '../../src/inference/prompt_tokenizer.js';
+import { aggregateFragmentTokens, createPromptTokenCounter } from '../../src/inference/prompt_tokenizer.js';
 import { createTiktokenTokenizer } from '../../src/inference/tokenizers/tiktoken_adapter.js';
 import type { InferenceContext } from '../../src/inference/types.js';
 

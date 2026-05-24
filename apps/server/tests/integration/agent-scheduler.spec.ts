@@ -11,6 +11,7 @@ import {
 } from '../../src/app/services/scheduler/queries.js';
 import type { SchedulerStorageAdapter } from "../../src/packs/storage/SchedulerStorageAdapter.js";
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
+import { expectDefined } from '../helpers/assertions.js';
 import { MemSchedulerStorage } from "../helpers/scheduler_storage.js";
 
 describe('agent scheduler integration', () => {
@@ -18,6 +19,8 @@ describe('agent scheduler integration', () => {
   let context: AppContext;
   let adapter: MemSchedulerStorage;
 const TEST_PACK_ID = "test-agent-sched";
+  const packRuntime = () => expectDefined(context.packRuntime, 'pack runtime');
+  const currentTick = () => packRuntime().getCurrentTick();
 
   beforeAll(async () => {
     const fixture = await createIsolatedAppContextFixture();
@@ -42,7 +45,7 @@ const TEST_PACK_ID = "test-agent-sched";
     await context.prisma.memoryCompactionState.deleteMany();
     await context.prisma.relationship.deleteMany();
 
-    const baseTick = context.packRuntime!.getCurrentTick();
+    const baseTick = currentTick();
     await context.prisma.agent.upsert({
       where: { id: 'agent-001' },
       update: { name: 'Scheduler Agent 001', type: 'active', snr: 0.7, updated_at: baseTick },
@@ -148,7 +151,7 @@ const TEST_PACK_ID = "test-agent-sched";
   describe('future-dated jobs', () => {
     it('rejects claims on jobs scheduled for a future tick', async () => {
       await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
-      const baseTick = context.packRuntime!.getCurrentTick();
+      const baseTick = currentTick();
       const futureTick = baseTick + 10n;
       const key = `sch:agent-001:${baseTick.toString()}:event_driven:event_followup`;
 
@@ -175,7 +178,7 @@ const TEST_PACK_ID = "test-agent-sched";
       const prisma = context.prisma;
       await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
 
-      const tick = context.packRuntime!.getCurrentTick();
+      const tick = currentTick();
       const traceId = `sched-int-trace-${Date.now()}`;
       const intentId = `sched-int-intent-${Date.now()}`;
       const eventTitle = `sched-int-event-${Date.now()}`;
@@ -236,7 +239,7 @@ const TEST_PACK_ID = "test-agent-sched";
       const prisma = context.prisma;
       await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
 
-      const tick = context.packRuntime!.getCurrentTick();
+      const tick = currentTick();
       const intentId = `sched-replay-intent-${Date.now()}`;
       const traceId = `sched-replay-trace-${Date.now()}`;
       const replayKey = `sched-replay-key-${Date.now()}`;
@@ -280,7 +283,7 @@ const TEST_PACK_ID = "test-agent-sched";
       const prisma = context.prisma;
       await runAgentScheduler({ context, packId: TEST_PACK_ID, limit: 10 });
 
-      const tick = context.packRuntime!.getCurrentTick();
+      const tick = currentTick();
       const traceId = `sched-retry-trace-${Date.now()}`;
       const intentId = `sched-retry-intent-${Date.now()}`;
       const retryKey = `sched-retry-key-${Date.now()}`;

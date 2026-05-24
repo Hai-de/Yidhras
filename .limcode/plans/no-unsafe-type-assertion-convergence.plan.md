@@ -12,12 +12,12 @@
 - [x] 处理 no-unsafe-enum-comparison、no-unsafe-unary-minus 及其他低频 no-unsafe 规则：当前基线为 0，暂无代码修改项  `#phase-7d-low-frequency`
 - [x] 审计 src/**/*.ts 中所有 @typescript-eslint/no-unsafe-* eslint-disable 压制说明：共 502 处，发现并修复 1 处缺少 -- 原因说明的压制  `#phase-7e-disable-audit`
 - [x] 运行 eslint src、typecheck、unit test、pnpm lint 完成固化验证：全部 exit 0；pnpm lint 仍有 726 个 warn，均为本阶段范围外 tests/scripts/builtin/web 既有警告  `#phase-7f-final-verify`
-- [ ] 采集 tests/ 和 scripts/ warn→error 基线，区分显式质量规则 warning 与其他 warning  `#phase-8a-tests-scripts-baseline`
-- [ ] 清理 tests/**/*.ts 中 @typescript-eslint/no-unused-vars 与 no-explicit-any warning  `#phase-8b-tests-unused-any`
-- [ ] 分批清理 tests/**/*.ts 中 @typescript-eslint/no-non-null-assertion warning  `#phase-8c-tests-non-null`
-- [ ] 复查 scripts/**/*.ts 显式质量规则 warning，并处理非质量类 security warning 的范围归属  `#phase-8d-scripts-scope`
-- [ ] 将 tests/ 和 scripts/ 质量规则从 warn 升为 error  `#phase-8e-promote-config`
-- [ ] 运行 eslint tests/scripts、typecheck、unit/integration/e2e 按影响面验证  `#phase-8f-tests-scripts-verify`
+- [x] 采集 tests/ 和 scripts/ warn→error 基线：397 条显式质量规则 warning 全在 tests；scripts 目标规则为 0  `#phase-8a-tests-scripts-baseline`
+- [x] 清理 tests/**/*.ts 中 @typescript-eslint/no-unused-vars（42→0）与 no-explicit-any（38→0）  `#phase-8b-tests-unused-any`
+- [x] 分批清理 tests/**/*.ts 中 @typescript-eslint/no-non-null-assertion（317→0），抽取 expectDefined/expectArrayElement/captureRequests helper  `#phase-8c-tests-non-null`
+- [x] 复查 scripts/**/*.ts 显式质量规则 warning（仍为 0），security/detect-object-injection 3 条为范围外  `#phase-8d-scripts-scope`
+- [x] 将 tests/ 和 scripts/ 6 条目标质量规则从 warn 升为 error，移除过期注释  `#phase-8e-promote-config`
+- [x] eslint tests/scripts exit 0 6 条目标规则全 0；typecheck exit 0；unit 1313/1313 pass；integration 有 3 个既有断言失败（非本阶段引入）  `#phase-8f-tests-scripts-verify`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # no-unsafe-type-assertion 渐进收敛计划

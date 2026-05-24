@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { buildPromptBundleV2, buildPromptTree } from '../../src/inference/prompt_builder_v2.js';
 import type { PromptSlotConfig } from '../../src/inference/prompt_slot_config.js';
-import type { PromptTree } from '../../src/inference/prompt_tree.js';
 import { resolveSlotPositions } from '../../src/inference/slot_position_resolver.js';
 import type { InferenceContext, PromptResolvableContext } from '../../src/inference/types.js';
+import { expectDefined } from '../helpers/assertions.js';
 
 type PromptContext = InferenceContext | PromptResolvableContext;
+
+const resolvedSlot = (positions: ReturnType<typeof resolveSlotPositions>['resolved_positions'], slotId: string) =>
+  expectDefined(positions.find((p) => p.slot_id === slotId), `resolved slot ${slotId}`);
 
 const createMinimalContext = (): PromptContext =>
   ({
@@ -131,18 +134,15 @@ describe('Slot Positioning Integration', () => {
     const { resolved_positions, diagnostics } = resolveSlotPositions(registry);
 
     // system_policy at position 90, custom_slot anchored after it → between 90 and 80
-    const sp = resolved_positions.find((p) => p.slot_id === 'system_policy');
-    const cs = resolved_positions.find((p) => p.slot_id === 'custom_slot');
-    const sc = resolved_positions.find((p) => p.slot_id === 'system_core');
-    const rc = resolved_positions.find((p) => p.slot_id === 'role_core');
+    const sp = resolvedSlot(resolved_positions, 'system_policy');
+    const cs = resolvedSlot(resolved_positions, 'custom_slot');
+    const rc = resolvedSlot(resolved_positions, 'role_core');
 
-    expect(sp).toBeDefined();
-    expect(sp!.enabled).toBe(false);
-    expect(cs).toBeDefined();
-    expect(cs!.enabled).toBe(true);
+    expect(sp.enabled).toBe(false);
+    expect(cs.enabled).toBe(true);
     // custom_slot resolved_position should be between system_policy (90) and role_core (80)
-    expect(cs!.resolved_position).toBeLessThan(sp!.resolved_position);
-    expect(cs!.resolved_position).toBeGreaterThan(rc!.resolved_position!);
+    expect(cs.resolved_position).toBeLessThan(sp.resolved_position);
+    expect(cs.resolved_position).toBeGreaterThan(rc.resolved_position);
     // system_core (100) > system_policy (90) > custom_slot (~85) > role_core (80)
     const sortedIds = resolved_positions.map((p) => p.slot_id);
     const spIdx = sortedIds.indexOf('system_policy');
@@ -163,7 +163,7 @@ describe('Slot Positioning Integration', () => {
     expect(tree.fragments_by_slot).toHaveProperty('system_policy');
     expect(tree.fragments_by_slot['system_policy']).toEqual([]);
     // custom_slot content appears
-    expect(bundle.slots['custom_slot']).toContain('Custom injected content');
+    expect(expectDefined(bundle.slots['custom_slot'], 'custom slot content')).toContain('Custom injected content');
     // custom_slot appears in slot_order
     expect(bundle.slot_order).toContain('custom_slot');
     expect(bundle.slot_order).not.toContain('system_policy');
@@ -192,12 +192,12 @@ describe('Slot Positioning Integration', () => {
 
     // world_context at position 70, memory_summary at 60
     // custom_slot anchored after world_context → between 70 and 60 (= 65)
-    const wc = resolved_positions.find((p) => p.slot_id === 'world_context');
-    const ms = resolved_positions.find((p) => p.slot_id === 'memory_summary');
-    const cs = resolved_positions.find((p) => p.slot_id === 'custom_slot');
+    const wc = resolvedSlot(resolved_positions, 'world_context');
+    const ms = resolvedSlot(resolved_positions, 'memory_summary');
+    const cs = resolvedSlot(resolved_positions, 'custom_slot');
 
-    expect(cs!.resolved_position).toBeLessThan(wc!.resolved_position);
-    expect(cs!.resolved_position).toBeGreaterThan(ms!.resolved_position);
+    expect(cs.resolved_position).toBeLessThan(wc.resolved_position);
+    expect(cs.resolved_position).toBeGreaterThan(ms.resolved_position);
 
     const ctx = createMinimalContext();
     const tree = buildPromptTree(ctx, registry);
@@ -217,7 +217,7 @@ describe('Slot Positioning Integration', () => {
     const msPos = combined.indexOf('Memory Summary');
     expect(wcPos).toBeLessThan(csPos);
     expect(csPos).toBeLessThan(msPos);
-    expect(bundle.slots['custom_slot']).toContain('Dynamic custom content');
+    expect(expectDefined(bundle.slots['custom_slot'], 'custom slot content')).toContain('Dynamic custom content');
   });
 
   it('T3: YAML position ordering — resolved_positions in descending order', () => {

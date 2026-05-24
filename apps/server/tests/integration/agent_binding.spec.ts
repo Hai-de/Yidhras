@@ -7,17 +7,19 @@ import {
   unbindAgent} from '../../src/app/services/operator/operator_agent_bindings.js'
 import { OPERATOR_STATUS } from '../../src/operator/constants.js'
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js'
+import { expectDefined } from '../helpers/assertions.js'
 
 describe('agent binding integration', () => {
   let cleanup: (() => Promise<void>) | null = null
   let context: AppContext
+  const currentTick = () => expectDefined(context.packRuntime, 'pack runtime').getCurrentTick()
 
   beforeAll(async () => {
     const fixture = await createIsolatedAppContextFixture()
     cleanup = fixture.cleanup
     context = fixture.context
 
-    const now = context.packRuntime!.getCurrentTick()
+    const now = currentTick()
 
     // 创建 operator
     await context.prisma.identity.create({

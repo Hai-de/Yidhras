@@ -8,6 +8,7 @@ import type { ToolLoopRunner } from '../../src/ai/tool_loop_runner.js';
 import { createToolLoopRunner } from '../../src/ai/tool_loop_runner.js';
 import type { ModelGatewayResponse } from '../../src/ai/types.js';
 import type { AppContext } from '../../src/app/context.js';
+import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 
 const buildMockContext = (): AppContext => {
@@ -68,7 +69,7 @@ const buildExecutionInput = (overrides?: Partial<ModelGatewayExecutionInput>): M
     task_id: 'task-001',
     task_type: 'agent_decision',
     input: {},
-    prompt_context: {}
+    prompt_context: { prompt_bundle_v2: {} }
   },
   task_config: {
     definition: {
@@ -152,13 +153,14 @@ describe('ToolLoopRunner', () => {
 
       await runner.run(mockGateway, buildExecutionInput(), executor, ctx);
 
-      const secondCall = vi.mocked(mockGateway.execute).mock.calls[1]![0]!;
+      const secondCall = expectArrayElement(vi.mocked(mockGateway.execute).mock.calls, 1, 'gateway execute calls')[0];
       const messages = secondCall.request.messages;
 
       const toolMessages = messages.filter(m => m.role === 'tool');
       expect(toolMessages).toHaveLength(1);
-      expect(toolMessages[0]!.name).toBe('get_clock_state');
-      expect(toolMessages[0]!.metadata?.call_id).toBe('call-001');
+      const toolMessage = expectArrayElement(toolMessages, 0, 'tool messages');
+      expect(toolMessage.name).toBe('get_clock_state');
+      expect(toolMessage.metadata?.call_id).toBe('call-001');
     });
 
     it('stops at max_rounds and returns with exhaustion message', async () => {
@@ -295,11 +297,15 @@ describe('ToolLoopRunner', () => {
       const result = await runner.run(mockGateway, buildExecutionInput(), executor, ctx);
 
       expect(result.trace?.tool_loop).toBeDefined();
-      expect(result.trace!.tool_loop!.total_rounds).toBe(2);
-      expect(result.trace!.tool_loop!.rounds).toHaveLength(1);
-      expect(result.trace!.tool_loop!.rounds[0]!.tool_calls).toHaveLength(1);
-      expect(result.trace!.tool_loop!.rounds[0]!.tool_calls[0]!.name).toBe('get_clock_state');
-      expect(result.trace!.tool_loop!.rounds[0]!.tool_calls[0]!.success).toBe(true);
+      const trace = expectDefined(result.trace, 'result trace');
+      const toolLoop = expectDefined(trace.tool_loop, 'tool loop trace');
+      expect(toolLoop.total_rounds).toBe(2);
+      expect(toolLoop.rounds).toHaveLength(1);
+      const round = expectArrayElement(toolLoop.rounds, 0, 'tool loop rounds');
+      expect(round.tool_calls).toHaveLength(1);
+      const toolCall = expectArrayElement(round.tool_calls, 0, 'tool calls');
+      expect(toolCall.name).toBe('get_clock_state');
+      expect(toolCall.success).toBe(true);
     });
 
     it('marks exhausted=true when max_rounds reached', async () => {
