@@ -1,11 +1,14 @@
-import type { DataCleanerInput, DataCleanerOutput } from '@yidhras/contracts';
+import type { DataCleaner, DataCleanerInput, DataCleanerOutput } from '@yidhras/contracts';
 
-import type { DataCleaner } from '../../../../src/plugins/extensions/data_cleaner_registry.js';
 import type { ServerPluginHostApi } from '../../../../src/plugins/runtime.js';
 
 const DEFAULT_MAX_PATTERN_LENGTH = 4096;
 const DEFAULT_TIMEOUT_MS = 5000;
 const DEFAULT_MAX_MATCH_COUNT = 100_000;
+
+function readPositiveNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback;
+}
 
 const enforceTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
   return new Promise((resolve, reject) => {
@@ -26,6 +29,10 @@ const enforceTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
   });
 };
 
+const hasNestedQuantifiers = (pattern: string): boolean => {
+  return /\([^)]*\*[^)]*\)[\s]*[*+{]/.test(pattern) || /\([^)]*\+[^)]*\)[\s]*[*+{]/.test(pattern);
+};
+
 const cleaner: DataCleaner = {
   key: 'data_cleaner.regex',
   version: '1.0.0',
@@ -35,8 +42,10 @@ const cleaner: DataCleaner = {
     const pattern = typeof options?.pattern === 'string' && options.pattern.length > 0 ? options.pattern : '.*';
     const replacement = typeof options?.replacement === 'string' ? options.replacement : '';
     const flags = typeof options?.flags === 'string' ? options.flags : 'g';
-    const maxPatternLength = typeof options?.max_pattern_length === 'number' ? options.max_pattern_length : DEFAULT_MAX_PATTERN_LENGTH;
-    const timeoutMs = typeof options?.timeout_ms === 'number' ? options.timeout_ms : DEFAULT_TIMEOUT_MS;
+    const maxPatternLength = readPositiveNumber(options?.max_pattern_length, DEFAULT_MAX_PATTERN_LENGTH);
+    const timeoutMs = readPositiveNumber(options?.timeout_ms, DEFAULT_TIMEOUT_MS);
+    const maxMatchCount = readPositiveNumber(options?.max_match_count, DEFAULT_MAX_MATCH_COUNT);
+    const allowNestedQuantifiers = options?.allow_nested_quantifiers === true;
 
     if (pattern.length > maxPatternLength) {
       throw new Error(
@@ -46,8 +55,7 @@ const cleaner: DataCleaner = {
       );
     }
 
-    // ReDoS heuristic: warn on nested quantifiers but allow execution
-    if (/\([^)]*\*[^)]*\)[\s]*[*+{]/.test(pattern) || /\([^)]*\+[^)]*\)[\s]*[*+{]/.test(pattern)) {
+    if (hasNestedQuantifiers(pattern) && !allowNestedQuantifiers) {
       throw new Error(
         'Pattern contains nested quantifiers that may cause catastrophic backtracking (ReDoS). ' +
         'This is blocked by default for safety. ' +
@@ -56,22 +64,22 @@ const cleaner: DataCleaner = {
       );
     }
 
-    const allowNestedQuantifiers = options?.allow_nested_quantifiers === true;
-    if (allowNestedQuantifiers) {
-      // Override the nested quantifier block — caller accepts the risk
-      // The timeout below is the last line of defense
+    let regex: RegExp;
+    try {
+      regex = new RegExp(pattern, flags);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Invalid regular expression: ${message}`);
     }
-
-    const regex = new RegExp(pattern, flags);
 
     const result = await enforceTimeout(
       (async () => {
         let matchCount = 0;
         const cleaned = text.replace(regex, (..._args) => {
           matchCount++;
-          if (matchCount > DEFAULT_MAX_MATCH_COUNT) {
+          if (matchCount > maxMatchCount) {
             throw new Error(
-              `Match count ${matchCount} exceeds maximum ${DEFAULT_MAX_MATCH_COUNT}. ` +
+              `Match count ${matchCount} exceeds maximum ${maxMatchCount}. ` +
               'Consider narrowing your pattern or increasing max_match_count in options.'
             );
           }
@@ -84,7 +92,9 @@ const cleaner: DataCleaner = {
             pattern,
             flags,
             match_count: matchCount,
-            replacement
+            replacement,
+            max_match_count: maxMatchCount,
+            allow_nested_quantifiers: allowNestedQuantifiers
           }
         };
       })(),

@@ -1,6 +1,5 @@
-import type { DataCleanerInput, DataCleanerOutput } from '@yidhras/contracts';
+import type { DataCleaner, DataCleanerInput, DataCleanerOutput } from '@yidhras/contracts';
 
-import type { DataCleaner } from '../../../../src/plugins/extensions/data_cleaner_registry.js';
 import type { ServerPluginHostApi } from '../../../../src/plugins/runtime.js';
 
 const cleaner: DataCleaner = {

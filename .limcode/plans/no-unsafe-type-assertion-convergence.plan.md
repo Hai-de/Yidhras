@@ -1,3 +1,25 @@
+<!-- LIMCODE_SOURCE_ARTIFACT_START -->
+{"type":"design","path":".limcode/design/eslint-bypass-analysis.md","contentHash":"sha256:d6cf06535dffe73de431d8cb72044cff1bc56c0f4c151cd72fb72caf1a660fd4"}
+<!-- LIMCODE_SOURCE_ARTIFACT_END -->
+
+## TODO LIST
+
+<!-- LIMCODE_TODO_LIST_START -->
+- [x] 确认 apps/server/eslint.config.mjs 中 src/**/*.ts 的 projectService 和 no-unsafe-* 规则实际启用状态：projectService=true，recommendedTypeChecked 启用 no-unsafe-assignment/member-access/call/return/argument，no-unsafe-type-assertion 显式 error  `#phase-7a-config-baseline`
+- [x] 运行 eslint JSON 基线统计，记录 @typescript-eslint/no-unsafe-* 各规则数量和文件分布：当前 src/ 统计为 0  `#phase-7a-counts`
+- [x] 优先处理 no-unsafe-assignment 与 no-unsafe-member-access 源头污染：当前基线为 0，暂无代码修改项  `#phase-7b-assignment-member-access`
+- [x] 处理 no-unsafe-call、no-unsafe-argument、no-unsafe-return 链式剩余问题：当前基线为 0，暂无代码修改项  `#phase-7c-call-argument-return`
+- [x] 处理 no-unsafe-enum-comparison、no-unsafe-unary-minus 及其他低频 no-unsafe 规则：当前基线为 0，暂无代码修改项  `#phase-7d-low-frequency`
+- [x] 审计 src/**/*.ts 中所有 @typescript-eslint/no-unsafe-* eslint-disable 压制说明：共 502 处，发现并修复 1 处缺少 -- 原因说明的压制  `#phase-7e-disable-audit`
+- [x] 运行 eslint src、typecheck、unit test、pnpm lint 完成固化验证：全部 exit 0；pnpm lint 仍有 726 个 warn，均为本阶段范围外 tests/scripts/builtin/web 既有警告  `#phase-7f-final-verify`
+- [ ] 采集 tests/ 和 scripts/ warn→error 基线，区分显式质量规则 warning 与其他 warning  `#phase-8a-tests-scripts-baseline`
+- [ ] 清理 tests/**/*.ts 中 @typescript-eslint/no-unused-vars 与 no-explicit-any warning  `#phase-8b-tests-unused-any`
+- [ ] 分批清理 tests/**/*.ts 中 @typescript-eslint/no-non-null-assertion warning  `#phase-8c-tests-non-null`
+- [ ] 复查 scripts/**/*.ts 显式质量规则 warning，并处理非质量类 security warning 的范围归属  `#phase-8d-scripts-scope`
+- [ ] 将 tests/ 和 scripts/ 质量规则从 warn 升为 error  `#phase-8e-promote-config`
+- [ ] 运行 eslint tests/scripts、typecheck、unit/integration/e2e 按影响面验证  `#phase-8f-tests-scripts-verify`
+<!-- LIMCODE_TODO_LIST_END -->
+
 # no-unsafe-type-assertion 渐进收敛计划
 
 **日期**: 2026-05-24
@@ -20,31 +42,48 @@
 | 枚举/字面量联合窄化 | ~20 | 4% | 低 |
 | 其他杂项窄化断言 | ~280 | 55% | 中 |
 
-**当前状态**: 规则不在 `eslint.config.mjs` 中。试跑通过 CLI 临时覆盖完成。工作进程中规则通过 `--rule` CLI flag 验证，不写入配置文件，避免误提交。最终阶段 6 才将规则固化到配置。
+**历史状态**: 计划创建时 `@typescript-eslint/no-unsafe-type-assertion` 不在 `eslint.config.mjs` 中，试跑通过 CLI 临时覆盖完成。
 
-**核心原则**: 不追求一次性清零。按模式分批处理，每批完成后 lint 确认该模式数量归零。最后一次性将规则以 `error` 加入配置。
+**当前状态**: `apps/server/eslint.config.mjs` 已在 `src/**/*.ts` 启用 `projectService: true`；`recommendedTypeChecked` 已覆盖 `@typescript-eslint/no-unsafe-assignment`、`no-unsafe-member-access`、`no-unsafe-call`、`no-unsafe-return`、`no-unsafe-argument` 等 typed no-unsafe 规则；`@typescript-eslint/no-unsafe-type-assertion` 已在 `src/**/*.ts` rules 块中显式设为 `error`。后续工作应以实际 `pnpm --filter yidhras-server exec eslint src/` 输出为准，而不是沿用历史估算。
+
+**核心原则**: 不追求一次性清零。按模式分批处理，每批完成后 lint 确认该模式数量归零。最后确保规则在配置中以 `error` 固化，且 `src/**/*.ts` 全量 lint 通过。
 
 ---
 
 ## 验证方法（全阶段统一）
 
-不改动 `eslint.config.mjs`。使用 CLI `--rule` 覆盖进行验证：
+基线验证以当前配置为准：
 
 ```bash
-# 全量检查
-pnpm --filter yidhras-server exec eslint --rule '@typescript-eslint/no-unsafe-type-assertion: warn' src/
+# 全量检查 src typed lint
+pnpm --filter yidhras-server exec eslint src/
 
-# 按模式统计
-pnpm --filter yidhras-server exec eslint --rule '@typescript-eslint/no-unsafe-type-assertion: warn' src/ 2>&1 | grep -c "no-unsafe-type-assertion"
+# no-unsafe-* 系列按规则统计
+pnpm --filter yidhras-server exec eslint src/ --format json > /tmp/yidhras-eslint-src.json || true
+node - <<'NODE'
+const fs = require('fs');
+const data = JSON.parse(fs.readFileSync('/tmp/yidhras-eslint-src.json', 'utf8'));
+const counts = {};
+for (const file of data) {
+  for (const message of file.messages) {
+    if (message.ruleId?.startsWith('@typescript-eslint/no-unsafe-')) {
+      counts[message.ruleId] = (counts[message.ruleId] ?? 0) + 1;
+    }
+  }
+}
+console.log(counts);
+NODE
 
 # 每个阶段完成后验证
 pnpm typecheck
 pnpm --filter yidhras-server test:unit
 ```
 
+历史阶段 0-6 中提到的 `--rule '@typescript-eslint/no-unsafe-type-assertion: warn'` 仅作为局部回归调查手段保留；当前不应再依赖 CLI 临时规则覆盖判断最终状态。
+
 此方法：
-- 不产生配置文件变更，无意外提交风险
-- CI 完全不受影响（CI 不执行此命令）
+- 使用实际配置，能暴露 CI/开发环境真实 lint 状态
+- 能按 `@typescript-eslint/no-unsafe-*` 规则维度统计剩余问题
 - 各阶段可独立验证
 
 ---
@@ -242,13 +281,203 @@ export function boundaryCast<T>(_value: unknown): T {
 **前置条件**: 阶段 1-5 全部完成，CLI lint 零命中。
 
 **执行步骤**:
-1. `pnpm --filter yidhras-server exec eslint --rule '@typescript-eslint/no-unsafe-type-assertion: error' src/` 确认零错误
-2. 在 `eslint.config.mjs` 的 `src/**/*.ts` rules 块中新增：
+1. `pnpm --filter yidhras-server exec eslint src/` 确认零错误
+2. 确认 `apps/server/eslint.config.mjs` 的 `src/**/*.ts` rules 块中存在：
    ```js
    '@typescript-eslint/no-unsafe-type-assertion': 'error',
    ```
-3. 在 AGENTS.md 中添加该规则说明
-4. 验证 `pnpm lint` 通过
+3. 确认 `recommendedTypeChecked` 仍只作用于 `src/**/*.ts`，且 `projectService: true` 未被移除
+4. 在 AGENTS.md 中添加或校准该规则说明
+5. 验证 `pnpm lint` 通过
+
+---
+
+### 阶段 7: 追加任务 — `@typescript-eslint/no-unsafe-*` 系列规则收敛
+
+**目标规则**:
+
+| 规则 | 典型问题 | 首选修复方式 |
+|------|----------|--------------|
+| `@typescript-eslint/no-unsafe-assignment` | `any` 赋值给具体类型或隐式污染局部变量 | 将源头改为 `unknown`，再用 schema/type guard 窄化 |
+| `@typescript-eslint/no-unsafe-member-access` | 对 `any` 直接访问属性 | 在访问前用 `isRecord()`、Zod schema 或具体类型守卫收窄 |
+| `@typescript-eslint/no-unsafe-call` | 调用 `any` 值 | 给函数来源补类型；不可补时用边界 wrapper 隔离 |
+| `@typescript-eslint/no-unsafe-return` | 从函数返回 `any` | 修复返回表达式源头类型，或改函数返回 `unknown` 后在调用端窄化 |
+| `@typescript-eslint/no-unsafe-argument` | 将 `any` 传给强类型参数 | 在调用点前窄化；或调整上游 API 返回类型 |
+| `@typescript-eslint/no-unsafe-enum-comparison` | 枚举与非枚举值比较 | 统一比较双方类型，避免 string/enum 混比 |
+| `@typescript-eslint/no-unsafe-unary-minus` | 对 `any` 使用一元负号 | 先用 `typeof value === 'number'` 窄化 |
+| `@typescript-eslint/no-unsafe-type-assertion` | 已由阶段 0-6 覆盖 | 按阶段 0-6 策略处理 |
+
+**当前配置事实**:
+- `apps/server/eslint.config.mjs` 已通过 `...tseslint.configs.recommendedTypeChecked.map((rc) => ({ ...rc, files: ['src/**/*.ts'] }))` 启用 typed recommended 规则。
+- `src/**/*.ts` 的 `languageOptions.parserOptions.projectService` 为 `true`。
+- `tests/**/*.ts`、`scripts/**/*.ts` 的 `projectService` 为 `false`，不属于本阶段范围。
+- `builtin/**/*.ts` 在 lint 脚本中被包含，但不属于当前 typed `src/**/*.ts` 收敛范围。
+
+**基线采集**:
+
+```bash
+pnpm --filter yidhras-server exec eslint src/ --format json > /tmp/yidhras-eslint-src.json || true
+node - <<'NODE'
+const fs = require('fs');
+const data = JSON.parse(fs.readFileSync('/tmp/yidhras-eslint-src.json', 'utf8'));
+const counts = new Map();
+const files = new Map();
+for (const result of data) {
+  for (const message of result.messages) {
+    if (!message.ruleId?.startsWith('@typescript-eslint/no-unsafe-')) continue;
+    counts.set(message.ruleId, (counts.get(message.ruleId) ?? 0) + 1);
+    if (!files.has(message.ruleId)) files.set(message.ruleId, new Set());
+    files.get(message.ruleId).add(result.filePath);
+  }
+}
+console.log('counts');
+for (const [rule, count] of [...counts.entries()].sort()) {
+  console.log(`${rule}: ${count}`);
+}
+console.log('files');
+for (const [rule, fileSet] of [...files.entries()].sort()) {
+  console.log(`${rule}: ${fileSet.size} files`);
+}
+NODE
+```
+
+**子阶段拆分**:
+
+#### 7a: 基线确认和规则来源确认
+- 运行 `pnpm --filter yidhras-server exec eslint --print-config src/index.ts`。
+- 确认目标规则在 print-config 中为 error 或符合预期级别。
+- 运行基线采集脚本，记录每条 `@typescript-eslint/no-unsafe-*` 的数量和涉及文件数。
+- 若基线为零，记录“当前 src 无 no-unsafe-* 命中”，不做无意义代码改动。
+
+#### 7b: assignment/member-access 优先处理
+- 优先处理 `no-unsafe-assignment` 和 `no-unsafe-member-access`，因为这两类通常是后续 `call`、`argument`、`return` 的源头。
+- 对 JSON/YAML/Prisma JSON/外部 API 边界：源头类型改为 `unknown`，用 Zod schema、`isRecord()` 或专用 type guard 收窄。
+- 对局部变量污染：移除 `any` 中间变量，改为显式 `unknown` 或具体类型。
+- 对确属不可验证的边界：封装到单点 wrapper，使用带原因的 eslint-disable，不在业务代码中散落压制。
+
+#### 7c: call/argument/return 链式修复
+- 在 7b 后重新 lint，避免修复已被源头修复连带消除的问题。
+- `no-unsafe-call`: 给回调、插件入口、动态 registry 查询结果补充函数签名或 guard。
+- `no-unsafe-argument`: 在传参前完成 schema parse/type guard，不允许直接 `as Target` 绕过。
+- `no-unsafe-return`: 修复返回表达式来源；如果函数确实是边界读取函数，返回 `unknown` 或 schema parse 后的具体类型。
+
+#### 7d: 低频 no-unsafe 规则扫尾
+- 处理 `no-unsafe-enum-comparison`：统一 enum/string literal 的建模方式，避免混用。
+- 处理 `no-unsafe-unary-minus`：先做 number 窄化再计算。
+- 处理其他 `@typescript-eslint/no-unsafe-*` 新增命中：按“源头类型修复优先，边界封装次之，disable 最后”的顺序处理。
+
+#### 7e: 压制审计
+- 搜索所有 no-unsafe 系列压制：
+  ```bash
+  grep -R "eslint-disable.*@typescript-eslint/no-unsafe" -n src/ --include="*.ts"
+  ```
+- 每个压制必须带 `--` 后缀说明不可消除原因。
+- 删除已失效压制；能通过 schema/type guard 消除的压制不得保留。
+- 不新增裸 `eslint-disable-next-line @typescript-eslint/no-unsafe-*`。
+
+#### 7f: 固化验证
+- `pnpm --filter yidhras-server exec eslint src/` 必须通过。
+- `pnpm typecheck` 必须通过。
+- `pnpm --filter yidhras-server test:unit` 必须通过。
+- `pnpm lint` 必须通过；若 tests/scripts/builtin 存在本阶段范围外问题，必须在提交说明中明确区分，不得混入 src no-unsafe 收敛结果。
+
+**完成标准**:
+- `src/**/*.ts` 中 `@typescript-eslint/no-unsafe-*` 系列规则零命中，或仅剩带具体原因、经过审计的必要压制。
+- 新增或保留的边界转换集中在工具函数、schema parse 或边界 adapter 中，不在业务路径分散 `as any` / 双断言。
+- `eslint.config.mjs` 中 `src/**/*.ts` typed lint 配置未被降级或绕开。
+
+---
+
+### 阶段 8: 追加任务 — tests/ 和 scripts/ 质量规则从 warn 升 error
+
+**目标规则（当前在 tests/scripts 中为 warn）**:
+
+| 规则 | tests 当前级别 | scripts 当前级别 | 本阶段目标 |
+|------|----------------|------------------|------------|
+| `prefer-const` | warn | warn | error |
+| `simple-import-sort/imports` | warn | warn | error |
+| `simple-import-sort/exports` | warn | warn | error |
+| `@typescript-eslint/no-non-null-assertion` | warn | warn | error |
+| `@typescript-eslint/no-explicit-any` | warn | warn | error |
+| `@typescript-eslint/no-unused-vars` | warn | warn | error |
+
+**当前基线（2026-05-24 采集）**:
+
+命令：
+
+```bash
+pnpm --filter yidhras-server exec eslint tests/**/*.ts scripts/**/*.ts --format json > /tmp/yidhras-eslint-tests-scripts.json || true
+```
+
+显式质量规则 warning 统计：
+
+| 区域 | 规则 | 数量 | 涉及文件数 |
+|------|------|------|------------|
+| tests | `@typescript-eslint/no-explicit-any` | 38 | 18 |
+| tests | `@typescript-eslint/no-non-null-assertion` | 317 | 56 |
+| tests | `@typescript-eslint/no-unused-vars` | 42 | 30 |
+| scripts | 显式质量规则 | 0 | 0 |
+
+未命中但仍需在升 error 前复查的规则：
+- `prefer-const`
+- `simple-import-sort/imports`
+- `simple-import-sort/exports`
+
+scripts 额外现状：`scripts/**/*.ts` 当前有 3 条 `security/detect-object-injection` warning，位于 `scripts/manual/permission_demo.ts`，该规则不是本阶段列出的“质量规则 warn→error”目标；除非单独扩展范围，否则不应混入本阶段修复。
+
+**复杂度判断**:
+- 总量 **397 条显式质量规则 warning**，全部在 tests 中。
+- 主要复杂度来自 `@typescript-eslint/no-non-null-assertion`：317 条、56 个文件。多数测试断言可用 helper、局部 guard、`expect(value).toBeDefined()` 后的显式变量承接替代，但机械替换风险高，容易改变测试可读性或引入重复样板。
+- `@typescript-eslint/no-unused-vars`：42 条、30 个文件，低到中等复杂度。多数可删除未使用 import/变量；少数可能是测试意图残留，需要确认是否应补断言而不是删除。
+- `@typescript-eslint/no-explicit-any`：38 条、18 个文件，中等复杂度。测试中常见动态 mock、Prisma/Express/HTTP 响应对象、插件 host API。应优先用 `unknown`、`Record<string, unknown>`、局部测试类型、Vitest mock 类型替代；不应批量改成 `never` 或宽泛 `object` 规避。
+- scripts 显式目标规则当前为 0，升 error 本身不复杂；但 scripts 仍有非目标 security warning，不能声称 scripts lint 全 warning 清零。
+
+**结论**: 这是中等偏高复杂度任务，不适合一次性全仓机械替换。建议按规则和测试层级分批：先 unused-vars，再 explicit-any，最后 non-null assertion。`no-non-null-assertion` 是决定工作量的主项。
+
+**子阶段拆分**:
+
+#### 8a: 基线确认
+- 运行 tests/scripts eslint JSON 统计脚本。
+- 分别统计目标质量规则与非目标 warning。
+- 确认 scripts 目标质量规则是否仍为 0。
+
+#### 8b: tests unused-vars 与 explicit-any
+- 先处理 `@typescript-eslint/no-unused-vars`，删除确实无用的 import/变量。
+- 对疑似缺失断言的 unused 变量，补测试断言，不直接删除。
+- 处理 `@typescript-eslint/no-explicit-any`：优先改为具体测试类型、`unknown` + guard、`Record<string, unknown>`、Vitest mock 类型。
+- 每批 5-10 个文件，运行 `pnpm --filter yidhras-server exec eslint tests/**/*.ts` 和相关测试。
+
+#### 8c: tests non-null assertion 分批清理
+- 按测试目录分批：`tests/helpers/` → `tests/unit/` → `tests/integration/` → `tests/e2e/`。
+- 替换策略优先级：
+  1. 使用断言 helper 返回已窄化值，例如 `expectDefined(value)`。
+  2. 在测试内使用 `if (value === undefined) throw new Error(...)` 后承接局部变量。
+  3. 对数组索引使用显式长度断言后封装 helper 获取元素。
+  4. 对 DOM/HTTP header/map 查询等边界值使用专用 helper。
+- 不使用 `as NonNullable<T>` 批量绕过；这会把 non-null assertion 迁移成 unsafe assertion 风险。
+
+#### 8d: scripts 范围复查
+- 运行 `pnpm --filter yidhras-server exec eslint scripts/**/*.ts --format json`。
+- 若目标质量规则仍为 0，只记录无需修改。
+- `security/detect-object-injection` 当前 3 条 warning 不属于本阶段升 error 范围；若要处理，应另开安全规则任务。
+
+#### 8e: 配置升 error
+- 在 `apps/server/eslint.config.mjs` 的 tests rules 中将目标质量规则从 `warn` 改为 `error`。
+- 在 scripts rules 中将目标质量规则从 `warn` 改为 `error`。
+- 同步更新注释，移除“pre-existing violations exist”的过期说明。
+
+#### 8f: 验证
+- `pnpm --filter yidhras-server exec eslint tests/**/*.ts scripts/**/*.ts`
+- `pnpm --filter yidhras-server test:unit`
+- 涉及 integration/e2e helper 或流程测试时运行对应：
+  - `pnpm --filter yidhras-server test:integration`
+  - `pnpm --filter yidhras-server test:e2e`
+- `pnpm lint`
+
+**完成标准**:
+- tests/scripts 中上述 6 条目标质量规则为 `error`。
+- tests/scripts 中上述 6 条目标质量规则零命中。
+- scripts 中非目标 security warning 若仍存在，必须在交付说明中明确为范围外。
 
 ---
 
@@ -265,13 +494,16 @@ export function boundaryCast<T>(_value: unknown): T {
   ↓
 阶段 5a → 5b → 5c → 5d → 5e (领域+杂项, ~335条) ──→ 分批扫尾
   ↓
-阶段 6 (固化到配置)
+阶段 6 (固化 no-unsafe-type-assertion 到配置)
+  ↓
+阶段 7a → 7b → 7c → 7d → 7e → 7f (`@typescript-eslint/no-unsafe-*` 系列收敛)
+  ↓
+阶段 8a → 8b → 8c → 8d → 8e → 8f (tests/scripts 质量规则 warn→error)
 ```
 
 ---
 
 ## 不在此计划内的项
 
-- **`@typescript-eslint/no-unsafe-*` 系列规则**：`no-unsafe-assignment`、`no-unsafe-member-access` 等。需 `projectService`，开启后警告量远超 514。留待未来计划。
-- **tests/ 和 scripts/ 质量规则从 warn 升 error**：预存的 no-explicit-any 和 no-unused-vars 违规分散在 40+ 文件中。留待未来计划。
-- **builtin/ 目录**：不在本次收敛范围，`projectService` 未覆盖该目录。
+- **builtin/ 目录 typed lint 收敛**：当前 `projectService` 未覆盖该目录。若要对 `builtin/**/*.ts` 启用 typed no-unsafe 系列规则，需要先处理 tsconfig/projectService 覆盖范围和内置插件编译边界。
+- **scripts 中 `security/detect-object-injection` warning**：当前 3 条位于 `scripts/manual/permission_demo.ts`，不是本阶段质量规则 warn→error 的目标规则。

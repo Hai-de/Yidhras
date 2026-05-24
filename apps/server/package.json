@@ -11,10 +11,10 @@
     "postinstall": "pnpm exec prisma generate --schema=prisma/schema.${PRISMA_DB_PROVIDER:-sqlite}.prisma",
     "check:rust": "cargo check --manifest-path rust/Cargo.toml --workspace",
     "build:rust": "cargo build --manifest-path rust/Cargo.toml --workspace",
-    "build": "tsc && pnpm run build:plugins",
+    "build": "tsc && pnpm run typecheck:plugins && pnpm run build:plugins",
     "build:plugins": "node builtin/system_pack/plugins/build.mjs",
-    "typecheck:plugins": "bash -c 'for dir in builtin/system_pack/plugins/*/; do echo \"Checking $dir...\" && tsc -p \"$dir/tsconfig.json\" --noEmit || exit 1; done'",
-    "dev:plugins": "tsx watch --clear-screen=false builtin/system_pack/plugins/build.mjs",
+    "typecheck:plugins": "node builtin/system_pack/plugins/typecheck.mjs",
+    "dev:plugins": "node builtin/system_pack/plugins/build.mjs --watch",
     "test": "pnpm run test:unit && pnpm run test:integration && pnpm run test:e2e",
     "test:unit": "vitest run --config vitest.unit.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
@@ -24,7 +24,7 @@
     "test:e2e:watch": "vitest --config vitest.e2e.config.ts --watch",
     "start": "node dist/index.js",
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" \"scripts/**/*.ts\" \"builtin/**/*.ts\"",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && pnpm run typecheck:plugins",
     "init:configw": "tsx src/init/init_configw.ts",
     "init:world-pack": "tsx src/init/init_world_pack.ts",
     "init:runtime": "tsx src/init/prepare_runtime.ts",
@@ -99,6 +99,7 @@
     "tsx": "^4.7.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.3",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.6",
+    "esbuild": "^0.27.7"
   }
 }

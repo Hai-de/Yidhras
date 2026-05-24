@@ -5,18 +5,18 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-- [ ] 确认 builtin ESLint 采用非类型感知覆盖，并记录取舍  `#confirm-eslint-strategy`
-- [ ] 在 apps/server/package.json 直接声明 esbuild devDependency  `#declare-esbuild`
-- [ ] 修复 regex-engine、template-engine、slot-condition-builtin 的已知类型安全/行为问题  `#fix-plugin-source-issues`
-- [ ] 加固 build.mjs 的插件发现、order/manifest/source 校验和错误输出  `#harden-build-script`
-- [ ] 新增 typecheck.mjs 或等价机制，避免 typecheck:plugins 盲扫所有子目录  `#harden-plugin-typecheck`
-- [ ] 补充 runtime smoke，验证四个 builtin 插件 import/activate/register/basic call  `#runtime-smoke`
-- [ ] 同步计划状态与当前实现，修正过时描述  `#sync-plan-status`
-- [ ] 补齐 plugins/.gitignore 的 dist/js/map/d.ts 忽略规则  `#update-plugin-gitignore`
-- [ ] 验证并确定 @yidhras/contracts external 策略  `#verify-contracts-external`
-- [ ] 验证 dev watch 或实现 build.mjs --watch / dev supervisor  `#verify-dev-watch`
-- [ ] 在 CI 中加入 server typecheck/build 或插件专项 typecheck/build  `#wire-ci`
-- [ ] 将 server build/typecheck 串联 typecheck:plugins 和 build:plugins  `#wire-package-scripts`
+- [x] 确认 builtin ESLint 采用非类型感知覆盖，并记录取舍  `#confirm-eslint-strategy`
+- [x] 在 apps/server/package.json 直接声明 esbuild devDependency  `#declare-esbuild`
+- [x] 修复 regex-engine、template-engine、slot-condition-builtin 的已知类型安全/行为问题  `#fix-plugin-source-issues`
+- [x] 加固 build.mjs 的插件发现、order/manifest/source 校验和错误输出  `#harden-build-script`
+- [x] 新增 typecheck.mjs 或等价机制，避免 typecheck:plugins 盲扫所有子目录  `#harden-plugin-typecheck`
+- [x] 补充 runtime smoke，验证四个 builtin 插件 import/activate/register/basic call  `#runtime-smoke`
+- [x] 同步计划状态与当前实现，修正过时描述  `#sync-plan-status`
+- [x] 补齐 plugins/.gitignore 的 dist/js/map/d.ts 忽略规则  `#update-plugin-gitignore`
+- [x] 验证并确定 @yidhras/contracts external 策略  `#verify-contracts-external`
+- [x] 验证 dev watch 或实现 build.mjs --watch / dev supervisor  `#verify-dev-watch`
+- [x] 在 CI 中加入 server typecheck/build 或插件专项 typecheck/build  `#wire-ci`
+- [x] 将 server build/typecheck 串联 typecheck:plugins 和 build:plugins  `#wire-package-scripts`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # builtin/ 插件独立编译流水线计划（方案 C，修订版）

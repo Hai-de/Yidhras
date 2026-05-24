@@ -46,6 +46,12 @@ jobs:
       - name: Lint server
         run: pnpm --filter yidhras-server lint
 
+      - name: Typecheck server and builtin plugins
+        run: pnpm --filter yidhras-server typecheck
+
+      - name: Build server and builtin plugins
+        run: pnpm --filter yidhras-server build
+
       - name: Check Rust sidecars
         run: pnpm --filter yidhras-server check:rust
 

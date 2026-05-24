@@ -1,4 +1,5 @@
 import type { SlotConditionContext, SlotConditionResult } from '@yidhras/contracts';
+import { z } from 'zod';
 
 import {
   evaluateContextLength,
@@ -9,47 +10,79 @@ import {
 import type { SlotConditionEvaluator } from '../../../../src/plugins/extensions/slot_condition_registry.js';
 import type { ServerPluginHostApi } from '../../../../src/plugins/runtime.js';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+const comparisonOperatorSchema = z.enum(['gt', 'lt', 'gte', 'lte', 'eq']);
 
-type ConditionParam = { type: string; [key: string]: unknown };
+const keywordMatchOptionsSchema = z.object({
+  keywords: z.array(z.string()),
+  match_mode: z.enum(['any', 'all']).optional()
+});
 
-function adapt(
-  fn: (condition: ConditionParam, context: SlotConditionContext) => SlotConditionResult
-): (context: SlotConditionContext) => Promise<SlotConditionResult> {
-  return async (context: SlotConditionContext) => {
-    const options = isRecord(context.options) ? context.options : {};
-    return fn(options as ConditionParam, context);
+const logicMatchOptionsSchema = z.object({
+  expression: z.record(z.string(), z.unknown())
+});
+
+const numericComparisonOptionsSchema = z.object({
+  operator: comparisonOperatorSchema,
+  value: z.number()
+});
+
+function validationFailure(key: string, error: z.ZodError): SlotConditionResult {
+  return {
+    active: false,
+    reason: `${key}: invalid options: ${z.prettifyError(error)}`
   };
 }
 
 const keywordMatchEvaluator: SlotConditionEvaluator = {
   key: 'slot_condition.keyword_match',
   version: '1.0.0',
-  evaluate: adapt(evaluateKeywordMatch as (c: { type: string; [key: string]: unknown }, ctx: SlotConditionContext) => SlotConditionResult)
+  async evaluate(context: SlotConditionContext): Promise<SlotConditionResult> {
+    const parsed = keywordMatchOptionsSchema.safeParse(context.options ?? {});
+    if (!parsed.success) {
+      return validationFailure(this.key, parsed.error);
+    }
+
+    return evaluateKeywordMatch(parsed.data, context);
+  }
 };
 
 const logicMatchEvaluator: SlotConditionEvaluator = {
   key: 'slot_condition.logic_match',
   version: '1.0.0',
-  evaluate: async (context: SlotConditionContext) => {
-    const options = isRecord(context.options) ? context.options : {};
-    const expression = isRecord(options.expression) ? options.expression : {};
-    return evaluateLogicMatch({ expression }, context);
+  async evaluate(context: SlotConditionContext): Promise<SlotConditionResult> {
+    const parsed = logicMatchOptionsSchema.safeParse(context.options ?? {});
+    if (!parsed.success) {
+      return validationFailure(this.key, parsed.error);
+    }
+
+    return evaluateLogicMatch(parsed.data, context);
   }
 };
 
 const conversationTurnEvaluator: SlotConditionEvaluator = {
   key: 'slot_condition.conversation_turn',
   version: '1.0.0',
-  evaluate: adapt(evaluateConversationTurn as (c: { type: string; [key: string]: unknown }, ctx: SlotConditionContext) => SlotConditionResult)
+  async evaluate(context: SlotConditionContext): Promise<SlotConditionResult> {
+    const parsed = numericComparisonOptionsSchema.safeParse(context.options ?? {});
+    if (!parsed.success) {
+      return validationFailure(this.key, parsed.error);
+    }
+
+    return evaluateConversationTurn(parsed.data, context);
+  }
 };
 
 const contextLengthEvaluator: SlotConditionEvaluator = {
   key: 'slot_condition.context_length',
   version: '1.0.0',
-  evaluate: adapt(evaluateContextLength as (c: { type: string; [key: string]: unknown }, ctx: SlotConditionContext) => SlotConditionResult)
+  async evaluate(context: SlotConditionContext): Promise<SlotConditionResult> {
+    const parsed = numericComparisonOptionsSchema.safeParse(context.options ?? {});
+    if (!parsed.success) {
+      return validationFailure(this.key, parsed.error);
+    }
+
+    return evaluateContextLength(parsed.data, context);
+  }
 };
 
 export function activate(host: ServerPluginHostApi): void {
