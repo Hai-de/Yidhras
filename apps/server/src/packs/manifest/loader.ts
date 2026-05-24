@@ -3,6 +3,7 @@ import * as YAML from 'yaml';
 
 import { createLogger } from '../../utils/logger.js';
 import { safeFs } from '../../utils/safe_fs.js';
+import { planMigration } from '../migrations/registry.js';
 import type { SimulationTimeConfig, WorldPack } from './constitution_loader.js';
 import { parseWorldPackConstitution } from './constitution_loader.js';
 import { resolveIncludes } from './include_resolver.js';
@@ -62,6 +63,22 @@ export class PackManifestLoader {
       }
 
       const parsed = parseWorldPackConstitution(merged, packPath);
+
+      const migrationPlan = planMigration(parsed);
+      if (migrationPlan.needsMigration) {
+        logger.warn(
+          `Pack ${parsed.metadata.id} uses schema_version ${String(migrationPlan.currentVersion)}; ` +
+          `latest supported schema_version is ${String(migrationPlan.latestVersion)}. ` +
+          'Run `pnpm --filter yidhras-server db:migrate-pack ' +
+          `${folderName}` +
+          '` to update the manifest. Loading continues without automatic migration.',
+          {
+            pack_id: parsed.metadata.id,
+            current_schema_version: migrationPlan.currentVersion,
+            latest_schema_version: migrationPlan.latestVersion
+          }
+        );
+      }
 
       const instanceId = this.deriveInstanceId(parsed, folderName);
       const existingFolder = this.instanceIndex.get(instanceId);

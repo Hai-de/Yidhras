@@ -1,7 +1,11 @@
 import { compilePackStoragePlan } from '../../packs/compiler/compile_pack_storage.js';
+import { planMigration } from '../../packs/migrations/registry.js';
 import type { WorldPack } from '../../packs/schema/constitution_schema.js';
 import { createPackStorageEngine, type PackStorageMaterializeSummary } from '../../packs/storage/pack_storage_engine.js';
 import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
+import { createLogger } from '../../utils/logger.js';
+
+const logger = createLogger('pack-install');
 
 export interface InstalledPackRuntimeSummary {
   packId: string;
@@ -12,6 +16,20 @@ export interface InstalledPackRuntimeSummary {
 }
 
 export const installPackRuntime = async (instanceId: string, pack: WorldPack, packStorageAdapter: PackStorageAdapter): Promise<InstalledPackRuntimeSummary> => {
+  const migrationPlan = planMigration(pack);
+  if (migrationPlan.needsMigration) {
+    logger.warn(
+      `Pack ${pack.metadata.id} uses schema_version ${String(migrationPlan.currentVersion)}; ` +
+      `latest supported schema_version is ${String(migrationPlan.latestVersion)}. ` +
+      'Runtime installation continues without automatic migration.',
+      {
+        pack_id: pack.metadata.id,
+        current_schema_version: migrationPlan.currentVersion,
+        latest_schema_version: migrationPlan.latestVersion
+      }
+    );
+  }
+
   const compiledStorage = compilePackStoragePlan(pack);
   const storageEngine = createPackStorageEngine(packStorageAdapter);
   const materialized = await storageEngine.materializeStoragePlan(instanceId, {

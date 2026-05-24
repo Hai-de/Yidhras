@@ -1,7 +1,7 @@
 # 通用能力实施计划
 
 > 基于: `.limcode/design/generic-capability-development-draft.md`
-> 状态: P0-P2 全部完成 + P3 测试基础设施完成。剩余 P3 大型基础设施未实施
+> 状态: P0-P2 全部完成 + P3 测试基础设施完成。P3 长期基础设施除 Worker 线程插件隔离外已完成
 
 ---
 
@@ -37,13 +37,17 @@
 - [x] 快照种子化测试辅助 — `tests/helpers/snapshot.ts`
 - [x] 属性测试 fast-check 集成 — `tests/unit/property_based.spec.ts`
 
-## P3 — 未实施（长期基础设施）
+## P3 — 长期基础设施（收尾后状态）
 
-- [ ] Prometheus 指标端点 (prom-client + GET /metrics)
-- [ ] 边车健康暴露到 health API
-- [ ] 运行时状态 dump CLI (sim dump)
+- [x] Prometheus 指标端点 (prom-client + 主 API `GET /metrics`) — `observability/metrics.ts`, `app/routes/system.ts`
+- [x] 边车健康暴露到 health API — `app/routes/system.ts`, `packages/contracts/src/system.ts`
+- [x] 运行时状态 dump CLI (sim dump) — `cli/dump_cli.ts`, `package.json`
 - [ ] Worker 线程插件隔离
-- [ ] 数据迁移框架 (pack schema version)
+- [x] 数据迁移框架 (pack schema version)：migration registry + CLI + 加载/安装流程只提示、不自动改文件 — `packs/migrations/registry.ts`, `cli/migrate_pack_cli.ts`, `packs/manifest/loader.ts`, `kernel/install/install_pack.ts`
+
+收尾验证：
+
+- `pnpm --filter yidhras-server exec vitest run tests/unit/pack_schema_migration.spec.ts tests/unit/system_metrics_route.spec.ts`
 
 ## 新建/修改文件清单
 

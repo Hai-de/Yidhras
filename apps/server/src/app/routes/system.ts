@@ -6,7 +6,7 @@ import {
 } from '@yidhras/contracts'
 import type { Express, NextFunction, Response } from 'express'
 
-import { setSidecarHealth } from '../../observability/metrics.js'
+import { getMetricsRegistry, setSidecarHealth } from '../../observability/metrics.js'
 import type { OperatorRequest } from '../../operator/auth/types.js'
 import { OPERATOR_ERROR_CODE } from '../../operator/constants.js'
 import { ApiError } from '../../utils/api_error.js'
@@ -29,6 +29,19 @@ const requireRoot = (req: OperatorRequest, _res: Response, next: NextFunction): 
 }
 
 export const registerSystemRoutes = (app: Express, context: AppContext): void => {
+  app.get('/metrics', (_req, res) => {
+    void (async () => {
+      try {
+        const registry = getMetricsRegistry()
+        const metrics = await registry.metrics()
+        res.type(registry.contentType)
+        res.status(200).send(metrics)
+      } catch (err) {
+        res.status(500).type('text/plain').send(`Failed to collect metrics: ${getErrorMessage(err)}`)
+      }
+    })()
+  })
+
   app.get(
     '/api/system/notifications',
     requireAuth(),
