@@ -10,6 +10,7 @@ import type {
 } from '../app/runtime/world_engine_contributors.js';
 import type { ContextSourceAdapter } from '../context/source_registry.js';
 import type { PromptWorkflowStepExecutor } from '../context/workflow/registry.js';
+import { setPluginsActive } from '../observability/metrics.js';
 import type { PerceptionResolver } from '../perception/types.js';
 import { createLogger } from '../utils/logger.js';
 import {
@@ -582,4 +583,5 @@ export const refreshPackPluginRuntime = async (
 
   pluginRuntimeRegistry.clearRuntimes(normalizedPackId);
   pluginRuntimeRegistry.setRuntimes(normalizedPackId, runtimes);
+  setPluginsActive(normalizedPackId, runtimes.length);
 };

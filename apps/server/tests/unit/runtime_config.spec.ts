@@ -236,6 +236,9 @@ afterEach(async () => {
   delete process.env.SQLITE_BUSY_TIMEOUT_MS;
   delete process.env.SQLITE_WAL_AUTOCHECKPOINT_PAGES;
   delete process.env.SQLITE_SYNCHRONOUS;
+  delete process.env.RUNTIME_SNAPSHOT_AUTO_ENABLED;
+  delete process.env.RUNTIME_SNAPSHOT_INTERVAL_TICKS;
+  delete process.env.RUNTIME_SNAPSHOT_RETENTION_COUNT;
 
   const { rm } = await import('node:fs/promises');
   for (const root of createdRoots.splice(0, createdRoots.length)) {
@@ -315,6 +318,11 @@ describe('runtime config YAML migration', () => {
       bootstrap_packs: ['death_note', 'test_pack']
     });
     expect(isAiGatewayEnabled()).toBe(false);
+    expect(config.runtime.snapshot).toEqual({
+      auto_enabled: false,
+      interval_ticks: 1000,
+      retention_count: 20
+    });
     expect(config.prompt_workflow.profiles.agent_decision_default).toMatchObject({
       token_budget: 2600
     });
@@ -371,6 +379,9 @@ describe('runtime config YAML migration', () => {
     process.env.RUNTIME_MULTI_PACK_MAX_LOADED_PACKS = '4';
     process.env.RUNTIME_MULTI_PACK_START_MODE = 'bootstrap_list';
     process.env.RUNTIME_MULTI_PACK_BOOTSTRAP_PACKS = 'death_note,test_pack';
+    process.env.RUNTIME_SNAPSHOT_AUTO_ENABLED = 'true';
+    process.env.RUNTIME_SNAPSHOT_INTERVAL_TICKS = '250';
+    process.env.RUNTIME_SNAPSHOT_RETENTION_COUNT = '7';
 
     expect(getDatabaseConfig().sqlite).toMatchObject({ busy_timeout_ms: 8000, wal_autocheckpoint_pages: 1200, synchronous: 'FULL' });
     expect(getSimulationLoopIntervalMs()).toBe(2500);
@@ -421,6 +432,11 @@ describe('runtime config YAML migration', () => {
       max_loaded_packs: 4,
       start_mode: 'bootstrap_list',
       bootstrap_packs: ['death_note', 'test_pack']
+    });
+    expect(getRuntimeConfig().runtime.snapshot).toEqual({
+      auto_enabled: true,
+      interval_ticks: 250,
+      retention_count: 7
     });
   });
 

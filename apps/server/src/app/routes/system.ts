@@ -6,10 +6,12 @@ import {
 } from '@yidhras/contracts'
 import type { Express, NextFunction, Response } from 'express'
 
+import { setSidecarHealth } from '../../observability/metrics.js'
 import type { OperatorRequest } from '../../operator/auth/types.js'
 import { OPERATOR_ERROR_CODE } from '../../operator/constants.js'
 import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js'
+import { getErrorMessage } from '../http/errors.js'
 import { jsonOk } from '../http/json.js'
 import { requireAuth } from '../middleware/require_auth.js'
 import {
@@ -77,20 +79,32 @@ export const registerSystemRoutes = (app: Express, context: AppContext): void =>
     const snapshot = getStartupHealthSnapshot(context)
 
     // Include sidecar health if world engine is available
-    let sidecars: Record<string, { alive: boolean }> | undefined;
+    let sidecars: Record<string, {
+      alive: boolean
+      engine_status?: string
+      protocol_version?: string
+      error?: string
+    }> | undefined;
     try {
       if (context.worldEngine) {
         const weHealth = await context.worldEngine.getHealth();
+        const alive = weHealth.engine_status === 'ready' || weHealth.engine_status === 'degraded'
+        setSidecarHealth('world_engine', alive)
         sidecars = {
-          world_engine: { alive: weHealth.engine_status === 'ready' || weHealth.engine_status === 'degraded' }
+          world_engine: {
+            alive,
+            engine_status: weHealth.engine_status,
+            protocol_version: weHealth.protocol_version
+          }
         };
       }
-    } catch {
-      sidecars = { world_engine: { alive: false } };
+    } catch (err) {
+      setSidecarHealth('world_engine', false)
+      sidecars = { world_engine: { alive: false, error: getErrorMessage(err) } };
     }
 
     const body = { ...snapshot.body, ...(sidecars ? { sidecars } : {}) };
-    startupHealthDataSchema.parse(snapshot.body);
+    startupHealthDataSchema.parse(body);
     res.status(snapshot.statusCode);
     jsonOk(res, body);
   })

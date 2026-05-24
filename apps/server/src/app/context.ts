@@ -83,6 +83,9 @@ export interface AppContext extends AppInfrastructure, AppContextPorts {
   setHttpApp?(app: Express): void;
   worldEngineStepCoordinator?: import('./runtime/world_engine_persistence.js').WorldEngineStepCoordinator;
   runtimeClockProjection?: import('./runtime/runtime_clock_projection.js').RuntimeClockProjectionService;
+  pluginRuntimeControl?: {
+    reload(packId: string): Promise<{ pack_id: string; runtime_count: number }>;
+  };
 }
 
 export type RouteRegistrar = (app: Express, context: AppContext) => void;

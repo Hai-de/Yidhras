@@ -12,12 +12,14 @@ import { checkDependencies, checkReverseDependencies } from '../plugins/dependen
 import { assertPluginEnableAllowed, createPluginManagerService } from '../plugins/service.js';
 import { createPluginStore } from '../plugins/store.js';
 
-const COMMANDS = ['list', 'confirm', 'enable', 'disable'] as const;
+const COMMANDS = ['list', 'confirm', 'enable', 'disable', 'reload'] as const;
 
 interface ParsedArgs {
   command?: string;
   installationId?: string;
   pack?: string;
+  server?: string;
+  token?: string;
   yes?: boolean;
   json?: boolean;
   help?: boolean;
@@ -35,6 +37,12 @@ const parseArgs = (argv: string[]): ParsedArgs => {
         break;
       case '--pack':
         parsed.pack = argv[++i];
+        break;
+      case '--server':
+        parsed.server = argv[++i];
+        break;
+      case '--token':
+        parsed.token = argv[++i];
         break;
       case '--json':
         parsed.json = true;
@@ -66,6 +74,7 @@ const printHelp = (): void => {
   pnpm plugin confirm <installation-id>
   pnpm plugin enable <installation-id> [--pack <pack-ref>] [--yes]
   pnpm plugin disable <installation-id> [--pack <pack-ref>] [--yes]
+  pnpm plugin reload --pack <pack-id> --server <url> --token <operator-token>
   pnpm plugin --help
 
 命令:
@@ -73,9 +82,12 @@ const printHelp = (): void => {
   confirm    确认插件导入
   enable     启用插件（含依赖检查）
   disable    禁用插件（含反向依赖检查）
+  reload     通过正在运行的 server 显式重载 pack 插件 runtime
 
 选项:
   --pack <pack-ref>     限定 pack 范围（默认全局）
+  --server <url>        Server 地址；也可用 YIDHRAS_SERVER_URL
+  --token <token>       Operator bearer token；也可用 YIDHRAS_OPERATOR_TOKEN
   --json                JSON 格式输出
   --yes, -y             跳过确认提示
 `);
@@ -394,6 +406,11 @@ const runCli = async (): Promise<void> => {
     return;
   }
 
+  if (args.command === 'reload') {
+    await doReload(args);
+    return;
+  }
+
   const prisma = createPrismaClient();
 
   try {
@@ -412,6 +429,9 @@ const runCli = async (): Promise<void> => {
       case 'disable':
         await doDisable(prisma, args);
         break;
+      case 'reload':
+        await doReload(args);
+        break;
       default:
         console.error(`错误: 未知命令 "${args.command}"。使用 --help 查看帮助。`);
         process.exitCode = 1;
@@ -425,3 +445,69 @@ const runCli = async (): Promise<void> => {
 };
 
 void runCli();
+
+
+// --- reload ---
+
+const doReload = async (args: ParsedArgs): Promise<void> => {
+  if (!args.pack) {
+    console.error('错误: 请通过 --pack <pack-id> 指定要重载的 pack');
+    process.exitCode = 1;
+    return;
+  }
+
+  const server = (args.server ?? process.env.YIDHRAS_SERVER_URL ?? '').trim().replace(/\/$/, '');
+  const token = (args.token ?? process.env.YIDHRAS_OPERATOR_TOKEN ?? '').trim();
+
+  if (!server) {
+    console.error('错误: 请通过 --server <url> 或 YIDHRAS_SERVER_URL 指定正在运行的 server');
+    process.exitCode = 1;
+    return;
+  }
+  if (!token) {
+    console.error('错误: 请通过 --token <operator-token> 或 YIDHRAS_OPERATOR_TOKEN 提供 operator token');
+    process.exitCode = 1;
+    return;
+  }
+
+  const parseReloadResponse = (text: string): { data?: { pack_id?: string; runtime_count?: number } } => {
+    const parsed: unknown = JSON.parse(text);
+    if (typeof parsed !== 'object' || parsed === null || !('data' in parsed)) {
+      return {};
+    }
+    const data = parsed.data;
+    if (typeof data !== 'object' || data === null) {
+      return {};
+    }
+    const packId = 'pack_id' in data && typeof data.pack_id === 'string' ? data.pack_id : undefined;
+    const runtimeCount = 'runtime_count' in data && typeof data.runtime_count === 'number' ? data.runtime_count : undefined;
+    return { data: { pack_id: packId, runtime_count: runtimeCount } };
+  };
+
+  const response = await fetch(`${server}/api/packs/${encodeURIComponent(args.pack)}/plugins/reload`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({})
+  });
+  const text = await response.text();
+
+  if (!response.ok) {
+    console.error(`错误: reload 请求失败 (${response.status})`);
+    console.error(text);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (args.json) {
+    console.log(text);
+    return;
+  }
+
+  const parsed = parseReloadResponse(text);
+  console.log('插件 runtime 已重载:');
+  console.log(`  Pack:          ${parsed.data?.pack_id ?? args.pack}`);
+  console.log(`  Runtime count: ${String(parsed.data?.runtime_count ?? 'unknown')}`);
+};

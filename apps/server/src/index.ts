@@ -71,11 +71,12 @@ import { SimulationManager } from './core/simulation.js';
 import { createPrismaClient } from './db/client.js';
 import { createInferenceService } from './inference/service.js';
 import { createPrismaInferenceTraceSink } from './inference/sinks/prisma.js';
+import { initMetrics } from './observability/metrics.js';
 import { DefaultPackRuntimePort } from './packs/orchestration/default_pack_runtime_port.js';
 import { PostgresPackStorageAdapter } from './packs/storage/internal/PostgresPackStorageAdapter.js';
 import { SqlitePackStorageAdapter } from './packs/storage/internal/SqlitePackStorageAdapter.js';
 import { SqliteSchedulerStorageAdapter } from './packs/storage/internal/SqliteSchedulerStorageAdapter.js';
-import { syncPackPluginRuntime } from './plugins/runtime.js';
+import { pluginRuntimeRegistry, syncPackPluginRuntime } from './plugins/runtime.js';
 import { initSystemPackPlugins } from './plugins/system_pack_init.js';
 import { ApiError } from './utils/api_error.js';
 import { createLogger, setLoggerRuntimeConfig } from './utils/logger.js';
@@ -220,6 +221,13 @@ appContext.worldEngine = createWorldEngineSidecarClient({
 });
 sim.setWorldEngine(appContext.worldEngine);
 appContext.packHostApi = createPackHostApi(appContext);
+appContext.pluginRuntimeControl = {
+  reload: async packId => {
+    await syncPackPluginRuntime(appContext, packId);
+    const runtimeCount = pluginRuntimeRegistry.listRuntimes(packId).length;
+    return { pack_id: packId, runtime_count: runtimeCount };
+  }
+};
 
 const inferenceService = createInferenceService({
   context: appContext,
@@ -310,6 +318,7 @@ app.use(createGlobalErrorMiddleware(appContext));
 const start = async (): Promise<void> => {
   validateProductionSecrets();
   setLoggerRuntimeConfig(getRuntimeConfig().logging);
+  initMetrics();
   logRuntimeConfigSnapshot();
 
   await getRuntimeBootstrap({ runtimeBootstrap: appContext.runtimeBootstrap }).prepareDatabase();

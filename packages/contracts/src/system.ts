@@ -69,6 +69,13 @@ export const runtimeStatusDataSchema = z.object({
   startup_errors: z.array(z.string())
 })
 
+export const sidecarHealthStatusSchema = z.object({
+  alive: z.boolean(),
+  engine_status: z.string().optional(),
+  protocol_version: z.string().optional(),
+  error: z.string().optional()
+})
+
 export const startupHealthDataSchema = z.object({
   healthy: z.boolean(),
   level: z.enum(['ok', 'degraded', 'fail']),
@@ -79,7 +86,8 @@ export const startupHealthDataSchema = z.object({
     world_pack_available: z.boolean()
   }),
   available_world_packs: z.array(z.string()),
-  errors: z.array(z.string())
+  errors: z.array(z.string()),
+  sidecars: z.record(z.string(), sidecarHealthStatusSchema).optional()
 })
 
 export const systemMessageSchema = z.object({

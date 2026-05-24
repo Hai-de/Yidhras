@@ -10,6 +10,7 @@ import type { Express, NextFunction, Request, Response } from 'express'
 
 import { OPERATOR_CAPABILITY } from '../../operator/constants.js'
 import { packAccessGuard } from '../../operator/guard/pack_access.js'
+import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseBody, parseParams } from '../http/zod.js'
@@ -91,6 +92,22 @@ export const registerPluginRoutes = (
       const installation = await disablePackPlugin(context, installationParams.installationId)
       pluginOperationAcknowledgementSchema.parse({ acknowledged: true, pack_id: packParams.packId, installation: toJsonSafe(installation) })
       jsonOk(res, toJsonSafe({ acknowledged: true, pack_id: packParams.packId, installation }))
+    })
+  )
+
+  app.post(
+    '/api/packs/:packId/plugins/reload',
+    packAccessGuard(context, { packIdParam: 'packId' }),
+    pluginMutateGuard,
+    deps.asyncHandler(async (req, res) => {
+      const packParams = parseParams(pluginPackParamsSchema, { packId: req.params.packId }, 'PLUGIN_RELOAD_INVALID')
+
+      if (!context.pluginRuntimeControl) {
+        throw new ApiError(501, 'PLUGIN_RELOAD_UNAVAILABLE', 'Plugin runtime reload control is not available')
+      }
+
+      const result = await context.pluginRuntimeControl.reload(packParams.packId)
+      jsonOk(res, toJsonSafe({ reloaded: true, ...result }))
     })
   )
 }

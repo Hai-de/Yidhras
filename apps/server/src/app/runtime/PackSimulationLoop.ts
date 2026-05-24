@@ -6,6 +6,7 @@ import type { DeterminismConfig } from '../../determinism/context.js';
 import { createDeterminismContext, resolvePackDeterminismConfig } from '../../determinism/context.js';
 import type { InferenceService } from '../../inference/service.js';
 import { recordTickCompleted } from '../../observability/metrics.js';
+import { maybeCaptureAutoSnapshot } from '../../packs/snapshots/auto_snapshot_service.js';
 import { dataCleanerRegistry } from '../../plugins/extensions/data_cleaner_registry.js';
 import { createLogger } from '../../utils/logger.js';
 import type { AppContext } from '../context.js';
@@ -424,6 +425,12 @@ export const runPackSimulationIteration = async (input: RunPackIterationInput): 
       }
     }
   }
+
+  await maybeCaptureAutoSnapshot({
+    context: input.context,
+    packId: input.packId,
+    packRuntime: input.packRuntime
+  });
 
   return { stepErrors, extensionErrors };
 };

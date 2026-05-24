@@ -502,8 +502,3 @@ scripts 额外现状：`scripts/**/*.ts` 当前有 3 条 `security/detect-object
 ```
 
 ---
-
-## 不在此计划内的项
-
-- **builtin/ 目录 typed lint 收敛**：当前 `projectService` 未覆盖该目录。若要对 `builtin/**/*.ts` 启用 typed no-unsafe 系列规则，需要先处理 tsconfig/projectService 覆盖范围和内置插件编译边界。
-- **scripts 中 `security/detect-object-injection` warning**：当前 3 条位于 `scripts/manual/permission_demo.ts`，不是本阶段质量规则 warn→error 的目标规则。

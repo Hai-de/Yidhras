@@ -171,6 +171,9 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     process.env.PLUGIN_ENABLE_WARNING_REQUIRE_ACKNOWLEDGEMENT
   )
   const observabilityMetricsPort = parseIntegerEnv('OBSERVABILITY_METRICS_PORT', process.env.OBSERVABILITY_METRICS_PORT)
+  const runtimeSnapshotAutoEnabled = parseBooleanEnv('RUNTIME_SNAPSHOT_AUTO_ENABLED', process.env.RUNTIME_SNAPSHOT_AUTO_ENABLED)
+  const runtimeSnapshotIntervalTicks = parseIntegerEnv('RUNTIME_SNAPSHOT_INTERVAL_TICKS', process.env.RUNTIME_SNAPSHOT_INTERVAL_TICKS)
+  const runtimeSnapshotRetentionCount = parseIntegerEnv('RUNTIME_SNAPSHOT_RETENTION_COUNT', process.env.RUNTIME_SNAPSHOT_RETENTION_COUNT)
 
   const overrides: Record<string, unknown> = {
     app: {
@@ -210,6 +213,10 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     runtimeMultiPackMaxLoadedPacks !== undefined
     || runtimeMultiPackStartMode !== undefined
     || runtimeMultiPackBootstrapPacks !== undefined
+    || observabilityMetricsPort !== undefined
+    || runtimeSnapshotAutoEnabled !== undefined
+    || runtimeSnapshotIntervalTicks !== undefined
+    || runtimeSnapshotRetentionCount !== undefined
   ) {
     overrides.runtime = {
       multi_pack: {
@@ -217,7 +224,12 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
         ...(runtimeMultiPackStartMode !== undefined ? { start_mode: runtimeMultiPackStartMode } : {}),
         ...(runtimeMultiPackBootstrapPacks !== undefined ? { bootstrap_packs: runtimeMultiPackBootstrapPacks } : {})
       },
-      ...(observabilityMetricsPort !== undefined ? { metrics_port: observabilityMetricsPort } : {})
+      ...(observabilityMetricsPort !== undefined ? { metrics_port: observabilityMetricsPort } : {}),
+      snapshot: {
+        ...(runtimeSnapshotAutoEnabled !== undefined ? { auto_enabled: runtimeSnapshotAutoEnabled } : {}),
+        ...(runtimeSnapshotIntervalTicks !== undefined ? { interval_ticks: runtimeSnapshotIntervalTicks } : {}),
+        ...(runtimeSnapshotRetentionCount !== undefined ? { retention_count: runtimeSnapshotRetentionCount } : {})
+      }
     }
   }
 

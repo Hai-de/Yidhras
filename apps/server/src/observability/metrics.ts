@@ -4,14 +4,20 @@ import {
   Gauge,
   Histogram,
   register,
-  type Registry} from 'prom-client';
+  type Registry
+} from 'prom-client';
 
 const metricsRegistry: Registry = register;
+let metricsInitialized = false;
 
 export const getMetricsRegistry = (): Registry => metricsRegistry;
 
 export const initMetrics = (): void => {
+  if (metricsInitialized) {
+    return;
+  }
   collectDefaultMetrics({ register: metricsRegistry, prefix: 'yidhras_' });
+  metricsInitialized = true;
 };
 
 const tickDurationMs = new Histogram({

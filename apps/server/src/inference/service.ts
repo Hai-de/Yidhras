@@ -32,6 +32,7 @@ import { defaultProfileResolver } from '../conversation/profile_resolver.js';
 import { writeConversationEntries } from '../conversation/writeback.js';
 import { groundDecisionIntent } from '../domain/invocation/intent_grounder.js';
 import { createMemoryRecordingService } from '../memory/recording/service.js';
+import { recordInferenceCompleted } from '../observability/metrics.js';
 import { ApiError } from '../utils/api_error.js';
 import { buildInferenceContext } from './context_builder.js';
 import type { PromptBundleV2 } from './prompt_bundle_v2.js';
@@ -303,13 +304,18 @@ const executeRunInternal = async (
   const promptVersion = prompt?.metadata.prompt_version ?? null;
 
   let rawDecision: ProviderDecisionRaw;
+  const providerStartedAt = Date.now();
+  const metricsPackId = inferenceContext.world_pack.instance_id;
+  const metricsTaskType = 'agent_decision';
   try {
     if (prompt) {
       rawDecision = await provider.run(inferenceContext, prompt);
     } else {
       rawDecision = await provider.run(inferenceContext, createEmptyPromptBundle(inferenceContext.inference_id));
     }
+    recordInferenceCompleted(metricsPackId, provider.name, metricsTaskType, Date.now() - providerStartedAt, 'success');
   } catch (err) {
+    recordInferenceCompleted(metricsPackId, provider.name, metricsTaskType, Date.now() - providerStartedAt, 'failed');
     const failure = classifyFailure(err);
 
     if (options?.jobId) {

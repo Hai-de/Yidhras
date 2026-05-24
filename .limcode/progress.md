@@ -1,6 +1,6 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-05-24T19:35:32.697Z
+- Updated At: 2026-05-24T20:10:47.477Z
 - Status: active
 - Phase: plan
 
@@ -15,19 +15,18 @@
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 计划：`.limcode/plans/no-unsafe-type-assertion-convergence.plan.md`
+- 计划：`.limcode/plans/generic-capability-p3-batch1-batch2.plan.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 确认 apps/server/eslint.config.mjs 中 src/**/*.ts 的 projectService 和 no-unsafe-* 规则实际启用状态：projectService=true，recommendedTypeChecked 启用 no-unsafe-assignment/member-access/call/return/argument，no-unsafe-type-assertion 显式 error  `#phase-7a-config-baseline`
-- [x] 运行 eslint JSON 基线统计，记录 @typescript-eslint/no-unsafe-* 各规则数量和文件分布：当前 src/ 统计为 0  `#phase-7a-counts`
-- [x] 优先处理 no-unsafe-assignment 与 no-unsafe-member-access 源头污染：当前基线为 0，暂无代码修改项  `#phase-7b-assignment-member-access`
-- [x] 处理 no-unsafe-call、no-unsafe-argument、no-unsafe-return 链式剩余问题：当前基线为 0，暂无代码修改项  `#phase-7c-call-argument-return`
-- [x] 处理 no-unsafe-enum-comparison、no-unsafe-unary-minus 及其他低频 no-unsafe 规则：当前基线为 0，暂无代码修改项  `#phase-7d-low-frequency`
-- [x] 审计 src/**/*.ts 中所有 @typescript-eslint/no-unsafe-* eslint-disable 压制说明：共 502 处，发现并修复 1 处缺少 -- 原因说明的压制  `#phase-7e-disable-audit`
-- [x] 运行 eslint src、typecheck、unit test、pnpm lint 完成固化验证：全部 exit 0；pnpm lint 仍有 726 个 warn，均为本阶段范围外 tests/scripts/builtin/web 既有警告  `#phase-7f-final-verify`
+- [x] 实现自动快照最小版配置、服务、loop 接入和 retention  `#p3-auto-snapshot`
+- [x] 补齐 /api/health sidecar 响应契约、字段和测试  `#p3-health-sidecar`
+- [x] 实现显式插件 reload API 与 CLI 调用路径  `#p3-plugin-reload`
+- [x] 补齐 Prometheus metrics 初始化与 inference/action/plugin/sidecar 打点  `#p3-prometheus-metrics`
+- [x] 增强 sim:dump CLI，覆盖 runtime/snapshot/plugin/prisma 维度  `#p3-runtime-dump-cli`
+- [x] 补充单元/集成测试并运行 typecheck/test  `#p3-tests-validation`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -87,6 +86,9 @@
 - 2026-05-24T16:17:38.376Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/no-unsafe-type-assertion-convergence.plan.md
 - 2026-05-24T16:19:51.121Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/no-unsafe-type-assertion-convergence.plan.md
 - 2026-05-24T19:35:32.697Z | milestone_recorded | phase-8-complete | 记录里程碑：Phase 8: tests/scripts 质量规则 warn→error 收敛完成
+- 2026-05-24T19:47:38.584Z | artifact_changed | plan | 同步计划文档：.limcode/plans/generic-capability-p3-batch1-batch2.plan.md
+- 2026-05-24T20:07:58.546Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/generic-capability-p3-batch1-batch2.plan.md
+- 2026-05-24T20:10:47.477Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/generic-capability-p3-batch1-batch2.plan.md
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -96,7 +98,7 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-05-24T16:15:36.183Z",
-  "updatedAt": "2026-05-24T19:35:32.697Z",
+  "updatedAt": "2026-05-24T20:10:47.477Z",
   "status": "active",
   "phase": "plan",
   "currentFocus": "no-unsafe-type-assertion 渐进收敛计划（追加 no-unsafe-* 系列）",
@@ -104,42 +106,37 @@
   "currentBlocker": null,
   "nextAction": null,
   "activeArtifacts": {
-    "plan": ".limcode/plans/no-unsafe-type-assertion-convergence.plan.md"
+    "plan": ".limcode/plans/generic-capability-p3-batch1-batch2.plan.md"
   },
   "todos": [
     {
-      "id": "phase-7a-config-baseline",
-      "content": "确认 apps/server/eslint.config.mjs 中 src/**/*.ts 的 projectService 和 no-unsafe-* 规则实际启用状态：projectService=true，recommendedTypeChecked 启用 no-unsafe-assignment/member-access/call/return/argument，no-unsafe-type-assertion 显式 error",
+      "id": "p3-auto-snapshot",
+      "content": "实现自动快照最小版配置、服务、loop 接入和 retention",
       "status": "completed"
     },
     {
-      "id": "phase-7a-counts",
-      "content": "运行 eslint JSON 基线统计，记录 @typescript-eslint/no-unsafe-* 各规则数量和文件分布：当前 src/ 统计为 0",
+      "id": "p3-health-sidecar",
+      "content": "补齐 /api/health sidecar 响应契约、字段和测试",
       "status": "completed"
     },
     {
-      "id": "phase-7b-assignment-member-access",
-      "content": "优先处理 no-unsafe-assignment 与 no-unsafe-member-access 源头污染：当前基线为 0，暂无代码修改项",
+      "id": "p3-plugin-reload",
+      "content": "实现显式插件 reload API 与 CLI 调用路径",
       "status": "completed"
     },
     {
-      "id": "phase-7c-call-argument-return",
-      "content": "处理 no-unsafe-call、no-unsafe-argument、no-unsafe-return 链式剩余问题：当前基线为 0，暂无代码修改项",
+      "id": "p3-prometheus-metrics",
+      "content": "补齐 Prometheus metrics 初始化与 inference/action/plugin/sidecar 打点",
       "status": "completed"
     },
     {
-      "id": "phase-7d-low-frequency",
-      "content": "处理 no-unsafe-enum-comparison、no-unsafe-unary-minus 及其他低频 no-unsafe 规则：当前基线为 0，暂无代码修改项",
+      "id": "p3-runtime-dump-cli",
+      "content": "增强 sim:dump CLI，覆盖 runtime/snapshot/plugin/prisma 维度",
       "status": "completed"
     },
     {
-      "id": "phase-7e-disable-audit",
-      "content": "审计 src/**/*.ts 中所有 @typescript-eslint/no-unsafe-* eslint-disable 压制说明：共 502 处，发现并修复 1 处缺少 -- 原因说明的压制",
-      "status": "completed"
-    },
-    {
-      "id": "phase-7f-final-verify",
-      "content": "运行 eslint src、typecheck、unit test、pnpm lint 完成固化验证：全部 exit 0；pnpm lint 仍有 726 个 warn，均为本阶段范围外 tests/scripts/builtin/web 既有警告",
+      "id": "p3-tests-validation",
+      "content": "补充单元/集成测试并运行 typecheck/test",
       "status": "completed"
     }
   ],
@@ -204,21 +201,39 @@
       "type": "milestone_recorded",
       "refId": "phase-8-complete",
       "message": "记录里程碑：Phase 8: tests/scripts 质量规则 warn→error 收敛完成"
+    },
+    {
+      "at": "2026-05-24T19:47:38.584Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/generic-capability-p3-batch1-batch2.plan.md"
+    },
+    {
+      "at": "2026-05-24T20:07:58.546Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/generic-capability-p3-batch1-batch2.plan.md"
+    },
+    {
+      "at": "2026-05-24T20:10:47.477Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/generic-capability-p3-batch1-batch2.plan.md"
     }
   ],
   "stats": {
     "milestonesTotal": 1,
     "milestonesCompleted": 1,
-    "todosTotal": 7,
-    "todosCompleted": 7,
+    "todosTotal": 6,
+    "todosCompleted": 6,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-05-24T19:35:32.697Z",
-    "bodyHash": "sha256:67736d9301b9b47a2b3711d0c75c5d45a70f9a8ceef64d26d1b70da5f8143b1e"
+    "generatedAt": "2026-05-24T20:10:47.477Z",
+    "bodyHash": "sha256:41fc5f1197e76e7c980cdb2437882b2a2a3fb3d526944d84d67de1ffccbeb019"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

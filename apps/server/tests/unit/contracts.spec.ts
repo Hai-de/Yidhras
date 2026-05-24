@@ -2,6 +2,30 @@ import * as contracts from '@yidhras/contracts';
 import { describe, expect, it } from 'vitest';
 
 describe('contracts — envelope', () => {
+  it('startupHealthDataSchema accepts sidecar health diagnostics', () => {
+    const result = contracts.startupHealthDataSchema.safeParse({
+      healthy: true,
+      level: 'ok',
+      runtime_ready: true,
+      checks: {
+        db: true,
+        world_pack_dir: true,
+        world_pack_available: true
+      },
+      available_world_packs: ['pack-a'],
+      errors: [],
+      sidecars: {
+        world_engine: {
+          alive: true,
+          engine_status: 'ready',
+          protocol_version: '1.0.0'
+        }
+      }
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it('apiSuccessMetaSchema parses valid pagination meta', () => {
     const result = contracts.apiSuccessMetaSchema.safeParse({
       pagination: { has_next_page: true, next_cursor: 'abc' }
