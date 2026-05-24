@@ -18,9 +18,37 @@
     "typecheck": "pnpm --filter yidhras-server typecheck && pnpm --filter web typecheck",
     "prepare:runtime": "pnpm --filter yidhras-server prepare:runtime",
     "scaffold:world-pack": "pnpm --filter yidhras-server scaffold:world-pack",
+    "prepare": "simple-git-hooks",
     "smoke:server": "pnpm --filter yidhras-server smoke"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["bcrypt"]
+    "onlyBuiltDependencies": [
+      "bcrypt",
+      "simple-git-hooks"
+    ]
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm exec lint-staged"
+  },
+  "lint-staged": {
+    "apps/server/src/**/*.ts": [
+      "pnpm --filter yidhras-server exec eslint --fix"
+    ],
+    "apps/server/tests/**/*.ts": [
+      "pnpm --filter yidhras-server exec eslint --fix"
+    ],
+    "apps/server/scripts/**/*.ts": [
+      "pnpm --filter yidhras-server exec eslint --fix"
+    ],
+    "apps/server/builtin/**/*.ts": [
+      "pnpm --filter yidhras-server exec eslint --fix"
+    ],
+    "apps/web/**/*.{ts,vue}": [
+      "pnpm --filter web exec eslint --fix"
+    ]
+  },
+  "devDependencies": {
+    "lint-staged": "^17.0.5",
+    "simple-git-hooks": "^2.13.1"
   }
 }

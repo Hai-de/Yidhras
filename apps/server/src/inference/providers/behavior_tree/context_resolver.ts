@@ -60,18 +60,22 @@ const applyOperator = (
       return resolved !== expected;
     case 'gt':
       return typeof resolved === 'bigint'
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- BigInt accepts string|number|bigint
         ? resolved > BigInt(expected as string | number | bigint)
         : typeof resolved === 'number' && typeof expected === 'number' && resolved > expected;
     case 'gte':
       return typeof resolved === 'bigint'
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- BigInt accepts string|number|bigint
         ? resolved >= BigInt(expected as string | number | bigint)
         : typeof resolved === 'number' && typeof expected === 'number' && resolved >= expected;
     case 'lt':
       return typeof resolved === 'bigint'
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- BigInt accepts string|number|bigint
         ? resolved < BigInt(expected as string | number | bigint)
         : typeof resolved === 'number' && typeof expected === 'number' && resolved < expected;
     case 'lte':
       return typeof resolved === 'bigint'
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- BigInt accepts string|number|bigint
         ? resolved <= BigInt(expected as string | number | bigint)
         : typeof resolved === 'number' && typeof expected === 'number' && resolved <= expected;
     case 'in':
@@ -88,16 +92,20 @@ const evaluateSimpleCondition = (
   const keys = Object.keys(cond);
 
   // The condition key is the first key that is not an operator
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const conditionKey = keys.find((k) => !OPERATORS.includes(k as BTConditionOperator));
   if (!conditionKey) return false;
 
-  // eslint-disable-next-line security/detect-object-injection -- operator/condition key 来自受限 DSL AST，动态读取是解析器正式能力
+   
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- blackboard condition value from DSL
   const conditionValue = cond[conditionKey] as string;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const resolved = resolveContextValue(conditionKey as BTConditionKey, conditionValue, ctx);
 
   if (resolved === undefined || resolved === null) return false;
 
   // Find explicit operator; if none, implicit check (truthy/falsy)
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const operator = keys.find((k) => OPERATORS.includes(k as BTConditionOperator)) as
     | BTConditionOperator
     | undefined;

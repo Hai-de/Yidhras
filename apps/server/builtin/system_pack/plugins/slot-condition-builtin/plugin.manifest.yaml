@@ -6,7 +6,7 @@ kind: "tool_provider"
 
 entrypoints:
   server:
-    source: "server.js"
+    source: "dist/server.js"
     runtime: "node_esm"
 
 compatibility:

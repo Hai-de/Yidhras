@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createMemoryRecordingService } from '../../src/memory/recording/service.js';
 import type { ContextOverlayStore } from '../../src/context/overlay/types.js';
 import type { LongMemoryBlockStore, MemoryBlockRecord } from '../../src/memory/blocks/types.js';
+import { createMemoryRecordingService } from '../../src/memory/recording/service.js';
 
 const { upsertDeclaredPackCollectionRecord } = vi.hoisted(() => ({
   upsertDeclaredPackCollectionRecord: vi.fn(async () => null)

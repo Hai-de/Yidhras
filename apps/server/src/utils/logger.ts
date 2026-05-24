@@ -28,13 +28,16 @@ let runtimeLogConfig: { level: LogLevel; format: 'text' | 'json' } | null = null
 
 export const setLoggerRuntimeConfig = (config: { level?: string; format?: string }): void => {
   runtimeLogConfig = {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     level: (config.level && LEVEL_ORDER[config.level as LogLevel] !== undefined ? config.level as LogLevel : 'info'),
     format: config.format === 'json' ? 'json' : 'text'
   };
 };
 
 const resolveLoggingConfig = (): { level: LogLevel; format: 'text' | 'json' } | null => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const envLevel = process.env.LOGGING_LEVEL as LogLevel | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const envFormat = process.env.LOGGING_FORMAT as 'text' | 'json' | undefined;
   if (envLevel || envFormat) {
     return {

@@ -9,8 +9,8 @@ import {
   setSlotEnabled,
   unregisterDynamicSlot
 } from '../../src/ai/registry.js';
-import { resolveSlotPositions } from '../../src/inference/slot_position_resolver.js';
 import type { PromptSlotConfig } from '../../src/inference/prompt_slot_config.js';
+import { resolveSlotPositions } from '../../src/inference/slot_position_resolver.js';
 
 const makeSlot = (overrides: Partial<PromptSlotConfig> = {}): PromptSlotConfig => ({
   id: 'test_dynamic_slot',

@@ -126,6 +126,7 @@ export class CausalGraphQuery {
     const rootEntry = this.entries.find((e) => e.id === entryId);
 
     return {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       root: rootEntry ?? ({ id: entryId } as ConversationEntry),
       derived,
       sources,

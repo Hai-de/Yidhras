@@ -80,6 +80,7 @@ const assertRecord = (value: unknown, code: string, message: string): Record<str
     throw new ApiError(500, code, message);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return value as Record<string, unknown>;
 };
 
@@ -544,11 +545,14 @@ const executeRunInternal = async (
 
   return {
     inference_id: inferenceContext.inference_id,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     actor_ref: toJsonSafe(inferenceContext.actor_ref) as InferenceRunResult['actor_ref'],
     strategy: inferenceContext.strategy,
     provider: provider.name,
     tick,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     decision: toJsonSafe(grounded.decision) as InferenceRunResult['decision'],
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     trace_metadata: toJsonSafe(traceMetadata) as InferenceRunResult['trace_metadata']
   };
 };
@@ -598,11 +602,14 @@ export const createInferenceService = ({
 
       return {
         inference_id: inferenceContext.inference_id,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         actor_ref: toJsonSafe(inferenceContext.actor_ref) as InferencePreviewResult['actor_ref'],
         strategy: inferenceContext.strategy,
         provider: provider.name,
         tick,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         prompt: toJsonSafe(prompt) as InferencePreviewResult['prompt'],
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         metadata: toJsonSafe(metadata) as InferencePreviewResult['metadata']
       };
     },

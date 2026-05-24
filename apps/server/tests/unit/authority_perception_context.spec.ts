@@ -1,6 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest';
-
 import type { PrismaClient } from '@prisma/client';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
 import { buildExtendedInferenceContext } from '../../src/app/services/context/context_assembler.js';
@@ -8,8 +7,8 @@ import { createPrismaRepositories } from '../../src/app/services/repositories/in
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 import { SimulationManager } from '../../src/core/simulation.js';
 import { resolveAuthorityForSubject } from '../../src/domain/authority/resolver.js';
-import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import { resolvePerceptionForSubject } from '../../src/domain/perception/resolver.js';
+import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import { createNotificationManager } from '../../src/utils/notifications.js';
 import {
   createIsolatedRuntimeEnvironment,

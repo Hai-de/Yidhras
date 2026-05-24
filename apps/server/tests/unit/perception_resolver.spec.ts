@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { BUILTIN_PERCEPTION_RULES } from '../../src/perception/default_rules.js';
 import { createRuleBasedPerceptionResolver } from '../../src/perception/default_resolver.js';
+import { BUILTIN_PERCEPTION_RULES } from '../../src/perception/default_rules.js';
 import { createPerceptionRuleEngine } from '../../src/perception/rule_engine.js';
 import type {
   PerceptionEventInput,

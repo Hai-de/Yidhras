@@ -75,6 +75,7 @@ const expandValue = (value: unknown, scope: RenderScope): unknown => {
   }
   if (value !== null && typeof value === 'object') {
     const result: Record<string, unknown> = {};
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- template variable access
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
       result[k] = expandValue(v, scope);
     }
@@ -87,5 +88,6 @@ export const expandStateJson = (
   stateJson: Record<string, unknown>,
   scope: RenderScope
 ): Record<string, unknown> => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- template variable access
   return expandValue(stateJson, scope) as Record<string, unknown>;
 };

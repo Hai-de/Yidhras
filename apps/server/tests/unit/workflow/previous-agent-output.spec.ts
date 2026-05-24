@@ -7,8 +7,8 @@ import {
 } from '../../../src/app/services/workflow/workflow_previous_output.js';
 import type { WorkflowStepRunRecord } from '../../../src/app/services/workflow/workflow_types.js';
 import { renderNarrativeTemplate } from '../../../src/template_engine/frontends/narrative/resolver.js';
-import { createPromptVariableContext, createPromptVariableLayer, normalizePromptVariableRecord } from '../../../src/template_engine/frontends/narrative/variable_context.js';
 import type { PromptVariableValue } from '../../../src/template_engine/frontends/narrative/types.js';
+import { createPromptVariableContext, createPromptVariableLayer, normalizePromptVariableRecord } from '../../../src/template_engine/frontends/narrative/variable_context.js';
 
 const createStepRun = ({ step_id, status, ...overrides }: Partial<WorkflowStepRunRecord> & Pick<WorkflowStepRunRecord, 'step_id' | 'status'>): WorkflowStepRunRecord => ({
   id: `step-run-${step_id}`,

@@ -100,7 +100,9 @@ const buildReport = async (): Promise<DiagReport> => {
       const configPath = path.join(packsDir, entry.name, 'pack.yaml');
       if (existsSync(configPath)) {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
           const yaml = YAML.parse(readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
           const meta = (yaml.metadata ?? {}) as Record<string, string>;
           packs.push({
             id: meta.id ?? entry.name,

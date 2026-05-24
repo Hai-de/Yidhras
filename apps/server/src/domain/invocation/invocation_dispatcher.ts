@@ -142,6 +142,7 @@ const shouldBridgeToInvocation = (context: AppInfrastructure, intent: Dispatchab
     return true
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const isKernelAction = KERNEL_INTENT_TYPES.includes(intent.intent_type as (typeof KERNEL_INTENT_TYPES)[number])
   if (!isKernelAction && !intent.intent_type.startsWith('invoke.')) {
     logger.warn(
@@ -165,6 +166,7 @@ const resolveInvocationPackRuntime = (
   context: AppInfrastructure,
   packRuntime?: InvocationPackRuntime
 ): InvocationPackRuntime | undefined => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return packRuntime ?? (context as { packRuntime?: InvocationPackRuntime }).packRuntime;
 }
 

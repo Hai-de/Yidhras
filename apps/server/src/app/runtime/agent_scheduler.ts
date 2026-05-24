@@ -187,6 +187,7 @@ const createEmptyPartitionRunResult = (partitionId: string): PartitionSchedulerR
 const aggregatePartitionRunResults = (results: PartitionSchedulerRunResult[]): AgentSchedulerRunResult => {
   const skipCounts = createEmptyPartitionRunResult(DEFAULT_SCHEDULER_PARTITION_ID).skipped_by_reason;
   for (const result of results) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     for (const reason of Object.keys(skipCounts) as SchedulerSkipReason[]) {
  
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键

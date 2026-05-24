@@ -318,8 +318,11 @@ export class WorldEngineSidecarClient implements WorldEnginePort {
     value: WorldEngineSidecarTransport | WorldEngineSidecarClientOptions
   ): value is WorldEngineSidecarTransport {
     return (
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       typeof (value as WorldEngineSidecarTransport).start === 'function' &&
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       typeof (value as WorldEngineSidecarTransport).stop === 'function' &&
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       typeof (value as WorldEngineSidecarTransport).send === 'function'
     );
   }

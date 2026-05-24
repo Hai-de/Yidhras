@@ -1,11 +1,10 @@
+import type { PrismaClient } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { AiTaskService } from '../../src/ai/task_service.js';
 import { createCrossAgentBridge, createCrossAgentToolHandler, registerCrossAgentTool } from '../../src/ai/cross_agent_tool.js';
-import { createToolRegistry } from '../../src/ai/tool_executor.js';
+import type { AiTaskService } from '../../src/ai/task_service.js';
 import type { ToolExecutionContext } from '../../src/ai/tool_executor.js';
-import type { PrismaClient } from '@prisma/client';
-
+import { createToolRegistry } from '../../src/ai/tool_executor.js';
 import type { AppContext } from '../../src/app/context.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 

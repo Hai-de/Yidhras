@@ -331,6 +331,7 @@ const parseChatCompletionsSseChunk = async function* (
         if (!trimmed.startsWith('data: ')) continue;
 
         try {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse boundary
           const json = JSON.parse(trimmed.slice(6)) as Record<string, unknown>;
           const choices = Array.isArray(json.choices) ? json.choices : [];
           const choice = choices.find((c: unknown) => isRecord(c));

@@ -43,11 +43,13 @@ const resolveTemplateValue = (
   const { path, fallback } = parseTemplateExpression(inner);
   const resolved = getValueAtPath(path, runtimeObjects);
   if (resolved !== undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     return resolved as PromptVariableValue;
   }
   if (fallback !== undefined) {
     const fallbackResolved = getValueAtPath(fallback, runtimeObjects);
     if (fallbackResolved !== undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       return fallbackResolved as PromptVariableValue;
     }
     return fallback;

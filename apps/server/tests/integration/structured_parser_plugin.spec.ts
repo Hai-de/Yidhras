@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { ServerPluginHostApi } from '../../src/plugins/runtime.js'
 import { dataCleanerRegistry } from '../../src/plugins/extensions/data_cleaner_registry.js'
+import type { ServerPluginHostApi } from '../../src/plugins/runtime.js'
 
 const buildHost = () => ({
   registerDataCleaner: (cleaner: Parameters<typeof dataCleanerRegistry.register>[0]) => {

@@ -80,6 +80,7 @@ async function tickWithTrace(
       nodeType,
       status,
       durationMs,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       discardedDecision: node.type === 'action' ? (ctx.blackboard['__last_decision'] as ProviderDecisionRaw | undefined) ?? null : null
     });
   }
@@ -103,6 +104,7 @@ export async function evaluateTree(
   try {
     await tickWithTrace(root, ctx, treeName, traces);
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const finalDecision = (ctx.blackboard['__last_decision'] as ProviderDecisionRaw | null) ?? null;
 
     return {

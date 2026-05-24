@@ -1,10 +1,10 @@
 import { bench, describe } from 'vitest';
 
-import { assembleConversationMessages } from '../../src/conversation/assembler.js';
-import { DEFAULT_CONVERSATION_FORMAT_CONFIG } from '../../src/conversation/format_config.js';
 import { resolveAiRoute } from '../../src/ai/route_resolver.js';
 import { decodeAiTaskOutput } from '../../src/ai/task_decoder.js';
 import type { AiResolvedTaskConfig, AiTaskRequest, ModelGatewayResponse } from '../../src/ai/types.js';
+import { assembleConversationMessages } from '../../src/conversation/assembler.js';
+import { DEFAULT_CONVERSATION_FORMAT_CONFIG } from '../../src/conversation/format_config.js';
 import type { PromptBundleV2 } from '../../src/inference/prompt_bundle_v2.js';
 
 // --- Shared test data ---

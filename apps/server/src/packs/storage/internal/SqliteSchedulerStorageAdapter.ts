@@ -310,6 +310,7 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
     }
   ): { count: number } {
     const db = this.getDb(packId);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const result = db.prepare(
       `UPDATE scheduler_lease
        SET key = ?,
@@ -334,6 +335,7 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
 
   public deleteLeaseByHolder(packId: string, partitionId: string, holder: string): { count: number } {
     const db = this.getDb(packId);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const result = db.prepare(
       'DELETE FROM scheduler_lease WHERE partition_id = ? AND holder = ?'
     ).run(partitionId, holder) as { changes: number };
@@ -477,6 +479,7 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
   public countMigrationsInProgress(packId: string, workerId?: string): number {
     const db = this.getDb(packId);
     if (workerId !== undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const row = db.prepare(
         `SELECT COUNT(*) as cnt FROM scheduler_ownership_migration_log
          WHERE status IN ('requested', 'in_progress') AND to_worker_id = ?`
@@ -484,6 +487,7 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
       return row?.cnt ?? 0;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const row = db.prepare(
       `SELECT COUNT(*) as cnt FROM scheduler_ownership_migration_log
        WHERE status IN ('requested', 'in_progress')`
@@ -996,75 +1000,120 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
 
   private toLeaseRecord(row: Record<string, unknown>): SchedulerLeaseRecord {
     return {
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       key: row['key'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       partition_id: row['partition_id'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       holder: row['holder'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       acquired_at: BigInt(row['acquired_at'] as number),
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       expires_at: BigInt(row['expires_at'] as number)
     };
   }
 
   private toCursorRecord(row: Record<string, unknown>): SchedulerCursorRecord {
     return {
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       key: row['key'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       partition_id: row['partition_id'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       last_scanned_tick: BigInt(row['last_scanned_tick'] as number),
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       last_signal_tick: BigInt(row['last_signal_tick'] as number),
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       updated_at: BigInt(row['updated_at'] as number)
     };
   }
 
   private toPartitionRecord(row: Record<string, unknown>): SchedulerPartitionRecord {
     return {
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       partition_id: row['partition_id'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       worker_id: row['worker_id'] as string | null,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       status: row['status'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       version: row['version'] as number,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       source: row['source'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       updated_at: BigInt(row['updated_at'] as number)
     };
   }
 
   private toMigrationRecord(row: Record<string, unknown>): SchedulerOwnershipMigrationRecord {
     return {
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       id: row['id'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       partition_id: row['partition_id'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       from_worker_id: row['from_worker_id'] as string | null,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       to_worker_id: row['to_worker_id'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       status: row['status'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       reason: row['reason'] as string | null,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       details: jsonParse(row['details'] as string | null),
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       created_at: BigInt(row['created_at'] as number),
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       updated_at: BigInt(row['updated_at'] as number),
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       completed_at: row['completed_at'] !== null ? BigInt(row['completed_at'] as number) : null
     };
   }
 
   private toWorkerStateRecord(row: Record<string, unknown>): SchedulerWorkerStateRecord {
     return {
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       worker_id: row['worker_id'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       status: row['status'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       last_heartbeat_at: BigInt(row['last_heartbeat_at'] as number),
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       owned_partition_count: row['owned_partition_count'] as number,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       active_migration_count: row['active_migration_count'] as number,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       capacity_hint: row['capacity_hint'] as number | null,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       updated_at: BigInt(row['updated_at'] as number)
     };
   }
 
   private toRecommendationRecord(row: Record<string, unknown>): SchedulerRebalanceRecommendationRecord {
     return {
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       id: row['id'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       partition_id: row['partition_id'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       from_worker_id: row['from_worker_id'] as string | null,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       to_worker_id: row['to_worker_id'] as string | null,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       status: row['status'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       reason: row['reason'] as string,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       score: row['score'] as number | null,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       suppress_reason: row['suppress_reason'] as string | null,
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       details: jsonParse(row['details'] as string | null),
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       created_at: BigInt(row['created_at'] as number),
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       updated_at: BigInt(row['updated_at'] as number),
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       applied_migration_id: row['applied_migration_id'] as string | null
     };
   }

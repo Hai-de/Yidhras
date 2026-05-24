@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { tickSelector, tickSequence } from '../../src/inference/providers/behavior_tree/nodes/composites.js';
+
 import { tick } from '../../src/inference/providers/behavior_tree/evaluator.js';
+import { tickSelector, tickSequence } from '../../src/inference/providers/behavior_tree/nodes/composites.js';
 import type { BTEvalContext, BTNodeDef } from '../../src/inference/providers/behavior_tree/types.js';
 import type { InferenceContext } from '../../src/inference/types.js';
 

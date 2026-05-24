@@ -91,6 +91,7 @@ const validateSchemaNode = (value: unknown, schema: Record<string, unknown>, pat
 
   if (schema.type === 'array' && Array.isArray(value) && isRecord(schema.items)) {
     value.forEach((item, index) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       issues.push(...validateSchemaNode(item, schema.items as Record<string, unknown>, `${path}[${String(index)}]`));
     });
   }

@@ -1,15 +1,13 @@
-import { describe, expect, it, beforeAll, afterAll } from 'vitest';
-
 import { PrismaClient } from '@prisma/client';
+import { afterAll,beforeAll, describe, expect, it } from 'vitest';
 
 import { SimulationManager } from '../../src/core/simulation.js';
 import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import {
   createIsolatedRuntimeEnvironment,
   createPrismaClientForEnvironment,
-  migrateIsolatedDatabase,
-  type IsolatedRuntimeEnvironment
-} from '../helpers/runtime.js';
+  type IsolatedRuntimeEnvironment,
+  migrateIsolatedDatabase} from '../helpers/runtime.js';
 
 describe('pack clock isolation', () => {
   let environment: IsolatedRuntimeEnvironment;

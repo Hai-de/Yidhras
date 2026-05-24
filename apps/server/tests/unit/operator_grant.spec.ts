@@ -1,5 +1,4 @@
 import type { PrismaClient } from '@prisma/client'
-
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { AppContext } from '../../src/app/context.js'

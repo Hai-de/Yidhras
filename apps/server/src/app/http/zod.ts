@@ -34,6 +34,7 @@ const normalizeQueryObject = (value: unknown): unknown => {
   }
 
   return Object.fromEntries(
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
     Object.entries(value as Record<string, unknown>)
       .map(([key, item]) => [key, flattenQueryValue(item)])
       .filter(([, item]) => item !== undefined)

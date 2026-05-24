@@ -29,6 +29,7 @@ export class PrismaNarrativeEventRepository implements NarrativeEventRepository 
   constructor(private readonly prisma: PrismaClient) {}
 
   private ctx(): AppContext {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     return { prisma: this.prisma } as AppContext;
   }
 
@@ -73,9 +74,12 @@ export class PrismaNarrativeEventRepository implements NarrativeEventRepository 
    
   async queryEvents(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown> | Array<Record<string, unknown>>; take?: number; include?: Record<string, unknown> }): Promise<Array<Record<string, unknown>>> {
     return this.prisma.event.findMany({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
       where: input.where as never,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
       orderBy: input.orderBy as never,
       take: input.take,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
       include: input.include as never
     });
   }

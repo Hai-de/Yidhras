@@ -32,6 +32,7 @@ export const createOperatorGrant = async (
       receiver_identity_id: receiverIdentityId,
       pack_id: packId,
       capability_key: capabilityKey,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       scope_json: options?.scope_json as Prisma.InputJsonValue | undefined ?? undefined,
       revocable: options?.revocable ?? true,
       expires_at: options?.expires_at ?? null,

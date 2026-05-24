@@ -84,6 +84,7 @@ export class JsonlCompactionAuditStore implements CompactionAuditStore {
         .filter((line) => line.trim().length > 0)
         .reduce<CompactionAuditEntry[]>((acc, line) => {
           try {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
             acc.push(JSON.parse(line) as CompactionAuditEntry);
           } catch {
             // Skip malformed lines

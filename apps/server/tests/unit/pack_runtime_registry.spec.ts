@@ -8,8 +8,8 @@ import {
   registerExperimentalPackRuntimeHost
 } from '../../src/app/services/runtime/experimental_multi_pack_runtime.js';
 import type { PackRuntimeHandle } from '../../src/core/pack_runtime_handle.js';
-import type { RuntimeSpeedSnapshot } from '../../src/core/runtime_speed.js';
 import { InMemoryPackRuntimeRegistry } from '../../src/core/pack_runtime_registry.js';
+import type { RuntimeSpeedSnapshot } from '../../src/core/runtime_speed.js';
 
 const defaultStrategy = {
   kind: 'variable' as const,

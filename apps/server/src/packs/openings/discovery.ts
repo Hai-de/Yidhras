@@ -41,6 +41,7 @@ export const listPackOpenings = (packDir: string): OpeningSummary[] => {
 
     try {
       const content = safeFs.readFileSync(packDir, filePath, 'utf-8');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
       const parsed = YAML.parse(content) as Record<string, unknown>;
       if (isRecord(parsed)) {
         results.push({

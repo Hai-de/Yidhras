@@ -43,11 +43,13 @@ export const registerGrantRoutes = (
 
       const grant = await createOperatorGrant(
         context,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
         req.params.packId as string,
         operator.id,
         body.receiver_identity_id,
         body.capability_key,
         {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma JSON column
           scope_json: body.scope_json as Record<string, unknown> | undefined,
           revocable: body.revocable,
           expires_at: expiresAt === undefined ? undefined : expiresAt
@@ -68,6 +70,7 @@ export const registerGrantRoutes = (
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const grants = await listOperatorGrants(context, req.params.packId as string, operator.id)
       jsonOk(res, toJsonSafe(grants))
     })
@@ -84,6 +87,7 @@ export const registerGrantRoutes = (
 
       const result = await revokeOperatorGrant(
         context,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
         req.params.grantId as string,
         operator.id,
         req.ip

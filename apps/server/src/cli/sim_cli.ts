@@ -39,6 +39,7 @@ const parseSimArgs = (argv: string[]): CliArgs => {
         parsed.password = argv[++i];
         break;
       default:
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         if (COMMANDS.includes(arg as (typeof COMMANDS)[number])) {
           parsed.command = arg;
         } else if (parsed.command === 'speed' && !arg.startsWith('-') && !parsed.speedValue) {
@@ -134,12 +135,14 @@ const request = async <T>(
     body: options.body ? JSON.stringify(options.body) : undefined
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: fetch boundary
   const json = (await res.json()) as ApiEnvelope<T>;
 
   if (!json.success) {
     throw new Error(`API 错误 [${res.status}]: ${json.error?.code ?? 'UNKNOWN'} — ${json.error?.message ?? '请求失败'}`);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return json.data as T;
 };
 
@@ -168,6 +171,7 @@ const doLogin = async (args: CliArgs): Promise<void> => {
   } else {
     console.log(`登录成功`);
     console.log(`  token: ${data.token}`);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     console.log(`  operator: ${(data.operator as Record<string, string>).name ?? data.operator}`);
     console.log(`\n使用: export YIDHRAS_TOKEN=${data.token}`);
   }

@@ -361,12 +361,14 @@ export const readPackOrderConfig = (packRootDir: string): PackLoadOrderConfig | 
 
   try {
     const content = safeFs.readFileSync(packRootDir, orderPath, 'utf-8');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- plugin config boundary
     const parsed = YAML.parse(content) as Record<string, unknown> | null;
 
     if (!parsed || !Array.isArray(parsed.order)) {
       return null;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- parsed plugin order
     return { order: parsed.order as string[] };
   } catch {
     return null;

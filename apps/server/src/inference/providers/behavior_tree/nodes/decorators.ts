@@ -9,6 +9,7 @@ function getCooldownStore(ctx: BTEvalContext): Map<string, BTCooldownState> {
   if (!ctx.blackboard['__cooldown_store']) {
     ctx.blackboard['__cooldown_store'] = new Map<string, BTCooldownState>();
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return ctx.blackboard['__cooldown_store'] as Map<string, BTCooldownState>;
 }
 
@@ -66,7 +67,9 @@ async function applyCooldown(
 }
 
 function buildNodeScopedKey(ctx: BTEvalContext, node: BTNodeDef): string {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- blackboard keys set by runner
   const agentId = (ctx.blackboard['__agent_id'] as string) ?? 'unknown';
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- blackboard keys set by runner
   const treeName = (ctx.blackboard['__tree_name'] as string) ?? 'unknown';
   return node.__node_path
     ? `${agentId}::${treeName}::${node.__node_path}`

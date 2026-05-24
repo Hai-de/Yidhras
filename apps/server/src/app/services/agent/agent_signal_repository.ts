@@ -77,6 +77,7 @@ export const resolveTriggerEventPayload = (payload: unknown): {
   }
 
   return {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     event_type: payload.event_type as 'history' | 'interaction' | 'system',
     title: payload.title.trim(),
     description: payload.description.trim(),

@@ -33,6 +33,7 @@ export interface PackRoutesDependencies {
 }
 
 export const registerPackRoutes = (deps: PackRoutesDependencies): Router => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const router = createRouter({ mergeParams: true }) as unknown as Express;
 
   const { context, asyncHandler } = deps;

@@ -192,6 +192,7 @@ const applyPreparedWorldStateDelta = async (input: {
           pack_id: input.prepared.pack_id,
           entity_id: entityId,
           state_namespace: namespace,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma JSON column
           state_json: nextState as Record<string, unknown>,
           now: parseBigIntLike(input.prepared.next_revision, 'prepared.next_revision')
         });
@@ -208,6 +209,7 @@ const applyPreparedWorldStateDelta = async (input: {
           });
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
         const recordObject = nextRecord as Record<string, unknown>;
         const recordId = typeof recordObject.id === 'string' ? recordObject.id.trim() : '';
         const payloadJson = recordObject.payload_json;
@@ -227,6 +229,7 @@ const applyPreparedWorldStateDelta = async (input: {
           target_entity_id: '__world__',
           execution_status: 'applied',
           payload_json: payloadJson && typeof payloadJson === 'object' && !Array.isArray(payloadJson)
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
             ? (payloadJson as Record<string, unknown>)
             : null,
           emitted_events_json: input.prepared.emitted_events,
@@ -245,6 +248,7 @@ const applyPreparedWorldStateDelta = async (input: {
           });
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
         const clockObject = nextClock as Record<string, unknown>;
         clockDelta = {
           previous_tick: typeof clockObject.previous_tick === 'string' ? clockObject.previous_tick : null,
@@ -396,10 +400,15 @@ export const executeWorldEnginePreparedStep = async (input: {
       mode: 'active',
       current_tick: input.packRuntime?.getCurrentTick()?.toString() ?? input.prepareInput.step_ticks,
       current_revision: input.prepareInput.base_revision ?? '0',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
       world_entities: worldEntities as unknown as ReadonlyArray<Record<string, unknown>>,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
       entity_states: entityStates as unknown as ReadonlyArray<Record<string, unknown>>,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
       authority_grants: authorityGrants as unknown as ReadonlyArray<Record<string, unknown>>,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
       mediator_bindings: mediatorBindings as unknown as ReadonlyArray<Record<string, unknown>>,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
       rule_execution_records: ruleExecutionRecords as unknown as ReadonlyArray<Record<string, unknown>>
     };
 

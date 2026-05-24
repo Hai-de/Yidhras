@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AiPackConfig, AiTaskOverride } from '../../src/ai/types.js';
 import { resolveAiTaskConfig } from '../../src/ai/task_definitions.js';
+import type { AiPackConfig, AiTaskOverride } from '../../src/ai/types.js';
 
 describe('resolveAiTaskConfig - tools chain', () => {
   it('returns empty tools and disabled tool_policy by default', () => {

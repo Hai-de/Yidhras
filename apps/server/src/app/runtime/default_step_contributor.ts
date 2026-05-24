@@ -36,6 +36,7 @@ export const createDefaultStepContributor = (): StepContributor => {
       ) ?? null;
 
       const previousStateJson = previousWorldState
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma JSON column
         ? ((previousWorldState).state_json as Record<string, unknown> | null) ?? null
         : null;
 

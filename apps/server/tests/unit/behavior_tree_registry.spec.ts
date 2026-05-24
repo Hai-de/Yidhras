@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { TreeRegistry } from '../../src/inference/providers/behavior_tree/tree_registry.js';
 
 describe('TreeRegistry', () => {

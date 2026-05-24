@@ -5,9 +5,8 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  JsonlCompactionAuditStore,
-  type CompactionAuditEntry
-} from '../../../src/conversation/compaction_audit.js';
+  type CompactionAuditEntry,
+  JsonlCompactionAuditStore} from '../../../src/conversation/compaction_audit.js';
 
 function makeAuditEntry(overrides: Partial<CompactionAuditEntry> = {}): CompactionAuditEntry {
   return {

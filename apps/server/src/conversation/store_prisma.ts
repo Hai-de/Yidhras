@@ -23,6 +23,7 @@ function jsonParse<T>(raw: string | null | undefined, fallback: T): T {
     return fallback;
   }
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
     return JSON.parse(raw) as T;
   } catch {
     return fallback;
@@ -34,6 +35,7 @@ function entryRecordToDomain(row: PrismaConversationEntryRecord): ConversationEn
     id: row.id,
     turn_number: row.turn_number,
     speaker_agent_id: row.speaker_agent_id,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     kind: row.kind as ConversationEntryKind,
     original_content: row.original_content,
     current_content: row.current_content,

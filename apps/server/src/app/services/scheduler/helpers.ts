@@ -91,13 +91,17 @@ export const parseSchedulerCursor = (value: string | undefined): SchedulerListCu
     typeof parsed !== 'object' ||
     parsed === null ||
     Array.isArray(parsed) ||
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
     typeof (parsed as Record<string, unknown>).created_at !== 'string' ||
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
     typeof (parsed as Record<string, unknown>).id !== 'string'
   ) {
     throw new ApiError(400, SCHEDULER_QUERY_INVALID, 'cursor payload is invalid');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
   const createdAt = (parsed as Record<string, unknown>).created_at as string;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
   const id = (parsed as Record<string, unknown>).id as string;
   if (!/^\d+$/.test(createdAt) || id.trim().length === 0) {
     throw new ApiError(400, SCHEDULER_QUERY_INVALID, 'cursor payload is invalid');
@@ -180,6 +184,7 @@ export const parseOptionalKind = (value: string | undefined): SchedulerKind | nu
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const normalized = value.trim() as SchedulerKind;
   if (!SCHEDULER_KINDS.includes(normalized)) {
     throw new ApiError(400, SCHEDULER_QUERY_INVALID, 'kind is unsupported', { kind: value });
@@ -193,6 +198,7 @@ export const parseOptionalReason = (value: string | undefined): SchedulerReason 
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const normalized = value.trim() as SchedulerReason;
   if (!SCHEDULER_REASONS.includes(normalized)) {
     throw new ApiError(400, SCHEDULER_QUERY_INVALID, 'reason is unsupported', { reason: value });
@@ -206,6 +212,7 @@ export const parseOptionalSkipReason = (value: string | undefined): SchedulerSki
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const normalized = value.trim() as SchedulerSkipReason;
   if (!SCHEDULER_SKIP_REASONS.includes(normalized)) {
     throw new ApiError(400, SCHEDULER_QUERY_INVALID, 'skipped_reason is unsupported', { skipped_reason: value });
@@ -377,6 +384,7 @@ export const toRunReadModel = (schedulerRun: {
   lease_holder: schedulerRun.lease_holder ?? null,
   lease_expires_at_snapshot: schedulerRun.lease_expires_at_snapshot?.toString() ?? null,
   tick: schedulerRun.tick.toString(),
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   summary: schedulerRun.summary as AgentSchedulerRunResult,
   started_at: schedulerRun.started_at.toString(),
   finished_at: schedulerRun.finished_at.toString(),
@@ -399,6 +407,7 @@ export const toCandidateDecisionReadModel = (candidate: {
   workflow_link?: SchedulerDecisionWorkflowLink | null;
   created_at: bigint;
 }): SchedulerCandidateDecisionReadModel => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
   const candidateReasons = Array.isArray(candidate.candidate_reasons) ? (candidate.candidate_reasons as string[]) : [];
   const coalescedSecondaryReasonCount = candidate.kind === 'event_driven' ? Math.max(candidateReasons.length - 1, 0) : 0;
 
@@ -412,6 +421,7 @@ export const toCandidateDecisionReadModel = (candidate: {
     chosen_reason: candidate.chosen_reason,
     scheduled_for_tick: candidate.scheduled_for_tick.toString(),
     priority_score: candidate.priority_score,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     skipped_reason: candidate.skipped_reason as SchedulerSkipReason | null,
     coalesced_secondary_reason_count: coalescedSecondaryReasonCount,
     has_coalesced_signals: coalescedSecondaryReasonCount > 0,

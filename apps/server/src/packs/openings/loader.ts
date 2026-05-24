@@ -25,6 +25,7 @@ export const loadPackOpening = (packDir: string, openingId: string): WorldPackOp
   }
 
   const content = safeFs.readFileSync(packDir, filePath, 'utf-8');
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
   const parsed = YAML.parse(content) as Record<string, unknown>;
 
   const result = worldPackOpeningSchema.safeParse(parsed);

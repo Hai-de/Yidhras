@@ -104,6 +104,7 @@ const buildUserContent = (message: AiMessage): AnthropicContentBlock[] => {
 const buildAssistantContent = (message: AiMessage): AnthropicContentBlock[] => {
   const blocks: AnthropicContentBlock[] = [];
   const toolCalls = Array.isArray(message.metadata?.tool_calls)
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: boundary assertion
     ? (message.metadata.tool_calls as Array<{ name: string; call_id?: string; arguments: Record<string, unknown> }>)
     : [];
 
@@ -151,8 +152,10 @@ const buildAnthropicTools = (tools: AiToolSpec[]): AnthropicToolDef[] => {
     description: tool.description,
     input_schema: {
       type: 'object' as const,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       properties: (tool.input_schema.properties ?? {}) as Record<string, unknown>,
       required: Array.isArray(tool.input_schema.required)
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON schema required fields are always string arrays
         ? (tool.input_schema.required as string[])
         : undefined
     }
@@ -179,8 +182,10 @@ const buildStructuredOutputTool = (
     description: `Output structured data matching the required schema`,
     input_schema: {
       type: 'object',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       properties: (structuredOutput.json_schema.properties ?? {}) as Record<string, unknown>,
       required: Array.isArray(structuredOutput.json_schema.required)
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON schema required fields are always string arrays
         ? (structuredOutput.json_schema.required as string[])
         : undefined
     }
@@ -346,6 +351,7 @@ const parseAnthropicResponse = (payload: Record<string, unknown>, response: Resp
   }
 
   const stopReason = typeof payload.stop_reason === 'string' ? payload.stop_reason : null;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const usage = isRecord(payload.usage) ? (payload.usage as unknown as AnthropicUsage) : null;
   const blocked = stopReason === 'content_filter' || stopReason === 'safety';
 
@@ -758,6 +764,7 @@ const parseAnthropicSseStream = async function* (
         if (!dataJson) continue;
 
         try {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse boundary
           const data = JSON.parse(dataJson) as Record<string, unknown>;
 
           switch (eventType) {

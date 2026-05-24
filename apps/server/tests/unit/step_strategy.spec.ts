@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import { stepStrategyRangeSchema, stepStrategySchema } from '@yidhras/contracts';
+import { describe, expect, it } from 'vitest';
 
 describe('StepStrategy types and schemas', () => {
   describe('stepStrategySchema', () => {

@@ -27,6 +27,7 @@ const toPackProjectionMetadataSnapshot = (pack: WorldPack): PackProjectionMetada
 export const createPackProjectionMetadataResolver = (
   context: AppInfrastructure
 ): PackProjectionMetadataResolver => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const ctx = context as unknown as AppContext;
   return {
     resolve(packId: string, feature: string): Promise<PackProjectionResolution> {

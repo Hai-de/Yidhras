@@ -8,6 +8,7 @@ import type { PromptWorkflowSnapshot } from '../types.js';
 const DEFAULT_JOB_MAX_ATTEMPTS = 3;
 
 const toJsonValue = (value: unknown): Prisma.InputJsonValue => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
   return JSON.parse(JSON.stringify(toJsonSafe(value))) as Prisma.InputJsonValue;
 };
 

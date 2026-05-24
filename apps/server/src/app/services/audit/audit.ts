@@ -84,7 +84,9 @@ const parseTickLike = (value: string | number | null | undefined): bigint | null
 };
 
 const parseAuditFeedFilters = (query: Record<string, unknown>): AuditFeedFilters & { limit: number } => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query param
   const fromTick = parseTickLike((query.from_tick as string | undefined) ?? null);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query param
   const toTick = parseTickLike((query.to_tick as string | undefined) ?? null);
   const parsedLimit = typeof query.limit === 'string' ? Number.parseInt(query.limit, 10) : DEFAULT_AUDIT_FEED_LIMIT;
   const limit = Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : DEFAULT_AUDIT_FEED_LIMIT, 1), MAX_AUDIT_FEED_LIMIT);
@@ -94,6 +96,7 @@ const parseAuditFeedFilters = (query: Record<string, unknown>): AuditFeedFilters
       ? [query.kinds]
       : null;
   const kinds = rawKinds
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     ? rawKinds.filter((kind): kind is AuditEntryKind => typeof kind === 'string' && AUDIT_ENTRY_KINDS.includes(kind as AuditEntryKind))
     : null;
 
@@ -197,6 +200,7 @@ const buildPostAuditEntries = async (
     return [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const posts = await context.repos.social.queryPosts({
     ...(shouldFetchAllForFilters(filters)
       ? {}
@@ -382,6 +386,7 @@ const buildEventAuditEntries = async (
     return [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const events = await context.repos.narrative.queryEvents({
     ...(shouldFetchAllForFilters(filters)
       ? {}

@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { createTokenBudgetTrimExecutor } from '../../src/context/workflow/executors/token_budget_trim.js';
 import { resolvePromptWorkflowBudget } from '../../src/context/workflow/token_budget.js';
 import { createInitialPromptWorkflowState } from '../../src/context/workflow/types.js';
-import type { PromptTokenCounter } from '../../src/inference/prompt_tokenizer.js';
 import type { PromptFragmentV2 } from '../../src/inference/prompt_fragment_v2.js';
+import type { PromptTokenCounter } from '../../src/inference/prompt_tokenizer.js';
 import type { PromptTree } from '../../src/inference/prompt_tree.js';
 import type { InferenceContext } from '../../src/inference/types.js';
 

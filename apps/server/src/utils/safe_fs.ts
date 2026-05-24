@@ -30,7 +30,7 @@ function readdirWrapper(
   dirPath: string,
   options?: BufferEncoding | { withFileTypes?: boolean } | null
 ): string[] | fs.Dirent[] {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-type-assertion -- assertion-to-any: fs API compatibility
   return fs.readdirSync(assertInBase(dirPath, baseDir), options as any);
 }
 

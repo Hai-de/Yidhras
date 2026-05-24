@@ -12,8 +12,12 @@ export default tseslint.config(
 
   // Boundaries — must be in a global (non-files-scoped) entry for settings to work
   {
+    languageOptions: {
+      parser: tseslint.parser
+    },
     plugins: {
-      boundaries
+      boundaries,
+      '@typescript-eslint': tseslint.plugin
     },
     settings: {
       'boundaries/root-path': import.meta.dirname,
@@ -108,7 +112,12 @@ export default tseslint.config(
     }
   },
 
-  ...tseslint.configs.recommendedTypeChecked,
+  // TypeScript type-checked rules — scoped to src (has projectService)
+  ...tseslint.configs.recommendedTypeChecked.map((rc) => ({
+    ...rc,
+    files: ['src/**/*.ts']
+  })),
+
   importX.flatConfigs.recommended,
   importX.flatConfigs.typescript,
   security.configs.recommended,
@@ -159,11 +168,136 @@ export default tseslint.config(
           message: 'NodeNext relative exports in server must end with .js'
         }
       ],
+      '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_' }
-      ]
+      ],
+      '@typescript-eslint/no-unsafe-type-assertion': 'error'
+    }
+  },
+
+  // Tests — no boundaries constraints, tests may import from any layer.
+  // Quality rules are warn-level (pre-existing violations exist in ~40+ files).
+  // Safety rules (eval, extensions, etc.) remain error.
+  {
+    files: ['tests/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        tsconfigRootDir: import.meta.dirname
+      }
+    },
+    plugins: {
+      'simple-import-sort': simpleImportSort
+    },
+    rules: {
+      'no-console': 'off',
+      'prefer-const': 'warn',
+      'no-eval': 'error',
+      'no-implied-eval': 'error',
+      'no-new-func': 'error',
+      'no-prototype-builtins': 'error',
+      'no-path-concat': 'error',
+      'import-x/no-named-as-default-member': 'off',
+      'simple-import-sort/imports': 'warn',
+      'simple-import-sort/exports': 'warn',
+      'import-x/extensions': 'off',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "ImportDeclaration[source.value=/^\\.{1,2}\\/(?!.*\\.js$).+/]",
+          message: 'NodeNext relative imports in tests must end with .js'
+        },
+        {
+          selector: "ExportNamedDeclaration[source.value=/^\\.{1,2}\\/(?!.*\\.js$).+/]",
+          message: 'NodeNext relative exports in tests must end with .js'
+        },
+        {
+          selector: "ExportAllDeclaration[source.value=/^\\.{1,2}\\/(?!.*\\.js$).+/]",
+          message: 'NodeNext relative exports in tests must end with .js'
+        }
+      ],
+      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_' }
+      ],
+      'security/detect-non-literal-fs-filename': 'off'
+    }
+  },
+
+  // Scripts — no boundaries constraints, security rules apply (scripts manipulate processes/files).
+  // Quality rules are warn-level (pre-existing violations exist).
+  // Safety rules remain error.
+  {
+    files: ['scripts/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        tsconfigRootDir: import.meta.dirname
+      }
+    },
+    plugins: {
+      'simple-import-sort': simpleImportSort
+    },
+    rules: {
+      'no-console': 'off',
+      'prefer-const': 'warn',
+      'no-eval': 'error',
+      'no-implied-eval': 'error',
+      'no-new-func': 'error',
+      'no-prototype-builtins': 'error',
+      'no-path-concat': 'error',
+      'simple-import-sort/imports': 'warn',
+      'simple-import-sort/exports': 'warn',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "ImportDeclaration[source.value=/^\\.{1,2}\\/(?!.*\\.js$).+/]",
+          message: 'NodeNext relative imports must end with .js'
+        }
+      ],
+      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
+    }
+  },
+
+  // Builtin system pack plugins — no boundaries constraints, plugins import from src/
+  {
+    files: ['builtin/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+        tsconfigRootDir: import.meta.dirname
+      }
+    },
+    plugins: {
+      'simple-import-sort': simpleImportSort
+    },
+    rules: {
+      'no-console': 'off',
+      'prefer-const': 'error',
+      'no-eval': 'error',
+      'no-implied-eval': 'error',
+      'no-new-func': 'error',
+      'no-prototype-builtins': 'error',
+      'no-path-concat': 'error',
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "ImportDeclaration[source.value=/^\\.{1,2}\\/(?!.*\\.js$).+/]",
+          message: 'NodeNext relative imports in plugins must end with .js'
+        }
+      ],
+      '@typescript-eslint/no-non-null-assertion': 'error',
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }]
     }
   }
 );

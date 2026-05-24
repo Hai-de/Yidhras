@@ -64,6 +64,7 @@ const parseArgs = (argv: string[]): ParsedArgs => {
       default:
         if (!arg.startsWith('-')) {
           if (!parsed.command) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
             parsed.command = arg as 'export' | 'import';
           } else if (!parsed.target) {
             parsed.target = arg;
@@ -73,6 +74,7 @@ const parseArgs = (argv: string[]): ParsedArgs => {
   }
 
   if (!parsed.command && parsed.target) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     parsed.command = parsed.target as 'export' | 'import';
     parsed.target = undefined;
   }
@@ -103,10 +105,12 @@ const readPackMetadata = (packDir: string): { id: string; version: string } | nu
 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
   const obj = parsed as Record<string, unknown>;
   const meta = obj.metadata;
   if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return null;
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
   const metaObj = meta as Record<string, unknown>;
   const id = typeof metaObj.id === 'string' ? metaObj.id : null;
   const version = typeof metaObj.version === 'string' ? metaObj.version : null;

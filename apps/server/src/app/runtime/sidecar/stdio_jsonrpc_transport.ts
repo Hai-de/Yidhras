@@ -262,6 +262,7 @@ export class StdioJsonRpcTransport extends EventEmitter {
   private handleResponseLine(line: string): void {
     let parsed: JsonRpcResponse<unknown>;
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
       parsed = JSON.parse(line) as JsonRpcResponse<unknown>;
     } catch (error) {
       this.logger.error('invalid JSON response', {
@@ -288,6 +289,7 @@ export class StdioJsonRpcTransport extends EventEmitter {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     pending.resolve((parsed as JsonRpcSuccess<unknown>).result);
   }
 

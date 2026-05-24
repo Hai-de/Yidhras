@@ -53,6 +53,7 @@ export const renderAstPublic = (
     depth: 0,
     maxDepth: 32
   };
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return renderAst(nodes as import('../../core/types.js').AstNode[], scope);
 };
 

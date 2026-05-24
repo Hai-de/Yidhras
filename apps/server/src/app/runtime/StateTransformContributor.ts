@@ -28,6 +28,7 @@ export const StateTransformContributor: StepContributor = {
           const kind = isString(e.entity_kind) ? e.entity_kind : '';
           return kind === 'actor' || kind.startsWith('actor:');
         })
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- entity id is always string
         .map(e => e.id as string)
     );
 
@@ -39,7 +40,9 @@ export const StateTransformContributor: StepContributor = {
           isRecord(s.state_json)
       )
       .map(s => ({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- entity_id column
         entity_id: s.entity_id as string,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma JSON column
         state_json: s.state_json as Record<string, unknown>
       }));
 
@@ -49,6 +52,7 @@ export const StateTransformContributor: StepContributor = {
         const payload = isRecord(e.payload_json) ? e.payload_json : {};
         return {
           source: isString(payload.source) ? payload.source : '',
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
           ranges: (Array.isArray(payload.ranges) ? payload.ranges : []) as Array<{
             min: number;
             max: number;

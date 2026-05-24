@@ -2,6 +2,8 @@ import { WORLD_ENGINE_PROTOCOL_VERSION } from '@yidhras/contracts';
 
 import type { ChronosEngine } from '../../clock/engine.js';
 import { buildStepContext } from '../../core/step_strategy.js';
+import type { DeterminismConfig } from '../../determinism/context.js';
+import { createDeterminismContext, resolvePackDeterminismConfig } from '../../determinism/context.js';
 import type { InferenceService } from '../../inference/service.js';
 import { recordTickCompleted } from '../../observability/metrics.js';
 import { dataCleanerRegistry } from '../../plugins/extensions/data_cleaner_registry.js';
@@ -76,6 +78,7 @@ export interface PackSimulationLoopOptions {
   intervalMs?: number;
   crashThreshold?: number;
   hooks?: PackLoopHooks;
+  determinism?: DeterminismConfig;
   onDegraded?: (packId: string, reason: string) => void;
   onStepError?: (err: unknown) => void;
 }
@@ -117,6 +120,7 @@ export class PackSimulationLoop {
   private readonly schedulerWorkerId: string;
   private readonly schedulerPartitionIds: string[];
   private readonly crashThreshold: number;
+  private readonly determinismConfig: DeterminismConfig;
   private readonly hooks?: PackLoopHooks;
   private readonly onDegraded?: (packId: string, reason: string) => void;
   private readonly onStepError?: (err: unknown) => void;
@@ -133,6 +137,7 @@ export class PackSimulationLoop {
     this.schedulerWorkerId = options.schedulerWorkerId ?? `scheduler:${options.packId}:${process.pid}`;
     this.schedulerPartitionIds = resolveOwnedSchedulerPartitionIds({ workerId: this.schedulerWorkerId });
     this.crashThreshold = options.crashThreshold ?? SCHEDULER_CRASH_THRESHOLD;
+    this.determinismConfig = options.determinism ?? resolvePackDeterminismConfig(options.packId);
     this.hooks = options.hooks;
     this.onDegraded = options.onDegraded;
     this.onStepError = options.onStepError;
@@ -224,62 +229,27 @@ export class PackSimulationLoop {
       last_extension_errors: []
     };
 
-    const hookCtx: HookContext = {
+    const result = await runPackSimulationIteration({
       packId: this.packId,
-      tick: this.packRuntime.getCurrentTick().toString(),
-      diagnostics: this.diagnostics
-    };
-
-    const steps: Array<{ name: string; fn: () => Promise<unknown> }> = [
-      { name: 'step1_expireBindings', fn: () => expirePackIdentityBindings(this.packRuntime, this.context) },
-      { name: 'step2_worldEngine', fn: () => stepPackWorldEngine(this.context, this.packId, this.worldEngine, this.packRuntime, this.diagnostics) },
-      { name: 'step3_agentScheduler', fn: () => runAgentScheduler({
-        context: this.context,
-        workerId: this.schedulerWorkerId,
-        partitionIds: this.schedulerPartitionIds,
-        packId: this.packId,
-        packRuntime: this.packRuntime
-      }) },
-      { name: 'step4_workflowDecision', fn: () => runWorkflowDecisionStep({
-        context: this.context,
-        inferenceService: this.inferenceService,
-        workerId: this.decisionWorkerId,
-        packRuntime: this.packRuntime
-      }) },
-      { name: 'step5_actionDispatch', fn: () => runActionDispatcher({
-        context: this.context,
-        workerId: this.actionDispatcherWorkerId,
-        packRuntime: this.packRuntime
-      }) },
-      { name: 'step6_perception', fn: () => runPerceptionPipeline(this.context, this.packRuntime) },
-      { name: 'step7_projection', fn: () => runProjectionPipeline(this.context, this.packRuntime) }
-    ];
-
-    let anyStepFailed = false;
-
-    for (let i = 0; i < steps.length; i++) {
-      const step = steps[i];
-      const stepNum = i + 1;
-      const stepStartedAt = Date.now();
-
-      try {
-        await this.runHooks(`beforeStep${stepNum}`, hookCtx);
-        await step.fn();
-        await this.runHooks(`afterStep${stepNum}`, hookCtx);
-        recordTickCompleted(this.packId, step.name, Date.now() - stepStartedAt, 'success');
-      } catch (err: unknown) {
-        const message = getErrorMessage(err);
-        this.diagnostics.last_step_errors.push({ step: step.name, error: message });
-        anyStepFailed = true;
-        recordTickCompleted(this.packId, step.name, Date.now() - stepStartedAt, 'failed');
-
-        if (this.onStepError) {
-          this.onStepError(err);
-        }
-      }
-    }
+      context: this.context,
+      packRuntime: this.packRuntime,
+      inferenceService: this.inferenceService,
+      decisionWorkerId: this.decisionWorkerId,
+      actionDispatcherWorkerId: this.actionDispatcherWorkerId,
+      worldEngine: this.worldEngine,
+      schedulerWorkerId: this.schedulerWorkerId,
+      schedulerPartitionIds: this.schedulerPartitionIds,
+      determinism: this.determinismConfig,
+      diagnostics: this.diagnostics,
+      hooks: this.hooks,
+      onStepError: this.onStepError
+    });
 
     const finishedAt = Date.now();
+    const anyStepFailed = result.stepErrors.length > 0;
+
+    this.diagnostics.last_step_errors = result.stepErrors;
+    this.diagnostics.last_extension_errors = result.extensionErrors;
 
     if (anyStepFailed) {
       this.consecutiveFailures += 1;
@@ -291,7 +261,7 @@ export class PackSimulationLoop {
         consecutive_failures: this.consecutiveFailures,
         last_finished_at: finishedAt,
         last_duration_ms: finishedAt - startedAt,
-        last_error_message: this.diagnostics.last_step_errors[0]?.error ?? null
+        last_error_message: result.stepErrors[0]?.error ?? null
       };
 
       if (this.consecutiveFailures >= this.crashThreshold) {
@@ -314,62 +284,149 @@ export class PackSimulationLoop {
       };
     }
 
-    // Run registered data cleaners
-    const cleaners = dataCleanerRegistry.list();
-    if (cleaners.length > 0) {
-      const packTick = this.packRuntime.getCurrentTick().toString();
-      for (const cleaner of cleaners) {
-        try {
-          await dataCleanerRegistry.clean(cleaner.key, {
-            text: `[pack=${this.packId}, tick=${packTick}]`,
-            options: { pack_id: this.packId, tick: packTick }
-          });
-        } catch (err: unknown) {
-          const error = getErrorMessage(err);
-          this.diagnostics.last_extension_errors.push({ extension_type: 'data_cleaner', key: cleaner.key, error });
-          logger.warn('Data cleaner failed during pack loop cleanup', {
-            pack_id: this.packId,
-            tick: packTick,
-            cleaner_key: cleaner.key,
-            error
-          });
-          // Single cleaner failure does not block the loop
-        }
-      }
-    }
-
     this.scheduleNext();
   }
 
-  private async runHooks(hookName: string, ctx: HookContext): Promise<void> {
-    // Only step hooks use HookContext; onLoopStateChange has a different signature
-    // and is handled separately via its own call site.
+}
+
+export interface RunPackIterationInput {
+  packId: string;
+  context: AppContext;
+  packRuntime: PackRuntimePort;
+  inferenceService: InferenceService;
+  decisionWorkerId: string;
+  actionDispatcherWorkerId: string;
+  worldEngine: WorldEngineSidecarClient;
+  schedulerWorkerId: string;
+  schedulerPartitionIds: string[];
+  determinism?: DeterminismConfig;
+  diagnostics: PackLoopDiagnostics;
+  hooks?: PackLoopHooks;
+  onStepError?: (err: unknown) => void;
+}
+
+export interface RunPackIterationResult {
+  stepErrors: Array<{ step: string; error: string }>;
+  extensionErrors: Array<{ extension_type: 'hook' | 'data_cleaner'; key: string; error: string }>;
+}
+
+export const runPackSimulationIteration = async (input: RunPackIterationInput): Promise<RunPackIterationResult> => {
+  const stepErrors: Array<{ step: string; error: string }> = [];
+  const extensionErrors: Array<{ extension_type: 'hook' | 'data_cleaner'; key: string; error: string }> = [];
+
+  const hookCtx: HookContext = {
+    packId: input.packId,
+    tick: input.packRuntime.getCurrentTick().toString(),
+    diagnostics: input.diagnostics
+  };
+
+  const runHooks = async (hookName: string): Promise<void> => {
     if (hookName.startsWith('on')) {
       return;
     }
 
-    const hooks = this.hooks?.[hookName as Exclude<keyof PackLoopHooks, 'onLoopStateChange'>];
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
+    const hooks = input.hooks?.[hookName as Exclude<keyof PackLoopHooks, 'onLoopStateChange'>];
     if (!hooks || hooks.length === 0) {
       return;
     }
 
     for (const hook of hooks) {
       try {
-        await (hook)(ctx);
+        await hook(hookCtx);
       } catch (err: unknown) {
         const error = getErrorMessage(err);
-        this.diagnostics.last_extension_errors.push({ extension_type: 'hook', key: hookName, error });
+        extensionErrors.push({ extension_type: 'hook', key: hookName, error });
         logger.warn('Pack loop hook failed', {
-          pack_id: ctx.packId,
-          tick: ctx.tick,
+          pack_id: input.packId,
+          tick: hookCtx.tick,
           hook: hookName,
           error
         });
-        // Single hook failure does not block other hooks or the step
+      }
+    }
+  };
+
+  const tickDeterminism = input.determinism?.enabled
+    ? createDeterminismContext({
+        packId: input.packId,
+        baseSeed: input.determinism.seed,
+        mode: input.determinism.strict ? 'strict' : 'off'
+      }).forTick(input.packRuntime.getCurrentTick().toString())
+    : undefined;
+
+  const steps: Array<{ name: string; fn: () => Promise<unknown> }> = [
+    { name: 'step1_expireBindings', fn: () => expirePackIdentityBindings(input.packRuntime, input.context) },
+    { name: 'step2_worldEngine', fn: () => stepPackWorldEngine(input.context, input.packId, input.worldEngine, input.packRuntime, input.diagnostics) },
+    { name: 'step3_agentScheduler', fn: () => runAgentScheduler({
+      context: input.context,
+      workerId: input.schedulerWorkerId,
+      partitionIds: input.schedulerPartitionIds,
+      packId: input.packId,
+      packRuntime: input.packRuntime
+    }) },
+    { name: 'step4_workflowDecision', fn: () => runWorkflowDecisionStep({
+      context: input.context,
+      inferenceService: input.inferenceService,
+      workerId: input.decisionWorkerId,
+      packRuntime: input.packRuntime
+    }) },
+    { name: 'step5_actionDispatch', fn: () => runActionDispatcher({
+      context: input.context,
+      workerId: input.actionDispatcherWorkerId,
+      packRuntime: input.packRuntime,
+      determinism: tickDeterminism
+    }) },
+    { name: 'step6_perception', fn: () => runPerceptionPipeline(input.context, input.packRuntime) },
+    { name: 'step7_projection', fn: () => runProjectionPipeline(input.context, input.packRuntime) }
+  ];
+
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    const stepNum = i + 1;
+    const stepStartedAt = Date.now();
+
+    try {
+      await runHooks(`beforeStep${stepNum}`);
+      await step.fn();
+      await runHooks(`afterStep${stepNum}`);
+      recordTickCompleted(input.packId, step.name, Date.now() - stepStartedAt, 'success');
+    } catch (err: unknown) {
+      const message = getErrorMessage(err);
+      stepErrors.push({ step: step.name, error: message });
+      recordTickCompleted(input.packId, step.name, Date.now() - stepStartedAt, 'failed');
+
+      if (input.onStepError) {
+        input.onStepError(err);
       }
     }
   }
-}
+
+  // Run registered data cleaners
+  const cleaners = dataCleanerRegistry.list();
+  if (cleaners.length > 0) {
+    const packTick = input.packRuntime.getCurrentTick().toString();
+    for (const cleaner of cleaners) {
+      try {
+        await dataCleanerRegistry.clean(cleaner.key, {
+          text: `[pack=${input.packId}, tick=${packTick}]`,
+          options: { pack_id: input.packId, tick: packTick }
+        });
+      } catch (err: unknown) {
+        const error = getErrorMessage(err);
+        extensionErrors.push({ extension_type: 'data_cleaner', key: cleaner.key, error });
+        logger.warn('Data cleaner failed during pack loop cleanup', {
+          pack_id: input.packId,
+          tick: packTick,
+          cleaner_key: cleaner.key,
+          error
+        });
+      }
+    }
+  }
+
+  return { stepErrors, extensionErrors };
+};
 
 const expirePackIdentityBindings = async (
   packRuntime: PackRuntimePort,

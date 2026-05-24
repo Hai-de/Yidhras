@@ -51,6 +51,7 @@ export const createTokenCounter = (): TokenCounter => {
     const cached = encodingCache.get(encodingName);
     if (cached) return cached;
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const tiktoken = safeRequire('tiktoken') as {
       get_encoding(name: string): { encode(text: string): { length: number } };
     } | null;

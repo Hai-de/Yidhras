@@ -97,6 +97,7 @@ export const createContentTransformExecutor = (): PromptWorkflowStepExecutor => 
         let originalContent = '';
         for (const child of fragment.children) {
           if ('kind' in child && child.kind === 'text') {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
             originalContent += (child as { rendered?: string }).rendered ?? '';
           }
         }
@@ -135,6 +136,7 @@ export const createContentTransformExecutor = (): PromptWorkflowStepExecutor => 
         if (currentContent !== originalContent) {
           for (const child of fragment.children) {
             if ('kind' in child && child.kind === 'text') {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
               (child as { rendered?: string }).rendered = currentContent;
               transformedCount++;
               break;

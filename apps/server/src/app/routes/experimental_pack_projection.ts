@@ -26,7 +26,9 @@ export interface ExperimentalPackProjectionRouteDependencies {
 }
 
 const resolvePackId = (reqParams: unknown): string => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express request body/param parsing
   const params = parseParams(packIdParamsSchema, reqParams as Record<string, unknown>, 'EXPERIMENTAL_PACK_ID_INVALID')
+
   return params.packId
 }
 

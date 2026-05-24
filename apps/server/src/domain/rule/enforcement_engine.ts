@@ -363,6 +363,7 @@ export const enforceInvocationRequest = async (
             return true;
           }
           if (when.location) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
             return spatialPredicateMatches(when.location as Record<string, unknown>, subjectLocation, spatialRuntime);
           }
           return true;

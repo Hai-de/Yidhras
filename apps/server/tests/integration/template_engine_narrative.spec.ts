@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { renderTemplateWithVariableContext, renderTemplateWithVisibleVariables } from '../../src/domain/perception/template_renderer.js';
 import type { PermissionContext } from '../../src/permission/types.js';
 import { renderNarrativeTemplate } from '../../src/template_engine/frontends/narrative/resolver.js';
 import type { PromptVariableContext, PromptVariableRecord } from '../../src/template_engine/frontends/narrative/types.js';
@@ -8,7 +9,6 @@ import {
   createPromptVariableLayer,
   normalizePromptVariableRecord
 } from '../../src/template_engine/frontends/narrative/variable_context.js';
-import { renderTemplateWithVariableContext, renderTemplateWithVisibleVariables } from '../../src/domain/perception/template_renderer.js';
 
 const buildMultiLayerContext = (): PromptVariableContext => {
   return createPromptVariableContext({

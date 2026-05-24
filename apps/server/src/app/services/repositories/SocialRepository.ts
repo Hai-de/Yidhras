@@ -52,6 +52,7 @@ export class PrismaSocialRepository implements SocialRepository {
   }> {
     const { listSocialFeed } = await import('../social/social.js');
     return listSocialFeed(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       { prisma: this.prisma } as AppContext,
       undefined,
       input ?? {}
@@ -64,6 +65,7 @@ export class PrismaSocialRepository implements SocialRepository {
   ): Promise<unknown> {
     const { createSocialPost } = await import('../social/social.js');
     return createSocialPost(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       { prisma: this.prisma } as AppContext,
       undefined,
       content,
@@ -74,9 +76,12 @@ export class PrismaSocialRepository implements SocialRepository {
    
   async queryPosts(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown> | Array<Record<string, unknown>>; take?: number; include?: Record<string, unknown>; skip?: number }): Promise<Array<Record<string, unknown>>> {
     return this.prisma.post.findMany({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
       where: input.where as never,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
       orderBy: input.orderBy as never,
       take: input.take,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
       include: input.include as never,
       skip: input.skip
     });
@@ -87,6 +92,9 @@ export class PrismaSocialRepository implements SocialRepository {
   }
 
   async createPostRecord(data: Record<string, unknown>): Promise<unknown> {
-    return this.prisma.post.create({ data: data as never });
+    return this.prisma.post.create({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
+      data: data as never
+    });
   }
 }

@@ -101,6 +101,7 @@ export class MemoryTriggerSidecarClient {
     return this.transport.send(
       'memory_trigger.protocol.handshake',
       {},
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       (value) => value as MemoryTriggerSidecarHandshakeResponse
     );
   }
@@ -110,6 +111,7 @@ export class MemoryTriggerSidecarClient {
     return this.transport.send(
       'memory_trigger.health.get',
       {},
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       (value) => value as MemoryTriggerSidecarHealthSnapshot
     );
   }
@@ -120,7 +122,9 @@ export class MemoryTriggerSidecarClient {
     await this.ensureStarted();
     return this.transport.send(
       'memory_trigger.source.evaluate',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- provider payload serialization
       input as unknown as Record<string, unknown>,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       (value) => value as MemoryTriggerSourceEvaluateResult
     );
   }

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { AiTaskOverride, AiTaskRequest, ModelGatewayResponse } from '../../src/ai/types.js';
 import type { ModelGateway, ModelGatewayExecutionInput } from '../../src/ai/gateway.js';
 import type { AiTaskService } from '../../src/ai/task_service.js';
 import { createAiTaskService } from '../../src/ai/task_service.js';
+import type { AiTaskOverride, AiTaskRequest, ModelGatewayResponse } from '../../src/ai/types.js';
 import type { PromptBundleV2 } from '../../src/inference/prompt_bundle_v2.js';
 
 const buildCompletedResponse = (input: ModelGatewayExecutionInput): ModelGatewayResponse => ({

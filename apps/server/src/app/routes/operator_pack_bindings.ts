@@ -41,6 +41,7 @@ export const registerPackBindingRoutes = (
 
       const binding = await createPackBinding(
         context,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
         req.params.packId as string,
         body.operator_id,
         body.binding_type,
@@ -61,6 +62,7 @@ export const registerPackBindingRoutes = (
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const bindings = await listPackBindings(context, req.params.packId as string)
       jsonOk(res, toJsonSafe(bindings))
     })
@@ -79,7 +81,9 @@ export const registerPackBindingRoutes = (
 
       const binding = await updatePackBinding(
         context,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
         req.params.packId as string,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
         req.params.operatorId as string,
         body.binding_type,
         operator.id,
@@ -101,7 +105,9 @@ export const registerPackBindingRoutes = (
 
       const result = await removePackBinding(
         context,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
         req.params.packId as string,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
         req.params.operatorId as string,
         operator.id,
         req.ip

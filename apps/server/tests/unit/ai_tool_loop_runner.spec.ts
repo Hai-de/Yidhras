@@ -1,13 +1,12 @@
+import type { PrismaClient } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ModelGateway, ModelGatewayExecutionInput } from '../../src/ai/gateway.js';
-import type { ModelGatewayResponse } from '../../src/ai/types.js';
-import { createToolLoopRunner } from '../../src/ai/tool_loop_runner.js';
-import type { ToolLoopRunner } from '../../src/ai/tool_loop_runner.js';
 import type { ToolExecutionContext, ToolRegistry } from '../../src/ai/tool_executor.js';
 import { createToolRegistry } from '../../src/ai/tool_executor.js';
-import type { PrismaClient } from '@prisma/client';
-
+import type { ToolLoopRunner } from '../../src/ai/tool_loop_runner.js';
+import { createToolLoopRunner } from '../../src/ai/tool_loop_runner.js';
+import type { ModelGatewayResponse } from '../../src/ai/types.js';
 import type { AppContext } from '../../src/app/context.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 

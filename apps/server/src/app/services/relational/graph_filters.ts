@@ -52,6 +52,7 @@ export const parseGraphKinds = (value: string[] | undefined): Array<(typeof GRAP
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return normalized as Array<(typeof GRAPH_NODE_KINDS)[number]>;
 };
 

@@ -83,8 +83,9 @@ const runMigration = async (): Promise<void> => {
     return;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
   const config = YAML.parse(raw) as Record<string, unknown>;
-  const currentVersion = (config.schema_version as number) ?? 0;
+  const currentVersion = typeof config.schema_version === 'number' ? config.schema_version : 0;
 
   console.error(`Current schema_version: ${currentVersion}`);
 

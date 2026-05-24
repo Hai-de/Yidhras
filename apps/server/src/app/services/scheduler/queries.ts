@@ -106,6 +106,7 @@ export const getAgentSchedulerProjection = async (
   for (const pid of packIds) {
     const rows = adapter.getAgentDecisions(pid, resolvedActorId, limit);
     for (const row of rows) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       allRawDecisions.push({ decision: row as unknown as RawSchedulerCandidateDecisionRow, packId: pid });
     }
   }
@@ -138,6 +139,7 @@ export const getAgentSchedulerProjection = async (
     for (const pid of packIds) {
       const rows = adapter.listRuns(pid, { where: { id: runId }, take: 1 });
       if (rows.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         const run = rows[0] as unknown as RawSchedulerRunRow;
         runs.push({
           run_id: run.id,
@@ -159,6 +161,7 @@ export const getAgentSchedulerProjection = async (
   let eventDrivenCount = 0;
 
   for (const item of timeline) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const chosenReason = item.chosen_reason as SchedulerReason;
     reasonCounts.set(chosenReason, (reasonCounts.get(chosenReason) ?? 0) + 1);
     if (item.kind === 'periodic') {
@@ -204,6 +207,7 @@ export const getAgentSchedulerProjection = async (
         .filter(item => item.created_job_id !== null)
         .map(item => ({
           decision_id: item.id,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
           job_id: item.created_job_id as string,
           scheduler_run_id: item.scheduler_run_id,
           partition_id: item.partition_id,
@@ -231,6 +235,7 @@ export const listAgentSchedulerDecisions = (
   for (const pid of packIds) {
     const rows = adapter.getAgentDecisions(pid, actorId, limit);
     for (const row of rows) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       allDecisions.push(row as unknown as RawSchedulerCandidateDecisionRow);
     }
   }
@@ -273,6 +278,7 @@ export const getLatestSchedulerRunReadModel = async (context: AppContext, packId
   for (const pid of packIds) {
     const rows = adapter.listRuns(pid, { orderBy: { created_at: 'desc' }, take: 1 });
     if (rows.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const run = rows[0] as unknown as RawSchedulerRunRow;
       if (!bestRun || run.created_at > bestRun.created_at) {
         bestRun = run;
@@ -289,6 +295,7 @@ export const getLatestSchedulerRunReadModel = async (context: AppContext, packId
     where: { scheduler_run_id: bestRun.id },
     orderBy: { created_at: 'asc' }
   });
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const decisions = rawDecisions.map(row => row as unknown as RawSchedulerCandidateDecisionRow);
 
   const workflowLinks = await buildSchedulerDecisionWorkflowLinks(context, decisions.map(d => ({ id: d.id, created_job_id: d.created_job_id })));
@@ -345,11 +352,13 @@ export const getSchedulerRunReadModelById = async (
       continue;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const schedulerRun = rows[0] as unknown as RawSchedulerRunRow;
     const rawDecisions = adapter.listCandidateDecisions(pid, {
       where: { scheduler_run_id: schedulerRun.id },
       orderBy: { created_at: 'asc' }
     });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const decisions = rawDecisions.map(row => row as unknown as RawSchedulerCandidateDecisionRow);
 
     const workflowLinks = await buildSchedulerDecisionWorkflowLinks(context, decisions.map(d => ({ id: d.id, created_job_id: d.created_job_id })));
@@ -431,6 +440,7 @@ export const listSchedulerRuns = (
       take: filters.limit + 1
     });
     for (const row of rows) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const run = row as unknown as RawSchedulerRunRow;
       if (filters.worker_id !== null && run.worker_id !== filters.worker_id) continue;
       if (filters.partition_id !== null && run.partition_id !== filters.partition_id) continue;
@@ -533,6 +543,7 @@ export const listSchedulerDecisions = async (
       take: filters.limit + 1
     });
     for (const row of rows) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const decision = row as unknown as RawSchedulerCandidateDecisionRow;
       if (filters.actor_id !== null && decision.actor_id !== filters.actor_id) continue;
       if (filters.kind !== null && decision.kind !== filters.kind) continue;
@@ -622,9 +633,11 @@ export const getSchedulerSummarySnapshot = async (
   if (adapter) {
     for (const pid of packIds) {
       const runs = adapter.listRuns(pid, { orderBy: { created_at: 'desc' }, take: sampleRuns });
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       allRuns.push(...runs.map(row => row as unknown as RawSchedulerRunRow));
 
       const decisions = adapter.listCandidateDecisions(pid, { orderBy: { created_at: 'desc' }, take: sampleRuns * 10 });
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       allDecisions.push(...decisions.map(row => row as unknown as RawSchedulerCandidateDecisionRow));
     }
     allRuns.sort((a, b) => {
@@ -677,11 +690,13 @@ export const getSchedulerSummarySnapshot = async (
   const intentClassCounts = new Map<string, number>();
 
   for (const decision of allDecisions) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const chosenReason = decision.chosen_reason as SchedulerReason;
     reasonCounts.set(chosenReason, (reasonCounts.get(chosenReason) ?? 0) + 1);
     actorCounts.set(decision.actor_id, (actorCounts.get(decision.actor_id) ?? 0) + 1);
     partitionCounts.set(decision.partition_id, (partitionCounts.get(decision.partition_id) ?? 0) + 1);
     if (decision.skipped_reason) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const skippedReason = decision.skipped_reason as SchedulerSkipReason;
       skippedReasonCounts.set(skippedReason, (skippedReasonCounts.get(skippedReason) ?? 0) + 1);
     }
@@ -697,6 +712,7 @@ export const getSchedulerSummarySnapshot = async (
 
   const runTotals = allRuns.reduce(
     (accumulator, run) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const summary = parseSummaryJson(run.summary) as AgentSchedulerRunResult;
       accumulator.sampled_runs += 1;
       accumulator.created_total += summary.created_count;
@@ -766,6 +782,7 @@ export const getSchedulerTrendsSnapshot = (
 
   for (const pid of packIds) {
     const rows = adapter.listRuns(pid, { orderBy: { created_at: 'desc' }, take: sampleRuns });
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     allRuns.push(...rows.map(row => row as unknown as RawSchedulerRunRow));
   }
 
@@ -775,6 +792,7 @@ export const getSchedulerTrendsSnapshot = (
   return {
     points: allRuns
       .map(run => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         const summary = parseSummaryJson(run.summary) as AgentSchedulerRunResult;
         return {
           tick: BigInt(run.tick).toString(),
@@ -819,6 +837,7 @@ export const listSchedulerOwnershipAssignments = (
   for (const pid of packIds) {
     const partitions = adapter.listPartitions(pid);
     for (const p of partitions) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const partition = p as unknown as RawSchedulerPartitionRow;
       if (filters.worker_id !== null && partition.worker_id !== filters.worker_id) continue;
       if (filters.partition_id !== null && partition.partition_id !== filters.partition_id) continue;
@@ -828,6 +847,7 @@ export const listSchedulerOwnershipAssignments = (
 
     const migrations = adapter.listMigrations(pid);
     for (const m of migrations) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       allMigrations.push(m as unknown as RawSchedulerMigrationRow);
     }
   }
@@ -896,6 +916,7 @@ export const listSchedulerOwnershipMigrations = (
   for (const pid of packIds) {
     const migrations = adapter.listMigrations(pid);
     for (const m of migrations) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const migration = m as unknown as RawSchedulerMigrationRow;
       if (filters.partition_id !== null && migration.partition_id !== filters.partition_id) continue;
       if (filters.status !== null && migration.status !== filters.status) continue;

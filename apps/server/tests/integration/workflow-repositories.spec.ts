@@ -1,6 +1,5 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-
 import type { PrismaClient } from '@prisma/client';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createPrismaRepositories } from '../../src/app/services/repositories/index.js';
 import type { IsolatedRuntimeEnvironment } from '../helpers/runtime.js';

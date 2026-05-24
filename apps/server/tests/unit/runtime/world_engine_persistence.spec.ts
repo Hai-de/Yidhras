@@ -1,3 +1,4 @@
+import type { PrismaClient } from '@prisma/client';
 import {
   type PreparedWorldStep,
   WORLD_ENGINE_PROTOCOL_VERSION,
@@ -6,8 +7,6 @@ import {
   type WorldEngineObservationRecord
 } from '@yidhras/contracts';
 import { describe, expect, it, vi } from 'vitest';
-
-import type { PrismaClient } from '@prisma/client';
 
 import type { AppContext } from '../../../src/app/context.js';
 import {

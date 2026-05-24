@@ -73,6 +73,7 @@ export const initSystemPackPlugins = async (
         source_pack_id: 'yidhras-system',
         source_path: pluginDir,
         checksum,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- plugin config boundary
         manifest_json: JSON.parse(JSON.stringify(manifest)) as Record<string, unknown>,
         imported_at: String(Date.now())
       }));

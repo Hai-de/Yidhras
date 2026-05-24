@@ -9,11 +9,11 @@ import crypto from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import type { AiResolvedTaskConfig, AiTaskRequest } from '../../../src/ai/types.js';
-import { assembleConversationMessages } from '../../../src/conversation/assembler.js';
-import { DEFAULT_CONVERSATION_FORMAT_CONFIG } from '../../../src/conversation/format_config.js';
-import type { ConversationFormatConfig } from '../../../src/conversation/format_config.js';
-import type { AgentConversationMemory, ConversationEntry } from '../../../src/conversation/types.js';
 import { getVisibleEntries, resolveEntryRole } from '../../../src/context/workflow/tracks/conversation_history_track.js';
+import { assembleConversationMessages } from '../../../src/conversation/assembler.js';
+import type { ConversationFormatConfig } from '../../../src/conversation/format_config.js';
+import { DEFAULT_CONVERSATION_FORMAT_CONFIG } from '../../../src/conversation/format_config.js';
+import type { AgentConversationMemory, ConversationEntry } from '../../../src/conversation/types.js';
 import type { PromptBundleV2 } from '../../../src/inference/prompt_bundle_v2.js';
 import type { PromptFragmentV2 } from '../../../src/inference/prompt_fragment_v2.js';
 import type { PromptSlotConfig } from '../../../src/inference/prompt_slot_config.js';

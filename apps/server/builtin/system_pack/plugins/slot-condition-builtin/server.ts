@@ -9,13 +9,18 @@ import {
 import type { SlotConditionEvaluator } from '../../../../src/plugins/extensions/slot_condition_registry.js';
 import type { ServerPluginHostApi } from '../../../../src/plugins/runtime.js';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+type ConditionParam = { type: string; [key: string]: unknown };
+
 function adapt(
-  fn: (condition: { type: string; [key: string]: unknown }, context: SlotConditionContext) => SlotConditionResult
+  fn: (condition: ConditionParam, context: SlotConditionContext) => SlotConditionResult
 ): (context: SlotConditionContext) => Promise<SlotConditionResult> {
   return async (context: SlotConditionContext) => {
-    // 内置评估器从 context.options 中获取对应 condition 参数
-    const condition = (context.options ?? {}) as unknown as { type: string; [key: string]: unknown };
-    return fn(condition, context);
+    const options = isRecord(context.options) ? context.options : {};
+    return fn(options as ConditionParam, context);
   };
 }
 
@@ -29,8 +34,9 @@ const logicMatchEvaluator: SlotConditionEvaluator = {
   key: 'slot_condition.logic_match',
   version: '1.0.0',
   evaluate: async (context: SlotConditionContext) => {
-    const condition = (context.options ?? {}) as unknown as { expression: Record<string, unknown> };
-    return evaluateLogicMatch({ expression: condition.expression as Record<string, unknown> }, context);
+    const options = isRecord(context.options) ? context.options : {};
+    const expression = isRecord(options.expression) ? options.expression : {};
+    return evaluateLogicMatch({ expression }, context);
   }
 };
 

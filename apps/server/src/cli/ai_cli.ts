@@ -41,6 +41,7 @@ const parseArgs = (argv: string[]): ParsedArgs => {
         parsed.json = true;
         break;
       default:
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         if (COMMANDS.includes(arg as (typeof COMMANDS)[number])) {
           parsed.command = arg;
         } else if (!arg.startsWith('-') && parsed.command === 'test' && !parsed.modelId) {
@@ -68,6 +69,7 @@ const loadMergedConfig = (): { models: AiModelRegistryEntry[]; providers: AiProv
 
   const configPath = path.join(serverDir, 'config', 'ai_models.yaml');
   if (existsSync(configPath)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: YAML config boundary
     const fileOverride = YAML.parse(readFileSync(configPath, 'utf-8')) as AiModelsFile;
     const overrideModels = fileOverride.models ?? [];
     const overrideProviders = fileOverride.providers ?? [];
@@ -197,6 +199,7 @@ const doTest = async (args: ParsedArgs): Promise<void> => {
     clearTimeout(timeout);
 
     const elapsed = Date.now() - startTime;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
     const body = (await res.json()) as Record<string, unknown>;
 
     if (args.json) {
@@ -207,11 +210,13 @@ const doTest = async (args: ParsedArgs): Promise<void> => {
     console.log(`状态: ${res.status} (${elapsed}ms)`);
 
     if (res.ok) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const choices = body.choices as Array<{ message?: { content?: string } }> | undefined;
       const content = choices?.[0]?.message?.content ?? JSON.stringify(body);
       console.log(`响应: ${content}`);
     } else {
       console.log(
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         `错误: ${(body.error as Record<string, string>)?.message ?? JSON.stringify(body)}`
       );
     }

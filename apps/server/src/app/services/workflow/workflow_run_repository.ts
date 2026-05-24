@@ -60,10 +60,12 @@ const toWorkflowRunRecord = (row: WorkflowRunRow): WorkflowRunRecord => ({
   id: row.id,
   workflow_name: row.workflow_name,
   pack_id: row.pack_id,
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   status: row.status as WorkflowRunStatus,
   created_tick: row.created_tick,
   last_advance_tick: row.last_advance_tick,
   max_ticks: row.max_ticks,
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   trigger_type: row.trigger_type as 'manual' | 'event',
   trigger_ref: row.trigger_ref,
   lock_worker_id: row.lock_worker_id,
@@ -72,6 +74,7 @@ const toWorkflowRunRecord = (row: WorkflowRunRow): WorkflowRunRecord => ({
 });
 
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
 const toInputJson = (value: unknown): Prisma.InputJsonValue => value as Prisma.InputJsonValue;
 
 const isUniqueConstraintError = (err: unknown): boolean => {

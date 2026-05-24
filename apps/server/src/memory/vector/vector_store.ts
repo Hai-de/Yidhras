@@ -99,12 +99,15 @@ function rowToBlock(row: PrismaMemoryBlockRow): MemoryBlock {
     id: row.id,
     owner_agent_id: row.owner_agent_id,
     pack_id: row.pack_id,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     kind: row.kind as MemoryBlock['kind'],
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     status: row.status as MemoryBlock['status'],
     title: row.title,
     content_text: row.content_text,
     content_structured:
       row.content_structured && typeof row.content_structured === 'object' && !Array.isArray(row.content_structured)
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         ? (row.content_structured as Record<string, unknown>)
         : null,
     tags,
@@ -135,6 +138,7 @@ export const createVectorStore = (prisma: PrismaClient): VectorStore => {
         return [];
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const rows = await prisma.memoryBlock.findMany({
         where: {
           owner_agent_id: input.owner_agent_id,

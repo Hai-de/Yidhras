@@ -31,6 +31,7 @@ export const registerClockRoutes = (
     const snapshot = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId: undefined });
     return {
       absolute_ticks: snapshot.absolute_ticks,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       calendars: deps.toJsonSafe(snapshot.calendars) as unknown[]
     };
   };

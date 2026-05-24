@@ -88,6 +88,7 @@ export class SqlitePackStorageAdapter implements PackStorageAdapter {
   async listEngineOwnedRecords<T = Record<string, unknown>>(packId: string, tableName: string): Promise<T[]> {
     const spec = this.resolveSpec(tableName);
     const loc = this.resolveLocation(packId);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: boundary assertion
     return listSqliteEngineOwnedRecords(loc.runtimeDbPath, spec, packId) as Promise<T[]>;
   }
 
@@ -97,7 +98,7 @@ export class SqlitePackStorageAdapter implements PackStorageAdapter {
     if (!safeFs.existsSync(loc.packRootDir, loc.runtimeDbPath)) {
       throw new Error(`[SqlitePackStorageAdapter] runtime db does not exist for pack=${packId}`);
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-type-assertion -- from-any: DB adapter boundary, assertion-to-any: DB operation
     return upsertSqliteEngineOwnedRecord(loc.runtimeDbPath, spec, record as any) as Promise<T>;
   }
 
@@ -154,6 +155,7 @@ export class SqlitePackStorageAdapter implements PackStorageAdapter {
         }
       } else {
         for (const row of rows) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
           await this.upsertCollectionRecord(packId, tableName, row as PackCollectionRecord);
         }
       }

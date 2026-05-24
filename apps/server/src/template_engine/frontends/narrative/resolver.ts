@@ -57,6 +57,7 @@ const parseModifierExpression = (expression: string): { path: string; modifiers:
       const modName = part.slice(0, argOpenIdx).trim();
       const argCloseIdx = part.indexOf(')', argOpenIdx);
       const argsStr = argCloseIdx !== -1 ? part.slice(argOpenIdx + 1, argCloseIdx) : part.slice(argOpenIdx + 1);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const args: MacroValue[] = argsStr.split(',').map((a) => a.trim()).filter(Boolean).map((a) => parseLiteralValue(a) as MacroValue);
       modifiers.push({ name: modName, args });
     } else {

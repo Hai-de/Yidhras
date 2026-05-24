@@ -69,6 +69,7 @@ const parseArgs = (argv: string[]): ParsedArgs => {
         parsed.outputDir = argv[++i];
         break;
       default:
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         if (COMMANDS.includes(arg as (typeof COMMANDS)[number])) {
           parsed.command = arg;
         }

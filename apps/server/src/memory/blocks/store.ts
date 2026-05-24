@@ -30,6 +30,7 @@ const normalizeLimit = (limit: number | undefined): number => {
 };
 
 const toJsonValue = (value: unknown): Prisma.InputJsonValue => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
   return JSON.parse(JSON.stringify(toJsonSafe(value))) as Prisma.InputJsonValue;
 };
 
@@ -59,6 +60,7 @@ const normalizeStructuredContent = (value: unknown): Record<string, unknown> | n
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return toJsonSafe(value) as Record<string, unknown>;
 };
 
@@ -91,6 +93,7 @@ const normalizeBehavior = (value: unknown): MemoryBehavior => {
     };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return toJsonSafe(value) as MemoryBehavior;
 };
 
@@ -99,6 +102,7 @@ const normalizeSourceRef = (value: unknown): MemoryBlockSourceRef | null => {
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return toJsonSafe(value) as MemoryBlockSourceRef;
 };
 
@@ -145,7 +149,9 @@ const toMemoryBlock = (record: {
     id: record.id,
     owner_agent_id: record.owner_agent_id,
     pack_id: record.pack_id,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     kind: record.kind as MemoryBlock['kind'],
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     status: record.status as MemoryBlockStatus,
     title: record.title,
     content_text: record.content_text,

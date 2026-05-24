@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveSlotPositions } from '../../src/inference/slot_position_resolver.js';
 import { buildPromptBundleV2, buildPromptTree } from '../../src/inference/prompt_builder_v2.js';
 import type { PromptSlotConfig } from '../../src/inference/prompt_slot_config.js';
 import type { PromptTree } from '../../src/inference/prompt_tree.js';
+import { resolveSlotPositions } from '../../src/inference/slot_position_resolver.js';
 import type { InferenceContext, PromptResolvableContext } from '../../src/inference/types.js';
 
 type PromptContext = InferenceContext | PromptResolvableContext;

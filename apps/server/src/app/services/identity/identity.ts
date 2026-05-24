@@ -90,6 +90,7 @@ export const createIdentityBinding = async (
     throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'identity_id is required');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   if (!role || !bindingRoles.includes(role as IdentityBindingRole)) {
     throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'role must be active or atmosphere');
   }
@@ -102,6 +103,7 @@ export const createIdentityBinding = async (
   }
 
   const normalizedStatus = (status ?? 'active');
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   if (!bindingStatuses.includes(normalizedStatus as IdentityBindingStatus)) {
     throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'status must be active, inactive, or expired');
   }
@@ -110,6 +112,7 @@ export const createIdentityBinding = async (
     const existingActive = await context.prisma.identityNodeBinding.findFirst({
       where: {
         identity_id,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         role: role as IdentityBindingRole,
         status: 'active'
       }
@@ -131,7 +134,9 @@ export const createIdentityBinding = async (
       identity_id,
       agent_id: hasAgent ? agent_id : null,
       atmosphere_node_id: hasAtmosphere ? atmosphere_node_id : null,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       role: role as IdentityBindingRole,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       status: normalizedStatus as IdentityBindingStatus,
       pack_id: packId ?? null,
       expires_at: expiresAt ?? undefined,
@@ -162,6 +167,7 @@ export const queryIdentityBindings = async (
   };
 
   if (role) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     if (!bindingRoles.includes(role as IdentityBindingRole)) {
       throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'role must be active or atmosphere');
     }
@@ -169,6 +175,7 @@ export const queryIdentityBindings = async (
   }
 
   if (status) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     if (!bindingStatuses.includes(status as IdentityBindingStatus)) {
       throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'status must be active, inactive, or expired');
     }
@@ -208,6 +215,7 @@ export const unbindIdentityBinding = async (
     throw new ApiError(404, 'IDENTITY_BINDING_NOT_FOUND', 'Binding not found', { binding_id });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   if (status && !bindingStatuses.includes(status as IdentityBindingStatus)) {
     throw new ApiError(400, 'IDENTITY_BINDING_INVALID', 'status must be active, inactive, or expired');
   }
@@ -216,6 +224,7 @@ export const unbindIdentityBinding = async (
   return context.prisma.identityNodeBinding.update({
     where: { id: binding_id },
     data: {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       status: (status ?? 'inactive') as IdentityBindingStatus,
       updated_at: now
     }

@@ -18,6 +18,7 @@ export class PrismaAgentRepository implements AgentRepository {
 
   async getEntityOverview(entityId: string, options?: { limit?: number }): Promise<unknown> {
     const { getEntityOverview: impl } = await import('../agent/agent.js');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     return impl({ prisma: this.prisma } as AppContext, entityId, options);
   }
 
@@ -26,6 +27,7 @@ export class PrismaAgentRepository implements AgentRepository {
     limit?: number;
   }): Promise<unknown[]> {
     const { listSnrAdjustmentLogs: impl } = await import('../agent/agent.js');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     return impl({ prisma: this.prisma } as AppContext, input);
   }
 
@@ -45,12 +47,17 @@ export class PrismaAgentRepository implements AgentRepository {
   }
 
   async listAgents(orderBy?: Record<string, string>): Promise<Array<{ id: string; name: string; type: string; snr: number; is_pinned: boolean; created_at: bigint; updated_at: bigint }>> {
-    return this.prisma.agent.findMany({ orderBy: (orderBy as never) ?? { created_at: 'asc' } });
+    return this.prisma.agent.findMany({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
+      orderBy: (orderBy as never) ?? { created_at: 'asc' }
+    });
   }
 
   async listAtmosphereNodes(where?: Record<string, unknown>, orderBy?: Record<string, unknown>): Promise<Array<{ id: string; name: string; owner_id: string; expires_at: bigint | null; created_at: bigint }>> {
     return this.prisma.atmosphereNode.findMany({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
       where: where as never,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
       orderBy: (orderBy as never) ?? { created_at: 'desc' }
     });
   }

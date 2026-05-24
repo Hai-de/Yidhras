@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import { evaluateTree } from '../../src/inference/providers/behavior_tree/evaluator.js';
 import type { BTEvalContext, BTNodeDef } from '../../src/inference/providers/behavior_tree/types.js';
 import type { InferenceContext } from '../../src/inference/types.js';

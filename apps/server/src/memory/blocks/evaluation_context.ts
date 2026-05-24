@@ -229,6 +229,7 @@ const buildEventRecentRecord = async (input: {
     return [];
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const events = (await input.context.repos.narrative.queryEvents({
     orderBy: [{ tick: 'desc' }],
     take: RECENT_SOURCE_LIMIT * 3,

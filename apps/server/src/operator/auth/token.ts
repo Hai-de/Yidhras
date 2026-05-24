@@ -24,11 +24,13 @@ export const signToken = (operator: OperatorContext): string => {
 
   const secret = getJwtSecret()
   const expiresIn = getJwtExpiresIn()
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return jwt.sign(payload, secret, { expiresIn } as jwt.SignOptions)
 }
 
 export const verifyToken = (token: string): JwtPayload | null => {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const payload = jwt.verify(token, getJwtSecret()) as JwtPayload
     return payload
   } catch {
@@ -48,6 +50,7 @@ export const createSession = async (
 ): Promise<void> => {
   const tokenHash = computeTokenHash(token)
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const decoded = jwt.decode(token) as JwtPayload | null
   const expiresAt = decoded?.exp
     ? BigInt(decoded.exp * 1000)

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+
 import { tickDecorated } from '../../src/inference/providers/behavior_tree/nodes/decorators.js';
-import type { BTEvalContext, BTDecoratorDef, BTNodeDef, BTCooldownState } from '../../src/inference/providers/behavior_tree/types.js';
+import type { BTCooldownState,BTDecoratorDef, BTEvalContext, BTNodeDef } from '../../src/inference/providers/behavior_tree/types.js';
 import type { InferenceContext } from '../../src/inference/types.js';
 
 const makeCtx = (tick: bigint = BigInt(1)): BTEvalContext => ({

@@ -67,6 +67,7 @@ export const registerOperatorRoutes = (
     '/api/operators/:id',
     deps.asyncHandler(async (req, res) => {
       requireRoot(req)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const operator = await getOperator(context, req.params.id as string)
       jsonOk(res, toJsonSafe(operator))
     })
@@ -81,6 +82,7 @@ export const registerOperatorRoutes = (
 
       const operator = await updateOperator(
         context,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
         req.params.id as string,
         body,
         req.operator?.id,
@@ -98,6 +100,7 @@ export const registerOperatorRoutes = (
       requireRoot(req)
       const operator = await deleteOperator(
         context,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
         req.params.id as string,
         req.operator?.id,
         req.ip

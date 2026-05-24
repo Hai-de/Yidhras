@@ -95,8 +95,10 @@ export const capabilityGuard = (
     const run = async (): Promise<void> => {
       // 提取 packId
       const packId = options.packIdParam
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query/param value
         ? (req.params[options.packIdParam] as string | undefined)
         : options.packIdQuery
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query/param value
           ? (req.query[options.packIdQuery] as string | undefined)
           : undefined
 
@@ -133,6 +135,7 @@ export const capabilityGuard = (
 
       // L2: Capability
       const targetAgentId = options.targetAgentIdParam
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query/param value
         ? (req.params[options.targetAgentIdParam] as string | undefined)
         : undefined
 

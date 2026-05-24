@@ -2,8 +2,8 @@ import fs from 'fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
-import { materializePackRuntime } from '../../src/packs/orchestration/pack_materializer.js';
 import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
+import { materializePackRuntime } from '../../src/packs/orchestration/pack_materializer.js';
 import { countSqliteEngineOwnedRecords } from '../../src/packs/storage/internal/sqlite_engine_owned_store.js';
 import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';

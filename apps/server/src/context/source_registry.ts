@@ -64,6 +64,7 @@ const toInferenceActorRef = (actorRef: Record<string, unknown> | null, resolvedA
 
   return {
     identity_id: identityId,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     identity_type: identityType as IdentityType,
     role,
     agent_id: typeof actorRef.agent_id === 'string' ? actorRef.agent_id : resolvedAgentId,
@@ -172,6 +173,7 @@ const createSpatialProximitySourceAdapter = (spatialRuntime: import('../packs/ru
   async buildNodes(input) {
     const rawAgentId: string | null =
       (input.actor_ref && typeof input.actor_ref === 'object' && 'agent_id' in input.actor_ref)
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- agent_id from context
         ? (input.actor_ref).agent_id as string | null
         : input.resolved_agent_id;
 

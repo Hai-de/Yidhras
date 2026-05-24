@@ -50,6 +50,7 @@ export class PrismaMemoryRepository implements MemoryRepository {
   private readonly vectorStore: VectorStore;
 
   constructor(private readonly prisma: PrismaClient) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const ctx = { prisma } as AppInfrastructure;
     this.blockStore = createPrismaLongMemoryBlockStore(ctx);
     this.longTermStore = createPrismaLongTermMemoryStore(ctx);
@@ -102,7 +103,11 @@ export class PrismaMemoryRepository implements MemoryRepository {
   }
 
   async updateCompactionState(agentId: string, data: Record<string, unknown>): Promise<{ inference_count_since_summary: number; inference_count_since_compaction: number; last_summary_tick: bigint | null; last_compaction_tick: bigint | null }> {
-    return this.prisma.memoryCompactionState.update({ where: { agent_id: agentId }, data: data as never });
+    return this.prisma.memoryCompactionState.update({
+      where: { agent_id: agentId },
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
+      data: data as never
+    });
   }
 
   async listActiveMemoryBlocks(packId?: string | null, limit?: number): Promise<Array<{ id: string; kind: string; title: string | null; content_text: string; tags: string; created_at_tick: bigint; updated_at_tick: bigint }>> {

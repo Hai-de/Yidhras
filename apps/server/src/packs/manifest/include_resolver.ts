@@ -41,6 +41,7 @@ export function resolveIncludes(
   packDir: string
 ): IncludeResolveResult {
   const diagnostics: IncludeDiagnostic[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const include = entryYaml.include as WorldPackInclude | undefined;
 
   if (!include || !isRecord(include) || Object.keys(include).length === 0) {
@@ -108,6 +109,7 @@ export function resolveIncludes(
           continue;
         }
          
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
         parsed = result as Record<string, unknown>;
         loadedFiles.set(absolutePath, parsed);
       } catch (err) {

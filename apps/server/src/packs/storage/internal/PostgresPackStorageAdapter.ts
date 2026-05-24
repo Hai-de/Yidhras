@@ -226,8 +226,10 @@ function toNullableBooleanValue(value: unknown): boolean | null {
 
 function parseJsonValue(value: unknown): Record<string, unknown> | null {
   if (value === null || value === undefined) return null;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- DB adapter row mapping
   if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
   if (typeof value === 'string') {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
     try { return JSON.parse(value) as Record<string, unknown>; } catch { return null; }
   }
   return null;
@@ -381,6 +383,7 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
         `SELECT * FROM ${table} WHERE pack_id = $1 ORDER BY created_at ASC, id ASC`,
         packId
       );
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       return rows.map(row => decodeEngineOwnedRow(tableName, row)) as T[];
     } catch {
       return [];
@@ -394,6 +397,7 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
     }
 
     // Preserve original created_at if the row already exists
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- DB adapter row mapping
     const rec = record as Record<string, unknown>;
     let origCreatedAt: unknown = rec['created_at'];
     try {
@@ -440,6 +444,7 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
 
     await this.prisma.$executeRawUnsafe(sql, ...params);
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     return upsertRecord as T;
   }
 
@@ -546,12 +551,14 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
     await this.ensureEngineOwnedSchema(packId);
 
     for (const [tableName, rows] of Object.entries(data)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       if (ENGINE_OWNED_TABLE_NAMES.includes(tableName as typeof ENGINE_OWNED_TABLE_NAMES[number]) && tableName !== 'projection_events') {
         for (const row of rows) {
           await this.upsertEngineOwnedRecord(packId, tableName, row);
         }
       } else {
         for (const row of rows) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- DB adapter row mapping
           await this.upsertCollectionRecord(packId, tableName, row as Record<string, unknown>);
         }
       }

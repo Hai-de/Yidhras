@@ -140,6 +140,7 @@ export const toTickString = (value: bigint | null): string | null => {
 };
 
 export const normalizeJobStatus = (status: string): InferenceJobStatus => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return (INFERENCE_JOB_STATUSES as readonly string[]).includes(status) ? (status as InferenceJobStatus) : 'failed';
 };
 
@@ -152,12 +153,14 @@ export const normalizeJobIntentClass = (intentClass: string): InferenceJobIntent
     'retry_recovery',
     'operator_forced'
   ].includes(intentClass)
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     ? (intentClass as InferenceJobIntentClass)
     : 'direct_inference';
 };
 
 export const normalizeIntentStatus = (status: string): InferenceActionIntentStatus => {
   return (ACTION_INTENT_STATUSES as readonly string[]).includes(status)
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     ? (status as InferenceActionIntentStatus)
     : 'failed';
 };

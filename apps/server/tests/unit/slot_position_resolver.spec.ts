@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import type { PromptSlotConfig } from '../../src/inference/prompt_slot_config.js';
 import { allocatePosition, resolveSlotPositions } from '../../src/inference/slot_position_resolver.js';
 

@@ -36,6 +36,7 @@ const toMemoryEntry = (record: {
 
   const structured =
     record.content_structured && typeof record.content_structured === 'object' && !Array.isArray(record.content_structured)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       ? (toJsonSafe(record.content_structured) as Record<string, unknown>)
       : undefined;
 

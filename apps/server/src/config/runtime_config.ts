@@ -195,6 +195,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   }
 
   if (appPort !== undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- YAML config boundary
     (overrides.app as Record<string, unknown>).port = appPort
   }
 

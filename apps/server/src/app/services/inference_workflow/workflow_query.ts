@@ -345,6 +345,7 @@ const buildInferenceJobListItem = (
     strategy: workflowSnapshot.records.trace?.strategy ?? requestInput?.strategy ?? null,
     actor_ref: resolveInferenceJobActorRef(workflowSnapshot, requestInput),
     target_ref: workflowSnapshot.records.intent?.target_ref ?? null,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     request_input: requestInput ? (toJsonSafe(requestInput) as StoredInferenceRequestInput) : null,
     workflow: {
       intent_type: workflowSnapshot.records.intent?.intent_type ?? null,

@@ -40,7 +40,8 @@ const deepMapValues = (
   for (const [key, value] of Object.entries(obj)) {
     const fullKey = prefix ? `${prefix}.${key}` : key
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+ 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
       result[key] = deepMapValues(value as Record<string, unknown>, fullKey, fn)
     } else {
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
@@ -62,6 +63,7 @@ export const getMaskedConfig = (): Record<string, unknown> => {
  * Return a single domain's config with sensitive values masked.
  */
 export const getDomainConfig = (domain: string): Record<string, unknown> | null => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- YAML config boundary
   const fullConfig = getRuntimeConfig() as unknown as Record<string, unknown>
   if (!(domain in fullConfig)) {
     return null

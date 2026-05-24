@@ -141,6 +141,7 @@ const markRecommendationStatus = (
 
   const mergedDetails: Record<string, unknown> = {
     ...(typeof existing?.details === 'object' && existing?.details !== null && !Array.isArray(existing.details)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
       ? (existing.details as Record<string, unknown>)
       : {}),
     ...(input.extraDetails ?? {})

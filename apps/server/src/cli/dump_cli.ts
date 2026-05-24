@@ -95,6 +95,7 @@ const runDump = async (): Promise<void> => {
   }
 
   const type = args.type ?? 'all';
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   if (!VALID_TYPES.includes(type as (typeof VALID_TYPES)[number])) {
     console.error(`Invalid type: ${type}. Must be one of: ${VALID_TYPES.join(', ')}`);
     process.exitCode = 1;

@@ -1,19 +1,19 @@
+import type { DataCleanerInput } from '@yidhras/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { dataCleanerRegistry } from '../../src/plugins/extensions/data_cleaner_registry.js';
-import type { DataCleanerInput } from '@yidhras/contracts';
 import type { DataCleaner } from '../../src/plugins/extensions/data_cleaner_registry.js';
-import { createParser, render } from '../../src/template_engine/frontends/data_cleaner/index.js';
+import { dataCleanerRegistry } from '../../src/plugins/extensions/data_cleaner_registry.js';
 import { tokenize } from '../../src/template_engine/core/lexer.js';
 import { parse } from '../../src/template_engine/core/parser.js';
 import { renderAst } from '../../src/template_engine/core/renderer.js';
-import { BUILTIN_BLOCK_HANDLERS, BUILTIN_MODIFIERS, DEFAULT_SYNTAX } from '../../src/template_engine/defaults.js';
 import type { AstNode, RenderScope, SyntaxConfig } from '../../src/template_engine/core/types.js';
+import { BUILTIN_BLOCK_HANDLERS, BUILTIN_MODIFIERS, DEFAULT_SYNTAX } from '../../src/template_engine/defaults.js';
+import { createParser, render } from '../../src/template_engine/frontends/data_cleaner/index.js';
+import { createNarrativeBlockHandlers } from '../../src/template_engine/frontends/narrative/blocks.js';
+import { renderNarrativeTemplate } from '../../src/template_engine/frontends/narrative/resolver.js';
+import { createPromptVariableContext, createPromptVariableLayer, normalizePromptVariableRecord } from '../../src/template_engine/frontends/narrative/variable_context.js';
 import { slotRefBlockHandler } from '../../src/template_engine/frontends/slot_function/blocks.js';
 import type { SlotRegistry } from '../../src/template_engine/frontends/slot_function/types.js';
-import { renderNarrativeTemplate } from '../../src/template_engine/frontends/narrative/resolver.js';
-import { createNarrativeBlockHandlers } from '../../src/template_engine/frontends/narrative/blocks.js';
-import { createPromptVariableContext, createPromptVariableLayer, normalizePromptVariableRecord } from '../../src/template_engine/frontends/narrative/variable_context.js';
 
 const createTemplateCleaner = (): DataCleaner => {
   return {

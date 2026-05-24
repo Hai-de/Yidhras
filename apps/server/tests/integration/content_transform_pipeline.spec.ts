@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createContentTransformExecutor } from '../../src/context/workflow/executors/content_transform.js';
-import { createInitialPromptWorkflowState } from '../../src/context/workflow/types.js';
 import type { PromptWorkflowState, PromptWorkflowStepSpec } from '../../src/context/workflow/types.js';
+import { createInitialPromptWorkflowState } from '../../src/context/workflow/types.js';
 import { slotContentTransformRegistry } from '../../src/plugins/extensions/slot_content_transformer.js';
 
 // ── helpers ──

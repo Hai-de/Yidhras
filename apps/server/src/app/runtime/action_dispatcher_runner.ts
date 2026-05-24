@@ -1,4 +1,5 @@
 import { getSchedulerRunnerConfig } from '../../config/runtime_config.js';
+import type { DeterminismContext } from '../../determinism/context.js';
 import { createMemoryCompactionService } from '../../memory/recording/compaction_service.js';
 import { createMemoryRecordingService } from '../../memory/recording/service.js';
 import { recordActionIntentDispatched } from '../../observability/metrics.js';
@@ -23,6 +24,7 @@ export interface RunActionDispatcherOptions {
   context: AppContext;
   workerId: string;
   packRuntime?: PackRuntimePort;
+  determinism?: DeterminismContext;
   limit?: number;
   concurrency?: number;
   lockTicks?: bigint;
@@ -32,6 +34,7 @@ export const runActionDispatcher = async ({
   context,
   workerId,
   packRuntime,
+  determinism,
   limit = getSchedulerRunnerConfig().action_dispatcher.batch_limit,
   concurrency = getSchedulerRunnerConfig().action_dispatcher.concurrency,
   lockTicks = BigInt(getSchedulerRunnerConfig().action_dispatcher.lock_ticks)
@@ -73,7 +76,7 @@ export const runActionDispatcher = async ({
 
       assertActionIntentLockOwnership(claimedIntent, workerId, resolvePackTick(context, packRuntime));
 
-      const result = await dispatchActionIntent(context, claimedIntent);
+      const result = await dispatchActionIntent(context, claimedIntent, packRuntime, determinism);
       const recordPackId = packRuntime?.getPackId() ?? 'unknown-pack';
       recordActionIntentDispatched(recordPackId, claimedIntent.intent_type, result.outcome);
       if (claimedIntent.intent_type === 'trigger_event') {

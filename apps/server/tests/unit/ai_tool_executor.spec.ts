@@ -1,11 +1,10 @@
+import type { PrismaClient } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { ToolRegistry } from '../../src/ai/tool_executor.js';
 import { createToolRegistry, registerPackTools, validateToolArgs } from '../../src/ai/tool_executor.js';
 import type { ToolPermissionPolicy } from '../../src/ai/tool_permissions.js';
 import type { AiToolRegistryEntry } from '../../src/ai/types.js';
-import type { PrismaClient } from '@prisma/client';
-
 import type { AppContext } from '../../src/app/context.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { createVariableRuntimeSpeedSnapshot } from '../helpers/runtime_speed.js';

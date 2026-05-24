@@ -32,6 +32,7 @@ export const writeDetailedSnapshot = (
       lease_holder: input.leaseHolder ?? input.workerId,
       lease_expires_at_snapshot: input.leaseExpiresAtSnapshot ?? null,
       tick: input.tick,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
       summary: input.summary as unknown as Record<string, unknown>,
       started_at: input.startedAt,
       finished_at: input.finishedAt,

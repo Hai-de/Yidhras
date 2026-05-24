@@ -53,6 +53,7 @@ export const buildRuntimeStateContextNodes = (input: {
       actor_ref: null,
       content: {
         text: buildPolicySummaryText(input.policy_summary),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- context data assembly
         structured: input.policy_summary as unknown as Record<string, unknown>
       },
       tags: ['policy', 'system'],
@@ -232,6 +233,7 @@ export const buildRuntimeStateContextNodes = (input: {
       actor_ref: null,
       content: {
         text: `Latest pack event: ${input.pack_state.latest_event.title} (${input.pack_state.latest_event.type})`,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- context data assembly
         structured: input.pack_state.latest_event as unknown as Record<string, unknown>
       },
       tags: ['pack-state', 'latest-event'],

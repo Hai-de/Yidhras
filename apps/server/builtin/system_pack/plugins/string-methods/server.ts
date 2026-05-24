@@ -1,7 +1,7 @@
 import type { DataCleanerInput, DataCleanerOutput } from '@yidhras/contracts';
 
-import type { ServerPluginHostApi } from '../../../../src/plugins/runtime.js';
 import type { DataCleaner } from '../../../../src/plugins/extensions/data_cleaner_registry.js';
+import type { ServerPluginHostApi } from '../../../../src/plugins/runtime.js';
 
 const cleaner: DataCleaner = {
   key: 'data_cleaner.string',
@@ -9,7 +9,7 @@ const cleaner: DataCleaner = {
 
   async clean(input: DataCleanerInput): Promise<DataCleanerOutput> {
     const { text, options } = input;
-    const mode = (options?.mode as string) ?? 'trim';
+    const mode = typeof options?.mode === 'string' ? options.mode : 'trim';
 
     let cleaned = text;
     switch (mode) {

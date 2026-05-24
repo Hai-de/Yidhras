@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { ModelGatewayExecutionInput } from '../../src/ai/gateway.js';
 import { createModelGateway } from '../../src/ai/gateway.js';
 import type { AiProviderAdapter, AiProviderAdapterChunk, AiProviderAdapterRequest, AiProviderAdapterResult } from '../../src/ai/providers/types.js';
-import type { ModelGatewayExecutionInput } from '../../src/ai/gateway.js';
 import type { AiRegistryConfig } from '../../src/ai/types.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────

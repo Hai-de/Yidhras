@@ -1,5 +1,4 @@
 import fs from 'fs';
-
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';

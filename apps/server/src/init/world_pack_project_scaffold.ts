@@ -192,8 +192,11 @@ const updateDefaultRuntimeConfig = (input: {
   }
 
   const raw = safeFs.readFileSync(input.workspaceRoot, defaultConfigPath, 'utf-8');
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
   const parsed = (YAML.parse(raw) ?? {}) as Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
   const world = (parsed.world && typeof parsed.world === 'object' ? parsed.world : {}) as Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
   const bootstrap = (world.bootstrap && typeof world.bootstrap === 'object' ? world.bootstrap : {}) as Record<string, unknown>;
 
   if (input.setPreferredPack) {
@@ -388,6 +391,7 @@ export const scaffoldWorldPackProject = (
     throw new Error(`[world-pack-scaffold] 模板文件不存在: ${entryTemplatePath}`);
   }
   const renderedEntry = renderTemplate(safeFs.readFileSync(workspaceRoot, entryTemplatePath, 'utf-8'), values);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
   const entryYaml = YAML.parse(renderedEntry) as Record<string, unknown>;
 
   // Collect all included section content from rendered templates

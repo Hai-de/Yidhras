@@ -1,3 +1,4 @@
+import type { DeterminismContext } from '../../../determinism/context.js';
 import { dispatchInvocationFromActionIntent } from '../../../domain/invocation/invocation_dispatcher.js';
 import { ApiError } from '../../../utils/api_error.js';
 import type { AppContext } from '../../context.js';
@@ -65,7 +66,8 @@ const resolveTransmissionPolicy = (
 };
 
 const resolveDropDecision = (
-  intent: ActionIntentRecord
+  intent: ActionIntentRecord,
+  determinism?: DeterminismContext
 ): { dropped: boolean; reason: string | null } => {
   const policy = resolveTransmissionPolicy(intent.transmission_policy);
 
@@ -94,8 +96,12 @@ const resolveDropDecision = (
     };
   }
 
+  const randomValue = determinism
+    ? determinism.forPurpose('drop', intent.id).random().nextFloat()
+    : Math.random();
+
   return {
-    dropped: Math.random() < chance,
+    dropped: randomValue < chance,
     reason: intent.drop_reason ?? 'probabilistic_drop'
   };
 };
@@ -200,8 +206,11 @@ const dispatchAdjustSnrIntent = async (context: AppContext, intent: ActionIntent
     action_intent_id: intent.id,
     agent_id: targetAgentId,
     operation: resolvedResult.intent.operation,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- resolved value type from action system
     requested_value: resolvedResult.intent.requested.value as number,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- resolved value type from action system
     baseline_value: resolvedResult.baseline.value as number,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- resolved value type from action system
     resolved_value: resolvedResult.result.absolute.value as number,
     reason: payload.reason,
     created_at: now
@@ -259,8 +268,11 @@ const dispatchAdjustRelationshipIntent = async (context: AppContext, intent: Act
       from_id: actorAgentId,
       to_id: targetAgentId,
       type: payload.relationship_type,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       operation: resolvedResult.intent.operation as 'set',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       old_weight: resolvedResult.baseline.weight as number | null,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       new_weight: resolvedResult.result.absolute.weight as number,
       reason: payload.reason,
       created_at: now
@@ -284,8 +296,11 @@ const dispatchAdjustRelationshipIntent = async (context: AppContext, intent: Act
     from_id: actorAgentId,
     to_id: targetAgentId,
     type: payload.relationship_type,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- resolved value type from action system
     operation: resolvedResult.intent.operation as 'set',
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- resolved value type from action system
     old_weight: resolvedResult.baseline.weight as number | null,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- resolved value type from action system
     new_weight: resolvedResult.result.absolute.weight as number,
     reason: payload.reason,
     created_at: now
@@ -308,7 +323,8 @@ export {
 type IntentHandler = (
   context: AppContext,
   intent: ActionIntentRecord,
-  packRuntime?: PackRuntimePort
+  packRuntime?: PackRuntimePort,
+  determinism?: DeterminismContext
 ) => Promise<{ outcome: 'completed' | 'dropped'; reason: string | null }>;
 
 const KERNEL_INTENT_TYPES = new Set([
@@ -331,8 +347,8 @@ export const registerIntentHandler = (intentType: string, handler: IntentHandler
   intentHandlerRegistry.set(intentType, handler);
 };
 
-const postMessageHandler: IntentHandler = async (context, intent, _packRuntime) => {
-  const dropDecision = resolveDropDecision(intent);
+const postMessageHandler: IntentHandler = async (context, intent, _packRuntime, determinism) => {
+  const dropDecision = resolveDropDecision(intent, determinism);
   if (dropDecision.dropped) {
     return { outcome: 'dropped', reason: dropDecision.reason };
   }
@@ -349,7 +365,8 @@ const postMessageHandler: IntentHandler = async (context, intent, _packRuntime) 
 export const dispatchActionIntent = async (
   context: AppContext,
   intent: ActionIntentRecord,
-  packRuntime?: PackRuntimePort
+  packRuntime?: PackRuntimePort,
+  determinism?: DeterminismContext
 ): Promise<{ outcome: 'completed' | 'dropped'; reason: string | null }> => {
   assertActionIntentLockOwnership(intent, intent.locked_by ?? '', resolvePackTick(context, packRuntime));
 
@@ -369,7 +386,7 @@ export const dispatchActionIntent = async (
   // 2. Plugin-registered custom handlers
   const registeredHandler = intentHandlerRegistry.get(intent.intent_type);
   if (registeredHandler) {
-    return registeredHandler(context, intent, packRuntime);
+    return registeredHandler(context, intent, packRuntime, determinism);
   }
 
   // 3. Kernel intent types
@@ -387,7 +404,7 @@ export const dispatchActionIntent = async (
       await dispatchMoveIntent(context, intent, packRuntime);
       return { outcome: 'completed', reason: null };
     case 'post_message':
-      return postMessageHandler(context, intent, packRuntime);
+      return postMessageHandler(context, intent, packRuntime, determinism);
     default:
       throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'Unsupported action intent type', {
         intent_id: intent.id,

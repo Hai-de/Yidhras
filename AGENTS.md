@@ -32,10 +32,13 @@ Both use `singleQuote: true`, `trailingComma: "none"`, `printWidth: 100`.
 
 ### ESLint — enforced across both apps
 
-- `simple-import-sort/imports` and `simple-import-sort/exports` are **errors** — imports and exports are auto-sorted.
+- `simple-import-sort/imports` and `simple-import-sort/exports` are **errors** in `src/` — imports and exports are auto-sorted.
 - `@typescript-eslint/no-explicit-any` is **error** — do not use `any` unless unavoidable; if so, explain inline.
 - `@typescript-eslint/no-unused-vars` allows prefixing with `_` (`argsIgnorePattern: '^_'`).
+- `@typescript-eslint/no-non-null-assertion` is **warn** — pre-existing usages exist; avoid new ones.
+- `@typescript-eslint/no-unsafe-type-assertion` is **error** — unsafe type assertions (`as` without runtime guard) are forbidden. Use `eslint-disable-next-line` with a justification for unavoidable boundary assertions (Express params, Prisma columns, JSON.parse, etc.), or use `boundaryCast<T>()` from `src/utils/type_guards.js` for `unknown` boundary casts.
 - **Server-only**: `no-restricted-syntax` enforces `.js` extensions on all relative imports/exports. Missing `.js` is a lint error.
+- **Server coverage**: `src/` (full rules + type-checked), `tests/` (warn-level quality rules, no boundaries), `scripts/` (warn-level quality rules, no boundaries), `builtin/` (full rules for plugin source, no boundaries).
 - **Web-only**: Nuxt `#imports` and `~/` are exempted from import resolution; `vue/multi-word-component-names` is off.
 
 ### Type system
@@ -112,9 +115,10 @@ pnpm --filter yidhras-server db:migrate-pack <packId> [--target-version <n>]
 
 ### CI baseline
 
-- `server-tests.yml`: runs `test:integration` on push/PR touching `apps/server/**` or `packages/contracts/**`.
-- `server-smoke.yml`: runs `prepare:runtime` then e2e smoke tests (startup + endpoints), same trigger paths.
+- `server-tests.yml`: runs `pnpm lint` → `test:unit` (+ coverage) → `test:integration` on push/PR touching `apps/server/**` or `packages/contracts/**`. Web lint + unit tests run in a separate job.
+- `server-smoke.yml`: runs `pnpm lint` → `prepare:runtime` → e2e smoke tests (startup + endpoints) → CLI smoke tests, same trigger paths.
 - `test:e2e` is not in the default CI gate; it's for local/manual verification.
+- Pre-commit hook via `simple-git-hooks` + `lint-staged` auto-fixes staged files on commit. Run `pnpm prepare` after first clone to install hooks.
 
 ## 4. Test Isolation
 

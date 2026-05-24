@@ -59,6 +59,7 @@ const buildSemanticIntentFromDecision = (decision: DecisionResult): SemanticInte
 };
 
 const getWorldPackInvocationRules = (context: PackStateResolvable): InvocationRuleRecord[] => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const runtimeRules = (context.pack_runtime as Record<string, unknown> | null)?.invocation_rules;
   if (!Array.isArray(runtimeRules)) {
     return [];
@@ -284,6 +285,7 @@ export const groundDecisionIntent = async (
 
   const then = matchedRule.then;
   const resolutionMode =
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     (toNullableString(then.resolution_mode) as IntentGroundingResolutionMode | null) ?? 'exact';
   const affordanceKey = toNullableString(then.affordance_key);
   const requiredCapabilityKey = toNullableString(then.requires_capability);

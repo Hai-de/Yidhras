@@ -1,5 +1,4 @@
 import type { PrismaClient } from '@prisma/client';
-
 import { describe, expect, it, vi } from 'vitest';
 
 import { recordAiInvocation } from '../../src/ai/observability.js';

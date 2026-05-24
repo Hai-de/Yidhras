@@ -261,6 +261,7 @@ const multiPackLoopHost = new MultiPackLoopHost({
   inferenceService,
   decisionWorkerId,
   actionDispatcherWorkerId,
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   worldEngine: appContext.worldEngine as WorldEngineSidecarClient,
   intervalMs: simulationLoopIntervalMs
 });
@@ -341,6 +342,7 @@ const start = async (): Promise<void> => {
   try {
     const resetSummary = await resetDevelopmentRuntimeState(appContext);
     if (resetSummary) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- toJsonSafe return type
       appContext.notifications.push('info', '开发环境 runtime 观测数据已清理', 'DEV_RUNTIME_RESET', toJsonSafe(resetSummary) as Record<string, unknown>);
     }
 
@@ -383,6 +385,7 @@ const start = async (): Promise<void> => {
         pack_id: packId,
         current_tick: clockSnapshot.current_tick,
         current_revision: clockSnapshot.current_tick,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         calendars: (pack?.time_systems ?? []) as unknown as CalendarConfig[]
       });
 
@@ -489,7 +492,9 @@ const start = async (): Promise<void> => {
 
       httpServer?.close();
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       if (appContext.worldEngine && typeof (appContext.worldEngine as WorldEngineSidecarClient).stop === 'function') {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         await (appContext.worldEngine as WorldEngineSidecarClient).stop();
       }
 

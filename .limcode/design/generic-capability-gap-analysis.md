@@ -113,7 +113,7 @@ Web 端已经有结构化类型: `panels: z.array(pluginWebPanelContributionSche
 | **分布式追踪** | 无 OpenTelemetry。仅推理追踪（inference trace）存在，限于 AI 调用 |
 | **日志传输** | 仅 `console.*`。无文件输出、无轮转、无日志投递 |
 | **实时事件流** | 无 WebSocket/SSE。所有状态查询是轮询式 REST |
-| **全模拟可复现** | 仅单推理任务可 replay。无 tick 级确定性、无 seed 传播、无回归重放 |
+| **全模拟可复现** | 基础 infrastructure 已实施（deterministic PRNG、seed derivation、tick 级确定性上下文、action_dispatcher 确定性丢弃、状态摘要 digest、replay test helper）。真实 AI/第三方插件强确定性仍受限制 |
 | **运行时内存转储** | 无 API/CLI 可 dump agent 记忆、关系图、推理队列 |
 | **边车健康暴露** | 心跳检测存在于 `StdioJsonRpcTransport` 但未通过 health API 暴露 |
 | **自动快照** | 仅手动触发。无定时调度 |
@@ -322,7 +322,7 @@ executeWorldEnginePreparedStep 内部:
 | 结构化指标/Prometheus | §七 | 计划引入 prom-client，尚未实施 |
 | 边车健康暴露 | §七 | `StdioJsonRpcTransport` 已有心跳，未暴露到 health API |
 | 运行时状态 dump CLI | §七 | 未实施 |
-| 全模拟可复现/确定性 | §七 | 未实施 |
+| 全模拟可复现/确定性 | §七 | 基础实施，真实 AI/第三方插件强确定性仍受限制 |
 | 日志传输层 | §七 | 未实施 |
 | 自动快照 | §七 | 未实施 |
 | Worker 线程插件隔离 | §十一 | 短期超时保护已实施，Worker 隔离未实施 |

@@ -1,9 +1,8 @@
+import { WORLD_ENGINE_PROTOCOL_VERSION } from '@yidhras/contracts'
 import { describe, expect, it } from 'vitest'
 
-import { WORLD_ENGINE_PROTOCOL_VERSION } from '@yidhras/contracts'
-
-import { buildSidecarObjectiveExecutionRequest } from '../../src/domain/rule/sidecar_objective_execution.js'
 import type { InvocationRequest } from '../../src/domain/invocation/invocation_dispatcher.js'
+import { buildSidecarObjectiveExecutionRequest } from '../../src/domain/rule/sidecar_objective_execution.js'
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js'
 
 const buildMockInvocation = (overrides: Partial<InvocationRequest> = {}): InvocationRequest => ({

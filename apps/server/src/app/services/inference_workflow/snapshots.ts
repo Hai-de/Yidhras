@@ -88,10 +88,12 @@ export const toWorkflowDecisionJobSnapshot = (job: DecisionJobRecord): WorkflowD
     replay_source_trace_id: job.replay_source_trace_id,
     replay_reason: job.replay_reason,
     replay_override_snapshot: isRecord(job.replay_override_snapshot) ? toRecord(toJsonSafe(job.replay_override_snapshot)) : null,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     last_error_code: (job.last_error_code as WorkflowDecisionJobSnapshot['last_error_code']) ?? null,
     locked_by: job.locked_by,
     locked_at: toTickString(job.locked_at),
     lock_expires_at: toTickString(job.lock_expires_at),
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     last_error_stage: (job.last_error_stage as WorkflowDecisionJobSnapshot['last_error_stage']) ?? null
   };
 };
@@ -199,6 +201,7 @@ export const toInferenceActionIntentSnapshot = (
     transmission_policy: transmissionPolicy,
     transmission_drop_chance: intent.transmission_drop_chance,
     drop_reason: intent.status === 'failed' ? intent.dispatch_error_message : intent.drop_reason,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     dispatch_error_code: (intent.dispatch_error_code as InferenceActionIntentSnapshot['dispatch_error_code']) ?? null,
     dispatch_error_message: intent.dispatch_error_message,
     source_workflow_run_id: intent.source_workflow_run_id,
@@ -347,6 +350,7 @@ export const buildWorkflowSnapshot = (input: {
       dispatch_stage: dispatchStage,
       workflow_state: workflowState,
       failure_stage: failure.stage,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       failure_code: failure.code as WorkflowSnapshot['derived']['failure_code'],
       failure_reason: failure.reason,
       outcome_summary: deriveWorkflowOutcomeSummary(workflowState)
@@ -366,14 +370,18 @@ export const buildInferenceRunResultFromTrace = (trace: {
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const traceMetadata = toJsonSafe(trace.trace_metadata) as InferenceRunResult['trace_metadata'];
 
   return {
     inference_id: trace.id,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     actor_ref: toJsonSafe(trace.actor_ref) as InferenceRunResult['actor_ref'],
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     strategy: trace.strategy as InferenceRunResult['strategy'],
     provider: trace.provider,
     tick: typeof traceMetadata.tick === 'string' ? traceMetadata.tick : '',
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     decision: toJsonSafe(trace.decision) as InferenceRunResult['decision'],
     trace_metadata: traceMetadata
   };

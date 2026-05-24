@@ -56,6 +56,7 @@ export class PackStorageEngine {
         key: collection.key,
         kind: collection.kind,
         primary_key: collection.primary_key,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         fields: collection.fields.map(f => ({ name: f.key, type: f.type as CollectionFieldType, required: f.required })),
         indexes: collection.indexes?.map(idx => ({ columns: idx }))
       });

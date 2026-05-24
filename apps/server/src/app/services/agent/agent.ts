@@ -233,6 +233,7 @@ export const getAgentContextSnapshot = async (context: AppInfrastructure & { get
 
   return {
     identity: agent,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse boundary
     variables: JSON.parse(resolvedVariables) as Record<string, unknown>
   };
 };
@@ -466,6 +467,7 @@ export const getEntityOverview = async (
       outcome_summary: (
         findWorkflowByInferenceId(trace.id)?.workflow.outcome_summary
       )
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
         ? (findWorkflowByInferenceId(trace.id)?.workflow.outcome_summary as unknown as Record<string, unknown>)
         : null,
       decision: isRecord(trace.decision) ? (trace.decision) : null,

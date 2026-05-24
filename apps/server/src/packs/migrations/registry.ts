@@ -29,7 +29,7 @@ export const migrateConfig = (
   config: Record<string, unknown>,
   targetVersion?: number
 ): { config: Record<string, unknown>; applied: PackMigration[] } => {
-  const currentVersion = (config.schema_version as number) ?? 0;
+  const currentVersion = typeof config.schema_version === 'number' ? config.schema_version : 0;
   const target = targetVersion ?? getTargetVersion();
 
   if (target <= currentVersion) {

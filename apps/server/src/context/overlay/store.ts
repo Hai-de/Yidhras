@@ -54,6 +54,7 @@ const normalizeStructuredContent = (value: unknown): Record<string, unknown> | n
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return toJsonSafe(value) as Record<string, unknown>;
 };
 
@@ -62,6 +63,7 @@ const stringifyStringArray = (values: string[]): string => {
 };
 
 const toJsonValue = (value: unknown): Prisma.InputJsonValue => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
   return JSON.parse(JSON.stringify(toJsonSafe(value))) as Prisma.InputJsonValue;
 };
 
@@ -85,14 +87,18 @@ const toOverlayEntry = (record: {
     id: record.id,
     actor_id: record.actor_id,
     pack_id: record.pack_id,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     overlay_type: record.overlay_type as ContextOverlayEntry['overlay_type'],
     title: record.title,
     content_text: record.content_text,
     content_structured: normalizeStructuredContent(record.content_structured),
     tags: normalizeTags(record.tags),
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     status: record.status as ContextOverlayStatus,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     persistence_mode: record.persistence_mode as ContextOverlayEntry['persistence_mode'],
     source_node_ids: normalizeSourceNodeIds(record.source_node_ids),
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     created_by: record.created_by as ContextOverlayEntry['created_by'],
     created_at_tick: record.created_at_tick.toString(),
     updated_at_tick: record.updated_at_tick.toString()

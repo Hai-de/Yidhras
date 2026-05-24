@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { SlotConditionInput, SlotConditionContext } from '../../src/inference/slot_condition_evaluators.js';
+import type { SlotLogicExpr } from '../../src/inference/slot_behavior.js';
+import type { SlotConditionContext,SlotConditionInput } from '../../src/inference/slot_condition_evaluators.js';
 import {
   evaluateBuiltinCondition,
   evaluateCustomCondition,
@@ -8,7 +9,6 @@ import {
   resolveDotPath,
   resolveWildcardPaths
 } from '../../src/inference/slot_condition_evaluators.js';
-import type { SlotLogicExpr } from '../../src/inference/slot_behavior.js';
 import { slotConditionRegistry } from '../../src/plugins/extensions/slot_condition_registry.js';
 
 const baseCtx = (overrides: Partial<SlotConditionContext> = {}): SlotConditionContext => ({

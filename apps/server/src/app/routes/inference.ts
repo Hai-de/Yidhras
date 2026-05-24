@@ -293,6 +293,7 @@ export const registerInferenceRoutes = (
       const body = parseBody(streamRequestSchema, req.body, 'STREAM_INPUT_INVALID');
 
       const messages = body.messages as AiMessage[];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const taskType = body.task_type as AiTaskType;
       const responseMode = body.response_mode as AiResponseMode;
 

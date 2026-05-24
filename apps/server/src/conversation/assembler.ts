@@ -235,6 +235,7 @@ export function assembleConversationMessages(input: ConversationAssemblerInput):
     if (transcriptMode === 'embed') {
       // Embed mode: all fragments go to the conversation_history target role
       const targetRole =
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         (slotRoleMap.get('conversation_history') as SlotRole | undefined) ?? 'user';
       if (convEntriesByRole[targetRole]) {
         convEntriesByRole[targetRole].push(cf.text);
@@ -243,6 +244,7 @@ export function assembleConversationMessages(input: ConversationAssemblerInput):
       }
     } else {
       // role_map mode: use per-entry role metadata
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const role = cf.entryRole as SlotRole;
       if (convEntriesByRole[role]) {
         convEntriesByRole[role].push(cf.text);

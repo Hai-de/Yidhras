@@ -72,7 +72,7 @@ export const createCrossAgentToolHandler = (bridge: CrossAgentBridge): ToolHandl
     async execute(args: Record<string, unknown>, ctx: ToolExecutionContext) {
       const targetAgentId = typeof args.target_agent_id === 'string' ? args.target_agent_id : null;
       const taskType = typeof args.task_type === 'string' ? args.task_type : 'agent_decision';
-      const query = args.query && typeof args.query === 'object' ? args.query as Record<string, unknown> : {};
+      const query = args.query && typeof args.query === 'object' ? args.query as Record<string, unknown> : {}; // eslint-disable-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
 
       if (!targetAgentId) {
         return { success: false, error: { code: 'MISSING_TARGET_AGENT', message: 'target_agent_id is required' } };
@@ -81,6 +81,7 @@ export const createCrossAgentToolHandler = (bridge: CrossAgentBridge): ToolHandl
       return bridge.queryAgent(
         {
           target_agent_id: targetAgentId,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
           task_type: taskType as AiTaskType,
           query
         },

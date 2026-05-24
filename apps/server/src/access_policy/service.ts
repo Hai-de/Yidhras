@@ -42,10 +42,12 @@ const toPolicyRule = (rule: {
     id: rule.id,
     effect: rule.effect === 'deny' ? 'deny' : 'allow',
     subject_id: rule.subject_id ?? null,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     subject_type: (rule.subject_type as PolicyRule['subject_type']) ?? null,
     resource: rule.resource,
     action: rule.action,
     field: rule.field,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma JSON column
     conditions: (rule.conditions as Record<string, unknown> | null | undefined) ?? null,
     priority: rule.priority
   };
@@ -149,7 +151,6 @@ export class AccessPolicyService {
     for (const field of fields) {
       if (result.allowedFields.has(field)) {
  
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
         (output as Record<string, unknown>)[field] = record[field];
       }
     }

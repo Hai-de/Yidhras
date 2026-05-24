@@ -31,17 +31,22 @@ const loadBackupPolicy = (workspaceRoot: string): ConfigBackupPolicy => {
     return FALLBACK_POLICY
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- YAML config boundary
   const cfg = raw.backup as Record<string, unknown>
   return {
     enabled: typeof cfg.enabled === 'boolean' ? cfg.enabled : FALLBACK_POLICY.enabled,
     directory: typeof cfg.directory === 'string' ? cfg.directory : FALLBACK_POLICY.directory,
     retention: {
       max_count:
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- YAML config parsed value
         typeof (cfg.retention as Record<string, unknown> | undefined)?.max_count === 'number'
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- YAML config parsed value
           ? ((cfg.retention as Record<string, unknown>).max_count as number)
           : FALLBACK_POLICY.retention.max_count,
       max_age_days:
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- YAML config parsed value
         typeof (cfg.retention as Record<string, unknown> | undefined)?.max_age_days === 'number'
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- YAML config parsed value
           ? ((cfg.retention as Record<string, unknown>).max_age_days as number)
           : FALLBACK_POLICY.retention.max_age_days
     }
@@ -76,6 +81,7 @@ const readMetadata = (workspaceRoot: string, backupDir: string): BackupMetadata 
 
   try {
     const raw = safeFs.readFileSync(workspaceRoot, metaPath, 'utf-8')
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
     return JSON.parse(raw) as BackupMetadata
   } catch {
     return { backups: [] }

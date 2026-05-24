@@ -303,6 +303,7 @@ export const createModelGateway = ({
         const cacheKey = buildCacheKey(input.request, input.task_request.pack_id);
         const cachedEntry = cache.get(cacheKey);
         if (cachedEntry) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
           const cachedResponse = cachedEntry.result as ModelGatewayResponse;
           await recordAiInvocation(context, {
             ...cachedResponse,

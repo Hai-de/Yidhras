@@ -103,7 +103,7 @@ const toContextNode = (entry: MemoryEntry): ContextNode => {
     source_ref: entry.source_ref ? ({ ...entry.source_ref }) : null,
     actor_ref:
       entry.actor_ref && typeof entry.actor_ref === 'object' && !Array.isArray(entry.actor_ref)
-        ? ({ ...(entry.actor_ref as unknown as Record<string, unknown>) })
+        ? ({ ...(entry.actor_ref as unknown as Record<string, unknown>) }) // eslint-disable-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         : null,
     content: {
       text: entry.content.text,

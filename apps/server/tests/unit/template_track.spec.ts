@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveSlotPositions } from '../../src/inference/slot_position_resolver.js';
-import type { PromptSlotConfig } from '../../src/inference/prompt_slot_config.js';
-import type { InferenceContext } from '../../src/inference/types.js';
 import { runTemplateTrack } from '../../src/context/workflow/tracks/template_track.js';
+import type { PromptSlotConfig } from '../../src/inference/prompt_slot_config.js';
+import { resolveSlotPositions } from '../../src/inference/slot_position_resolver.js';
+import type { InferenceContext } from '../../src/inference/types.js';
 
 const buildContext = (overrides: Partial<InferenceContext> = {}): InferenceContext =>
   ({

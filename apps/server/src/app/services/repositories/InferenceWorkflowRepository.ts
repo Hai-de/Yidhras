@@ -104,6 +104,7 @@ export class PrismaInferenceWorkflowRepository implements InferenceWorkflowRepos
   constructor(private readonly prisma: PrismaClient) {}
 
   private ctx(): AppContext {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     return { prisma: this.prisma } as AppContext;
   }
 
@@ -304,6 +305,7 @@ export class PrismaInferenceWorkflowRepository implements InferenceWorkflowRepos
   async findDecisionJobs<T = DecisionJobRecord>(input: { where?: Prisma.DecisionJobWhereInput; orderBy?: Prisma.DecisionJobOrderByWithRelationInput | Prisma.DecisionJobOrderByWithRelationInput[]; take?: number; include?: Prisma.DecisionJobInclude; select?: Prisma.DecisionJobSelect }): Promise<T[]> {
     const { include, select, ...rest } = input;
     const args: Prisma.DecisionJobFindManyArgs = { ...rest, ...(include ? { include } : {}), ...(select ? { select } : {}) };
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     return await this.prisma.decisionJob.findMany(args) as T[];
   }
 

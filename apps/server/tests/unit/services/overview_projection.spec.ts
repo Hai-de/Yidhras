@@ -1,11 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import type { PrismaClient } from '@prisma/client';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppContext } from '../../../src/app/context.js';
 import { createRuntimeClockProjectionService } from '../../../src/app/runtime/runtime_clock_projection.js';
-import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 import { getOverviewSummary } from '../../../src/app/services/overview/overview.js';
+import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 import { createVariableRuntimeSpeedSnapshot } from '../../helpers/runtime_speed.js';
 
 vi.mock('../../../src/kernel/projections/operator_overview_service.js', () => ({

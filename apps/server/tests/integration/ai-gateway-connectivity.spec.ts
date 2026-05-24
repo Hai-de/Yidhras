@@ -5,8 +5,8 @@ dotenvConfig({ path: resolve(process.cwd(), '..', '.env') });
 
 import { describe, expect, it } from 'vitest';
 
-import { createModelGateway } from '../../src/ai/gateway.js';
 import type { ModelGatewayExecutionInput } from '../../src/ai/gateway.js';
+import { createModelGateway } from '../../src/ai/gateway.js';
 import type { AiRegistryConfig } from '../../src/ai/types.js';
 
 const hasApiKey = typeof process.env.DEEPSEEK_API_KEY === 'string' && process.env.DEEPSEEK_API_KEY.trim().length > 0;

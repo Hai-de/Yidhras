@@ -1,11 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
-
 import type { PrismaClient } from '@prisma/client';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { AppContext } from '../../../src/app/context.js';
 import { registerClockRoutes } from '../../../src/app/routes/clock.js';
-import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 import { createRuntimeClockProjectionService } from '../../../src/app/runtime/runtime_clock_projection.js';
+import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 import { createVariableRuntimeSpeedSnapshot } from '../../helpers/runtime_speed.js';
 
 const createFakeApp = () => {

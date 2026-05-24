@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import type { PrismaClient } from '@prisma/client';
+import { describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
 import type { ContextOverlayStore } from '../../src/context/overlay/types.js';
@@ -13,7 +12,6 @@ import type {
 import type { LongMemoryBlockStore, MemoryBehavior, MemoryBlock, MemoryRuntimeState } from '../../src/memory/blocks/types.js';
 import type { BuildMemoryContextInput, MemoryService } from '../../src/memory/service.js';
 import type { MemoryContextPack, MemoryEntry, MemorySelectionResult } from '../../src/memory/types.js';
-
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 
 const buildMemoryEntry = (input: {

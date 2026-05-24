@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import type { PluginManifest } from '@yidhras/contracts';
+import { describe, expect, it } from 'vitest';
 
 import { getRootAuthHeaders } from '../helpers/auth.js';
 import { assertErrorEnvelope, assertSuccessEnvelopeData } from '../helpers/envelopes.js';

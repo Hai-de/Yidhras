@@ -97,6 +97,7 @@ export const updateOperator = async (
   const data: Record<string, unknown> = { updated_at: now }
 
   if (input.status !== undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     if (!Object.values(OPERATOR_STATUS).includes(input.status as typeof OPERATOR_STATUS[keyof typeof OPERATOR_STATUS])) {
       throw new ApiError(400, 'OPERATOR_INVALID', 'Invalid status')
     }

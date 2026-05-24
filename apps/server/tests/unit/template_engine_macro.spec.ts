@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { createPRNG } from '../../src/template_engine/core/prng.js';
-import { parse } from '../../src/template_engine/core/parser.js';
-import { renderAst } from '../../src/template_engine/core/renderer.js';
+import { expandStateJson } from '../../src/packs/runtime/template_expander.js';
 import { tokenize } from '../../src/template_engine/core/lexer.js';
+import { parse } from '../../src/template_engine/core/parser.js';
+import { createPRNG } from '../../src/template_engine/core/prng.js';
+import { renderAst } from '../../src/template_engine/core/renderer.js';
 import type { RenderScope } from '../../src/template_engine/core/types.js';
 import { BUILTIN_MACRO_HANDLERS } from '../../src/template_engine/defaults.js';
-import { expandStateJson } from '../../src/packs/runtime/template_expander.js';
 
 const buildScope = (seed?: string): RenderScope => ({
   variables: {},

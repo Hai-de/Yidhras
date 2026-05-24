@@ -59,6 +59,7 @@ export interface HostRuntimeClockQueryPort {
 }
 
 const toJsonSafeFormattedCalendars = (calendars: TimeFormatted[]): JsonSafeTimeFormatted[] => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return toJsonSafe(calendars) as JsonSafeTimeFormatted[];
 };
 

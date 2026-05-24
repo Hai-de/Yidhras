@@ -9,6 +9,7 @@ import type { AiInvocationTrace, ModelGatewayResponse } from './types.js';
 const logger = createLogger('ai-observability');
 
 const toJsonValue = (value: unknown): Prisma.InputJsonValue => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 };
 
@@ -37,6 +38,7 @@ const toOptionalJson = (value: unknown): Prisma.InputJsonValue | typeof Prisma.J
 };
 
 const isForeignKeyViolation = (error: unknown): boolean => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return error instanceof Error && 'code' in error && (error as { code: string }).code === 'P2003';
 };
 

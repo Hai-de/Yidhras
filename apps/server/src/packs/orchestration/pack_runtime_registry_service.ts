@@ -175,6 +175,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       initialTick: runtimeConfig.initialTick
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const calendars = (resolved.pack.time_systems ?? []) as unknown as CalendarConfig[];
     const clock = new ChronosEngine({ calendarConfigs: calendars, initialTicks: runtimeConfig.initialTick });
     const runtimeSpeed = new RuntimeSpeedPolicy(runtimeConfig.stepStrategy);

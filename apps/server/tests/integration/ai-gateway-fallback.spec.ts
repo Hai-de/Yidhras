@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createModelGateway } from '../../src/ai/gateway.js';
-import { createAiTaskService } from '../../src/ai/task_service.js';
 import type { AiProviderAdapter, AiProviderAdapterResult } from '../../src/ai/providers/types.js';
-import type { AiRegistryConfig } from '../../src/ai/types.js';
 import type { AiTaskService } from '../../src/ai/task_service.js';
+import { createAiTaskService } from '../../src/ai/task_service.js';
+import type { AiRegistryConfig } from '../../src/ai/types.js';
 
 // ── Adapter fixtures ───────────────────────────────────────────────────
 

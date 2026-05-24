@@ -39,6 +39,7 @@ const mergeDecisionJobRequestInputAttributes = (
   const requestInput = isRecord(existing.request_input) ? existing.request_input : {};
   const requestInputAttributes = isRecord(requestInput.attributes) ? requestInput.attributes : {};
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return toJsonSafe({
     ...requestInput,
     attributes: {
@@ -150,6 +151,7 @@ export const claimDecisionJob = async (
   const now = input.now ?? resolvePackTick(context, packRuntime);
   const lockTicks = input.lock_ticks ?? DEFAULT_DECISION_JOB_LOCK_TICKS;
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   if (!RUNNABLE_JOB_STATUSES.includes(existing.status as (typeof RUNNABLE_JOB_STATUSES)[number])) {
     return null;
   }
@@ -334,6 +336,7 @@ export const createPendingDecisionJob = async (
       pack_id: input.request_input.pack_id ?? null,
       attempt_count: 0,
       max_attempts: input.max_attempts ?? 3,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       request_input: toJsonSafe({
         ...input.request_input,
         attributes: {
@@ -406,6 +409,7 @@ export const createReplayDecisionJob = async (
       pack_id: input.request_input.pack_id ?? null,
       attempt_count: 0,
       max_attempts: input.max_attempts ?? input.source_job.max_attempts,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       request_input: toJsonSafe({
         ...input.request_input,
         attributes: {
@@ -418,6 +422,7 @@ export const createReplayDecisionJob = async (
       replay_source_trace_id: input.source_trace_id,
       replay_reason: input.reason ?? null,
       replay_override_snapshot: input.replay_override_snapshot
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         ? (toJsonSafe(input.replay_override_snapshot) as Prisma.InputJsonValue)
         : Prisma.JsonNull,
       last_error: null,

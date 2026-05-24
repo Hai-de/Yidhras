@@ -105,14 +105,17 @@ const toStringArray = (value: unknown): string[] => isStringArray(value) ? value
 
 const toWorkflowStepResultJson = (value: unknown): WorkflowStepResultJson | null => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return value as WorkflowStepResultJson;
 };
 
 const toErrorJson = (value: unknown): Record<string, unknown> | null => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
   return value as Record<string, unknown>;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
 const toInputJson = (value: unknown): Prisma.InputJsonValue => value as Prisma.InputJsonValue;
 
 const toNullableInputJson = (value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull => {
@@ -125,6 +128,7 @@ const toWorkflowStepRunRecord = (row: WorkflowStepRunRow): WorkflowStepRunRecord
   step_id: row.step_id,
   agent_id: row.agent_id,
   partition_id: row.partition_id,
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   status: row.status as WorkflowStepRunStatus,
   dependency_step_ids: toStringArray(row.dependency_step_ids),
   input_step_ids: toStringArray(row.input_step_ids),

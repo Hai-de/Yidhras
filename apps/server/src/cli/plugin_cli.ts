@@ -44,6 +44,7 @@ const parseArgs = (argv: string[]): ParsedArgs => {
         parsed.yes = true;
         break;
       default:
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         if (COMMANDS.includes(arg as (typeof COMMANDS)[number])) {
           parsed.command = arg;
         } else if (!parsed.command) {
@@ -216,6 +217,7 @@ const doEnable = async (prisma: PrismaClient, args: ParsedArgs): Promise<void> =
   // Dependency check
   const artifact = await store.getArtifactById(installation.artifact_id);
   if (artifact) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const manifest = artifact.manifest_json as PluginManifest;
 
     // Gather enabled installations and their manifests
@@ -232,6 +234,7 @@ const doEnable = async (prisma: PrismaClient, args: ParsedArgs): Promise<void> =
     for (const inst of enabledInstallations) {
       const a = await store.getArtifactById(inst.artifact_id);
       if (a) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         enabledManifests.set(inst.installation_id, a.manifest_json as PluginManifest);
       }
     }
@@ -333,6 +336,7 @@ const doDisable = async (prisma: PrismaClient, args: ParsedArgs): Promise<void> 
   for (const inst of enabledInstallations) {
     const a = await store.getArtifactById(inst.artifact_id);
     if (a) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       enabledManifests.set(inst.installation_id, a.manifest_json as PluginManifest);
     }
   }

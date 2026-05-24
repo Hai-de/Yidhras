@@ -43,6 +43,9 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Lint server
+        run: pnpm --filter yidhras-server lint
+
       - name: Check Rust sidecars
         run: pnpm --filter yidhras-server check:rust
 
@@ -72,6 +75,9 @@ jobs:
 
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Lint web
+        run: pnpm --filter web lint
 
       - name: Run web unit tests
         run: pnpm --filter web test:unit

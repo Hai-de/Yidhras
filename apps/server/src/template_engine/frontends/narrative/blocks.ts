@@ -102,6 +102,7 @@ export const createNarrativeBlockHandlers = (): Record<string, BlockHandlerFn> =
       ...scope,
       variables: {
         ...scope.variables,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- template variable access
         ...ctx as Record<string, unknown>
       }
     };

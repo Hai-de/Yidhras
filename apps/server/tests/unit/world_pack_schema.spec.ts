@@ -1,6 +1,6 @@
+import { worldEntitySnapshotSchema } from '@yidhras/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { worldEntitySnapshotSchema } from '@yidhras/contracts';
 import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
 
 describe('world pack constitution schema', () => {

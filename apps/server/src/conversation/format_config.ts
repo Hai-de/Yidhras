@@ -71,6 +71,7 @@ export function resolveEffectiveFormatConfig(
   const effectiveProfile = meta?.conversation_profile_override ?? profileName;
 
   // 方案 A: full config override
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const base = meta?.conversation_format_override as ConversationFormatConfig | undefined
     ?? resolveConversationFormatConfig(effectiveProfile);
 

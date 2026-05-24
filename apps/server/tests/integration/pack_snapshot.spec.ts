@@ -1,10 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
-import { gunzipSync } from 'zlib';
 
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { gunzipSync } from 'zlib';
 
 // The config_backup feature has added backup.yaml to conf.d but the schema
 // hasn't been updated yet, causing RuntimeConfigSchema.parse to reject the

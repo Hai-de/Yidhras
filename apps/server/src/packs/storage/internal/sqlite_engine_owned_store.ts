@@ -167,6 +167,7 @@ const getStatement = <T extends SqliteRow>(
   sql: string,
   params: SqlitePrimitive[] = []
 ): T | null => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return (db.prepare(sql).get(...params) as T | undefined) ?? null;
 };
 
@@ -175,6 +176,7 @@ const allStatement = <T extends SqliteRow>(
   sql: string,
   params: SqlitePrimitive[] = []
 ): T[] => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return (db.prepare(sql).all(...params) as T[] | undefined) ?? [];
 };
 const withRuntimeDatabase = async <T>(

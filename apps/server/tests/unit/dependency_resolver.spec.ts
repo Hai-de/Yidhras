@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import type { PluginInstallation, PluginManifest } from '@yidhras/contracts';
+import { describe, expect, it } from 'vitest';
 
 import {
   checkDependencies,

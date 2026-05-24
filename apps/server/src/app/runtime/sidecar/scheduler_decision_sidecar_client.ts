@@ -91,6 +91,7 @@ export class SchedulerDecisionSidecarClient implements SchedulerDecisionKernelPo
     return this.transport.send(
       'scheduler.health.get',
       {},
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       (value) => value as SchedulerDecisionSidecarHealthSnapshot
     );
   }
@@ -101,7 +102,9 @@ export class SchedulerDecisionSidecarClient implements SchedulerDecisionKernelPo
     await this.ensureStarted();
     return this.transport.send(
       'scheduler.kernel.evaluate',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
       input as unknown as Record<string, unknown>,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       (value) => value as SchedulerKernelEvaluateOutput
     );
   }

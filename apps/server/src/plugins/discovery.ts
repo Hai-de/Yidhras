@@ -101,6 +101,7 @@ const calculateJsonDepth = (value: unknown, currentDepth = 0): number => {
   }
 
   if (value !== null && typeof value === 'object') {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- plugin config boundary
     const obj = value as Record<string, unknown>;
     const keys = Object.keys(obj);
     if (keys.length === 0) return currentDepth + 1;
@@ -181,6 +182,7 @@ export const discoverPackLocalPlugins = async (input: {
           source_pack_id: pack.metadata.id,
           source_path: candidate.plugin_dir_path,
           checksum,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- plugin config boundary
           manifest_json: JSON.parse(JSON.stringify(manifest)) as Record<string, unknown>,
           imported_at: String(Date.now())
         }));

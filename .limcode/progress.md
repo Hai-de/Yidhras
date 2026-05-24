@@ -1,35 +1,40 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-05-23T22:37:11.097Z
+- Updated At: 2026-05-24T13:00:00.000Z
 - Status: active
 - Phase: implementation
 
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
-- 当前进度：尚无里程碑记录
-- 当前焦点：赛博朋克世界包草稿对接验证
-- 最新结论：本轮交叉审查确认：项目不是全靠脏代码堆出来，文档中也有一些诚实限制说明；但当前代码质量存在实质问题。最严重的是类型系统绕过和工作流终态写入静默失败。其次，工作流与调度器多处“先查再插”的幂等实现不是原子并发安全；运行时扩展点存在无声吞错；架构文档对 Repository 边界的宣称比代码实际更干净。优先修复顺序应为：1) 去掉仓储层 `as any`/`as…
-- 下一步：按高严重级别发现先修：类型绕过和工作流静默失败；随后处理非原子幂等和运行时吞错。
+- 当前进度：ESLint 覆盖范围与执行修复已完成（阶段 0-4），builtin 插件独立编译流水线已建立，no-unsafe-type-assertion 试跑因噪音过大放弃
+- 当前焦点：生成 no-unsafe-type-assertion 渐进收敛计划
+- 最新结论：ESLint 覆盖从仅 src/ 扩展到 tests/、scripts/、builtin/，CI 加入 lint 门禁，pre-commit hook（simple-git-hooks + lint-staged）已安装。builtin 四个插件已建立独立 tsconfig + esbuild bundle 编译流水线。snapshot_restore.ts CalendarConfig→TimeFormatted 类型转换 bug 已修复。lint 终态：0 errors, 720 warnings。no-unsafe-type-assertion 试跑产生 514 条警告，需分阶段收敛。
+- 下一步：按模式分类渐进收敛 no-unsafe-type-assertion 违规项。
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/group-collective-entity-kind-design.md`
-- 计划：`.limcode/plans/code-quality-follow-up-remediation.plan.md`
-- 审查：`.limcode/review/code-quality-cross-audit.md`
+- 设计：`.limcode/design/eslint-bypass-investigation.md`
+- 设计：`.limcode/design/eslint-bypass-analysis.md`
+- 计划：`.limcode/plans/eslint-coverage-and-enforcement.plan.md`
+- 计划：`.limcode/plans/builtin-plugin-compilation-pipeline.plan.md`
+- 计划：`.limcode/plans/no-unsafe-type-assertion-convergence.plan.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 修正 ARCH Repository 边界文档宣称  `#todo-doc-boundary-alignment`
-- [x] 实现工作流触发与调度器 DecisionJob 的原子幂等创建  `#todo-idempotency-concurrency`
-- [x] 为 PackSimulationLoop hook/cleaner 吞错路径补日志/诊断  `#todo-runtime-extension-observability`
-- [x] 收敛仓储/短期记忆路径中的类型系统绕过  `#todo-type-boundary-remediation`
-- [ ] 补充并运行 typecheck/lint/unit/integration 验证  `#todo-validation` (in_progress)
-- [x] 修复工作流终态写入 count 被忽略与执行异常语义  `#todo-workflow-terminal-and-error-semantics`
+- [x] 修复 snapshot_restore.ts CalendarConfig→TimeFormatted 类型转换 bug  `#fix-snapshot-bug`
+- [x] 删除孤儿文件 test_boundaries.mjs  `#remove-orphan`
+- [x] CI workflow 添加 pnpm lint 门禁  `#ci-lint-gate`
+- [x] 添加 @typescript-eslint/no-non-null-assertion: warn  `#non-null-rule`
+- [x] ESLint 覆盖扩展到 tests/ 和 scripts/  `#eslint-coverage-expand`
+- [x] 配置 pre-commit hook（simple-git-hooks + lint-staged）  `#precommit-hook`
+- [x] builtin 插件独立编译流水线（tsconfig + esbuild bundle + ESLint 覆盖）  `#builtin-pipeline`
+- [x] 试跑 no-unsafe-type-assertion（514 条警告，放弃直接启用）  `#no-unsafe-assertion-trial`
+- [x] 生成 no-unsafe-type-assertion 渐进收敛计划  `#no-unsafe-assertion-plan`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -47,7 +52,11 @@
 ## 最近更新
 
 <!-- LIMCODE_PROGRESS_LOG_START -->
-- 2026-05-23T00:36:36.127Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/group-collective-entity-kind-plan.md
+- 2026-05-24T12:00:00.000Z | artifact_created | design | 创建排查文档：.limcode/design/eslint-bypass-investigation.md
+- 2026-05-24T12:30:00.000Z | artifact_created | design | 创建分析文档：.limcode/design/eslint-bypass-analysis.md
+- 2026-05-24T12:45:00.000Z | artifact_created | plan | 创建主计划：.limcode/plans/eslint-coverage-and-enforcement.plan.md
+- 2026-05-24T13:00:00.000Z | artifact_created | plan | 创建插件编译流水线计划：.limcode/plans/builtin-plugin-compilation-pipeline.plan.md
+- 2026-05-24T13:00:00.000Z | phase_completed | implementation | ESLint 覆盖范围与执行修复完成（阶段 0-4）：CI lint 门禁、pre-commit hook、tests/scripts/builtin/ 覆盖、builtin 插件编译流水线
 - 2026-05-23T18:06:08.664Z | artifact_changed | plan | 同步计划文档：.limcode/plans/agent-chain-workflow-phase1.plan.md
 - 2026-05-23T18:29:27.854Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/agent-chain-workflow-phase1.plan.md
 - 2026-05-23T18:38:50.980Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/agent-chain-workflow-phase1.plan.md
@@ -67,6 +76,7 @@
 - 2026-05-23T22:14:56.466Z | artifact_changed | plan | 同步计划文档：.limcode/plans/code-quality-follow-up-remediation.plan.md
 - 2026-05-23T22:16:10.140Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/code-quality-follow-up-remediation.plan.md
 - 2026-05-23T22:37:11.097Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/code-quality-follow-up-remediation.plan.md
+- 2026-05-23T23:56:56.744Z | artifact_changed | plan | 同步计划文档：.limcode/plans/full-simulation-determinism.plan.md
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -76,59 +86,58 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-05-15T08:18:59.116Z",
-  "updatedAt": "2026-05-23T22:37:11.097Z",
-  "status": "active",
-  "phase": "implementation",
-  "currentFocus": "赛博朋克世界包草稿对接验证",
-  "latestConclusion": "本轮交叉审查确认：项目不是全靠脏代码堆出来，文档中也有一些诚实限制说明；但当前代码质量存在实质问题。最严重的是类型系统绕过和工作流终态写入静默失败。其次，工作流与调度器多处“先查再插”的幂等实现不是原子并发安全；运行时扩展点存在无声吞错；架构文档对 Repository 边界的宣称比代码实际更干净。优先修复顺序应为：1) 去掉仓储层 `as any`/`as never` 等类型压制；2) 工作流终态写入检查 `updateMany.count` 并处理锁丢失；3) 将工作流和调度器幂等创建改为 upsert/唯一冲突重读；4) 给 hook/cleaner 吞错路径加日志、metrics 或 diagnostics；5) 修正文档中过度宣称的 Repository 边界。",
-  "currentBlocker": null,
-  "nextAction": "按高严重级别发现先修：类型绕过和工作流静默失败；随后处理非原子幂等和运行时吞错。",
-  "activeArtifacts": {
-    "design": ".limcode/design/group-collective-entity-kind-design.md",
-    "plan": ".limcode/plans/code-quality-follow-up-remediation.plan.md",
-    "review": ".limcode/review/code-quality-cross-audit.md"
+  “updatedAt”: “2026-05-24T13:00:00.000Z”,
+  “status”: “active”,
+  “phase”: “implementation”,
+  “currentFocus”: “ESLint 覆盖范围与执行修复已收尾，准备 no-unsafe-type-assertion 渐进收敛”,
+  “latestConclusion”: “ESLint 覆盖从仅 src/ 扩展到 tests/、scripts/、builtin/（含独立编译流水线）。CI lint + pre-commit hook 已建立。no-unsafe-type-assertion 试跑 514 条警告，需分阶段收敛。”,
+  “currentBlocker”: null,
+  “nextAction”: “生成 no-unsafe-type-assertion 渐进收敛计划，按模式分类分阶段处理。”,
+  “activeArtifacts”: {
+    “design”: “.limcode/design/eslint-bypass-analysis.md”,
+    “plan”: “.limcode/plans/eslint-coverage-and-enforcement.plan.md”,
+    “plan_plugin”: “.limcode/plans/builtin-plugin-compilation-pipeline.plan.md”
   },
   "todos": [
     {
-      "id": "todo-doc-boundary-alignment",
-      "content": "修正 ARCH Repository 边界文档宣称",
+      "id": "determinism-foundation",
+      "content": "新增 deterministic PRNG、seed derivation、stable JSON 基础模块及单元测试",
       "status": "completed"
     },
     {
-      "id": "todo-idempotency-concurrency",
-      "content": "实现工作流触发与调度器 DecisionJob 的原子幂等创建",
+      "id": "manual-tick-runner",
+      "content": "抽出可手动执行的单 tick/iteration runner，避免 replay 依赖 setTimeout",
       "status": "completed"
     },
     {
-      "id": "todo-runtime-extension-observability",
-      "content": "为 PackSimulationLoop hook/cleaner 吞错路径补日志/诊断",
+      "id": "pack-seed-integration",
+      "content": "为 pack runtime 接入 deterministic seed 配置与默认 seed 解析",
       "status": "completed"
     },
     {
-      "id": "todo-type-boundary-remediation",
-      "content": "收敛仓储/短期记忆路径中的类型系统绕过",
+      "id": "replace-state-randomness",
+      "content": "替换会影响模拟状态的直接随机路径，优先 action_dispatcher 与 template defaults",
       "status": "completed"
     },
     {
-      "id": "todo-validation",
-      "content": "补充并运行 typecheck/lint/unit/integration 验证",
-      "status": "in_progress"
+      "id": "replay-harness",
+      "content": "新增 replay CLI 或测试 helper，支持同 seed 多 run digest 对比",
+      "status": "completed"
     },
     {
-      "id": "todo-workflow-terminal-and-error-semantics",
-      "content": "修复工作流终态写入 count 被忽略与执行异常语义",
+      "id": "state-digest",
+      "content": "实现确定性状态摘要和 sha256 digest，排除观测性非确定字段",
+      "status": "completed"
+    },
+    {
+      "id": "tests-and-docs",
+      "content": "补充 replay/随机稳定性/摘要稳定性测试并更新缺口文档状态",
       "status": "completed"
     }
   ],
   "milestones": [],
   "risks": [],
   "log": [
-    {
-      "at": "2026-05-23T00:36:36.127Z",
-      "type": "artifact_changed",
-      "refId": "plan",
-      "message": "同步计划 TODO 快照：.limcode/plans/group-collective-entity-kind-plan.md"
-    },
     {
       "at": "2026-05-23T18:06:08.664Z",
       "type": "artifact_changed",
@@ -242,21 +251,27 @@
       "type": "artifact_changed",
       "refId": "plan",
       "message": "同步计划 TODO 快照：.limcode/plans/code-quality-follow-up-remediation.plan.md"
+    },
+    {
+      "at": "2026-05-23T23:56:56.744Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/full-simulation-determinism.plan.md"
     }
   ],
   "stats": {
     "milestonesTotal": 0,
     "milestonesCompleted": 0,
-    "todosTotal": 6,
-    "todosCompleted": 5,
-    "todosInProgress": 1,
+    "todosTotal": 7,
+    "todosCompleted": 7,
+    "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-05-23T22:37:11.097Z",
-    "bodyHash": "sha256:829c36a93125a44a5261bece794052d6b7c46735f91061fbfd53e948f8ef0ad5"
+    "generatedAt": "2026-05-23T23:56:56.744Z",
+    "bodyHash": "sha256:225348d59bd266ffa62185e45a9f6a758581fd2c5aba0a218d791d880d98c431"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

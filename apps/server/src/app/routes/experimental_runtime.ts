@@ -161,6 +161,7 @@ export const registerExperimentalRuntimeRoutes = (
       const packId = resolvePackIdParam(req.params.packId)
       const host = requireExperimentalPackHost(context, packId)
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express request body/param parsing
       const amountInput = (req.body as Record<string, unknown> | undefined)?.amount
       const amount = typeof amountInput === 'number' && Number.isFinite(amountInput) && amountInput > 0
         ? BigInt(Math.trunc(amountInput))

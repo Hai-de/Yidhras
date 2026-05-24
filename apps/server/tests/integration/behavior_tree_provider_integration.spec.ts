@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import type { InferenceProvider } from '../../src/inference/provider.js';
 import { createBehaviorTreeProvider } from '../../src/inference/providers/behavior_tree/provider.js';
 import { TreeRegistry } from '../../src/inference/providers/behavior_tree/tree_registry.js';
 import type { BTCooldownState } from '../../src/inference/providers/behavior_tree/types.js';
-import type { InferenceProvider } from '../../src/inference/provider.js';
 import type { InferenceContext, ProviderDecisionRaw } from '../../src/inference/types.js';
 
 const createMinimalInferenceContext = (

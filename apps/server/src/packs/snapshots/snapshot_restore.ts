@@ -14,7 +14,8 @@ import { gunzipSync } from 'zlib';
 import type { RuntimeClockProjectionSnapshot } from '../../app/runtime/runtime_clock_projection.js';
 import type { WorldEnginePort } from '../../app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from '../../app/runtime/world_engine_snapshot.js';
-import type { TimeFormatted } from '../../clock/types.js';
+import { ChronosEngine } from '../../clock/engine.js';
+import type { CalendarConfig } from '../../clock/types.js';
 import type { NotificationPort } from '../../core/runtime_activation.js';
 import type { WorldPack } from '../../packs/manifest/loader.js';
 import { safeFs } from '../../utils/safe_fs.js';
@@ -187,6 +188,7 @@ const restorePrismaData = async (
       });
 
       if (mem.behavior) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- DB adapter row mapping
         const behavior = mem.behavior as Record<string, unknown>;
         await tx.memoryBlockBehavior.create({
           data: {
@@ -199,6 +201,7 @@ const restorePrismaData = async (
       }
 
       if (mem.runtime_state) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- DB adapter row mapping
         const rs = mem.runtime_state as Record<string, unknown>;
         await tx.memoryBlockRuntimeState.create({
           data: {
@@ -358,11 +361,19 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
   await materializePackRuntime({ instanceId: packId, pack, prisma, packStorageAdapter, initialTick: tick, appliedOpeningId: appliedOpeningId ?? undefined });
 
   // 9. Restore in-memory clock
+  const clockEngine = new ChronosEngine({
+    // Zod schema allows ratio to be absent when irregular_ratios is present;
+    // CalendarConfig requires ratio: number. This is a known Zod/TS gap —
+    // runtime validation guarantees at least one of ratio/irregular_ratios.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
+    calendarConfigs: (pack.time_systems ?? []) as unknown as CalendarConfig[],
+    initialTicks: tick
+  });
   const clockSnapshot: RuntimeClockProjectionSnapshot = {
     pack_id: packId,
     current_tick: metadata.captured_at_tick,
     current_revision: metadata.captured_at_revision,
-    calendars: (pack.time_systems ?? []) as unknown as TimeFormatted[],
+    calendars: clockEngine.getAllTimes(),
     source: 'host_projection',
     updated_at_ms: Date.now(),
     generation: 1
@@ -372,6 +383,7 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
   // 10. Reload sidecar with restored state
   if (worldEngine) {
     const hydrateRequest = await buildWorldPackHydrateRequest(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       { packStorageAdapter, getPackRuntimeHandle } as unknown as import('../../app/context.js').AppContext,
       packId
     );

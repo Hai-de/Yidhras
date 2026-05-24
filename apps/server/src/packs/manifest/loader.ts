@@ -16,6 +16,7 @@ export class PackManifestLoader {
   constructor(private packsDir: string) {}
 
   public deriveInstanceId(pack: WorldPack, folderName: string): string {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
     const explicit = (pack.metadata as Record<string, unknown>).instance_id as string | undefined;
     return explicit?.trim() || folderName;
   }
@@ -42,6 +43,7 @@ export class PackManifestLoader {
 
     try {
       const content = safeFs.readFileSync(this.packsDir, packPath, 'utf-8');
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
       const entryYaml = YAML.parse(content) as Record<string, unknown>;
 
       if (!entryYaml || typeof entryYaml !== 'object') {

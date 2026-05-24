@@ -3,9 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { ModelGateway, ModelGatewayExecutionInput } from '../../../src/ai/gateway.js';
 import type {
   AiResolvedTaskConfig,
-  ModelGatewayResponse,
-  AiTaskDefinition
-} from '../../../src/ai/types.js';
+  AiTaskDefinition,
+  ModelGatewayResponse} from '../../../src/ai/types.js';
 import { runCompactionInference } from '../../../src/conversation/compaction_inference.js';
 import type { ConversationEntry } from '../../../src/conversation/types.js';
 

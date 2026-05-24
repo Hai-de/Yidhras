@@ -36,6 +36,7 @@ const parseEventImpactData = (value: string | null): Record<string, unknown> | n
   try {
     const parsed = JSON.parse(value) as unknown;
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- DB adapter row mapping
       return parsed as Record<string, unknown>;
     }
     return { raw: parsed };

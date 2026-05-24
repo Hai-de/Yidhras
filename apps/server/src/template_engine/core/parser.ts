@@ -171,18 +171,22 @@ const parseValue = (
 
   switch (token.type) {
     case 'NUMBER':
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- token value guaranteed by tokenizer
       return { value: token.value as number, nextIdx: idx + 1 };
 
     case 'BOOLEAN':
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- token value guaranteed by tokenizer
       return { value: token.value as boolean, nextIdx: idx + 1 };
 
     case 'NULL':
       return { value: null, nextIdx: idx + 1 };
 
     case 'STRING':
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- token value guaranteed by tokenizer
       return { value: token.value as string, nextIdx: idx + 1 };
 
     case 'IDENT':
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- token value guaranteed by tokenizer
       return { value: token.value as string, nextIdx: idx + 1 };
 
     case 'LBRACKET':
@@ -249,6 +253,7 @@ const parseObject = (
     if (tokens[i].type !== 'IDENT') {
       return null;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const key = tokens[i].value as string;
     i++;
 
@@ -346,6 +351,7 @@ const parseMacroExpression = (
     return { name: '', args: {} };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- token value guaranteed by tokenizer
   const name = tokens[0].value as string;
   const args: Record<string, MacroValue> = {};
   let i = 1;
@@ -354,6 +360,7 @@ const parseMacroExpression = (
     if (tokens[i].type !== 'IDENT') {
       break;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- token value guaranteed by tokenizer
     const key = tokens[i].value as string;
     i++;
 

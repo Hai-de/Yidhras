@@ -37,6 +37,7 @@ export const parseStepStrategy = (body: Record<string, unknown>): StepStrategy =
     throw new ApiError(400, 'STRATEGY_INVALID', 'strategy must be an object');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
   const strategy = body.strategy as Record<string, unknown> | undefined;
   if (!strategy || typeof strategy !== 'object') {
     throw new ApiError(400, 'STRATEGY_INVALID', 'strategy field is required');
@@ -47,6 +48,7 @@ export const parseStepStrategy = (body: Record<string, unknown>): StepStrategy =
     throw new ApiError(400, 'STRATEGY_INVALID', 'strategy.kind must be variable or adaptive');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
   const range = strategy.range as Record<string, unknown> | undefined;
   if (!range || typeof range !== 'object') {
     throw new ApiError(400, 'STRATEGY_INVALID', 'strategy.range is required');
@@ -67,6 +69,7 @@ export const parseStepStrategy = (body: Record<string, unknown>): StepStrategy =
   };
 
   if (kind === 'adaptive') {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
     const adaptive = strategy.adaptive as Record<string, unknown> | undefined;
     if (!adaptive || typeof adaptive !== 'object') {
       throw new ApiError(400, 'STRATEGY_INVALID', 'adaptive config is required when kind is adaptive');

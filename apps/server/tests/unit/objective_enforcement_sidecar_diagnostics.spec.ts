@@ -1,12 +1,11 @@
+import type { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '@prisma/client';
-
 import type { AppContext } from '../../src/app/context.js';
-import type { PackRuntimeHost } from '../../src/core/pack_runtime_host.js';
 import { WorldEngineSidecarClient, type WorldEngineSidecarTransport } from '../../src/app/runtime/sidecar/world_engine_sidecar_client.js';
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
+import type { PackRuntimeHost } from '../../src/core/pack_runtime_host.js';
 import { dispatchInvocationFromActionIntent } from '../../src/domain/invocation/invocation_dispatcher.js';
 import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
 import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';

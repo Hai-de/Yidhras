@@ -148,6 +148,7 @@ export const parseInferenceJobStatuses = (value: string[] | undefined): Inferenc
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return normalized as InferenceJobStatus[];
 };
 

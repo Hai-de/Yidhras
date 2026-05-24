@@ -95,6 +95,7 @@ export const createContextService = ({
   return {
     async buildContextRun(input) {
       const memoryResult = await memoryService.buildMemoryContext({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma relation connect type
         actor_ref: input.actor_ref as never,
         resolved_agent_id: input.resolved_agent_id
       });
@@ -137,6 +138,7 @@ export const createContextService = ({
           try {
             const parsed: unknown = JSON.parse(e.impact_data);
             if (typeof parsed !== 'object' || parsed === null) return false;
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse boundary
             const record = parsed as Record<string, unknown>;
             return (
               record['semantic_type'] === 'investigation_conducted' &&
@@ -253,6 +255,7 @@ export const createContextService = ({
       const selectedEntries: MemoryEntry[] = [];
       for (const node of contextRun.nodes) {
         if (node.source_kind === 'overlay') continue;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         const sourceKind = node.source_kind as MemorySourceKind;
         if (!['trace', 'intent', 'job', 'post', 'event', 'summary', 'manual'].includes(sourceKind)) continue;
         const preferredSlot = node.placement_policy.preferred_slot;
@@ -261,6 +264,7 @@ export const createContextService = ({
         selectedEntries.push({
           id: node.id,
           scope,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
           actor_ref: (node.actor_ref && typeof node.actor_ref === 'object' && !Array.isArray(node.actor_ref) ? node.actor_ref as unknown as MemoryEntry['actor_ref'] : null),
           source_kind: sourceKind,
           source_ref: node.source_ref ? { ...node.source_ref } : null,

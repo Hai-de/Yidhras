@@ -31,6 +31,7 @@ const CACHE_DEFAULT_TTL_MS = 120_000; // 2 分钟
 
 const resolveTtl = (taskType: string): number => {
    
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return TASK_TTL_OVERRIDES[taskType as AiTaskType] ?? CACHE_DEFAULT_TTL_MS;
 };
 

@@ -27,6 +27,7 @@ const parseImpactData = (value: string | null): Record<string, unknown> | null =
 
   try {
     const parsed = JSON.parse(value) as unknown;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse boundary
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
   } catch {
     return null;

@@ -125,6 +125,7 @@ export const createAiTaskService = ({
       }
 
       const messages = assembleConversationMessages({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         bundle: request.prompt_context.prompt_bundle_v2 as PromptBundleV2,
         memory: request.prompt_context.agent_conversation_memory ?? null,
         formatConfig: resolveConversationFormatConfig(request.prompt_context.conversation_profile),

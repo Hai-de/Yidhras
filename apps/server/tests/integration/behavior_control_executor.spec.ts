@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { SlotBehaviorProfile } from '../../src/inference/slot_behavior.js';
-import type { PromptWorkflowState } from '../../src/context/workflow/types.js';
-import { createInitialPromptWorkflowState } from '../../src/context/workflow/types.js';
 import { createBehaviorControlExecutor } from '../../src/context/workflow/executors/behavior_control.js';
-import type { PromptWorkflowProfile, PromptWorkflowStepSpec } from '../../src/context/workflow/types.js';
+import type { PromptWorkflowProfile, PromptWorkflowState, PromptWorkflowStepSpec  } from '../../src/context/workflow/types.js';
+import { createInitialPromptWorkflowState } from '../../src/context/workflow/types.js';
+import type { SlotBehaviorProfile } from '../../src/inference/slot_behavior.js';
 
 // ── helpers ──
 

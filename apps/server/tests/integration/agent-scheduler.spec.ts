@@ -2,8 +2,6 @@ import { Prisma } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
-import type { SchedulerStorageAdapter } from "../../src/packs/storage/SchedulerStorageAdapter.js";
-import { MemSchedulerStorage } from "../helpers/scheduler_storage.js";
 import { runAgentScheduler } from '../../src/app/runtime/agent_scheduler.js';
 import { claimDecisionJob } from '../../src/app/services/inference_workflow.js';
 import {
@@ -11,7 +9,9 @@ import {
   getSchedulerRunReadModelById,
   getSchedulerSummarySnapshot
 } from '../../src/app/services/scheduler/queries.js';
+import type { SchedulerStorageAdapter } from "../../src/packs/storage/SchedulerStorageAdapter.js";
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
+import { MemSchedulerStorage } from "../helpers/scheduler_storage.js";
 
 describe('agent scheduler integration', () => {
   let cleanup: (() => Promise<void>) | null = null;

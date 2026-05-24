@@ -38,6 +38,7 @@ const extractActorEntityId = (impactData: string | null): string | null => {
       && 'actor_identity_id' in parsed
       && typeof (parsed as { actor_identity_id?: unknown }).actor_identity_id === 'string'
     ) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       return (parsed as { actor_identity_id: string }).actor_identity_id;
     }
   } catch {

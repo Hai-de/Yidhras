@@ -27,6 +27,7 @@ export function getHostAgentIds(context: InferenceContext): string[] {
   if (bindingAgentId) {
     ids.push(bindingAgentId);
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const packHostIds = (context.world_pack as unknown as Record<string, unknown>)?.host_agent_ids;
   if (Array.isArray(packHostIds)) {
     for (const id of packHostIds) {
@@ -76,9 +77,9 @@ export function resolveSlotPermission(input: PermissionCheckInput): PermissionCh
   const slotPerms = input.slot_config.permissions;
   const fragPerms = input.fragment.permissions;
   const allowedList: string[] | boolean | undefined | null =
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+// eslint-disable-next-line security/detect-object-injection, @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     (fragPerms as unknown as Record<string, unknown>)?.[permKey] as string[] | boolean | undefined | null
-// eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
+// eslint-disable-next-line security/detect-object-injection, @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     ?? (slotPerms as unknown as Record<string, unknown>)?.[permKey] as string[] | boolean | undefined | null;
 
   if (allowedList === null) {

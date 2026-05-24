@@ -101,6 +101,7 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
   constructor(private readonly prisma: PrismaClient) {}
 
   private ctx(): AppContext {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     return { prisma: this.prisma } as AppContext;
   }
 
@@ -135,10 +136,12 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
     if (!identity) return null;
     return {
       id: identity.id,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       type: identity.type as IdentityContext['type'],
       name: identity.name,
       provider: identity.provider,
       status: identity.status,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma JSON column
       claims: identity.claims as Record<string, unknown> | null
     };
   }

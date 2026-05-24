@@ -50,6 +50,7 @@ export const registerSchedulerRoutes = (
     observeGuard(context),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler latest run')
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const packId = req.query.packId as string | undefined
       const readModel = await getLatestSchedulerRunReadModel(context, packId)
       jsonOk(res, toJsonSafe(readModel))
@@ -93,6 +94,7 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler summary')
       const query = parseQuery(schedulerSummaryQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const packId = req.query.packId as string
       const runtimeKernel = createRuntimeKernelService(context, packId)
       const summary = await runtimeKernel.getSummary?.({
@@ -124,6 +126,7 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler operator projection')
       const query = parseQuery(schedulerOperatorQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const packId = req.query.packId as string
       const runtimeKernel = createRuntimeKernelService(context, packId)
       const projection = await runtimeKernel.getOperatorProjection?.({
@@ -141,6 +144,7 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler ownership projection')
       const query = parseQuery(schedulerOwnershipQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const packId = req.query.packId as string
       const runtimeKernel = createRuntimeKernelService(context, packId)
       const result = await runtimeKernel.getOwnershipAssignments?.({
@@ -177,6 +181,7 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler worker runtime states')
       const query = parseQuery(schedulerWorkersQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const packId = req.query.packId as string
       const runtimeKernel = createRuntimeKernelService(context, packId)
       const result = await runtimeKernel.getWorkers?.({
@@ -213,6 +218,7 @@ export const registerSchedulerRoutes = (
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler run read')
       const params = parseParams(schedulerRunIdParamsSchema, req.params, 'SCHEDULER_QUERY_INVALID')
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const packId = req.query.packId as string | undefined
       const readModel = await getSchedulerRunReadModelById(context, params.id, packId)
       jsonOk(res, toJsonSafe(readModel))
@@ -261,7 +267,9 @@ export const registerSchedulerRoutes = (
       // eslint-disable-next-line @typescript-eslint/require-await
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('agent scheduler decisions')
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const packId = req.query.packId as string | undefined
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const decisions = listAgentSchedulerDecisions(context, req.params.id as string, undefined, packId)
       jsonOk(res, toJsonSafe(decisions))
     })

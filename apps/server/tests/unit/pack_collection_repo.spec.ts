@@ -1,15 +1,14 @@
 import fs from 'fs';
-
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { resetRuntimeConfigCache } from '../../src/config/runtime_config.js';
 import { installPackRuntime } from '../../src/kernel/install/install_pack.js';
 import { parseWorldPackConstitution } from '../../src/packs/manifest/constitution_loader.js';
+import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import {
   listDeclaredPackCollectionRecords,
   upsertDeclaredPackCollectionRecord
 } from '../../src/packs/storage/pack_collection_repo.js';
-import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
 
 const createdRoots: string[] = [];

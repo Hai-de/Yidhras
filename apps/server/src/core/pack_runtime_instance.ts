@@ -9,6 +9,7 @@ import type { StepContext, StepStrategy } from './step_strategy.js';
 import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
 
 const buildPackRuntimeClock = (pack: WorldPack): ChronosEngine => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const calendars = (pack.time_systems ?? []) as unknown as CalendarConfig[];
   const runtimeConfig = getWorldPackRuntimeConfig(pack);
   return new ChronosEngine({ calendarConfigs: calendars, initialTicks: runtimeConfig.initialTick });

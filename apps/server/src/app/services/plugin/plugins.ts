@@ -85,6 +85,7 @@ const buildDependencyContext = async (context: AppContext, scopeRef?: string) =>
   for (const inst of enabledInstallations) {
     const artifact = await context.repos.plugin.getArtifactById(inst.artifact_id);
     if (artifact) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       enabledManifests.set(inst.installation_id, artifact.manifest_json as PluginManifest);
     }
   }
@@ -164,6 +165,7 @@ export const enablePackPlugin = async (
   // Check dependencies before enabling
   const artifact = await context.repos.plugin.getArtifactById(installation.artifact_id);
   if (artifact) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const manifest = artifact.manifest_json as PluginManifest;
     const { enabledInstallations, enabledManifests } = await buildDependencyContext(
       context,

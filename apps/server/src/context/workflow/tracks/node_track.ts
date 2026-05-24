@@ -144,6 +144,7 @@ const groupNodes = (
 ): { sections: PromptSectionDraft[]; groupCount: number } => {
   const byType = new Map<string, PromptSectionDraft[]>();
   for (const section of sections) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- metadata field from data
     const nodeType = (section.metadata?.node_type as string) ?? 'unknown';
     const existing = byType.get(nodeType);
     if (existing) {

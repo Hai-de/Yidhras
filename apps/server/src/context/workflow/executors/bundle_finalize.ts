@@ -68,6 +68,7 @@ export const createBundleFinalizeExecutor = (): PromptWorkflowStepExecutor => ({
     }
     if (state.diagnostics.placement_summary) {
       state.tree.metadata.workflow.workflow_placement_summary =
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- context data assembly
         state.diagnostics.placement_summary as unknown as Record<string, unknown>;
     }
 

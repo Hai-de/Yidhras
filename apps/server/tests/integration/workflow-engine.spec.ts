@@ -1,11 +1,10 @@
+import type { PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { PrismaClient } from '@prisma/client';
-
 import type { AppContext } from '../../src/app/context.js';
+import type { PackRuntimePort } from '../../src/app/services/pack/pack_runtime_ports.js';
 import { createPrismaRepositories } from '../../src/app/services/repositories/index.js';
 import { createWorkflowEngine } from '../../src/app/services/workflow/workflow_engine.js';
-import type { PackRuntimePort } from '../../src/app/services/pack/pack_runtime_ports.js';
 import type { InferenceService } from '../../src/inference/service.js';
 import type { InferenceRunResult } from '../../src/inference/types.js';
 import type { IsolatedRuntimeEnvironment } from '../helpers/runtime.js';

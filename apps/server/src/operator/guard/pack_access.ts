@@ -25,6 +25,7 @@ export const checkPackAccess = async (
 
   return {
     allowed: true,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     bindingType: binding.binding_type as PackBindingType
   }
 }
@@ -42,8 +43,10 @@ export const packAccessGuard = (
   ): void => {
     const run = async (): Promise<void> => {
       const packId = options.packIdParam
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query/param value
         ? (req.params[options.packIdParam] as string | undefined)
         : options.packIdQuery
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query/param value
           ? (req.query[options.packIdQuery] as string | undefined)
           : undefined
 

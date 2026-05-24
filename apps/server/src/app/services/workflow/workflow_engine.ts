@@ -141,6 +141,7 @@ const buildCompletedStepResults = (steps: WorkflowStepRunRecord[]): Map<string, 
   return new Map(
     steps
       .filter(step => step.status === 'completed' && step.result_json !== null)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       .map(step => [step.step_id, step.result_json as WorkflowStepResultJson])
   );
 };

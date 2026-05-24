@@ -3,6 +3,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> => {
     return false;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: boundary assertion
   const prototype = Object.getPrototypeOf(value) as object | null;
   return prototype === Object.prototype || prototype === null;
 };

@@ -99,6 +99,7 @@ const hasCapability = (
     return true;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const requiredLevel = CAPABILITY_KEY_MIN_LEVEL[capabilityKey as PluginCapabilityKey] ?? 'pack_scoped';
   const levels = ['readonly', 'pack_scoped', 'full'] as const;
   return levels.indexOf(sandboxLevel) >= levels.indexOf(requiredLevel);
@@ -364,6 +365,7 @@ const registerManifestContributions = (runtime: RegisteredServerPluginRuntime): 
   for (const route of runtime.manifest.contributions.server.api_routes) {
     host.registerPackRoute(
       (app, _context) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         const method = route.method.toLowerCase() as 'get' | 'post' | 'put' | 'delete';
         app[method](route.path, (req: Request, res: Response) => {
           if (req.params.packId !== runtime.pack_id || req.params.pluginId !== runtime.plugin_id) {
@@ -397,6 +399,7 @@ const activatePluginEntrypoint = async (
   entrypointPath: string,
   host: ServerPluginHostApi
 ): Promise<PluginActivateResult> => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: dynamic import boundary
   const module = await import(entrypointPath) as { activate?: (host: ServerPluginHostApi) => PluginActivateResult | Promise<PluginActivateResult> };
 
   if (typeof module.activate === 'function') {
@@ -467,6 +470,7 @@ export const refreshPackPluginRuntime = async (
     const artifact = await context.repos.plugin.getArtifactById(inst.artifact_id);
     if (!artifact) continue;
     artifactStore.set(inst.installation_id, artifact);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     manifests.set(inst.installation_id, artifact.manifest_json as PluginManifest);
   }
 
@@ -541,6 +545,7 @@ export const refreshPackPluginRuntime = async (
         if (typeof result === 'function') {
           runtime.deactivate = result;
         } else if (result && typeof (result).deactivate === 'function') {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
           runtime.deactivate = (result as { deactivate: () => void | Promise<void> }).deactivate;
         }
       } catch (err) {

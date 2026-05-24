@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppContext } from '../../../src/app/context.js';
-import type { PackRuntimePort } from '../../../src/app/services/pack/pack_runtime_ports.js';
 import type { WorkflowDecisionStepEngine } from '../../../src/app/runtime/workflow_decision_step.js';
 import { runWorkflowDecisionStep } from '../../../src/app/runtime/workflow_decision_step.js';
+import type { PackRuntimePort } from '../../../src/app/services/pack/pack_runtime_ports.js';
 import type { InferenceService } from '../../../src/inference/service.js';
 
 const order = vi.hoisted((): string[] => []);

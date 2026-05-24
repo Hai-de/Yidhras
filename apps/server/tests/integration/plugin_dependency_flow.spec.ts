@@ -1,12 +1,10 @@
-import { describe, expect, it } from 'vitest';
-
 import type { PluginManifest } from '@yidhras/contracts';
-
-import type { PluginInstallationUpsertInput } from '../../src/plugins/types.js';
+import { describe, expect, it } from 'vitest';
 
 import { confirmPackPluginImport, disablePackPlugin, enablePackPlugin } from '../../src/app/services/plugin/plugins.js';
 import { pluginRuntimeRegistry, refreshPackPluginRuntime } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
+import type { PluginInstallationUpsertInput } from '../../src/plugins/types.js';
 import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 
 const REMINDER_HASH = '03ee763729f5fe81f03478a3b0f487ff6c8dfc779f7e9b8d88a6d016dc17edfb';

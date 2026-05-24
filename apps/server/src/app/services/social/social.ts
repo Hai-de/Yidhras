@@ -181,6 +181,7 @@ const parseSocialFeedCursor = (value: string | undefined): SocialFeedCursor | nu
     throw new ApiError(400, 'SOCIAL_FEED_QUERY_INVALID', 'cursor payload is invalid');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse boundary
   const payload = parsed as Record<string, unknown>;
   if (payload.sort === 'latest') {
     if (typeof payload.created_at !== 'string' || typeof payload.id !== 'string' || !/^\d+$/.test(payload.created_at)) {
@@ -391,6 +392,7 @@ export const listSocialFeed = async (
       return true;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: Prisma dynamic query
     return compareSocialFeedCursorPosition(buildSocialFeedCursor(post as { id: string; created_at: bigint; noise_level: number }, sort), cursor) > 0;
   });
 
@@ -406,6 +408,7 @@ export const listSocialFeed = async (
           resource: 'social_post',
           action: 'read'
         },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
         post as unknown as Record<string, unknown>
       );
     })
@@ -415,6 +418,7 @@ export const listSocialFeed = async (
     items,
     page_info: {
       has_next_page: hasNextPage,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: Prisma dynamic query
       next_cursor: hasNextPage ? encodeSocialFeedCursor(buildSocialFeedCursor(pagePosts[pagePosts.length - 1] as { id: string; created_at: bigint; noise_level: number }, sort)) : null
     }
   };

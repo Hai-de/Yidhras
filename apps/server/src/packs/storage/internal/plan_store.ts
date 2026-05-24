@@ -28,6 +28,7 @@ export const readPersistedStoragePlan = (baseDir: string, storagePlanPath: strin
   if (content.length === 0) {
     return null;
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
   return JSON.parse(content) as PersistedStoragePlan;
 };
 

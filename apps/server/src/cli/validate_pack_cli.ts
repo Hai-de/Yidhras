@@ -77,7 +77,9 @@ const validateIncludes = (parsed: unknown, packDir: string): ValidationIssue[] =
     return issues;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
   const obj = parsed as Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
   const include = obj.include as Record<string, unknown> | undefined;
   if (!include || typeof include !== 'object' || Object.keys(include).length === 0) {
     return issues;
@@ -107,6 +109,7 @@ const validateIncludes = (parsed: unknown, packDir: string): ValidationIssue[] =
 
     const filePath = typeof includeValue === 'string'
       ? includeValue
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
       : (includeValue as Record<string, unknown>)?.file as string | undefined;
 
     if (!filePath || typeof filePath !== 'string') {
@@ -190,6 +193,7 @@ const validateConfig = (packDir: string): ValidationIssue[] => {
 
   let mergedParsed = parsed;
   if (!hasIncludeFail && typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
     const obj = parsed as Record<string, unknown>;
     if (obj.include && typeof obj.include === 'object' && Object.keys(obj.include).length > 0) {
       const { merged, diagnostics } = resolveIncludes(obj, packDir);
@@ -219,6 +223,7 @@ const validateConfig = (packDir: string): ValidationIssue[] => {
 
   // Behavior tree validation (if defined)
   if (typeof mergedParsed === 'object' && mergedParsed !== null && !Array.isArray(mergedParsed)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
     const treeIssues = validateBehaviorTrees(mergedParsed as Record<string, unknown>);
     issues.push(...treeIssues);
   }
@@ -316,6 +321,7 @@ const validateBehaviorTrees = (parsedConfig: Record<string, unknown>): Validatio
   // TreeRegistry validation ($ref, cycles, depth, Parallel, Sequence actions)
   try {
     const registry = new TreeRegistry('validation');
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
     registry.register(rawTrees as Record<string, unknown>);
     // Verify all trees can be expanded
     for (const name of registry.list()) {

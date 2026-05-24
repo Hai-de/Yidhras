@@ -7,6 +7,7 @@ export const toJsonSafe = (value: unknown): unknown => {
   }
   if (value && typeof value === 'object') {
     return Object.fromEntries(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- DB adapter row mapping
       Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, toJsonSafe(item)])
     );
   }

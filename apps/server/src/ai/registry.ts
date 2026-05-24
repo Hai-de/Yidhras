@@ -576,7 +576,7 @@ const mergeById = <T>(
     }
     merged.set(
       key,
-      deepMerge(existing, override as Record<string, unknown>) as unknown as T
+      deepMerge(existing, override as Record<string, unknown>) as unknown as T // eslint-disable-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     );
   }
   return Array.from(merged.values());
@@ -662,6 +662,7 @@ export const listAiRoutePolicies = (taskType?: string): AiRoutePolicy[] => {
     return routes;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return routes.filter(route => route.task_types.includes(taskType as AiRoutePolicy['task_types'][number]));
 };
 

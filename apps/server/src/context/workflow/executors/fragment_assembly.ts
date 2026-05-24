@@ -108,6 +108,7 @@ export const createFragmentAssemblyExecutor = (): PromptWorkflowStepExecutor => 
     }
 
     const tree: PromptTree = {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       inference_id: (context as unknown as Record<string, string>).inference_id ?? '',
       task_type: state.task_type,
       fragments_by_slot: fragmentsBySlot,

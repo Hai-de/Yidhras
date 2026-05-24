@@ -63,6 +63,7 @@ export function resolveDotPath(obj: Record<string, unknown>, path: string): unkn
       if (FORBIDDEN_PATH_SEGMENTS.has(key)) {
         return undefined;
       }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const record = current as Record<string, unknown>;
       // eslint-disable-next-line security/detect-object-injection
       const arr = record[key];
@@ -75,6 +76,7 @@ export function resolveDotPath(obj: Record<string, unknown>, path: string): unkn
       if (FORBIDDEN_PATH_SEGMENTS.has(segment)) {
         return undefined;
       }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const record = current as Record<string, unknown>;
       // eslint-disable-next-line security/detect-object-injection
       current = record[segment];
@@ -109,6 +111,7 @@ export function resolveWildcardPaths(obj: Record<string, unknown>, path: string)
       if (typeof current !== 'object' || Array.isArray(current)) {
         return [];
       }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const record = current as Record<string, unknown>;
       const results: unknown[] = [];
       for (const key of Object.keys(record)) {
@@ -125,6 +128,7 @@ export function resolveWildcardPaths(obj: Record<string, unknown>, path: string)
       const key = arrayMatch[1];
       if (FORBIDDEN_PATH_SEGMENTS.has(key)) return [];
       const index = parseInt(arrayMatch[2], 10);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const record = current as Record<string, unknown>;
       // eslint-disable-next-line security/detect-object-injection
       const arr = record[key];
@@ -135,6 +139,7 @@ export function resolveWildcardPaths(obj: Record<string, unknown>, path: string)
 
     // 普通 key
     if (FORBIDDEN_PATH_SEGMENTS.has(segment)) return [];
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const record = current as Record<string, unknown>;
     // eslint-disable-next-line security/detect-object-injection
     return walk(record[segment], segIndex + 1);
@@ -317,6 +322,7 @@ export function evaluateLogicMatch(
     };
 
     // YAML 配置加载后 expression 为 Record<string, unknown>，内部 cast 到 SlotLogicExpr
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const expr = condition.expression as unknown as SlotLogicExpr;
     const active = evaluateSlotLogicExpr(expr, mergedVars, controller.signal);
     return {

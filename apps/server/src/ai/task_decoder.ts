@@ -107,6 +107,7 @@ const validateSchemaNode = (value: unknown, schema: Record<string, unknown>, pat
 
   if (schema.type === 'array' && Array.isArray(value) && isRecord(schema.items)) {
     value.forEach((item, index) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       issues.push(...validateSchemaNode(item, schema.items as Record<string, unknown>, `${path}[${String(index)}]`));
     });
   }
@@ -192,6 +193,7 @@ export const decodeAiTaskOutput = <TOutput = unknown>(
           task_type: response.task_type
         });
       }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       return response.output.embedding as TOutput;
     }
     case 'free_text': {
@@ -200,6 +202,7 @@ export const decodeAiTaskOutput = <TOutput = unknown>(
           task_type: response.task_type
         });
       }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       return response.output.text as TOutput;
     }
     case 'tool_call': {
@@ -208,11 +211,13 @@ export const decodeAiTaskOutput = <TOutput = unknown>(
           task_type: response.task_type
         });
       }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       return response.output.tool_calls as TOutput;
     }
     case 'json_object':
     case 'json_schema':
     default:
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       return normalizeStructuredObject(response, taskConfig) as TOutput;
   }
 };

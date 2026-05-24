@@ -1,6 +1,6 @@
+import { AccessLevel, PermissionContext } from '../../src/permission/types.js';
 import { renderNarrativeTemplate } from '../../src/template_engine/frontends/narrative/resolver.js';
 import { createPromptVariableContext, createPromptVariableLayer, normalizePromptVariableRecord } from '../../src/template_engine/frontends/narrative/variable_context.js';
-import { AccessLevel, PermissionContext } from '../../src/permission/types.js';
 
 const civilian: PermissionContext = {
   agent_id: 'agent-001',

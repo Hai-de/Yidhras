@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+
 import { tickAction, tickCondition, tickLLMDecision } from '../../src/inference/providers/behavior_tree/nodes/leaves.js';
-import type { BTEvalContext, BTActionDef, BTLLMDecisionDef } from '../../src/inference/providers/behavior_tree/types.js';
+import type { BTActionDef, BTEvalContext, BTLLMDecisionDef } from '../../src/inference/providers/behavior_tree/types.js';
 import type { InferenceContext } from '../../src/inference/types.js';
 
 const makeCtx = (): BTEvalContext => ({

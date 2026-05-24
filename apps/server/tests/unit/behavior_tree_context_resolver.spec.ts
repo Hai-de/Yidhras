@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+
 import { evaluateCondition, resolveContextValue } from '../../src/inference/providers/behavior_tree/context_resolver.js';
-import type { BTConditionExpr, BTCompoundCondition, BTEvalContext } from '../../src/inference/providers/behavior_tree/types.js';
+import type { BTCompoundCondition, BTConditionExpr, BTEvalContext } from '../../src/inference/providers/behavior_tree/types.js';
 import type { InferenceContext, InferencePackLatestEventSnapshot, InferencePackStateSnapshot } from '../../src/inference/types.js';
 
 const makePackState = (overrides: Partial<InferencePackStateSnapshot> = {}): InferencePackStateSnapshot => ({

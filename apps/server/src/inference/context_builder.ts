@@ -88,6 +88,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 const toBindingRef = (binding: BindingRecord): InferenceBindingRef => {
   return {
     binding_id: binding.id,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     role: binding.role as InferenceBindingRef['role'],
     status: binding.status,
     agent_id: binding.agent_id,
@@ -100,6 +101,7 @@ const selectStrategy = (input: InferenceRequestInput): InferenceStrategy => {
     return 'mock';
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   if (!SUPPORTED_STRATEGIES.includes(input.strategy as InferenceStrategy)) {
     throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'strategy is not supported', {
       allowed_strategies: SUPPORTED_STRATEGIES,
@@ -107,6 +109,7 @@ const selectStrategy = (input: InferenceRequestInput): InferenceStrategy => {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return input.strategy as InferenceStrategy;
 };
 
@@ -119,6 +122,7 @@ const normalizeAttributes = (value: unknown): Record<string, unknown> => {
     throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'attributes must be an object');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return value as Record<string, unknown>;
 };
 
@@ -128,6 +132,7 @@ const createAccessPolicyService = (context: Ctx): AccessPolicyService => {
 
 // eslint-disable-next-line @typescript-eslint/require-await
 const listActiveBindingsForIdentity = async (context: Ctx, identityId: string): Promise<BindingRecord[]> => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return context.repos.identityOperator.listIdentityBindings({
     where: {
       identity_id: identityId,
@@ -168,9 +173,11 @@ const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?:
   if (input.agent_id) {
     const agentContext = await getAgentContextSnapshot(context, input.agent_id, packId);
     return {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       identity: agentContext.identity as IdentityContext,
       actor_ref: {
         identity_id: agentContext.identity.id,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         identity_type: agentContext.identity.type as IdentityContext['type'],
         role: 'active',
         agent_id: input.agent_id,
@@ -264,11 +271,12 @@ const resolveActor = async (context: Ctx, input: InferenceRequestInput, packId?:
     const identityContext: IdentityContext = binding
       ? {
           id: binding.identity?.id ?? '',
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
           type: (binding.identity?.type as IdentityContext['type']) ?? 'noise',
           name: binding.identity?.name ?? '',
           provider: binding.identity?.provider ?? undefined,
           status: binding.identity?.status ?? undefined,
-          claims: binding.identity?.claims as Record<string, unknown> | null ?? null
+          claims: binding.identity?.claims as Record<string, unknown> | null ?? null // eslint-disable-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse boundary
         }
       : {
           id: `${packId}:identity:${input.actor_entity_id}`,
@@ -462,6 +470,7 @@ const parsePackStateRecord = (value: unknown): InferencePackStateRecord => {
     return {};
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return value as InferencePackStateRecord;
 };
 
@@ -496,6 +505,7 @@ const fetchRecentEvents = async (
         try {
           const parsed = JSON.parse(row.impact_data) as unknown;
           if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse boundary
             const st = (parsed as Record<string, unknown>).semantic_type;
             return typeof st === 'string' ? st : null;
           }
@@ -566,6 +576,7 @@ const buildPackStateSnapshot = async (
                 try {
                   const parsed = JSON.parse(latestEventRecord.impact_data) as unknown;
                   if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse boundary
                     const semanticType = (parsed as Record<string, unknown>).semantic_type;
                     return typeof semanticType === 'string' ? semanticType : null;
                   }
@@ -695,6 +706,7 @@ const buildInferenceVariableContext = (input: {
       const isRequest = namespace === 'request';
 
       return createPromptVariableLayer({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         namespace: namespace as PromptVariableNamespace,
         values: normalizePromptVariableRecord(values),
         alias_values: normalizePromptVariableRecord(aliasValues),
@@ -707,7 +719,7 @@ const buildInferenceVariableContext = (input: {
     })
     .filter((layer): layer is NonNullable<typeof layer> => layer !== null);
 
-  const previousAgentOutputValues = runtimeObjects.previous_agent_output as Record<string, unknown>;
+  const previousAgentOutputValues = runtimeObjects.previous_agent_output as Record<string, unknown>; // eslint-disable-line @typescript-eslint/no-unsafe-type-assertion -- context data assembly
   if (Object.keys(previousAgentOutputValues).length > 0) {
     layers.push(createPromptVariableLayer({
       namespace: 'previous_agent_output',
@@ -800,11 +812,13 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         attributes,
         config
       );
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const contextAssembly = context.contextAssembly ?? createContextAssemblyPort(context as unknown as import('../app/context.js').AppContext);
       if (!contextAssembly.buildContextRun) {
         throw new ApiError(500, 'CONTEXT_ASSEMBLY_MISSING', 'Context assembly port is not configured with buildContextRun');
       }
       const contextResult = await contextAssembly.buildContextRun({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         actor_ref: resolvedActor.actor_ref as unknown as Record<string, unknown>,
         identity: resolvedActor.identity,
         resolved_agent_id: resolvedActor.resolved_agent_id,
@@ -827,6 +841,7 @@ export const createPackScopedInferenceContextBuilder = (): PackScopedInferenceCo
         currentTick,
         config
       });
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const rawBehaviorTrees = (pack as unknown as { behavior_trees?: unknown }).behavior_trees;
 
       return {

@@ -54,6 +54,7 @@ const parseArgs = (argv: string[]): ParsedArgs => {
         parsed.limit = parseInt(argv[++i], 10);
         break;
       default:
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         if (COMMANDS.includes(arg as (typeof COMMANDS)[number])) {
           parsed.command = arg;
         } else if (!arg.startsWith('-') && !parsed.command) {

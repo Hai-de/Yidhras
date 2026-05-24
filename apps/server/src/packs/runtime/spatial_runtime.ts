@@ -82,7 +82,9 @@ const bfsDistance = (adjacency: Map<string, Set<string>>, from: string, to: stri
 };
 
 const parseSpatialState = (stateJson: unknown): SpatialState | null => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
   if (stateJson !== null && typeof stateJson === 'object' && 'location' in (stateJson as Record<string, unknown>)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
     const location = (stateJson as Record<string, unknown>).location;
     if (typeof location === 'string') {
       return { location };

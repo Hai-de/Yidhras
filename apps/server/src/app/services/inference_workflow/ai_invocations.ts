@@ -167,6 +167,7 @@ const parseAiInvocationCursor = (value: string | undefined): ParsedAiInvocationC
     throw new ApiError(400, 'AI_INVOCATION_QUERY_INVALID', 'cursor payload is invalid');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse boundary
   const candidate = parsed as Record<string, unknown>;
   if (typeof candidate.created_at !== 'string' || !/^\d+$/.test(candidate.created_at) || typeof candidate.id !== 'string' || candidate.id.length === 0) {
     throw new ApiError(400, 'AI_INVOCATION_QUERY_INVALID', 'cursor payload is invalid');

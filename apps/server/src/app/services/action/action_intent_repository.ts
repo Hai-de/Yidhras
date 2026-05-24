@@ -320,6 +320,7 @@ export const getActionIntentForDispatchReflection = async (
     actor_agent_id: actorAgentId,
     target_ref: isRecord(intent.target_ref) ? intent.target_ref : null,
     semantic_intent_kind: decision && typeof decision.payload === 'object' && decision.payload !== null && !Array.isArray(decision.payload) && typeof (decision.payload as Record<string, unknown>).semantic_intent_kind === 'string'
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
       ? ((decision.payload as Record<string, unknown>).semantic_intent_kind as string)
       : null,
     event_summaries: events.map(event => ({ id: event.id, type: event.type, title: event.title }))

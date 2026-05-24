@@ -100,6 +100,7 @@ export const createToolLoopRunner = (): ToolLoopRunner => {
       const model = input.request.model_hint ?? 'unknown';
 
       // token 预算：优先使用显式配置，否则取模型 max_context_tokens * 0.85
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const tc = input.task_config as unknown as { model_entry?: { capabilities?: { max_context_tokens?: number } } } | undefined;
       const modelMaxTokens = tc?.model_entry?.capabilities?.max_context_tokens ?? 131072;
       const maxTotalTokens = config.max_total_tokens ?? Math.floor(modelMaxTokens * TOKEN_BUDGET_RATIO);

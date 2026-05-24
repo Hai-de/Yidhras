@@ -44,6 +44,7 @@ function walkFragmentChildren(
       const block = child;
       visitor(block, [...ancestors, block]);
       if (block.kind === 'conditional' || block.kind === 'loop') {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         const nested = (block.content as { children?: PromptBlock[] }).children;
         if (nested) {
           for (const nestedBlock of nested) {
@@ -98,6 +99,7 @@ async function walkFragmentChildrenAsync(
       const block = child;
       await visitor(block, [...ancestors, block]);
       if (block.kind === 'conditional' || block.kind === 'loop') {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         const nested = (block.content as { children?: PromptBlock[] }).children;
         if (nested) {
           for (const nestedBlock of nested) {

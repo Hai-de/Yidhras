@@ -21,6 +21,7 @@ export const SYSTEM_IDENTITY: IdentityContext = {
 
 const parseHeaderIdentity = (value: string): IdentityContext | null => {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
     const parsed = JSON.parse(value) as Partial<IdentityContext>;
     if (!parsed.id || !parsed.type) {
       return null;

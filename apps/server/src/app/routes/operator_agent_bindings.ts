@@ -38,6 +38,7 @@ export const registerAgentBindingRoutes = (
 
       const binding = await createAgentBinding(
         context,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
         req.params.agentId as string,
         body.operator_id || operator.identity_id,
         body.role,
@@ -60,6 +61,7 @@ export const registerAgentBindingRoutes = (
 
       const result = await unbindAgent(
         context,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
         req.params.agentId as string,
         operator.identity_id,
         operator.id,
@@ -74,6 +76,7 @@ export const registerAgentBindingRoutes = (
   app.get(
     '/api/agents/:agentId/operators',
     deps.asyncHandler(async (req, res) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const operators = await listAgentOperators(context, req.params.agentId as string)
       jsonOk(res, toJsonSafe(operators))
     })

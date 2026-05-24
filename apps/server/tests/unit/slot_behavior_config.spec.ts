@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { validateSlotBehaviorConfig } from '../../src/inference/slot_behavior.js';
 import type { SlotBehaviorConfig } from '../../src/config/domains/slot_behavior.js';
+import { validateSlotBehaviorConfig } from '../../src/inference/slot_behavior.js';
 
 describe('validateSlotBehaviorConfig', () => {
   it('returns empty array for empty config', () => {

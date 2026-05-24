@@ -1,7 +1,7 @@
 import type { DataCleanerInput, DataCleanerOutput } from '@yidhras/contracts';
 
-import type { ServerPluginHostApi } from '../../../../src/plugins/runtime.js';
 import type { DataCleaner } from '../../../../src/plugins/extensions/data_cleaner_registry.js';
+import type { ServerPluginHostApi } from '../../../../src/plugins/runtime.js';
 
 const DEFAULT_MAX_PATTERN_LENGTH = 4096;
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -32,11 +32,11 @@ const cleaner: DataCleaner = {
 
   async clean(input: DataCleanerInput): Promise<DataCleanerOutput> {
     const { text, options } = input;
-    const pattern = (options?.pattern as string) ?? '.*';
-    const replacement = (options?.replacement as string) ?? '';
-    const flags = (options?.flags as string) ?? 'g';
-    const maxPatternLength = (options?.max_pattern_length as number) ?? DEFAULT_MAX_PATTERN_LENGTH;
-    const timeoutMs = (options?.timeout_ms as number) ?? DEFAULT_TIMEOUT_MS;
+    const pattern = typeof options?.pattern === 'string' && options.pattern.length > 0 ? options.pattern : '.*';
+    const replacement = typeof options?.replacement === 'string' ? options.replacement : '';
+    const flags = typeof options?.flags === 'string' ? options.flags : 'g';
+    const maxPatternLength = typeof options?.max_pattern_length === 'number' ? options.max_pattern_length : DEFAULT_MAX_PATTERN_LENGTH;
+    const timeoutMs = typeof options?.timeout_ms === 'number' ? options.timeout_ms : DEFAULT_TIMEOUT_MS;
 
     if (pattern.length > maxPatternLength) {
       throw new Error(
@@ -56,7 +56,7 @@ const cleaner: DataCleaner = {
       );
     }
 
-    const allowNestedQuantifiers = (options?.allow_nested_quantifiers as boolean) ?? false;
+    const allowNestedQuantifiers = options?.allow_nested_quantifiers === true;
     if (allowNestedQuantifiers) {
       // Override the nested quantifier block — caller accepts the risk
       // The timeout below is the last line of defense
@@ -67,7 +67,7 @@ const cleaner: DataCleaner = {
     const result = await enforceTimeout(
       (async () => {
         let matchCount = 0;
-        const cleaned = text.replace(regex, (...args) => {
+        const cleaned = text.replace(regex, (..._args) => {
           matchCount++;
           if (matchCount > DEFAULT_MAX_MATCH_COUNT) {
             throw new Error(
