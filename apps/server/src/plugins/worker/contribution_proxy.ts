@@ -1,3 +1,4 @@
+import type { DataCleaner } from '@yidhras/contracts';
 import {
   dataCleanerInputSchema,
   dataCleanerOutputSchema,
@@ -6,7 +7,6 @@ import {
   slotTransformContextSchema,
   slotTransformResultSchema
 } from '@yidhras/contracts';
-import type { DataCleaner } from '@yidhras/contracts';
 import { z } from 'zod';
 
 import type {
@@ -22,7 +22,7 @@ import type { ContextSourceAdapter, ContextSourceAdapterBuildResult, ContextSour
 import type { ContextNode } from '../../context/types.js';
 import type { PromptWorkflowStepExecutor } from '../../context/workflow/registry.js';
 import type { PromptWorkflowState, PromptWorkflowStepSpec } from '../../context/workflow/types.js';
-import type { PerceptionRuleInput, PerceptionRuleOutput, PerceptionResolver } from '../../perception/types.js';
+import type { PerceptionResolver,PerceptionRuleInput, PerceptionRuleOutput } from '../../perception/types.js';
 import type { SlotConditionEvaluator } from '../extensions/slot_condition_registry.js';
 import type { SlotContentTransformer } from '../extensions/slot_content_transformer.js';
 import type {
@@ -42,13 +42,14 @@ import type { PluginWorkerClient } from './PluginWorkerClient.js';
 
 const recordSchema = z.record(z.string(), z.unknown());
 
-const jsonClone = <T>(value: T): unknown => {
-  return JSON.parse(JSON.stringify(value, (_key, current) => {
+const jsonClone = (value: unknown): unknown => {
+  const bigintReplacer = (_key: string, current: unknown): unknown => {
     if (typeof current === 'bigint') {
       return current.toString();
     }
     return current;
-  }));
+  };
+  return JSON.parse(JSON.stringify(value, bigintReplacer));
 };
 
 const invokeWorker = async <T>(input: {
@@ -65,6 +66,7 @@ const invokeWorker = async <T>(input: {
   return input.outputSchema.parse(result);
 };
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion */
 const contextNodeSchema: z.ZodType<ContextNode> = z.object({
   id: z.string().trim().min(1),
   node_type: z.string().trim().min(1),
@@ -89,16 +91,20 @@ const contextNodeSchema: z.ZodType<ContextNode> = z.object({
   placement_policy: recordSchema,
   provenance: recordSchema,
   metadata: recordSchema.optional()
-}).passthrough() as unknown as z.ZodType<ContextNode>;
+}).loose() as unknown as z.ZodType<ContextNode>;
+/* eslint-enable @typescript-eslint/no-unsafe-type-assertion */
 
+ 
 const contextSourceBuildResultSchema: z.ZodType<ContextNode[] | ContextSourceAdapterBuildResult> = z.union([
   z.array(contextNodeSchema),
   z.object({
     nodes: z.array(contextNodeSchema),
     diagnostics: recordSchema.nullable().optional()
-  }).passthrough() as z.ZodType<ContextSourceAdapterBuildResult>
+  }).loose() as z.ZodType<ContextSourceAdapterBuildResult>
 ]);
+ 
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion */
 const promptWorkflowStateSchema: z.ZodType<PromptWorkflowState> = z.object({
   pack_id: z.string(),
   profile: recordSchema,
@@ -111,17 +117,21 @@ const promptWorkflowStateSchema: z.ZodType<PromptWorkflowState> = z.object({
     profile_version: z.string(),
     selected_step_keys: z.array(z.string()),
     step_traces: z.array(z.unknown())
-  }).passthrough()
-}).passthrough() as unknown as z.ZodType<PromptWorkflowState>;
+  }).loose()
+}).loose() as unknown as z.ZodType<PromptWorkflowState>;
+/* eslint-enable @typescript-eslint/no-unsafe-type-assertion */
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion */
 const stepContributionSchema: z.ZodType<StepContribution> = z.object({
   delta_operations: z.array(z.unknown()),
   emitted_events: z.array(z.unknown()),
   observability: z.array(z.unknown())
 }) as z.ZodType<StepContribution>;
+/* eslint-enable @typescript-eslint/no-unsafe-type-assertion */
 
 const nullableStepContributionSchema = stepContributionSchema.nullable();
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion */
 const ruleContributionSchema: z.ZodType<RuleContribution> = z.object({
   rule_id: z.string(),
   mutations: z.array(z.unknown()),
@@ -132,14 +142,17 @@ const ruleContributionSchema: z.ZodType<RuleContribution> = z.object({
     rendered_template_count: z.number().optional()
   }).optional()
 }) as z.ZodType<RuleContribution>;
+/* eslint-enable @typescript-eslint/no-unsafe-type-assertion */
 
 const nullableRuleContributionSchema = ruleContributionSchema.nullable();
 
+/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion */
 const queryContributionSchema: z.ZodType<QueryContribution> = z.object({
   data: z.unknown(),
   warnings: z.array(z.unknown()).optional(),
   next_cursor: z.string().nullable().optional()
 }) as z.ZodType<QueryContribution>;
+/* eslint-enable @typescript-eslint/no-unsafe-type-assertion */
 
 const nullableQueryContributionSchema = queryContributionSchema.nullable();
 

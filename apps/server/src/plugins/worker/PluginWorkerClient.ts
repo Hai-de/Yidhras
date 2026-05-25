@@ -1,25 +1,49 @@
 import { Worker } from 'node:worker_threads';
 
 import type { AppContext } from '../../app/context.js';
-import { createLogger } from '../../utils/logger.js';
 import { getRuntimeConfig } from '../../config/runtime_config.js';
 import {
   recordPluginWorkerCrash,
   recordPluginWorkerInvocationCompleted
 } from '../../observability/metrics.js';
+import { createLogger } from '../../utils/logger.js';
 import type { ContributionDescriptor } from './contribution_descriptors.js';
 import { PluginWorkerCrashError, PluginWorkerTimeoutError } from './errors.js';
 import { handlePluginWorkerHostCall } from './host_call_handler.js';
 import {
-  parseWorkerToMainMessage,
-  serializePluginError,
   type MainToWorkerMessage,
+  parseWorkerToMainMessage,
   type PluginWorkerActivationInput,
+  serializePluginError,
   type WorkerToMainMessage
 } from './protocol.js';
 import { resolvePluginWorkerEntry } from './worker_entry_resolver.js';
 
 const logger = createLogger('plugin-worker-client');
+
+const extractErrorMessage = (value: unknown): string => {
+  if (typeof value === 'object' && value !== null && 'message' in value) {
+    const msg = (value as Record<string, unknown>).message;
+    if (typeof msg === 'string') return msg;
+  }
+  return 'Plugin worker request failed';
+};
+
+const extractErrorName = (value: unknown): string => {
+  if (typeof value === 'object' && value !== null && 'name' in value) {
+    const name = (value as Record<string, unknown>).name;
+    if (typeof name === 'string') return name;
+  }
+  return 'PluginWorkerRequestError';
+};
+
+const extractErrorStack = (value: unknown): string | undefined => {
+  if (typeof value === 'object' && value !== null && 'stack' in value) {
+    const stack = (value as Record<string, unknown>).stack;
+    if (typeof stack === 'string') return stack;
+  }
+  return undefined;
+};
 
 type PendingKind = 'activation' | 'invoke' | 'deactivate' | 'host_result';
 
@@ -78,8 +102,8 @@ export class PluginWorkerClient {
       ...(entry.execArgv ? { execArgv: entry.execArgv } : {})
     });
 
-    this.worker.on('message', raw => this.handleMessage(raw));
-    this.worker.on('error', error => this.handleCrash(error));
+    this.worker.on('message', raw => { this.handleMessage(raw); });
+    this.worker.on('error', error => { this.handleCrash(error); });
     this.worker.on('exit', code => {
       this.alive = false;
       if (code !== 0) {
@@ -98,6 +122,7 @@ export class PluginWorkerClient {
 
   public activate(input: PluginWorkerActivationInput): Promise<PluginWorkerRuntimeSnapshot> {
     const timeoutMs = getRuntimeConfig().plugins.isolation.activation_timeout_ms;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     return this.request('activation', timeoutMs, {
       type: 'activate',
       requestId: this.nextRequestId('activate'),
@@ -149,12 +174,12 @@ export class PluginWorkerClient {
       });
   }
 
-  public deactivate(): Promise<void> {
+  public async deactivate(): Promise<void> {
     const timeoutMs = getRuntimeConfig().plugins.isolation.deactivate_timeout_ms;
-    return this.request('deactivate', timeoutMs, {
+    await this.request('deactivate', timeoutMs, {
       type: 'deactivate',
       requestId: this.nextRequestId('deactivate')
-    }) as Promise<void>;
+    });
   }
 
   public async terminate(reason: string): Promise<void> {
@@ -239,10 +264,9 @@ export class PluginWorkerClient {
       pending.resolve(value);
       return;
     }
-    const error = value as { message?: string; name?: string; stack?: string };
-    const next = new Error(error.message ?? 'Plugin worker request failed');
-    next.name = error.name ?? 'PluginWorkerRequestError';
-    next.stack = error.stack;
+    const next = new Error(extractErrorMessage(value));
+    next.name = extractErrorName(value);
+    next.stack = extractErrorStack(value);
     pending.reject(next);
   }
 

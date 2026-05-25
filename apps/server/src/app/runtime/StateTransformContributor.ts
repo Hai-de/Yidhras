@@ -71,8 +71,8 @@ export const StateTransformContributor: StepContributor = {
       packId: context.pack_id,
       actorStates,
       transformDefs,
-      logDebug: (message, meta) => logger.debug(message, meta),
-      logWarn: (message, meta) => logger.warn(message, meta)
+      logDebug: (message, meta) => { logger.debug(message, meta); },
+      logWarn: (message, meta) => { logger.warn(message, meta); }
     });
 
     if (deltaOps.length === 0) {

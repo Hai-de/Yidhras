@@ -32,6 +32,7 @@ export class ValueDynamicsManager {
         last_updated_tick: currentTick
       });
     }
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- getOrCreate guarantees existence
     return this.states.get(nodeId)!;
   }
 

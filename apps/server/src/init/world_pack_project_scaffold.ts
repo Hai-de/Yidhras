@@ -252,6 +252,7 @@ export const scaffoldWorldPackProject = (
   const repository = options.repository?.trim() || 'https://example.com/repository/world-pack';
   const status = options.status?.trim() || 'draft';
   const tags = (options.tags?.map(item => item.trim()).filter(Boolean) ?? []).length > 0
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- length check above guarantees non-empty
     ? options.tags!.map(item => item.trim()).filter(Boolean)
     : ['custom-pack'];
   const publishedAt = formatDate(new Date());
@@ -413,7 +414,7 @@ export const scaffoldWorldPackProject = (
 
 export const logWorldPackProjectScaffoldResult = (
   result: WorldPackProjectScaffoldResult,
-  logger: (message: string) => void = (...args) => log.info(...args)
+  logger: (message: string) => void = (...args) => { log.info(...args); }
 ): void => {
   const mode = result.dryRun ? 'dry-run' : 'write';
   logger(

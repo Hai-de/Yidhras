@@ -416,13 +416,13 @@ export const parse = (
       if (token.type === 'VAR_OPEN') {
         advance();
         const parts: string[] = [];
-        while (hasMore() && (peek()!.type !== 'VAR_CLOSE' && (peek()!.type !== 'MACRO_CLOSE' && peek()!.type !== 'VAR_CLOSE'))) {
+        while (hasMore() && (peek()?.type !== 'VAR_CLOSE' && (peek()?.type !== 'MACRO_CLOSE' && peek()?.type !== 'VAR_CLOSE'))) {
           const inner = advance();
           if (inner.type === 'TEXT' && inner.content) {
             parts.push(inner.content);
           }
         }
-        if (hasMore() && (peek()!.type === 'VAR_CLOSE' || (peek()!.type === 'MACRO_CLOSE' || peek()!.type === 'VAR_CLOSE'))) {
+        if (hasMore() && (peek()?.type === 'VAR_CLOSE' || (peek()?.type === 'MACRO_CLOSE' || peek()?.type === 'VAR_CLOSE'))) {
           advance();
         }
         const expression = parts.join('');
@@ -447,13 +447,13 @@ export const parse = (
       if (token.type === 'MACRO_OPEN') {
         advance();
         const parts: string[] = [];
-        while (hasMore() && (peek()!.type !== 'MACRO_CLOSE' && peek()!.type !== 'VAR_CLOSE')) {
+        while (hasMore() && (peek()?.type !== 'MACRO_CLOSE' && peek()?.type !== 'VAR_CLOSE')) {
           const inner = advance();
           if (inner.type === 'TEXT' && inner.content) {
             parts.push(inner.content);
           }
         }
-        if (hasMore() && (peek()!.type === 'MACRO_CLOSE' || peek()!.type === 'VAR_CLOSE')) {
+        if (hasMore() && (peek()?.type === 'MACRO_CLOSE' || peek()?.type === 'VAR_CLOSE')) {
           advance();
         }
         const expression = parts.join('');
@@ -487,13 +487,13 @@ export const parse = (
 
         advance();
         const headerParts: string[] = [];
-        while (hasMore() && (peek()!.type !== 'MACRO_CLOSE' && peek()!.type !== 'VAR_CLOSE')) {
+        while (hasMore() && (peek()?.type !== 'MACRO_CLOSE' && peek()?.type !== 'VAR_CLOSE')) {
           const inner = advance();
           if (inner.type === 'TEXT' && inner.content) {
             headerParts.push(inner.content);
           }
         }
-        if (hasMore() && (peek()!.type === 'MACRO_CLOSE' || peek()!.type === 'VAR_CLOSE')) {
+        if (hasMore() && (peek()?.type === 'MACRO_CLOSE' || peek()?.type === 'VAR_CLOSE')) {
           advance();
         }
         const header = headerParts.join('').trim();
@@ -528,16 +528,16 @@ export const parse = (
           }
         }
 
-        if (hasMore() && peek()!.type === 'BLOCK_CLOSE') {
+        if (hasMore() && peek()?.type === 'BLOCK_CLOSE') {
           advance();
           const closeParts: string[] = [];
-          while (hasMore() && (peek()!.type !== 'MACRO_CLOSE' && peek()!.type !== 'VAR_CLOSE')) {
+          while (hasMore() && (peek()?.type !== 'MACRO_CLOSE' && peek()?.type !== 'VAR_CLOSE')) {
             const inner = advance();
             if (inner.type === 'TEXT' && inner.content) {
               closeParts.push(inner.content);
             }
           }
-          if (hasMore() && (peek()!.type === 'MACRO_CLOSE' || peek()!.type === 'VAR_CLOSE')) {
+          if (hasMore() && (peek()?.type === 'MACRO_CLOSE' || peek()?.type === 'VAR_CLOSE')) {
             advance();
           }
           const closeKeyword = closeParts.join('').trim();
@@ -568,10 +568,10 @@ export const parse = (
 
       if (token.type === 'COMMENT_OPEN') {
         advance();
-        while (hasMore() && peek()!.type !== 'COMMENT_CLOSE') {
+        while (hasMore() && peek()?.type !== 'COMMENT_CLOSE') {
           advance();
         }
-        if (hasMore() && peek()!.type === 'COMMENT_CLOSE') {
+        if (hasMore() && peek()?.type === 'COMMENT_CLOSE') {
           advance();
         }
         continue;

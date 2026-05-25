@@ -149,7 +149,7 @@ function extractNonConversationSlots(bundle: PromptBundleV2): SlotEntry[] {
     if (!isRecord(config)) {
       continue;
     }
-    if (config.enabled === false) {
+    if (!config.enabled) {
       continue;
     }
     // eslint-disable-next-line security/detect-object-injection

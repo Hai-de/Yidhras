@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { confirmPackPluginImport, disablePackPlugin, enablePackPlugin } from '../../src/app/services/plugin/plugins.js';
-import { refreshPackPluginRuntime, pluginRuntimeRegistry } from '../../src/plugins/runtime.js';
 import { PLUGIN_CAPABILITY_KEY } from '../../src/plugins/capability_keys.js';
+import { pluginRuntimeRegistry,refreshPackPluginRuntime } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
 import { PluginWorkerTimeoutError } from '../../src/plugins/worker/errors.js';
 import { pluginWorkerManager } from '../../src/plugins/worker/PluginWorkerManager.js';

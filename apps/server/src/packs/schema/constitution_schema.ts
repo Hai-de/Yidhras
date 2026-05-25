@@ -197,7 +197,7 @@ const timeUnitSchema = z
   .superRefine((value, ctx) => {
     if (value.ratio === undefined && value.irregular_ratios === undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'time unit requires ratio or irregular_ratios'
       });
     }
@@ -238,7 +238,7 @@ export const simulationTimeConfigSchema = z
   })
   .strict();
 
-const metadataLinkSchema = z.union([z.string().url(), nonEmptyStringSchema]);
+const metadataLinkSchema = z.union([z.url(), nonEmptyStringSchema]);
 
 const metadataAuthorSchema = z
   .object({
@@ -281,7 +281,7 @@ const metadataSchema = z
     published_at: nonEmptyStringSchema.optional(),
     status: nonEmptyStringSchema.optional()
   })
-  .passthrough();
+  .loose();
 
 const constitutionSchema = z
   .object({
@@ -352,7 +352,7 @@ const validateWorkflowDag = (workflowName: string, steps: Array<z.infer<typeof w
   const stepIdSet = new Set(stepIds);
   if (stepIdSet.size !== stepIds.length) {
     ctx.addIssue({
-      code: z.ZodIssueCode.custom,
+      code: "custom",
       message: `workflow "${workflowName}" step ids must be unique`,
       path: [workflowName, 'steps']
     });
@@ -367,7 +367,7 @@ const validateWorkflowDag = (workflowName: string, steps: Array<z.infer<typeof w
     for (const dependencyStepId of dependsOn) {
       if (!stepIdSet.has(dependencyStepId)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: `workflow "${workflowName}" step "${step.id}" depends_on references unknown step "${dependencyStepId}"`,
           path: [workflowName, 'steps', index, 'depends_on']
         });
@@ -378,7 +378,7 @@ const validateWorkflowDag = (workflowName: string, steps: Array<z.infer<typeof w
       const inputIndex = declaredIndexByStepId.get(inputStepId);
       if (inputIndex === undefined) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: `workflow "${workflowName}" step "${step.id}" input_from references unknown step "${inputStepId}"`,
           path: [workflowName, 'steps', index, 'input_from']
         });
@@ -386,7 +386,7 @@ const validateWorkflowDag = (workflowName: string, steps: Array<z.infer<typeof w
       }
       if (inputIndex >= index) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: `workflow "${workflowName}" step "${step.id}" input_from must reference an earlier step; "${inputStepId}" is not earlier in declaration order`,
           path: [workflowName, 'steps', index, 'input_from']
         });
@@ -409,7 +409,7 @@ const validateWorkflowDag = (workflowName: string, steps: Array<z.infer<typeof w
     for (const inputStepId of step.input_from ?? []) {
       if (stepIdSet.has(inputStepId) && !dependencyClosure.has(inputStepId)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: `workflow "${workflowName}" step "${step.id}" input_from must reference a dependency predecessor; "${inputStepId}" is not in depends_on closure`,
           path: [workflowName, 'steps', index, 'input_from']
         });
@@ -433,7 +433,7 @@ const validateWorkflowDag = (workflowName: string, steps: Array<z.infer<typeof w
 
   for (const stepId of stepIds) {
     if (!visit(stepId)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `workflow "${workflowName}" depends_on graph must be acyclic`, path: [workflowName, 'steps'] });
+      ctx.addIssue({ code: "custom", message: `workflow "${workflowName}" depends_on graph must be acyclic`, path: [workflowName, 'steps'] });
       break;
     }
   }
@@ -523,7 +523,7 @@ const entitiesSchema = z
     const uniqueIds = new Set(allEntityIds);
     if (uniqueIds.size !== allEntityIds.length) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'entity ids must be unique across all entity groups'
       });
     }
@@ -570,20 +570,20 @@ const targetSelectorSchema = z
     ) {
       if (!value.entity_id) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: `target selector kind=${value.kind} requires entity_id`
         });
       }
     }
     if (value.kind === 'subject_entity' && !value.entity_id && !value.identity_id) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'target selector kind=subject_entity requires entity_id or identity_id'
       });
     }
     if (value.kind === 'entity_type_is' && !value.entity_type) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'target selector kind=entity_type_is requires entity_type'
       });
     }
@@ -624,7 +624,7 @@ const objectiveEnforcementWhenSchema = z.record(z.string(), worldPackValueSchema
     }
     if (!value.startsWith('invoke.')) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: `invocation_type '${value}' must use 'invoke.' prefix for capability-key matching in the enforcement pipeline. Expected format: 'invoke.${value}'. Kernel actions (${KERNEL_INTENT_TYPES.join(', ')}) are exempt.`
       });
     }
@@ -643,7 +643,7 @@ const perceptionWhenSchema = z
     investigation_count_min: z.number().int().min(0).optional(),
     observer_has_capability: z.string().optional()
   })
-  .passthrough();
+  .loose();
 
 const perceptionThenSchema = z
   .object({
@@ -652,7 +652,7 @@ const perceptionThenSchema = z
     reveal_hidden: z.boolean().optional(),
     max_hidden_segments: z.number().int().min(0).optional()
   })
-  .passthrough();
+  .loose();
 
 const perceptionRuleSchema = z
   .object({
@@ -668,7 +668,7 @@ const projectionWhenSchema = z
     on_event_type: nonEmptyStringSchema.optional(),
     entity_type_is: nonEmptyStringSchema.optional()
   })
-  .passthrough()
+  .loose()
 
 const projectionThenSchema = z
   .object({
@@ -680,7 +680,7 @@ const projectionThenSchema = z
     aggregate_by: z.array(nonEmptyStringSchema).optional(),
     filter_condition: z.record(z.string(), worldPackValueSchema).optional()
   })
-  .passthrough()
+  .loose()
 
 const projectionRuleSchema = z
   .object({
@@ -762,7 +762,7 @@ const stateTransformSchema = z
     for (const range of ranges) {
       if (range.min > range.max) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: `state_transform range min (${range.min}) must be <= max (${range.max}) for label "${range.label}"`
         });
       }
@@ -771,7 +771,7 @@ const stateTransformSchema = z
     const uniqueLabels = new Set(labels);
     if (uniqueLabels.size !== labels.length) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'state_transform range labels must be unique'
       });
     }
@@ -862,13 +862,13 @@ export const worldPackConstitutionSchema = z
   .superRefine((value, ctx) => {
     if ('actions' in value) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'Legacy field actions is no longer accepted; migrate to rules.objective_enforcement + capabilities/authorities'
       });
     }
     if ('decision_rules' in value) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'Legacy field decision_rules is no longer accepted; migrate to unified rules.* definitions'
       });
     }
@@ -899,7 +899,7 @@ export const worldPackConstitutionSchema = z
       for (const identity of value.identities) {
         if (!entityIds.has(identity.subject_entity_id)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: `identity "${identity.id}" references unknown actor "${identity.subject_entity_id}" in subject_entity_id`,
             path: ['identities']
           });
@@ -912,7 +912,7 @@ export const worldPackConstitutionSchema = z
       for (const location of value.spatial.locations) {
         if (!domainIds.has(location.id)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: `spatial.location "${location.id}" must reference an entity in entities.domains`,
             path: ['spatial', 'locations']
           });
@@ -921,14 +921,14 @@ export const worldPackConstitutionSchema = z
       for (const edge of value.spatial.edges) {
         if (!domainIds.has(edge.from)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: `spatial.edge.from "${edge.from}" must reference an entity in entities.domains`,
             path: ['spatial', 'edges']
           });
         }
         if (!domainIds.has(edge.to)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: `spatial.edge.to "${edge.to}" must reference an entity in entities.domains`,
             path: ['spatial', 'edges']
           });
@@ -942,7 +942,7 @@ export const worldPackConstitutionSchema = z
       for (const target of targets) {
         if (seen.has(target)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: `Duplicate state_transform target "${target}": each transform must have a unique target key`,
             path: ['state_transforms']
           });
@@ -956,35 +956,35 @@ export const worldPackConstitutionSchema = z
       const scenarioValue = isRecord(value.scenario) ? value.scenario : null;
       if (scenarioValue && 'agents' in scenarioValue) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: 'Legacy scenario.agents is no longer accepted; migrate to entities.actors + identities/authorities'
         });
       }
       if (scenarioValue && 'artifacts' in scenarioValue) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: 'Legacy scenario.artifacts is no longer accepted; migrate to entities.artifacts + rules.objective_enforcement'
         });
       }
       if (scenarioValue && 'relationships' in scenarioValue) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: 'Legacy scenario.relationships is no longer accepted; migrate to entities/authorities or kernel relational fixtures'
         });
       }
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'Legacy field scenario is no longer accepted; migrate world initialization to bootstrap.initial_states'
       });
     }
     if ('event_templates' in value) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'Legacy field event_templates is no longer accepted; inline events under rules.objective_enforcement[*].then.emit_events'
       });
     }
   })
-  .passthrough();
+  .loose();
 
 export type SimulationTimeConfig = z.infer<typeof simulationTimeConfigSchema>;
 export type WorldPackBootstrapInitialState = z.infer<typeof bootstrapInitialStateSchema>;

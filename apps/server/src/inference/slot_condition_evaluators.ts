@@ -311,8 +311,7 @@ export function evaluateLogicMatch(
   context: SlotConditionContext
 ): SlotConditionResult {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 3000);
-
+  const timeout = setTimeout(() => { controller.abort(); }, 3000);
   try {
     const mergedVars: Record<string, unknown> = {
       ...context.variables,
@@ -429,7 +428,7 @@ export async function evaluateCustomCondition(
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = setTimeout(() => { controller.abort(); }, timeoutMs);
 
   try {
     const result = await evaluator.evaluate(context);

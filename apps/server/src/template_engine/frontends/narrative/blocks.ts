@@ -44,6 +44,7 @@ const resolveNarrativeVar = (name: string, scope: NarrativeBlockScope): unknown 
   const lookup = lookupPromptVariable({
     expression: name,
     path: name,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- variableContext always set by render pipeline
     context: scope.variableContext!,
     localScope: scope.variables
   });

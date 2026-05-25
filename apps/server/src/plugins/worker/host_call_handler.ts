@@ -36,6 +36,7 @@ export const handlePluginWorkerHostCall = async (
       if (!context.appContext.requestPluginInference) {
         throw new ApiError(501, 'PLUGIN_INFERENCE_UNAVAILABLE', 'Plugin inference executor is not available');
       }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       return context.appContext.requestPluginInference(payload as PluginInferenceRequest);
     }
 
@@ -48,6 +49,7 @@ export const handlePluginWorkerHostCall = async (
     }
 
     case 'queryWorldState': {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const query = payload as WorldStateQuery;
       if (query.pack_id !== context.packId) {
         throw new ApiError(403, 'PLUGIN_PACK_SCOPE_DENIED', 'Plugin cannot query a different pack', {

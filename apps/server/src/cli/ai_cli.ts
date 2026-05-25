@@ -168,6 +168,7 @@ const doTest = async (args: ParsedArgs): Promise<void> => {
   }
   console.log('');
 
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- apiKeyEnv truthy guard above
   const apiKey = apiKeyEnv ? process.env[apiKeyEnv]! : '';
   const endpoint = baseUrl ?? 'https://api.openai.com/v1';
 
@@ -188,7 +189,7 @@ const doTest = async (args: ParsedArgs): Promise<void> => {
   const startTime = Date.now();
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => { controller.abort(); }, 30000);
 
     const res = await fetch(`${endpoint}${endpointPath}`, {
       method: 'POST',

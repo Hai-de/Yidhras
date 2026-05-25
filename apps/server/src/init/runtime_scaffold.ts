@@ -124,7 +124,7 @@ export const ensureRuntimeConfigScaffold = (
 
 export const logRuntimeConfigScaffoldResult = (
   result: RuntimeConfigScaffoldResult,
-  logger: (message: string) => void = (...args) => log.info(...args)
+  logger: (message: string) => void = (...args) => { log.info(...args); }
 ): void => {
   logger(
     `[init:configw] config_dir=${result.configDir} | created=${result.createdFiles.length} | existing=${result.existingFiles.length}`

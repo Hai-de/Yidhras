@@ -45,6 +45,7 @@ export const buildJsonOkBody = <T>(data: T, meta?: ApiSuccessMeta): ApiSuccessEn
   };
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- callers benefit from data type constraint
 export const jsonOk = <T>(res: Response, data: T, meta?: ApiSuccessMeta): void => {
   res.json(buildJsonOkBody(data, meta));
 };

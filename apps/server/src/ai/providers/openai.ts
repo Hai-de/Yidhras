@@ -337,6 +337,7 @@ const performOpenAiRequest = async (input: AiProviderAdapterRequest): Promise<Re
   return fetch(`${baseUrl}${endpoint}`, {
     method: 'POST',
     headers: {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- env var required for auth
       Authorization: `Bearer ${getEnv(input.provider_config.api_key_env)!}`,
       'Content-Type': 'application/json',
       ...buildOpenAiHeaders(input)

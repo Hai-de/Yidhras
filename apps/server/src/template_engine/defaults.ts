@@ -99,6 +99,7 @@ const resolveVar = (name: string, scope: RenderScope): unknown => {
 
 const resolveRng = (scope: RenderScope): (() => number) => {
   if (scope.prng) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- scope.prng guard above
     return () => scope.prng!.next();
   }
   return Math.random;

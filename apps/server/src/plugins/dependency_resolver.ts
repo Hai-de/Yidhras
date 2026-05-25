@@ -149,6 +149,7 @@ export const resolveLoadOrder = (input: LoadOrderInput): PluginInstallation[] =>
 
     for (const afterId of afterList) {
       if (!edges.has(afterId)) continue;
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- has() guard above
       const deps = edges.get(afterId)!;
 
       if (!deps.includes(inst.plugin_id)) {
@@ -181,6 +182,7 @@ export const resolveLoadOrder = (input: LoadOrderInput): PluginInstallation[] =>
       return a.localeCompare(b);
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- while loop guards non-empty queue
     const current = queue.shift()!;
     sorted.push(current);
 
@@ -201,6 +203,7 @@ export const resolveLoadOrder = (input: LoadOrderInput): PluginInstallation[] =>
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by install graph completeness
   return sorted.map(id => installations.find(i => i.plugin_id === id)!);
 };
 
@@ -298,6 +301,7 @@ export const checkDependencies = (input: DependencyCheckInput): DependencyCheckR
     }
 
     if (dep.version) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- dep.version truthiness guard above
       const matchingProvider = providers.find(p => matchesVersion(p.version, dep.version!));
 
       if (!matchingProvider) {

@@ -24,6 +24,7 @@ export class PackManifestLoader {
 
   public loadPack(folderName: string): WorldPack {
     if (this.packs.has(folderName)) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- has() guard above
       return this.packs.get(folderName)!;
     }
 
@@ -70,7 +71,7 @@ export class PackManifestLoader {
           `Pack ${parsed.metadata.id} uses schema_version ${String(migrationPlan.currentVersion)}; ` +
           `latest supported schema_version is ${String(migrationPlan.latestVersion)}. ` +
           'Run `pnpm --filter yidhras-server db:migrate-pack ' +
-          `${folderName}` +
+          folderName +
           '` to update the manifest. Loading continues without automatic migration.',
           {
             pack_id: parsed.metadata.id,

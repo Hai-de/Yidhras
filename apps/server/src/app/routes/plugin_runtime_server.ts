@@ -1,10 +1,10 @@
-import { z } from 'zod';
 import type { Express, NextFunction, Request, Response } from 'express';
+import { z } from 'zod';
 
 import { getRuntimeConfig } from '../../config/runtime_config.js';
 import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
-import { PluginWorkerTimeoutError } from '../../plugins/worker/errors.js';
 import type { WorkerPackRouteProxy } from '../../plugins/worker/contribution_proxy.js';
+import { PluginWorkerTimeoutError } from '../../plugins/worker/errors.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
 
@@ -91,7 +91,7 @@ export const registerPluginRuntimeServerRoutes = (
             path: routePath,
             params: req.params,
             query: req.query,
-            body: req.body ?? null,
+            body: req.body as unknown ?? null,
             headers: req.headers
           },
           getRuntimeConfig().plugins.isolation.route_timeout_ms

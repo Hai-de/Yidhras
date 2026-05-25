@@ -9,9 +9,8 @@ import type {
 import type { ContextSourceAdapter } from '../context/source_registry.js';
 import type { PromptWorkflowStepExecutor } from '../context/workflow/registry.js';
 import {
-  setPluginWorkersActive,
-  setPluginsActive
-} from '../observability/metrics.js';
+  setPluginsActive,
+  setPluginWorkersActive} from '../observability/metrics.js';
 import type { PerceptionResolver } from '../perception/types.js';
 import { createLogger } from '../utils/logger.js';
 import {
@@ -20,12 +19,11 @@ import {
 } from './capability_keys.js';
 import { resolveLoadOrder } from './dependency_resolver.js';
 import { dataCleanerRegistry } from './extensions/data_cleaner_registry.js';
-import type { SlotConditionEvaluator } from './extensions/slot_condition_registry.js';
 import { slotConditionRegistry } from './extensions/slot_condition_registry.js';
-import type { SlotContentTransformer } from './extensions/slot_content_transformer.js';
 import { slotContentTransformRegistry } from './extensions/slot_content_transformer.js';
 import type {
   ContextSourceDescriptorInput,
+  ContributionDescriptor,
   DataCleanerDescriptorInput,
   PackRouteDescriptorInput,
   PerceptionResolverDescriptorInput,
@@ -34,9 +32,7 @@ import type {
   RuleContributorDescriptorInput,
   SlotConditionEvaluatorDescriptorInput,
   SlotContentTransformerDescriptorInput,
-  StepContributorDescriptorInput,
-  ContributionDescriptor
-} from './worker/contribution_descriptors.js';
+  StepContributorDescriptorInput} from './worker/contribution_descriptors.js';
 import { createWorkerContributionProxies, type WorkerPackRouteProxy } from './worker/contribution_proxy.js';
 import type { PluginWorkerClient } from './worker/PluginWorkerClient.js';
 import { pluginWorkerManager, resolvePluginEntrypointPath } from './worker/PluginWorkerManager.js';
@@ -58,7 +54,8 @@ export interface PluginInferenceResult {
 }
 
 export interface ServerPluginHostApi {
-  registerHandler(name: string, handler: (input: any) => unknown | Promise<unknown>): void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime handler registration
+  registerHandler(name: string, handler: (input: any) => unknown): void;
   registerContextSource(descriptor: ContextSourceDescriptorInput, capabilityKey?: PluginCapabilityKey): void;
   registerPromptWorkflowStep(descriptor: PromptWorkflowStepDescriptorInput, capabilityKey?: PluginCapabilityKey): void;
   registerPackRoute(descriptor: PackRouteDescriptorInput, capabilityKey?: PluginCapabilityKey): void;
@@ -357,7 +354,7 @@ export const refreshPackPluginRuntime = async (
     }
   }
 
-  const previousRuntimes = pluginRuntimeRegistry.replaceRuntimes(normalizedPackId, runtimes);
+  pluginRuntimeRegistry.replaceRuntimes(normalizedPackId, runtimes);
   dataCleanerRegistry.clearPack(normalizedPackId);
   slotConditionRegistry.clearPack(normalizedPackId);
   slotContentTransformRegistry.clearPack(normalizedPackId);

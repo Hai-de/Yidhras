@@ -8,6 +8,7 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
  * 仅用于系统边界不可消除的断言点（JSON.parse 返回值、Prisma JSON 列、外部 API 响应）。
  * 调用点不会被 no-unsafe-type-assertion 标记——断言集中在函数体内用 eslint-disable 管理。
  */
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- centralized boundary cast utility
 export function boundaryCast<T>(_value: unknown): T {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- centralized boundary cast utility
   return _value as T;

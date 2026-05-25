@@ -78,10 +78,10 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T
   }
 
   return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('TOOL_EXECUTION_TIMEOUT')), timeoutMs);
+    const timer = setTimeout(() => { reject(new Error('TOOL_EXECUTION_TIMEOUT')); }, timeoutMs);
     promise.then(
       (value) => { clearTimeout(timer); resolve(value); },
-      (err) => { clearTimeout(timer); reject(err instanceof Error ? err : new Error(String(err))); }
+      (err: unknown) => { clearTimeout(timer); reject(err instanceof Error ? err : new Error(String(err))); }
     );
   });
 };
@@ -200,7 +200,7 @@ export const createToolLoopRunner = (): ToolLoopRunner => {
           }
 
           const toolLatency = Date.now() - toolStart;
-          roundTraceCalls.push({ name: tc.name, latency_ms: toolLatency, success: execResult.success === true });
+          roundTraceCalls.push({ name: tc.name, latency_ms: toolLatency, success: execResult.success });
 
           toolResultMessages.push(buildToolResultMessage(tc.name, tc.call_id, execResult, maxToolResultChars));
 

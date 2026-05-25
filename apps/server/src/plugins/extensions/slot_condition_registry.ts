@@ -26,6 +26,7 @@ class SlotConditionRegistry {
     }
 
     if (packStore.has(evaluator.key)) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- has() guard above
       const existing = packStore.get(evaluator.key)!;
       if (existing.version === evaluator.version) {
         return;

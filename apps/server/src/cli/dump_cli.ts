@@ -255,7 +255,7 @@ const runDump = async (): Promise<void> => {
   writeResult(result, args.out);
 };
 
-runDump().catch((err) => {
+runDump().catch((err: unknown) => {
   console.error('Dump failed:', err instanceof Error ? err.message : String(err));
   process.exitCode = 1;
 });

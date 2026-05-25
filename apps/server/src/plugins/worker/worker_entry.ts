@@ -1,14 +1,14 @@
 import { parentPort } from 'node:worker_threads';
 
-import { createWorkerPluginHostApi } from './worker_host_api.js';
 import {
+  type HostMethodName,
+  type MainToWorkerMessage,
   parseMainToWorkerMessage,
   parseWorkerToMainMessage,
   serializePluginError,
-  type HostMethodName,
-  type MainToWorkerMessage,
   type WorkerToMainMessage
 } from './protocol.js';
+import { createWorkerPluginHostApi } from './worker_host_api.js';
 
 if (!parentPort) {
   throw new Error('plugin worker_entry must run inside a Worker thread');
@@ -71,6 +71,7 @@ const handleActivate = async (message: Extract<MainToWorkerMessage, { type: 'act
   try {
     runtime = createWorkerPluginHostApi({ sendHostCall, sendMessage: postToMain });
     const activatedRuntime = runtime;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const module = await import(message.input.entrypointPath) as {
       activate?: (host: typeof activatedRuntime.host) => ActivateResult | Promise<ActivateResult>;
     };

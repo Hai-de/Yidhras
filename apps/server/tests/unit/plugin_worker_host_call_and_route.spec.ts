@@ -5,12 +5,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AppContext } from '../../src/app/context.js';
 import { registerPluginRuntimeServerRoutes } from '../../src/app/routes/plugin_runtime_server.js';
 import { getRuntimeConfig } from '../../src/config/runtime_config.js';
-import { pluginRuntimeRegistry, type RegisteredServerPluginRuntime } from '../../src/plugins/runtime.js';
 import { PLUGIN_CAPABILITY_KEY } from '../../src/plugins/capability_keys.js';
-import { handlePluginWorkerHostCall } from '../../src/plugins/worker/host_call_handler.js';
-import { PluginWorkerTimeoutError } from '../../src/plugins/worker/errors.js';
-import { pluginWorkerManager } from '../../src/plugins/worker/PluginWorkerManager.js';
+import { pluginRuntimeRegistry, type RegisteredServerPluginRuntime } from '../../src/plugins/runtime.js';
 import type { WorkerPackRouteProxy } from '../../src/plugins/worker/contribution_proxy.js';
+import { PluginWorkerTimeoutError } from '../../src/plugins/worker/errors.js';
+import { handlePluginWorkerHostCall } from '../../src/plugins/worker/host_call_handler.js';
+import { pluginWorkerManager } from '../../src/plugins/worker/PluginWorkerManager.js';
 
 const packId = 'worker-route-pack';
 const installationId = 'installation-worker-route';

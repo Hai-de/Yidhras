@@ -24,6 +24,7 @@ function buildIndex(entries: ConversationEntry[]): CausalIndex {
   for (const entry of entries) {
     if (entry.derived_from_entry_ids && entry.derived_from_entry_ids.length > 0) {
       // Backward: from this summary → source entries
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- derived_from_entry_ids guard above
       const sources = entries.filter((e) => entry.derived_from_entry_ids!.includes(e.id));
       backward.set(entry.id, sources);
 
@@ -93,6 +94,7 @@ export class CausalGraphQuery {
 
     while (queue.length > 0) {
        
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- while queue.length > 0 guard
       const current = queue.shift()!;
       if (current.depth >= maxDepth) continue;
 

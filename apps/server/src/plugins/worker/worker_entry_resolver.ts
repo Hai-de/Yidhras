@@ -10,7 +10,7 @@ export interface WorkerEntryResolution {
 
 const resolveTsxLoaderPath = (): string | undefined => {
   try {
-    return require.resolve('tsx') as string;
+    return require.resolve('tsx');
   } catch {
     return undefined;
   }

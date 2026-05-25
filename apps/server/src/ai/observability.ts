@@ -48,7 +48,7 @@ const buildUpsertPayload = (
   options: { sourceInferenceId?: string | null } | undefined,
   latencyMs: number | null,
   currentTick: bigint,
-  sourceInferenceIdOverride: string | null | undefined = undefined
+  sourceInferenceIdOverride?: string | null
 ) => {
   const sourceInferenceId = sourceInferenceIdOverride !== undefined
     ? sourceInferenceIdOverride

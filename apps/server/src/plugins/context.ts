@@ -73,7 +73,7 @@ const createReadonlyContext = (context: AppContext, packRuntime?: PackRuntimePor
 const createPackScopedContext = (context: AppContext, packRuntime?: PackRuntimePort): PackScopedPluginContext => ({
   ...createReadonlyContext(context, packRuntime),
   getRuntimeReady: () => context.isRuntimeReady(),
-  assertRuntimeReady: feature => context.assertRuntimeReady(feature)
+  assertRuntimeReady: feature => { context.assertRuntimeReady(feature); }
 });
 
 /**

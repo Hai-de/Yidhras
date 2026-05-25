@@ -92,32 +92,33 @@ const buildChatCompletionsRequestBody = (
     messages: buildChatMessages(input.request.messages)
   };
 
-  const hasTemp = typeof input.request.sampling?.temperature === 'number';
-  const hasTopP = typeof input.request.sampling?.top_p === 'number';
+  const sampling = input.request.sampling;
+  const hasTemp = typeof sampling?.temperature === 'number';
+  const hasTopP = typeof sampling?.top_p === 'number';
 
   if (hasTemp) {
-    body.temperature = input.request.sampling!.temperature;
+    body.temperature = sampling.temperature;
   }
 
   if (hasTopP) {
     if (overrides?.disallowTempWithTopP && hasTemp) {
       // DeepSeek 互斥：保留 temperature，丢弃 top_p
     } else {
-      body.top_p = input.request.sampling!.top_p;
+      body.top_p = sampling.top_p;
     }
   }
 
-  if (typeof input.request.sampling?.max_output_tokens === 'number') {
+  if (typeof sampling?.max_output_tokens === 'number') {
     const field = overrides?.maxTokensField ?? 'max_completion_tokens';
     // eslint-disable-next-line security/detect-object-injection
-    body[field] = input.request.sampling.max_output_tokens;
+    body[field] = sampling.max_output_tokens;
   }
 
-  const hasSeed = typeof input.request.sampling?.seed === 'number';
+  const hasSeed = typeof sampling?.seed === 'number';
   if (hasSeed) {
     const supportsSeed = overrides?.supportsSeed !== false;
     if (supportsSeed) {
-      body.seed = input.request.sampling!.seed;
+      body.seed = sampling.seed;
     }
   }
 

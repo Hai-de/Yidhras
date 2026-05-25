@@ -162,6 +162,7 @@ const runStatement = (db: SqliteDatabase, sql: string, params: SqlitePrimitive[]
   db.prepare(sql).run(...params);
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- DB row type casting
 const getStatement = <T extends SqliteRow>(
   db: SqliteDatabase,
   sql: string,

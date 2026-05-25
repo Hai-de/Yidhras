@@ -862,30 +862,34 @@ export const listSchedulerOwnershipAssignments = (
     }
   }
 
-  const items = allPartitions.map(assignment => ({
-    partition_id: assignment.partition_id,
-    worker_id: assignment.worker_id,
-    status: assignment.status,
-    version: assignment.version,
-    source: assignment.source,
-    updated_at: BigInt(assignment.updated_at).toString(),
-    latest_migration: latestMigrationByPartition.get(assignment.partition_id)
-      ? toOwnershipMigrationReadModel({
-          id: latestMigrationByPartition.get(assignment.partition_id)!.id,
-          partition_id: latestMigrationByPartition.get(assignment.partition_id)!.partition_id,
-          from_worker_id: latestMigrationByPartition.get(assignment.partition_id)!.from_worker_id,
-          to_worker_id: latestMigrationByPartition.get(assignment.partition_id)!.to_worker_id,
-          status: latestMigrationByPartition.get(assignment.partition_id)!.status,
-          reason: latestMigrationByPartition.get(assignment.partition_id)!.reason,
-          details: latestMigrationByPartition.get(assignment.partition_id)!.details,
-          created_at: BigInt(latestMigrationByPartition.get(assignment.partition_id)!.created_at),
-          updated_at: BigInt(latestMigrationByPartition.get(assignment.partition_id)!.updated_at),
-          completed_at: latestMigrationByPartition.get(assignment.partition_id)!.completed_at !== null
-            ? BigInt(latestMigrationByPartition.get(assignment.partition_id)!.completed_at!)
+  const items = allPartitions.map(assignment => {
+    const migration = latestMigrationByPartition.get(assignment.partition_id);
+    const completedAt = migration?.completed_at;
+    return {
+      partition_id: assignment.partition_id,
+      worker_id: assignment.worker_id,
+      status: assignment.status,
+      version: assignment.version,
+      source: assignment.source,
+      updated_at: BigInt(assignment.updated_at).toString(),
+      latest_migration: migration
+        ? toOwnershipMigrationReadModel({
+            id: migration.id,
+            partition_id: migration.partition_id,
+            from_worker_id: migration.from_worker_id,
+            to_worker_id: migration.to_worker_id,
+            status: migration.status,
+            reason: migration.reason,
+            details: migration.details,
+            created_at: BigInt(migration.created_at),
+            updated_at: BigInt(migration.updated_at),
+            completed_at: completedAt !== null && completedAt !== undefined
+              ? BigInt(completedAt)
             : null
         })
       : null
-  }));
+    };
+  });
   const summary = buildSchedulerOwnershipSummary(items);
 
   return {

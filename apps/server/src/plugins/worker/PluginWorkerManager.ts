@@ -5,12 +5,12 @@ import { pathToFileURL } from 'node:url';
 import type { PluginInstallation, PluginManifest } from '@yidhras/contracts';
 
 import type { AppContext } from '../../app/context.js';
-import { PLUGIN_CAPABILITY_KEY } from '../capability_keys.js';
 import {
   recordPluginWorkerActivationCompleted,
   setPluginWorkersActive
 } from '../../observability/metrics.js';
 import { createLogger } from '../../utils/logger.js';
+import { PLUGIN_CAPABILITY_KEY } from '../capability_keys.js';
 import type { ContributionDescriptor, ContributionType } from './contribution_descriptors.js';
 import { PluginWorkerClient } from './PluginWorkerClient.js';
 import type { PluginWorkerActivationInput } from './protocol.js';

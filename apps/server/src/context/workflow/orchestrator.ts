@@ -134,5 +134,6 @@ export const buildWorkflowPromptBundle = async (input: {
     registry: stepRegistry
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- bundle guaranteed by workflow
   return { bundle: finalState.bundle! };
 };

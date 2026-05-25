@@ -94,7 +94,7 @@ export class SchedulerSidecarPool {
           this.active.set(next.packId, client);
           next.resolve({ client, packId: next.packId });
         })
-        .catch(error => {
+        .catch((error: unknown) => {
           next.reject(error);
           this.processQueue();
         });

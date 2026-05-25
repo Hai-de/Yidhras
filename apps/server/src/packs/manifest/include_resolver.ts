@@ -95,6 +95,7 @@ export function resolveIncludes(
 
     let parsed: Record<string, unknown>;
     if (loadedFiles.has(absolutePath)) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- has() guard above
       parsed = loadedFiles.get(absolutePath)!;
     } else {
       try {

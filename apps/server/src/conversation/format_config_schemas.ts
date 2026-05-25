@@ -120,7 +120,7 @@ export const ConversationFormatConfigSchema = z
     message_assembly: MessageAssemblyConfigSchema,
     compression: CompressionConfigSchema
   })
-  .passthrough();
+  .loose();
 
 export type ConversationFormatConfig = z.infer<typeof ConversationFormatConfigSchema>;
 
@@ -130,7 +130,7 @@ export const ConversationDomainConfigSchema = z
   .object({
     profiles: z.record(z.string(), ConversationFormatConfigSchema)
   })
-  .passthrough();
+  .loose();
 
 export type ConversationDomainConfig = z.infer<typeof ConversationDomainConfigSchema>;
 

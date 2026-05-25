@@ -91,7 +91,7 @@ export const ensureBootstrapWorldPack = async (): Promise<WorldPackBootstrapResu
 
 export const logWorldPackBootstrapResult = (
   result: WorldPackBootstrapResult,
-  logger: (message: string) => void = (...args) => log.info(...args)
+  logger: (message: string) => void = (...args) => { log.info(...args); }
 ): void => {
   switch (result.status) {
     case 'disabled':

@@ -118,7 +118,7 @@ const runMigration = async (): Promise<void> => {
   console.log(newYaml);
 };
 
-runMigration().catch((err) => {
+runMigration().catch((err: unknown) => {
   console.error('Migration failed:', err instanceof Error ? err.message : String(err));
   process.exitCode = 1;
 });

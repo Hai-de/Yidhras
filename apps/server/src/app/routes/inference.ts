@@ -75,6 +75,7 @@ export const registerInferenceRoutes = (
     requireAuth(),
     deps.asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference jobs list');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- middleware guarantees operator
       const operator = (req as OperatorRequest).operator!;
       const query = parseQuery(inferenceJobsQuerySchema, req.query, 'INFERENCE_INPUT_INVALID');
       const normalizedStatus = Array.isArray(query.status)

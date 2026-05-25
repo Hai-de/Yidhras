@@ -110,7 +110,7 @@ export const buildInferenceJobReplaySubmitResult = (
       source_job_id: job.replay_of_job_id ?? '',
       source_trace_id: job.replay_source_trace_id,
       reason: job.replay_reason,
-      override_applied: Boolean(workflowSnapshot.lineage.override_applied),
+      override_applied: workflowSnapshot.lineage.override_applied,
       override_snapshot: workflowSnapshot.lineage.override_snapshot,
       parent_job: workflowSnapshot.lineage.parent_job,
       child_jobs: workflowSnapshot.lineage.child_jobs

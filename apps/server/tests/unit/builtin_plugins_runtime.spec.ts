@@ -6,8 +6,8 @@ import type { DataCleaner } from '@yidhras/contracts';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { SlotConditionEvaluator } from '../../src/plugins/extensions/slot_condition_registry.js';
-import type { DataCleanerDescriptorInput, SlotConditionEvaluatorDescriptorInput } from '../../src/plugins/worker/contribution_descriptors.js';
 import type { ServerPluginHostApi } from '../../src/plugins/runtime.js';
+import type { DataCleanerDescriptorInput, SlotConditionEvaluatorDescriptorInput } from '../../src/plugins/worker/contribution_descriptors.js';
 
 const execFileAsync = promisify(execFile);
 

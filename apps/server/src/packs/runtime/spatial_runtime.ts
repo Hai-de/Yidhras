@@ -34,6 +34,7 @@ const buildAdjacencyMap = (config: SpatialDiscreteConfig): Map<string, Set<strin
     if (!map.has(from)) {
       map.set(from, new Set());
     }
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- map.has/set above guarantees key exists
     map.get(from)!.add(to);
   };
 
@@ -62,6 +63,7 @@ const bfsDistance = (adjacency: Map<string, Set<string>>, from: string, to: stri
   visited.add(from);
 
   while (queue.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- while queue.length > 0 guard
     const [current, dist] = queue.shift()!;
     const neighbors = adjacency.get(current);
     if (!neighbors) {

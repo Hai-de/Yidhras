@@ -330,7 +330,7 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
       input.holder,
       Number(input.now)
     ) as { changes: number };
-    return { count: Number(result.changes) };
+    return { count: result.changes };
   }
 
   public deleteLeaseByHolder(packId: string, partitionId: string, holder: string): { count: number } {
@@ -339,7 +339,7 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
     const result = db.prepare(
       'DELETE FROM scheduler_lease WHERE partition_id = ? AND holder = ?'
     ).run(partitionId, holder) as { changes: number };
-    return { count: Number(result.changes) };
+    return { count: result.changes };
   }
 
   // -- Cursor --

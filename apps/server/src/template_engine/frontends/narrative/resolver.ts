@@ -97,6 +97,7 @@ const renderNarrativeAst = (
         const macroName = node.name;
         const parsed = parseModifierExpression(macroName);
         const result = createNarrativeVariableResolver(
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- variableContext always set by render pipeline
           scope.variableContext!,
           scope.variables
         )(parsed.path, parsed.modifiers);
@@ -116,6 +117,7 @@ const renderNarrativeAst = (
       case 'variable': {
         const parsed = { path: node.name, modifiers: node.modifiers };
         const result = createNarrativeVariableResolver(
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- variableContext always set by render pipeline
           scope.variableContext!,
           scope.variables
         )(parsed.path, parsed.modifiers);

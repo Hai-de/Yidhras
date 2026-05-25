@@ -28,7 +28,7 @@ export interface PackRoutesDependencies {
   ) => (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => void;
   inferenceService: InferenceService;
   parseOptionalTick?: (value: unknown, fieldName: string) => bigint | null;
-  toJsonSafe?: <T>(value: T) => unknown;
+  toJsonSafe?: (value: unknown) => unknown;
   getErrorMessage?: (err: unknown) => string;
 }
 

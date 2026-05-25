@@ -695,7 +695,7 @@ const buildInferenceVariableContext = (input: {
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
       const layerConfig = configuredLayers?.[namespace];
       if (!layerConfig) return null;
-      if (layerConfig.enabled === false) return null;
+      if (!layerConfig.enabled) return null;
 
       const values = resolveConfigValues(layerConfig.values, runtimeObjects);
       const aliasValues = layerConfig.alias_values

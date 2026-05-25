@@ -165,7 +165,7 @@ const runReplay = async (): Promise<void> => {
   }
 };
 
-runReplay().catch((err) => {
+runReplay().catch((err: unknown) => {
   console.error('Replay failed:', err instanceof Error ? err.message : String(err));
   process.exitCode = 1;
 });

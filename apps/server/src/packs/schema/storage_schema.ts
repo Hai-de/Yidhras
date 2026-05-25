@@ -17,13 +17,13 @@ const storageFieldDefinitionSchema = z
   .superRefine((value, ctx) => {
     if (value.type === 'enum' && (!value.values || value.values.length === 0)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'enum storage field requires non-empty values'
       });
     }
     if (value.type !== 'enum' && value.values !== undefined) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'values is only allowed when type=enum'
       });
     }
@@ -36,7 +36,7 @@ const storageIndexDefinitionSchema = z
     const unique = new Set(value);
     if (unique.size !== value.length) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'storage index fields must not contain duplicates'
       });
     }
@@ -65,14 +65,14 @@ const storageCollectionDefinitionSchema = z
     const uniqueFieldKeys = new Set(fieldKeys);
     if (uniqueFieldKeys.size !== fieldKeys.length) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'storage collection field keys must be unique'
       });
     }
 
     if (!uniqueFieldKeys.has(value.primary_key)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: `primary_key must reference an existing field: ${value.primary_key}`
       });
     }
@@ -81,7 +81,7 @@ const storageCollectionDefinitionSchema = z
       for (const field of indexFields) {
         if (!uniqueFieldKeys.has(field)) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             message: `storage index references unknown field: ${field}`,
             path: ['indexes', indexPosition]
           });
@@ -115,7 +115,7 @@ export const worldPackStorageSchema = z
 
     if (uniquePackCollectionKeys.size !== packCollectionKeys.length) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'pack collection keys must be unique'
       });
     }
@@ -123,7 +123,7 @@ export const worldPackStorageSchema = z
     for (const collectionKey of packCollectionKeys) {
       if (engineOwned.has(collectionKey)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message: `pack collection must not shadow engine-owned collection: ${collectionKey}`
         });
       }
@@ -131,7 +131,7 @@ export const worldPackStorageSchema = z
 
     if (value.install.allow_raw_sql === true) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: 'allow_raw_sql=true is not supported in the current framework'
       });
     }

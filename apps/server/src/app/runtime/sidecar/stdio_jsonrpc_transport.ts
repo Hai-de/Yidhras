@@ -197,7 +197,7 @@ export class StdioJsonRpcTransport extends EventEmitter {
       this.handleStdout(chunk);
     });
     this.child.stderr.on('data', (chunk: string) => {
-      const message = chunk.toString().trim();
+      const message = chunk.trim();
       if (message.length > 0) {
         this.logger.warn(message);
       }
@@ -327,6 +327,7 @@ export class StdioJsonRpcTransport extends EventEmitter {
 
       this.pending.set(id, { resolve, reject, timeout });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- child guaranteed initialized in open()
       const ok = this.child!.stdin.write(`${payload}\n`, (error) => {
         if (error) {
           const pendingRequest = this.pending.get(id);
@@ -347,6 +348,7 @@ export class StdioJsonRpcTransport extends EventEmitter {
 
       // 背压处理：写入缓冲区满时暂停
       if (!ok) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- child guaranteed initialized in open()
         this.child!.stdin.once('drain', () => {
           // drain 后继续，不需要额外操作 —— write callback 已排队
         });

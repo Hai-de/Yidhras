@@ -1,13 +1,14 @@
+import { z } from 'zod';
+
 import type { PluginInferenceRequest, PluginInferenceResult, ServerPluginHostApi } from '../runtime.js';
 import {
-  contributionDescriptorListSchema,
-  contributionDescriptorSchema,
   type ContributionDescriptor,
-  type ContributionDescriptorInput
-} from './contribution_descriptors.js';
+  type ContributionDescriptorInput,
+  contributionDescriptorListSchema,
+  contributionDescriptorSchema} from './contribution_descriptors.js';
 import type { HostMethodName, WorkerToMainMessage } from './protocol.js';
 
-export type PluginInvokeHandler = (input: unknown) => unknown | Promise<unknown>;
+export type PluginInvokeHandler = (input: unknown) => unknown;
 
 type HostCallSender = (method: HostMethodName, payload: unknown) => Promise<unknown>;
 type MessageSender = (message: WorkerToMainMessage) => void;
@@ -93,7 +94,15 @@ export const createWorkerPluginHostApi = (options: {
 
     async requestInference(input: PluginInferenceRequest): Promise<PluginInferenceResult> {
       const result = await options.sendHostCall('requestInference', input);
-      return result as PluginInferenceResult;
+      return z
+        .object({
+          content: z.string(),
+          usage: z.object({
+            inputTokens: z.number(),
+            outputTokens: z.number()
+          })
+        })
+        .parse(result);
     }
   };
 

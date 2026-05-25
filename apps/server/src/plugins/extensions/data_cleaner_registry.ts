@@ -12,6 +12,7 @@ class DataCleanerRegistry {
 
   public register(cleaner: DataCleaner, owner?: DataCleanerOwner): void {
     if (this.cleaners.has(cleaner.key)) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- has() guard above
       const existing = this.cleaners.get(cleaner.key)!;
       if (existing.version === cleaner.version) return;
     }

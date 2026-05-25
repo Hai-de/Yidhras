@@ -72,6 +72,12 @@ const createClient = (options?: { onCrash?: (error: Error) => void }) =>
     onCrash: options?.onCrash
   });
 
+const latestWorker = () => {
+  const worker = getWorkerInstances().at(-1);
+  if (!worker) throw new Error('No mock worker instance found');
+  return worker;
+};
+
 describe('plugin Worker crash isolation', () => {
   beforeEach(() => {
     resetWorkerState();
@@ -100,7 +106,7 @@ describe('plugin Worker crash isolation', () => {
       grantedCapabilities: []
     }).catch((error: unknown) => error);
 
-    const mockWorker = getWorkerInstances().at(-1)!;
+    const mockWorker = latestWorker();
     const crashError = new Error('Worker thread crashed');
     mockWorker.emit('error', crashError);
 
@@ -118,7 +124,7 @@ describe('plugin Worker crash isolation', () => {
     const onCrash = vi.fn();
     const client = createClient({ onCrash });
 
-    const mockWorker = getWorkerInstances().at(-1)!;
+    const mockWorker = latestWorker();
 
     const invokePromise = client.invoke('data_cleaner', 'clean', {}).catch((error: unknown) => error);
 
@@ -136,7 +142,7 @@ describe('plugin Worker crash isolation', () => {
     const onCrash = vi.fn();
     const client = createClient({ onCrash });
 
-    const mockWorker = getWorkerInstances().at(-1)!;
+    const mockWorker = latestWorker();
     mockWorker.emit('exit', 0);
 
     expect(client.isAlive()).toBe(false);
@@ -169,7 +175,7 @@ describe('plugin Worker consecutive failure tracking', () => {
       onCrash: options?.onCrash
     });
     // Hijack the mock worker's postMessage to capture request IDs
-    const mockWorker = getWorkerInstances().at(-1)!;
+    const mockWorker = latestWorker();
     const origPost = mockWorker.postMessage;
     mockWorker.postMessage = (msg: unknown) => {
       const m = msg as { type: string; requestId: string };
@@ -177,6 +183,12 @@ describe('plugin Worker consecutive failure tracking', () => {
       origPost.call(mockWorker, msg);
     };
     return client;
+  };
+
+  const lastPosted = () => {
+    const msg = postedMessages.at(-1);
+    if (!msg) throw new Error('No posted message found');
+    return msg;
   };
 
   const simulateInvokeFailure = (worker: ReturnType<typeof getWorkerInstances>[number], requestId: string) => {
@@ -200,16 +212,16 @@ describe('plugin Worker consecutive failure tracking', () => {
   it('resets consecutive failure counter on successful invoke', async () => {
     const onCrash = vi.fn();
     const client = createClientWithCapture({ onCrash });
-    const worker = getWorkerInstances().at(-1)!;
+    const worker = latestWorker();
 
     // Fail once
     const p1 = client.invoke('data_cleaner', 'clean', {}).catch(() => {});
-    simulateInvokeFailure(worker, postedMessages.at(-1)!.requestId);
+    simulateInvokeFailure(worker, lastPosted().requestId);
     await p1;
 
     // Succeed — should reset counter
     const p2 = client.invoke('data_cleaner', 'clean', {});
-    simulateInvokeSuccess(worker, postedMessages.at(-1)!.requestId);
+    simulateInvokeSuccess(worker, lastPosted().requestId);
     await p2;
 
     expect(client.isAlive()).toBe(true);
@@ -219,12 +231,12 @@ describe('plugin Worker consecutive failure tracking', () => {
   it('triggers crash after maxConsecutiveFailures consecutive invoke failures', async () => {
     const onCrash = vi.fn();
     const client = createClientWithCapture({ onCrash });
-    const worker = getWorkerInstances().at(-1)!;
+    const worker = latestWorker();
 
     // maxConsecutiveFailures defaults to 3. Fail 3 times in a row.
     for (let i = 0; i < 3; i++) {
       const p = client.invoke('data_cleaner', 'clean', {}).catch(() => {});
-      simulateInvokeFailure(worker, postedMessages.at(-1)!.requestId);
+      simulateInvokeFailure(worker, lastPosted().requestId);
       await p;
     }
 
@@ -243,7 +255,7 @@ describe('plugin Worker consecutive failure tracking', () => {
     // They are handled by their own timeout mechanisms, not counted as consecutive invoke failures
     const onCrash = vi.fn();
     const client = createClientWithCapture({ onCrash });
-    const worker = getWorkerInstances().at(-1)!;
+    const worker = latestWorker();
 
     // Fail an activation (different message type — not counted as invoke failure)
     const actPromise = client.activate({
@@ -257,7 +269,7 @@ describe('plugin Worker consecutive failure tracking', () => {
     }).catch(() => {});
     worker.emit('message', {
       type: 'activation_result',
-      requestId: postedMessages.at(-1)!.requestId,
+      requestId: lastPosted().requestId,
       ok: false,
       error: { message: 'activation failed' }
     });
@@ -269,7 +281,7 @@ describe('plugin Worker consecutive failure tracking', () => {
     // Now fail invoke 3 times — should still trigger crash (activation failure didn't advance counter)
     for (let i = 0; i < 3; i++) {
       const p = client.invoke('data_cleaner', 'clean', {}).catch(() => {});
-      simulateInvokeFailure(worker, postedMessages.at(-1)!.requestId);
+      simulateInvokeFailure(worker, lastPosted().requestId);
       await p;
     }
 

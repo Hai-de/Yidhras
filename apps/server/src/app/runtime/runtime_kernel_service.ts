@@ -35,7 +35,7 @@ export const createRuntimeKernelService = (context: AppContext, packId: string):
       context.setPaused(true);
     },
     isRunning() {
-      return context.isPaused() === false;
+      return !context.isPaused();
     },
     getLoopDiagnostics() {
       return context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;

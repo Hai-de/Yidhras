@@ -72,7 +72,8 @@ export const createTokenBudgetTrimExecutor = (
     const sortedSlots = Object.entries(state.tree.fragments_by_slot)
       .map(([slotId, frags]) => ({
         slotId,
-// eslint-disable-next-line security/detect-object-injection
+ 
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- state.tree initialized by executor
         priority: state.tree!.slot_registry[slotId]?.default_priority ?? 0,
         fragments: frags
       }))

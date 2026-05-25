@@ -168,13 +168,22 @@ export default tseslint.config(
           message: 'NodeNext relative exports in server must end with .js'
         }
       ],
-      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/no-non-null-assertion': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_' }
       ],
-      '@typescript-eslint/no-unsafe-type-assertion': 'error'
+      '@typescript-eslint/no-unsafe-type-assertion': 'error',
+      '@typescript-eslint/use-unknown-in-catch-callback-variable': 'error',
+      '@typescript-eslint/no-unnecessary-type-parameters': 'error',
+      '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
+      '@typescript-eslint/no-unnecessary-type-conversion': 'error',
+      '@typescript-eslint/no-unnecessary-template-expression': 'error',
+      '@typescript-eslint/no-useless-default-assignment': 'error',
+      '@typescript-eslint/no-confusing-void-expression': 'error',
+      '@typescript-eslint/no-deprecated': 'error',
+      '@typescript-eslint/no-unnecessary-condition': 'warn'
     }
   },
 

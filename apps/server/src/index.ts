@@ -434,6 +434,7 @@ const start = async (): Promise<void> => {
         logger.info(`bootstrap_list: loading ${String(multiPackConfig.bootstrap_packs.length)} pack(s): ${multiPackConfig.bootstrap_packs.join(', ')}`);
         for (const packRef of multiPackConfig.bootstrap_packs) {
           try {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- bootstrap config guarantees packRuntimeControl
             const result = await appContext.packRuntimeControl!.load(packRef);
             if (result.loaded) {
               logger.info(`bootstrap_list: loaded pack ${packRef} (handle=${result.handle.instance_id})`);

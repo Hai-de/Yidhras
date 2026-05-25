@@ -26,8 +26,8 @@ describe('plugin Worker entry resolver', () => {
       const entry = resolvePluginWorkerEntry();
       if (entry.workerUrl.pathname.endsWith('.ts')) {
         expect(entry.execArgv).toBeDefined();
-        expect(entry.execArgv![0]).toBe('--import');
-        expect(entry.execArgv![1]).toContain('tsx');
+        expect(entry.execArgv?.[0]).toBe('--import');
+        expect(entry.execArgv?.[1]).toContain('tsx');
       } else {
         expect(entry.execArgv).toBeUndefined();
       }

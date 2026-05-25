@@ -208,6 +208,7 @@ const runCli = async (): Promise<void> => {
       await prisma.$connect();
     }
 
+    /* eslint-disable @typescript-eslint/no-non-null-assertion -- prisma guaranteed initialized by needsPrisma guard */
     switch (args.command) {
       case 'status':
         await runStatus(prisma!);
@@ -224,6 +225,7 @@ const runCli = async (): Promise<void> => {
       case 'archive-conversations':
         await runArchiveConversations(prisma!, args);
         break;
+      /* eslint-enable @typescript-eslint/no-non-null-assertion */
       default:
         console.error(`错误: 未知命令 "${args.command}"。使用 --help 查看帮助。`);
         process.exitCode = 1;

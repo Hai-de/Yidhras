@@ -182,6 +182,7 @@ const normalizeStructuredObject = (
   return withDefaults;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- caller-specified output type
 export const decodeAiTaskOutput = <TOutput = unknown>(
   response: ModelGatewayResponse,
   taskConfig: AiResolvedTaskConfig

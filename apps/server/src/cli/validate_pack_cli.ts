@@ -424,6 +424,7 @@ const runCli = (): void => {
         process.exitCode = 1;
       }
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- args.packDir validated above
       const packDir = path.resolve(args.packDir!);
       const result = validatePack(packDir);
       printResult(result);

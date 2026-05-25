@@ -232,7 +232,7 @@ async function main() {
 }
 
 main()
-  .catch((e) => {
+  .catch((e: unknown) => {
     logger.error('Identity seed error', { error: e instanceof Error ? e.message : String(e) });
     process.exit(1);
   })

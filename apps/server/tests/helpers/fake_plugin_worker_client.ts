@@ -1,4 +1,3 @@
-import type { ContributionDescriptor } from '../../src/plugins/worker/contribution_descriptors.js';
 import type { PluginWorkerRuntimeSnapshot } from '../../src/plugins/worker/PluginWorkerClient.js';
 
 export interface FakePluginWorkerClientCallLog {
@@ -64,7 +63,7 @@ export class FakePluginWorkerClient {
     return this._alive;
   }
 
-  triggerCrash(error: Error): void {
+  triggerCrash(_error: Error): void {
     this._alive = false;
   }
 }

@@ -26,6 +26,7 @@ class SlotContentTransformRegistry {
     }
 
     if (packStore.has(transformer.key)) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- has() guard above
       const existing = packStore.get(transformer.key)!;
       if (existing.version === transformer.version) {
         return;

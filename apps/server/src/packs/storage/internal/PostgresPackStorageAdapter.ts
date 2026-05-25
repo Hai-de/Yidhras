@@ -574,7 +574,7 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
         `SELECT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = $1)`,
         schema
       );
-      return rows.length > 0 && rows[0].exists === true;
+      return rows.length > 0 && rows[0].exists;
     } catch {
       return false;
     }
