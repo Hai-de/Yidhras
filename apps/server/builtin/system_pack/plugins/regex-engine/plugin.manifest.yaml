@@ -11,10 +11,11 @@ entrypoints:
 
 compatibility:
   yidhras: ">=0.1.0"
-  host_api: "1.0.0"
+  host_api: "2.0.0"
   pack_id: "yidhras-system"
 
-requested_capabilities: []
+requested_capabilities:
+  - "server.data_cleaner.register"
 
 contributions:
   server:
@@ -24,6 +25,16 @@ contributions:
     step_contributors: []
     rule_contributors: []
     query_contributors: []
+    data_cleaners:
+      - name: "regex"
+        key: "data_cleaner.regex"
+        version: "1.0.0"
+        trigger: "on_tick"
+        priority: 90
+        invoke: "data_cleaner.regex.clean"
+    slot_condition_evaluators: []
+    slot_content_transformers: []
+    perception_resolvers: []
 
 load:
   priority: 90

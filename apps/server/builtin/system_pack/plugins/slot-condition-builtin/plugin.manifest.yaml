@@ -11,10 +11,11 @@ entrypoints:
 
 compatibility:
   yidhras: ">=0.1.0"
-  host_api: "1.0.0"
+  host_api: "2.0.0"
   pack_id: "yidhras-system"
 
-requested_capabilities: []
+requested_capabilities:
+  - "server.slot_condition.register"
 
 contributions:
   server:
@@ -24,6 +25,30 @@ contributions:
     step_contributors: []
     rule_contributors: []
     query_contributors: []
+    data_cleaners: []
+    slot_condition_evaluators:
+      - name: "keyword_match"
+        key: "slot_condition.keyword_match"
+        version: "1.0.0"
+        priority: 100
+        invoke: "slot_condition.keyword_match.evaluate"
+      - name: "logic_match"
+        key: "slot_condition.logic_match"
+        version: "1.0.0"
+        priority: 100
+        invoke: "slot_condition.logic_match.evaluate"
+      - name: "conversation_turn"
+        key: "slot_condition.conversation_turn"
+        version: "1.0.0"
+        priority: 100
+        invoke: "slot_condition.conversation_turn.evaluate"
+      - name: "context_length"
+        key: "slot_condition.context_length"
+        version: "1.0.0"
+        priority: 100
+        invoke: "slot_condition.context_length.evaluate"
+    slot_content_transformers: []
+    perception_resolvers: []
 
 load:
   priority: 100

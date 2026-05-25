@@ -26,7 +26,7 @@ describe('world engine plugin contributor chain', () => {
       }
     };
 
-    pluginRuntimeRegistry.setRuntimes(packId, [
+    pluginRuntimeRegistry.replaceRuntimes(packId, [
       {
         installation_id: 'install-1',
         plugin_id: 'mock-plugin',
@@ -45,10 +45,13 @@ describe('world engine plugin contributor chain', () => {
               context_sources: [],
               prompt_workflow_steps: [],
               api_routes: [],
-              step_contributors: [{ name: 'mock_plugin_step', priority: 0, config: {} }],
+              step_contributors: [{ name: 'mock_plugin_step', invoke: 'mock_plugin_step', priority: 0, config: {} }],
               rule_contributors: [],
               query_contributors: [],
-              data_cleaners: []
+              data_cleaners: [],
+              slot_condition_evaluators: [],
+              slot_content_transformers: [],
+              perception_resolvers: []
             },
             web: { panels: [], routes: [], menu_items: [] }
           }
@@ -60,7 +63,9 @@ describe('world engine plugin contributor chain', () => {
         step_contributors: [mockContributor],
         rule_contributors: [],
         query_contributors: [],
-        perception_resolvers: []
+        perception_resolvers: [],
+        contribution_descriptors: [],
+        handler_names: []
       }
     ]);
 

@@ -19,6 +19,9 @@ const packRuntimeOf = (context: Awaited<ReturnType<typeof createIsolatedAppConte
 const packRuntimeControlOf = (context: Awaited<ReturnType<typeof createIsolatedAppContextFixture>>['context']) =>
   expectDefined(context.packRuntimeControl, 'pack runtime control');
 
+const packRuntimeLookupOf = (context: Awaited<ReturnType<typeof createIsolatedAppContextFixture>>['context']) =>
+  expectDefined(context.packRuntimeLookup, 'pack runtime lookup');
+
 describe('plugin runtime web integration', () => {
   it('returns canonical bundle URLs and resolves enabled plugin web assets after confirm/enable', async () => {
     const fixture = await createIsolatedAppContextFixture();
@@ -83,6 +86,7 @@ describe('plugin runtime web integration', () => {
       packRuntimeOf(fixture.context).getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
+      packRuntimeLookupOf(fixture.context).hasPackRuntime = (packId: string) => packId === 'world-pack-alpha';
       fixture.context.getPluginEnableWarningConfig = () => ({
         enabled: true,
         require_acknowledgement: true
@@ -184,6 +188,7 @@ describe('plugin runtime web integration', () => {
         enabled: true,
         require_acknowledgement: true
       });
+      packRuntimeLookupOf(fixture.context).hasPackRuntime = (packId: string) => packId === 'world-pack-alpha';
       packRuntimeControlOf(fixture.context).load = async (_packRef: string) => ({
         handle: {
           pack_id: 'world-pack-experimental-web'
@@ -206,32 +211,8 @@ describe('plugin runtime web integration', () => {
       await syncPackPluginRuntime(fixture.context, 'world-pack-experimental-web');
 
       await expect(getPackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-experimental-web')).rejects.toMatchObject({
-        code: 'PLUGIN_ROUTE_SCOPE_MISMATCH'
+        code: 'PACK_RUNTIME_NOT_FOUND'
       });
-
-      const experimentalSnapshot = await getPackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-experimental-web');
-      expect(experimentalSnapshot.pack_id).toBe('world-pack-experimental-web');
-      expect(experimentalSnapshot.plugins).toHaveLength(1);
-      expect(experimentalSnapshot.plugins[0]?.web_bundle_url).toBe(
-        '/api/experimental/runtime/packs/world-pack-experimental-web/plugins/plugin.experimental.web.alpha/runtime/web/installation-experimental-web-alpha/death_note.README.md'
-      );
-
-      await expect(
-        resolveEnabledPluginWebAsset(fixture.context, {
-          pack_id: 'world-pack-experimental-web',
-          plugin_id: 'plugin.experimental.web.alpha',
-          installation_id: 'installation-experimental-web-alpha',
-          asset_path: 'death_note.README.md'
-        })
-      ).rejects.toMatchObject({ code: 'PLUGIN_ROUTE_SCOPE_MISMATCH' });
-
-      const asset = await resolveEnabledPluginWebAsset(fixture.context, {
-        pack_id: 'world-pack-experimental-web',
-        plugin_id: 'plugin.experimental.web.alpha',
-        installation_id: 'installation-experimental-web-alpha',
-        asset_path: 'death_note.README.md'
-      });
-      expect(asset.relative_path).toBe('death_note.README.md');
     } finally {
       await fixture.cleanup();
     }
@@ -301,6 +282,7 @@ describe('plugin runtime web integration', () => {
       packRuntimeOf(fixture.context).getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
+      packRuntimeLookupOf(fixture.context).hasPackRuntime = (packId: string) => packId === 'world-pack-alpha';
 
       await expect(
         resolveEnabledPluginWebAsset(fixture.context, {

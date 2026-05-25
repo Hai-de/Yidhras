@@ -73,6 +73,7 @@ const contributionBaseSchema = z.object({
 
 export const contextSourceContributionSchema = contributionBaseSchema.extend({
   adapterType: z.enum(['entity_state', 'world_state', 'relationship', 'custom']).default('custom'),
+  invoke: nonEmptyStringSchema,
   config: z.record(z.string(), z.unknown()).default({})
 })
 
@@ -90,30 +91,57 @@ export const promptWorkflowStepContributionSchema = contributionBaseSchema.exten
     'permission_filter',
     'bundle_finalize'
   ]),
+  invoke: nonEmptyStringSchema,
   config: z.record(z.string(), z.unknown()).default({})
 })
 
 export const apiRouteContributionSchema = contributionBaseSchema.extend({
   path: nonEmptyStringSchema,
-  method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).default('GET')
+  method: z.enum(['GET', 'POST', 'PUT', 'DELETE']).default('GET'),
+  invoke: nonEmptyStringSchema
 })
 
 export const stepContributorContributionSchema = contributionBaseSchema.extend({
+  invoke: nonEmptyStringSchema,
   config: z.record(z.string(), z.unknown()).default({})
 })
 
 export const ruleContributorContributionSchema = contributionBaseSchema.extend({
   supportsRuleIds: z.array(nonEmptyStringSchema).default([]),
+  invoke: nonEmptyStringSchema,
   config: z.record(z.string(), z.unknown()).default({})
 })
 
 export const queryContributorContributionSchema = contributionBaseSchema.extend({
   supportsQueryNames: z.array(nonEmptyStringSchema).default([]),
+  invoke: nonEmptyStringSchema,
   config: z.record(z.string(), z.unknown()).default({})
 })
 
 export const dataCleanerContributionSchema = contributionBaseSchema.extend({
   trigger: z.enum(['on_tick', 'on_unload']).default('on_tick'),
+  key: nonEmptyStringSchema,
+  version: semverStringSchema,
+  invoke: nonEmptyStringSchema,
+  config: z.record(z.string(), z.unknown()).default({})
+})
+
+export const slotConditionEvaluatorContributionSchema = contributionBaseSchema.extend({
+  key: nonEmptyStringSchema,
+  version: semverStringSchema,
+  invoke: nonEmptyStringSchema,
+  config: z.record(z.string(), z.unknown()).default({})
+})
+
+export const slotContentTransformerContributionSchema = contributionBaseSchema.extend({
+  key: nonEmptyStringSchema,
+  version: semverStringSchema,
+  invoke: nonEmptyStringSchema,
+  config: z.record(z.string(), z.unknown()).default({})
+})
+
+export const perceptionResolverContributionSchema = contributionBaseSchema.extend({
+  invoke: nonEmptyStringSchema,
   config: z.record(z.string(), z.unknown()).default({})
 })
 
@@ -134,7 +162,10 @@ export const pluginServerContributionsSchema = z.object({
   step_contributors: z.array(stepContributorContributionSchema).default([]),
   rule_contributors: z.array(ruleContributorContributionSchema).default([]),
   query_contributors: z.array(queryContributorContributionSchema).default([]),
-  data_cleaners: z.array(dataCleanerContributionSchema).default([])
+  data_cleaners: z.array(dataCleanerContributionSchema).default([]),
+  slot_condition_evaluators: z.array(slotConditionEvaluatorContributionSchema).default([]),
+  slot_content_transformers: z.array(slotContentTransformerContributionSchema).default([]),
+  perception_resolvers: z.array(perceptionResolverContributionSchema).default([])
 })
 
 export const pluginWebPanelContributionSchema = z.object({
@@ -202,7 +233,10 @@ export const pluginManifestSchema = z.object({
       step_contributors: [],
       rule_contributors: [],
       query_contributors: [],
-      data_cleaners: []
+      data_cleaners: [],
+      slot_condition_evaluators: [],
+      slot_content_transformers: [],
+      perception_resolvers: []
     }),
     web: pluginWebContributionsSchema.default({
       panels: [],

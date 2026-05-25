@@ -1,4 +1,4 @@
-import type { DataCleaner, DataCleanerInput, DataCleanerOutput } from '@yidhras/contracts';
+import type { DataCleanerInput, DataCleanerOutput } from '@yidhras/contracts';
 
 import type { ServerPluginHostApi } from '../../../../src/plugins/runtime.js';
 
@@ -33,11 +33,7 @@ const hasNestedQuantifiers = (pattern: string): boolean => {
   return /\([^)]*\*[^)]*\)[\s]*[*+{]/.test(pattern) || /\([^)]*\+[^)]*\)[\s]*[*+{]/.test(pattern);
 };
 
-const cleaner: DataCleaner = {
-  key: 'data_cleaner.regex',
-  version: '1.0.0',
-
-  async clean(input: DataCleanerInput): Promise<DataCleanerOutput> {
+const cleanRegex = async (input: DataCleanerInput): Promise<DataCleanerOutput> => {
     const { text, options } = input;
     const pattern = typeof options?.pattern === 'string' && options.pattern.length > 0 ? options.pattern : '.*';
     const replacement = typeof options?.replacement === 'string' ? options.replacement : '';
@@ -102,9 +98,17 @@ const cleaner: DataCleaner = {
     );
 
     return result;
-  }
 };
 
 export function activate(host: ServerPluginHostApi): void {
-  host.registerDataCleaner(cleaner);
+  host.registerHandler('data_cleaner.regex.clean', cleanRegex);
+  host.registerDataCleaner({
+    type: 'data_cleaner',
+    name: 'regex',
+    key: 'data_cleaner.regex',
+    version: '1.0.0',
+    trigger: 'on_tick',
+    priority: 90,
+    invoke: 'data_cleaner.regex.clean'
+  });
 }

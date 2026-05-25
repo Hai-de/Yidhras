@@ -47,6 +47,22 @@ function makeMinimalContext(tick = 100) {
     variable_context: { layers: [], summary: { total_variables: 0, layers_merged: 0, namespaces: [] } },
     variable_context_summary: { total_variables: 0, layers_merged: 0, namespaces: [] },
     context_run: { id: 'run-1', nodes: [], metadata: {} },
+    agent_conversation_memory: {
+      id: 'memory-1',
+      owner_agent_id: 'agent-1',
+      conversation_id: 'conversation-1',
+      entries: [{
+        id: 'entry-1',
+        turn_number: 1,
+        speaker_agent_id: 'user-1',
+        kind: 'message',
+        original_content: 'hello world',
+        current_content: 'hello world',
+        provenance: { source: 'user' },
+        recorded_at: 1,
+        modifications: []
+      }]
+    },
     memory_context: { pack_id: 'test-pack', memory_blocks: [], overlays: [], metadata: {} },
     pack_runtime: {},
     world_pack: { id: 'test-pack', name: 'Test', version: '1' },

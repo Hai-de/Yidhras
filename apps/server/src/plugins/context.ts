@@ -1,5 +1,3 @@
-import type { Express } from 'express';
-
 import type { AppContext , NotificationStore } from '../app/context.js';
 import type { PackRuntimePort } from '../app/services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
@@ -9,14 +7,13 @@ import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger('plugin-sandbox');
 
-export type PluginCapabilityLevel = 'readonly' | 'pack_scoped' | 'full';
+export type PluginCapabilityLevel = 'readonly' | 'pack_scoped';
 
 /**
  * 插件能力等级说明：
  *
  * - readonly: 只读访问 pack 信息、通知推送。不可写 Prisma、不可控制模拟。
- * - pack_scoped: 同上 + 操作当前 pack 数据（world state 读写），无全局 Prisma 访问。
- * - full: 等同 AppContext，可访问所有能力。默认级别，仅向后兼容。
+ * - pack_scoped: 同上 + 当前 pack 只读运行时元数据。所有 Host API 调用必须通过 Worker IPC 边界。
  *
  * 配置路径: plugins.sandbox.capability_level
  */
@@ -27,7 +24,6 @@ export interface PluginSandboxConfig {
   maxManifestDepth: number;
   maxRoutes: number;
   maxContextSources: number;
-  warnOnFullAccess: boolean;
 }
 
 export const getPluginSandboxConfig = (): PluginSandboxConfig => {
@@ -37,8 +33,7 @@ export const getPluginSandboxConfig = (): PluginSandboxConfig => {
     maxManifestSizeBytes: config.max_manifest_size_bytes,
     maxManifestDepth: config.max_manifest_depth,
     maxRoutes: config.max_routes,
-    maxContextSources: config.max_context_sources,
-    warnOnFullAccess: config.warn_on_full_access
+    maxContextSources: config.max_context_sources
   };
 };
 
@@ -59,18 +54,11 @@ export interface ReadonlyPluginContext {
  * Pack 范围接口 — 继承只读，增加 pack state 读写能力
  */
 export interface PackScopedPluginContext extends ReadonlyPluginContext {
-  getHttpApp(): Express | null;
   getRuntimeReady(): boolean;
   assertRuntimeReady(feature: string): void;
-  startupHealth: AppContext['startupHealth'];
 }
 
-/**
- * 完整接口 — 等同于 AppContext
- */
-export type FullPluginContext = AppContext;
-
-export type PluginContext = ReadonlyPluginContext | PackScopedPluginContext | FullPluginContext;
+export type PluginContext = ReadonlyPluginContext | PackScopedPluginContext;
 
 const createReadonlyContext = (context: AppContext, packRuntime?: PackRuntimePort): ReadonlyPluginContext => ({
   notifications: context.notifications,
@@ -82,45 +70,32 @@ const createReadonlyContext = (context: AppContext, packRuntime?: PackRuntimePor
   getPackId: () => packRuntime?.getPackId() ?? null
 });
 
-const createPackScopedContext = (context: AppContext): PackScopedPluginContext => ({
-  ...createReadonlyContext(context),
-  getHttpApp: () => context.getHttpApp?.() ?? null,
+const createPackScopedContext = (context: AppContext, packRuntime?: PackRuntimePort): PackScopedPluginContext => ({
+  ...createReadonlyContext(context, packRuntime),
   getRuntimeReady: () => context.isRuntimeReady(),
-  assertRuntimeReady: feature => context.assertRuntimeReady(feature),
-  startupHealth: context.startupHealth
+  assertRuntimeReady: feature => context.assertRuntimeReady(feature)
 });
 
 /**
  * 根据配置的能力等级，从 AppContext 构建受限的 PluginContext。
  *
- * full 级别：直接返回 AppContext（默认，向后兼容）。
- * 如果 warnOnFullAccess 启用，打印运行时警告。
+ * 此函数只返回受限只读对象；不会返回 AppContext。
+ * Worker-only 插件不得通过此路径获取主线程对象引用。
  */
 export const createPluginContext = (
   context: AppContext,
   pluginName: string,
-  options?: { level?: PluginCapabilityLevel }
+  options?: { level?: PluginCapabilityLevel; packRuntime?: PackRuntimePort }
 ): PluginContext => {
   const level = options?.level ?? getPluginSandboxConfig().capabilityLevel;
-  const config = getPluginSandboxConfig();
 
   switch (level) {
     case 'readonly':
       logger.info(`插件 ${pluginName} 以 readonly 权限运行`);
-      return createReadonlyContext(context);
+      return createReadonlyContext(context, options?.packRuntime);
 
     case 'pack_scoped':
       logger.info(`插件 ${pluginName} 以 pack_scoped 权限运行`);
-      return createPackScopedContext(context);
-
-    case 'full':
-      if (config.warnOnFullAccess) {
-        logger.warn(
-          `插件 ${pluginName} 以 full 权限运行，可访问 Prisma、文件系统和模拟控制。` +
-          `请确保插件来源可信。风险自负。` +
-          `可通过 plugins.sandbox.capability_level 配置调整权限等级。`
-        );
-      }
-      return context;
+      return createPackScopedContext(context, options?.packRuntime);
   }
 };

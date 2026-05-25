@@ -6,13 +6,22 @@ plugins:
 
   # 插件沙箱能力等级
   # - readonly: 只读 pack 信息 + 通知推送，无 Prisma/模拟控制
-  # - pack_scoped: 同上 + 当前 pack 数据读写 + HTTP 上下文
-  # - full: 等同完整 AppContext（默认，向后兼容）
-  # warn_on_full_access 为 true 时，full 级别插件注册时打印风险警告。
+  # - pack_scoped: 同上 + 当前 pack 范围 Host API
   sandbox:
-    capability_level: "full"
+    capability_level: "pack_scoped"
     max_manifest_size_bytes: 1048576
     max_manifest_depth: 20
     max_routes: 16
     max_context_sources: 32
-    warn_on_full_access: true
+
+  isolation:
+    mode: "worker"
+    activation_timeout_ms: 30000
+    invocation_timeout_ms: 5000
+    route_timeout_ms: 10000
+    deactivate_timeout_ms: 5000
+    max_consecutive_failures: 3
+    resource_limits:
+      max_old_generation_size_mb: 128
+      max_young_generation_size_mb: 32
+      stack_size_mb: 4

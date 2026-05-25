@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { DataCleaner, DataCleanerInput, DataCleanerOutput } from '@yidhras/contracts'
 
 import { dataCleanerRegistry } from '../../src/plugins/extensions/data_cleaner_registry.js'
 import type { ServerPluginHostApi } from '../../src/plugins/runtime.js'
@@ -6,11 +7,41 @@ import { expectDefined } from '../helpers/assertions.js'
 
 const templateCleaner = () => expectDefined(dataCleanerRegistry.get('data_cleaner.template'), 'template cleaner')
 
-const buildHost = () => ({
-  registerDataCleaner: (cleaner: Parameters<typeof dataCleanerRegistry.register>[0]) => {
-    dataCleanerRegistry.register(cleaner)
+const buildHost = (): ServerPluginHostApi => {
+  const handlers = new Map<string, (input: unknown) => unknown | Promise<unknown>>()
+
+  return {
+    registerHandler(name, handler) {
+      handlers.set(name, handler)
+    },
+    registerDataCleaner(descriptor) {
+      const cleaner: DataCleaner = {
+        key: descriptor.key,
+        version: descriptor.version,
+        async clean(input: DataCleanerInput): Promise<DataCleanerOutput> {
+          const handler = handlers.get(descriptor.invoke)
+          if (!handler) {
+            throw new Error(`handler not registered: ${descriptor.invoke}`)
+          }
+          return await handler(input) as DataCleanerOutput
+        }
+      }
+      dataCleanerRegistry.register(cleaner)
+    },
+    registerContextSource() {},
+    registerPromptWorkflowStep() {},
+    registerPackRoute() {},
+    registerStepContributor() {},
+    registerRuleContributor() {},
+    registerQueryContributor() {},
+    registerSlotConditionEvaluator() {},
+    registerSlotContentTransformer() {},
+    registerPerceptionResolver() {},
+    async requestInference() {
+      throw new Error('requestInference is not used by template plugin tests')
+    }
   }
-})
+}
 
 describe('template-engine plugin integration', () => {
   it('registers data_cleaner.template via plugin activation', async () => {
@@ -19,7 +50,7 @@ describe('template-engine plugin integration', () => {
     )
 
     const host = buildHost()
-    activate(host as unknown as ServerPluginHostApi)
+    activate(host)
 
     const cleaner = templateCleaner()
     expect(cleaner.key).toBe('data_cleaner.template')
@@ -31,7 +62,7 @@ describe('template-engine plugin integration', () => {
       '../../builtin/system_pack/plugins/template-engine/server.js'
     )
 
-    activate(buildHost() as unknown as ServerPluginHostApi)
+    activate(buildHost())
 
     const cleaner = templateCleaner()
     const output = await cleaner.clean({
@@ -47,7 +78,7 @@ describe('template-engine plugin integration', () => {
       '../../builtin/system_pack/plugins/template-engine/server.js'
     )
 
-    activate(buildHost() as unknown as ServerPluginHostApi)
+    activate(buildHost())
 
     const cleaner = templateCleaner()
     const output = await cleaner.clean({
@@ -63,7 +94,7 @@ describe('template-engine plugin integration', () => {
       '../../builtin/system_pack/plugins/template-engine/server.js'
     )
 
-    activate(buildHost() as unknown as ServerPluginHostApi)
+    activate(buildHost())
 
     const cleaner = templateCleaner()
     const output = await cleaner.clean({

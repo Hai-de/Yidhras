@@ -403,8 +403,8 @@ export const runPackSimulationIteration = async (input: RunPackIterationInput): 
     }
   }
 
-  // Run registered data cleaners
-  const cleaners = dataCleanerRegistry.list();
+  // Run registered data cleaners scoped to this pack
+  const cleaners = dataCleanerRegistry.listByPack(input.packId);
   if (cleaners.length > 0) {
     const packTick = input.packRuntime.getCurrentTick().toString();
     for (const cleaner of cleaners) {

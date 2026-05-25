@@ -1,7 +1,7 @@
 # 通用能力实施计划
 
 > 基于: `.limcode/design/generic-capability-development-draft.md`
-> 状态: P0-P2 全部完成 + P3 测试基础设施完成。P3 长期基础设施除 Worker 线程插件隔离外已完成
+> 状态: P0-P2 全部完成 + P3 测试基础设施完成。P3 长期基础设施已完成，Worker 线程插件隔离进入测试补齐阶段
 
 ---
 
@@ -42,7 +42,7 @@
 - [x] Prometheus 指标端点 (prom-client + 主 API `GET /metrics`) — `observability/metrics.ts`, `app/routes/system.ts`
 - [x] 边车健康暴露到 health API — `app/routes/system.ts`, `packages/contracts/src/system.ts`
 - [x] 运行时状态 dump CLI (sim dump) — `cli/dump_cli.ts`, `package.json`
-- [ ] Worker 线程插件隔离
+- [x] Worker 线程插件隔离 — `plugins/worker/*`, `plugins/runtime.ts`, `app/routes/plugin_runtime_server.ts`, `observability/metrics.ts`, `config/domains/plugins.ts`
 - [x] 数据迁移框架 (pack schema version)：migration registry + CLI + 加载/安装流程只提示、不自动改文件 — `packs/migrations/registry.ts`, `cli/migrate_pack_cli.ts`, `packs/manifest/loader.ts`, `kernel/install/install_pack.ts`
 
 收尾验证：
@@ -54,6 +54,17 @@
 | 文件 | 类型 |
 |------|------|
 | `apps/server/src/plugins/capability_keys.ts` | 新建 |
+| `apps/server/src/plugins/worker/protocol.ts` | 新建 |
+| `apps/server/src/plugins/worker/errors.ts` | 新建 |
+| `apps/server/src/plugins/worker/worker_entry_resolver.ts` | 新建 |
+| `apps/server/src/plugins/worker/worker_entry.ts` | 新建 |
+| `apps/server/src/plugins/worker/worker_host_api.ts` | 新建 |
+| `apps/server/src/plugins/worker/host_call_handler.ts` | 新建 |
+| `apps/server/src/plugins/worker/PluginWorkerClient.ts` | 新建 |
+| `apps/server/src/plugins/worker/PluginWorkerManager.ts` | 新建 |
+| `apps/server/src/plugins/worker/contribution_descriptors.ts` | 新建 |
+| `apps/server/src/plugins/worker/contribution_proxy.ts` | 新建 |
+| `apps/server/src/app/routes/plugin_runtime_server.ts` | 新建 |
 | `apps/server/src/app/runtime/StateTransformContributor.ts` | 新建 |
 | `apps/server/src/app/runtime/plugin_contributor_adapter.ts` | 新建 |
 | `apps/server/tests/helpers/clock.ts` | 新建 |
@@ -62,7 +73,23 @@
 | `packages/contracts/src/plugins.ts` | 修改 |
 | `packages/contracts/src/world_engine.ts` | 修改 |
 | `apps/server/src/plugins/runtime.ts` | 修改 |
-| `apps/server/src/plugins/context.ts` | 间接 |
+| `apps/server/src/plugins/context.ts` | 修改 |
+| `apps/server/src/plugins/extensions/data_cleaner_registry.ts` | 修改 |
+| `apps/server/src/config/domains/plugins.ts` | 修改 |
+| `apps/server/src/observability/metrics.ts` | 修改 |
+| `apps/server/src/index.ts` | 修改 |
+| `apps/server/templates/configw/default.yaml` | 修改 |
+| `apps/server/templates/configw/conf.d/plugins.yaml` | 修改 |
+| `data/configw/default.yaml` | 修改 |
+| `data/configw/conf.d/plugins.yaml` | 修改 |
+| `data/world_packs/closed_space_simulator/plugins/game-loop/server.ts` | 修改 |
+| `data/world_packs/closed_space_simulator/plugins/mastermind-context/server.ts` | 修改 |
+| `data/world_packs/snowbound_mansion/plugins/game-loop/server.ts` | 修改 |
+| `data/world_packs/snowbound_mansion/plugins/mastermind-context/server.ts` | 修改 |
+| `apps/server/builtin/system_pack/plugins/string-methods/server.ts` | 修改 |
+| `apps/server/builtin/system_pack/plugins/regex-engine/server.ts` | 修改 |
+| `apps/server/builtin/system_pack/plugins/template-engine/server.ts` | 修改 |
+| `apps/server/builtin/system_pack/plugins/slot-condition-builtin/server.ts` | 修改 |
 | `apps/server/src/app/runtime/PackSimulationLoop.ts` | 修改 |
 | `apps/server/src/app/runtime/world_engine_persistence.ts` | 修改 |
 | `apps/server/src/app/services/action_dispatcher.ts` | 修改 |

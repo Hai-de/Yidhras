@@ -25,6 +25,7 @@ import { registerOperatorRoutes } from './app/routes/operators.js';
 import { registerPackFrontendAssetRoutes } from './app/routes/pack_frontend_assets.js';
 import { registerPackListRoutes } from './app/routes/packs.js';
 import { registerPackRoutes } from './app/routes/packs/index.js';
+import { registerPluginRuntimeServerRoutes } from './app/routes/plugin_runtime_server.js';
 import { registerPluginRuntimeWebRoutes } from './app/routes/plugin_runtime_web.js';
 import { registerPluginRoutes } from './app/routes/plugins.js';
 import { registerSystemRoutes } from './app/routes/system.js';
@@ -287,6 +288,7 @@ const registerRoutes: RouteRegistrar = (application, context) => {
   registerConfigBackupRoutes(application, context, { asyncHandler });
   registerConfigRoutes(application, context, { asyncHandler });
   registerPluginRoutes(application, context, { asyncHandler });
+  registerPluginRuntimeServerRoutes(application, context, { asyncHandler });
   registerPluginRuntimeWebRoutes(application, context, { asyncHandler });
   registerOperatorAuthRoutes(application, context, { asyncHandler });
   registerOperatorRoutes(application, context, { asyncHandler });

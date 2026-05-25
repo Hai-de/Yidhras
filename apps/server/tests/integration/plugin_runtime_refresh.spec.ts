@@ -93,7 +93,8 @@ describe('plugin runtime refresh integration', () => {
       const enabledRuntimes = pluginRuntimeRegistry.listRuntimes('world-pack-runtime');
       expect(enabledRuntimes).toHaveLength(1);
       expect(enabledRuntimes[0]?.plugin_id).toBe('plugin.runtime.alpha');
-      expect(enabledRuntimes[0]?.pack_routes).toHaveLength(1);
+      expect(enabledRuntimes[0]?.pack_routes).toHaveLength(0);
+      expect(enabledRuntimes[0]?.worker_client).toBeUndefined();
 
       await disablePackPlugin(fixture.context, 'installation-runtime-alpha');
       expect(pluginRuntimeRegistry.listRuntimes('world-pack-runtime')).toHaveLength(0);

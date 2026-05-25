@@ -6,6 +6,7 @@ import type { DataCleaner } from '@yidhras/contracts';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import type { SlotConditionEvaluator } from '../../src/plugins/extensions/slot_condition_registry.js';
+import type { DataCleanerDescriptorInput, SlotConditionEvaluatorDescriptorInput } from '../../src/plugins/worker/contribution_descriptors.js';
 import type { ServerPluginHostApi } from '../../src/plugins/runtime.js';
 
 const execFileAsync = promisify(execFile);
@@ -20,19 +21,43 @@ const pluginIds = [
 function createHost() {
   const dataCleaners = new Map<string, DataCleaner>();
   const slotConditionEvaluators = new Map<string, SlotConditionEvaluator>();
+  const handlers = new Map<string, (input: unknown) => unknown | Promise<unknown>>();
+
+  const requireHandler = (invoke: string) => {
+    const handler = handlers.get(invoke);
+    if (!handler) {
+      throw new Error(`handler not registered: ${invoke}`);
+    }
+    return handler;
+  };
 
   const host: ServerPluginHostApi = {
+    registerHandler(name, handler) {
+      handlers.set(name, handler);
+    },
     registerContextSource() {},
     registerPromptWorkflowStep() {},
     registerPackRoute() {},
     registerStepContributor() {},
     registerRuleContributor() {},
     registerQueryContributor() {},
-    registerDataCleaner(cleaner) {
-      dataCleaners.set(cleaner.key, cleaner);
+    registerDataCleaner(descriptor: DataCleanerDescriptorInput) {
+      dataCleaners.set(descriptor.key, {
+        key: descriptor.key,
+        version: descriptor.version,
+        async clean(input) {
+          return await requireHandler(descriptor.invoke)(input) as Awaited<ReturnType<DataCleaner['clean']>>;
+        }
+      });
     },
-    registerSlotConditionEvaluator(evaluator) {
-      slotConditionEvaluators.set(evaluator.key, evaluator);
+    registerSlotConditionEvaluator(descriptor: SlotConditionEvaluatorDescriptorInput) {
+      slotConditionEvaluators.set(descriptor.key, {
+        key: descriptor.key,
+        version: descriptor.version,
+        async evaluate(input) {
+          return await requireHandler(descriptor.invoke)(input) as Awaited<ReturnType<SlotConditionEvaluator['evaluate']>>;
+        }
+      });
     },
     registerSlotContentTransformer() {},
     registerPerceptionResolver() {},

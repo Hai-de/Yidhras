@@ -16,6 +16,9 @@ const packRuntimeOf = (context: Awaited<ReturnType<typeof createIsolatedAppConte
 const packRuntimeControlOf = (context: Awaited<ReturnType<typeof createIsolatedAppContextFixture>>['context']) =>
   expectDefined(context.packRuntimeControl, 'pack runtime control');
 
+const packRuntimeLookupOf = (context: Awaited<ReturnType<typeof createIsolatedAppContextFixture>>['context']) =>
+  expectDefined(context.packRuntimeLookup, 'pack runtime lookup');
+
 describe('plugin runtime experimental pack scope integration', () => {
   it('loads pack-local plugin runtime for an experimentally loaded pack without changing stable mode', async () => {
     const fixture = await createIsolatedAppContextFixture();
@@ -88,6 +91,8 @@ describe('plugin runtime experimental pack scope integration', () => {
         handle: {
           pack_id: 'world-pack-experimental',
           pack_folder_name: 'world-pack-experimental',
+          instance_id: 'world-pack-experimental',
+          metadata_id: 'world-pack-experimental',
           pack: {
             metadata: { id: 'world-pack-experimental', name: 'World Pack Experimental', version: '0.1.0' }
           }
@@ -95,6 +100,7 @@ describe('plugin runtime experimental pack scope integration', () => {
         loaded: true,
         already_loaded: false
       });
+      packRuntimeLookupOf(fixture.context).hasPackRuntime = (packId: string) => packId === 'world-pack-experimental';
       fixture.context.getPackRuntimeHandle = (packId: string) => {
         return packId === 'world-pack-experimental'
           ? ({

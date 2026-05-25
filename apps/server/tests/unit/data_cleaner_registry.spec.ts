@@ -88,4 +88,44 @@ describe('DataCleanerRegistry', () => {
     dataCleanerRegistry.clear();
     expect(dataCleanerRegistry.list().length).toBe(0);
   });
+
+  it('listByPack returns only cleaners from the specified pack', () => {
+    const cleanerA = { key: 'data_cleaner.pack_a', version: '1.0.0', async clean() { return { cleaned: 'a' }; } };
+    const cleanerB = { key: 'data_cleaner.pack_b', version: '1.0.0', async clean() { return { cleaned: 'b' }; } };
+
+    dataCleanerRegistry.register(cleanerA, { packId: 'pack-a', installationId: 'inst-a', pluginId: 'plugin-a' });
+    dataCleanerRegistry.register(cleanerB, { packId: 'pack-b', installationId: 'inst-b', pluginId: 'plugin-b' });
+
+    const packA = dataCleanerRegistry.listByPack('pack-a');
+    expect(packA).toHaveLength(1);
+    expect(packA[0]?.key).toBe('data_cleaner.pack_a');
+
+    const packB = dataCleanerRegistry.listByPack('pack-b');
+    expect(packB).toHaveLength(1);
+    expect(packB[0]?.key).toBe('data_cleaner.pack_b');
+
+    // Clean up
+    dataCleanerRegistry.clearPack('pack-a');
+    dataCleanerRegistry.clearPack('pack-b');
+  });
+
+  it('listByPack returns empty array for pack with no cleaners', () => {
+    expect(dataCleanerRegistry.listByPack('nonexistent-pack')).toEqual([]);
+  });
+
+  it('clearPack removes only the specified pack, leaving other packs intact', () => {
+    const cleanerA = { key: 'data_cleaner.cp_a', version: '1.0.0', async clean() { return { cleaned: 'a' }; } };
+    const cleanerB = { key: 'data_cleaner.cp_b', version: '1.0.0', async clean() { return { cleaned: 'b' }; } };
+
+    dataCleanerRegistry.register(cleanerA, { packId: 'pack-clear-a', installationId: 'inst-x', pluginId: 'plugin-x' });
+    dataCleanerRegistry.register(cleanerB, { packId: 'pack-clear-b', installationId: 'inst-y', pluginId: 'plugin-y' });
+
+    dataCleanerRegistry.clearPack('pack-clear-a');
+
+    expect(dataCleanerRegistry.listByPack('pack-clear-a')).toEqual([]);
+    expect(dataCleanerRegistry.listByPack('pack-clear-b')).toHaveLength(1);
+
+    // Clean up remaining
+    dataCleanerRegistry.clearPack('pack-clear-b');
+  });
 });

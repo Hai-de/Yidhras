@@ -35,7 +35,7 @@ const createArtifact = (input: ArtifactInput) => ({
     version: '1.0.0',
     kind: 'other',
     entrypoints: {},
-    compatibility: { yidhras: '>=0.5.0', host_api: '1.0.0', pack_id: PACK_ID },
+    compatibility: { yidhras: '>=0.5.0', host_api: '2.0.0', pack_id: PACK_ID },
     requested_capabilities: [],
     contributions: {
       server: {

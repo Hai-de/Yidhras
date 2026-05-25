@@ -1,6 +1,6 @@
 import type { PluginCapabilityLevel } from './context.js';
 
-export const PLUGIN_HOST_API_VERSION = '1.0.0';
+export const PLUGIN_HOST_API_VERSION = '2.0.0';
 
 export const PLUGIN_CAPABILITY_KEY = {
   CONTEXT_SOURCE_REGISTER: 'server.context_source.register',

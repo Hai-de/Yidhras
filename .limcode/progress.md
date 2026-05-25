@@ -1,6 +1,6 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-05-24T20:10:47.477Z
+- Updated At: 2026-05-24T21:40:14.219Z
 - Status: active
 - Phase: plan
 
@@ -15,18 +15,21 @@
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 计划：`.limcode/plans/generic-capability-p3-batch1-batch2.plan.md`
+- 设计：`.limcode/design/worker-thread-plugin-isolation-design.md`
+- 计划：`.limcode/plans/worker-thread-plugin-isolation-plan.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [x] 实现自动快照最小版配置、服务、loop 接入和 retention  `#p3-auto-snapshot`
-- [x] 补齐 /api/health sidecar 响应契约、字段和测试  `#p3-health-sidecar`
-- [x] 实现显式插件 reload API 与 CLI 调用路径  `#p3-plugin-reload`
-- [x] 补齐 Prometheus metrics 初始化与 inference/action/plugin/sidecar 打点  `#p3-prometheus-metrics`
-- [x] 增强 sim:dump CLI，覆盖 runtime/snapshot/plugin/prisma 维度  `#p3-runtime-dump-cli`
-- [x] 补充单元/集成测试并运行 typecheck/test  `#p3-tests-validation`
+- [ ] 定义 Worker IPC 协议、contribution descriptor、Host API 2.0.0 和 plugins.isolation 配置  `#worker-isolation-phase-1-protocol-config`
+- [ ] 实现 Worker entry resolver、worker bootstrap、Worker-side host proxy、PluginWorkerClient 和 host_call handler  `#worker-isolation-phase-2-worker-client`
+- [ ] 实现 PluginWorkerManager，并重构 runtime.ts 删除主线程插件 dynamic import、采用原子 registry 替换  `#worker-isolation-phase-3-runtime-integration`
+- [ ] 实现 step/rule/query/context/prompt/data-cleaner/slot/perception/API-route contribution proxy 和 manifest 对齐校验  `#worker-isolation-phase-4-contribution-proxy`
+- [ ] 删除函数式 registerPackRoute，改为固定主线程 route host 转发 Worker handler  `#worker-isolation-phase-5-route-host`
+- [ ] 清理 full AppContext sandbox 暴露，统一主线程 capability gate  `#worker-isolation-phase-6-sandbox-cleanup`
+- [ ] 增加 Worker metrics，更新 PLUGIN_RUNTIME 文档和 generic-capability 计划状态  `#worker-isolation-phase-7-docs-metrics`
+- [ ] 补齐 Worker 隔离单元/集成测试并运行 typecheck 与插件相关回归测试  `#worker-isolation-phase-8-tests`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -89,6 +92,8 @@
 - 2026-05-24T19:47:38.584Z | artifact_changed | plan | 同步计划文档：.limcode/plans/generic-capability-p3-batch1-batch2.plan.md
 - 2026-05-24T20:07:58.546Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/generic-capability-p3-batch1-batch2.plan.md
 - 2026-05-24T20:10:47.477Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/generic-capability-p3-batch1-batch2.plan.md
+- 2026-05-24T21:30:55.320Z | artifact_changed | design | 同步设计文档：.limcode/design/worker-thread-plugin-isolation-design.md
+- 2026-05-24T21:40:14.219Z | artifact_changed | plan | 同步计划文档：.limcode/plans/worker-thread-plugin-isolation-plan.md
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -98,7 +103,7 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-05-24T16:15:36.183Z",
-  "updatedAt": "2026-05-24T20:10:47.477Z",
+  "updatedAt": "2026-05-24T21:40:14.219Z",
   "status": "active",
   "phase": "plan",
   "currentFocus": "no-unsafe-type-assertion 渐进收敛计划（追加 no-unsafe-* 系列）",
@@ -106,38 +111,49 @@
   "currentBlocker": null,
   "nextAction": null,
   "activeArtifacts": {
-    "plan": ".limcode/plans/generic-capability-p3-batch1-batch2.plan.md"
+    "design": ".limcode/design/worker-thread-plugin-isolation-design.md",
+    "plan": ".limcode/plans/worker-thread-plugin-isolation-plan.md"
   },
   "todos": [
     {
-      "id": "p3-auto-snapshot",
-      "content": "实现自动快照最小版配置、服务、loop 接入和 retention",
-      "status": "completed"
+      "id": "worker-isolation-phase-1-protocol-config",
+      "content": "定义 Worker IPC 协议、contribution descriptor、Host API 2.0.0 和 plugins.isolation 配置",
+      "status": "pending"
     },
     {
-      "id": "p3-health-sidecar",
-      "content": "补齐 /api/health sidecar 响应契约、字段和测试",
-      "status": "completed"
+      "id": "worker-isolation-phase-2-worker-client",
+      "content": "实现 Worker entry resolver、worker bootstrap、Worker-side host proxy、PluginWorkerClient 和 host_call handler",
+      "status": "pending"
     },
     {
-      "id": "p3-plugin-reload",
-      "content": "实现显式插件 reload API 与 CLI 调用路径",
-      "status": "completed"
+      "id": "worker-isolation-phase-3-runtime-integration",
+      "content": "实现 PluginWorkerManager，并重构 runtime.ts 删除主线程插件 dynamic import、采用原子 registry 替换",
+      "status": "pending"
     },
     {
-      "id": "p3-prometheus-metrics",
-      "content": "补齐 Prometheus metrics 初始化与 inference/action/plugin/sidecar 打点",
-      "status": "completed"
+      "id": "worker-isolation-phase-4-contribution-proxy",
+      "content": "实现 step/rule/query/context/prompt/data-cleaner/slot/perception/API-route contribution proxy 和 manifest 对齐校验",
+      "status": "pending"
     },
     {
-      "id": "p3-runtime-dump-cli",
-      "content": "增强 sim:dump CLI，覆盖 runtime/snapshot/plugin/prisma 维度",
-      "status": "completed"
+      "id": "worker-isolation-phase-5-route-host",
+      "content": "删除函数式 registerPackRoute，改为固定主线程 route host 转发 Worker handler",
+      "status": "pending"
     },
     {
-      "id": "p3-tests-validation",
-      "content": "补充单元/集成测试并运行 typecheck/test",
-      "status": "completed"
+      "id": "worker-isolation-phase-6-sandbox-cleanup",
+      "content": "清理 full AppContext sandbox 暴露，统一主线程 capability gate",
+      "status": "pending"
+    },
+    {
+      "id": "worker-isolation-phase-7-docs-metrics",
+      "content": "增加 Worker metrics，更新 PLUGIN_RUNTIME 文档和 generic-capability 计划状态",
+      "status": "pending"
+    },
+    {
+      "id": "worker-isolation-phase-8-tests",
+      "content": "补齐 Worker 隔离单元/集成测试并运行 typecheck 与插件相关回归测试",
+      "status": "pending"
     }
   ],
   "milestones": [
@@ -219,21 +235,33 @@
       "type": "artifact_changed",
       "refId": "plan",
       "message": "同步计划 TODO 快照：.limcode/plans/generic-capability-p3-batch1-batch2.plan.md"
+    },
+    {
+      "at": "2026-05-24T21:30:55.320Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/worker-thread-plugin-isolation-design.md"
+    },
+    {
+      "at": "2026-05-24T21:40:14.219Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/worker-thread-plugin-isolation-plan.md"
     }
   ],
   "stats": {
     "milestonesTotal": 1,
     "milestonesCompleted": 1,
-    "todosTotal": 6,
-    "todosCompleted": 6,
+    "todosTotal": 8,
+    "todosCompleted": 0,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-05-24T20:10:47.477Z",
-    "bodyHash": "sha256:41fc5f1197e76e7c980cdb2437882b2a2a3fb3d526944d84d67de1ffccbeb019"
+    "generatedAt": "2026-05-24T21:40:14.219Z",
+    "bodyHash": "sha256:216d64a78474131a7630a2010af3fade280158739e7898ca04de89a3314a579d"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

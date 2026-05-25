@@ -62,6 +62,34 @@ const pluginsActive = new Gauge({
   registers: [metricsRegistry]
 });
 
+const pluginWorkersActive = new Gauge({
+  name: 'yidhras_plugin_workers_active',
+  help: 'Number of currently active plugin Worker threads per pack',
+  labelNames: ['pack_id'],
+  registers: [metricsRegistry]
+});
+
+const pluginWorkerCrashesTotal = new Counter({
+  name: 'yidhras_plugin_worker_crashes_total',
+  help: 'Total number of plugin Worker crashes',
+  labelNames: ['pack_id', 'plugin_id', 'installation_id'],
+  registers: [metricsRegistry]
+});
+
+const pluginWorkerInvocationDurationMs = new Histogram({
+  name: 'yidhras_plugin_worker_invocation_duration_ms',
+  help: 'Duration of plugin Worker contribution invocations in milliseconds',
+  labelNames: ['pack_id', 'plugin_id', 'installation_id', 'contribution_type', 'status'],
+  registers: [metricsRegistry]
+});
+
+const pluginWorkerActivationDurationMs = new Histogram({
+  name: 'yidhras_plugin_worker_activation_duration_ms',
+  help: 'Duration of plugin Worker activation attempts in milliseconds',
+  labelNames: ['pack_id', 'plugin_id', 'installation_id', 'status'],
+  registers: [metricsRegistry]
+});
+
 const sidecarHealth = new Gauge({
   name: 'yidhras_sidecar_health',
   help: 'Health status of sidecar processes (1 = healthy, 0 = unhealthy)',
@@ -100,6 +128,54 @@ export const recordActionIntentDispatched = (
 
 export const setPluginsActive = (packId: string, count: number): void => {
   pluginsActive.set({ pack_id: packId }, count);
+};
+
+export const setPluginWorkersActive = (packId: string, count: number): void => {
+  pluginWorkersActive.set({ pack_id: packId }, count);
+};
+
+export const recordPluginWorkerCrash = (
+  packId: string,
+  pluginId: string,
+  installationId: string
+): void => {
+  pluginWorkerCrashesTotal.inc({
+    pack_id: packId,
+    plugin_id: pluginId,
+    installation_id: installationId
+  });
+};
+
+export const recordPluginWorkerInvocationCompleted = (
+  packId: string,
+  pluginId: string,
+  installationId: string,
+  contributionType: string,
+  durationMs: number,
+  status: 'success' | 'failed'
+): void => {
+  pluginWorkerInvocationDurationMs.observe({
+    pack_id: packId,
+    plugin_id: pluginId,
+    installation_id: installationId,
+    contribution_type: contributionType,
+    status
+  }, durationMs);
+};
+
+export const recordPluginWorkerActivationCompleted = (
+  packId: string,
+  pluginId: string,
+  installationId: string,
+  durationMs: number,
+  status: 'success' | 'failed'
+): void => {
+  pluginWorkerActivationDurationMs.observe({
+    pack_id: packId,
+    plugin_id: pluginId,
+    installation_id: installationId,
+    status
+  }, durationMs);
 };
 
 export const setSidecarHealth = (sidecarName: string, alive: boolean): void => {
