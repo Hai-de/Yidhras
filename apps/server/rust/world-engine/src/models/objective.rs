@@ -107,28 +107,3 @@ pub struct ObjectiveDiagnostics {
     pub mutation_count: usize,
     pub emitted_event_count: usize,
 }
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct NoMatchDiagnostics {
-    pub pack_id: String,
-    pub invocation_type: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub capability_key: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub effective_mediator_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub target_entity_id: Option<String>,
-    pub diagnostics: NoMatchDetail,
-}
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub struct NoMatchDetail {
-    pub matched_rule_id: Option<String>,
-    pub no_match_reason: String,
-    pub evaluated_rule_count: usize,
-    pub rendered_template_count: usize,
-    pub mutation_count: usize,
-    pub emitted_event_count: usize,
-}

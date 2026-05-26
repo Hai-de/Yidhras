@@ -67,10 +67,10 @@ async function applyCooldown(
 }
 
 function buildNodeScopedKey(ctx: BTEvalContext, node: BTNodeDef): string {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- blackboard keys set by runner
-  const agentId = (ctx.blackboard['__agent_id'] as string) ?? 'unknown';
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- blackboard keys set by runner
-  const treeName = (ctx.blackboard['__tree_name'] as string) ?? 'unknown';
+  const rawAgentId = ctx.blackboard['__agent_id'];
+  const agentId = typeof rawAgentId === 'string' ? rawAgentId : 'unknown';
+  const rawTreeName = ctx.blackboard['__tree_name'];
+  const treeName = typeof rawTreeName === 'string' ? rawTreeName : 'unknown';
   return node.__node_path
     ? `${agentId}::${treeName}::${node.__node_path}`
     : `${agentId}::${treeName}`;

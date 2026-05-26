@@ -12,7 +12,6 @@ import { materializePackRuntimeCoreModels } from '../../src/packs/runtime/materi
 import { SqlitePackStorageAdapter } from '../../src/packs/storage/internal/SqlitePackStorageAdapter.js';
 import type { PackStorageAdapter } from '../../src/packs/storage/PackStorageAdapter.js';
 import { listPackRuleExecutionRecords } from '../../src/packs/storage/rule_execution_repo.js';
-import { ApiError } from '../../src/utils/api_error.js';
 import type { NotificationLevel, SystemMessage } from '../../src/utils/notifications.js';
 import { wrapPrismaAsRepositories } from '../helpers/mock_repos.js';
 import { createIsolatedRuntimeEnvironment } from '../helpers/runtime.js';
@@ -134,7 +133,7 @@ const buildTestContext = (
 describe('objective enforcement sidecar fallback policy', () => {
   const packStorageAdapter = new SqlitePackStorageAdapter();
 
-  it('does not silently fall back to TS objective resolution when a configured sidecar reports OBJECTIVE_RULE_NOT_FOUND', async () => {
+  it('completes with empty plan when sidecar returns __no_match__ sentinel', async () => {
     const environment = await createIsolatedRuntimeEnvironment({ appEnv: 'test' });
     createdRoots.push(environment.rootDir);
     process.env.WORKSPACE_ROOT = environment.rootDir;
@@ -225,45 +224,50 @@ describe('objective enforcement sidecar fallback policy', () => {
 
     const context = buildTestContext(pack, packStorageAdapter, {
       worldEngine: createObjectiveOnlyWorldEngineStub({
-        executeObjectiveRule: async () => {
-          throw new ApiError(500, 'OBJECTIVE_RULE_NOT_FOUND', 'sidecar reported no matching objective rule', {
-            pack_id: pack.metadata.id,
-            invocation_type: 'invoke.claim_book'
-          });
-        }
+        executeObjectiveRule: async () => ({
+          protocol_version: 'world_engine/v1alpha1',
+          pack_id: pack.metadata.id,
+          rule_id: '__no_match__',
+          capability_key: null,
+          mediator_id: null,
+          target_entity_id: null,
+          mutations: [],
+          emitted_events: [],
+          diagnostics: {
+            matched_rule_id: '__no_match__',
+            no_match_reason: 'no matching objective rule',
+            evaluated_rule_count: 1,
+            rendered_template_count: 0,
+            mutation_count: 0,
+            emitted_event_count: 0
+          }
+        })
       })
     });
 
-    await expect(
-      dispatchInvocationFromActionIntent(context, {
-        id: 'intent-legacy-claim',
-        source_inference_id: 'inference-legacy-claim',
-        intent_type: 'invoke.claim_book',
-        actor_ref: {
-          identity_id: 'agent-holder',
-          role: 'active',
-          agent_id: 'agent-holder',
-          atmosphere_node_id: null
-        },
-        target_ref: null,
-        payload: {
-          artifact_id: 'artifact-book',
-          mediator_id: 'mediator-book'
-        }
-      })
-    ).rejects.toMatchObject({
-      code: 'OBJECTIVE_RULE_NOT_FOUND'
+    const result = await dispatchInvocationFromActionIntent(context, {
+      id: 'intent-legacy-claim',
+      source_inference_id: 'inference-legacy-claim',
+      intent_type: 'invoke.claim_book',
+      actor_ref: {
+        identity_id: 'agent-holder',
+        role: 'active',
+        agent_id: 'agent-holder',
+        atmosphere_node_id: null
+      },
+      target_ref: null,
+      payload: {
+        artifact_id: 'artifact-book',
+        mediator_id: 'mediator-book'
+      }
     });
+
+    expect(result).toBeDefined();
+    expect(result.rule_execution_id).toBeDefined();
 
     const executionRecords = await listPackRuleExecutionRecords(packStorageAdapter, pack.metadata.id);
     expect(executionRecords).toHaveLength(1);
-    expect(executionRecords[0]?.execution_status).toBe('failed');
-    expect(executionRecords[0]?.rule_id).toBe('failed:invoke.claim_book');
-
-    const payload = executionRecords[0]?.payload_json ?? null;
-    expect(payload).toMatchObject({
-      invocation_type: 'invoke.claim_book',
-      error_message: 'sidecar reported no matching objective rule'
-    });
+    expect(executionRecords[0]?.execution_status).toBe('completed');
+    expect(executionRecords[0]?.rule_id).toBe('__no_match__');
   });
 });

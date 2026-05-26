@@ -92,7 +92,7 @@ export async function evaluateTree(
   ctx: BTEvalContext
 ): Promise<{ decision: ProviderDecisionRaw | null; trace: BTDecisionTrace }> {
   const traces: BTNodeTrace[] = [];
-  const agentId = ctx.inferenceContext.actor_ref?.agent_id ?? 'unknown';
+  const agentId = ctx.inferenceContext.actor_ref.agent_id ?? 'unknown';
   const simTick = ctx.inferenceContext.tick;
 
   ctx.blackboard['__last_decision'] = null;

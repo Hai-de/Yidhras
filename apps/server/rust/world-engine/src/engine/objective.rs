@@ -36,22 +36,6 @@ pub struct ObjectiveDiagnostics {
     pub emitted_event_count: usize,
 }
 
-#[derive(Debug, Clone, Serialize)]
-pub struct NoMatchDiagnostics {
-    pub pack_id: String,
-    pub invocation_type: String,
-    pub capability_key: Option<String>,
-    pub effective_mediator_id: Option<String>,
-    pub target_entity_id: Option<String>,
-    pub diagnostics: NoMatchDetail,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct NoMatchDetail {
-    pub evaluated_rule_count: usize,
-    pub rendered_template_count: usize,
-}
-
 fn resolve_target_kind_condition(when: &serde_json::Map<String, Value>) -> Option<String> {
     when.get("target.kind")
         .and_then(Value::as_str)
@@ -136,7 +120,7 @@ fn build_template_context(
     })
 }
 
-pub fn execute(input: ExecuteObjectiveInput) -> Result<ExecuteObjectiveOutput, NoMatchDiagnostics> {
+pub fn execute(input: ExecuteObjectiveInput) -> ExecuteObjectiveOutput {
     let invocation_type = input
         .invocation
         .get("invocation_type")
@@ -218,7 +202,7 @@ pub fn execute(input: ExecuteObjectiveInput) -> Result<ExecuteObjectiveOutput, N
         let mutation_count = mutations.len();
         let emitted_event_count = events.len();
 
-        return Ok(ExecuteObjectiveOutput {
+        return ExecuteObjectiveOutput {
             protocol_version: PROTOCOL_VERSION,
             pack_id: input.pack_id,
             rule_id: rule_id.clone(),
@@ -235,20 +219,27 @@ pub fn execute(input: ExecuteObjectiveInput) -> Result<ExecuteObjectiveOutput, N
                 mutation_count,
                 emitted_event_count,
             },
-        });
+        };
     }
 
-    Err(NoMatchDiagnostics {
+    ExecuteObjectiveOutput {
+        protocol_version: PROTOCOL_VERSION,
         pack_id: input.pack_id,
-        invocation_type,
+        rule_id: "__no_match__".to_string(),
         capability_key,
-        effective_mediator_id,
+        mediator_id: effective_mediator_id,
         target_entity_id,
-        diagnostics: NoMatchDetail {
+        mutations: vec![],
+        emitted_events: vec![],
+        diagnostics: ObjectiveDiagnostics {
+            matched_rule_id: "__no_match__".to_string(),
+            no_match_reason: Some("no matching objective rule".to_string()),
             evaluated_rule_count: rules.len(),
             rendered_template_count: 0,
+            mutation_count: 0,
+            emitted_event_count: 0,
         },
-    })
+    }
 }
 
 fn apply_rule(

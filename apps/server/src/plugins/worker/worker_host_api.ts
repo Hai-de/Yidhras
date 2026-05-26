@@ -103,6 +103,32 @@ export const createWorkerPluginHostApi = (options: {
           })
         })
         .parse(result);
+    },
+
+    async upsertPackCollectionRecord(collectionKey: string, record: Record<string, unknown>): Promise<void> {
+      await options.sendHostCall('upsertPackCollectionRecord', { collectionKey, record });
+    },
+
+    async listPackCollectionRecords(collectionKey: string): Promise<Record<string, unknown>[]> {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
+      return options.sendHostCall('listPackCollectionRecords', { collectionKey }) as Promise<Record<string, unknown>[]>;
+    },
+
+    async emitEvent(event: { title: string; description: string; type: string; impact_data?: Record<string, unknown>; location_id?: string; visibility?: string }): Promise<void> {
+      await options.sendHostCall('emitPackEvent', event);
+    },
+
+    registerLoopHook(hookPoint: string, handler: (ctx: Record<string, unknown>) => Promise<void>): void {
+      const handlerName = `__loop_hook:${hookPoint}`;
+      registerDescriptor({
+        type: 'loop_hook',
+        name: handlerName,
+        invoke: handlerName,
+        hookPoint,
+        priority: 0
+      });
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- wrapper: loop hook handler matches invoke handler shape
+      handlers.set(handlerName, handler as PluginInvokeHandler);
     }
   };
 

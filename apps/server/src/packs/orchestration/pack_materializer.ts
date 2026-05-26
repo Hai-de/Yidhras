@@ -40,7 +40,7 @@ export async function materializePackRuntime(
   const { instanceId, pack, prisma, packStorageAdapter, initialTick, appliedOpeningId } = input;
 
   const install = await installPackRuntime(instanceId, pack, packStorageAdapter);
-  const coreModels = await materializePackRuntimeCoreModels(instanceId, pack, initialTick, packStorageAdapter, appliedOpeningId);
+  const coreModels = await materializePackRuntimeCoreModels(instanceId, pack, initialTick, packStorageAdapter, appliedOpeningId, prisma);
   const actorBridges = await materializeActorBridges(instanceId, pack, prisma, initialTick);
 
   return { install, coreModels, actorBridges };

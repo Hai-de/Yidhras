@@ -45,7 +45,8 @@ const descriptorCapabilityDefaults: Record<ContributionType, string> = {
   data_cleaner: PLUGIN_CAPABILITY_KEY.DATA_CLEANER_REGISTER,
   slot_condition_evaluator: PLUGIN_CAPABILITY_KEY.SLOT_CONDITION_REGISTER,
   slot_content_transformer: PLUGIN_CAPABILITY_KEY.SLOT_CONTENT_TRANSFORM_REGISTER,
-  perception_resolver: PLUGIN_CAPABILITY_KEY.PERCEPTION_RESOLVER_REGISTER
+  perception_resolver: PLUGIN_CAPABILITY_KEY.PERCEPTION_RESOLVER_REGISTER,
+  loop_hook: PLUGIN_CAPABILITY_KEY.STEP_CONTRIBUTOR_REGISTER
 };
 
 const descriptorKey = (type: ContributionType, invoke: string): string => `${type}:${invoke}`;

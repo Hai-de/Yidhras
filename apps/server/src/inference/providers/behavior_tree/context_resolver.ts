@@ -97,7 +97,7 @@ const evaluateSimpleCondition = (
   if (!conditionKey) return false;
 
    
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- blackboard condition value from DSL
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion, security/detect-object-injection -- blackboard condition value from DSL
   const conditionValue = cond[conditionKey] as string;
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const resolved = resolveContextValue(conditionKey as BTConditionKey, conditionValue, ctx);

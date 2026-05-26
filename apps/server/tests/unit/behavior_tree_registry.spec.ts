@@ -231,18 +231,19 @@ describe('TreeRegistry', () => {
   });
 
 
-  it('rejects llm_decision until AI Gateway wiring exists', () => {
+  it('accepts llm_decision nodes (AI Gateway wiring completed)', () => {
     const registry = new TreeRegistry('pack-1');
     expect(() =>
       registry.register({
-        bad_llm: {
+        llm_node: {
           type: 'llm_decision',
           prompt_template: 'Choose an action',
           provider: 'openai_compatible',
           model: 'test-model'
         }
       })
-    ).toThrow(/llm_decision/);
+    ).not.toThrow();
+    expect(registry.list()).toContain('llm_node');
   });
 
   it('rejects invalid tree definition (missing type on root)', () => {

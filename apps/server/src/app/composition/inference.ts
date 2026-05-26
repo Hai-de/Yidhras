@@ -5,6 +5,7 @@ import type { InferenceProvider } from '../../inference/provider.js';
 import { createBehaviorTreeProvider } from '../../inference/providers/behavior_tree/provider.js';
 import { TreeRegistry } from '../../inference/providers/behavior_tree/tree_registry.js';
 import { createMockInferenceProvider } from '../../inference/providers/mock.js';
+import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import type { AppContext } from '../context.js';
 
 export interface CreateInferenceProvidersInput {
@@ -41,6 +42,22 @@ export const createInferenceProviders = ({
     createMockInferenceProvider(),
     createGatewayBackedInferenceProvider({ aiTaskService }),
     createBehaviorTreeProvider({
+      aiTaskService,
+      callHandler: async (name: string, input: unknown) => {
+        if (!isRecord(input)) return null;
+        const blackboard = input['blackboard'];
+        if (!isRecord(blackboard)) return null;
+        const packId = blackboard['__pack_id'];
+        if (typeof packId !== 'string') return null;
+
+        const runtimes = pluginRuntimeRegistry.listRuntimes(packId);
+        for (const runtime of runtimes) {
+          if (runtime.handler_names.includes(name) && runtime.worker_client) {
+            return runtime.worker_client.invoke('handler', name, input);
+          }
+        }
+        return null;
+      },
       resolveTreeRegistry: (inferenceContext) => {
         const packId = inferenceContext.world_pack.instance_id;
         return resolveTreeRegistry(packId, inferenceContext.world_pack.behavior_trees);

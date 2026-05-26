@@ -36,13 +36,6 @@ pub fn handle_execute_objective(request_id: Option<Value>, params: &Value) -> Rp
         pack_variables: params.get("pack_variables").cloned(),
     };
 
-    match objective::execute(input) {
-        Ok(result) => rpc_result(request_id, serde_json::to_value(result).unwrap()),
-        Err(diag) => rpc_error(
-            request_id,
-            50001,
-            "OBJECTIVE_RULE_NOT_FOUND",
-            Some(serde_json::to_value(diag).unwrap()),
-        ),
-    }
+    let result = objective::execute(input);
+    rpc_result(request_id, serde_json::to_value(result).unwrap())
 }

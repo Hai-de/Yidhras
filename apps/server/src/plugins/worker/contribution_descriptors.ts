@@ -15,7 +15,9 @@ const capabilityKeySchema = z.enum([
   PLUGIN_CAPABILITY_KEY.DATA_CLEANER_REGISTER,
   PLUGIN_CAPABILITY_KEY.SLOT_CONDITION_REGISTER,
   PLUGIN_CAPABILITY_KEY.SLOT_CONTENT_TRANSFORM_REGISTER,
-  PLUGIN_CAPABILITY_KEY.PERCEPTION_RESOLVER_REGISTER
+  PLUGIN_CAPABILITY_KEY.PERCEPTION_RESOLVER_REGISTER,
+  PLUGIN_CAPABILITY_KEY.PACK_STORAGE_ACCESS,
+  PLUGIN_CAPABILITY_KEY.PACK_EVENT_EMIT
 ]);
 
 const baseContributionDescriptorSchema = z.object({
@@ -101,6 +103,11 @@ export const perceptionResolverDescriptorSchema = baseContributionDescriptorSche
   config: z.record(z.string(), z.unknown()).default({})
 });
 
+export const loopHookDescriptorSchema = baseContributionDescriptorSchema.extend({
+  type: z.literal('loop_hook'),
+  hookPoint: nonEmptyStringSchema
+});
+
 export const contributionDescriptorSchema = z.discriminatedUnion('type', [
   contextSourceDescriptorSchema,
   promptWorkflowStepDescriptorSchema,
@@ -111,7 +118,8 @@ export const contributionDescriptorSchema = z.discriminatedUnion('type', [
   dataCleanerDescriptorSchema,
   slotConditionEvaluatorDescriptorSchema,
   slotContentTransformerDescriptorSchema,
-  perceptionResolverDescriptorSchema
+  perceptionResolverDescriptorSchema,
+  loopHookDescriptorSchema
 ]);
 
 export const contributionDescriptorListSchema = z.array(contributionDescriptorSchema);

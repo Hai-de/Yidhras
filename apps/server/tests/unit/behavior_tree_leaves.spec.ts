@@ -40,10 +40,10 @@ describe('tickCondition', () => {
 });
 
 describe('tickAction', () => {
-  it('semantic_intent action → writes __last_decision to blackboard', () => {
+  it('semantic_intent action → writes __last_decision to blackboard', async () => {
     const ctx = makeCtx();
     const action: BTActionDef = { semantic_intent: 'claim_notebook', reasoning: 'must have it' };
-    const status = tickAction(action, ctx);
+    const status = await tickAction(action, ctx);
     expect(status).toBe('success');
     expect(ctx.blackboard['__last_decision']).toBeDefined();
     const decision = ctx.blackboard['__last_decision'] as Record<string, unknown>;
@@ -51,33 +51,33 @@ describe('tickAction', () => {
     expect(decision.reasoning).toBe('must have it');
   });
 
-  it('kernel action → writes __last_decision with kernel action_type', () => {
+  it('kernel action → writes __last_decision with kernel action_type', async () => {
     const ctx = makeCtx();
     const action: BTActionDef = {
       kernel: 'trigger_event',
       payload: { event_type: 'history', title: 'Observe' }
     };
-    const status = tickAction(action, ctx);
+    const status = await tickAction(action, ctx);
     expect(status).toBe('success');
     const decision = ctx.blackboard['__last_decision'] as Record<string, unknown>;
     expect(decision.action_type).toBe('trigger_event');
     expect((decision.payload as Record<string, unknown>).event_type).toBe('history');
   });
 
-  it('action with target_ref → DecisionResult includes target_ref', () => {
+  it('action with target_ref → DecisionResult includes target_ref', async () => {
     const ctx = makeCtx();
     const action: BTActionDef = {
       semantic_intent: 'gather_target_intel',
       target_ref: { entity_id: 'agent-002', kind: 'actor' }
     };
-    tickAction(action, ctx);
+    await tickAction(action, ctx);
     const decision = ctx.blackboard['__last_decision'] as Record<string, unknown>;
     expect(decision.target_ref).toEqual({ entity_id: 'agent-002', kind: 'actor' });
   });
 });
 
 describe('tickLLMDecision', () => {
-  it('stub implementation returns failure (Phase 6 wires AI Gateway)', async () => {
+  it('returns failure when aiTaskService is not available', async () => {
     const ctx = makeCtx();
     const llm: BTLLMDecisionDef = {
       prompt_template: 'test_template',

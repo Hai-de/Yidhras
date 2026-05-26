@@ -46,7 +46,8 @@ const btActionDefSchema = z.object({
   }).optional(),
   reasoning: z.string().optional(),
   desired_effect: z.string().optional(),
-  payload: z.record(z.string(), z.unknown()).optional()
+  payload: z.record(z.string(), z.unknown()).optional(),
+  call_handler: nonEmptyStringSchema.optional()
 }).refine(
   (val) => val.semantic_intent !== undefined || val.kernel !== undefined,
   { message: 'Action must have at least one of "semantic_intent" or "kernel"' }

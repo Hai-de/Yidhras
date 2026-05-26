@@ -132,18 +132,12 @@ export class TreeRegistry {
     return withPath;
   }
 
-  private readonly SUPPORTED_TYPES = ['selector', 'sequence', 'condition', 'action'];
+  private readonly SUPPORTED_TYPES = ['selector', 'sequence', 'condition', 'action', 'llm_decision'];
 
   private validateNode(node: BTNodeDef, treeName: string): void {
     if (!node.type && !node.$ref && !node.decorators) {
       throw new Error(
         `Tree "${treeName}": root node must have a "type" (selector, sequence, condition, action, llm_decision) or "$ref".`
-      );
-    }
-    if (node.type === 'llm_decision') {
-      throw new Error(
-        `Tree "${treeName}": llm_decision nodes are not supported until AI Gateway wiring is implemented. ` +
-        `Use a deterministic action node or remove this branch.`
       );
     }
     if (node.type && !this.SUPPORTED_TYPES.includes(node.type)) {

@@ -109,6 +109,7 @@ export class PackSimulationLoop {
   private timer: NodeJS.Timeout | null = null;
   private diagnostics: PackLoopDiagnostics = createDefaultDiagnostics();
   private consecutiveFailures = 0;
+  private loopState: 'stopped' | 'scheduled' | 'running' | 'idle' | 'paused' = 'stopped';
 
   private readonly packId: string;
   private readonly clock: ChronosEngine;
@@ -160,7 +161,8 @@ export class PackSimulationLoop {
       clearTimeout(this.timer);
       this.timer = null;
     }
-    this.diagnostics = { ...this.diagnostics, status: 'stopped', in_flight: false };
+    this.diagnostics = { ...this.diagnostics, in_flight: false };
+    this.transitionState('stopped');
   }
 
   public pause(): void {
@@ -170,6 +172,7 @@ export class PackSimulationLoop {
   public resume(): void {
     this.paused = false;
     this.consecutiveFailures = 0;
+    this.transitionState('scheduled');
   }
 
   public isRunning(): boolean {
@@ -180,17 +183,39 @@ export class PackSimulationLoop {
     return { ...this.diagnostics };
   }
 
+  private transitionState(to: typeof this.loopState): void {
+    const from = this.loopState;
+    if (from === to) return;
+    this.loopState = to;
+    this.diagnostics = { ...this.diagnostics, status: to };
+    if (this.hooks?.onLoopStateChange) {
+      for (const fn of this.hooks.onLoopStateChange) {
+        try {
+          fn(from, to);
+        } catch (err: unknown) {
+          logger.warn('onLoopStateChange hook failed', {
+            pack_id: this.packId,
+            from,
+            to,
+            error: getErrorMessage(err)
+          });
+        }
+      }
+    }
+  }
+
   private scheduleNext(): void {
     if (this.stopped) {
-      this.diagnostics = { ...this.diagnostics, status: 'stopped', in_flight: false };
+      this.diagnostics = { ...this.diagnostics, in_flight: false };
+      this.transitionState('stopped');
       return;
     }
 
     this.diagnostics = {
       ...this.diagnostics,
-      status: this.paused ? 'paused' : 'scheduled',
       in_flight: false
     };
+    this.transitionState(this.paused ? 'paused' : 'scheduled');
 
     this.timer = setTimeout(() => {
       void this.runIteration();
@@ -203,7 +228,8 @@ export class PackSimulationLoop {
     }
 
     if (this.paused) {
-      this.diagnostics = { ...this.diagnostics, status: 'paused', in_flight: false };
+      this.diagnostics = { ...this.diagnostics, in_flight: false };
+      this.transitionState('paused');
       this.scheduleNext();
       return;
     }
@@ -211,8 +237,7 @@ export class PackSimulationLoop {
     if (this.diagnostics.in_flight) {
       this.diagnostics = {
         ...this.diagnostics,
-        overlap_skipped_count: this.diagnostics.overlap_skipped_count + 1,
-        status: 'running'
+        overlap_skipped_count: this.diagnostics.overlap_skipped_count + 1
       };
       this.scheduleNext();
       return;
@@ -221,7 +246,6 @@ export class PackSimulationLoop {
     const startedAt = Date.now();
     this.diagnostics = {
       ...this.diagnostics,
-      status: 'running',
       in_flight: true,
       iteration_count: this.diagnostics.iteration_count + 1,
       last_started_at: startedAt,
@@ -229,6 +253,7 @@ export class PackSimulationLoop {
       last_step_errors: [],
       last_extension_errors: []
     };
+    this.transitionState('running');
 
     const result = await runPackSimulationIteration({
       packId: this.packId,
@@ -257,7 +282,6 @@ export class PackSimulationLoop {
 
       this.diagnostics = {
         ...this.diagnostics,
-        status: 'idle',
         in_flight: false,
         consecutive_failures: this.consecutiveFailures,
         last_finished_at: finishedAt,
@@ -267,22 +291,25 @@ export class PackSimulationLoop {
 
       if (this.consecutiveFailures >= this.crashThreshold) {
         this.paused = true;
+        this.transitionState('paused');
         if (this.onDegraded) {
           this.onDegraded(this.packId, this.diagnostics.last_error_message ?? 'unknown error');
         }
+      } else {
+        this.transitionState('idle');
       }
     } else {
       this.consecutiveFailures = 0;
 
       this.diagnostics = {
         ...this.diagnostics,
-        status: 'idle',
         in_flight: false,
         consecutive_failures: 0,
         last_finished_at: finishedAt,
         last_duration_ms: finishedAt - startedAt,
         last_error_message: null
       };
+      this.transitionState('idle');
     }
 
     this.scheduleNext();
@@ -322,10 +349,6 @@ export const runPackSimulationIteration = async (input: RunPackIterationInput): 
   };
 
   const runHooks = async (hookName: string): Promise<void> => {
-    if (hookName.startsWith('on')) {
-      return;
-    }
-
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     const hooks = input.hooks?.[hookName as Exclude<keyof PackLoopHooks, 'onLoopStateChange'>];
     if (!hooks || hooks.length === 0) {
@@ -383,6 +406,7 @@ export const runPackSimulationIteration = async (input: RunPackIterationInput): 
   ];
 
   for (let i = 0; i < steps.length; i++) {
+    // eslint-disable-next-line security/detect-object-injection -- steps is a static array, i is loop-local
     const step = steps[i];
     const stepNum = i + 1;
     const stepStartedAt = Date.now();

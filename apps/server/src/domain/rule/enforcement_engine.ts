@@ -10,15 +10,21 @@ import type { AppContextPorts } from '../../app/services/app_context_ports.js';
 type EnforcementContext = AppInfrastructure & Pick<AppContextPorts, 'worldEngine'> & {
   getSpatialRuntime?(): import('../../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
 };
-import { upsertPackAuthorityGrant } from '../../packs/storage/authority_repo.js';
+import { createPluginRuleAdapter } from '../../app/runtime/plugin_contributor_adapter.js';
+import type { WorldEngineSessionContext } from '../../app/runtime/world_engine_contributors.js';
+import { listPackAuthorityGrants,upsertPackAuthorityGrant  } from '../../packs/storage/authority_repo.js';
+import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage/entity_state_repo.js';
+import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js';
 import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
+import { listPackRuleExecutionRecords } from '../../packs/storage/rule_execution_repo.js';
 import { ApiError } from '../../utils/api_error.js';
 import { resolveAuthorityForSubject, resolveMediatorBindingsForPack } from '../authority/resolver.js';
 import type { InvocationRequest } from '../invocation/invocation_dispatcher.js';
 import { createObjectiveRuleExecutionRecord } from './execution_recorder.js';
 import {
   buildSidecarObjectiveExecutionRequest,
+  type ObjectiveEventEffect,
   type ObjectiveMutationEffect,
   toObjectiveRulePlanFromSidecarResult} from './sidecar_objective_execution.js';
 
@@ -381,6 +387,52 @@ export const enforceInvocationRequest = async (
         packStorageAdapter: context.packStorageAdapter,
         filteredRules
       }, packRuntime);
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
+      const worldEntities = await listPackWorldEntities(context.packStorageAdapter, invocation.pack_id) as unknown as ReadonlyArray<Record<string, unknown>>;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
+      const entityStates = await listPackEntityStates(context.packStorageAdapter, invocation.pack_id) as unknown as ReadonlyArray<Record<string, unknown>>;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
+      const authorityGrants = await listPackAuthorityGrants(context.packStorageAdapter, invocation.pack_id) as unknown as ReadonlyArray<Record<string, unknown>>;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
+      const mediatorBindings = await listPackMediatorBindings(context.packStorageAdapter, invocation.pack_id) as unknown as ReadonlyArray<Record<string, unknown>>;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
+      const ruleExecutionRecords = await listPackRuleExecutionRecords(context.packStorageAdapter, invocation.pack_id) as unknown as ReadonlyArray<Record<string, unknown>>;
+
+      const sessionContext: WorldEngineSessionContext = {
+        pack_id: invocation.pack_id,
+        mode: 'active',
+        current_tick: now.toString(),
+        current_revision: now.toString(),
+        world_entities: worldEntities,
+        entity_states: entityStates,
+        authority_grants: authorityGrants,
+        mediator_bindings: mediatorBindings,
+        rule_execution_records: ruleExecutionRecords
+      };
+
+      const pluginAdapter = createPluginRuleAdapter();
+      const pluginMatch = await pluginAdapter.findFirstMatch(invocation.pack_id, sidecarRequest, sessionContext);
+      if (pluginMatch) {
+        const pluginTargetEntityId =
+          'target_entity_id' in invocation.payload
+            ? String(invocation.payload.target_entity_id)
+            : invocation.target_ref && typeof invocation.target_ref === 'object' && 'entity_id' in invocation.target_ref
+              ? String(invocation.target_ref.entity_id)
+              : null;
+        return {
+          rule_id: pluginMatch.rule_id,
+          capability_key: invocation.capability_key,
+          mediator_id: mediatorId,
+          target_entity_id: pluginTargetEntityId,
+          diagnostics: pluginMatch.diagnostics as Record<string, unknown> | null | undefined,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary adapter: RuleContribution → ObjectiveRulePlan
+          mutations: pluginMatch.mutations as unknown as ObjectiveMutationEffect[],
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary adapter: RuleContribution → ObjectiveRulePlan
+          emitted_events: pluginMatch.emitted_events as unknown as ObjectiveEventEffect[]
+        };
+      }
+
       const sidecarResult = normalizeObjectiveRuleSidecarResult(
         await context.worldEngine.executeObjectiveRule(sidecarRequest)
       );

@@ -737,7 +737,7 @@ const worldPackOpeningSchema = z
 const bootstrapSchema = z
   .object({
     initial_states: z.array(bootstrapInitialStateSchema).default([]),
-    initial_events: z.array(worldPackValueSchema).default([])
+    initial_events: z.array(bootstrapInitialEventSchema).default([])
   })
   .strict()
   .default({ initial_states: [], initial_events: [] });
@@ -875,22 +875,22 @@ export const worldPackConstitutionSchema = z
 
     const entityIds = new Set<string>();
     if (value.entities) {
-      for (const actor of value.entities.actors ?? []) {
+      for (const actor of value.entities.actors) {
         entityIds.add(actor.id);
       }
-      for (const collective of value.entities.collectives ?? []) {
+      for (const collective of value.entities.collectives) {
         entityIds.add(collective.id);
       }
-      for (const domain of value.entities.domains ?? []) {
+      for (const domain of value.entities.domains) {
         entityIds.add(domain.id);
       }
-      for (const artifact of value.entities.artifacts ?? []) {
+      for (const artifact of value.entities.artifacts) {
         entityIds.add(artifact.id);
       }
-      for (const institution of value.entities.institutions ?? []) {
+      for (const institution of value.entities.institutions) {
         entityIds.add(institution.id);
       }
-      for (const mediator of value.entities.mediators ?? []) {
+      for (const mediator of value.entities.mediators) {
         entityIds.add(mediator.id);
       }
     }

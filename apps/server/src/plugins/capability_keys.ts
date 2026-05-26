@@ -13,7 +13,9 @@ export const PLUGIN_CAPABILITY_KEY = {
   DATA_CLEANER_REGISTER: 'server.data_cleaner.register',
   SLOT_CONDITION_REGISTER: 'server.slot_condition.register',
   SLOT_CONTENT_TRANSFORM_REGISTER: 'server.slot_content_transform.register',
-  PERCEPTION_RESOLVER_REGISTER: 'server.perception_resolver.register'
+  PERCEPTION_RESOLVER_REGISTER: 'server.perception_resolver.register',
+  PACK_STORAGE_ACCESS: 'server.pack_storage.access',
+  PACK_EVENT_EMIT: 'server.pack_event.emit'
 } as const;
 
 export type PluginCapabilityKey = (typeof PLUGIN_CAPABILITY_KEY)[keyof typeof PLUGIN_CAPABILITY_KEY];
@@ -29,5 +31,7 @@ export const CAPABILITY_KEY_MIN_LEVEL: Record<PluginCapabilityKey, PluginCapabil
   [PLUGIN_CAPABILITY_KEY.DATA_CLEANER_REGISTER]: 'pack_scoped',
   [PLUGIN_CAPABILITY_KEY.SLOT_CONDITION_REGISTER]: 'pack_scoped',
   [PLUGIN_CAPABILITY_KEY.SLOT_CONTENT_TRANSFORM_REGISTER]: 'pack_scoped',
-  [PLUGIN_CAPABILITY_KEY.PERCEPTION_RESOLVER_REGISTER]: 'pack_scoped'
+  [PLUGIN_CAPABILITY_KEY.PERCEPTION_RESOLVER_REGISTER]: 'pack_scoped',
+  [PLUGIN_CAPABILITY_KEY.PACK_STORAGE_ACCESS]: 'pack_scoped',
+  [PLUGIN_CAPABILITY_KEY.PACK_EVENT_EMIT]: 'pack_scoped'
 };

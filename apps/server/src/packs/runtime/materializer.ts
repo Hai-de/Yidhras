@@ -69,7 +69,8 @@ export const materializePackRuntimeCoreModels = async (
   pack: WorldPack,
   now: bigint,
   packStorageAdapter: PackStorageAdapter,
-  appliedOpeningId?: string
+  appliedOpeningId?: string,
+  prisma?: PrismaClient
 ): Promise<PackRuntimeMaterializeSummary> => {
   const packId = instanceId;
   const worldEntities = new Map<string, PackRuntimeWorldEntityInput>();
@@ -247,6 +248,22 @@ export const materializePackRuntimeCoreModels = async (
         now
       )
     );
+  }
+
+  if (prisma && pack.bootstrap?.initial_events.length) {
+    for (const initialEvent of pack.bootstrap.initial_events) {
+      await prisma.event.create({
+        data: {
+          title: initialEvent.event_type,
+          description: JSON.stringify(initialEvent.payload),
+          tick: now,
+          type: 'system',
+          pack_id: packId,
+          visibility: 'public',
+          created_at: now
+        }
+      });
+    }
   }
 
   const metaStateId = buildEntityStateId(packId, DEFAULT_PACK_WORLD_ENTITY_ID, 'meta');

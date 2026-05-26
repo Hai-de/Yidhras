@@ -60,7 +60,10 @@ export const hostMethodNameSchema = z.enum([
   'getPackSummary',
   'getCurrentTick',
   'queryWorldState',
-  'emitLog'
+  'emitLog',
+  'upsertPackCollectionRecord',
+  'listPackCollectionRecords',
+  'emitPackEvent'
 ]);
 
 export type HostMethodName = z.infer<typeof hostMethodNameSchema>;

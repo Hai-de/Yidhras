@@ -43,6 +43,7 @@ export interface BTActionDef {
   reasoning?: string;
   desired_effect?: string;
   payload?: Record<string, unknown>;
+  call_handler?: string;
 }
 
 export interface BTLLMDecisionDef {
@@ -69,6 +70,8 @@ export interface BTNodeDef {
 export interface BTEvalContext {
   inferenceContext: InferenceContext;
   blackboard: Record<string, unknown>;
+  aiTaskService?: import('../../../ai/task_service.js').AiTaskService;
+  callHandler?: (name: string, input: unknown) => Promise<unknown>;
 }
 
 export interface BTNodeTrace {

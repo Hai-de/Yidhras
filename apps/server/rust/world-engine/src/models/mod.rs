@@ -11,8 +11,7 @@ pub use entity::{EntityState, WorldEntity};
 pub use execution::RuleExecutionRecord;
 pub use mediator::MediatorBinding;
 pub use objective::{
-    EmittedEvent, ExecuteObjectiveInput, ExecuteObjectiveOutput, Mutation, NoMatchDiagnostics,
-    ObjectiveRule,
+    EmittedEvent, ExecuteObjectiveInput, ExecuteObjectiveOutput, Mutation, ObjectiveRule,
 };
 pub use state::{AppState, CommittedTickCache, SessionState};
 pub use step::CommittedTickCacheEntry;

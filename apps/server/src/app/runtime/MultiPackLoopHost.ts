@@ -1,9 +1,10 @@
 import type { ChronosEngine } from '../../clock/engine.js';
 import type { StepStrategy } from '../../core/step_strategy.js';
 import type { InferenceService } from '../../inference/service.js';
+import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
-import type { PackLoopDiagnostics } from './PackSimulationLoop.js';
+import type { HookContext, PackLoopDiagnostics, PackLoopHooks } from './PackSimulationLoop.js';
 import { PackSimulationLoop } from './PackSimulationLoop.js';
 import type { WorldEngineSidecarClient } from './sidecar/world_engine_sidecar_client.js';
 
@@ -15,6 +16,30 @@ export interface MultiPackLoopHostOptions {
   worldEngine: WorldEngineSidecarClient;
   intervalMs?: number;
 }
+
+const buildPluginLoopHooks = (packId: string): PackLoopHooks | undefined => {
+  const entries = pluginRuntimeRegistry.getLoopHooks(packId);
+  if (entries.length === 0) return undefined;
+
+  const hooks: PackLoopHooks = {};
+
+  for (const { hookPoint, runtime } of entries) {
+    const client = runtime.worker_client;
+    if (!client) continue;
+    const handlerName = `__loop_hook:${hookPoint}`;
+    const hookFn = async (ctx: HookContext) => {
+      await client.invoke('loop_hook', handlerName, ctx);
+    };
+
+    const validHookPoints = ['beforeStep1', 'afterStep1', 'beforeStep2', 'afterStep2', 'beforeStep3', 'afterStep3', 'beforeStep4', 'afterStep4', 'beforeStep5', 'afterStep5', 'beforeStep6', 'afterStep6', 'beforeStep7', 'afterStep7'];
+    if (validHookPoints.includes(hookPoint)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated key
+      (hooks[hookPoint as keyof Omit<PackLoopHooks, 'onLoopStateChange'>] ??= []).push(hookFn);
+    }
+  }
+
+  return hooks;
+};
 
 export class MultiPackLoopHost {
   private readonly loops = new Map<string, PackSimulationLoop>();
@@ -47,6 +72,8 @@ export class MultiPackLoopHost {
     // Per-pack interval: prefer pack's own strategy, fall back to host default
     const intervalMs = packRuntime.getLoopIntervalMs() || this.defaultIntervalMs;
 
+    const pluginHooks = buildPluginLoopHooks(packId);
+
     const loop = new PackSimulationLoop({
       packId,
       clock,
@@ -57,6 +84,7 @@ export class MultiPackLoopHost {
       worldEngine: this.worldEngine,
       packRuntime,
       intervalMs,
+      hooks: pluginHooks,
       onDegraded: (degradedPackId, reason) => {
         this.onPackDegraded(degradedPackId, reason);
       },

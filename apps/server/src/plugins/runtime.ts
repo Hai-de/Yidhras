@@ -67,6 +67,10 @@ export interface ServerPluginHostApi {
   registerSlotContentTransformer(descriptor: SlotContentTransformerDescriptorInput, capabilityKey?: PluginCapabilityKey): void;
   registerPerceptionResolver(descriptor: PerceptionResolverDescriptorInput, capabilityKey?: PluginCapabilityKey): void;
   requestInference(input: PluginInferenceRequest): Promise<PluginInferenceResult>;
+  upsertPackCollectionRecord(collectionKey: string, record: Record<string, unknown>): Promise<void>;
+  listPackCollectionRecords(collectionKey: string): Promise<Record<string, unknown>[]>;
+  emitEvent(event: { title: string; description: string; type: string; impact_data?: Record<string, unknown>; location_id?: string; visibility?: string }): Promise<void>;
+  registerLoopHook(hookPoint: string, handler: (ctx: Record<string, unknown>) => Promise<void>): void;
 }
 
 export interface RegisteredServerPluginRuntime {
@@ -84,6 +88,7 @@ export interface RegisteredServerPluginRuntime {
   perception_resolvers: PerceptionResolver[];
   contribution_descriptors: ContributionDescriptor[];
   handler_names: string[];
+  loop_hook_points: string[];
   worker_client?: PluginWorkerClient;
   inferenceExecutor?: (input: PluginInferenceRequest) => Promise<PluginInferenceResult>;
   deactivate?: () => void | Promise<void>;
@@ -135,6 +140,12 @@ class PluginRuntimeRegistry {
   public getPerceptionResolvers(packId: string): PerceptionResolver[] {
     return this.listRuntimes(packId).flatMap(runtime => runtime.perception_resolvers);
   }
+
+  public getLoopHooks(packId: string): Array<{ hookPoint: string; runtime: RegisteredServerPluginRuntime }> {
+    return this.listRuntimes(packId).flatMap(runtime =>
+      runtime.loop_hook_points.map(hookPoint => ({ hookPoint, runtime }))
+    );
+  }
 }
 
 export const pluginRuntimeRegistry = new PluginRuntimeRegistry();
@@ -164,6 +175,9 @@ const createRuntimeForActivatedWorker = (input: {
     perception_resolvers: proxies.perception_resolvers,
     contribution_descriptors: input.descriptors,
     handler_names: input.descriptors.map(descriptor => descriptor.invoke),
+    loop_hook_points: input.descriptors
+      .filter(d => d.type === 'loop_hook')
+      .map(d => (d as { hookPoint: string }).hookPoint),
     worker_client: input.worker_client,
     deactivate: () => input.worker_client.deactivate()
   };
@@ -270,7 +284,7 @@ export const refreshPackPluginRuntime = async (
     if (!manifest) continue;
 
     // Check Host API version compatibility
-    const requiredHostApi = manifest.compatibility?.host_api;
+    const requiredHostApi = manifest.compatibility.host_api;
     if (requiredHostApi && !isHostApiCompatible(PLUGIN_HOST_API_VERSION, requiredHostApi)) {
       runtimeLogger.error(
         `Plugin ${installation.plugin_id} requires host_api ${requiredHostApi} ` +
@@ -300,7 +314,7 @@ export const refreshPackPluginRuntime = async (
       continue;
     }
 
-    const serverEntrypoint = manifest.entrypoints?.server;
+    const serverEntrypoint = manifest.entrypoints.server;
     if (!serverEntrypoint?.source) {
       runtimes.push({
         installation_id: installation.installation_id,
@@ -316,7 +330,8 @@ export const refreshPackPluginRuntime = async (
         query_contributors: [],
         perception_resolvers: [],
         contribution_descriptors: [],
-        handler_names: []
+        handler_names: [],
+        loop_hook_points: []
       });
       continue;
     }
