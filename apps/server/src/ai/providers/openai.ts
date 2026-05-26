@@ -470,6 +470,13 @@ export const createOpenAiProviderAdapter = (): AiProviderAdapter => {
       }
       // Responses API / Embeddings 暂不支持流式
       yield { type: 'error', code: 'STREAM_NOT_SUPPORTED', message: 'OpenAI Responses API and Embeddings do not support streaming' };
+    },
+
+    async listModels(providerConfig) {
+      if (openAiChatCompletionsAdapter.listModels) {
+        return openAiChatCompletionsAdapter.listModels(providerConfig);
+      }
+      return [];
     }
   };
 };

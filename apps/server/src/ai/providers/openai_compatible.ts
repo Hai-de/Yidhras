@@ -1,7 +1,7 @@
 import { ApiError } from '../../utils/api_error.js';
 import type { AiMessage, AiToolSpec } from '../types.js';
 import { encodeMessageText, getEnv, isRecord, mapMessageRole } from './shared.js';
-import type { AiProviderAdapter, AiProviderAdapterRequest, AiProviderAdapterResult } from './types.js';
+import type { AiProviderAdapter, AiProviderAdapterRequest, AiProviderAdapterResult, PartialModelEntry } from './types.js';
 
 export interface OpenAiCompatibleCapabilityOverrides {
   /** DeepSeek: temperature 和 top_p 不允许同时设置 */
@@ -21,6 +21,8 @@ export interface OpenAiCompatibleConfig {
   buildHeaders?(input: AiProviderAdapterRequest): Record<string, string>;
   resolveUserId?(input: AiProviderAdapterRequest): string | null;
   capabilityOverrides?: OpenAiCompatibleCapabilityOverrides;
+  /** 模型列表 API 路径，默认 `/models`。设 null 则跳过动态获取 */
+  modelsPath?: string | null;
 }
 
 const buildChatMessages = (messages: AiMessage[]) => {
@@ -451,6 +453,70 @@ const performStreamingRequest = async (
   });
 };
 
+// ── Dynamic model listing ──────────────────────────────────────────────
+
+const deriveCapabilities = (
+  overrides?: OpenAiCompatibleCapabilityOverrides
+): PartialModelEntry['capabilities'] => {
+  const maxStructured = overrides?.maxStructuredOutput;
+  return {
+    text_generation: true,
+    structured_output: maxStructured === 'json_schema' ? 'json_schema'
+      : maxStructured === 'json_object' ? 'json_object'
+      : 'none',
+    tool_calling: true,
+    vision_input: false,
+    embeddings: false,
+    rerank: false
+  };
+};
+
+const fetchModelsList = async (
+  config: OpenAiCompatibleConfig,
+  providerConfig: import('../types.js').AiProviderConfig
+): Promise<PartialModelEntry[]> => {
+  const modelsPath = config.modelsPath ?? '/models';
+  // resolveBaseUrl requires an AiProviderAdapterRequest — for model listing
+  // we construct a minimal stub with only provider_config populated
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- intentional stub
+  const stubInput = { provider_config: providerConfig } as unknown as AiProviderAdapterRequest;
+  const resolvedBaseUrl = config.resolveBaseUrl(stubInput);
+  const url = `${resolvedBaseUrl}${modelsPath}`;
+
+  const headers: Record<string, string> = {};
+  const apiKey = config.resolveApiKey(stubInput);
+  if (apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  }
+
+  const response = await fetch(url, { method: 'GET', headers });
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const payload = (await response.json()) as unknown;
+  if (!isRecord(payload) || !Array.isArray(payload.data)) {
+    return [];
+  }
+
+  const models: PartialModelEntry[] = [];
+  const data = payload.data as unknown[];
+  for (const item of data) {
+    if (!isRecord(item) || !item.id || typeof item.id !== 'string') continue;
+    models.push({
+      provider: config.provider,
+      model: item.id,
+      endpoint_kind: 'chat_completions',
+      capabilities: deriveCapabilities(config.capabilityOverrides),
+      tags: ['dynamic'],
+      availability: 'active'
+    });
+  }
+
+  return models;
+};
+
 // ── Adapter factory ────────────────────────────────────────────────────
 
 export const createOpenAiCompatibleAdapter = (
@@ -514,6 +580,15 @@ export const createOpenAiCompatibleAdapter = (
     async *executeStream(input, signal) {
       const response = await performStreamingRequest(input, config, signal);
       yield* parseChatCompletionsSseChunk(response);
+    },
+
+    async listModels(providerConfig) {
+      if (config.modelsPath === null) return [];
+      try {
+        return await fetchModelsList(config, providerConfig);
+      } catch {
+        return [];
+      }
     }
   };
 };

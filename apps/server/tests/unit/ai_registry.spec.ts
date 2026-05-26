@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { PartialModelEntry } from '../../src/ai/providers/types.js';
 import {
   BUILTIN_AI_TOOLS,
   findAiModelRegistryEntry,
@@ -8,14 +9,51 @@ import {
   getAiRegistryConfig,
   getAiRegistryMetadata,
   getAiToolEntry,
+  getDynamicModelsMetadata,
   listAiModelRegistryEntries,
   listAiProviderConfigs,
   listAiRoutePolicies,
   listAiToolEntries,
+  refreshDynamicModels,
   resetAiRegistryCache,
   resolveToolsFromRegistry
 } from '../../src/ai/registry.js';
+import type { AiProviderConfig } from '../../src/ai/types.js';
 import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
+
+const DYNAMIC_MODEL_ID = 'test-model-dynamic';
+
+const mockDynamicModel: PartialModelEntry = {
+  provider: 'openai',
+  model: DYNAMIC_MODEL_ID,
+  endpoint_kind: 'chat_completions',
+  capabilities: {
+    text_generation: true,
+    structured_output: 'json_object',
+    tool_calling: true,
+    vision_input: false,
+    embeddings: false,
+    rerank: false
+  },
+  tags: ['dynamic'],
+  availability: 'active'
+};
+
+const mockAdapterWithListModels = {
+  provider: 'openai',
+  execute: vi.fn(),
+  listModels: vi.fn(async (_providerConfig: AiProviderConfig) => [mockDynamicModel])
+};
+
+const mockAdapterWithoutListModels = {
+  provider: 'no-list-models',
+  execute: vi.fn()
+};
+
+vi.mock('../../src/ai/providers/adapter_registry.js', () => ({
+  buildAdaptersFromRegistry: vi.fn(() => [mockAdapterWithListModels, mockAdapterWithoutListModels]),
+  listBuiltinAdapterNames: vi.fn(() => [])
+}));
 
 describe('ai registry', () => {
   beforeEach(() => {
@@ -327,6 +365,121 @@ describe('ai registry', () => {
       for (const route of nonAgentRoutes) {
         expect(route.constraints?.allow_tool_calling).toBeUndefined();
       }
+    });
+  });
+
+  describe('dynamic models', () => {
+    beforeEach(() => {
+      resetAiRegistryCache();
+      vi.resetAllMocks();
+      mockAdapterWithListModels.listModels = vi.fn(async (_providerConfig: AiProviderConfig) => [mockDynamicModel]);
+    });
+
+    it('getDynamicModelsMetadata returns zero count when no models fetched', () => {
+      const meta = getDynamicModelsMetadata();
+
+      expect(meta.count).toBe(0);
+      expect(meta.lastFetchedAt).toBeNull();
+    });
+
+    it('getAiRegistryConfig returns only static models before dynamic refresh', () => {
+      const config = getAiRegistryConfig();
+      const modelIds = config.models.map(m => `${m.provider}:${m.model}`);
+
+      expect(modelIds).not.toContain(`openai:${DYNAMIC_MODEL_ID}`);
+    });
+
+    it('refreshDynamicModels populates dynamic models and getAiRegistryConfig includes them', async () => {
+      await refreshDynamicModels();
+
+      const config = getAiRegistryConfig();
+      const modelIds = config.models.map(m => `${m.provider}:${m.model}`);
+
+      expect(modelIds).toContain(`openai:${DYNAMIC_MODEL_ID}`);
+    });
+
+    it('dynamic models have dynamic tag', async () => {
+      await refreshDynamicModels();
+
+      const config = getAiRegistryConfig();
+      const dynamicModel = config.models.find(m => m.model === DYNAMIC_MODEL_ID);
+
+      const foundDynamic = expectDefined(dynamicModel, 'dynamic model');
+      expect(foundDynamic.tags).toContain('dynamic');
+    });
+
+    it('getDynamicModelsMetadata reflects fetched models', async () => {
+      await refreshDynamicModels();
+
+      const meta = getDynamicModelsMetadata();
+
+      expect(meta.count).toBeGreaterThanOrEqual(1);
+      expect(meta.lastFetchedAt).toBeGreaterThan(0);
+    });
+
+    it('static models take priority over dynamic models with same key', async () => {
+      // First, verify gpt-4.1-mini exists in static config
+      const staticConfig = getAiRegistryConfig();
+      const gpt4Mini = staticConfig.models.find(
+        m => m.provider === 'openai' && m.model === 'gpt-4.1-mini'
+      );
+      const staticGpt4Mini = expectDefined(gpt4Mini, 'static gpt-4.1-mini');
+      expect(staticGpt4Mini.capabilities.structured_output).toBe('json_schema');
+
+      // Now set up mock to return a model with same key but different capabilities
+      mockAdapterWithListModels.listModels = vi.fn(async (_providerConfig: AiProviderConfig) => [
+        {
+          provider: 'openai',
+          model: 'gpt-4.1-mini',
+          endpoint_kind: 'chat_completions',
+          capabilities: {
+            text_generation: true,
+            structured_output: 'none' as const,
+            tool_calling: false,
+            vision_input: false,
+            embeddings: false,
+            rerank: false
+          },
+          tags: ['dynamic'],
+          availability: 'active' as const
+        }
+      ] as PartialModelEntry[]);
+
+      await refreshDynamicModels();
+
+      // Static entry should NOT be overwritten — structured_output stays 'json_schema'
+      const mergedConfig = getAiRegistryConfig();
+      const mergedGpt4Mini = mergedConfig.models.find(
+        m => m.provider === 'openai' && m.model === 'gpt-4.1-mini'
+      );
+
+      const resolvedMerged = expectDefined(mergedGpt4Mini, 'merged gpt-4.1-mini');
+      expect(resolvedMerged.capabilities.structured_output).toBe('json_schema');
+    });
+
+    it('resetAiRegistryCache clears dynamic models', async () => {
+      await refreshDynamicModels();
+
+      const metaBefore = getDynamicModelsMetadata();
+      expect(metaBefore.count).toBeGreaterThanOrEqual(1);
+
+      resetAiRegistryCache();
+
+      const metaAfter = getDynamicModelsMetadata();
+      expect(metaAfter.count).toBe(0);
+      expect(metaAfter.lastFetchedAt).toBeNull();
+    });
+
+    it('listModels is not called for adapter without listModels method', async () => {
+      await refreshDynamicModels();
+
+      // The mock adapter without listModels should not cause errors
+      const config = getAiRegistryConfig();
+      const models = config.models;
+
+      // no-list-models adapter should not contribute models
+      const modelsFromNoList = models.filter(m => m.provider === 'no-list-models');
+      expect(modelsFromNoList).toHaveLength(0);
     });
   });
 

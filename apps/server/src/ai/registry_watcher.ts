@@ -8,6 +8,7 @@ import {
   aiRegistryConfigSchema,
   BUILTIN_AI_REGISTRY_CONFIG,
   promptSlotRegistrySchema,
+  refreshDynamicModels,
   resetAiRegistryCache,
   resetPromptSlotRegistryCache,
 } from './registry.js';
@@ -77,6 +78,9 @@ const validateAndReloadAiModels = (filePath: string): void => {
     });
 
     resetAiRegistryCache();
+    refreshDynamicModels().catch((err: unknown) => {
+      logger.warn('动态模型刷新失败', { error: err instanceof Error ? err.message : String(err) });
+    });
     const summary = formatSummary(parsedOverride, 'ai_models');
     logger.info(`${resolveFileName(filePath)} 变更，重新加载成功\n  ${summary}`);
   } catch (err) {

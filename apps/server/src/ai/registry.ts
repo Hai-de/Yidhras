@@ -4,6 +4,8 @@ import { readYamlFileIfExists, resolveWorkspaceRoot } from '../config/loader.js'
 import { deepMerge } from '../config/merge.js';
 import { getAiModelsConfigPath } from '../config/runtime_config.js';
 import type { PromptSlotConfig } from '../inference/prompt_slot_config.js';
+import { createLogger } from '../utils/logger.js';
+import { buildAdaptersFromRegistry } from './providers/adapter_registry.js';
 import {
   AI_AUDIT_LEVELS,
   AI_MODEL_AVAILABILITY,
@@ -135,7 +137,7 @@ const aiToolRegistryEntrySchema = z
   })
   .strict();
 
-export const BUILTIN_ADAPTER_NAMES = ['mock', 'openai', 'anthropic', 'deepseek', 'ollama'] as const;
+export const BUILTIN_ADAPTER_NAMES = ['mock', 'openai', 'anthropic', 'deepseek', 'mimo', 'ollama'] as const;
 export type BuiltinAdapterName = (typeof BUILTIN_ADAPTER_NAMES)[number];
 
 export const AI_PROVIDER_TEMPLATE_KINDS = ['openai_compatible', 'anthropic_compatible', 'builtin'] as const;
@@ -189,6 +191,8 @@ export interface AiRegistryMetadata {
 interface AiRegistryCache {
   config: AiRegistryConfig;
   metadata: AiRegistryMetadata;
+  dynamicModels: AiModelRegistryEntry[];
+  dynamicLastFetchedAt: number | null;
 }
 
 export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
@@ -222,6 +226,15 @@ export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
       enabled: true,
       metadata: {
         strategy: 'deepseek_first'
+      }
+    },
+    {
+      provider: 'mimo',
+      api_key_env: 'MIMO_API_KEY',
+      base_url: 'https://token-plan-sgp.xiaomimimo.com/v1',
+      enabled: true,
+      metadata: {
+        strategy: 'mimo_first'
       }
     },
     {
@@ -362,6 +375,28 @@ export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
       }
     },
     {
+      provider: 'mimo',
+      model: 'mimo-v2.5-pro',
+      endpoint_kind: 'chat_completions',
+      capabilities: {
+        text_generation: true,
+        structured_output: 'json_object',
+        tool_calling: true,
+        vision_input: false,
+        embeddings: false,
+        rerank: false,
+        max_context_tokens: 1048576,
+        max_output_tokens: 16384
+      },
+      tags: ['fallback', 'high_capacity', 'mimo-first'],
+      availability: 'active',
+      defaults: {
+        timeout_ms: 45000,
+        temperature: 0.7,
+        max_output_tokens: 4096
+      }
+    },
+    {
       provider: 'ollama',
       model: 'llama3.2',
       endpoint_kind: 'chat_completions',
@@ -411,6 +446,7 @@ export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
       fallback_models: [
         { provider: 'openai', model: 'gpt-4.1' },
         { provider: 'anthropic', model: 'claude-sonnet-4-6' },
+        { provider: 'mimo', model: 'mimo-v2.5-pro' },
         { provider: 'deepseek', model: 'deepseek-chat' }
       ],
       constraints: {
@@ -433,6 +469,7 @@ export const BUILTIN_AI_REGISTRY_CONFIG: AiRegistryConfig = {
       fallback_models: [
         { provider: 'openai', model: 'gpt-4.1' },
         { provider: 'anthropic', model: 'claude-sonnet-4-6' },
+        { provider: 'mimo', model: 'mimo-v2.5-pro' },
         { provider: 'deepseek', model: 'deepseek-chat' }
       ],
       constraints: {
@@ -614,7 +651,9 @@ const loadAiRegistryConfig = (): AiRegistryCache => {
       workspaceRoot,
       configPath,
       loadedFromFile: hasFileOverrides
-    }
+    },
+    dynamicModels: [],
+    dynamicLastFetchedAt: null
   };
 };
 
@@ -630,8 +669,104 @@ export const resetAiRegistryCache = (): void => {
   aiRegistryCache = null;
 };
 
+const logger = createLogger('ai-registry');
+
+const buildSyntheticProviderConfig = (
+  template: import('./types.js').AiProviderTemplate
+): AiProviderConfig => ({
+  provider: template.name,
+  api_key_env: template.api_key_env ?? null,
+  base_url: template.base_url ?? null,
+  enabled: true,
+  default_headers: template.default_headers
+});
+
+const resolveProviderConfig = (
+  cache: AiRegistryCache,
+  provider: string
+): AiProviderConfig | null => {
+  const fromProviders = cache.config.providers.find(p => p.provider === provider);
+  if (fromProviders) return fromProviders;
+
+  const fromTemplate = (cache.config.provider_templates ?? []).find(t => t.name === provider);
+  if (fromTemplate) return buildSyntheticProviderConfig(fromTemplate);
+
+  return null;
+};
+
 export const getAiRegistryConfig = (): AiRegistryConfig => {
-  return getAiRegistryCache().config;
+  const cache = getAiRegistryCache();
+  if (cache.dynamicModels.length === 0) {
+    return cache.config;
+  }
+  const staticKeys = new Set(cache.config.models.map(m => `${m.provider}:${m.model}`));
+  const newDynamic = cache.dynamicModels.filter(m => !staticKeys.has(`${m.provider}:${m.model}`));
+  if (newDynamic.length === 0) {
+    return cache.config;
+  }
+  return {
+    ...cache.config,
+    models: [...cache.config.models, ...newDynamic]
+  };
+};
+
+export const getDynamicModelsMetadata = (): {
+  count: number;
+  lastFetchedAt: number | null;
+} => {
+  const cache = getAiRegistryCache();
+  return {
+    count: cache.dynamicModels.length,
+    lastFetchedAt: cache.dynamicLastFetchedAt
+  };
+};
+
+export const refreshDynamicModels = async (): Promise<void> => {
+  const cache = getAiRegistryCache();
+  const adapters = buildAdaptersFromRegistry(cache.config);
+  const dynamicModels: AiModelRegistryEntry[] = [];
+
+  for (const adapter of adapters) {
+    if (!adapter.listModels) continue;
+    const providerConfig = resolveProviderConfig(cache, adapter.provider);
+    if (!providerConfig || !providerConfig.enabled) continue;
+
+    try {
+      const partialModels = await adapter.listModels(providerConfig);
+      for (const partial of partialModels) {
+        dynamicModels.push({
+          provider: partial.provider,
+          model: partial.model,
+          endpoint_kind: partial.endpoint_kind ?? 'chat_completions',
+          base_url: partial.base_url ?? null,
+          api_version: partial.api_version ?? null,
+          capabilities: {
+            text_generation: partial.capabilities?.text_generation ?? true,
+            structured_output: partial.capabilities?.structured_output ?? 'none',
+            tool_calling: partial.capabilities?.tool_calling ?? false,
+            vision_input: partial.capabilities?.vision_input ?? false,
+            embeddings: partial.capabilities?.embeddings ?? false,
+            rerank: partial.capabilities?.rerank ?? false,
+            max_context_tokens: partial.capabilities?.max_context_tokens,
+            max_output_tokens: partial.capabilities?.max_output_tokens
+          },
+          tags: partial.tags ?? ['dynamic'],
+          availability: partial.availability ?? 'active',
+          pricing: partial.pricing,
+          defaults: partial.defaults,
+          metadata: partial.metadata
+        });
+      }
+    } catch (err) {
+      logger.warn(`动态模型列表获取失败 [${adapter.provider}]`, {
+        error: err instanceof Error ? err.message : String(err)
+      });
+    }
+  }
+
+  cache.dynamicModels = dynamicModels;
+  cache.dynamicLastFetchedAt = Date.now();
+  logger.info(`动态模型刷新完成，共 ${String(dynamicModels.length)} 个模型`);
 };
 
 export const getAiRegistryMetadata = (): AiRegistryMetadata => {

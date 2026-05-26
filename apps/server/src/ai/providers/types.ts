@@ -8,6 +8,10 @@ import type {
   ModelGatewayResponse
 } from '../types.js';
 
+/** listModels() 返回的部分模型条目，由 registry 层补全缺失字段 */
+export type PartialModelEntry = Pick<AiModelRegistryEntry, 'provider' | 'model'> &
+  Partial<Omit<AiModelRegistryEntry, 'provider' | 'model'>>;
+
 export type AiProviderAdapterResult = Pick<
   ModelGatewayResponse,
   'status' | 'finish_reason' | 'output' | 'usage' | 'safety' | 'raw_ref' | 'error'
@@ -38,4 +42,6 @@ export interface AiProviderAdapter {
   execute(input: AiProviderAdapterRequest): Promise<AiProviderAdapterResult>;
   /** 流式推理。不支持的 adapter 可不实现，gateway 将退化到 execute() */
   executeStream?(input: AiProviderAdapterRequest, signal?: AbortSignal): AsyncIterable<AiProviderAdapterChunk>;
+  /** 从 provider API 动态拉取可用模型列表。不支持的 adapter 可不实现 */
+  listModels?(providerConfig: AiProviderConfig): Promise<PartialModelEntry[]>;
 }

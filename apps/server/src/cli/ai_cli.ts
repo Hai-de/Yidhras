@@ -1,23 +1,7 @@
 import 'dotenv/config';
 
-import { existsSync,readFileSync  } from 'node:fs';
-import path from 'node:path';
-
-import * as YAML from 'yaml';
-
-import { BUILTIN_AI_REGISTRY_CONFIG } from '../ai/registry.js';
+import { listAiModelRegistryEntries, listAiProviderConfigs } from '../ai/registry.js';
 import type { AiModelRegistryEntry, AiProviderConfig } from '../ai/types.js';
-import { resolveWorkspaceRoot } from '../config/loader.js';
-
-const workspaceRoot = resolveWorkspaceRoot();
-const serverDir = path.join(workspaceRoot, 'apps', 'server');
-
-interface AiModelsFile {
-  version?: number;
-  providers?: AiProviderConfig[];
-  models?: AiModelRegistryEntry[];
-  routes?: unknown[];
-}
 
 const COMMANDS = ['models', 'test'] as const;
 
@@ -64,40 +48,10 @@ const printHelp = (): void => {
 };
 
 const loadMergedConfig = (): { models: AiModelRegistryEntry[]; providers: AiProviderConfig[] } => {
-  const builtinModels = BUILTIN_AI_REGISTRY_CONFIG.models ?? [];
-  const builtinProviders = BUILTIN_AI_REGISTRY_CONFIG.providers ?? [];
-
-  const configPath = path.join(serverDir, 'config', 'ai_models.yaml');
-  if (existsSync(configPath)) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: YAML config boundary
-    const fileOverride = YAML.parse(readFileSync(configPath, 'utf-8')) as AiModelsFile;
-    const overrideModels = fileOverride.models ?? [];
-    const overrideProviders = fileOverride.providers ?? [];
-
-    const mergedProviders = [...builtinProviders];
-    for (const op of overrideProviders) {
-      const idx = mergedProviders.findIndex((bp) => bp.provider === op.provider);
-      if (idx >= 0) {
-        mergedProviders[idx] = { ...mergedProviders[idx], ...op };
-      } else {
-        mergedProviders.push(op);
-      }
-    }
-
-    const mergedModels = [...builtinModels];
-    for (const om of overrideModels) {
-      const idx = mergedModels.findIndex((bm) => bm.provider === om.provider && bm.model === om.model);
-      if (idx >= 0) {
-        mergedModels[idx] = { ...mergedModels[idx], ...om };
-      } else {
-        mergedModels.push(om);
-      }
-    }
-
-    return { models: mergedModels, providers: mergedProviders };
-  }
-
-  return { models: builtinModels, providers: builtinProviders };
+  return {
+    models: listAiModelRegistryEntries(),
+    providers: listAiProviderConfigs()
+  };
 };
 
 const doModels = (args: ParsedArgs): void => {

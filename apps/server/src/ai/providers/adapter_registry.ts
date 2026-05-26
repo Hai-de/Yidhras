@@ -7,6 +7,7 @@ import { createOllamaProviderAdapter } from './ollama.js';
 import { createOpenAiProviderAdapter } from './openai.js';
 import { createOpenAiCompatibleAdapterFromTemplate } from './openai_compatible.js';
 import type { AiProviderAdapter } from './types.js';
+import { createXiaomiMiMoProviderAdapter } from './xiaomi_mimo.js';
 
 const logger = createLogger('adapter-registry');
 
@@ -17,6 +18,7 @@ const builtinFactories = new Map<string, BuiltinAdapterFactory>([
   ['openai', createOpenAiProviderAdapter],
   ['anthropic', createAnthropicProviderAdapter],
   ['deepseek', createDeepSeekProviderAdapter],
+  ['mimo', createXiaomiMiMoProviderAdapter],
   ['ollama', createOllamaProviderAdapter],
 ]);
 
