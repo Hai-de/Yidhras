@@ -16,12 +16,15 @@ import { parseOptionalTick } from './app/http/runtime.js';
 import { createGlobalErrorMiddleware } from './app/middleware/error_handler.js';
 import { registerConfigRoutes } from './app/routes/config.js';
 import { registerConfigBackupRoutes } from './app/routes/config_backup.js';
+import { registerExperimentalRuntimeRoutes } from './app/routes/experimental_runtime.js';
+import { registerOpenApiRoute } from './app/routes/openapi.js';
 import { registerAgentBindingRoutes } from './app/routes/operator_agent_bindings.js';
 import { registerOperatorAuditRoutes } from './app/routes/operator_audit.js';
 import { registerOperatorAuthRoutes } from './app/routes/operator_auth.js';
 import { registerGrantRoutes } from './app/routes/operator_grants.js';
 import { registerPackBindingRoutes } from './app/routes/operator_pack_bindings.js';
 import { registerOperatorRoutes } from './app/routes/operators.js';
+import { registerPackActionsRoute } from './app/routes/pack_actions.js';
 import { registerPackFrontendAssetRoutes } from './app/routes/pack_frontend_assets.js';
 import { registerPackListRoutes } from './app/routes/packs.js';
 import { registerPackRoutes } from './app/routes/packs/index.js';
@@ -46,6 +49,7 @@ import {
 import { createWorldEngineStepCoordinator } from './app/runtime/world_engine_persistence.js';
 import { createPackHostApi } from './app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from './app/runtime/world_engine_snapshot.js';
+import { PackQueryHandlerRegistry } from './app/services/action/pack_query_resolver.js';
 import { getRuntimeBootstrap } from './app/services/app_context_ports.js';
 import { createContextAssemblyPort } from './app/services/context/context_memory_ports.js';
 import { createPrismaRepositories } from './app/services/repositories/index.js';
@@ -278,12 +282,17 @@ sim.setMultiPackLoopHost(multiPackLoopHost);
 
 const packScopeMiddleware = createPackScopeMiddleware(packScopeResolver);
 
+const queryHandlerRegistry = new PackQueryHandlerRegistry();
+
 const registerRoutes: RouteRegistrar = (application, context) => {
   // -- Global routes (no pack prefix) -- must be registered before /:packId middleware
   // so that /api/* paths match exact routes rather than being caught by the
   // /:packId wildcard (which would resolve "api" as a pack id).
   registerPackListRoutes(application, context, worldPacksDir);
   registerPackFrontendAssetRoutes(application, context, worldPacksDir);
+  registerPackActionsRoute(application, context, queryHandlerRegistry);
+  registerExperimentalRuntimeRoutes(application, context, { asyncHandler });
+  registerOpenApiRoute(application);
   registerSystemRoutes(application, context);
   registerConfigBackupRoutes(application, context, { asyncHandler });
   registerConfigRoutes(application, context, { asyncHandler });

@@ -26,6 +26,7 @@
 | 模块 | 路径 |
 |------|------|
 | System | `/api/health`, `/api/status`, `/api/system/notifications`, `/api/system/notifications/clear` |
+| OpenAPI | `/api/openapi.json` |
 | Config | `/api/config`, `/api/config/domains`, `/api/config/:domain` |
 | Config Backup | `/api/config/backups`, `/api/config/backups/:id`, `/api/config/backups/:id/download`, `/api/config/backups/:id/restore`, `/api/config/backup-policy`, `/api/config/backups/cleanup` |
 | Auth | `/api/auth/login`, `/api/auth/logout`, `/api/auth/session`, `/api/auth/refresh` |
@@ -107,6 +108,18 @@
   - 说明：为 custom 类型包前端提供静态资源（JS/CSS/图片等），映射到包目录下的 `frontend/dist/*`。包含路径穿越防护
   - 响应 MIME 类型根据文件扩展名自动设置，缓存头为 `public, max-age=3600`
   - 错误码：`PACK_NOT_FOUND`, `PATH_TRAVERSAL_DENIED`, `ASSET_NOT_FOUND`
+
+---
+
+## 1.3 OpenAPI 规范 (OpenAPI Specification)
+
+**Global** — 无 `/:packId` 前缀。
+
+- **GET `/api/openapi.json`**
+  - 鉴权：无
+  - 说明：返回 OpenAPI 3.0.3 格式的 API 规范文档。规范从 Zod contracts 自动生成，包含已注册路由的路径、方法、请求体 schema、查询参数和响应 schema。可用于 API explorer（如 Swagger UI）或自动化 API fuzzing 工具
+  - Content-Type：`application/json`
+  - CORS：允许任意来源（`Access-Control-Allow-Origin: *`）
 
 ---
 
