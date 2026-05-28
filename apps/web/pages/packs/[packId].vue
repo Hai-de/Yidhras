@@ -1,5 +1,9 @@
 <template>
-  <div v-if="frontendType === 'custom'" class="min-h-screen bg-yd-app">
+  <div v-if="frontendType === null" class="flex min-h-screen items-center justify-center bg-yd-app">
+    <div class="text-sm text-yd-text-muted yd-font-mono">Loading...</div>
+  </div>
+
+  <div v-else-if="frontendType === 'custom'" class="min-h-screen bg-yd-app">
     <PackFrontendMount :pack-id="packId" />
   </div>
 
@@ -31,6 +35,11 @@ const resolveFrontendType = async () => {
     frontendType.value = pack?.frontend?.type ?? 'default'
   } catch {
     frontendType.value = 'default'
+  }
+
+  // Auto-redirect default-frontend packs to overview workspace
+  if (frontendType.value !== 'custom' && !route.path.split('/').slice(3)[0]) {
+    await navigateTo(`/packs/${packId.value}/overview`, { replace: true })
   }
 }
 
