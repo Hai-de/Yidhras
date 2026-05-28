@@ -1,6 +1,5 @@
-import path from 'path';
-
 import type { Express } from 'express';
+import path from 'path';
 
 import { listDynamicSlots, registerDynamicSlot, unregisterDynamicSlot } from './ai/registry.js';
 import { startAiRegistryWatcher } from './ai/registry_watcher.js';
@@ -14,6 +13,50 @@ import {
 import { buildWorldPackHydrateRequest } from './app/runtime/world_engine_snapshot.js';
 import { getRuntimeBootstrap } from './app/services/app_context_ports.js';
 import { ensureSchedulerBootstrapOwnership, resetDevelopmentRuntimeState } from './app/services/system/system.js';
+import { Application } from './bootstrap/application.js';
+import {
+  runtimeClockProjectionProvider,
+  worldEngineStepCoordinatorProvider
+} from './bootstrap/providers/clock.js';
+import { type CliConfig,cliConfigProvider, runtimeStateProvider } from './bootstrap/providers/config_context.js';
+// Providers — 聚合与路由
+import { appContextProvider } from './bootstrap/providers/context.js';
+// Providers — 基础设施
+import {
+  conversationStoreProvider,
+  prismaProvider,
+  repositoriesProvider
+} from './bootstrap/providers/database.js';
+// Providers — AI / Inference
+import {
+  inferenceProvidersProvider,
+  inferenceServiceProvider,
+  inferenceTraceSinkProvider
+} from './bootstrap/providers/inference.js';
+import { metricsInitProvider } from './bootstrap/providers/metrics.js';
+import { notificationsProvider } from './bootstrap/providers/notifications.js';
+import { packScopeResolverProvider } from './bootstrap/providers/pack_scope.js';
+// Providers — 插件
+import { behaviorStateStoreInitProvider } from './bootstrap/providers/plugin.js';
+import {
+  expressAppProvider,
+  queryHandlerRegistryProvider,
+  registerRoutesProvider
+} from './bootstrap/providers/routes.js';
+import {
+  packRuntimeControlProvider,
+  packRuntimeLookupProvider,
+  packRuntimeObservationProvider
+} from './bootstrap/providers/runtime_ports.js';
+// Providers — 核心服务
+import { simulationManagerProvider } from './bootstrap/providers/simulation.js';
+import {
+  packStorageAdapterProvider,
+  schedulerStorageProvider
+} from './bootstrap/providers/storage.js';
+import { wiringProvider } from './bootstrap/providers/wiring.js';
+import { worldEngineProvider } from './bootstrap/providers/world_engine.js';
+import { TOKENS } from './bootstrap/tokens.js';
 import type { CalendarConfig } from './clock/types.js';
 import {
   getAiModelsConfigPath,
@@ -27,66 +70,11 @@ import {
 import { startConfigWatcher } from './config/watcher.js';
 import { initMetrics } from './observability/metrics.js';
 import { DefaultPackRuntimePort } from './packs/orchestration/default_pack_runtime_port.js';
-import { pluginRuntimeRegistry, syncPackPluginRuntime } from './plugins/runtime.js';
+import { syncPackPluginRuntime } from './plugins/runtime.js';
 import { initSystemPackPlugins } from './plugins/system_pack_init.js';
 import { ApiError } from './utils/api_error.js';
 import { createLogger, setLoggerRuntimeConfig } from './utils/logger.js';
 import { safeFs } from './utils/safe_fs.js';
-
-import { Application } from './bootstrap/application.js';
-import { TOKENS } from './bootstrap/tokens.js';
-
-// Providers — 基础设施
-import {
-  conversationStoreProvider,
-  prismaProvider,
-  repositoriesProvider
-} from './bootstrap/providers/database.js';
-import {
-  packStorageAdapterProvider,
-  schedulerStorageProvider
-} from './bootstrap/providers/storage.js';
-import { notificationsProvider } from './bootstrap/providers/notifications.js';
-
-// Providers — 核心服务
-import { simulationManagerProvider } from './bootstrap/providers/simulation.js';
-import { packScopeResolverProvider } from './bootstrap/providers/pack_scope.js';
-import {
-  packRuntimeControlProvider,
-  packRuntimeLookupProvider,
-  packRuntimeObservationProvider
-} from './bootstrap/providers/runtime_ports.js';
-import { worldEngineProvider } from './bootstrap/providers/world_engine.js';
-import {
-  runtimeClockProjectionProvider,
-  worldEngineStepCoordinatorProvider
-} from './bootstrap/providers/clock.js';
-import { cliConfigProvider, runtimeStateProvider, type CliConfig } from './bootstrap/providers/config_context.js';
-
-// Providers — AI / Inference
-import {
-  inferenceProvidersProvider,
-  inferenceServiceProvider,
-  inferenceTraceSinkProvider
-} from './bootstrap/providers/inference.js';
-
-// Providers — 插件
-import {
-  behaviorStateStoreInitProvider,
-  pluginAiTaskServiceProvider,
-  pluginRuntimeControlProvider,
-  requestPluginInferenceProvider
-} from './bootstrap/providers/plugin.js';
-
-// Providers — 聚合与路由
-import { appContextProvider } from './bootstrap/providers/context.js';
-import {
-  expressAppProvider,
-  queryHandlerRegistryProvider,
-  registerRoutesProvider
-} from './bootstrap/providers/routes.js';
-import { wiringProvider } from './bootstrap/providers/wiring.js';
-import { metricsInitProvider } from './bootstrap/providers/metrics.js';
 
 const logger = createLogger('yidhras-server');
 
@@ -119,9 +107,7 @@ app.register(inferenceServiceProvider);
 
 // 插件
 app.register(behaviorStateStoreInitProvider);
-app.register(pluginRuntimeControlProvider);
-app.register(pluginAiTaskServiceProvider);
-app.register(requestPluginInferenceProvider);
+// pluginRuntimeControl / pluginAiTaskService / requestPluginInference 内联在 context.ts（循环依赖）
 
 // 聚合
 app.register(appContextProvider);
@@ -179,6 +165,7 @@ void (async () => {
   try {
     const resetSummary = await resetDevelopmentRuntimeState(ctx);
     if (resetSummary) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary: toJsonSafe return type
       ctx.notifications.push('info', '开发环境 runtime 观测数据已清理', 'DEV_RUNTIME_RESET', toJsonSafe(resetSummary) as Record<string, unknown>);
     }
 
@@ -221,7 +208,7 @@ void (async () => {
         pack_id: packId,
         current_tick: clockSnapshot.current_tick,
         current_revision: clockSnapshot.current_tick,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unnecessary-condition -- boundary type assertion
         calendars: (pack?.time_systems ?? []) as unknown as CalendarConfig[]
       });
 
@@ -302,7 +289,7 @@ void (async () => {
   const inferenceService = await application.services.resolve<import('./inference/service.js').InferenceService>(TOKENS.inferenceService);
   const httpServer = httpApp.listen(cliConfig.port, () => {
     logger.info(`API full implementation running at http://localhost:${cliConfig.port}`);
-    logger.info(`Inference module ready (phase=${String(inferenceService.phase)}, ready=${String(inferenceService.ready)})`);
+    logger.info(`Inference module ready (phase=${inferenceService.phase}, ready=${String(inferenceService.ready)})`);
     logger.info(`AI gateway enabled=${String(isAiGatewayEnabled())}`);
     logger.info(`Scheduler worker=${cliConfig.schedulerWorkerId} partitions=${cliConfig.schedulerPartitionIds.join(',') || 'none'} loopIntervalMs=${String(cliConfig.simulationLoopIntervalMs)}`);
   });
@@ -329,6 +316,7 @@ void (async () => {
 
     httpServer?.close();
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary: WorldEnginePort → WorldEngineSidecarClient
     const weClient = ctx.worldEngine as import('./app/runtime/sidecar/world_engine_sidecar_client.js').WorldEngineSidecarClient;
     if (weClient && typeof weClient.stop === 'function') {
       await weClient.stop();
