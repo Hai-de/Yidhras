@@ -71,8 +71,8 @@ export const buildExperimentalRuntimeControlPlaneSnapshot = async (
     packRuntimeObservation: context.packRuntimeObservation
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- runtimeReady guard
-  const loadedPackIds = context.listLoadedPackRuntimeIds!();
+   
+  const loadedPackIds = context.listLoadedPackRuntimeIds();
 
   const items = await Promise.all(
     loadedPackIds.map(async packId => {

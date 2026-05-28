@@ -75,6 +75,7 @@
 </template>
 
 <script setup lang="ts">
+import AppAlert from '../components/ui/AppAlert.vue'
 import LocaleSwitcher from '../features/shared/components/LocaleSwitcher.vue'
 import { ApiClientError, requestApiData } from '../lib/http/client'
 import { useAuthStore } from '../stores/auth'

@@ -12,6 +12,7 @@ import {
 } from '@yidhras/contracts'
 
 import { OPERATOR_CAPABILITY } from '../../operator/constants.js'
+import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js'
 import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
@@ -30,6 +31,16 @@ import {
 } from '../services/scheduler/queries.js'
 import type { RouteModule } from './types.js'
 
+const resolvePackIdFromRequest = (req: import('express').Request): string => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express mergeParams
+  const fromParams = req.params.packId as string | undefined
+  if (fromParams) return fromParams
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query value
+  const fromQuery = req.query.packId as string | undefined
+  if (fromQuery) return fromQuery
+  throw new ApiError(400, 'PACK_ID_REQUIRED', 'Pack ID is required for scheduler operations')
+}
+
 const observeGuard = (context: AppContext) =>
   capabilityGuard(context, OPERATOR_CAPABILITY.PERCEIVE_SCHEDULER_OBSERVABILITY, {
     packIdQuery: 'packId'
@@ -42,8 +53,7 @@ export const schedulerRoutes: RouteModule = {
     observeGuard(context),
     asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler latest run')
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-      const packId = req.query.packId as string | undefined
+      const packId = resolvePackIdFromRequest(req)
       const readModel = await getLatestSchedulerRunReadModel(context, packId)
       jsonOk(res, toJsonSafe(readModel))
     })
@@ -86,8 +96,7 @@ export const schedulerRoutes: RouteModule = {
     asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler summary')
       const query = parseQuery(schedulerSummaryQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-      const packId = req.query.packId as string
+      const packId = resolvePackIdFromRequest(req)
       const runtimeKernel = createRuntimeKernelService(context, packId)
       const summary = await runtimeKernel.getSummary?.({
         sampleRuns: query.sample_runs
@@ -118,8 +127,7 @@ export const schedulerRoutes: RouteModule = {
     asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler operator projection')
       const query = parseQuery(schedulerOperatorQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-      const packId = req.query.packId as string
+      const packId = resolvePackIdFromRequest(req)
       const runtimeKernel = createRuntimeKernelService(context, packId)
       const projection = await runtimeKernel.getOperatorProjection?.({
         sampleRuns: query.sample_runs,
@@ -136,8 +144,7 @@ export const schedulerRoutes: RouteModule = {
     asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler ownership projection')
       const query = parseQuery(schedulerOwnershipQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-      const packId = req.query.packId as string
+      const packId = resolvePackIdFromRequest(req)
       const runtimeKernel = createRuntimeKernelService(context, packId)
       const result = await runtimeKernel.getOwnershipAssignments?.({
         worker_id: query.worker_id,
@@ -173,8 +180,7 @@ export const schedulerRoutes: RouteModule = {
     asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler worker runtime states')
       const query = parseQuery(schedulerWorkersQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-      const packId = req.query.packId as string
+      const packId = resolvePackIdFromRequest(req)
       const runtimeKernel = createRuntimeKernelService(context, packId)
       const result = await runtimeKernel.getWorkers?.({
         worker_id: query.worker_id,
@@ -210,8 +216,7 @@ export const schedulerRoutes: RouteModule = {
     asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler run read')
       const params = parseParams(schedulerRunIdParamsSchema, req.params, 'SCHEDULER_QUERY_INVALID')
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-      const packId = req.query.packId as string | undefined
+      const packId = resolvePackIdFromRequest(req)
       const readModel = await getSchedulerRunReadModelById(context, params.id, packId)
       jsonOk(res, toJsonSafe(readModel))
     })
@@ -258,9 +263,8 @@ export const schedulerRoutes: RouteModule = {
     }),
       // eslint-disable-next-line @typescript-eslint/require-await
     asyncHandler(async (req, res) => {
-      context.assertRuntimeReady('agent scheduler decisions')
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-      const packId = req.query.packId as string | undefined
+context.assertRuntimeReady('agent scheduler decisions')
+      const packId = resolvePackIdFromRequest(req)
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const decisions = listAgentSchedulerDecisions(context, req.params.id as string, undefined, packId)
       jsonOk(res, toJsonSafe(decisions))

@@ -1,11 +1,14 @@
-import type { Request, Response } from 'express'
-import path from 'path'
+import fs from 'node:fs';
 
-import { PackManifestLoader } from '../../packs/manifest/loader.js'
-import { ApiError } from '../../utils/api_error.js'
-import { safeFs } from '../../utils/safe_fs.js'
-import { asyncHandler } from '../http/async_handler.js'
-import type { RouteModule } from './types.js'
+import path from 'path';
+
+import { ApiError } from '../../utils/api_error.js';
+import { createLogger } from '../../utils/logger.js';
+import { safeFs } from '../../utils/safe_fs.js';
+import { asyncHandler } from '../http/async_handler.js';
+import type { RouteModule } from './types.js';
+
+const logger = createLogger('pack-frontend-assets');
 
 const MIME_TYPES: Record<string, string> = {
   '.js': 'application/javascript',
@@ -23,65 +26,97 @@ const MIME_TYPES: Record<string, string> = {
   '.woff2': 'font/woff2'
 }
 
+const BINARY_EXTENSIONS = new Set([
+  '.png', '.jpg', '.jpeg', '.ico', '.woff', '.woff2', '.gif', '.webp', '.avif'
+])
+
 const resolveMimeType = (filePath: string): string => {
   const ext = path.extname(filePath).toLowerCase()
   return MIME_TYPES[ext] ?? 'application/octet-stream'
 }
 
+const isBinary = (filePath: string): boolean => {
+  const ext = path.extname(filePath).toLowerCase()
+  return BINARY_EXTENSIONS.has(ext)
+}
+
 export function createPackFrontendAssetRoutes(packsDir: string): RouteModule {
-  const loader = new PackManifestLoader(packsDir)
-
   return {
-    register(app, _context) {
+    register(app, context) {
       app.get(
-        '/api/packs/:packId/frontend/{/*assetPath}',
-        asyncHandler((req: Request, res: Response) => {
-      const packId = req.params.packId
-      const assetPath = typeof req.params.assetPath === 'string' ? req.params.assetPath : ''
+        '/api/packs/:packId/frontend/{*assetPath}',
+        asyncHandler((req, res) => {
+          const packId = req.params.packId
+          const rawAssetPath = req.params.assetPath
 
-      if (!packId || typeof packId !== 'string' || packId.length === 0) {
-        throw new ApiError(400, 'INVALID_PACK_ID', 'packId is required')
-      }
+          if (!packId || typeof packId !== 'string' || packId.length === 0) {
+            throw new ApiError(400, 'INVALID_PACK_ID', 'packId is required')
+          }
 
-      // Resolve pack folder name from instance_id
-      const availableFolders = loader.listAvailablePacks()
-      let packFolder: string | null = null
+          // Express 5 {*param} captures path segments as an array;
+          // Express 4 *param returns a string. Handle both.
+          const assetPath = Array.isArray(rawAssetPath)
+            ? rawAssetPath.join('/')
+            : typeof rawAssetPath === 'string'
+              ? rawAssetPath
+              : ''
 
-      for (const folderName of availableFolders) {
-        const pack = loader.loadPack(folderName)
-        const instanceId = loader.deriveInstanceId(pack, folderName)
-        if (instanceId === packId) {
-          packFolder = folderName
-          break
-        }
-      }
+          if (!assetPath || assetPath.length === 0) {
+            throw new ApiError(400, 'MISSING_ASSET_PATH', 'Asset path is required')
+          }
 
-      if (!packFolder) {
-        throw new ApiError(404, 'PACK_NOT_FOUND', `Pack ${packId} not found`)
-      }
+          const resolved = context.packCatalog.resolveByInstanceId(packId)
+          if (!resolved) {
+            throw new ApiError(404, 'PACK_NOT_FOUND', `Pack ${packId} not found`)
+          }
 
-      // Prevent path traversal
-      const normalizedAssetPath = path.normalize(assetPath).replace(/^(\.\.[/\\])+/, '')
-      const resolvedPath = path.resolve(packsDir, packFolder, 'frontend', 'dist', normalizedAssetPath)
+          const packFolder = resolved.packFolderName
 
-      // Verify resolved path stays within the pack's frontend/dist directory
-      const packFrontendRoot = path.resolve(packsDir, packFolder, 'frontend', 'dist')
-      if (!resolvedPath.startsWith(packFrontendRoot)) {
-        throw new ApiError(403, 'PATH_TRAVERSAL_DENIED', 'Asset path escapes pack directory')
-      }
+          // Prevent path traversal
+          const normalizedAssetPath = path.normalize(assetPath).replace(/^(\.\.[/\\])+/, '')
+          const packFrontendRoot = path.resolve(packsDir, packFolder, 'frontend', 'dist')
+          const resolvedPath = path.resolve(packFrontendRoot, normalizedAssetPath)
 
-      if (!safeFs.existsSync(packFrontendRoot, resolvedPath)) {
-        throw new ApiError(404, 'ASSET_NOT_FOUND', `Asset not found: ${normalizedAssetPath}`)
-      }
+          // Verify resolved path stays within the pack's frontend/dist directory
+          if (!resolvedPath.startsWith(packFrontendRoot + path.sep) && resolvedPath !== packFrontendRoot) {
+            throw new ApiError(403, 'PATH_TRAVERSAL_DENIED', 'Asset path escapes pack directory')
+          }
 
-      const content = safeFs.readFileSync(packFrontendRoot, resolvedPath)
-      const mimeType = resolveMimeType(resolvedPath)
+          if (!safeFs.existsSync(packFrontendRoot, resolvedPath)) {
+            throw new ApiError(404, 'ASSET_NOT_FOUND', `Asset not found: ${normalizedAssetPath}`)
+          }
 
-      res.setHeader('Content-Type', mimeType)
-      res.setHeader('Cache-Control', 'public, max-age=3600')
-      res.send(content)
-    })
-  )
+          const absolutePath = safeFs.inBase(packFrontendRoot, resolvedPath)
+
+          // Reject directories — only serve regular files
+          let stat: fs.Stats
+          try {
+            stat = fs.statSync(absolutePath)
+          } catch {
+            throw new ApiError(404, 'ASSET_NOT_FOUND', `Asset not found: ${normalizedAssetPath}`)
+          }
+
+          if (!stat.isFile()) {
+            logger.warn(`Requested asset path is not a file: ${normalizedAssetPath} (pack=${packId})`)
+            throw new ApiError(404, 'ASSET_NOT_FOUND', `Asset not found: ${normalizedAssetPath}`)
+          }
+
+          const mimeType = resolveMimeType(resolvedPath)
+
+          if (isBinary(resolvedPath)) {
+            const content = fs.readFileSync(absolutePath)
+            res.setHeader('Content-Type', mimeType)
+            res.setHeader('Cache-Control', 'public, max-age=3600')
+            res.end(content)
+          } else {
+            const content = safeFs.readFileSync(packFrontendRoot, resolvedPath)
+            res.setHeader('Content-Type', mimeType)
+            res.setHeader('Cache-Control', 'public, max-age=3600')
+            res.send(content)
+          }
+        })
+      )
     }
   };
 }
+

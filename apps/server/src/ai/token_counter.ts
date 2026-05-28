@@ -1,3 +1,7 @@
+import { createRequire } from 'node:module';
+
+const safeRequire = createRequire(import.meta.url);
+
 export interface TokenCounter {
   countTokens(text: string, provider: string, model: string): number;
   countMessagesTokens(messages: { role: string; parts: { type: string; text?: string; json?: Record<string, unknown> }[] }[], provider: string, model: string): number;
@@ -34,15 +38,6 @@ const isOpenAiCompatible = (provider: string): boolean => {
   return provider === 'openai' || provider === 'deepseek' || provider === 'ollama';
 };
 
- 
-const safeRequire = (id: string): unknown => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require(id);
-  } catch {
-    return null;
-  }
-};
 
 export const createTokenCounter = (): TokenCounter => {
   const encodingCache = new Map<string, { encode(text: string): { length: number } }>();
@@ -51,8 +46,14 @@ export const createTokenCounter = (): TokenCounter => {
     const cached = encodingCache.get(encodingName);
     if (cached) return cached;
 
+    let tiktokenModule: unknown = null;
+    try {
+      tiktokenModule = safeRequire('tiktoken');
+    } catch {
+      // tiktoken not available
+    }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    const tiktoken = safeRequire('tiktoken') as {
+    const tiktoken = tiktokenModule as {
       get_encoding(name: string): { encode(text: string): { length: number } };
     } | null;
 

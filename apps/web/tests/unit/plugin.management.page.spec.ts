@@ -92,6 +92,7 @@ describe('usePluginManagementPage', () => {
       health_level: 'ok',
       world_pack: {
         id: 'world-pack-alpha',
+        instance_id: 'world-pack-alpha',
         name: 'Pack Alpha',
         version: '0.1.0'
       },

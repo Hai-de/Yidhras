@@ -17,6 +17,7 @@ export interface RuntimeWorldAuthor {
 
 export interface RuntimeWorldMetadata {
   id: string
+  instance_id: string
   name: string
   version: string
   description?: string
@@ -110,7 +111,10 @@ export const useSystemApi = () => {
   return {
     getRuntimeStatus: () => {
       const packId = resolvePackId()
-      return requestApiData<RuntimeStatusSnapshot>(`/api/status?packId=${encodeURIComponent(packId ?? '')}`)
+      if (!packId) {
+        return Promise.resolve(null as unknown as RuntimeStatusSnapshot)
+      }
+      return requestApiData<RuntimeStatusSnapshot>(`/api/status?packId=${encodeURIComponent(packId)}`)
     },
     getFormattedClock: () =>
       requestApiData<FormattedClockSnapshot>('/api/clock/formatted', {

@@ -49,6 +49,7 @@ export const runtimeStatusDataSchema = z.object({
   world_pack: z
     .object({
       id: z.string(),
+      instance_id: z.string(),
       name: z.string(),
       version: z.string(),
       description: z.string().optional(),

@@ -1,9 +1,9 @@
 import type { PrismaClient } from '@prisma/client';
 
 import type { ConversationStore } from '../conversation/store.js';
-import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
-import type { PackRuntimeHost } from '../core/pack_runtime_host.js';
 import type { PackRuntimeHandle } from '../core/pack_runtime_handle.js';
+import type { PackRuntimeHost } from '../core/pack_runtime_host.js';
+import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
 import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
 import type { SchedulerStorageAdapter } from '../packs/storage/SchedulerStorageAdapter.js';
 import type { NotificationLevel, SystemMessage } from '../utils/notifications.js';
@@ -12,9 +12,7 @@ import type {
   RuntimeClockProjectionService
 } from './runtime/runtime_clock_projection.js';
 import type { WorldEngineStepCoordinator } from './runtime/world_engine_persistence.js';
-import type { PackHostApi, WorldEnginePort } from './runtime/world_engine_ports.js';
-import type { AppContextPorts } from './services/app_context_ports.js';
-import type { ContextAssemblyPort } from './services/context/context_memory_ports.js';
+import type { AppContextPorts, PackCatalogService } from './services/app_context_ports.js';
 import type { Repositories } from './services/repositories/index.js';
 
 export type HealthLevel = 'ok' | 'degraded' | 'fail';
@@ -70,6 +68,7 @@ export interface AppInfrastructure {
 
 export interface AppContext extends AppInfrastructure, AppContextPorts {
   readonly packScope: PackScopeResolver;
+  readonly packCatalog: PackCatalogService;
   getPackRuntimeHandle(packId: string): PackRuntimeHandle | null;
   listLoadedPackRuntimeIds(): string[];
   getPackRuntimeHost(packId: string): PackRuntimeHost | null;

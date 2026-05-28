@@ -69,6 +69,7 @@ export interface RuntimeStatusSnapshot {
   world_pack:
     | {
         id: string;
+        instance_id: string;
         name: string;
         version: string;
         description?: string;
@@ -235,6 +236,7 @@ return {
     world_pack: pack
       ? {
           id: pack.metadata.id,
+          instance_id: packId,
           name: pack.metadata.name,
           version: pack.metadata.version,
           ...(pack.metadata.description ? { description: pack.metadata.description } : {}),

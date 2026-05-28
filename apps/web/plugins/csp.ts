@@ -1,14 +1,23 @@
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig()
-  const apiBase: string = (config.public.apiBase) || 'http://localhost:3001'
+  const configuredApiBase = String(config.public.apiBase ?? '')
+
+  const connectSrcValues = ["'self'"]
+  const scriptSrcValues = ["'self'", "'unsafe-inline'"]
+
+  if (configuredApiBase) {
+    connectSrcValues.push(configuredApiBase)
+    scriptSrcValues.push(configuredApiBase)
+  }
 
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
-    'script-src': ["'self'", "'unsafe-inline'"],
+    'script-src': scriptSrcValues,
     'script-src-attr': ["'unsafe-inline'"],
     'style-src': ["'self'", "'unsafe-inline'"],
     'style-src-attr': ["'unsafe-inline'"],
-    'connect-src': ["'self'", apiBase],
+    'connect-src': connectSrcValues,
+    'worker-src': ["'self'", 'blob:'],
     'img-src': ["'self'", 'data:', 'blob:'],
     'font-src': ["'self'", 'data:'],
     'base-uri': ["'self'"],

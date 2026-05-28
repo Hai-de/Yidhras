@@ -42,6 +42,7 @@ export const useOperatorBootstrap = () => {
 
     try {
       const runtimeSnapshot = await systemApi.getRuntimeStatus()
+      if (!runtimeSnapshot) return
       runtime.applyRuntimeStatusSnapshot(runtimeSnapshot)
       runtime.setStatusError(null)
     } catch (error) {

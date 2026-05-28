@@ -43,8 +43,12 @@ export class DefaultPackCatalogService implements PackCatalogService {
   public resolveByInstanceId(instanceId: string): PackResolution | null {
     const folderName = this.loader.getFolderNameByInstanceId(instanceId);
     if (!folderName) return null;
-    const pack = this.loader.loadPack(folderName);
-    return { pack, packFolderName: folderName };
+    try {
+      const pack = this.loader.loadPack(folderName);
+      return { pack, packFolderName: folderName };
+    } catch {
+      return null;
+    }
   }
 
   public resolvePackByIdOrFolder(packRef: string): PackResolution | null {

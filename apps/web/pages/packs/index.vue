@@ -143,10 +143,11 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 
-import type { PackListItem } from '../composables/api/usePackListApi'
-import { usePackListApi } from '../composables/api/usePackListApi'
-import { usePackOperationsApi } from '../composables/api/usePackOperationsApi'
-import { useAuthStore } from '../stores/auth'
+import AppAlert from '../../components/ui/AppAlert.vue'
+import type { PackListItem } from '../../composables/api/usePackListApi'
+import { usePackListApi } from '../../composables/api/usePackListApi'
+import { usePackOperationsApi } from '../../composables/api/usePackOperationsApi'
+import { useAuthStore } from '../../stores/auth'
 
 definePageMeta({
   layout: false,

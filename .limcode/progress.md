@@ -1,6 +1,6 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-05-27T18:42:17.531Z
+- Updated At: 2026-05-28T11:36:17.012Z
 - Status: active
 - Phase: plan
 
@@ -15,7 +15,7 @@
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/vampire-appearance-extension.md`
+- 设计：`.limcode/design/rust-迁移收益评估基于现有代码与架构.md`
 - 计划：`.limcode/plans/千年吸血鬼世界包后端实现计划.plan.md`
 - 审查：`.limcode/review/千年吸血鬼世界包前端设计盲点分析.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
@@ -101,6 +101,7 @@
 - 2026-05-27T17:49:51.561Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/千年吸血鬼世界包前端实现计划.plan.md
 - 2026-05-27T18:31:28.388Z | artifact_changed | plan | 同步计划文档：.limcode/plans/千年吸血鬼世界包后端实现计划.plan.md
 - 2026-05-27T18:42:17.531Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/千年吸血鬼世界包后端实现计划.plan.md
+- 2026-05-28T11:36:17.012Z | artifact_changed | design | 同步设计文档：.limcode/design/rust-迁移收益评估基于现有代码与架构.md
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -110,7 +111,7 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-05-24T16:15:36.183Z",
-  "updatedAt": "2026-05-27T18:42:17.531Z",
+  "updatedAt": "2026-05-28T11:36:17.012Z",
   "status": "active",
   "phase": "plan",
   "currentFocus": "no-unsafe-type-assertion 渐进收敛计划（追加 no-unsafe-* 系列）",
@@ -118,7 +119,7 @@
   "currentBlocker": null,
   "nextAction": null,
   "activeArtifacts": {
-    "design": ".limcode/design/vampire-appearance-extension.md",
+    "design": ".limcode/design/rust-迁移收益评估基于现有代码与架构.md",
     "plan": ".limcode/plans/千年吸血鬼世界包后端实现计划.plan.md",
     "review": ".limcode/review/千年吸血鬼世界包前端设计盲点分析.md"
   },
@@ -293,6 +294,12 @@
       "type": "artifact_changed",
       "refId": "plan",
       "message": "同步计划 TODO 快照：.limcode/plans/千年吸血鬼世界包后端实现计划.plan.md"
+    },
+    {
+      "at": "2026-05-28T11:36:17.012Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/rust-迁移收益评估基于现有代码与架构.md"
     }
   ],
   "stats": {
@@ -306,8 +313,8 @@
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-05-27T18:42:17.531Z",
-    "bodyHash": "sha256:e107adf0a0fab6e6943e0d1d45b433309e3a863dca4f827670f951a7702fb797"
+    "generatedAt": "2026-05-28T11:36:17.012Z",
+    "bodyHash": "sha256:5a7ac0937a87f4734e78661ee1dcd8d79ba9aafc825dbef6bf5ad778d3d7e09b"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

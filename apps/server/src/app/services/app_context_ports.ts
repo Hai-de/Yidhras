@@ -13,6 +13,7 @@ import type { ContextAssemblyPort } from './context/context_memory_ports.js';
 export interface PackCatalogService {
   listAvailablePacks(): string[];
   getPacksDir(): string;
+  resolveByInstanceId(instanceId: string): { packFolderName: string } | null;
 }
 
 export interface PluginHostPort {

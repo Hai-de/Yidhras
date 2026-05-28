@@ -3,7 +3,6 @@
 </template>
 
 <script setup lang="ts">
-const route = useRoute()
-const packId = route.params.packId as string
-await navigateTo(`/packs/${packId}/overview`, { replace: true })
+// Index page exists only for Nuxt route matching.
+// Redirect to default workspace is handled by [packId].vue after frontend type resolution.
 </script>

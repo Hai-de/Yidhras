@@ -5,7 +5,7 @@ import type { AppContext, RouteRegistrar } from '../../app/context.js';
 import { createApp } from '../../app/create_app.js';
 import { getErrorMessage } from '../../app/http/errors.js';
 import { toJsonSafe } from '../../app/http/json.js';
-import { createPackScopeMiddleware } from '../../app/http/pack_scope_middleware.js';
+import { createLenientPackScopeMiddleware } from '../../app/http/pack_scope_middleware.js';
 import { parseOptionalTick } from '../../app/http/runtime.js';
 import { createGlobalErrorMiddleware } from '../../app/middleware/error_handler.js';
 import {
@@ -23,6 +23,7 @@ import { TOKENS } from '../tokens.js';
 
 interface CliConfig {
   worldPacksDir: string;
+  port: number;
 }
 
 interface RoutesDeps {
@@ -49,7 +50,6 @@ export const registerRoutesProvider: ServiceProvider = {
   ],
   useFactory: (deps) => {
     const d = deps as unknown as RoutesDeps;
-    const packScopeMiddleware = createPackScopeMiddleware(d.packScope);
     return (application: Express, context: AppContext) => {
       // Global routes (no pack prefix)
       for (const route of allGlobalRoutes) {
@@ -70,21 +70,31 @@ export const registerRoutesProvider: ServiceProvider = {
         toJsonSafe,
         getErrorMessage
       });
-      application.use('/:packId', packScopeMiddleware, packRouter);
+      application.use('/:packId', createLenientPackScopeMiddleware(d.packScope), packRouter);
     };
   }
 };
 
 export const expressAppProvider: ServiceProvider = {
   provide: TOKENS.httpApp,
-  deps: [TOKENS.appContext, TOKENS.registerRoutes],
+  deps: [TOKENS.appContext, TOKENS.registerRoutes, TOKENS.cliConfig],
   useFactory: (deps) => {
      
-    const { appContext, registerRoutes } = deps as unknown as {
+    const { appContext, registerRoutes, cliConfig } = deps as unknown as {
       appContext: AppContext;
       registerRoutes: RouteRegistrar;
+      cliConfig: CliConfig;
     };
-    const app = createApp({ context: appContext, registerRoutes });
+
+    const apiOrigin = `http://localhost:${String(cliConfig.port)}`;
+    const app = createApp({
+      context: appContext,
+      registerRoutes,
+      cspOrigins: {
+        webOrigin: 'http://localhost:3000',
+        apiOrigin: apiOrigin
+      }
+    });
     app.use(createGlobalErrorMiddleware(appContext));
     return app;
   }

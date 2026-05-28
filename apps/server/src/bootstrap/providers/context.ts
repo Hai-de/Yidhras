@@ -33,7 +33,7 @@ interface RuntimeStateDeps {
   setRuntimeLoopDiagnostics: (next: RuntimeLoopDiagnostics) => void;
 }
 
-interface ContextProviderDeps extends RuntimeStateDeps {
+interface ContextProviderDeps {
   repos: Repositories;
   prisma: PrismaClient;
   conversationStore: ConversationStore;
@@ -48,6 +48,8 @@ interface ContextProviderDeps extends RuntimeStateDeps {
   worldEngine: WorldEnginePort;
   runtimeClockProjection: RuntimeClockProjectionService;
   worldEngineStepCoordinator: WorldEngineStepCoordinator;
+  runtimeState: RuntimeStateDeps;
+  cliConfig: Record<string, unknown>;
 }
 
 export const appContextProvider: ServiceProvider = {
@@ -87,6 +89,11 @@ export const appContextProvider: ServiceProvider = {
 
       runtimeBootstrap: d.sim,
       packScope: d.packScope,
+      packCatalog: {
+        listAvailablePacks: () => d.sim.listAvailablePacks(),
+        getPacksDir: () => d.sim.getPacksDir(),
+        resolveByInstanceId: (instanceId: string) => d.sim.resolveByInstanceId(instanceId)
+      },
 
       getPackRuntimeHandle: (packId: string) => d.sim.getPackRuntimeHandle(packId),
       listLoadedPackRuntimeIds: () => d.sim.listLoadedPackRuntimeIds(),
@@ -100,14 +107,14 @@ export const appContextProvider: ServiceProvider = {
       runtimeClockProjection: d.runtimeClockProjection,
       worldEngineStepCoordinator: d.worldEngineStepCoordinator,
 
-      startupHealth: d.startupHealth,
-      assertRuntimeReady: d.assertRuntimeReady,
-      isRuntimeReady: d.isRuntimeReady,
-      setRuntimeReady: d.setRuntimeReady,
-      isPaused: d.isPaused,
-      setPaused: d.setPaused,
-      getRuntimeLoopDiagnostics: d.getRuntimeLoopDiagnostics,
-      setRuntimeLoopDiagnostics: d.setRuntimeLoopDiagnostics,
+      startupHealth: d.runtimeState.startupHealth,
+      assertRuntimeReady: d.runtimeState.assertRuntimeReady,
+      isRuntimeReady: d.runtimeState.isRuntimeReady,
+      setRuntimeReady: d.runtimeState.setRuntimeReady,
+      isPaused: d.runtimeState.isPaused,
+      setPaused: d.runtimeState.setPaused,
+      getRuntimeLoopDiagnostics: d.runtimeState.getRuntimeLoopDiagnostics,
+      setRuntimeLoopDiagnostics: d.runtimeState.setRuntimeLoopDiagnostics,
       getDatabaseHealth: () => d.sim.getDatabaseHealth(),
       getPluginEnableWarningConfig: () => ({
         enabled: getRuntimeConfig().plugins.enable_warning.enabled,

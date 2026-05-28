@@ -12,5 +12,5 @@ export const resolvePackId = (): string | undefined => {
   }
 
   const runtime = useRuntimeStore()
-  return runtime.worldPack?.id
+  return runtime.worldPack?.instance_id ?? runtime.worldPack?.id
 }

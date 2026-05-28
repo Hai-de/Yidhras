@@ -85,6 +85,11 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, PackCatalogS
     return this.packCatalogService.getPacksDir();
   }
 
+  public resolveByInstanceId(instanceId: string): { packFolderName: string } | null {
+    const resolved = this.packCatalogService.resolveByInstanceId(instanceId);
+    return resolved ? { packFolderName: resolved.packFolderName } : null;
+  }
+
   public getPackRuntimeRegistry(): PackRuntimeRegistry {
     return this.packRuntimeRegistryService.getRegistry();
   }

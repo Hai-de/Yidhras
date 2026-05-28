@@ -58,7 +58,11 @@ export const pluginRuntimeWebRoutes: RouteModule = {
         },
         'PLUGIN_QUERY_INVALID'
       );
-      const wildcardAssetPath = typeof req.params.assetPath === 'string' ? req.params.assetPath : '';
+      const wildcardAssetPath = Array.isArray(req.params.assetPath)
+        ? req.params.assetPath.join('/')
+        : typeof req.params.assetPath === 'string'
+          ? req.params.assetPath
+          : '';
       const asset = await packScopedPluginRuntimeService.resolveEnabledPluginWebAsset({
         pack_id: params.packId,
         plugin_id: params.pluginId,

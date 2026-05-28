@@ -73,8 +73,8 @@ const hasPropagationIntent = (entry: AuditViewEntry): boolean => {
   return intentType === 'post_message';
 };
 
-const readProjectedWorldTime = (context: AppContext): { tick: string; calendars: unknown } => {
-  const visibleClock = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId: undefined });
+const readProjectedWorldTime = (context: AppContext, packId?: string): { tick: string; calendars: unknown } => {
+  const visibleClock = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId });
 
   return {
     tick: visibleClock.absolute_ticks,
@@ -82,12 +82,12 @@ const readProjectedWorldTime = (context: AppContext): { tick: string; calendars:
   };
 };
 
-export const getOverviewSummary = async (context: AppContext): Promise<OverviewSummarySnapshot> => {
-  const worldTime = readProjectedWorldTime(context);
+export const getOverviewSummary = async (context: AppContext, packId?: string): Promise<OverviewSummarySnapshot> => {
+  const worldTime = readProjectedWorldTime(context, packId);
 
   const [operatorProjection, globalProjectionIndex, activeAgentCount, notifications, recentAudit, latestEvents, latestPosts] = await Promise.all([
-    getOperatorOverviewProjection(context),
-    extractGlobalProjectionIndex(context),
+    getOperatorOverviewProjection(context, { packId }),
+    extractGlobalProjectionIndex(context, packId),
     context.repos.agent.countActiveAgents(),
     Promise.resolve(context.notifications.getMessages()),
     listAuditFeed(context, {

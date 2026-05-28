@@ -93,14 +93,14 @@ export const capabilityGuard = (
     next: NextFunction
   ): void => {
     const run = async (): Promise<void> => {
-      // 提取 packId
-      const packId = options.packIdParam
+      const queryKey = options.packIdQuery ?? ''
+    const packId = options.packIdParam
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query/param value
         ? (req.params[options.packIdParam] as string | undefined)
-        : options.packIdQuery
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query/param value
-          ? (req.query[options.packIdQuery] as string | undefined)
-          : undefined
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query/param value
+        : ((req.query[queryKey] as string | undefined)
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express mergeParams
+            || (req.params.packId as string | undefined))
 
       if (!packId) {
         throw new ApiError(400, 'PACK_ID_REQUIRED', 'Pack ID is required for capability check')

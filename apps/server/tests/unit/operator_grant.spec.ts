@@ -29,7 +29,8 @@ describe('operator grant capability check', () => {
       prisma,
       sim,
       clock: sim,
-      packRuntime: { getCurrentTick: () => 1000n } as AppContext['packRuntime']
+      packRuntime: { getCurrentTick: () => 1000n } as AppContext['packRuntime'],
+      getPackRuntimeHost: () => null
     } as unknown as AppContext
   })
 

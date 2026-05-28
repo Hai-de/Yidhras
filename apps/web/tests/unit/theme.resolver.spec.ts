@@ -114,6 +114,7 @@ describe('theme resolver pipeline', () => {
       worldPackId: 'pack-alpha',
       worldPack: {
         id: 'pack-alpha',
+        instance_id: 'pack-alpha',
         name: 'Pack Alpha',
         version: '1.0.0'
       }
@@ -133,6 +134,7 @@ describe('theme resolver pipeline', () => {
       worldPackId: 'pack-provider',
       worldPack: {
         id: 'pack-provider',
+        instance_id: 'pack-provider',
         name: 'Pack Provider',
         version: '1.0.0',
         presentation: {
@@ -166,6 +168,7 @@ describe('theme resolver pipeline', () => {
       worldPackId: 'pack-default',
       worldPack: {
         id: 'pack-default',
+        instance_id: 'pack-default',
         name: 'Pack Default',
         version: '1.0.0'
       }

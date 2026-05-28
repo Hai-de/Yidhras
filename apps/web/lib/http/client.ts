@@ -69,14 +69,18 @@ const tryResolveRuntimeConfigBaseUrl = (): string | undefined => {
     }
 
     const normalizedApiBase = configuredApiBase.trim()
-    return normalizedApiBase.length > 0 ? normalizedApiBase : undefined
+    return normalizedApiBase.length > 0 ? normalizedApiBase : ''
   } catch {
     return undefined
   }
 }
 
 export const resolveApiBaseUrl = (baseURL?: string): string => {
-  return (baseURL ?? tryResolveRuntimeConfigBaseUrl() ?? DEFAULT_API_BASE_URL).replace(/\/$/, '')
+  const resolved = baseURL ?? tryResolveRuntimeConfigBaseUrl()
+  if (resolved === '' || resolved === undefined) {
+    return ''
+  }
+  return resolved.replace(/\/$/, '')
 }
 
 const buildUrl = (path: string, options?: { baseURL?: string; packId?: string }): string => {

@@ -1,6 +1,7 @@
 {
   "name": "yidhras-server",
   "version": "0.1.0",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "dev": "pnpm run dev:plugins & tsx watch src/index.ts",

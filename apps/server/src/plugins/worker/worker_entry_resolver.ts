@@ -1,6 +1,9 @@
 import { existsSync } from 'node:fs';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { createRequire } from 'node:module';
+import path, { dirname } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export interface WorkerEntryResolution {
   workerUrl: URL;
@@ -10,7 +13,7 @@ export interface WorkerEntryResolution {
 
 const resolveTsxLoaderPath = (): string | undefined => {
   try {
-    return require.resolve('tsx');
+    return createRequire(import.meta.url).resolve('tsx');
   } catch {
     return undefined;
   }
