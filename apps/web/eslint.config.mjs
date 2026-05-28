@@ -107,6 +107,7 @@ export default tseslint.config(
       'no-prototype-builtins': 'error',
       'simple-import-sort/imports': 'error',
       'simple-import-sort/exports': 'error',
+      'import-x/no-unresolved': ['error', { ignore: ['^#imports$', '^~/'] }],
       'import-x/extensions': [
         'warn',
         'ignorePackages',
