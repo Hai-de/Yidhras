@@ -15,9 +15,11 @@ describe('pack clock isolation', () => {
   let prisma: PrismaClient;
   let sim: SimulationManager;
   const DEATH_NOTE_REF = 'death_note';
-  const DEATH_NOTE_ID = 'world-death-note';
+  const DEATH_NOTE_ID = 'death_note';
+  const DEATH_NOTE_META_ID = 'world-death-note';
   const EXAMPLE_PACK_REF = 'example_pack';
-  const EXAMPLE_PACK_ID = 'world-example-pack';
+  const EXAMPLE_PACK_ID = 'example_pack';
+  const EXAMPLE_PACK_META_ID = 'world-example-pack';
 
   beforeAll(async () => {
     environment = await createIsolatedRuntimeEnvironment({
@@ -79,11 +81,11 @@ describe('pack clock isolation', () => {
 
       const handleA = sim.getPackRuntimeHandle(DEATH_NOTE_ID);
       const deathNoteHandle = expectDefined(handleA, 'death note handle');
-      expect(deathNoteHandle.metadata_id).toBe(DEATH_NOTE_ID);
+      expect(deathNoteHandle.metadata_id).toBe(DEATH_NOTE_META_ID);
 
       const handleB = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
       const exampleHandle = expectDefined(handleB, 'example pack handle');
-      expect(exampleHandle.metadata_id).toBe(EXAMPLE_PACK_ID);
+      expect(exampleHandle.metadata_id).toBe(EXAMPLE_PACK_META_ID);
     });
 
     it('two packs have distinct clock snapshot values', () => {
@@ -103,8 +105,8 @@ describe('pack clock isolation', () => {
 
       const deathNoteHandle = expectDefined(handleA, 'death note handle');
       const exampleHandle = expectDefined(handleB, 'example pack handle');
-      expect(deathNoteHandle.metadata_id).toBe(DEATH_NOTE_ID);
-      expect(exampleHandle.metadata_id).toBe(EXAMPLE_PACK_ID);
+      expect(deathNoteHandle.metadata_id).toBe(DEATH_NOTE_META_ID);
+      expect(exampleHandle.metadata_id).toBe(EXAMPLE_PACK_META_ID);
       expect(deathNoteHandle.metadata_id).not.toBe(exampleHandle.metadata_id);
     });
 
@@ -154,7 +156,7 @@ describe('pack clock isolation', () => {
       expect(loadedIds.has(EXAMPLE_PACK_ID)).toBe(true);
 
       for (const s of statuses) {
-        expect(loadedIds.has(s.metadata_id)).toBe(true);
+        expect(loadedIds.has(s.instance_id)).toBe(true);
       }
     });
 

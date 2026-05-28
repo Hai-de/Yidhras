@@ -52,6 +52,13 @@ echo Both services are running!
 echo Server: http://localhost:3001
 echo Web: http://localhost:3000
 echo.
+
+REM 等待服务启动后自动打开浏览器
+echo Waiting for services to start...
+timeout /t 3 /nobreak > nul
+start http://localhost:3000
+echo Browser opened
+
 echo Press any key to stop all services...
 pause
 taskkill /F /IM node.exe

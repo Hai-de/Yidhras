@@ -1,31 +1,25 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { AppContext } from '../../src/app/context.js';
 import {
   listSchedulerWorkerRuntimeStates,
   refreshSchedulerWorkerRuntimeLiveness,
   refreshSchedulerWorkerRuntimeState,
   resolveSchedulerOwnershipSnapshot
 } from '../../src/app/runtime/scheduler_ownership.js';
-import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { MemSchedulerStorage } from '../helpers/scheduler_storage.js';
+import { TestKit } from '../testkit.js';
 
 const TEST_PACK_ID = 'test-worker-state';
 
 describe('scheduler worker runtime state integration', () => {
-  let cleanup: (() => Promise<void>) | null = null;
-  let context: AppContext;
+  let kit: TestKit;
   let adapter: MemSchedulerStorage;
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
-    context = fixture.context;
-
+    kit = await TestKit.create();
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
+    kit.withSchedulerStorage(adapter);
   });
 
   beforeEach(async () => {
@@ -34,7 +28,7 @@ describe('scheduler worker runtime state integration', () => {
   });
 
   afterAll(async () => {
-    await cleanup?.();
+    await kit[Symbol.asyncDispose]();
   });
 
   it('tracks worker heartbeats, derives stale/dead liveness and exposes the state through ownership snapshots', async () => {
@@ -47,28 +41,28 @@ describe('scheduler worker runtime state integration', () => {
       updated_at: 1000n
     });
 
-    await refreshSchedulerWorkerRuntimeState(context, {
+    await refreshSchedulerWorkerRuntimeState(kit.context, {
       workerId: 'worker-a',
       ownedPartitionIds: ['p0'],
       capacityHint: 4,
       now: 1000n
     }, TEST_PACK_ID);
 
-    let states = await listSchedulerWorkerRuntimeStates(context, TEST_PACK_ID);
+    let states = await listSchedulerWorkerRuntimeStates(kit.context, TEST_PACK_ID);
     expect(states).toHaveLength(1);
     expect(states[0]?.status).toBe('active');
     expect(states[0]?.owned_partition_count).toBe(1);
     expect(states[0]?.capacity_hint).toBe(4);
 
-    await refreshSchedulerWorkerRuntimeLiveness(context, 1006n, TEST_PACK_ID);
-    states = await listSchedulerWorkerRuntimeStates(context, TEST_PACK_ID);
+    await refreshSchedulerWorkerRuntimeLiveness(kit.context, 1006n, TEST_PACK_ID);
+    states = await listSchedulerWorkerRuntimeStates(kit.context, TEST_PACK_ID);
     expect(states[0]?.status).toBe('stale');
 
-    await refreshSchedulerWorkerRuntimeLiveness(context, 1016n, TEST_PACK_ID);
-    states = await listSchedulerWorkerRuntimeStates(context, TEST_PACK_ID);
+    await refreshSchedulerWorkerRuntimeLiveness(kit.context, 1016n, TEST_PACK_ID);
+    states = await listSchedulerWorkerRuntimeStates(kit.context, TEST_PACK_ID);
     expect(states[0]?.status).toBe('suspected_dead');
 
-    const snapshot = await resolveSchedulerOwnershipSnapshot(context, {
+    const snapshot = await resolveSchedulerOwnershipSnapshot(kit.context, {
       workerId: 'worker-a',
       bootstrapPartitionIds: []
     }, TEST_PACK_ID);

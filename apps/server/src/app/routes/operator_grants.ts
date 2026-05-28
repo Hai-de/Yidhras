@@ -1,12 +1,11 @@
 import {
   createOperatorGrantRequestSchema
 } from '@yidhras/contracts'
-import type { Express } from 'express'
 
 import type { OperatorRequest } from '../../operator/auth/types.js'
 import { OPERATOR_ERROR_CODE } from '../../operator/constants.js'
 import { ApiError } from '../../utils/api_error.js'
-import type { AppContext } from '../context.js'
+import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseBody } from '../http/zod.js'
 import {
@@ -14,23 +13,15 @@ import {
   listOperatorGrants,
   revokeOperatorGrant
 } from '../services/operator/operator_grants.js'
+import type { RouteModule } from './types.js'
 
-export interface GrantRouteDependencies {
-  asyncHandler(
-    handler: (req: OperatorRequest, res: import('express').Response, next: import('express').NextFunction) => Promise<void>
-  ): (req: OperatorRequest, res: import('express').Response, next: import('express').NextFunction) => void
-}
-
-export const registerGrantRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: GrantRouteDependencies
-): void => {
+export const grantRoutes: RouteModule = {
+  register(app, context) {
   // POST /api/packs/:packId/grants
   app.post(
     '/api/packs/:packId/grants',
-    deps.asyncHandler(async (req, res) => {
-      const operator = (req).operator
+    asyncHandler(async (req, res) => {
+      const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -64,8 +55,8 @@ export const registerGrantRoutes = (
   // GET /api/packs/:packId/grants
   app.get(
     '/api/packs/:packId/grants',
-    deps.asyncHandler(async (req, res) => {
-      const operator = (req).operator
+    asyncHandler(async (req, res) => {
+      const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -79,8 +70,8 @@ export const registerGrantRoutes = (
   // DELETE /api/packs/:packId/grants/:grantId
   app.delete(
     '/api/packs/:packId/grants/:grantId',
-    deps.asyncHandler(async (req, res) => {
-      const operator = (req).operator
+    asyncHandler(async (req, res) => {
+      const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -96,4 +87,5 @@ export const registerGrantRoutes = (
       jsonOk(res, toJsonSafe(result))
     })
   )
+  },
 }

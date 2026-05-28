@@ -250,8 +250,8 @@ export const materializePackRuntimeCoreModels = async (
     );
   }
 
-  if (prisma && pack.bootstrap?.initial_events.length) {
-    for (const initialEvent of pack.bootstrap.initial_events) {
+  if (prisma && (pack.bootstrap?.initial_events?.length ?? 0) > 0) {
+    for (const initialEvent of pack.bootstrap?.initial_events ?? []) {
       await prisma.event.create({
         data: {
           title: initialEvent.event_type,

@@ -8,7 +8,6 @@ import {
   inferenceJobsQuerySchema,
   inferenceRequestSchema
 } from '@yidhras/contracts';
-import type { Express, NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 
 import { createModelGateway } from '../../ai/gateway.js';
@@ -17,7 +16,7 @@ import { resolveAiTaskConfig } from '../../ai/task_definitions.js';
 import type { AiMessage, AiResponseMode, AiTaskRequest, AiTaskType, ModelGatewayRequest } from '../../ai/types.js';
 import type { InferenceService } from '../../inference/service.js';
 import type { OperatorRequest } from '../../operator/auth/types.js';
-import type { AppContext } from '../context.js';
+import { asyncHandler } from '../http/async_handler.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseBody, parseParams, parseQuery } from '../http/zod.js';
 import { requireAuth } from '../middleware/require_auth.js';
@@ -33,23 +32,15 @@ import {
   listInferenceJobs
 } from '../services/inference_workflow.js';
 import { getOperatorPackIds } from '../services/operator/operator_pack_bindings.js';
+import type { RouteModule } from './types.js';
 
-export interface InferenceRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void;
-}
-
-export const registerInferenceRoutes = (
-  app: Express,
-  context: AppContext,
-  inferenceService: InferenceService,
-  deps: InferenceRouteDependencies
-): void => {
+export function createInferenceRoutes(inferenceService: InferenceService): RouteModule {
+  return {
+    register(app, context) {
   app.post(
     '/api/inference/preview',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference preview');
       const input = parseBody(inferenceRequestSchema, req.body, 'INFERENCE_INPUT_INVALID');
       const result = await inferenceService.previewInference(input);
@@ -61,7 +52,7 @@ export const registerInferenceRoutes = (
   app.post(
     '/api/inference/run',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference run');
       const input = parseBody(inferenceRequestSchema, req.body, 'INFERENCE_INPUT_INVALID');
       const result = await inferenceService.runInference(input);
@@ -73,7 +64,7 @@ export const registerInferenceRoutes = (
   app.get(
     '/api/inference/jobs',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference jobs list');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- middleware guarantees operator
       const operator = (req as OperatorRequest).operator!;
@@ -113,7 +104,7 @@ export const registerInferenceRoutes = (
   app.get(
     '/api/inference/ai-invocations',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('ai invocation list');
       const query = parseQuery(aiInvocationsQuerySchema, req.query, 'AI_INVOCATION_QUERY_INVALID');
       const normalizedStatus = Array.isArray(query.status)
@@ -144,7 +135,7 @@ export const registerInferenceRoutes = (
     })
   );
 
-  app.get('/api/inference/ai-invocations/:id', requireAuth(), deps.asyncHandler(async (req, res) => {
+  app.get('/api/inference/ai-invocations/:id', requireAuth(), asyncHandler(async (req, res) => {
     context.assertRuntimeReady('ai invocation read');
     const params = parseParams(aiInvocationIdParamsSchema, req.params, 'AI_INVOCATION_QUERY_INVALID');
     const record = await getAiInvocationById(context, params.id);
@@ -154,7 +145,7 @@ export const registerInferenceRoutes = (
   app.post(
     '/api/inference/jobs',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference job submit');
       const input = parseBody(inferenceRequestSchema, req.body, 'INFERENCE_INPUT_INVALID');
       const result = await inferenceService.submitInferenceJob(input);
@@ -166,7 +157,7 @@ export const registerInferenceRoutes = (
   app.post(
     '/api/inference/jobs/:id/retry',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference job retry');
       const params = parseParams(inferenceJobIdParamsSchema, req.params, 'INFERENCE_INPUT_INVALID');
       const result = await inferenceService.retryInferenceJob(params.id);
@@ -178,7 +169,7 @@ export const registerInferenceRoutes = (
   app.post(
     '/api/inference/jobs/:id/replay',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference job replay');
       const params = parseParams(inferenceJobIdParamsSchema, req.params, 'INFERENCE_INPUT_INVALID');
       const body = parseBody(inferenceJobReplayRequestSchema, req.body, 'INFERENCE_INPUT_INVALID');
@@ -191,7 +182,7 @@ export const registerInferenceRoutes = (
   app.get(
     '/api/inference/traces/:id',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference trace read');
       const params = parseParams(inferenceJobIdParamsSchema, req.params, 'INFERENCE_INPUT_INVALID');
       const trace = await getInferenceTraceById(context, params.id);
@@ -203,7 +194,7 @@ export const registerInferenceRoutes = (
   app.get(
     '/api/inference/traces/:id/intent',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('action intent read');
       const params = parseParams(inferenceJobIdParamsSchema, req.params, 'INFERENCE_INPUT_INVALID');
       const intent = await getActionIntentByInferenceId(context, params.id);
@@ -215,7 +206,7 @@ export const registerInferenceRoutes = (
   app.get(
     '/api/inference/traces/:id/job',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('decision job read');
       const params = parseParams(inferenceJobIdParamsSchema, req.params, 'INFERENCE_INPUT_INVALID');
       const job = await getDecisionJobByInferenceId(context, params.id);
@@ -227,7 +218,7 @@ export const registerInferenceRoutes = (
   app.get(
     '/api/inference/traces/:id/workflow',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference workflow read');
       const params = parseParams(inferenceJobIdParamsSchema, req.params, 'INFERENCE_INPUT_INVALID');
       const workflow = await getWorkflowSnapshotByInferenceId(context, params.id);
@@ -239,7 +230,7 @@ export const registerInferenceRoutes = (
   app.get(
     '/api/inference/jobs/:id',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('decision job read');
       const params = parseParams(inferenceJobIdParamsSchema, req.params, 'INFERENCE_INPUT_INVALID');
       const job = await getDecisionJobById(context, params.id);
@@ -251,7 +242,7 @@ export const registerInferenceRoutes = (
   app.get(
     '/api/inference/jobs/:id/workflow',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('decision workflow read');
       const params = parseParams(inferenceJobIdParamsSchema, req.params, 'INFERENCE_INPUT_INVALID');
       const workflow = await getWorkflowSnapshotByJobId(context, params.id);
@@ -263,7 +254,7 @@ export const registerInferenceRoutes = (
   app.post(
     '/api/inference/stream',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('inference stream');
 
       const streamRequestSchema = z.object({
@@ -364,4 +355,6 @@ export const registerInferenceRoutes = (
       }
     })
   );
-};
+    }
+  };
+}

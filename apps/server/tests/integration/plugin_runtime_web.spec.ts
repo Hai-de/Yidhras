@@ -8,26 +8,17 @@ import { confirmPackPluginImport, enablePackPlugin } from '../../src/app/service
 import { PLUGIN_ENABLE_WARNING_TEXT } from '../../src/plugins/contracts.js';
 import { refreshPackPluginRuntime, syncPackPluginRuntime } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { expectDefined } from '../helpers/assertions.js';
+import { TestKit } from '../testkit.js';
 
 const REMINDER_HASH = '03ee763729f5fe81f03478a3b0f487ff6c8dfc779f7e9b8d88a6d016dc17edfb';
 
-const packRuntimeOf = (context: Awaited<ReturnType<typeof createIsolatedAppContextFixture>>['context']) =>
-  expectDefined(context.packRuntime, 'pack runtime');
-
-const packRuntimeControlOf = (context: Awaited<ReturnType<typeof createIsolatedAppContextFixture>>['context']) =>
-  expectDefined(context.packRuntimeControl, 'pack runtime control');
-
-const packRuntimeLookupOf = (context: Awaited<ReturnType<typeof createIsolatedAppContextFixture>>['context']) =>
-  expectDefined(context.packRuntimeLookup, 'pack runtime lookup');
-
 describe('plugin runtime web integration', () => {
   it('returns canonical bundle URLs and resolves enabled plugin web assets after confirm/enable', async () => {
-    const fixture = await createIsolatedAppContextFixture();
+    const kit = await TestKit.create();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
       const artifact = await store.upsertArtifact({
         artifact_id: 'artifact-alpha',
         plugin_id: 'plugin.alpha',
@@ -83,30 +74,30 @@ describe('plugin runtime web integration', () => {
         trust_mode: 'trusted'
       });
 
-      packRuntimeOf(fixture.context).getPack = () => ({
+      expectDefined(kit.context.packRuntime, 'pack runtime').getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
-      packRuntimeLookupOf(fixture.context).hasPackRuntime = (packId: string) => packId === 'world-pack-alpha';
-      fixture.context.getPluginEnableWarningConfig = () => ({
+      expectDefined(kit.context.packRuntimeLookup, 'pack runtime lookup').hasPackRuntime = (packId: string) => packId === 'world-pack-alpha';
+      kit.context.getPluginEnableWarningConfig = () => ({
         enabled: true,
         require_acknowledgement: true
       });
 
-      await confirmPackPluginImport(fixture.context, 'installation-alpha', ['web.panel.register']);
-      await enablePackPlugin(fixture.context, 'installation-alpha', {
+      await confirmPackPluginImport(kit.context, 'installation-alpha', ['web.panel.register']);
+      await enablePackPlugin(kit.context, 'installation-alpha', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'integration'
       });
-      await refreshPackPluginRuntime(fixture.context, 'world-pack-alpha');
+      await refreshPackPluginRuntime(kit.context, 'world-pack-alpha');
 
-      const runtimeSnapshot = await getPackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-alpha');
+      const runtimeSnapshot = await getPackPluginRuntimeWebSnapshot(kit.context, 'world-pack-alpha');
       expect(runtimeSnapshot.plugins).toHaveLength(1);
       expect(runtimeSnapshot.plugins[0]?.web_bundle_url).toBe(
         '/api/packs/world-pack-alpha/plugins/plugin.alpha/runtime/web/installation-alpha/death_note.README.md'
       );
       expect(runtimeSnapshot.plugins[0]?.runtime_module.format).toBe('browser_esm');
 
-      const asset = await resolveEnabledPluginWebAsset(fixture.context, {
+      const asset = await resolveEnabledPluginWebAsset(kit.context, {
         pack_id: 'world-pack-alpha',
         plugin_id: 'plugin.alpha',
         installation_id: 'installation-alpha',
@@ -117,15 +108,15 @@ describe('plugin runtime web integration', () => {
       expect(asset.absolute_path.endsWith('apps/server/templates/world-pack/death_note.README.md')).toBe(true);
       expect(PLUGIN_ENABLE_WARNING_TEXT).toContain('With great power comes great responsibility');
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 
   it('keeps stable pack runtime web routes scoped while exposing experimental pack-local web paths separately', async () => {
-    const fixture = await createIsolatedAppContextFixture();
+    const kit = await TestKit.create();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
       const artifact = await store.upsertArtifact({
         artifact_id: 'artifact-experimental-web-alpha',
         plugin_id: 'plugin.experimental.web.alpha',
@@ -181,48 +172,48 @@ describe('plugin runtime web integration', () => {
         trust_mode: 'trusted'
       });
 
-      packRuntimeOf(fixture.context).getPack = () => ({
+      expectDefined(kit.context.packRuntime, 'pack runtime').getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
-      fixture.context.getPluginEnableWarningConfig = () => ({
+      kit.context.getPluginEnableWarningConfig = () => ({
         enabled: true,
         require_acknowledgement: true
       });
-      packRuntimeLookupOf(fixture.context).hasPackRuntime = (packId: string) => packId === 'world-pack-alpha';
-      packRuntimeControlOf(fixture.context).load = async (_packRef: string) => ({
+      expectDefined(kit.context.packRuntimeLookup, 'pack runtime lookup').hasPackRuntime = (packId: string) => packId === 'world-pack-alpha';
+      expectDefined(kit.context.packRuntimeControl, 'pack runtime control').load = async (_packRef: string) => ({
         handle: {
           pack_id: 'world-pack-experimental-web'
         } as never,
         loaded: true,
         already_loaded: false
       });
-      fixture.context.getPackRuntimeHandle = (packId: string) => {
+      kit.context.getPackRuntimeHandle = (packId: string) => {
         return packId === 'world-pack-experimental-web'
           ? ({ pack_id: 'world-pack-experimental-web' } as never)
           : null;
       };
 
-      await confirmPackPluginImport(fixture.context, 'installation-experimental-web-alpha', ['web.panel.register']);
-      await enablePackPlugin(fixture.context, 'installation-experimental-web-alpha', {
+      await confirmPackPluginImport(kit.context, 'installation-experimental-web-alpha', ['web.panel.register']);
+      await enablePackPlugin(kit.context, 'installation-experimental-web-alpha', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'integration'
       });
-      await refreshPackPluginRuntime(fixture.context, 'world-pack-experimental-web');
-      await syncPackPluginRuntime(fixture.context, 'world-pack-experimental-web');
+      await refreshPackPluginRuntime(kit.context, 'world-pack-experimental-web');
+      await syncPackPluginRuntime(kit.context, 'world-pack-experimental-web');
 
-      await expect(getPackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-experimental-web')).rejects.toMatchObject({
+      await expect(getPackPluginRuntimeWebSnapshot(kit.context, 'world-pack-experimental-web')).rejects.toMatchObject({
         code: 'PACK_RUNTIME_NOT_FOUND'
       });
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 
   it('rejects web asset resolution when installation is not enabled', async () => {
-    const fixture = await createIsolatedAppContextFixture();
+    const kit = await TestKit.create();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
       await store.upsertArtifact({
         artifact_id: 'artifact-beta',
         plugin_id: 'plugin.beta',
@@ -279,13 +270,13 @@ describe('plugin runtime web integration', () => {
         confirmed_at: '1500'
       });
 
-      packRuntimeOf(fixture.context).getPack = () => ({
+      expectDefined(kit.context.packRuntime, 'pack runtime').getPack = () => ({
         metadata: { id: 'world-pack-alpha', name: 'World Pack Alpha', version: '0.1.0' }
       }) as never;
-      packRuntimeLookupOf(fixture.context).hasPackRuntime = (packId: string) => packId === 'world-pack-alpha';
+      expectDefined(kit.context.packRuntimeLookup, 'pack runtime lookup').hasPackRuntime = (packId: string) => packId === 'world-pack-alpha';
 
       await expect(
-        resolveEnabledPluginWebAsset(fixture.context, {
+        resolveEnabledPluginWebAsset(kit.context, {
           pack_id: 'world-pack-alpha',
           plugin_id: 'plugin.beta',
           installation_id: 'installation-beta',
@@ -295,7 +286,7 @@ describe('plugin runtime web integration', () => {
         code: 'PLUGIN_WEB_ASSET_NOT_ENABLED'
       });
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 });

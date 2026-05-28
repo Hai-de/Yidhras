@@ -5,26 +5,17 @@ import { confirmPackPluginImport, enablePackPlugin } from '../../src/app/service
 import { loadExperimentalPackRuntime } from '../../src/app/services/runtime/experimental_multi_pack_runtime.js';
 import { pluginRuntimeRegistry } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { expectArrayElement, expectDefined } from '../helpers/assertions.js';
+import { TestKit } from '../testkit.js';
 
 const REMINDER_HASH = '03ee763729f5fe81f03478a3b0f487ff6c8dfc779f7e9b8d88a6d016dc17edfb';
 
-const packRuntimeOf = (context: Awaited<ReturnType<typeof createIsolatedAppContextFixture>>['context']) =>
-  expectDefined(context.packRuntime, 'pack runtime');
-
-const packRuntimeControlOf = (context: Awaited<ReturnType<typeof createIsolatedAppContextFixture>>['context']) =>
-  expectDefined(context.packRuntimeControl, 'pack runtime control');
-
-const packRuntimeLookupOf = (context: Awaited<ReturnType<typeof createIsolatedAppContextFixture>>['context']) =>
-  expectDefined(context.packRuntimeLookup, 'pack runtime lookup');
-
 describe('plugin runtime experimental pack scope integration', () => {
   it('loads pack-local plugin runtime for an experimentally loaded pack without changing stable mode', async () => {
-    const fixture = await createIsolatedAppContextFixture();
+    const kit = await TestKit.create();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
       await store.upsertArtifact({
         artifact_id: 'artifact-experimental-alpha',
         plugin_id: 'plugin.experimental.alpha',
@@ -80,14 +71,14 @@ describe('plugin runtime experimental pack scope integration', () => {
         trust_mode: 'trusted'
       });
 
-      packRuntimeOf(fixture.context).getPack = () => ({
+      expectDefined(kit.context.packRuntime, 'pack runtime').getPack = () => ({
         metadata: { id: 'world-pack-runtime', name: 'Runtime Pack', version: '0.1.0' }
       }) as never;
-      fixture.context.getPluginEnableWarningConfig = () => ({
+      kit.context.getPluginEnableWarningConfig = () => ({
         enabled: true,
         require_acknowledgement: true
       });
-      packRuntimeControlOf(fixture.context).load = async (_packRef: string) => ({
+      expectDefined(kit.context.packRuntimeControl, 'pack runtime control').load = async (_packRef: string) => ({
         handle: {
           pack_id: 'world-pack-experimental',
           pack_folder_name: 'world-pack-experimental',
@@ -100,8 +91,8 @@ describe('plugin runtime experimental pack scope integration', () => {
         loaded: true,
         already_loaded: false
       });
-      packRuntimeLookupOf(fixture.context).hasPackRuntime = (packId: string) => packId === 'world-pack-experimental';
-      fixture.context.getPackRuntimeHandle = (packId: string) => {
+      expectDefined(kit.context.packRuntimeLookup, 'pack runtime lookup').hasPackRuntime = (packId: string) => packId === 'world-pack-experimental';
+      kit.context.getPackRuntimeHandle = (packId: string) => {
         return packId === 'world-pack-experimental'
           ? ({
               pack_id: 'world-pack-experimental'
@@ -109,22 +100,22 @@ describe('plugin runtime experimental pack scope integration', () => {
           : null;
       };
 
-      await confirmPackPluginImport(fixture.context, 'installation-experimental-alpha', ['web.panel.register']);
-      await enablePackPlugin(fixture.context, 'installation-experimental-alpha', {
+      await confirmPackPluginImport(kit.context, 'installation-experimental-alpha', ['web.panel.register']);
+      await enablePackPlugin(kit.context, 'installation-experimental-alpha', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'integration'
       });
 
-      await loadExperimentalPackRuntime(fixture.context, 'world-pack-experimental');
+      await loadExperimentalPackRuntime(kit.context, 'world-pack-experimental');
 
-      const snapshot = await getPackPluginRuntimeWebSnapshot(fixture.context, 'world-pack-experimental');
+      const snapshot = await getPackPluginRuntimeWebSnapshot(kit.context, 'world-pack-experimental');
       expect(snapshot.pack_id).toBe('world-pack-experimental');
       expect(snapshot.plugins).toHaveLength(1);
       expect(expectArrayElement(snapshot.plugins, 0, 'snapshot plugins').pack_id).toBe('world-pack-experimental');
       expect(pluginRuntimeRegistry.listRuntimes('world-pack-experimental')).toHaveLength(1);
-      expect(packRuntimeOf(fixture.context).getPack()?.metadata.id).toBe('world-pack-runtime');
+      expect(expectDefined(kit.context.packRuntime, 'pack runtime').getPack()?.metadata.id).toBe('world-pack-runtime');
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 });

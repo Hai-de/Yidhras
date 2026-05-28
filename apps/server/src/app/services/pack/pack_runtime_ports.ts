@@ -24,6 +24,8 @@ export interface PackRuntimePort {
   step(amount?: bigint): void;
   getPackSlotDeclarations(): Record<string, Record<string, unknown>> | null;
   applyClockProjection(snapshot: RuntimeClockProjectionSnapshot): void;
+  setRequestedStepTicks(ticks: bigint): void;
+  consumeRequestedStepTicks(): bigint | undefined;
 }
 
 export interface AggregatedClockSnapshot {

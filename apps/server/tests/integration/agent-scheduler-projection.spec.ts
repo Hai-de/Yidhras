@@ -2,29 +2,24 @@ import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { AppContext } from '../../src/app/context.js';
 import { getAgentSchedulerProjection } from '../../src/app/services/scheduler/queries.js';
-import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { expectDefined } from '../helpers/assertions.js';
 import { MemSchedulerStorage } from '../helpers/scheduler_storage.js';
+import { TestKit } from '../testkit.js';
 
 const TEST_PACK_ID = 'test-agent-proj';
 
 describe('agent scheduler projection integration', () => {
-  let cleanup: (() => Promise<void>) | null = null;
-  let context: AppContext;
+  let kit: TestKit;
   let adapter: MemSchedulerStorage;
-  const currentTick = () => expectDefined(context.packRuntime, 'pack runtime').getCurrentTick();
+  const currentTick = () => expectDefined(kit.context.packRuntime, 'pack runtime').getCurrentTick();
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
-    context = fixture.context;
+    kit = await TestKit.create();
 
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
+    kit.withSchedulerStorage(adapter);
   });
 
   beforeEach(async () => {
@@ -33,7 +28,7 @@ describe('agent scheduler projection integration', () => {
   });
 
   afterAll(async () => {
-    await cleanup?.();
+    await kit[Symbol.asyncDispose]();
   });
 
   it('builds a per-actor scheduler timeline with reason breakdowns', async () => {
@@ -71,7 +66,7 @@ describe('agent scheduler projection integration', () => {
       created_job_id: null, created_at: Number(baseTick + 1n)
     });
 
-    const projection = await getAgentSchedulerProjection(context, 'agent-001', { limit: 10 });
+    const projection = await getAgentSchedulerProjection(kit.context, 'agent-001', { limit: 10 });
     expect(projection.actor_id).toBe('agent-001');
     expect(projection.timeline).toHaveLength(2);
     expect(projection.summary.created_count).toBe(1);

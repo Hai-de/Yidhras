@@ -1,15 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { AppContext } from '../../src/app/context.js';
 import { runAgentScheduler } from '../../src/app/runtime/agent_scheduler.js';
 import { resolveSchedulerPartitionId } from '../../src/app/runtime/scheduler_partitioning.js';
 import {
   listSchedulerDecisions,
   listSchedulerRuns
 } from '../../src/app/services/scheduler/queries.js';
-import type { SchedulerStorageAdapter } from "../../src/packs/storage/SchedulerStorageAdapter.js";
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { MemSchedulerStorage } from "../helpers/scheduler_storage.js";
+import { TestKit } from '../testkit.js';
 
 const findAgentIdsByPartition = (): Map<string, string> => {
   const result = new Map<string, string>();
@@ -32,31 +30,28 @@ const findAgentIdsByPartition = (): Map<string, string> => {
 };
 
 describe('scheduler multi worker partitioning integration', () => {
-  let cleanup: (() => Promise<void>) | null = null;
-  let context: AppContext;
+  let kit: TestKit;
   let adapter: MemSchedulerStorage;
 const TEST_PACK_ID = "test-multi-worker";
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture();
-    context = fixture.context;
-    cleanup = fixture.cleanup;
+    kit = await TestKit.create();
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
+    kit.withSchedulerStorage(adapter);
   });
 
   beforeEach(async () => {
     adapter.destroyPackSchedulerStorage(TEST_PACK_ID);
     adapter.open(TEST_PACK_ID);
-    await context.prisma.decisionJob.deleteMany({
+    await kit.prisma.decisionJob.deleteMany({
       where: {
         idempotency_key: {
           startsWith: 'sch:'
         }
       }
     });
-    await context.prisma.agent.deleteMany({
+    await kit.prisma.agent.deleteMany({
       where: {
         id: {
           startsWith: 'partition-agent-'
@@ -66,13 +61,13 @@ const TEST_PACK_ID = "test-multi-worker";
   });
 
   afterAll(async () => {
-    await cleanup?.();
+    await kit[Symbol.asyncDispose]();
   });
 
   it('keeps two workers constrained to their explicit partition sets and covers all partitions together', async () => {
     const agentIdsByPartition = findAgentIdsByPartition();
 
-    await context.prisma.agent.createMany({
+    await kit.prisma.agent.createMany({
       data: Array.from(agentIdsByPartition.entries()).map(([partitionId, agentId], offset) => ({
         id: agentId,
         name: `Partition Agent ${partitionId}`,
@@ -84,8 +79,8 @@ const TEST_PACK_ID = "test-multi-worker";
       }))
     });
 
-    const firstRun = await runAgentScheduler({ packId: TEST_PACK_ID, 
-      context,
+    const firstRun = await runAgentScheduler({ packId: TEST_PACK_ID,
+      context: kit.context,
       workerId: 'multi-worker-a',
       partitionIds: ['p0', 'p2'],
       limit: 20
@@ -95,8 +90,8 @@ const TEST_PACK_ID = "test-multi-worker";
     expect(firstRun.scheduler_run_ids?.length ?? 0).toBeGreaterThanOrEqual(1);
     expect(firstRun.created_count).toBeGreaterThan(0);
 
-    const secondRun = await runAgentScheduler({ packId: TEST_PACK_ID, 
-      context,
+    const secondRun = await runAgentScheduler({ packId: TEST_PACK_ID,
+      context: kit.context,
       workerId: 'multi-worker-b',
       partitionIds: ['p1', 'p3'],
       limit: 20
@@ -106,8 +101,8 @@ const TEST_PACK_ID = "test-multi-worker";
     expect(secondRun.scheduler_run_ids?.length ?? 0).toBeGreaterThanOrEqual(1);
     expect(secondRun.created_count).toBeGreaterThan(0);
 
-    const runs = await listSchedulerRuns(context, { limit: 100 });
-    const decisions = await listSchedulerDecisions(context, { limit: 200 });
+    const runs = await listSchedulerRuns(kit.context, { limit: 100 });
+    const decisions = await listSchedulerDecisions(kit.context, { limit: 200 });
     const uniquePartitions = new Set(runs.items.map(item => item.partition_id));
 
     expect(uniquePartitions.size).toBe(4);

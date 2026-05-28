@@ -1,18 +1,12 @@
 import path from 'node:path';
 
 import { packPluginRuntimeDataSchema, pluginPackParamsSchema } from '@yidhras/contracts';
-import type { Express, NextFunction, Request, Response } from 'express';
 
-import type { AppContext } from '../context.js';
+import { asyncHandler } from '../http/async_handler.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseParams } from '../http/zod.js';
 import { createPackScopedPluginRuntimeService } from '../services/pack/pack_scoped_plugin_runtime_service.js';
-
-export interface PluginRuntimeWebRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void;
-}
+import type { RouteModule } from './types.js';
 
 const pluginWebAssetParamsSchema = pluginPackParamsSchema.extend({
   pluginId: pluginPackParamsSchema.shape.packId,
@@ -36,16 +30,13 @@ const getContentType = (assetPath: string): string | undefined => {
   }
 };
 
-export const registerPluginRuntimeWebRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: PluginRuntimeWebRouteDependencies
-): void => {
+export const pluginRuntimeWebRoutes: RouteModule = {
+  register(app, context) {
   const packScopedPluginRuntimeService = createPackScopedPluginRuntimeService(context);
 
   app.get(
     '/api/packs/:packId/plugins/runtime/web',
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       const params = parseParams(pluginPackParamsSchema, req.params, 'PLUGIN_QUERY_INVALID');
       const snapshot = await packScopedPluginRuntimeService.getRuntimeWebSnapshot({
         pack_id: params.packId
@@ -57,7 +48,7 @@ export const registerPluginRuntimeWebRoutes = (
 
   app.get(
     '/api/packs/:packId/plugins/:pluginId/runtime/web/:installationId/{*assetPath}',
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       const params = parseParams(
         pluginWebAssetParamsSchema,
         {
@@ -84,4 +75,5 @@ export const registerPluginRuntimeWebRoutes = (
       res.sendFile(asset.absolute_path);
     })
   );
+  },
 };

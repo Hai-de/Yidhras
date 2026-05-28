@@ -2,30 +2,21 @@ import {
   auditEntryParamsSchema,
   auditFeedQuerySchema
 } from '@yidhras/contracts';
-import type { Express, NextFunction, Request, Response } from 'express';
 
-import type { AppContext } from '../context.js';
+import { asyncHandler } from '../http/async_handler.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseParams, parseQuery } from '../http/zod.js';
 import {
   getAuditEntryById,
   listAuditFeed
 } from '../services/audit/audit.js';
+import type { RouteModule } from './types.js';
 
-export interface AuditRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void;
-}
-
-export const registerAuditRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: AuditRouteDependencies
-): void => {
+export const auditRoutes: RouteModule = {
+  register(app, context) {
   app.get(
     '/api/audit/feed',
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('audit feed');
       const query = parseQuery(auditFeedQuerySchema, req.query, 'AUDIT_VIEW_QUERY_INVALID');
       const kinds = Array.isArray(query.kinds)
@@ -55,7 +46,7 @@ export const registerAuditRoutes = (
 
   app.get(
     '/api/audit/entries/:kind/:id',
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('audit entry detail');
       const params = parseParams(auditEntryParamsSchema, req.params, 'AUDIT_VIEW_QUERY_INVALID');
       const entry = await getAuditEntryById(context, params);
@@ -63,4 +54,5 @@ export const registerAuditRoutes = (
       jsonOk(res, toJsonSafe(entry));
     })
   );
+  }
 };

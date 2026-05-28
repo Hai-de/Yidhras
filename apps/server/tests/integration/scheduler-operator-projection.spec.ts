@@ -3,45 +3,39 @@ import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { AppContext } from '../../src/app/context.js';
 import { getSchedulerOperatorProjection } from '../../src/app/services/scheduler/queries.js';
-import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { expectDefined } from '../helpers/assertions.js';
 import { MemSchedulerStorage } from '../helpers/scheduler_storage.js';
+import { TestKit } from '../testkit.js';
 
 const TEST_PACK_ID = 'test-operator-proj';
 
 describe('scheduler operator projection integration', () => {
-  let cleanup: (() => Promise<void>) | null = null;
-  let context: AppContext;
+  let kit: TestKit;
   let adapter: MemSchedulerStorage;
-  const currentTick = () => expectDefined(context.packRuntime, 'pack runtime').getCurrentTick();
+  const currentTick = () => expectDefined(kit.context.packRuntime, 'pack runtime').getCurrentTick();
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
-    context = fixture.context;
-
+    kit = await TestKit.create();
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
+    kit.withSchedulerStorage(adapter);
   });
 
   beforeEach(async () => {
     adapter.destroyPackSchedulerStorage(TEST_PACK_ID);
     adapter.open(TEST_PACK_ID);
-    await context.prisma.actionIntent.deleteMany();
-    await context.prisma.decisionJob.deleteMany();
-    await context.prisma.inferenceTrace.deleteMany();
+    await kit.prisma.actionIntent.deleteMany();
+    await kit.prisma.decisionJob.deleteMany();
+    await kit.prisma.inferenceTrace.deleteMany();
   });
 
   afterAll(async () => {
-    await cleanup?.();
+    await kit[Symbol.asyncDispose]();
   });
 
   it('builds the full operator projection covering runs, decisions, ownership, workers and rebalance', async () => {
-    const prisma = context.prisma;
+    const prisma = kit.prisma;
     const baseTick = currentTick();
     const runId = randomUUID();
     const jobId = randomUUID();
@@ -100,7 +94,7 @@ describe('scheduler operator projection integration', () => {
       created_job_id: jobId, created_at: Number(baseTick)
     });
 
-    const projection = await getSchedulerOperatorProjection(context, { sampleRuns: 5, recentLimit: 5 });
+    const projection = await getSchedulerOperatorProjection(kit.context, { sampleRuns: 5, recentLimit: 5 });
     expect(projection.latest_run).not.toBeNull();
     expect(projection.summary.run_totals.sampled_runs).toBeGreaterThanOrEqual(1);
     expect(projection.ownership.assignments.length).toBeGreaterThan(0);

@@ -8,7 +8,8 @@ export default mergeConfig(
     test: {
       name: 'server-integration',
       include: ['tests/integration/**/*.spec.ts'],
-      fileParallelism: false
+      fileParallelism: false,
+      globalSetup: ['tests/support/global_setup.ts']
     }
   })
 );

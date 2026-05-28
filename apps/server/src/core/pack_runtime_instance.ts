@@ -42,6 +42,7 @@ export class PackRuntimeInstance implements PackRuntimeHost {
   private health: PackRuntimeHealthSnapshot;
   private readonly handle: PackRuntimeHandle;
   private currentRevision = 0n;
+  private requestedStepTicks: bigint | null = null;
 
   constructor(options: PackRuntimeInstanceOptions) {
     this.pack = options.pack;
@@ -159,5 +160,15 @@ export class PackRuntimeInstance implements PackRuntimeHost {
     const slots = this.pack.ai?.slots;
     if (!slots) return null;
     return slots;
+  }
+
+  public setRequestedStepTicks(ticks: bigint): void {
+    this.requestedStepTicks = ticks;
+  }
+
+  public consumeRequestedStepTicks(): bigint | undefined {
+    const value = this.requestedStepTicks;
+    this.requestedStepTicks = null;
+    return value ?? undefined;
   }
 }

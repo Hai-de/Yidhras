@@ -139,7 +139,9 @@ function extractNonConversationSlots(bundle: PromptBundleV2): SlotEntry[] {
 
   const slots: SlotEntry[] = [];
   // Use slot_order for traversal order; fall back to Object.keys(registry)
-  const order = bundle.slot_order ?? Object.keys(registry);
+  const order = (bundle.slot_order && bundle.slot_order.length > 0)
+    ? bundle.slot_order
+    : Object.keys(registry);
   for (const slotId of order) {
     if (slotId === 'conversation_history') {
       continue;
@@ -384,7 +386,7 @@ export function assembleConversationMessages(input: ConversationAssemblerInput):
     {
       ...workflowMetadata,
       prompt_preset: preset,
-      combined_prompt_length: bundle.combined_prompt.length
+      combined_prompt_length: bundle.combined_prompt?.length ?? 0
     }
   );
   if (userMsg) {

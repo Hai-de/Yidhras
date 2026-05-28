@@ -126,7 +126,7 @@ const runTask = async (svc: AiTaskService) => {
     pack_id: 'test-pack',
     input: {},
     prompt_context: {
-      prompt_bundle_v2: { messages: [{ role: 'user', parts: [{ type: 'text', text: 'test' }] }] }
+      prompt_bundle_v2: { combined_prompt: 'test', messages: [{ role: 'user', parts: [{ type: 'text', text: 'test' }] }] }
     },
     output_contract: {
       mode: 'json_object'

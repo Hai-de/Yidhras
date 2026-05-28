@@ -1,31 +1,25 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { AppContext } from '../../src/app/context.js';
 import {
   acquireSchedulerLease,
   getSchedulerCursor,
   updateSchedulerCursor
 } from '../../src/app/runtime/scheduler_lease.js';
-import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { MemSchedulerStorage } from '../helpers/scheduler_storage.js';
+import { TestKit } from '../testkit.js';
 
 const TEST_PACK_ID = 'test-failover';
 const TEST_PARTITION_ID = 'p2';
 
 describe('scheduler failover integration', () => {
-  let cleanup: (() => Promise<void>) | null = null;
-  let context: AppContext;
+  let kit: TestKit;
   let adapter: MemSchedulerStorage;
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
-    context = fixture.context;
-
+    kit = await TestKit.create();
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
+    kit.withSchedulerStorage(adapter);
   });
 
   beforeEach(async () => {
@@ -34,11 +28,11 @@ describe('scheduler failover integration', () => {
   });
 
   afterAll(async () => {
-    await cleanup?.();
+    await kit[Symbol.asyncDispose]();
   });
 
   it('hands an expired partition lease to a new worker while preserving cursor progress', async () => {
-    const firstAcquire = await acquireSchedulerLease(context, {
+    const firstAcquire = await acquireSchedulerLease(kit.context, {
       workerId: 'failover-worker-a',
       partitionId: TEST_PARTITION_ID,
       now: 1000n,
@@ -47,14 +41,14 @@ describe('scheduler failover integration', () => {
     expect(firstAcquire.acquired).toBe(true);
     expect(firstAcquire.holder).toBe('failover-worker-a');
 
-    await updateSchedulerCursor(context, {
+    await updateSchedulerCursor(kit.context, {
       partitionId: TEST_PARTITION_ID,
       lastScannedTick: 1000n,
       lastSignalTick: 999n,
       now: 1000n
     }, TEST_PACK_ID);
 
-    const blockedAcquire = await acquireSchedulerLease(context, {
+    const blockedAcquire = await acquireSchedulerLease(kit.context, {
       workerId: 'failover-worker-b',
       partitionId: TEST_PARTITION_ID,
       now: 1001n,
@@ -63,7 +57,7 @@ describe('scheduler failover integration', () => {
     expect(blockedAcquire.acquired).toBe(false);
     expect(blockedAcquire.holder).toBe('failover-worker-a');
 
-    const failoverAcquire = await acquireSchedulerLease(context, {
+    const failoverAcquire = await acquireSchedulerLease(kit.context, {
       workerId: 'failover-worker-b',
       partitionId: TEST_PARTITION_ID,
       now: 1003n,
@@ -72,14 +66,14 @@ describe('scheduler failover integration', () => {
     expect(failoverAcquire.acquired).toBe(true);
     expect(failoverAcquire.holder).toBe('failover-worker-b');
 
-    await updateSchedulerCursor(context, {
+    await updateSchedulerCursor(kit.context, {
       partitionId: TEST_PARTITION_ID,
       lastScannedTick: 1003n,
       lastSignalTick: 1002n,
       now: 1003n
     }, TEST_PACK_ID);
 
-    const cursor = await getSchedulerCursor(context, TEST_PARTITION_ID, TEST_PACK_ID);
+    const cursor = await getSchedulerCursor(kit.context, TEST_PARTITION_ID, TEST_PACK_ID);
     expect(cursor).not.toBeNull();
     expect(cursor?.last_scanned_tick).toBe(1003n);
     expect(cursor?.last_signal_tick).toBe(1002n);

@@ -467,7 +467,7 @@ const expirePackIdentityBindings = async (
   await context.repos.identityOperator.expireBindings(now);
 };
 
-const stepPackWorldEngine = async (
+export const stepPackWorldEngine = async (
   context: AppContext,
   packId: string,
   worldEngine: WorldEngineSidecarClient,
@@ -480,7 +480,8 @@ const stepPackWorldEngine = async (
     overlapSkippedCount: loopDiagnostics.overlap_skipped_count,
     pendingEventCount: 0
   });
-  const stepTicks = packRuntime.getEffectiveStepTicks(ctx).toString();
+  const requestedStep = packRuntime.consumeRequestedStepTicks();
+  const stepTicks = packRuntime.getEffectiveStepTicks(ctx, requestedStep).toString();
 
   await executeWorldEnginePreparedStep({
     context,

@@ -4,28 +4,24 @@ import { Router as createRouter } from 'express';
 import type { InferenceService } from '../../../inference/service.js';
 import type { AppContext } from '../../context.js';
 import type { PackScopeResolver } from '../../runtime/PackScopeResolver.js';
-import { registerAgentRoutes } from '../agent.js';
-import { registerAuditRoutes } from '../audit.js';
-import { registerClockRoutes } from '../clock.js';
-import { registerExperimentalPackProjectionRoutes } from '../experimental_pack_projection.js';
-import { registerExperimentalRuntimeRoutes } from '../experimental_runtime.js';
-import { registerGraphRoutes } from '../graph.js';
-import { registerIdentityRoutes } from '../identity.js';
-import { registerInferenceRoutes } from '../inference.js';
-import { registerNarrativeRoutes } from '../narrative.js';
-import { registerOverviewRoutes } from '../overview.js';
-import { registerPackOpeningRoutes } from '../pack_openings.js';
-import { registerPackSnapshotRoutes } from '../pack_snapshots.js';
-import { registerRelationalRoutes } from '../relational.js';
-import { registerSchedulerRoutes } from '../scheduler.js';
-import { registerSocialRoutes } from '../social.js';
+import { agentRoutes } from '../agent.js';
+import { auditRoutes } from '../audit.js';
+import { createClockRoutes } from '../clock.js';
+import { experimentalPackProjectionRoutes } from '../experimental_pack_projection.js';
+import { graphRoutes } from '../graph.js';
+import { createIdentityRoutes } from '../identity.js';
+import { createInferenceRoutes } from '../inference.js';
+import { narrativeRoutes } from '../narrative.js';
+import { overviewRoutes } from '../overview.js';
+import { packOpeningRoutes } from '../pack_openings.js';
+import { packSnapshotRoutes } from '../pack_snapshots.js';
+import { relationalRoutes } from '../relational.js';
+import { schedulerRoutes } from '../scheduler.js';
+import { socialRoutes } from '../social.js';
 
 export interface PackRoutesDependencies {
   context: AppContext;
   scopeResolver: PackScopeResolver;
-  asyncHandler: (
-    handler: (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => Promise<void>
-  ) => (req: import('express').Request, res: import('express').Response, next: import('express').NextFunction) => void;
   inferenceService: InferenceService;
   parseOptionalTick?: (value: unknown, fieldName: string) => bigint | null;
   toJsonSafe?: (value: unknown) => unknown;
@@ -36,29 +32,30 @@ export const registerPackRoutes = (deps: PackRoutesDependencies): Router => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const router = createRouter({ mergeParams: true }) as unknown as Express;
 
-  const { context, asyncHandler } = deps;
+  const { context } = deps;
 
-  registerInferenceRoutes(router, context, deps.inferenceService, { asyncHandler });
-  registerOverviewRoutes(router, context, { asyncHandler });
-  registerPackOpeningRoutes(router, context, { asyncHandler });
-  registerPackSnapshotRoutes(router, context, { asyncHandler });
-  registerGraphRoutes(router, context, { asyncHandler });
-  registerClockRoutes(router, context, {
+  // Pattern A: direct RouteModule
+  overviewRoutes.register(router, context);
+  packOpeningRoutes.register(router, context);
+  packSnapshotRoutes.register(router, context);
+  graphRoutes.register(router, context);
+  experimentalPackProjectionRoutes.register(router, context);
+  socialRoutes.register(router, context);
+  relationalRoutes.register(router, context);
+  narrativeRoutes.register(router, context);
+  agentRoutes.register(router, context);
+  auditRoutes.register(router, context);
+  schedulerRoutes.register(router, context);
+
+  // Pattern B: factory functions
+  createInferenceRoutes(deps.inferenceService).register(router, context);
+  createClockRoutes({
     toJsonSafe: deps.toJsonSafe ?? ((v: unknown) => v),
     getErrorMessage: deps.getErrorMessage ?? ((err: unknown) => String(err))
-  });
-  registerExperimentalRuntimeRoutes(router, context, { asyncHandler });
-  registerExperimentalPackProjectionRoutes(router, context, { asyncHandler });
-  registerSocialRoutes(router, context, { asyncHandler });
-  registerRelationalRoutes(router, context, { asyncHandler });
-  registerNarrativeRoutes(router, context, { asyncHandler });
-  registerAgentRoutes(router, context, { asyncHandler });
-  registerAuditRoutes(router, context, { asyncHandler });
-  registerIdentityRoutes(router, context, {
-    asyncHandler,
+  }).register(router, context);
+  createIdentityRoutes({
     parseOptionalTick: deps.parseOptionalTick ?? (() => null)
-  });
-  registerSchedulerRoutes(router, context, { asyncHandler });
+  }).register(router, context);
 
   return router;
 };

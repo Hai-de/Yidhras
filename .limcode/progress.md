@@ -1,6 +1,6 @@
 # 项目进度
 - Project: Yidhras
-- Updated At: 2026-05-24T21:40:14.219Z
+- Updated At: 2026-05-27T18:42:17.531Z
 - Status: active
 - Phase: plan
 
@@ -15,21 +15,20 @@
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/worker-thread-plugin-isolation-design.md`
-- 计划：`.limcode/plans/worker-thread-plugin-isolation-plan.md`
+- 设计：`.limcode/design/vampire-appearance-extension.md`
+- 计划：`.limcode/plans/千年吸血鬼世界包后端实现计划.plan.md`
+- 审查：`.limcode/review/千年吸血鬼世界包前端设计盲点分析.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
 
 <!-- LIMCODE_PROGRESS_TODOS_START -->
-- [ ] 定义 Worker IPC 协议、contribution descriptor、Host API 2.0.0 和 plugins.isolation 配置  `#worker-isolation-phase-1-protocol-config`
-- [ ] 实现 Worker entry resolver、worker bootstrap、Worker-side host proxy、PluginWorkerClient 和 host_call handler  `#worker-isolation-phase-2-worker-client`
-- [ ] 实现 PluginWorkerManager，并重构 runtime.ts 删除主线程插件 dynamic import、采用原子 registry 替换  `#worker-isolation-phase-3-runtime-integration`
-- [ ] 实现 step/rule/query/context/prompt/data-cleaner/slot/perception/API-route contribution proxy 和 manifest 对齐校验  `#worker-isolation-phase-4-contribution-proxy`
-- [ ] 删除函数式 registerPackRoute，改为固定主线程 route host 转发 Worker handler  `#worker-isolation-phase-5-route-host`
-- [ ] 清理 full AppContext sandbox 暴露，统一主线程 capability gate  `#worker-isolation-phase-6-sandbox-cleanup`
-- [ ] 增加 Worker metrics，更新 PLUGIN_RUNTIME 文档和 generic-capability 计划状态  `#worker-isolation-phase-7-docs-metrics`
-- [ ] 补齐 Worker 隔离单元/集成测试并运行 typecheck 与插件相关回归测试  `#worker-isolation-phase-8-tests`
+- [x] 补全 config/capabilities.yaml - 声明全部 10 个 capability  `#1`
+- [x] 补全 config/rules.yaml - 替代规则声明  `#2`
+- [x] 补全 config/prompts.yaml - prompt slot 配置  `#3`
+- [x] 更新 config/behavior_trees.yaml - both_depleted condition 定义  `#4`
+- [x] 实现 perceive.* 和 invoke.* 处理器 + 更新 vampire-core 插件  `#5`
+- [x] 验证并测试所有 capability 端点  `#6`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑
@@ -94,6 +93,14 @@
 - 2026-05-24T20:10:47.477Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/generic-capability-p3-batch1-batch2.plan.md
 - 2026-05-24T21:30:55.320Z | artifact_changed | design | 同步设计文档：.limcode/design/worker-thread-plugin-isolation-design.md
 - 2026-05-24T21:40:14.219Z | artifact_changed | plan | 同步计划文档：.limcode/plans/worker-thread-plugin-isolation-plan.md
+- 2026-05-26T20:59:24.592Z | artifact_changed | design | 同步设计文档：.limcode/design/serious-world-pack-basic-skeleton-draft.md
+- 2026-05-26T21:02:39.646Z | artifact_changed | plan | 同步计划文档：.limcode/plans/千年吸血鬼世界包前端实现计划.plan.md
+- 2026-05-27T00:36:48.283Z | artifact_changed | design | 同步设计文档：.limcode/design/vampire-appearance-extension.md
+- 2026-05-27T09:10:08.257Z | artifact_changed | review | 同步审查文档：.limcode/review/千年吸血鬼世界包前端设计盲点分析.md
+- 2026-05-27T17:07:54.700Z | artifact_changed | plan | 同步计划文档：.limcode/plans/千年吸血鬼世界包前端实现计划.plan.md
+- 2026-05-27T17:49:51.561Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/千年吸血鬼世界包前端实现计划.plan.md
+- 2026-05-27T18:31:28.388Z | artifact_changed | plan | 同步计划文档：.limcode/plans/千年吸血鬼世界包后端实现计划.plan.md
+- 2026-05-27T18:42:17.531Z | artifact_changed | plan | 同步计划 TODO 快照：.limcode/plans/千年吸血鬼世界包后端实现计划.plan.md
 <!-- LIMCODE_PROGRESS_LOG_END -->
 
 <!-- LIMCODE_PROGRESS_METADATA_START -->
@@ -103,7 +110,7 @@
   "projectId": "yidhras",
   "projectName": "Yidhras",
   "createdAt": "2026-05-24T16:15:36.183Z",
-  "updatedAt": "2026-05-24T21:40:14.219Z",
+  "updatedAt": "2026-05-27T18:42:17.531Z",
   "status": "active",
   "phase": "plan",
   "currentFocus": "no-unsafe-type-assertion 渐进收敛计划（追加 no-unsafe-* 系列）",
@@ -111,49 +118,40 @@
   "currentBlocker": null,
   "nextAction": null,
   "activeArtifacts": {
-    "design": ".limcode/design/worker-thread-plugin-isolation-design.md",
-    "plan": ".limcode/plans/worker-thread-plugin-isolation-plan.md"
+    "design": ".limcode/design/vampire-appearance-extension.md",
+    "plan": ".limcode/plans/千年吸血鬼世界包后端实现计划.plan.md",
+    "review": ".limcode/review/千年吸血鬼世界包前端设计盲点分析.md"
   },
   "todos": [
     {
-      "id": "worker-isolation-phase-1-protocol-config",
-      "content": "定义 Worker IPC 协议、contribution descriptor、Host API 2.0.0 和 plugins.isolation 配置",
-      "status": "pending"
+      "id": "1",
+      "content": "补全 config/capabilities.yaml - 声明全部 10 个 capability",
+      "status": "completed"
     },
     {
-      "id": "worker-isolation-phase-2-worker-client",
-      "content": "实现 Worker entry resolver、worker bootstrap、Worker-side host proxy、PluginWorkerClient 和 host_call handler",
-      "status": "pending"
+      "id": "2",
+      "content": "补全 config/rules.yaml - 替代规则声明",
+      "status": "completed"
     },
     {
-      "id": "worker-isolation-phase-3-runtime-integration",
-      "content": "实现 PluginWorkerManager，并重构 runtime.ts 删除主线程插件 dynamic import、采用原子 registry 替换",
-      "status": "pending"
+      "id": "3",
+      "content": "补全 config/prompts.yaml - prompt slot 配置",
+      "status": "completed"
     },
     {
-      "id": "worker-isolation-phase-4-contribution-proxy",
-      "content": "实现 step/rule/query/context/prompt/data-cleaner/slot/perception/API-route contribution proxy 和 manifest 对齐校验",
-      "status": "pending"
+      "id": "4",
+      "content": "更新 config/behavior_trees.yaml - both_depleted condition 定义",
+      "status": "completed"
     },
     {
-      "id": "worker-isolation-phase-5-route-host",
-      "content": "删除函数式 registerPackRoute，改为固定主线程 route host 转发 Worker handler",
-      "status": "pending"
+      "id": "5",
+      "content": "实现 perceive.* 和 invoke.* 处理器 + 更新 vampire-core 插件",
+      "status": "completed"
     },
     {
-      "id": "worker-isolation-phase-6-sandbox-cleanup",
-      "content": "清理 full AppContext sandbox 暴露，统一主线程 capability gate",
-      "status": "pending"
-    },
-    {
-      "id": "worker-isolation-phase-7-docs-metrics",
-      "content": "增加 Worker metrics，更新 PLUGIN_RUNTIME 文档和 generic-capability 计划状态",
-      "status": "pending"
-    },
-    {
-      "id": "worker-isolation-phase-8-tests",
-      "content": "补齐 Worker 隔离单元/集成测试并运行 typecheck 与插件相关回归测试",
-      "status": "pending"
+      "id": "6",
+      "content": "验证并测试所有 capability 端点",
+      "status": "completed"
     }
   ],
   "milestones": [
@@ -247,21 +245,69 @@
       "type": "artifact_changed",
       "refId": "plan",
       "message": "同步计划文档：.limcode/plans/worker-thread-plugin-isolation-plan.md"
+    },
+    {
+      "at": "2026-05-26T20:59:24.592Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/serious-world-pack-basic-skeleton-draft.md"
+    },
+    {
+      "at": "2026-05-26T21:02:39.646Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/千年吸血鬼世界包前端实现计划.plan.md"
+    },
+    {
+      "at": "2026-05-27T00:36:48.283Z",
+      "type": "artifact_changed",
+      "refId": "design",
+      "message": "同步设计文档：.limcode/design/vampire-appearance-extension.md"
+    },
+    {
+      "at": "2026-05-27T09:10:08.257Z",
+      "type": "artifact_changed",
+      "refId": "review",
+      "message": "同步审查文档：.limcode/review/千年吸血鬼世界包前端设计盲点分析.md"
+    },
+    {
+      "at": "2026-05-27T17:07:54.700Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/千年吸血鬼世界包前端实现计划.plan.md"
+    },
+    {
+      "at": "2026-05-27T17:49:51.561Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/千年吸血鬼世界包前端实现计划.plan.md"
+    },
+    {
+      "at": "2026-05-27T18:31:28.388Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划文档：.limcode/plans/千年吸血鬼世界包后端实现计划.plan.md"
+    },
+    {
+      "at": "2026-05-27T18:42:17.531Z",
+      "type": "artifact_changed",
+      "refId": "plan",
+      "message": "同步计划 TODO 快照：.limcode/plans/千年吸血鬼世界包后端实现计划.plan.md"
     }
   ],
   "stats": {
     "milestonesTotal": 1,
     "milestonesCompleted": 1,
-    "todosTotal": 8,
-    "todosCompleted": 0,
+    "todosTotal": 6,
+    "todosCompleted": 6,
     "todosInProgress": 0,
     "todosCancelled": 0,
     "activeRisks": 0
   },
   "render": {
     "rendererVersion": 1,
-    "generatedAt": "2026-05-24T21:40:14.219Z",
-    "bodyHash": "sha256:216d64a78474131a7630a2010af3fade280158739e7898ca04de89a3314a579d"
+    "generatedAt": "2026-05-27T18:42:17.531Z",
+    "bodyHash": "sha256:e107adf0a0fab6e6943e0d1d45b433309e3a863dca4f827670f951a7702fb797"
   }
 }
 <!-- LIMCODE_PROGRESS_METADATA_END -->

@@ -1,4 +1,3 @@
-import type { Express, NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 
 import { getRuntimeConfig } from '../../config/runtime_config.js';
@@ -6,19 +5,14 @@ import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
 import type { WorkerPackRouteProxy } from '../../plugins/worker/contribution_proxy.js';
 import { PluginWorkerTimeoutError } from '../../plugins/worker/errors.js';
 import { ApiError } from '../../utils/api_error.js';
-import type { AppContext } from '../context.js';
+import { asyncHandler } from '../http/async_handler.js';
+import type { RouteModule } from './types.js';
 
 const pluginServerRouteParamsSchema = z.object({
   packId: z.string().trim().min(1),
   pluginId: z.string().trim().min(1),
   installationId: z.string().trim().min(1)
 });
-
-export interface PluginRuntimeServerRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void;
-}
 
 const normalizeRoutePath = (value: unknown): string => {
   if (Array.isArray(value)) {
@@ -48,14 +42,11 @@ const isTimeoutError = (error: unknown): boolean => {
   );
 };
 
-export const registerPluginRuntimeServerRoutes = (
-  app: Express,
-  _context: AppContext,
-  deps: PluginRuntimeServerRouteDependencies
-): void => {
-  app.all(
-    '/api/packs/:packId/plugins/:pluginId/runtime/server/:installationId/routes/{*runtimePath}',
-    deps.asyncHandler(async (req, res) => {
+export const pluginRuntimeServerRoutes: RouteModule = {
+  register(app, _context) {
+    app.all(
+      '/api/packs/:packId/plugins/:pluginId/runtime/server/:installationId/routes/{*runtimePath}',
+      asyncHandler(async (req, res) => {
       const paramsResult = pluginServerRouteParamsSchema.safeParse({
         packId: req.params.packId,
         pluginId: req.params.pluginId,
@@ -105,4 +96,5 @@ export const registerPluginRuntimeServerRoutes = (
       }
     })
   );
+  }
 };

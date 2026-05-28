@@ -3,9 +3,8 @@ import {
   relationshipLogsParamsSchema,
   relationshipLogsQuerySchema
 } from '@yidhras/contracts';
-import type { Express, NextFunction, Request, Response } from 'express';
 
-import type { AppContext } from '../context.js';
+import { asyncHandler } from '../http/async_handler.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseParams, parseQuery } from '../http/zod.js';
 import {
@@ -14,21 +13,13 @@ import {
   listRelationalCircles,
   listRelationshipAdjustmentLogs
 } from '../services/relational.js';
+import type { RouteModule } from './types.js';
 
-export interface RelationalRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void;
-}
-
-export const registerRelationalRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: RelationalRouteDependencies
-): void => {
+export const relationalRoutes: RouteModule = {
+  register(app, context) {
   app.get(
     '/api/relational/graph',
-    deps.asyncHandler(async (_req, res) => {
+    asyncHandler(async (_req, res) => {
       context.assertRuntimeReady('relational graph');
       const graph = await getRelationalGraph(context);
       jsonOk(res, toJsonSafe(graph));
@@ -37,7 +28,7 @@ export const registerRelationalRoutes = (
 
   app.get(
     '/api/relational/circles',
-    deps.asyncHandler(async (_req, res) => {
+    asyncHandler(async (_req, res) => {
       context.assertRuntimeReady('relational circles');
       const circles = await listRelationalCircles(context);
       jsonOk(res, toJsonSafe(circles));
@@ -46,7 +37,7 @@ export const registerRelationalRoutes = (
 
   app.get(
     '/api/atmosphere/nodes',
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('atmosphere nodes');
       const query = parseQuery(atmosphereNodesQuerySchema, req.query, 'RELATIONAL_QUERY_INVALID');
       const nodes = await listAtmosphereNodes(context, {
@@ -60,7 +51,7 @@ export const registerRelationalRoutes = (
 
   app.get(
     '/api/relationships/:from_id/:to_id/:type/logs',
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('relationship adjustment logs');
       const params = parseParams(relationshipLogsParamsSchema, req.params, 'RELATIONSHIP_LOG_QUERY_INVALID');
       const query = parseQuery(relationshipLogsQuerySchema, req.query, 'RELATIONSHIP_LOG_QUERY_INVALID');
@@ -74,4 +65,5 @@ export const registerRelationalRoutes = (
       jsonOk(res, toJsonSafe(logs));
     })
   );
+  }
 };

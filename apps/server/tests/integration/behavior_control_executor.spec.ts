@@ -76,7 +76,7 @@ const makeMinimalState = (overrides: Partial<PromptWorkflowState> = {}): PromptW
   return { ...base, ...overrides } as PromptWorkflowState;
 };
 
-const makeMinimalContext = () => ({
+const makeMinimalContext = (overrides: Record<string, unknown> = {}) => ({
   inference_id: 'inf-test',
   tick: BigInt(100),
   strategy: 'mock' as const,
@@ -97,7 +97,8 @@ const makeMinimalContext = () => ({
   pack_state: { entities: {}, relationships: [] },
   visible_variables: {},
   policy_summary: { allowed_actions: [], permissions: [] },
-  transmission_profile: { max_tokens: 4096, temperature: 0.7 }
+  transmission_profile: { max_tokens: 4096, temperature: 0.7 },
+  ...overrides
 });
 
 const diagnosticsOf = (state: PromptWorkflowState) => expectDefined(state.slot_behavior_diagnostics, 'slot behavior diagnostics');
@@ -198,12 +199,15 @@ describe('behavior_control executor — integration', () => {
       behavior_profiles: [{
         slot_id: 'test_slot',
         conditions: [{ type: 'keyword_match', keywords: ['hello'] }]
-      } as SlotBehaviorProfile],
-      ai_messages: [{ role: 'user', parts: [{ type: 'text', text: 'hello world' }], name: 'user' }]
+      } as SlotBehaviorProfile]
     });
 
     const result = await executor.execute({
-      context: makeMinimalContext() as never,
+      context: makeMinimalContext({
+        agent_conversation_memory: {
+          entries: [{ turn_number: 1, speaker_agent_id: 'e2', current_content: 'hello world', archived: false }]
+        }
+      }) as never,
       profile: makeMinimalProfile(),
       spec: makeMinimalSpec(),
       state
@@ -223,12 +227,15 @@ describe('behavior_control executor — integration', () => {
         slot_id: 'test_slot',
         conditions: [{ type: 'keyword_match', keywords: ['nonexistent'] }],
         evaluator_failure_policy: 'deactivate'
-      } as SlotBehaviorProfile],
-      ai_messages: [{ role: 'user', parts: [{ type: 'text', text: 'hello world' }], name: 'user' }]
+      } as SlotBehaviorProfile]
     });
 
     const result = await executor.execute({
-      context: makeMinimalContext() as never,
+      context: makeMinimalContext({
+        agent_conversation_memory: {
+          entries: [{ turn_number: 1, speaker_agent_id: 'e2', current_content: 'hello world', archived: false }]
+        }
+      }) as never,
       profile: makeMinimalProfile(),
       spec: makeMinimalSpec(),
       state
@@ -271,19 +278,21 @@ describe('behavior_control executor — integration', () => {
       behavior_profiles: [{
         slot_id: 'test_slot',
         conditions: [{ type: 'conversation_turn', operator: 'gt', value: 3 }]
-      } as SlotBehaviorProfile],
-      // 5 messages → turn_count = 5
-      ai_messages: [
-        { role: 'user', parts: [{ type: 'text', text: 'msg1' }] },
-        { role: 'assistant', parts: [{ type: 'text', text: 'msg2' }] },
-        { role: 'user', parts: [{ type: 'text', text: 'msg3' }] },
-        { role: 'assistant', parts: [{ type: 'text', text: 'msg4' }] },
-        { role: 'user', parts: [{ type: 'text', text: 'msg5' }] }
-      ] as never
+      } as SlotBehaviorProfile]
     });
 
     const result = await executor.execute({
-      context: makeMinimalContext() as never,
+      context: makeMinimalContext({
+        agent_conversation_memory: {
+          entries: [
+            { turn_number: 1, speaker_agent_id: 'e2', current_content: 'msg1', archived: false },
+            { turn_number: 2, speaker_agent_id: 'e1', current_content: 'msg2', archived: false },
+            { turn_number: 3, speaker_agent_id: 'e2', current_content: 'msg3', archived: false },
+            { turn_number: 4, speaker_agent_id: 'e1', current_content: 'msg4', archived: false },
+            { turn_number: 5, speaker_agent_id: 'e2', current_content: 'msg5', archived: false }
+          ]
+        }
+      }) as never,
       profile: makeMinimalProfile(),
       spec: makeMinimalSpec(),
       state
@@ -329,12 +338,15 @@ describe('behavior_control executor — integration', () => {
           { type: 'conversation_turn', operator: 'gt', value: 0 }
         ],
         condition_combination: 'or'
-      } as SlotBehaviorProfile],
-      ai_messages: [{ role: 'user', parts: [{ type: 'text', text: 'hello' }] }]
+      } as SlotBehaviorProfile]
     });
 
     const result = await executor.execute({
-      context: makeMinimalContext() as never,
+      context: makeMinimalContext({
+        agent_conversation_memory: {
+          entries: [{ turn_number: 1, speaker_agent_id: 'e2', current_content: 'hello', archived: false }]
+        }
+      }) as never,
       profile: makeMinimalProfile(),
       spec: makeMinimalSpec(),
       state
@@ -531,7 +543,7 @@ describe('behavior_control executor — groups', () => {
     const result = await executor.execute({
       context: makeMinimalContext() as never,
       profile: makeMinimalProfile(),
-      spec: makeMinimalSpec(),
+      spec: { key: 'behavior_control', config: { token_budget: 8192, safety_margin_tokens: 0 } },
       state
     });
 

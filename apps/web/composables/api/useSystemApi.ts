@@ -16,8 +16,7 @@ export interface RuntimeWorldAuthor {
 }
 
 export interface RuntimeWorldMetadata {
-  instance_id: string
-  metadata_id: string
+  id: string
   name: string
   version: string
   description?: string
@@ -41,11 +40,11 @@ export interface RuntimeSpeedSnapshot {
       min: TickString
       max: TickString
     }
-    loopIntervalMs: number
+    loop_interval_ms?: number
     adaptive?: {
-      targetLoopMs: number
-      scaleUpThresholdMs: number
-      scaleDownThresholdMs: number
+      target_loop_ms: number
+      scale_up_threshold_ms: number
+      scale_down_threshold_ms: number
     }
   }
   effective_step_ticks: TickString

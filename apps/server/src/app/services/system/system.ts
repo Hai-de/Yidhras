@@ -1,10 +1,10 @@
-import { isAiGatewayEnabled } from '../../../config/runtime_config.js';
-import type { RuntimeSpeedSnapshot } from '../../../core/runtime_speed.js';
-import type { DatabaseHealthSnapshot } from '../../../db/sqlite_runtime.js';
-import type { SystemMessage } from '../../../utils/notifications.js';
-import type { AppContext, RuntimeLoopDiagnostics } from '../../context.js';
-import { createRuntimeKernelService } from '../../runtime/runtime_kernel_service.js';
-import { readVisibleClockSnapshot } from '../app_context_ports.js';
+import { isAiGatewayEnabled } from '../../../config/runtime_config.js'
+import type { RuntimeSpeedSnapshot } from '../../../core/runtime_speed.js'
+import type { StepStrategy } from '../../../core/step_strategy.js'
+import type { SystemMessage } from '../../../utils/notifications.js'
+import type { AppContext, RuntimeLoopDiagnostics } from '../../context.js'
+import { createRuntimeKernelService } from '../../runtime/runtime_kernel_service.js'
+import { readVisibleClockSnapshot } from '../app_context_ports.js'
 
 const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
   status: 'idle',
@@ -17,12 +17,41 @@ const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
   last_error_message: null
 };
 
+function serializeStepStrategy(strategy: StepStrategy): Record<string, unknown> {
+  const base: Record<string, unknown> = {
+    kind: strategy.kind,
+    range: {
+      min: strategy.range.min.toString(),
+      max: strategy.range.max.toString()
+    },
+    loop_interval_ms: strategy.loopIntervalMs
+  };
+  if (strategy.kind === 'adaptive' && strategy.adaptive) {
+    base.adaptive = {
+      target_loop_ms: strategy.adaptive.targetLoopMs,
+      scale_up_threshold_ms: strategy.adaptive.scaleUpThresholdMs,
+      scale_down_threshold_ms: strategy.adaptive.scaleDownThresholdMs
+    };
+  }
+  return base;
+}
+
+function serializeRuntimeSpeed(speed: RuntimeSpeedSnapshot): Record<string, unknown> {
+  return {
+    mode: speed.mode,
+    source: speed.source,
+    strategy: serializeStepStrategy(speed.strategy),
+    effective_step_ticks: speed.effective_step_ticks,
+    override_since: speed.override_since
+  };
+}
+
 export interface RuntimeStatusSnapshot {
   status: 'paused' | 'running';
   runtime_ready: boolean;
-  runtime_speed: RuntimeSpeedSnapshot;
+  runtime_speed: ReturnType<typeof serializeRuntimeSpeed>;
   runtime_loop: RuntimeLoopDiagnostics;
-  database: DatabaseHealthSnapshot | null;
+  sqlite: import('../../../db/sqlite_runtime.js').SqliteRuntimePragmaSnapshot | null;
   scheduler: {
     worker_id: string;
     partition_count: number;
@@ -39,8 +68,7 @@ export interface RuntimeStatusSnapshot {
   health_level: AppContext['startupHealth']['level'];
   world_pack:
     | {
-        instance_id: string;
-        metadata_id: string;
+        id: string;
         name: string;
         version: string;
         description?: string;
@@ -176,12 +204,20 @@ export const getRuntimeStatusSnapshot = async (
   });
   const runtimeLoop = runtimeKernel.getLoopDiagnostics() ?? context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
 
-  return {
+return {
     status: context.isPaused() ? 'paused' : 'running',
     runtime_ready: context.isRuntimeReady(),
-    runtime_speed: context.getPackRuntimeHost?.(packId)?.getRuntimeSpeedSnapshot() ?? { mode: 'variable', source: 'default', strategy: { kind: 'variable', range: { min: 1n, max: 1n }, loopIntervalMs: 1000 }, effective_step_ticks: '1', override_since: null },
+    runtime_speed: serializeRuntimeSpeed(
+      context.getPackRuntimeHost?.(packId)?.getRuntimeSpeedSnapshot() ?? {
+        mode: 'variable',
+        source: 'default',
+        strategy: { kind: 'variable', range: { min: 1n, max: 1n }, loopIntervalMs: 1000 },
+        effective_step_ticks: '1',
+        override_since: null
+      }
+    ),
     runtime_loop: runtimeLoop,
-    database: context.getDatabaseHealth?.() ?? null,
+    sqlite: context.getDatabaseHealth?.()?.sqlite ?? null,
     scheduler: {
       worker_id: ownershipSnapshot.worker_id,
       partition_count: ownershipSnapshot.partition_count,
@@ -198,8 +234,7 @@ export const getRuntimeStatusSnapshot = async (
     health_level: context.startupHealth.level,
     world_pack: pack
       ? {
-          instance_id: packId,
-          metadata_id: pack.metadata.id,
+          id: pack.metadata.id,
           name: pack.metadata.name,
           version: pack.metadata.version,
           ...(pack.metadata.description ? { description: pack.metadata.description } : {}),

@@ -1,29 +1,23 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { AppContext } from '../../src/app/context.js';
 import {
   evaluateSchedulerAutomaticRebalance,
   listRecentSchedulerRebalanceRecommendations
 } from '../../src/app/runtime/scheduler_rebalance.js';
-import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { MemSchedulerStorage } from '../helpers/scheduler_storage.js';
+import { TestKit } from '../testkit.js';
 
 const TEST_PACK_ID = 'test-rebalance-rec';
 
 describe('scheduler rebalance recommendation integration', () => {
-  let cleanup: (() => Promise<void>) | null = null;
-  let context: AppContext;
+  let kit: TestKit;
   let adapter: MemSchedulerStorage;
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
-    context = fixture.context;
-
+    kit = await TestKit.create();
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
+    kit.withSchedulerStorage(adapter);
   });
 
   beforeEach(async () => {
@@ -32,7 +26,7 @@ describe('scheduler rebalance recommendation integration', () => {
   });
 
   afterAll(async () => {
-    await cleanup?.();
+    await kit[Symbol.asyncDispose]();
   });
 
   it('creates a worker_unhealthy recommendation that moves a partition from a stale worker to an active worker', async () => {
@@ -55,7 +49,7 @@ describe('scheduler rebalance recommendation integration', () => {
       owned_partition_count: 1, active_migration_count: 0, capacity_hint: 4, updated_at: 1000n
     });
 
-    const result = await evaluateSchedulerAutomaticRebalance(context, {
+    const result = await evaluateSchedulerAutomaticRebalance(kit.context, {
       now: 1000n,
       maxRecommendations: 1,
       migrationBacklogLimit: 2
@@ -67,7 +61,7 @@ describe('scheduler rebalance recommendation integration', () => {
     expect(result.created_recommendations[0]?.from_worker_id).toBe('worker-a');
     expect(result.created_recommendations[0]?.to_worker_id).toBe('worker-b');
 
-    const persistedRecommendations = await listRecentSchedulerRebalanceRecommendations(context, 10, TEST_PACK_ID);
+    const persistedRecommendations = await listRecentSchedulerRebalanceRecommendations(kit.context, 10, TEST_PACK_ID);
     expect(persistedRecommendations[0]?.status).toBe('recommended');
     expect(persistedRecommendations[0]?.reason).toBe('worker_unhealthy');
     expect(persistedRecommendations[0]?.from_worker_id).toBe('worker-a');

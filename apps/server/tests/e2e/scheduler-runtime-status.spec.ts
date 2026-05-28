@@ -1,17 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { assertRecord, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
-import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { requestJson } from '../helpers/server.js';
+import { E2ETestKit } from '../testkit_e2e.js';
 
 describe('scheduler runtime status e2e', () => {
   it('reports runtime loop and sqlite diagnostics', async () => {
-    await withIsolatedTestServer({
-      defaultPort: 3111,
-      packRef: 'example_pack',
-      seededPackRefs: ['example_pack']
-    }, async server => {
-      const response = await requestJson(server.baseUrl, '/api/status');
+    const kit = await E2ETestKit.create({ port: 3111, packRef: 'example_pack', seededPackRefs: ['example_pack'] });
+    try {
+      await kit.startServer();
+      const response = await requestJson(kit.baseUrl, '/api/status');
       expect(response.status).toBe(200);
 
       const data = assertSuccessEnvelopeData(response.body, '/api/status');
@@ -28,6 +26,8 @@ describe('scheduler runtime status e2e', () => {
       expect(typeof sqlite.busy_timeout).toBe('number');
       expect((sqlite.busy_timeout as number) >= 5000).toBe(true);
       expect(sqlite.foreign_keys).toBe(true);
-    });
+    } finally {
+      await kit[Symbol.asyncDispose]();
+    }
   });
 });

@@ -10,12 +10,11 @@ export interface OverviewSummarySnapshot {
   runtime: {
     status: 'paused' | 'running';
     runtime_ready: boolean;
-    runtime_speed: import('../../../core/runtime_speed.js').RuntimeSpeedSnapshot;
+    runtime_speed: Record<string, unknown>;
     health_level: AppContext['startupHealth']['level'];
     world_pack:
       | {
-          instance_id: string;
-          metadata_id: string;
+          id: string;
           name: string;
           version: string;
         }

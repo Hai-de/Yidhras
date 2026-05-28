@@ -128,4 +128,12 @@ export class DefaultPackRuntimePort implements PackRuntimePort {
   applyClockProjection(snapshot: RuntimeClockProjectionSnapshot): void {
     this.host.applyClockProjection(snapshot);
   }
+
+  setRequestedStepTicks(ticks: bigint): void {
+    this.host.setRequestedStepTicks(ticks);
+  }
+
+  consumeRequestedStepTicks(): bigint | undefined {
+    return this.host.consumeRequestedStepTicks();
+  }
 }

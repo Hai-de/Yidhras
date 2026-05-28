@@ -332,7 +332,8 @@ const KERNEL_INTENT_TYPES = new Set([
   'adjust_snr',
   'adjust_relationship',
   'move',
-  'post_message'
+  'post_message',
+  'set_requested_step_ticks'
 ]);
 
 const intentHandlerRegistry = new Map<string, IntentHandler>();
@@ -405,6 +406,23 @@ export const dispatchActionIntent = async (
       return { outcome: 'completed', reason: null };
     case 'post_message':
       return postMessageHandler(context, intent, packRuntime, determinism);
+    case 'set_requested_step_ticks': {
+      const payload = isRecord(intent.payload) ? intent.payload : null;
+      const rawTicks = payload?.ticks;
+      if (typeof rawTicks === 'number' && rawTicks > 0) {
+        packRuntime?.setRequestedStepTicks(BigInt(Math.floor(rawTicks)));
+      } else if (typeof rawTicks === 'string' && rawTicks.trim().length > 0) {
+        try {
+          const parsed = BigInt(rawTicks.trim());
+          if (parsed > 0n) {
+            packRuntime?.setRequestedStepTicks(parsed);
+          }
+        } catch {
+          // ignore invalid bigint strings
+        }
+      }
+      return { outcome: 'completed', reason: null };
+    }
     default:
       throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'Unsupported action intent type', {
         intent_id: intent.id,

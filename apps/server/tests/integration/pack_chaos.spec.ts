@@ -14,9 +14,11 @@ describe('pack chaos', () => {
   let prisma: PrismaClient;
   let sim: SimulationManager;
   const DEATH_NOTE_REF = 'death_note';
-  const DEATH_NOTE_ID = 'world-death-note';
+  const DEATH_NOTE_ID = 'death_note';
+  const DEATH_NOTE_META_ID = 'world-death-note';
   const EXAMPLE_PACK_REF = 'example_pack';
-  const EXAMPLE_PACK_ID = 'world-example-pack';
+  const EXAMPLE_PACK_ID = 'example_pack';
+  const EXAMPLE_PACK_META_ID = 'world-example-pack';
 
   beforeAll(async () => {
     environment = await createIsolatedRuntimeEnvironment({
@@ -69,7 +71,7 @@ describe('pack chaos', () => {
 
       const handle = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
       expect(handle).not.toBeNull();
-      expect(handle?.pack_id).toBe(EXAMPLE_PACK_ID);
+      expect(handle?.metadata_id).toBe(EXAMPLE_PACK_META_ID);
 
       const occurrences = sim.listLoadedPackRuntimeIds()
         .filter(id => id === EXAMPLE_PACK_ID).length;
@@ -99,7 +101,7 @@ describe('pack chaos', () => {
       if (count === 1) {
         const handle = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
         expect(handle).not.toBeNull();
-        expect(handle?.pack_id).toBe(EXAMPLE_PACK_ID);
+        expect(handle?.metadata_id).toBe(EXAMPLE_PACK_META_ID);
       }
     });
 
@@ -138,7 +140,7 @@ describe('pack chaos', () => {
       // Pack A should still be intact
       const handleAAfter = sim.getPackRuntimeHandle(DEATH_NOTE_ID);
       expect(handleAAfter).not.toBeNull();
-      expect(handleAAfter?.pack_id).toBe(DEATH_NOTE_ID);
+      expect(handleAAfter?.metadata_id).toBe(DEATH_NOTE_META_ID);
 
       const ids = sim.listLoadedPackRuntimeIds();
       expect(ids).toContain(DEATH_NOTE_ID);

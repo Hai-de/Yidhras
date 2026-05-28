@@ -1,7 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { AppContext } from '../../src/app/context.js';
 import { getGraphView } from '../../src/app/services/relational.js';
 import { parseGraphViewFilters } from '../../src/app/services/relational/graph_filters.js';
 import {
@@ -9,20 +8,17 @@ import {
   buildRelayNodeId,
   getNeighborhoodNodeIds
 } from '../../src/app/services/relational/graph_traversal.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
+import { TestKit } from '../testkit.js';
 
 describe('relational graph core integration', () => {
-  let cleanup: (() => Promise<void>) | null = null;
-  let context: AppContext;
+  let kit: TestKit;
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
-    context = fixture.context;
+    kit = await TestKit.create();
   });
 
   afterAll(async () => {
-    await cleanup?.();
+    await kit[Symbol.asyncDispose]();
   });
 
   it('normalizes graph view filters and rejects unsupported kinds', () => {
@@ -91,7 +87,7 @@ describe('relational graph core integration', () => {
     const successIntentId = `graph-intent-success-${runId}`;
     const failedIntentId = `graph-intent-failed-${runId}`;
 
-    await context.prisma.agent.createMany({
+    await kit.prisma.agent.createMany({
       data: [
         {
           id: rootAgentId,
@@ -114,7 +110,7 @@ describe('relational graph core integration', () => {
       ]
     });
 
-    await context.prisma.relationship.create({
+    await kit.prisma.relationship.create({
       data: {
         id: relationshipId,
         from_id: rootAgentId,
@@ -126,7 +122,7 @@ describe('relational graph core integration', () => {
       }
     });
 
-    await context.prisma.atmosphereNode.create({
+    await kit.prisma.atmosphereNode.create({
       data: {
         id: atmosphereId,
         owner_id: rootAgentId,
@@ -136,7 +132,7 @@ describe('relational graph core integration', () => {
       }
     });
 
-    await context.prisma.identity.create({
+    await kit.prisma.identity.create({
       data: {
         id: rootAgentId,
         type: 'agent',
@@ -148,7 +144,7 @@ describe('relational graph core integration', () => {
       }
     });
 
-    await context.prisma.identityNodeBinding.create({
+    await kit.prisma.identityNodeBinding.create({
       data: {
         id: bindingId,
         identity_id: rootAgentId,
@@ -162,7 +158,7 @@ describe('relational graph core integration', () => {
       }
     });
 
-    await context.prisma.inferenceTrace.createMany({
+    await kit.prisma.inferenceTrace.createMany({
       data: [
         {
           id: successTraceId,
@@ -198,7 +194,7 @@ describe('relational graph core integration', () => {
       ]
     });
 
-    await context.prisma.actionIntent.createMany({
+    await kit.prisma.actionIntent.createMany({
       data: [
         {
           id: successIntentId,
@@ -251,7 +247,7 @@ describe('relational graph core integration', () => {
       ]
     });
 
-    const defaultView = await getGraphView(context, {});
+    const defaultView = await getGraphView(kit.context, {});
     expect(defaultView.view).toBe('mesh');
     expect(defaultView.summary.returned_node_count).toBeGreaterThanOrEqual(4);
     expect(defaultView.summary.counts_by_kind.agent).toBeGreaterThanOrEqual(2);
@@ -259,7 +255,7 @@ describe('relational graph core integration', () => {
     expect(defaultView.nodes.some(node => node.id === buildRelayNodeId(successIntentId))).toBe(true);
     expect(defaultView.nodes.some(node => node.id === buildContainerNodeId(failedIntentId))).toBe(true);
 
-    const rootedView = await getGraphView(context, {
+    const rootedView = await getGraphView(kit.context, {
       root_id: rootAgentId,
       depth: 1,
       include_unresolved: true
@@ -271,7 +267,7 @@ describe('relational graph core integration', () => {
     expect(rootedView.nodes.some(node => node.id === atmosphereId)).toBe(true);
     expect(rootedView.summary.returned_node_count).toBeGreaterThanOrEqual(3);
 
-    const searchView = await getGraphView(context, {
+    const searchView = await getGraphView(kit.context, {
       search: 'alpha atmosphere'
     });
     expect(searchView.nodes.length).toBeGreaterThanOrEqual(1);
@@ -283,7 +279,7 @@ describe('relational graph core integration', () => {
       )
     ).toBe(true);
 
-    const noUnresolvedView = await getGraphView(context, {
+    const noUnresolvedView = await getGraphView(kit.context, {
       include_unresolved: false
     });
     expect(

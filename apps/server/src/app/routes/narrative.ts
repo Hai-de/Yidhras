@@ -1,27 +1,18 @@
 import { packIdParamsSchema, packNarrativeProjectionDataSchema } from '@yidhras/contracts'
-import type { Express, NextFunction, Request, Response } from 'express'
 
 import { packAccessGuard } from '../../operator/guard/pack_access.js'
-import type { AppContext } from '../context.js'
+import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseParams } from '../http/zod.js'
 import { getPackNarrativeTimelineProjection } from '../services/narrative.js'
+import type { RouteModule } from './types.js'
 
-export interface NarrativeRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void
-}
-
-export const registerNarrativeRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: NarrativeRouteDependencies
-): void => {
-  app.get(
+export const narrativeRoutes: RouteModule = {
+  register(app, context) {
+    app.get(
     '/api/packs/projections/timeline',
     packAccessGuard(context, { packIdParam: 'packId' }),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('pack narrative timeline')
       const params = parseParams(packIdParamsSchema, req.params, 'AGENT_QUERY_INVALID')
       const events = await getPackNarrativeTimelineProjection(context, params.packId)
@@ -29,4 +20,5 @@ export const registerNarrativeRoutes = (
       jsonOk(res, toJsonSafe(events))
     })
   )
+  }
 }

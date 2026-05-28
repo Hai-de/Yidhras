@@ -15,9 +15,10 @@ describe('pack lifecycle', () => {
   let prisma: PrismaClient;
   let sim: SimulationManager;
   const DEATH_NOTE_REF = 'death_note';
-  const DEATH_NOTE_ID = 'world-death-note';
+  const DEATH_NOTE_ID = 'death_note';
   const EXAMPLE_PACK_REF = 'example_pack';
-  const EXAMPLE_PACK_ID = 'world-example-pack';
+  const EXAMPLE_PACK_ID = 'example_pack';
+  const EXAMPLE_PACK_META_ID = 'world-example-pack';
 
   beforeAll(async () => {
     environment = await createIsolatedRuntimeEnvironment({
@@ -48,7 +49,7 @@ describe('pack lifecycle', () => {
 
       const beforeUnload = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
       expect(beforeUnload).not.toBeNull();
-      expect(beforeUnload?.metadata_id).toBe(EXAMPLE_PACK_ID);
+      expect(beforeUnload?.metadata_id).toBe(EXAMPLE_PACK_META_ID);
 
       const unloaded = await sim.unloadExperimentalPackRuntime(EXAMPLE_PACK_ID);
       expect(unloaded).toBe(true);
@@ -61,7 +62,7 @@ describe('pack lifecycle', () => {
 
       const afterReload = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
       expect(afterReload).not.toBeNull();
-      expect(afterReload?.metadata_id).toBe(EXAMPLE_PACK_ID);
+      expect(afterReload?.metadata_id).toBe(EXAMPLE_PACK_META_ID);
     });
 
     it('rapid sequential unload → reload is idempotent over 5 cycles', async () => {
@@ -78,7 +79,7 @@ describe('pack lifecycle', () => {
 
         const handle = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
         expect(handle).not.toBeNull();
-        expect(handle?.metadata_id).toBe(EXAMPLE_PACK_ID);
+        expect(handle?.metadata_id).toBe(EXAMPLE_PACK_META_ID);
 
         const unloaded = await sim.unloadExperimentalPackRuntime(EXAMPLE_PACK_ID);
         expect(unloaded).toBe(true);
@@ -103,7 +104,7 @@ describe('pack lifecycle', () => {
 
       const handle = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
       expect(handle).not.toBeNull();
-      expect(handle?.metadata_id).toBe(EXAMPLE_PACK_ID);
+      expect(handle?.metadata_id).toBe(EXAMPLE_PACK_META_ID);
       expect(typeof handle?.pack_folder_name).toBe('string');
     });
   });
@@ -173,7 +174,7 @@ describe('pack lifecycle', () => {
 
       const snapshot = sim.getPackRuntimeStatusSnapshot(EXAMPLE_PACK_ID);
       expect(snapshot).not.toBeNull();
-      expect(snapshot?.metadata_id).toBe(EXAMPLE_PACK_ID);
+      expect(snapshot?.metadata_id).toBe(EXAMPLE_PACK_META_ID);
 
       await sim.unloadExperimentalPackRuntime(EXAMPLE_PACK_ID);
 

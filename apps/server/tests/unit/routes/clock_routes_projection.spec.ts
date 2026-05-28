@@ -2,7 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { AppContext } from '../../../src/app/context.js';
-import { registerClockRoutes } from '../../../src/app/routes/clock.js';
+import { createClockRoutes } from '../../../src/app/routes/clock.js';
 import { createRuntimeClockProjectionService } from '../../../src/app/runtime/runtime_clock_projection.js';
 import { wrapPrismaAsRepositories } from '../../helpers/mock_repos.js';
 import { createVariableRuntimeSpeedSnapshot } from '../../helpers/runtime_speed.js';
@@ -113,11 +113,10 @@ describe('clock routes host projection read path', () => {
     const context = createContext();
     const { app, gets } = createFakeApp();
 
-    registerClockRoutes(app as never, context, {
-      parsePositiveStepTicks: value => BigInt(value as string),
+    createClockRoutes({
       toJsonSafe: value => value,
       getErrorMessage: err => (err instanceof Error ? err.message : String(err))
-    });
+    }).register(app as never, context);
 
     const handler = gets.get('/api/clock/formatted');
     expect(handler).toBeTypeOf('function');
@@ -154,11 +153,10 @@ describe('clock routes host projection read path', () => {
     });
     const { app, gets } = createFakeApp();
 
-    registerClockRoutes(app as never, context, {
-      parsePositiveStepTicks: value => BigInt(value as string),
+    createClockRoutes({
       toJsonSafe: value => JSON.parse(JSON.stringify(value, (_key, item) => (typeof item === 'bigint' ? item.toString() : item))),
       getErrorMessage: err => (err instanceof Error ? err.message : String(err))
-    });
+    }).register(app as never, context);
 
     const handler = gets.get('/api/clock/formatted');
     const { res, body } = createFakeResponse();
@@ -178,11 +176,10 @@ describe('clock routes host projection read path', () => {
     context.runtimeClockProjection = createRuntimeClockProjectionService();
     const { app, gets } = createFakeApp();
 
-    registerClockRoutes(app as never, context, {
-      parsePositiveStepTicks: value => BigInt(value as string),
+    createClockRoutes({
       toJsonSafe: value => value,
       getErrorMessage: err => (err instanceof Error ? err.message : String(err))
-    });
+    }).register(app as never, context);
 
     const handler = gets.get('/api/clock/formatted');
     expect(handler).toBeTypeOf('function');
@@ -204,11 +201,10 @@ describe('clock routes host projection read path', () => {
     context.runtimeClockProjection = createRuntimeClockProjectionService();
     const { app, gets } = createFakeApp();
 
-    registerClockRoutes(app as never, context, {
-      parsePositiveStepTicks: value => BigInt(value as string),
+    createClockRoutes({
       toJsonSafe: value => value,
       getErrorMessage: err => (err instanceof Error ? err.message : String(err))
-    });
+    }).register(app as never, context);
 
     const handler = gets.get('/api/clock/formatted');
     const { res, body } = createFakeResponse();

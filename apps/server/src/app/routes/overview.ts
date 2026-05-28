@@ -3,28 +3,19 @@ import {
   packIdParamsSchema,
   packOverviewDataSchema
 } from '@yidhras/contracts'
-import type { Express, NextFunction, Request, Response } from 'express'
 
 import { packAccessGuard } from '../../operator/guard/pack_access.js'
-import type { AppContext } from '../context.js'
+import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseParams } from '../http/zod.js'
 import { getOverviewSummary, getPackOverviewProjectionSummary } from '../services/overview/overview.js'
+import type { RouteModule } from './types.js'
 
-export interface OverviewRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void
-}
-
-export const registerOverviewRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: OverviewRouteDependencies
-): void => {
-  app.get(
+export const overviewRoutes: RouteModule = {
+  register(app, context) {
+    app.get(
     '/api/overview/summary',
-    deps.asyncHandler(async (_req, res) => {
+    asyncHandler(async (_req, res) => {
       context.assertRuntimeReady('overview summary')
       const summary = await getOverviewSummary(context)
       overviewSummaryDataSchema.parse(summary)
@@ -35,7 +26,7 @@ export const registerOverviewRoutes = (
   app.get(
     '/api/packs/overview',
     packAccessGuard(context, { packIdParam: 'packId' }),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('pack overview')
       const params = parseParams(packIdParamsSchema, req.params, 'AGENT_QUERY_INVALID')
       const projection = await getPackOverviewProjectionSummary(context, params.packId)
@@ -43,4 +34,5 @@ export const registerOverviewRoutes = (
       jsonOk(res, toJsonSafe(projection))
     })
   )
+  }
 }

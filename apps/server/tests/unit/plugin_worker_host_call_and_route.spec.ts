@@ -3,7 +3,7 @@ import express from 'express';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
-import { registerPluginRuntimeServerRoutes } from '../../src/app/routes/plugin_runtime_server.js';
+import { pluginRuntimeServerRoutes } from '../../src/app/routes/plugin_runtime_server.js';
 import { getRuntimeConfig } from '../../src/config/runtime_config.js';
 import { PLUGIN_CAPABILITY_KEY } from '../../src/plugins/capability_keys.js';
 import { pluginRuntimeRegistry, type RegisteredServerPluginRuntime } from '../../src/plugins/runtime.js';
@@ -77,18 +77,6 @@ const request = async (app: express.Express, path: string): Promise<{ status: nu
   }
   const response = await fetch(`http://127.0.0.1:${String(address.port)}${path}`);
   return { status: response.status, body: await response.json() };
-};
-
-const asyncHandler = (handler: express.RequestHandler) => {
-  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    Promise.resolve(handler(req, res, next)).catch((error: unknown) => {
-      const candidate = error as { status?: number; code?: string; message?: string };
-      res.status(candidate.status ?? 500).json({
-        code: candidate.code ?? 'INTERNAL_ERROR',
-        message: candidate.message ?? String(error)
-      });
-    });
-  };
 };
 
 describe('plugin Worker host_call boundary', () => {
@@ -181,7 +169,7 @@ describe('plugin runtime server route host', () => {
 
     const app = express();
     app.use(express.json());
-    registerPluginRuntimeServerRoutes(app, {} as AppContext, { asyncHandler: asyncHandler as never });
+    pluginRuntimeServerRoutes.register(app, {} as AppContext);
 
     const response = await request(
       app,
@@ -197,6 +185,14 @@ describe('plugin runtime server route host', () => {
     }), getRuntimeConfig().plugins.isolation.route_timeout_ms);
   });
 
+  const jsonErrorHandler: express.ErrorRequestHandler = (err, _req, res, _next) => {
+    const candidate = err as { status?: number; code?: string; message?: string };
+    res.status(candidate.status ?? 500).json({
+      code: candidate.code ?? 'INTERNAL_ERROR',
+      message: candidate.message ?? String(err)
+    });
+  };
+
   it('returns 404 when route path is not declared for the runtime', async () => {
     const route = {
       method: 'GET',
@@ -207,7 +203,9 @@ describe('plugin runtime server route host', () => {
     pluginRuntimeRegistry.replaceRuntimes(packId, [createRouteRuntime(route)]);
 
     const app = express();
-    registerPluginRuntimeServerRoutes(app, {} as AppContext, { asyncHandler: asyncHandler as never });
+    app.use(express.json());
+    pluginRuntimeServerRoutes.register(app, {} as AppContext);
+    app.use(jsonErrorHandler);
 
     const response = await request(
       app,
@@ -232,7 +230,9 @@ describe('plugin runtime server route host', () => {
     pluginRuntimeRegistry.replaceRuntimes(packId, [createRouteRuntime(route)]);
 
     const app = express();
-    registerPluginRuntimeServerRoutes(app, {} as AppContext, { asyncHandler: asyncHandler as never });
+    app.use(express.json());
+    pluginRuntimeServerRoutes.register(app, {} as AppContext);
+    app.use(jsonErrorHandler);
 
     const response = await request(
       app,

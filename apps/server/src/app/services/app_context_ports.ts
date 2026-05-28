@@ -52,7 +52,6 @@ export const getRuntimeBootstrap = (input: {
   if (input.runtimeBootstrap) {
     return input.runtimeBootstrap;
   }
-
   throw new Error('[app_context_ports] runtimeBootstrap port is required but not provided');
 };
 
@@ -62,7 +61,6 @@ export const getPackRuntimeObservation = (input: {
   if (input.packRuntimeObservation) {
     return input.packRuntimeObservation;
   }
-
   throw new Error('[app_context_ports] packRuntimeObservation port is required but not provided');
 };
 
@@ -72,7 +70,6 @@ export const getPackRuntimeControl = (input: {
   if (input.packRuntimeControl) {
     return input.packRuntimeControl;
   }
-
   throw new Error('[app_context_ports] packRuntimeControl port is required but not provided');
 };
 
@@ -82,7 +79,6 @@ export const getPackRuntimeLookupPort = (input: {
   if (input.packRuntimeLookup) {
     return input.packRuntimeLookup;
   }
-
   throw new Error('[app_context_ports] packRuntimeLookup port is required but not provided');
 };
 
@@ -92,7 +88,6 @@ export const getWorldEnginePort = (input: {
   if (input.worldEngine) {
     return input.worldEngine;
   }
-
   throw new Error('[app_context_ports] worldEngine port is required but not provided');
 };
 
@@ -102,7 +97,6 @@ export const getPackHostApi = (input: {
   if (input.packHostApi) {
     return input.packHostApi;
   }
-
   throw new Error('[app_context_ports] packHostApi port is required but not provided');
 };
 

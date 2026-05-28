@@ -1,14 +1,20 @@
 import type { PrismaClient } from '@prisma/client';
-import type { Express } from 'express';
 
 import type { ConversationStore } from '../conversation/store.js';
 import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
+import type { PackRuntimeHost } from '../core/pack_runtime_host.js';
+import type { PackRuntimeHandle } from '../core/pack_runtime_handle.js';
 import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
 import type { SchedulerStorageAdapter } from '../packs/storage/SchedulerStorageAdapter.js';
 import type { NotificationLevel, SystemMessage } from '../utils/notifications.js';
 import type { PackScopeResolver } from './runtime/PackScopeResolver.js';
+import type {
+  RuntimeClockProjectionService
+} from './runtime/runtime_clock_projection.js';
+import type { WorldEngineStepCoordinator } from './runtime/world_engine_persistence.js';
+import type { PackHostApi, WorldEnginePort } from './runtime/world_engine_ports.js';
 import type { AppContextPorts } from './services/app_context_ports.js';
-import type { MultiPackRuntimePort, PackRuntimePort } from './services/pack/pack_runtime_ports.js';
+import type { ContextAssemblyPort } from './services/context/context_memory_ports.js';
 import type { Repositories } from './services/repositories/index.js';
 
 export type HealthLevel = 'ok' | 'degraded' | 'fail';
@@ -63,30 +69,25 @@ export interface AppInfrastructure {
 }
 
 export interface AppContext extends AppInfrastructure, AppContextPorts {
-  readonly packScope?: PackScopeResolver;
-  packRuntime?: PackRuntimePort;
-  multiPackRuntime?: MultiPackRuntimePort;
+  readonly packScope: PackScopeResolver;
+  getPackRuntimeHandle(packId: string): PackRuntimeHandle | null;
+  listLoadedPackRuntimeIds(): string[];
+  getPackRuntimeHost(packId: string): PackRuntimeHost | null;
 
   getSpatialRuntime?(): import('../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
-  getPackRuntimeHost?(packId: string): import('../core/pack_runtime_host.js').PackRuntimeHost | null;
-  getPackRuntimeHandle?(packId: string): import('../core/pack_runtime_handle.js').PackRuntimeHandle | null;
-  listLoadedPackRuntimeIds?(): string[];
 
-  getRuntimeLoopDiagnostics?(): RuntimeLoopDiagnostics;
-  setRuntimeLoopDiagnostics?(next: RuntimeLoopDiagnostics): void;
-  getDatabaseHealth?(): DatabaseHealthSnapshot | null;
-  getPluginEnableWarningConfig?(): {
+  getRuntimeLoopDiagnostics(): RuntimeLoopDiagnostics;
+  setRuntimeLoopDiagnostics(next: RuntimeLoopDiagnostics): void;
+  getDatabaseHealth(): DatabaseHealthSnapshot | null;
+  getPluginEnableWarningConfig(): {
     enabled: boolean;
     require_acknowledgement: boolean;
   };
-  getHttpApp?(): Express | null;
-  setHttpApp?(app: Express): void;
-  worldEngineStepCoordinator?: import('./runtime/world_engine_persistence.js').WorldEngineStepCoordinator;
-  runtimeClockProjection?: import('./runtime/runtime_clock_projection.js').RuntimeClockProjectionService;
+  worldEngineStepCoordinator: WorldEngineStepCoordinator;
+  runtimeClockProjection: RuntimeClockProjectionService;
   pluginRuntimeControl?: {
     reload(packId: string): Promise<{ pack_id: string; runtime_count: number }>;
   };
 }
 
-export type RouteRegistrar = (app: Express, context: AppContext) => void;
-
+export type RouteRegistrar = (app: import('express').Express, context: AppContext) => void;

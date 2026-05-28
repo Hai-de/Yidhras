@@ -1,36 +1,32 @@
 import { Prisma } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { AppContext } from '../../src/app/context.js';
 import { runActionDispatcher } from '../../src/app/runtime/action_dispatcher_runner.js';
 import { runDecisionJobRunner } from '../../src/app/runtime/job_runner.js';
 import { createPendingDecisionJob } from '../../src/app/services/inference_workflow.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { expectDefined } from '../helpers/assertions.js';
+import { TestKit } from '../testkit.js';
 
 describe('runner single-flight integration', () => {
-  let cleanup: (() => Promise<void>) | null = null;
-  let context: AppContext;
-  const currentTick = () => expectDefined(context.packRuntime, 'pack runtime').getCurrentTick();
+  let kit: TestKit;
+  const currentTick = () => expectDefined(kit.context.packRuntime, 'pack runtime').getCurrentTick();
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
-    context = fixture.context;
+    kit = await TestKit.create();
   });
 
   beforeEach(async () => {
-    await context.prisma.actionIntent.deleteMany();
-    await context.prisma.decisionJob.deleteMany();
-    await context.prisma.inferenceTrace.deleteMany();
+    await kit.prisma.actionIntent.deleteMany();
+    await kit.prisma.decisionJob.deleteMany();
+    await kit.prisma.inferenceTrace.deleteMany();
   });
 
   afterAll(async () => {
-    await cleanup?.();
+    await kit[Symbol.asyncDispose]();
   });
 
   it('does not execute a decision job when another active workflow already exists for the same actor', async () => {
-    await createPendingDecisionJob(context, {
+    await createPendingDecisionJob(kit.context, {
       idempotency_key: `single-flight-existing-${Date.now()}`,
       request_input: {
         agent_id: 'agent-001',
@@ -39,7 +35,7 @@ describe('runner single-flight integration', () => {
       },
       intent_class: 'direct_inference'
     });
-    const candidateJob = await createPendingDecisionJob(context, {
+    const candidateJob = await createPendingDecisionJob(kit.context, {
       idempotency_key: `single-flight-candidate-${Date.now()}`,
       request_input: {
         agent_id: 'agent-001',
@@ -63,7 +59,7 @@ describe('runner single-flight integration', () => {
     } as never;
 
     const executedCount = await runDecisionJobRunner({
-      context,
+      context: kit.context,
       inferenceService,
       workerId: 'single-flight-worker',
       limit: 10,
@@ -73,7 +69,7 @@ describe('runner single-flight integration', () => {
 
     expect(executedCount).toBe(0);
 
-    const refreshedCandidate = await context.prisma.decisionJob.findUnique({ where: { id: candidateJob.id } });
+    const refreshedCandidate = await kit.prisma.decisionJob.findUnique({ where: { id: candidateJob.id } });
     expect(refreshedCandidate?.status).toBe('running');
     expect(refreshedCandidate?.locked_by).toBeNull();
   });
@@ -83,7 +79,7 @@ describe('runner single-flight integration', () => {
     const traceExisting = `runner-single-flight-existing-${Date.now()}`;
     const traceCandidate = `runner-single-flight-candidate-${Date.now()}`;
 
-    await context.prisma.inferenceTrace.create({
+    await kit.prisma.inferenceTrace.create({
       data: {
         id: traceExisting,
         kind: 'run',
@@ -104,7 +100,7 @@ describe('runner single-flight integration', () => {
         updated_at: now
       }
     });
-    await context.prisma.inferenceTrace.create({
+    await kit.prisma.inferenceTrace.create({
       data: {
         id: traceCandidate,
         kind: 'run',
@@ -126,7 +122,7 @@ describe('runner single-flight integration', () => {
       }
     });
 
-    await context.prisma.actionIntent.create({
+    await kit.prisma.actionIntent.create({
       data: {
         source_inference_id: traceExisting,
         intent_type: 'post_message',
@@ -155,7 +151,7 @@ describe('runner single-flight integration', () => {
       }
     });
 
-    const candidateIntent = await context.prisma.actionIntent.create({
+    const candidateIntent = await kit.prisma.actionIntent.create({
       data: {
         source_inference_id: traceCandidate,
         intent_type: 'post_message',
@@ -185,7 +181,7 @@ describe('runner single-flight integration', () => {
     });
 
     const dispatchedCount = await runActionDispatcher({
-      context,
+      context: kit.context,
       workerId: 'single-flight-dispatcher',
       limit: 10,
       concurrency: 4,
@@ -194,7 +190,7 @@ describe('runner single-flight integration', () => {
 
     expect(dispatchedCount).toBe(0);
 
-    const refreshedCandidate = await context.prisma.actionIntent.findUnique({ where: { id: candidateIntent.id } });
+    const refreshedCandidate = await kit.prisma.actionIntent.findUnique({ where: { id: candidateIntent.id } });
     expect(refreshedCandidate?.status).toBe('dispatching');
     expect(refreshedCandidate?.locked_by).toBeNull();
   });

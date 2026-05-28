@@ -27,6 +27,7 @@ import type { PackListItem } from '../../../composables/api/usePackListApi'
 import { usePackListApi } from '../../../composables/api/usePackListApi'
 import { buildShellContext } from '../../../composables/app/useShellContext'
 import { useShellNavigation } from '../../../composables/app/useShellNavigation'
+import { resolveApiBaseUrl } from '../../../lib/http/client'
 
 const props = defineProps<{
   packId: string
@@ -53,7 +54,8 @@ const resolveEntryUrl = (pack: PackListItem): string => {
     return entry
   }
 
-  return `/api/packs/${pack.instance_id}/frontend/${entry.replace(/^\.?\/?/, '')}`
+  const apiBase = resolveApiBaseUrl()
+  return `${apiBase}/api/packs/${pack.instance_id}/frontend/${entry.replace(/^\.?\/?/, '')}`
 }
 
 const loadPackFrontend = async () => {

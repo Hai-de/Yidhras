@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../../app/context.js';
+import type { AppContext, AppInfrastructure } from '../../app/context.js';
 import { getRuntimeStatusSnapshot } from '../../app/services/system/system.js';
 import {
   createPackEntityOverviewProjectionService,
@@ -50,7 +50,7 @@ const toPackOverviewProjectionSummary = (
 };
 
 export const getOperatorOverviewProjection = async (
-  context: AppInfrastructure,
+  context: AppContext,
   options: OperatorOverviewProjectionOptions = {}
 ): Promise<OperatorOverviewProjectionSnapshot> => {
   const runtime = await getRuntimeStatusSnapshot(context, {

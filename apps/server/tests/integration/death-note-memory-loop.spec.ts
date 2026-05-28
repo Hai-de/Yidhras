@@ -1,36 +1,31 @@
 import { Prisma } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { AppContext } from '../../src/app/context.js';
 import { runActionDispatcher } from '../../src/app/runtime/action_dispatcher_runner.js';
 import { runAgentScheduler } from '../../src/app/runtime/agent_scheduler.js';
 import { getLatestSchedulerRunReadModel } from '../../src/app/services/scheduler/queries.js';
 import { createMemoryCompactionService } from '../../src/memory/recording/compaction_service.js';
-import type { SchedulerStorageAdapter } from "../../src/packs/storage/SchedulerStorageAdapter.js";
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { expectDefined } from '../helpers/assertions.js';
 import { MemSchedulerStorage } from "../helpers/scheduler_storage.js";
+import { TestKit } from '../testkit.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 };
 
 describe('death note memory loop integration', () => {
-  let cleanup: (() => Promise<void>) | null = null;
-  let context: AppContext;
+  let kit: TestKit;
   let adapter: MemSchedulerStorage;
 const TEST_PACK_ID = "test-death-note";
-  const packRuntime = () => expectDefined(context.packRuntime, 'pack runtime');
+  const packRuntime = () => expectDefined(kit.context.packRuntime, 'pack runtime');
 
   const currentTick = () => packRuntime().getCurrentTick();
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture();
-    context = fixture.context;
-    cleanup = fixture.cleanup;
+    kit = await TestKit.create();
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
+    kit.withSchedulerStorage(adapter);
     packRuntime().getPack = () => ({
       metadata: { id: 'world-death-note', name: '死亡笔记', version: '0.5.0' },
       ai: {
@@ -46,18 +41,18 @@ const TEST_PACK_ID = "test-death-note";
   beforeEach(async () => {
     adapter.destroyPackSchedulerStorage(TEST_PACK_ID);
     adapter.open(TEST_PACK_ID);
-    await context.prisma.relationshipAdjustmentLog.deleteMany();
-    await context.prisma.sNRAdjustmentLog.deleteMany();
-    await context.prisma.event.deleteMany();
-    await context.prisma.actionIntent.deleteMany();
-    await context.prisma.decisionJob.deleteMany();
-    await context.prisma.inferenceTrace.deleteMany();
-    await context.prisma.contextOverlayEntry.deleteMany();
-    await context.prisma.memoryBlock.deleteMany();
-    await context.prisma.memoryCompactionState.deleteMany();
+    await kit.prisma.relationshipAdjustmentLog.deleteMany();
+    await kit.prisma.sNRAdjustmentLog.deleteMany();
+    await kit.prisma.event.deleteMany();
+    await kit.prisma.actionIntent.deleteMany();
+    await kit.prisma.decisionJob.deleteMany();
+    await kit.prisma.inferenceTrace.deleteMany();
+    await kit.prisma.contextOverlayEntry.deleteMany();
+    await kit.prisma.memoryBlock.deleteMany();
+    await kit.prisma.memoryCompactionState.deleteMany();
 
     const baseTick = currentTick();
-    await context.prisma.agent.upsert({
+    await kit.prisma.agent.upsert({
       where: { id: 'agent-001' },
       update: {
         name: '夜神月',
@@ -75,7 +70,7 @@ const TEST_PACK_ID = "test-death-note";
         updated_at: baseTick
       }
     });
-    await context.prisma.identity.upsert({
+    await kit.prisma.identity.upsert({
       where: { id: 'agent-001' },
       update: {
         type: 'agent',
@@ -97,7 +92,7 @@ const TEST_PACK_ID = "test-death-note";
   });
 
   afterAll(async () => {
-    await cleanup?.();
+    await kit[Symbol.asyncDispose]();
   });
 
   it('creates memory mutations after execution and lets scheduler detect them as follow-up signals', async () => {
@@ -105,7 +100,7 @@ const TEST_PACK_ID = "test-death-note";
     const inferenceId = `memory-loop-trace-${Date.now()}`;
     const intentId = `memory-loop-intent-${Date.now()}`;
 
-    await context.prisma.inferenceTrace.create({
+    await kit.prisma.inferenceTrace.create({
       data: {
         id: inferenceId,
         kind: 'final',
@@ -136,7 +131,7 @@ const TEST_PACK_ID = "test-death-note";
       }
     });
 
-    await context.prisma.actionIntent.create({
+    await kit.prisma.actionIntent.create({
       data: {
         id: intentId,
         source_inference_id: inferenceId,
@@ -157,25 +152,25 @@ const TEST_PACK_ID = "test-death-note";
       }
     });
 
-    const dispatchedCount = await runActionDispatcher({ context,
+    const dispatchedCount = await runActionDispatcher({ context: kit.context,
       packRuntime: packRuntime(),
       workerId: 'memory-loop-test-dispatcher',
       limit: 10
     });
     expect(dispatchedCount).toBeGreaterThanOrEqual(0);
 
-    const overlaysAfterExecution = await context.prisma.contextOverlayEntry.findMany({
+    const overlaysAfterExecution = await kit.prisma.contextOverlayEntry.findMany({
       where: { actor_id: 'agent-001' },
       orderBy: { updated_at_tick: 'desc' }
     });
-    const memoryBlocksAfterExecution = await context.prisma.memoryBlock.findMany({
+    const memoryBlocksAfterExecution = await kit.prisma.memoryBlock.findMany({
       where: { owner_agent_id: 'agent-001' },
       orderBy: { updated_at_tick: 'desc' }
     });
     expect(overlaysAfterExecution.length).toBeGreaterThan(0);
     expect(memoryBlocksAfterExecution.length).toBeGreaterThan(0);
 
-    const trace = await context.prisma.inferenceTrace.findUnique({ where: { id: inferenceId } });
+    const trace = await kit.prisma.inferenceTrace.findUnique({ where: { id: inferenceId } });
     expect(trace).not.toBeNull();
     const traceMetadata = trace && isRecord(trace.trace_metadata) ? trace.trace_metadata : null;
     const traceMemoryMutations = traceMetadata && isRecord(traceMetadata.memory_mutations) && Array.isArray(traceMetadata.memory_mutations.records)
@@ -184,7 +179,7 @@ const TEST_PACK_ID = "test-death-note";
     expect(traceMemoryMutations.length).toBeGreaterThan(0);
 
     const schedulerResult = await runAgentScheduler({ packId: TEST_PACK_ID, packRuntime: packRuntime(),
-      context,
+      context: kit.context,
       workerId: 'memory-loop-test-scheduler',
       limit: 10
     });
@@ -192,7 +187,7 @@ const TEST_PACK_ID = "test-death-note";
     expect(schedulerResult.signals_detected_count).toBeGreaterThan(0);
 
     const compactionService = createMemoryCompactionService({
-      context,
+      context: kit.context,
       packRuntime: packRuntime(),
       aiTaskService: {
         async runTask() {
@@ -200,7 +195,7 @@ const TEST_PACK_ID = "test-death-note";
         }
       } as never
     });
-    await context.prisma.memoryCompactionState.upsert({
+    await kit.prisma.memoryCompactionState.upsert({
       where: { agent_id: 'agent-001' },
       update: {
         inference_count_since_summary: 999,
@@ -217,12 +212,12 @@ const TEST_PACK_ID = "test-death-note";
     expect(compactionResult).not.toBeNull();
     expect(compactionResult?.triggered).toBeDefined();
 
-    const compactionState = await context.prisma.memoryCompactionState.findUnique({
+    const compactionState = await kit.prisma.memoryCompactionState.findUnique({
       where: { agent_id: 'agent-001' }
     });
     expect(compactionState).not.toBeNull();
 
-    const latestRunModel = await getLatestSchedulerRunReadModel(context);
+    const latestRunModel = await getLatestSchedulerRunReadModel(kit.context);
     expect(latestRunModel).not.toBeNull();
     const candidateReasons = latestRunModel?.candidates.flatMap(item =>
       Array.isArray(item.candidate_reasons) ? item.candidate_reasons : []
@@ -239,7 +234,7 @@ const TEST_PACK_ID = "test-death-note";
     const inferenceId = `revise-plan-trace-${Date.now()}`;
     const intentId = `revise-plan-intent-${Date.now()}`;
 
-    await context.prisma.inferenceTrace.create({
+    await kit.prisma.inferenceTrace.create({
       data: {
         id: inferenceId,
         kind: 'final',
@@ -270,7 +265,7 @@ const TEST_PACK_ID = "test-death-note";
       }
     });
 
-    await context.prisma.actionIntent.create({
+    await kit.prisma.actionIntent.create({
       data: {
         id: intentId,
         source_inference_id: inferenceId,
@@ -302,7 +297,7 @@ const TEST_PACK_ID = "test-death-note";
       }
     });
 
-    const dispatchedCount = await runActionDispatcher({ context,
+    const dispatchedCount = await runActionDispatcher({ context: kit.context,
       packRuntime: packRuntime(),
       workerId: 'revise-plan-test-dispatcher',
       limit: 10
@@ -310,11 +305,11 @@ const TEST_PACK_ID = "test-death-note";
 
     expect(dispatchedCount).toBeGreaterThanOrEqual(0);
 
-    const overlays = await context.prisma.contextOverlayEntry.findMany({
+    const overlays = await kit.prisma.contextOverlayEntry.findMany({
       where: { actor_id: 'agent-001' },
       orderBy: { created_at_tick: 'desc' }
     });
-    const memoryBlocks = await context.prisma.memoryBlock.findMany({
+    const memoryBlocks = await kit.prisma.memoryBlock.findMany({
       where: { owner_agent_id: 'agent-001' },
       orderBy: { created_at_tick: 'desc' }
     });
@@ -338,7 +333,7 @@ const TEST_PACK_ID = "test-death-note";
     expect(planMemory?.kind).toBe('plan');
     expect(planMemory?.tags).toContain('plan_revision');
 
-    const actionIntent = await context.prisma.actionIntent.findUnique({ where: { id: intentId } });
+    const actionIntent = await kit.prisma.actionIntent.findUnique({ where: { id: intentId } });
     expect(actionIntent?.status).toBe('completed');
   });
 });

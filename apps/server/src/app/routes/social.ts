@@ -2,29 +2,20 @@ import {
   socialFeedQuerySchema,
   socialPostRequestSchema
 } from '@yidhras/contracts';
-import type { Express, NextFunction, Request, Response } from 'express';
 
 import type { IdentityRequest } from '../../identity/middleware.js';
-import type { AppContext } from '../context.js';
+import { asyncHandler } from '../http/async_handler.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseBody, parseQuery } from '../http/zod.js';
 import { requireAuth } from '../middleware/require_auth.js';
 import { createSocialPost, listSocialFeed } from '../services/social/social.js';
+import type { RouteModule } from './types.js';
 
-export interface SocialRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void;
-}
-
-export const registerSocialRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: SocialRouteDependencies
-): void => {
+export const socialRoutes: RouteModule = {
+  register(app, context) {
   app.get(
     '/api/social/feed',
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       const identityRequest = req as IdentityRequest;
       context.assertRuntimeReady('social feed');
       const query = parseQuery(socialFeedQuerySchema, req.query, 'SOCIAL_FEED_QUERY_INVALID');
@@ -40,7 +31,7 @@ export const registerSocialRoutes = (
   app.post(
     '/api/social/post',
     requireAuth(),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       const identityRequest = req as IdentityRequest;
       context.assertRuntimeReady('social post');
       const body = parseBody(socialPostRequestSchema, req.body, 'SOCIAL_POST_INVALID');
@@ -50,4 +41,5 @@ export const registerSocialRoutes = (
       jsonOk(res, toJsonSafe(post));
     })
   );
+  }
 };

@@ -1,27 +1,18 @@
 import {
   graphViewQuerySchema
 } from '@yidhras/contracts';
-import type { Express, NextFunction, Request, Response } from 'express';
 
-import type { AppContext } from '../context.js';
+import { asyncHandler } from '../http/async_handler.js';
 import { jsonOk, toJsonSafe } from '../http/json.js';
 import { parseQuery } from '../http/zod.js';
 import { getGraphView } from '../services/relational.js';
+import type { RouteModule } from './types.js';
 
-export interface GraphRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void;
-}
-
-export const registerGraphRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: GraphRouteDependencies
-): void => {
-  app.get(
+export const graphRoutes: RouteModule = {
+  register(app, context) {
+    app.get(
     '/api/graph/view',
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('graph view');
       const query = parseQuery(graphViewQuerySchema, req.query, 'GRAPH_VIEW_QUERY_INVALID');
       const kinds = Array.isArray(query.kinds)
@@ -47,4 +38,5 @@ export const registerGraphRoutes = (
       });
     })
   );
+  }
 };

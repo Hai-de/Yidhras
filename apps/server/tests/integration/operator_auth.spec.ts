@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
-import type { AppContext } from '../../src/app/context.js'
 import { comparePassword,hashPassword } from '../../src/operator/auth/password.js'
 import {
   computeTokenHash,
@@ -10,22 +9,19 @@ import {
   signToken,
   verifyToken} from '../../src/operator/auth/token.js'
 import { OPERATOR_STATUS } from '../../src/operator/constants.js'
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js'
 import { expectDefined } from '../helpers/assertions.js'
+import { TestKit } from '../testkit.js'
 
 describe('operator auth integration', () => {
-  let cleanup: (() => Promise<void>) | null = null
-  let context: AppContext
+  let kit: TestKit
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture()
-    cleanup = fixture.cleanup
-    context = fixture.context
+    kit = await TestKit.create()
 
     // 注入测试 operator
-    const now = expectDefined(context.packRuntime, 'pack runtime').getCurrentTick()
+    const now = expectDefined(kit.context.packRuntime, 'pack runtime').getCurrentTick()
     const passwordHash = await hashPassword('test-password', 4)
-    await context.prisma.identity.create({
+    await kit.prisma.identity.create({
       data: {
         id: 'identity-test-1',
         type: 'user',
@@ -36,7 +32,7 @@ describe('operator auth integration', () => {
         updated_at: now
       }
     })
-    await context.prisma.operator.create({
+    await kit.prisma.operator.create({
       data: {
         id: 'op-test-1',
         identity_id: 'identity-test-1',
@@ -51,7 +47,7 @@ describe('operator auth integration', () => {
   })
 
   afterAll(async () => {
-    await cleanup?.()
+    await kit[Symbol.asyncDispose]()
   })
 
   describe('password', () => {
@@ -99,9 +95,9 @@ describe('operator auth integration', () => {
         display_name: null
       })
 
-      await createSession(context, 'op-test-1', token, 'pack-1')
+      await createSession(kit.context, 'op-test-1', token, 'pack-1')
 
-      const session = await findActiveSession(context, token)
+      const session = await findActiveSession(kit.context, token)
       const activeSession = expectDefined(session, 'active session')
       expect(activeSession.operatorId).toBe('op-test-1')
       expect(activeSession.packId).toBe('pack-1')
@@ -117,12 +113,12 @@ describe('operator auth integration', () => {
         display_name: null
       })
 
-      await createSession(context, 'op-test-1', token)
-      const deleted = await destroySession(context, token)
+      await createSession(kit.context, 'op-test-1', token)
+      const deleted = await destroySession(kit.context, token)
 
       expect(deleted).toBe(true)
 
-      const session = await findActiveSession(context, token)
+      const session = await findActiveSession(kit.context, token)
       expect(session).toBeNull()
     })
 

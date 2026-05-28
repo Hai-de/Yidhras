@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import type { AppContext } from '../../src/app/context.js';
 import {
   assertDecisionJobLockOwnership,
   claimDecisionJob,
@@ -8,25 +7,22 @@ import {
   releaseDecisionJobLock,
   updateDecisionJobState
 } from '../../src/app/services/inference_workflow.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
+import { TestKit } from '../testkit.js';
 
 describe('workflow locking integration', () => {
-  let cleanup: (() => Promise<void>) | null = null;
-  let context: AppContext;
+  let kit: TestKit;
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
-    context = fixture.context;
+    kit = await TestKit.create();
   });
 
   afterAll(async () => {
-    await cleanup?.();
+    await kit[Symbol.asyncDispose]();
   });
 
   const createJob = async (suffix: string) => {
     const idempotencyKey = `workflow-lock-test-${suffix}-${Date.now()}`;
-    return createPendingDecisionJob(context, {
+    return createPendingDecisionJob(kit.context, {
       idempotency_key: idempotencyKey,
       request_input: {
         agent_id: 'agent-001',
@@ -39,7 +35,7 @@ describe('workflow locking integration', () => {
   it('claims a pending job only once while its lock is valid', async () => {
     const job = await createJob('single-claim');
 
-    const claimed = await claimDecisionJob(context, {
+    const claimed = await claimDecisionJob(kit.context, {
       job_id: job.id,
       worker_id: 'worker-a',
       now: 2000n,
@@ -50,7 +46,7 @@ describe('workflow locking integration', () => {
     expect(claimed?.status).toBe('running');
     expect(claimed?.attempt_count).toBe(1);
 
-    const secondClaim = await claimDecisionJob(context, {
+    const secondClaim = await claimDecisionJob(kit.context, {
       job_id: job.id,
       worker_id: 'worker-b',
       now: 2001n,
@@ -62,7 +58,7 @@ describe('workflow locking integration', () => {
   it('reclaims an expired running job without incrementing attempt_count again', async () => {
     const job = await createJob('expired-reclaim');
 
-    const firstClaim = await claimDecisionJob(context, {
+    const firstClaim = await claimDecisionJob(kit.context, {
       job_id: job.id,
       worker_id: 'worker-a',
       now: 3000n,
@@ -71,7 +67,7 @@ describe('workflow locking integration', () => {
     expect(firstClaim).not.toBeNull();
     expect(firstClaim?.lock_expires_at).toBe(3002n);
 
-    const reclaimed = await claimDecisionJob(context, {
+    const reclaimed = await claimDecisionJob(kit.context, {
       job_id: job.id,
       worker_id: 'worker-b',
       now: 3003n,
@@ -85,7 +81,7 @@ describe('workflow locking integration', () => {
   it('enforces ownership checks and only allows the holder to release the lock', async () => {
     const job = await createJob('release-ownership');
 
-    const claimed = await claimDecisionJob(context, {
+    const claimed = await claimDecisionJob(kit.context, {
       job_id: job.id,
       worker_id: 'worker-a',
       now: 4000n,
@@ -99,13 +95,13 @@ describe('workflow locking integration', () => {
     expect(() => assertDecisionJobLockOwnership(claimed, 'worker-a', 4001n)).not.toThrow();
     expect(() => assertDecisionJobLockOwnership(claimed, 'worker-b', 4001n)).toThrow();
 
-    const wrongRelease = await releaseDecisionJobLock(context, {
+    const wrongRelease = await releaseDecisionJobLock(kit.context, {
       job_id: job.id,
       worker_id: 'worker-b'
     });
     expect(wrongRelease.locked_by).toBe('worker-a');
 
-    const released = await releaseDecisionJobLock(context, {
+    const released = await releaseDecisionJobLock(kit.context, {
       job_id: job.id,
       worker_id: 'worker-a'
     });
@@ -117,7 +113,7 @@ describe('workflow locking integration', () => {
   it('clears locks on retry reset and increments attempt_count on the next claim', async () => {
     const job = await createJob('retry-reset');
 
-    const claimed = await claimDecisionJob(context, {
+    const claimed = await claimDecisionJob(kit.context, {
       job_id: job.id,
       worker_id: 'worker-a',
       now: 5000n,
@@ -125,7 +121,7 @@ describe('workflow locking integration', () => {
     });
     expect(claimed).not.toBeNull();
 
-    const failed = await updateDecisionJobState(context, {
+    const failed = await updateDecisionJobState(kit.context, {
       job_id: job.id,
       status: 'failed',
       last_error: 'test failure',
@@ -137,7 +133,7 @@ describe('workflow locking integration', () => {
     expect(failed.status).toBe('failed');
     expect(failed.locked_by).toBeNull();
 
-    const reset = await updateDecisionJobState(context, {
+    const reset = await updateDecisionJobState(kit.context, {
       job_id: job.id,
       status: 'pending',
       last_error: null,
@@ -152,7 +148,7 @@ describe('workflow locking integration', () => {
     expect(reset.status).toBe('pending');
     expect(reset.locked_by).toBeNull();
 
-    const reclaimed = await claimDecisionJob(context, {
+    const reclaimed = await claimDecisionJob(kit.context, {
       job_id: job.id,
       worker_id: 'worker-c',
       now: 5001n,

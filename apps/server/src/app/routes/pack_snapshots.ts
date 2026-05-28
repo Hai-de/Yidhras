@@ -3,7 +3,6 @@ import {
   listSnapshotsResponseSchema,
   restoreSnapshotRequestSchema
 } from '@yidhras/contracts';
-import type { Express, NextFunction, Request, Response } from 'express';
 import { z } from 'zod';
 
 import { packAccessGuard } from '../../operator/guard/pack_access.js';
@@ -15,8 +14,10 @@ import {
 } from '../../packs/snapshots/snapshot_locator.js';
 import { ApiError } from '../../utils/api_error.js';
 import type { AppContext } from '../context.js';
+import { asyncHandler } from '../http/async_handler.js';
 import { jsonOk } from '../http/json.js';
 import { parseBody, parseParams } from '../http/zod.js';
+import type { RouteModule } from './types.js';
 
 const SNAPSHOT_NOT_AVAILABLE_MESSAGE =
   '快照功能仅支持 SQLite 后端。当前后端不支持快照，请使用数据库原生工具进行备份（如 PostgreSQL 的 pg_dump、pg_basebackup 等）。';
@@ -36,17 +37,8 @@ const snapshotIdParamsSchema = z.object({
   snapshotId: z.string().trim().min(1)
 });
 
-export interface PackSnapshotRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void;
-}
-
-export const registerPackSnapshotRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: PackSnapshotRouteDependencies
-): void => {
+export const packSnapshotRoutes: RouteModule = {
+  register(app, context) {
   // GET /api/packs/:packId/snapshots — list snapshots
   app.get(
     '/api/packs/snapshots',
@@ -79,7 +71,7 @@ export const registerPackSnapshotRoutes = (
   app.post(
     '/api/packs/snapshots',
     packAccessGuard(context, { packIdParam: 'packId' }),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('snapshot create');
       requireSqliteBackend(context);
       const params = parseParams(packIdParamsSchema, req.params, 'SNAPSHOT_CREATE_INVALID');
@@ -131,7 +123,7 @@ export const registerPackSnapshotRoutes = (
   app.post(
     '/api/packs/snapshots/:snapshotId/restore',
     packAccessGuard(context, { packIdParam: 'packId' }),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('snapshot restore');
       requireSqliteBackend(context);
       const params = parseParams(snapshotIdParamsSchema, req.params, 'SNAPSHOT_RESTORE_INVALID');
@@ -187,7 +179,7 @@ export const registerPackSnapshotRoutes = (
   app.delete(
     '/api/packs/snapshots/:snapshotId',
     packAccessGuard(context, { packIdParam: 'packId' }),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('snapshot delete');
       requireSqliteBackend(context);
       const params = parseParams(snapshotIdParamsSchema, req.params, 'SNAPSHOT_DELETE_INVALID');
@@ -209,4 +201,5 @@ export const registerPackSnapshotRoutes = (
       });
     })
   );
+  }
 };

@@ -1,11 +1,11 @@
-import type { Express, Request, Response } from 'express'
+import type { Request, Response } from 'express'
 import path from 'path'
 
 import { PackManifestLoader } from '../../packs/manifest/loader.js'
 import { ApiError } from '../../utils/api_error.js'
 import { safeFs } from '../../utils/safe_fs.js'
-import type { AppContext } from '../context.js'
 import { asyncHandler } from '../http/async_handler.js'
+import type { RouteModule } from './types.js'
 
 const MIME_TYPES: Record<string, string> = {
   '.js': 'application/javascript',
@@ -28,16 +28,14 @@ const resolveMimeType = (filePath: string): string => {
   return MIME_TYPES[ext] ?? 'application/octet-stream'
 }
 
-export const registerPackFrontendAssetRoutes = (
-  app: Express,
-  context: AppContext,
-  packsDir: string
-): void => {
+export function createPackFrontendAssetRoutes(packsDir: string): RouteModule {
   const loader = new PackManifestLoader(packsDir)
 
-  app.get(
-    '/api/packs/:packId/frontend/{/*assetPath}',
-    asyncHandler((req: Request, res: Response) => {
+  return {
+    register(app, _context) {
+      app.get(
+        '/api/packs/:packId/frontend/{/*assetPath}',
+        asyncHandler((req: Request, res: Response) => {
       const packId = req.params.packId
       const assetPath = typeof req.params.assetPath === 'string' ? req.params.assetPath : ''
 
@@ -84,4 +82,6 @@ export const registerPackFrontendAssetRoutes = (
       res.send(content)
     })
   )
+    }
+  };
 }

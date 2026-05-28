@@ -59,7 +59,7 @@ const createTestTaskRequest = () => ({
   task_type: 'agent_decision' as const,
   input: {},
   prompt_context: {
-    prompt_bundle_v2: {},
+    prompt_bundle_v2: { combined_prompt: 'test', messages: [] },
     messages: [{ role: 'user' as const, parts: [{ type: 'text' as const, text: 'test' }] }]
   },
   output_contract: {

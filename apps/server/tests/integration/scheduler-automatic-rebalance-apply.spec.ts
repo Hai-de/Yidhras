@@ -1,28 +1,22 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { AppContext } from '../../src/app/context.js';
 import { runAgentScheduler } from '../../src/app/runtime/agent_scheduler.js';
 import { listRecentSchedulerOwnershipMigrations } from '../../src/app/runtime/scheduler_ownership.js';
 import { listRecentSchedulerRebalanceRecommendations } from '../../src/app/runtime/scheduler_rebalance.js';
-import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { MemSchedulerStorage } from '../helpers/scheduler_storage.js';
+import { TestKit } from '../testkit.js';
 
 const TEST_PACK_ID = 'test-rebalance-apply';
 
 describe('scheduler automatic rebalance apply integration', () => {
-  let cleanup: (() => Promise<void>) | null = null;
-  let context: AppContext;
+  let kit: TestKit;
   let adapter: MemSchedulerStorage;
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
-    context = fixture.context;
-
+    kit = await TestKit.create();
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
+    kit.withSchedulerStorage(adapter);
   });
 
   beforeEach(async () => {
@@ -31,7 +25,7 @@ describe('scheduler automatic rebalance apply integration', () => {
   });
 
   afterAll(async () => {
-    await cleanup?.();
+    await kit[Symbol.asyncDispose]();
   });
 
   it('applies a worker_unhealthy rebalance recommendation for the current worker during scheduler execution', async () => {
@@ -55,7 +49,7 @@ describe('scheduler automatic rebalance apply integration', () => {
     });
 
     const runResult = await runAgentScheduler({
-      context,
+      context: kit.context,
       workerId: 'worker-b',
       partitionIds: [],
       limit: 5,
@@ -64,12 +58,12 @@ describe('scheduler automatic rebalance apply integration', () => {
 
     expect(Array.isArray(runResult.partition_ids)).toBe(true);
 
-    const migrations = await listRecentSchedulerOwnershipMigrations(context, 10, TEST_PACK_ID);
+    const migrations = await listRecentSchedulerOwnershipMigrations(kit.context, 10, TEST_PACK_ID);
     expect(migrations.length).toBeGreaterThanOrEqual(1);
     expect(migrations[0]?.to_worker_id).toBe('worker-b');
     expect(migrations[0]?.reason).toBe('automatic_rebalance:worker_unhealthy');
 
-    const recommendations = await listRecentSchedulerRebalanceRecommendations(context, 10, TEST_PACK_ID);
+    const recommendations = await listRecentSchedulerRebalanceRecommendations(kit.context, 10, TEST_PACK_ID);
     expect(recommendations.some(item => item.status === 'applied')).toBe(true);
     expect(recommendations.some(item => item.reason === 'worker_unhealthy')).toBe(true);
   });

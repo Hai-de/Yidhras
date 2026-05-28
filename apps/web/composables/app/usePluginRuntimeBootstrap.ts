@@ -17,7 +17,7 @@ export const usePluginRuntimeBootstrap = () => {
   const { worldPack } = storeToRefs(runtimeStore)
 
   const refresh = async () => {
-    const packId = worldPack.value?.instance_id ?? null
+    const packId = worldPack.value?.id ?? null
     if (!packId) {
       pluginRuntimeStore.setErrorMessage(null)
       return

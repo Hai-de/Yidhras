@@ -1,8 +1,8 @@
-import type { Express, Request, Response } from 'express'
+import type { Request, Response } from 'express'
 
 import { PackManifestLoader } from '../../packs/manifest/loader.js'
-import type { AppContext } from '../context.js'
 import { jsonOk } from '../http/json.js'
+import type { RouteModule } from './types.js'
 
 interface PackListItem {
   instance_id: string
@@ -18,17 +18,15 @@ interface PackListItem {
   current_tick: string | null
 }
 
-export const registerPackListRoutes = (
-  app: Express,
-  context: AppContext,
-  packsDir: string
-): void => {
+export function createPackListRoutes(packsDir: string): RouteModule {
   const loader = new PackManifestLoader(packsDir)
 
-  app.get(
-    '/api/packs',
-    (_req: Request, res: Response) => {
-      const availableFolders = loader.listAvailablePacks()
+  return {
+    register(app, context) {
+      app.get(
+        '/api/packs',
+        (_req: Request, res: Response) => {
+          const availableFolders = loader.listAvailablePacks()
       const loadedIds = context.listLoadedPackRuntimeIds
         ? context.listLoadedPackRuntimeIds()
         : []
@@ -74,4 +72,6 @@ export const registerPackListRoutes = (
       jsonOk(res, { packs })
     }
   )
+    }
+  };
 }

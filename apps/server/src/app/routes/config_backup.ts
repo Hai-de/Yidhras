@@ -2,11 +2,11 @@ import {
   createBackupRequestSchema,
   listBackupsQuerySchema
 } from '@yidhras/contracts'
-import type { Express, NextFunction, Response } from 'express'
+import type { NextFunction, Response } from 'express'
 
 import type { OperatorRequest } from '../../operator/auth/types.js'
 import { ApiError } from '../../utils/api_error.js'
-import type { AppContext } from '../context.js'
+import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseBody, parseQuery } from '../http/zod.js'
 import {
@@ -18,6 +18,7 @@ import {
   listConfigBackups,
   restoreConfigBackup
 } from '../services/config/config_backup.js'
+import type { RouteModule } from './types.js'
 
 const requireRoot = (req: OperatorRequest, _res: Response, next: NextFunction): void => {
   if (!req.operator?.is_root) {
@@ -26,26 +27,13 @@ const requireRoot = (req: OperatorRequest, _res: Response, next: NextFunction): 
   next()
 }
 
-export interface ConfigBackupRouteDependencies {
-  asyncHandler(
-    handler: (
-      req: OperatorRequest,
-      res: Response,
-      next: NextFunction
-    ) => Promise<void>
-  ): (req: OperatorRequest, res: Response, next: NextFunction) => void
-}
-
-export const registerConfigBackupRoutes = (
-  app: Express,
-  _context: AppContext,
-  deps: ConfigBackupRouteDependencies
-): void => {
+export const configBackupRoutes: RouteModule = {
+  register(app, _context) {
   // Create backup
   app.post(
     '/api/config/backups',
     requireRoot,
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       const body = parseBody(createBackupRequestSchema, req.body, 'INVALID_BACKUP_REQUEST')
       const backup = await createConfigBackup(body.name)
       jsonOk(res, toJsonSafe(backup))
@@ -116,7 +104,7 @@ export const registerConfigBackupRoutes = (
   app.post(
     '/api/config/backups/:id/restore',
     requireRoot,
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       const force = req.query.force === 'true'
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       await restoreConfigBackup(req.params.id as string, force)
@@ -145,4 +133,5 @@ export const registerConfigBackupRoutes = (
       jsonOk(res, { removed })
     }
   )
+  }
 }

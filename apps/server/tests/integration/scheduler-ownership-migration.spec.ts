@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { AppContext } from '../../src/app/context.js';
 import {
   completeSchedulerOwnershipMigration,
   createSchedulerOwnershipMigration,
@@ -9,25 +8,20 @@ import {
   markSchedulerOwnershipMigrationInProgress,
   resolveSchedulerOwnershipSnapshot
 } from '../../src/app/runtime/scheduler_ownership.js';
-import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { MemSchedulerStorage } from '../helpers/scheduler_storage.js';
+import { TestKit } from '../testkit.js';
 
 const TEST_PACK_ID = 'test-ownership-migration';
 
 describe('scheduler ownership migration integration', () => {
-  let cleanup: (() => Promise<void>) | null = null;
-  let context: AppContext;
+  let kit: TestKit;
   let adapter: MemSchedulerStorage;
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
-    context = fixture.context;
-
+    kit = await TestKit.create();
     adapter = new MemSchedulerStorage();
     adapter.open(TEST_PACK_ID);
-    (context as { schedulerStorage: SchedulerStorageAdapter }).schedulerStorage = adapter as unknown as SchedulerStorageAdapter;
+    kit.withSchedulerStorage(adapter);
   });
 
   beforeEach(async () => {
@@ -36,7 +30,7 @@ describe('scheduler ownership migration integration', () => {
   });
 
   afterAll(async () => {
-    await cleanup?.();
+    await kit[Symbol.asyncDispose]();
   });
 
   it('moves persisted partition ownership to a new worker and records migration progress', async () => {
@@ -49,13 +43,13 @@ describe('scheduler ownership migration integration', () => {
       updated_at: 1000n
     });
 
-    const beforeSnapshot = await resolveSchedulerOwnershipSnapshot(context, {
+    const beforeSnapshot = await resolveSchedulerOwnershipSnapshot(kit.context, {
       workerId: 'worker-a'
     }, TEST_PACK_ID);
     expect(beforeSnapshot.assignment_source).toBe('persisted');
     expect(beforeSnapshot.owned_partition_ids).toContain('p1');
 
-    const migration = await createSchedulerOwnershipMigration(context, {
+    const migration = await createSchedulerOwnershipMigration(kit.context, {
       partitionId: 'p1',
       toWorkerId: 'worker-b',
       reason: 'rebalance test'
@@ -63,26 +57,26 @@ describe('scheduler ownership migration integration', () => {
     expect(migration.status).toBe('requested');
     expect(migration.from_worker_id).toBe('worker-a');
 
-    await markSchedulerOwnershipMigrationInProgress(context, migration.id, TEST_PACK_ID);
-    const inProgressLogs = await listRecentSchedulerOwnershipMigrations(context, 10, TEST_PACK_ID);
+    await markSchedulerOwnershipMigrationInProgress(kit.context, migration.id, TEST_PACK_ID);
+    const inProgressLogs = await listRecentSchedulerOwnershipMigrations(kit.context, 10, TEST_PACK_ID);
     expect(inProgressLogs[0]?.status).toBe('in_progress');
 
-    await completeSchedulerOwnershipMigration(context, migration.id, TEST_PACK_ID);
+    await completeSchedulerOwnershipMigration(kit.context, migration.id, TEST_PACK_ID);
 
-    const assignments = await listSchedulerPartitionAssignments(context, TEST_PACK_ID);
+    const assignments = await listSchedulerPartitionAssignments(kit.context, TEST_PACK_ID);
     const migratedAssignment = assignments.find(item => item.partition_id === 'p1') ?? null;
     expect(migratedAssignment).not.toBeNull();
     expect(migratedAssignment?.worker_id).toBe('worker-b');
     expect(migratedAssignment?.status).toBe('assigned');
     expect(migratedAssignment?.source).toBe('rebalance');
 
-    const afterSnapshot = await resolveSchedulerOwnershipSnapshot(context, {
+    const afterSnapshot = await resolveSchedulerOwnershipSnapshot(kit.context, {
       workerId: 'worker-b'
     }, TEST_PACK_ID);
     expect(afterSnapshot.assignment_source).toBe('persisted');
     expect(afterSnapshot.owned_partition_ids).toContain('p1');
 
-    const completedLogs = await listRecentSchedulerOwnershipMigrations(context, 10, TEST_PACK_ID);
+    const completedLogs = await listRecentSchedulerOwnershipMigrations(kit.context, 10, TEST_PACK_ID);
     expect(completedLogs[0]?.status).toBe('completed');
     expect(completedLogs[0]?.completed_at).not.toBeNull();
   });

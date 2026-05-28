@@ -65,7 +65,7 @@ export const resolveThemeWithDiagnostics = (
   const source: ThemeSourceDescriptor = worldPackTheme
     ? {
         kind: 'explicit-override',
-        worldPackId: options?.worldPackId ?? options?.worldPack?.instance_id ?? null,
+        worldPackId: options?.worldPackId ?? options?.worldPack?.id ?? null,
         path: 'explicit-override',
         label: 'explicit theme override'
       }

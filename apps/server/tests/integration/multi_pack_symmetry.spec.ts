@@ -14,9 +14,10 @@ describe('multi-pack symmetry', () => {
   let prisma: PrismaClient;
   let sim: SimulationManager;
   const DEATH_NOTE_REF = 'death_note';
-  const DEATH_NOTE_ID = 'world-death-note';
+  const DEATH_NOTE_ID = 'death_note';
   const EXAMPLE_PACK_REF = 'example_pack';
-  const EXAMPLE_PACK_ID = 'world-example-pack';
+  const EXAMPLE_PACK_ID = 'example_pack';
+  const EXAMPLE_PACK_META_ID = 'world-example-pack';
 
   beforeAll(async () => {
     environment = await createIsolatedRuntimeEnvironment({
@@ -52,7 +53,7 @@ describe('multi-pack symmetry', () => {
     it('loads secondary pack via registry service', async () => {
       const result = await sim.loadExperimentalPackRuntime(EXAMPLE_PACK_REF);
       expect(result.loaded).toBe(true);
-      expect(result.handle.pack_id).toBe(EXAMPLE_PACK_ID);
+      expect(result.handle.metadata_id).toBe(EXAMPLE_PACK_META_ID);
     });
 
     it('lists all loaded pack IDs', () => {
@@ -65,7 +66,7 @@ describe('multi-pack symmetry', () => {
     it('each pack has distinct handles', () => {
       const ids = sim.listLoadedPackRuntimeIds();
       const handles = ids.map(id => sim.getPackRuntimeHandle(id));
-      const packIds = handles.map(h => h?.pack_id);
+      const packIds = handles.map(h => h?.instance_id);
       expect(new Set(packIds).size).toBe(ids.length);
     });
 
@@ -97,7 +98,7 @@ describe('multi-pack symmetry', () => {
 
       const loadedIds = new Set(sim.listLoadedPackRuntimeIds());
       for (const s of statuses) {
-        expect(loadedIds.has(s.pack_id)).toBe(true);
+        expect(loadedIds.has(s.instance_id)).toBe(true);
       }
     });
   });
@@ -125,7 +126,7 @@ describe('multi-pack symmetry', () => {
 
       const handle = sim.getPackRuntimeHandle(EXAMPLE_PACK_ID);
       expect(handle).not.toBeNull();
-      expect(handle?.pack_id).toBe(EXAMPLE_PACK_ID);
+      expect(handle?.metadata_id).toBe(EXAMPLE_PACK_META_ID);
     });
 
     it('reloaded pack gets a fresh handle', async () => {
@@ -152,7 +153,7 @@ describe('multi-pack symmetry', () => {
       const statuses = sim.listRuntimeStatuses();
       for (const s of statuses) {
         expect(s.health_status).toMatch(/^(loaded|running|stopped|paused|failed)$/);
-        expect(s.pack_id).toBeTruthy();
+        expect(s.instance_id).toBeTruthy();
       }
     });
 
@@ -167,7 +168,7 @@ describe('multi-pack symmetry', () => {
 
       const snapshot = sim.getPackRuntimeStatusSnapshot(ids[0]);
       expect(snapshot).not.toBeNull();
-      expect(snapshot?.pack_id).toBe(ids[0]);
+      expect(snapshot?.instance_id).toBe(ids[0]);
       expect(snapshot?.current_tick).toBeTruthy();
     });
   });

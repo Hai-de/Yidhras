@@ -5,8 +5,8 @@ import { confirmPackPluginImport, disablePackPlugin, enablePackPlugin } from '..
 import { pluginRuntimeRegistry, refreshPackPluginRuntime } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
 import type { PluginInstallationUpsertInput } from '../../src/plugins/types.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { expectDefined } from '../helpers/assertions.js';
+import { TestKit } from '../testkit.js';
 
 const REMINDER_HASH = '03ee763729f5fe81f03478a3b0f487ff6c8dfc779f7e9b8d88a6d016dc17edfb';
 
@@ -82,28 +82,28 @@ const createInstall = (input: InstallationInput): PluginInstallationUpsertInput 
   trust_mode: 'trusted' as const
 }) as unknown as PluginInstallationUpsertInput;
 
-const setupFixture = async () => {
-  const fixture = await createIsolatedAppContextFixture();
+const setupKit = async () => {
+  const kit = await TestKit.create();
 
-  expectDefined(fixture.context.packRuntime, 'pack runtime').getPack = () => ({
+  expectDefined(kit.context.packRuntime, 'pack runtime').getPack = () => ({
     metadata: { id: PACK_ID, name: 'Test Dependency Pack', version: '0.1.0' }
   }) as never;
-  fixture.context.getPluginEnableWarningConfig = () => ({
+  kit.context.getPluginEnableWarningConfig = () => ({
     enabled: true,
     require_acknowledgement: true
   });
 
-  return fixture;
+  return kit;
 };
 
 // --- Dependency checking on enable ---
 
 describe('plugin dependency check on enable', () => {
   it('blocks enable when a required interface dependency is missing', async () => {
-    const fixture = await setupFixture();
+    const kit = await setupKit();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
 
       await store.upsertArtifact(createArtifact({
         artifact_id: 'artifact-regex-consumer',
@@ -125,7 +125,7 @@ describe('plugin dependency check on enable', () => {
       }));
 
       await expect(
-        enablePackPlugin(fixture.context, 'installation-regex-consumer', {
+        enablePackPlugin(kit.context, 'installation-regex-consumer', {
           reminder_text_hash: REMINDER_HASH,
           actor_label: 'test'
         })
@@ -133,15 +133,15 @@ describe('plugin dependency check on enable', () => {
         code: 'PLUGIN_DEPENDENCIES_UNSATISFIED'
       });
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 
   it('allows enable when required interface dependency is provided', async () => {
-    const fixture = await setupFixture();
+    const kit = await setupKit();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
 
       // Provider
       await store.upsertArtifact(createArtifact({
@@ -179,30 +179,30 @@ describe('plugin dependency check on enable', () => {
       }));
 
       // Enable provider first
-      await confirmPackPluginImport(fixture.context, 'installation-regex-provider', []);
-      await enablePackPlugin(fixture.context, 'installation-regex-provider', {
+      await confirmPackPluginImport(kit.context, 'installation-regex-provider', []);
+      await enablePackPlugin(kit.context, 'installation-regex-provider', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
 
       // Consumer should now succeed
-      await confirmPackPluginImport(fixture.context, 'installation-regex-consumer', []);
-      const result = await enablePackPlugin(fixture.context, 'installation-regex-consumer', {
+      await confirmPackPluginImport(kit.context, 'installation-regex-consumer', []);
+      const result = await enablePackPlugin(kit.context, 'installation-regex-consumer', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
 
       expect(result.lifecycle_state).toBe('enabled');
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 
   it('allows enable when optional interface dependency is missing', async () => {
-    const fixture = await setupFixture();
+    const kit = await setupKit();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
 
       await store.upsertArtifact(createArtifact({
         artifact_id: 'artifact-optional-consumer',
@@ -223,23 +223,23 @@ describe('plugin dependency check on enable', () => {
         lifecycle_state: 'confirmed_disabled'
       }));
 
-      await confirmPackPluginImport(fixture.context, 'installation-optional-consumer', []);
-      const result = await enablePackPlugin(fixture.context, 'installation-optional-consumer', {
+      await confirmPackPluginImport(kit.context, 'installation-optional-consumer', []);
+      const result = await enablePackPlugin(kit.context, 'installation-optional-consumer', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
 
       expect(result.lifecycle_state).toBe('enabled');
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 
   it('blocks enable when required hard plugin dependency is missing', async () => {
-    const fixture = await setupFixture();
+    const kit = await setupKit();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
 
       await store.upsertArtifact(createArtifact({
         artifact_id: 'artifact-hard-consumer',
@@ -260,10 +260,10 @@ describe('plugin dependency check on enable', () => {
         lifecycle_state: 'confirmed_disabled'
       }));
 
-      await confirmPackPluginImport(fixture.context, 'installation-hard-consumer', []);
+      await confirmPackPluginImport(kit.context, 'installation-hard-consumer', []);
 
       await expect(
-        enablePackPlugin(fixture.context, 'installation-hard-consumer', {
+        enablePackPlugin(kit.context, 'installation-hard-consumer', {
           reminder_text_hash: REMINDER_HASH,
           actor_label: 'test'
         })
@@ -271,15 +271,15 @@ describe('plugin dependency check on enable', () => {
         code: 'PLUGIN_DEPENDENCIES_UNSATISFIED'
       });
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 
   it('resolves interface dependency from a global-scope plugin', async () => {
-    const fixture = await setupFixture();
+    const kit = await setupKit();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
 
       // Global-scope provider
       await store.upsertArtifact(createArtifact({
@@ -319,22 +319,22 @@ describe('plugin dependency check on enable', () => {
       }));
 
       // Enable global provider
-      await confirmPackPluginImport(fixture.context, 'installation-global-provider', []);
-      await enablePackPlugin(fixture.context, 'installation-global-provider', {
+      await confirmPackPluginImport(kit.context, 'installation-global-provider', []);
+      await enablePackPlugin(kit.context, 'installation-global-provider', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
 
       // Local consumer sees the global provider
-      await confirmPackPluginImport(fixture.context, 'installation-local-consumer', []);
-      const result = await enablePackPlugin(fixture.context, 'installation-local-consumer', {
+      await confirmPackPluginImport(kit.context, 'installation-local-consumer', []);
+      const result = await enablePackPlugin(kit.context, 'installation-local-consumer', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
 
       expect(result.lifecycle_state).toBe('enabled');
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 });
@@ -343,10 +343,10 @@ describe('plugin dependency check on enable', () => {
 
 describe('plugin reverse dependency check on disable', () => {
   it('warns but allows disable when dependents exist (non-strict mode)', async () => {
-    const fixture = await setupFixture();
+    const kit = await setupKit();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
 
       // Provider
       await store.upsertArtifact(createArtifact({
@@ -384,31 +384,31 @@ describe('plugin reverse dependency check on disable', () => {
       }));
 
       // Enable both
-      await confirmPackPluginImport(fixture.context, 'installation-disable-provider', []);
-      await enablePackPlugin(fixture.context, 'installation-disable-provider', {
+      await confirmPackPluginImport(kit.context, 'installation-disable-provider', []);
+      await enablePackPlugin(kit.context, 'installation-disable-provider', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
 
-      await confirmPackPluginImport(fixture.context, 'installation-disable-consumer', []);
-      await enablePackPlugin(fixture.context, 'installation-disable-consumer', {
+      await confirmPackPluginImport(kit.context, 'installation-disable-consumer', []);
+      await enablePackPlugin(kit.context, 'installation-disable-consumer', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
 
       // Disable provider — succeeds with warning (non-strict default)
-      const result = await disablePackPlugin(fixture.context, 'installation-disable-provider');
+      const result = await disablePackPlugin(kit.context, 'installation-disable-provider');
       expect(result.lifecycle_state).toBe('disabled');
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 
   it('blocks disable when strict mode is on and dependents exist', async () => {
-    const fixture = await setupFixture();
+    const kit = await setupKit();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
 
       // Provider
       await store.upsertArtifact(createArtifact({
@@ -446,14 +446,14 @@ describe('plugin reverse dependency check on disable', () => {
       }));
 
       // Enable both
-      await confirmPackPluginImport(fixture.context, 'installation-strict-provider', []);
-      await enablePackPlugin(fixture.context, 'installation-strict-provider', {
+      await confirmPackPluginImport(kit.context, 'installation-strict-provider', []);
+      await enablePackPlugin(kit.context, 'installation-strict-provider', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
 
-      await confirmPackPluginImport(fixture.context, 'installation-strict-consumer', []);
-      await enablePackPlugin(fixture.context, 'installation-strict-consumer', {
+      await confirmPackPluginImport(kit.context, 'installation-strict-consumer', []);
+      await enablePackPlugin(kit.context, 'installation-strict-consumer', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
@@ -466,7 +466,7 @@ describe('plugin reverse dependency check on disable', () => {
 
       try {
         await expect(
-          disablePackPlugin(fixture.context, 'installation-strict-provider')
+          disablePackPlugin(kit.context, 'installation-strict-provider')
         ).rejects.toMatchObject({
           code: 'PLUGIN_HAS_DEPENDENTS'
         });
@@ -474,15 +474,15 @@ describe('plugin reverse dependency check on disable', () => {
         depConfig.strict = originalStrict;
       }
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 
   it('allows disable when no dependents exist', async () => {
-    const fixture = await setupFixture();
+    const kit = await setupKit();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
 
       await store.upsertArtifact(createArtifact({
         artifact_id: 'artifact-solo',
@@ -497,16 +497,16 @@ describe('plugin reverse dependency check on disable', () => {
         lifecycle_state: 'confirmed_disabled'
       }));
 
-      await confirmPackPluginImport(fixture.context, 'installation-solo', []);
-      await enablePackPlugin(fixture.context, 'installation-solo', {
+      await confirmPackPluginImport(kit.context, 'installation-solo', []);
+      await enablePackPlugin(kit.context, 'installation-solo', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
 
-      const result = await disablePackPlugin(fixture.context, 'installation-solo');
+      const result = await disablePackPlugin(kit.context, 'installation-solo');
       expect(result.lifecycle_state).toBe('disabled');
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 });
@@ -515,10 +515,10 @@ describe('plugin reverse dependency check on disable', () => {
 
 describe('plugin load order in runtime', () => {
   it('loads plugins sorted by priority', async () => {
-    const fixture = await setupFixture();
+    const kit = await setupKit();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
 
       await store.upsertArtifact(createArtifact({
         artifact_id: 'artifact-low',
@@ -549,34 +549,34 @@ describe('plugin load order in runtime', () => {
       }));
 
       // Enable both
-      await confirmPackPluginImport(fixture.context, 'installation-low', []);
-      await enablePackPlugin(fixture.context, 'installation-low', {
+      await confirmPackPluginImport(kit.context, 'installation-low', []);
+      await enablePackPlugin(kit.context, 'installation-low', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
 
-      await confirmPackPluginImport(fixture.context, 'installation-high', []);
-      await enablePackPlugin(fixture.context, 'installation-high', {
+      await confirmPackPluginImport(kit.context, 'installation-high', []);
+      await enablePackPlugin(kit.context, 'installation-high', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
 
-      await refreshPackPluginRuntime(fixture.context, PACK_ID);
+      await refreshPackPluginRuntime(kit.context, PACK_ID);
 
       const runtimes = pluginRuntimeRegistry.listRuntimes(PACK_ID);
       expect(runtimes).toHaveLength(2);
       expect(runtimes[0].manifest.id).toBe('plugin.high');
       expect(runtimes[1].manifest.id).toBe('plugin.low');
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 
   it('respects after constraint over priority', async () => {
-    const fixture = await setupFixture();
+    const kit = await setupKit();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
 
       await store.upsertArtifact(createArtifact({
         artifact_id: 'artifact-base',
@@ -607,26 +607,26 @@ describe('plugin load order in runtime', () => {
       }));
 
       // Enable both
-      await confirmPackPluginImport(fixture.context, 'installation-base', []);
-      await enablePackPlugin(fixture.context, 'installation-base', {
+      await confirmPackPluginImport(kit.context, 'installation-base', []);
+      await enablePackPlugin(kit.context, 'installation-base', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
 
-      await confirmPackPluginImport(fixture.context, 'installation-after-base', []);
-      await enablePackPlugin(fixture.context, 'installation-after-base', {
+      await confirmPackPluginImport(kit.context, 'installation-after-base', []);
+      await enablePackPlugin(kit.context, 'installation-after-base', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'test'
       });
 
-      await refreshPackPluginRuntime(fixture.context, PACK_ID);
+      await refreshPackPluginRuntime(kit.context, PACK_ID);
 
       const runtimes = pluginRuntimeRegistry.listRuntimes(PACK_ID);
       expect(runtimes).toHaveLength(2);
       expect(runtimes[0].manifest.id).toBe('plugin.base');
       expect(runtimes[1].manifest.id).toBe('plugin.after-base');
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 });

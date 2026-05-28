@@ -1,10 +1,9 @@
 import { entityIdParamsSchema } from '@yidhras/contracts'
-import type { Express, NextFunction, Request, Response } from 'express'
 import { z } from 'zod'
 
 import { packAccessGuard } from '../../operator/guard/pack_access.js'
 import { ApiError } from '../../utils/api_error.js'
-import type { AppContext } from '../context.js'
+import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseParams } from '../http/zod.js'
 import {
@@ -14,16 +13,11 @@ import {
   getExperimentalPackOverviewProjection,
   getExperimentalPackPluginInstallations
 } from '../services/runtime/experimental_projection_runtime.js'
+import type { RouteModule } from './types.js'
 
 const packIdParamsSchema = z.object({
   packId: z.string().min(1, 'packId is required')
 })
-
-export interface ExperimentalPackProjectionRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void
-}
 
 const resolvePackId = (reqParams: unknown): string => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express request body/param parsing
@@ -45,17 +39,14 @@ const translateExperimentalProjectionError = (packId: string, error: unknown): n
   throw new ApiError(409, 'EXPERIMENTAL_PACK_PROJECTION_FAILED', message, { pack_id: packId })
 }
 
-export const registerExperimentalPackProjectionRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: ExperimentalPackProjectionRouteDependencies
-): void => {
+export const experimentalPackProjectionRoutes: RouteModule = {
+  register(app, context) {
   const packGuard = packAccessGuard(context, { packIdParam: 'packId' })
 
   app.get(
     '/api/experimental/packs/overview',
     packGuard,
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
 const packId = resolvePackId(req.params)
       try {
         jsonOk(res, toJsonSafe(await getExperimentalPackOverviewProjection(context, packId)))
@@ -68,7 +59,7 @@ const packId = resolvePackId(req.params)
   app.get(
     '/api/experimental/packs/projections/timeline',
     packGuard,
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
 const packId = resolvePackId(req.params)
       try {
         jsonOk(res, toJsonSafe(await getExperimentalPackNarrativeProjection(context, packId)))
@@ -81,7 +72,7 @@ const packId = resolvePackId(req.params)
   app.get(
     '/api/experimental/packs/projections/entities',
     packGuard,
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
 const packId = resolvePackId(req.params)
       try {
         jsonOk(res, toJsonSafe(await getExperimentalPackEntityProjection(context, packId)))
@@ -94,7 +85,7 @@ const packId = resolvePackId(req.params)
   app.get(
     '/api/experimental/packs/entities/:id/overview',
     packGuard,
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
 const packId = resolvePackId(req.params)
       const entityId = resolveEntityId({ id: req.params.id })
       try {
@@ -108,7 +99,7 @@ const packId = resolvePackId(req.params)
   app.get(
     '/api/experimental/packs/plugins',
     packGuard,
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
 const packId = resolvePackId(req.params)
       try {
         jsonOk(res, toJsonSafe(await getExperimentalPackPluginInstallations(context, packId)))
@@ -117,4 +108,5 @@ const packId = resolvePackId(req.params)
       }
     })
   )
+  }
 }

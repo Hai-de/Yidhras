@@ -5,6 +5,7 @@ set -euo pipefail
 # 颜色输出
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 RESET_DEV_DB=false
@@ -82,6 +83,43 @@ fi
 echo -e "${GREEN}Web: http://localhost:3000${NC}"
 echo ""
 echo "Press Ctrl+C to stop all services"
+
+# 等待后端健康检查通过后再打开浏览器
+echo -e "${YELLOW}Waiting for server to be ready...${NC}"
+SERVER_URL="http://localhost:3001/api/health"
+MAX_RETRIES=30
+RETRY_INTERVAL=2
+
+for ((i=1; i<=MAX_RETRIES; i++)); do
+  if curl -sf "$SERVER_URL" > /dev/null 2>&1; then
+    echo -e "${GREEN}Server is ready! (attempt $i/$MAX_RETRIES)${NC}"
+    break
+  fi
+
+  if [ "$i" -eq "$MAX_RETRIES" ]; then
+    echo -e "${RED}Server did not become ready after $MAX_RETRIES attempts. Opening browser anyway...${NC}"
+  else
+    echo -e "${YELLOW}Waiting for server... (attempt $i/$MAX_RETRIES)${NC}"
+    sleep "$RETRY_INTERVAL"
+  fi
+done
+
+# 额外等待 Nuxt 前端编译完成
+echo -e "${YELLOW}Waiting for frontend to compile...${NC}"
+sleep 3
+
+# 检测操作系统并打开浏览器
+if command -v xdg-open &> /dev/null; then
+  # Linux
+  xdg-open http://localhost:3000 &>/dev/null &
+  echo -e "${GREEN}Browser opened${NC}"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+  # macOS
+  open http://localhost:3000 &>/dev/null &
+  echo -e "${GREEN}Browser opened${NC}"
+else
+  echo -e "${YELLOW}Could not detect browser command. Please open http://localhost:3000 manually${NC}"
+fi
 
 cleanup() {
   for pid in "${SERVER_PIDS[@]}"; do

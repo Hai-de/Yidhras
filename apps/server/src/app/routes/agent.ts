@@ -6,27 +6,19 @@ import {
   entityOverviewDataSchema,
   entityOverviewQuerySchema
 } from '@yidhras/contracts'
-import type { Express, NextFunction, Request, Response } from 'express'
+import type { Request, Response } from 'express'
 
 import { OPERATOR_CAPABILITY } from '../../operator/constants.js'
-import type { AppContext } from '../context.js'
+import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseParams, parseQuery } from '../http/zod.js'
 import { capabilityGuard } from '../middleware/capability.js'
 import { getAgentContextSnapshot, getEntityOverview, listSnrAdjustmentLogs } from '../services/agent/agent.js'
 import { getAgentSchedulerProjection } from '../services/scheduler/queries.js'
+import type { RouteModule } from './types.js'
 
-export interface AgentRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void
-}
-
-export const registerAgentRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: AgentRouteDependencies
-): void => {
+export const agentRoutes: RouteModule = {
+  register(app, context) {
   const sendEntityOverview = async (
     req: Request,
     res: Response,
@@ -51,7 +43,7 @@ export const registerAgentRoutes = (
       packIdQuery: 'packId',
       targetAgentIdParam: 'id'
     }),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('agent context')
       const params = parseParams(agentIdParamsSchema, req.params, 'AGENT_QUERY_INVALID')
       const snapshot = await getAgentContextSnapshot(context, params.id)
@@ -66,7 +58,7 @@ export const registerAgentRoutes = (
       packIdQuery: 'packId',
       targetAgentIdParam: 'id'
     }),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       await sendEntityOverview(req, res, {
         runtimeFeature: 'entity overview'
       })
@@ -79,7 +71,7 @@ export const registerAgentRoutes = (
       packIdQuery: 'packId',
       targetAgentIdParam: 'id'
     }),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('agent scheduler projection')
       const params = parseParams(agentIdParamsSchema, req.params, 'AGENT_QUERY_INVALID')
       const query = parseQuery(agentSchedulerProjectionQuerySchema, req.query, 'AGENT_QUERY_INVALID')
@@ -97,7 +89,7 @@ export const registerAgentRoutes = (
       packIdQuery: 'packId',
       targetAgentIdParam: 'id'
     }),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('agent snr adjustment logs')
       const params = parseParams(agentIdParamsSchema, req.params, 'SNR_LOG_QUERY_INVALID')
       const query = parseQuery(agentSnrLogsQuerySchema, req.query, 'SNR_LOG_QUERY_INVALID')
@@ -109,4 +101,5 @@ export const registerAgentRoutes = (
       jsonOk(res, toJsonSafe(logs))
     })
   )
+  }
 }

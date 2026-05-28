@@ -26,7 +26,7 @@ const createRuntimeSpeedSnapshot = (): RuntimeSpeedSnapshot => ({
   strategy: {
     kind: 'variable',
     range: { min: '1', max: '1' },
-    loopIntervalMs: 1000
+    loop_interval_ms: 1000
   },
   effective_step_ticks: '1',
   override_since: null
@@ -56,7 +56,7 @@ describe('usePluginRuntimeBootstrap', () => {
       },
       health_level: 'ok',
       world_pack: {
-        instance_id: 'world-pack-alpha', metadata_id: 'world-pack-alpha',
+        id: 'world-pack-alpha',
         name: 'Pack Alpha',
         version: '0.1.0'
       },
@@ -129,7 +129,7 @@ describe('usePluginRuntimeBootstrap', () => {
       },
       health_level: 'ok',
       world_pack: {
-        instance_id: 'world-pack-alpha', metadata_id: 'world-pack-alpha',
+        id: 'world-pack-alpha',
         name: 'Pack Alpha',
         version: '0.1.0'
       },

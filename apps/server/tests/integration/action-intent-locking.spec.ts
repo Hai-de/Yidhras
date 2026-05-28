@@ -1,38 +1,34 @@
 import { Prisma } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import type { AppContext } from '../../src/app/context.js';
 import {
   assertActionIntentLockOwnership,
   claimActionIntent,
   listDispatchableActionIntents,
   releaseActionIntentLock
 } from '../../src/app/services/action/action_dispatcher.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { expectDefined } from '../helpers/assertions.js';
+import { TestKit } from '../testkit.js';
 
 const INTENT_SOURCE_PREFIX = 'intent-lock-source-';
 
 describe('action intent locking integration', () => {
-  let cleanup: (() => Promise<void>) | null = null;
-  let context: AppContext;
-  const currentTick = () => expectDefined(context.packRuntime, 'pack runtime').getCurrentTick();
+  let kit: TestKit;
+  const currentTick = () => expectDefined(kit.context.packRuntime, 'pack runtime').getCurrentTick();
 
   beforeAll(async () => {
-    const fixture = await createIsolatedAppContextFixture();
-    cleanup = fixture.cleanup;
-    context = fixture.context;
+    kit = await TestKit.create();
   });
 
   beforeEach(async () => {
-    await context.prisma.actionIntent.deleteMany({
+    await kit.prisma.actionIntent.deleteMany({
       where: {
         source_inference_id: {
           startsWith: INTENT_SOURCE_PREFIX
         }
       }
     });
-    await context.prisma.inferenceTrace.deleteMany({
+    await kit.prisma.inferenceTrace.deleteMany({
       where: {
         id: {
           startsWith: INTENT_SOURCE_PREFIX
@@ -42,14 +38,14 @@ describe('action intent locking integration', () => {
   });
 
   afterAll(async () => {
-    await cleanup?.();
+    await kit[Symbol.asyncDispose]();
   });
 
   const createActionIntent = async (suffix: string) => {
     const now = currentTick();
     const inferenceId = `${INTENT_SOURCE_PREFIX}${suffix}-${Date.now()}`;
 
-    await context.prisma.inferenceTrace.create({
+    await kit.prisma.inferenceTrace.create({
       data: {
         id: inferenceId,
         kind: 'run',
@@ -70,7 +66,7 @@ describe('action intent locking integration', () => {
       }
     });
 
-    return context.prisma.actionIntent.create({
+    return kit.prisma.actionIntent.create({
       data: {
         source_inference_id: inferenceId,
         intent_type: 'post_message',
@@ -103,10 +99,10 @@ describe('action intent locking integration', () => {
   it('lists and claims a pending action intent only once', async () => {
     const intent = await createActionIntent('single-claim');
 
-    const claimable = await listDispatchableActionIntents(context, 10);
+    const claimable = await listDispatchableActionIntents(kit.context, 10);
     expect(claimable.some(item => item.id === intent.id)).toBe(true);
 
-    const claimed = await claimActionIntent(context, {
+    const claimed = await claimActionIntent(kit.context, {
       intent_id: intent.id,
       worker_id: 'dispatcher-a',
       now: 2000n,
@@ -116,7 +112,7 @@ describe('action intent locking integration', () => {
     expect(claimed?.locked_by).toBe('dispatcher-a');
     expect(claimed?.status).toBe('dispatching');
 
-    const secondClaim = await claimActionIntent(context, {
+    const secondClaim = await claimActionIntent(kit.context, {
       intent_id: intent.id,
       worker_id: 'dispatcher-b',
       now: 2001n,
@@ -128,7 +124,7 @@ describe('action intent locking integration', () => {
   it('reclaims expired locks after the intent becomes pending again', async () => {
     const intent = await createActionIntent('expired-reclaim');
 
-    const claimed = await claimActionIntent(context, {
+    const claimed = await claimActionIntent(kit.context, {
       intent_id: intent.id,
       worker_id: 'dispatcher-a',
       now: 3000n,
@@ -137,12 +133,12 @@ describe('action intent locking integration', () => {
     expect(claimed).not.toBeNull();
     expect(claimed?.lock_expires_at).toBe(3002n);
 
-    await context.prisma.actionIntent.update({
+    await kit.prisma.actionIntent.update({
       where: { id: intent.id },
       data: { status: 'pending', updated_at: 3003n }
     });
 
-    const reclaimed = await claimActionIntent(context, {
+    const reclaimed = await claimActionIntent(kit.context, {
       intent_id: intent.id,
       worker_id: 'dispatcher-b',
       now: 3003n,
@@ -155,7 +151,7 @@ describe('action intent locking integration', () => {
   it('enforces ownership checks when releasing locks', async () => {
     const intent = await createActionIntent('ownership-release');
 
-    const claimed = await claimActionIntent(context, {
+    const claimed = await claimActionIntent(kit.context, {
       intent_id: intent.id,
       worker_id: 'dispatcher-a',
       now: 4000n,
@@ -169,14 +165,14 @@ describe('action intent locking integration', () => {
     expect(() => assertActionIntentLockOwnership(claimed, 'dispatcher-a', 4001n)).not.toThrow();
     expect(() => assertActionIntentLockOwnership(claimed, 'dispatcher-b', 4001n)).toThrow();
 
-    const wrongRelease = await releaseActionIntentLock(context, {
+    const wrongRelease = await releaseActionIntentLock(kit.context, {
       intent_id: intent.id,
       worker_id: 'dispatcher-b'
     });
     expect(wrongRelease).not.toBeNull();
     expect(wrongRelease?.locked_by).toBe('dispatcher-a');
 
-    const released = await releaseActionIntentLock(context, {
+    const released = await releaseActionIntentLock(kit.context, {
       intent_id: intent.id,
       worker_id: 'dispatcher-a'
     });

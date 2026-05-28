@@ -1,22 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
 import { assertRecord, assertSuccessEnvelopeData } from '../helpers/envelopes.js';
-import { withIsolatedTestServer } from '../helpers/runtime.js';
 import { requestJson } from '../helpers/server.js';
+import { E2ETestKit } from '../testkit_e2e.js';
 
 describe('overview summary e2e', () => {
   it('returns runtime, world time and audit aggregates for the operator summary page', async () => {
-    await withIsolatedTestServer({
-      defaultPort: 3104,
-      packRef: 'example_pack',
-      seededPackRefs: ['example_pack']
-    }, async server => {
-      const statusResponse = await requestJson(server.baseUrl, '/api/status');
+    const kit = await E2ETestKit.create({ port: 3104, packRef: 'example_pack', seededPackRefs: ['example_pack'] });
+    try {
+      await kit.startServer();
+      const statusResponse = await requestJson(kit.baseUrl, '/api/status');
       expect(statusResponse.status).toBe(200);
       const statusData = assertSuccessEnvelopeData(statusResponse.body, '/api/status');
       expect(statusData.runtime_ready).toBe(true);
 
-      const overviewResponse = await requestJson(server.baseUrl, '/api/overview/summary');
+      const overviewResponse = await requestJson(kit.baseUrl, '/api/overview/summary');
       expect(overviewResponse.status).toBe(200);
       const overview = assertSuccessEnvelopeData(overviewResponse.body, 'overview summary response');
 
@@ -35,6 +33,8 @@ describe('overview summary e2e', () => {
       expect(Array.isArray(overview.failed_jobs)).toBe(true);
       expect(Array.isArray(overview.dropped_intents)).toBe(true);
       expect(Array.isArray(overview.notifications)).toBe(true);
-    });
+    } finally {
+      await kit[Symbol.asyncDispose]();
+    }
   });
 });

@@ -29,4 +29,6 @@ export interface PackRuntimeHost {
   clearRuntimeSpeedOverride(): void;
   getHealthSnapshot(): PackRuntimeHealthSnapshot;
   getClockSnapshot(): PackRuntimeClockSnapshot;
+  setRequestedStepTicks(ticks: bigint): void;
+  consumeRequestedStepTicks(): bigint | undefined;
 }

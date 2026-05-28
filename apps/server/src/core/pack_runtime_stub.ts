@@ -27,5 +27,7 @@ export const PACK_RUNTIME_STUB = {
   getAllTimes: () => [],
   step: async (_amount?: bigint): Promise<void> => {},
   getPackSlotDeclarations: (): Record<string, Record<string, unknown>> | null => null,
-  resolvePackVariables: (template: string): string => template
+  resolvePackVariables: (template: string): string => template,
+  setRequestedStepTicks: (_ticks: bigint): void => {},
+  consumeRequestedStepTicks: (): bigint | undefined => undefined
 };

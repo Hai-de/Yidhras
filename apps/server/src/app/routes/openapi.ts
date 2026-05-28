@@ -5,10 +5,10 @@ import {
   startupHealthDataSchema,
   systemMessageSchema
 } from '@yidhras/contracts';
-import type { Express } from 'express';
 import { z } from 'zod';
 
 import { OpenApiCollector } from '../http/openapi_generator.js';
+import type { RouteModule } from './types.js';
 
 // ---- Demo: register OpenAPI metadata for system + clock routes ------------
 
@@ -120,13 +120,15 @@ function buildDemoSpec(): ReturnType<OpenApiCollector['toSpec']> {
 
 let cachedSpec: object | null = null;
 
-export const registerOpenApiRoute = (app: Express): void => {
-  app.get('/api/openapi.json', (_req, res) => {
-    if (!cachedSpec) {
-      cachedSpec = buildDemoSpec();
-    }
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Type', 'application/json');
-    res.status(200).json(cachedSpec);
-  });
+export const openApiRoute: RouteModule = {
+  register(app) {
+    app.get('/api/openapi.json', (_req, res) => {
+      if (!cachedSpec) {
+        cachedSpec = buildDemoSpec();
+      }
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Content-Type', 'application/json');
+      res.status(200).json(cachedSpec);
+    });
+  }
 };

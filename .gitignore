@@ -157,3 +157,6 @@ target/
 CLAUDE.md
 .claude/
 
+# nextlevelbuilder/ui-ux-pro-max-skill
+.agents/skills/ui-ux-pro-max/scripts/__pycache__/
+

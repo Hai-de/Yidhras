@@ -6,8 +6,8 @@ import { pluginRuntimeRegistry,refreshPackPluginRuntime } from '../../src/plugin
 import { createPluginStore } from '../../src/plugins/store.js';
 import { PluginWorkerTimeoutError } from '../../src/plugins/worker/errors.js';
 import { pluginWorkerManager } from '../../src/plugins/worker/PluginWorkerManager.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { expectDefined } from '../helpers/assertions.js';
+import { TestKit } from '../testkit.js';
 
 const { FakePluginWorkerClient, resetFakeState } = vi.hoisted(() => {
   const deactivates: string[] = [];
@@ -160,26 +160,26 @@ describe('plugin Worker runtime flow integration', () => {
       threadId: 99
     };
 
-    const fixture = await createIsolatedAppContextFixture();
+    const kit = await TestKit.create();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
       await store.upsertArtifact(baseArtifact());
       await store.upsertInstallation(baseInstallation());
 
-      expectDefined(fixture.context.packRuntime, 'pack runtime').getPack = () => ({
+      expectDefined(kit.context.packRuntime, 'pack runtime').getPack = () => ({
         metadata: { id: PACK_ID, name: 'Worker Flow Pack', version: '0.1.0' }
       }) as never;
-      fixture.context.getPluginEnableWarningConfig = () => ({
+      kit.context.getPluginEnableWarningConfig = () => ({
         enabled: true, require_acknowledgement: true
       });
 
-      await refreshPackPluginRuntime(fixture.context, PACK_ID);
+      await refreshPackPluginRuntime(kit.context, PACK_ID);
       expect(pluginRuntimeRegistry.listRuntimes(PACK_ID)).toHaveLength(0);
 
-      await confirmPackPluginImport(fixture.context, 'installation-worker-flow',
+      await confirmPackPluginImport(kit.context, 'installation-worker-flow',
         [PLUGIN_CAPABILITY_KEY.DATA_CLEANER_REGISTER]);
-      await enablePackPlugin(fixture.context, 'installation-worker-flow', {
+      await enablePackPlugin(kit.context, 'installation-worker-flow', {
         reminder_text_hash: REMINDER_HASH, actor_label: 'integration'
       });
 
@@ -190,10 +190,10 @@ describe('plugin Worker runtime flow integration', () => {
       expect(runtimes[0]?.contribution_descriptors).toHaveLength(1);
       expect(runtimes[0]?.handler_names).toContain('data_cleaner.flow.clean');
 
-      await disablePackPlugin(fixture.context, 'installation-worker-flow');
+      await disablePackPlugin(kit.context, 'installation-worker-flow');
       expect(pluginRuntimeRegistry.listRuntimes(PACK_ID)).toHaveLength(0);
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 
@@ -204,23 +204,23 @@ describe('plugin Worker runtime flow integration', () => {
       threadId: 99
     };
 
-    const fixture = await createIsolatedAppContextFixture();
+    const kit = await TestKit.create();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
       await store.upsertArtifact(baseArtifact());
       await store.upsertInstallation(baseInstallation());
 
-      expectDefined(fixture.context.packRuntime, 'pack runtime').getPack = () => ({
+      expectDefined(kit.context.packRuntime, 'pack runtime').getPack = () => ({
         metadata: { id: PACK_ID, name: 'Worker Flow Pack', version: '0.1.0' }
       }) as never;
-      fixture.context.getPluginEnableWarningConfig = () => ({
+      kit.context.getPluginEnableWarningConfig = () => ({
         enabled: true, require_acknowledgement: true
       });
 
-      await confirmPackPluginImport(fixture.context, 'installation-worker-flow',
+      await confirmPackPluginImport(kit.context, 'installation-worker-flow',
         [PLUGIN_CAPABILITY_KEY.DATA_CLEANER_REGISTER]);
-      await enablePackPlugin(fixture.context, 'installation-worker-flow', {
+      await enablePackPlugin(kit.context, 'installation-worker-flow', {
         reminder_text_hash: REMINDER_HASH, actor_label: 'integration'
       });
 
@@ -229,7 +229,7 @@ describe('plugin Worker runtime flow integration', () => {
       // Configure next activation to fail
       FakePluginWorkerClient.nextActivateError = new PluginWorkerTimeoutError('activation timed out');
 
-      await refreshPackPluginRuntime(fixture.context, PACK_ID);
+      await refreshPackPluginRuntime(kit.context, PACK_ID);
 
       // Old runtime must survive the failed refresh
       const runtimes = pluginRuntimeRegistry.listRuntimes(PACK_ID);
@@ -237,17 +237,17 @@ describe('plugin Worker runtime flow integration', () => {
       expect(runtimes[0]?.plugin_id).toBe('plugin.worker.flow');
       expect(runtimes[0]?.worker_client).toBeDefined();
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 
   it('records activation timeout as a failed session with last_error', async () => {
     FakePluginWorkerClient.nextActivateError = new PluginWorkerTimeoutError('activation timed out');
 
-    const fixture = await createIsolatedAppContextFixture();
+    const kit = await TestKit.create();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
       await store.upsertArtifact(baseArtifact());
 
       await store.upsertInstallation(baseInstallation({
@@ -255,11 +255,11 @@ describe('plugin Worker runtime flow integration', () => {
         granted_capabilities: [PLUGIN_CAPABILITY_KEY.DATA_CLEANER_REGISTER]
       }));
 
-      expectDefined(fixture.context.packRuntime, 'pack runtime').getPack = () => ({
+      expectDefined(kit.context.packRuntime, 'pack runtime').getPack = () => ({
         metadata: { id: PACK_ID, name: 'Worker Flow Pack', version: '0.1.0' }
       }) as never;
 
-      await refreshPackPluginRuntime(fixture.context, PACK_ID);
+      await refreshPackPluginRuntime(kit.context, PACK_ID);
 
       expect(pluginRuntimeRegistry.listRuntimes(PACK_ID)).toHaveLength(0);
 
@@ -267,7 +267,7 @@ describe('plugin Worker runtime flow integration', () => {
       expectDefined(installation, 'installation');
       expect(installation.last_error).toBe('activation timed out');
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 });

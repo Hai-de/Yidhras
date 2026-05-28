@@ -10,10 +10,10 @@ import {
   schedulerTrendsQuerySchema,
   schedulerWorkersQuerySchema
 } from '@yidhras/contracts'
-import type { Express, NextFunction, Request, Response } from 'express'
 
 import { OPERATOR_CAPABILITY } from '../../operator/constants.js'
 import type { AppContext } from '../context.js'
+import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseParams, parseQuery } from '../http/zod.js'
 import { capabilityGuard } from '../middleware/capability.js'
@@ -28,27 +28,19 @@ import {
   listSchedulerRebalanceRecommendations,
   listSchedulerRuns
 } from '../services/scheduler/queries.js'
-
-export interface SchedulerRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void
-}
+import type { RouteModule } from './types.js'
 
 const observeGuard = (context: AppContext) =>
   capabilityGuard(context, OPERATOR_CAPABILITY.PERCEIVE_SCHEDULER_OBSERVABILITY, {
     packIdQuery: 'packId'
   })
 
-export const registerSchedulerRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: SchedulerRouteDependencies
-): void => {
+export const schedulerRoutes: RouteModule = {
+  register(app, context) {
   app.get(
     '/api/runtime/scheduler/runs/latest',
     observeGuard(context),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler latest run')
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const packId = req.query.packId as string | undefined
@@ -61,7 +53,7 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/runs',
     observeGuard(context),
       // eslint-disable-next-line @typescript-eslint/require-await
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler runs list')
       const query = parseQuery(schedulerRunsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       const result = listSchedulerRuns(context, {
@@ -91,7 +83,7 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/summary',
     observeGuard(context),
        
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler summary')
       const query = parseQuery(schedulerSummaryQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
@@ -108,7 +100,7 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/trends',
     observeGuard(context),
       // eslint-disable-next-line @typescript-eslint/require-await
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler trends')
       const query = parseQuery(schedulerTrendsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       const trends = getSchedulerTrendsSnapshot(context, {
@@ -123,7 +115,7 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/operator',
     observeGuard(context),
        
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler operator projection')
       const query = parseQuery(schedulerOperatorQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
@@ -141,7 +133,7 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/ownership',
     observeGuard(context),
        
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler ownership projection')
       const query = parseQuery(schedulerOwnershipQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
@@ -160,7 +152,7 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/migrations',
     observeGuard(context),
       // eslint-disable-next-line @typescript-eslint/require-await
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler ownership migrations')
       const query = parseQuery(schedulerMigrationsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       const result = listSchedulerOwnershipMigrations(context, {
@@ -178,7 +170,7 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/workers',
     observeGuard(context),
        
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler worker runtime states')
       const query = parseQuery(schedulerWorkersQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
@@ -196,7 +188,7 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/rebalance/recommendations',
     observeGuard(context),
       // eslint-disable-next-line @typescript-eslint/require-await
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler rebalance recommendations')
       const query = parseQuery(schedulerRebalanceRecommendationsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       const result = listSchedulerRebalanceRecommendations(context, {
@@ -215,7 +207,7 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/runs/:id',
     observeGuard(context),
        
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler run read')
       const params = parseParams(schedulerRunIdParamsSchema, req.params, 'SCHEDULER_QUERY_INVALID')
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
@@ -229,7 +221,7 @@ export const registerSchedulerRoutes = (
     '/api/runtime/scheduler/decisions',
     observeGuard(context),
        
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('scheduler decisions list')
       const query = parseQuery(schedulerDecisionsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
       const result = await listSchedulerDecisions(context, {
@@ -265,7 +257,7 @@ export const registerSchedulerRoutes = (
       targetAgentIdParam: 'id'
     }),
       // eslint-disable-next-line @typescript-eslint/require-await
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       context.assertRuntimeReady('agent scheduler decisions')
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
       const packId = req.query.packId as string | undefined
@@ -274,4 +266,5 @@ export const registerSchedulerRoutes = (
       jsonOk(res, toJsonSafe(decisions))
     })
   )
+  }
 }

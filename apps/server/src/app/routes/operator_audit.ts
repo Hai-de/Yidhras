@@ -1,32 +1,23 @@
 import {
   operatorAuditLogQuerySchema
 } from '@yidhras/contracts'
-import type { Express } from 'express'
 
 import type { OperatorRequest } from '../../operator/auth/types.js'
 import { OPERATOR_ERROR_CODE } from '../../operator/constants.js'
 import { ApiError } from '../../utils/api_error.js'
-import type { AppContext } from '../context.js'
+import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseQuery } from '../http/zod.js'
 import { queryAuditLogs } from '../services/operator/operator_audit.js'
+import type { RouteModule } from './types.js'
 
-export interface AuditRouteDependencies {
-  asyncHandler(
-    handler: (req: OperatorRequest, res: import('express').Response, next: import('express').NextFunction) => Promise<void>
-  ): (req: OperatorRequest, res: import('express').Response, next: import('express').NextFunction) => void
-}
-
-export const registerOperatorAuditRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: AuditRouteDependencies
-): void => {
+export const operatorAuditRoutes: RouteModule = {
+  register(app, context) {
   // GET /api/audit/logs
   app.get(
     '/api/audit/logs',
-    deps.asyncHandler(async (req, res) => {
-      const operator = (req).operator
+    asyncHandler(async (req, res) => {
+      const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -60,8 +51,8 @@ export const registerOperatorAuditRoutes = (
   // GET /api/audit/logs/me
   app.get(
     '/api/audit/logs/me',
-    deps.asyncHandler(async (req, res) => {
-      const operator = (req).operator
+    asyncHandler(async (req, res) => {
+      const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -91,4 +82,5 @@ export const registerOperatorAuditRoutes = (
       })
     })
   )
+  },
 }

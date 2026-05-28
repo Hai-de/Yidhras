@@ -1,9 +1,8 @@
-import type { Express, NextFunction, Request, Response } from 'express'
-
 import { OPERATOR_CAPABILITY } from '../../operator/constants.js'
 import { packAccessGuard } from '../../operator/guard/pack_access.js'
 import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js'
+import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { capabilityGuard } from '../middleware/capability.js'
 import { createRuntimeKernelService } from '../runtime/runtime_kernel_service.js'
@@ -16,12 +15,7 @@ import {
   loadExperimentalPackRuntime,
   unloadExperimentalPackRuntime
 } from '../services/runtime/experimental_multi_pack_runtime.js'
-
-export interface ExperimentalRuntimeRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void
-}
+import type { RouteModule } from './types.js'
 
 const resolvePackIdParam = (value: unknown): string => {
   if (typeof value !== 'string' || value.trim().length === 0) {
@@ -92,169 +86,167 @@ const requireExperimentalPackHandle = (context: AppContext, packId: string) => {
   return handle
 }
 
-export const registerExperimentalRuntimeRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: ExperimentalRuntimeRouteDependencies
-): void => {
-  const packGuard = packAccessGuard(context, { packIdParam: 'packId' })
-  const controlGuard = capabilityGuard(context, OPERATOR_CAPABILITY.INVOKE_SCHEDULER_CONTROL, {
-    packIdParam: 'packId'
-  })
-  const observeGuard = capabilityGuard(context, OPERATOR_CAPABILITY.PERCEIVE_SCHEDULER_OBSERVABILITY, {
-    packIdParam: 'packId'
-  })
-
-  app.get(
-    '/api/experimental/runtime/system/health',
-    (_req, res) => {
-      jsonOk(res, toJsonSafe(buildExperimentalSystemHealthSnapshot(context)))
-    }
-  )
-
-  app.get(
-    '/api/experimental/runtime/packs',
-    deps.asyncHandler(async (_req, res) => {
-      jsonOk(
-        res,
-        toJsonSafe(await buildExperimentalPackRuntimeRegistrySnapshot(context))
-      )
+export const experimentalRuntimeRoutes: RouteModule = {
+  register(app, context) {
+    const packGuard = packAccessGuard(context, { packIdParam: 'packId' })
+    const controlGuard = capabilityGuard(context, OPERATOR_CAPABILITY.INVOKE_SCHEDULER_CONTROL, {
+      packIdParam: 'packId'
     })
-  )
+    const observeGuard = capabilityGuard(context, OPERATOR_CAPABILITY.PERCEIVE_SCHEDULER_OBSERVABILITY, {
+      packIdParam: 'packId'
+    })
 
-  app.post(
-    '/api/experimental/runtime/packs/:packId/load',
-    packGuard,
-    controlGuard,
-    deps.asyncHandler(async (req, res) => {
-      const packId = resolvePackIdParam(req.params.packId)
-
-      try {
-        const result = await loadExperimentalPackRuntime(context, packId)
-        jsonOk(res, toJsonSafe({ acknowledged: true, ...result, pack: result.handle }))
-      } catch (error) {
-        translateExperimentalLoadError(packId, error)
+    app.get(
+      '/api/experimental/runtime/system/health',
+      (_req, res) => {
+        jsonOk(res, toJsonSafe(buildExperimentalSystemHealthSnapshot(context)))
       }
-    })
-  )
+    )
 
-  app.post(
-    '/api/experimental/runtime/packs/:packId/unload',
-    packGuard,
-    controlGuard,
-    deps.asyncHandler(async (req, res) => {
-      const packId = resolvePackIdParam(req.params.packId)
+    app.get(
+      '/api/experimental/runtime/packs',
+      asyncHandler(async (_req, res) => {
+        jsonOk(
+          res,
+          toJsonSafe(await buildExperimentalPackRuntimeRegistrySnapshot(context))
+        )
+      })
+    )
 
-      try {
-        jsonOk(res, toJsonSafe(await unloadExperimentalPackRuntime(context, packId)))
-      } catch (error) {
-        translateExperimentalUnloadError(packId, error)
+    app.post(
+      '/api/experimental/runtime/packs/:packId/load',
+      packGuard,
+      controlGuard,
+      asyncHandler(async (req, res) => {
+        const packId = resolvePackIdParam(req.params.packId)
+
+        try {
+          const result = await loadExperimentalPackRuntime(context, packId)
+          jsonOk(res, toJsonSafe({ acknowledged: true, ...result, pack: result.handle }))
+        } catch (error) {
+          translateExperimentalLoadError(packId, error)
+        }
+      })
+    )
+
+    app.post(
+      '/api/experimental/runtime/packs/:packId/unload',
+      packGuard,
+      controlGuard,
+      asyncHandler(async (req, res) => {
+        const packId = resolvePackIdParam(req.params.packId)
+
+        try {
+          jsonOk(res, toJsonSafe(await unloadExperimentalPackRuntime(context, packId)))
+        } catch (error) {
+          translateExperimentalUnloadError(packId, error)
+        }
+      })
+    )
+
+    app.post(
+      '/api/experimental/runtime/packs/:packId/step',
+      packGuard,
+      controlGuard,
+      (req, res) => {
+        const packId = resolvePackIdParam(req.params.packId)
+        const host = requireExperimentalPackHost(context, packId)
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express request body/param parsing
+        const amountInput = (req.body as Record<string, unknown> | undefined)?.amount
+        const amount = typeof amountInput === 'number' && Number.isFinite(amountInput) && amountInput > 0
+          ? BigInt(Math.trunc(amountInput))
+          : 1n
+
+        const previousTick = host.getClock().getTicks()
+        host.getClock().tick(amount)
+        const currentTick = host.getClock().getTicks()
+
+        jsonOk(res, toJsonSafe({
+          pack_id: packId,
+          previous_tick: previousTick.toString(),
+          current_tick: currentTick.toString(),
+          advanced_by: amount.toString()
+        }))
       }
-    })
-  )
+    )
 
-  app.post(
-    '/api/experimental/runtime/packs/:packId/step',
-    packGuard,
-    controlGuard,
-    (req, res) => {
-      const packId = resolvePackIdParam(req.params.packId)
-      const host = requireExperimentalPackHost(context, packId)
+    app.get(
+      '/api/experimental/runtime/packs/:packId/status',
+      packGuard,
+      observeGuard,
+      asyncHandler(async (req, res) => {
+        const packId = resolvePackIdParam(req.params.packId)
+        const snapshot = await getExperimentalPackRuntimeStatusSnapshot(context, packId)
+        requireExperimentalPackHandle(context, packId)
+        jsonOk(res, toJsonSafe(snapshot))
+      })
+    )
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express request body/param parsing
-      const amountInput = (req.body as Record<string, unknown> | undefined)?.amount
-      const amount = typeof amountInput === 'number' && Number.isFinite(amountInput) && amountInput > 0
-        ? BigInt(Math.trunc(amountInput))
-        : 1n
+    app.get(
+      '/api/experimental/runtime/packs/:packId/clock',
+      packGuard,
+      observeGuard,
+      (req, res) => {
+        const packId = resolvePackIdParam(req.params.packId)
+        const handle = requireExperimentalPackHandle(context, packId)
+        jsonOk(
+          res,
+          toJsonSafe({
+            pack_id: handle.instance_id,
+            clock: handle.getClockSnapshot(),
+            runtime_speed: handle.getRuntimeSpeedSnapshot()
+          })
+        )
+      }
+    )
 
-      const previousTick = host.getClock().getTicks()
-      host.getClock().tick(amount)
-      const currentTick = host.getClock().getTicks()
+    app.get(
+      '/api/experimental/runtime/packs/:packId/scheduler/summary',
+      packGuard,
+      observeGuard,
+      asyncHandler(async (req, res) => {
+        const packId = resolvePackIdParam(req.params.packId)
+        requireExperimentalPackHandle(context, packId)
+        const kernel = createRuntimeKernelService(context, packId)
+        jsonOk(res, toJsonSafe(await kernel.getSummary?.({})))
+      })
+    )
 
-      jsonOk(res, toJsonSafe({
-        pack_id: packId,
-        previous_tick: previousTick.toString(),
-        current_tick: currentTick.toString(),
-        advanced_by: amount.toString()
-      }))
-    }
-  )
+    app.get(
+      '/api/experimental/runtime/packs/:packId/scheduler/ownership',
+      packGuard,
+      observeGuard,
+      asyncHandler(async (req, res) => {
+        const packId = resolvePackIdParam(req.params.packId)
+        requireExperimentalPackHandle(context, packId)
+        const kernel = createRuntimeKernelService(context, packId)
+        jsonOk(res, toJsonSafe(await kernel.getOwnershipAssignments?.({})))
+      })
+    )
 
-  app.get(
-    '/api/experimental/runtime/packs/:packId/status',
-    packGuard,
-    observeGuard,
-    deps.asyncHandler(async (req, res) => {
-      const packId = resolvePackIdParam(req.params.packId)
-      const snapshot = await getExperimentalPackRuntimeStatusSnapshot(context, packId)
-      requireExperimentalPackHandle(context, packId)
-      jsonOk(res, toJsonSafe(snapshot))
-    })
-  )
+    app.get(
+      '/api/experimental/runtime/packs/:packId/scheduler/workers',
+      packGuard,
+      observeGuard,
+      asyncHandler(async (req, res) => {
+        const packId = resolvePackIdParam(req.params.packId)
+        requireExperimentalPackHandle(context, packId)
+        const kernel = createRuntimeKernelService(context, packId)
+        jsonOk(res, toJsonSafe(await kernel.getWorkers?.({})))
+      })
+    )
 
-  app.get(
-    '/api/experimental/runtime/packs/:packId/clock',
-    packGuard,
-    observeGuard,
-    (req, res) => {
-      const packId = resolvePackIdParam(req.params.packId)
-      const handle = requireExperimentalPackHandle(context, packId)
-      jsonOk(
-        res,
-        toJsonSafe({
-          pack_id: handle.instance_id,
-          clock: handle.getClockSnapshot(),
-          runtime_speed: handle.getRuntimeSpeedSnapshot()
-        })
-      )
-    }
-  )
-
-  app.get(
-    '/api/experimental/runtime/packs/:packId/scheduler/summary',
-    packGuard,
-    observeGuard,
-    deps.asyncHandler(async (req, res) => {
-      const packId = resolvePackIdParam(req.params.packId)
-      requireExperimentalPackHandle(context, packId)
-      const kernel = createRuntimeKernelService(context, packId)
-      jsonOk(res, toJsonSafe(await kernel.getSummary?.({})))
-    })
-  )
-
-  app.get(
-    '/api/experimental/runtime/packs/:packId/scheduler/ownership',
-    packGuard,
-    observeGuard,
-    deps.asyncHandler(async (req, res) => {
-      const packId = resolvePackIdParam(req.params.packId)
-      requireExperimentalPackHandle(context, packId)
-      const kernel = createRuntimeKernelService(context, packId)
-      jsonOk(res, toJsonSafe(await kernel.getOwnershipAssignments?.({})))
-    })
-  )
-
-  app.get(
-    '/api/experimental/runtime/packs/:packId/scheduler/workers',
-    packGuard,
-    observeGuard,
-    deps.asyncHandler(async (req, res) => {
-      const packId = resolvePackIdParam(req.params.packId)
-      requireExperimentalPackHandle(context, packId)
-      const kernel = createRuntimeKernelService(context, packId)
-      jsonOk(res, toJsonSafe(await kernel.getWorkers?.({})))
-    })
-  )
-
-  app.get(
-    '/api/experimental/runtime/packs/:packId/scheduler/operator',
-    packGuard,
-    observeGuard,
-    deps.asyncHandler(async (req, res) => {
-      const packId = resolvePackIdParam(req.params.packId)
-      requireExperimentalPackHandle(context, packId)
-      const kernel = createRuntimeKernelService(context, packId)
-      jsonOk(res, toJsonSafe(await kernel.getOperatorProjection?.({})))
-    })
-  )
+    app.get(
+      '/api/experimental/runtime/packs/:packId/scheduler/operator',
+      packGuard,
+      observeGuard,
+      asyncHandler(async (req, res) => {
+        const packId = resolvePackIdParam(req.params.packId)
+        requireExperimentalPackHandle(context, packId)
+        const kernel = createRuntimeKernelService(context, packId)
+        jsonOk(res, toJsonSafe(await kernel.getOperatorProjection?.({})))
+      })
+    )
+  }
 }

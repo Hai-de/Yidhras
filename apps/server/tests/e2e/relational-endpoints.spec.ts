@@ -6,14 +6,10 @@ import {
   assertSuccessEnvelopeArrayData,
   assertSuccessEnvelopeData
 } from '../helpers/envelopes.js';
-import {
-  createIsolatedRuntimeEnvironment,
-  createPrismaClientForEnvironment,
-  prepareIsolatedRuntime
-} from '../helpers/runtime.js';
-import { isRecord, requestJson, withTestServer } from '../helpers/server.js';
+import { isRecord, requestJson } from '../helpers/server.js';
+import { E2ETestKit } from '../testkit_e2e.js';
 
-const ensureRelationalFixtures = async (prisma: ReturnType<typeof createPrismaClientForEnvironment>) => {
+const ensureRelationalFixtures = async (prisma: PrismaClient) => {
   const now = BigInt(Date.now());
   const relationshipId = 'rel-e2e-agent-001-agent-002-friend';
   const traceId = 'relational-endpoints-trace-001';
@@ -166,51 +162,43 @@ const ensureRelationalFixtures = async (prisma: ReturnType<typeof createPrismaCl
 
 describe('relational endpoints e2e', () => {
   it('serves atmosphere and relationship log queries with validation errors', async () => {
-    const environment = await createIsolatedRuntimeEnvironment();
-    const prisma = createPrismaClientForEnvironment(environment);
+    const kit = await E2ETestKit.create({ skipPrepareRuntime: true });
+    await ensureRelationalFixtures(kit.prisma);
 
     try {
-      await prepareIsolatedRuntime(environment);
-      await ensureRelationalFixtures(prisma);
+      await kit.startServer(3107);
 
-      await withTestServer(
-        {
-          defaultPort: 3107,
-          envOverrides: environment.envOverrides,
-          prepareRuntime: false
-        },
-        async server => {
-          const atmosphereResponse = await requestJson(server.baseUrl, '/api/atmosphere/nodes?owner_id=agent-001');
-          expect(atmosphereResponse.status).toBe(200);
-          const atmosphereNodes = assertSuccessEnvelopeArrayData(atmosphereResponse.body, 'atmosphere nodes response');
-          expect(atmosphereNodes.every(item => item.owner_id === 'agent-001')).toBe(true);
+      const atmosphereResponse = await requestJson(kit.baseUrl, '/api/atmosphere/nodes?owner_id=agent-001');
+      expect(atmosphereResponse.status).toBe(200);
+      const atmosphereNodes = assertSuccessEnvelopeArrayData(atmosphereResponse.body, 'atmosphere nodes response');
+      expect(atmosphereNodes.every(item => item.owner_id === 'agent-001')).toBe(true);
 
-          const invalidAtmosphereResponse = await requestJson(
-            server.baseUrl,
-            '/api/atmosphere/nodes?include_expired=maybe'
-          );
-          expect(invalidAtmosphereResponse.status).toBe(400);
-          assertErrorEnvelope(
-            invalidAtmosphereResponse.body,
-            'RELATIONAL_QUERY_INVALID',
-            'invalid atmosphere include_expired'
-          );
+      const invalidAtmosphereResponse = await requestJson(
+        kit.baseUrl,
+        '/api/atmosphere/nodes?include_expired=maybe'
+      );
+      expect(invalidAtmosphereResponse.status).toBe(400);
+      assertErrorEnvelope(
+        invalidAtmosphereResponse.body,
+        'RELATIONAL_QUERY_INVALID',
+        'invalid atmosphere include_expired'
+      );
 
-          const relationshipLogsResponse = await requestJson(
-            server.baseUrl,
-            '/api/relationships/agent-001/agent-002/friend/logs?limit=5'
-          );
-          expect(relationshipLogsResponse.status).toBe(200);
-          const relationshipLogs = assertSuccessEnvelopeArrayData(
-            relationshipLogsResponse.body,
-            'relationship logs response'
-          );
-          expect(relationshipLogs.every(item => isRecord(item))).toBe(true);
+      const relationshipLogsResponse = await requestJson(
+        kit.baseUrl,
+        '/api/relationships/agent-001/agent-002/friend/logs?limit=5'
+      );
+      expect(relationshipLogsResponse.status).toBe(200);
+      const relationshipLogs = assertSuccessEnvelopeArrayData(
+        relationshipLogsResponse.body,
+        'relationship logs response'
+      );
+      expect(relationshipLogs.every(item => isRecord(item))).toBe(true);
 
-          const invalidRelationshipLimitResponse = await requestJson(
-            server.baseUrl,
-            '/api/relationships/agent-001/agent-002/friend/logs?limit=abc'
-          );
+      const invalidRelationshipLimitResponse = await requestJson(
+        kit.baseUrl,
+        '/api/relationships/agent-001/agent-002/friend/logs?limit=abc'
+      );
           expect(invalidRelationshipLimitResponse.status).toBe(400);
           assertErrorEnvelope(
             invalidRelationshipLimitResponse.body,
@@ -219,7 +207,7 @@ describe('relational endpoints e2e', () => {
           );
 
           const blankRelationshipParamResponse = await requestJson(
-            server.baseUrl,
+            kit.baseUrl,
             '/api/relationships/%20%20/agent-002/friend/logs'
           );
           expect(blankRelationshipParamResponse.status).toBe(400);
@@ -229,7 +217,7 @@ describe('relational endpoints e2e', () => {
             'blank relationship params'
           );
 
-          const relationalGraphResponse = await requestJson(server.baseUrl, '/api/relational/graph');
+          const relationalGraphResponse = await requestJson(kit.baseUrl, '/api/relational/graph');
           expect(relationalGraphResponse.status).toBe(200);
           const relationalGraph = assertSuccessEnvelopeData(
             relationalGraphResponse.body,
@@ -238,14 +226,11 @@ describe('relational endpoints e2e', () => {
           expect(Array.isArray(relationalGraph.nodes)).toBe(true);
           expect(Array.isArray(relationalGraph.edges)).toBe(true);
 
-          const relationalCirclesResponse = await requestJson(server.baseUrl, '/api/relational/circles');
+          const relationalCirclesResponse = await requestJson(kit.baseUrl, '/api/relational/circles');
           expect(relationalCirclesResponse.status).toBe(200);
           assertSuccessEnvelopeArrayData(relationalCirclesResponse.body, 'relational circles response');
-        }
-      );
     } finally {
-      await prisma.$disconnect();
-      await environment.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 });

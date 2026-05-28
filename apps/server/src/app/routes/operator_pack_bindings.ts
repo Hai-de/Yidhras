@@ -2,12 +2,11 @@ import {
   createPackBindingRequestSchema,
   updatePackBindingRequestSchema
 } from '@yidhras/contracts'
-import type { Express } from 'express'
 
 import type { OperatorRequest } from '../../operator/auth/types.js'
 import { OPERATOR_ERROR_CODE } from '../../operator/constants.js'
 import { ApiError } from '../../utils/api_error.js'
-import type { AppContext } from '../context.js'
+import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseBody } from '../http/zod.js'
 import {
@@ -16,23 +15,15 @@ import {
   listPackBindings,
   removePackBinding,
   updatePackBinding} from '../services/operator/operator_pack_bindings.js'
+import type { RouteModule } from './types.js'
 
-export interface PackBindingRouteDependencies {
-  asyncHandler(
-    handler: (req: OperatorRequest, res: import('express').Response, next: import('express').NextFunction) => Promise<void>
-  ): (req: OperatorRequest, res: import('express').Response, next: import('express').NextFunction) => void
-}
-
-export const registerPackBindingRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: PackBindingRouteDependencies
-): void => {
+export const packBindingRoutes: RouteModule = {
+  register(app, context) {
   // POST /api/packs/:packId/bindings — 邀请加入
   app.post(
     '/api/packs/:packId/bindings',
-    deps.asyncHandler(async (req, res) => {
-      const operator = (req).operator
+    asyncHandler(async (req, res) => {
+      const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -56,8 +47,8 @@ export const registerPackBindingRoutes = (
   // GET /api/packs/:packId/bindings — 成员列表
   app.get(
     '/api/packs/:packId/bindings',
-    deps.asyncHandler(async (req, res) => {
-      const operator = (req).operator
+    asyncHandler(async (req, res) => {
+      const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -71,8 +62,8 @@ export const registerPackBindingRoutes = (
   // PATCH /api/packs/:packId/bindings/:operatorId — 修改角色
   app.patch(
     '/api/packs/:packId/bindings/:operatorId',
-    deps.asyncHandler(async (req, res) => {
-      const operator = (req).operator
+    asyncHandler(async (req, res) => {
+      const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -97,8 +88,8 @@ export const registerPackBindingRoutes = (
   // DELETE /api/packs/:packId/bindings/:operatorId — 移除成员
   app.delete(
     '/api/packs/:packId/bindings/:operatorId',
-    deps.asyncHandler(async (req, res) => {
-      const operator = (req).operator
+    asyncHandler(async (req, res) => {
+      const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -120,8 +111,8 @@ export const registerPackBindingRoutes = (
   // GET /api/me/bindings — 当前 Operator 的 Pack 列表
   app.get(
     '/api/me/bindings',
-    deps.asyncHandler(async (req, res) => {
-      const operator = (req).operator
+    asyncHandler(async (req, res) => {
+      const operator = (req as OperatorRequest).operator
       if (!operator) {
         throw new ApiError(401, OPERATOR_ERROR_CODE.OPERATOR_REQUIRED, 'Authentication required')
       }
@@ -130,4 +121,5 @@ export const registerPackBindingRoutes = (
       jsonOk(res, toJsonSafe(bindings))
     })
   )
+  },
 }

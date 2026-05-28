@@ -13,7 +13,7 @@ export default defineNuxtPlugin(() => {
   let lastPackId: string | null = null
 
   const applyCurrentTheme = () => {
-    const packId = (route.params.packId as string | undefined) ?? worldPack.value?.instance_id ?? null
+    const packId = (route.params.packId as string | undefined) ?? worldPack.value?.id ?? null
 
     const { theme, issues, source } = resolveThemeWithDiagnostics(undefined, {
       worldPackId: packId,
@@ -39,7 +39,7 @@ export default defineNuxtPlugin(() => {
   applyCurrentTheme()
 
   watch(
-    () => route.params.packId ?? worldPack.value?.instance_id,
+    () => route.params.packId ?? worldPack.value?.id,
     () => {
       if (lastPackId && lastPackId !== (route.params.packId as string | undefined)) {
         resetToBaseline()

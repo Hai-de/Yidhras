@@ -1,5 +1,10 @@
 import 'dotenv/config'
 
+import fs from 'fs'
+import path from 'path'
+import * as YAML from 'yaml'
+
+import { resolveWorkspaceRoot } from '../config/loader.js'
 import { hashPassword } from '../operator/auth/password.js'
 import {
   DEFAULT_BCRYPT_ROUNDS,
@@ -13,9 +18,41 @@ const logger = createLogger('seed-operator')
 
 const prisma = createPrismaClient()
 
+function discoverPackIds(packsDir: string): string[] {
+  if (!fs.existsSync(packsDir)) return []
+
+  const packIds: string[] = []
+
+  for (const entry of fs.readdirSync(packsDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+
+    for (const configFile of ['pack.yaml', 'pack.yml']) {
+      const filePath = path.join(packsDir, entry.name, configFile)
+      if (!fs.existsSync(filePath)) continue
+
+      try {
+        const content = fs.readFileSync(filePath, 'utf-8')
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary: YAML parse return
+        const parsed = YAML.parse(content) as Record<string, unknown>
+        const metadata = parsed.metadata
+        if (metadata && typeof metadata === 'object' && 'id' in metadata) {
+          const id = metadata.id
+          if (typeof id === 'string') {
+            packIds.push(id)
+          }
+        }
+      } catch {
+        logger.warn(`Failed to parse ${filePath}, skipping`)
+      }
+      break
+    }
+  }
+
+  return packIds
+}
+
 async function main() {
   const rootPassword = process.env.ROOT_PASSWORD || 'changeme-root-password'
-  const defaultPackId = process.env.WORLD_PACK || 'example_pack'
   const now = BigInt(Date.now())
 
   // 1. 创建 root Identity
@@ -60,31 +97,39 @@ async function main() {
 
   logger.info(`Operator created: ${operator.id} (${operator.username})`)
 
-  // 3. 为默认 pack 创建 root 的 OperatorPackBinding
-  const existingBinding = await prisma.operatorPackBinding.findUnique({
-    where: {
-      operator_id_pack_id: {
-        operator_id: operator.id,
-        pack_id: defaultPackId
-      }
-    }
-  })
+  // 3. 为所有已发现的 pack 创建 root 的 OperatorPackBinding
+  const workspaceRoot = resolveWorkspaceRoot()
+  const packsDir = path.join(workspaceRoot, 'data', 'world_packs')
+  const discoveredPackIds = discoverPackIds(packsDir)
 
-  if (!existingBinding) {
-    await prisma.operatorPackBinding.create({
-      data: {
-        operator_id: operator.id,
-        pack_id: defaultPackId,
-        binding_type: PACK_BINDING_TYPE.OWNER,
-        bound_at: now,
-        bound_by: null,
-        created_at: now
+  logger.info(`Discovered pack IDs: ${discoveredPackIds.join(', ') || '(none)'}`)
+
+  for (const packId of discoveredPackIds) {
+    const existingBinding = await prisma.operatorPackBinding.findUnique({
+      where: {
+        operator_id_pack_id: {
+          operator_id: operator.id,
+          pack_id: packId
+        }
       }
     })
 
-    logger.info(`PackBinding created: ${operator.id} -> ${defaultPackId} (owner)`)
-  } else {
-    logger.info(`PackBinding already exists: ${operator.id} -> ${defaultPackId}`)
+    if (!existingBinding) {
+      await prisma.operatorPackBinding.create({
+        data: {
+          operator_id: operator.id,
+          pack_id: packId,
+          binding_type: PACK_BINDING_TYPE.OWNER,
+          bound_at: now,
+          bound_by: null,
+          created_at: now
+        }
+      })
+
+      logger.info(`PackBinding created: ${operator.id} -> ${packId} (owner)`)
+    } else {
+      logger.info(`PackBinding already exists: ${operator.id} -> ${packId}`)
+    }
   }
 
   // 4. 为示例 Agent 创建 root 的 IdentityNodeBinding（仅当 Agent 已存在时）

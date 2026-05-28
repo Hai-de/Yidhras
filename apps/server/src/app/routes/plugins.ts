@@ -6,12 +6,11 @@ import {
   pluginOperationAcknowledgementSchema,
   pluginPackParamsSchema
 } from '@yidhras/contracts'
-import type { Express, NextFunction, Request, Response } from 'express'
 
 import { OPERATOR_CAPABILITY } from '../../operator/constants.js'
 import { packAccessGuard } from '../../operator/guard/pack_access.js'
 import { ApiError } from '../../utils/api_error.js'
-import type { AppContext } from '../context.js'
+import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseBody, parseParams } from '../http/zod.js'
 import { capabilityGuard } from '../middleware/capability.js'
@@ -21,23 +20,15 @@ import {
   enablePackPlugin,
   listPackPluginInstallations
 } from '../services/plugin/plugins.js'
+import type { RouteModule } from './types.js'
 
-export interface PluginRouteDependencies {
-  asyncHandler(
-    handler: (req: Request, res: Response, next: NextFunction) => Promise<void>
-  ): (req: Request, res: Response, next: NextFunction) => void
-}
-
-export const registerPluginRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: PluginRouteDependencies
-): void => {
+export const pluginRoutes: RouteModule = {
+  register(app, context) {
   // GET list — read-only, packAccessGuard only
   app.get(
     '/api/packs/:packId/plugins',
     packAccessGuard(context, { packIdParam: 'packId' }),
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       const params = parseParams(pluginPackParamsSchema, req.params, 'PLUGIN_QUERY_INVALID')
       const snapshot = await listPackPluginInstallations(context, params.packId)
       pluginListResponseDataSchema.parse(toJsonSafe(snapshot))
@@ -55,7 +46,7 @@ export const registerPluginRoutes = (
     '/api/packs/:packId/plugins/:installationId/confirm',
     packAccessGuard(context, { packIdParam: 'packId' }),
     pluginMutateGuard,
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       const packParams = parseParams(pluginPackParamsSchema, { packId: req.params.packId }, 'PLUGIN_INSTALLATION_INVALID')
       const installationParams = parseParams(pluginInstallationParamsSchema, { installationId: req.params.installationId }, 'PLUGIN_INSTALLATION_INVALID')
       const body = parseBody(pluginImportConfirmRequestSchema, req.body, 'PLUGIN_INSTALLATION_INVALID')
@@ -70,7 +61,7 @@ export const registerPluginRoutes = (
     '/api/packs/:packId/plugins/:installationId/enable',
     packAccessGuard(context, { packIdParam: 'packId' }),
     pluginMutateGuard,
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       const packParams = parseParams(pluginPackParamsSchema, { packId: req.params.packId }, 'PLUGIN_INSTALLATION_INVALID')
       const installationParams = parseParams(pluginInstallationParamsSchema, { installationId: req.params.installationId }, 'PLUGIN_INSTALLATION_INVALID')
       const body = parseBody(pluginEnableRequestSchema, req.body, 'PLUGIN_INSTALLATION_INVALID')
@@ -85,7 +76,7 @@ export const registerPluginRoutes = (
     '/api/packs/:packId/plugins/:installationId/disable',
     packAccessGuard(context, { packIdParam: 'packId' }),
     pluginMutateGuard,
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       const packParams = parseParams(pluginPackParamsSchema, { packId: req.params.packId }, 'PLUGIN_INSTALLATION_INVALID')
       const installationParams = parseParams(pluginInstallationParamsSchema, { installationId: req.params.installationId }, 'PLUGIN_INSTALLATION_INVALID')
 
@@ -99,7 +90,7 @@ export const registerPluginRoutes = (
     '/api/packs/:packId/plugins/reload',
     packAccessGuard(context, { packIdParam: 'packId' }),
     pluginMutateGuard,
-    deps.asyncHandler(async (req, res) => {
+    asyncHandler(async (req, res) => {
       const packParams = parseParams(pluginPackParamsSchema, { packId: req.params.packId }, 'PLUGIN_RELOAD_INVALID')
 
       if (!context.pluginRuntimeControl) {
@@ -110,4 +101,5 @@ export const registerPluginRoutes = (
       jsonOk(res, toJsonSafe({ reloaded: true, ...result }))
     })
   )
+  }
 }

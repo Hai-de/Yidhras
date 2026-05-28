@@ -3,17 +3,17 @@ import { describe, expect, it } from 'vitest';
 import { confirmPackPluginImport, disablePackPlugin, enablePackPlugin } from '../../src/app/services/plugin/plugins.js';
 import { pluginRuntimeRegistry,refreshPackPluginRuntime } from '../../src/plugins/runtime.js';
 import { createPluginStore } from '../../src/plugins/store.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
 import { expectDefined } from '../helpers/assertions.js';
+import { TestKit } from '../testkit.js';
 
 const REMINDER_HASH = '03ee763729f5fe81f03478a3b0f487ff6c8dfc779f7e9b8d88a6d016dc17edfb';
 
 describe('plugin runtime refresh integration', () => {
   it('refreshes plugin runtime registry after confirm -> enable -> disable', async () => {
-    const fixture = await createIsolatedAppContextFixture();
+    const kit = await TestKit.create();
 
     try {
-      const store = createPluginStore({ prisma: fixture.prisma });
+      const store = createPluginStore({ prisma: kit.prisma });
       await store.upsertArtifact({
         artifact_id: 'artifact-runtime-alpha',
         plugin_id: 'plugin.runtime.alpha',
@@ -73,19 +73,19 @@ describe('plugin runtime refresh integration', () => {
         trust_mode: 'trusted'
       });
 
-      expectDefined(fixture.context.packRuntime, 'pack runtime').getPack = () => ({
+      expectDefined(kit.context.packRuntime, 'pack runtime').getPack = () => ({
         metadata: { id: 'world-pack-runtime', name: 'Runtime Pack', version: '0.1.0' }
       }) as never;
-      fixture.context.getPluginEnableWarningConfig = () => ({
+      kit.context.getPluginEnableWarningConfig = () => ({
         enabled: true,
         require_acknowledgement: true
       });
 
-      await refreshPackPluginRuntime(fixture.context, 'world-pack-runtime');
+      await refreshPackPluginRuntime(kit.context, 'world-pack-runtime');
       expect(pluginRuntimeRegistry.listRuntimes('world-pack-runtime')).toHaveLength(0);
 
-      await confirmPackPluginImport(fixture.context, 'installation-runtime-alpha', ['server.api_route.register', 'web.panel.register']);
-      await enablePackPlugin(fixture.context, 'installation-runtime-alpha', {
+      await confirmPackPluginImport(kit.context, 'installation-runtime-alpha', ['server.api_route.register', 'web.panel.register']);
+      await enablePackPlugin(kit.context, 'installation-runtime-alpha', {
         reminder_text_hash: REMINDER_HASH,
         actor_label: 'integration'
       });
@@ -96,10 +96,10 @@ describe('plugin runtime refresh integration', () => {
       expect(enabledRuntimes[0]?.pack_routes).toHaveLength(0);
       expect(enabledRuntimes[0]?.worker_client).toBeUndefined();
 
-      await disablePackPlugin(fixture.context, 'installation-runtime-alpha');
+      await disablePackPlugin(kit.context, 'installation-runtime-alpha');
       expect(pluginRuntimeRegistry.listRuntimes('world-pack-runtime')).toHaveLength(0);
     } finally {
-      await fixture.cleanup();
+      await kit[Symbol.asyncDispose]();
     }
   });
 });

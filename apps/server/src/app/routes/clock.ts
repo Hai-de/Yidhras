@@ -2,10 +2,8 @@ import {
   clockControlRequestSchema,
   runtimeSpeedOverrideRequestSchema
 } from '@yidhras/contracts';
-import type { Express } from 'express';
 
 import { ApiError } from '../../utils/api_error.js';
-import type { AppContext } from '../context.js';
 import { jsonOk } from '../http/json.js';
 import { parseBody } from '../http/zod.js';
 import { requireAuth } from '../middleware/require_auth.js';
@@ -16,17 +14,14 @@ import {
   resumeRuntime,
   setPackStepStrategy
 } from '../services/runtime/runtime_control.js';
+import type { RouteModule } from './types.js';
 
-export interface ClockRouteDependencies {
+export function createClockRoutes(deps: {
   toJsonSafe(value: unknown): unknown;
   getErrorMessage(err: unknown): string;
-}
-
-export const registerClockRoutes = (
-  app: Express,
-  context: AppContext,
-  deps: ClockRouteDependencies
-): void => {
+}): RouteModule {
+  return {
+    register(app, context) {
   const readProjectedClock = () => {
     const snapshot = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId: undefined });
     return {
@@ -121,4 +116,6 @@ export const registerClockRoutes = (
       allowed_actions: ['pause', 'resume']
     });
   });
-};
+    }
+  };
+}

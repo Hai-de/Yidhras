@@ -67,6 +67,11 @@ export const packAccessGuard = (
         )
       }
 
+      if (req.operator.is_root) {
+        next()
+        return
+      }
+
       const access = await checkPackAccess(context, req.operator.id, packId)
 
       if (!access.allowed) {

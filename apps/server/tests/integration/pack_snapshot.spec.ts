@@ -13,7 +13,6 @@ vi.mock('../support/config.js', () => ({
   DEFAULT_E2E_WORLD_PACK: 'snapshot-integration-pack'
 }));
 
-import type { AppContext } from '../../src/app/context.js';
 import { capturePackSnapshot } from '../../src/packs/snapshots/snapshot_capture.js';
 import {
   deleteSnapshotDir,
@@ -22,7 +21,7 @@ import {
   resolveSnapshotLocation,
   snapshotFilesExist
 } from '../../src/packs/snapshots/snapshot_locator.js';
-import { createIsolatedAppContextFixture } from '../fixtures/isolated-db.js';
+import { TestKit } from '../testkit.js';
 
 const TEST_PACK_ID = 'snapshot-integration-pack';
 
@@ -102,8 +101,7 @@ let runtimeDbPath: string;
 let storagePlanPath: string;
 let originalWorkspaceRoot: string | undefined;
 
-let cleanupFixture: (() => Promise<void>) | null = null;
-let context: AppContext;
+let kit: TestKit;
 
 describe('pack snapshot integration', () => {
   beforeAll(async () => {
@@ -116,45 +114,42 @@ describe('pack snapshot integration', () => {
     createMinimalRuntimeDb(runtimeDbPath);
     fs.writeFileSync(storagePlanPath, JSON.stringify({ strategy: 'sqlite', engine_owned_collections: [] }));
 
-    // Ensure config loading uses the temp workspace root (no backup.yaml in conf.d)
+    // Create TestKit first so its env snapshot captures the current WORKSPACE_ROOT.
+    kit = await TestKit.create();
+
+    // Now override WORKSPACE_ROOT to point to the custom workspace for snapshot tests.
+    // TestKit will restore the pre-snapshot WORKSPACE_ROOT on disposal.
     originalWorkspaceRoot = process.env.WORKSPACE_ROOT;
     process.env.WORKSPACE_ROOT = testRoot;
     process.env.APP_ENV = 'test';
 
-    // Reset cached config since we changed WORKSPACE_ROOT
     const { resetRuntimeConfigCache } = await import('../../src/config/runtime_config.js');
     resetRuntimeConfigCache();
-
-    const fixture = await createIsolatedAppContextFixture();
-    cleanupFixture = fixture.cleanup;
-    context = fixture.context;
   });
 
   afterAll(async () => {
-    if (cleanupFixture) {
-      await cleanupFixture();
-    }
-    if (testRoot && fs.existsSync(testRoot)) {
-      fs.rmSync(testRoot, { recursive: true, force: true });
-    }
     if (originalWorkspaceRoot !== undefined) {
       process.env.WORKSPACE_ROOT = originalWorkspaceRoot;
     } else {
       delete process.env.WORKSPACE_ROOT;
     }
+    await kit[Symbol.asyncDispose]();
+    if (testRoot && fs.existsSync(testRoot)) {
+      fs.rmSync(testRoot, { recursive: true, force: true });
+    }
   });
 
   beforeEach(async () => {
     // Clean up Prisma pack-scoped records from previous tests
-    await context.prisma.identityNodeBinding.deleteMany({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
-    await context.prisma.identity.deleteMany({ where: { id: { startsWith: `${TEST_PACK_ID}:identity:` } } });
-    await context.prisma.post.deleteMany({ where: { author_id: { startsWith: `${TEST_PACK_ID}:` } } });
-    await context.prisma.relationship.deleteMany({ where: { from_id: { startsWith: `${TEST_PACK_ID}:` } } });
-    await context.prisma.agent.deleteMany({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
-    await context.prisma.memoryBlock.deleteMany({ where: { pack_id: TEST_PACK_ID } });
-    await context.prisma.contextOverlayEntry.deleteMany({ where: { pack_id: TEST_PACK_ID } });
-    await context.prisma.memoryCompactionState.deleteMany({ where: { pack_id: TEST_PACK_ID } });
-    await context.prisma.scenarioEntityState.deleteMany({ where: { pack_id: TEST_PACK_ID } });
+    await kit.prisma.identityNodeBinding.deleteMany({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
+    await kit.prisma.identity.deleteMany({ where: { id: { startsWith: `${TEST_PACK_ID}:identity:` } } });
+    await kit.prisma.post.deleteMany({ where: { author_id: { startsWith: `${TEST_PACK_ID}:` } } });
+    await kit.prisma.relationship.deleteMany({ where: { from_id: { startsWith: `${TEST_PACK_ID}:` } } });
+    await kit.prisma.agent.deleteMany({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
+    await kit.prisma.memoryBlock.deleteMany({ where: { pack_id: TEST_PACK_ID } });
+    await kit.prisma.contextOverlayEntry.deleteMany({ where: { pack_id: TEST_PACK_ID } });
+    await kit.prisma.memoryCompactionState.deleteMany({ where: { pack_id: TEST_PACK_ID } });
+    await kit.prisma.scenarioEntityState.deleteMany({ where: { pack_id: TEST_PACK_ID } });
 
     // Clean up snapshot directories from temp pack root
     const snapshotsDir = path.join(packRoot, SNAPSHOTS_DIRNAME);
@@ -177,32 +172,32 @@ describe('pack snapshot integration', () => {
   const seedPackPrismaData = async () => {
     const now = BigInt(Date.now());
 
-    await context.prisma.agent.createMany({
+    await kit.prisma.agent.createMany({
       data: [
         { id: `${TEST_PACK_ID}:actor-1`, name: 'Hero', type: 'active', snr: 0.8, is_pinned: false, created_at: now, updated_at: now },
         { id: `${TEST_PACK_ID}:actor-2`, name: 'Villain', type: 'active', snr: 0.3, is_pinned: false, created_at: now, updated_at: now }
       ]
     });
 
-    await context.prisma.identity.createMany({
+    await kit.prisma.identity.createMany({
       data: [
         { id: `${TEST_PACK_ID}:identity:actor-1`, type: 'agent', name: 'Hero', provider: 'pack', status: 'active', created_at: now, updated_at: now },
         { id: `${TEST_PACK_ID}:identity:actor-2`, type: 'agent', name: 'Villain', provider: 'pack', status: 'active', created_at: now, updated_at: now }
       ]
     });
 
-    await context.prisma.identityNodeBinding.createMany({
+    await kit.prisma.identityNodeBinding.createMany({
       data: [
         { id: `${TEST_PACK_ID}:binding:actor-1`, identity_id: `${TEST_PACK_ID}:identity:actor-1`, agent_id: `${TEST_PACK_ID}:actor-1`, role: 'active', status: 'active', created_at: now, updated_at: now },
         { id: `${TEST_PACK_ID}:binding:actor-2`, identity_id: `${TEST_PACK_ID}:identity:actor-2`, agent_id: `${TEST_PACK_ID}:actor-2`, role: 'active', status: 'active', created_at: now, updated_at: now }
       ]
     });
 
-    await context.prisma.post.create({
+    await kit.prisma.post.create({
       data: { id: 'post-1', author_id: `${TEST_PACK_ID}:actor-1`, content: 'Hello world', noise_level: 0.1, is_encrypted: false, created_at: now }
     });
 
-    await context.prisma.relationship.create({
+    await kit.prisma.relationship.create({
       data: { id: 'rel-1', from_id: `${TEST_PACK_ID}:actor-1`, to_id: `${TEST_PACK_ID}:actor-2`, type: 'rival', weight: 1.0, created_at: now, updated_at: now }
     });
   };
@@ -213,9 +208,9 @@ describe('pack snapshot integration', () => {
 
       const result = await capturePackSnapshot({
         packId: TEST_PACK_ID,
-        prisma: context.prisma,
-        packStorageAdapter: context.packStorageAdapter,
-        packRuntime: context.packRuntime,
+        prisma: kit.prisma,
+        packStorageAdapter: kit.context.packStorageAdapter,
+        packRuntime: kit.context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
@@ -233,9 +228,9 @@ describe('pack snapshot integration', () => {
 
       const result = await capturePackSnapshot({
         packId: TEST_PACK_ID,
-        prisma: context.prisma,
-        packStorageAdapter: context.packStorageAdapter,
-        packRuntime: context.packRuntime,
+        prisma: kit.prisma,
+        packStorageAdapter: kit.context.packStorageAdapter,
+        packRuntime: kit.context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
@@ -257,9 +252,9 @@ describe('pack snapshot integration', () => {
       const result = await capturePackSnapshot({
         packId: TEST_PACK_ID,
         label: 'test-snapshot',
-        prisma: context.prisma,
-        packStorageAdapter: context.packStorageAdapter,
-        packRuntime: context.packRuntime,
+        prisma: kit.prisma,
+        packStorageAdapter: kit.context.packStorageAdapter,
+        packRuntime: kit.context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
@@ -281,17 +276,17 @@ describe('pack snapshot integration', () => {
       // Create multiple snapshots
       await capturePackSnapshot({
         packId: TEST_PACK_ID,
-        prisma: context.prisma,
-        packStorageAdapter: context.packStorageAdapter,
-        packRuntime: context.packRuntime,
+        prisma: kit.prisma,
+        packStorageAdapter: kit.context.packStorageAdapter,
+        packRuntime: kit.context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
       await capturePackSnapshot({
         packId: TEST_PACK_ID,
-        prisma: context.prisma,
-        packStorageAdapter: context.packStorageAdapter,
-        packRuntime: context.packRuntime,
+        prisma: kit.prisma,
+        packStorageAdapter: kit.context.packStorageAdapter,
+        packRuntime: kit.context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
@@ -309,9 +304,9 @@ describe('pack snapshot integration', () => {
 
       const result = await capturePackSnapshot({
         packId: TEST_PACK_ID,
-        prisma: context.prisma,
-        packStorageAdapter: context.packStorageAdapter,
-        packRuntime: context.packRuntime,
+        prisma: kit.prisma,
+        packStorageAdapter: kit.context.packStorageAdapter,
+        packRuntime: kit.context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
@@ -329,25 +324,25 @@ describe('pack snapshot integration', () => {
       await seedPackPrismaData();
       const result = await capturePackSnapshot({
         packId: TEST_PACK_ID,
-        prisma: context.prisma,
-        packStorageAdapter: context.packStorageAdapter,
-        packRuntime: context.packRuntime,
+        prisma: kit.prisma,
+        packStorageAdapter: kit.context.packStorageAdapter,
+        packRuntime: kit.context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });
 
       // Verify seed data exists
-      let agentCount = await context.prisma.agent.count({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
+      let agentCount = await kit.prisma.agent.count({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
       expect(agentCount).toBe(2);
 
       // Delete all pack-scoped data to simulate "time passed"
-      await context.prisma.identityNodeBinding.deleteMany({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
-      await context.prisma.identity.deleteMany({ where: { id: { startsWith: `${TEST_PACK_ID}:identity:` } } });
-      await context.prisma.post.deleteMany({ where: { author_id: { startsWith: `${TEST_PACK_ID}:` } } });
-      await context.prisma.relationship.deleteMany({ where: { from_id: { startsWith: `${TEST_PACK_ID}:` } } });
-      await context.prisma.agent.deleteMany({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
+      await kit.prisma.identityNodeBinding.deleteMany({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
+      await kit.prisma.identity.deleteMany({ where: { id: { startsWith: `${TEST_PACK_ID}:identity:` } } });
+      await kit.prisma.post.deleteMany({ where: { author_id: { startsWith: `${TEST_PACK_ID}:` } } });
+      await kit.prisma.relationship.deleteMany({ where: { from_id: { startsWith: `${TEST_PACK_ID}:` } } });
+      await kit.prisma.agent.deleteMany({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
 
-      agentCount = await context.prisma.agent.count({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
+      agentCount = await kit.prisma.agent.count({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
       expect(agentCount).toBe(0);
 
       // Restore using the prisma.json from the snapshot
@@ -366,27 +361,27 @@ describe('pack snapshot integration', () => {
       await restorePackSnapshot({
         packId: TEST_PACK_ID,
         snapshotId: result.metadata.snapshot_id,
-        prisma: context.prisma,
-        packStorageAdapter: context.packStorageAdapter,
+        prisma: kit.prisma,
+        packStorageAdapter: kit.context.packStorageAdapter,
         pack: packMock,
-        notifications: context.notifications,
+        notifications: kit.context.notifications,
         applyClockProjection: () => {}
       });
 
       // Verify data is restored
-      agentCount = await context.prisma.agent.count({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
+      agentCount = await kit.prisma.agent.count({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
       expect(agentCount).toBe(2);
 
-      const identityCount = await context.prisma.identity.count({ where: { id: { startsWith: `${TEST_PACK_ID}:identity:` } } });
+      const identityCount = await kit.prisma.identity.count({ where: { id: { startsWith: `${TEST_PACK_ID}:identity:` } } });
       expect(identityCount).toBe(2);
 
-      const bindingCount = await context.prisma.identityNodeBinding.count({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
+      const bindingCount = await kit.prisma.identityNodeBinding.count({ where: { id: { startsWith: `${TEST_PACK_ID}:` } } });
       expect(bindingCount).toBe(2);
 
-      const postCount = await context.prisma.post.count({ where: { author_id: { startsWith: `${TEST_PACK_ID}:` } } });
+      const postCount = await kit.prisma.post.count({ where: { author_id: { startsWith: `${TEST_PACK_ID}:` } } });
       expect(postCount).toBe(1);
 
-      const relCount = await context.prisma.relationship.count({ where: { from_id: { startsWith: `${TEST_PACK_ID}:` } } });
+      const relCount = await kit.prisma.relationship.count({ where: { from_id: { startsWith: `${TEST_PACK_ID}:` } } });
       expect(relCount).toBe(1);
     });
   });
@@ -396,9 +391,9 @@ describe('pack snapshot integration', () => {
       await seedPackPrismaData();
       const result = await capturePackSnapshot({
         packId: TEST_PACK_ID,
-        prisma: context.prisma,
-        packStorageAdapter: context.packStorageAdapter,
-        packRuntime: context.packRuntime,
+        prisma: kit.prisma,
+        packStorageAdapter: kit.context.packStorageAdapter,
+        packRuntime: kit.context.packRuntime,
         getExperimentalTick: () => null,
         getExperimentalRevision: () => null
       });

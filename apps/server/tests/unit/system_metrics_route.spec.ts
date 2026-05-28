@@ -2,7 +2,7 @@ import express from 'express';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
-import { registerSystemRoutes } from '../../src/app/routes/system.js';
+import { systemRoutes } from '../../src/app/routes/system.js';
 import { initMetrics } from '../../src/observability/metrics.js';
 
 const servers: Array<{ close: () => void }> = [];
@@ -18,7 +18,7 @@ describe('main API metrics route', () => {
     initMetrics();
 
     const app = express();
-    registerSystemRoutes(app, {} as AppContext);
+    systemRoutes.register(app, {} as AppContext);
 
     const server = app.listen(0);
     servers.push(server);
