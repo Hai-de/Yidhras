@@ -1,6 +1,6 @@
 import { resolveAuthorityForSubject, resolveMediatorBindingsForPack } from '../../../domain/authority/resolver.js';
 import { resolvePerceptionForSubject } from '../../../domain/perception/resolver.js';
-import { buildInferenceContext } from '../../../inference/context_builder.js';
+import { buildInferenceContext } from '../../../inference/context/builder.js';
 import type { ActorResolvable, InferenceContext } from '../../../inference/types.js';
 import type { AppContext } from '../../context.js';
 

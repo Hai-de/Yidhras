@@ -1,5 +1,6 @@
 import type { AppInfrastructure } from '../../app/context.js';
 import type { ActorResolvable, DecisionResult, InferenceContext, PackStateResolvable } from '../../inference/types.js';
+import { isRecord } from '../../utils/type_guards.js';
 import { resolveAuthorityForSubject } from '../authority/resolver.js';
 
 export type IntentGroundingResolutionMode = 'exact' | 'translated' | 'narrativized' | 'blocked';
@@ -32,10 +33,6 @@ interface InvocationRuleRecord {
   when: Record<string, unknown>;
   then: Record<string, unknown>;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const toNullableString = (value: unknown): string | null => {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;

@@ -1,4 +1,5 @@
 import { ApiError } from '../../../utils/api_error.js';
+import { isRecord } from '../../../utils/type_guards.js';
 import type { AppContext } from '../../context.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
@@ -40,10 +41,6 @@ export interface ActionIntentDispatchReflection {
   semantic_intent_kind: string | null;
   event_summaries: Array<{ id: string; type: string; title: string }>;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 export const DEFAULT_ACTION_INTENT_LOCK_TICKS = 5n;
 

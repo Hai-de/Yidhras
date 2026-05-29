@@ -2,6 +2,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import { safeFs } from '../../../utils/safe_fs.js';
+import { isRecord } from '../../../utils/type_guards.js';
 import type {
   PackRuntimeAuthorityGrantRecord,
   PackRuntimeEntityStateRecord,
@@ -21,10 +22,6 @@ export interface SqliteEngineOwnedTableSpec<RecordT> {
   encode(record: RecordT): Record<string, SqlitePrimitive>;
   decode(row: SqliteRow): RecordT;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const parseJsonString = (value: string): unknown => {
   try {

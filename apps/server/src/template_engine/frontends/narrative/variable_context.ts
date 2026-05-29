@@ -1,3 +1,4 @@
+import { isRecord } from '../../../utils/type_guards.js';
 import type {
   PromptMacroDiagnostics,
   PromptVariableContext,
@@ -10,10 +11,6 @@ import type {
   PromptVariableValue,
   PromptVariableValueType
 } from './types.js';
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const serializeUnknown = (value: unknown): string => {
   if (typeof value === 'object' && value !== null) return JSON.stringify(value);

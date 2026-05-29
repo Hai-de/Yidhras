@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveConfigValues } from '../../../src/inference/context_config_resolver.js';
+import { resolveConfigValues } from '../../../src/inference/context/config_loader.js';
 
 describe('context_config_resolver', () => {
   describe('resolveConfigValues', () => {

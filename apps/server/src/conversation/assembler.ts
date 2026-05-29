@@ -7,13 +7,11 @@ import type { AiMessage, AiResolvedTaskConfig } from '../ai/types.js';
 import type { PromptBlock } from '../inference/prompt_block.js';
 import type { PromptBundleV2 } from '../inference/prompt_bundle_v2.js';
 import type { PromptFragmentV2 } from '../inference/prompt_fragment_v2.js';
+import { isRecord } from '../utils/type_guards.js';
 import type { ConversationFormatConfig, MessageAssemblyInjection } from './format_config.js';
 import type { AgentConversationMemory } from './types.js';
 
 // ── Helpers ────────────────────────────────────────────────
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
 type SlotRole = 'system' | 'developer' | 'user';
 

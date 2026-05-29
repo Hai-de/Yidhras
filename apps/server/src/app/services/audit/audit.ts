@@ -1,5 +1,6 @@
 import { auditFeedQuerySchema, auditViewKindSchema } from '@yidhras/contracts';
 
+import { isRecord } from '../../../utils/type_guards.js';
 import type { AppContext } from '../../context.js';
 import { parseQuery } from '../../http/zod.js';
 import { getWorkflowSnapshotByJobId, listInferenceJobs } from '../inference_workflow.js';
@@ -46,10 +47,6 @@ export interface GetAuditEntryInput {
 const MAX_AUDIT_FEED_LIMIT = 100;
 const DEFAULT_AUDIT_FEED_LIMIT = 20;
 const AUDIT_ENTRY_KINDS: AuditEntryKind[] = ['workflow', 'post', 'relationship_adjustment', 'snr_adjustment', 'event'];
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const parseAuditEntryKind = (value: string | undefined): AuditEntryKind => {
   const parsed = auditViewKindSchema.safeParse(value);

@@ -617,7 +617,7 @@ world-pack 在物化阶段（`materializer.ts`）展开 `bootstrap.initial_state
 | `ai/` | AI 网关层：gateway、task_service、task_definitions、task_decoder、task_prompt_builder、prompt_bundle_from_messages、route_resolver、registry、registry_watcher、observability、providers、token_counter、cache |
 | `ai/elasticity/` | 网关弹性层：circuit_breaker、rate_limiter、backoff、config_resolver |
 | `ai/tool_*.ts` | Tool Calling 系统：cross_agent_tool、tool_executor、tool_loop_runner、tool_permissions |
-| `inference/` | 推理流水线：context_builder、PromptBundleV2 / PromptTree 渲染类型、processors、tokenizers、types（inference 专用） |
+| `inference/` | 推理流水线：`context/`（pipeline 编排、actor 解析、state snapshot、variable context 组装）、PromptBundleV2 / PromptTree 渲染类型、providers、tokenizers、types（inference 专用） |
 | `packages/contracts/src/ai_shared.ts` | AI/inference 共享类型契约：PromptBundleMetadata、PromptWorkflowSnapshot 等 |
 
 ### 6.3 Behavior Tree

@@ -1,9 +1,6 @@
 import { ApiError } from '../utils/api_error.js';
+import { isRecord } from '../utils/type_guards.js';
 import type { AiResolvedTaskConfig, ModelGatewayResponse } from './types.js';
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const resolvePath = (value: unknown, path: string | undefined): unknown => {
   if (!path || path.trim().length === 0) {

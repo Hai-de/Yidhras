@@ -7,17 +7,14 @@ import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution
 import { isAiGatewayEnabled } from '../../config/runtime_config.js';
 import { createContextOverlayStore } from '../../context/overlay/store.js';
 import { buildWorkflowPromptBundle } from '../../context/workflow/orchestrator.js';
-import { buildInferenceContext } from '../../inference/context_builder.js';
+import { buildInferenceContext } from '../../inference/context/builder.js';
+import { isRecord } from '../../utils/type_guards.js';
 import { createPrismaLongMemoryBlockStore } from '../blocks/store.js';
 import type { LongMemoryBlockStore } from '../blocks/types.js';
 import { createMemoryRecordingService, type MemoryRecordingMutationBundle } from './service.js';
 
 const DEFAULT_SUMMARY_EVERY_N_ROUNDS = 5;
 const DEFAULT_COMPACTION_EVERY_N_ROUNDS = 5;
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const toPositiveInt = (value: unknown, fallback: number): number => {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : fallback;

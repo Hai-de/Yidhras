@@ -6,15 +6,13 @@ import { createBehaviorTreeProvider } from '../../inference/providers/behavior_t
 import { TreeRegistry } from '../../inference/providers/behavior_tree/tree_registry.js';
 import { createMockInferenceProvider } from '../../inference/providers/mock.js';
 import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
+import { isRecord } from '../../utils/type_guards.js';
 import type { AppContext } from '../context.js';
 
 export interface CreateInferenceProvidersInput {
   context: AppContext;
   aiTaskService?: AiTaskService;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value);
 
 /**
  * 创建 inference provider 组合。

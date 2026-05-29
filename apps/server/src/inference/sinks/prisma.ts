@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 
 import type { AppInfrastructure } from '../../app/context.js';
 import { toJsonSafe } from '../../app/http/json.js';
+import { isRecord } from '../../utils/type_guards.js';
 import type { InferenceTraceEvent, InferenceTraceSink } from '../trace_sink.js';
 import type { PromptWorkflowSnapshot } from '../types.js';
 
@@ -18,10 +19,6 @@ const parseOptionalTickString = (value: string | null | undefined): bigint | nul
   }
 
   return BigInt(value);
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 };
 
 const toStringArray = (value: unknown): string[] => {

@@ -7,19 +7,19 @@
 ## 当前摘要
 
 <!-- LIMCODE_PROGRESS_SUMMARY_START -->
-- 当前进度：12/12 个里程碑已完成；最新：PG15-route-utility-tests-58pct
-- 当前焦点：路由层测试完成，继续覆盖大型模块提升至60%门禁
-- 最新结论：全会话完成：新增33个测试文件（路由层7个+辅助模块6个+纯函数8个+工作流4个+已有路由扩写3个+HTTP辅助2个），共+494个测试用例。行覆盖率从56.85%提升至58.18%(+1.33%)。距60%门禁差1.82%。
+- 当前进度：13/13 个里程碑已完成；最新：context-builder-demolition-complete
+- 当前焦点：context_builder 破坏性重构全部完成（原894行上帝函数已消除）
+- 最新结论：mock 基础设施 + 缺失测试补齐 + config 层彻底迁移全部完成。新增 inference-mocks.ts（6 factory）+ 4 spec（52 tests）。删除 context_config.ts / context_config_resolver.ts / context_config_schema.ts。InferenceContextConfigLoader 类为唯一配置入口，零模块级可变状态。3207 tests 全通过，typecheck 零错误。
 - 当前阻塞：无
-- 下一步：继续覆盖scheduler/queries(1164行)、context_builder(894行)、workflow_engine(601行)等大型0%模块提升至60%门禁
+- 下一步：继续覆盖 scheduler/queries(1164行)、workflow_engine(601行) 等大型模块提升至60%门禁
 <!-- LIMCODE_PROGRESS_SUMMARY_END -->
 
 ## 关联文档
 
 <!-- LIMCODE_PROGRESS_ARTIFACTS_START -->
-- 设计：`.limcode/design/测试覆盖率提升至80的设计方案.md`
-- 计划：`.limcode/plans/测试覆盖率提升至80实施计划.plan.md`
-- 审查：`.limcode/review/千年吸血鬼世界包前端设计盲点分析.md`
+- 设计：`.limcode/design/context-builder-audit-and-refactoring.md`、`.limcode/design/context-builder-blind-spots.md`
+- 计划：`.limcode/plans/context-builder-demolition-and-reconstruction.plan.md`（全部完成）
+- 审查：`.limcode/review/code-quality-cross-audit.md`
 <!-- LIMCODE_PROGRESS_ARTIFACTS_END -->
 
 ## 当前 TODO 快照
@@ -30,7 +30,8 @@
 - [x] 纯函数模块测试完成(determinism/stable_json/state_digest/prng, dynamics/algorithms, inference/slot_trigger/slot_group/context_config/tiktoken)  `#pure-function-tests`
 - [x] 工作流模块测试完成(workflow_condition/previous_output/budget/dag/single_flight)  `#workflow-tests`
 - [x] TypeScript诊断修复(task_service/assembler/gateway/plugin.store/workflow_dag)  `#ts-fixes`
-- [ ] 继续覆盖大型0%模块提升行覆盖率至60%门禁(scheduler_queries/context_builder/workflow_engine)  `#reach-60pct`
+- [x] context_builder 破坏性重构全部完成(894行上帝函数已消除，替换为 pipeline + 10 模块)  `#context-builder-demolition-complete`
+- [ ] 继续覆盖大型0%模块提升行覆盖率至60%门禁(scheduler_queries/workflow_engine)  `#reach-60pct`
 <!-- LIMCODE_PROGRESS_TODOS_END -->
 
 ## 项目里程碑

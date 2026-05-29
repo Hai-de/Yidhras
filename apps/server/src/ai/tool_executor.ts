@@ -2,6 +2,7 @@ import type { AppContext } from '../app/context.js';
 import { listActiveSchedulerAgents } from '../app/services/inference_workflow/scheduler_signal_repository.js';
 import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
 import { listPackWorldEntities } from '../packs/storage/entity_repo.js';
+import { isRecord } from '../utils/type_guards.js';
 import type { ToolPermissionPolicy } from './tool_permissions.js';
 import { resolveToolPermissions } from './tool_permissions.js';
 import type { AiToolRegistryEntry, AiToolSandboxLevel } from './types.js';
@@ -30,10 +31,6 @@ export interface ToolRegistry {
   has(name: string): boolean;
   listNames(): string[];
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const validateType = (value: unknown, expectedType: string): boolean => {
   switch (expectedType) {

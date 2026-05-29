@@ -90,6 +90,4 @@ export const DEFAULT_GRAPH_DEPTH = 1;
 export const MAX_GRAPH_DEPTH = 3;
 export const GRAPH_NODE_KINDS = ['agent', 'atmosphere', 'relay', 'container'] as const;
 
-export const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
+export { isRecord } from '../../../utils/type_guards.js';

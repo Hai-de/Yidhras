@@ -10,9 +10,13 @@ export interface LatestEventEvidenceRecord {
 }
 
 export const getLatestEventEvidenceRecord = async (
-  context: AppInfrastructure
+  context: AppInfrastructure,
+  packId: string
 ): Promise<LatestEventEvidenceRecord | null> => {
   return context.prisma.event.findFirst({
+    where: {
+      pack_id: packId
+    },
     orderBy: {
       tick: 'desc'
     },

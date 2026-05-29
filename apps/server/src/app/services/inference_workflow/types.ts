@@ -127,9 +127,9 @@ export const DEFAULT_DECISION_JOB_LOCK_TICKS = 5n;
 export const DEFAULT_INFERENCE_JOB_LIST_LIMIT = 20;
 export const MAX_INFERENCE_JOB_LIST_LIMIT = 100;
 
-export const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
+import { isRecord } from '../../../utils/type_guards.js';
+
+export { isRecord };
 
 export const toRecord = (value: unknown): Record<string, unknown> => {
   return isRecord(value) ? value : {};

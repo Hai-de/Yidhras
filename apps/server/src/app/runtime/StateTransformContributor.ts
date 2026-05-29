@@ -2,10 +2,8 @@ import type { WorldStepPrepareRequest } from '@yidhras/contracts';
 
 import { evaluateStateTransforms } from '../../packs/runtime/state_transform_evaluator.js';
 import { createLogger } from '../../utils/logger.js';
+import { isRecord } from '../../utils/type_guards.js';
 import type { StepContribution, StepContributor, WorldEngineSessionContext } from './world_engine_contributors.js';
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 
 const isString = (value: unknown): value is string => typeof value === 'string';
 

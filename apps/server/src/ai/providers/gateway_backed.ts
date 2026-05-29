@@ -1,12 +1,9 @@
 import type { PromptBundleV2 } from '../../inference/prompt_bundle_v2.js';
 import type { InferenceProvider } from '../../inference/provider.js';
 import type { InferenceContext, ProviderDecisionRaw } from '../../inference/types.js';
+import { isRecord } from '../../utils/type_guards.js';
 import { buildAiTaskRequestFromInferenceContextV2 } from '../task_prompt_builder.js';
 import type { AiTaskService } from '../task_service.js';
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const FALLBACK_DECISION: ProviderDecisionRaw = {
   action_type: 'idle',

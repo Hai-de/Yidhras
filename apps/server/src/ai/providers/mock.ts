@@ -1,8 +1,5 @@
+import { isRecord } from '../../utils/type_guards.js';
 import type { AiProviderAdapter, AiProviderAdapterResult } from './types.js';
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const getNestedRecord = (value: unknown, key: string): Record<string, unknown> | null => {
   if (!isRecord(value)) {

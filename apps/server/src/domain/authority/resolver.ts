@@ -1,9 +1,10 @@
 import type { AppInfrastructure } from '../../app/context.js';
-import { packEntityIdFromResolvedAgentId } from '../../inference/context_builder.js';
 import { listPackAuthorityGrants } from '../../packs/storage/authority_repo.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import { listPackEntityStates } from '../../packs/storage/entity_state_repo.js';
 import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js';
+import { packEntityIdFromResolvedAgentId } from '../../packs/utils/pack_entity_id.js';
+import { isRecord } from '../../utils/type_guards.js';
 
 export interface ResolvedCapabilityItem {
   capability_key: string;
@@ -34,10 +35,6 @@ export interface AuthorityResolutionResult {
   resolved_capabilities: ResolvedCapabilityItem[];
   blocked_authority_ids: string[];
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const asStringArray = (value: unknown): string[] => {
   if (typeof value === 'string') {

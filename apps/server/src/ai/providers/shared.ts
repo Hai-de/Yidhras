@@ -1,8 +1,6 @@
 // Shared utility functions for AI provider adapters.
 
-export const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
+export { isRecord } from '../../utils/type_guards.js';
 
 export const getEnv = (name: string | null | undefined): string | null => {
   if (!name) {

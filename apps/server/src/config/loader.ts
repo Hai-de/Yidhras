@@ -2,11 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import * as YAML from 'yaml';
 
-const WORKSPACE_ROOT_MARKERS = ['pnpm-workspace.yaml', '.git'];
+import { isRecord } from '../utils/type_guards.js';
 
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-};
+const WORKSPACE_ROOT_MARKERS = ['pnpm-workspace.yaml', '.git'];
 
 export const resolveWorkspaceRoot = (startDir: string = process.cwd()): string => {
   const explicitWorkspaceRoot = process.env.WORKSPACE_ROOT?.trim();
@@ -67,7 +65,7 @@ export const readYamlFileIfExists = (filePath: string): Record<string, unknown> 
  * 统一的 YAML 配置加载器。
  *
  * 封装 readYamlFileIfExists + validate 的标准流程，
- * 供 runtime_config / ai/registry / inference/context_config 使用。
+ * 供 runtime_config / ai/registry / inference/context/config_loader 使用。
  * 合并逻辑由调用方通过 defaults 参数控制，保留各域特定的 deepMerge 策略。
  */
 export const loadConfigYaml = <T>(options: {

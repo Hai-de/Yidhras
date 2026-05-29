@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 // Mock all heavy dependencies before import
-vi.mock('../../../src/inference/context_builder.js', () => ({
+vi.mock('../../../src/inference/context/builder.js', () => ({
   buildInferenceContext: vi.fn(async () => ({
     inference_id: 'inf-test-001',
     strategy: 'mock',
@@ -119,6 +119,7 @@ vi.mock('../../../src/inference/provider.js', () => ({}));
 vi.mock('../../../src/inference/trace_sink.js', () => ({}));
 
 const mockContext = {
+  assertRuntimeReady: vi.fn(),
   repos: { identityOperator: { findIdentityById: vi.fn(), listIdentityBindings: vi.fn() } },
   prisma: {},
   conversationStore: {

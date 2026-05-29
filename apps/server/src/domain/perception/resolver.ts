@@ -1,6 +1,7 @@
 import type { AppInfrastructure } from '../../app/context.js';
 import type { InferencePackStateSnapshot } from '../../inference/types.js';
 import { listPackEntityStates } from '../../packs/storage/entity_state_repo.js';
+import { isRecord } from '../../utils/type_guards.js';
 
 export interface PerceptionDecisionItem {
   state_namespace: string;
@@ -17,10 +18,6 @@ export interface PerceptionResolutionResult {
   }>;
   hidden_state_entries: PerceptionDecisionItem[];
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const buildPackStateVisibilitySet = (packState: InferencePackStateSnapshot): Set<string> => {
   const visible = new Set<string>();

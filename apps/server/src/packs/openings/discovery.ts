@@ -9,12 +9,10 @@ export interface OpeningSummary {
   description?: string;
 }
 
+import { isRecord } from '../../utils/type_guards.js';
+
 const OPENINGS_DIR = 'openings';
 const YAML_EXTENSIONS = ['.yaml', '.yml'];
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 export const listPackOpenings = (packDir: string): OpeningSummary[] => {
   const openingsDir = path.join(packDir, OPENINGS_DIR);

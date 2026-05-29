@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { fromError } from 'zod-validation-error';
 
+import { isRecord } from '../../utils/type_guards.js';
 import {
   authorityGrantTypeSchema,
   capabilityCategorySchema,
@@ -41,10 +42,6 @@ export type WorldPackAiTaskType =
   | 'moderation'
   | 'embedding'
   | 'rerank';
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const worldPackVariableValueSchema: z.ZodType<WorldPackVariableValue> = z.lazy(() =>
   z.union([
@@ -857,6 +854,7 @@ export const worldPackConstitutionSchema = z
     state_transforms: z.array(stateTransformSchema).optional(),
     spatial: spatialSchema.optional(),
     workflows: workflowsSchema.optional(),
+    behavior_trees: z.record(z.string(), z.unknown()).optional(),
     include: includeSchema
   })
   .superRefine((value, ctx) => {

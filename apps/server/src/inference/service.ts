@@ -34,7 +34,7 @@ import { groundDecisionIntent } from '../domain/invocation/intent_grounder.js';
 import { createMemoryRecordingService } from '../memory/recording/service.js';
 import { recordInferenceCompleted } from '../observability/metrics.js';
 import { ApiError } from '../utils/api_error.js';
-import { buildInferenceContext } from './context_builder.js';
+import { buildInferenceContext } from './context/builder.js';
 import type { PromptBundleV2 } from './prompt_bundle_v2.js';
 import type { PromptTree } from './prompt_tree.js';
 import type { InferenceProvider } from './provider.js';

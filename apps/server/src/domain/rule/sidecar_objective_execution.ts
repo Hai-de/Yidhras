@@ -11,6 +11,7 @@ import type { AppInfrastructure } from '../../app/context.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { ApiError } from '../../utils/api_error.js';
+import { isRecord } from '../../utils/type_guards.js';
 import type { InvocationRequest } from '../invocation/invocation_dispatcher.js';
 
 export interface ObjectiveEntityStateMutation {
@@ -54,10 +55,6 @@ export interface ObjectiveRulePlan {
   mutations: ObjectiveMutationEffect[];
   emitted_events: ObjectiveEventEffect[];
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const toObjectiveInvocation = (invocation: InvocationRequest): WorldObjectiveRuleInvocation => {
   return {

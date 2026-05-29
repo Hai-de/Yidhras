@@ -6,6 +6,7 @@ import {
 
 import type { AppInfrastructure } from '../../app/context.js';
 import type { AppContextPorts } from '../../app/services/app_context_ports.js';
+import { isRecord } from '../../utils/type_guards.js';
 
 type EnforcementContext = AppInfrastructure & Pick<AppContextPorts, 'worldEngine'> & {
   getSpatialRuntime?(): import('../../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
@@ -31,10 +32,6 @@ import {
 export interface InvocationEnforcementResult {
   rule_execution_id: string;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const buildPackEntityStateId = (packId: string, entityId: string, namespace: string): string => {
   return `${packId}:state:${entityId}:${namespace}`;

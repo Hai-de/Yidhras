@@ -1,3 +1,4 @@
+import { isRecord } from '../../utils/type_guards.js';
 import type { InferenceProvider } from '../provider.js';
 
 const normalizeTransmissionDelayTicks = (value: unknown): string => {
@@ -60,10 +61,6 @@ const resolveTransmissionDropChanceByPolicy = (
     default:
       return 0;
   }
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 };
 
 export const createMockInferenceProvider = (): InferenceProvider => {

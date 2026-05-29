@@ -1,9 +1,6 @@
 import { ApiError } from '../../../utils/api_error.js';
+import { isRecord } from '../../../utils/type_guards.js';
 import type { AppContext } from '../../context.js';
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const EVENT_TYPE_ALLOWLIST = new Set(['history', 'interaction', 'system']);
 const MAX_SNR = 1;

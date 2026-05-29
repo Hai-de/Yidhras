@@ -1,6 +1,7 @@
 import type { AppInfrastructure } from '../../app/context.js';
 import type { IdentityContext } from '../../identity/types.js';
 import type { InferenceActorRef, InferencePackStateSnapshot } from '../../inference/types.js';
+import { isRecord } from '../../utils/type_guards.js';
 import type {
   MemoryEvaluationContext,
   MemoryRecentSourceRecord
@@ -8,10 +9,6 @@ import type {
 
 const RECENT_SOURCE_LIMIT = 10;
 const MEMORY_POLICY_RESOURCE = 'memory';
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 const getAllowedFields = async (
   context: AppInfrastructure,

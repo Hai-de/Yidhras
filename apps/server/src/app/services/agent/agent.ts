@@ -1,5 +1,6 @@
 import { getPackEntityOverviewProjection } from '../../../packs/runtime/projections/entity_overview_service.js';
 import { ApiError } from '../../../utils/api_error.js';
+import { isRecord } from '../../../utils/type_guards.js';
 import type { AppContext, AppInfrastructure } from '../../context.js';
 import type { AuditViewEntry } from '../audit/audit.js';
 import { listAuditFeed } from '../audit/audit.js';
@@ -208,10 +209,6 @@ const parsePositiveBoundedLimit = (
 
 const toTickString = (value: bigint | null): string | null => {
   return value === null ? null : value.toString();
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 };
 
 const toAuditEntries = (entries: AuditViewEntry[], kind: AuditViewEntry['kind']): AuditViewEntry[] => {

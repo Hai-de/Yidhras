@@ -8,7 +8,7 @@ import { getLatestEventEvidenceRecord } from '../mutation/event_evidence_reposit
 export type { LatestEventEvidenceRecord };
 
 export interface NarrativeEventRepository {
-  getLatestEventEvidence(): Promise<LatestEventEvidenceRecord | null>;
+  getLatestEventEvidence(packId: string): Promise<LatestEventEvidenceRecord | null>;
   createEventEvidence(input: {
     title: string;
     description: string;
@@ -33,8 +33,8 @@ export class PrismaNarrativeEventRepository implements NarrativeEventRepository 
     return { prisma: this.prisma } as AppContext;
   }
 
-  async getLatestEventEvidence(): Promise<LatestEventEvidenceRecord | null> {
-    return getLatestEventEvidenceRecord(this.ctx());
+  async getLatestEventEvidence(packId: string): Promise<LatestEventEvidenceRecord | null> {
+    return getLatestEventEvidenceRecord(this.ctx(), packId);
   }
 
   async createEventEvidence(input: {

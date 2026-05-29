@@ -4,6 +4,7 @@ import { logOperatorAudit } from '../../operator/audit/logger.js'
 import { AUDIT_ACTION } from '../../operator/constants.js'
 import { resolveSubjectForAgentAction } from '../../operator/guard/subject_resolver.js'
 import { createLogger } from '../../utils/logger.js'
+import { isRecord } from '../../utils/type_guards.js'
 import { enforceInvocationRequest } from '../rule/enforcement_engine.js'
 
 const logger = createLogger('invocation-dispatcher')
@@ -46,10 +47,6 @@ interface DispatchableActionIntentLike {
   actor_ref: unknown
   target_ref: unknown
   payload: unknown
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
 const normalizeRecord = (value: unknown): Record<string, unknown> => {

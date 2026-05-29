@@ -4,11 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  getInferenceContextConfig,
-  getInferenceContextConfigLoadedFile,
-  resetInferenceContextConfigCache
-} from '../../../src/inference/context_config.js';
+import { InferenceContextConfigLoader } from '../../../src/inference/context/config_loader.js';
 
 const createdRoots: string[] = [];
 
@@ -32,7 +28,6 @@ const createWorkspace = async (files: Record<string, string>): Promise<string> =
 };
 
 afterEach(async () => {
-  resetInferenceContextConfigCache();
   delete process.env.WORKSPACE_ROOT;
   delete process.env.YIDHRAS_DEPLOYMENT_ID;
   delete process.env.ICC_SNR_FALLBACK;
@@ -48,7 +43,7 @@ afterEach(async () => {
   }
 });
 
-describe('deployment-level inference context config', () => {
+describe('InferenceContextConfigLoader — deployment-level', () => {
   it('loads deployment-level config and merges with site-level', async () => {
     const rootDir = await createWorkspace({
       'data/configw/inference_context.yaml': [
@@ -72,13 +67,14 @@ describe('deployment-level inference context config', () => {
 
     process.env.WORKSPACE_ROOT = rootDir;
 
-    const config = getInferenceContextConfig('prod');
+    const loader = new InferenceContextConfigLoader('prod');
+    const config = loader.getConfig();
 
     // Deployment-level override for snr_fallback
     expect(config.transmission_profile?.defaults?.snr_fallback).toBe(0.95);
     // Site-level value inherited (fragile_snr not overridden in deployment)
     expect(config.transmission_profile?.thresholds?.fragile_snr).toBe(0.25);
-    // Site-level drop_chances.fragile was 0.35 (default), but deployment overrides to 0.5
+    // Deployment overrides site-level drop_chances
     expect(config.transmission_profile?.drop_chances?.fragile).toBe(0.5);
     expect(config.transmission_profile?.drop_chances?.best_effort).toBe(0.2);
     // Not overridden — remains default 0.0
@@ -97,7 +93,8 @@ describe('deployment-level inference context config', () => {
 
     process.env.WORKSPACE_ROOT = rootDir;
 
-    const config = getInferenceContextConfig('nonexistent');
+    const loader = new InferenceContextConfigLoader('nonexistent');
+    const config = loader.getConfig();
 
     // Should use site-level value
     expect(config.transmission_profile?.defaults?.snr_fallback).toBe(0.7);
@@ -105,43 +102,40 @@ describe('deployment-level inference context config', () => {
     expect(config.transmission_profile?.thresholds?.fragile_snr).toBe(0.3);
   });
 
-  it('returns builtin defaults when no config files exist and no deployment_id', async () => {
+  it('loads builtin defaults when no config files exist', async () => {
     const rootDir = await createWorkspace({});
     process.env.WORKSPACE_ROOT = rootDir;
 
-    const config = getInferenceContextConfig();
+    const loader = new InferenceContextConfigLoader();
+    const config = loader.getConfig();
 
     expect(config.config_version).toBe(1);
     expect(config.transmission_profile?.defaults?.snr_fallback).toBe(0.5);
     expect(config.variable_context?.layers?.system?.enabled).toBe(true);
   });
 
-  it('isolates caches between different deployment_ids', async () => {
+  it('caches deployment config on repeated calls', async () => {
     const rootDir = await createWorkspace({
       'data/configw/inference_context.d/a.yaml': [
         'config_version: 1',
         'transmission_profile:',
         '  defaults:',
         '    snr_fallback: 0.9'
-      ].join('\n') + '\n',
-      'data/configw/inference_context.d/b.yaml': [
-        'config_version: 1',
-        'transmission_profile:',
-        '  defaults:',
-        '    snr_fallback: 0.1'
       ].join('\n') + '\n'
     });
 
     process.env.WORKSPACE_ROOT = rootDir;
 
-    const configA = getInferenceContextConfig('a');
-    const configB = getInferenceContextConfig('b');
+    const loaderA = new InferenceContextConfigLoader('a');
+    const config1 = loaderA.getConfig();
+    const config2 = loaderA.getConfig();
 
-    expect(configA.transmission_profile?.defaults?.snr_fallback).toBe(0.9);
-    expect(configB.transmission_profile?.defaults?.snr_fallback).toBe(0.1);
+    // Same instance returns cached value
+    expect(config1.transmission_profile?.defaults?.snr_fallback).toBe(0.9);
+    expect(config2.transmission_profile?.defaults?.snr_fallback).toBe(0.9);
   });
 
-  it('clears specific deployment cache without affecting others', async () => {
+  it('isolates caches between different loader instances', async () => {
     const rootDir = await createWorkspace({
       'data/configw/inference_context.d/a.yaml': [
         'config_version: 1',
@@ -159,11 +153,39 @@ describe('deployment-level inference context config', () => {
 
     process.env.WORKSPACE_ROOT = rootDir;
 
-    // Load both into cache
-    getInferenceContextConfig('a');
-    getInferenceContextConfig('b');
+    const loaderA = new InferenceContextConfigLoader('a');
+    const loaderB = new InferenceContextConfigLoader('b');
 
-    // Now overwrite the 'a' deployment file on disk
+    expect(loaderA.getConfig().transmission_profile?.defaults?.snr_fallback).toBe(0.9);
+    expect(loaderB.getConfig().transmission_profile?.defaults?.snr_fallback).toBe(0.1);
+  });
+
+  it('resetCache clears deployment cache so next call re-reads file', async () => {
+    const rootDir = await createWorkspace({
+      'data/configw/inference_context.d/a.yaml': [
+        'config_version: 1',
+        'transmission_profile:',
+        '  defaults:',
+        '    snr_fallback: 0.9'
+      ].join('\n') + '\n',
+      'data/configw/inference_context.d/b.yaml': [
+        'config_version: 1',
+        'transmission_profile:',
+        '  defaults:',
+        '    snr_fallback: 0.1'
+      ].join('\n') + '\n'
+    });
+
+    process.env.WORKSPACE_ROOT = rootDir;
+
+    const loaderA = new InferenceContextConfigLoader('a');
+    const loaderB = new InferenceContextConfigLoader('b');
+
+    // Load both into their per-instance caches
+    loaderA.getConfig();
+    loaderB.getConfig();
+
+    // Overwrite 'a' deployment file on disk
     await writeWorkspaceFile(rootDir, 'data/configw/inference_context.d/a.yaml', [
       'config_version: 1',
       'transmission_profile:',
@@ -171,22 +193,20 @@ describe('deployment-level inference context config', () => {
       '    snr_fallback: 0.99'
     ].join('\n') + '\n');
 
-    // Without reset, cache still gives old value
-    const cachedA = getInferenceContextConfig('a');
-    expect(cachedA.transmission_profile?.defaults?.snr_fallback).toBe(0.9);
+    // Without reset, loaderA still returns cached value
+    expect(loaderA.getConfig().transmission_profile?.defaults?.snr_fallback).toBe(0.9);
 
-    // Clear only deployment 'a'
-    resetInferenceContextConfigCache('a');
+    // Clear only deployment 'a' cache on loaderA
+    loaderA.resetCache('a');
 
-    const reloadedA = getInferenceContextConfig('a');
-    expect(reloadedA.transmission_profile?.defaults?.snr_fallback).toBe(0.99);
+    // After reset, loaderA re-reads from disk
+    expect(loaderA.getConfig().transmission_profile?.defaults?.snr_fallback).toBe(0.99);
 
-    // Deployment 'b' still has its cached value
-    const cachedB = getInferenceContextConfig('b');
-    expect(cachedB.transmission_profile?.defaults?.snr_fallback).toBe(0.1);
+    // loaderB unaffected — still has its cached value
+    expect(loaderB.getConfig().transmission_profile?.defaults?.snr_fallback).toBe(0.1);
   });
 
-  it('clears all caches when resetting without deployment_id', async () => {
+  it('resetCache without deploymentId clears all caches on instance', async () => {
     const rootDir = await createWorkspace({
       'data/configw/inference_context.yaml': [
         'config_version: 1',
@@ -204,8 +224,11 @@ describe('deployment-level inference context config', () => {
 
     process.env.WORKSPACE_ROOT = rootDir;
 
-    getInferenceContextConfig();
-    getInferenceContextConfig('a');
+    const loader = new InferenceContextConfigLoader();
+    loader.getConfig();
+
+    const loaderA = new InferenceContextConfigLoader('a');
+    loaderA.getConfig();
 
     // Modify site-level file
     await writeWorkspaceFile(rootDir, 'data/configw/inference_context.yaml', [
@@ -215,13 +238,14 @@ describe('deployment-level inference context config', () => {
       '    snr_fallback: 0.72'
     ].join('\n') + '\n');
 
-    resetInferenceContextConfigCache();
+    // Clear global cache on the loader
+    loader.resetCache();
 
-    const reloadedGlobal = getInferenceContextConfig();
+    const reloadedGlobal = loader.getConfig();
     expect(reloadedGlobal.transmission_profile?.defaults?.snr_fallback).toBe(0.72);
 
-    const reloadedA = getInferenceContextConfig('a');
-    expect(reloadedA.transmission_profile?.defaults?.snr_fallback).toBe(0.9);
+    // loaderA still has its deployment cache (separate instance)
+    expect(loaderA.getConfig().transmission_profile?.defaults?.snr_fallback).toBe(0.9);
   });
 
   it('env variables override deployment-level config', async () => {
@@ -243,7 +267,8 @@ describe('deployment-level inference context config', () => {
     process.env.WORKSPACE_ROOT = rootDir;
     process.env.ICC_SNR_FALLBACK = '0.99';
 
-    const config = getInferenceContextConfig('prod');
+    const loader = new InferenceContextConfigLoader('prod');
+    const config = loader.getConfig();
 
     // Env should win over deployment-level
     expect(config.transmission_profile?.defaults?.snr_fallback).toBe(0.99);
@@ -262,7 +287,8 @@ describe('deployment-level inference context config', () => {
     process.env.WORKSPACE_ROOT = rootDir;
     process.env.ICC_SNR_FALLBACK = '0.75';
 
-    const config = getInferenceContextConfig();
+    const loader = new InferenceContextConfigLoader();
+    const config = loader.getConfig();
 
     expect(config.transmission_profile?.defaults?.snr_fallback).toBe(0.75);
   });
@@ -271,9 +297,9 @@ describe('deployment-level inference context config', () => {
     const rootDir = await createWorkspace({});
     process.env.WORKSPACE_ROOT = rootDir;
 
-    expect(() => getInferenceContextConfig('../../../etc/passwd')).toThrow();
-    expect(() => getInferenceContextConfig('prod/test')).toThrow();
-    expect(() => getInferenceContextConfig('has space')).toThrow();
+    expect(() => new InferenceContextConfigLoader('../../../etc/passwd').getConfig()).toThrow();
+    expect(() => new InferenceContextConfigLoader('prod/test').getConfig()).toThrow();
+    expect(() => new InferenceContextConfigLoader('has space').getConfig()).toThrow();
   });
 
   it('accepts valid deployment_id characters', async () => {
@@ -288,33 +314,8 @@ describe('deployment-level inference context config', () => {
 
     process.env.WORKSPACE_ROOT = rootDir;
 
-    const config = getInferenceContextConfig('Test-Dev_123');
-    expect(config.transmission_profile?.defaults?.snr_fallback).toBe(0.6);
-  });
-
-  it('getInferenceContextConfigLoadedFile returns deployment-level path', async () => {
-    const rootDir = await createWorkspace({
-      'data/configw/inference_context.d/prod.yaml': [
-        'config_version: 1'
-      ].join('\n') + '\n'
-    });
-
-    process.env.WORKSPACE_ROOT = rootDir;
-
-    getInferenceContextConfig('prod');
-    const loadedFile = getInferenceContextConfigLoadedFile('prod');
-
-    expect(loadedFile).toContain('inference_context.d/prod.yaml');
-  });
-
-  it('getInferenceContextConfigLoadedFile returns null for deployment without file', async () => {
-    const rootDir = await createWorkspace({});
-    process.env.WORKSPACE_ROOT = rootDir;
-
-    getInferenceContextConfig('no-file');
-    const loadedFile = getInferenceContextConfigLoadedFile('no-file');
-
-    expect(loadedFile).toBeNull();
+    const loader = new InferenceContextConfigLoader('Test-Dev_123');
+    expect(loader.getConfig().transmission_profile?.defaults?.snr_fallback).toBe(0.6);
   });
 
   it('deployment-level variable_context layers override site-level', async () => {
@@ -341,25 +342,8 @@ describe('deployment-level inference context config', () => {
 
     process.env.WORKSPACE_ROOT = rootDir;
 
-    const config = getInferenceContextConfig('custom');
+    const loader = new InferenceContextConfigLoader('custom');
+    const config = loader.getConfig();
     expect(config.variable_context?.layers?.system?.values?.name).toBe('CustomDeployment');
-  });
-
-  it('100% backward compatible without YIDHRAS_DEPLOYMENT_ID', async () => {
-    const rootDir = await createWorkspace({});
-    process.env.WORKSPACE_ROOT = rootDir;
-    // Note: YIDHRAS_DEPLOYMENT_ID is not set — this is the default state
-    // The context_config module doesn't read YIDHRAS_DEPLOYMENT_ID;
-    // context_builder.ts does. This test verifies the config module API contract.
-
-    const config = getInferenceContextConfig();
-
-    expect(config.config_version).toBe(1);
-    expect(config.transmission_profile?.defaults?.snr_fallback).toBe(0.5);
-    expect(config.transmission_profile?.thresholds?.fragile_snr).toBe(0.3);
-    expect(config.transmission_profile?.drop_chances?.fragile).toBe(0.35);
-    expect(config.transmission_profile?.drop_chances?.best_effort).toBe(0.15);
-    expect(config.transmission_profile?.drop_chances?.reliable).toBe(0.0);
-    expect(config.policy_summary?.evaluations).toHaveLength(2);
   });
 });

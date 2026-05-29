@@ -1,4 +1,5 @@
 import { ApiError } from '../../../utils/api_error.js';
+import { isRecord } from '../../../utils/type_guards.js';
 import type { AppContext } from '../../context.js';
 
 export interface RelationshipAdjustmentLogInput {
@@ -28,10 +29,6 @@ export interface RelationshipRecord {
   created_at: bigint;
   updated_at: bigint;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-};
 
 export const RELATIONSHIP_TYPE_ALLOWLIST = new Set(['friend', 'enemy', 'command', 'transfer']);
 const MIN_RELATIONSHIP_WEIGHT = 0;

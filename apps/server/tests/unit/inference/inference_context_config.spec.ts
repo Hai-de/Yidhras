@@ -5,13 +5,10 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
-  buildInferenceContextConfigSnapshot,
-  getInferenceContextConfig,
-  getInferenceContextConfigLoadedFile,
-  resetInferenceContextConfigCache
-} from '../../../src/inference/context_config.js';
-import { resolveConfigValues } from '../../../src/inference/context_config_resolver.js';
-import { inferenceContextConfigSchema } from '../../../src/inference/context_config_schema.js';
+  InferenceContextConfigLoader,
+  inferenceContextConfigSchema,
+  resolveConfigValues
+} from '../../../src/inference/context/config_loader.js';
 
 const createdRoots: string[] = [];
 
@@ -35,7 +32,6 @@ const createWorkspace = async (files: Record<string, string>): Promise<string> =
 };
 
 afterEach(async () => {
-  resetInferenceContextConfigCache();
   delete process.env.WORKSPACE_ROOT;
   delete process.env.ICC_SNR_FALLBACK;
   delete process.env.ICC_FRAGILE_SNR;
@@ -49,12 +45,13 @@ afterEach(async () => {
   }
 });
 
-describe('inference context config', () => {
+describe('InferenceContextConfigLoader', () => {
   it('loads builtin defaults when no config file exists', async () => {
     const rootDir = await createWorkspace({});
     process.env.WORKSPACE_ROOT = rootDir;
 
-    const config = getInferenceContextConfig();
+    const loader = new InferenceContextConfigLoader();
+    const config = loader.getConfig();
 
     expect(config.config_version).toBe(1);
     expect(config.variable_context?.layers?.system?.enabled).toBe(true);
@@ -65,7 +62,6 @@ describe('inference context config', () => {
     expect(config.transmission_profile?.drop_chances?.best_effort).toBe(0.15);
     expect(config.transmission_profile?.drop_chances?.reliable).toBe(0.0);
     expect(config.policy_summary?.evaluations).toHaveLength(2);
-    expect(getInferenceContextConfigLoadedFile()).toBeNull();
   });
 
   it('loads YAML file override when present', async () => {
@@ -93,7 +89,8 @@ describe('inference context config', () => {
 
     process.env.WORKSPACE_ROOT = rootDir;
 
-    const config = getInferenceContextConfig();
+    const loader = new InferenceContextConfigLoader();
+    const config = loader.getConfig();
 
     expect(config.transmission_profile?.defaults?.snr_fallback).toBe(0.8);
     expect(config.transmission_profile?.thresholds?.fragile_snr).toBe(0.2);
@@ -106,7 +103,6 @@ describe('inference context config', () => {
       action: 'custom_action',
       fields: ['field_a', 'field_b']
     });
-    expect(getInferenceContextConfigLoadedFile()).not.toBeNull();
   });
 
   it('allows env to override YAML values', async () => {
@@ -126,13 +122,40 @@ describe('inference context config', () => {
     process.env.ICC_BEST_EFFORT_DROP_CHANCE = '0.25';
     process.env.ICC_RELIABLE_DROP_CHANCE = '0.1';
 
-    const config = getInferenceContextConfig();
+    const loader = new InferenceContextConfigLoader();
+    const config = loader.getConfig();
 
     expect(config.transmission_profile?.defaults?.snr_fallback).toBe(0.95);
     expect(config.transmission_profile?.thresholds?.fragile_snr).toBe(0.15);
     expect(config.transmission_profile?.drop_chances?.fragile).toBe(0.6);
     expect(config.transmission_profile?.drop_chances?.best_effort).toBe(0.25);
     expect(config.transmission_profile?.drop_chances?.reliable).toBe(0.1);
+  });
+
+  it('caches global config on repeated calls', async () => {
+    const rootDir = await createWorkspace({
+      'data/configw/inference_context.yaml': [
+        'config_version: 1',
+        'transmission_profile:',
+        '  defaults:',
+        '    snr_fallback: 0.7'
+      ].join('\n') + '\n'
+    });
+
+    process.env.WORKSPACE_ROOT = rootDir;
+
+    const loader = new InferenceContextConfigLoader();
+    const config1 = loader.getConfig();
+    const config2 = loader.getConfig();
+
+    // Same instance returns same cached config
+    expect(config1.transmission_profile?.defaults?.snr_fallback).toBe(0.7);
+    expect(config2.transmission_profile?.defaults?.snr_fallback).toBe(0.7);
+
+    // resetCache clears and reloads
+    loader.resetCache();
+    const config3 = loader.getConfig();
+    expect(config3.transmission_profile?.defaults?.snr_fallback).toBe(0.7);
   });
 
   it('rejects invalid config_version via schema validation', () => {
@@ -149,27 +172,9 @@ describe('inference context config', () => {
     const result = inferenceContextConfigSchema.safeParse(invalid);
     expect(result.success).toBe(false);
   });
-
-  it('builds a snapshot with expected keys', async () => {
-    const rootDir = await createWorkspace({});
-    process.env.WORKSPACE_ROOT = rootDir;
-
-    const snapshot = buildInferenceContextConfigSnapshot();
-
-    expect(snapshot).toMatchObject({
-      config_version: 1,
-      variable_layers_count: 6,
-      transmission_snr_fallback: 0.5,
-      transmission_fragile_snr: 0.3,
-      transmission_fragile_drop: 0.35,
-      transmission_best_effort_drop: 0.15,
-      transmission_reliable_drop: 0.0,
-      policy_evaluations_count: 2
-    });
-  });
 });
 
-describe('inference context config resolver', () => {
+describe('resolveConfigValues', () => {
   it('resolves simple literal values', () => {
     const result = resolveConfigValues({ name: 'Yidhras', count: 42 }, {});
     expect(result).toEqual({ name: 'Yidhras', count: 42 });
