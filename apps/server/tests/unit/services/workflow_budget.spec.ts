@@ -1,11 +1,10 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach,beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  checkWorkflowBudget,
   createWorkflowBudgetState,
   incrementWorkflowBudgetRound,
-  incrementWorkflowBudgetSteps,
-  checkWorkflowBudget
-} from '../../../src/app/services/workflow/workflow_budget.js';
+  incrementWorkflowBudgetSteps} from '../../../src/app/services/workflow/workflow_budget.js';
 
 describe('createWorkflowBudgetState', () => {
   it('creates state with default startedAtMs', () => {

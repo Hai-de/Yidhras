@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveCircuitBreakerConfig, resolveRateLimiterConfig, resolveBackoffConfig } from '../../../src/ai/elasticity/config_resolver.js';
+import { resolveBackoffConfig,resolveCircuitBreakerConfig, resolveRateLimiterConfig } from '../../../src/ai/elasticity/config_resolver.js';
 
 describe('elasticity/config_resolver', () => {
   describe('resolveCircuitBreakerConfig', () => {

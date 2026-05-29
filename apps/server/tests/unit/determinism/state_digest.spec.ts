@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import type { EngineOwnedStateSnapshot,PrismaStateSnapshot } from '../../../src/determinism/state_digest.js';
 import { computeStateDigest } from '../../../src/determinism/state_digest.js';
-import type { PrismaStateSnapshot, EngineOwnedStateSnapshot } from '../../../src/determinism/state_digest.js';
 
 const makePrismaData = (): PrismaStateSnapshot => ({
   agents: [],

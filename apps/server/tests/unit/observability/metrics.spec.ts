@@ -1,16 +1,16 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { beforeEach,describe, expect, it } from 'vitest';
 
 import {
   getMetricsRegistry,
   initMetrics,
-  recordTickCompleted,
-  recordInferenceCompleted,
   recordActionIntentDispatched,
-  setPluginsActive,
-  setPluginWorkersActive,
+  recordInferenceCompleted,
+  recordPluginWorkerActivationCompleted,
   recordPluginWorkerCrash,
   recordPluginWorkerInvocationCompleted,
-  recordPluginWorkerActivationCompleted,
+  recordTickCompleted,
+  setPluginsActive,
+  setPluginWorkersActive,
   setSidecarHealth
 } from '../../../src/observability/metrics.js';
 

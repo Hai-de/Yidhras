@@ -1,9 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  listActiveWorkflowActors,
-  hasActiveWorkflowForActor
-} from '../../../src/app/services/workflow/workflow_single_flight.js';
+  hasActiveWorkflowForActor,
+  listActiveWorkflowActors} from '../../../src/app/services/workflow/workflow_single_flight.js';
 
 const makeMockContext = (overrides?: {
   jobs?: Array<{ id: string; request_input: unknown }>;

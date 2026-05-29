@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { assembleConversationMessages } from '../../../src/conversation/assembler.js';
-import type { PromptBundleV2 } from '../../../src/inference/prompt_bundle_v2.js';
 import type { AiResolvedTaskConfig } from '../../../src/ai/types.js';
+import { assembleConversationMessages } from '../../../src/conversation/assembler.js';
 import type { ConversationEntry } from '../../../src/conversation/types.js';
+import type { PromptBundleV2 } from '../../../src/inference/prompt_bundle_v2.js';
 
 const DEFAULT_FORMAT_CONFIG = {
   transcript: {

@@ -129,7 +129,6 @@ vi.mock('../../../src/app/services/inference_workflow/types.js', () => ({
 }));
 
 import { runAgentScheduler } from '../../../src/app/runtime/agent_scheduler.js';
-import type { RunAgentSchedulerOptions } from '../../../src/app/runtime/agent_scheduler.js';
 import { createMockAppContext } from '../../helpers/mock_context.js';
 
 /* ──────────────────── helpers ──────────────────── */

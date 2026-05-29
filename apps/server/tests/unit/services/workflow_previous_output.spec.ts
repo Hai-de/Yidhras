@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import type { WorkflowStepRunRecord } from '../../../src/app/services/workflow/workflow_types.js';
-
 import {
   buildPreviousAgentOutputScope,
   buildPreviousAgentOutputTemplateScope,
   hasAllRequiredPreviousAgentOutputs
 } from '../../../src/app/services/workflow/workflow_previous_output.js';
+import type { WorkflowStepRunRecord } from '../../../src/app/services/workflow/workflow_types.js';
 
 describe('workflow_previous_output', () => {
   const makeStepRun = (overrides: Partial<WorkflowStepRunRecord> = {}): WorkflowStepRunRecord => ({

@@ -3,15 +3,13 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   getSchedulerPartitionAssignment,
   isWorkerAllowedToOperateSchedulerPartition,
-  listSchedulerPartitionAssignments,
   listRecentSchedulerOwnershipMigrations,
+  listSchedulerPartitionAssignments,
   listSchedulerWorkerRuntimeStates,
-  refreshSchedulerWorkerRuntimeState,
-  refreshSchedulerWorkerRuntimeLiveness
-} from '../../../src/app/runtime/scheduler_ownership.js';
+  refreshSchedulerWorkerRuntimeLiveness,
+  refreshSchedulerWorkerRuntimeState} from '../../../src/app/runtime/scheduler_ownership.js';
 import { createMockAppContext } from '../../helpers/mock_context.js';
 
-type FnMock = ReturnType<typeof vi.fn>;
 
 const createMockAdapter = () => ({
   open: vi.fn(),
@@ -45,7 +43,7 @@ const createMockAdapter = () => ({
 
 const createContextWithAdapter = (adapter?: ReturnType<typeof createMockAdapter>) => {
   const ctx = createMockAppContext();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test mock
+   
   (ctx as unknown as Record<string, unknown>).schedulerStorage = adapter ?? createMockAdapter();
   return ctx;
 };

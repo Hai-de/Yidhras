@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TiktokenTokenizerAdapter, createTiktokenTokenizer, getDefaultTokenizer } from '../../../src/inference/tokenizers/tiktoken_adapter.js';
+import { createTiktokenTokenizer, getDefaultTokenizer,TiktokenTokenizerAdapter } from '../../../src/inference/tokenizers/tiktoken_adapter.js';
 
 describe('tiktoken_adapter', () => {
   describe('TiktokenTokenizerAdapter', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveAiTaskConfig, getAiTaskDefinition } from '../../../src/ai/task_definitions.js';
+import { getAiTaskDefinition,resolveAiTaskConfig } from '../../../src/ai/task_definitions.js';
 
 describe('getAiTaskDefinition', () => {
   it('returns definition for agent_decision', () => {
@@ -48,7 +48,7 @@ describe('getAiTaskDefinition', () => {
       'classification', 'moderation', 'embedding', 'rerank'
     ];
     for (const taskType of taskTypes) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- iterating known types
+       
       const def = getAiTaskDefinition(taskType as import('../../../src/ai/types.js').AiTaskType);
       expect(def.task_type).toBe(taskType);
     }

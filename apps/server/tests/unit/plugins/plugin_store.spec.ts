@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
 import type { PrismaClient } from '@prisma/client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createPluginStore } from '../../../src/plugins/store.js';
 

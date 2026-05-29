@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  checkWorkflowBudget,
   createWorkflowBudgetState,
   incrementWorkflowBudgetRound,
-  incrementWorkflowBudgetSteps,
-  checkWorkflowBudget
-} from '../../../src/app/services/workflow/workflow_budget.js';
+  incrementWorkflowBudgetSteps} from '../../../src/app/services/workflow/workflow_budget.js';
 import type { WorkflowAdvanceBudget } from '../../../src/app/services/workflow/workflow_types.js';
 
 const makeBudget = (overrides?: Partial<WorkflowAdvanceBudget>): WorkflowAdvanceBudget => ({

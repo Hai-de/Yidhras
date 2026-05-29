@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildInlineOverrideFromRequest, buildGatewayRequest } from '../../../src/ai/task_service.js';
-import type { AiTaskRequest, AiResolvedTaskConfig, AiMessage } from '../../../src/ai/types.js';
+import { buildGatewayRequest,buildInlineOverrideFromRequest } from '../../../src/ai/task_service.js';
+import type { AiMessage,AiResolvedTaskConfig, AiTaskRequest } from '../../../src/ai/types.js';
 
 const makeTaskRequest = (overrides?: Partial<AiTaskRequest>): AiTaskRequest => ({
   task_id: 'task-1',

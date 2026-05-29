@@ -6,7 +6,7 @@ import { createMockAppContext } from '../../helpers/mock_context.js';
 type FnMock = ReturnType<typeof vi.fn>;
 
 const mockRepoMethod = <T>(obj: Record<string, unknown>, key: string, value: T): void => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test mock
+   
   (obj as Record<string, unknown>)[key] = vi.fn().mockResolvedValue(value) as FnMock;
 };
 
@@ -44,7 +44,7 @@ describe('listSnrAdjustmentLogs', () => {
     const result = await listSnrAdjustmentLogs(ctx as never, { agent_id: 'agent1' });
 
     expect(result).toEqual(mockLogs);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test mock
+     
     expect(ctx.repos.relationship.listSnrAdjustmentLogs as FnMock).toHaveBeenCalledWith({
       where: { agent_id: 'agent1' },
       orderBy: { created_at: 'desc' },
@@ -58,7 +58,7 @@ describe('listSnrAdjustmentLogs', () => {
 
     await listSnrAdjustmentLogs(ctx as never, { agent_id: 'a1', limit: 999 });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test mock
+     
     expect(ctx.repos.relationship.listSnrAdjustmentLogs as FnMock).toHaveBeenCalledWith(
       expect.objectContaining({ take: 100 })
     );
@@ -98,7 +98,7 @@ describe('listSnrAdjustmentLogs', () => {
 
     await listSnrAdjustmentLogs(ctx as never, { agent_id: 'a1', limit: 15.7 });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test mock
+     
     expect(ctx.repos.relationship.listSnrAdjustmentLogs as FnMock).toHaveBeenCalledWith(
       expect.objectContaining({ take: 15 })
     );
@@ -110,7 +110,7 @@ describe('listSnrAdjustmentLogs', () => {
 
     await listSnrAdjustmentLogs(ctx as never, { agent_id: 'a1', limit: 50 });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test mock
+     
     expect(ctx.repos.relationship.listSnrAdjustmentLogs as FnMock).toHaveBeenCalledWith(
       expect.objectContaining({ take: 50 })
     );
@@ -122,7 +122,7 @@ describe('listSnrAdjustmentLogs', () => {
 
     await listSnrAdjustmentLogs(ctx as never, { agent_id: '  agent1  ' });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test mock
+     
     expect(ctx.repos.relationship.listSnrAdjustmentLogs as FnMock).toHaveBeenCalledWith(
       expect.objectContaining({ where: { agent_id: 'agent1' } })
     );

@@ -1,11 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createMockAppContext } from '../../helpers/mock_context.js';
 import {
-  listInferenceJobs,
   getWorkflowSnapshotByInferenceId,
-  getWorkflowSnapshotByJobId
-} from '../../../src/app/services/inference_workflow/workflow_query.js';
+  getWorkflowSnapshotByJobId,
+  listInferenceJobs} from '../../../src/app/services/inference_workflow/workflow_query.js';
+import { createMockAppContext } from '../../helpers/mock_context.js';
 
 vi.mock('../../../src/app/services/pack/pack_runtime_resolution.js', () => ({
   resolvePackTick: vi.fn(() => 1000n)

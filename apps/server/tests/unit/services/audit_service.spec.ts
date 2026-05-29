@@ -7,7 +7,7 @@ import { createMockAppContext } from '../../helpers/mock_context.js';
 /* ──────────────────── helpers ──────────────────── */
 
 const setMock = (obj: unknown, key: string, value: unknown): void => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test mock helper
+   
   (obj as Record<string, unknown>)[key] = vi.fn().mockResolvedValue(value);
 };
 

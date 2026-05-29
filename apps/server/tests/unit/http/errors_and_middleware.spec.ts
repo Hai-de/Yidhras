@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError } from '../../../src/utils/api_error.js';
 import { getErrorMessage } from '../../../src/app/http/errors.js';
 import { createRequestId } from '../../../src/app/middleware/request_id.js';
 import { requireAuth } from '../../../src/app/middleware/require_auth.js';
+import { ApiError } from '../../../src/utils/api_error.js';
 
 describe('getErrorMessage', () => {
   it('returns message from Error instance', () => {

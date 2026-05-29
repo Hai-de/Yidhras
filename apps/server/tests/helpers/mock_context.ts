@@ -3,9 +3,9 @@ import { createWorldEngineStepCoordinator } from '../../src/app/runtime/world_en
 import type { PackRuntimePort } from '../../src/app/services/pack/pack_runtime_ports.js';
 import { ChronosEngine } from '../../src/clock/engine.js';
 import { createNotificationManager } from '../../src/utils/notifications.js';
-import { wrapPrismaAsRepositories } from './mock_repos.js';
-import { type DeepMockProxy, createMockPrisma } from './prisma_mock.js';
 import { DEFAULT_E2E_WORLD_PACK } from '../support/config.js';
+import { wrapPrismaAsRepositories } from './mock_repos.js';
+import { createMockPrisma,type DeepMockProxy } from './prisma_mock.js';
 
 export interface CreateMockAppContextOptions {
   /** Override specific AppContext properties. DeepMockProxy fields from createMockPrisma() can be passed here. */

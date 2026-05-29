@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { triggerManualWorkflow, triggerEventWorkflows } from '../../../src/app/services/workflow/workflow_trigger_scheduler.js';
+import { triggerEventWorkflows,triggerManualWorkflow } from '../../../src/app/services/workflow/workflow_trigger_scheduler.js';
 import { createMockAppContext } from '../../helpers/mock_context.js';
 
 const makePackRuntime = (workflows: Record<string, unknown> = {}) => ({

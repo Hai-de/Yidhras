@@ -7,7 +7,7 @@ import { createMockAppContext } from '../../helpers/mock_context.js';
 /** Assign a mock function to a property on an object, bypassing readonly/strict types. */
 const setMock = (obj: unknown, key: string, value: unknown): ReturnType<typeof vi.fn> => {
   const fn = typeof value === 'function' ? value as ReturnType<typeof vi.fn> : vi.fn().mockResolvedValue(value);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test mock
+   
   (obj as Record<string, unknown>)[key] = fn;
   return fn;
 };

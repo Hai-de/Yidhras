@@ -1,29 +1,28 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { beforeEach,describe, expect, it } from 'vitest';
 
 import {
-  resetAiRegistryCache,
-  getAiRegistryConfig,
-  getDynamicModelsMetadata,
-  getAiRegistryMetadata,
-  listAiProviderConfigs,
-  getAiProviderConfig,
-  listAiModelRegistryEntries,
+  BUILTIN_SLOT_IDS,
   findAiModelRegistryEntry,
-  listAiRoutePolicies,
-  listAiToolEntries,
-  getAiToolEntry,
   findAiToolEntryByName,
-  resolveToolsFromRegistry,
-  resolveToolSpecsFromRegistry,
-  resetPromptSlotRegistryCache,
+  getAiProviderConfig,
+  getAiRegistryConfig,
+  getAiRegistryMetadata,
+  getAiToolEntry,
+  getDynamicModelsMetadata,
   getPromptSlotRegistry,
   getPromptSlotRegistryMetadata,
-  registerDynamicSlot,
-  unregisterDynamicSlot,
-  setSlotEnabled,
+  listAiModelRegistryEntries,
+  listAiProviderConfigs,
+  listAiRoutePolicies,
+  listAiToolEntries,
   listDynamicSlots,
-  BUILTIN_SLOT_IDS
-} from '../../../src/ai/registry.js';
+  registerDynamicSlot,
+  resetAiRegistryCache,
+  resetPromptSlotRegistryCache,
+  resolveToolsFromRegistry,
+  resolveToolSpecsFromRegistry,
+  setSlotEnabled,
+  unregisterDynamicSlot} from '../../../src/ai/registry.js';
 
 // ---------------------------------------------------------------------------
 // AI Registry Config

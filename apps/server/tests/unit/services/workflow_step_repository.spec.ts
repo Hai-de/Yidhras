@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { Prisma } from '@prisma/client';
 import { createMockPrisma } from '../../helpers/prisma_mock.js';
 
 // Test the PrismaWorkflowStepRunRepository class and its helper functions

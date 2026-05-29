@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  parseInferenceJobListLimit,
-  parseOptionalFilterId,
-  parseOptionalCreatedAtFilter,
-  parseInferenceJobStatuses,
   ensureNonEmptyId,
-  parseInferenceJobsFilters
-} from '../../../src/app/services/inference_workflow/parsers.js';
+  parseInferenceJobListLimit,
+  parseInferenceJobsFilters,
+  parseInferenceJobStatuses,
+  parseOptionalCreatedAtFilter,
+  parseOptionalFilterId} from '../../../src/app/services/inference_workflow/parsers.js';
 
 describe('inference_workflow/parsers', () => {
   describe('parseInferenceJobListLimit', () => {

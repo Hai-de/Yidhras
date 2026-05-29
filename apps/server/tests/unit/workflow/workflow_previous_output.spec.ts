@@ -5,7 +5,6 @@ import {
   buildPreviousAgentOutputTemplateScope,
   hasAllRequiredPreviousAgentOutputs
 } from '../../../src/app/services/workflow/workflow_previous_output.js';
-import type { WorkflowStepRunRecord, WorkflowStepResultJson } from '../../../src/app/services/workflow/workflow_types.js';
 
 const makeStepRun = (overrides: Partial<WorkflowStepRunRecord>): WorkflowStepRunRecord => ({
   id: 'sr-1',

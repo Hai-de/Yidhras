@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolvePromptWorkflowBudget, DEFAULT_PROMPT_TOKEN_BUDGET, DEFAULT_PROMPT_SAFETY_MARGIN_TOKENS } from '../../../../src/context/workflow/token_budget.js';
+import { DEFAULT_PROMPT_SAFETY_MARGIN_TOKENS,DEFAULT_PROMPT_TOKEN_BUDGET, resolvePromptWorkflowBudget } from '../../../../src/context/workflow/token_budget.js';
 import type { PromptWorkflowProfile, PromptWorkflowStepSpec } from '../../../../src/context/workflow/types.js';
 
 const makeProfile = (overrides?: Partial<PromptWorkflowProfile['defaults']>): PromptWorkflowProfile => ({

@@ -1,15 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createMockAppContext } from '../../helpers/mock_context.js';
 import {
+  getActionIntentByInferenceId,
   getDecisionJobById,
+  getDecisionJobByIdempotencyKey,
   getDecisionJobByInferenceId,
   getInferenceTraceById,
-  getActionIntentByInferenceId,
-  getDecisionJobByIdempotencyKey,
   listRunnableDecisionJobs
 } from '../../../src/app/services/inference_workflow/workflow_job_repository.js';
-import { createMockPrisma } from '../../helpers/prisma_mock.js';
+import { createMockAppContext } from '../../helpers/mock_context.js';
 
 vi.mock('../../../src/app/services/pack/pack_runtime_resolution.js', () => ({
   resolvePackTick: vi.fn(() => 1000n)

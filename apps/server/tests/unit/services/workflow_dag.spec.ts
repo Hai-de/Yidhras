@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  assertWorkflowInputSourcesAreDependencyPredecessors,
   buildWorkflowTopology,
-  listReadyWorkflowStepIds,
-  assertWorkflowInputSourcesAreDependencyPredecessors
-} from '../../../src/app/services/workflow/workflow_dag.js';
+  listReadyWorkflowStepIds} from '../../../src/app/services/workflow/workflow_dag.js';
 
 const makeWorkflow = (steps: Array<{ id: string; depends_on?: string[]; input_from?: string[]; agent?: string }>) => ({
   trigger: { type: 'manual' as const },

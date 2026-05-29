@@ -1,5 +1,5 @@
+import type { NextFunction,Request, Response } from 'express';
 import { describe, expect, it, vi } from 'vitest';
-import type { Request, Response, NextFunction } from 'express';
 
 import { asyncHandler } from '../../../src/app/http/async_handler.js';
 

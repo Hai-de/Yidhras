@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildCacheKey, resolveCacheTtl, createInMemoryPromptCache } from '../../../src/ai/cache.js';
+import { buildCacheKey, createInMemoryPromptCache,resolveCacheTtl } from '../../../src/ai/cache.js';
 import type { ModelGatewayRequest } from '../../../src/ai/types.js';
 
 describe('buildCacheKey', () => {

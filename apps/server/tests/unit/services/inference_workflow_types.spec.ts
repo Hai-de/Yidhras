@@ -1,22 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  isRecord,
-  toRecord,
-  toTickString,
-  normalizeJobStatus,
-  normalizeJobIntentClass,
-  normalizeIntentStatus,
-  buildPendingSourceKey,
-  hasMaterializedInferenceTrace,
-  resolveDecisionJobInferenceId,
-  INFERENCE_JOB_STATUSES,
   ACTION_INTENT_STATUSES,
-  RUNNABLE_JOB_STATUSES,
+  buildPendingSourceKey,
   DEFAULT_DECISION_JOB_LOCK_TICKS,
   DEFAULT_INFERENCE_JOB_LIST_LIMIT,
-  MAX_INFERENCE_JOB_LIST_LIMIT
-} from '../../../src/app/services/inference_workflow/types.js';
+  hasMaterializedInferenceTrace,
+  INFERENCE_JOB_STATUSES,
+  isRecord,
+  MAX_INFERENCE_JOB_LIST_LIMIT,
+  normalizeIntentStatus,
+  normalizeJobIntentClass,
+  normalizeJobStatus,
+  resolveDecisionJobInferenceId,
+  RUNNABLE_JOB_STATUSES,
+  toRecord,
+  toTickString} from '../../../src/app/services/inference_workflow/types.js';
 
 describe('inference_workflow/types', () => {
   describe('constants', () => {

@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { AppInfrastructure } from '../../../src/app/context.js';
+import type { InferenceActorRef } from '../../../src/inference/types.js';
 import {
   createNoopLongTermMemoryStore,
   createPrismaLongTermMemoryStore
 } from '../../../src/memory/long_term_store.js';
-import type { AppInfrastructure } from '../../../src/app/context.js';
-import type { InferenceActorRef } from '../../../src/inference/types.js';
 
 function makeActorRef(overrides: Partial<InferenceActorRef> = {}): InferenceActorRef {
   return {

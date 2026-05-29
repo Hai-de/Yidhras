@@ -10,27 +10,27 @@ import {
 const makeInstallation = (overrides: Record<string, unknown> = {}): PluginInstallation => ({
   installation_id: `inst-${(overrides.plugin_id as string) ?? 'default'}`,
   plugin_id: 'plugin-a',
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test fixture boundary
+   
   artifact_id: 'artifact-a' as string,
   version: '1.0.0',
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test fixture boundary
+   
   scope_type: 'pack_local' as PluginInstallation['scope_type'],
   scope_ref: undefined,
   lifecycle_state: 'enabled',
   requested_capabilities: [],
   granted_capabilities: [],
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test fixture boundary
+   
   trust_mode: 'permissive' as PluginInstallation['trust_mode'],
   ...overrides
 });
 
 const makeManifest = (overrides: Record<string, unknown> = {}): PluginManifest => ({
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test fixture boundary
+   
   manifest_version: 'plugin/v1' as PluginManifest['manifest_version'],
   id: 'plugin-a',
   name: 'Plugin A',
   version: '1.0.0',
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test fixture boundary
+   
   kind: 'other' as PluginManifest['kind'],
   entrypoints: { server: { runtime: 'node' as PluginManifest['entrypoints']['server'] extends { runtime: infer R } ? R : never } },
   compatibility: { yidhras: '0.1.0', host_api: '1.0.0', pack_id: 'test-pack' },

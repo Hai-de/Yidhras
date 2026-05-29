@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveSlotGroups, resolveExclusiveGroup, resolvePriorityOrder, resolveBudgetAllocation } from '../../../src/inference/slot_group_resolver.js';
 import type { SlotBehaviorProfile } from '../../../src/inference/slot_behavior.js';
+import { resolveBudgetAllocation,resolveExclusiveGroup, resolvePriorityOrder, resolveSlotGroups } from '../../../src/inference/slot_group_resolver.js';
 
 const makeProfile = (slotId: string, opts?: { groupId?: string; weight?: number }): SlotBehaviorProfile => ({
   slot_id: slotId,

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { ApiError } from '../../../src/utils/api_error.js';
 import {
   createPackBinding,
   getOperatorPackIds,
   listPackBindings
 } from '../../../src/app/services/operator/operator_pack_bindings.js';
+import { ApiError } from '../../../src/utils/api_error.js';
 import { createMockAppContext } from '../../helpers/mock_context.js';
 
 describe('operator_pack_bindings', () => {

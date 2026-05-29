@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { AgentConversationMemory } from '../../../src/conversation/types.js';
 import {
   resolveConversationFormatConfig,
   resolveEffectiveFormatConfig
 } from '../../../src/conversation/format_config.js';
 import { DEFAULT_CONVERSATION_FORMAT_CONFIG } from '../../../src/conversation/format_config_schemas.js';
+import type { AgentConversationMemory } from '../../../src/conversation/types.js';
 
 function makeMemory(overrides: Partial<AgentConversationMemory> = {}): AgentConversationMemory {
   return {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { toJsonSafe, buildJsonOkBody } from '../../../src/app/http/json.js';
+import { buildJsonOkBody,toJsonSafe } from '../../../src/app/http/json.js';
 
 describe('app/http/json', () => {
   describe('toJsonSafe', () => {

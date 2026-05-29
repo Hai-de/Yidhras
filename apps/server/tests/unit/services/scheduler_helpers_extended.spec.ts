@@ -1,36 +1,34 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  buildDecisionCursorWhere,
+  buildRunCrossLinkSummary,
+  buildRunCursorWhere,
+  buildSchedulerOwnershipSummary,
   encodeSchedulerCursor,
-  parseSchedulerCursor,
-  parseOptionalTickFilter,
+  getFilteredPackIds,
+  parseDecisionFilters,
   parseLimit,
   parseOptionalIdFilter,
   parseOptionalKind,
   parseOptionalReason,
   parseOptionalSkipReason,
-  parseRunFilters,
-  parseDecisionFilters,
+  parseOptionalTickFilter,
   parseOwnershipAssignmentFilters,
   parseOwnershipMigrationFilters,
-  parseWorkerFilters,
   parseRebalanceRecommendationFilters,
+  parseRunFilters,
+  parseSchedulerCursor,
   parseSummaryJson,
-  buildRunCursorWhere,
-  buildDecisionCursorWhere,
-  toRunReadModel,
-  toCandidateDecisionReadModel,
-  toOwnershipMigrationReadModel,
-  toWorkerRuntimeReadModel,
-  toRebalanceRecommendationReadModel,
-  buildRunCrossLinkSummary,
-  buildSchedulerOwnershipSummary,
-  getFilteredPackIds,
+  parseWorkerFilters,
   SCHEDULER_KINDS,
   SCHEDULER_REASONS,
   SCHEDULER_SKIP_REASONS,
-  SCHEDULER_QUERY_INVALID
-} from '../../../src/app/services/scheduler/helpers.js';
+  toCandidateDecisionReadModel,
+  toOwnershipMigrationReadModel,
+  toRebalanceRecommendationReadModel,
+  toRunReadModel,
+  toWorkerRuntimeReadModel} from '../../../src/app/services/scheduler/helpers.js';
 
 // Mock runtime_config to provide default config values
 vi.mock('../../../src/config/runtime_config.js', () => ({

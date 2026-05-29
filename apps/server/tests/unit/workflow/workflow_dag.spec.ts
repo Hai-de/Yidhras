@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  assertWorkflowInputSourcesAreDependencyPredecessors,
   buildWorkflowTopology,
-  listReadyWorkflowStepIds,
-  assertWorkflowInputSourcesAreDependencyPredecessors
-} from '../../../src/app/services/workflow/workflow_dag.js';
+  listReadyWorkflowStepIds} from '../../../src/app/services/workflow/workflow_dag.js';
 import type { WorldPackWorkflowDefinition, WorldPackWorkflowStep } from '../../../src/packs/schema/constitution_schema.js';
 
 const makeStep = (overrides: Partial<WorldPackWorkflowStep>): WorldPackWorkflowStep => ({

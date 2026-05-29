@@ -32,7 +32,7 @@ const makeToolCallResponse = (toolCalls: Array<{ name: string; arguments: Record
   makeBaseResponse({ output: { mode: 'tool_call', tool_calls: toolCalls } });
 
 const makeTaskConfig = (overrides: Partial<AiResolvedTaskConfig> = {}): AiResolvedTaskConfig => ({
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- test mock
+   
   definition: {} as AiResolvedTaskConfig['definition'],
   override: null,
   output: {

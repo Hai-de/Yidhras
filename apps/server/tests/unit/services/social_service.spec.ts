@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppContext } from '../../../src/app/context.js';
-import { listSocialFeed, createSocialPost } from '../../../src/app/services/social/social.js';
+import { createSocialPost,listSocialFeed } from '../../../src/app/services/social/social.js';
 import { createMockAppContext } from '../../helpers/mock_context.js';
 
 vi.mock('../../../src/access_policy/service.js', () => ({

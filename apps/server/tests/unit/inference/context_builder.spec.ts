@@ -72,10 +72,9 @@ vi.mock('../../../src/inference/pack_scoped_inference_context_builder.js', () =>
 
 import {
   ACTOR_ENTITY_ID_SEPARATOR,
-  packEntityIdFromResolvedAgentId,
   buildInferenceContext,
-  createPackScopedInferenceContextBuilder
-} from '../../../src/inference/context_builder.js';
+  createPackScopedInferenceContextBuilder,
+  packEntityIdFromResolvedAgentId} from '../../../src/inference/context_builder.js';
 
 describe('context_builder', () => {
   describe('ACTOR_ENTITY_ID_SEPARATOR', () => {

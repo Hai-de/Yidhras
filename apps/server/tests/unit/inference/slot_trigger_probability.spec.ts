@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { fnv1a64, computeTriggerProbabilitySample, evaluateTriggerProbability } from '../../../src/inference/slot_trigger_probability.js';
+import { computeTriggerProbabilitySample, evaluateTriggerProbability,fnv1a64 } from '../../../src/inference/slot_trigger_probability.js';
 
 describe('slot_trigger_probability', () => {
   describe('fnv1a64', () => {

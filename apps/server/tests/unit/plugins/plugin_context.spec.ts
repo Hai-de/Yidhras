@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import type { AppContext } from '../../../src/app/context.js';
+import type { PackRuntimePort } from '../../../src/app/services/pack/pack_runtime_ports.js';
+import type { WorldPack } from '../../../src/packs/schema/constitution_schema.js';
 import {
   createPluginContext,
   type PackScopedPluginContext,
   type PluginCapabilityLevel,
   type ReadonlyPluginContext
 } from '../../../src/plugins/context.js';
-import type { AppContext } from '../../../src/app/context.js';
-import type { PackRuntimePort } from '../../../src/app/services/pack/pack_runtime_ports.js';
-import type { WorldPack } from '../../../src/packs/schema/constitution_schema.js';
 
 vi.mock('../../../src/app/services/pack/pack_runtime_resolution.js', () => ({
   resolvePackTick: vi.fn().mockReturnValue(42n)

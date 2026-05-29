@@ -1,19 +1,16 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach,describe, expect, it, vi } from 'vitest';
 
-import { createMockAppContext } from '../../helpers/mock_context.js';
 import type { AppContext } from '../../../src/app/context.js';
 import {
+  getAgentSchedulerProjection,
   getLatestSchedulerRunReadModel,
   getSchedulerRunReadModelById,
-  listSchedulerRuns,
+  listAgentSchedulerDecisions,
   listSchedulerDecisions,
   listSchedulerOwnershipMigrations,
   listSchedulerRebalanceRecommendations,
-  getAgentSchedulerProjection,
-  listAgentSchedulerDecisions,
-  getSchedulerTrendsSnapshot
-} from '../../../src/app/services/scheduler/queries.js';
-import { listSchedulerWorkerRuntimeStates } from '../../../src/app/runtime/scheduler_ownership.js';
+  listSchedulerRuns} from '../../../src/app/services/scheduler/queries.js';
+import { createMockAppContext } from '../../helpers/mock_context.js';
 
 
 

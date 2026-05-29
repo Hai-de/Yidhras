@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { registerIdentity } from '../../../src/app/services/identity/identity.js';
-import { ApiError } from '../../../src/utils/api_error.js';
 import { createMockAppContext } from '../../helpers/mock_context.js';
 
 describe('registerIdentity', () => {

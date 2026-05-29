@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  parseGraphView,
+  normalizeSearch,
   parseGraphDepth,
   parseGraphKinds,
-  normalizeSearch,
+  parseGraphView,
   parseGraphViewFilters
 } from '../../../src/app/services/relational/graph_filters.js';
 

@@ -1,4 +1,4 @@
-import type { AppContext, AppInfrastructure } from '../../app/context.js';
+import type { AppContext } from '../../app/context.js';
 import { getRuntimeStatusSnapshot } from '../../app/services/system/system.js';
 import {
   createPackEntityOverviewProjectionService,

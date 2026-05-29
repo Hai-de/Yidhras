@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ConversationStore } from '../../../src/conversation/store.js';
-import type { ConversationFormatConfig } from '../../../src/conversation/format_config_schemas.js';
-import { DEFAULT_CONVERSATION_FORMAT_CONFIG } from '../../../src/conversation/format_config_schemas.js';
-import { DefaultConversationCompactionService } from '../../../src/conversation/compaction_service.js';
-import type { AgentConversationMemory, ConversationEntry } from '../../../src/conversation/types.js';
-import type { CompactionAuditStore } from '../../../src/conversation/compaction_audit.js';
 import type { ModelGateway } from '../../../src/ai/gateway.js';
 import type { AiResolvedTaskConfig, AiTaskDefinition } from '../../../src/ai/types.js';
+import type { CompactionAuditStore } from '../../../src/conversation/compaction_audit.js';
+import { DefaultConversationCompactionService } from '../../../src/conversation/compaction_service.js';
+import type { ConversationFormatConfig } from '../../../src/conversation/format_config_schemas.js';
+import { DEFAULT_CONVERSATION_FORMAT_CONFIG } from '../../../src/conversation/format_config_schemas.js';
+import type { ConversationStore } from '../../../src/conversation/store.js';
+import type { AgentConversationMemory, ConversationEntry } from '../../../src/conversation/types.js';
 
 function makeEntry(overrides: Partial<ConversationEntry> = {}): ConversationEntry {
   return {

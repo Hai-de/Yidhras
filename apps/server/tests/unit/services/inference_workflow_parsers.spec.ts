@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ensureNonEmptyId,
   parseInferenceJobListLimit,
-  parseOptionalFilterId,
-  parseOptionalCreatedAtFilter,
   parseInferenceJobStatuses,
-  ensureNonEmptyId
-} from '../../../src/app/services/inference_workflow/parsers.js';
+  parseOptionalCreatedAtFilter,
+  parseOptionalFilterId} from '../../../src/app/services/inference_workflow/parsers.js';
 
 describe('parseInferenceJobListLimit', () => {
   it('returns default limit when value is undefined', () => {
