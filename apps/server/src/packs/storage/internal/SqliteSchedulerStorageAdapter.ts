@@ -3,11 +3,15 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { resolvePackRuntimeDatabaseLocation } from '../pack_db_locator.js';
 import type {
+  ListDecisionsInput,
+  ListRunsInput,
+  SchedulerCandidateDecisionRecord,
   SchedulerCursorRecord,
   SchedulerLeaseRecord,
   SchedulerOwnershipMigrationRecord,
   SchedulerPartitionRecord,
   SchedulerRebalanceRecommendationRecord,
+  SchedulerRunRecord,
   SchedulerStorageAdapter,
   SchedulerWorkerStateRecord
 } from '../SchedulerStorageAdapter.js';
@@ -800,41 +804,172 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
     return rows.map(row => this.toRecommendationRecord(row));
   }
 
-  // -- Observability --
+  // -- Observability (typed) --
 
-  public writeDetailedSnapshot(
+  public getRunById(packId: string, runId: string): SchedulerRunRecord | null {
+    const db = this.getDb(packId);
+    const row = db.prepare('SELECT * FROM scheduler_run WHERE id = ?').get(runId);
+    if (!row) {
+      return null;
+    }
+    return this.toRunRecord(row);
+  }
+
+  public listRuns(packId: string, input: ListRunsInput): SchedulerRunRecord[] {
+    const db = this.getDb(packId);
+    const conditions: string[] = [];
+    const params: SqlitePrimitive[] = [];
+
+    if (input.tickFrom !== undefined) {
+      conditions.push('tick >= ?');
+      params.push(Number(input.tickFrom));
+    }
+    if (input.tickTo !== undefined) {
+      conditions.push('tick <= ?');
+      params.push(Number(input.tickTo));
+    }
+    if (input.workerId !== undefined) {
+      conditions.push('worker_id = ?');
+      params.push(input.workerId);
+    }
+    if (input.partitionId !== undefined) {
+      conditions.push('partition_id = ?');
+      params.push(input.partitionId);
+    }
+    if (input.cursorCreatedAt !== undefined && input.cursorId !== undefined) {
+      conditions.push('(created_at < ? OR (created_at = ? AND id < ?))');
+      params.push(Number(input.cursorCreatedAt), Number(input.cursorCreatedAt), input.cursorId);
+    }
+
+    let sql = 'SELECT * FROM scheduler_run';
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    const orderMap: Record<ListRunsInput['orderBy'], string> = {
+      created_at_desc: 'created_at DESC, id DESC',
+      created_at_asc: 'created_at ASC, id ASC',
+      tick_desc: 'tick DESC, id DESC'
+    };
+    sql += ' ORDER BY ' + orderMap[input.orderBy];
+    sql += ' LIMIT ?';
+    params.push(input.take);
+
+    return db.prepare(sql).all(...params).map(row => this.toRunRecord(row));
+  }
+
+  public listDecisionsForRun(packId: string, runId: string): SchedulerCandidateDecisionRecord[] {
+    const db = this.getDb(packId);
+    const rows = db.prepare(
+      'SELECT * FROM scheduler_candidate_decision WHERE scheduler_run_id = ? ORDER BY created_at ASC'
+    ).all(runId);
+    return rows.map(row => this.toCandidateDecisionRecord(row));
+  }
+
+  public listCandidateDecisions(packId: string, input: ListDecisionsInput): SchedulerCandidateDecisionRecord[] {
+    const db = this.getDb(packId);
+    const conditions: string[] = [];
+    const params: SqlitePrimitive[] = [];
+
+    if (input.actorId !== undefined) {
+      conditions.push('actor_id = ?');
+      params.push(input.actorId);
+    }
+    if (input.kind !== undefined) {
+      conditions.push('kind = ?');
+      params.push(input.kind);
+    }
+    if (input.chosenReason !== undefined) {
+      conditions.push('chosen_reason = ?');
+      params.push(input.chosenReason);
+    }
+    if (input.skippedReason !== undefined) {
+      conditions.push('skipped_reason = ?');
+      params.push(input.skippedReason);
+    }
+    if (input.partitionId !== undefined) {
+      conditions.push('partition_id = ?');
+      params.push(input.partitionId);
+    }
+    if (input.tickFrom !== undefined) {
+      conditions.push('scheduled_for_tick >= ?');
+      params.push(Number(input.tickFrom));
+    }
+    if (input.tickTo !== undefined) {
+      conditions.push('scheduled_for_tick <= ?');
+      params.push(Number(input.tickTo));
+    }
+    if (input.cursorCreatedAt !== undefined && input.cursorId !== undefined) {
+      conditions.push('(created_at < ? OR (created_at = ? AND id < ?))');
+      params.push(Number(input.cursorCreatedAt), Number(input.cursorCreatedAt), input.cursorId);
+    }
+
+    let sql = 'SELECT * FROM scheduler_candidate_decision';
+    if (conditions.length > 0) {
+      sql += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    sql += input.orderBy === 'created_at_asc'
+      ? ' ORDER BY created_at ASC, id ASC'
+      : ' ORDER BY created_at DESC, id DESC';
+    sql += ' LIMIT ?';
+    params.push(input.take);
+
+    return db.prepare(sql).all(...params).map(row => this.toCandidateDecisionRecord(row));
+  }
+
+  public getAgentDecisions(packId: string, actorId: string, limit: number): SchedulerCandidateDecisionRecord[] {
+    const db = this.getDb(packId);
+    const rows = db.prepare(
+      'SELECT * FROM scheduler_candidate_decision WHERE actor_id = ? ORDER BY created_at DESC LIMIT ?'
+    ).all(actorId, limit);
+    return rows.map(row => this.toCandidateDecisionRecord(row));
+  }
+
+  public writeRunSnapshot(
     _packId: string,
     input: {
       id: string;
-      worker_id: string;
-      partition_id: string;
-      lease_holder: string | null;
-      lease_expires_at_snapshot: bigint | null;
+      workerId: string;
+      partitionId: string;
+      leaseHolder: string | null;
+      leaseExpiresAtSnapshot: bigint | null;
       tick: bigint;
       summary: Record<string, unknown>;
-      started_at: bigint;
-      finished_at: bigint;
-      created_at: bigint;
+      startedAt: bigint;
+      finishedAt: bigint;
     }
-  ): Record<string, unknown> {
+  ): SchedulerRunRecord {
     const db = this.getDb(_packId);
+    const createdAt = input.finishedAt;
     db.prepare(
       `INSERT INTO scheduler_run
        (id, worker_id, partition_id, lease_holder, lease_expires_at_snapshot, tick, summary, started_at, finished_at, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       input.id,
-      input.worker_id,
-      input.partition_id,
-      input.lease_holder,
-      input.lease_expires_at_snapshot !== null ? Number(input.lease_expires_at_snapshot) : null,
+      input.workerId,
+      input.partitionId,
+      input.leaseHolder,
+      input.leaseExpiresAtSnapshot !== null ? Number(input.leaseExpiresAtSnapshot) : null,
       Number(input.tick),
       jsonStringify(input.summary),
-      Number(input.started_at),
-      Number(input.finished_at),
-      Number(input.created_at)
+      Number(input.startedAt),
+      Number(input.finishedAt),
+      Number(createdAt)
     );
-    return input;
+    return {
+      id: input.id,
+      worker_id: input.workerId,
+      partition_id: input.partitionId,
+      lease_holder: input.leaseHolder,
+      lease_expires_at_snapshot: input.leaseExpiresAtSnapshot,
+      tick: input.tick,
+      summary: jsonStringify(input.summary),
+      started_at: input.startedAt,
+      finished_at: input.finishedAt,
+      created_at: createdAt
+    };
   }
 
   public writeCandidateDecision(
@@ -842,18 +977,18 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
     schedulerRunId: string,
     input: {
       id: string;
-      partition_id: string;
-      actor_id: string;
+      partitionId: string;
+      actorId: string;
       kind: string;
-      candidate_reasons: unknown;
-      chosen_reason: string;
-      scheduled_for_tick: bigint;
-      priority_score: number;
-      skipped_reason: string | null;
-      created_job_id: string | null;
-      created_at: bigint;
+      candidateReasons: unknown;
+      chosenReason: string;
+      scheduledForTick: bigint;
+      priorityScore: number;
+      skippedReason: string | null;
+      createdJobId: string | null;
+      createdAt: bigint;
     }
-  ): Record<string, unknown> {
+  ): SchedulerCandidateDecisionRecord {
     const db = this.getDb(_packId);
     db.prepare(
       `INSERT INTO scheduler_candidate_decision
@@ -862,128 +997,31 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
     ).run(
       input.id,
       schedulerRunId,
-      input.partition_id,
-      input.actor_id,
+      input.partitionId,
+      input.actorId,
       input.kind,
-      jsonStringify(input.candidate_reasons),
-      input.chosen_reason,
-      Number(input.scheduled_for_tick),
-      input.priority_score,
-      input.skipped_reason,
-      input.created_job_id,
-      Number(input.created_at)
+      jsonStringify(input.candidateReasons),
+      input.chosenReason,
+      Number(input.scheduledForTick),
+      input.priorityScore,
+      input.skippedReason,
+      input.createdJobId,
+      Number(input.createdAt)
     );
-    return input;
-  }
-
-  public listRuns(
-    packId: string,
-    input: {
-      where?: Record<string, unknown>;
-      orderBy?: Record<string, unknown>;
-      take?: number;
-      cursor?: Record<string, unknown>;
-      skip?: number;
-    }
-  ): Record<string, unknown>[] {
-    const db = this.getDb(packId);
-    let sql = 'SELECT * FROM scheduler_run';
-    const params: SqlitePrimitive[] = [];
-    const conditions: string[] = [];
-
-    if (input.where) {
-      for (const [key, value] of Object.entries(input.where)) {
-        if (value !== undefined) {
-          conditions.push(`${key} = ?`);
-          params.push(toSqliteParam(value));
-        }
-      }
-    }
-
-    if (conditions.length > 0) {
-      sql += ' WHERE ' + conditions.join(' AND ');
-    }
-
-    if (input.orderBy) {
-      const orderClauses = Object.entries(input.orderBy).map(([key, dir]) => `${key} ${String(dir)}`);
-      if (orderClauses.length > 0) {
-        sql += ' ORDER BY ' + orderClauses.join(', ');
-      }
-    } else {
-      sql += ' ORDER BY created_at DESC';
-    }
-
-    if (input.take !== undefined) {
-      sql += ' LIMIT ?';
-      params.push(input.take);
-    }
-
-    if (input.skip !== undefined) {
-      sql += ' OFFSET ?';
-      params.push(input.skip);
-    }
-
-    return db.prepare(sql).all(...params);
-  }
-
-  public listCandidateDecisions(
-    packId: string,
-    input: {
-      where?: Record<string, unknown>;
-      orderBy?: Record<string, unknown>;
-      take?: number;
-      cursor?: Record<string, unknown>;
-      skip?: number;
-    }
-  ): Record<string, unknown>[] {
-    const db = this.getDb(packId);
-    let sql = 'SELECT * FROM scheduler_candidate_decision';
-    const params: SqlitePrimitive[] = [];
-    const conditions: string[] = [];
-
-    if (input.where) {
-      for (const [key, value] of Object.entries(input.where)) {
-        if (value !== undefined) {
-          conditions.push(`${key} = ?`);
-          params.push(toSqliteParam(value));
-        }
-      }
-    }
-
-    if (conditions.length > 0) {
-      sql += ' WHERE ' + conditions.join(' AND ');
-    }
-
-    if (input.orderBy) {
-      const orderClauses = Object.entries(input.orderBy).map(([key, dir]) => `${key} ${String(dir)}`);
-      if (orderClauses.length > 0) {
-        sql += ' ORDER BY ' + orderClauses.join(', ');
-      }
-    } else {
-      sql += ' ORDER BY created_at DESC';
-    }
-
-    if (input.take !== undefined) {
-      sql += ' LIMIT ?';
-      params.push(input.take);
-    }
-
-    if (input.skip !== undefined) {
-      sql += ' OFFSET ?';
-      params.push(input.skip);
-    }
-
-    return db.prepare(sql).all(...params);
-  }
-
-  public getAgentDecisions(packId: string, actorId: string, limit?: number): Record<string, unknown>[] {
-    const db = this.getDb(packId);
-    const sql = limit !== undefined
-      ? 'SELECT * FROM scheduler_candidate_decision WHERE actor_id = ? ORDER BY created_at DESC LIMIT ?'
-      : 'SELECT * FROM scheduler_candidate_decision WHERE actor_id = ? ORDER BY created_at DESC';
-    return limit !== undefined
-      ? db.prepare(sql).all(actorId, limit)
-      : db.prepare(sql).all(actorId);
+    return {
+      id: input.id,
+      scheduler_run_id: schedulerRunId,
+      partition_id: input.partitionId,
+      actor_id: input.actorId,
+      kind: input.kind,
+      candidate_reasons: jsonStringify(input.candidateReasons),
+      chosen_reason: input.chosenReason,
+      scheduled_for_tick: input.scheduledForTick,
+      priority_score: input.priorityScore,
+      skipped_reason: input.skippedReason,
+      created_job_id: input.createdJobId,
+      created_at: input.createdAt
+    };
   }
 
   // -- Private helpers --
@@ -1086,6 +1124,60 @@ export class SqliteSchedulerStorageAdapter implements SchedulerStorageAdapter {
       capacity_hint: row['capacity_hint'] as number | null,
 // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
       updated_at: BigInt(row['updated_at'] as number)
+    };
+  }
+
+  private toRunRecord(row: Record<string, unknown>): SchedulerRunRecord {
+    return {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      id: row['id'] as string,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      worker_id: row['worker_id'] as string,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      partition_id: row['partition_id'] as string,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      lease_holder: (row['lease_holder'] as string | null) ?? null,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      lease_expires_at_snapshot: row['lease_expires_at_snapshot'] !== null ? BigInt(row['lease_expires_at_snapshot'] as number) : null,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      tick: BigInt(row['tick'] as number),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      summary: (row['summary'] as string | null) ?? '{}',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      started_at: BigInt(row['started_at'] as number),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      finished_at: BigInt(row['finished_at'] as number),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      created_at: BigInt(row['created_at'] as number)
+    };
+  }
+
+  private toCandidateDecisionRecord(row: Record<string, unknown>): SchedulerCandidateDecisionRecord {
+    return {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      id: row['id'] as string,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      scheduler_run_id: row['scheduler_run_id'] as string,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      partition_id: row['partition_id'] as string,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      actor_id: row['actor_id'] as string,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      kind: row['kind'] as string,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      candidate_reasons: (row['candidate_reasons'] as string | null) ?? '[]',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      chosen_reason: row['chosen_reason'] as string,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      scheduled_for_tick: BigInt(row['scheduled_for_tick'] as number),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      priority_score: row['priority_score'] as number,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      skipped_reason: (row['skipped_reason'] as string | null) ?? null,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      created_job_id: (row['created_job_id'] as string | null) ?? null,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- SQLite column type
+      created_at: BigInt(row['created_at'] as number)
     };
   }
 

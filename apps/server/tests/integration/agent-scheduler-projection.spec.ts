@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { getAgentSchedulerProjection } from '../../src/app/services/scheduler/queries.js';
+import { getAgentSchedulerProjection } from '../../src/app/services/scheduler/agent-queries.js';
 import { expectDefined } from '../helpers/assertions.js';
 import { MemSchedulerStorage } from '../helpers/scheduler_storage.js';
 import { TestKit } from '../testkit.js';

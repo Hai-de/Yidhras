@@ -1,12 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { SCHEDULER_KINDS, SCHEDULER_REASONS, SCHEDULER_SKIP_REASONS } from '../../../src/app/services/scheduler/constants.js';
+import { encodeSchedulerCursor, parseSchedulerCursor } from '../../../src/app/services/scheduler/cursor.js';
 import {
-  buildDecisionCursorWhere,
-  buildRunCrossLinkSummary,
-  buildRunCursorWhere,
-  buildSchedulerOwnershipSummary,
-  encodeSchedulerCursor,
-  getFilteredPackIds,
   parseDecisionFilters,
   parseLimit,
   parseOptionalIdFilter,
@@ -18,17 +14,18 @@ import {
   parseOwnershipMigrationFilters,
   parseRebalanceRecommendationFilters,
   parseRunFilters,
-  parseSchedulerCursor,
+  parseWorkerFilters
+} from '../../../src/app/services/scheduler/filter-parsers.js';
+import {
+  buildRunCrossLinkSummary,
+  buildSchedulerOwnershipSummary,
   parseSummaryJson,
-  parseWorkerFilters,
-  SCHEDULER_KINDS,
-  SCHEDULER_REASONS,
-  SCHEDULER_SKIP_REASONS,
   toCandidateDecisionReadModel,
   toOwnershipMigrationReadModel,
   toRebalanceRecommendationReadModel,
   toRunReadModel,
-  toWorkerRuntimeReadModel} from '../../../src/app/services/scheduler/helpers.js';
+  toWorkerRuntimeReadModel
+} from '../../../src/app/services/scheduler/read-models.js';
 
 // Mock runtime_config to provide default config values
 vi.mock('../../../src/config/runtime_config.js', () => ({
@@ -269,34 +266,6 @@ describe('scheduler helpers', () => {
     });
   });
 
-  describe('buildRunCursorWhere', () => {
-    it('returns always-true predicate for null cursor', () => {
-      const pred = buildRunCursorWhere(null);
-      expect(pred({ id: 'any', created_at: 0 } as never)).toBe(true);
-    });
-
-    it('filters runs after cursor', () => {
-      const pred = buildRunCursorWhere({ created_at: '1000', id: 'run-1' });
-      // Run before cursor should pass
-      expect(pred({ id: 'run-0', created_at: 500 } as never)).toBe(true);
-      // Run after cursor should not pass
-      expect(pred({ id: 'run-2', created_at: 2000 } as never)).toBe(false);
-    });
-  });
-
-  describe('buildDecisionCursorWhere', () => {
-    it('returns always-true predicate for null cursor', () => {
-      const pred = buildDecisionCursorWhere(null);
-      expect(pred({ id: 'any', created_at: 0 } as never)).toBe(true);
-    });
-
-    it('builds cursor predicate', () => {
-      const pred = buildDecisionCursorWhere({ created_at: '1000', id: 'dec-1' });
-      expect(pred({ id: 'dec-0', created_at: 500 } as never)).toBe(true);
-      expect(pred({ id: 'dec-2', created_at: 2000 } as never)).toBe(false);
-    });
-  });
-
   describe('toRunReadModel', () => {
     it('converts raw row to read model', () => {
       const raw = {
@@ -420,26 +389,6 @@ describe('scheduler helpers', () => {
       expect(result.returned).toBe(0);
       expect(result.assigned_count).toBe(0);
       expect(result.top_workers).toEqual([]);
-    });
-  });
-
-  describe('getFilteredPackIds', () => {
-    it('returns all pack ids when no filter', () => {
-      const ctx = { schedulerStorage: { listOpenPackIds: () => ['pack-a', 'pack-b'] } } as never;
-      const result = getFilteredPackIds(ctx);
-      expect(result).toEqual(['pack-a', 'pack-b']);
-    });
-
-    it('returns empty when no schedulerStorage', () => {
-      const ctx = {} as never;
-      const result = getFilteredPackIds(ctx);
-      expect(result).toEqual([]);
-    });
-
-    it('filters by pack id', () => {
-      const ctx = { schedulerStorage: { listOpenPackIds: () => ['pack-a', 'pack-b'] } } as never;
-      const result = getFilteredPackIds(ctx, 'pack-a');
-      expect(result).toEqual(['pack-a']);
     });
   });
 });

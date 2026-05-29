@@ -25,30 +25,11 @@ export interface RuntimeKernelFacade {
   getHealthSnapshot(): RuntimeKernelHealthSnapshot;
 }
 
-export interface SchedulerObservationPort {
+export interface SchedulerControlPort {
   getOwnershipSnapshot(input?: {
     workerId?: string;
     partitionIds?: string[];
   }): Promise<SchedulerOwnershipSnapshot>;
-  getOwnershipAssignments?(input?: {
-    worker_id?: string;
-    partition_id?: string;
-    status?: string;
-  }): Promise<unknown>;
-  getWorkers?(input?: {
-    worker_id?: string;
-    status?: string;
-  }): Promise<unknown>;
-  getSummary?(input?: {
-    sampleRuns?: number;
-  }): Promise<unknown>;
-  getOperatorProjection?(input?: {
-    sampleRuns?: number;
-    recentLimit?: number;
-  }): Promise<unknown>;
-}
-
-export interface SchedulerControlPort {
   reconcileBootstrapOwnership(input: {
     schedulerWorkerId: string;
     schedulerPartitionIds?: string[];

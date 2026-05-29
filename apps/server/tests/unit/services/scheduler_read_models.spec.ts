@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  buildDecisionCursorWhere,
   buildRunCrossLinkSummary,
   buildSchedulerOwnershipSummary,
   toCandidateDecisionReadModel,
@@ -9,11 +8,11 @@ import {
   toRebalanceRecommendationReadModel,
   toRunReadModel,
   toWorkerRuntimeReadModel
-} from '../../../src/app/services/scheduler/helpers.js';
+} from '../../../src/app/services/scheduler/read-models.js';
 
 describe('scheduler read-model converters', () => {
   describe('toRunReadModel', () => {
-    it('converts raw scheduler run to read model', () => {
+    it('converts adapter run record to read model', () => {
       const result = toRunReadModel({
         id: 'run-1',
         worker_id: 'worker-1',
@@ -21,7 +20,7 @@ describe('scheduler read-model converters', () => {
         lease_holder: 'worker-1',
         lease_expires_at_snapshot: 5000n,
         tick: 100n,
-        summary: { decisions: 5, skipped: 2 },
+        summary: '{"decisions":5,"skipped":2}',
         started_at: 1000n,
         finished_at: 2000n,
         created_at: 1500n
@@ -44,7 +43,7 @@ describe('scheduler read-model converters', () => {
         lease_holder: null,
         lease_expires_at_snapshot: null,
         tick: 50n,
-        summary: {},
+        summary: '{}',
         started_at: 100n,
         finished_at: 200n,
         created_at: 150n
@@ -56,14 +55,14 @@ describe('scheduler read-model converters', () => {
   });
 
   describe('toCandidateDecisionReadModel', () => {
-    it('converts raw candidate to read model', () => {
+    it('converts adapter record to read model', () => {
       const result = toCandidateDecisionReadModel({
         id: 'dec-1',
         scheduler_run_id: 'run-1',
         partition_id: 'part-1',
         actor_id: 'agent-1',
         kind: 'periodic',
-        candidate_reasons: ['periodic_tick'],
+        candidate_reasons: '["periodic_tick"]',
         chosen_reason: 'periodic_tick',
         scheduled_for_tick: 100n,
         priority_score: 0.95,
@@ -86,7 +85,7 @@ describe('scheduler read-model converters', () => {
         partition_id: 'part-1',
         actor_id: 'agent-1',
         kind: 'event_driven',
-        candidate_reasons: ['event_followup', 'relationship_change_followup', 'snr_change_followup'],
+        candidate_reasons: '["event_followup","relationship_change_followup","snr_change_followup"]',
         chosen_reason: 'event_followup',
         scheduled_for_tick: 100n,
         priority_score: 0.8,
@@ -106,7 +105,7 @@ describe('scheduler read-model converters', () => {
         partition_id: 'part-1',
         actor_id: 'agent-1',
         kind: 'periodic',
-        candidate_reasons: 'invalid',
+        candidate_reasons: '"invalid"',
         chosen_reason: 'periodic_tick',
         scheduled_for_tick: 100n,
         priority_score: 0.5,
@@ -203,24 +202,10 @@ describe('scheduler read-model converters', () => {
     });
   });
 
-  describe('buildDecisionCursorWhere', () => {
-    it('returns always-true for null cursor', () => {
-      const predicate = buildDecisionCursorWhere(null);
-      expect(predicate({ created_at: 1000, id: 'dec-1' } as any)).toBe(true);
-    });
-
-    it('filters decisions before cursor', () => {
-      const predicate = buildDecisionCursorWhere({ created_at: '1000', id: 'dec-1' });
-      expect(predicate({ created_at: 500, id: 'dec-x' } as any)).toBe(true);
-      expect(predicate({ created_at: 1000, id: 'aaa' } as any)).toBe(true);
-      expect(predicate({ created_at: 2000, id: 'dec-x' } as any)).toBe(false);
-    });
-  });
-
   describe('buildRunCrossLinkSummary', () => {
     it('returns null when no candidates have workflow links', () => {
       const result = buildRunCrossLinkSummary([
-        { id: 'dec-1', workflow_link: null } as any
+        { id: 'dec-1', workflow_link: null } as unknown as import('../../../src/app/services/scheduler/types.js').SchedulerCandidateDecisionReadModel
       ]);
       expect(result).toBeNull();
     });
@@ -247,13 +232,16 @@ describe('scheduler read-model converters', () => {
             audit_entry: { summary: 'test2' }
           }
         }
-      ] as any);
+      ] as unknown as import('../../../src/app/services/scheduler/types.js').SchedulerCandidateDecisionReadModel[]);
 
-      expect(result).not.toBeNull();
-      expect(result!.linked_workflow_count).toBe(2);
-      expect(result!.workflow_state_breakdown).toHaveLength(1);
-      expect(result!.linked_intent_type_breakdown).toHaveLength(2);
-      expect(result!.recent_audit_summaries).toHaveLength(2);
+      if (result) {
+        expect(result.linked_workflow_count).toBe(2);
+        expect(result.workflow_state_breakdown).toHaveLength(1);
+        expect(result.linked_intent_type_breakdown).toHaveLength(2);
+        expect(result.recent_audit_summaries).toHaveLength(2);
+      } else {
+        expect(result).not.toBeNull();
+      }
     });
   });
 
@@ -266,12 +254,12 @@ describe('scheduler read-model converters', () => {
     });
 
     it('counts statuses correctly', () => {
-      const items = [
-        { worker_id: 'w1', status: 'assigned', source: 'bootstrap' },
-        { worker_id: 'w1', status: 'assigned', source: 'bootstrap' },
-        { worker_id: 'w2', status: 'migrating', source: 'rebalance' },
-        { worker_id: null, status: 'released', source: 'manual' }
-      ] as any[];
+      const items: import('../../../src/app/services/scheduler/types.js').SchedulerPartitionOwnershipReadModel[] = [
+        { partition_id: 'p1', worker_id: 'w1', status: 'assigned', version: 1, source: 'bootstrap', updated_at: '100', latest_migration: null },
+        { partition_id: 'p2', worker_id: 'w1', status: 'assigned', version: 1, source: 'bootstrap', updated_at: '100', latest_migration: null },
+        { partition_id: 'p3', worker_id: 'w2', status: 'migrating', version: 1, source: 'rebalance', updated_at: '100', latest_migration: null },
+        { partition_id: 'p4', worker_id: null, status: 'released', version: 1, source: 'manual', updated_at: '100', latest_migration: null }
+      ];
 
       const result = buildSchedulerOwnershipSummary(items);
       expect(result.returned).toBe(4);

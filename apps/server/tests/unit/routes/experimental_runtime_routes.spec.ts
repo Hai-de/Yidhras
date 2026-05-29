@@ -24,13 +24,17 @@ vi.mock('../../../src/app/services/runtime/experimental_multi_pack_runtime.js', 
   }))
 }));
 
-vi.mock('../../../src/app/runtime/runtime_kernel_service.js', () => ({
-  createRuntimeKernelService: vi.fn(() => ({
-    getSummary: vi.fn(async () => ({ partition_count: 1, worker_count: 1 })),
-    getOwnershipAssignments: vi.fn(async () => ({ assignments: [] })),
-    getWorkers: vi.fn(async () => []),
-    getOperatorProjection: vi.fn(async () => ({}))
-  }))
+vi.mock('../../../src/app/services/scheduler/summary-queries.js', () => ({
+  getSchedulerSummarySnapshot: vi.fn(async () => ({ latest_run: null, run_totals: {}, top_reasons: [] })),
+  getSchedulerOperatorProjection: vi.fn(async () => ({}))
+}));
+
+vi.mock('../../../src/app/services/scheduler/ownership-queries.js', () => ({
+  listSchedulerOwnershipAssignments: vi.fn(() => ({ items: [], summary: {} }))
+}));
+
+vi.mock('../../../src/app/services/scheduler/worker-queries.js', () => ({
+  listSchedulerWorkers: vi.fn(() => ({ items: [], summary: {} }))
 }));
 
 vi.mock('../../../src/operator/guard/pack_access.js', () => ({

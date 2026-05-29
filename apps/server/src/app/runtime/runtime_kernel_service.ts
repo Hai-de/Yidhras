@@ -1,15 +1,8 @@
 import type { AppContext, RuntimeLoopDiagnostics } from '../context.js';
-import {
-  getSchedulerOperatorProjection,
-  getSchedulerSummarySnapshot,
-  listSchedulerOwnershipAssignments,
-  listSchedulerWorkers
-} from '../services/scheduler/queries.js';
 import type {
   RuntimeKernelFacade,
   RuntimeKernelHealthSnapshot,
-  SchedulerControlPort,
-  SchedulerObservationPort
+  SchedulerControlPort
 } from './runtime_kernel_ports.js';
 import { reconcileSchedulerBootstrapAssignments, resolveSchedulerOwnershipSnapshot } from './scheduler_ownership.js';
 
@@ -24,9 +17,12 @@ const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
   last_error_message: null
 };
 
-export interface RuntimeKernelService extends RuntimeKernelFacade, SchedulerObservationPort, SchedulerControlPort {}
+export interface RuntimeKernelService extends RuntimeKernelFacade, SchedulerControlPort {}
 
-export const createRuntimeKernelService = (context: AppContext, packId: string): RuntimeKernelService => {
+export const createRuntimeKernelService = (
+  context: AppContext,
+  packId: string
+): RuntimeKernelService => {
   return {
     start() {
       context.setPaused(false);
@@ -48,31 +44,25 @@ export const createRuntimeKernelService = (context: AppContext, packId: string):
         loop_status: diagnostics.status
       };
     },
-    // eslint-disable-next-line @typescript-eslint/require-await
     async reconcileBootstrapOwnership(input) {
-      reconcileSchedulerBootstrapAssignments(context, input.schedulerWorkerId, input.schedulerPartitionIds, packId);
+      reconcileSchedulerBootstrapAssignments(
+        context,
+        input.schedulerWorkerId,
+        input.schedulerPartitionIds,
+        packId
+      );
     },
-    // eslint-disable-next-line @typescript-eslint/require-await
     async getOwnershipSnapshot(input) {
-      const workerId = input?.workerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
-      return resolveSchedulerOwnershipSnapshot(context, {
-        workerId,
-        bootstrapPartitionIds: input?.partitionIds
-      }, packId);
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await
-    async getOwnershipAssignments(input) {
-      return listSchedulerOwnershipAssignments(context, { ...input ?? {}, pack_id: packId });
-    },
-    // eslint-disable-next-line @typescript-eslint/require-await
-    async getWorkers(input) {
-      return listSchedulerWorkers(context, { ...input ?? {}, pack_id: packId });
-    },
-    async getSummary(input) {
-      return getSchedulerSummarySnapshot(context, { ...input, packId });
-    },
-    async getOperatorProjection(input) {
-      return getSchedulerOperatorProjection(context, { ...input, packId });
+      const workerId =
+        input?.workerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
+      return resolveSchedulerOwnershipSnapshot(
+        context,
+        {
+          workerId,
+          bootstrapPartitionIds: input?.partitionIds
+        },
+        packId
+      );
     }
   };
 };

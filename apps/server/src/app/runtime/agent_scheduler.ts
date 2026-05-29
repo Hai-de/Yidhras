@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { getSchedulerAgentConfig, getSchedulerDecisionKernelConfig, getSchedulerEntityConcurrencyConfig, getSchedulerTickBudgetConfig } from '../../config/runtime_config.js';
 import type { InferenceRequestInput } from '../../inference/types.js';
 import type { AppContext } from '../context.js';
@@ -17,7 +19,6 @@ import {
 } from '../services/inference_workflow.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../services/pack/pack_runtime_resolution.js';
-import { recordSchedulerRunSnapshot } from '../services/scheduler/writes.js';
 import { triggerEventWorkflows } from '../services/workflow/workflow_trigger_scheduler.js';
 import { listActiveWorkflowActors } from './entity_activity_query.js';
 import type {
@@ -149,6 +150,57 @@ const buildSchedulerIdempotencyKey = (
   reason: SchedulerReason
 ): string => {
   return `sch:${agentId}:${tick.toString()}:${kind}:${reason}`;
+};
+
+const writeSchedulerSnapshot = (
+  context: AppContext,
+  packId: string | undefined,
+  input: {
+    workerId: string;
+    partitionId: string;
+    leaseHolder: string;
+    leaseExpiresAtSnapshot: bigint | null;
+    tick: bigint;
+    startedAt: bigint;
+    finishedAt: bigint;
+    summary: AgentSchedulerRunResult;
+    candidateDecisions: AgentSchedulerCandidateDecisionSnapshot[];
+  }
+): string => {
+  const runId = randomUUID();
+  const adapter = context.schedulerStorage;
+  if (adapter && packId) {
+    adapter.open(packId);
+    adapter.writeRunSnapshot(packId, {
+      id: runId,
+      workerId: input.workerId,
+      partitionId: input.partitionId,
+      leaseHolder: input.leaseHolder,
+      leaseExpiresAtSnapshot: input.leaseExpiresAtSnapshot,
+      tick: input.tick,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
+      summary: input.summary as unknown as Record<string, unknown>,
+      startedAt: input.startedAt,
+      finishedAt: input.finishedAt
+    });
+
+    for (const candidate of input.candidateDecisions) {
+      adapter.writeCandidateDecision(packId, runId, {
+        id: randomUUID(),
+        partitionId: candidate.partition_id ?? input.partitionId,
+        actorId: candidate.actor_id,
+        kind: candidate.kind,
+        candidateReasons: candidate.candidate_reasons,
+        chosenReason: candidate.chosen_reason,
+        scheduledForTick: candidate.scheduled_for_tick,
+        priorityScore: candidate.priority_score,
+        skippedReason: candidate.skipped_reason,
+        createdJobId: candidate.created_job_id,
+        createdAt: input.finishedAt
+      });
+    }
+  }
+  return runId;
 };
 
 const buildScheduledInferenceRequestInput = (
@@ -374,7 +426,7 @@ const runAgentSchedulerForPartition = async ({
 
   if (agentIds.length === 0) {
     const summary = createEmptyPartitionRunResult(partitionId);
-    const schedulerRunId = recordSchedulerRunSnapshot(context, {
+    const schedulerRunId = writeSchedulerSnapshot(context, packId, {
       workerId,
       partitionId,
       leaseHolder: workerId,
@@ -384,7 +436,7 @@ const runAgentSchedulerForPartition = async ({
       finishedAt: resolvePackTick(context, packRuntime),
       summary,
       candidateDecisions
-    }, packId);
+    });
 
     updateSchedulerCursor(context, {
       partitionId,
@@ -528,7 +580,7 @@ const runAgentSchedulerForPartition = async ({
     }
   }
 
-  const schedulerRunId = recordSchedulerRunSnapshot(context, {
+  const schedulerRunId = writeSchedulerSnapshot(context, packId, {
     workerId,
     partitionId,
     leaseHolder: workerId,
@@ -538,7 +590,7 @@ const runAgentSchedulerForPartition = async ({
     finishedAt: resolvePackTick(context, packRuntime),
     summary,
     candidateDecisions
-  }, packId);
+  });
   const observedSignalTickCandidates = [
     ...recentSignals.map(signal => signal.created_at),
     ...Array.from(replayRecoveryActorTicks.entries()).filter(([actorId]) => allowedAgentIds.has(actorId)).map(([_actorId, tick]) => tick),

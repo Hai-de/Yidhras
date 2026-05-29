@@ -513,59 +513,58 @@ describe('SqliteSchedulerStorageAdapter', () => {
 
   // -- Observability --
 
-  it('writeDetailedSnapshot creates a scheduler run record', () => {
-    const snapshot = adapter.writeDetailedSnapshot(PACK_ID, {
+  it('writeRunSnapshot creates a scheduler run record', () => {
+    const snapshot = adapter.writeRunSnapshot(PACK_ID, {
       id: 'run-1',
-      worker_id: 'w1',
-      partition_id: 'p0',
-      lease_holder: 'w1',
-      lease_expires_at_snapshot: 2000n,
+      workerId: 'w1',
+      partitionId: 'p0',
+      leaseHolder: 'w1',
+      leaseExpiresAtSnapshot: 2000n,
       tick: 100n,
       summary: { created_count: 5 },
-      started_at: 100n,
-      finished_at: 200n,
-      created_at: 200n
+      startedAt: 100n,
+      finishedAt: 200n
     });
 
     expect(snapshot.id).toBe('run-1');
 
-    const runs = adapter.listRuns(PACK_ID, { where: { worker_id: 'w1' } });
+    const runs = adapter.listRuns(PACK_ID, { workerId: 'w1', orderBy: 'created_at_desc', take: 10 });
     expect(runs).toHaveLength(1);
   });
 
   it('writeCandidateDecision creates a decision record', () => {
     const decision = adapter.writeCandidateDecision(PACK_ID, 'run-1', {
       id: 'dec-1',
-      partition_id: 'p0',
-      actor_id: 'agent-a',
+      partitionId: 'p0',
+      actorId: 'agent-a',
       kind: 'periodic',
-      candidate_reasons: ['periodic_tick'],
-      chosen_reason: 'periodic_tick',
-      scheduled_for_tick: 200n,
-      priority_score: 10,
-      skipped_reason: null,
-      created_job_id: null,
-      created_at: 200n
+      candidateReasons: ['periodic_tick'],
+      chosenReason: 'periodic_tick',
+      scheduledForTick: 200n,
+      priorityScore: 10,
+      skippedReason: null,
+      createdJobId: null,
+      createdAt: 200n
     });
 
     expect(decision.id).toBe('dec-1');
 
-    const decisions = adapter.listCandidateDecisions(PACK_ID, { where: { actor_id: 'agent-a' } });
+    const decisions = adapter.listCandidateDecisions(PACK_ID, { actorId: 'agent-a', orderBy: 'created_at_desc', take: 10 });
     expect(decisions).toHaveLength(1);
   });
 
   it('getAgentDecisions filters by actor', () => {
     adapter.writeCandidateDecision(PACK_ID, 'run-1', {
-      id: 'dec-1', partition_id: 'p0', actor_id: 'agent-a', kind: 'periodic', candidate_reasons: [], chosen_reason: 'periodic_tick', scheduled_for_tick: 100n, priority_score: 5, skipped_reason: null, created_job_id: null, created_at: 100n
+      id: 'dec-1', partitionId: 'p0', actorId: 'agent-a', kind: 'periodic', candidateReasons: [], chosenReason: 'periodic_tick', scheduledForTick: 100n, priorityScore: 5, skippedReason: null, createdJobId: null, createdAt: 100n
     });
     adapter.writeCandidateDecision(PACK_ID, 'run-1', {
-      id: 'dec-2', partition_id: 'p0', actor_id: 'agent-b', kind: 'event_driven', candidate_reasons: [], chosen_reason: 'event_followup', scheduled_for_tick: 100n, priority_score: 8, skipped_reason: null, created_job_id: null, created_at: 100n
+      id: 'dec-2', partitionId: 'p0', actorId: 'agent-b', kind: 'event_driven', candidateReasons: [], chosenReason: 'event_followup', scheduledForTick: 100n, priorityScore: 8, skippedReason: null, createdJobId: null, createdAt: 100n
     });
 
-    const agentADecisions = adapter.getAgentDecisions(PACK_ID, 'agent-a');
+    const agentADecisions = adapter.getAgentDecisions(PACK_ID, 'agent-a', 10);
     expect(agentADecisions).toHaveLength(1);
 
-    const agentBDecisions = adapter.getAgentDecisions(PACK_ID, 'agent-b');
+    const agentBDecisions = adapter.getAgentDecisions(PACK_ID, 'agent-b', 10);
     expect(agentBDecisions).toHaveLength(1);
   });
 

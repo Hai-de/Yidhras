@@ -2,10 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { runAgentScheduler } from '../../src/app/runtime/agent_scheduler.js';
 import { resolveSchedulerPartitionId } from '../../src/app/runtime/scheduler_partitioning.js';
-import {
-  listSchedulerDecisions,
-  listSchedulerRuns
-} from '../../src/app/services/scheduler/queries.js';
+import { listSchedulerDecisions } from '../../src/app/services/scheduler/decision-queries.js';
+import { listSchedulerRuns } from '../../src/app/services/scheduler/run-queries.js';
 import { MemSchedulerStorage } from "../helpers/scheduler_storage.js";
 import { TestKit } from '../testkit.js';
 

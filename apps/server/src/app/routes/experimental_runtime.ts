@@ -5,7 +5,6 @@ import type { AppContext } from '../context.js'
 import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { capabilityGuard } from '../middleware/capability.js'
-import { createRuntimeKernelService } from '../runtime/runtime_kernel_service.js'
 import { getPackRuntimeLookupPort } from '../services/app_context_ports.js'
 import { assertPackScope } from '../services/pack/pack_scope_resolver.js'
 import {
@@ -15,6 +14,9 @@ import {
   loadExperimentalPackRuntime,
   unloadExperimentalPackRuntime
 } from '../services/runtime/experimental_multi_pack_runtime.js'
+import { listSchedulerOwnershipAssignments } from '../services/scheduler/ownership-queries.js'
+import { getSchedulerOperatorProjection,getSchedulerSummarySnapshot } from '../services/scheduler/summary-queries.js'
+import { listSchedulerWorkers } from '../services/scheduler/worker-queries.js'
 import type { RouteModule } from './types.js'
 
 const resolvePackIdParam = (value: unknown): string => {
@@ -208,8 +210,7 @@ export const experimentalRuntimeRoutes: RouteModule = {
       asyncHandler(async (req, res) => {
         const packId = resolvePackIdParam(req.params.packId)
         requireExperimentalPackHandle(context, packId)
-        const kernel = createRuntimeKernelService(context, packId)
-        jsonOk(res, toJsonSafe(await kernel.getSummary?.({})))
+        jsonOk(res, toJsonSafe(await getSchedulerSummarySnapshot(context, packId, {})))
       })
     )
 
@@ -220,8 +221,7 @@ export const experimentalRuntimeRoutes: RouteModule = {
       asyncHandler(async (req, res) => {
         const packId = resolvePackIdParam(req.params.packId)
         requireExperimentalPackHandle(context, packId)
-        const kernel = createRuntimeKernelService(context, packId)
-        jsonOk(res, toJsonSafe(await kernel.getOwnershipAssignments?.({})))
+        jsonOk(res, toJsonSafe(listSchedulerOwnershipAssignments(context, packId, {})))
       })
     )
 
@@ -232,8 +232,7 @@ export const experimentalRuntimeRoutes: RouteModule = {
       asyncHandler(async (req, res) => {
         const packId = resolvePackIdParam(req.params.packId)
         requireExperimentalPackHandle(context, packId)
-        const kernel = createRuntimeKernelService(context, packId)
-        jsonOk(res, toJsonSafe(await kernel.getWorkers?.({})))
+        jsonOk(res, toJsonSafe(listSchedulerWorkers(context, packId, {})))
       })
     )
 
@@ -244,8 +243,7 @@ export const experimentalRuntimeRoutes: RouteModule = {
       asyncHandler(async (req, res) => {
         const packId = resolvePackIdParam(req.params.packId)
         requireExperimentalPackHandle(context, packId)
-        const kernel = createRuntimeKernelService(context, packId)
-        jsonOk(res, toJsonSafe(await kernel.getOperatorProjection?.({})))
+        jsonOk(res, toJsonSafe(await getSchedulerOperatorProjection(context, packId, {})))
       })
     )
   }

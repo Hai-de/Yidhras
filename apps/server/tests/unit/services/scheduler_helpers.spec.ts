@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { encodeSchedulerCursor, parseSchedulerCursor } from '../../../src/app/services/scheduler/cursor.js';
 import {
-  buildRunCursorWhere,
-  encodeSchedulerCursor,
   parseDecisionFilters,
   parseLimit,
   parseOptionalIdFilter,
@@ -14,10 +13,9 @@ import {
   parseOwnershipMigrationFilters,
   parseRebalanceRecommendationFilters,
   parseRunFilters,
-  parseSchedulerCursor,
-  parseSummaryJson,
   parseWorkerFilters
-} from '../../../src/app/services/scheduler/helpers.js';
+} from '../../../src/app/services/scheduler/filter-parsers.js';
+import { parseSummaryJson } from '../../../src/app/services/scheduler/read-models.js';
 
 describe('scheduler helpers', () => {
   describe('encodeSchedulerCursor / parseSchedulerCursor', () => {
@@ -241,23 +239,6 @@ describe('scheduler helpers', () => {
 
     it('returns empty object for invalid JSON', () => {
       expect(parseSummaryJson('not json')).toEqual({});
-    });
-  });
-
-  describe('buildRunCursorWhere', () => {
-    it('returns always-true for null cursor', () => {
-      const predicate = buildRunCursorWhere(null);
-      expect(predicate({ created_at: 1000, id: 'run-1' } as any)).toBe(true);
-    });
-
-    it('filters runs before cursor position', () => {
-      const predicate = buildRunCursorWhere({ created_at: '1000', id: 'run-1' });
-      // run with earlier timestamp should pass
-      expect(predicate({ created_at: 500, id: 'run-x' } as any)).toBe(true);
-      // run with same timestamp but earlier id should pass
-      expect(predicate({ created_at: 1000, id: 'aaa' } as any)).toBe(true);
-      // run with later timestamp should not pass
-      expect(predicate({ created_at: 2000, id: 'run-x' } as any)).toBe(false);
     });
   });
 });

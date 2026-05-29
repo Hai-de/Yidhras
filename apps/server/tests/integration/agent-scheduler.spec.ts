@@ -7,7 +7,7 @@ import {
   getLatestSchedulerRunReadModel,
   getSchedulerRunReadModelById,
   getSchedulerSummarySnapshot
-} from '../../src/app/services/scheduler/queries.js';
+} from '../../src/app/services/scheduler/run-queries.js';
 import { expectDefined } from '../helpers/assertions.js';
 import { MemSchedulerStorage } from "../helpers/scheduler_storage.js";
 import { TestKit } from '../testkit.js';

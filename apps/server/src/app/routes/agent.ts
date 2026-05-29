@@ -9,12 +9,13 @@ import {
 import type { Request, Response } from 'express'
 
 import { OPERATOR_CAPABILITY } from '../../operator/constants.js'
+import { ApiError } from '../../utils/api_error.js'
 import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseParams, parseQuery } from '../http/zod.js'
 import { capabilityGuard } from '../middleware/capability.js'
 import { getAgentContextSnapshot, getEntityOverview, listSnrAdjustmentLogs } from '../services/agent/agent.js'
-import { getAgentSchedulerProjection } from '../services/scheduler/queries.js'
+import { getAgentSchedulerProjection } from '../services/scheduler/agent-queries.js'
 import type { RouteModule } from './types.js'
 
 export const agentRoutes: RouteModule = {
@@ -75,7 +76,12 @@ export const agentRoutes: RouteModule = {
       context.assertRuntimeReady('agent scheduler projection')
       const params = parseParams(agentIdParamsSchema, req.params, 'AGENT_QUERY_INVALID')
       const query = parseQuery(agentSchedulerProjectionQuerySchema, req.query, 'AGENT_QUERY_INVALID')
-      const projection = await getAgentSchedulerProjection(context, params.id, {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query value
+      const packId = (req.query.packId as string | undefined) ?? (req.params.packId as string | undefined)
+      if (!packId) {
+        throw new ApiError(400, 'PACK_ID_REQUIRED', 'Pack ID is required for agent scheduler operations')
+      }
+      const projection = await getAgentSchedulerProjection(context, packId, params.id, {
         limit: query.limit
       })
 

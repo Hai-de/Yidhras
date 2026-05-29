@@ -70,6 +70,59 @@ export interface SchedulerRebalanceRecommendationRecord {
   applied_migration_id: string | null;
 }
 
+export interface SchedulerRunRecord {
+  id: string;
+  worker_id: string;
+  partition_id: string;
+  lease_holder: string | null;
+  lease_expires_at_snapshot: bigint | null;
+  tick: bigint;
+  summary: string;
+  started_at: bigint;
+  finished_at: bigint;
+  created_at: bigint;
+}
+
+export interface SchedulerCandidateDecisionRecord {
+  id: string;
+  scheduler_run_id: string;
+  partition_id: string;
+  actor_id: string;
+  kind: string;
+  candidate_reasons: string;
+  chosen_reason: string;
+  scheduled_for_tick: bigint;
+  priority_score: number;
+  skipped_reason: string | null;
+  created_job_id: string | null;
+  created_at: bigint;
+}
+
+export interface ListRunsInput {
+  tickFrom?: bigint;
+  tickTo?: bigint;
+  workerId?: string;
+  partitionId?: string;
+  cursorCreatedAt?: bigint;
+  cursorId?: string;
+  orderBy: 'created_at_desc' | 'created_at_asc' | 'tick_desc';
+  take: number;
+}
+
+export interface ListDecisionsInput {
+  actorId?: string;
+  kind?: string;
+  chosenReason?: string;
+  skippedReason?: string;
+  partitionId?: string;
+  tickFrom?: bigint;
+  tickTo?: bigint;
+  cursorCreatedAt?: bigint;
+  cursorId?: string;
+  orderBy: 'created_at_desc' | 'created_at_asc';
+  take: number;
+}
+
 export interface SchedulerStorageAdapter {
   // -- Lifecycle --
 
@@ -278,63 +331,56 @@ export interface SchedulerStorageAdapter {
     maxApply: number
   ): SchedulerRebalanceRecommendationRecord[];
 
-  // -- Observability --
+  // -- Observability (typed) --
 
-  writeDetailedSnapshot(
+  /** Get a single scheduler run by its ID. */
+  getRunById(packId: string, runId: string): SchedulerRunRecord | null;
+
+  /** List scheduler runs with typed filters. All filtering happens in the storage layer. */
+  listRuns(packId: string, input: ListRunsInput): SchedulerRunRecord[];
+
+  /** Get all candidate decisions for a specific scheduler run, ordered by created_at ASC. */
+  listDecisionsForRun(packId: string, runId: string): SchedulerCandidateDecisionRecord[];
+
+  /** List candidate decisions with typed filters. All filtering happens in the storage layer. */
+  listCandidateDecisions(packId: string, input: ListDecisionsInput): SchedulerCandidateDecisionRecord[];
+
+  /** Get candidate decisions scoped to a single agent. */
+  getAgentDecisions(packId: string, actorId: string, limit: number): SchedulerCandidateDecisionRecord[];
+
+  /** Write a scheduler run snapshot. Returns the stored record. */
+  writeRunSnapshot(
     packId: string,
     input: {
       id: string;
-      worker_id: string;
-      partition_id: string;
-      lease_holder: string | null;
-      lease_expires_at_snapshot: bigint | null;
+      workerId: string;
+      partitionId: string;
+      leaseHolder: string | null;
+      leaseExpiresAtSnapshot: bigint | null;
       tick: bigint;
       summary: Record<string, unknown>;
-      started_at: bigint;
-      finished_at: bigint;
-      created_at: bigint;
+      startedAt: bigint;
+      finishedAt: bigint;
     }
-  ): Record<string, unknown>;
+  ): SchedulerRunRecord;
 
+  /** Write a candidate decision record linked to a scheduler run. Returns the stored record. */
   writeCandidateDecision(
     packId: string,
     schedulerRunId: string,
     input: {
       id: string;
-      partition_id: string;
-      actor_id: string;
+      partitionId: string;
+      actorId: string;
       kind: string;
-      candidate_reasons: unknown;
-      chosen_reason: string;
-      scheduled_for_tick: bigint;
-      priority_score: number;
-      skipped_reason: string | null;
-      created_job_id: string | null;
-      created_at: bigint;
+      candidateReasons: unknown;
+      chosenReason: string;
+      scheduledForTick: bigint;
+      priorityScore: number;
+      skippedReason: string | null;
+      createdJobId: string | null;
+      createdAt: bigint;
     }
-  ): Record<string, unknown>;
+  ): SchedulerCandidateDecisionRecord;
 
-  listRuns(
-    packId: string,
-    input: {
-      where?: Record<string, unknown>;
-      orderBy?: Record<string, unknown>;
-      take?: number;
-      cursor?: Record<string, unknown>;
-      skip?: number;
-    }
-  ): Record<string, unknown>[];
-
-  listCandidateDecisions(
-    packId: string,
-    input: {
-      where?: Record<string, unknown>;
-      orderBy?: Record<string, unknown>;
-      take?: number;
-      cursor?: Record<string, unknown>;
-      skip?: number;
-    }
-  ): Record<string, unknown>[];
-
-  getAgentDecisions(packId: string, actorId: string, limit?: number): Record<string, unknown>[];
 }

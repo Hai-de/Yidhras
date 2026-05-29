@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { runActionDispatcher } from '../../src/app/runtime/action_dispatcher_runner.js';
 import { runAgentScheduler } from '../../src/app/runtime/agent_scheduler.js';
-import { getLatestSchedulerRunReadModel } from '../../src/app/services/scheduler/queries.js';
+import { getLatestSchedulerRunReadModel } from '../../src/app/services/scheduler/run-queries.js';
 import { createMemoryCompactionService } from '../../src/memory/recording/compaction_service.js';
 import { expectDefined } from '../helpers/assertions.js';
 import { MemSchedulerStorage } from "../helpers/scheduler_storage.js";

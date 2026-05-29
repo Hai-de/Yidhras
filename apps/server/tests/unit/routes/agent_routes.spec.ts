@@ -37,7 +37,7 @@ vi.mock('../../../src/app/services/agent/agent.js', () => ({
   listSnrAdjustmentLogs: vi.fn(async () => ({ logs: [], page_info: { has_next_page: false, next_cursor: null } }))
 }));
 
-vi.mock('../../../src/app/services/scheduler/queries.js', () => ({
+vi.mock('../../../src/app/services/scheduler/agent-queries.js', () => ({
   getAgentSchedulerProjection: vi.fn(async () => ({
     actor_id: 'agent-1',
     summary: { total_decisions: 0, created_count: 0, skipped_count: 0, periodic_count: 0, event_driven_count: 0, latest_scheduled_tick: null, latest_run_id: null, latest_partition_id: null, top_reason: null, top_skipped_reason: null },
@@ -109,7 +109,7 @@ describe('agent routes', () => {
       });
       agentRoutes.register(app.express, ctx);
 
-      const res = await app.get('/api/agent/agent-1/scheduler/projection');
+      const res = await app.get('/api/agent/agent-1/scheduler/projection?packId=test-pack');
       expect(res.status).toBe(200);
       await app.close();
     });

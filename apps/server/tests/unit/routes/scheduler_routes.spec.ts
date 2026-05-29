@@ -5,71 +5,88 @@ vi.mock('../../../src/app/middleware/capability.js', () => ({
   checkCapability: vi.fn(async () => true)
 }));
 
-vi.mock('../../../src/app/services/scheduler/queries.js', () => ({
+vi.mock('../../../src/app/services/scheduler/run-queries.js', () => ({
   getLatestSchedulerRunReadModel: vi.fn(async () => ({
-    run: { id: 'run-1', pack_id: 'test-pack', worker_id: 'w1', partition_id: 'p0', tick: 100n, started_at: 100n, finished_at: 200n, summary: {} },
-    decisions: [],
-    skip_breakdown: []
+    run: { id: 'run-1', worker_id: 'w1', partition_id: 'p0', tick: '100', started_at: '100', finished_at: '200', summary: {}, cross_link_summary: null, lease_holder: null, lease_expires_at_snapshot: null, created_at: '100' },
+    candidates: []
   })),
   getSchedulerRunReadModelById: vi.fn(async () => ({
-    run: { id: 'run-1', pack_id: 'test-pack', worker_id: 'w1', partition_id: 'p0', tick: 100n, started_at: 100n, finished_at: 200n, summary: {} },
-    decisions: [],
-    skip_breakdown: []
+    run: { id: 'run-1', worker_id: 'w1', partition_id: 'p0', tick: '100', started_at: '100', finished_at: '200', summary: {}, cross_link_summary: null, lease_holder: null, lease_expires_at_snapshot: null, created_at: '100' },
+    candidates: []
   })),
   listSchedulerRuns: vi.fn(() => ({
     items: [],
     page_info: { has_next_page: false, next_cursor: null },
-    summary: { total_count: 0 }
+    summary: { returned: 0, limit: 10, filters: {} }
+  }))
+}));
+
+vi.mock('../../../src/app/services/scheduler/decision-queries.js', () => ({
+  listSchedulerDecisions: vi.fn(() => ({ items: [], page_info: { has_next_page: false, next_cursor: null }, summary: { returned: 0, limit: 10, filters: {} } }))
+}));
+
+vi.mock('../../../src/app/services/scheduler/agent-queries.js', () => ({
+  listAgentSchedulerDecisions: vi.fn(() => [])
+}));
+
+vi.mock('../../../src/app/services/scheduler/ownership-queries.js', () => ({
+  listSchedulerOwnershipAssignments: vi.fn(() => ({ items: [], summary: { returned: 0, filters: {} } })),
+  listSchedulerOwnershipMigrations: vi.fn(() => ({ items: [], summary: { returned: 0, limit: 10, in_progress_count: 0, filters: {} } }))
+}));
+
+vi.mock('../../../src/app/services/scheduler/rebalance-queries.js', () => ({
+  listSchedulerRebalanceRecommendations: vi.fn(() => ({ items: [], summary: { returned: 0, limit: 10, status_breakdown: [], suppress_reason_breakdown: [], filters: {} } }))
+}));
+
+vi.mock('../../../src/app/services/scheduler/summary-queries.js', () => ({
+  getSchedulerSummarySnapshot: vi.fn(async () => ({
+    latest_run: null,
+    run_totals: { sampled_runs: 0, created_total: 0, created_periodic_total: 0, created_event_driven_total: 0, skipped_pending_total: 0, skipped_cooldown_total: 0, signals_detected_total: 0 },
+    top_reasons: [],
+    top_skipped_reasons: [],
+    top_actors: [],
+    top_partitions: [],
+    top_workers: [],
+    intent_class_breakdown: []
   })),
-  getSchedulerTrendsSnapshot: vi.fn(async () => ({
-    trend_points: [],
-    aggregate: { avg_created: 0, avg_eligible: 0, avg_skipped: 0 }
-  })),
-  listSchedulerDecisions: vi.fn(() => ({ items: [], page_info: { has_next_page: false, next_cursor: null } })),
-  listAgentSchedulerDecisions: vi.fn(async () => ({
-    actor_id: 'agent-1',
-    summary: { total_decisions: 0, created_count: 0 },
-    reason_breakdown: [],
-    skipped_reason_breakdown: [],
-    timeline: [],
-    linkage: { recent_runs: [], recent_created_jobs: [] }
-  })),
-  listSchedulerOwnershipMigrations: vi.fn(() => ({ items: [], page_info: { has_next_page: false, next_cursor: null } })),
-  listSchedulerRebalanceRecommendations: vi.fn(() => ({ items: [], page_info: { has_next_page: false, next_cursor: null } }))
+  getSchedulerTrendsSnapshot: vi.fn(() => ({ points: [] })),
+  getSchedulerOperatorProjection: vi.fn(async () => ({
+    latest_run: null,
+    summary: {},
+    trends: {},
+    recent_runs: [],
+    recent_decisions: [],
+    ownership: { assignments: [], recent_migrations: [], summary: {} },
+    workers: { items: [], summary: {} },
+    rebalance: { recommendations: [], summary: {} },
+    highlights: {}
+  }))
+}));
+
+vi.mock('../../../src/app/services/scheduler/worker-queries.js', () => ({
+  listSchedulerWorkers: vi.fn(() => ({ items: [], summary: { returned: 0, active_count: 0, stale_count: 0, suspected_dead_count: 0, filters: {} } }))
 }));
 
 vi.mock('../../../src/app/runtime/runtime_kernel_service.js', () => ({
   createRuntimeKernelService: vi.fn(() => ({
-    getSchedulerSummary: vi.fn(async () => ({
+    start: vi.fn(),
+    stop: vi.fn(),
+    isRunning: vi.fn(() => true),
+    getLoopDiagnostics: vi.fn(() => ({ status: 'idle' })),
+    getHealthSnapshot: vi.fn(() => ({ runtime_ready: true, paused: false, loop_status: 'idle' })),
+    getOwnershipSnapshot: vi.fn(async () => ({
+      worker_id: 'w1',
       partition_count: 1,
-      worker_count: 1,
-      latest_run: null,
-      ownership: { worker_id: 'w1', partition_count: 1, owned_partition_ids: ['p0'], assignment_source: 'bootstrap' }
+      owned_partition_ids: ['p0'],
+      assignment_source: 'bootstrap'
     })),
-    getSummary: vi.fn(async () => ({
-      partition_count: 1,
-      worker_count: 1,
-      latest_run: null,
-      ownership: { worker_id: 'w1', partition_count: 1, owned_partition_ids: ['p0'], assignment_source: 'bootstrap' }
-    })),
-    getOperatorProjection: vi.fn(async () => ({
-      runtime: { ready: true, scheduler_ready: true },
-      runtime_loop: { status: 'idle' },
-      scheduler: { worker_id: 'w1', partition_count: 1 }
-    })),
-    getOwnershipAssignments: vi.fn(async () => ({
-      items: [],
-      page_info: { has_next_page: false, next_cursor: null }
-    })),
-    getWorkers: vi.fn(async () => []),
-    listSchedulerWorkers: vi.fn(async () => []),
-    getSchedulerWorkerDetail: vi.fn(async () => null)
+    reconcileBootstrapOwnership: vi.fn(async () => {})
   }))
 }));
 
 import { schedulerRoutes } from '../../../src/app/routes/scheduler.js';
 import { createMockAppContext } from '../../helpers/mock_context.js';
-import { createTestApp, unwrapData } from '../../helpers/test_app.js';
+import { createTestApp } from '../../helpers/test_app.js';
 
 describe('scheduler routes', () => {
   describe('GET /api/runtime/scheduler/runs/latest', () => {

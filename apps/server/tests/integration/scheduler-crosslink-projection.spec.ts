@@ -3,11 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import {
-  getAgentSchedulerProjection,
-  getLatestSchedulerRunReadModel,
-  listSchedulerDecisions
-} from '../../src/app/services/scheduler/queries.js';
+import { getAgentSchedulerProjection } from '../../src/app/services/scheduler/agent-queries.js';
+import { listSchedulerDecisions } from '../../src/app/services/scheduler/decision-queries.js';
+import { getLatestSchedulerRunReadModel } from '../../src/app/services/scheduler/run-queries.js';
 import { expectDefined } from '../helpers/assertions.js';
 import { MemSchedulerStorage } from '../helpers/scheduler_storage.js';
 import { TestKit } from '../testkit.js';

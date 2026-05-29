@@ -4,10 +4,7 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { AppContext } from '../../src/app/context.js';
-import {
-  getLatestSchedulerRunReadModel,
-  getSchedulerRunReadModelById
-} from '../../src/app/services/scheduler/queries.js';
+import { getLatestSchedulerRunReadModel, getSchedulerRunReadModelById } from '../../src/app/services/scheduler/run-queries.js';
 import type { SchedulerStorageAdapter } from '../../src/packs/storage/SchedulerStorageAdapter.js';
 import { createTestAppContext } from '../fixtures/app-context.js';
 import { expectDefined } from '../helpers/assertions.js';
