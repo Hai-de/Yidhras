@@ -77,6 +77,10 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, PackCatalogS
     });
   }
 
+  public getLoader(): PackManifestLoader {
+    return this.loader;
+  }
+
   public listAvailablePacks(): string[] {
     return this.packCatalogService.listAvailablePacks();
   }

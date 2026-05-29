@@ -85,6 +85,7 @@ definePageMeta({
 })
 
 const { t } = useI18n()
+const localePath = useLocalePath()
 const auth = useAuthStore()
 const router = useRouter()
 
@@ -141,7 +142,7 @@ const handleLogin = async () => {
     })
 
     auth.setToken(result.token, rememberMe.value)
-    await router.push('/packs')
+    await router.push(localePath('/packs'))
   } catch (error) {
     if (error instanceof ApiClientError && error.status === 401) {
       errorMessage.value = t('login.error_invalid_credentials')
@@ -157,7 +158,7 @@ const handleLogin = async () => {
 }
 
 if (auth.isAuthenticated) {
-  router.replace('/packs')
+  router.replace(localePath('/packs'))
 }
 </script>
 

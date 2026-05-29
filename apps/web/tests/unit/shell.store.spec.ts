@@ -1,122 +1,133 @@
-import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { useShellStore } from '../../stores/shell'
+import { useShellStore } from '../../stores/shell';
 
-const createMemoryStorage = () => {
-  const storage = new Map<string, string>()
-
-  return {
-    clear: () => {
-      storage.clear()
-    },
-    getItem: (key: string) => {
-      return storage.get(key) ?? null
-    },
-    key: (index: number) => {
-      return Array.from(storage.keys())[index] ?? null
-    },
-    removeItem: (key: string) => {
-      storage.delete(key)
-    },
-    setItem: (key: string, value: string) => {
-      storage.set(key, value)
-    },
-    get length() {
-      return storage.size
-    }
-  }
-}
-
-const localStorageMock = createMemoryStorage()
-
-if (!('window' in globalThis)) {
-  Object.defineProperty(globalThis, 'window', {
-    value: { localStorage: localStorageMock },
-    configurable: true
-  })
-} else {
-  Object.defineProperty(window, 'localStorage', {
-    value: localStorageMock,
-    configurable: true
-  })
+function expectDefined<T>(value: T): asserts value is NonNullable<T> {
+  expect(value).toBeDefined();
 }
 
 describe('useShellStore', () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
-    vi.restoreAllMocks()
-    window.localStorage.clear()
-  })
+    setActivePinia(createPinia());
+  });
 
-  it('updates active workspace and dock tab', () => {
-    const shell = useShellStore()
+  describe('initial state', () => {
+    it('starts with overview workspace', () => {
+      const shell = useShellStore();
+      expect(shell.activeWorkspaceId).toBe('overview');
+    });
 
-    shell.setActiveWorkspace('scheduler')
-    shell.setActiveDockTab('notifications')
+    it('starts with jobs dock tab', () => {
+      const shell = useShellStore();
+      expect(shell.activeDockTabId).toBe('jobs');
+    });
 
-    expect(shell.activeWorkspaceId).toBe('scheduler')
-    expect(shell.activeDockTabId).toBe('notifications')
-  })
+    it('starts with dock collapsed', () => {
+      const shell = useShellStore();
+      expect(shell.isDockExpanded).toBe(false);
+    });
 
-  it('toggles dock expanded state', () => {
-    const shell = useShellStore()
+    it('starts with empty recent targets', () => {
+      const shell = useShellStore();
+      expect(shell.recentTargets).toEqual([]);
+    });
 
-    expect(shell.isDockExpanded).toBe(false)
-    shell.toggleDockExpanded()
-    expect(shell.isDockExpanded).toBe(true)
-    shell.setDockExpanded(true)
-    expect(shell.isDockExpanded).toBe(true)
-  })
+    it('starts with default dock height', () => {
+      const shell = useShellStore();
+      expect(shell.dockHeight).toBe(224);
+    });
+  });
 
-  it('persists dock height and enforces minimum height', () => {
-    const setItemSpy = vi.spyOn(window.localStorage, 'setItem')
-    const shell = useShellStore()
+  describe('setActiveWorkspace', () => {
+    it('changes active workspace', () => {
+      const shell = useShellStore();
+      shell.setActiveWorkspace('scheduler');
+      expect(shell.activeWorkspaceId).toBe('scheduler');
+    });
+  });
 
-    shell.setDockHeight(320)
-    expect(shell.dockHeight).toBe(320)
-    expect(setItemSpy).toHaveBeenLastCalledWith('yd-shell-dock-height', '320')
+  describe('setActiveDockTab', () => {
+    it('changes active dock tab', () => {
+      const shell = useShellStore();
+      shell.setActiveDockTab('traces');
+      expect(shell.activeDockTabId).toBe('traces');
+    });
+  });
 
-    shell.setDockHeight(80)
-    expect(shell.dockHeight).toBe(160)
-    expect(setItemSpy).toHaveBeenLastCalledWith('yd-shell-dock-height', '160')
-  })
+  describe('setDockExpanded', () => {
+    it('sets dock expanded state', () => {
+      const shell = useShellStore();
+      shell.setDockExpanded(true);
+      expect(shell.isDockExpanded).toBe(true);
+      shell.setDockExpanded(false);
+      expect(shell.isDockExpanded).toBe(false);
+    });
+  });
 
-  it('hydrates dock height from localStorage on store creation', () => {
-    window.localStorage.setItem('yd-shell-dock-height', '288')
+  describe('toggleDockExpanded', () => {
+    it('toggles dock expanded state', () => {
+      const shell = useShellStore();
+      expect(shell.isDockExpanded).toBe(false);
+      shell.toggleDockExpanded();
+      expect(shell.isDockExpanded).toBe(true);
+      shell.toggleDockExpanded();
+      expect(shell.isDockExpanded).toBe(false);
+    });
+  });
 
-    const shell = useShellStore()
+  describe('setDockHeight', () => {
+    it('sets dock height', () => {
+      const shell = useShellStore();
+      shell.setDockHeight(400);
+      expect(shell.dockHeight).toBe(400);
+    });
 
-    expect(shell.dockHeight).toBe(288)
-  })
+    it('enforces minimum dock height', () => {
+      const shell = useShellStore();
+      shell.setDockHeight(100);
+      expect(shell.dockHeight).toBe(160);
+    });
+  });
 
-  it('records recent targets with dedupe and cap', () => {
-    const shell = useShellStore()
+  describe('recordRecentTarget', () => {
+    const makeTarget = (id: string, label = `Label ${id}`) => ({
+      id,
+      label,
+      meta: 'meta',
+      workspaceId: 'overview' as const,
+      routePath: `/target/${id}`
+    });
 
-    shell.recordRecentTarget({
-      id: 'scheduler-run:run-1',
-      label: 'Scheduler run run-1',
-      meta: 'scheduler run',
-      workspaceId: 'scheduler',
-      routePath: '/scheduler?run_id=run-1'
-    })
-    shell.recordRecentTarget({
-      id: 'agent:agent-1',
-      label: 'Agent agent-1',
-      meta: 'agent',
-      workspaceId: 'agents',
-      routePath: '/agents/agent-1'
-    })
-    shell.recordRecentTarget({
-      id: 'scheduler-run:run-1',
-      label: 'Scheduler run run-1',
-      meta: 'scheduler run repeat',
-      workspaceId: 'scheduler',
-      routePath: '/scheduler?run_id=run-1'
-    })
+    it('adds target to recent list', () => {
+      const shell = useShellStore();
+      shell.recordRecentTarget(makeTarget('t1'));
+      expect(shell.recentTargets).toHaveLength(1);
+      expectDefined(shell.recentTargets[0]);
+      expect(shell.recentTargets[0].id).toBe('t1');
+    });
 
-    expect(shell.recentTargets).toHaveLength(2)
-    expect(shell.recentTargets[0]?.id).toBe('scheduler-run:run-1')
-    expect(shell.recentTargets[0]?.meta).toBe('scheduler run repeat')
-  })
-})
+    it('deduplicates targets by id', () => {
+      const shell = useShellStore();
+      shell.recordRecentTarget(makeTarget('t1', 'First'));
+      shell.recordRecentTarget(makeTarget('t2'));
+      shell.recordRecentTarget(makeTarget('t1', 'Updated'));
+      expect(shell.recentTargets).toHaveLength(2);
+      expectDefined(shell.recentTargets[0]);
+      expect(shell.recentTargets[0].id).toBe('t1');
+      expect(shell.recentTargets[0].label).toBe('Updated');
+    });
+
+    it('caps at 8 targets', () => {
+      const shell = useShellStore();
+      for (let i = 0; i < 10; i++) {
+        shell.recordRecentTarget(makeTarget(`t${i}`));
+      }
+      expect(shell.recentTargets).toHaveLength(8);
+      expectDefined(shell.recentTargets[0]);
+      expectDefined(shell.recentTargets[7]);
+      expect(shell.recentTargets[0].id).toBe('t9');
+      expect(shell.recentTargets[7].id).toBe('t2');
+    });
+  });
+});

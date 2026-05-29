@@ -6,17 +6,6 @@ import type { AppContext, RuntimeLoopDiagnostics } from '../../context.js'
 import { createRuntimeKernelService } from '../../runtime/runtime_kernel_service.js'
 import { readVisibleClockSnapshot } from '../app_context_ports.js'
 
-const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
-  status: 'idle',
-  in_flight: false,
-  overlap_skipped_count: 0,
-  iteration_count: 0,
-  last_started_at: null,
-  last_finished_at: null,
-  last_duration_ms: null,
-  last_error_message: null
-};
-
 function serializeStepStrategy(strategy: StepStrategy): Record<string, unknown> {
   const base: Record<string, unknown> = {
     kind: strategy.kind,
@@ -195,21 +184,21 @@ export const getRuntimeStatusSnapshot = async (
   if (!packId) {
     throw new Error('packId is required for getRuntimeStatusSnapshot');
   }
-  const pack = context.getPackRuntimeHandle?.(packId)?.pack ?? null;
-  const schedulerWorkerId = options?.schedulerWorkerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
+  const pack = context.getPackRuntimeHandle(packId)?.pack ?? null;
+  const schedulerWorkerId = options.schedulerWorkerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
   const visibleClock = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId });
   const runtimeKernel = createRuntimeKernelService(context, packId);
   const ownershipSnapshot = await runtimeKernel.getOwnershipSnapshot({
     workerId: schedulerWorkerId,
-    partitionIds: options?.schedulerPartitionIds
+    partitionIds: options.schedulerPartitionIds
   });
-  const runtimeLoop = runtimeKernel.getLoopDiagnostics() ?? context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
+  const runtimeLoop = runtimeKernel.getLoopDiagnostics();
 
 return {
     status: context.isPaused() ? 'paused' : 'running',
     runtime_ready: context.isRuntimeReady(),
     runtime_speed: serializeRuntimeSpeed(
-      context.getPackRuntimeHost?.(packId)?.getRuntimeSpeedSnapshot() ?? {
+      context.getPackRuntimeHost(packId)?.getRuntimeSpeedSnapshot() ?? {
         mode: 'variable',
         source: 'default',
         strategy: { kind: 'variable', range: { min: 1n, max: 1n }, loopIntervalMs: 1000 },
@@ -218,7 +207,7 @@ return {
       }
     ),
     runtime_loop: runtimeLoop,
-    sqlite: context.getDatabaseHealth?.()?.sqlite ?? null,
+    sqlite: context.getDatabaseHealth()?.sqlite ?? null,
     scheduler: {
       worker_id: ownershipSnapshot.worker_id,
       partition_count: ownershipSnapshot.partition_count,

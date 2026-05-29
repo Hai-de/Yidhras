@@ -31,6 +31,7 @@ export interface ActivatedPluginWorker {
   descriptors: ContributionDescriptor[];
   loadedServer: boolean;
   threadId: number;
+  handlerNames: string[];
 }
 
 const workerKey = (packId: string, installationId: string): string => `${packId}:${installationId}`;
@@ -219,7 +220,8 @@ export class PluginWorkerManager {
         client,
         descriptors: snapshot.descriptors,
         loadedServer: snapshot.loadedServer,
-        threadId: snapshot.threadId
+        threadId: snapshot.threadId,
+        handlerNames: snapshot.handlerNames
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

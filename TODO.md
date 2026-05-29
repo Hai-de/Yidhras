@@ -55,12 +55,6 @@
 
 ### 提示词流水线升级
 
-##### Prompt Workflow 非兼容式收敛
-
-> 计划：`.limcode/plans/prompt-workflow-non-compatible-cleanup.md`
-> 决策：项目未上线，不保留旧 prompt builder / direct messages 兼容层；`buildWorkflowPromptBundle()` + `PromptBundleV2` 为唯一正式路径。
-- [x] 旧 `inference/prompt_builder.ts` 删除；profile 严格选择；`intent_grounding_assist` 显式 profile；behavior/budget 语义收敛；`AiTaskService` 强制 `prompt_bundle_v2`
-
 ##### 多轮对话（Multi-Turn Conversation）
 
 > 设计文档：`.limcode/design/multi-turn-conversation-design.md`
@@ -72,8 +66,12 @@
 > 设计：`.limcode/design/slot-function-advanced-design.md` | 计划：`.limcode/plans/slot-function-advanced-phase1-4.md`、`slot-function-advanced-phase5.md`
 > 剩余：
 >   - [ ] Phase 6+: Rust + wasmtime WASM 沙箱（需求驱动）
->   - [x] 功能 B：双重模块设置（已决策：不做双轨）
-- [x] 双重模块设置决策：不做双模块并存；保留 PromptTree / PromptBundleV2 单路径，插槽函数能力并入 Prompt Workflow executor/track 扩展点
-> ✅ 已由 Prompt Workflow 非兼容式收敛计划取代，避免继续保留双轨债务
+
+
+### 文件拆分
+- apps/server/src/app/services/scheduler/queries.ts 充满了代码异味
+
+- apps/server/src/inference/context_builder.ts 是巨大屎山代码
+
 
 

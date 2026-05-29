@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import * as jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken'
 
 import type { AppInfrastructure } from '../../app/context.js'
 import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution.js';

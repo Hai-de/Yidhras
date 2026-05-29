@@ -58,6 +58,7 @@ export interface PluginWorkerRuntimeSnapshot {
   descriptors: ContributionDescriptor[];
   loadedServer: boolean;
   threadId: number;
+  handlerNames: string[];
 }
 
 export class PluginWorkerClient {
@@ -230,7 +231,8 @@ export class PluginWorkerClient {
         this.resolvePending(message.requestId, message.ok, message.ok ? {
           descriptors: message.result.descriptors,
           loadedServer: message.result.loadedServer,
-          threadId: this.threadId
+          threadId: this.threadId,
+          handlerNames: message.result.handlerNames
         } : message.error);
         break;
       case 'invoke_result':

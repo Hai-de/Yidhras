@@ -51,7 +51,7 @@ export const checkCapability = async (
   }
 
   // 查 OperatorGrant 委托
-  const now = context.getPackRuntimeHost?.(packId)?.getCurrentTick() ?? resolvePackTick(context)
+  const now = context.getPackRuntimeHost(packId)?.getCurrentTick() ?? resolvePackTick(context)
   const grant = await context.repos.identityOperator.findOperatorGrant({
     receiver_identity_id: operator.identity_id,
     pack_id: packId,
@@ -97,7 +97,7 @@ export const capabilityGuard = (
     const packId = options.packIdParam
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query/param value
         ? (req.params[options.packIdParam] as string | undefined)
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query/param value
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion,security/detect-object-injection -- Express query/param value
         : ((req.query[queryKey] as string | undefined)
             // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express mergeParams
             || (req.params.packId as string | undefined))

@@ -8,6 +8,7 @@ import { logOperatorAudit } from '../../operator/audit/logger.js'
 import type { OperatorRequest } from '../../operator/auth/types.js'
 import { AUDIT_ACTION, OPERATOR_ERROR_CODE } from '../../operator/constants.js'
 import { packAccessGuard } from '../../operator/guard/pack_access.js'
+import { pluginRuntimeRegistry } from '../../plugins/runtime.js'
 import { ApiError } from '../../utils/api_error.js'
 import type { AppContext } from '../context.js'
 import { asyncHandler } from '../http/async_handler.js'
@@ -62,6 +63,36 @@ export const createFrontendActionIntent = async (
     },
     select: { id: true }
   })
+}
+
+const resolvePerceiveQuery = async (
+  context: AppContext,
+  queryHandlerRegistry: PackQueryHandlerRegistry,
+  packId: string,
+  capabilityKey: string,
+  payload: unknown,
+  operator: NonNullable<OperatorRequest['operator']>
+): Promise<unknown> => {
+  // 1. Try the query handler registry first
+  const handler = queryHandlerRegistry.find(capabilityKey)
+  if (handler) {
+    return handler.resolve(context, packId, payload, operator)
+  }
+
+  // 2. Fallback to plugin workers (handlers registered via host.registerHandler)
+  const runtimes = pluginRuntimeRegistry.listRuntimes(packId)
+  for (const runtime of runtimes) {
+    if (runtime.handler_names.includes(capabilityKey) && runtime.worker_client) {
+      return runtime.worker_client.invoke('handler', capabilityKey, payload)
+    }
+  }
+
+  throw new ApiError(
+    404,
+    'QUERY_HANDLER_NOT_FOUND',
+    `No query handler registered for: ${capabilityKey}`,
+    { capability_key: capabilityKey }
+  )
 }
 
 // ── Route registration ──
@@ -141,16 +172,14 @@ export function createPackActionsRoute(queryHandlerRegistry: PackQueryHandlerReg
 
       // 5. Route based on prefix
       if (isPerceiveCapability(capability_key)) {
-        const handler = queryHandlerRegistry.find(capability_key)
-        if (!handler) {
-          throw new ApiError(
-            404,
-            'QUERY_HANDLER_NOT_FOUND',
-            `No query handler registered for: ${capability_key}`,
-            { capability_key }
-          )
-        }
-        const data = await handler.resolve(context, packId, payload, opReq.operator)
+        const data = await resolvePerceiveQuery(
+          context,
+          queryHandlerRegistry,
+          packId,
+          capability_key,
+          payload,
+          opReq.operator
+        )
         jsonOk(res, { capability_key, data })
       } else {
         const now = resolvePackTick(context)

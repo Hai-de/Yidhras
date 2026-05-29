@@ -32,6 +32,7 @@ const BINARY_EXTENSIONS = new Set([
 
 const resolveMimeType = (filePath: string): string => {
   const ext = path.extname(filePath).toLowerCase()
+  // eslint-disable-next-line security/detect-object-injection -- ext is derived from filePath, validated via safeFs
   return MIME_TYPES[ext] ?? 'application/octet-stream'
 }
 
@@ -91,7 +92,8 @@ export function createPackFrontendAssetRoutes(packsDir: string): RouteModule {
           // Reject directories — only serve regular files
           let stat: fs.Stats
           try {
-            stat = fs.statSync(absolutePath)
+            // eslint-disable-next-line security/detect-non-literal-fs-filename -- absolutePath validated via path traversal check + safeFs.existsSync
+          stat = fs.statSync(absolutePath)
           } catch {
             throw new ApiError(404, 'ASSET_NOT_FOUND', `Asset not found: ${normalizedAssetPath}`)
           }
@@ -102,16 +104,19 @@ export function createPackFrontendAssetRoutes(packsDir: string): RouteModule {
           }
 
           const mimeType = resolveMimeType(resolvedPath)
+          const isDev = process.env.NODE_ENV === 'development'
+          const cacheControl = isDev ? 'no-cache' : 'public, max-age=3600'
 
           if (isBinary(resolvedPath)) {
-            const content = fs.readFileSync(absolutePath)
+            // eslint-disable-next-line security/detect-non-literal-fs-filename -- absolutePath validated via path traversal check + safeFs.existsSync
+          const content = fs.readFileSync(absolutePath)
             res.setHeader('Content-Type', mimeType)
-            res.setHeader('Cache-Control', 'public, max-age=3600')
+            res.setHeader('Cache-Control', cacheControl)
             res.end(content)
           } else {
             const content = safeFs.readFileSync(packFrontendRoot, resolvedPath)
             res.setHeader('Content-Type', mimeType)
-            res.setHeader('Cache-Control', 'public, max-age=3600')
+            res.setHeader('Cache-Control', cacheControl)
             res.send(content)
           }
         })

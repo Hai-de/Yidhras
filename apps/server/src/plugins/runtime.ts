@@ -157,6 +157,7 @@ const createRuntimeForActivatedWorker = (input: {
   manifest: PluginManifest;
   granted_capabilities: string[];
   descriptors: ContributionDescriptor[];
+  handlerNames: string[];
   worker_client: PluginWorkerClient;
 }): RegisteredServerPluginRuntime => {
   const proxies = createWorkerContributionProxies(input.worker_client, input.descriptors);
@@ -174,7 +175,7 @@ const createRuntimeForActivatedWorker = (input: {
     query_contributors: proxies.query_contributors,
     perception_resolvers: proxies.perception_resolvers,
     contribution_descriptors: input.descriptors,
-    handler_names: input.descriptors.map(descriptor => descriptor.invoke),
+    handler_names: input.handlerNames,
     loop_hook_points: input.descriptors
       .filter(d => d.type === 'loop_hook')
       .map(d => (d as { hookPoint: string }).hookPoint),
@@ -356,6 +357,7 @@ export const refreshPackPluginRuntime = async (
         manifest,
         granted_capabilities: installation.granted_capabilities,
         descriptors: activated.descriptors,
+        handlerNames: activated.handlerNames,
         worker_client: activated.client
       }));
     } catch (err) {

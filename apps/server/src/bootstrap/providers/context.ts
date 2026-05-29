@@ -92,7 +92,8 @@ export const appContextProvider: ServiceProvider = {
       packCatalog: {
         listAvailablePacks: () => d.sim.listAvailablePacks(),
         getPacksDir: () => d.sim.getPacksDir(),
-        resolveByInstanceId: (instanceId: string) => d.sim.resolveByInstanceId(instanceId)
+        resolveByInstanceId: (instanceId: string) => d.sim.resolveByInstanceId(instanceId),
+        getLoader: () => d.sim.getLoader()
       },
 
       getPackRuntimeHandle: (packId: string) => d.sim.getPackRuntimeHandle(packId),

@@ -42,6 +42,7 @@ const errorMessage = ref<string | null>(null)
 
 let appInstance: App | null = null
 let packFrontendUnmount: ((app: App) => void) | null = null
+let cssLinkEl: HTMLLinkElement | null = null
 let unmounted = false
 
 const resolveEntryUrl = (pack: PackListItem): string => {
@@ -58,11 +59,18 @@ const resolveEntryUrl = (pack: PackListItem): string => {
   const apiBase = resolveApiBaseUrl()
   const normalizedEntry = entry.replace(/^\.?\/?/, '')
 
+  let url: string
   if (apiBase) {
-    return `${apiBase}/api/packs/${pack.instance_id}/frontend/${normalizedEntry}`
+    url = `${apiBase}/api/packs/${pack.instance_id}/frontend/${normalizedEntry}`
+  } else {
+    url = `/api/packs/${pack.instance_id}/frontend/${normalizedEntry}`
   }
 
-  return `/api/packs/${pack.instance_id}/frontend/${normalizedEntry}`
+  if (import.meta.env.DEV) {
+    url += (url.includes('?') ? '&' : '?') + '_t=' + Date.now()
+  }
+
+  return url
 }
 
 const loadPackFrontend = async () => {
@@ -81,6 +89,17 @@ const loadPackFrontend = async () => {
     }
 
     const entryUrl = resolveEntryUrl(pack)
+
+    // Vite library mode extracts CSS to style.css alongside the JS entry;
+    // the JS bundle does not import it, so we inject a <link> manually.
+    const qsIndex = entryUrl.indexOf('?')
+    const baseUrl = qsIndex >= 0 ? entryUrl.slice(0, qsIndex) : entryUrl
+    const qs = qsIndex >= 0 ? entryUrl.slice(qsIndex) : ''
+    cssLinkEl = document.createElement('link')
+    cssLinkEl.rel = 'stylesheet'
+    cssLinkEl.href = `${baseUrl.replace(/\/[^/]+$/, '/style.css')}${qs}`
+    document.head.appendChild(cssLinkEl)
+
     // eslint-disable-next-line no-unsanitized/method
     const module = await import(/* @vite-ignore */ entryUrl)
 
@@ -126,6 +145,10 @@ onBeforeUnmount(() => {
     }
     appInstance = null
     packFrontendUnmount = null
+  }
+  if (cssLinkEl) {
+    cssLinkEl.remove()
+    cssLinkEl = null
   }
 })
 </script>

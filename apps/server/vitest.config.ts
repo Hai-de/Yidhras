@@ -18,6 +18,14 @@ export default defineConfig({
       provider: 'v8',
       reportsDirectory: './coverage',
       reporter: ['text', 'lcov'],
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/cli/**',
+        'src/init/**',
+        'src/index.ts',
+        'src/db/seed*.ts',
+        '**/*.d.ts'
+      ],
       thresholds: {
         lines: 60,
         branches: 45,

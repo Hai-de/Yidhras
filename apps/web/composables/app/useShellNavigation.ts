@@ -7,13 +7,14 @@ export interface ShellNavigation {
 
 export const useShellNavigation = (): ShellNavigation => {
   const router = useRouter()
+  const localePath = useLocalePath()
 
   return {
     switchPack: async (packId: string) => {
-      await router.push(`/packs/${packId}`)
+      await router.push(localePath(`/packs/${packId}`))
     },
     goToPacks: async () => {
-      await router.push('/packs')
+      await router.push(localePath('/packs'))
     }
   }
 }

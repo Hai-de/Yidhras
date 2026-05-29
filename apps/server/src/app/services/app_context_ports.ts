@@ -3,6 +3,7 @@ import type {
   PackRuntimeLookupPort,
   PackRuntimeObservation
 } from '../../core/pack_runtime_ports.js';
+import type { PackManifestLoader } from '../../packs/manifest/loader.js';
 import type { RuntimeDatabaseBootstrap } from '../runtime/runtime_bootstrap.js';
 import type {
   RuntimeClockProjectionService
@@ -14,6 +15,7 @@ export interface PackCatalogService {
   listAvailablePacks(): string[];
   getPacksDir(): string;
   resolveByInstanceId(instanceId: string): { packFolderName: string } | null;
+  getLoader(): PackManifestLoader;
 }
 
 export interface PluginHostPort {

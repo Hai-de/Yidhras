@@ -1,6 +1,5 @@
 import type { Request, Response } from 'express'
 
-import { PackManifestLoader } from '../../packs/manifest/loader.js'
 import { jsonOk } from '../http/json.js'
 import type { RouteModule } from './types.js'
 
@@ -18,14 +17,13 @@ interface PackListItem {
   current_tick: string | null
 }
 
-export function createPackListRoutes(packsDir: string): RouteModule {
-  const loader = new PackManifestLoader(packsDir)
-
+export function createPackListRoutes(_packsDir: string): RouteModule {
   return {
     register(app, context) {
       app.get(
         '/api/packs',
         (_req: Request, res: Response) => {
+          const loader = context.packCatalog.getLoader()
           const availableFolders = loader.listAvailablePacks()
       const loadedIds = context.listLoadedPackRuntimeIds
         ? context.listLoadedPackRuntimeIds()

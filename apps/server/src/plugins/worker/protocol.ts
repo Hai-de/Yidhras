@@ -42,7 +42,8 @@ export const pluginWorkerActivationInputSchema = z.object({
 
 export const pluginWorkerActivationResultSchema = z.object({
   descriptors: contributionDescriptorListSchema,
-  loadedServer: z.boolean()
+  loadedServer: z.boolean(),
+  handlerNames: z.array(z.string())
 });
 
 export const pluginWorkerInvokeInputSchema = z.object({

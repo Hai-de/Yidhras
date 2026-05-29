@@ -87,7 +87,8 @@ const handleActivate = async (message: Extract<MainToWorkerMessage, { type: 'act
       ok: true,
       result: {
         descriptors: activatedRuntime.getDescriptors(),
-        loadedServer: typeof module.activate === 'function'
+        loadedServer: typeof module.activate === 'function',
+        handlerNames: Array.from(activatedRuntime.handlers.keys())
       }
     });
   } catch (error) {
