@@ -1,4 +1,5 @@
 import type { PackCatalogService } from '../../app/services/app_context_ports.js';
+import { captureError } from '../../utils/capture_error.js';
 import { PackManifestLoader, type WorldPack } from '../manifest/loader.js';
 
 export interface PackResolution {
@@ -46,7 +47,8 @@ export class DefaultPackCatalogService implements PackCatalogService {
     try {
       const pack = this.loader.loadPack(folderName);
       return { pack, packFolderName: folderName };
-    } catch {
+    } catch (err: unknown) {
+      captureError(err, { module: 'pack-catalog', message: `Failed to load pack: ${folderName}` });
       return null;
     }
   }

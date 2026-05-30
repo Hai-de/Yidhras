@@ -1,3 +1,4 @@
+import { captureError } from '../../../utils/capture_error.js';
 import type { AppContext } from '../../context.js';
 import { listSchedulerWorkerRuntimeStates } from '../../runtime/scheduler_ownership.js';
 import { parseWorkerFilters } from './filter-parsers.js';
@@ -23,8 +24,8 @@ export const listSchedulerWorkers = (
   let allWorkers: ReturnType<typeof listSchedulerWorkerRuntimeStates> = [];
   try {
     allWorkers = listSchedulerWorkerRuntimeStates(context, packId);
-  } catch {
-    // pack has no scheduler storage
+  } catch (err: unknown) {
+    captureError(err, { module: 'scheduler-worker-queries', message: 'Failed to list scheduler workers — returning empty list' });
   }
 
   const filteredWorkers = allWorkers.filter(

@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 
+import { captureError } from '../../../utils/capture_error.js';
 import type {
   CollectionDefinition,
   CollectionFieldDefinition,
@@ -385,7 +386,8 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
       );
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       return rows.map(row => decodeEngineOwnedRow(tableName, row)) as T[];
-    } catch {
+    } catch (err: unknown) {
+      captureError(err, { module: 'pg-pack-storage', message: 'Engine-owned query failed' });
       return [];
     }
   }
@@ -412,8 +414,8 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
           origCreatedAt = existing['created_at'];
         }
       }
-    } catch {
-      // Table may not exist yet; use provided created_at
+    } catch (err: unknown) {
+      captureError(err, { module: 'pg-pack-storage', message: 'Failed to check table metadata — using provided created_at' });
     }
 
     const upsertRecord: Record<string, unknown> = { ...rec, created_at: origCreatedAt ?? rec['created_at'] };
@@ -508,7 +510,8 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
           collection.fields.map(f => [f.name, decodeFieldValue(f, row[f.name])])
         )
       );
-    } catch {
+    } catch (err: unknown) {
+      captureError(err, { module: 'pg-pack-storage', message: 'Collection query failed' });
       return [];
     }
   }
@@ -575,7 +578,8 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
         schema
       );
       return rows.length > 0 && rows[0]!.exists;
-    } catch {
+    } catch (err: unknown) {
+      captureError(err, { module: 'pg-pack-storage', message: 'Schema existence check failed' });
       return false;
     }
   }

@@ -1,3 +1,4 @@
+import { captureError } from '../../../utils/capture_error.js';
 import type { AppContext } from '../../context.js';
 import type { SchedulerRebalanceRecommendationRecord } from '../../runtime/scheduler_rebalance.js';
 import { listRecentSchedulerRebalanceRecommendations } from '../../runtime/scheduler_rebalance.js';
@@ -24,8 +25,8 @@ export const listSchedulerRebalanceRecommendations = (
   let allRecommendations: SchedulerRebalanceRecommendationRecord[] = [];
   try {
     allRecommendations = listRecentSchedulerRebalanceRecommendations(context, filters.limit, packId);
-  } catch {
-    // pack has no scheduler storage
+  } catch (err: unknown) {
+    captureError(err, { module: 'scheduler-rebalance-queries', message: 'Failed to list rebalance recommendations — returning empty list' });
   }
 
   const filteredRecommendations = allRecommendations.filter(

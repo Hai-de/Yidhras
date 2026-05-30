@@ -12,6 +12,7 @@ import type {
   PerceptionRuleDef
 } from '../../perception/types.js';
 import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
+import { tryParseJson } from '../../utils/json_parse.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../services/pack/pack_runtime_resolution.js';
@@ -30,19 +31,14 @@ const extractActorEntityId = (impactData: string | null): string | null => {
   if (!impactData) {
     return null;
   }
-  try {
-    const parsed: unknown = JSON.parse(impactData);
-    if (
-      parsed
-      && typeof parsed === 'object'
-      && 'actor_identity_id' in parsed
-      && typeof (parsed as { actor_identity_id?: unknown }).actor_identity_id === 'string'
-    ) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      return (parsed as { actor_identity_id: string }).actor_identity_id;
-    }
-  } catch {
-    // ignore parse errors
+  const parsed = tryParseJson(impactData, { module: 'perception-pipeline', context: 'extractActorEntityId' });
+  if (
+    parsed
+    && typeof parsed === 'object'
+    && 'actor_identity_id' in parsed
+    && typeof parsed['actor_identity_id'] === 'string'
+  ) {
+    return parsed['actor_identity_id'];
   }
   return null;
 };
