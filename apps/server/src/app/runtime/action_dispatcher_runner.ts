@@ -65,6 +65,7 @@ export const runActionDispatcher = async ({
           excludeActionIntentIds: [claimedIntent.id]
         });
         if (hasOtherActiveWorkflow) {
+// @ts-expect-error -- EOPT strict mode
           await releaseActionIntentLock(context, {
             intent_id: claimedIntent.id,
             worker_id: workerId,

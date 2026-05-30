@@ -92,7 +92,7 @@ export const materializePackRuntimeCoreModels = async (
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- YAML config value
-  const seed = (pack.variables?.seed as string | undefined) ?? randomUUID();
+  const seed = (pack.variables?.['seed'] as string | undefined) ?? randomUUID();
   const prng = createPRNG(seed);
   const expandScope: RenderScope = {
     variables: {

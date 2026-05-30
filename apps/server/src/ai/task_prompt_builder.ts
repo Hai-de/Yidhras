@@ -28,8 +28,6 @@ const buildDefaultTaskInput = (context: InferenceContext): Record<string, unknow
   inference_id: context.inference_id
 });
 
-
-
 export interface BuildAiTaskRequestFromInferenceOptions {
   task_type: AiTaskType;
   task_id?: string;

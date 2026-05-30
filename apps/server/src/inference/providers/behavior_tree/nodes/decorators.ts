@@ -26,7 +26,7 @@ export async function tickDecorated(
     ? { decorators: rest, child, __node_path: child.__node_path }
     : child;
 
-  switch (outermost.type) {
+  switch (outermost!.type) {
     case 'inverter': {
       const status = await tick(innerNode, ctx);
       if (status === 'success') return 'failure';
@@ -34,9 +34,9 @@ export async function tickDecorated(
       return status;
     }
     case 'cooldown':
-      return applyCooldown(outermost, innerNode, ctx, getCooldownStore(ctx));
+      return applyCooldown(outermost!, innerNode, ctx, getCooldownStore(ctx));
     case 'probability':
-      return applyProbability(outermost, innerNode, ctx);
+      return applyProbability(outermost!, innerNode, ctx);
     default:
       return tick(innerNode, ctx);
   }

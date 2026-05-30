@@ -10,7 +10,8 @@ export const extractSemanticType = (impactData: string | null): string | null =>
   try {
     const parsed: unknown = JSON.parse(impactData);
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      const st = (parsed as Record<string, unknown>).semantic_type;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated as object above
+      const st = (parsed as Record<string, unknown>)['semantic_type'];
       return typeof st === 'string' ? st : null;
     }
   } catch {

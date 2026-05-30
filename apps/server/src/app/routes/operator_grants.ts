@@ -35,10 +35,11 @@ export const grantRoutes: RouteModule = {
       const grant = await createOperatorGrant(
         context,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-        req.params.packId as string,
+        req.params['packId'] as string,
         operator.id,
         body.receiver_identity_id,
         body.capability_key,
+// @ts-expect-error -- EOPT strict mode
         {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma JSON column
           scope_json: body.scope_json as Record<string, unknown> | undefined,
@@ -62,7 +63,7 @@ export const grantRoutes: RouteModule = {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-      const grants = await listOperatorGrants(context, req.params.packId as string, operator.id)
+      const grants = await listOperatorGrants(context, req.params['packId'] as string, operator.id)
       jsonOk(res, toJsonSafe(grants))
     })
   )
@@ -79,7 +80,7 @@ export const grantRoutes: RouteModule = {
       const result = await revokeOperatorGrant(
         context,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-        req.params.grantId as string,
+        req.params['grantId'] as string,
         operator.id,
         req.ip
       )

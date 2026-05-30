@@ -35,13 +35,13 @@ const hasNestedQuantifiers = (pattern: string): boolean => {
 
 const cleanRegex = async (input: DataCleanerInput): Promise<DataCleanerOutput> => {
     const { text, options } = input;
-    const pattern = typeof options?.pattern === 'string' && options.pattern.length > 0 ? options.pattern : '.*';
-    const replacement = typeof options?.replacement === 'string' ? options.replacement : '';
-    const flags = typeof options?.flags === 'string' ? options.flags : 'g';
-    const maxPatternLength = readPositiveNumber(options?.max_pattern_length, DEFAULT_MAX_PATTERN_LENGTH);
-    const timeoutMs = readPositiveNumber(options?.timeout_ms, DEFAULT_TIMEOUT_MS);
-    const maxMatchCount = readPositiveNumber(options?.max_match_count, DEFAULT_MAX_MATCH_COUNT);
-    const allowNestedQuantifiers = options?.allow_nested_quantifiers === true;
+    const pattern = typeof options?.['pattern'] === 'string' && options['pattern'].length > 0 ? options['pattern'] : '.*';
+    const replacement = typeof options?.['replacement'] === 'string' ? options['replacement'] : '';
+    const flags = typeof options?.['flags'] === 'string' ? options['flags'] : 'g';
+    const maxPatternLength = readPositiveNumber(options?.['max_pattern_length'], DEFAULT_MAX_PATTERN_LENGTH);
+    const timeoutMs = readPositiveNumber(options?.['timeout_ms'], DEFAULT_TIMEOUT_MS);
+    const maxMatchCount = readPositiveNumber(options?.['max_match_count'], DEFAULT_MAX_MATCH_COUNT);
+    const allowNestedQuantifiers = options?.['allow_nested_quantifiers'] === true;
 
     if (pattern.length > maxPatternLength) {
       throw new Error(

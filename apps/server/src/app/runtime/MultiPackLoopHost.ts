@@ -74,6 +74,7 @@ export class MultiPackLoopHost {
 
     const pluginHooks = buildPluginLoopHooks(packId);
 
+// @ts-expect-error -- EOPT strict mode
     const loop = new PackSimulationLoop({
       packId,
       clock,

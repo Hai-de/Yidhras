@@ -18,6 +18,7 @@ export interface StateSnapshotContext {
 
 const parseStateRecord = (value: unknown): InferencePackStateRecord => {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated as object above
     return value as InferencePackStateRecord;
   }
   return {};
@@ -93,11 +94,12 @@ export const buildPackStateSnapshot = async (
     }
   }
 
-  const actorRoles = Array.isArray(attributes.actor_roles)
-    ? attributes.actor_roles.filter((entry): entry is string => typeof entry === 'string')
+  const actorRoles = Array.isArray(attributes['actor_roles'])
+    ? attributes['actor_roles'].filter((entry): entry is string => typeof entry === 'string')
     : [];
 
   const latestEventRecord = await getLatestEventEvidenceRecord(
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial AppInfrastructure
     { prisma: context.prisma } as AppInfrastructure,
     packId
   );

@@ -121,8 +121,8 @@ const toWorkflowStepResultJson = (
   actionIntentIds: string[]
 ): WorkflowStepResultJson => {
   const semanticIntent =
-    typeof result.decision.payload.semantic_intent_kind === 'string'
-      ? result.decision.payload.semantic_intent_kind
+    typeof result.decision.payload['semantic_intent_kind'] === 'string'
+      ? result.decision.payload['semantic_intent_kind']
       : result.decision.action_type;
 
   return {

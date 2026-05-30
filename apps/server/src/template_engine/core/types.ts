@@ -11,8 +11,8 @@ export interface Token {
     | 'BLOCK_CLOSE'
     | 'COMMENT_OPEN'
     | 'COMMENT_CLOSE';
-  content?: string;
-  keyword?: string;
+  content?: string | undefined;
+  keyword?: string | undefined;
   position: number;
 }
 
@@ -40,7 +40,7 @@ export interface MacroNode {
   type: 'macro';
   name: string;
   args: Record<string, MacroValue>;
-  body?: AstNode[];
+  body?: AstNode[] | undefined;
 }
 
 export interface BlockNode {
@@ -48,7 +48,7 @@ export interface BlockNode {
   keyword: string;
   condition: string;
   body: AstNode[];
-  elseBody?: AstNode[];
+  elseBody?: AstNode[] | undefined;
 }
 
 export interface ModifierSpec {
@@ -83,8 +83,8 @@ export interface RenderScope {
   variables: Record<string, unknown>;
   modifiers: Record<string, ModifierFn>;
   blockHandlers: Record<string, BlockHandlerFn>;
-  macroHandlers?: Record<string, MacroHandlerFn>;
-  prng?: PRNGLike;
+  macroHandlers?: Record<string, MacroHandlerFn> | undefined;
+  prng?: PRNGLike | undefined;
   depth: number;
   maxDepth: number;
 }
@@ -118,7 +118,7 @@ export interface SyntaxConfig {
 export interface ParserDiagnostic {
   kind: 'warning' | 'error';
   message: string;
-  offset?: number;
+  offset?: number | undefined;
 }
 
 // === Parser instance (public API) ===
@@ -133,7 +133,7 @@ export interface ParserInstance {
 
 export interface ScopeFrame {
   variables: Record<string, unknown>;
-  label?: string;
+  label?: string | undefined;
 }
 
 export interface RenderDiagnostics {
@@ -141,9 +141,9 @@ export interface RenderDiagnostics {
   missing_paths: string[];
   restricted_paths: string[];
   blocks: BlockExecutionTrace[];
-  namespaces_used?: string[];
-  output_length?: number;
-  template_source?: string;
+  namespaces_used?: string[] | undefined;
+  output_length?: number | undefined;
+  template_source?: string | undefined;
   errors: TemplateError[];
 }
 
@@ -152,26 +152,26 @@ export interface VariableResolutionTrace {
   resolved_path: string;
   resolved: boolean;
   missing: boolean;
-  restricted?: boolean;
-  value_preview?: string;
-  fallback_applied?: boolean;
-  source?: string;
-  notes?: string[];
+  restricted?: boolean | undefined;
+  value_preview?: string | undefined;
+  fallback_applied?: boolean | undefined;
+  source?: string | undefined;
+  notes?: string[] | undefined;
 }
 
 export interface BlockExecutionTrace {
   kind: string;
   expression: string;
   executed: boolean;
-  iteration_count?: number;
-  alias?: string;
+  iteration_count?: number | undefined;
+  alias?: string | undefined;
 }
 
 export interface TemplateError {
   code: string;
-  path?: string;
+  path?: string | undefined;
   message: string;
-  offset?: number;
+  offset?: number | undefined;
 }
 
 export interface RenderResult {
@@ -188,8 +188,8 @@ export type VariableResolver = (
 export interface ResolvedVariable {
   value: unknown;
   missing: boolean;
-  restricted?: boolean;
-  trace?: VariableResolutionTrace;
+  restricted?: boolean | undefined;
+  trace?: VariableResolutionTrace | undefined;
 }
 
 export type BlockHandlerKind = 'conditional' | 'iteration' | 'context' | 'custom';

@@ -29,6 +29,7 @@ const postToMain = (message: WorkerToMainMessage): void => {
 const deserializeError = (error: { name?: string; message: string; stack?: string; code?: string }): Error => {
   const next = new Error(error.message);
   next.name = error.name ?? 'PluginHostCallError';
+// @ts-expect-error -- EOPT strict mode
   next.stack = error.stack;
   if (error.code) {
     (next as Error & { code?: string }).code = error.code;
@@ -54,6 +55,7 @@ const handleHostResult = (message: Extract<MainToWorkerMessage, { type: 'host_re
     pending.resolve(message.result);
     return;
   }
+// @ts-expect-error -- EOPT strict mode
   pending.reject(deserializeError(message.error));
 };
 

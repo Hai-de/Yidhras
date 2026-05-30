@@ -195,24 +195,24 @@ const updateDefaultRuntimeConfig = (input: {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
   const parsed = (YAML.parse(raw) ?? {}) as Record<string, unknown>;
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
-  const world = (parsed.world && typeof parsed.world === 'object' ? parsed.world : {}) as Record<string, unknown>;
+  const world = (parsed['world'] && typeof parsed['world'] === 'object' ? parsed['world'] : {}) as Record<string, unknown>;
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
-  const bootstrap = (world.bootstrap && typeof world.bootstrap === 'object' ? world.bootstrap : {}) as Record<string, unknown>;
+  const bootstrap = (world['bootstrap'] && typeof world['bootstrap'] === 'object' ? world['bootstrap'] : {}) as Record<string, unknown>;
 
   if (input.setPreferredPack) {
-    world.preferred_pack = input.packDirName;
+    world['preferred_pack'] = input.packDirName;
     updates.push(`set world.preferred_pack=${input.packDirName}`);
   }
 
   if (input.setBootstrapTemplate) {
-    bootstrap.target_pack_dir = input.packDirName;
-    bootstrap.template_file = `data/world_packs/${input.packDirName}/pack.yaml`;
+    bootstrap['target_pack_dir'] = input.packDirName;
+    bootstrap['template_file'] = `data/world_packs/${input.packDirName}/pack.yaml`;
     updates.push(`set world.bootstrap.target_pack_dir=${input.packDirName}`);
     updates.push(`set world.bootstrap.template_file=data/world_packs/${input.packDirName}/pack.yaml`);
   }
 
   if (input.disableBootstrap) {
-    bootstrap.enabled = false;
+    bootstrap['enabled'] = false;
     updates.push('set world.bootstrap.enabled=false');
   }
 
@@ -220,8 +220,8 @@ const updateDefaultRuntimeConfig = (input: {
     return updates;
   }
 
-  world.bootstrap = bootstrap;
-  parsed.world = world;
+  world['bootstrap'] = bootstrap;
+  parsed['world'] = world;
   safeFs.writeFileSync(input.workspaceRoot, defaultConfigPath, YAML.stringify(parsed));
 
   return updates;
@@ -405,7 +405,7 @@ export const scaffoldWorldPackProject = (
     const sectionYaml = YAML.parse(renderedSection) as unknown;
     entryYaml[sectionKey] = sectionYaml;
   }
-  delete entryYaml.include;
+  delete entryYaml['include'];
 
   parseWorldPackConstitution(entryYaml, `${targetPackDir}/pack.yaml`);
 

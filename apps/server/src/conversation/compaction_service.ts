@@ -80,6 +80,7 @@ export class DefaultConversationCompactionService implements ConversationCompact
     let errorMessage: string | undefined;
 
     try {
+// @ts-expect-error -- EOPT strict mode
       const result = await runCompactionInference({
         entries: entriesToCompress,
         agentId: memory.owner_agent_id,
@@ -90,13 +91,13 @@ export class DefaultConversationCompactionService implements ConversationCompact
       });
 
       const turnRange = {
-        start: entriesToCompress[0].turn_number,
-        end: entriesToCompress[entriesToCompress.length - 1].turn_number
+        start: entriesToCompress[0]!.turn_number,
+        end: entriesToCompress[entriesToCompress.length - 1]!.turn_number
       };
 
       summaryEntry = {
         id: crypto.randomUUID(),
-        turn_number: sorted[sorted.length - 1].turn_number + 1,
+        turn_number: sorted[sorted.length - 1]!.turn_number + 1,
         speaker_agent_id: memory.owner_agent_id,
         kind: 'summary',
         original_content: result.summaryText,
@@ -122,6 +123,7 @@ export class DefaultConversationCompactionService implements ConversationCompact
     }
 
     // Write audit entry regardless of outcome
+// @ts-expect-error -- EOPT strict mode
     await auditStore.append({
       id: auditEntryId,
       agent_id: memory.owner_agent_id,

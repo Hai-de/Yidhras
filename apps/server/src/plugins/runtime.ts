@@ -213,9 +213,9 @@ const parseSemver = (version: string): { major: number; minor: number; patch: nu
   const match = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
   if (!match) return null;
   return {
-    major: parseInt(match[1], 10),
-    minor: parseInt(match[2], 10),
-    patch: parseInt(match[3], 10)
+    major: parseInt(match[1]!, 10),
+    minor: parseInt(match[2]!, 10),
+    patch: parseInt(match[3]!, 10)
   };
 };
 

@@ -76,10 +76,10 @@ export const configBackupRoutes: RouteModule = {
     requireRoot,
     (req, res) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-      const backup = getConfigBackup(req.params.id as string)
+      const backup = getConfigBackup(req.params['id'] as string)
       if (!backup) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-        throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params.id as string} 不存在`)
+        throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params['id'] as string} 不存在`)
       }
       res.download(backup.path, `${backup.id}.tar.gz`)
     }
@@ -91,10 +91,10 @@ export const configBackupRoutes: RouteModule = {
     requireRoot,
     (req, res) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-      const deleted = deleteConfigBackup(req.params.id as string)
+      const deleted = deleteConfigBackup(req.params['id'] as string)
       if (!deleted) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-        throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params.id as string} 不存在`)
+        throw new ApiError(404, 'BACKUP_NOT_FOUND', `备份 ${req.params['id'] as string} 不存在`)
       }
       jsonOk(res, { deleted: true })
     }
@@ -105,9 +105,9 @@ export const configBackupRoutes: RouteModule = {
     '/api/config/backups/:id/restore',
     requireRoot,
     asyncHandler(async (req, res) => {
-      const force = req.query.force === 'true'
+      const force = req.query['force'] === 'true'
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-      await restoreConfigBackup(req.params.id as string, force)
+      await restoreConfigBackup(req.params['id'] as string, force)
       jsonOk(res, { restored: true })
     })
   )

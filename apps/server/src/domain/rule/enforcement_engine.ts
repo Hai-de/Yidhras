@@ -123,9 +123,9 @@ const hasEventBridge = (
   const prismaCandidate = context.prisma as unknown;
   return (
     isRecord(prismaCandidate) &&
-    typeof prismaCandidate.$transaction === 'function' &&
-    isRecord(prismaCandidate.event) &&
-    typeof prismaCandidate.event.create === 'function'
+    typeof prismaCandidate['$transaction'] === 'function' &&
+    isRecord(prismaCandidate['event']) &&
+    typeof prismaCandidate['event']['create'] === 'function'
   );
 };
 
@@ -315,17 +315,17 @@ export const spatialPredicateMatches = (
   subjectLocation: string | null,
   spatialRuntime: import('../../packs/runtime/spatial_runtime.js').SpatialRuntime
 ): boolean => {
-  if (Array.isArray(locationCondition.in)) {
-    if (!subjectLocation || !locationCondition.in.includes(subjectLocation)) {
+  if (Array.isArray(locationCondition['in'])) {
+    if (!subjectLocation || !locationCondition['in'].includes(subjectLocation)) {
       return false;
     }
   }
-  if (typeof locationCondition.adjacent_to === 'string') {
+  if (typeof locationCondition['adjacent_to'] === 'string') {
     if (!subjectLocation) {
       return false;
     }
-    const neighbors = spatialRuntime.neighbors(locationCondition.adjacent_to);
-    if (subjectLocation !== locationCondition.adjacent_to && !neighbors.includes(subjectLocation)) {
+    const neighbors = spatialRuntime.neighbors(locationCondition['adjacent_to']);
+    if (subjectLocation !== locationCondition['adjacent_to'] && !neighbors.includes(subjectLocation)) {
       return false;
     }
   }
@@ -335,7 +335,7 @@ export const spatialPredicateMatches = (
 export const enforceInvocationRequest = async (
   context: EnforcementContext,
   invocation: InvocationRequest,
-  packRuntime?: { getPack(): { metadata: { id: string }; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> }; variables?: Record<string, unknown> } | undefined }
+  packRuntime?: { getPack(): { metadata: { id: string }; capabilities?: Array<{ key: string }> | undefined; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> | undefined } | undefined; variables?: Record<string, unknown> | undefined } | undefined }
 ): Promise<InvocationEnforcementResult> => {
   const now = invocation.created_at;
 
@@ -365,9 +365,9 @@ export const enforceInvocationRequest = async (
           if (!when) {
             return true;
           }
-          if (when.location) {
+          if (when['location']) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-            return spatialPredicateMatches(when.location as Record<string, unknown>, subjectLocation, spatialRuntime);
+            return spatialPredicateMatches(when['location'] as Record<string, unknown>, subjectLocation, spatialRuntime);
           }
           return true;
         });
@@ -413,9 +413,9 @@ export const enforceInvocationRequest = async (
       if (pluginMatch) {
         const pluginTargetEntityId =
           'target_entity_id' in invocation.payload
-            ? String(invocation.payload.target_entity_id)
+            ? String(invocation.payload['target_entity_id'])
             : invocation.target_ref && typeof invocation.target_ref === 'object' && 'entity_id' in invocation.target_ref
-              ? String(invocation.target_ref.entity_id)
+              ? String(invocation.target_ref['entity_id'])
               : null;
         return {
           rule_id: pluginMatch.rule_id,
@@ -486,8 +486,8 @@ export const enforceInvocationRequest = async (
       mediator_id: invocation.mediator_id,
       subject_entity_id: invocation.subject_entity_id,
       target_entity_id:
-        invocation.target_ref && typeof invocation.target_ref.entity_id === 'string'
-          ? invocation.target_ref.entity_id
+        invocation.target_ref && typeof invocation.target_ref['entity_id'] === 'string'
+          ? invocation.target_ref['entity_id']
           : null,
       execution_status: 'failed',
       payload_json: {

@@ -69,11 +69,11 @@ export const createMockInferenceProvider = (): InferenceProvider => {
     strategies: ['mock'],
     requiresPrompt: false,
     run(context) {
-      if (context.attributes.force_fail === true) {
+      if (context.attributes['force_fail'] === true) {
         return Promise.reject(new Error('Forced mock provider failure'));
       }
 
-      if (context.attributes.force_invalid_payload === true) {
+      if (context.attributes['force_invalid_payload'] === true) {
         return Promise.resolve({
           action_type: 'post_message',
           target_ref: null,
@@ -81,25 +81,25 @@ export const createMockInferenceProvider = (): InferenceProvider => {
         });
       }
 
-      if (context.attributes.mock_action_type === 'semantic_intent') {
-        const targetRef = isRecord(context.attributes.semantic_target_ref)
-          ? context.attributes.semantic_target_ref
+      if (context.attributes['mock_action_type'] === 'semantic_intent') {
+        const targetRef = isRecord(context.attributes['semantic_target_ref'])
+          ? context.attributes['semantic_target_ref']
           : null;
         const semanticIntentKind =
-          typeof context.attributes.semantic_intent_kind === 'string' && context.attributes.semantic_intent_kind.trim().length > 0
-            ? context.attributes.semantic_intent_kind.trim()
+          typeof context.attributes['semantic_intent_kind'] === 'string' && context.attributes['semantic_intent_kind'].trim().length > 0
+            ? context.attributes['semantic_intent_kind'].trim()
             : 'ritual_divination';
         const semanticIntentText =
-          typeof context.attributes.semantic_intent_text === 'string' && context.attributes.semantic_intent_text.trim().length > 0
-            ? context.attributes.semantic_intent_text.trim()
+          typeof context.attributes['semantic_intent_text'] === 'string' && context.attributes['semantic_intent_text'].trim().length > 0
+            ? context.attributes['semantic_intent_text'].trim()
             : 'The actor attempts an unsupported semantic action.';
         const desiredEffect =
-          typeof context.attributes.semantic_intent_desired_effect === 'string'
-            ? context.attributes.semantic_intent_desired_effect
+          typeof context.attributes['semantic_intent_desired_effect'] === 'string'
+            ? context.attributes['semantic_intent_desired_effect']
             : null;
         const proposedMethod =
-          typeof context.attributes.semantic_intent_proposed_method === 'string'
-            ? context.attributes.semantic_intent_proposed_method
+          typeof context.attributes['semantic_intent_proposed_method'] === 'string'
+            ? context.attributes['semantic_intent_proposed_method']
             : null;
 
         return Promise.resolve({
@@ -126,24 +126,24 @@ export const createMockInferenceProvider = (): InferenceProvider => {
         });
       }
 
-      if (context.attributes.mock_action_type === 'trigger_event') {
+      if (context.attributes['mock_action_type'] === 'trigger_event') {
         return Promise.resolve({
           action_type: 'trigger_event',
           target_ref: null,
           payload: {
             event_type:
-              typeof context.attributes.event_type === 'string' ? context.attributes.event_type : 'interaction',
+              typeof context.attributes['event_type'] === 'string' ? context.attributes['event_type'] : 'interaction',
             title:
-              typeof context.attributes.event_title === 'string' && context.attributes.event_title.trim().length > 0
-                ? context.attributes.event_title.trim()
+              typeof context.attributes['event_title'] === 'string' && context.attributes['event_title'].trim().length > 0
+                ? context.attributes['event_title'].trim()
                 : 'Mock triggered event',
             description:
-              typeof context.attributes.event_description === 'string' && context.attributes.event_description.trim().length > 0
-                ? context.attributes.event_description.trim()
+              typeof context.attributes['event_description'] === 'string' && context.attributes['event_description'].trim().length > 0
+                ? context.attributes['event_description'].trim()
                 : 'Mock provider emitted a trigger_event action.',
             impact_data:
-              context.attributes.event_impact_data && typeof context.attributes.event_impact_data === 'object' && !Array.isArray(context.attributes.event_impact_data)
-                ? context.attributes.event_impact_data
+              context.attributes['event_impact_data'] && typeof context.attributes['event_impact_data'] === 'object' && !Array.isArray(context.attributes['event_impact_data'])
+                ? context.attributes['event_impact_data']
                 : undefined
           },
           confidence: 0.91,
@@ -155,25 +155,25 @@ export const createMockInferenceProvider = (): InferenceProvider => {
         });
       }
 
-      if (context.attributes.mock_action_type === 'adjust_relationship') {
+      if (context.attributes['mock_action_type'] === 'adjust_relationship') {
         return Promise.resolve({
           action_type: 'adjust_relationship',
           target_ref: {
             agent_id:
-              typeof context.attributes.target_agent_id === 'string' && context.attributes.target_agent_id.trim().length > 0
-                ? context.attributes.target_agent_id.trim()
+              typeof context.attributes['target_agent_id'] === 'string' && context.attributes['target_agent_id'].trim().length > 0
+                ? context.attributes['target_agent_id'].trim()
                 : 'agent-002'
           },
           payload: {
             relationship_type:
-              typeof context.attributes.relationship_type === 'string' ? context.attributes.relationship_type : 'friend',
-            operation: typeof context.attributes.relationship_operation === 'string' ? context.attributes.relationship_operation : 'set',
+              typeof context.attributes['relationship_type'] === 'string' ? context.attributes['relationship_type'] : 'friend',
+            operation: typeof context.attributes['relationship_operation'] === 'string' ? context.attributes['relationship_operation'] : 'set',
             target_weight:
-              typeof context.attributes.relationship_weight === 'number'
-                ? context.attributes.relationship_weight
+              typeof context.attributes['relationship_weight'] === 'number'
+                ? context.attributes['relationship_weight']
                 : 0.5,
-            create_if_missing: context.attributes.create_if_missing === true,
-            reason: typeof context.attributes.relationship_reason === 'string' ? context.attributes.relationship_reason : 'mock_adjust_relationship'
+            create_if_missing: context.attributes['create_if_missing'] === true,
+            reason: typeof context.attributes['relationship_reason'] === 'string' ? context.attributes['relationship_reason'] : 'mock_adjust_relationship'
           },
           confidence: 0.93,
           delay_hint_ticks: '1',
@@ -184,26 +184,26 @@ export const createMockInferenceProvider = (): InferenceProvider => {
         });
       }
 
-      if (context.attributes.mock_action_type === 'adjust_snr') {
+      if (context.attributes['mock_action_type'] === 'adjust_snr') {
         return Promise.resolve({
           action_type: 'adjust_snr',
           target_ref: {
             agent_id:
-              typeof context.attributes.target_agent_id === 'string' && context.attributes.target_agent_id.trim().length > 0
-                ? context.attributes.target_agent_id.trim()
+              typeof context.attributes['target_agent_id'] === 'string' && context.attributes['target_agent_id'].trim().length > 0
+                ? context.attributes['target_agent_id'].trim()
                 : context.resolved_agent_id ?? 'agent-001'
           },
           payload: {
-            operation: typeof context.attributes.snr_operation === 'string' ? context.attributes.snr_operation : 'set',
+            operation: typeof context.attributes['snr_operation'] === 'string' ? context.attributes['snr_operation'] : 'set',
             target_snr:
-              typeof context.attributes.target_snr === 'number'
-                ? context.attributes.target_snr
-                : typeof context.attributes.snr_target_value === 'number'
-                  ? context.attributes.snr_target_value
+              typeof context.attributes['target_snr'] === 'number'
+                ? context.attributes['target_snr']
+                : typeof context.attributes['snr_target_value'] === 'number'
+                  ? context.attributes['snr_target_value']
                   : 0.5,
             reason:
-              typeof context.attributes.snr_reason === 'string'
-                ? context.attributes.snr_reason
+              typeof context.attributes['snr_reason'] === 'string'
+                ? context.attributes['snr_reason']
                 : 'mock_adjust_snr'
           },
           confidence: 0.94,
@@ -216,13 +216,13 @@ export const createMockInferenceProvider = (): InferenceProvider => {
       }
 
       const mockedContent =
-        typeof context.attributes.mock_content === 'string' && context.attributes.mock_content.trim().length > 0
-          ? context.attributes.mock_content.trim()
+        typeof context.attributes['mock_content'] === 'string' && context.attributes['mock_content'].trim().length > 0
+          ? context.attributes['mock_content'].trim()
           : `Mock decision from ${context.actor_display_name} in ${context.world_pack.name}.`;
       const transmissionPolicy = normalizeTransmissionPolicy(
-        context.attributes.transmission_policy ?? context.transmission_profile.policy
+        context.attributes['transmission_policy'] ?? context.transmission_profile.policy
       );
-      const explicitDropChance = normalizeTransmissionDropChance(context.attributes.transmission_drop_chance);
+      const explicitDropChance = normalizeTransmissionDropChance(context.attributes['transmission_drop_chance']);
       const transmissionDropChance = resolveTransmissionDropChanceByPolicy(
         transmissionPolicy,
         explicitDropChance,
@@ -242,7 +242,7 @@ export const createMockInferenceProvider = (): InferenceProvider => {
           provider_mode: 'mock',
           actor_role: context.actor_ref.role,
           transmission_delay_ticks: normalizeTransmissionDelayTicks(
-            context.attributes.transmission_delay_ticks ?? context.transmission_profile.delay_ticks
+            context.attributes['transmission_delay_ticks'] ?? context.transmission_profile.delay_ticks
           ),
           transmission_policy: transmissionPolicy,
           transmission_drop_chance: transmissionDropChance,

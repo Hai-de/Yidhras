@@ -36,9 +36,9 @@ export const setLoggerRuntimeConfig = (config: { level?: string; format?: string
 
 const resolveLoggingConfig = (): { level: LogLevel; format: 'text' | 'json' } | null => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-  const envLevel = process.env.LOGGING_LEVEL as LogLevel | undefined;
+  const envLevel = process.env['LOGGING_LEVEL'] as LogLevel | undefined;
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-  const envFormat = process.env.LOGGING_FORMAT as 'text' | 'json' | undefined;
+  const envFormat = process.env['LOGGING_FORMAT'] as 'text' | 'json' | undefined;
   if (envLevel || envFormat) {
     return {
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键

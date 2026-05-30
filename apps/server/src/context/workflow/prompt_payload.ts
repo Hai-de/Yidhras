@@ -21,13 +21,13 @@ export const buildContextPromptPayload = (context: InferenceContext): Record<str
   };
 
   if (context.agent_conversation_memory) {
-    payload.agent_conversation_memory = context.agent_conversation_memory;
+    payload['agent_conversation_memory'] = context.agent_conversation_memory;
   }
   if (context.current_agent_id) {
-    payload.current_agent_id = context.current_agent_id;
+    payload['current_agent_id'] = context.current_agent_id;
   }
   if (context.conversation_profile) {
-    payload.conversation_profile = context.conversation_profile;
+    payload['conversation_profile'] = context.conversation_profile;
   }
 
   return payload;

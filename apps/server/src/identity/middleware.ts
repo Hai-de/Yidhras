@@ -1,7 +1,7 @@
-import { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 
 import type { OperatorRequest } from '../operator/auth/types.js';
-import { IdentityContext } from './types.js';
+import type { IdentityContext } from './types.js';
 
 export interface IdentityRequest extends Request {
   identity?: IdentityContext;

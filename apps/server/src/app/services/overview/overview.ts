@@ -57,11 +57,11 @@ const isWorkflowEntry = (entry: AuditViewEntry): boolean => {
 };
 
 const hasFailureState = (entry: AuditViewEntry): boolean => {
-  return isWorkflowEntry(entry) && entry.data.workflow_state === 'workflow_failed';
+  return isWorkflowEntry(entry) && entry.data['workflow_state'] === 'workflow_failed';
 };
 
 const hasDroppedState = (entry: AuditViewEntry): boolean => {
-  return isWorkflowEntry(entry) && entry.data.workflow_state === 'workflow_dropped';
+  return isWorkflowEntry(entry) && entry.data['workflow_state'] === 'workflow_dropped';
 };
 
 const hasPropagationIntent = (entry: AuditViewEntry): boolean => {
@@ -69,11 +69,12 @@ const hasPropagationIntent = (entry: AuditViewEntry): boolean => {
     return false;
   }
 
-  const intentType = typeof entry.data.intent_type === 'string' ? entry.data.intent_type : null;
+  const intentType = typeof entry.data['intent_type'] === 'string' ? entry.data['intent_type'] : null;
   return intentType === 'post_message';
 };
 
 const readProjectedWorldTime = (context: AppContext, packId?: string): { tick: string; calendars: unknown } => {
+// @ts-expect-error -- EOPT strict mode
   const visibleClock = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId });
 
   return {
@@ -86,6 +87,7 @@ export const getOverviewSummary = async (context: AppContext, packId?: string): 
   const worldTime = readProjectedWorldTime(context, packId);
 
   const [operatorProjection, globalProjectionIndex, activeAgentCount, notifications, recentAudit, latestEvents, latestPosts] = await Promise.all([
+// @ts-expect-error -- EOPT strict mode
     getOperatorOverviewProjection(context, { packId }),
     extractGlobalProjectionIndex(context, packId),
     context.repos.agent.countActiveAgents(),

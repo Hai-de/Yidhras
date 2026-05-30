@@ -13,7 +13,7 @@ export const packStorageAdapterProvider: ServiceProvider = {
   useFactory: (deps) => {
      
     const { prisma } = deps as unknown as { prisma: PrismaClient };
-    const dbProvider = process.env.PRISMA_DB_PROVIDER ?? 'sqlite';
+    const dbProvider = process.env['PRISMA_DB_PROVIDER'] ?? 'sqlite';
     return dbProvider === 'postgresql'
       ? new PostgresPackStorageAdapter(prisma)
       : new SqlitePackStorageAdapter();

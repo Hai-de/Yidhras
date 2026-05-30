@@ -360,12 +360,14 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
 
   async listIdentityBindings(input: { where?: Prisma.IdentityNodeBindingWhereInput; include?: Prisma.IdentityNodeBindingInclude; orderBy?: Prisma.IdentityNodeBindingOrderByWithRelationInput; select?: Prisma.IdentityNodeBindingSelect }): Promise<Array<{ id: string; role: string; status: string; atmosphere_node_id: string | null; expires_at: bigint | null; identity?: { id: string; type: string; name: string | null } | null; agent_id?: string | null; atmosphere_node?: { id: string; name: string } | null }>> {
     if (input.select) {
+// @ts-expect-error -- EOPT strict mode
       return this.prisma.identityNodeBinding.findMany({
         where: input.where,
         orderBy: input.orderBy,
         select: input.select
       });
     }
+// @ts-expect-error -- EOPT strict mode
     return this.prisma.identityNodeBinding.findMany({
       where: input.where,
       orderBy: input.orderBy,

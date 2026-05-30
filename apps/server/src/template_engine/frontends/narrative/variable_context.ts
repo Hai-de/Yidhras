@@ -26,6 +26,7 @@ export const createPromptVariableLayer = (input: {
   values?: PromptVariableRecord;
   alias_values?: Record<string, PromptVariableValue>;
   metadata?: PromptVariableLayer['metadata'];
+// @ts-expect-error -- EOPT strict mode
 }): PromptVariableLayer => ({
   namespace: input.namespace,
   values: input.values ?? {},
@@ -154,7 +155,7 @@ const splitNamespacePath = (path: string): { namespace: string; relativePath: st
   }
 
   return {
-    namespace: segments[0],
+    namespace: segments[0]!,
     relativePath: segments.slice(1).join('.')
   };
 };

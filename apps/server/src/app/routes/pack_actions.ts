@@ -108,7 +108,7 @@ export function createPackActionsRoute(queryHandlerRegistry: PackQueryHandlerReg
         asyncHandler(async (req, res) => {
        
       const opReq = req as OperatorRequest
-      const packId = typeof opReq.params.packId === 'string' ? opReq.params.packId : ''
+      const packId = typeof opReq.params['packId'] === 'string' ? opReq.params['packId'] : ''
 
       if (!packId) {
         throw new ApiError(400, 'INVALID_PACK_ID', 'packId is required')

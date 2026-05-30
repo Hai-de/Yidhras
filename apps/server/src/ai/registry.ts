@@ -979,7 +979,7 @@ export const setSlotEnabled = (slotId: string, enabled: boolean): boolean => {
   }
   if (slotId in cache.config.slots) {
     // eslint-disable-next-line security/detect-object-injection
-    cache.config.slots[slotId].enabled = enabled;
+    cache.config.slots[slotId]!.enabled = enabled;
     return true;
   }
   return false;

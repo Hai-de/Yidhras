@@ -33,9 +33,9 @@ export interface JwtPayload {
  */
 export interface OperatorRequest extends Request {
   /** 由 identityInjector 中间件注入 (x-m2-identity) */
-  identity?: IdentityContext
+  identity?: IdentityContext | undefined
   /** 由 operatorAuthMiddleware 中间件注入 (Authorization: Bearer) */
-  operator?: OperatorContext
+  operator?: OperatorContext | undefined
 }
 
 /**

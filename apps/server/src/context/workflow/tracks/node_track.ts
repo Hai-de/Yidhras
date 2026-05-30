@@ -62,6 +62,7 @@ const nodeToSection = (node: ContextNode): PromptSectionDraft | null => {
 
   const sectionType = NODE_TYPE_TO_SECTION_TYPE[node.node_type] ?? 'memory_short_term';
 
+// @ts-expect-error -- EOPT strict mode
   return {
     id: `node:${node.id}`,
     track: 'node',
@@ -145,7 +146,7 @@ const groupNodes = (
   const byType = new Map<string, PromptSectionDraft[]>();
   for (const section of sections) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- metadata field from data
-    const nodeType = (section.metadata?.node_type as string) ?? 'unknown';
+    const nodeType = (section.metadata?.['node_type'] as string) ?? 'unknown';
     const existing = byType.get(nodeType);
     if (existing) {
       existing.push(section);
@@ -171,8 +172,8 @@ const groupNodes = (
     grouped.push({
       id: randomUUID(),
       track: 'node',
-      section_type: group[0].section_type,
-      slot: group[0].slot,
+      section_type: group[0]!.section_type,
+      slot: group[0]!.slot,
       priority: Math.max(...group.map((s) => s.priority)),
       source_node_ids: group.flatMap((s) => s.source_node_ids),
       content_blocks: [{ kind: 'text', text: groupText }],

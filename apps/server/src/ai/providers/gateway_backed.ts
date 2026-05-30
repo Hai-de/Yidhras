@@ -37,8 +37,8 @@ export const createGatewayBackedInferenceProvider = ({
 
         const output = {
           ...(result.output ?? {}),
-          meta: isRecord(result.output.meta)
-            ? { ...result.output.meta, ai_invocation_id: result.invocation.invocation_id }
+          meta: isRecord(result.output['meta'])
+            ? { ...result.output['meta'], ai_invocation_id: result.invocation.invocation_id }
             : { ai_invocation_id: result.invocation.invocation_id }
         };
         return isRecord(output) ? output : {};

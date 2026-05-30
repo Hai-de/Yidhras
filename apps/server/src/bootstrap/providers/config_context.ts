@@ -49,11 +49,11 @@ export const cliConfigProvider: ServiceProvider = {
     };
     const cliWorkerIndex = parseCliInt('worker-index');
     const cliWorkerTotal = parseCliInt('worker-total');
-    if (cliWorkerIndex !== undefined) process.env.SCHEDULER_WORKER_INDEX = cliWorkerIndex;
-    if (cliWorkerTotal !== undefined) process.env.SCHEDULER_WORKER_TOTAL = cliWorkerTotal;
+    if (cliWorkerIndex !== undefined) process.env['SCHEDULER_WORKER_INDEX'] = cliWorkerIndex;
+    if (cliWorkerTotal !== undefined) process.env['SCHEDULER_WORKER_TOTAL'] = cliWorkerTotal;
 
-    const workerIndex = parseInt(process.env.SCHEDULER_WORKER_INDEX ?? '0', 10) || 0;
-    const schedulerWorkerId = process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}:${Date.now()}`;
+    const workerIndex = parseInt(process.env['SCHEDULER_WORKER_INDEX'] ?? '0', 10) || 0;
+    const schedulerWorkerId = process.env['SCHEDULER_WORKER_ID'] ?? `scheduler:${process.pid}:${Date.now()}`;
 
     return {
       workerIndex,

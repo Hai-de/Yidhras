@@ -47,8 +47,8 @@ export const pluginRoutes: RouteModule = {
     packAccessGuard(context, { packIdParam: 'packId' }),
     pluginMutateGuard,
     asyncHandler(async (req, res) => {
-      const packParams = parseParams(pluginPackParamsSchema, { packId: req.params.packId }, 'PLUGIN_INSTALLATION_INVALID')
-      const installationParams = parseParams(pluginInstallationParamsSchema, { installationId: req.params.installationId }, 'PLUGIN_INSTALLATION_INVALID')
+      const packParams = parseParams(pluginPackParamsSchema, { packId: req.params['packId'] }, 'PLUGIN_INSTALLATION_INVALID')
+      const installationParams = parseParams(pluginInstallationParamsSchema, { installationId: req.params['installationId'] }, 'PLUGIN_INSTALLATION_INVALID')
       const body = parseBody(pluginImportConfirmRequestSchema, req.body, 'PLUGIN_INSTALLATION_INVALID')
 
       const installation = await confirmPackPluginImport(context, installationParams.installationId, body.granted_capabilities)
@@ -62,10 +62,11 @@ export const pluginRoutes: RouteModule = {
     packAccessGuard(context, { packIdParam: 'packId' }),
     pluginMutateGuard,
     asyncHandler(async (req, res) => {
-      const packParams = parseParams(pluginPackParamsSchema, { packId: req.params.packId }, 'PLUGIN_INSTALLATION_INVALID')
-      const installationParams = parseParams(pluginInstallationParamsSchema, { installationId: req.params.installationId }, 'PLUGIN_INSTALLATION_INVALID')
+      const packParams = parseParams(pluginPackParamsSchema, { packId: req.params['packId'] }, 'PLUGIN_INSTALLATION_INVALID')
+      const installationParams = parseParams(pluginInstallationParamsSchema, { installationId: req.params['installationId'] }, 'PLUGIN_INSTALLATION_INVALID')
       const body = parseBody(pluginEnableRequestSchema, req.body, 'PLUGIN_INSTALLATION_INVALID')
 
+// @ts-expect-error -- EOPT strict mode
       const installation = await enablePackPlugin(context, installationParams.installationId, body.acknowledgement)
       pluginOperationAcknowledgementSchema.parse({ acknowledged: true, pack_id: packParams.packId, installation: toJsonSafe(installation) })
       jsonOk(res, toJsonSafe({ acknowledged: true, pack_id: packParams.packId, installation }))
@@ -77,8 +78,8 @@ export const pluginRoutes: RouteModule = {
     packAccessGuard(context, { packIdParam: 'packId' }),
     pluginMutateGuard,
     asyncHandler(async (req, res) => {
-      const packParams = parseParams(pluginPackParamsSchema, { packId: req.params.packId }, 'PLUGIN_INSTALLATION_INVALID')
-      const installationParams = parseParams(pluginInstallationParamsSchema, { installationId: req.params.installationId }, 'PLUGIN_INSTALLATION_INVALID')
+      const packParams = parseParams(pluginPackParamsSchema, { packId: req.params['packId'] }, 'PLUGIN_INSTALLATION_INVALID')
+      const installationParams = parseParams(pluginInstallationParamsSchema, { installationId: req.params['installationId'] }, 'PLUGIN_INSTALLATION_INVALID')
 
       const installation = await disablePackPlugin(context, installationParams.installationId)
       pluginOperationAcknowledgementSchema.parse({ acknowledged: true, pack_id: packParams.packId, installation: toJsonSafe(installation) })
@@ -91,7 +92,7 @@ export const pluginRoutes: RouteModule = {
     packAccessGuard(context, { packIdParam: 'packId' }),
     pluginMutateGuard,
     asyncHandler(async (req, res) => {
-      const packParams = parseParams(pluginPackParamsSchema, { packId: req.params.packId }, 'PLUGIN_RELOAD_INVALID')
+      const packParams = parseParams(pluginPackParamsSchema, { packId: req.params['packId'] }, 'PLUGIN_RELOAD_INVALID')
 
       if (!context.pluginRuntimeControl) {
         throw new ApiError(501, 'PLUGIN_RELOAD_UNAVAILABLE', 'Plugin runtime reload control is not available')

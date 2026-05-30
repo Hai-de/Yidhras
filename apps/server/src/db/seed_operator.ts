@@ -34,7 +34,7 @@ function discoverPackIds(packsDir: string): string[] {
         const content = fs.readFileSync(filePath, 'utf-8')
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary: YAML parse return
         const parsed = YAML.parse(content) as Record<string, unknown>
-        const metadata = parsed.metadata
+        const metadata = parsed['metadata']
         if (metadata && typeof metadata === 'object' && 'id' in metadata) {
           const id = metadata.id
           if (typeof id === 'string') {
@@ -52,7 +52,7 @@ function discoverPackIds(packsDir: string): string[] {
 }
 
 async function main() {
-  const rootPassword = process.env.ROOT_PASSWORD || 'changeme-root-password'
+  const rootPassword = process.env['ROOT_PASSWORD'] || 'changeme-root-password'
   const now = BigInt(Date.now())
 
   // 1. 创建 root Identity

@@ -72,6 +72,7 @@ export const runWorkflowDecisionStep = async (input: RunWorkflowDecisionStepInpu
     budget
   });
 
+// @ts-expect-error -- EOPT strict mode
   const executedDecisionJobCount = await runDecisionJobRunner({
     context: input.context,
     inferenceService: input.inferenceService,

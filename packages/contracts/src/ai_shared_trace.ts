@@ -16,26 +16,26 @@ export interface PromptProcessingTrace {
   processor_names: string[];
   fragment_count_before: number;
   fragment_count_after: number;
-  workflow_task_type?: string | null;
-  workflow_profile_id?: string | null;
-  workflow_profile_version?: string | null;
-  workflow_step_keys?: string[];
-  workflow_step_traces?: PromptWorkflowStepTraceSnapshot[];
-  prompt_workflow?: PromptWorkflowSnapshot | null;
+  workflow_task_type?: string | null | undefined | undefined;
+  workflow_profile_id?: string | null | undefined | undefined;
+  workflow_profile_version?: string | null | undefined | undefined;
+  workflow_step_keys?: string[] | undefined | undefined;
+  workflow_step_traces?: PromptWorkflowStepTraceSnapshot[] | undefined | undefined;
+  prompt_workflow?: PromptWorkflowSnapshot | null | undefined | undefined;
   steps?: Array<{
     processor_name: string;
     fragment_count_before: number;
     fragment_count_after: number;
-    added_fragment_ids?: string[];
-    removed_fragment_ids?: string[];
-    notes?: Record<string, unknown>;
+    added_fragment_ids?: string[] | undefined | undefined;
+    removed_fragment_ids?: string[] | undefined | undefined;
+    notes?: Record<string, unknown> | undefined | undefined;
   }>;
   fragments: Array<{
     id: string;
     slot: string;
     source: string;
     priority: number;
-    metadata?: Record<string, unknown>;
+    metadata?: Record<string, unknown> | undefined | undefined;
   }>;
   summary_compaction?: {
     summarized_fragment_ids: string[];
@@ -46,14 +46,14 @@ export interface PromptProcessingTrace {
     reasons: Record<string, string>;
   } | null;
   token_budget_trimming?: {
-    task_type?: string | null;
+    task_type?: string | null | undefined | undefined;
     budget: number;
     used: number;
     trimmed_fragment_ids: string[];
-    kept_fragment_ids?: string[];
-    always_kept_fragment_ids?: string[];
-    kept_optional_fragment_ids?: string[];
-    slot_priority?: Partial<Record<string, number>>;
+    kept_fragment_ids?: string[] | undefined | undefined;
+    always_kept_fragment_ids?: string[] | undefined | undefined;
+    kept_optional_fragment_ids?: string[] | undefined | undefined;
+    slot_priority?: Partial<Record<string, number>> | undefined | undefined;
     optional_fragment_scores?: Array<{
       fragment_id: string;
       slot: string;
@@ -61,7 +61,7 @@ export interface PromptProcessingTrace {
       estimated_cost: number;
       kept: boolean;
     }>;
-    trimmed_by_slot?: Partial<Record<string, string[]>>;
+    trimmed_by_slot?: Partial<Record<string, string[]>> | undefined | undefined;
     section_budget?: {
       mode: 'fragment_only' | 'section_level';
       total_budget: number;
@@ -78,7 +78,7 @@ export interface PromptProcessingTrace {
       kept_section_ids: string[];
       dropped_section_ids: string[];
     } | null;
-    trimmed_sources?: string[];
-    section_summary?: Record<string, unknown> | null;
+    trimmed_sources?: string[] | undefined | undefined;
+    section_summary?: Record<string, unknown> | null | undefined | undefined;
   } | null;
 }

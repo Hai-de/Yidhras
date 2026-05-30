@@ -39,24 +39,24 @@ const parseArgs = (argv: string[]): ParsedArgs => {
   const parsed: ParsedArgs = {};
 
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
+    const arg = argv[i]!;
     switch (arg) {
       case '--help':
       case '-h':
         parsed.help = true;
         break;
       case '--type':
-        parsed.type = argv[++i];
+        parsed.type = argv[++i]!;
         break;
       case '--out':
-        parsed.out = argv[++i];
+        parsed.out = argv[++i]!;
         break;
       case '--limit':
-        parsed.limit = Number.parseInt(argv[++i], 10);
+        parsed.limit = Number.parseInt(argv[++i]!, 10);
         break;
       default:
         if (!arg.startsWith('-') && !parsed.packId) {
-          parsed.packId = arg;
+          parsed.packId = arg!;
         }
     }
   }

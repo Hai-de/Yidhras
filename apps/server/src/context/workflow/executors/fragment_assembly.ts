@@ -43,6 +43,7 @@ const sectionToFragment = (section: PromptSectionDraft): PromptFragmentV2 => {
     };
   });
 
+// @ts-expect-error -- EOPT strict mode
   return {
     id: randomUUID(),
     slot_id: section.slot,
@@ -103,13 +104,13 @@ export const createFragmentAssemblyExecutor = (): PromptWorkflowStepExecutor => 
       if (!fragmentsBySlot[section.slot]) {
         fragmentsBySlot[section.slot] = [];
       }
-      fragmentsBySlot[section.slot].push(fragment);
+      fragmentsBySlot[section.slot]!.push(fragment);
       sourceKeys.push(fragment.source);
     }
 
     const tree: PromptTree = {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      inference_id: (context as unknown as Record<string, string>).inference_id ?? '',
+      inference_id: (context as unknown as Record<string, string>)['inference_id'] ?? '',
       task_type: state.task_type,
       fragments_by_slot: fragmentsBySlot,
       slot_registry: state.slot_registry ?? state.tree?.slot_registry ?? {},

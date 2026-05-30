@@ -1,6 +1,8 @@
 import { createLogger } from '../utils/logger.js';
-import { AlgorithmConfig,DynamicsCalculator } from './algorithms.js';
-import { NodeValueState, ValueChangeReason, ValueUpdateResult } from './types.js';
+import type { AlgorithmConfig } from './algorithms.js';
+import { DynamicsCalculator } from './algorithms.js';
+import type { NodeValueState, ValueUpdateResult } from './types.js';
+import { ValueChangeReason } from './types.js';
 
 const logger = createLogger('dynamics-manager');
 

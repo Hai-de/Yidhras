@@ -15,7 +15,7 @@ export interface StepStrategy {
   kind: StepStrategyKind;
   range: StepStrategyRange;
   loopIntervalMs: number;
-  adaptive?: AdaptiveConfig;
+  adaptive?: AdaptiveConfig | undefined;
 }
 
 export interface StepContext {
@@ -48,7 +48,7 @@ function clampStep(step: bigint, range: StepStrategyRange): bigint {
 export function computeVariableStep(
   strategy: StepStrategy,
   _ctx: StepContext,
-  requestedStep?: bigint
+  requestedStep?: bigint  
 ): bigint {
   const step = requestedStep ?? strategy.range.min;
   return clampStep(step, strategy.range);

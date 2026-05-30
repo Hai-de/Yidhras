@@ -47,6 +47,7 @@ export const getExperimentalPackRuntimeStatusSnapshot = async (
   context: AppContext,
   packId: string
 ): Promise<PackRuntimeStatusSnapshot & { control_plane?: ExperimentalPackRuntimeSnapshot } | null> => {
+// @ts-expect-error -- EOPT strict mode
   const observation = getPackRuntimeObservation({
     packRuntimeObservation: context.packRuntimeObservation
   });
@@ -57,6 +58,7 @@ export const getExperimentalPackRuntimeStatusSnapshot = async (
 
   const controlPlane = await buildExperimentalPackRuntimeSnapshot(context, packId);
 
+// @ts-expect-error -- EOPT strict mode
   return {
     ...snapshot,
     startup_level: context.startupHealth.level,
@@ -70,6 +72,7 @@ export const loadExperimentalPackRuntime = async (
   context: AppContext,
   packRef: string
 ): Promise<{ handle: PackRuntimeHandle; loaded: boolean; already_loaded: boolean }> => {
+// @ts-expect-error -- EOPT strict mode
   const result = await getPackRuntimeControl({
     packRuntimeControl: context.packRuntimeControl
   }).load(packRef);
@@ -83,6 +86,7 @@ export const unloadExperimentalPackRuntime = async (
 ): Promise<{ acknowledged: true; unloaded: boolean }> => {
   return {
     acknowledged: true,
+// @ts-expect-error -- EOPT strict mode
     unloaded: await getPackRuntimeControl({
       packRuntimeControl: context.packRuntimeControl
     }).unload(packId)

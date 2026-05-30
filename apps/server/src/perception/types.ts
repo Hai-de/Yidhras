@@ -3,18 +3,18 @@ export type PerceptionLevel = 'full' | 'partial' | 'none';
 // ── Rule definition (matches YAML schema) ──
 
 export interface PerceptionWhenClause {
-  observer_at?: 'same' | 'adjacent' | 'any';
-  event_visibility?: 'public' | 'private';
-  observer_is_actor?: boolean;
-  investigation_count_min?: number;
-  observer_has_capability?: string;
+  observer_at?: 'same' | 'adjacent' | 'any' | undefined;
+  event_visibility?: 'public' | 'private' | undefined;
+  observer_is_actor?: boolean | undefined;
+  investigation_count_min?: number | undefined;
+  observer_has_capability?: string | undefined;
 }
 
 export interface PerceptionThenClause {
   level: PerceptionLevel;
-  reveal_public?: boolean;
-  reveal_hidden?: boolean;
-  max_hidden_segments?: number;
+  reveal_public?: boolean | undefined;
+  reveal_hidden?: boolean | undefined;
+  max_hidden_segments?: number | undefined;
 }
 
 export interface PerceptionRuleDef {
@@ -44,8 +44,8 @@ export interface PerceptionLocationInput {
 export type PerceptionObserverRelation = 'same' | 'adjacent' | 'different' | 'no_location';
 
 export interface PerceptionRuleInput {
-  event?: PerceptionEventInput;
-  location?: PerceptionLocationInput;
+  event?: PerceptionEventInput | undefined;
+  location?: PerceptionLocationInput | undefined;
   observerEntityId: string;
   observerRelation: PerceptionObserverRelation;
   agentCapabilities: string[];

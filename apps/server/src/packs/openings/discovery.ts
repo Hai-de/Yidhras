@@ -5,8 +5,8 @@ import { safeFs } from '../../utils/safe_fs.js';
 
 export interface OpeningSummary {
   id: string;
-  name?: string;
-  description?: string;
+  name?: string | undefined;
+  description?: string | undefined;
 }
 
 import { isRecord } from '../../utils/type_guards.js';
@@ -44,8 +44,8 @@ export const listPackOpenings = (packDir: string): OpeningSummary[] => {
       if (isRecord(parsed)) {
         results.push({
           id,
-          name: typeof parsed.name === 'string' ? parsed.name : undefined,
-          description: typeof parsed.description === 'string' ? parsed.description : undefined
+          name: typeof parsed['name'] === 'string' ? parsed['name'] : undefined,
+          description: typeof parsed['description'] === 'string' ? parsed['description'] : undefined
         });
       } else {
         results.push({ id });

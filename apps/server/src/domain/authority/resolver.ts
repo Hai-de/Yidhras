@@ -95,7 +95,7 @@ const resolveTargetSelectorMatch = async (
     return null;
   }
 
-  const kind = typeof targetSelector.kind === 'string' ? targetSelector.kind : null;
+  const kind = typeof targetSelector['kind'] === 'string' ? targetSelector['kind'] : null;
   if (!kind) {
     return null;
   }
@@ -107,28 +107,28 @@ const resolveTargetSelectorMatch = async (
   }
 
   if (kind === 'direct_entity') {
-    const targetEntityId = typeof targetSelector.entity_id === 'string' ? targetSelector.entity_id : null;
+    const targetEntityId = typeof targetSelector['entity_id'] === 'string' ? targetSelector['entity_id'] : null;
     if (!targetEntityId) return null;
     return candidateEntityIds.includes(targetEntityId) ? 'direct_actor_ref' : null;
   }
 
-  if (kind === 'holder_of' && typeof targetSelector.entity_id === 'string') {
+  if (kind === 'holder_of' && typeof targetSelector['entity_id'] === 'string') {
     const states = await listPackEntityStates(context.packStorageAdapter, packId);
     const targetState = states.find(
-      state => state.entity_id === targetSelector.entity_id && state.state_namespace === 'core'
+      state => state.entity_id === targetSelector['entity_id'] && state.state_namespace === 'core'
     );
-    const holderId = targetState?.state_json?.holder_agent_id;
+    const holderId = targetState?.state_json?.['holder_agent_id'];
     if (typeof holderId !== 'string') return null;
     return candidateEntityIds.includes(holderId) ? 'holder_of' : null;
   }
 
   if (kind === 'subject_entity') {
-    if (typeof targetSelector.entity_id === 'string') {
-      return candidateEntityIds.includes(targetSelector.entity_id) ? 'subject_entity' : null;
+    if (typeof targetSelector['entity_id'] === 'string') {
+      return candidateEntityIds.includes(targetSelector['entity_id']) ? 'subject_entity' : null;
     }
-    if (typeof targetSelector.identity_id === 'string') {
+    if (typeof targetSelector['identity_id'] === 'string') {
       const currentIdentityId = (context as AppInfrastructure & { identity?: { id?: string } }).identity?.id;
-      return targetSelector.identity_id === currentIdentityId ? 'subject_entity' : null;
+      return targetSelector['identity_id'] === currentIdentityId ? 'subject_entity' : null;
     }
     return null;
   }
@@ -141,19 +141,19 @@ const resolveTargetSelectorMatch = async (
     return isActor ? 'all_actors' : null;
   }
 
-  if (kind === 'entity_type_is' && typeof targetSelector.entity_type === 'string') {
+  if (kind === 'entity_type_is' && typeof targetSelector['entity_type'] === 'string') {
     const entities = await listPackWorldEntities(context.packStorageAdapter, packId);
     const matches = entities.some(
       e =>
         candidateEntityIds.includes(e.id) &&
-        e.entity_type === targetSelector.entity_type
+        e.entity_type === targetSelector['entity_type']
     );
     return matches ? 'entity_type_is' : null;
   }
 
-  if (kind === 'member_of' && typeof targetSelector.entity_id === 'string') {
+  if (kind === 'member_of' && typeof targetSelector['entity_id'] === 'string') {
     const entities = await listPackWorldEntities(context.packStorageAdapter, packId);
-    const groupExists = entities.some(e => e.id === targetSelector.entity_id);
+    const groupExists = entities.some(e => e.id === targetSelector['entity_id']);
     if (!groupExists) {
       return null;
     }
@@ -164,8 +164,8 @@ const resolveTargetSelectorMatch = async (
         candidateEntityIds.includes(state.entity_id) &&
         state.state_namespace === 'core'
     );
-    const memberships = asStringArray(subjectState?.state_json?.member_of);
-    return memberships.includes(targetSelector.entity_id) ? 'member_of' : null;
+    const memberships = asStringArray(subjectState?.state_json?.['member_of']);
+    return memberships.includes(targetSelector['entity_id']) ? 'member_of' : null;
   }
 
   return null;

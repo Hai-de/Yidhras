@@ -61,7 +61,7 @@ export const isSchedulerPartitionId = (value: string): boolean => {
 };
 
 export const getSchedulerPartitionCount = (): number => {
-  return parsePositiveInteger(process.env.SCHEDULER_PARTITION_COUNT) ?? DEFAULT_SCHEDULER_PARTITION_COUNT;
+  return parsePositiveInteger(process.env['SCHEDULER_PARTITION_COUNT']) ?? DEFAULT_SCHEDULER_PARTITION_COUNT;
 };
 
 export const listSchedulerPartitionIds = (partitionCount = getSchedulerPartitionCount()): string[] => {
@@ -133,13 +133,13 @@ export const resolveOwnedSchedulerPartitionIds = (input?: {
     return normalizeSchedulerPartitionIds(input.explicitPartitionIds, partitionCount);
   }
 
-  const envPartitions = parseSchedulerWorkerPartitionList(process.env.SCHEDULER_WORKER_PARTITIONS, partitionCount);
+  const envPartitions = parseSchedulerWorkerPartitionList(process.env['SCHEDULER_WORKER_PARTITIONS'], partitionCount);
   if (envPartitions !== null) {
     return envPartitions;
   }
 
-  const workerTotal = parsePositiveInteger(process.env.SCHEDULER_WORKER_TOTAL);
-  const workerIndex = parseNonNegativeInteger(process.env.SCHEDULER_WORKER_INDEX);
+  const workerTotal = parsePositiveInteger(process.env['SCHEDULER_WORKER_TOTAL']);
+  const workerIndex = parseNonNegativeInteger(process.env['SCHEDULER_WORKER_INDEX']);
   if (workerTotal !== null && workerIndex !== null) {
     if (workerIndex >= workerTotal) {
       throw new Error(

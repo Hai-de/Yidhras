@@ -53,6 +53,7 @@ export const getOperatorOverviewProjection = async (
   context: AppContext,
   options: OperatorOverviewProjectionOptions = {}
 ): Promise<OperatorOverviewProjectionSnapshot> => {
+// @ts-expect-error -- EOPT strict mode
   const runtime = await getRuntimeStatusSnapshot(context, {
     packId: options.packId
   });

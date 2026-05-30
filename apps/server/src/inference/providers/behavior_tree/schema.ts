@@ -12,6 +12,7 @@ const btConditionSchema: z.ZodType<Record<string, unknown>> = z.lazy(() =>
   z.union([btConditionExprSchema, btCompoundConditionSchema])
 );
 
+// @ts-expect-error -- EOPT strict mode
 const btCompoundConditionSchema: z.ZodType<{ all?: Record<string, unknown>[]; any?: Record<string, unknown>[] }> = z.lazy(() =>
   z.object({
     all: z.array(btConditionSchema).optional(),

@@ -142,7 +142,7 @@ void (async () => {
     startupPolicy: cliConfig.startupPolicy,
     worldPacksDir: cliConfig.worldPacksDir,
     queryDatabaseHealth: async () => {
-      const dbProvider = process.env.PRISMA_DB_PROVIDER ?? 'sqlite';
+      const dbProvider = process.env['PRISMA_DB_PROVIDER'] ?? 'sqlite';
       let count: unknown;
       if (dbProvider === 'postgresql' || dbProvider === 'pg') {
         const rows = await ctx.prisma.$queryRawUnsafe<Array<Record<string, unknown>>>(
@@ -199,6 +199,7 @@ void (async () => {
           unregisterDynamicSlot(slotId);
         }
         for (const [slotId, slotConfig] of Object.entries(packSlots)) {
+           
           registerDynamicSlot({ id: slotId, ...slotConfig });
         }
       }

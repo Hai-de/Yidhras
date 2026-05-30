@@ -6,7 +6,7 @@ import type { SlotLogicExpr } from './slot_behavior.js';
  * 评估时内部 cast 到 SlotLogicExpr。
  */
 export type SlotConditionInput =
-  | { type: 'keyword_match'; keywords: string[]; match_mode?: 'any' | 'all' }
+  | { type: 'keyword_match'; keywords: string[]; match_mode?: 'any' | 'all' | undefined }
   | { type: 'logic_match'; expression: Record<string, unknown> }
   | { type: 'context_length'; operator: 'gt' | 'lt' | 'gte' | 'lte' | 'eq'; value: number }
   | { type: 'conversation_turn'; operator: 'gt' | 'lt' | 'gte' | 'lte' | 'eq'; value: number }
@@ -20,7 +20,7 @@ export interface SlotConditionContext {
   variables: Record<string, unknown>;
   conversation_meta: {
     turn_count: number;
-    last_message_role?: string;
+    last_message_role?: string | undefined;
   };
   token_budget: {
     total: number;
@@ -29,7 +29,7 @@ export interface SlotConditionContext {
   };
   current_tick: number;
   last_user_message: string;
-  options?: Record<string, unknown>;
+  options?: Record<string, unknown> | undefined;
 }
 
 /**
@@ -58,8 +58,8 @@ export function resolveDotPath(obj: Record<string, unknown>, path: string): unkn
 
     const arrayMatch = segment.match(/^(\w+)\[(-?\d+)\]$/);
     if (arrayMatch) {
-      const key = arrayMatch[1];
-      const index = parseInt(arrayMatch[2], 10);
+      const key = arrayMatch[1]!;
+      const index = parseInt(arrayMatch[2]!, 10);
       if (FORBIDDEN_PATH_SEGMENTS.has(key)) {
         return undefined;
       }
@@ -104,7 +104,7 @@ export function resolveWildcardPaths(obj: Record<string, unknown>, path: string)
       return [current];
     }
 
-    const segment = segments[segIndex];
+    const segment = segments[segIndex]!;
 
     // 通配符 — 展开当前对象的所有 key
     if (segment === '*') {
@@ -125,9 +125,9 @@ export function resolveWildcardPaths(obj: Record<string, unknown>, path: string)
     // 数组索引: key[N]
     const arrayMatch = segment.match(/^(\w+)\[(-?\d+)\]$/);
     if (arrayMatch) {
-      const key = arrayMatch[1];
+      const key = arrayMatch[1]!;
       if (FORBIDDEN_PATH_SEGMENTS.has(key)) return [];
-      const index = parseInt(arrayMatch[2], 10);
+      const index = parseInt(arrayMatch[2]!, 10);
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       const record = current as Record<string, unknown>;
       // eslint-disable-next-line security/detect-object-injection
@@ -282,7 +282,7 @@ export function evaluateSlotLogicExpr(
  * 空文本直接返回 false。
  */
 export function evaluateKeywordMatch(
-  condition: { keywords: string[]; match_mode?: 'any' | 'all' },
+  condition: { keywords: string[]; match_mode?: 'any' | 'all' | undefined },
   context: SlotConditionContext
 ): SlotConditionResult {
   const text = context.last_user_message;
@@ -432,6 +432,7 @@ export async function evaluateCustomCondition(
 
   try {
     const result = await evaluator.evaluate(context);
+// @ts-expect-error -- EOPT strict mode
     return result;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);

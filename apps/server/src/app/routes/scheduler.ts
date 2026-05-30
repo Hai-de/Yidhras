@@ -18,7 +18,6 @@ import { asyncHandler } from '../http/async_handler.js'
 import { jsonOk, toJsonSafe } from '../http/json.js'
 import { parseParams, parseQuery } from '../http/zod.js'
 import { capabilityGuard } from '../middleware/capability.js'
-import { createRuntimeKernelService } from '../runtime/runtime_kernel_service.js'
 import { listSchedulerDecisions } from '../services/scheduler/decision-queries.js'
 import { listSchedulerOwnershipAssignments,listSchedulerOwnershipMigrations  } from '../services/scheduler/ownership-queries.js'
 import { listSchedulerRebalanceRecommendations } from '../services/scheduler/rebalance-queries.js'
@@ -33,10 +32,10 @@ import type { RouteModule } from './types.js'
 
 const resolvePackIdFromRequest = (req: import('express').Request): string => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express mergeParams
-  const fromParams = req.params.packId as string | undefined
+  const fromParams = req.params['packId'] as string | undefined
   if (fromParams) return fromParams
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query value
-  const fromQuery = req.query.packId as string | undefined
+  const fromQuery = req.query['packId'] as string | undefined
   if (fromQuery) return fromQuery
   throw new ApiError(400, 'PACK_ID_REQUIRED', 'Pack ID is required for scheduler operations')
 }
@@ -62,7 +61,7 @@ export const schedulerRoutes: RouteModule = {
     app.get(
       '/api/runtime/scheduler/runs',
       observeGuard(context),
-      asyncHandler(async (req, res) => {
+      asyncHandler((req, res) => {
         context.assertRuntimeReady('scheduler runs list')
         const query = parseQuery(schedulerRunsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
         const packId = resolvePackIdFromRequest(req)
@@ -96,6 +95,7 @@ export const schedulerRoutes: RouteModule = {
         context.assertRuntimeReady('scheduler summary')
         const query = parseQuery(schedulerSummaryQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
         const packId = resolvePackIdFromRequest(req)
+// @ts-expect-error -- EOPT strict mode
         const summary = await getSchedulerSummarySnapshot(context, packId, {
           sampleRuns: query.sample_runs
         })
@@ -106,10 +106,11 @@ export const schedulerRoutes: RouteModule = {
     app.get(
       '/api/runtime/scheduler/trends',
       observeGuard(context),
-      asyncHandler(async (req, res) => {
+      asyncHandler((req, res) => {
         context.assertRuntimeReady('scheduler trends')
         const query = parseQuery(schedulerTrendsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
         const packId = resolvePackIdFromRequest(req)
+// @ts-expect-error -- EOPT strict mode
         const trends = getSchedulerTrendsSnapshot(context, packId, {
           sampleRuns: query.sample_runs
         })
@@ -124,6 +125,7 @@ export const schedulerRoutes: RouteModule = {
         context.assertRuntimeReady('scheduler operator projection')
         const query = parseQuery(schedulerOperatorQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
         const packId = resolvePackIdFromRequest(req)
+// @ts-expect-error -- EOPT strict mode
         const projection = await getSchedulerOperatorProjection(context, packId, {
           sampleRuns: query.sample_runs,
           recentLimit: query.recent_limit
@@ -135,7 +137,7 @@ export const schedulerRoutes: RouteModule = {
     app.get(
       '/api/runtime/scheduler/ownership',
       observeGuard(context),
-      asyncHandler(async (req, res) => {
+      asyncHandler((req, res) => {
         context.assertRuntimeReady('scheduler ownership projection')
         const query = parseQuery(schedulerOwnershipQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
         const packId = resolvePackIdFromRequest(req)
@@ -151,7 +153,7 @@ export const schedulerRoutes: RouteModule = {
     app.get(
       '/api/runtime/scheduler/migrations',
       observeGuard(context),
-      asyncHandler(async (req, res) => {
+      asyncHandler((req, res) => {
         context.assertRuntimeReady('scheduler ownership migrations')
         const query = parseQuery(schedulerMigrationsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
         const packId = resolvePackIdFromRequest(req)
@@ -169,7 +171,7 @@ export const schedulerRoutes: RouteModule = {
     app.get(
       '/api/runtime/scheduler/workers',
       observeGuard(context),
-      asyncHandler(async (req, res) => {
+      asyncHandler((req, res) => {
         context.assertRuntimeReady('scheduler worker runtime states')
         const query = parseQuery(schedulerWorkersQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
         const packId = resolvePackIdFromRequest(req)
@@ -184,7 +186,7 @@ export const schedulerRoutes: RouteModule = {
     app.get(
       '/api/runtime/scheduler/rebalance/recommendations',
       observeGuard(context),
-      asyncHandler(async (req, res) => {
+      asyncHandler((req, res) => {
         context.assertRuntimeReady('scheduler rebalance recommendations')
         const query = parseQuery(schedulerRebalanceRecommendationsQuerySchema, req.query, 'SCHEDULER_QUERY_INVALID')
         const packId = resolvePackIdFromRequest(req)
@@ -258,7 +260,7 @@ export const schedulerRoutes: RouteModule = {
           '../services/scheduler/agent-queries.js'
         )
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-        const decisions = listAgentSchedulerDecisions(context, packId, req.params.id as string)
+        const decisions = listAgentSchedulerDecisions(context, packId, req.params['id'] as string)
         jsonOk(res, toJsonSafe(decisions))
       })
     )

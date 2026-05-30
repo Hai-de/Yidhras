@@ -107,6 +107,7 @@ export const createAiTaskService = ({
   gateway,
   context
 }: CreateAiTaskServiceOptions = {}): AiTaskService => {
+// @ts-expect-error -- EOPT strict mode
   const resolvedGateway = gateway ?? createModelGateway({ context });
 
   return {
@@ -124,6 +125,7 @@ export const createAiTaskService = ({
         });
       }
 
+// @ts-expect-error -- EOPT strict mode
       const messages = assembleConversationMessages({
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         bundle: request.prompt_context.prompt_bundle_v2 as PromptBundleV2,

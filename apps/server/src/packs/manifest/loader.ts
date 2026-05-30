@@ -18,7 +18,7 @@ export class PackManifestLoader {
 
   public deriveInstanceId(pack: WorldPack, folderName: string): string {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
-    const explicit = (pack.metadata as Record<string, unknown>).instance_id as string | undefined;
+    const explicit = (pack.metadata as Record<string, unknown>)['instance_id'] as string | undefined;
     return explicit?.trim() || folderName;
   }
 

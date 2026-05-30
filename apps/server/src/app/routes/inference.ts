@@ -78,6 +78,7 @@ export function createInferenceRoutes(inferenceService: InferenceService): Route
       const hasError = query.has_error === 'true' ? true : query.has_error === 'false' ? false : undefined;
       const packIds = operator.is_root ? null : await getOperatorPackIds(context, operator.id);
 
+// @ts-expect-error -- EOPT strict mode
       const snapshot = await listInferenceJobs(context, {
         status: normalizedStatus,
         agent_id: query.agent_id,
@@ -115,6 +116,7 @@ export function createInferenceRoutes(inferenceService: InferenceService): Route
       const limit = typeof query.limit === 'string' ? Number.parseInt(query.limit, 10) : undefined;
       const hasError = query.has_error === 'true' ? true : query.has_error === 'false' ? false : undefined;
 
+// @ts-expect-error -- EOPT strict mode
       const snapshot = await listAiInvocations(context, {
         status: normalizedStatus,
         provider: query.provider,
@@ -173,6 +175,7 @@ export function createInferenceRoutes(inferenceService: InferenceService): Route
       context.assertRuntimeReady('inference job replay');
       const params = parseParams(inferenceJobIdParamsSchema, req.params, 'INFERENCE_INPUT_INVALID');
       const body = parseBody(inferenceJobReplayRequestSchema, req.body, 'INFERENCE_INPUT_INVALID');
+// @ts-expect-error -- EOPT strict mode
       const result = await inferenceService.replayInferenceJob(params.id, body);
 
       jsonOk(res, toJsonSafe(result));

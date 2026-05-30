@@ -14,10 +14,10 @@ interface CliArgs {
 }
 
 const parseSimArgs = (argv: string[]): CliArgs => {
-  const parsed: CliArgs = { baseUrl: process.env.YIDHRAS_BASE_URL ?? DEFAULT_BASE_URL };
+  const parsed: CliArgs = { baseUrl: process.env['YIDHRAS_BASE_URL'] ?? DEFAULT_BASE_URL };
 
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
+    const arg = argv[i]!;
     switch (arg) {
       case '--help':
       case '-h':
@@ -27,23 +27,23 @@ const parseSimArgs = (argv: string[]): CliArgs => {
         parsed.json = true;
         break;
       case '--base-url':
-        parsed.baseUrl = argv[++i];
+        parsed.baseUrl = argv[++i]!;
         break;
       case '--token':
-        parsed.token = argv[++i];
+        parsed.token = argv[++i]!;
         break;
       case '--username':
-        parsed.username = argv[++i];
+        parsed.username = argv[++i]!;
         break;
       case '--password':
-        parsed.password = argv[++i];
+        parsed.password = argv[++i]!;
         break;
       default:
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion for includes check
         if (COMMANDS.includes(arg as (typeof COMMANDS)[number])) {
-          parsed.command = arg;
+          parsed.command = arg!;
         } else if (parsed.command === 'speed' && !arg.startsWith('-') && !parsed.speedValue) {
-          parsed.speedValue = arg;
+          parsed.speedValue = arg!;
         }
     }
   }
@@ -132,7 +132,7 @@ const request = async <T>(
   const res = await fetch(`${baseUrl}${path}`, {
     method: options.method ?? 'GET',
     headers,
-    body: options.body ? JSON.stringify(options.body) : undefined
+    body: options.body ? JSON.stringify(options.body) : null
   });
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: fetch boundary
@@ -147,7 +147,7 @@ const request = async <T>(
 };
 
 const getToken = (args: CliArgs): string | undefined => {
-  return args.token ?? process.env.YIDHRAS_TOKEN;
+  return args.token ?? process.env['YIDHRAS_TOKEN'];
 };
 
 const doLogin = async (args: CliArgs): Promise<void> => {
@@ -172,7 +172,7 @@ const doLogin = async (args: CliArgs): Promise<void> => {
     console.log(`登录成功`);
     console.log(`  token: ${data.token}`);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    console.log(`  operator: ${(data.operator as Record<string, string>).name ?? data.operator}`);
+    console.log(`  operator: ${(data.operator as Record<string, string>)['name'] ?? '(anonymous)'}`);
     console.log(`\n使用: export YIDHRAS_TOKEN=${data.token}`);
   }
 };

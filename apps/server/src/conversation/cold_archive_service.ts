@@ -195,6 +195,7 @@ export const archiveConversationEntriesToColdStorage = async (
   const limit = normalizeLimit(options.limit);
   const beforeRecordedAt = normalizeRecordedAt(options.beforeRecordedAt);
   const beforeTurn = normalizeBeforeTurn(options.beforeTurn);
+// @ts-expect-error -- EOPT strict mode
   const where = buildWhere({
     memoryId: options.memoryId,
     beforeRecordedAt,

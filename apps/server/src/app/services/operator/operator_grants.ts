@@ -27,6 +27,7 @@ export const createOperatorGrant = async (
   }
 
   const grant = await context.prisma.operatorGrant.create({
+// @ts-expect-error -- EOPT strict mode
     data: {
       giver_operator_id: giverOperatorId,
       receiver_identity_id: receiverIdentityId,

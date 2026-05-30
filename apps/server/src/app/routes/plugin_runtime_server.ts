@@ -48,9 +48,9 @@ export const pluginRuntimeServerRoutes: RouteModule = {
       '/api/packs/:packId/plugins/:pluginId/runtime/server/:installationId/routes/{*runtimePath}',
       asyncHandler(async (req, res) => {
       const paramsResult = pluginServerRouteParamsSchema.safeParse({
-        packId: req.params.packId,
-        pluginId: req.params.pluginId,
-        installationId: req.params.installationId
+        packId: req.params['packId'],
+        pluginId: req.params['pluginId'],
+        installationId: req.params['installationId']
       });
       if (!paramsResult.success) {
         throw new ApiError(400, 'PLUGIN_ROUTE_INVALID', 'Invalid plugin runtime route parameters', {
@@ -69,7 +69,7 @@ export const pluginRuntimeServerRoutes: RouteModule = {
         throw new ApiError(404, 'PLUGIN_ROUTE_NOT_FOUND', 'Plugin runtime route not found');
       }
 
-      const routePath = normalizeRoutePath(req.params.runtimePath);
+      const routePath = normalizeRoutePath(req.params['runtimePath']);
       const route = findRouteProxy(runtime.pack_routes, method, routePath);
       if (!route) {
         throw new ApiError(404, 'PLUGIN_ROUTE_NOT_FOUND', 'Plugin runtime route not found');

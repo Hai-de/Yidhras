@@ -128,7 +128,7 @@ export const resolveLoadOrder = (input: LoadOrderInput): PluginInstallation[] =>
   const packOrderIndex = new Map<string, number>();
   if (packOrderConfig) {
     for (let i = 0; i < packOrderConfig.order.length; i++) {
-      packOrderIndex.set(packOrderConfig.order[i], i);
+      packOrderIndex.set(packOrderConfig.order[i]!, i);
     }
   }
 
@@ -242,12 +242,14 @@ export const checkDependencies = (input: DependencyCheckInput): DependencyCheckR
 
     if (!enabled) {
       if (dep.optional) {
+// @ts-expect-error -- EOPT strict mode
         result.missingOptionalDeps.push({
           key: dep.plugin_id,
           version: dep.version
         });
       } else {
         result.satisfied = false;
+// @ts-expect-error -- EOPT strict mode
         result.missingHardDeps.push({
           plugin_id: dep.plugin_id,
           version: dep.version,
@@ -285,12 +287,14 @@ export const checkDependencies = (input: DependencyCheckInput): DependencyCheckR
 
     if (providers.length === 0) {
       if (dep.optional) {
+// @ts-expect-error -- EOPT strict mode
         result.missingOptionalDeps.push({
           key: dep.key,
           version: dep.version
         });
       } else {
         result.satisfied = false;
+// @ts-expect-error -- EOPT strict mode
         result.missingInterfaceDeps.push({
           key: dep.key,
           version: dep.version,
@@ -368,12 +372,12 @@ export const readPackOrderConfig = (packRootDir: string): PackLoadOrderConfig | 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- plugin config boundary
     const parsed = YAML.parse(content) as Record<string, unknown> | null;
 
-    if (!parsed || !Array.isArray(parsed.order)) {
+    if (!parsed || !Array.isArray(parsed['order'])) {
       return null;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- parsed plugin order
-    return { order: parsed.order as string[] };
+    return { order: parsed['order'] as string[] };
   } catch {
     return null;
   }

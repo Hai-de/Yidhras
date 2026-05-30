@@ -34,6 +34,7 @@ export const operatorRoutes: RouteModule = {
 
       const operator = await createOperator(
         context,
+// @ts-expect-error -- EOPT strict mode
         body,
         (req as OperatorRequest).operator?.id,
         req.ip
@@ -59,7 +60,7 @@ export const operatorRoutes: RouteModule = {
     asyncHandler(async (req, res) => {
       requireRoot(req)
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-      const operator = await getOperator(context, req.params.id as string)
+      const operator = await getOperator(context, req.params['id'] as string)
       jsonOk(res, toJsonSafe(operator))
     })
   )
@@ -74,7 +75,8 @@ export const operatorRoutes: RouteModule = {
       const operator = await updateOperator(
         context,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-        req.params.id as string,
+        req.params['id'] as string,
+// @ts-expect-error -- EOPT strict mode
         body,
         (req as OperatorRequest).operator?.id,
         req.ip
@@ -92,7 +94,7 @@ export const operatorRoutes: RouteModule = {
       const operator = await deleteOperator(
         context,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-        req.params.id as string,
+        req.params['id'] as string,
         (req as OperatorRequest).operator?.id,
         req.ip
       )

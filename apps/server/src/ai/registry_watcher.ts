@@ -45,14 +45,14 @@ const extractErrorMessage = (err: unknown): string => {
 
 const formatSummary = (rawConfig: Record<string, unknown>, kind: 'ai_models' | 'prompt_slots'): string => {
   if (kind === 'ai_models') {
-    const providers = Array.isArray(rawConfig.providers) ? rawConfig.providers.length : 0;
-    const models = Array.isArray(rawConfig.models) ? rawConfig.models.length : 0;
-    const routes = Array.isArray(rawConfig.routes) ? rawConfig.routes.length : 0;
+    const providers = Array.isArray(rawConfig['providers']) ? rawConfig['providers'].length : 0;
+    const models = Array.isArray(rawConfig['models']) ? rawConfig['models'].length : 0;
+    const routes = Array.isArray(rawConfig['routes']) ? rawConfig['routes'].length : 0;
     return `providers: ${String(providers)}, models: ${String(models)}, routes: ${String(routes)}`;
   }
 
-  const slots = typeof rawConfig.slots === 'object' && rawConfig.slots !== null
-    ? Object.keys(rawConfig.slots).length
+  const slots = typeof rawConfig['slots'] === 'object' && rawConfig['slots'] !== null
+    ? Object.keys(rawConfig['slots']).length
     : 0;
   return `slots: ${String(slots)}`;
 };

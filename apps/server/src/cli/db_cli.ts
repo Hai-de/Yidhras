@@ -54,24 +54,24 @@ const parseArgs = (argv: string[]): ParsedArgs => {
         parsed.help = true;
         break;
       case '--memory-id':
-        parsed.memoryId = argv[++i];
+        parsed.memoryId = argv[++i]!;
         break;
       case '--before-recorded-at':
-        parsed.beforeRecordedAt = argv[++i];
+        parsed.beforeRecordedAt = argv[++i]!;
         break;
       case '--before-turn':
-        parsed.beforeTurn = Number.parseInt(argv[++i], 10);
+        parsed.beforeTurn = Number.parseInt(argv[++i]!, 10);
         break;
       case '--limit':
-        parsed.limit = Number.parseInt(argv[++i], 10);
+        parsed.limit = Number.parseInt(argv[++i]!, 10);
         break;
       case '--output-dir':
-        parsed.outputDir = argv[++i];
+        parsed.outputDir = argv[++i]!;
         break;
       default:
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         if (COMMANDS.includes(arg as (typeof COMMANDS)[number])) {
-          parsed.command = arg;
+          parsed.command = arg!;
         }
     }
   }
@@ -169,6 +169,7 @@ const runTables = async (prisma: PrismaClient): Promise<void> => {
 };
 
 const runArchiveConversations = async (prisma: PrismaClient, args: ParsedArgs): Promise<void> => {
+// @ts-expect-error -- EOPT strict mode
   const result = await archiveConversationEntriesToColdStorage(prisma, {
     memoryId: args.memoryId,
     beforeRecordedAt: args.beforeRecordedAt,

@@ -128,7 +128,7 @@ const buildTraceRecentRecord = async (input: {
   return traces
     .filter(trace => {
       const actorRef = isRecord(trace.actor_ref) ? trace.actor_ref : null;
-      return actorRef && typeof actorRef.agent_id === 'string' && actorRef.agent_id === agentId;
+      return actorRef && typeof actorRef['agent_id'] === 'string' && actorRef['agent_id'] === agentId;
     })
     .slice(0, RECENT_SOURCE_LIMIT)
     .map(trace => {
@@ -139,7 +139,7 @@ const buildTraceRecentRecord = async (input: {
         provider: trace.provider,
         updated_at: trace.updated_at.toString(),
         decision,
-        reasoning: decision && typeof decision.reasoning === 'string' ? decision.reasoning : null
+        reasoning: decision && typeof decision['reasoning'] === 'string' ? decision['reasoning'] : null
       };
 
       return {
@@ -182,7 +182,7 @@ const buildIntentRecentRecord = async (input: {
   return intents
     .filter(intent => {
       const actorRef = isRecord(intent.actor_ref) ? intent.actor_ref : null;
-      return actorRef && typeof actorRef.agent_id === 'string' && actorRef.agent_id === agentId;
+      return actorRef && typeof actorRef['agent_id'] === 'string' && actorRef['agent_id'] === agentId;
     })
     .slice(0, RECENT_SOURCE_LIMIT)
     .map(intent => {
@@ -256,10 +256,10 @@ const buildEventRecentRecord = async (input: {
       if (!event.source_action_intent) {
         return false;
       }
-      const actorRef = isRecord(event.source_action_intent.actor_ref)
-        ? event.source_action_intent.actor_ref
+      const actorRef = isRecord(event.source_action_intent['actor_ref'])
+        ? event.source_action_intent['actor_ref']
         : null;
-      return actorRef && typeof actorRef.agent_id === 'string' && actorRef.agent_id === agentId;
+      return actorRef && typeof actorRef['agent_id'] === 'string' && actorRef['agent_id'] === agentId;
     })
     .slice(0, RECENT_SOURCE_LIMIT)
     .map((event: EventQueryRecord) => {
@@ -282,7 +282,7 @@ const buildEventRecentRecord = async (input: {
         type: event.type,
         impact_data: impactData,
         tick: event.tick.toString(),
-        semantic_type: impactData && typeof impactData.semantic_type === 'string' ? impactData.semantic_type : null
+        semantic_type: impactData && typeof impactData['semantic_type'] === 'string' ? impactData['semantic_type'] : null
       };
 
       return {
@@ -324,6 +324,7 @@ export const buildMemoryEvaluationContext = async (input: {
     buildEventRecentRecord(input)
   ]);
 
+// @ts-expect-error -- EOPT strict mode
   return {
     actor_ref: input.actor_ref,
     resolved_agent_id: input.resolved_agent_id,

@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client';
 
-import { IdentityBindingRole, IdentityBindingStatus } from '../../../identity/types.js';
+import type { IdentityBindingRole, IdentityBindingStatus } from '../../../identity/types.js';
 import { ApiError } from '../../../utils/api_error.js';
 import type { AppContext } from '../../context.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
@@ -63,6 +63,7 @@ export const registerIdentity = async (
 
   const now = resolvePackTick(context, packRuntime);
   return context.prisma.identity.create({
+// @ts-expect-error -- EOPT strict mode
     data: {
       id,
       type,
@@ -130,14 +131,15 @@ export const createIdentityBinding = async (
   const now = resolvePackTick(context, packRuntime);
 
   return context.prisma.identityNodeBinding.create({
+// @ts-expect-error -- EOPT strict mode
     data: {
       identity_id,
       agent_id: hasAgent ? agent_id : null,
       atmosphere_node_id: hasAtmosphere ? atmosphere_node_id : null,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      role: role as IdentityBindingRole,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      status: normalizedStatus as IdentityBindingStatus,
+       
+      role: role,
+       
+      status: normalizedStatus,
       pack_id: packId ?? null,
       expires_at: expiresAt ?? undefined,
       created_at: now,

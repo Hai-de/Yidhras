@@ -1,4 +1,4 @@
-import { PolicyDecision, PolicyMatchInput, PolicyRule } from './types.js';
+import type { PolicyDecision, PolicyMatchInput, PolicyRule } from './types.js';
 
 type FieldMatchRank = {
   effectRank: number;

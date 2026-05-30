@@ -87,7 +87,7 @@ const parseSpatialState = (stateJson: unknown): SpatialState | null => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
   if (stateJson !== null && typeof stateJson === 'object' && 'location' in (stateJson as Record<string, unknown>)) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- pack manifest parsing
-    const location = (stateJson as Record<string, unknown>).location;
+    const location = (stateJson as Record<string, unknown>)['location'];
     if (typeof location === 'string') {
       return { location };
     }
@@ -168,11 +168,11 @@ export const createSpatialRuntime = (
 
       const stateJson = domainState.state_json;
       const publicDescription =
-        (typeof stateJson.public_description === 'string' ? stateJson.public_description : null) ??
-        (typeof stateJson.description === 'string' ? stateJson.description : null);
-      const hiddenDetails = parseHiddenDetails(stateJson.hidden_details);
-      const tags = Array.isArray(stateJson.tags)
-        ? stateJson.tags.filter((t): t is string => typeof t === 'string')
+        (typeof stateJson['public_description'] === 'string' ? stateJson['public_description'] : null) ??
+        (typeof stateJson['description'] === 'string' ? stateJson['description'] : null);
+      const hiddenDetails = parseHiddenDetails(stateJson['hidden_details']);
+      const tags = Array.isArray(stateJson['tags'])
+        ? stateJson['tags'].filter((t): t is string => typeof t === 'string')
         : [];
 
       return { label, publicDescription, hiddenDetails, tags };

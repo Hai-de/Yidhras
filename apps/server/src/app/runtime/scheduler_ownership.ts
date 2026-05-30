@@ -179,8 +179,8 @@ export const refreshSchedulerWorkerRuntimeLiveness = (
   adapter.open(packId);
 
   const currentTick = now ?? resolvePackTick(context, packRuntime);
-  const staleThreshold = BigInt(process.env.SCHEDULER_WORKER_STALE_TICKS ?? DEFAULT_SCHEDULER_WORKER_STALE_TICKS.toString());
-  const deadThreshold = BigInt(process.env.SCHEDULER_WORKER_DEAD_TICKS ?? DEFAULT_SCHEDULER_WORKER_DEAD_TICKS.toString());
+  const staleThreshold = BigInt(process.env['SCHEDULER_WORKER_STALE_TICKS'] ?? DEFAULT_SCHEDULER_WORKER_STALE_TICKS.toString());
+  const deadThreshold = BigInt(process.env['SCHEDULER_WORKER_DEAD_TICKS'] ?? DEFAULT_SCHEDULER_WORKER_DEAD_TICKS.toString());
   const workerStates = listSchedulerWorkerRuntimeStates(context, packId);
 
   for (const state of workerStates) {
@@ -209,6 +209,7 @@ export const reconcileSchedulerBootstrapAssignments = (
 
   const now = resolvePackTick(context, packRuntime);
   const partitionCount = getSchedulerPartitionCount();
+// @ts-expect-error -- EOPT strict mode
   const bootstrapPartitionIds = resolveOwnedSchedulerPartitionIds({
     explicitPartitionIds: partitionIds,
     workerId,
@@ -282,6 +283,7 @@ export const resolveSchedulerOwnershipSnapshot = (
   const ownedPartitionIds =
     persistedOwnedPartitionIds.length > 0
       ? persistedOwnedPartitionIds
+// @ts-expect-error -- EOPT strict mode
       : resolveOwnedSchedulerPartitionIds({
           explicitPartitionIds: input.bootstrapPartitionIds,
           workerId: input.workerId,

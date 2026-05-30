@@ -75,7 +75,7 @@ export const configRoutes: RouteModule = {
       asyncHandler(async (req, res) => {
         const body = parseBody(updateConfigSchema, req.body, 'INVALID_CONFIG_UPDATE')
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param is always string at runtime
-        const domain = req.params.domain as string
+        const domain = req.params['domain'] as string
         const result = updateDomainConfig(domain, body)
         const opReq = req as OperatorRequest
 

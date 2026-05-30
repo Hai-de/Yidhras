@@ -15,8 +15,8 @@ export const createDeepSeekProviderAdapter = (): AiProviderAdapter => {
     },
     resolveUserId(input) {
       const actorRef = input.task_request.actor_ref;
-      if (actorRef && typeof actorRef.identity_id === 'string') {
-        return actorRef.identity_id;
+      if (actorRef && typeof actorRef['identity_id'] === 'string') {
+        return actorRef['identity_id'];
       }
       return null;
     },

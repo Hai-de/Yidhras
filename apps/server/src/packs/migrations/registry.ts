@@ -53,7 +53,7 @@ export const getAvailableMigrations = (): readonly PackMigration[] => sortedMigr
 
 export const getTargetVersion = (): number => {
   if (sortedMigrations.length === 0) return 0;
-  return sortedMigrations[sortedMigrations.length - 1].version;
+  return sortedMigrations[sortedMigrations.length - 1]!.version;
 };
 
 const serializeUnknown = (value: unknown): string => {
@@ -66,7 +66,7 @@ const serializeUnknown = (value: unknown): string => {
 };
 
 const parseSchemaVersion = (config: Record<string, unknown>): number => {
-  const rawVersion = config.schema_version;
+  const rawVersion = config['schema_version'];
   if (rawVersion === undefined || rawVersion === null) {
     return 0;
   }

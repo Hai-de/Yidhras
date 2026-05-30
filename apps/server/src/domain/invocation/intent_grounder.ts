@@ -43,34 +43,34 @@ const toRecord = (value: unknown): Record<string, unknown> | null => {
 };
 
 const buildSemanticIntentFromDecision = (decision: DecisionResult): SemanticIntentSnapshot => {
-  const semanticIntent = isRecord(decision.meta?.semantic_intent) ? decision.meta?.semantic_intent : null;
+  const semanticIntent = isRecord(decision.meta?.['semantic_intent']) ? decision.meta?.['semantic_intent'] : null;
   return {
-    kind: toNullableString(semanticIntent?.kind) ?? toNullableString(decision.payload.semantic_intent_kind),
-    text: toNullableString(semanticIntent?.text) ?? toNullableString(decision.reasoning),
+    kind: toNullableString(semanticIntent?.['kind']) ?? toNullableString(decision.payload['semantic_intent_kind']),
+    text: toNullableString(semanticIntent?.['text']) ?? toNullableString(decision.reasoning),
     desired_effect:
-      toNullableString(semanticIntent?.desired_effect) ?? toNullableString(decision.payload.semantic_intent_desired_effect),
+      toNullableString(semanticIntent?.['desired_effect']) ?? toNullableString(decision.payload['semantic_intent_desired_effect']),
     proposed_method:
-      toNullableString(semanticIntent?.proposed_method) ?? toNullableString(decision.payload.semantic_intent_proposed_method),
-    target_ref: toRecord(semanticIntent?.target_ref) ?? decision.target_ref
+      toNullableString(semanticIntent?.['proposed_method']) ?? toNullableString(decision.payload['semantic_intent_proposed_method']),
+    target_ref: toRecord(semanticIntent?.['target_ref']) ?? decision.target_ref
   };
 };
 
 const getWorldPackInvocationRules = (context: PackStateResolvable): InvocationRuleRecord[] => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-  const runtimeRules = (context.pack_runtime as Record<string, unknown> | null)?.invocation_rules;
+  const runtimeRules = (context.pack_runtime as Record<string, unknown> | null)?.['invocation_rules'];
   if (!Array.isArray(runtimeRules)) {
     return [];
   }
 
   return runtimeRules.flatMap(item => {
-    if (!isRecord(item) || typeof item.id !== 'string') {
+    if (!isRecord(item) || typeof item['id'] !== 'string') {
       return [];
     }
 
     return [{
-      id: item.id,
-      when: isRecord(item.when) ? item.when : {},
-      then: isRecord(item.then) ? item.then : {}
+      id: item['id'],
+      when: isRecord(item['when']) ? item['when'] : {},
+      then: isRecord(item['then']) ? item['then'] : {}
     } satisfies InvocationRuleRecord];
   });
 };
@@ -90,8 +90,8 @@ const matchesSemanticIntent = (rule: InvocationRuleRecord, semanticIntent: Seman
   if (targetCondition) {
     const targetRef = semanticIntent.target_ref;
     const targetKind =
-      toNullableString(targetRef?.kind) ??
-      (typeof targetRef?.agent_id === 'string' || typeof targetRef?.entity_id === 'string' ? 'actor' : null);
+      toNullableString(targetRef?.['kind']) ??
+      (typeof targetRef?.['agent_id'] === 'string' || typeof targetRef?.['entity_id'] === 'string' ? 'actor' : null);
     if (targetCondition !== targetKind) {
       return false;
     }
@@ -122,14 +122,14 @@ const buildNarrativizedDecision = (
   sourceDecision: DecisionResult,
   narrativizeEvent: Record<string, unknown> | null
 ): DecisionResult => {
-  const eventType = toNullableString(narrativizeEvent?.type) ?? 'history';
-  const title = toNullableString(narrativizeEvent?.title) ?? '发生了一次失败但真实存在的尝试';
+  const eventType = toNullableString(narrativizeEvent?.['type']) ?? 'history';
+  const title = toNullableString(narrativizeEvent?.['title']) ?? '发生了一次失败但真实存在的尝试';
   const description =
-    toNullableString(narrativizeEvent?.description) ??
+    toNullableString(narrativizeEvent?.['description']) ??
     semanticIntent.text ??
     sourceDecision.reasoning ??
     '该行为没有产生客观效果，但已被系统记录。';
-  const impactData = isRecord(narrativizeEvent?.impact_data) ? narrativizeEvent?.impact_data : {};
+  const impactData = isRecord(narrativizeEvent?.['impact_data']) ? narrativizeEvent?.['impact_data'] : {};
 
   return {
     action_type: 'trigger_event',
@@ -140,7 +140,7 @@ const buildNarrativizedDecision = (
       description,
       impact_data: {
         ...impactData,
-        semantic_type: toNullableString(impactData.semantic_type) ?? semanticIntent.kind ?? 'narrativized_attempt',
+        semantic_type: toNullableString(impactData['semantic_type']) ?? semanticIntent.kind ?? 'narrativized_attempt',
         failed_attempt: true,
         objective_effect_applied: false,
         grounding_mode: grounding.resolution_mode,
@@ -283,13 +283,13 @@ export const groundDecisionIntent = async (
   const then = matchedRule.then;
   const resolutionMode =
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    (toNullableString(then.resolution_mode) as IntentGroundingResolutionMode | null) ?? 'exact';
-  const affordanceKey = toNullableString(then.affordance_key);
-  const requiredCapabilityKey = toNullableString(then.requires_capability);
-  const translateToCapability = toNullableString(then.translate_to_capability);
-  const translateToKernelIntent = toNullableString(then.translate_to_kernel_intent);
-  const mediatorId = toNullableString(then.mediator_id);
-  const explanation = toNullableString(then.explanation);
+    (toNullableString(then['resolution_mode']) as IntentGroundingResolutionMode | null) ?? 'exact';
+  const affordanceKey = toNullableString(then['affordance_key']);
+  const requiredCapabilityKey = toNullableString(then['requires_capability']);
+  const translateToCapability = toNullableString(then['translate_to_capability']);
+  const translateToKernelIntent = toNullableString(then['translate_to_kernel_intent']);
+  const mediatorId = toNullableString(then['mediator_id']);
+  const explanation = toNullableString(then['explanation']);
 
   const capabilitySatisfied = await hasCapability(context, inferenceContext, requiredCapabilityKey ?? translateToCapability);
 
@@ -304,9 +304,9 @@ export const groundDecisionIntent = async (
     };
     const targetRef = semanticIntent.target_ref ?? decision.target_ref;
     const targetEntityId =
-      toNullableString(targetRef?.entity_id) ??
-      toNullableString(targetRef?.agent_id) ??
-      toNullableString((decision.payload).target_entity_id);
+      toNullableString(targetRef?.['entity_id']) ??
+      toNullableString(targetRef?.['agent_id']) ??
+      toNullableString((decision.payload)['target_entity_id']);
 
     return {
       decision: buildRewrittenDecision(decision, semanticIntent, grounding, translateToCapability, targetRef, {
@@ -332,7 +332,7 @@ export const groundDecisionIntent = async (
       return {
         decision: buildRewrittenDecision(decision, semanticIntent, grounding, 'post_message', decision.target_ref, {
           content:
-            toNullableString((decision.payload).content) ??
+            toNullableString((decision.payload)['content']) ??
             semanticIntent.text ??
             decision.reasoning ??
             '未指定内容的案件进展通告。'
@@ -356,7 +356,7 @@ export const groundDecisionIntent = async (
       semanticIntent,
       grounding,
       decision,
-      isRecord(then.narrativize_event) ? then.narrativize_event : null
+      isRecord(then['narrativize_event']) ? then['narrativize_event'] : null
     ),
     semantic_intent: semanticIntent,
     grounding

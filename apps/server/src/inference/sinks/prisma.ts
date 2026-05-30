@@ -31,9 +31,9 @@ const toPlacementSummary = (value: unknown): PromptWorkflowSnapshot['placement_s
   }
 
   return {
-    total_fragments: typeof value.total_fragments === 'number' ? value.total_fragments : 0,
-    resolved_with_anchor: typeof value.resolved_with_anchor === 'number' ? value.resolved_with_anchor : 0,
-    fallback_count: typeof value.fallback_count === 'number' ? value.fallback_count : 0
+    total_fragments: typeof value['total_fragments'] === 'number' ? value['total_fragments'] : 0,
+    resolved_with_anchor: typeof value['resolved_with_anchor'] === 'number' ? value['resolved_with_anchor'] : 0,
+    fallback_count: typeof value['fallback_count'] === 'number' ? value['fallback_count'] : 0
   };
 };
 
@@ -43,20 +43,20 @@ const extractPromptWorkflowSnapshot = (event: InferenceTraceEvent): PromptWorkfl
     return null;
   }
 
-  const promptWorkflow = isRecord(orchestration.prompt_workflow) ? orchestration.prompt_workflow : null;
+  const promptWorkflow = isRecord(orchestration['prompt_workflow']) ? orchestration['prompt_workflow'] : null;
 
   if (!promptWorkflow) {
     return null;
   }
 
   return {
-    task_type: typeof promptWorkflow.task_type === 'string' ? promptWorkflow.task_type : null,
-    profile_id: typeof promptWorkflow.profile_id === 'string' ? promptWorkflow.profile_id : null,
-    profile_version: typeof promptWorkflow.profile_version === 'string' ? promptWorkflow.profile_version : null,
-    selected_step_keys: toStringArray(promptWorkflow.selected_step_keys),
-    placement_summary: toPlacementSummary(promptWorkflow.placement_summary),
-    section_summary: isRecord(promptWorkflow.section_summary) ? promptWorkflow.section_summary : null,
-    step_traces: Array.isArray(promptWorkflow.step_traces) ? (promptWorkflow.step_traces as PromptWorkflowSnapshot['step_traces']) : []
+    task_type: typeof promptWorkflow['task_type'] === 'string' ? promptWorkflow['task_type'] : null,
+    profile_id: typeof promptWorkflow['profile_id'] === 'string' ? promptWorkflow['profile_id'] : null,
+    profile_version: typeof promptWorkflow['profile_version'] === 'string' ? promptWorkflow['profile_version'] : null,
+    selected_step_keys: toStringArray(promptWorkflow['selected_step_keys']),
+    placement_summary: toPlacementSummary(promptWorkflow['placement_summary']),
+    section_summary: isRecord(promptWorkflow['section_summary']) ? promptWorkflow['section_summary'] : null,
+    step_traces: Array.isArray(promptWorkflow['step_traces']) ? (promptWorkflow['step_traces'] as PromptWorkflowSnapshot['step_traces']) : []
   };
 };
 
@@ -254,6 +254,7 @@ export const createPrismaInferenceTraceSink = (context: AppInfrastructure): Infe
           where: {
             id: event.inference_id
           },
+// @ts-expect-error -- EOPT strict mode
           update: {
             kind: event.kind,
             strategy: event.strategy,
@@ -272,6 +273,7 @@ export const createPrismaInferenceTraceSink = (context: AppInfrastructure): Infe
             decision: event.decision ? toJsonValue(event.decision) : undefined,
             updated_at: now
           },
+// @ts-expect-error -- EOPT strict mode
           create: {
             id: event.inference_id,
             kind: event.kind,

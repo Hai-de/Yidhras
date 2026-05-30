@@ -11,7 +11,7 @@ export interface PackAccessResult {
   /** 绑定的角色类型；未匹配时为 null */
   bindingType: 'owner' | 'admin' | 'member' | 'spectator' | null
   /** 拒绝原因码 */
-  reason?: 'NOT_BOUND' | 'OPERATOR_DISABLED' | 'PACK_NOT_FOUND'
+  reason?: 'NOT_BOUND' | 'OPERATOR_DISABLED' | 'PACK_NOT_FOUND' | undefined
 }
 
 /**
@@ -19,13 +19,13 @@ export interface PackAccessResult {
  */
 export interface PackAccessGuardOptions {
   /** 从 req.params 提取 packId 的参数名 */
-  packIdParam?: string
+  packIdParam?: string | undefined
   /** 或从 req.query 提取 */
-  packIdQuery?: string
+  packIdQuery?: string | undefined
   /** 是否允许匿名/未绑定用户访问（默认 false） */
-  allowPublic?: boolean
+  allowPublic?: boolean | undefined
   /** 允许的最低 bindingType（如 'member' 允许 member/admin/owner） */
-  minBindingType?: 'owner' | 'admin' | 'member' | 'spectator'
+  minBindingType?: 'owner' | 'admin' | 'member' | 'spectator' | undefined
 }
 
 // ── L2: Subject 解析 ──
@@ -71,10 +71,10 @@ export interface CapabilityCheckResult {
  */
 export interface CapabilityGuardOptions {
   /** 从 req.params 提取 targetAgentId 的参数名 */
-  targetAgentIdParam?: string
+  targetAgentIdParam?: string | undefined
   /** 从 req.query 提取 packId 的参数名 */
-  packIdParam?: string
-  packIdQuery?: string
+  packIdParam?: string | undefined
+  packIdQuery?: string | undefined
 }
 
 // ── L3: Policy 过滤上下文扩展 ──

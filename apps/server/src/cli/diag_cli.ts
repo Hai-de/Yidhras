@@ -103,11 +103,11 @@ const buildReport = async (): Promise<DiagReport> => {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
           const yaml = YAML.parse(readFileSync(configPath, 'utf-8')) as Record<string, unknown>;
           // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-          const meta = (yaml.metadata ?? {}) as Record<string, string>;
+          const meta = (yaml['metadata'] ?? {}) as Record<string, string>;
           packs.push({
-            id: meta.id ?? entry.name,
-            name: meta.name ?? entry.name,
-            version: meta.version ?? '?'
+            id: meta['id'] ?? entry.name,
+            name: meta['name'] ?? entry.name,
+            version: meta['version'] ?? '?'
           });
         } catch {
           packs.push({ id: entry.name, name: entry.name, version: '解析失败' });

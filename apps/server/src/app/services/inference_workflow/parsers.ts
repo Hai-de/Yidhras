@@ -199,6 +199,7 @@ export const normalizeReplayInput = (input: InferenceJobReplayInput | undefined)
     });
   }
 
+// @ts-expect-error -- EOPT strict mode
   return result.data;
 };
 

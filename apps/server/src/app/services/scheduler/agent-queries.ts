@@ -1,5 +1,4 @@
 import { getSchedulerObservabilityConfig } from '../../../config/runtime_config.js';
-import type { SchedulerCandidateDecisionRecord } from '../../../packs/storage/SchedulerStorageAdapter.js';
 import { ApiError } from '../../../utils/api_error.js';
 import type { AppContext } from '../../context.js';
 import type { SchedulerReason, SchedulerSkipReason } from '../../runtime/agent_scheduler.js';
@@ -85,6 +84,7 @@ export const getAgentSchedulerProjection = async (
   let eventDrivenCount = 0;
 
   for (const item of timeline) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime value validated by adapter
     const chosenReason = item.chosen_reason as SchedulerReason;
     reasonCounts.set(chosenReason, (reasonCounts.get(chosenReason) ?? 0) + 1);
     if (item.kind === 'periodic') periodicCount += 1;
@@ -126,6 +126,7 @@ export const getAgentSchedulerProjection = async (
         .filter(item => item.created_job_id !== null)
         .map(item => ({
           decision_id: item.id,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- already null-checked above
           job_id: item.created_job_id as string,
           scheduler_run_id: item.scheduler_run_id,
           partition_id: item.partition_id,

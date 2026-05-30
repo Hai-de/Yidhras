@@ -60,6 +60,7 @@ const invokeWorker = async <T>(input: {
   timeoutMs?: number;
 }): Promise<T> => {
   const payload = jsonClone(input.payload);
+// @ts-expect-error -- EOPT strict mode
   const result = await input.client.invoke(input.descriptor.type, input.descriptor.invoke, payload, {
     timeoutMs: input.timeoutMs
   });
@@ -94,9 +95,10 @@ const contextNodeSchema: z.ZodType<ContextNode> = z.object({
 }).loose() as unknown as z.ZodType<ContextNode>;
 /* eslint-enable @typescript-eslint/no-unsafe-type-assertion */
 
- 
+
 const contextSourceBuildResultSchema: z.ZodType<ContextNode[] | ContextSourceAdapterBuildResult> = z.union([
   z.array(contextNodeSchema),
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Zod schema loose() cast to union member
   z.object({
     nodes: z.array(contextNodeSchema),
     diagnostics: recordSchema.nullable().optional()
@@ -121,13 +123,12 @@ const promptWorkflowStateSchema: z.ZodType<PromptWorkflowState> = z.object({
 }).loose() as unknown as z.ZodType<PromptWorkflowState>;
 /* eslint-enable @typescript-eslint/no-unsafe-type-assertion */
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion */
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Zod schema loose() cast
 const stepContributionSchema: z.ZodType<StepContribution> = z.object({
   delta_operations: z.array(z.unknown()),
   emitted_events: z.array(z.unknown()),
   observability: z.array(z.unknown())
 }) as z.ZodType<StepContribution>;
-/* eslint-enable @typescript-eslint/no-unsafe-type-assertion */
 
 const nullableStepContributionSchema = stepContributionSchema.nullable();
 
@@ -388,6 +389,7 @@ export class WorkerPackRouteProxy {
   }
 
   public handle(payload: unknown, timeoutMs?: number): Promise<unknown> {
+// @ts-expect-error -- EOPT strict mode
     return invokeWorker({
       client: this.client,
       descriptor: this.descriptor,

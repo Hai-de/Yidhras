@@ -15,7 +15,7 @@ import type { RouteModule } from './types.js'
 
 const resolvePackId = (req: Request & { packScope?: PackScope }): string | undefined => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express param value
-  return (req.params.packId as string | undefined) ?? req.packScope?.packId
+  return (req.params['packId'] as string | undefined) ?? req.packScope?.packId
 }
 
 export const overviewRoutes: RouteModule = {

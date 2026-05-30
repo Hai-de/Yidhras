@@ -105,6 +105,7 @@ export const activateWorldPackRuntime = async ({
   configureRuntimeSpeedFromPack(runtimeSpeed, pack, notifications);
 
   const instanceId = loader.deriveInstanceId(pack, packFolderName);
+// @ts-expect-error -- EOPT strict mode
   await materializePackRuntime({ instanceId, pack, prisma, packStorageAdapter, initialTick: runtimeConfig.initialTick, appliedOpeningId });
 
   const clock = await resolvePackClock({

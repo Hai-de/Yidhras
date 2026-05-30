@@ -73,6 +73,7 @@ export class PrismaNarrativeEventRepository implements NarrativeEventRepository 
 
    
   async queryEvents(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown> | Array<Record<string, unknown>>; take?: number; include?: Record<string, unknown> }): Promise<Array<Record<string, unknown>>> {
+// @ts-expect-error -- EOPT strict mode
     return this.prisma.event.findMany({
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
       where: input.where as never,

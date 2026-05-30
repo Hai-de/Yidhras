@@ -11,10 +11,7 @@ import type {
   InferenceActorRef,
   InferenceAgentSnapshot,
   InferenceBindingRef,
-  InferencePackArtifactSnapshot,
-  InferencePackLatestEventSnapshot,
   InferencePackRuntimeContract,
-  InferencePackStateRecord,
   InferencePackStateSnapshot,
   InferencePolicySummary,
   InferenceRequestInput,
@@ -65,9 +62,9 @@ export interface TransmissionProfileInput {
 export interface VariableContextInput {
   pack: {
     metadata: { id: string; name: string; version: string };
-    variables?: Record<string, unknown>;
-    prompts?: Record<string, unknown>;
-    ai?: WorldPackAiConfig | null;
+    variables?: Record<string, unknown> | undefined;
+    prompts?: Record<string, unknown> | undefined;
+    ai?: WorldPackAiConfig | null | undefined;
   };
   strategy: InferenceStrategy;
   attributes: Record<string, unknown>;
@@ -115,7 +112,7 @@ export interface AssembledInferenceContext {
   attributes: Record<string, unknown>;
   world_pack: InferenceWorldPackRef;
   world_prompts: Record<string, string>;
-  world_ai?: WorldPackAiConfig | null;
+  world_ai?: WorldPackAiConfig | null | undefined;
   visible_variables: PromptVariableRecord;
   variable_context: PromptVariableContext;
   variable_context_summary: PromptVariableContextSummary;
@@ -126,7 +123,7 @@ export interface AssembledInferenceContext {
   pack_state: InferencePackStateSnapshot;
   pack_runtime: InferencePackRuntimeContract;
   agent_capabilities: string[];
-  previous_agent_output?: Record<string, PreviousAgentOutputRecord>;
+  previous_agent_output?: Record<string, PreviousAgentOutputRecord> | undefined;
 }
 
 // ── Pipeline types ─────────────────────────────────────────
@@ -136,7 +133,7 @@ export class ContextAssemblyError extends Error {
   constructor(
     message: string,
     public readonly stage: string,
-    public readonly cause: unknown
+    public override readonly cause: unknown
   ) {
     super(message);
     this.name = 'ContextAssemblyError';
@@ -146,7 +143,7 @@ export class ContextAssemblyError extends Error {
 /** Pipeline options. */
 export interface PipelineOptions {
   /** Continue to next stage on non-critical failure. */
-  graceful?: boolean;
+  graceful?: boolean | undefined;
   /** Deployment ID for config resolution. */
-  deploymentId?: string;
+  deploymentId?: string | undefined;
 }

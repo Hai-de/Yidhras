@@ -1,18 +1,18 @@
 export interface ProjectionWhenClause {
   /** 距离上次执行至少 N tick（累计距离判断，非取模） */
-  tick_interval?: number;
-  on_event_type?: string;
-  entity_type_is?: string;
+  tick_interval?: number | undefined;
+  on_event_type?: string | undefined;
+  entity_type_is?: string | undefined;
 }
 
 export interface ProjectionThenClause {
   compute: 'count' | 'sum' | 'max' | 'min' | 'collect';
-  source_entity_type?: string;
-  source_state_key?: string;
-  source_collection?: string;
+  source_entity_type?: string | undefined;
+  source_state_key?: string | undefined;
+  source_collection?: string | undefined;
   target_projection: string;
-  aggregate_by?: string[];
-  filter_condition?: Record<string, unknown>;
+  aggregate_by?: string[] | undefined;
+  filter_condition?: Record<string, unknown> | undefined;
 }
 
 export interface ProjectionRuleDef {
@@ -30,7 +30,7 @@ export interface ProjectionEvaluationContext {
   authorityGrants: Array<{ id: string; source_entity_id: string; capability_key: string; status: string | null }>;
   ruleExecutionRecords: Array<{ id: string; rule_id: string; execution_status: string; payload_json: Record<string, unknown> | null }>;
   /** Per-rule last execution tick map, keyed by rule id */
-  lastExecutionTicks?: Map<string, bigint>;
+  lastExecutionTicks?: Map<string, bigint> | undefined;
 }
 
 export interface ProjectionEvaluationResult {

@@ -29,20 +29,20 @@ const parseArgs = (argv: string[]): ParsedArgs => {
   const parsed: ParsedArgs = {};
 
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
+    const arg = argv[i]!;
     switch (arg) {
       case '--help':
       case '-h':
         parsed.help = true;
         break;
       case '--pack':
-        parsed.pack = argv[++i];
+        parsed.pack = argv[++i]!;
         break;
       case '--server':
-        parsed.server = argv[++i];
+        parsed.server = argv[++i]!;
         break;
       case '--token':
-        parsed.token = argv[++i];
+        parsed.token = argv[++i]!;
         break;
       case '--json':
         parsed.json = true;
@@ -235,9 +235,9 @@ const doEnable = async (prisma: PrismaClient, args: ParsedArgs): Promise<void> =
     // Gather enabled installations and their manifests
     const scopeRef = installation.scope_ref ?? undefined;
     const packLocal = scopeRef
-      ? await store.listInstallationsByScope({ scope_type: 'pack_local', scope_ref: scopeRef })
+      ? (await store.listInstallationsByScope({ scope_type: 'pack_local', scope_ref: scopeRef })) ?? []
       : [];
-    const global = await store.listInstallationsByScope({ scope_type: 'global' });
+    const global = (await store.listInstallationsByScope({ scope_type: 'global' })) ?? [];
     const enabledInstallations = [...packLocal, ...global].filter(
       i => i.lifecycle_state === 'enabled'
     );
@@ -446,7 +446,6 @@ const runCli = async (): Promise<void> => {
 
 void runCli();
 
-
 // --- reload ---
 
 const doReload = async (args: ParsedArgs): Promise<void> => {
@@ -456,8 +455,8 @@ const doReload = async (args: ParsedArgs): Promise<void> => {
     return;
   }
 
-  const server = (args.server ?? process.env.YIDHRAS_SERVER_URL ?? '').trim().replace(/\/$/, '');
-  const token = (args.token ?? process.env.YIDHRAS_OPERATOR_TOKEN ?? '').trim();
+  const server = (args.server ?? process.env['YIDHRAS_SERVER_URL'] ?? '').trim().replace(/\/$/, '');
+  const token = (args.token ?? process.env['YIDHRAS_OPERATOR_TOKEN'] ?? '').trim();
 
   if (!server) {
     console.error('错误: 请通过 --server <url> 或 YIDHRAS_SERVER_URL 指定正在运行的 server');
@@ -481,6 +480,7 @@ const doReload = async (args: ParsedArgs): Promise<void> => {
     }
     const packId = 'pack_id' in data && typeof data.pack_id === 'string' ? data.pack_id : undefined;
     const runtimeCount = 'runtime_count' in data && typeof data.runtime_count === 'number' ? data.runtime_count : undefined;
+// @ts-expect-error -- EOPT strict mode
     return { data: { pack_id: packId, runtime_count: runtimeCount } };
   };
 

@@ -38,7 +38,7 @@ function findAnchorTarget(
       return working.findIndex((d) => {
         if (d.source_node_ids.includes(value)) return true;
         const meta: Record<string, unknown> | undefined = d.metadata;
-        if (meta && meta.source === value) return true;
+        if (meta && meta['source'] === value) return true;
         return false;
       });
     default:
@@ -54,7 +54,7 @@ function findAnchorTarget(
 function insertByOrder(ordered: PromptSectionDraft[], draft: PromptSectionDraft): void {
   const draftOrder = draft.placement?.order ?? 0;
   for (let i = 0; i < ordered.length; i++) {
-    const wOrder = ordered[i].placement?.order ?? 0;
+    const wOrder = ordered[i]!.placement?.order ?? 0;
     if (draftOrder > wOrder) {
       ordered.splice(i, 0, draft);
       return;

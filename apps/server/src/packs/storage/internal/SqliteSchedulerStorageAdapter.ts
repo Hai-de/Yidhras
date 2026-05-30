@@ -22,16 +22,6 @@ import type {
 
 type SqlitePrimitive = string | number | bigint | null;
 
-const toSqliteParam = (value: unknown): SqlitePrimitive => {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'bigint') {
-    return value;
-  }
-  return JSON.stringify(value);
-};
-
 const jsonStringify = (value: unknown): string => {
   return JSON.stringify(value);
 };

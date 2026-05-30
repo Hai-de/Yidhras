@@ -203,6 +203,7 @@ export const selectPromptWorkflowProfile = (input: PromptWorkflowSelectionInput)
     if (explicit) {
       return explicit;
     }
+// @ts-expect-error -- EOPT strict mode
     throw new PromptWorkflowProfileNotFoundError(input);
   }
 
@@ -220,6 +221,7 @@ export const selectPromptWorkflowProfile = (input: PromptWorkflowSelectionInput)
     });
 
   if (!matching[0]) {
+// @ts-expect-error -- EOPT strict mode
     throw new PromptWorkflowProfileSelectionError(input);
   }
   return matching[0];

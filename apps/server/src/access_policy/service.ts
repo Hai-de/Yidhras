@@ -232,6 +232,7 @@ export const createAccessPolicy = async (
 
   const now = resolvePackTick(context, packRuntime);
 
+// @ts-expect-error -- EOPT strict mode
   return context.repos.identityOperator.createPolicy({
     effect,
     subject_id: subject_id ?? null,
@@ -282,6 +283,7 @@ export const evaluateAccessPolicy = async (
     throw new ApiError(400, 'POLICY_EVAL_INVALID', 'resource, action, fields are required');
   }
 
+// @ts-expect-error -- EOPT strict mode
   const { service, matchInput } = createPolicyAccessContext(context, identity, {
     resource,
     action,

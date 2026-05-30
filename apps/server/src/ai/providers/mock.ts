@@ -133,7 +133,7 @@ export const createMockAiProviderAdapter = (): AiProviderAdapter => {
       // Use setTimeoutMs to control the delay (default 120000ms — long enough to trigger
       // caller-side timeout without hanging the test indefinitely).
       if (getBooleanFlag(taskInput, 'force_timeout')) {
-        const delayMs = typeof taskInput.timeout_ms === 'number' ? taskInput.timeout_ms : 120000;
+        const delayMs = typeof taskInput['timeout_ms'] === 'number' ? taskInput['timeout_ms'] : 120000;
         return new Promise((resolve) => {
           setTimeout(() => {
             resolve({
@@ -190,7 +190,7 @@ export const createMockAiProviderAdapter = (): AiProviderAdapter => {
       // Token limit exceeded: returns with finish_reason 'length' and a
       // warning-level error, simulating hitting the model's max output tokens.
       if (getBooleanFlag(taskInput, 'force_token_limit')) {
-        const maxTokens = typeof taskInput.max_tokens === 'number' ? taskInput.max_tokens : 4096;
+        const maxTokens = typeof taskInput['max_tokens'] === 'number' ? taskInput['max_tokens'] : 4096;
         return Promise.resolve({
           status: 'completed',
           finish_reason: 'length',
@@ -259,17 +259,17 @@ export const createMockAiProviderAdapter = (): AiProviderAdapter => {
         }));
       }
 
-      if (isRecord(taskInput.mock_json)) {
+      if (isRecord(taskInput['mock_json'])) {
         return Promise.resolve(buildCompletedResult({
           mode: input.request.response_mode,
-          json: taskInput.mock_json
+          json: taskInput['mock_json']
         }));
       }
 
       const actorDisplayName =
         getStringValue(taskInput, 'actor_display_name')
-        ?? (typeof input.task_request.actor_ref?.actor_display_name === 'string'
-          ? input.task_request.actor_ref.actor_display_name
+        ?? (typeof input.task_request.actor_ref?.['actor_display_name'] === 'string'
+          ? input.task_request.actor_ref['actor_display_name']
           : 'Unknown Actor');
       const worldName = getStringValue(taskInput, 'world_name') ?? 'Unknown World';
       const decision = buildDefaultAgentDecision({

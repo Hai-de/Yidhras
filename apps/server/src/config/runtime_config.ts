@@ -92,88 +92,88 @@ const parseIntegerEnv = (name: string, value: string | undefined): number | unde
 }
 
 export const getActiveAppEnv = (): string => {
-  return parseOptionalStringEnv(process.env.APP_ENV)
-    ?? parseOptionalStringEnv(process.env.NODE_ENV)
+  return parseOptionalStringEnv(process.env['APP_ENV'])
+    ?? parseOptionalStringEnv(process.env['NODE_ENV'])
     ?? BUILTIN_DEFAULTS.app.env
 }
 
 const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> => {
-  const appPort = parseIntegerEnv('PORT', process.env.PORT)
-  const preferredPack = parseOptionalStringEnv(process.env.WORLD_PACK)
-  const preferredOpening = parseOptionalStringEnv(process.env.WORLD_PREFERRED_OPENING)
-  const worldPacksDir = parseOptionalStringEnv(process.env.WORLD_PACKS_DIR)
-  const aiModelsConfigPath = parseOptionalStringEnv(process.env.AI_MODELS_CONFIG_PATH)
-  const bootstrapEnabled = parseBooleanEnv('WORLD_BOOTSTRAP_ENABLED', process.env.WORLD_BOOTSTRAP_ENABLED)
-  const bootstrapTargetPackDir = parseOptionalStringEnv(process.env.WORLD_BOOTSTRAP_TARGET_PACK_DIR)
-  const bootstrapTemplateFile = parseOptionalStringEnv(process.env.WORLD_BOOTSTRAP_TEMPLATE_FILE)
-  const bootstrapOverwrite = parseBooleanEnv('WORLD_BOOTSTRAP_OVERWRITE', process.env.WORLD_BOOTSTRAP_OVERWRITE)
-  const sqliteBusyTimeoutMs = parseIntegerEnv('SQLITE_BUSY_TIMEOUT_MS', process.env.SQLITE_BUSY_TIMEOUT_MS)
-  const sqliteWalAutocheckpointPages = parseIntegerEnv('SQLITE_WAL_AUTOCHECKPOINT_PAGES', process.env.SQLITE_WAL_AUTOCHECKPOINT_PAGES)
-  const sqliteSynchronous = parseOptionalStringEnv(process.env.SQLITE_SYNCHRONOUS)?.toUpperCase()
-  const simulationLoopIntervalMs = parseIntegerEnv('SIM_LOOP_INTERVAL_MS', process.env.SIM_LOOP_INTERVAL_MS)
-  const schedulerLeaseTicks = parseIntegerEnv('SCHEDULER_LEASE_TICKS', process.env.SCHEDULER_LEASE_TICKS)
-  const schedulerAutomaticRebalanceBacklogLimit = parseIntegerEnv('SCHEDULER_AUTOMATIC_REBALANCE_BACKLOG_LIMIT', process.env.SCHEDULER_AUTOMATIC_REBALANCE_BACKLOG_LIMIT)
-  const schedulerAutomaticRebalanceMaxRecommendations = parseIntegerEnv('SCHEDULER_AUTOMATIC_REBALANCE_MAX_RECOMMENDATIONS', process.env.SCHEDULER_AUTOMATIC_REBALANCE_MAX_RECOMMENDATIONS)
-  const schedulerAutomaticRebalanceMaxApply = parseIntegerEnv('SCHEDULER_AUTOMATIC_REBALANCE_MAX_APPLY', process.env.SCHEDULER_AUTOMATIC_REBALANCE_MAX_APPLY)
-  const schedulerAgentLimit = parseIntegerEnv('SCHEDULER_AGENT_LIMIT', process.env.SCHEDULER_AGENT_LIMIT)
-  const schedulerAgentCooldownTicks = parseIntegerEnv('SCHEDULER_AGENT_COOLDOWN_TICKS', process.env.SCHEDULER_AGENT_COOLDOWN_TICKS)
-  const schedulerAgentDecisionKernelMode = parseOptionalStringEnv(process.env.SCHEDULER_AGENT_DECISION_KERNEL_MODE)
-  const schedulerAgentDecisionKernelTimeoutMs = parseIntegerEnv('SCHEDULER_AGENT_DECISION_KERNEL_TIMEOUT_MS', process.env.SCHEDULER_AGENT_DECISION_KERNEL_TIMEOUT_MS)
-  const schedulerAgentDecisionKernelBinaryPath = parseOptionalStringEnv(process.env.SCHEDULER_AGENT_DECISION_KERNEL_BINARY_PATH)
-  const schedulerAgentDecisionKernelAutoRestart = parseBooleanEnv('SCHEDULER_AGENT_DECISION_KERNEL_AUTO_RESTART', process.env.SCHEDULER_AGENT_DECISION_KERNEL_AUTO_RESTART)
-  const memoryTriggerEngineMode = parseOptionalStringEnv(process.env.MEMORY_TRIGGER_ENGINE_MODE)
-  const memoryTriggerEngineTimeoutMs = parseIntegerEnv('MEMORY_TRIGGER_ENGINE_TIMEOUT_MS', process.env.MEMORY_TRIGGER_ENGINE_TIMEOUT_MS)
-  const memoryTriggerEngineBinaryPath = parseOptionalStringEnv(process.env.MEMORY_TRIGGER_ENGINE_BINARY_PATH)
-  const memoryTriggerEngineAutoRestart = parseBooleanEnv('MEMORY_TRIGGER_ENGINE_AUTO_RESTART', process.env.MEMORY_TRIGGER_ENGINE_AUTO_RESTART)
-  const worldEngineTimeoutMs = parseIntegerEnv('WORLD_ENGINE_TIMEOUT_MS', process.env.WORLD_ENGINE_TIMEOUT_MS)
-  const worldEngineBinaryPath = parseOptionalStringEnv(process.env.WORLD_ENGINE_BINARY_PATH)
-  const worldEngineAutoRestart = parseBooleanEnv('WORLD_ENGINE_AUTO_RESTART', process.env.WORLD_ENGINE_AUTO_RESTART)
-  const schedulerEntityDefaultMaxActiveWorkflows = parseIntegerEnv('SCHEDULER_ENTITY_DEFAULT_MAX_ACTIVE_WORKFLOWS_PER_ENTITY', process.env.SCHEDULER_ENTITY_DEFAULT_MAX_ACTIVE_WORKFLOWS_PER_ENTITY)
-  const schedulerEntityMaxActivationsPerTick = parseIntegerEnv('SCHEDULER_ENTITY_MAX_ACTIVATIONS_PER_TICK', process.env.SCHEDULER_ENTITY_MAX_ACTIVATIONS_PER_TICK)
-  const schedulerAllowParallelDecisionPerEntity = parseBooleanEnv('SCHEDULER_ALLOW_PARALLEL_DECISION_PER_ENTITY', process.env.SCHEDULER_ALLOW_PARALLEL_DECISION_PER_ENTITY)
-  const schedulerAllowParallelActionPerEntity = parseBooleanEnv('SCHEDULER_ALLOW_PARALLEL_ACTION_PER_ENTITY', process.env.SCHEDULER_ALLOW_PARALLEL_ACTION_PER_ENTITY)
-  const schedulerEventFollowupPreemptsPeriodic = parseBooleanEnv('SCHEDULER_EVENT_FOLLOWUP_PREEMPTS_PERIODIC', process.env.SCHEDULER_EVENT_FOLLOWUP_PREEMPTS_PERIODIC)
-  const schedulerDecisionJobBatchLimit = parseIntegerEnv('SCHEDULER_DECISION_JOB_BATCH_LIMIT', process.env.SCHEDULER_DECISION_JOB_BATCH_LIMIT)
-  const schedulerDecisionJobConcurrency = parseIntegerEnv('SCHEDULER_DECISION_JOB_CONCURRENCY', process.env.SCHEDULER_DECISION_JOB_CONCURRENCY)
-  const schedulerDecisionJobLockTicks = parseIntegerEnv('SCHEDULER_DECISION_JOB_LOCK_TICKS', process.env.SCHEDULER_DECISION_JOB_LOCK_TICKS)
-  const schedulerActionDispatcherBatchLimit = parseIntegerEnv('SCHEDULER_ACTION_DISPATCHER_BATCH_LIMIT', process.env.SCHEDULER_ACTION_DISPATCHER_BATCH_LIMIT)
-  const schedulerActionDispatcherConcurrency = parseIntegerEnv('SCHEDULER_ACTION_DISPATCHER_CONCURRENCY', process.env.SCHEDULER_ACTION_DISPATCHER_CONCURRENCY)
-  const schedulerActionDispatcherLockTicks = parseIntegerEnv('SCHEDULER_ACTION_DISPATCHER_LOCK_TICKS', process.env.SCHEDULER_ACTION_DISPATCHER_LOCK_TICKS)
-  const schedulerTickBudgetCreatedJobs = parseIntegerEnv('SCHEDULER_TICK_BUDGET_MAX_CREATED_JOBS', process.env.SCHEDULER_TICK_BUDGET_MAX_CREATED_JOBS)
-  const schedulerTickBudgetExecutedDecisions = parseIntegerEnv('SCHEDULER_TICK_BUDGET_MAX_EXECUTED_DECISIONS', process.env.SCHEDULER_TICK_BUDGET_MAX_EXECUTED_DECISIONS)
-  const schedulerTickBudgetDispatchedActions = parseIntegerEnv('SCHEDULER_TICK_BUDGET_MAX_DISPATCHED_ACTIONS', process.env.SCHEDULER_TICK_BUDGET_MAX_DISPATCHED_ACTIONS)
-  const schedulerDefaultQueryLimit = parseIntegerEnv('SCHEDULER_DEFAULT_QUERY_LIMIT', process.env.SCHEDULER_DEFAULT_QUERY_LIMIT)
-  const schedulerMaxQueryLimit = parseIntegerEnv('SCHEDULER_MAX_QUERY_LIMIT', process.env.SCHEDULER_MAX_QUERY_LIMIT)
-  const schedulerSummaryDefaultSampleRuns = parseIntegerEnv('SCHEDULER_SUMMARY_DEFAULT_SAMPLE_RUNS', process.env.SCHEDULER_SUMMARY_DEFAULT_SAMPLE_RUNS)
-  const schedulerSummaryMaxSampleRuns = parseIntegerEnv('SCHEDULER_SUMMARY_MAX_SAMPLE_RUNS', process.env.SCHEDULER_SUMMARY_MAX_SAMPLE_RUNS)
-  const schedulerOperatorDefaultRecentLimit = parseIntegerEnv('SCHEDULER_OPERATOR_DEFAULT_RECENT_LIMIT', process.env.SCHEDULER_OPERATOR_DEFAULT_RECENT_LIMIT)
-  const schedulerOperatorMaxRecentLimit = parseIntegerEnv('SCHEDULER_OPERATOR_MAX_RECENT_LIMIT', process.env.SCHEDULER_OPERATOR_MAX_RECENT_LIMIT)
-  const allowDegradedMode = parseBooleanEnv('STARTUP_ALLOW_DEGRADED_MODE', process.env.STARTUP_ALLOW_DEGRADED_MODE)
+  const appPort = parseIntegerEnv('PORT', process.env['PORT'])
+  const preferredPack = parseOptionalStringEnv(process.env['WORLD_PACK'])
+  const preferredOpening = parseOptionalStringEnv(process.env['WORLD_PREFERRED_OPENING'])
+  const worldPacksDir = parseOptionalStringEnv(process.env['WORLD_PACKS_DIR'])
+  const aiModelsConfigPath = parseOptionalStringEnv(process.env['AI_MODELS_CONFIG_PATH'])
+  const bootstrapEnabled = parseBooleanEnv('WORLD_BOOTSTRAP_ENABLED', process.env['WORLD_BOOTSTRAP_ENABLED'])
+  const bootstrapTargetPackDir = parseOptionalStringEnv(process.env['WORLD_BOOTSTRAP_TARGET_PACK_DIR'])
+  const bootstrapTemplateFile = parseOptionalStringEnv(process.env['WORLD_BOOTSTRAP_TEMPLATE_FILE'])
+  const bootstrapOverwrite = parseBooleanEnv('WORLD_BOOTSTRAP_OVERWRITE', process.env['WORLD_BOOTSTRAP_OVERWRITE'])
+  const sqliteBusyTimeoutMs = parseIntegerEnv('SQLITE_BUSY_TIMEOUT_MS', process.env['SQLITE_BUSY_TIMEOUT_MS'])
+  const sqliteWalAutocheckpointPages = parseIntegerEnv('SQLITE_WAL_AUTOCHECKPOINT_PAGES', process.env['SQLITE_WAL_AUTOCHECKPOINT_PAGES'])
+  const sqliteSynchronous = parseOptionalStringEnv(process.env['SQLITE_SYNCHRONOUS'])?.toUpperCase()
+  const simulationLoopIntervalMs = parseIntegerEnv('SIM_LOOP_INTERVAL_MS', process.env['SIM_LOOP_INTERVAL_MS'])
+  const schedulerLeaseTicks = parseIntegerEnv('SCHEDULER_LEASE_TICKS', process.env['SCHEDULER_LEASE_TICKS'])
+  const schedulerAutomaticRebalanceBacklogLimit = parseIntegerEnv('SCHEDULER_AUTOMATIC_REBALANCE_BACKLOG_LIMIT', process.env['SCHEDULER_AUTOMATIC_REBALANCE_BACKLOG_LIMIT'])
+  const schedulerAutomaticRebalanceMaxRecommendations = parseIntegerEnv('SCHEDULER_AUTOMATIC_REBALANCE_MAX_RECOMMENDATIONS', process.env['SCHEDULER_AUTOMATIC_REBALANCE_MAX_RECOMMENDATIONS'])
+  const schedulerAutomaticRebalanceMaxApply = parseIntegerEnv('SCHEDULER_AUTOMATIC_REBALANCE_MAX_APPLY', process.env['SCHEDULER_AUTOMATIC_REBALANCE_MAX_APPLY'])
+  const schedulerAgentLimit = parseIntegerEnv('SCHEDULER_AGENT_LIMIT', process.env['SCHEDULER_AGENT_LIMIT'])
+  const schedulerAgentCooldownTicks = parseIntegerEnv('SCHEDULER_AGENT_COOLDOWN_TICKS', process.env['SCHEDULER_AGENT_COOLDOWN_TICKS'])
+  const schedulerAgentDecisionKernelMode = parseOptionalStringEnv(process.env['SCHEDULER_AGENT_DECISION_KERNEL_MODE'])
+  const schedulerAgentDecisionKernelTimeoutMs = parseIntegerEnv('SCHEDULER_AGENT_DECISION_KERNEL_TIMEOUT_MS', process.env['SCHEDULER_AGENT_DECISION_KERNEL_TIMEOUT_MS'])
+  const schedulerAgentDecisionKernelBinaryPath = parseOptionalStringEnv(process.env['SCHEDULER_AGENT_DECISION_KERNEL_BINARY_PATH'])
+  const schedulerAgentDecisionKernelAutoRestart = parseBooleanEnv('SCHEDULER_AGENT_DECISION_KERNEL_AUTO_RESTART', process.env['SCHEDULER_AGENT_DECISION_KERNEL_AUTO_RESTART'])
+  const memoryTriggerEngineMode = parseOptionalStringEnv(process.env['MEMORY_TRIGGER_ENGINE_MODE'])
+  const memoryTriggerEngineTimeoutMs = parseIntegerEnv('MEMORY_TRIGGER_ENGINE_TIMEOUT_MS', process.env['MEMORY_TRIGGER_ENGINE_TIMEOUT_MS'])
+  const memoryTriggerEngineBinaryPath = parseOptionalStringEnv(process.env['MEMORY_TRIGGER_ENGINE_BINARY_PATH'])
+  const memoryTriggerEngineAutoRestart = parseBooleanEnv('MEMORY_TRIGGER_ENGINE_AUTO_RESTART', process.env['MEMORY_TRIGGER_ENGINE_AUTO_RESTART'])
+  const worldEngineTimeoutMs = parseIntegerEnv('WORLD_ENGINE_TIMEOUT_MS', process.env['WORLD_ENGINE_TIMEOUT_MS'])
+  const worldEngineBinaryPath = parseOptionalStringEnv(process.env['WORLD_ENGINE_BINARY_PATH'])
+  const worldEngineAutoRestart = parseBooleanEnv('WORLD_ENGINE_AUTO_RESTART', process.env['WORLD_ENGINE_AUTO_RESTART'])
+  const schedulerEntityDefaultMaxActiveWorkflows = parseIntegerEnv('SCHEDULER_ENTITY_DEFAULT_MAX_ACTIVE_WORKFLOWS_PER_ENTITY', process.env['SCHEDULER_ENTITY_DEFAULT_MAX_ACTIVE_WORKFLOWS_PER_ENTITY'])
+  const schedulerEntityMaxActivationsPerTick = parseIntegerEnv('SCHEDULER_ENTITY_MAX_ACTIVATIONS_PER_TICK', process.env['SCHEDULER_ENTITY_MAX_ACTIVATIONS_PER_TICK'])
+  const schedulerAllowParallelDecisionPerEntity = parseBooleanEnv('SCHEDULER_ALLOW_PARALLEL_DECISION_PER_ENTITY', process.env['SCHEDULER_ALLOW_PARALLEL_DECISION_PER_ENTITY'])
+  const schedulerAllowParallelActionPerEntity = parseBooleanEnv('SCHEDULER_ALLOW_PARALLEL_ACTION_PER_ENTITY', process.env['SCHEDULER_ALLOW_PARALLEL_ACTION_PER_ENTITY'])
+  const schedulerEventFollowupPreemptsPeriodic = parseBooleanEnv('SCHEDULER_EVENT_FOLLOWUP_PREEMPTS_PERIODIC', process.env['SCHEDULER_EVENT_FOLLOWUP_PREEMPTS_PERIODIC'])
+  const schedulerDecisionJobBatchLimit = parseIntegerEnv('SCHEDULER_DECISION_JOB_BATCH_LIMIT', process.env['SCHEDULER_DECISION_JOB_BATCH_LIMIT'])
+  const schedulerDecisionJobConcurrency = parseIntegerEnv('SCHEDULER_DECISION_JOB_CONCURRENCY', process.env['SCHEDULER_DECISION_JOB_CONCURRENCY'])
+  const schedulerDecisionJobLockTicks = parseIntegerEnv('SCHEDULER_DECISION_JOB_LOCK_TICKS', process.env['SCHEDULER_DECISION_JOB_LOCK_TICKS'])
+  const schedulerActionDispatcherBatchLimit = parseIntegerEnv('SCHEDULER_ACTION_DISPATCHER_BATCH_LIMIT', process.env['SCHEDULER_ACTION_DISPATCHER_BATCH_LIMIT'])
+  const schedulerActionDispatcherConcurrency = parseIntegerEnv('SCHEDULER_ACTION_DISPATCHER_CONCURRENCY', process.env['SCHEDULER_ACTION_DISPATCHER_CONCURRENCY'])
+  const schedulerActionDispatcherLockTicks = parseIntegerEnv('SCHEDULER_ACTION_DISPATCHER_LOCK_TICKS', process.env['SCHEDULER_ACTION_DISPATCHER_LOCK_TICKS'])
+  const schedulerTickBudgetCreatedJobs = parseIntegerEnv('SCHEDULER_TICK_BUDGET_MAX_CREATED_JOBS', process.env['SCHEDULER_TICK_BUDGET_MAX_CREATED_JOBS'])
+  const schedulerTickBudgetExecutedDecisions = parseIntegerEnv('SCHEDULER_TICK_BUDGET_MAX_EXECUTED_DECISIONS', process.env['SCHEDULER_TICK_BUDGET_MAX_EXECUTED_DECISIONS'])
+  const schedulerTickBudgetDispatchedActions = parseIntegerEnv('SCHEDULER_TICK_BUDGET_MAX_DISPATCHED_ACTIONS', process.env['SCHEDULER_TICK_BUDGET_MAX_DISPATCHED_ACTIONS'])
+  const schedulerDefaultQueryLimit = parseIntegerEnv('SCHEDULER_DEFAULT_QUERY_LIMIT', process.env['SCHEDULER_DEFAULT_QUERY_LIMIT'])
+  const schedulerMaxQueryLimit = parseIntegerEnv('SCHEDULER_MAX_QUERY_LIMIT', process.env['SCHEDULER_MAX_QUERY_LIMIT'])
+  const schedulerSummaryDefaultSampleRuns = parseIntegerEnv('SCHEDULER_SUMMARY_DEFAULT_SAMPLE_RUNS', process.env['SCHEDULER_SUMMARY_DEFAULT_SAMPLE_RUNS'])
+  const schedulerSummaryMaxSampleRuns = parseIntegerEnv('SCHEDULER_SUMMARY_MAX_SAMPLE_RUNS', process.env['SCHEDULER_SUMMARY_MAX_SAMPLE_RUNS'])
+  const schedulerOperatorDefaultRecentLimit = parseIntegerEnv('SCHEDULER_OPERATOR_DEFAULT_RECENT_LIMIT', process.env['SCHEDULER_OPERATOR_DEFAULT_RECENT_LIMIT'])
+  const schedulerOperatorMaxRecentLimit = parseIntegerEnv('SCHEDULER_OPERATOR_MAX_RECENT_LIMIT', process.env['SCHEDULER_OPERATOR_MAX_RECENT_LIMIT'])
+  const allowDegradedMode = parseBooleanEnv('STARTUP_ALLOW_DEGRADED_MODE', process.env['STARTUP_ALLOW_DEGRADED_MODE'])
   const failOnMissingWorldPackDir = parseBooleanEnv(
     'STARTUP_FAIL_ON_MISSING_WORLD_PACK_DIR',
-    process.env.STARTUP_FAIL_ON_MISSING_WORLD_PACK_DIR
+    process.env['STARTUP_FAIL_ON_MISSING_WORLD_PACK_DIR']
   )
-  const failOnNoWorldPack = parseBooleanEnv('STARTUP_FAIL_ON_NO_WORLD_PACK', process.env.STARTUP_FAIL_ON_NO_WORLD_PACK)
-  const aiGatewayEnabled = parseBooleanEnv('AI_GATEWAY_ENABLED', process.env.AI_GATEWAY_ENABLED)
-  const pluginEnableWarningEnabled = parseBooleanEnv('PLUGIN_ENABLE_WARNING_ENABLED', process.env.PLUGIN_ENABLE_WARNING_ENABLED)
-  const runtimeMultiPackMaxLoadedPacks = parseIntegerEnv('RUNTIME_MULTI_PACK_MAX_LOADED_PACKS', process.env.RUNTIME_MULTI_PACK_MAX_LOADED_PACKS)
-  const runtimeMultiPackStartMode = parseOptionalStringEnv(process.env.RUNTIME_MULTI_PACK_START_MODE)
-  const operatorJwtSecret = parseOptionalStringEnv(process.env.OPERATOR_JWT_SECRET)
-  const operatorJwtExpiresIn = parseOptionalStringEnv(process.env.OPERATOR_JWT_EXPIRES_IN)
-  const operatorBcryptRounds = parseIntegerEnv('OPERATOR_BCRYPT_ROUNDS', process.env.OPERATOR_BCRYPT_ROUNDS)
-  const operatorRootDefaultPassword = parseOptionalStringEnv(process.env.OPERATOR_ROOT_DEFAULT_PASSWORD)
-  const runtimeMultiPackBootstrapPacks = parseOptionalStringEnv(process.env.RUNTIME_MULTI_PACK_BOOTSTRAP_PACKS)
+  const failOnNoWorldPack = parseBooleanEnv('STARTUP_FAIL_ON_NO_WORLD_PACK', process.env['STARTUP_FAIL_ON_NO_WORLD_PACK'])
+  const aiGatewayEnabled = parseBooleanEnv('AI_GATEWAY_ENABLED', process.env['AI_GATEWAY_ENABLED'])
+  const pluginEnableWarningEnabled = parseBooleanEnv('PLUGIN_ENABLE_WARNING_ENABLED', process.env['PLUGIN_ENABLE_WARNING_ENABLED'])
+  const runtimeMultiPackMaxLoadedPacks = parseIntegerEnv('RUNTIME_MULTI_PACK_MAX_LOADED_PACKS', process.env['RUNTIME_MULTI_PACK_MAX_LOADED_PACKS'])
+  const runtimeMultiPackStartMode = parseOptionalStringEnv(process.env['RUNTIME_MULTI_PACK_START_MODE'])
+  const operatorJwtSecret = parseOptionalStringEnv(process.env['OPERATOR_JWT_SECRET'])
+  const operatorJwtExpiresIn = parseOptionalStringEnv(process.env['OPERATOR_JWT_EXPIRES_IN'])
+  const operatorBcryptRounds = parseIntegerEnv('OPERATOR_BCRYPT_ROUNDS', process.env['OPERATOR_BCRYPT_ROUNDS'])
+  const operatorRootDefaultPassword = parseOptionalStringEnv(process.env['OPERATOR_ROOT_DEFAULT_PASSWORD'])
+  const runtimeMultiPackBootstrapPacks = parseOptionalStringEnv(process.env['RUNTIME_MULTI_PACK_BOOTSTRAP_PACKS'])
     ?.split(',')
     .map(value => value.trim())
     .filter(value => value.length > 0)
   const pluginEnableWarningRequireAcknowledgement = parseBooleanEnv(
     'PLUGIN_ENABLE_WARNING_REQUIRE_ACKNOWLEDGEMENT',
-    process.env.PLUGIN_ENABLE_WARNING_REQUIRE_ACKNOWLEDGEMENT
+    process.env['PLUGIN_ENABLE_WARNING_REQUIRE_ACKNOWLEDGEMENT']
   )
-  const observabilityMetricsPort = parseIntegerEnv('OBSERVABILITY_METRICS_PORT', process.env.OBSERVABILITY_METRICS_PORT)
-  const runtimeSnapshotAutoEnabled = parseBooleanEnv('RUNTIME_SNAPSHOT_AUTO_ENABLED', process.env.RUNTIME_SNAPSHOT_AUTO_ENABLED)
-  const runtimeSnapshotIntervalTicks = parseIntegerEnv('RUNTIME_SNAPSHOT_INTERVAL_TICKS', process.env.RUNTIME_SNAPSHOT_INTERVAL_TICKS)
-  const runtimeSnapshotRetentionCount = parseIntegerEnv('RUNTIME_SNAPSHOT_RETENTION_COUNT', process.env.RUNTIME_SNAPSHOT_RETENTION_COUNT)
+  const observabilityMetricsPort = parseIntegerEnv('OBSERVABILITY_METRICS_PORT', process.env['OBSERVABILITY_METRICS_PORT'])
+  const runtimeSnapshotAutoEnabled = parseBooleanEnv('RUNTIME_SNAPSHOT_AUTO_ENABLED', process.env['RUNTIME_SNAPSHOT_AUTO_ENABLED'])
+  const runtimeSnapshotIntervalTicks = parseIntegerEnv('RUNTIME_SNAPSHOT_INTERVAL_TICKS', process.env['RUNTIME_SNAPSHOT_INTERVAL_TICKS'])
+  const runtimeSnapshotRetentionCount = parseIntegerEnv('RUNTIME_SNAPSHOT_RETENTION_COUNT', process.env['RUNTIME_SNAPSHOT_RETENTION_COUNT'])
 
   const overrides: Record<string, unknown> = {
     app: {
@@ -186,7 +186,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   }
 
   if (sqliteBusyTimeoutMs !== undefined || sqliteWalAutocheckpointPages !== undefined || sqliteSynchronous !== undefined) {
-    overrides.database = {
+    overrides['database'] = {
       sqlite: {
         ...(sqliteBusyTimeoutMs !== undefined ? { busy_timeout_ms: sqliteBusyTimeoutMs } : {}),
         ...(sqliteWalAutocheckpointPages !== undefined
@@ -199,11 +199,11 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
 
   if (appPort !== undefined) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- YAML config boundary
-    (overrides.app as Record<string, unknown>).port = appPort
+    (overrides['app'] as Record<string, unknown>)['port'] = appPort
   }
 
   if (worldPacksDir !== undefined || aiModelsConfigPath !== undefined) {
-    overrides.paths = {
+    overrides['paths'] = {
       ...(worldPacksDir !== undefined ? { world_packs_dir: worldPacksDir } : {}),
       ...(aiModelsConfigPath !== undefined ? { ai_models_config: aiModelsConfigPath } : {})
     }
@@ -218,7 +218,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     || runtimeSnapshotIntervalTicks !== undefined
     || runtimeSnapshotRetentionCount !== undefined
   ) {
-    overrides.runtime = {
+    overrides['runtime'] = {
       multi_pack: {
         ...(runtimeMultiPackMaxLoadedPacks !== undefined ? { max_loaded_packs: runtimeMultiPackMaxLoadedPacks } : {}),
         ...(runtimeMultiPackStartMode !== undefined ? { start_mode: runtimeMultiPackStartMode } : {}),
@@ -239,7 +239,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     || operatorBcryptRounds !== undefined
     || operatorRootDefaultPassword !== undefined
   ) {
-    overrides.operator = {
+    overrides['operator'] = {
       auth: {
         ...(operatorJwtSecret !== undefined ? { jwt_secret: operatorJwtSecret } : {}),
         ...(operatorJwtExpiresIn !== undefined ? { jwt_expires_in: operatorJwtExpiresIn } : {}),
@@ -252,7 +252,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
   }
 
   if (pluginEnableWarningEnabled !== undefined || pluginEnableWarningRequireAcknowledgement !== undefined) {
-    overrides.plugins = {
+    overrides['plugins'] = {
       enable_warning: {
         ...(pluginEnableWarningEnabled !== undefined ? { enabled: pluginEnableWarningEnabled } : {}),
         ...(pluginEnableWarningRequireAcknowledgement !== undefined
@@ -270,7 +270,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     || bootstrapTemplateFile !== undefined
     || bootstrapOverwrite !== undefined
   ) {
-    overrides.world = {
+    overrides['world'] = {
       ...(preferredPack !== undefined ? { preferred_pack: preferredPack } : {}),
       ...(preferredOpening !== undefined ? { preferred_opening: preferredOpening } : {}),
       bootstrap: {
@@ -287,7 +287,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     || failOnMissingWorldPackDir !== undefined
     || failOnNoWorldPack !== undefined
   ) {
-    overrides.startup = {
+    overrides['startup'] = {
       ...(allowDegradedMode !== undefined ? { allow_degraded_mode: allowDegradedMode } : {}),
       ...(failOnMissingWorldPackDir !== undefined ? { fail_on_missing_world_pack_dir: failOnMissingWorldPackDir } : {}),
       ...(failOnNoWorldPack !== undefined ? { fail_on_no_world_pack: failOnNoWorldPack } : {})
@@ -331,7 +331,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     || memoryTriggerEngineBinaryPath !== undefined
     || memoryTriggerEngineAutoRestart !== undefined
   ) {
-    overrides.scheduler = {
+    overrides['scheduler'] = {
       runtime: {
         ...(simulationLoopIntervalMs !== undefined ? { simulation_loop_interval_ms: simulationLoopIntervalMs } : {})
       },
@@ -409,7 +409,7 @@ const buildEnvironmentOverrides = (activeEnv: string): Record<string, unknown> =
     || worldEngineBinaryPath !== undefined
     || worldEngineAutoRestart !== undefined
   ) {
-    overrides.world_engine = {
+    overrides['world_engine'] = {
       ...(worldEngineTimeoutMs !== undefined ? { timeout_ms: worldEngineTimeoutMs } : {}),
       ...(worldEngineBinaryPath !== undefined ? { binary_path: worldEngineBinaryPath } : {}),
       ...(worldEngineAutoRestart !== undefined ? { auto_restart: worldEngineAutoRestart } : {})

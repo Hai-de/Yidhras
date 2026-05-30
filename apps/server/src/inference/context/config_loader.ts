@@ -167,11 +167,11 @@ const parseNumberEnv = (name: string, value: string | undefined): number | undef
 };
 
 const buildEnvironmentOverrides = (): Record<string, unknown> => {
-  const snrFallback = parseNumberEnv('ICC_SNR_FALLBACK', process.env.ICC_SNR_FALLBACK);
-  const fragileSnr = parseNumberEnv('ICC_FRAGILE_SNR', process.env.ICC_FRAGILE_SNR);
-  const fragileDropChance = parseNumberEnv('ICC_FRAGILE_DROP_CHANCE', process.env.ICC_FRAGILE_DROP_CHANCE);
-  const bestEffortDropChance = parseNumberEnv('ICC_BEST_EFFORT_DROP_CHANCE', process.env.ICC_BEST_EFFORT_DROP_CHANCE);
-  const reliableDropChance = parseNumberEnv('ICC_RELIABLE_DROP_CHANCE', process.env.ICC_RELIABLE_DROP_CHANCE);
+  const snrFallback = parseNumberEnv('ICC_SNR_FALLBACK', process.env['ICC_SNR_FALLBACK']);
+  const fragileSnr = parseNumberEnv('ICC_FRAGILE_SNR', process.env['ICC_FRAGILE_SNR']);
+  const fragileDropChance = parseNumberEnv('ICC_FRAGILE_DROP_CHANCE', process.env['ICC_FRAGILE_DROP_CHANCE']);
+  const bestEffortDropChance = parseNumberEnv('ICC_BEST_EFFORT_DROP_CHANCE', process.env['ICC_BEST_EFFORT_DROP_CHANCE']);
+  const reliableDropChance = parseNumberEnv('ICC_RELIABLE_DROP_CHANCE', process.env['ICC_RELIABLE_DROP_CHANCE']);
   const overrides: Record<string, unknown> = {};
 
   if (
@@ -179,7 +179,7 @@ const buildEnvironmentOverrides = (): Record<string, unknown> => {
     fragileDropChance !== undefined || bestEffortDropChance !== undefined ||
     reliableDropChance !== undefined
   ) {
-    overrides.transmission_profile = {
+    overrides['transmission_profile'] = {
       ...(snrFallback !== undefined ? { defaults: { snr_fallback: snrFallback } } : {}),
       ...(fragileSnr !== undefined ? { thresholds: { fragile_snr: fragileSnr } } : {}),
       ...(fragileDropChance !== undefined || bestEffortDropChance !== undefined || reliableDropChance !== undefined

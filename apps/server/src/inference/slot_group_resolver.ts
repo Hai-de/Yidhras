@@ -48,7 +48,7 @@ export function resolveExclusiveGroup(
   }
 
   if (groupProfiles.length === 1) {
-    return groupProfiles[0].slot_id;
+    return groupProfiles[0]!.slot_id;
   }
 
   // 计算总权重
@@ -74,7 +74,7 @@ export function resolveExclusiveGroup(
   }
 
   // 回退：选最后一个
-  return groupProfiles[groupProfiles.length - 1].slot_id;
+  return groupProfiles[groupProfiles.length - 1]!.slot_id;
 }
 
 /**

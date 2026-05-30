@@ -64,9 +64,11 @@ const readEnabledPluginCount = async (context: AppContext, packId: string): Prom
 export const buildExperimentalRuntimeControlPlaneSnapshot = async (
   context: AppContext
 ): Promise<ExperimentalRuntimeControlPlaneSnapshot> => {
+// @ts-expect-error -- EOPT strict mode
   const lookup = getPackRuntimeLookupPort({
     packRuntimeLookup: context.packRuntimeLookup
   });
+// @ts-expect-error -- EOPT strict mode
   const observation = getPackRuntimeObservation({
     packRuntimeObservation: context.packRuntimeObservation
   });

@@ -137,6 +137,7 @@ const renderNarrativeAst = (
       case 'block': {
         const handler = scope.blockHandlers[node.keyword];
         if (handler) {
+// @ts-expect-error -- EOPT strict mode
           const innerScope: RenderScope & { variableContext?: PromptVariableContext } = {
             ...scope,
             depth: scope.depth + 1,

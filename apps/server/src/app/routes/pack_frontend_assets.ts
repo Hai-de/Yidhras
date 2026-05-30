@@ -47,8 +47,8 @@ export function createPackFrontendAssetRoutes(packsDir: string): RouteModule {
       app.get(
         '/api/packs/:packId/frontend/{*assetPath}',
         asyncHandler((req, res) => {
-          const packId = req.params.packId
-          const rawAssetPath = req.params.assetPath
+          const packId = req.params['packId']
+          const rawAssetPath = req.params['assetPath']
 
           if (!packId || typeof packId !== 'string' || packId.length === 0) {
             throw new ApiError(400, 'INVALID_PACK_ID', 'packId is required')
@@ -104,7 +104,7 @@ export function createPackFrontendAssetRoutes(packsDir: string): RouteModule {
           }
 
           const mimeType = resolveMimeType(resolvedPath)
-          const isDev = process.env.NODE_ENV === 'development'
+          const isDev = process.env['NODE_ENV'] === 'development'
           const cacheControl = isDev ? 'no-cache' : 'public, max-age=3600'
 
           if (isBinary(resolvedPath)) {

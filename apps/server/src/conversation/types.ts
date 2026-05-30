@@ -19,7 +19,7 @@ export interface EntryProvenance {
     | 'conversation.modify'
     | 'conversation.delete'
     | 'conversation.record';
-  rule?: string;
+  rule?: string | undefined;
 }
 
 // ── Modification History ───────────────────────────────────
@@ -29,7 +29,7 @@ export interface EntryModification {
   modified_at: number;
   previous_content: string;
   new_content: string;
-  reason?: string;
+  reason?: string | undefined;
 }
 
 // ── Tool Trace ─────────────────────────────────────────────
@@ -60,40 +60,40 @@ export interface ConversationEntry {
   modifications: EntryModification[];
 
   // Causal chain
-  source_inference_id?: string;
-  derived_from_entry_ids?: string[];
+  source_inference_id?: string | undefined;
+  derived_from_entry_ids?: string[] | undefined;
 
   // Summary-specific
   turn_range?: { start: number; end: number };
 
   // Tool call trace (final reply only)
-  tool_trace?: EntryToolTrace;
+  tool_trace?: EntryToolTrace | undefined;
 
   // Soft archive (AI summary compaction)
-  archived?: boolean;
+  archived?: boolean | undefined;
 
   // Metadata
-  tags?: string[];
-  metadata?: Record<string, unknown>;
+  tags?: string[] | undefined;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 // ── Agent Conversation Memory ──────────────────────────────
 
 export interface ConversationMemoryMetadata {
-  conversation_profile_override?: string;
+  conversation_profile_override?: string | undefined;
   conversation_format_override?: unknown;
-  enable_ai_summary?: boolean;
-  summary_trigger_turns?: number;
+  enable_ai_summary?: boolean | undefined;
+  summary_trigger_turns?: number | undefined;
 }
 
 export interface AgentConversationMemory {
   id: string;
   owner_agent_id: string;
   conversation_id: string;
-  display_name?: string;
+  display_name?: string | undefined;
   entries: ConversationEntry[];
-  summary?: string;
-  metadata?: Record<string, unknown>;
+  summary?: string | undefined;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 // ── Conversation ID ────────────────────────────────────────

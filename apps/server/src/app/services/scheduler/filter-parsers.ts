@@ -91,6 +91,7 @@ export const parseOptionalKind = (value: string | undefined): SchedulerKind | nu
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated against SCHEDULER_KINDS
   const normalized = value.trim() as SchedulerKind;
   if (!SCHEDULER_KINDS.includes(normalized)) {
     throw new ApiError(400, SCHEDULER_QUERY_INVALID, 'kind is unsupported', { kind: value });
@@ -104,6 +105,7 @@ export const parseOptionalReason = (value: string | undefined): SchedulerReason 
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated against SCHEDULER_REASONS
   const normalized = value.trim() as SchedulerReason;
   if (!SCHEDULER_REASONS.includes(normalized)) {
     throw new ApiError(400, SCHEDULER_QUERY_INVALID, 'reason is unsupported', { reason: value });
@@ -117,6 +119,7 @@ export const parseOptionalSkipReason = (value: string | undefined): SchedulerSki
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated against SCHEDULER_SKIP_REASONS
   const normalized = value.trim() as SchedulerSkipReason;
   if (!SCHEDULER_SKIP_REASONS.includes(normalized)) {
     throw new ApiError(400, SCHEDULER_QUERY_INVALID, 'skipped_reason is unsupported', { skipped_reason: value });

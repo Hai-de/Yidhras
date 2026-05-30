@@ -5,10 +5,9 @@ import type {
   AgentSchedulerRunResult,
   SchedulerReason,
   SchedulerSkipReason} from '../../runtime/agent_scheduler.js';
-import { buildSchedulerDecisionWorkflowLinks } from './cross-links.js';
 import { listSchedulerDecisions } from './decision-queries.js';
 import { listSchedulerOwnershipAssignments, listSchedulerOwnershipMigrations } from './ownership-queries.js';
-import { buildRunCrossLinkSummary, buildSchedulerOwnershipSummary,parseSummaryJson, toCandidateDecisionReadModel, toRunReadModel  } from './read-models.js';
+import { buildSchedulerOwnershipSummary, parseSummaryJson } from './read-models.js';
 import { listSchedulerRebalanceRecommendations } from './rebalance-queries.js';
 import { getLatestSchedulerRunReadModel, listSchedulerRuns } from './run-queries.js';
 import type {
@@ -66,11 +65,13 @@ export const getSchedulerSummarySnapshot = async (
   const intentClassCounts = new Map<string, number>();
 
   for (const decision of decisions) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime value validated by adapter
     const chosenReason = decision.chosen_reason as SchedulerReason;
     reasonCounts.set(chosenReason, (reasonCounts.get(chosenReason) ?? 0) + 1);
     actorCounts.set(decision.actor_id, (actorCounts.get(decision.actor_id) ?? 0) + 1);
     partitionCounts.set(decision.partition_id, (partitionCounts.get(decision.partition_id) ?? 0) + 1);
     if (decision.skipped_reason) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime value validated by adapter
       const skippedReason = decision.skipped_reason as SchedulerSkipReason;
       skippedReasonCounts.set(skippedReason, (skippedReasonCounts.get(skippedReason) ?? 0) + 1);
     }
@@ -86,6 +87,7 @@ export const getSchedulerSummarySnapshot = async (
 
   const runTotals = runs.reduce(
     (accumulator, run) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse result typed at boundary
       const summary = parseSummaryJson(run.summary) as AgentSchedulerRunResult;
       accumulator.sampled_runs += 1;
       accumulator.created_total += summary.created_count;
@@ -160,6 +162,7 @@ export const getSchedulerTrendsSnapshot = (
   return {
     points: runs
       .map(run => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse result typed at boundary
         const summary = parseSummaryJson(run.summary) as AgentSchedulerRunResult;
         return {
           tick: run.tick.toString(),

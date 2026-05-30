@@ -36,6 +36,7 @@ export const resolvePluginWorkerEntry = (): WorkerEntryResolution => {
     return ['--import', loaderPath];
   })();
 
+// @ts-expect-error -- EOPT strict mode
   return {
     workerUrl: pathToFileURL(path.join(__dirname, 'worker_entry.ts')),
     execArgv

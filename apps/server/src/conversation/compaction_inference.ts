@@ -89,6 +89,7 @@ export async function runCompactionInference(
 ): Promise<CompactionInferenceOutput> {
   const { entries, agentId, conversationId, gateway, taskConfig, model } = input;
 
+// @ts-expect-error -- EOPT strict mode
   const request = buildCompactionRequest({ entries, agentId, conversationId, model, taskConfig });
 
   // Build a minimal AiTaskRequest for the gateway call

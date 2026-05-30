@@ -101,19 +101,19 @@ export const updateOperator = async (
     if (!Object.values(OPERATOR_STATUS).includes(input.status as typeof OPERATOR_STATUS[keyof typeof OPERATOR_STATUS])) {
       throw new ApiError(400, 'OPERATOR_INVALID', 'Invalid status')
     }
-    data.status = input.status
+    data['status'] = input.status
   }
 
   if (input.password !== undefined) {
-    data.password_hash = await hashPassword(input.password)
+    data['password_hash'] = await hashPassword(input.password)
   }
 
   if (input.display_name !== undefined) {
-    data.display_name = input.display_name
+    data['display_name'] = input.display_name
   }
 
   if (input.is_root !== undefined) {
-    data.is_root = input.is_root
+    data['is_root'] = input.is_root
   }
 
   const updated = await context.repos.identityOperator.updateOperator(operatorId, data)

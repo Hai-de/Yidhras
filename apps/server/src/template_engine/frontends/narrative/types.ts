@@ -25,11 +25,11 @@ export type PromptVariableValueType = 'null' | 'string' | 'number' | 'boolean' |
 export interface PromptVariableLayer {
   namespace: PromptVariableNamespace;
   values: PromptVariableRecord;
-  alias_values?: Record<string, PromptVariableValue>;
+  alias_values?: Record<string, PromptVariableValue> | undefined;
   metadata?: {
     source_label: string;
-    mutable?: boolean;
-    trusted?: boolean;
+    mutable?: boolean | undefined;
+    trusted?: boolean | undefined;
   };
 }
 
@@ -47,32 +47,32 @@ export interface PromptVariableResolutionTrace {
   resolution_mode: PromptVariableResolutionMode;
   requested_path: string;
   resolved: boolean;
-  resolved_layer?: string;
-  resolved_path?: string;
-  fallback_applied?: boolean;
-  missing?: boolean;
-  restricted?: boolean;
-  value_preview?: string;
-  value_type?: PromptVariableValueType;
-  notes?: string[];
+  resolved_layer?: string | undefined;
+  resolved_path?: string | undefined;
+  fallback_applied?: boolean | undefined;
+  missing?: boolean | undefined;
+  restricted?: boolean | undefined;
+  value_preview?: string | undefined;
+  value_type?: PromptVariableValueType | undefined;
+  notes?: string[] | undefined;
 }
 
 export interface PromptMacroBlockTrace {
   kind: 'if' | 'each';
   expression: string;
   executed: boolean;
-  iteration_count?: number;
-  alias?: string;
+  iteration_count?: number | undefined;
+  alias?: string | undefined;
 }
 
 export interface PromptMacroDiagnostics {
-  template_source?: string;
+  template_source?: string | undefined;
   traces: PromptVariableResolutionTrace[];
   missing_paths: string[];
   restricted_paths: string[];
-  blocks?: PromptMacroBlockTrace[];
-  namespaces_used?: string[];
-  output_length?: number;
+  blocks?: PromptMacroBlockTrace[] | undefined;
+  namespaces_used?: string[] | undefined;
+  output_length?: number | undefined;
 }
 
 export interface PromptMacroRenderResult {

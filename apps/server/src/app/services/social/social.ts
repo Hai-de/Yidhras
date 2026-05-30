@@ -183,34 +183,34 @@ const parseSocialFeedCursor = (value: string | undefined): SocialFeedCursor | nu
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse boundary
   const payload = parsed as Record<string, unknown>;
-  if (payload.sort === 'latest') {
-    if (typeof payload.created_at !== 'string' || typeof payload.id !== 'string' || !/^\d+$/.test(payload.created_at)) {
+  if (payload['sort'] === 'latest') {
+    if (typeof payload['created_at'] !== 'string' || typeof payload['id'] !== 'string' || !/^\d+$/.test(payload['created_at'])) {
       throw new ApiError(400, 'SOCIAL_FEED_QUERY_INVALID', 'cursor payload is invalid');
     }
 
     return {
       sort: 'latest',
-      created_at: payload.created_at,
-      id: payload.id
+      created_at: payload['created_at'],
+      id: payload['id']
     };
   }
 
-  if (payload.sort === 'signal') {
+  if (payload['sort'] === 'signal') {
     if (
-      typeof payload.created_at !== 'string' ||
-      typeof payload.id !== 'string' ||
-      !/^\d+$/.test(payload.created_at) ||
-      typeof payload.noise_level !== 'number' ||
-      !Number.isFinite(payload.noise_level)
+      typeof payload['created_at'] !== 'string' ||
+      typeof payload['id'] !== 'string' ||
+      !/^\d+$/.test(payload['created_at']) ||
+      typeof payload['noise_level'] !== 'number' ||
+      !Number.isFinite(payload['noise_level'])
     ) {
       throw new ApiError(400, 'SOCIAL_FEED_QUERY_INVALID', 'cursor payload is invalid');
     }
 
     return {
       sort: 'signal',
-      noise_level: payload.noise_level,
-      created_at: payload.created_at,
-      id: payload.id
+      noise_level: payload['noise_level'],
+      created_at: payload['created_at'],
+      id: payload['id']
     };
   }
 

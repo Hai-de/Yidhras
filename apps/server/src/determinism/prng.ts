@@ -75,7 +75,7 @@ export const createDeterministicRandom = (seed: string): DeterministicRandom => 
       }
       const index = Math.floor(next() * items.length);
       // eslint-disable-next-line security/detect-object-injection -- index is derived from clamped random within bounds
-      return items[index];
+      return items[index]!;
     },
     getSeed: () => resolvedSeed
   };

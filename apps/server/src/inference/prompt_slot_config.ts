@@ -61,7 +61,7 @@ export interface SlotPositionDiagnostics {
 export interface PromptSlotConfig {
   id: string;
   display_name: string;
-  description?: string;
+  description?: string | undefined;
   default_priority: number;
 
   /**
@@ -71,7 +71,7 @@ export interface PromptSlotConfig {
    * 向后兼容：若未指定，回退到 default_priority 的值。
    * 优先级低于 anchor（当 anchor 被指定时，anchor 解析结果覆盖 position）。
    */
-  position?: number | null;
+  position?: number | null | undefined;
 
   /**
    * 相对定位锚点。声明式语法：此插槽排在 ref 插槽的 after/before 方向。
@@ -79,19 +79,19 @@ export interface PromptSlotConfig {
    *
    * 若 ref 插槽不存在，降级为 position → default_priority 排序，并写入 diagnostics。
    */
-  anchor?: SlotAnchor | null;
+  anchor?: SlotAnchor | null | undefined;
 
-  default_template?: string | null;
-  template_context?: 'inference' | 'world_prompts' | 'pack_state' | 'none';
+  default_template?: string | null | undefined;
+  template_context?: 'inference' | 'world_prompts' | 'pack_state' | 'none' | undefined;
   /**
    * 当 template_context 为 world_prompts 时，指定取哪个 prompt key。
    * 默认 'global_prefix'。
    */
-  template_key?: string | null;
-  message_role?: 'system' | 'developer' | 'user';
+  template_key?: string | null | undefined;
+  message_role?: 'system' | 'developer' | 'user' | undefined;
   include_in_combined: boolean;
-  combined_heading?: string | null;
-  permissions?: PromptFragmentPermissions | null;
+  combined_heading?: string | null | undefined;
+  permissions?: PromptFragmentPermissions | null | undefined;
 
   /**
    * 插槽启用状态。
@@ -101,7 +101,7 @@ export interface PromptSlotConfig {
    * 但渲染时跳过内容产出（不纳入 combined_prompt、不参与 message assembly）。
    */
   enabled: boolean;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface PromptSlotRegistry {

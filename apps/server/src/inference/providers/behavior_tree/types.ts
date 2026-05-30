@@ -25,25 +25,25 @@ export interface BTConditionExpr {
 }
 
 export interface BTCompoundCondition {
-  all?: BTConditionExpr[];
-  any?: BTConditionExpr[];
+  all?: BTConditionExpr[] | undefined;
+  any?: BTConditionExpr[] | undefined;
 }
 
 export interface BTDecoratorDef {
   type: BTDecoratorType;
-  cooldown_ticks?: number;
-  weight?: number;
+  cooldown_ticks?: number | undefined;
+  weight?: number | undefined;
 }
 
 export interface BTActionDef {
-  semantic_intent?: string;
-  kernel?: string;
-  proposed_method?: string;
+  semantic_intent?: string | undefined;
+  kernel?: string | undefined;
+  proposed_method?: string | undefined;
   target_ref?: { entity_id: string; kind: string };
-  reasoning?: string;
-  desired_effect?: string;
-  payload?: Record<string, unknown>;
-  call_handler?: string;
+  reasoning?: string | undefined;
+  desired_effect?: string | undefined;
+  payload?: Record<string, unknown> | undefined;
+  call_handler?: string | undefined;
 }
 
 export interface BTLLMDecisionDef {
@@ -53,18 +53,18 @@ export interface BTLLMDecisionDef {
 }
 
 export interface BTNodeDef {
-  type?: BTCompositeType | BTLeafType;
-  children?: BTNodeDef[];
-  decorators?: BTDecoratorDef[];
-  child?: BTNodeDef;
-  condition?: BTCompoundCondition | BTConditionExpr;
-  action?: BTActionDef;
-  prompt_template?: string;
-  provider?: string;
-  model?: string;
-  $ref?: string;
+  type?: BTCompositeType | BTLeafType | undefined;
+  children?: BTNodeDef[] | undefined;
+  decorators?: BTDecoratorDef[] | undefined;
+  child?: BTNodeDef | undefined;
+  condition?: BTCompoundCondition | BTConditionExpr | undefined;
+  action?: BTActionDef | undefined;
+  prompt_template?: string | undefined;
+  provider?: string | undefined;
+  model?: string | undefined;
+  $ref?: string | undefined;
   /** Internal runtime path assigned after $ref expansion; not accepted from YAML schema. */
-  __node_path?: string;
+  __node_path?: string | undefined;
 }
 
 export interface BTEvalContext {
@@ -79,7 +79,7 @@ export interface BTNodeTrace {
   nodeType: string;
   status: BTStatus | 'skipped';
   durationMs: number;
-  discardedDecision?: ProviderDecisionRaw | null;
+  discardedDecision?: ProviderDecisionRaw | null | undefined;
 }
 
 export interface BTDecisionTrace {

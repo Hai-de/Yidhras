@@ -112,7 +112,7 @@ export const createContentTransformExecutor = (): PromptWorkflowStepExecutor => 
           conversation_meta: {
             turn_count: visibleConversationEntries.length,
             last_message_role: visibleConversationEntries.length > 0
-              ? visibleConversationEntries[visibleConversationEntries.length - 1].speaker_agent_id === context.current_agent_id ? 'assistant' : 'user'
+              ? visibleConversationEntries[visibleConversationEntries.length - 1]!.speaker_agent_id === context.current_agent_id ? 'assistant' : 'user'
               : undefined
           },
           token_budget: { total: budgetResolution.modelContextWindow, used: 0, remaining: budgetResolution.effectiveBudget },

@@ -108,13 +108,13 @@ function extractConversationFragments(
       return {
         text: collectFragmentText(f),
         entryRole:
-          typeof metadata.entry_role === 'string' ? metadata.entry_role : 'user',
+          typeof metadata['entry_role'] === 'string' ? metadata['entry_role'] : 'user',
         entryKind:
-          typeof metadata.conversation_entry_kind === 'string'
-            ? metadata.conversation_entry_kind
+          typeof metadata['conversation_entry_kind'] === 'string'
+            ? metadata['conversation_entry_kind']
             : 'original',
         turnNumber:
-          typeof metadata.turn_number === 'number' ? metadata.turn_number : 0,
+          typeof metadata['turn_number'] === 'number' ? metadata['turn_number'] : 0,
         fragmentId: f.id
       };
     })
@@ -427,7 +427,7 @@ function resolveInjectionIndex(
   switch (position) {
     case 'after_last_user': {
       for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].role === 'user') {
+        if (messages[i]!.role === 'user') {
           return i + 1;
         }
       }
@@ -435,7 +435,7 @@ function resolveInjectionIndex(
     }
     case 'after_last_system': {
       for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].role === 'system') {
+        if (messages[i]!.role === 'system') {
           return i + 1;
         }
       }

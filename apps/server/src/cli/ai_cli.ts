@@ -166,13 +166,13 @@ const doTest = async (args: ParsedArgs): Promise<void> => {
 
     if (res.ok) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      const choices = body.choices as Array<{ message?: { content?: string } }> | undefined;
+      const choices = body['choices'] as Array<{ message?: { content?: string } }> | undefined;
       const content = choices?.[0]?.message?.content ?? JSON.stringify(body);
       console.log(`响应: ${content}`);
     } else {
       console.log(
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-        `错误: ${(body.error as Record<string, string>)?.message ?? JSON.stringify(body)}`
+        `错误: ${(body['error'] as Record<string, string>)?.['message'] ?? JSON.stringify(body)}`
       );
     }
   } catch (error) {

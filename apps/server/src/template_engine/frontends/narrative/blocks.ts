@@ -31,8 +31,8 @@ const parseEachSpec = (expression: string): { path: string; alias: string } | nu
     return null;
   }
   return {
-    path: match[1],
-    alias: match[2]
+    path: match[1]!,
+    alias: match[2]!
   };
 };
 

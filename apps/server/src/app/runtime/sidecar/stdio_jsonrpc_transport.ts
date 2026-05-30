@@ -74,8 +74,8 @@ export interface UnhealthyEvent {
 }
 
 const resolveCargoCommand = (): string => {
-  if (process.env.CARGO_BIN?.trim()) {
-    return process.env.CARGO_BIN.trim();
+  if (process.env['CARGO_BIN']?.trim()) {
+    return process.env['CARGO_BIN'].trim();
   }
   return 'cargo';
 };

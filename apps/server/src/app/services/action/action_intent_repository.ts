@@ -287,8 +287,8 @@ export const getActionIntentForDispatchReflection = async (
     return null;
   }
 
-  const actorAgentId = typeof intent.actor_ref.agent_id === 'string' && intent.actor_ref.agent_id.trim().length > 0
-    ? intent.actor_ref.agent_id.trim()
+  const actorAgentId = typeof intent.actor_ref['agent_id'] === 'string' && intent.actor_ref['agent_id'].trim().length > 0
+    ? intent.actor_ref['agent_id'].trim()
     : null;
   if (!actorAgentId) {
     return null;
@@ -316,9 +316,9 @@ export const getActionIntentForDispatchReflection = async (
     intent_type: intent.intent_type,
     actor_agent_id: actorAgentId,
     target_ref: isRecord(intent.target_ref) ? intent.target_ref : null,
-    semantic_intent_kind: decision && typeof decision.payload === 'object' && decision.payload !== null && !Array.isArray(decision.payload) && typeof (decision.payload as Record<string, unknown>).semantic_intent_kind === 'string'
+    semantic_intent_kind: decision && typeof decision['payload'] === 'object' && decision['payload'] !== null && !Array.isArray(decision['payload']) && typeof (decision['payload'] as Record<string, unknown>)['semantic_intent_kind'] === 'string'
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
-      ? ((decision.payload as Record<string, unknown>).semantic_intent_kind as string)
+      ? ((decision['payload'] as Record<string, unknown>)['semantic_intent_kind'] as string)
       : null,
     event_summaries: events.map(event => ({ id: event.id, type: event.type, title: event.title }))
   };

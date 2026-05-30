@@ -4,41 +4,41 @@ export type MemoryScope = 'short_term' | 'long_term';
 export type MemorySourceKind = 'trace' | 'intent' | 'job' | 'post' | 'event' | 'summary' | 'manual';
 
 export interface MemorySourceRef {
-  trace_id?: string;
-  job_id?: string;
-  intent_id?: string;
-  post_id?: string;
-  event_id?: string;
-  source_message_id?: string;
+  trace_id?: string | undefined;
+  job_id?: string | undefined;
+  intent_id?: string | undefined;
+  post_id?: string | undefined;
+  event_id?: string | undefined;
+  source_message_id?: string | undefined;
 }
 
 export interface MemoryVisibility {
-  min_level?: number;
-  circle_id?: string | null;
-  policy_gate?: string | null;
+  min_level?: number | undefined;
+  circle_id?: string | null | undefined;
+  policy_gate?: string | null | undefined;
 }
 
 export interface MemoryContent {
   text: string;
-  structured?: Record<string, unknown>;
+  structured?: Record<string, unknown> | undefined;
 }
 
 export interface MemoryEntry {
   id: string;
   scope: MemoryScope;
-  actor_ref?: InferenceActorRef | null;
+  actor_ref?: InferenceActorRef | null | undefined;
   source_kind: MemorySourceKind;
-  source_ref?: MemorySourceRef | null;
+  source_ref?: MemorySourceRef | null | undefined;
   content: MemoryContent;
   tags: string[];
   importance: number;
   salience: number;
-  confidence?: number | null;
-  visibility?: MemoryVisibility | null;
+  confidence?: number | null | undefined;
+  visibility?: MemoryVisibility | null | undefined;
   created_at: string;
-  occurred_at?: string | null;
-  expires_at?: string | null;
-  metadata?: Record<string, unknown>;
+  occurred_at?: string | null | undefined;
+  expires_at?: string | null | undefined;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface MemoryDroppedEntry {
@@ -49,7 +49,7 @@ export interface MemoryDroppedEntry {
 export interface MemorySelectionDiagnostics {
   selected_count: number;
   skipped_count: number;
-  token_budget?: number;
+  token_budget?: number | undefined;
   memory_selection?: {
     selected_entry_ids: string[];
     dropped: MemoryDroppedEntry[];
@@ -74,9 +74,9 @@ export interface MemoryContextPack {
 
 export interface LongTermMemorySearchInput {
   actor_ref: InferenceActorRef;
-  query?: string;
-  query_embedding?: number[];
-  tags?: string[];
+  query?: string | undefined;
+  query_embedding?: number[] | undefined;
+  tags?: string[] | undefined;
   limit: number;
 }
 

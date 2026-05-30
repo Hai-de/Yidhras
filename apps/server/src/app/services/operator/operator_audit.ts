@@ -19,33 +19,33 @@ export const queryAuditLogs = async (
   // root 可见全部，普通 Operator 仅见自己
   if (!isRoot) {
     if (currentOperatorId) {
-      where.operator_id = currentOperatorId
+      where['operator_id'] = currentOperatorId
     } else {
       return { logs: [], next_cursor: null }
     }
   } else if (filters.operator_id) {
-    where.operator_id = filters.operator_id
+    where['operator_id'] = filters.operator_id
   }
 
   if (filters.pack_id) {
-    where.pack_id = filters.pack_id
+    where['pack_id'] = filters.pack_id
   }
 
   if (filters.action) {
-    where.action = filters.action
+    where['action'] = filters.action
   }
 
   if (filters.from_date) {
-    where.created_at = { ...(where.created_at ?? {}), gte: BigInt(filters.from_date) }
+    where['created_at'] = { ...(where['created_at'] ?? {}), gte: BigInt(filters.from_date) }
   }
 
   if (filters.to_date) {
-    where.created_at = { ...(where.created_at ?? {}), lte: BigInt(filters.to_date) }
+    where['created_at'] = { ...(where['created_at'] ?? {}), lte: BigInt(filters.to_date) }
   }
 
   // cursor 分页
   if (filters.cursor) {
-    where.id = { lt: filters.cursor }
+    where['id'] = { lt: filters.cursor }
   }
 
   const logs = await context.prisma.operatorAuditLog.findMany({

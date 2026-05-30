@@ -39,8 +39,8 @@ const resolveEventPackId = (event: { pack_id: string | null; impact_data: string
     return event.pack_id;
   }
   const impactData = parseImpactData(event.impact_data);
-  return typeof impactData?.pack_id === 'string' && impactData.pack_id.trim().length > 0
-    ? impactData.pack_id.trim()
+  return typeof impactData?.['pack_id'] === 'string' && impactData['pack_id'].trim().length > 0
+    ? impactData['pack_id'].trim()
     : null;
 };
 

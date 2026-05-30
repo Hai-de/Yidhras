@@ -111,6 +111,7 @@ export const createContextService = ({
       const lookbackTick = input.tick - MAX_INVESTIGATION_LOOKBACK_TICK;
       const investigationEvents = agentEntityId
         ? await context.prisma.event.findMany({
+// @ts-expect-error -- EOPT strict mode
             where: {
               pack_id: input.pack_id ?? undefined,
               type: 'interaction',
@@ -171,6 +172,7 @@ export const createContextService = ({
         ...createDefaultContextSourceAdapters({ context, overlayStore, longMemoryBlockStore, spatialRuntime }),
         ...pluginAdapters
       ];
+// @ts-expect-error -- EOPT strict mode
       const built = await buildContextNodesFromSources(adapters, {
         tick: input.tick,
         actor_ref: input.actor_ref,
@@ -205,11 +207,11 @@ export const createContextService = ({
         .filter(node => node.source_kind === 'overlay')
         .map(node => ({
           node_id: node.id,
-          overlay_id: typeof node.source_ref?.overlay_id === 'string' ? node.source_ref.overlay_id : node.id,
-          overlay_type: typeof node.metadata?.overlay_type === 'string' ? node.metadata.overlay_type : 'overlay_entry',
-          persistence_mode: typeof node.metadata?.persistence_mode === 'string' ? node.metadata.persistence_mode : 'sticky',
+          overlay_id: typeof node.source_ref?.['overlay_id'] === 'string' ? node.source_ref['overlay_id'] : node.id,
+          overlay_type: typeof node.metadata?.['overlay_type'] === 'string' ? node.metadata['overlay_type'] : 'overlay_entry',
+          persistence_mode: typeof node.metadata?.['persistence_mode'] === 'string' ? node.metadata['persistence_mode'] : 'sticky',
           created_by: node.provenance.created_by === 'agent' ? 'agent' : 'system',
-          status: typeof node.metadata?.overlay_status === 'string' ? node.metadata.overlay_status : 'active',
+          status: typeof node.metadata?.['overlay_status'] === 'string' ? node.metadata['overlay_status'] : 'active',
           preferred_slot: node.placement_policy.preferred_slot
         }));
 

@@ -50,7 +50,7 @@ export interface VisibleClockSnapshot {
 }
 
 export const getRuntimeBootstrap = (input: {
-  runtimeBootstrap?: RuntimeDatabaseBootstrap;
+  runtimeBootstrap?: RuntimeDatabaseBootstrap | undefined;
 }): RuntimeDatabaseBootstrap => {
   if (input.runtimeBootstrap) {
     return input.runtimeBootstrap;

@@ -87,7 +87,7 @@ const packId = resolvePackId(req.params)
     packGuard,
     asyncHandler(async (req, res) => {
 const packId = resolvePackId(req.params)
-      const entityId = resolveEntityId({ id: req.params.id })
+      const entityId = resolveEntityId({ id: req.params['id'] })
       try {
         jsonOk(res, toJsonSafe(await getExperimentalPackAgentOverview(context, packId, entityId)))
       } catch (error) {

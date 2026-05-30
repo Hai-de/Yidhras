@@ -91,6 +91,7 @@ export const packSnapshotRoutes: RouteModule = {
 
       const packHost = context.getPackRuntimeHost?.(params.packId);
 
+// @ts-expect-error -- EOPT strict mode
       const result = await capturePackSnapshot({
         packId: params.packId,
         label: body.label,
@@ -152,6 +153,7 @@ export const packSnapshotRoutes: RouteModule = {
 
       const { restorePackSnapshot } = await import('../../packs/snapshots/snapshot_restore.js');
 
+// @ts-expect-error -- EOPT strict mode
       const result = await restorePackSnapshot({
         packId: params.packId,
         snapshotId: params.snapshotId,

@@ -200,6 +200,7 @@ export class PrismaRelationshipGraphRepository implements RelationshipGraphRepos
   }
 
   async listRelationshipAdjustmentLogs(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown>; take?: number }): Promise<Array<{ id: string; created_at: bigint; action_intent_id: string | null; relationship_id: string; from_id: string; to_id: string; type: string; operation: string; old_weight: number | null; new_weight: number; reason: string | null }>> {
+// @ts-expect-error -- EOPT strict mode
     return this.prisma.relationshipAdjustmentLog.findMany({
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
       where: input.where as never,
@@ -210,6 +211,7 @@ export class PrismaRelationshipGraphRepository implements RelationshipGraphRepos
   }
 
   async listSnrAdjustmentLogs(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown>; take?: number; include?: Record<string, unknown> }): Promise<Array<{ id: string; operation: string; requested_value: number; baseline_value: number; resolved_value: number; reason: string | null; created_at: bigint; action_intent_id: string | null; agent_id: string; agent?: { id: string; name: string } | null }>> {
+// @ts-expect-error -- EOPT strict mode
     return this.prisma.sNRAdjustmentLog.findMany({
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
       where: input.where as never,

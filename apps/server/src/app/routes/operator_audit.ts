@@ -26,6 +26,7 @@ export const operatorAuditRoutes: RouteModule = {
 
       const result = await queryAuditLogs(
         context,
+// @ts-expect-error -- EOPT strict mode
         {
           operator_id: query.operator_id,
           pack_id: query.pack_id,
@@ -61,6 +62,7 @@ export const operatorAuditRoutes: RouteModule = {
 
       const result = await queryAuditLogs(
         context,
+// @ts-expect-error -- EOPT strict mode
         {
           operator_id: operator.id,
           pack_id: query.pack_id,

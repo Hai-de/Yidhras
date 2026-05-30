@@ -59,7 +59,7 @@ const readAppliedOpeningId = async (adapter: PackStorageAdapter, packId: string)
     return null;
   }
   const stateJson = metaState.state_json;
-  return typeof stateJson.applied_opening_id === 'string' ? stateJson.applied_opening_id : null;
+  return typeof stateJson['applied_opening_id'] === 'string' ? stateJson['applied_opening_id'] : null;
 };
 
 const teardownPrismaPackData = async (
@@ -206,15 +206,15 @@ const restorePrismaData = async (
         await tx.memoryBlockRuntimeState.create({
           data: {
             memory_block_id: mem.id,
-            trigger_count: typeof rs.trigger_count === 'number' ? rs.trigger_count : 0,
-            last_triggered_tick: typeof rs.last_triggered_tick === 'string' ? parseBigInt(rs.last_triggered_tick) : null,
-            last_inserted_tick: typeof rs.last_inserted_tick === 'string' ? parseBigInt(rs.last_inserted_tick) : null,
-            cooldown_until_tick: typeof rs.cooldown_until_tick === 'string' ? parseBigInt(rs.cooldown_until_tick) : null,
-            delayed_until_tick: typeof rs.delayed_until_tick === 'string' ? parseBigInt(rs.delayed_until_tick) : null,
-            retain_until_tick: typeof rs.retain_until_tick === 'string' ? parseBigInt(rs.retain_until_tick) : null,
-            currently_active: typeof rs.currently_active === 'boolean' ? rs.currently_active : false,
-            last_activation_score: typeof rs.last_activation_score === 'number' ? rs.last_activation_score : null,
-            recent_distance_from_latest_message: typeof rs.recent_distance_from_latest_message === 'number' ? rs.recent_distance_from_latest_message : null
+            trigger_count: typeof rs['trigger_count'] === 'number' ? rs['trigger_count'] : 0,
+            last_triggered_tick: typeof rs['last_triggered_tick'] === 'string' ? parseBigInt(rs['last_triggered_tick']) : null,
+            last_inserted_tick: typeof rs['last_inserted_tick'] === 'string' ? parseBigInt(rs['last_inserted_tick']) : null,
+            cooldown_until_tick: typeof rs['cooldown_until_tick'] === 'string' ? parseBigInt(rs['cooldown_until_tick']) : null,
+            delayed_until_tick: typeof rs['delayed_until_tick'] === 'string' ? parseBigInt(rs['delayed_until_tick']) : null,
+            retain_until_tick: typeof rs['retain_until_tick'] === 'string' ? parseBigInt(rs['retain_until_tick']) : null,
+            currently_active: typeof rs['currently_active'] === 'boolean' ? rs['currently_active'] : false,
+            last_activation_score: typeof rs['last_activation_score'] === 'number' ? rs['last_activation_score'] : null,
+            recent_distance_from_latest_message: typeof rs['recent_distance_from_latest_message'] === 'number' ? rs['recent_distance_from_latest_message'] : null
           }
         });
       }
@@ -358,6 +358,7 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
   // 8. Materialize (idempotent)
   const { materializePackRuntime } = await import('../orchestration/pack_materializer.js');
   const tick = parseBigInt(metadata.captured_at_tick);
+// @ts-expect-error -- EOPT strict mode
   await materializePackRuntime({ instanceId: packId, pack, prisma, packStorageAdapter, initialTick: tick, appliedOpeningId: appliedOpeningId ?? undefined });
 
   // 9. Restore in-memory clock

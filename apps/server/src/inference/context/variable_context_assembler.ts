@@ -91,7 +91,8 @@ export const assembleVariableContext = (input: VariableContextInput, config?: In
     .filter((layer): layer is NonNullable<typeof layer> => layer !== null);
 
   // Append previous_agent_output layer when output data is present
-  const previousAgentOutputValues = runtimeObjects.previous_agent_output as Record<string, unknown>;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- known runtime key
+  const previousAgentOutputValues = runtimeObjects['previous_agent_output'] as Record<string, unknown>;
   if (Object.keys(previousAgentOutputValues).length > 0) {
     layers.push(
       createPromptVariableLayer({

@@ -335,8 +335,8 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
 
       for (const idx of def.indexes) {
         const idxParts = idx.split(' ON ');
-        const idxName = idxParts[0];
-        const idxTarget = idxParts[1];
+        const idxName = idxParts[0]!;
+        const idxTarget = idxParts[1]!;
         await this.prisma.$executeRawUnsafe(
           `CREATE INDEX IF NOT EXISTS ${idxName} ON ${tableName.split('.')[0]}."${def.name}" (${idxTarget.replace(/^.*\(/, '').replace(/\)$/, '')})`
         );
@@ -407,7 +407,7 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
         rec['id']
       );
       if (existingRows.length > 0) {
-        const existing = existingRows[0];
+        const existing = existingRows[0]!;
         if (existing['created_at'] !== null) {
           origCreatedAt = existing['created_at'];
         }
@@ -574,7 +574,7 @@ export class PostgresPackStorageAdapter implements PackStorageAdapter {
         `SELECT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = $1)`,
         schema
       );
-      return rows.length > 0 && rows[0].exists;
+      return rows.length > 0 && rows[0]!.exists;
     } catch {
       return false;
     }

@@ -60,7 +60,7 @@ export function createPackListRoutes(_packsDir: string): RouteModule {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- YAML config boundary
           presentation: (metadata.presentation as Record<string, unknown>) ?? null,
           // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- YAML config boundary
-          frontend: (metadata as Record<string, unknown>).frontend as Record<string, unknown> ?? null,
+          frontend: (metadata as Record<string, unknown>)['frontend'] as Record<string, unknown> ?? null,
           runtime_status: runtime ? 'loaded' : 'not_loaded',
           health_status: runtime?.health_status ?? null,
           current_tick: runtime?.current_tick ?? null

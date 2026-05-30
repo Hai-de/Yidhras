@@ -121,7 +121,7 @@ export const resolveSlotPositions = (
     if (cycleNodes.has(slotId)) continue;
 
     if (!(anchor.ref in configs)) {
-      const config = configs[slotId];
+      const config = configs[slotId]!;
       const fallback = config.position ?? config.default_priority;
       diagnostics.warnings.push({
         slot_id: slotId,
@@ -156,7 +156,7 @@ export const resolveSlotPositions = (
 
   // ── Step 5: fallback for cycles + unresolved ──
   for (const slotId of cycleNodes) {
-    const config = configs[slotId];
+    const config = configs[slotId]!;
     const fallback = config.position ?? config.default_priority;
     diagnostics.warnings.push({
       slot_id: slotId,
@@ -169,7 +169,7 @@ export const resolveSlotPositions = (
   }
 
   for (const [slotId] of unresolvedAnchors) {
-    const config = configs[slotId];
+    const config = configs[slotId]!;
     const fallback = config.position ?? config.default_priority;
     diagnostics.warnings.push({
       slot_id: slotId,

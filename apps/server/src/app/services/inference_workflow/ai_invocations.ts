@@ -169,13 +169,13 @@ const parseAiInvocationCursor = (value: string | undefined): ParsedAiInvocationC
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse boundary
   const candidate = parsed as Record<string, unknown>;
-  if (typeof candidate.created_at !== 'string' || !/^\d+$/.test(candidate.created_at) || typeof candidate.id !== 'string' || candidate.id.length === 0) {
+  if (typeof candidate['created_at'] !== 'string' || !/^\d+$/.test(candidate['created_at']) || typeof candidate['id'] !== 'string' || candidate['id'].length === 0) {
     throw new ApiError(400, 'AI_INVOCATION_QUERY_INVALID', 'cursor payload is invalid');
   }
 
   return {
-    created_at: candidate.created_at,
-    id: candidate.id
+    created_at: candidate['created_at'],
+    id: candidate['id']
   };
 };
 
@@ -331,7 +331,7 @@ export const listAiInvocations = async (
     items: pageItems,
     page_info: {
       has_next_page: hasNextPage,
-      next_cursor: hasNextPage ? encodeAiInvocationCursor(pageItems[pageItems.length - 1]) : null
+      next_cursor: hasNextPage ? encodeAiInvocationCursor(pageItems[pageItems.length - 1]!) : null
     },
     summary: {
       returned: pageItems.length,

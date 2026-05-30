@@ -20,7 +20,7 @@ import type { ContextNode } from '../types.js';
 const logger = createLogger('context-memory-blocks');
 
 const collectSemanticQueryTemplates = (
-  records: Array<{ behavior: { activation: { triggers: Array<{ type: string; query_template?: string }> } } }>
+  records: Array<{ behavior: { activation: { triggers: Array<{ type: string; query_template?: string | undefined }> } } }>
 ): string[] => {
   const templates: string[] = [];
   for (const record of records) {
@@ -42,7 +42,7 @@ const buildSemanticQueryText = (
 
   const recentTraces = evaluationContext.recent?.trace ?? [];
   for (const trace of recentTraces.slice(0, 3)) {
-    const reasoning = typeof trace.payload.reasoning === 'string' ? trace.payload.reasoning : null;
+    const reasoning = typeof trace.payload['reasoning'] === 'string' ? trace.payload['reasoning'] : null;
     if (reasoning && reasoning.trim().length > 0) {
       contextLines.push(`[Trace] ${reasoning}`);
     }
@@ -50,7 +50,7 @@ const buildSemanticQueryText = (
 
   const recentEvents = evaluationContext.recent?.event ?? [];
   for (const event of recentEvents.slice(0, 3)) {
-    const title = typeof event.payload.title === 'string' ? event.payload.title : null;
+    const title = typeof event.payload['title'] === 'string' ? event.payload['title'] : null;
     if (title && title.trim().length > 0) {
       contextLines.push(`[Event] ${title}`);
     }
@@ -149,6 +149,7 @@ export const buildContextNodesFromMemoryBlocks = async (input: {
   if (!evaluationContext.query_embedding) {
     const templates = collectSemanticQueryTemplates(records);
     if (templates.length > 0) {
+// @ts-expect-error -- EOPT strict mode
       const queryText = buildSemanticQueryText(templates, evaluationContext);
       try {
         const embedding = await generateQueryEmbedding(input.context, queryText);

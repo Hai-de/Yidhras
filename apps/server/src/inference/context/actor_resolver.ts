@@ -1,6 +1,5 @@
 import type { IdentityContext } from '../../identity/types.js';
 import type { WorldPack } from '../../packs/manifest/constitution_loader.js';
-import { packEntityIdFromResolvedAgentId } from '../../packs/utils/pack_entity_id.js';
 import { ApiError } from '../../utils/api_error.js';
 import { toAgentSnapshot } from '../mappers.js';
 import type { InferenceRequestInput } from '../types.js';
@@ -56,7 +55,7 @@ const AgentIdStrategy: ActorResolutionStrategy = {
     return Boolean(input.agent_id);
   },
 
-  async resolve(ctx, input, packId) {
+  async resolve(ctx, input, _packId) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- canHandle guarantees agent_id presence
     const agentId = input.agent_id!;
     const agent = await ctx.repos.agent.findAgentByIdWithCircles(agentId);
@@ -66,11 +65,12 @@ const AgentIdStrategy: ActorResolutionStrategy = {
     }
 
     const identity: IdentityContext = {
-      id: typeof agent.id === 'string' ? agent.id : '',
-      type: (typeof agent.type === 'string' ? agent.type : 'agent') as IdentityContext['type'],
-      name: typeof agent.name === 'string' ? agent.name : null,
-      provider: typeof agent.provider === 'string' ? agent.provider : undefined,
-      status: typeof agent.status === 'string' ? agent.status : undefined,
+      id: typeof agent['id'] === 'string' ? agent['id'] : '',
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated as string above
+      type: (typeof agent['type'] === 'string' ? agent['type'] : 'agent') as IdentityContext['type'],
+      name: typeof agent['name'] === 'string' ? agent['name'] : null,
+      provider: typeof agent['provider'] === 'string' ? agent['provider'] : undefined,
+      status: typeof agent['status'] === 'string' ? agent['status'] : undefined,
       claims: null
     };
 
@@ -99,10 +99,12 @@ const toBindingIdentityContext = (
   }
 ): IdentityContext => ({
   id: binding.identity?.id ?? '',
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime cast of DB value
   type: (binding.identity?.type as IdentityContext['type']) ?? 'noise',
   name: binding.identity?.name ?? '',
   provider: binding.identity?.provider ?? undefined,
   status: binding.identity?.status ?? undefined,
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- DB value typed at boundary
   claims: binding.identity?.claims as Record<string, unknown> | null ?? null
 });
 
@@ -111,7 +113,7 @@ const IdentityIdStrategy: ActorResolutionStrategy = {
     return Boolean(input.identity_id) && !input.agent_id;
   },
 
-  async resolve(ctx, input, packId) {
+  async resolve(ctx, input, _packId) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- canHandle guarantees identity_id presence
     const identityId = input.identity_id!;
     const identity = await ctx.repos.identityOperator.findIdentityById(identityId);

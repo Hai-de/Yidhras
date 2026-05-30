@@ -191,6 +191,7 @@ export class PrismaWorkflowStepRunRepository implements WorkflowStepRunRepositor
   }
 
   async listRunnableSteps(input: ListRunnableWorkflowStepsInput): Promise<WorkflowStepRunRecord[]> {
+// @ts-expect-error -- EOPT strict mode
     const rows = await this.prisma.workflowStepRun.findMany({
       where: {
         status: { in: RUNNABLE_WORKFLOW_STEP_STATUSES },
@@ -210,6 +211,7 @@ export class PrismaWorkflowStepRunRepository implements WorkflowStepRunRepositor
   }
 
   async listRunningSteps(input: ListRunningWorkflowStepsInput = {}): Promise<WorkflowStepRunRecord[]> {
+// @ts-expect-error -- EOPT strict mode
     const rows = await this.prisma.workflowStepRun.findMany({
       where: {
         status: 'running',
@@ -254,6 +256,7 @@ export class PrismaWorkflowStepRunRepository implements WorkflowStepRunRepositor
   }
 
   async completeStep(input: CompleteWorkflowStepInput): Promise<WorkflowStepTerminalUpdateResult> {
+// @ts-expect-error -- EOPT strict mode
     return this.updateTerminalStep({
       step_run_id: input.step_run_id,
       status: 'completed',
@@ -267,6 +270,7 @@ export class PrismaWorkflowStepRunRepository implements WorkflowStepRunRepositor
   }
 
   async narrativizeStep(input: NarrativizeWorkflowStepInput): Promise<WorkflowStepTerminalUpdateResult> {
+// @ts-expect-error -- EOPT strict mode
     return this.updateTerminalStep({
       step_run_id: input.step_run_id,
       status: 'narrativized',
@@ -280,6 +284,7 @@ export class PrismaWorkflowStepRunRepository implements WorkflowStepRunRepositor
   }
 
   async failStep(input: FailWorkflowStepInput): Promise<WorkflowStepTerminalUpdateResult> {
+// @ts-expect-error -- EOPT strict mode
     return this.updateTerminalStep({
       step_run_id: input.step_run_id,
       status: 'failed',

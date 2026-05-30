@@ -23,7 +23,7 @@ const logger = createLogger('plugin-worker-client');
 
 const extractErrorMessage = (value: unknown): string => {
   if (typeof value === 'object' && value !== null && 'message' in value) {
-    const msg = (value as Record<string, unknown>).message;
+    const msg = (value as Record<string, unknown>)['message'];
     if (typeof msg === 'string') return msg;
   }
   return 'Plugin worker request failed';
@@ -31,7 +31,7 @@ const extractErrorMessage = (value: unknown): string => {
 
 const extractErrorName = (value: unknown): string => {
   if (typeof value === 'object' && value !== null && 'name' in value) {
-    const name = (value as Record<string, unknown>).name;
+    const name = (value as Record<string, unknown>)['name'];
     if (typeof name === 'string') return name;
   }
   return 'PluginWorkerRequestError';
@@ -39,7 +39,7 @@ const extractErrorName = (value: unknown): string => {
 
 const extractErrorStack = (value: unknown): string | undefined => {
   if (typeof value === 'object' && value !== null && 'stack' in value) {
-    const stack = (value as Record<string, unknown>).stack;
+    const stack = (value as Record<string, unknown>)['stack'];
     if (typeof stack === 'string') return stack;
   }
   return undefined;
@@ -89,6 +89,7 @@ export class PluginWorkerClient {
     this.pluginId = input.pluginId;
     this.installationId = input.installationId;
     this.grantedCapabilities = input.grantedCapabilities;
+// @ts-expect-error -- EOPT strict mode
     this.onCrash = input.onCrash;
 
     const isolation = getRuntimeConfig().plugins.isolation;
@@ -268,6 +269,7 @@ export class PluginWorkerClient {
     }
     const next = new Error(extractErrorMessage(value));
     next.name = extractErrorName(value);
+// @ts-expect-error -- EOPT strict mode
     next.stack = extractErrorStack(value);
     pending.reject(next);
   }

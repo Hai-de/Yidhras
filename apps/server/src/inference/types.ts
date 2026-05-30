@@ -46,21 +46,21 @@ export interface PreviousAgentOutputRecord {
 }
 
 export interface InferenceRequestInput {
-  agent_id?: string;
-  identity_id?: string;
-  actor_entity_id?: string;
-  strategy?: string;
-  attributes?: Record<string, unknown>;
-  idempotency_key?: string;
-  pack_id?: string | null;
+  agent_id?: string | undefined;
+  identity_id?: string | undefined;
+  actor_entity_id?: string | undefined;
+  strategy?: string | undefined;
+  attributes?: Record<string, unknown> | undefined;
+  idempotency_key?: string | undefined;
+  pack_id?: string | null | undefined;
   /** Multi-turn conversation: deterministic triple-based conversation ID */
-  conversation_id?: string;
+  conversation_id?: string | undefined;
   /** Multi-turn conversation: the other agent in the conversation */
-  listener_agent_id?: string;
+  listener_agent_id?: string | undefined;
   /** Workflow engine source metadata for trace/action recovery and attribution. */
-  workflow_source?: InferenceWorkflowSource;
+  workflow_source?: InferenceWorkflowSource | undefined;
   /** Workflow step input channel keyed by source workflow step id. */
-  previous_agent_output?: Record<string, PreviousAgentOutputRecord>;
+  previous_agent_output?: Record<string, PreviousAgentOutputRecord> | undefined;
 }
 
 export type InferenceJobIntentClass = 'direct_inference' | 'scheduler_periodic' | 'scheduler_event_followup' | 'replay_recovery' | 'retry_recovery' | 'operator_forced';
@@ -68,7 +68,7 @@ export type InferenceJobIntentClass = 'direct_inference' | 'scheduler_periodic' 
 export interface InferenceJobSnapshot {
   id: string;
   source_inference_id: string;
-  pending_source_key?: string | null;
+  pending_source_key?: string | null | undefined;
   action_intent_id: string | null;
   job_type: string;
   status: InferenceJobStatus;
@@ -103,14 +103,14 @@ export interface InferenceJobRetryResult {
 }
 
 export interface InferenceJobReplayInput {
-  reason?: string;
-  idempotency_key?: string;
+  reason?: string | undefined;
+  idempotency_key?: string | undefined;
   overrides?: {
-    strategy?: InferenceStrategy;
-    attributes?: Record<string, unknown>;
-    agent_id?: string;
-    identity_id?: string;
-    actor_entity_id?: string;
+    strategy?: InferenceStrategy | undefined;
+    attributes?: Record<string, unknown> | undefined;
+    agent_id?: string | undefined;
+    identity_id?: string | undefined;
+    actor_entity_id?: string | undefined;
   };
 }
 
@@ -120,8 +120,8 @@ export interface InferenceJobReplayMetadata {
   reason: string | null;
   override_applied: boolean;
   override_snapshot: {
-    strategy?: InferenceStrategy;
-    attributes?: Record<string, unknown>;
+    strategy?: InferenceStrategy | undefined;
+    attributes?: Record<string, unknown> | undefined;
   } | null;
   parent_job: {
     id: string;
@@ -152,7 +152,7 @@ export interface InferenceBindingRef {
 export interface InferenceActorRef {
   identity_id: string;
   identity_type: IdentityContext['type'];
-  entity_kind?: string;
+  entity_kind?: string | undefined;
   role: InferenceActorRole;
   agent_id: string | null;
   atmosphere_node_id: string | null;
@@ -186,7 +186,7 @@ export interface InferenceWorldPackRef {
   metadata_id: string;
   name: string;
   version: string;
-  behavior_trees?: Record<string, unknown>;
+  behavior_trees?: Record<string, unknown> | undefined;
 }
 
 export type InferencePackStateValue = WorldPackValue;
@@ -222,7 +222,7 @@ export interface InferencePackInvocationRule {
 }
 
 export interface InferencePackRuntimeContract {
-  invocation_rules?: InferencePackInvocationRule[];
+  invocation_rules?: InferencePackInvocationRule[] | undefined;
 }
 
 /**
@@ -267,7 +267,7 @@ export interface PromptResolvableContext extends ActorResolvable, PackStateResol
 export interface InferenceContext extends PromptResolvableContext {
   inference_id: string;
   binding_ref: InferenceBindingRef | null;
-  world_ai?: WorldPackAiConfig | null;
+  world_ai?: WorldPackAiConfig | null | undefined;
   visible_variables: PromptVariableRecord;
   policy_summary: InferencePolicySummary;
   transmission_profile: InferenceTransmissionProfile;
@@ -279,23 +279,23 @@ export interface InferenceContext extends PromptResolvableContext {
   agent_capabilities: string[];
 
   /** Multi-turn conversation: per-agent conversation memory (Phase 1) */
-  agent_conversation_memory?: AgentConversationMemory | null;
+  agent_conversation_memory?: AgentConversationMemory | null | undefined;
   /** Multi-turn conversation: the agent ID of the current inference subject */
-  current_agent_id?: string;
+  current_agent_id?: string | undefined;
   /** Multi-turn conversation: YAML conversation profile name (e.g. 'chat-first-turn') */
-  conversation_profile?: string;
-  previous_agent_output?: Record<string, PreviousAgentOutputRecord>;
+  conversation_profile?: string | undefined;
+  previous_agent_output?: Record<string, PreviousAgentOutputRecord> | undefined;
 }
 
 export interface InferenceMemoryMutationRecord {
   kind: 'overlay' | 'memory_block';
   record_id: string;
   operation: 'created' | 'updated' | 'archived' | 'deleted';
-  actor_id?: string | null;
-  pack_id?: string | null;
-  note_kind?: string | null;
-  status?: string | null;
-  metadata?: Record<string, unknown> | null;
+  actor_id?: string | null | undefined;
+  pack_id?: string | null | undefined;
+  note_kind?: string | null | undefined;
+  status?: string | null | undefined;
+  metadata?: Record<string, unknown> | null | undefined;
 }
 
 export interface InferenceMemoryMutationSnapshot {
@@ -343,10 +343,10 @@ export interface DecisionResult {
   action_type: string;
   target_ref: Record<string, unknown> | null;
   payload: Record<string, unknown>;
-  confidence?: number;
-  delay_hint_ticks?: string;
-  reasoning?: string;
-  meta?: Record<string, unknown>;
+  confidence?: number | undefined;
+  delay_hint_ticks?: string | undefined;
+  reasoning?: string | undefined;
+  meta?: Record<string, unknown> | undefined;
 }
 
 export interface ActionIntentDraft {
@@ -360,9 +360,9 @@ export interface ActionIntentDraft {
   transmission_drop_chance: number;
   drop_reason: string | null;
   source_inference_id: string;
-  source_workflow_run_id?: string | null;
-  source_workflow_step_id?: string | null;
-  source_step_attempt?: number | null;
+  source_workflow_run_id?: string | null | undefined;
+  source_workflow_step_id?: string | null | undefined;
+  source_step_attempt?: number | null | undefined;
 }
 
 export interface InferencePreviewMetadata {
@@ -376,7 +376,7 @@ export interface TraceMetadata extends InferencePreviewMetadata {
   tick: string;
   strategy: InferenceStrategy;
   provider: string;
-  memory_mutations?: InferenceMemoryMutationSnapshot | null;
+  memory_mutations?: InferenceMemoryMutationSnapshot | null | undefined;
 }
 
 export interface InferencePreviewResult {

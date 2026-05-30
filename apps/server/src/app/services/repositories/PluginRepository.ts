@@ -23,11 +23,11 @@ export interface PluginRepository {
   getInstallationByScope(input: {
     plugin_id: string;
     scope_type: PluginScopeType;
-    scope_ref?: string;
+    scope_ref?: string | undefined;
   }): Promise<PluginInstallation | null>;
   listInstallationsByScope(input: {
     scope_type: PluginScopeType;
-    scope_ref?: string;
+    scope_ref?: string | undefined;
   }): Promise<PluginInstallation[]>;
   upsertInstallation(input: PluginInstallationUpsertInput): Promise<PluginInstallation>;
   createActivationSession(input: PluginActivationSessionCreateInput): Promise<PluginActivationSession>;

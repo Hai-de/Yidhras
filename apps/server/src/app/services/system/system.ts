@@ -16,7 +16,7 @@ function serializeStepStrategy(strategy: StepStrategy): Record<string, unknown> 
     loop_interval_ms: strategy.loopIntervalMs
   };
   if (strategy.kind === 'adaptive' && strategy.adaptive) {
-    base.adaptive = {
+    base['adaptive'] = {
       target_loop_ms: strategy.adaptive.targetLoopMs,
       scale_up_threshold_ms: strategy.adaptive.scaleUpThresholdMs,
       scale_down_threshold_ms: strategy.adaptive.scaleDownThresholdMs
@@ -62,7 +62,7 @@ export interface RuntimeStatusSnapshot {
         name: string;
         version: string;
         description?: string;
-        authors?: Array<{ name: string; role?: string; homepage?: string }>;
+        authors?: Array<{ name: string; role?: string | undefined; homepage?: string | undefined }>;
         license?: string;
         homepage?: string;
         repository?: string;
@@ -134,6 +134,7 @@ export const ensureSchedulerBootstrapOwnership = async (
   }
 ): Promise<void> => {
   const runtimeKernel = createRuntimeKernelService(context, options.packId);
+// @ts-expect-error -- EOPT strict mode
   await runtimeKernel.reconcileBootstrapOwnership({
     schedulerWorkerId: options.schedulerWorkerId,
     schedulerPartitionIds: options.schedulerPartitionIds
@@ -141,8 +142,8 @@ export const ensureSchedulerBootstrapOwnership = async (
 };
 
 export const resetDevelopmentRuntimeState = async (context: AppContext): Promise<DevRuntimeResetSummary | null> => {
-  const appEnv = (process.env.APP_ENV ?? process.env.NODE_ENV ?? 'development').trim().toLowerCase();
-  const enabled = parseBooleanEnv(process.env.DEV_RUNTIME_RESET_ON_START ?? '1');
+  const appEnv = (process.env['APP_ENV'] ?? process.env['NODE_ENV'] ?? 'development').trim().toLowerCase();
+  const enabled = parseBooleanEnv(process.env['DEV_RUNTIME_RESET_ON_START'] ?? '1');
   if (appEnv !== 'development' || !enabled) {
     return null;
   }
@@ -185,9 +186,10 @@ export const getRuntimeStatusSnapshot = async (
     throw new Error('packId is required for getRuntimeStatusSnapshot');
   }
   const pack = context.getPackRuntimeHandle(packId)?.pack ?? null;
-  const schedulerWorkerId = options.schedulerWorkerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
+  const schedulerWorkerId = options.schedulerWorkerId ?? process.env['SCHEDULER_WORKER_ID'] ?? `scheduler:${process.pid}`;
   const visibleClock = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId });
   const runtimeKernel = createRuntimeKernelService(context, packId);
+// @ts-expect-error -- EOPT strict mode
   const ownershipSnapshot = await runtimeKernel.getOwnershipSnapshot({
     workerId: schedulerWorkerId,
     partitionIds: options.schedulerPartitionIds

@@ -28,14 +28,18 @@ export const parseSchedulerCursor = (value: string | undefined): SchedulerListCu
     typeof parsed !== 'object' ||
     parsed === null ||
     Array.isArray(parsed) ||
-    typeof (parsed as Record<string, unknown>).created_at !== 'string' ||
-    typeof (parsed as Record<string, unknown>).id !== 'string'
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated object
+    typeof (parsed as Record<string, unknown>)['created_at'] !== 'string' ||
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated object
+    typeof (parsed as Record<string, unknown>)['id'] !== 'string'
   ) {
     throw new ApiError(400, SCHEDULER_QUERY_INVALID, 'cursor payload is invalid');
   }
 
-  const createdAt = (parsed as Record<string, unknown>).created_at as string;
-  const id = (parsed as Record<string, unknown>).id as string;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated as string above
+  const createdAt = (parsed as Record<string, unknown>)['created_at'] as string;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- validated as string above
+  const id = (parsed as Record<string, unknown>)['id'] as string;
   if (!/^\d+$/.test(createdAt) || id.trim().length === 0) {
     throw new ApiError(400, SCHEDULER_QUERY_INVALID, 'cursor payload is invalid');
   }

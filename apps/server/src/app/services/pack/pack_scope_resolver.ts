@@ -12,6 +12,7 @@ const normalizeRequestedPackId = (packId: string): string => {
 };
 
 export const createPackScopeResolver = (context: AppContext) => {
+// @ts-expect-error -- EOPT strict mode
   const lookup = getPackRuntimeLookupPort({
     packRuntimeLookup: context.packRuntimeLookup
   });

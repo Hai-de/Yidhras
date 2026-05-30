@@ -181,6 +181,7 @@ export class PrismaWorkflowRunRepository implements WorkflowRunRepository {
   }
 
   async listActiveRuns(input: ListActiveWorkflowRunsInput = {}): Promise<WorkflowRunRecord[]> {
+// @ts-expect-error -- EOPT strict mode
     const rows = await this.prisma.workflowRun.findMany({
       where: {
         status: { in: ACTIVE_WORKFLOW_RUN_STATUSES },
@@ -222,6 +223,7 @@ export class PrismaWorkflowRunRepository implements WorkflowRunRepository {
   async updateRunStatus(input: UpdateWorkflowRunStatusInput): Promise<void> {
     await this.prisma.workflowRun.update({
       where: { id: input.run_id },
+// @ts-expect-error -- EOPT strict mode
       data: {
         status: input.status,
         last_advance_tick: input.last_advance_tick,

@@ -1,5 +1,4 @@
 import type { PolicyRule } from '../access_policy/types.js';
-import type { IdentityContext } from '../identity/types.js';
 import { extractSemanticType } from './helpers.js';
 import type {
   InferenceAgentSnapshot,
@@ -80,10 +79,12 @@ export const toPolicyRule = (row: PolicyPrismaRow): PolicyRule => ({
   id: row.id,
   effect: row.effect === 'deny' ? 'deny' : 'allow',
   subject_id: row.subject_id ?? null,
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- DB value typed at boundary
   subject_type: (row.subject_type as PolicyRule['subject_type']) ?? null,
   resource: row.resource,
   action: row.action,
   field: row.field,
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- DB value typed at boundary
   conditions: (row.conditions as Record<string, unknown> | null | undefined) ?? null,
   priority: row.priority
 });

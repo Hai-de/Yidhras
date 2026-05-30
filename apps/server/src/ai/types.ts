@@ -22,13 +22,13 @@ export type AiContentPart =
   | { type: 'text'; text: string }
   | { type: 'json'; json: Record<string, unknown> }
   | { type: 'image_url'; url: string }
-  | { type: 'file_ref'; file_id: string; mime_type?: string };
+  | { type: 'file_ref'; file_id: string; mime_type?: string | undefined };
 
 export interface AiMessage {
   role: AiMessageRole;
   parts: AiContentPart[];
-  name?: string;
-  metadata?: Record<string, unknown>;
+  name?: string | undefined;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export const AI_RESPONSE_MODES = ['free_text', 'json_object', 'json_schema', 'tool_call', 'embedding'] as const;
@@ -50,53 +50,53 @@ export interface AiToolSpec {
   name: string;
   description: string;
   input_schema: Record<string, unknown>;
-  strict?: boolean;
+  strict?: boolean | undefined;
 }
 
 export interface AiToolPolicy {
   mode: 'disabled' | 'allowed' | 'required';
-  allowed_tool_names?: string[];
-  max_tool_calls?: number;
+  allowed_tool_names?: string[] | undefined;
+  max_tool_calls?: number | undefined;
 }
 
 export interface AiStructuredOutputSpec {
   schema_name: string;
   json_schema: Record<string, unknown>;
-  strict?: boolean;
+  strict?: boolean | undefined;
 }
 
 export interface ModelGatewayRequest {
   invocation_id: string;
   task_id: string;
   task_type: AiTaskType;
-  provider_hint?: string | null;
-  model_hint?: string | null;
-  route_id?: string | null;
+  provider_hint?: string | null | undefined;
+  model_hint?: string | null | undefined;
+  route_id?: string | null | undefined;
   messages: AiMessage[];
   response_mode: AiResponseMode;
-  structured_output?: AiStructuredOutputSpec | null;
-  tools?: AiToolSpec[];
-  tool_policy?: AiToolPolicy | null;
+  structured_output?: AiStructuredOutputSpec | null | undefined;
+  tools?: AiToolSpec[] | undefined;
+  tool_policy?: AiToolPolicy | null | undefined;
   sampling?: {
-    temperature?: number;
-    top_p?: number;
-    max_output_tokens?: number;
-    stop?: string[];
-    seed?: number;
-    extensions?: Record<string, unknown>;
+    temperature?: number | undefined;
+    top_p?: number | undefined;
+    max_output_tokens?: number | undefined;
+    stop?: string[] | undefined;
+    seed?: number | undefined;
+    extensions?: Record<string, unknown> | undefined;
   };
   execution?: {
     timeout_ms: number;
     retry_limit: number;
     allow_fallback: boolean;
-    idempotency_key?: string | null;
+    idempotency_key?: string | null | undefined;
   };
   governance?: {
-    privacy_tier?: AiPrivacyTier;
-    safety_profile?: string | null;
-    audit_level?: AiAuditLevel;
+    privacy_tier?: AiPrivacyTier | undefined;
+    safety_profile?: string | null | undefined;
+    audit_level?: AiAuditLevel | undefined;
   };
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface AiInvocationAttemptRecord {
@@ -104,22 +104,22 @@ export interface AiInvocationAttemptRecord {
   model: string;
   status: 'completed' | 'failed' | 'blocked' | 'timeout';
   finish_reason: 'stop' | 'length' | 'tool_call' | 'safety' | 'error' | 'unknown';
-  latency_ms?: number;
-  error_code?: string | null;
-  error_stage?: 'route' | 'provider' | 'decode' | 'validate' | 'safety' | 'unknown' | null;
+  latency_ms?: number | undefined;
+  error_code?: string | null | undefined;
+  error_stage?: 'route' | 'provider' | 'decode' | 'validate' | 'safety' | 'unknown' | null | undefined;
 }
 
 export interface AiInvocationTrace {
   task_id: string;
   task_type: AiTaskType;
   route_id: string | null;
-  source_inference_id?: string | null;
-  workflow_task_type?: string | null;
+  source_inference_id?: string | null | undefined;
+  workflow_task_type?: string | null | undefined;
   audit_level: AiAuditLevel;
   attempts: AiInvocationAttemptRecord[];
-  request?: Record<string, unknown> | null;
-  response?: Record<string, unknown> | null;
-  tool_loop?: AiToolLoopTrace;
+  request?: Record<string, unknown> | null | undefined;
+  response?: Record<string, unknown> | null | undefined;
+  tool_loop?: AiToolLoopTrace | undefined;
 }
 
 export interface AiToolLoopTrace {
@@ -141,38 +141,38 @@ export interface ModelGatewayResponse {
   route_id: string | null;
   fallback_used: boolean;
   /** 指示此响应来自缓存而非 provider 调用 */
-  cached?: boolean;
+  cached?: boolean | undefined;
   attempted_models: string[];
   status: 'completed' | 'failed' | 'blocked' | 'timeout';
   finish_reason: 'stop' | 'length' | 'tool_call' | 'safety' | 'error' | 'unknown';
   output: {
     mode: AiResponseMode;
-    text?: string;
-    json?: Record<string, unknown> | null;
+    text?: string | undefined;
+    json?: Record<string, unknown> | null | undefined;
     tool_calls?: Array<{
       name: string;
       arguments: Record<string, unknown>;
-      call_id?: string;
+      call_id?: string | undefined;
     }>;
-    embedding?: number[];
+    embedding?: number[] | undefined;
   };
   usage?: {
-    input_tokens?: number;
-    output_tokens?: number;
-    total_tokens?: number;
-    cached_input_tokens?: number;
-    thinking_tokens?: number;
-    estimated_cost_usd?: number;
-    latency_ms?: number;
+    input_tokens?: number | undefined;
+    output_tokens?: number | undefined;
+    total_tokens?: number | undefined;
+    cached_input_tokens?: number | undefined;
+    thinking_tokens?: number | undefined;
+    estimated_cost_usd?: number | undefined;
+    latency_ms?: number | undefined;
   };
   safety?: {
     blocked: boolean;
-    reason_code?: string | null;
-    provider_signal?: Record<string, unknown> | null;
+    reason_code?: string | null | undefined;
+    provider_signal?: Record<string, unknown> | null | undefined;
   };
   raw_ref?: {
-    provider_request_id?: string | null;
-    provider_response_id?: string | null;
+    provider_request_id?: string | null | undefined;
+    provider_response_id?: string | null | undefined;
   };
   error?: {
     code: string;
@@ -180,41 +180,41 @@ export interface ModelGatewayResponse {
     retryable: boolean;
     stage: 'route' | 'provider' | 'decode' | 'validate' | 'safety' | 'unknown';
   } | null;
-  trace?: AiInvocationTrace;
+  trace?: AiInvocationTrace | undefined;
 }
 
 export interface AiTaskRequestMetadata extends PromptBundleMetadata {
-  inference_id?: string | null;
+  inference_id?: string | null | undefined;
   binding_ref?: unknown;
 }
 
 export interface AiTaskRequest {
   task_id: string;
   task_type: AiTaskType;
-  pack_id?: string | null;
-  actor_ref?: Record<string, unknown> | null;
+  pack_id?: string | null | undefined;
+  actor_ref?: Record<string, unknown> | null | undefined;
   input: Record<string, unknown>;
   prompt_context: {
     prompt_bundle_v2: unknown;
-    agent_conversation_memory?: import('../conversation/types.js').AgentConversationMemory | null;
-    current_agent_id?: string;
-    conversation_profile?: string;
+    agent_conversation_memory?: import('../conversation/types.js').AgentConversationMemory | null | undefined;
+    current_agent_id?: string | undefined;
+    conversation_profile?: string | undefined;
   };
   output_contract?: {
     mode: AiResponseMode;
-    json_schema?: Record<string, unknown>;
-  };
+    json_schema?: Record<string, unknown> | undefined;
+  } | undefined;
   route_hints?: {
-    route_id?: string;
-    provider?: string;
-    model?: string;
-    latency_tier?: AiLatencyTier;
-    determinism_tier?: AiDeterminismTier;
-    privacy_tier?: AiPrivacyTier;
-  };
-  tools?: AiToolSpec[];
-  tool_policy?: AiToolPolicy | null;
-  metadata?: AiTaskRequestMetadata;
+    route_id?: string | undefined;
+    provider?: string | undefined;
+    model?: string | undefined;
+    latency_tier?: AiLatencyTier | undefined;
+    determinism_tier?: AiDeterminismTier | undefined;
+    privacy_tier?: AiPrivacyTier | undefined;
+  } | undefined;
+  tools?: AiToolSpec[] | undefined;
+  tool_policy?: AiToolPolicy | null | undefined;
+  metadata?: AiTaskRequestMetadata | undefined;
 }
 
 export interface AiTaskResult<TOutput = unknown> {
@@ -225,10 +225,10 @@ export interface AiTaskResult<TOutput = unknown> {
 }
 
 export interface AiModelSelector {
-  provider?: string;
-  model?: string;
-  tags?: string[];
-  exclude_tags?: string[];
+  provider?: string | undefined;
+  model?: string | undefined;
+  tags?: string[] | undefined;
+  exclude_tags?: string[] | undefined;
 }
 
 export const AI_MODEL_STRUCTURED_OUTPUT_SUPPORT = ['none', 'json_object', 'json_schema'] as const;
@@ -247,116 +247,116 @@ export interface AiModelCapabilities {
   vision_input: boolean;
   embeddings: boolean;
   rerank: boolean;
-  max_context_tokens?: number;
-  max_output_tokens?: number;
+  max_context_tokens?: number | undefined;
+  max_output_tokens?: number | undefined;
 }
 
 export interface AiProviderConfig {
   provider: string;
-  api_key_env?: string | null;
-  base_url?: string | null;
-  organization_env?: string | null;
-  project_env?: string | null;
-  default_headers?: Record<string, string>;
+  api_key_env?: string | null | undefined;
+  base_url?: string | null | undefined;
+  organization_env?: string | null | undefined;
+  project_env?: string | null | undefined;
+  default_headers?: Record<string, string> | undefined;
   enabled: boolean;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface AiModelRegistryEntry {
   provider: string;
   model: string;
   endpoint_kind: AiModelEndpointKind;
-  base_url?: string | null;
-  api_version?: string | null;
+  base_url?: string | null | undefined;
+  api_version?: string | null | undefined;
   capabilities: AiModelCapabilities;
   tags: string[];
   availability: AiModelAvailability;
   pricing?: {
-    input_per_1m_usd?: number;
-    output_per_1m_usd?: number;
-  };
+    input_per_1m_usd?: number | undefined;
+    output_per_1m_usd?: number | undefined;
+  } | undefined;
   defaults?: {
-    timeout_ms?: number;
-    temperature?: number;
-    max_output_tokens?: number;
-  };
-  metadata?: Record<string, unknown>;
+    timeout_ms?: number | undefined;
+    temperature?: number | undefined;
+    max_output_tokens?: number | undefined;
+  } | undefined;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface AiRouteConstraints {
-  require_structured_output?: boolean;
-  require_tool_calling?: boolean;
-  require_local_only?: boolean;
-  max_latency_ms?: number;
-  max_cost_usd?: number;
-  privacy_tier?: AiPrivacyTier;
-  response_modes?: AiResponseMode[];
-  allow_tool_calling?: boolean;
-  allowed_tool_ids?: string[];
+  require_structured_output?: boolean | undefined;
+  require_tool_calling?: boolean | undefined;
+  require_local_only?: boolean | undefined;
+  max_latency_ms?: number | undefined;
+  max_cost_usd?: number | undefined;
+  privacy_tier?: AiPrivacyTier | undefined;
+  response_modes?: AiResponseMode[] | undefined;
+  allow_tool_calling?: boolean | undefined;
+  allowed_tool_ids?: string[] | undefined;
 }
 
 export interface AiRouteDefaults {
-  timeout_ms?: number;
-  retry_limit?: number;
-  allow_fallback?: boolean;
-  audit_level?: AiAuditLevel;
+  timeout_ms?: number | undefined;
+  retry_limit?: number | undefined;
+  allow_fallback?: boolean | undefined;
+  audit_level?: AiAuditLevel | undefined;
   /** 熔断器配置（预留，暂不暴露到 YAML schema） */
   circuit_breaker?: {
-    failure_threshold?: number;
-    recovery_timeout_ms?: number;
+    failure_threshold?: number | undefined;
+    recovery_timeout_ms?: number | undefined;
   };
   /** 速率限制配置（预留，暂不暴露到 YAML schema） */
   rate_limit?: {
-    max_concurrent?: number;
+    max_concurrent?: number | undefined;
   };
   /** 退避策略配置（预留，暂不暴露到 YAML schema） */
   backoff?: {
-    base_delay_ms?: number;
-    max_delay_ms?: number;
+    base_delay_ms?: number | undefined;
+    max_delay_ms?: number | undefined;
   };
 }
 
 export interface AiRoutePolicy {
   route_id: string;
   task_types: AiTaskType[];
-  pack_id?: string | null;
+  pack_id?: string | null | undefined;
   preferred_models: AiModelSelector[];
   fallback_models: AiModelSelector[];
-  constraints?: AiRouteConstraints;
-  defaults?: AiRouteDefaults;
-  metadata?: Record<string, unknown>;
+  constraints?: AiRouteConstraints | undefined;
+  defaults?: AiRouteDefaults | undefined;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface AiRegistryConfig {
   version: number;
-  provider_templates?: AiProviderTemplate[];
+  provider_templates?: AiProviderTemplate[] | undefined;
   providers: AiProviderConfig[];
   models: AiModelRegistryEntry[];
   routes: AiRoutePolicy[];
-  tools?: AiToolRegistryEntry[];
+  tools?: AiToolRegistryEntry[] | undefined;
 }
 
 export interface AiProviderTemplate {
   name: string;
   kind: 'openai_compatible' | 'anthropic_compatible' | 'builtin';
-  base_url?: string | null;
-  api_key_env?: string | null;
+  base_url?: string | null | undefined;
+  api_key_env?: string | null | undefined;
   capability_overrides?: {
-    disallowTempWithTopP?: boolean;
-    maxTokensField?: 'max_completion_tokens' | 'max_tokens';
-    supportsSeed?: boolean;
-    maxStructuredOutput?: 'none' | 'json_object' | 'json_schema';
-  };
+    disallowTempWithTopP?: boolean | undefined;
+    maxTokensField?: 'max_completion_tokens' | 'max_tokens' | undefined;
+    supportsSeed?: boolean | undefined;
+    maxStructuredOutput?: 'none' | 'json_object' | 'json_schema' | undefined;
+  } | undefined;
   /** Anthropic 兼容协议特有覆盖项（仅 kind === 'anthropic_compatible' 时生效） */
   anthropic_overrides?: {
-    supportsThinking?: boolean;
-    supportsImageInput?: boolean;
-    supportsToolUse?: boolean;
-    apiVersion?: string | null;
-    authHeader?: 'x-api-key' | 'bearer';
-  };
-  default_headers?: Record<string, string>;
-  builtin_name?: string | null;
+    supportsThinking?: boolean | undefined;
+    supportsImageInput?: boolean | undefined;
+    supportsToolUse?: boolean | undefined;
+    apiVersion?: string | null | undefined;
+    authHeader?: 'x-api-key' | 'bearer' | undefined;
+  } | undefined;
+  default_headers?: Record<string, string> | undefined;
+  builtin_name?: string | null | undefined;
 }
 
 export const AI_TOOL_SANDBOX_LEVELS = ['strict', 'readonly_world', 'mutation'] as const;
@@ -367,72 +367,72 @@ export interface AiToolRegistryEntry {
   name: string;
   description: string;
   input_schema: Record<string, unknown>;
-  strict?: boolean;
+  strict?: boolean | undefined;
   kind: 'system' | 'pack';
-  pack_id?: string | null;
+  pack_id?: string | null | undefined;
   enabled: boolean;
-  sandbox?: AiToolSandboxLevel;
-  metadata?: Record<string, unknown>;
+  sandbox?: AiToolSandboxLevel | undefined;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface AiTaskPromptOverride {
-  preset?: string;
-  system_append?: string;
-  developer_append?: string;
-  user_prefix?: string;
-  include_sections?: string[];
-  examples?: Array<Record<string, unknown>>;
+  preset?: string | undefined;
+  system_append?: string | undefined;
+  developer_append?: string | undefined;
+  user_prefix?: string | undefined;
+  include_sections?: string[] | undefined;
+  examples?: Array<Record<string, unknown>> | undefined;
 }
 
 export interface AiTaskOutputOverride {
-  mode?: AiResponseMode;
-  schema?: Record<string, unknown>;
-  strict?: boolean;
+  mode?: AiResponseMode | undefined;
+  schema?: Record<string, unknown> | undefined;
+  strict?: boolean | undefined;
 }
 
 export interface AiTaskParseOverride {
-  decoder?: string;
-  unwrap?: string;
-  field_alias?: Record<string, string>;
-  required_fields?: string[];
-  defaults?: Record<string, unknown>;
+  decoder?: string | undefined;
+  unwrap?: string | undefined;
+  field_alias?: Record<string, string> | undefined;
+  required_fields?: string[] | undefined;
+  defaults?: Record<string, unknown> | undefined;
 }
 
 export interface AiTaskRouteHint {
-  route_id?: string;
-  provider?: string;
-  model?: string;
-  latency_tier?: AiLatencyTier;
-  determinism_tier?: AiDeterminismTier;
-  privacy_tier?: AiPrivacyTier;
+  route_id?: string | undefined;
+  provider?: string | undefined;
+  model?: string | undefined;
+  latency_tier?: AiLatencyTier | undefined;
+  determinism_tier?: AiDeterminismTier | undefined;
+  privacy_tier?: AiPrivacyTier | undefined;
 }
 
 export interface AiTaskOverride {
-  prompt?: AiTaskPromptOverride;
-  output?: AiTaskOutputOverride;
-  parse?: AiTaskParseOverride;
-  route?: AiTaskRouteHint;
-  tools?: string[];
-  tool_policy?: AiToolPolicy;
-  metadata?: Record<string, unknown>;
+  prompt?: AiTaskPromptOverride | undefined;
+  output?: AiTaskOutputOverride | undefined;
+  parse?: AiTaskParseOverride | undefined;
+  route?: AiTaskRouteHint | undefined;
+  tools?: string[] | undefined;
+  tool_policy?: AiToolPolicy | undefined;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface AiPackConfigDefaults {
-  prompt_preset?: string;
-  decoder?: string;
-  route_id?: string;
-  privacy_tier?: AiPrivacyTier;
+  prompt_preset?: string | undefined;
+  decoder?: string | undefined;
+  route_id?: string | undefined;
+  privacy_tier?: AiPrivacyTier | undefined;
 }
 
 export interface AiPackMemoryLoopConfig {
-  summary_every_n_rounds?: number;
-  compaction_every_n_rounds?: number;
+  summary_every_n_rounds?: number | undefined;
+  compaction_every_n_rounds?: number | undefined;
 }
 
 export interface AiPackConfig {
-  defaults?: AiPackConfigDefaults;
-  memory_loop?: AiPackMemoryLoopConfig;
-  tasks?: Partial<Record<AiTaskType, AiTaskOverride>>;
+  defaults?: AiPackConfigDefaults | undefined;
+  memory_loop?: AiPackMemoryLoopConfig | undefined;
+  tasks?: Partial<Record<AiTaskType, AiTaskOverride>> | undefined;
 }
 
 export interface AiTaskDefinition {
@@ -440,12 +440,12 @@ export interface AiTaskDefinition {
   default_response_mode: AiResponseMode;
   default_prompt_preset: string;
   default_decoder: string;
-  default_route_id?: string | null;
-  default_schema?: Record<string, unknown>;
-  default_strict?: boolean;
-  default_privacy_tier?: AiPrivacyTier;
-  default_tools?: string[];
-  default_tool_policy?: AiToolPolicy;
+  default_route_id?: string | null | undefined;
+  default_schema?: Record<string, unknown> | undefined;
+  default_strict?: boolean | undefined;
+  default_privacy_tier?: AiPrivacyTier | undefined;
+  default_tools?: string[] | undefined;
+  default_tool_policy?: AiToolPolicy | undefined;
 }
 
 export interface AiResolvedTaskConfig {
@@ -453,23 +453,23 @@ export interface AiResolvedTaskConfig {
   override: AiTaskOverride | null;
   output: {
     mode: AiResponseMode;
-    schema?: Record<string, unknown>;
-    strict?: boolean;
+    schema?: Record<string, unknown> | undefined;
+    strict?: boolean | undefined;
   };
   prompt: AiTaskPromptOverride;
   parse: AiTaskParseOverride;
   route: AiTaskRouteHint;
   tools: string[];
   tool_policy: AiToolPolicy;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface AiRouteSelectionInput {
   task_type: AiTaskType;
-  pack_id?: string | null;
-  response_mode?: AiResponseMode;
-  route_hint?: AiTaskRouteHint | null;
-  task_override?: AiTaskOverride | null;
+  pack_id?: string | null | undefined;
+  response_mode?: AiResponseMode | undefined;
+  route_hint?: AiTaskRouteHint | null | undefined;
+  task_override?: AiTaskOverride | null | undefined;
 }
 
 export interface AiRouteSelectionResult {

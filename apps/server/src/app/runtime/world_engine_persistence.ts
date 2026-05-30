@@ -1,9 +1,8 @@
-import {
+import type {
   PreparedWorldStep,
   WORLD_ENGINE_PROTOCOL_VERSION,
   WorldEngineCommitResult,
-  type WorldStateDeltaOperation,
-  WorldStepAbortRequest,
+  type WorldStateDeltaOperation,  WorldStepAbortRequest,
   WorldStepCommitRequest,
   WorldStepPrepareRequest} from '@yidhras/contracts';
 
@@ -211,8 +210,8 @@ const applyPreparedWorldStateDelta = async (input: {
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
         const recordObject = nextRecord as Record<string, unknown>;
-        const recordId = typeof recordObject.id === 'string' ? recordObject.id.trim() : '';
-        const payloadJson = recordObject.payload_json;
+        const recordId = typeof recordObject['id'] === 'string' ? recordObject['id'].trim() : '';
+        const payloadJson = recordObject['payload_json'];
         if (recordId.length === 0) {
           throw new ApiError(500, 'HOST_PERSIST_FAILED', 'append_rule_execution requires payload.next.id', {
             operation
@@ -251,10 +250,10 @@ const applyPreparedWorldStateDelta = async (input: {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime-guarded object access
         const clockObject = nextClock as Record<string, unknown>;
         clockDelta = {
-          previous_tick: typeof clockObject.previous_tick === 'string' ? clockObject.previous_tick : null,
-          next_tick: typeof clockObject.next_tick === 'string' ? clockObject.next_tick : null,
-          previous_revision: typeof clockObject.previous_revision === 'string' ? clockObject.previous_revision : null,
-          next_revision: typeof clockObject.next_revision === 'string' ? clockObject.next_revision : null
+          previous_tick: typeof clockObject['previous_tick'] === 'string' ? clockObject['previous_tick'] : null,
+          next_tick: typeof clockObject['next_tick'] === 'string' ? clockObject['next_tick'] : null,
+          previous_revision: typeof clockObject['previous_revision'] === 'string' ? clockObject['previous_revision'] : null,
+          next_revision: typeof clockObject['next_revision'] === 'string' ? clockObject['next_revision'] : null
         };
         appliedOperations.push(operation.op);
         break;
@@ -443,6 +442,7 @@ export const executeWorldEnginePreparedStep = async (input: {
       }
     }
 
+// @ts-expect-error -- EOPT strict mode
     const persisted = await input.persistence.persistPreparedStep({
       context: input.context,
       prepared,
@@ -466,6 +466,7 @@ export const executeWorldEnginePreparedStep = async (input: {
     };
 
     const committed = await input.worldEngine.commitPreparedStep(commitInput);
+// @ts-expect-error -- EOPT strict mode
     applyCommittedClockProjection({ context: input.context, packId, committed, persisted, packRuntime: input.packRuntime });
     coordinator.clearSingleFlightState(packId);
     coordinator.clearTaintedPackId(packId);

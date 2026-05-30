@@ -18,16 +18,16 @@ export interface PluginInstallationUpsertInput {
   artifact_id: string;
   version: string;
   scope_type: PluginScopeType;
-  scope_ref?: string;
+  scope_ref?: string | undefined;
   lifecycle_state: PluginLifecycleState;
   requested_capabilities: string[];
   granted_capabilities: string[];
   trust_mode: PluginTrustMode;
-  failure_policy?: 'fail_open' | 'block_pack_activation';
-  confirmed_at?: string;
-  enabled_at?: string;
-  disabled_at?: string;
-  last_error?: string;
+  failure_policy?: 'fail_open' | 'block_pack_activation' | undefined;
+  confirmed_at?: string | undefined;
+  enabled_at?: string | undefined;
+  disabled_at?: string | undefined;
+  last_error?: string | undefined;
 }
 
 export interface PluginActivationSessionCreateInput {
@@ -37,10 +37,10 @@ export interface PluginActivationSessionCreateInput {
   channel: PluginActivationChannel;
   result: PluginActivationSession['result'];
   started_at: string;
-  finished_at?: string;
-  loaded_server?: boolean;
-  loaded_web_manifest?: boolean;
-  error_message?: string;
+  finished_at?: string | undefined;
+  loaded_server?: boolean | undefined;
+  loaded_web_manifest?: boolean | undefined;
+  error_message?: string | undefined;
 }
 
 export interface PluginEnableAcknowledgementCreateInput {
@@ -50,8 +50,8 @@ export interface PluginEnableAcknowledgementCreateInput {
   channel: PluginAcknowledgementChannel;
   reminder_text_hash: string;
   acknowledged: boolean;
-  actor_id?: string;
-  actor_label?: string;
+  actor_id?: string | undefined;
+  actor_label?: string | undefined;
   created_at: string;
 }
 
@@ -60,8 +60,8 @@ export interface PluginStore {
   getArtifactByChecksum(checksum: string): Promise<PluginArtifact | null>;
   upsertArtifact(input: PluginArtifact): Promise<PluginArtifact>;
   getInstallationById(installationId: string): Promise<PluginInstallation | null>;
-  getInstallationByScope(input: { plugin_id: string; scope_type: PluginScopeType; scope_ref?: string }): Promise<PluginInstallation | null>;
-  listInstallationsByScope(input: { scope_type: PluginScopeType; scope_ref?: string }): Promise<PluginInstallation[]>;
+  getInstallationByScope(input: { plugin_id: string; scope_type: PluginScopeType; scope_ref?: string | undefined }): Promise<PluginInstallation | null>;
+  listInstallationsByScope(input: { scope_type: PluginScopeType; scope_ref?: string | undefined }): Promise<PluginInstallation[]>;
   upsertInstallation(input: PluginInstallationUpsertInput): Promise<PluginInstallation>;
   createActivationSession(input: PluginActivationSessionCreateInput): Promise<PluginActivationSession>;
   updateActivationSession(
@@ -84,18 +84,18 @@ export interface PluginManagerService {
     artifact: PluginArtifact;
     pack_id: string;
     requested_capabilities: string[];
-    granted_capabilities?: string[];
-    trust_mode?: PluginTrustMode;
+    granted_capabilities?: string[] | undefined;
+    trust_mode?: PluginTrustMode | undefined;
   }): Promise<PluginRegistrationResult>;
   confirmInstallation(input: {
     installation_id: string;
-    granted_capabilities?: string[];
+    granted_capabilities?: string[] | undefined;
     confirmed_at: string;
   }): Promise<PluginInstallation>;
   enableInstallation(input: {
     installation_id: string;
     enabled_at: string;
-    granted_capabilities?: string[];
+    granted_capabilities?: string[] | undefined;
   }): Promise<PluginInstallation>;
   disableInstallation(input: {
     installation_id: string;
@@ -113,9 +113,9 @@ export interface PluginManagerService {
     activation_id: string;
     result: PluginActivationSession['result'];
     finished_at: string;
-    loaded_server?: boolean;
-    loaded_web_manifest?: boolean;
-    error_message?: string;
+    loaded_server?: boolean | undefined;
+    loaded_web_manifest?: boolean | undefined;
+    error_message?: string | undefined;
   }): Promise<PluginActivationSession>;
   recordEnableAcknowledgement(input: PluginEnableAcknowledgementCreateInput): Promise<PluginEnableAcknowledgement>;
   getManifestFingerprint(manifest: PluginManifest): string;

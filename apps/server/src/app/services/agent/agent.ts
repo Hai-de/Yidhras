@@ -328,34 +328,34 @@ export const getEntityOverview = async (
   const latestContextSnapshot = isRecord(latestTrace?.context_snapshot)
     ? (latestTrace?.context_snapshot)
     : null;
-  const latestPolicyDecisions = latestContextSnapshot && Array.isArray(latestContextSnapshot.policy_decisions)
-    ? latestContextSnapshot.policy_decisions.filter(isRecord).map(item => item)
+  const latestPolicyDecisions = latestContextSnapshot && Array.isArray(latestContextSnapshot['policy_decisions'])
+    ? latestContextSnapshot['policy_decisions'].filter(isRecord).map(item => item)
     : [];
-  const latestBlockedNodes = latestContextSnapshot && Array.isArray(latestContextSnapshot.blocked_nodes)
-    ? latestContextSnapshot.blocked_nodes.filter(isRecord).map(item => item)
+  const latestBlockedNodes = latestContextSnapshot && Array.isArray(latestContextSnapshot['blocked_nodes'])
+    ? latestContextSnapshot['blocked_nodes'].filter(isRecord).map(item => item)
     : [];
-  const latestLockedNodes = latestContextSnapshot && Array.isArray(latestContextSnapshot.locked_nodes)
-    ? latestContextSnapshot.locked_nodes.filter(isRecord).map(item => item)
+  const latestLockedNodes = latestContextSnapshot && Array.isArray(latestContextSnapshot['locked_nodes'])
+    ? latestContextSnapshot['locked_nodes'].filter(isRecord).map(item => item)
     : [];
-  const latestVisibilityDenials = latestContextSnapshot && Array.isArray(latestContextSnapshot.visibility_denials)
-    ? latestContextSnapshot.visibility_denials.filter(isRecord).map(item => item)
+  const latestVisibilityDenials = latestContextSnapshot && Array.isArray(latestContextSnapshot['visibility_denials'])
+    ? latestContextSnapshot['visibility_denials'].filter(isRecord).map(item => item)
     : [];
-  const latestOverlayNodesLoaded = latestContextSnapshot && Array.isArray(latestContextSnapshot.overlay_nodes_loaded)
-    ? latestContextSnapshot.overlay_nodes_loaded.filter(isRecord)
+  const latestOverlayNodesLoaded = latestContextSnapshot && Array.isArray(latestContextSnapshot['overlay_nodes_loaded'])
+    ? latestContextSnapshot['overlay_nodes_loaded'].filter(isRecord)
     : [];
-  const latestOverlayNodesMutated = latestContextSnapshot && Array.isArray(latestContextSnapshot.overlay_nodes_mutated)
-    ? latestContextSnapshot.overlay_nodes_mutated.filter(isRecord).map(item => item)
+  const latestOverlayNodesMutated = latestContextSnapshot && Array.isArray(latestContextSnapshot['overlay_nodes_mutated'])
+    ? latestContextSnapshot['overlay_nodes_mutated'].filter(isRecord).map(item => item)
     : [];
-  const latestMemoryBlocks = latestContextSnapshot && isRecord(latestContextSnapshot.memory_blocks)
-    ? latestContextSnapshot.memory_blocks
+  const latestMemoryBlocks = latestContextSnapshot && isRecord(latestContextSnapshot['memory_blocks'])
+    ? latestContextSnapshot['memory_blocks']
     : null;
-  const latestMemoryBlockMutations = latestContextSnapshot && Array.isArray(latestContextSnapshot.memory_block_mutations)
-    ? latestContextSnapshot.memory_block_mutations.filter(isRecord).map(item => item)
+  const latestMemoryBlockMutations = latestContextSnapshot && Array.isArray(latestContextSnapshot['memory_block_mutations'])
+    ? latestContextSnapshot['memory_block_mutations'].filter(isRecord).map(item => item)
     : [];
-  const latestTraceMemoryMutations = latestTrace && isRecord(latestTrace.trace_metadata) && Array.isArray((latestTrace.trace_metadata).memory_mutations)
-    ? (((latestTrace.trace_metadata).memory_mutations as unknown[]).filter(isRecord).map(item => item))
-    : latestTrace && isRecord(latestTrace.trace_metadata) && isRecord((latestTrace.trace_metadata).memory_mutations) && Array.isArray(((latestTrace.trace_metadata).memory_mutations).records)
-      ? ((((latestTrace.trace_metadata).memory_mutations).records as unknown[]).filter(isRecord).map(item => item))
+  const latestTraceMemoryMutations = latestTrace && isRecord(latestTrace.trace_metadata) && Array.isArray((latestTrace.trace_metadata)['memory_mutations'])
+    ? (((latestTrace.trace_metadata)['memory_mutations'] as unknown[]).filter(isRecord).map(item => item))
+    : latestTrace && isRecord(latestTrace.trace_metadata) && isRecord((latestTrace.trace_metadata)['memory_mutations']) && Array.isArray(((latestTrace.trace_metadata)['memory_mutations'])['records'])
+      ? ((((latestTrace.trace_metadata)['memory_mutations'])['records'] as unknown[]).filter(isRecord).map(item => item))
       : [];
   const packEntity = packProjection.entities.find(entity => entity.id === resolvedAgentId) ?? null;
   const memoryCompactionState = await context.repos.memory.getCompactionState(resolvedAgentId);
@@ -451,7 +451,7 @@ export const getEntityOverview = async (
     recent_inference_results: filteredRecentTraces.map(trace => ({
       job_id:
         findWorkflowByInferenceId(trace.id)?.id ??
-        recentActivity.find(entry => entry.kind === 'workflow' && entry.refs.inference_id === trace.id)?.id ??
+        recentActivity.find(entry => entry.kind === 'workflow' && entry.refs['inference_id'] === trace.id)?.id ??
         '',
       inference_id: trace.id,
       strategy: trace.strategy,
@@ -485,34 +485,34 @@ export const getEntityOverview = async (
     memory: {
       summary: {
         recent_trace_count: filteredRecentTraces.length,
-        latest_memory_context: latestContextSnapshot && isRecord(latestContextSnapshot.memory_context)
-          ? (latestContextSnapshot.memory_context)
+        latest_memory_context: latestContextSnapshot && isRecord(latestContextSnapshot['memory_context'])
+          ? (latestContextSnapshot['memory_context'])
           : null,
-        latest_memory_selection: latestContextSnapshot && isRecord(latestContextSnapshot.memory_selection)
-          ? (latestContextSnapshot.memory_selection)
+        latest_memory_selection: latestContextSnapshot && isRecord(latestContextSnapshot['memory_selection'])
+          ? (latestContextSnapshot['memory_selection'])
           : null,
-        latest_prompt_processing_trace: latestContextSnapshot && isRecord(latestContextSnapshot.prompt_processing_trace)
-          ? (latestContextSnapshot.prompt_processing_trace)
+        latest_prompt_processing_trace: latestContextSnapshot && isRecord(latestContextSnapshot['prompt_processing_trace'])
+          ? (latestContextSnapshot['prompt_processing_trace'])
           : null
       },
       latest_blocks: {
-        evaluated: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.evaluated)
-          ? latestMemoryBlocks.evaluated.filter(isRecord).map(item => item)
+        evaluated: latestMemoryBlocks && Array.isArray(latestMemoryBlocks['evaluated'])
+          ? latestMemoryBlocks['evaluated'].filter(isRecord).map(item => item)
           : [],
-        inserted: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.inserted)
-          ? latestMemoryBlocks.inserted.filter((item): item is string => typeof item === 'string')
+        inserted: latestMemoryBlocks && Array.isArray(latestMemoryBlocks['inserted'])
+          ? latestMemoryBlocks['inserted'].filter((item): item is string => typeof item === 'string')
           : [],
-        delayed: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.delayed)
-          ? latestMemoryBlocks.delayed.filter((item): item is string => typeof item === 'string')
+        delayed: latestMemoryBlocks && Array.isArray(latestMemoryBlocks['delayed'])
+          ? latestMemoryBlocks['delayed'].filter((item): item is string => typeof item === 'string')
           : [],
-        cooling: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.cooling)
-          ? latestMemoryBlocks.cooling.filter((item): item is string => typeof item === 'string')
+        cooling: latestMemoryBlocks && Array.isArray(latestMemoryBlocks['cooling'])
+          ? latestMemoryBlocks['cooling'].filter((item): item is string => typeof item === 'string')
           : [],
-        retained: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.retained)
-          ? latestMemoryBlocks.retained.filter((item): item is string => typeof item === 'string')
+        retained: latestMemoryBlocks && Array.isArray(latestMemoryBlocks['retained'])
+          ? latestMemoryBlocks['retained'].filter((item): item is string => typeof item === 'string')
           : [],
-        inactive: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.inactive)
-          ? latestMemoryBlocks.inactive.filter((item): item is string => typeof item === 'string')
+        inactive: latestMemoryBlocks && Array.isArray(latestMemoryBlocks['inactive'])
+          ? latestMemoryBlocks['inactive'].filter((item): item is string => typeof item === 'string')
           : [],
         mutations: latestMemoryBlockMutations
       }
@@ -527,34 +527,34 @@ export const getEntityOverview = async (
       overlay: {
         count: latestOverlayNodesLoaded.length,
         latest_items: latestOverlayNodesLoaded.slice(0, limit).map(item => ({
-          node_id: typeof item.node_id === 'string' ? item.node_id : '',
-          overlay_id: typeof item.overlay_id === 'string' ? item.overlay_id : '',
-          overlay_type: typeof item.overlay_type === 'string' ? item.overlay_type : 'self_note',
-          persistence_mode: typeof item.persistence_mode === 'string' ? item.persistence_mode : 'sticky',
-          created_by: item.created_by === 'agent' ? 'agent' : 'system',
-          status: typeof item.status === 'string' ? item.status : 'active',
-          preferred_slot: typeof item.preferred_slot === 'string' ? item.preferred_slot : null
+          node_id: typeof item['node_id'] === 'string' ? item['node_id'] : '',
+          overlay_id: typeof item['overlay_id'] === 'string' ? item['overlay_id'] : '',
+          overlay_type: typeof item['overlay_type'] === 'string' ? item['overlay_type'] : 'self_note',
+          persistence_mode: typeof item['persistence_mode'] === 'string' ? item['persistence_mode'] : 'sticky',
+          created_by: item['created_by'] === 'agent' ? 'agent' : 'system',
+          status: typeof item['status'] === 'string' ? item['status'] : 'active',
+          preferred_slot: typeof item['preferred_slot'] === 'string' ? item['preferred_slot'] : null
         })),
         latest_mutations: latestOverlayNodesMutated.slice(0, limit)
       },
       memory_blocks: {
-        evaluated: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.evaluated)
-          ? latestMemoryBlocks.evaluated.filter(isRecord).map(item => item)
+        evaluated: latestMemoryBlocks && Array.isArray(latestMemoryBlocks['evaluated'])
+          ? latestMemoryBlocks['evaluated'].filter(isRecord).map(item => item)
           : [],
-        inserted: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.inserted)
-          ? latestMemoryBlocks.inserted.filter((item): item is string => typeof item === 'string')
+        inserted: latestMemoryBlocks && Array.isArray(latestMemoryBlocks['inserted'])
+          ? latestMemoryBlocks['inserted'].filter((item): item is string => typeof item === 'string')
           : [],
-        delayed: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.delayed)
-          ? latestMemoryBlocks.delayed.filter((item): item is string => typeof item === 'string')
+        delayed: latestMemoryBlocks && Array.isArray(latestMemoryBlocks['delayed'])
+          ? latestMemoryBlocks['delayed'].filter((item): item is string => typeof item === 'string')
           : [],
-        cooling: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.cooling)
-          ? latestMemoryBlocks.cooling.filter((item): item is string => typeof item === 'string')
+        cooling: latestMemoryBlocks && Array.isArray(latestMemoryBlocks['cooling'])
+          ? latestMemoryBlocks['cooling'].filter((item): item is string => typeof item === 'string')
           : [],
-        retained: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.retained)
-          ? latestMemoryBlocks.retained.filter((item): item is string => typeof item === 'string')
+        retained: latestMemoryBlocks && Array.isArray(latestMemoryBlocks['retained'])
+          ? latestMemoryBlocks['retained'].filter((item): item is string => typeof item === 'string')
           : [],
-        inactive: latestMemoryBlocks && Array.isArray(latestMemoryBlocks.inactive)
-          ? latestMemoryBlocks.inactive.filter((item): item is string => typeof item === 'string')
+        inactive: latestMemoryBlocks && Array.isArray(latestMemoryBlocks['inactive'])
+          ? latestMemoryBlocks['inactive'].filter((item): item is string => typeof item === 'string')
           : [],
         mutations: latestMemoryBlockMutations,
         compaction_state: memoryCompactionState

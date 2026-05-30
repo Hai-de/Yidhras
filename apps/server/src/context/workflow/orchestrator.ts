@@ -1,6 +1,7 @@
 import { getPromptSlotRegistry } from '../../ai/registry.js';
 import { getRuntimeConfig } from '../../config/runtime_config.js';
 import { resolveConversationFormatConfig } from '../../conversation/format_config.js';
+import type { PromptSlotConfig } from '../../inference/prompt_slot_config.js';
 import { loadSlotBehaviorConfig, validateSlotBehaviorConfig } from '../../inference/slot_behavior.js';
 import { resolveSlotPositions } from '../../inference/slot_position_resolver.js';
 import type { InferenceContext } from '../../inference/types.js';
@@ -47,10 +48,12 @@ export const buildWorkflowPromptBundle = async (input: {
     pack_id: input.context.world_pack.instance_id,
     profile
   });
-  state.slot_registry = slotRegistry.slots;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime slot registry guaranteed to be Record<string, PromptSlotConfig>
+  state.slot_registry = slotRegistry.slots as Record<string, PromptSlotConfig>;
 
   const { resolved_positions, diagnostics: posDiagnostics } =
-    resolveSlotPositions(slotRegistry.slots);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime slot registry guaranteed to be Record<string, PromptSlotConfig>
+    resolveSlotPositions(slotRegistry.slots as Record<string, PromptSlotConfig>);
   state.resolved_positions = resolved_positions;
   state.diagnostics.slot_position_diagnostics = posDiagnostics;
 
@@ -58,7 +61,8 @@ export const buildWorkflowPromptBundle = async (input: {
   const tracksEnabled = profile.tracks ?? { template: true, node: true, snapshot: true };
 
   if (tracksEnabled.template !== false) {
-    const r = runTemplateTrack(slotRegistry.slots, resolved_positions, input.context);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime slot registry guaranteed to be Record<string, PromptSlotConfig>
+    const r = runTemplateTrack(slotRegistry.slots as Record<string, PromptSlotConfig>, resolved_positions, input.context);
     state.section_drafts.push(...r.result);
     trackResults.push(r.trace);
   }
@@ -68,7 +72,8 @@ export const buildWorkflowPromptBundle = async (input: {
     trackResults.push(r.trace);
   }
   if (tracksEnabled.snapshot !== false) {
-    const r = runSnapshotTrack(input.context, slotRegistry.slots);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime slot registry guaranteed to be Record<string, PromptSlotConfig>
+    const r = runSnapshotTrack(input.context, slotRegistry.slots as Record<string, PromptSlotConfig>);
     state.section_drafts.push(...r.result);
     trackResults.push(r.trace);
   }
@@ -77,7 +82,8 @@ export const buildWorkflowPromptBundle = async (input: {
     const formatConfig = resolveConversationFormatConfig(conversationProfile);
     const r = runConversationHistoryTrack({
       memory: input.context.agent_conversation_memory,
-      slotRegistry: slotRegistry.slots,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- runtime slot registry guaranteed to be Record<string, PromptSlotConfig>
+      slotRegistry: slotRegistry.slots as Record<string, PromptSlotConfig>,
       resolvedPositions: resolved_positions,
       formatConfig,
       currentAgentId: input.context.current_agent_id ?? 'unknown'

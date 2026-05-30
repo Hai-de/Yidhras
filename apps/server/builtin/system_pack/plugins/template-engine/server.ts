@@ -9,7 +9,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const cleanTemplate = async (input: DataCleanerInput): Promise<DataCleanerOutput> => {
   const { text, options } = input;
-  const variables = isRecord(options?.variables) ? options.variables : {};
+  const variables = isRecord(options?.['variables']) ? options['variables'] : {};
 
   let rendered: string;
   let renderError: string | undefined;

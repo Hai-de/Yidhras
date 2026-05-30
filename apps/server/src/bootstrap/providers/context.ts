@@ -124,11 +124,11 @@ export const appContextProvider: ServiceProvider = {
     } as unknown as AppContext;
 
     // Step 2: 创建依赖 AppContext 的对象并回填
-    (ctx as unknown as Record<string, unknown>).packHostApi = createPackHostApi(ctx);
-    (ctx as unknown as Record<string, unknown>).contextAssembly = createContextAssemblyPort(ctx);
+    (ctx as unknown as Record<string, unknown>)['packHostApi'] = createPackHostApi(ctx);
+    (ctx as unknown as Record<string, unknown>)['contextAssembly'] = createContextAssemblyPort(ctx);
 
     // pluginRuntimeControl — reload 需要完整 AppContext
-    (ctx as unknown as Record<string, unknown>).pluginRuntimeControl = {
+    (ctx as unknown as Record<string, unknown>)['pluginRuntimeControl'] = {
       reload: async (packId: string) => {
         await syncPackPluginRuntime(ctx, packId);
         const runtimeCount = pluginRuntimeRegistry.listRuntimes(packId).length;
@@ -140,12 +140,12 @@ export const appContextProvider: ServiceProvider = {
     const pluginAiTaskService: AiTaskService = createAiTaskService({ context: ctx });
 
     // requestPluginInference — 为插件推理提供独立入口
-    (ctx as unknown as Record<string, unknown>).requestPluginInference = async (input: Record<string, unknown>) => {
+    (ctx as unknown as Record<string, unknown>)['requestPluginInference'] = async (input: Record<string, unknown>) => {
       const messages = [
-        { role: 'system' as const, parts: [{ type: 'text' as const, text: input.systemPrompt as string }] },
-        { role: 'user' as const, parts: [{ type: 'text' as const, text: input.userPrompt as string }] }
+        { role: 'system' as const, parts: [{ type: 'text' as const, text: input['systemPrompt'] as string }] },
+        { role: 'user' as const, parts: [{ type: 'text' as const, text: input['userPrompt'] as string }] }
       ];
-      const taskId = `plugin:${String(input.purpose)}`;
+      const taskId = `plugin:${String(input['purpose'])}`;
       const result = await pluginAiTaskService.runTask({
         task_id: taskId,
         task_type: 'agent_decision',
@@ -154,7 +154,7 @@ export const appContextProvider: ServiceProvider = {
           prompt_bundle_v2: buildPromptBundleFromAiMessages({ taskId, taskType: 'agent_decision', messages })
         },
         output_contract: { mode: 'free_text' },
-        route_hints: input.maxTokens
+        route_hints: input['maxTokens']
           ? { determinism_tier: 'balanced' }
           : undefined
       });

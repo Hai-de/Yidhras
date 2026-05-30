@@ -71,7 +71,7 @@ export const getLatestSchedulerRunReadModel = async (
     return null;
   }
 
-  return buildRunWithCandidates(context, packId, runs[0]);
+  return buildRunWithCandidates(context, packId, runs[0]!);
 };
 
 export const getSchedulerRunReadModelById = async (
@@ -103,6 +103,7 @@ export const listSchedulerRuns = (
     return emptyRunListResult(filters);
   }
 
+// @ts-expect-error -- EOPT strict mode
   const queryInput: ListRunsInput = {
     tickFrom: filters.from_tick ?? undefined,
     tickTo: filters.to_tick ?? undefined,
@@ -121,8 +122,8 @@ export const listSchedulerRuns = (
   const pageItems = pageRecords.map(r => toRunReadModel(r));
   const nextCursor = hasNextPage && pageItems.length > 0
     ? encodeSchedulerCursor({
-        created_at: pageItems[pageItems.length - 1].created_at,
-        id: pageItems[pageItems.length - 1].id
+        created_at: pageItems[pageItems.length - 1]!.created_at,
+        id: pageItems[pageItems.length - 1]!.id
       })
     : null;
 

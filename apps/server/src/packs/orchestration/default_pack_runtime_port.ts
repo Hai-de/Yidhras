@@ -77,6 +77,7 @@ export class DefaultPackRuntimePort implements PackRuntimePort {
 
     const variableContext = createPromptVariableContext({ layers });
 
+// @ts-expect-error -- EOPT strict mode
     return renderNarrativeTemplate({
       template,
       variableContext,

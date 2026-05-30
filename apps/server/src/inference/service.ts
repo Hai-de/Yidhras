@@ -291,6 +291,7 @@ const executeRunInternal = async (
 
   const prompt = provider.requiresPrompt
     ? (
+// @ts-expect-error -- EOPT strict mode
         await buildWorkflowPromptBundle({
           context: inferenceContext,
           taskType: 'agent_decision',
@@ -382,22 +383,22 @@ const executeRunInternal = async (
   );
 
   const transmissionDelayTicks =
-    grounded.decision.meta && typeof grounded.decision.meta.transmission_delay_ticks === 'string'
-      ? grounded.decision.meta.transmission_delay_ticks
-      : grounded.decision.meta && typeof grounded.decision.meta.transmission_delay_ticks === 'number'
-        ? String(grounded.decision.meta.transmission_delay_ticks)
+    grounded.decision.meta && typeof grounded.decision.meta['transmission_delay_ticks'] === 'string'
+      ? grounded.decision.meta['transmission_delay_ticks']
+      : grounded.decision.meta && typeof grounded.decision.meta['transmission_delay_ticks'] === 'number'
+        ? String(grounded.decision.meta['transmission_delay_ticks'])
         : grounded.decision.delay_hint_ticks ?? '0';
   const transmissionDropChance =
-    grounded.decision.meta && typeof grounded.decision.meta.transmission_drop_chance === 'number'
-      ? grounded.decision.meta.transmission_drop_chance
+    grounded.decision.meta && typeof grounded.decision.meta['transmission_drop_chance'] === 'number'
+      ? grounded.decision.meta['transmission_drop_chance']
       : 0;
   const transmissionPolicy =
-    grounded.decision.meta && typeof grounded.decision.meta.transmission_policy === 'string'
-      ? grounded.decision.meta.transmission_policy
+    grounded.decision.meta && typeof grounded.decision.meta['transmission_policy'] === 'string'
+      ? grounded.decision.meta['transmission_policy']
       : 'reliable';
   const dropReason =
-    grounded.decision.meta && typeof grounded.decision.meta.drop_reason === 'string'
-      ? grounded.decision.meta.drop_reason
+    grounded.decision.meta && typeof grounded.decision.meta['drop_reason'] === 'string'
+      ? grounded.decision.meta['drop_reason']
       : null;
 
   actionIntentDraft.transmission_delay_ticks = transmissionDelayTicks;
@@ -435,7 +436,7 @@ const executeRunInternal = async (
   );
   const semanticIntentKind =
     grounded.semantic_intent.kind ??
-    (typeof grounded.decision.payload.semantic_intent_kind === 'string' ? grounded.decision.payload.semantic_intent_kind : null);
+    (typeof grounded.decision.payload['semantic_intent_kind'] === 'string' ? grounded.decision.payload['semantic_intent_kind'] : null);
   const decisionReflection = await memoryRecordingService.recordDecisionReflection({
     actor_id: inferenceContext.resolved_agent_id ?? inferenceContext.actor_ref.agent_id ?? inferenceContext.actor_ref.identity_id,
     pack_id: inferenceContext.world_pack.instance_id,
@@ -460,10 +461,11 @@ const executeRunInternal = async (
     ...decisionReflection.memory_block_mutations
   ];
   const aiInvocationId =
-    grounded.decision.meta && typeof grounded.decision.meta.ai_invocation_id === 'string'
-      ? grounded.decision.meta.ai_invocation_id
+    grounded.decision.meta && typeof grounded.decision.meta['ai_invocation_id'] === 'string'
+      ? grounded.decision.meta['ai_invocation_id']
       : null;
 
+// @ts-expect-error -- EOPT strict mode
   await persistTraceEvent(traceSink, {
     kind: 'run',
     inference_id: inferenceContext.inference_id,

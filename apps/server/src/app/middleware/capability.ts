@@ -100,7 +100,7 @@ export const capabilityGuard = (
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion,security/detect-object-injection -- Express query/param value
         : ((req.query[queryKey] as string | undefined)
             // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express mergeParams
-            || (req.params.packId as string | undefined))
+            || (req.params['packId'] as string | undefined))
 
       if (!packId) {
         throw new ApiError(400, 'PACK_ID_REQUIRED', 'Pack ID is required for capability check')

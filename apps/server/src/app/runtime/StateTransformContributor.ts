@@ -23,40 +23,40 @@ export const StateTransformContributor: StepContributor = {
     const actorEntityIds = new Set(
       worldEntities
         .filter(e => {
-          const kind = isString(e.entity_kind) ? e.entity_kind : '';
+          const kind = isString(e['entity_kind']) ? e['entity_kind'] : '';
           return kind === 'actor' || kind.startsWith('actor:');
         })
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- entity id is always string
-        .map(e => e.id as string)
+        .map(e => e['id'] as string)
     );
 
     const actorStates = entityStates
       .filter(
         s =>
-          isString(s.state_namespace) && s.state_namespace === 'core' &&
-          isString(s.entity_id) && actorEntityIds.has(s.entity_id) &&
-          isRecord(s.state_json)
+          isString(s['state_namespace']) && s['state_namespace'] === 'core' &&
+          isString(s['entity_id']) && actorEntityIds.has(s['entity_id']) &&
+          isRecord(s['state_json'])
       )
       .map(s => ({
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- entity_id column
-        entity_id: s.entity_id as string,
+        entity_id: s['entity_id'] as string,
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma JSON column
-        state_json: s.state_json as Record<string, unknown>
+        state_json: s['state_json'] as Record<string, unknown>
       }));
 
     const transformDefs = worldEntities
-      .filter(e => isString(e.entity_kind) && e.entity_kind === 'state_transform')
+      .filter(e => isString(e['entity_kind']) && e['entity_kind'] === 'state_transform')
       .map(e => {
-        const payload = isRecord(e.payload_json) ? e.payload_json : {};
+        const payload = isRecord(e['payload_json']) ? e['payload_json'] : {};
         return {
-          source: isString(payload.source) ? payload.source : '',
+          source: isString(payload['source']) ? payload['source'] : '',
           // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
-          ranges: (Array.isArray(payload.ranges) ? payload.ranges : []) as Array<{
+          ranges: (Array.isArray(payload['ranges']) ? payload['ranges'] : []) as Array<{
             min: number;
             max: number;
             label: string;
           }>,
-          target: isString(payload.target) ? payload.target : ''
+          target: isString(payload['target']) ? payload['target'] : ''
         };
       })
       .filter(t => t.source.length > 0 && t.target.length > 0 && t.ranges.length > 0);

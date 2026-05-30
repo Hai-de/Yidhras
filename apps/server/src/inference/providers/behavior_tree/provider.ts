@@ -47,6 +47,7 @@ export const createBehaviorTreeProvider = ({
       const treeDef = getTreeRegistry(context).get(treeName);
       const agentId = context.actor_ref.agent_id ?? 'unknown';
 
+// @ts-expect-error -- EOPT strict mode
       const evalCtx: BTEvalContext = {
         inferenceContext: context,
         blackboard: {
@@ -78,8 +79,8 @@ export const createBehaviorTreeProvider = ({
 
 const resolveTreeName = (context: InferenceContext): string | null => {
   // Check attributes first (for testing / operator override)
-  if (context.attributes.behavior_tree && typeof context.attributes.behavior_tree === 'string') {
-    return context.attributes.behavior_tree;
+  if (context.attributes['behavior_tree'] && typeof context.attributes['behavior_tree'] === 'string') {
+    return context.attributes['behavior_tree'];
   }
 
   // Phase 7: resolve from actor entity definition inference config

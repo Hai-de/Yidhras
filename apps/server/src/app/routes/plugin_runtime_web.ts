@@ -52,16 +52,16 @@ export const pluginRuntimeWebRoutes: RouteModule = {
       const params = parseParams(
         pluginWebAssetParamsSchema,
         {
-          packId: req.params.packId,
-          pluginId: req.params.pluginId,
-          installationId: req.params.installationId
+          packId: req.params['packId'],
+          pluginId: req.params['pluginId'],
+          installationId: req.params['installationId']
         },
         'PLUGIN_QUERY_INVALID'
       );
-      const wildcardAssetPath = Array.isArray(req.params.assetPath)
-        ? req.params.assetPath.join('/')
-        : typeof req.params.assetPath === 'string'
-          ? req.params.assetPath
+      const wildcardAssetPath = Array.isArray(req.params['assetPath'])
+        ? req.params['assetPath'].join('/')
+        : typeof req.params['assetPath'] === 'string'
+          ? req.params['assetPath']
           : '';
       const asset = await packScopedPluginRuntimeService.resolveEnabledPluginWebAsset({
         pack_id: params.packId,

@@ -68,10 +68,10 @@ export const createMemoryCompactionService = ({
 }: CreateMemoryCompactionServiceOptions & { packRuntime?: PackRuntimePort }): MemoryCompactionService => {
   return {
     getThresholdsForPack(packAiConfig: unknown): MemoryCompactionThresholds {
-      const memoryLoop = isRecord(packAiConfig) && isRecord(packAiConfig.memory_loop) ? packAiConfig.memory_loop : null;
+      const memoryLoop = isRecord(packAiConfig) && isRecord(packAiConfig['memory_loop']) ? packAiConfig['memory_loop'] : null;
       return {
-        summary_every_n_rounds: toPositiveInt(memoryLoop?.summary_every_n_rounds, DEFAULT_SUMMARY_EVERY_N_ROUNDS),
-        compaction_every_n_rounds: toPositiveInt(memoryLoop?.compaction_every_n_rounds, DEFAULT_COMPACTION_EVERY_N_ROUNDS)
+        summary_every_n_rounds: toPositiveInt(memoryLoop?.['summary_every_n_rounds'], DEFAULT_SUMMARY_EVERY_N_ROUNDS),
+        compaction_every_n_rounds: toPositiveInt(memoryLoop?.['compaction_every_n_rounds'], DEFAULT_COMPACTION_EVERY_N_ROUNDS)
       };
     },
 
@@ -164,7 +164,7 @@ export const createMemoryCompactionService = ({
         const result = await aiTaskService.runTask<Record<string, unknown>>(request, {
           packAiConfig: inferenceContext.world_ai ?? null
         });
-        summaryText = typeof result.output.summary === 'string' ? result.output.summary : null;
+        summaryText = typeof result.output['summary'] === 'string' ? result.output['summary'] : null;
         if (summaryText) {
           const existingSummary = (await overlayStore.listEntries({
             actor_id: input.agent_id,
@@ -242,7 +242,7 @@ export const createMemoryCompactionService = ({
         const result = await aiTaskService.runTask<Record<string, unknown>>(request, {
           packAiConfig: inferenceContext.world_ai ?? null
         });
-        compactionText = typeof result.output.compaction === 'string' ? result.output.compaction : null;
+        compactionText = typeof result.output['compaction'] === 'string' ? result.output['compaction'] : null;
       }
 
       const updatedState = await context.repos.memory.updateCompactionState(input.agent_id, {

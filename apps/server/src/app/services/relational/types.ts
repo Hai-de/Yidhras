@@ -1,51 +1,51 @@
 export interface ListAtmosphereNodesInput {
-  owner_id?: string;
-  include_expired?: boolean;
+  owner_id?: string | undefined;
+  include_expired?: boolean | undefined;
 }
 
 export interface ListRelationshipAdjustmentLogsInput {
-  from_id?: string;
-  to_id?: string;
-  type?: string;
-  limit?: number;
+  from_id?: string | undefined;
+  to_id?: string | undefined;
+  type?: string | undefined;
+  limit?: number | undefined;
 }
 
 export interface GraphViewInput {
-  view?: string;
-  root_id?: string;
-  depth?: number;
-  kinds?: string[];
-  include_inactive?: boolean;
-  include_unresolved?: boolean;
-  search?: string;
+  view?: string | undefined;
+  root_id?: string | undefined;
+  depth?: number | undefined;
+  kinds?: string[] | undefined;
+  include_inactive?: boolean | undefined;
+  include_unresolved?: boolean | undefined;
+  search?: string | undefined;
 }
 
 export interface GraphNodeView {
   id: string;
   kind: 'agent' | 'atmosphere' | 'relay' | 'container';
   label: string;
-  render_type?: 'avatar' | 'chip' | 'relay' | 'blackbox';
+  render_type?: 'avatar' | 'chip' | 'relay' | 'blackbox' | undefined;
   display?: {
-    avatar_url?: string | null;
-    image_url?: string | null;
-    icon?: string | null;
-    accent_token?: string | null;
+    avatar_url?: string | null | undefined;
+    image_url?: string | null | undefined;
+    icon?: string | null | undefined;
+    accent_token?: string | null | undefined;
   };
   state?: {
-    is_pinned?: boolean;
-    activity_status?: 'active' | 'inactive' | 'idle' | 'unknown';
-    resolve_state?: 'open' | 'merged' | 'resolved' | 'sealed';
-    lifecycle_status?: 'active' | 'idle' | 'gc_candidate' | 'recycled' | 'sealed';
+    is_pinned?: boolean | undefined;
+    activity_status?: 'active' | 'inactive' | 'idle' | 'unknown' | undefined;
+    resolve_state?: 'open' | 'merged' | 'resolved' | 'sealed' | undefined;
+    lifecycle_status?: 'active' | 'idle' | 'gc_candidate' | 'recycled' | 'sealed' | undefined;
   };
   refs?: {
-    agent_id?: string | null;
-    atmosphere_node_id?: string | null;
-    source_action_intent_id?: string | null;
-    source_event_id?: string | null;
-    source_inference_id?: string | null;
-    merged_into_node_id?: string | null;
+    agent_id?: string | null | undefined;
+    atmosphere_node_id?: string | null | undefined;
+    source_action_intent_id?: string | null | undefined;
+    source_event_id?: string | null | undefined;
+    source_inference_id?: string | null | undefined;
+    merged_into_node_id?: string | null | undefined;
   };
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface GraphEdgeView {
@@ -53,14 +53,14 @@ export interface GraphEdgeView {
   source: string;
   target: string;
   kind: 'relationship' | 'ownership' | 'transmission' | 'derived_from';
-  label?: string;
-  weight?: number | null;
+  label?: string | undefined;
+  weight?: number | null | undefined;
   refs?: {
-    relationship_id?: string | null;
-    action_intent_id?: string | null;
-    event_id?: string | null;
+    relationship_id?: string | null | undefined;
+    action_intent_id?: string | null | undefined;
+    event_id?: string | null | undefined;
   };
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface GraphViewSnapshot {

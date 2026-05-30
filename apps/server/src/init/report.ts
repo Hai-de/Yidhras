@@ -12,15 +12,15 @@ export interface InitReport {
     env: string;
     config_dir: string;
     loaded_files: string[];
-    world_packs_dir?: string;
-    preferred_world_pack?: string;
-  };
+    world_packs_dir?: string | undefined;
+    preferred_world_pack?: string | undefined;
+  } | undefined;
   scaffold?: {
     created_count: number;
     existing_count: number;
     created_files: string[];
     existing_files: string[];
-  };
+  } | undefined;
   world_pack_bootstrap?: {
     status: WorldPackBootstrapResult['status'];
     target_pack_dir: string;
@@ -31,8 +31,8 @@ export interface InitReport {
       runtime_db_created: boolean;
       engine_owned_collections: string[];
       pack_collections: string[];
-    };
-  };
+    } | undefined;
+  } | undefined;
 }
 
 export const buildRuntimeMetadataReport = (

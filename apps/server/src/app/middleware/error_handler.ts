@@ -9,7 +9,7 @@ const logger = createLogger('error-handler');
 
 export const createGlobalErrorMiddleware = (context: AppContext) => {
   return (err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    const requestId = typeof res.locals.requestId === 'string' ? res.locals.requestId : 'req_unknown';
+    const requestId = typeof res.locals['requestId'] === 'string' ? res.locals['requestId'] : 'req_unknown';
     const isApiError = err instanceof ApiError;
     const status = isApiError ? err.status : 500;
     const code = isApiError ? err.code : 'API_INTERNAL_ERROR';

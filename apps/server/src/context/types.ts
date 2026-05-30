@@ -32,8 +32,8 @@ export interface ContextVisibilityPolicy {
   level: ContextVisibilityLevel;
   read_access: ContextReadAccess;
   /** Policy gate for field-level visibility control. */
-  policy_gate?: string | null;
-  blocked?: boolean;
+  policy_gate?: string | null | undefined;
+  blocked?: boolean | undefined;
 }
 
 export type ContextMutabilityLevel = 'immutable' | 'fixed' | 'flexible' | 'overlay';
@@ -55,14 +55,14 @@ export interface ContextPlacementPolicy {
 
 export interface ContextNodeContent {
   text: string;
-  structured?: Record<string, unknown>;
+  structured?: Record<string, unknown> | undefined;
   raw?: unknown;
 }
 
 export interface ContextNodeProvenance {
   created_by: 'system' | 'agent' | 'plugin';
   created_at_tick: string;
-  parent_node_ids?: string[];
+  parent_node_ids?: string[] | undefined;
 }
 
 // Known node_type values — kept as constants for discoverability.
@@ -89,27 +89,27 @@ export interface ContextNode {
   scope: ContextNodeScope;
   source_kind: ContextNodeSourceKind;
   source_ref: Record<string, unknown> | null;
-  actor_ref?: Record<string, unknown> | null;
+  actor_ref?: Record<string, unknown> | null | undefined;
   content: ContextNodeContent;
   tags: string[];
   importance: number;
   salience: number;
-  confidence?: number | null;
+  confidence?: number | null | undefined;
   created_at: string;
-  occurred_at?: string | null;
-  expires_at?: string | null;
+  occurred_at?: string | null | undefined;
+  expires_at?: string | null | undefined;
   visibility: ContextVisibilityPolicy;
   mutability: ContextMutabilityPolicy;
   placement_policy: ContextPlacementPolicy;
   provenance: ContextNodeProvenance;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface ContextDroppedNode {
   node_id: string;
   reason: string;
-  source_kind?: ContextNodeSourceKind | null;
-  node_type?: ContextNodeType | null;
+  source_kind?: ContextNodeSourceKind | null | undefined;
+  node_type?: ContextNodeType | null | undefined;
 }
 
 export interface ContextSelectionResult {
@@ -193,16 +193,16 @@ export interface ContextOverlayLoadedNode {
 export interface ContextOverlayMutationRecord {
   overlay_id: string;
   operation: 'created' | 'updated' | 'archived' | 'deleted';
-  node_id?: string | null;
-  status?: string | null;
+  node_id?: string | null | undefined;
+  status?: string | null | undefined;
 }
 
 export interface ContextMemoryBlockMutationRecord {
   memory_id: string;
   operation: 'created' | 'updated' | 'deleted';
-  kind?: string | null;
-  status?: string | null;
-  source_kind?: string | null;
+  kind?: string | null | undefined;
+  status?: string | null | undefined;
+  source_kind?: string | null | undefined;
 }
 
 export interface ContextMemoryBlockDiagnostics {
@@ -227,20 +227,20 @@ export interface ContextRunDiagnostics {
   node_counts_by_type: Record<string, number>;
   selected_node_ids: string[];
   dropped_nodes: ContextDroppedNode[];
-  policy_decisions?: ContextNodePolicyDecision[];
-  blocked_nodes?: ContextPolicyBlockedNode[];
-  locked_nodes?: ContextPolicyLockedNode[];
-  visibility_denials?: ContextPolicyVisibilityDenial[];
-  overlay_nodes_loaded?: ContextOverlayLoadedNode[];
-  overlay_nodes_mutated?: ContextOverlayMutationRecord[];
-  memory_block_mutations?: ContextMemoryBlockMutationRecord[];
-  memory_blocks?: ContextMemoryBlockDiagnostics | null;
-  submitted_directives?: ContextDirectiveRequest[];
-  approved_directives?: ContextApprovedDirective[];
-  denied_directives?: ContextDeniedDirective[];
-  selected_node_summaries?: Array<{ id: string; node_type: ContextNodeType; source_kind: ContextNodeSourceKind; preferred_slot: PromptFragmentSlot | null }>;
-  orchestration?: Record<string, unknown>;
-  prompt_assembly?: ContextPromptAssemblySummary | null;
+  policy_decisions?: ContextNodePolicyDecision[] | undefined;
+  blocked_nodes?: ContextPolicyBlockedNode[] | undefined;
+  locked_nodes?: ContextPolicyLockedNode[] | undefined;
+  visibility_denials?: ContextPolicyVisibilityDenial[] | undefined;
+  overlay_nodes_loaded?: ContextOverlayLoadedNode[] | undefined;
+  overlay_nodes_mutated?: ContextOverlayMutationRecord[] | undefined;
+  memory_block_mutations?: ContextMemoryBlockMutationRecord[] | undefined;
+  memory_blocks?: ContextMemoryBlockDiagnostics | null | undefined;
+  submitted_directives?: ContextDirectiveRequest[] | undefined;
+  approved_directives?: ContextApprovedDirective[] | undefined;
+  denied_directives?: ContextDeniedDirective[] | undefined;
+  selected_node_summaries?: Array<{ id: string; node_type: ContextNodeType; source_kind: ContextNodeSourceKind; preferred_slot: PromptFragmentSlot | null }> | undefined;
+  orchestration?: Record<string, unknown> | undefined;
+  prompt_assembly?: ContextPromptAssemblySummary | null | undefined;
 }
 
 export interface ContextRun {

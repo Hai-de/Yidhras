@@ -15,16 +15,16 @@ const resolveTransmissionProfile = (
   const lowSnrBase = tpConfig.policies?.low_snr_base ?? 'fragile';
   const defaultBase = tpConfig.policies?.default_base ?? 'reliable';
 
-  const explicitPolicy = typeof input.attributes.transmission_policy === 'string'
-    ? input.attributes.transmission_policy
+  const explicitPolicy = typeof input.attributes['transmission_policy'] === 'string'
+    ? input.attributes['transmission_policy']
     : null;
-  const explicitDropChance = typeof input.attributes.transmission_drop_chance === 'number'
-    ? input.attributes.transmission_drop_chance
+  const explicitDropChance = typeof input.attributes['transmission_drop_chance'] === 'number'
+    ? input.attributes['transmission_drop_chance']
     : null;
   const explicitDelayTicks =
-    typeof input.attributes.transmission_delay_ticks === 'string' ||
-    typeof input.attributes.transmission_delay_ticks === 'number'
-      ? String(input.attributes.transmission_delay_ticks)
+    typeof input.attributes['transmission_delay_ticks'] === 'string' ||
+    typeof input.attributes['transmission_delay_ticks'] === 'number'
+      ? String(input.attributes['transmission_delay_ticks'])
       : null;
 
   if (explicitPolicy === 'blocked') {

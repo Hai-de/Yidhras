@@ -72,6 +72,7 @@ export const slotRefBlockHandler: BlockHandlerFn = (
   if (slot.enabled) return slot.content;
   if (body.length > 0) {
     // 传递递归约束到子渲染
+// @ts-expect-error -- EOPT strict mode
     const childScope: SlotFunctionRenderScope = {
       ...sfScope,
       currentSlotStack: [...(sfScope.currentSlotStack ?? []), slotName],

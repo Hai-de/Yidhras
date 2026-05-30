@@ -42,6 +42,7 @@ export class SimulationManager implements RuntimeDatabaseBootstrap, PackCatalogS
       loader: this.loader
     });
 
+// @ts-expect-error -- EOPT strict mode
     this.packRuntimeRegistryService = new DefaultPackRuntimeRegistryService({
       registry: this.packRuntimeRegistry,
       packCatalog: this.packCatalogService,

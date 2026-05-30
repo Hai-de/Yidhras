@@ -128,6 +128,7 @@ export const listSchedulerOwnershipMigrations = (
       to_worker_id: migration.to_worker_id,
       status: migration.status,
       reason: migration.reason,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- parseSummaryJson expects string
       details: migration.details ? parseSummaryJson(migration.details as unknown as string) : null,
       created_at: migration.created_at,
       updated_at: migration.updated_at,

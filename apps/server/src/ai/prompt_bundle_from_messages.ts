@@ -62,7 +62,7 @@ export const buildPromptBundleFromAiMessages = (input: {
   const combinedParts: string[] = [];
 
   for (let index = 0; index < input.messages.length; index++) {
-    const message = input.messages[index];
+    const message = input.messages[index]!;
     const slotId = roleToSlotId(message.role);
     const position = roleToPosition(message.role) - index / 1000;
     const text = messageToText(message);
@@ -72,11 +72,18 @@ export const buildPromptBundleFromAiMessages = (input: {
         id: slotId,
         display_name: slotId,
         default_priority: Math.floor(position),
+        description: undefined,
         position: Math.floor(position),
+        anchor: undefined,
+        default_template: null,
+        template_context: undefined,
+        template_key: null,
         message_role: slotId === 'system_core' ? 'system' : slotId === 'role_core' ? 'developer' : 'user',
         include_in_combined: true,
         combined_heading: null,
-        enabled: true
+        permissions: null,
+        enabled: true,
+        metadata: undefined
       };
     }
 

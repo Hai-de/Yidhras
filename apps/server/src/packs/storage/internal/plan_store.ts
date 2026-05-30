@@ -12,8 +12,8 @@ export interface PersistedStoragePlan {
     fields: Array<{
       key: string;
       type: string;
-      required?: boolean;
-      values?: string[];
+      required?: boolean | undefined;
+      values?: (string)[] | undefined;
     }>;
     indexes: string[][];
   }>;

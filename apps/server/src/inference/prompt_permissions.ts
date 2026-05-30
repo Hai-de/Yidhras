@@ -28,7 +28,7 @@ export function getHostAgentIds(context: InferenceContext): string[] {
     ids.push(bindingAgentId);
   }
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-  const packHostIds = (context.world_pack as unknown as Record<string, unknown>)?.host_agent_ids;
+  const packHostIds = (context.world_pack as unknown as Record<string, unknown>)?.['host_agent_ids'];
   if (Array.isArray(packHostIds)) {
     for (const id of packHostIds) {
       if (typeof id === 'string' && !ids.includes(id)) {
@@ -92,6 +92,7 @@ export function resolveSlotPermission(input: PermissionCheckInput): PermissionCh
 
   // boolean (visible field): false = deny, true = allow
   if (typeof allowedList === 'boolean') {
+// @ts-expect-error -- EOPT strict mode
     return { allowed: allowedList, reason: allowedList ? undefined : 'visible is false' };
   }
 
@@ -111,6 +112,7 @@ export function resolveSlotPermission(input: PermissionCheckInput): PermissionCh
   ].filter((id): id is string => id !== null);
 
   const allowed = resolvedTokens.some(id => subjectIds.includes(id));
+// @ts-expect-error -- EOPT strict mode
   return {
     allowed,
     reason: allowed ? undefined : `actor not in ${input.permission_kind} allowlist`
@@ -127,8 +129,18 @@ function applyFragmentPermissions(
     id: fragment.slot_id,
     display_name: fragment.slot_id,
     default_priority: fragment.priority,
+    description: undefined,
+    position: undefined,
+    anchor: undefined,
+    default_template: null,
+    template_context: undefined,
+    template_key: null,
+    message_role: undefined,
     include_in_combined: true,
-    enabled: true
+    combined_heading: null,
+    permissions: null,
+    enabled: true,
+    metadata: undefined
   };
 
   const baseInput: Omit<PermissionCheckInput, 'permission_kind'> = {

@@ -27,15 +27,15 @@ export const resolvePromptWorkflowBudget = (input: {
   profile: PromptWorkflowProfile;
   spec?: PromptWorkflowStepSpec;
 }): PromptWorkflowBudgetResolution => {
-  const stepTokenBudget = readPositiveInteger(input.spec?.config?.token_budget);
+  const stepTokenBudget = readPositiveInteger(input.spec?.config?.['token_budget']);
   const profileTokenBudget = readPositiveInteger(input.profile.defaults?.token_budget);
   const tokenBudget = stepTokenBudget ?? profileTokenBudget ?? DEFAULT_PROMPT_TOKEN_BUDGET;
 
-  const stepSafetyMargin = readNonNegativeInteger(input.spec?.config?.safety_margin_tokens);
+  const stepSafetyMargin = readNonNegativeInteger(input.spec?.config?.['safety_margin_tokens']);
   const profileSafetyMargin = readNonNegativeInteger(input.profile.defaults?.safety_margin_tokens);
   const safetyMarginTokens = stepSafetyMargin ?? profileSafetyMargin ?? DEFAULT_PROMPT_SAFETY_MARGIN_TOKENS;
 
-  const stepContextWindow = readPositiveInteger(input.spec?.config?.model_context_window);
+  const stepContextWindow = readPositiveInteger(input.spec?.config?.['model_context_window']);
   const modelContextWindow = stepContextWindow ?? tokenBudget;
 
   return {

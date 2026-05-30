@@ -97,7 +97,7 @@ export const buildSidecarObjectiveExecutionRequest = async (
     packStorageAdapter: PackStorageAdapter;
     filteredRules?: Array<{ id: string; when?: unknown; then?: unknown }> | null;
   },
-  packRuntime?: { getPack(): { metadata: { id: string }; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> }; variables?: Record<string, unknown> } | undefined }
+  packRuntime?: { getPack(): { metadata: { id: string }; capabilities?: Array<{ key: string }> | undefined; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> | undefined } | undefined; variables?: Record<string, unknown> | undefined } | undefined }
 ): Promise<WorldRuleExecuteObjectiveRequest> => {
   const pack = packRuntime?.getPack();
   if (!pack || pack.metadata.id !== input.invocation.pack_id) {

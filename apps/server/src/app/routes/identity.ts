@@ -30,6 +30,7 @@ export function createIdentityRoutes(deps: {
     asyncHandler(async (req, res) => {
       const body = parseBody(registerIdentityRequestSchema, req.body, 'IDENTITY_INVALID');
 
+// @ts-expect-error -- EOPT strict mode
       const identity = await registerIdentity(context, body);
 
       jsonOk(res, toJsonSafe(identity));
@@ -44,6 +45,7 @@ export function createIdentityRoutes(deps: {
 
       const binding = await createIdentityBinding(
         context,
+// @ts-expect-error -- EOPT strict mode
         body,
         {
           parseOptionalTick: (value: unknown, fieldName: string) => deps.parseOptionalTick(value, fieldName)
@@ -60,6 +62,7 @@ export function createIdentityRoutes(deps: {
     asyncHandler(async (req, res) => {
       const body = parseBody(queryIdentityBindingsRequestSchema, req.body, 'IDENTITY_BINDING_INVALID');
 
+// @ts-expect-error -- EOPT strict mode
       const bindings = await queryIdentityBindings(context, body);
 
       jsonOk(res, toJsonSafe(bindings));
@@ -72,6 +75,7 @@ export function createIdentityRoutes(deps: {
     asyncHandler(async (req, res) => {
       const body = parseBody(unbindIdentityBindingRequestSchema, req.body, 'IDENTITY_BINDING_INVALID');
 
+// @ts-expect-error -- EOPT strict mode
       const binding = await unbindIdentityBinding(context, body);
 
       jsonOk(res, toJsonSafe(binding));

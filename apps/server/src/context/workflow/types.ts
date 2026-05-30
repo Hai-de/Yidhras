@@ -42,33 +42,33 @@ export type PromptWorkflowStepKind =
 export interface PromptWorkflowStepSpec {
   key: string;
   kind: PromptWorkflowStepKind;
-  enabled?: boolean;
-  config?: Record<string, unknown>;
-  requires?: string[];
-  produces?: string[];
+  enabled?: boolean | undefined;
+  config?: Record<string, unknown> | undefined;
+  requires?: string[] | undefined;
+  produces?: string[] | undefined;
 }
 
 export interface PromptWorkflowProfile {
   id: string;
   version: string;
-  description?: string;
+  description?: string | undefined;
   applies_to: {
-    task_types?: string[];
-    strategies?: Array<string>;
-    pack_ids?: string[];
+    task_types?: string[] | undefined;
+    strategies?: Array<string> | undefined;
+    pack_ids?: string[] | undefined;
   };
   defaults?: {
-    token_budget?: number;
-    safety_margin_tokens?: number;
-  };
+    token_budget?: number | undefined;
+    safety_margin_tokens?: number | undefined;
+  } | undefined;
   tracks?: {
-    template?: boolean;
-    node?: boolean;
-    snapshot?: boolean;
-    conversation_history?: boolean;
+    template?: boolean | undefined;
+    node?: boolean | undefined;
+    snapshot?: boolean | undefined;
+    conversation_history?: boolean | undefined;
   };
   /** Multi-turn conversation: YAML profile name (e.g. 'chat-first-turn') */
-  conversation_profile?: string;
+  conversation_profile?: string | undefined;
   steps: PromptWorkflowStepSpec[];
 }
 
@@ -89,32 +89,32 @@ export type PromptSectionContentBlock =
   | {
       kind: 'text';
       text: string;
-      metadata?: Record<string, unknown>;
+      metadata?: Record<string, unknown> | undefined;
     }
   | {
       kind: 'json';
       json: Record<string, unknown>;
-      metadata?: Record<string, unknown>;
+      metadata?: Record<string, unknown> | undefined;
     };
 
 export interface PromptSectionDraft {
   id: string;
   track: 'template' | 'node' | 'snapshot' | (string & {});
   section_type: PromptSectionDraftType;
-  title?: string | null;
+  title?: string | null | undefined;
   slot: PromptFragmentSlot;
   priority: number;
   source_node_ids: string[];
   content_blocks: PromptSectionContentBlock[];
   placement?: {
-    anchor?: PromptFragmentAnchor | null;
-    placement_mode?: PromptFragmentPlacementMode | null;
-    depth?: number | null;
-    order?: number | null;
+    anchor?: PromptFragmentAnchor | null | undefined;
+    placement_mode?: PromptFragmentPlacementMode | null | undefined;
+    depth?: number | null | undefined;
+    order?: number | null | undefined;
   };
   removable: boolean;
-  estimated_tokens?: number;
-  metadata?: Record<string, unknown>;
+  estimated_tokens?: number | undefined;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export interface TrackResult<T> {
@@ -155,7 +155,7 @@ export interface PromptWorkflowStepTrace {
   status: 'completed' | 'skipped' | 'failed';
   before: StepSnapshotSummary;
   after: StepSnapshotSummary;
-  notes?: Record<string, unknown>;
+  notes?: Record<string, unknown> | undefined;
 }
 
 export interface AnchorDiagnostic {
@@ -164,14 +164,14 @@ export interface AnchorDiagnostic {
   anchor_kind: string;
   anchor_value: string;
   code: 'resolved' | 'target_not_found' | 'tag_not_implemented';
-  message?: string;
+  message?: string | undefined;
 }
 
 export interface PromptWorkflowPlacementSummary {
   total_fragments: number;
   resolved_with_anchor: number;
   fallback_count: number;
-  anchor_diagnostics?: AnchorDiagnostic[];
+  anchor_diagnostics?: AnchorDiagnostic[] | undefined;
 }
 
 export interface TrackTrace {
@@ -186,13 +186,13 @@ export interface PromptWorkflowDiagnostics {
   profile_version: string;
   selected_step_keys: string[];
   step_traces: PromptWorkflowStepTrace[];
-  node_counts?: Record<string, number>;
-  working_set_counts?: Record<string, number>;
-  section_summary?: Record<string, unknown>;
-  section_budget?: PromptWorkflowSectionBudgetSummary;
-  placement_summary?: PromptWorkflowPlacementSummary;
-  slot_position_diagnostics?: SlotPositionDiagnostics;
-  track_traces?: TrackTrace[];
+  node_counts?: Record<string, number> | undefined;
+  working_set_counts?: Record<string, number> | undefined;
+  section_summary?: Record<string, unknown> | undefined;
+  section_budget?: PromptWorkflowSectionBudgetSummary | undefined;
+  placement_summary?: PromptWorkflowPlacementSummary | undefined;
+  slot_position_diagnostics?: SlotPositionDiagnostics | undefined;
+  track_traces?: TrackTrace[] | undefined;
 }
 
 export interface SlotBehaviorDiagnostic {
@@ -209,33 +209,33 @@ export interface PromptWorkflowState {
   strategy: InferenceStrategy;
   pack_id: string;
   profile: PromptWorkflowProfile;
-  include_sections?: string[];
+  include_sections?: string[] | undefined;
   selected_nodes: ContextNode[];
   working_set: ContextNode[];
   grouped_nodes: Record<string, ContextNode[]>;
   section_drafts: PromptSectionDraft[];
-  ai_messages?: AiMessage[];
-  tree?: PromptTree;
-  bundle?: PromptBundleV2;
-  slot_registry?: Record<string, PromptSlotConfig>;
-  resolved_positions?: ResolvedSlotPosition[];
+  ai_messages?: AiMessage[] | undefined;
+  tree?: PromptTree | undefined;
+  bundle?: PromptBundleV2 | undefined;
+  slot_registry?: Record<string, PromptSlotConfig> | undefined;
+  resolved_positions?: ResolvedSlotPosition[] | undefined;
   diagnostics: PromptWorkflowDiagnostics;
-  behavior_profiles?: SlotBehaviorProfile[];
-  behavior_states?: Record<string, SlotBehaviorState>;
-  slot_behavior_diagnostics?: SlotBehaviorDiagnostic;
+  behavior_profiles?: SlotBehaviorProfile[] | undefined;
+  behavior_states?: Record<string, SlotBehaviorState> | undefined;
+  slot_behavior_diagnostics?: SlotBehaviorDiagnostic | undefined;
 }
 
 export interface PromptWorkflowSelectionInput {
   task_type: PromptWorkflowTaskType;
   strategy: InferenceStrategy;
   pack_id: string;
-  profile_id?: string | null;
+  profile_id?: string | null | undefined;
 }
 
 export interface PromptWorkflowRunOptions {
-  task_type?: PromptWorkflowTaskType;
-  profile_id?: string | null;
-  include_sections?: string[];
+  task_type?: PromptWorkflowTaskType | undefined;
+  profile_id?: string | null | undefined;
+  include_sections?: string[] | undefined;
 }
 
 export const createPromptWorkflowDiagnostics = (profile: PromptWorkflowProfile): PromptWorkflowDiagnostics => ({
@@ -252,8 +252,8 @@ export const createInitialPromptWorkflowState = (input: {
   strategy: InferenceStrategy;
   pack_id: string;
   profile: PromptWorkflowProfile;
-  tree?: PromptTree;
-  include_sections?: string[];
+  tree?: PromptTree | undefined;
+  include_sections?: string[] | undefined;
 }): PromptWorkflowState => {
   const safeNodes = input.context_run?.nodes ?? [];
   return {

@@ -66,7 +66,7 @@ export const systemRoutes: RouteModule = {
       '/api/status',
       requireAuth(),
       asyncHandler(async (req, res) => {
-        const rawPackId = req.query.packId;
+        const rawPackId = req.query['packId'];
         const packId = typeof rawPackId === 'string' && rawPackId.trim().length > 0
           ? rawPackId.trim()
           : undefined;
@@ -74,9 +74,10 @@ export const systemRoutes: RouteModule = {
           throw new ApiError(400, 'PACK_ID_REQUIRED', 'packId query parameter is required');
         }
 
+// @ts-expect-error -- EOPT strict mode
         const snapshot = await getRuntimeStatusSnapshot(context, {
           packId,
-          schedulerWorkerId: process.env.SCHEDULER_WORKER_ID,
+          schedulerWorkerId: process.env['SCHEDULER_WORKER_ID'],
           schedulerPartitionIds: undefined
         });
         runtimeStatusDataSchema.parse(snapshot)

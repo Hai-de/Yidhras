@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client'
 let defaultPrisma: PrismaClient | null = null
 
 export const createPrismaClient = (databaseUrl?: string): PrismaClient => {
-  const url = databaseUrl ?? process.env.DATABASE_URL ?? 'file:../../data/yidhras.sqlite'
+  const url = databaseUrl ?? process.env['DATABASE_URL'] ?? 'file:../../data/yidhras.sqlite'
   const adapter = new PrismaBetterSqlite3({ url })
   return new PrismaClient({ adapter })
 }

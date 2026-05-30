@@ -17,13 +17,13 @@ export interface PromptBlock {
   /** 渲染后的缓存纯文本（由宏展开阶段填充） */
   rendered?: string | null;
   /** 预估 token 数（由 PromptTokenizer 填充，强依附于当前 model 的编码） */
-  estimated_tokens?: number;
+  estimated_tokens?: number | undefined;
   /** 计数时使用的编码名称（如 'cl100k_base'），用于跨模型失效判断 */
-  token_encoding?: string;
+  token_encoding?: string | undefined;
   /** 类型相关的具体内容 */
   content: PromptBlockContent;
   /** 元数据（来源、诊断等） */
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | undefined;
 }
 
 export type PromptBlockContent =

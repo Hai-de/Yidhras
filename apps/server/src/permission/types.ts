@@ -8,13 +8,13 @@ export enum AccessLevel {
 export interface Circle {
   id: string;
   name: string;
-  description?: string;
+  description?: string | undefined;
   level: AccessLevel;
 }
 
 export interface InformationMetadata {
   id: string;
-  circle_id?: string; // 所属圈子
+  circle_id?: string | undefined; // 所属圈子
   min_level: AccessLevel; // 所需最小权限等级
 }
 

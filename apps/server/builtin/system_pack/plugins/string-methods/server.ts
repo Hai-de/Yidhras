@@ -4,7 +4,7 @@ import type { ServerPluginHostApi } from '../../../../src/plugins/runtime.js';
 
 const cleanString = async (input: DataCleanerInput): Promise<DataCleanerOutput> => {
   const { text, options } = input;
-  const mode = typeof options?.mode === 'string' ? options.mode : 'trim';
+  const mode = typeof options?.['mode'] === 'string' ? options['mode'] : 'trim';
 
   let cleaned = text;
   switch (mode) {

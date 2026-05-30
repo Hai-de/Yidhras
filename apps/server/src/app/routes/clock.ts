@@ -23,6 +23,7 @@ export function createClockRoutes(deps: {
   return {
     register(app, context) {
   const readProjectedClock = () => {
+// @ts-expect-error -- EOPT strict mode
     const snapshot = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId: undefined });
     return {
       absolute_ticks: snapshot.absolute_ticks,

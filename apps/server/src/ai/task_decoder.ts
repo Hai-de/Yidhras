@@ -70,20 +70,20 @@ const validateType = (value: unknown, expectedType: string): boolean => {
 };
 
 const validateSchemaNode = (value: unknown, schema: Record<string, unknown>, path = '$'): string[] => {
-  if (Array.isArray(schema.anyOf)) {
-    const valid = schema.anyOf.some(option => isRecord(option) && validateSchemaNode(value, option, path).length === 0);
+  if (Array.isArray(schema['anyOf'])) {
+    const valid = schema['anyOf'].some(option => isRecord(option) && validateSchemaNode(value, option, path).length === 0);
     return valid ? [] : [`${path} does not satisfy anyOf schema`];
   }
 
   const issues: string[] = [];
-  if (typeof schema.type === 'string' && !validateType(value, schema.type)) {
-    issues.push(`${path} must be ${schema.type}`);
+  if (typeof schema['type'] === 'string' && !validateType(value, schema['type'])) {
+    issues.push(`${path} must be ${schema['type']}`);
     return issues;
   }
 
-  if (schema.type === 'object' && isRecord(value)) {
-    const required = Array.isArray(schema.required)
-      ? schema.required.filter((item): item is string => typeof item === 'string')
+  if (schema['type'] === 'object' && isRecord(value)) {
+    const required = Array.isArray(schema['required'])
+      ? schema['required'].filter((item): item is string => typeof item === 'string')
       : [];
     for (const field of required) {
       if (!(field in value)) {
@@ -91,8 +91,8 @@ const validateSchemaNode = (value: unknown, schema: Record<string, unknown>, pat
       }
     }
 
-    if (isRecord(schema.properties)) {
-      for (const [key, propertySchema] of Object.entries(schema.properties)) {
+    if (isRecord(schema['properties'])) {
+      for (const [key, propertySchema] of Object.entries(schema['properties'])) {
         if (!(key in value) || !isRecord(propertySchema)) {
           continue;
         }
@@ -102,10 +102,10 @@ const validateSchemaNode = (value: unknown, schema: Record<string, unknown>, pat
     }
   }
 
-  if (schema.type === 'array' && Array.isArray(value) && isRecord(schema.items)) {
+  if (schema['type'] === 'array' && Array.isArray(value) && isRecord(schema['items'])) {
     value.forEach((item, index) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      issues.push(...validateSchemaNode(item, schema.items as Record<string, unknown>, `${path}[${String(index)}]`));
+      issues.push(...validateSchemaNode(item, schema['items'] as Record<string, unknown>, `${path}[${String(index)}]`));
     });
   }
 
@@ -153,8 +153,8 @@ const normalizeStructuredObject = (
   const withDefaults = applyDefaults(withAliases, taskConfig.parse.defaults);
   const requiredFields = new Set<string>(taskConfig.parse.required_fields ?? []);
 
-  const schemaRequired = Array.isArray(taskConfig.output.schema?.required)
-    ? taskConfig.output.schema.required.filter((item): item is string => typeof item === 'string')
+  const schemaRequired = Array.isArray(taskConfig.output.schema?.['required'])
+    ? taskConfig.output.schema['required'].filter((item): item is string => typeof item === 'string')
     : [];
   schemaRequired.forEach(field => requiredFields.add(field));
 

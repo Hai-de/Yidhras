@@ -83,11 +83,11 @@ const buildSnapshot = (
 
   const engineOwned: Record<string, unknown[]> = {};
   if (engineOwnedData) {
-    engineOwned.world_entities = sortBy(engineOwnedData.world_entities, (r) => r.entity_id);
-    engineOwned.entity_states = sortBy(engineOwnedData.entity_states, (r) => r.entity_id);
-    engineOwned.authority_grants = sortBy(engineOwnedData.authority_grants, (r) => r.grant_id);
-    engineOwned.mediator_bindings = sortBy(engineOwnedData.mediator_bindings, (r) => r.binding_id);
-    engineOwned.rule_execution_records = sortBy(engineOwnedData.rule_execution_records, (r) => r.execution_id);
+    engineOwned['world_entities'] = sortBy(engineOwnedData.world_entities, (r) => r.entity_id);
+    engineOwned['entity_states'] = sortBy(engineOwnedData.entity_states, (r) => r.entity_id);
+    engineOwned['authority_grants'] = sortBy(engineOwnedData.authority_grants, (r) => r.grant_id);
+    engineOwned['mediator_bindings'] = sortBy(engineOwnedData.mediator_bindings, (r) => r.binding_id);
+    engineOwned['rule_execution_records'] = sortBy(engineOwnedData.rule_execution_records, (r) => r.execution_id);
   }
 
   return {

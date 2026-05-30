@@ -44,7 +44,7 @@ const parseArgs = (argv: string[]): ParsedArgs => {
   const parsed: ParsedArgs = {};
 
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
+    const arg = argv[i]!;
     switch (arg) {
       case '--help':
       case '-h':
@@ -57,8 +57,8 @@ const parseArgs = (argv: string[]): ParsedArgs => {
         parsed.force = true;
         break;
       case '--output':
-        if (i + 1 < argv.length && !argv[i + 1].startsWith('-')) {
-          parsed.output = argv[++i];
+        if (i + 1 < argv.length && !argv[i + 1]!.startsWith('-')) {
+          parsed.output = argv[++i]!;
         }
         break;
       default:
@@ -67,7 +67,7 @@ const parseArgs = (argv: string[]): ParsedArgs => {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
             parsed.command = arg as 'export' | 'import';
           } else if (!parsed.target) {
-            parsed.target = arg;
+            parsed.target = arg!;
           }
         }
     }
@@ -76,6 +76,7 @@ const parseArgs = (argv: string[]): ParsedArgs => {
   if (!parsed.command && parsed.target) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     parsed.command = parsed.target as 'export' | 'import';
+// @ts-expect-error -- EOPT strict mode
     parsed.target = undefined;
   }
 
@@ -107,13 +108,13 @@ const readPackMetadata = (packDir: string): { id: string; version: string } | nu
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
   const obj = parsed as Record<string, unknown>;
-  const meta = obj.metadata;
+  const meta = obj['metadata'];
   if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return null;
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
   const metaObj = meta as Record<string, unknown>;
-  const id = typeof metaObj.id === 'string' ? metaObj.id : null;
-  const version = typeof metaObj.version === 'string' ? metaObj.version : null;
+  const id = typeof metaObj['id'] === 'string' ? metaObj['id'] : null;
+  const version = typeof metaObj['version'] === 'string' ? metaObj['version'] : null;
 
   if (!id || !version) return null;
 

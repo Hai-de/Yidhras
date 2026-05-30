@@ -222,16 +222,16 @@ export const packRuntimeWorldEntityTableSpec: SqliteEngineOwnedTableSpec<PackRun
   },
   decode(row) {
     return {
-      id: String(row.id),
-      pack_id: String(row.pack_id),
-      entity_kind: String(row.entity_kind),
-      entity_type: toNullableString(row.entity_type),
-      label: String(row.label),
-      tags: parseStringArrayValue(row.tags_json ?? row.tags),
-      static_schema_ref: toNullableString(row.static_schema_ref),
-      payload_json: parseNullableRecordValue(row.payload_json),
-      created_at: toBigInt(row.created_at),
-      updated_at: toBigInt(row.updated_at)
+      id: String(row['id']),
+      pack_id: String(row['pack_id']),
+      entity_kind: String(row['entity_kind']),
+      entity_type: toNullableString(row['entity_type']),
+      label: String(row['label']),
+      tags: parseStringArrayValue(row['tags_json'] ?? row['tags']),
+      static_schema_ref: toNullableString(row['static_schema_ref']),
+      payload_json: parseNullableRecordValue(row['payload_json']),
+      created_at: toBigInt(row['created_at']),
+      updated_at: toBigInt(row['updated_at'])
     };
   }
 };
@@ -264,13 +264,13 @@ export const packRuntimeEntityStateTableSpec: SqliteEngineOwnedTableSpec<PackRun
   },
   decode(row) {
     return {
-      id: String(row.id),
-      pack_id: String(row.pack_id),
-      entity_id: String(row.entity_id),
-      state_namespace: String(row.state_namespace),
-      state_json: parseRecordValue(row.state_json),
-      created_at: toBigInt(row.created_at),
-      updated_at: toBigInt(row.updated_at)
+      id: String(row['id']),
+      pack_id: String(row['pack_id']),
+      entity_id: String(row['entity_id']),
+      state_namespace: String(row['state_namespace']),
+      state_json: parseRecordValue(row['state_json']),
+      created_at: toBigInt(row['created_at']),
+      updated_at: toBigInt(row['updated_at'])
     };
   }
 };
@@ -317,20 +317,20 @@ export const packRuntimeAuthorityGrantTableSpec: SqliteEngineOwnedTableSpec<Pack
   },
   decode(row) {
     return {
-      id: String(row.id),
-      pack_id: String(row.pack_id),
-      source_entity_id: String(row.source_entity_id),
-      target_selector_json: parseRecordValue(row.target_selector_json),
-      capability_key: String(row.capability_key),
-      grant_type: String(row.grant_type),
-      mediated_by_entity_id: toNullableString(row.mediated_by_entity_id),
-      scope_json: parseNullableRecordValue(row.scope_json),
-      conditions_json: parseNullableRecordValue(row.conditions_json),
-      priority: Number(row.priority ?? 0),
-      status: toNullableString(row.status),
-      revocable: toNullableBoolean(row.revocable),
-      created_at: toBigInt(row.created_at),
-      updated_at: toBigInt(row.updated_at)
+      id: String(row['id']),
+      pack_id: String(row['pack_id']),
+      source_entity_id: String(row['source_entity_id']),
+      target_selector_json: parseRecordValue(row['target_selector_json']),
+      capability_key: String(row['capability_key']),
+      grant_type: String(row['grant_type']),
+      mediated_by_entity_id: toNullableString(row['mediated_by_entity_id']),
+      scope_json: parseNullableRecordValue(row['scope_json']),
+      conditions_json: parseNullableRecordValue(row['conditions_json']),
+      priority: Number(row['priority'] ?? 0),
+      status: toNullableString(row['status']),
+      revocable: toNullableBoolean(row['revocable']),
+      created_at: toBigInt(row['created_at']),
+      updated_at: toBigInt(row['updated_at'])
     };
   }
 };
@@ -367,15 +367,15 @@ export const packRuntimeMediatorBindingTableSpec: SqliteEngineOwnedTableSpec<Pac
   },
   decode(row) {
     return {
-      id: String(row.id),
-      pack_id: String(row.pack_id),
-      mediator_id: String(row.mediator_id),
-      subject_entity_id: toNullableString(row.subject_entity_id),
-      binding_kind: String(row.binding_kind),
-      status: String(row.status),
-      metadata_json: parseNullableRecordValue(row.metadata_json),
-      created_at: toBigInt(row.created_at),
-      updated_at: toBigInt(row.updated_at)
+      id: String(row['id']),
+      pack_id: String(row['pack_id']),
+      mediator_id: String(row['mediator_id']),
+      subject_entity_id: toNullableString(row['subject_entity_id']),
+      binding_kind: String(row['binding_kind']),
+      status: String(row['status']),
+      metadata_json: parseNullableRecordValue(row['metadata_json']),
+      created_at: toBigInt(row['created_at']),
+      updated_at: toBigInt(row['updated_at'])
     };
   }
 };
@@ -418,18 +418,18 @@ export const packRuntimeRuleExecutionTableSpec: SqliteEngineOwnedTableSpec<PackR
   },
   decode(row) {
     return {
-      id: String(row.id),
-      pack_id: String(row.pack_id),
-      rule_id: String(row.rule_id),
-      capability_key: toNullableString(row.capability_key),
-      mediator_id: toNullableString(row.mediator_id),
-      subject_entity_id: toNullableString(row.subject_entity_id),
-      target_entity_id: toNullableString(row.target_entity_id),
-      execution_status: String(row.execution_status),
-      payload_json: parseNullableRecordValue(row.payload_json),
-      emitted_events_json: parseUnknownArrayValue(row.emitted_events_json),
-      created_at: toBigInt(row.created_at),
-      updated_at: toBigInt(row.updated_at)
+      id: String(row['id']),
+      pack_id: String(row['pack_id']),
+      rule_id: String(row['rule_id']),
+      capability_key: toNullableString(row['capability_key']),
+      mediator_id: toNullableString(row['mediator_id']),
+      subject_entity_id: toNullableString(row['subject_entity_id']),
+      target_entity_id: toNullableString(row['target_entity_id']),
+      execution_status: String(row['execution_status']),
+      payload_json: parseNullableRecordValue(row['payload_json']),
+      emitted_events_json: parseUnknownArrayValue(row['emitted_events_json']),
+      created_at: toBigInt(row['created_at']),
+      updated_at: toBigInt(row['updated_at'])
     };
   }
 };
@@ -527,9 +527,9 @@ export const upsertSqliteEngineOwnedRecord = async <RecordT>(
   return withRuntimeDatabase(runtimeDbPath, db => {
     applySchema(db);
     const row = spec.encode(record);
-    const existing = getStatement<SqliteRow>(db, `SELECT created_at FROM ${spec.tableName} WHERE id = ?`, [row.id ?? null]);
-    if (existing?.created_at !== undefined && existing.created_at !== null) {
-      row.created_at = serializeUnknown(existing.created_at);
+    const existing = getStatement<SqliteRow>(db, `SELECT created_at FROM ${spec.tableName} WHERE id = ?`, [row['id'] ?? null]);
+    if (existing?.['created_at'] !== undefined && existing['created_at'] !== null) {
+      row['created_at'] = serializeUnknown(existing['created_at']);
     }
     const columns = Object.keys(row);
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键

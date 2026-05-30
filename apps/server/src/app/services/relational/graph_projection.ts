@@ -189,8 +189,8 @@ export const getGraphView = async (
       }
 
       const relayNodeId = buildRelayNodeId(intent.id);
-      const actorAgentId = isRecord(intent.actor_ref) && typeof intent.actor_ref.agent_id === 'string'
-        ? intent.actor_ref.agent_id
+      const actorAgentId = isRecord(intent.actor_ref) && typeof intent.actor_ref['agent_id'] === 'string'
+        ? intent.actor_ref['agent_id']
         : null;
       if (allowedNodeIds && !allowedNodeIds.has(relayNodeId) && !(actorAgentId && allowedNodeIds.has(actorAgentId))) {
         continue;
@@ -241,8 +241,8 @@ export const getGraphView = async (
       }
 
       const containerNodeId = buildContainerNodeId(intent.id);
-      const actorAgentId = isRecord(intent.actor_ref) && typeof intent.actor_ref.agent_id === 'string'
-        ? intent.actor_ref.agent_id
+      const actorAgentId = isRecord(intent.actor_ref) && typeof intent.actor_ref['agent_id'] === 'string'
+        ? intent.actor_ref['agent_id']
         : null;
       if (allowedNodeIds && !allowedNodeIds.has(containerNodeId) && !(actorAgentId && allowedNodeIds.has(actorAgentId))) {
         continue;
@@ -344,8 +344,8 @@ export const getGraphView = async (
     }));
 
   const transmissionEdges: GraphEdgeView[] = actionIntents.flatMap(intent => {
-    const actorAgentId = isRecord(intent.actor_ref) && typeof intent.actor_ref.agent_id === 'string'
-      ? intent.actor_ref.agent_id
+    const actorAgentId = isRecord(intent.actor_ref) && typeof intent.actor_ref['agent_id'] === 'string'
+      ? intent.actor_ref['agent_id']
       : null;
     const relayNodeId = buildRelayNodeId(intent.id);
 

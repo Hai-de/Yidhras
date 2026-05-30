@@ -25,37 +25,37 @@ export interface ContextOverlayEntry {
 
 export interface ContextOverlayQuery {
   actor_id: string;
-  pack_id?: string | null;
-  statuses?: ContextOverlayStatus[];
-  limit?: number;
+  pack_id?: string | null | undefined;
+  statuses?: ContextOverlayStatus[] | undefined;
+  limit?: number | undefined;
 }
 
 export interface ContextOverlayCreateInput {
-  id?: string;
+  id?: string | undefined;
   actor_id: string;
-  pack_id?: string | null;
+  pack_id?: string | null | undefined;
   overlay_type: ContextOverlayType;
-  title?: string | null;
+  title?: string | null | undefined;
   content_text: string;
-  content_structured?: Record<string, unknown> | null;
-  tags?: string[];
-  status?: ContextOverlayStatus;
-  persistence_mode?: ContextOverlayPersistenceMode;
-  source_node_ids?: string[];
+  content_structured?: Record<string, unknown> | null | undefined;
+  tags?: string[] | undefined;
+  status?: ContextOverlayStatus | undefined;
+  persistence_mode?: ContextOverlayPersistenceMode | undefined;
+  source_node_ids?: string[] | undefined;
   created_by: ContextOverlayCreatedBy;
   created_at_tick: string;
-  updated_at_tick?: string;
+  updated_at_tick?: string | undefined;
 }
 
 export interface ContextOverlayUpdateInput {
   id: string;
-  title?: string | null;
-  content_text?: string;
-  content_structured?: Record<string, unknown> | null;
-  tags?: string[];
-  status?: ContextOverlayStatus;
-  persistence_mode?: ContextOverlayPersistenceMode;
-  source_node_ids?: string[];
+  title?: string | null | undefined;
+  content_text?: string | undefined;
+  content_structured?: Record<string, unknown> | null | undefined;
+  tags?: string[] | undefined;
+  status?: ContextOverlayStatus | undefined;
+  persistence_mode?: ContextOverlayPersistenceMode | undefined;
+  source_node_ids?: string[] | undefined;
   updated_at_tick: string;
 }
 

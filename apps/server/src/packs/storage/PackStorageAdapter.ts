@@ -5,7 +5,7 @@ export type CollectionFieldType = 'number' | 'boolean' | 'string' | 'json' | 'ti
 export interface CollectionFieldDefinition {
   name: string;
   type: CollectionFieldType;
-  required?: boolean;
+  required?: boolean | undefined;
 }
 
 export interface CollectionDefinition {

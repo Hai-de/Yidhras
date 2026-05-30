@@ -65,8 +65,11 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
     this.packStorageAdapter = options.packStorageAdapter;
     this.packsDir = options.packsDir;
     this.getStartupLevelRef = options.getStartupLevel;
+// @ts-expect-error -- EOPT strict mode
     this.onBeforeUnload = options.onBeforeUnload;
+// @ts-expect-error -- EOPT strict mode
     this.multiPackLoopHost = options.multiPackLoopHost;
+// @ts-expect-error -- EOPT strict mode
     this.worldEngine = options.worldEngine;
   }
 

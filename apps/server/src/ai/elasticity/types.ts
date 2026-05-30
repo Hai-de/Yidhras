@@ -54,11 +54,11 @@ export interface RateLimiterSnapshot {
 
 export interface RateLimitHints {
   /** Retry-After header 值（秒） */
-  retryAfterSeconds?: number;
+  retryAfterSeconds?: number | undefined;
   /** x-ratelimit-remaining 剩余配额 */
-  remainingQuota?: number;
+  remainingQuota?: number | undefined;
   /** x-ratelimit-limit 总配额 */
-  limitQuota?: number;
+  limitQuota?: number | undefined;
 }
 
 export interface RateLimiter {

@@ -26,41 +26,41 @@ const parseArgs = (argv: string[]): ParsedArgs => {
   const parsed: ParsedArgs = {};
 
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
+    const arg = argv[i]!;
     switch (arg) {
       case '--help':
       case '-h':
         parsed.help = true;
         break;
       case '--name':
-        parsed.name = argv[++i];
+        parsed.name = argv[++i]!;
         break;
       case '--display-name':
-        parsed.displayName = argv[++i];
+        parsed.displayName = argv[++i]!;
         break;
       case '--password':
-        parsed.password = argv[++i];
+        parsed.password = argv[++i]!;
         break;
       case '--role':
-        parsed.role = argv[++i];
+        parsed.role = argv[++i]!;
         break;
       case '--root':
         parsed.isRoot = true;
         break;
       case '--status':
-        parsed.status = argv[++i];
+        parsed.status = argv[++i]!;
         break;
       case '--limit':
-        parsed.limit = parseInt(argv[++i], 10);
+        parsed.limit = parseInt(argv[++i]!, 10);
         break;
       default:
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary narrowing
         if (COMMANDS.includes(arg as (typeof COMMANDS)[number])) {
-          parsed.command = arg;
+          parsed.command = arg!;
         } else if (!arg.startsWith('-') && !parsed.command) {
-          parsed.command = arg;
+          parsed.command = arg!;
         } else if (!arg.startsWith('-') && parsed.command && !parsed.id) {
-          parsed.id = arg;
+          parsed.id = arg!;
         }
     }
   }
@@ -234,20 +234,20 @@ const doUpdate = async (prisma: PrismaClient, args: ParsedArgs): Promise<void> =
 
   if (args.password) {
     validatePassword(args.password);
-    data.password_hash = await hashPassword(args.password);
+    data['password_hash'] = await hashPassword(args.password);
   }
 
   if (args.displayName !== undefined) {
-    data.display_name = args.displayName;
+    data['display_name'] = args.displayName;
   }
 
   if (args.isRoot !== undefined) {
-    data.is_root = args.isRoot;
+    data['is_root'] = args.isRoot;
   }
 
   if (args.status) {
     validateStatus(args.status);
-    data.status = args.status;
+    data['status'] = args.status;
   }
 
   if (Object.keys(data).length <= 1) {

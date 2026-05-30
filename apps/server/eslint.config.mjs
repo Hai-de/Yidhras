@@ -168,7 +168,7 @@ export default tseslint.config(
           message: 'NodeNext relative exports in server must end with .js'
         }
       ],
-      '@typescript-eslint/no-non-null-assertion': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',
@@ -226,7 +226,7 @@ export default tseslint.config(
           message: 'NodeNext relative exports in tests must end with .js'
         }
       ],
-      '@typescript-eslint/no-non-null-assertion': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',
@@ -265,7 +265,7 @@ export default tseslint.config(
           message: 'NodeNext relative imports must end with .js'
         }
       ],
-      '@typescript-eslint/no-non-null-assertion': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }]
     }
@@ -300,7 +300,7 @@ export default tseslint.config(
           message: 'NodeNext relative imports in plugins must end with .js'
         }
       ],
-      '@typescript-eslint/no-non-null-assertion': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }]
     }

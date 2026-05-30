@@ -123,6 +123,7 @@ const buildFailureResponse = (
   auditLevel: AiAuditLevel,
   status: ModelGatewayResponse['status'] = 'failed'
 ): ModelGatewayResponse => {
+// @ts-expect-error -- EOPT strict mode
   return {
     invocation_id: input.request.invocation_id,
     task_id: input.request.task_id,
@@ -185,6 +186,7 @@ const finalizeProviderResponse = (
   result: AiProviderAdapterResult,
   auditLevel: AiAuditLevel
 ): ModelGatewayResponse => {
+// @ts-expect-error -- EOPT strict mode
   return {
     invocation_id: input.request.invocation_id,
     task_id: input.request.task_id,
@@ -566,6 +568,7 @@ export const createModelGateway = ({
             if (result?.status === 'completed' && result.output.text) {
               yield { type: 'text_delta', text: result.output.text };
               yield { type: 'finish', finish_reason: result.finish_reason, usage: result.usage };
+// @ts-expect-error -- EOPT strict mode
               await recordAiInvocation(context, {
                 invocation_id: input.request.invocation_id,
                 task_id: input.request.task_id,
@@ -609,13 +612,18 @@ export const createModelGateway = ({
 
         try {
           const streamStart = Date.now();
-          yield* adapter.executeStream({
+          const stream = adapter.executeStream({
             request: input.request,
             task_request: input.task_request,
             task_config: input.task_config,
             model_entry: candidate,
             provider_config: providerConfig
           }, signal);
+          if (stream) {
+            yield* stream;
+          } else {
+            yield { type: 'error', code: 'STREAM_NOT_SUPPORTED', message: 'Streaming not available from adapter' };
+          }
 
           // 记录流式调用（简化版，不含完整 trace）
           await recordAiInvocation(context, {

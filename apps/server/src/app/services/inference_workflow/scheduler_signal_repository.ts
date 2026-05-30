@@ -50,7 +50,7 @@ export const listPendingSchedulerDecisionJobs = async (
         return [];
       }
       const requestInput = isRecord(job.request_input) ? job.request_input : null;
-      const agentId = requestInput && typeof requestInput.agent_id === 'string' ? requestInput.agent_id : null;
+      const agentId = requestInput && typeof requestInput['agent_id'] === 'string' ? requestInput['agent_id'] : null;
       return agentId && agentIdSet.has(agentId) ? [agentId] : [];
     })
   );
@@ -89,7 +89,7 @@ export const listPendingSchedulerActionIntents = async (
         return [];
       }
       const actorRef = isRecord(intent.actor_ref) ? intent.actor_ref : null;
-      const agentId = actorRef && typeof actorRef.agent_id === 'string' ? actorRef.agent_id : null;
+      const agentId = actorRef && typeof actorRef['agent_id'] === 'string' ? actorRef['agent_id'] : null;
       return agentId && agentIdSet.has(agentId) ? [agentId] : [];
     })
   );
@@ -122,7 +122,7 @@ export const listRecentScheduledDecisionJobs = async (
   const agentIdSet = new Set(agentIds);
   for (const job of jobs) {
     const requestInput = isRecord(job.request_input) ? job.request_input : null;
-    const agentId = requestInput && typeof requestInput.agent_id === 'string' ? requestInput.agent_id : null;
+    const agentId = requestInput && typeof requestInput['agent_id'] === 'string' ? requestInput['agent_id'] : null;
     if (agentId && agentIdSet.has(agentId) && !recentTicks.has(agentId)) {
       recentTicks.set(agentId, job.created_at);
     }
@@ -160,7 +160,7 @@ export const listRecentRecoveryWindowActors = async (
   const latestByActor = new Map<string, bigint>();
   for (const job of jobs) {
     const requestInput = isRecord(job.request_input) ? job.request_input : null;
-    const agentId = requestInput && typeof requestInput.agent_id === 'string' ? requestInput.agent_id : null;
+    const agentId = requestInput && typeof requestInput['agent_id'] === 'string' ? requestInput['agent_id'] : null;
     if (!agentId) {
       continue;
     }
@@ -244,18 +244,18 @@ export const listRecentEventFollowupSignals = async (
       ? event.source_action_intent.actor_ref
       : null;
     const impactData = parseImpactData(event.impact_data);
-    const followupActorIds = Array.isArray(impactData?.followup_actor_ids)
-      ? impactData.followup_actor_ids.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    const followupActorIds = Array.isArray(impactData?.['followup_actor_ids'])
+      ? impactData['followup_actor_ids'].filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
       : [];
-    const semanticIntent = impactData && isRecord(impactData.semantic_intent) ? impactData.semantic_intent : null;
-    const semanticTargetRef = semanticIntent && isRecord(semanticIntent.target_ref) ? semanticIntent.target_ref : null;
-    const semanticTargetAgentId = semanticTargetRef && typeof semanticTargetRef.agent_id === 'string'
-      ? semanticTargetRef.agent_id.trim()
+    const semanticIntent = impactData && isRecord(impactData['semantic_intent']) ? impactData['semantic_intent'] : null;
+    const semanticTargetRef = semanticIntent && isRecord(semanticIntent['target_ref']) ? semanticIntent['target_ref'] : null;
+    const semanticTargetAgentId = semanticTargetRef && typeof semanticTargetRef['agent_id'] === 'string'
+      ? semanticTargetRef['agent_id'].trim()
       : null;
 
     const candidateAgentIds = new Set<string>();
-    if (actorRef && typeof actorRef.agent_id === 'string' && actorRef.agent_id.trim().length > 0) {
-      candidateAgentIds.add(actorRef.agent_id.trim());
+    if (actorRef && typeof actorRef['agent_id'] === 'string' && actorRef['agent_id'].trim().length > 0) {
+      candidateAgentIds.add(actorRef['agent_id'].trim());
     }
     if (semanticTargetAgentId) {
       candidateAgentIds.add(semanticTargetAgentId);

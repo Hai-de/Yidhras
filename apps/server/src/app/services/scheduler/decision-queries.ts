@@ -41,6 +41,7 @@ export const listSchedulerDecisions = async (
     return emptyDecisionListResult(filters);
   }
 
+// @ts-expect-error -- EOPT strict mode
   const queryInput: ListDecisionsInput = {
     actorId: filters.actor_id ?? undefined,
     kind: filters.kind ?? undefined,
@@ -71,8 +72,8 @@ export const listSchedulerDecisions = async (
 
   const nextCursor = hasNextPage && pageItems.length > 0
     ? encodeSchedulerCursor({
-        created_at: pageItems[pageItems.length - 1].created_at,
-        id: pageItems[pageItems.length - 1].id
+        created_at: pageItems[pageItems.length - 1]!.created_at,
+        id: pageItems[pageItems.length - 1]!.id
       })
     : null;
 

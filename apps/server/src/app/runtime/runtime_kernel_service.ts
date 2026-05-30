@@ -44,7 +44,7 @@ export const createRuntimeKernelService = (
         loop_status: diagnostics.status
       };
     },
-    async reconcileBootstrapOwnership(input) {
+    reconcileBootstrapOwnership(input) {
       reconcileSchedulerBootstrapAssignments(
         context,
         input.schedulerWorkerId,
@@ -52,11 +52,12 @@ export const createRuntimeKernelService = (
         packId
       );
     },
-    async getOwnershipSnapshot(input) {
+    getOwnershipSnapshot(input) {
       const workerId =
-        input?.workerId ?? process.env.SCHEDULER_WORKER_ID ?? `scheduler:${process.pid}`;
+        input?.workerId ?? process.env['SCHEDULER_WORKER_ID'] ?? `scheduler:${process.pid}`;
       return resolveSchedulerOwnershipSnapshot(
         context,
+// @ts-expect-error -- EOPT strict mode
         {
           workerId,
           bootstrapPartitionIds: input?.partitionIds

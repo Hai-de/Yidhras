@@ -42,14 +42,14 @@ export function resolveIncludes(
 ): IncludeResolveResult {
   const diagnostics: IncludeDiagnostic[] = [];
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-  const include = entryYaml.include as WorldPackInclude | undefined;
+  const include = entryYaml['include'] as WorldPackInclude | undefined;
 
   if (!include || !isRecord(include) || Object.keys(include).length === 0) {
     return { merged: { ...entryYaml }, diagnostics };
   }
 
   const merged = { ...entryYaml };
-  delete merged.include;
+  delete merged['include'];
 
   const loadedFiles = new Map<string, Record<string, unknown>>();
 

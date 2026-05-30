@@ -37,7 +37,7 @@ const mergeDecisionJobRequestInputAttributes = (
   attributesPatch: Record<string, unknown>
 ): Prisma.InputJsonValue => {
   const requestInput = isRecord(existing.request_input) ? existing.request_input : {};
-  const requestInputAttributes = isRecord(requestInput.attributes) ? requestInput.attributes : {};
+  const requestInputAttributes = isRecord(requestInput['attributes']) ? requestInput['attributes'] : {};
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   return toJsonSafe({
@@ -141,9 +141,9 @@ export const claimDecisionJob = async (
   input: {
     job_id: string;
     worker_id: string;
-    now?: bigint;
-    lock_ticks?: bigint;
-    packRuntime?: PackRuntimePort;
+    now?: bigint | undefined;
+    lock_ticks?: bigint | undefined;
+    packRuntime?: PackRuntimePort | undefined;
   }
 ): Promise<DecisionJobRecord | null> => {
   const existing = await getDecisionJobById(context, input.job_id);
@@ -207,8 +207,8 @@ export const releaseDecisionJobLock = async (
   context: AppInfrastructure,
   input: {
     job_id: string;
-    worker_id?: string;
-    packRuntime?: PackRuntimePort;
+    worker_id?: string | undefined;
+    packRuntime?: PackRuntimePort | undefined;
   }
 ): Promise<DecisionJobRecord> => {
   const existing = await getDecisionJobById(context, input.job_id);
@@ -316,11 +316,11 @@ export const createPendingDecisionJob = async (
   input: {
     idempotency_key: string;
     request_input: InferenceRequestInput;
-    max_attempts?: number;
-    scheduled_for_tick?: bigint | null;
-    intent_class?: InferenceJobIntentClass;
-    job_source?: string;
-    packRuntime?: PackRuntimePort;
+    max_attempts?: number | undefined;
+    scheduled_for_tick?: bigint | null | undefined;
+    intent_class?: InferenceJobIntentClass | undefined;
+    job_source?: string | undefined;
+    packRuntime?: PackRuntimePort | undefined;
   }
 ): Promise<DecisionJobRecord> => {
   const packRuntime = input.packRuntime;
@@ -391,10 +391,10 @@ export const createReplayDecisionJob = async (
     source_trace_id: string | null;
     request_input: InferenceRequestInput;
     idempotency_key: string;
-    reason?: string | null;
-    max_attempts?: number;
-    replay_override_snapshot?: Record<string, unknown> | null;
-    packRuntime?: PackRuntimePort;
+    reason?: string | null | undefined;
+    max_attempts?: number | undefined;
+    replay_override_snapshot?: Record<string, unknown> | null | undefined;
+    packRuntime?: PackRuntimePort | undefined;
   }
 ): Promise<DecisionJobRecord> => {
   const packRuntime = input.packRuntime;

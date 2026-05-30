@@ -55,9 +55,9 @@ const toInferenceActorRef = (actorRef: Record<string, unknown> | null, resolvedA
     return null;
   }
 
-  const identityId = typeof actorRef.identity_id === 'string' ? actorRef.identity_id : null;
-  const identityType = typeof actorRef.identity_type === 'string' ? actorRef.identity_type : null;
-  const role = actorRef.role === 'atmosphere' ? 'atmosphere' : actorRef.role === 'active' ? 'active' : null;
+  const identityId = typeof actorRef['identity_id'] === 'string' ? actorRef['identity_id'] : null;
+  const identityType = typeof actorRef['identity_type'] === 'string' ? actorRef['identity_type'] : null;
+  const role = actorRef['role'] === 'atmosphere' ? 'atmosphere' : actorRef['role'] === 'active' ? 'active' : null;
   if (!identityId || !identityType || !role) {
     return null;
   }
@@ -67,8 +67,8 @@ const toInferenceActorRef = (actorRef: Record<string, unknown> | null, resolvedA
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
     identity_type: identityType as IdentityType,
     role,
-    agent_id: typeof actorRef.agent_id === 'string' ? actorRef.agent_id : resolvedAgentId,
-    atmosphere_node_id: typeof actorRef.atmosphere_node_id === 'string' ? actorRef.atmosphere_node_id : null
+    agent_id: typeof actorRef['agent_id'] === 'string' ? actorRef['agent_id'] : resolvedAgentId,
+    atmosphere_node_id: typeof actorRef['atmosphere_node_id'] === 'string' ? actorRef['atmosphere_node_id'] : null
   };
 };
 
@@ -82,6 +82,7 @@ const createMemorySelectionSourceAdapter = (): ContextSourceAdapter => ({
 const createRuntimeStateSourceAdapter = (): ContextSourceAdapter => ({
   name: 'runtime-state-snapshots',
   buildNodes(input) {
+// @ts-expect-error -- EOPT strict mode
     return buildRuntimeStateContextNodes({
       tick: input.tick.toString(),
       resolved_agent_id: input.resolved_agent_id,
@@ -174,7 +175,7 @@ const createSpatialProximitySourceAdapter = (spatialRuntime: import('../packs/ru
     const rawAgentId: string | null =
       (input.actor_ref && typeof input.actor_ref === 'object' && 'agent_id' in input.actor_ref)
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- agent_id from context
-        ? (input.actor_ref).agent_id as string | null
+        ? (input.actor_ref)['agent_id'] as string | null
         : input.resolved_agent_id;
 
     if (typeof rawAgentId !== 'string' || !rawAgentId) {
@@ -190,6 +191,7 @@ const createSpatialProximitySourceAdapter = (spatialRuntime: import('../packs/ru
       return [];
     }
 
+// @ts-expect-error -- EOPT strict mode
     return buildSpatialProximityContextNodes({
       entityId,
       spatialRuntime,

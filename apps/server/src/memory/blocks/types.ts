@@ -22,9 +22,9 @@ export type MemoryBlockSourceKind =
   | 'overlay';
 
 export interface MemoryBlockSourceRef {
-  source_kind?: MemoryBlockSourceKind;
-  source_id?: string;
-  source_message_id?: string;
+  source_kind?: MemoryBlockSourceKind | undefined;
+  source_id?: string | undefined;
+  source_message_id?: string | undefined;
 }
 
 export interface MemoryBlock {
@@ -78,9 +78,9 @@ export interface MemoryKeywordTrigger {
   type: 'keyword';
   match: 'any' | 'all';
   keywords: string[];
-  case_sensitive?: boolean;
-  fields?: Array<'content_text' | 'content_structured' | 'recent_trace_reasoning' | 'recent_event_text'>;
-  score?: number;
+  case_sensitive?: boolean | undefined;
+  fields?: Array<'content_text' | 'content_structured' | 'recent_trace_reasoning' | 'recent_event_text'> | undefined;
+  score?: number | undefined;
 }
 
 export type MemoryLogicExpr =
@@ -97,7 +97,7 @@ export type MemoryLogicExpr =
 export interface MemoryLogicTrigger {
   type: 'logic';
   expr: MemoryLogicExpr;
-  score?: number;
+  score?: number | undefined;
 }
 
 export interface MemoryRecentSourceTrigger {
@@ -107,17 +107,17 @@ export interface MemoryRecentSourceTrigger {
     field: string;
     op: 'eq' | 'in' | 'contains' | 'exists' | 'gt' | 'lt';
     value?: unknown;
-    values?: unknown[];
+    values?: unknown[] | undefined;
   };
-  score?: number;
+  score?: number | undefined;
 }
 
 export interface MemorySemanticTrigger {
   type: 'semantic';
   threshold: number;
-  query_template?: string;
-  fields?: Array<'content_text' | 'content_structured'>;
-  score?: number;
+  query_template?: string | undefined;
+  fields?: Array<'content_text' | 'content_structured'> | undefined;
+  score?: number | undefined;
 }
 
 export type MemoryTrigger =
@@ -167,7 +167,7 @@ export interface MemoryBlockRecord {
 
 export interface MemoryBlockCandidateQuery {
   owner_agent_id: string;
-  pack_id?: string | null;
+  pack_id?: string | null | undefined;
   limit: number;
 }
 
@@ -179,7 +179,7 @@ export interface MemoryBlockUpsertInput {
 export interface DeleteMemoryBlockInput {
   memory_id: string;
   deleted_by: 'system' | 'agent' | 'model';
-  reason?: string | null;
+  reason?: string | null | undefined;
 }
 
 export interface LongMemoryBlockStore {
@@ -211,18 +211,18 @@ export interface MemoryEvaluationContext {
   resolved_agent_id: string | null;
   pack_id: string | null;
   current_tick: string;
-  attributes?: Record<string, unknown>;
+  attributes?: Record<string, unknown> | undefined;
   pack_state?: {
-    actor_state?: Record<string, unknown> | null;
-    world_state?: Record<string, unknown> | null;
-    latest_event?: Record<string, unknown> | null;
+    actor_state?: Record<string, unknown> | null | undefined;
+    world_state?: Record<string, unknown> | null | undefined;
+    latest_event?: Record<string, unknown> | null | undefined;
   } | null;
   recent?: {
-    trace?: MemoryRecentSourceRecord[];
-    intent?: MemoryRecentSourceRecord[];
-    event?: MemoryRecentSourceRecord[];
+    trace?: MemoryRecentSourceRecord[] | undefined;
+    intent?: MemoryRecentSourceRecord[] | undefined;
+    event?: MemoryRecentSourceRecord[] | undefined;
   };
-  query_embedding?: number[];
+  query_embedding?: number[] | undefined;
 }
 
 export type MemoryTriggerEngineMode = 'rust_primary';
@@ -247,7 +247,7 @@ export interface MemoryTriggerSourceRecordResult {
   next_runtime_state: MemoryRuntimeState;
   should_materialize: boolean;
   materialize_reason: 'active' | 'retained' | null;
-  trigger_rate?: MemoryTriggerRateDecisionRecord | null;
+  trigger_rate?: MemoryTriggerRateDecisionRecord | null | undefined;
 }
 
 export interface MemoryTriggerSourceDiagnostics {
@@ -266,7 +266,7 @@ export interface MemoryBlockTriggerDiagnostics {
 
 export interface MemoryTriggerSourceEvaluateInput {
   protocol_version: string;
-  request_id?: string | null;
+  request_id?: string | null | undefined;
   evaluation_context: MemoryEvaluationContext;
   candidates: MemoryBlockRecord[];
 }
@@ -285,10 +285,10 @@ export type MemoryTriggerEngineEvaluationMetadata = {
 
 export interface MemoryVectorSearchInput {
   owner_agent_id: string;
-  pack_id?: string | null;
-  query_text?: string;
-  query_embedding?: number[];
-  threshold?: number;
+  pack_id?: string | null | undefined;
+  query_text?: string | undefined;
+  query_embedding?: number[] | undefined;
+  threshold?: number | undefined;
   limit: number;
 }
 

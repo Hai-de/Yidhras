@@ -281,9 +281,9 @@ export const createMemoryRecordingService = ({
       await upsertDeclaredPackCollectionRecord(input.pack_id, 'judgement_plans', {
         id: overlayEntry.id,
         owner_actor_id: input.actor_id,
-        target_entity_id: typeof input.target_ref?.entity_id === 'string' ? input.target_ref.entity_id : null,
-        phase: typeof input.metadata?.phase === 'string' ? input.metadata.phase : input.semantic_intent_kind ?? 'revise_judgement_plan',
-        risk_score: typeof input.metadata?.risk_score === 'number' ? input.metadata.risk_score : null,
+        target_entity_id: typeof input.target_ref?.['entity_id'] === 'string' ? input.target_ref['entity_id'] : null,
+        phase: typeof input.metadata?.['phase'] === 'string' ? input.metadata['phase'] : input.semantic_intent_kind ?? 'revise_judgement_plan',
+        risk_score: typeof input.metadata?.['risk_score'] === 'number' ? input.metadata['risk_score'] : null,
         content: buildOverlayStructuredContent({
           record_kind: 'revise_judgement_plan',
           source_inference_id: input.source_inference_id,
@@ -350,8 +350,8 @@ export const createMemoryRecordingService = ({
         ? `目标档案更新 @ ${input.tick}`
         : `思考记录 @ ${input.tick}`;
       const structured = buildOverlayStructuredContent({
-        record_kind: typeof input.metadata?.record_kind === 'string'
-          ? input.metadata.record_kind
+        record_kind: typeof input.metadata?.['record_kind'] === 'string'
+          ? input.metadata['record_kind']
           : overlayType === 'target_dossier' ? 'target_dossier_update' : 'decision_reflection',
         source_inference_id: input.source_inference_id,
         semantic_intent_kind: input.semantic_intent_kind ?? null,
@@ -392,8 +392,8 @@ export const createMemoryRecordingService = ({
         await upsertDeclaredPackCollectionRecord(input.pack_id, 'target_dossiers', {
           id: entry.id,
           owner_actor_id: input.actor_id,
-          target_entity_id: typeof input.target_ref?.entity_id === 'string' ? input.target_ref.entity_id : null,
-          confidence: typeof input.metadata?.confidence === 'number' ? input.metadata.confidence : null,
+          target_entity_id: typeof input.target_ref?.['entity_id'] === 'string' ? input.target_ref['entity_id'] : null,
+          confidence: typeof input.metadata?.['confidence'] === 'number' ? input.metadata['confidence'] : null,
           content: { reasoning, structured }
         });
       }
@@ -456,9 +456,9 @@ export const createMemoryRecordingService = ({
       await upsertDeclaredPackCollectionRecord(input.pack_id, 'investigation_threads', {
         id: overlayEntry.id,
         owner_actor_id: input.actor_id,
-        subject_entity_id: typeof input.target_ref?.entity_id === 'string' ? input.target_ref.entity_id : input.actor_id,
-        evidence_strength: typeof input.metadata?.evidence_strength === 'number'
-          ? input.metadata.evidence_strength
+        subject_entity_id: typeof input.target_ref?.['entity_id'] === 'string' ? input.target_ref['entity_id'] : input.actor_id,
+        evidence_strength: typeof input.metadata?.['evidence_strength'] === 'number'
+          ? input.metadata['evidence_strength']
           : input.outcome === 'completed' ? 0.7 : input.outcome === 'dropped' ? 0.3 : 0.5,
         content: buildExecutionReflectionSummary(input)
       });

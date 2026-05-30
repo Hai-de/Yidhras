@@ -5,12 +5,12 @@ import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution
 import type { AuditAction } from '../constants.js'
 
 export interface OperatorAuditEntry {
-  operator_id?: string | null
-  pack_id?: string | null
+  operator_id?: string | null | undefined
+  pack_id?: string | null | undefined
   action: AuditAction
-  target_id?: string | null
-  detail_json?: Prisma.JsonObject | null
-  client_ip?: string | null
+  target_id?: string | null | undefined
+  detail_json?: Prisma.JsonObject | null | undefined
+  client_ip?: string | null | undefined
 }
 
 export const logOperatorAudit = async (

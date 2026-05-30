@@ -40,7 +40,7 @@ const resolveVariable = (name: string, scope: RenderScope): unknown => {
   }
 
   if (typeof current === 'object' && !Array.isArray(current) && '_value' in current) {
-    return (current as Record<string, unknown>)._value;
+    return (current as Record<string, unknown>)['_value'];
   }
 
   return current;

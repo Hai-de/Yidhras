@@ -20,6 +20,7 @@ class RustPrimarySchedulerDecisionKernelProvider implements SchedulerDecisionKer
   private readonly rustKernel;
 
   constructor(private readonly options: SchedulerDecisionKernelProviderOptions) {
+// @ts-expect-error -- EOPT strict mode
     this.rustKernel = createSchedulerDecisionSidecarClient({
       binaryPath: options.binaryPath,
       timeoutMs: options.timeoutMs,

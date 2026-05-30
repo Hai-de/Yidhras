@@ -20,20 +20,20 @@ const parseArgs = (argv: string[]): { packId?: string; targetVersion?: number; h
   const parsed: { packId?: string; targetVersion?: number; help?: boolean } = {};
 
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
+    const arg = argv[i]!
     switch (arg) {
       case '--help':
       case '-h':
         parsed.help = true;
         break;
       case '--target-version': {
-        const val = parseInt(argv[++i], 10);
+        const val = parseInt(argv[++i]!, 10);
         if (!Number.isNaN(val)) parsed.targetVersion = val;
         break;
       }
       default:
         if (!arg.startsWith('-') && !parsed.packId) {
-          parsed.packId = arg;
+          parsed.packId = arg!;
         }
     }
   }
@@ -85,7 +85,7 @@ const runMigration = async (): Promise<void> => {
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
   const config = YAML.parse(raw) as Record<string, unknown>;
-  const currentVersion = typeof config.schema_version === 'number' ? config.schema_version : 0;
+  const currentVersion = typeof config['schema_version'] === 'number' ? config['schema_version'] : 0;
 
   console.error(`Current schema_version: ${currentVersion}`);
 
@@ -109,7 +109,7 @@ const runMigration = async (): Promise<void> => {
   for (const m of result.applied) {
     console.error(`  v${m.version}: ${m.description}`);
   }
-  const nextSchemaVersion = result.config.schema_version;
+  const nextSchemaVersion = result.config['schema_version'];
   console.error(
     `Schema version updated: ${String(currentVersion)} → ${typeof nextSchemaVersion === 'number' ? String(nextSchemaVersion) : 'unknown'}`
   );

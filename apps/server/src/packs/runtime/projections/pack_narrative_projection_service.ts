@@ -46,7 +46,7 @@ const parseEventImpactData = (value: string | null): Record<string, unknown> | n
 };
 
 const resolveEventBridgePackId = (impactData: Record<string, unknown> | null): string | null => {
-  return impactData && typeof impactData.pack_id === 'string' ? impactData.pack_id : null;
+  return impactData && typeof impactData['pack_id'] === 'string' ? impactData['pack_id'] : null;
 };
 
 export const createPackNarrativeProjectionService = (

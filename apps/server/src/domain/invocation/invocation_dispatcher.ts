@@ -55,8 +55,8 @@ const normalizeRecord = (value: unknown): Record<string, unknown> => {
 
 const resolveCapabilityKey = (intent: DispatchableActionIntentLike): string | null => {
   const payload = normalizeRecord(intent.payload)
-  if (typeof payload.capability_key === 'string' && payload.capability_key.trim().length > 0) {
-    return payload.capability_key.trim()
+  if (typeof payload['capability_key'] === 'string' && payload['capability_key'].trim().length > 0) {
+    return payload['capability_key'].trim()
   }
 
   if (intent.intent_type.startsWith('invoke.')) {
@@ -68,13 +68,13 @@ const resolveCapabilityKey = (intent: DispatchableActionIntentLike): string | nu
 
 const resolveMediatorId = (intent: DispatchableActionIntentLike): string | null => {
   const payload = normalizeRecord(intent.payload)
-  if (typeof payload.mediator_id === 'string' && payload.mediator_id.trim().length > 0) {
-    return payload.mediator_id.trim()
+  if (typeof payload['mediator_id'] === 'string' && payload['mediator_id'].trim().length > 0) {
+    return payload['mediator_id'].trim()
   }
 
   const targetRef = normalizeRecord(intent.target_ref)
-  if (typeof targetRef.mediator_id === 'string' && targetRef.mediator_id.trim().length > 0) {
-    return targetRef.mediator_id.trim()
+  if (typeof targetRef['mediator_id'] === 'string' && targetRef['mediator_id'].trim().length > 0) {
+    return targetRef['mediator_id'].trim()
   }
 
   return null
@@ -85,8 +85,8 @@ const resolveSubjectEntityId = async (
   actorRef: Record<string, unknown>,
   packId: string
 ): Promise<string | null> => {
-  if (typeof actorRef.agent_id === 'string' && actorRef.agent_id.trim().length > 0) {
-    const agentId = actorRef.agent_id.trim()
+  if (typeof actorRef['agent_id'] === 'string' && actorRef['agent_id'].trim().length > 0) {
+    const agentId = actorRef['agent_id'].trim()
 
     // P3-1: Agent 自主行为 → 查找控制 Operator
     const cacheKey = `${packId}:${agentId}`
@@ -107,15 +107,15 @@ const resolveSubjectEntityId = async (
 
     return resolution.subjectEntityId ?? agentId
   }
-  if (typeof actorRef.identity_id === 'string' && actorRef.identity_id.trim().length > 0) {
-    return actorRef.identity_id.trim()
+  if (typeof actorRef['identity_id'] === 'string' && actorRef['identity_id'].trim().length > 0) {
+    return actorRef['identity_id'].trim()
   }
   return null
 }
 
 const KERNEL_INTENT_TYPES = ['trigger_event', 'post_message', 'adjust_relationship', 'adjust_snr', 'move'] as const
 
-const shouldBridgeToInvocation = (context: AppInfrastructure, intent: DispatchableActionIntentLike, packRuntime?: { getPack(): { capabilities?: Array<{ key: string }>; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> }; variables?: Record<string, unknown> } | undefined }): boolean => {
+const shouldBridgeToInvocation = (context: AppInfrastructure, intent: DispatchableActionIntentLike, packRuntime?: { getPack(): { capabilities?: Array<{ key: string }> | undefined; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> | undefined } | undefined; variables?: Record<string, unknown> | undefined } | undefined }): boolean => {
   const pack = packRuntime?.getPack()
   if (!pack) {
     return false
@@ -130,10 +130,10 @@ const shouldBridgeToInvocation = (context: AppInfrastructure, intent: Dispatchab
   if (
     enforcementRules.some(rule => {
       const when = isRecord(rule.when) ? rule.when : {}
-      if (capabilityKey && when.capability === capabilityKey) {
+      if (capabilityKey && when['capability'] === capabilityKey) {
         return true
       }
-      return typeof when.invocation_type === 'string' && when.invocation_type === intent.intent_type
+      return typeof when['invocation_type'] === 'string' && when['invocation_type'] === intent.intent_type
     })
   ) {
     return true
@@ -170,7 +170,7 @@ const resolveInvocationPackRuntime = (
 export const buildInvocationRequestFromActionIntent = async (
   context: AppInfrastructure,
   intent: DispatchableActionIntentLike,
-  packRuntime?: { getPack(): { metadata: { id: string }; capabilities?: Array<{ key: string }>; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> }; variables?: Record<string, unknown> } | undefined }
+  packRuntime?: { getPack(): { metadata: { id: string }; capabilities?: Array<{ key: string }> | undefined; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> | undefined } | undefined; variables?: Record<string, unknown> | undefined } | undefined }
 ): Promise<InvocationRequest | null> => {
   const effectivePackRuntime = resolveInvocationPackRuntime(context, packRuntime);
   if (!shouldBridgeToInvocation(context, intent, effectivePackRuntime)) {

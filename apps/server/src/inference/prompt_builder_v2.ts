@@ -29,7 +29,7 @@ function resolveTemplate(config: PromptSlotConfig, context: PromptContext): stri
     return config.default_template;
   }
   if (config.template_context === 'world_prompts') {
-    return context.world_prompts.global_prefix ?? null;
+    return context.world_prompts['global_prefix'] ?? null;
   }
   return null;
 }

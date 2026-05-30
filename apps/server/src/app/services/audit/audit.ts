@@ -82,15 +82,15 @@ const parseTickLike = (value: string | number | null | undefined): bigint | null
 
 const parseAuditFeedFilters = (query: Record<string, unknown>): AuditFeedFilters & { limit: number } => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query param
-  const fromTick = parseTickLike((query.from_tick as string | undefined) ?? null);
+  const fromTick = parseTickLike((query['from_tick'] as string | undefined) ?? null);
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query param
-  const toTick = parseTickLike((query.to_tick as string | undefined) ?? null);
-  const parsedLimit = typeof query.limit === 'string' ? Number.parseInt(query.limit, 10) : DEFAULT_AUDIT_FEED_LIMIT;
+  const toTick = parseTickLike((query['to_tick'] as string | undefined) ?? null);
+  const parsedLimit = typeof query['limit'] === 'string' ? Number.parseInt(query['limit'], 10) : DEFAULT_AUDIT_FEED_LIMIT;
   const limit = Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : DEFAULT_AUDIT_FEED_LIMIT, 1), MAX_AUDIT_FEED_LIMIT);
-  const rawKinds = Array.isArray(query.kinds)
-    ? (query.kinds as unknown[])
-    : typeof query.kinds === 'string'
-      ? [query.kinds]
+  const rawKinds = Array.isArray(query['kinds'])
+    ? (query['kinds'] as unknown[])
+    : typeof query['kinds'] === 'string'
+      ? [query['kinds']]
       : null;
   const kinds = rawKinds
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
@@ -100,11 +100,11 @@ const parseAuditFeedFilters = (query: Record<string, unknown>): AuditFeedFilters
   return {
     from_tick: fromTick,
     to_tick: toTick,
-    job_id: typeof query.job_id === 'string' ? query.job_id : null,
-    inference_id: typeof query.inference_id === 'string' ? query.inference_id : null,
-    agent_id: typeof query.agent_id === 'string' ? query.agent_id : null,
-    action_intent_id: typeof query.action_intent_id === 'string' ? query.action_intent_id : null,
-    cursor: typeof query.cursor === 'string' ? query.cursor : null,
+    job_id: typeof query['job_id'] === 'string' ? query['job_id'] : null,
+    inference_id: typeof query['inference_id'] === 'string' ? query['inference_id'] : null,
+    agent_id: typeof query['agent_id'] === 'string' ? query['agent_id'] : null,
+    action_intent_id: typeof query['action_intent_id'] === 'string' ? query['action_intent_id'] : null,
+    cursor: typeof query['cursor'] === 'string' ? query['cursor'] : null,
     kinds,
     limit
   };
@@ -142,12 +142,12 @@ const extractAgentIdsFromRefs = (...values: unknown[]): string[] => {
     if (!isRecord(value)) {
       continue;
     }
-    const directAgentId = typeof value.agent_id === 'string' ? value.agent_id : null;
-    const directEntityId = typeof value.entity_id === 'string' ? value.entity_id : null;
-    const semanticIntent = isRecord(value.semantic_intent) ? value.semantic_intent : null;
-    const nestedTargetRef = semanticIntent && isRecord(semanticIntent.target_ref) ? semanticIntent.target_ref : null;
-    const nestedAgentId = nestedTargetRef && typeof nestedTargetRef.agent_id === 'string' ? nestedTargetRef.agent_id : null;
-    const nestedEntityId = nestedTargetRef && typeof nestedTargetRef.entity_id === 'string' ? nestedTargetRef.entity_id : null;
+    const directAgentId = typeof value['agent_id'] === 'string' ? value['agent_id'] : null;
+    const directEntityId = typeof value['entity_id'] === 'string' ? value['entity_id'] : null;
+    const semanticIntent = isRecord(value['semantic_intent']) ? value['semantic_intent'] : null;
+    const nestedTargetRef = semanticIntent && isRecord(semanticIntent['target_ref']) ? semanticIntent['target_ref'] : null;
+    const nestedAgentId = nestedTargetRef && typeof nestedTargetRef['agent_id'] === 'string' ? nestedTargetRef['agent_id'] : null;
+    const nestedEntityId = nestedTargetRef && typeof nestedTargetRef['entity_id'] === 'string' ? nestedTargetRef['entity_id'] : null;
 
     for (const candidate of [directAgentId, directEntityId, nestedAgentId, nestedEntityId]) {
       if (candidate && candidate.trim().length > 0) {
@@ -260,6 +260,7 @@ const buildRelationshipAdjustmentAuditEntries = async (
     return [];
   }
 
+// @ts-expect-error -- EOPT strict mode
   const logs = await context.repos.relationship.listRelationshipAdjustmentLogs({
     take: shouldFetchAllForFilters(filters) ? undefined : limit,
     where: {
@@ -319,6 +320,7 @@ const buildSnrAdjustmentAuditEntries = async (
     return [];
   }
 
+// @ts-expect-error -- EOPT strict mode
   const logs = await context.repos.relationship.listSnrAdjustmentLogs({
     take: shouldFetchAllForFilters(filters) ? undefined : limit,
     where: {
@@ -457,11 +459,11 @@ const buildEventAuditEntries = async (
         tick: event.tick.toString(),
         type: event.type,
         impact_data: impactData,
-        semantic_type: impactData && typeof impactData.semantic_type === 'string' ? impactData.semantic_type : null,
-        failed_attempt: impactData?.failed_attempt === true,
+        semantic_type: impactData && typeof impactData['semantic_type'] === 'string' ? impactData['semantic_type'] : null,
+        failed_attempt: impactData?.['failed_attempt'] === true,
         objective_effect_applied:
-          typeof impactData?.objective_effect_applied === 'boolean' ? impactData.objective_effect_applied : null,
-        grounding_mode: impactData && typeof impactData.grounding_mode === 'string' ? impactData.grounding_mode : null,
+          typeof impactData?.['objective_effect_applied'] === 'boolean' ? impactData['objective_effect_applied'] : null,
+        grounding_mode: impactData && typeof impactData['grounding_mode'] === 'string' ? impactData['grounding_mode'] : null,
         source_action_intent_id: event.source_action_intent_id
       }
     }];
@@ -524,17 +526,17 @@ const buildWorkflowAuditEntryBySnapshot = (jobId: string, snapshot: Awaited<Retu
   const decisionRecord = isRecord(trace?.decision) ? trace.decision : null;
   const intentPayload = isRecord(intent?.payload) ? intent.payload : null;
   const intentGrounding =
-    (traceMetadata && isRecord(traceMetadata.intent_grounding) ? traceMetadata.intent_grounding : null) ??
-    (decisionRecord && isRecord(decisionRecord.meta) && isRecord((decisionRecord.meta).intent_grounding)
-      ? ((decisionRecord.meta).intent_grounding)
+    (traceMetadata && isRecord(traceMetadata['intent_grounding']) ? traceMetadata['intent_grounding'] : null) ??
+    (decisionRecord && isRecord(decisionRecord['meta']) && isRecord((decisionRecord['meta'])['intent_grounding'])
+      ? ((decisionRecord['meta'])['intent_grounding'])
       : null) ??
-    (intentPayload && isRecord(intentPayload.intent_grounding) ? intentPayload.intent_grounding : null);
+    (intentPayload && isRecord(intentPayload['intent_grounding']) ? intentPayload['intent_grounding'] : null);
   const semanticIntent =
-    (traceMetadata && isRecord(traceMetadata.semantic_intent) ? traceMetadata.semantic_intent : null) ??
-    (decisionRecord && isRecord(decisionRecord.meta) && isRecord((decisionRecord.meta).semantic_intent)
-      ? ((decisionRecord.meta).semantic_intent)
+    (traceMetadata && isRecord(traceMetadata['semantic_intent']) ? traceMetadata['semantic_intent'] : null) ??
+    (decisionRecord && isRecord(decisionRecord['meta']) && isRecord((decisionRecord['meta'])['semantic_intent'])
+      ? ((decisionRecord['meta'])['semantic_intent'])
       : null) ??
-    (intentPayload && isRecord(intentPayload.semantic_intent) ? intentPayload.semantic_intent : null);
+    (intentPayload && isRecord(intentPayload['semantic_intent']) ? intentPayload['semantic_intent'] : null);
 
   return {
     kind: 'workflow',
@@ -572,12 +574,12 @@ const buildWorkflowAuditEntryBySnapshot = (jobId: string, snapshot: Awaited<Retu
       semantic_intent: semanticIntent,
       intent_grounding: intentGrounding,
       semantic_outcome:
-        (decisionRecord && isRecord(decisionRecord.meta)
-          ? (decisionRecord.meta).semantic_outcome
+        (decisionRecord && isRecord(decisionRecord['meta'])
+          ? (decisionRecord['meta'])['semantic_outcome']
           : null) ?? null,
       objective_effect_applied:
-        (intentGrounding && typeof intentGrounding.objective_effect_applied === 'boolean'
-          ? intentGrounding.objective_effect_applied
+        (intentGrounding && typeof intentGrounding['objective_effect_applied'] === 'boolean'
+          ? intentGrounding['objective_effect_applied']
           : null) ?? null
     }
   };
@@ -595,14 +597,14 @@ const toWorkflowLineageSummary = (entry: AuditViewEntry): Record<string, unknown
     id: entry.id,
     created_at: entry.created_at,
     summary: entry.summary,
-    workflow_state: entry.data.workflow_state ?? null,
-    job_status: entry.data.job_status ?? null,
-    intent_type: entry.data.intent_type ?? null,
-    action_intent_id: entry.refs.action_intent_id ?? null,
-    inference_id: entry.refs.inference_id ?? null,
-    replay_of_job_id: entry.data.replay_of_job_id ?? null,
-    replay_reason: entry.data.replay_reason ?? null,
-    override_applied: entry.data.override_applied ?? null
+    workflow_state: entry.data['workflow_state'] ?? null,
+    job_status: entry.data['job_status'] ?? null,
+    intent_type: entry.data['intent_type'] ?? null,
+    action_intent_id: entry.refs['action_intent_id'] ?? null,
+    inference_id: entry.refs['inference_id'] ?? null,
+    replay_of_job_id: entry.data['replay_of_job_id'] ?? null,
+    replay_reason: entry.data['replay_reason'] ?? null,
+    override_applied: entry.data['override_applied'] ?? null
   };
 };
 
@@ -632,7 +634,7 @@ const buildWorkflowAuditDetailEntry = async (
   snapshot: Awaited<ReturnType<typeof getWorkflowSnapshotByJobId>>
 ): Promise<AuditViewEntry> => {
   const baseEntry = buildWorkflowAuditEntryBySnapshot(jobId, snapshot);
-  const relatedRecords = await buildWorkflowRelatedRecords(context, baseEntry.refs.action_intent_id ?? null);
+  const relatedRecords = await buildWorkflowRelatedRecords(context, baseEntry.refs['action_intent_id'] ?? null);
   const lineageDetail = await buildWorkflowLineageDetail(context, snapshot);
 
   return {

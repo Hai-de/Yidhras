@@ -167,7 +167,7 @@ const parseValue = (
     return null;
   }
 
-  const token = tokens[idx];
+  const token = tokens[idx]!;
 
   switch (token.type) {
     case 'NUMBER':
@@ -209,7 +209,7 @@ const parseArray = (
   const items: MacroValue[] = [];
 
   // Empty array
-  if (i < tokens.length && tokens[i].type === 'RBRACKET') {
+  if (i < tokens.length && tokens[i]!.type === 'RBRACKET') {
     return { value: items, nextIdx: i + 1 };
   }
 
@@ -221,12 +221,12 @@ const parseArray = (
     items.push(result.value);
     i = result.nextIdx;
 
-    if (i < tokens.length && tokens[i].type === 'COMMA') {
+    if (i < tokens.length && tokens[i]!.type === 'COMMA') {
       i++;
       continue;
     }
 
-    if (i < tokens.length && tokens[i].type === 'RBRACKET') {
+    if (i < tokens.length && tokens[i]!.type === 'RBRACKET') {
       return { value: items, nextIdx: i + 1 };
     }
 
@@ -245,19 +245,19 @@ const parseObject = (
   const obj: Record<string, MacroValue> = {};
 
   // Empty object
-  if (i < tokens.length && tokens[i].type === 'RBRACE') {
+  if (i < tokens.length && tokens[i]!.type === 'RBRACE') {
     return { value: obj, nextIdx: i + 1 };
   }
 
   while (i < tokens.length) {
-    if (tokens[i].type !== 'IDENT') {
+    if (tokens[i]!.type !== 'IDENT') {
       return null;
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    const key = tokens[i].value as string;
+    const key = tokens[i]!.value as string;
     i++;
 
-    if (i >= tokens.length || tokens[i].type !== 'COLON') {
+    if (i >= tokens.length || tokens[i]!.type !== 'COLON') {
       return null;
     }
     i++;
@@ -269,12 +269,12 @@ const parseObject = (
     obj[key] = result.value;
     i = result.nextIdx;
 
-    if (i < tokens.length && tokens[i].type === 'COMMA') {
+    if (i < tokens.length && tokens[i]!.type === 'COMMA') {
       i++;
       continue;
     }
 
-    if (i < tokens.length && tokens[i].type === 'RBRACE') {
+    if (i < tokens.length && tokens[i]!.type === 'RBRACE') {
       return { value: obj, nextIdx: i + 1 };
     }
 
@@ -313,12 +313,12 @@ const parseModifierChain = (
           args.push(result.value);
           ti = result.nextIdx;
           // Skip comma between args
-          if (ti < argTokens.length && argTokens[ti].type === 'COMMA') {
+          if (ti < argTokens.length && argTokens[ti]!.type === 'COMMA') {
             ti++;
           }
         } else {
           // Fall back to raw string for unparseable args
-          args.push(argsStr.slice(argTokens[ti]?.position ?? 0).trim());
+          args.push(argsStr.slice(argTokens[ti]!.position ?? 0).trim());
           break;
         }
       }
@@ -347,24 +347,24 @@ const parseMacroExpression = (
 
   const { tokens } = tokenizeExpr(expression);
 
-  if (tokens.length === 0 || tokens[0].type !== 'IDENT') {
+  if (tokens.length === 0 || tokens[0]!.type !== 'IDENT') {
     return { name: '', args: {} };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- token value guaranteed by tokenizer
-  const name = tokens[0].value as string;
+  const name = tokens[0]!.value as string;
   const args: Record<string, MacroValue> = {};
   let i = 1;
 
   while (i < tokens.length) {
-    if (tokens[i].type !== 'IDENT') {
+    if (tokens[i]!.type !== 'IDENT') {
       break;
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- token value guaranteed by tokenizer
-    const key = tokens[i].value as string;
+    const key = tokens[i]!.value as string;
     i++;
 
-    if (i >= tokens.length || tokens[i].type !== 'EQ') {
+    if (i >= tokens.length || tokens[i]!.type !== 'EQ') {
       break;
     }
     i++; // skip EQ

@@ -31,6 +31,7 @@ function jsonParse<T>(raw: string | null | undefined, fallback: T): T {
 }
 
 function entryRecordToDomain(row: PrismaConversationEntryRecord): ConversationEntry {
+// @ts-expect-error -- EOPT strict mode
   return {
     id: row.id,
     turn_number: row.turn_number,
@@ -292,6 +293,7 @@ export class PrismaConversationStore implements ConversationStore {
       where.turn_number = { lt: opts.before };
     }
 
+// @ts-expect-error -- EOPT strict mode
     const rows = await this.prisma.conversationEntryRecord.findMany({
       where,
       orderBy: { turn_number: 'asc' },

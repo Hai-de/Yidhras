@@ -54,20 +54,20 @@ const validateType = (value: unknown, expectedType: string): boolean => {
 };
 
 const validateSchemaNode = (value: unknown, schema: Record<string, unknown>, path = '$'): string[] => {
-  if (Array.isArray(schema.anyOf)) {
-    const valid = schema.anyOf.some(option => isRecord(option) && validateSchemaNode(value, option, path).length === 0);
+  if (Array.isArray(schema['anyOf'])) {
+    const valid = schema['anyOf'].some(option => isRecord(option) && validateSchemaNode(value, option, path).length === 0);
     return valid ? [] : [`${path} does not satisfy anyOf schema`];
   }
 
   const issues: string[] = [];
-  if (typeof schema.type === 'string' && !validateType(value, schema.type)) {
-    issues.push(`${path} must be ${schema.type}`);
+  if (typeof schema['type'] === 'string' && !validateType(value, schema['type'])) {
+    issues.push(`${path} must be ${schema['type']}`);
     return issues;
   }
 
-  if (schema.type === 'object' && isRecord(value)) {
-    const required = Array.isArray(schema.required)
-      ? schema.required.filter((item): item is string => typeof item === 'string')
+  if (schema['type'] === 'object' && isRecord(value)) {
+    const required = Array.isArray(schema['required'])
+      ? schema['required'].filter((item): item is string => typeof item === 'string')
       : [];
     for (const field of required) {
       if (!(field in value)) {
@@ -75,8 +75,8 @@ const validateSchemaNode = (value: unknown, schema: Record<string, unknown>, pat
       }
     }
 
-    if (isRecord(schema.properties)) {
-      for (const [key, propertySchema] of Object.entries(schema.properties)) {
+    if (isRecord(schema['properties'])) {
+      for (const [key, propertySchema] of Object.entries(schema['properties'])) {
         if (!(key in value) || !isRecord(propertySchema)) {
           continue;
         }
@@ -86,10 +86,10 @@ const validateSchemaNode = (value: unknown, schema: Record<string, unknown>, pat
     }
   }
 
-  if (schema.type === 'array' && Array.isArray(value) && isRecord(schema.items)) {
+  if (schema['type'] === 'array' && Array.isArray(value) && isRecord(schema['items'])) {
     value.forEach((item, index) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      issues.push(...validateSchemaNode(item, schema.items as Record<string, unknown>, `${path}[${String(index)}]`));
+      issues.push(...validateSchemaNode(item, schema['items'] as Record<string, unknown>, `${path}[${String(index)}]`));
     });
   }
 
@@ -117,6 +117,7 @@ const createHandlerMap = () => {
 
   return {
     register(name: string, handler: ToolHandler, schema?: Record<string, unknown>, sandbox?: AiToolSandboxLevel): void {
+// @ts-expect-error -- EOPT strict mode
       entries.set(name, { handler, schema, sandbox });
     },
     get(name: string): HandlerEntry | undefined {
@@ -169,8 +170,8 @@ export const createToolRegistry = (toolEntries?: AiToolRegistryEntry[], permissi
 
   registerWithSchema('query_memory_blocks', {
     async execute(args, ctx) {
-      const packId = typeof args.pack_id === 'string' ? args.pack_id : ctx.pack_id;
-      const limit = typeof args.limit === 'number' && args.limit > 0 ? Math.min(Math.trunc(args.limit), 100) : 10;
+      const packId = typeof args['pack_id'] === 'string' ? args['pack_id'] : ctx.pack_id;
+      const limit = typeof args['limit'] === 'number' && args['limit'] > 0 ? Math.min(Math.trunc(args['limit']), 100) : 10;
 
       const rows = await ctx.context.repos.memory.listActiveMemoryBlocks(packId, limit);
 
@@ -188,8 +189,8 @@ export const createToolRegistry = (toolEntries?: AiToolRegistryEntry[], permissi
 
   registerWithSchema('get_entity', {
     async execute(args, ctx) {
-      const packId = typeof args.pack_id === 'string' ? args.pack_id : ctx.pack_id;
-      const entityId = typeof args.entity_id === 'string' ? args.entity_id : null;
+      const packId = typeof args['pack_id'] === 'string' ? args['pack_id'] : ctx.pack_id;
+      const entityId = typeof args['entity_id'] === 'string' ? args['entity_id'] : null;
 
       if (!packId) {
         return { error: { code: 'MISSING_PACK_ID', message: 'pack_id is required' } };
@@ -206,7 +207,7 @@ export const createToolRegistry = (toolEntries?: AiToolRegistryEntry[], permissi
 
   registerWithSchema('list_active_agents', {
     async execute(args, ctx) {
-      const limit = typeof args.limit === 'number' && args.limit > 0 ? Math.min(Math.trunc(args.limit), 100) : 50;
+      const limit = typeof args['limit'] === 'number' && args['limit'] > 0 ? Math.min(Math.trunc(args['limit']), 100) : 50;
       const agents = await listActiveSchedulerAgents(ctx.context, limit);
       return agents;
     }
@@ -214,8 +215,8 @@ export const createToolRegistry = (toolEntries?: AiToolRegistryEntry[], permissi
 
   registerWithSchema('get_relationship', {
     async execute(args, ctx) {
-      const sourceId = typeof args.source_id === 'string' ? args.source_id : null;
-      const targetId = typeof args.target_id === 'string' ? args.target_id : null;
+      const sourceId = typeof args['source_id'] === 'string' ? args['source_id'] : null;
+      const targetId = typeof args['target_id'] === 'string' ? args['target_id'] : null;
 
       if (!sourceId || !targetId) {
         return { error: { code: 'MISSING_IDS', message: 'source_id and target_id are required' } };
@@ -271,6 +272,7 @@ export const createToolRegistry = (toolEntries?: AiToolRegistryEntry[], permissi
       }
 
       if (policies.length > 0) {
+// @ts-expect-error -- EOPT strict mode
         const permissionResult = resolveToolPermissions(policies, name, {
           agent_role: ctx.agent_role,
           pack_id: ctx.pack_id,

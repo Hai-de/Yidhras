@@ -75,6 +75,7 @@ const requireExperimentalPackHost = (context: AppContext, packId: string) => {
 
 const requireExperimentalPackHandle = (context: AppContext, packId: string) => {
   assertPackScope(context, packId,'experimental runtime pack handle')
+// @ts-expect-error -- EOPT strict mode
   const summary = getPackRuntimeLookupPort({
     packRuntimeLookup: context.packRuntimeLookup
   }).getPackRuntimeSummary(packId)
@@ -120,7 +121,7 @@ export const experimentalRuntimeRoutes: RouteModule = {
       packGuard,
       controlGuard,
       asyncHandler(async (req, res) => {
-        const packId = resolvePackIdParam(req.params.packId)
+        const packId = resolvePackIdParam(req.params['packId'])
 
         try {
           const result = await loadExperimentalPackRuntime(context, packId)
@@ -136,7 +137,7 @@ export const experimentalRuntimeRoutes: RouteModule = {
       packGuard,
       controlGuard,
       asyncHandler(async (req, res) => {
-        const packId = resolvePackIdParam(req.params.packId)
+        const packId = resolvePackIdParam(req.params['packId'])
 
         try {
           jsonOk(res, toJsonSafe(await unloadExperimentalPackRuntime(context, packId)))
@@ -151,11 +152,11 @@ export const experimentalRuntimeRoutes: RouteModule = {
       packGuard,
       controlGuard,
       (req, res) => {
-        const packId = resolvePackIdParam(req.params.packId)
+        const packId = resolvePackIdParam(req.params['packId'])
         const host = requireExperimentalPackHost(context, packId)
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express request body/param parsing
-        const amountInput = (req.body as Record<string, unknown> | undefined)?.amount
+        const amountInput = (req.body as Record<string, unknown> | undefined)?.['amount']
         const amount = typeof amountInput === 'number' && Number.isFinite(amountInput) && amountInput > 0
           ? BigInt(Math.trunc(amountInput))
           : 1n
@@ -178,7 +179,7 @@ export const experimentalRuntimeRoutes: RouteModule = {
       packGuard,
       observeGuard,
       asyncHandler(async (req, res) => {
-        const packId = resolvePackIdParam(req.params.packId)
+        const packId = resolvePackIdParam(req.params['packId'])
         const snapshot = await getExperimentalPackRuntimeStatusSnapshot(context, packId)
         requireExperimentalPackHandle(context, packId)
         jsonOk(res, toJsonSafe(snapshot))
@@ -190,7 +191,7 @@ export const experimentalRuntimeRoutes: RouteModule = {
       packGuard,
       observeGuard,
       (req, res) => {
-        const packId = resolvePackIdParam(req.params.packId)
+        const packId = resolvePackIdParam(req.params['packId'])
         const handle = requireExperimentalPackHandle(context, packId)
         jsonOk(
           res,
@@ -208,7 +209,7 @@ export const experimentalRuntimeRoutes: RouteModule = {
       packGuard,
       observeGuard,
       asyncHandler(async (req, res) => {
-        const packId = resolvePackIdParam(req.params.packId)
+        const packId = resolvePackIdParam(req.params['packId'])
         requireExperimentalPackHandle(context, packId)
         jsonOk(res, toJsonSafe(await getSchedulerSummarySnapshot(context, packId, {})))
       })
@@ -218,8 +219,8 @@ export const experimentalRuntimeRoutes: RouteModule = {
       '/api/experimental/runtime/packs/:packId/scheduler/ownership',
       packGuard,
       observeGuard,
-      asyncHandler(async (req, res) => {
-        const packId = resolvePackIdParam(req.params.packId)
+      asyncHandler((req, res) => {
+        const packId = resolvePackIdParam(req.params['packId'])
         requireExperimentalPackHandle(context, packId)
         jsonOk(res, toJsonSafe(listSchedulerOwnershipAssignments(context, packId, {})))
       })
@@ -229,8 +230,8 @@ export const experimentalRuntimeRoutes: RouteModule = {
       '/api/experimental/runtime/packs/:packId/scheduler/workers',
       packGuard,
       observeGuard,
-      asyncHandler(async (req, res) => {
-        const packId = resolvePackIdParam(req.params.packId)
+      asyncHandler((req, res) => {
+        const packId = resolvePackIdParam(req.params['packId'])
         requireExperimentalPackHandle(context, packId)
         jsonOk(res, toJsonSafe(listSchedulerWorkers(context, packId, {})))
       })
@@ -241,7 +242,7 @@ export const experimentalRuntimeRoutes: RouteModule = {
       packGuard,
       observeGuard,
       asyncHandler(async (req, res) => {
-        const packId = resolvePackIdParam(req.params.packId)
+        const packId = resolvePackIdParam(req.params['packId'])
         requireExperimentalPackHandle(context, packId)
         jsonOk(res, toJsonSafe(await getSchedulerOperatorProjection(context, packId, {})))
       })

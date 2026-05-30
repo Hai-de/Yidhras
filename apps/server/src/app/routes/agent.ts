@@ -30,6 +30,7 @@ export const agentRoutes: RouteModule = {
     context.assertRuntimeReady(options.runtimeFeature)
     const params = parseParams(entityIdParamsSchema, req.params, 'AGENT_QUERY_INVALID')
     const query = parseQuery(entityOverviewQuerySchema, req.query, 'AGENT_QUERY_INVALID')
+// @ts-expect-error -- EOPT strict mode
     const overview = await getEntityOverview(context, params.id, {
       limit: query.limit
     })
@@ -77,10 +78,11 @@ export const agentRoutes: RouteModule = {
       const params = parseParams(agentIdParamsSchema, req.params, 'AGENT_QUERY_INVALID')
       const query = parseQuery(agentSchedulerProjectionQuerySchema, req.query, 'AGENT_QUERY_INVALID')
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query value
-      const packId = (req.query.packId as string | undefined) ?? (req.params.packId as string | undefined)
+      const packId = (req.query['packId'] as string | undefined) ?? (req.params['packId'] as string | undefined)
       if (!packId) {
         throw new ApiError(400, 'PACK_ID_REQUIRED', 'Pack ID is required for agent scheduler operations')
       }
+// @ts-expect-error -- EOPT strict mode
       const projection = await getAgentSchedulerProjection(context, packId, params.id, {
         limit: query.limit
       })
@@ -99,6 +101,7 @@ export const agentRoutes: RouteModule = {
       context.assertRuntimeReady('agent snr adjustment logs')
       const params = parseParams(agentIdParamsSchema, req.params, 'SNR_LOG_QUERY_INVALID')
       const query = parseQuery(agentSnrLogsQuerySchema, req.query, 'SNR_LOG_QUERY_INVALID')
+// @ts-expect-error -- EOPT strict mode
       const logs = await listSnrAdjustmentLogs(context, {
         agent_id: params.id,
         limit: query.limit

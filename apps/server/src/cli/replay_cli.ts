@@ -26,27 +26,27 @@ const parseArgs = (argv: string[]): ReplayArgs => {
   const parsed: ReplayArgs = {
     ticks: DEFAULT_TICKS,
     runs: DEFAULT_RUNS,
-    baseUrl: process.env.YIDHRAS_BASE_URL ?? DEFAULT_BASE_URL
+    baseUrl: process.env['YIDHRAS_BASE_URL'] ?? DEFAULT_BASE_URL
   };
 
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
+    const arg = argv[i]!;
     switch (arg) {
       case '--help':
       case '-h':
         parsed.help = true;
         break;
       case '--seed':
-        parsed.seed = argv[++i];
+        parsed.seed = argv[++i]!;
         break;
       case '--ticks':
-        parsed.ticks = Number(argv[++i]);
+        parsed.ticks = Number(argv[++i]!);
         break;
       case '--runs':
-        parsed.runs = Number(argv[++i]);
+        parsed.runs = Number(argv[++i]!);
         break;
       case '--base-url':
-        parsed.baseUrl = argv[++i];
+        parsed.baseUrl = argv[++i]!;
         break;
       default:
         if (!arg.startsWith('-') && !parsed.packId) {

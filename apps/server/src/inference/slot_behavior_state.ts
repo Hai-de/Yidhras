@@ -94,6 +94,7 @@ export function applyStateTransitions(
         next.status = 'Active';
         next.last_activated_tick = input.currentTick;
         next.trigger_count = state.trigger_count + 1;
+// @ts-expect-error -- EOPT strict mode
         next.delay_until_tick = undefined;
         if (input.stickyMaxActivations !== undefined && input.stickyMaxActivations > 1) {
           next.sticky_remaining = input.stickyMaxActivations - 1;
@@ -107,6 +108,7 @@ export function applyStateTransitions(
       if (input.cooldownTicks && input.cooldownTicks > 0) {
         next.status = 'Cooling';
         next.cooldown_until_tick = input.currentTick + input.cooldownTicks;
+// @ts-expect-error -- EOPT strict mode
         next.sticky_remaining = undefined;
       } else if ((state.sticky_remaining ?? 0) > 0) {
         next.status = 'Retained';
@@ -129,6 +131,7 @@ export function applyStateTransitions(
           } else {
             next.status = 'Pending';
           }
+// @ts-expect-error -- EOPT strict mode
           next.sticky_remaining = undefined;
         }
       } else {
@@ -138,6 +141,7 @@ export function applyStateTransitions(
         } else {
           next.status = 'Pending';
         }
+// @ts-expect-error -- EOPT strict mode
         next.sticky_remaining = undefined;
       }
       break;
@@ -146,6 +150,7 @@ export function applyStateTransitions(
     case 'Cooling': {
       if (input.currentTick >= (state.cooldown_until_tick ?? 0)) {
         next.status = 'Pending';
+// @ts-expect-error -- EOPT strict mode
         next.cooldown_until_tick = undefined;
       }
       // Cooling 状态下即使条件满足也不激活

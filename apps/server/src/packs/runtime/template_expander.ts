@@ -46,11 +46,11 @@ const expandMacroValue = (
 
     if (
       nodes.length === 1 &&
-      nodes[0].type === 'macro' &&
-      scope.macroHandlers?.[nodes[0].name]
+      nodes[0]!.type === 'macro' &&
+      scope.macroHandlers?.[nodes[0]!.name]
     ) {
-      const resolvedArgs = resolveMacroArgs(nodes[0].args, scope);
-      return scope.macroHandlers[nodes[0].name](nodes[0].name, resolvedArgs, scope);
+      const resolvedArgs = resolveMacroArgs(nodes[0]!.args, scope);
+      return scope.macroHandlers[nodes[0]!.name]!(nodes[0]!.name, resolvedArgs, scope);
     }
 
     return renderAst(nodes, scope);

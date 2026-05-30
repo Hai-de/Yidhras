@@ -30,29 +30,29 @@ const parseArgs = (argv: string[]): ParsedArgs => {
   const parsed: ParsedArgs = {};
 
   for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
+    const arg = argv[i]!;
     switch (arg) {
       case '--help':
       case '-h':
         parsed.help = true;
         break;
       case '--pack':
-        parsed.packId = argv[++i];
+        parsed.packId = argv[++i]!;
         break;
       case '--force':
         parsed.force = true;
         break;
       case '--limit':
-        parsed.limit = parseInt(argv[++i], 10);
+        parsed.limit = parseInt(argv[++i]!, 10);
         break;
       default:
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
         if (COMMANDS.includes(arg as (typeof COMMANDS)[number])) {
-          parsed.command = arg;
+          parsed.command = arg!;
         } else if (!arg.startsWith('-') && !parsed.command) {
-          parsed.command = arg;
+          parsed.command = arg!;
         } else if (!arg.startsWith('-') && parsed.command && !parsed.snapshotId) {
-          parsed.snapshotId = arg;
+          parsed.snapshotId = arg!;
         }
     }
   }

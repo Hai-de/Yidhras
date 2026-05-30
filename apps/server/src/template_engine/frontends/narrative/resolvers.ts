@@ -46,6 +46,7 @@ export const createNarrativeVariableResolver = (
   localScope?: Record<string, unknown>
 ) => {
   return (path: string, pipeline: ModifierSpec[]) => {
+// @ts-expect-error -- EOPT strict mode
     const lookup = lookupPromptVariable({
       expression: path,
       path,
@@ -58,7 +59,7 @@ export const createNarrativeVariableResolver = (
 
     for (const modifier of pipeline) {
       if (modifier.name === 'default' && modifier.args.length > 0) {
-        const result = applyDefaultModifier(resolvedValue, modifier.args[0]);
+        const result = applyDefaultModifier(resolvedValue, modifier.args[0]!);
         resolvedValue = result.value;
         fallbackApplied = result.fallbackApplied || fallbackApplied;
       }

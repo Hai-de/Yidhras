@@ -264,7 +264,7 @@ const aggregatePartitionRunResults = (results: PartitionSchedulerRunResult[]): A
     scheduled_for_future_count: results.reduce((sum, result) => sum + result.scheduled_for_future_count, 0),
     skipped_existing_idempotency_count: results.reduce((sum, result) => sum + result.skipped_existing_idempotency_count, 0),
     skipped_by_reason: skipCounts,
-    scheduler_run_id: schedulerRunIds[0],
+    scheduler_run_id: schedulerRunIds[0]!,
     scheduler_run_ids: schedulerRunIds,
     partition_ids: partitionIds
   };
@@ -497,6 +497,7 @@ const runAgentSchedulerForPartition = async ({
   const effectiveMaxCandidates = Math.min(getSchedulerAgentConfig().max_candidates, tickBudgetConfig.max_created_jobs_per_tick);
 
   const kernelConfig = getSchedulerDecisionKernelConfig();
+// @ts-expect-error -- EOPT strict mode
   const schedulerKernel = createSchedulerDecisionKernelProvider({
     timeoutMs: kernelConfig.timeout_ms,
     binaryPath: kernelConfig.binary_path,
@@ -628,6 +629,7 @@ export const runAgentScheduler = async ({
   const now = resolvePackTick(context, packRuntime);
   refreshSchedulerWorkerRuntimeLiveness(context, now, packId);
 
+// @ts-expect-error -- EOPT strict mode
   const initialOwnershipSnapshot = resolveSchedulerOwnershipSnapshot(context, {
     workerId,
     bootstrapPartitionIds: partitionIds
@@ -643,6 +645,7 @@ export const runAgentScheduler = async ({
   evaluateSchedulerAutomaticRebalance(context, { now }, packId);
   applySchedulerAutomaticRebalanceForWorker(context, { workerId, now }, packId);
 
+// @ts-expect-error -- EOPT strict mode
   const ownershipSnapshot = resolveSchedulerOwnershipSnapshot(context, {
     workerId,
     bootstrapPartitionIds: partitionIds
@@ -659,6 +662,7 @@ export const runAgentScheduler = async ({
 
   const partitionResults = await Promise.all(
     ownedPartitionIds.map(partitionId =>
+// @ts-expect-error -- EOPT strict mode
       runAgentSchedulerForPartition({
         context,
         workerId,

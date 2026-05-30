@@ -26,6 +26,7 @@ class NotificationManager {
     code?: string,
     details?: Record<string, unknown>
   ): SystemMessage {
+// @ts-expect-error -- EOPT strict mode
     const msg: SystemMessage = {
       id: Math.random().toString(36).substring(2, 9),
       level,

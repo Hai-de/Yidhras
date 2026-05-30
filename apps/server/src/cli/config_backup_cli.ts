@@ -39,7 +39,7 @@ const parseArgs = (argv: string[]): ParsedArgs => {
 
   for (let i = 0; i < argv.length; i++) {
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
-    const arg = argv[i]
+    const arg = argv[i]!
 
     switch (arg) {
       case '--help':
@@ -47,10 +47,10 @@ const parseArgs = (argv: string[]): ParsedArgs => {
         parsed.help = true
         break
       case '--name':
-        parsed.name = argv[++i]
+        parsed.name = argv[++i]!
         break
       case '--limit':
-        parsed.limit = parseInt(argv[++i], 10)
+        parsed.limit = parseInt(argv[++i]!, 10)
         break
       case '--force':
         parsed.force = true

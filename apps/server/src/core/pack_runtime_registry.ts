@@ -5,7 +5,7 @@ export type PackRuntimeStatus = 'loading' | 'ready' | 'degraded' | 'unloading' |
 
 export interface PackRuntimeState {
   status: PackRuntimeStatus;
-  degradedReason?: string;
+  degradedReason?: string | undefined;
   updatedAt: number;
 }
 

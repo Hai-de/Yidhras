@@ -21,18 +21,18 @@ export interface ContextDirectiveRequest {
   id: string;
   directive_type: ContextDirectiveType;
   submitted_by: 'system' | 'agent' | 'model';
-  target_node_id?: string | null;
-  target_overlay_id?: string | null;
-  payload?: Record<string, unknown> | null;
+  target_node_id?: string | null | undefined;
+  target_overlay_id?: string | null | undefined;
+  payload?: Record<string, unknown> | null | undefined;
 }
 
 export interface ContextApprovedDirective {
   id: string;
   directive_type: ContextDirectiveType;
   approved_by: 'system' | 'policy_engine';
-  target_node_id?: string | null;
-  target_overlay_id?: string | null;
-  resulting_overlay_mutation_ids?: string[];
+  target_node_id?: string | null | undefined;
+  target_overlay_id?: string | null | undefined;
+  resulting_overlay_mutation_ids?: string[] | undefined;
 }
 
 export interface ContextDeniedDirective {
@@ -41,6 +41,6 @@ export interface ContextDeniedDirective {
   denied_by: 'system' | 'policy_engine';
   denial_code: ContextDirectiveDeniedCode;
   denial_reason: string;
-  target_node_id?: string | null;
-  target_overlay_id?: string | null;
+  target_node_id?: string | null | undefined;
+  target_overlay_id?: string | null | undefined;
 }

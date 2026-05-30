@@ -46,7 +46,7 @@ function extractLastUserMessage(context: InferenceContext): string {
 
   const currentAgentId = context.current_agent_id ?? context.resolved_agent_id ?? context.actor_ref.agent_id ?? context.actor_ref.identity_id;
   for (let i = entries.length - 1; i >= 0; i--) {
-    const entry = entries[i];
+    const entry = entries[i]!;
     if (entry.speaker_agent_id !== currentAgentId) {
       return entry.current_content;
     }
@@ -61,6 +61,7 @@ function extractConversationMeta(context: InferenceContext): {
   const entries = getVisibleConversationEntries(context);
   const last = entries[entries.length - 1];
   const currentAgentId = context.current_agent_id ?? context.resolved_agent_id ?? context.actor_ref.agent_id ?? context.actor_ref.identity_id;
+// @ts-expect-error -- EOPT strict mode
   return {
     turn_count: entries.length,
     last_message_role: last
@@ -360,7 +361,7 @@ export const createBehaviorControlExecutor = (): PromptWorkflowStepExecutor => (
           // 按权重降序排列，render_order 越大的越靠前
           const ordered = resolvePriorityOrder(groupProfiles);
           for (let i = 0; i < ordered.length; i++) {
-            ordered[i].render_order = ordered.length - i;
+            ordered[i]!.render_order = ordered.length - i;
           }
           break;
         }
@@ -417,6 +418,7 @@ export const createBehaviorControlExecutor = (): PromptWorkflowStepExecutor => (
 
         // Phase 2: apply state transitions BEFORE activation decision finalization.
         // Delayed and Cooling states override the condition-based decision.
+// @ts-expect-error -- EOPT strict mode
         const nextState = applyStateTransitions(currentState, {
           conditionMet: decision.active,
           currentTick,

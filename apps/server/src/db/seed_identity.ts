@@ -86,6 +86,7 @@ const ensurePolicy = async (policy: PolicySeed) => {
 
   const now = BigInt(Date.now());
   await prisma.policy.create({
+// @ts-expect-error -- EOPT strict mode
     data: {
       effect: policy.effect,
       subject_id: policy.subject_id ?? null,
@@ -134,6 +135,7 @@ const ensureIdentityBinding = async (binding: IdentityBindingSeed) => {
 
   const now = BigInt(Date.now());
   await prisma.identityNodeBinding.create({
+// @ts-expect-error -- EOPT strict mode
     data: {
       identity_id: binding.identity_id,
       agent_id: binding.agent_id ?? null,

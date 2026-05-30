@@ -7,7 +7,7 @@ export const createRequestId = (): string => {
 export const requestIdMiddleware = () => {
   return (_req: Request, res: Response, next: NextFunction) => {
     const requestId = createRequestId();
-    res.locals.requestId = requestId;
+    res.locals['requestId'] = requestId;
     res.setHeader('X-Request-Id', requestId);
     next();
   };

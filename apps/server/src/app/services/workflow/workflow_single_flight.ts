@@ -10,7 +10,7 @@ const resolveActionIntentActorId = (actorRef: unknown): string | null => {
     return null;
   }
 
-  return typeof actorRef.agent_id === 'string' && actorRef.agent_id.length > 0 ? actorRef.agent_id : null;
+  return typeof actorRef['agent_id'] === 'string' && actorRef['agent_id'].length > 0 ? actorRef['agent_id'] : null;
 };
 
 const resolveRequestInputAgentId = (requestInput: unknown): string | null => {

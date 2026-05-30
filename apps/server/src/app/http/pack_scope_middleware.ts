@@ -9,7 +9,7 @@ interface PackScopedRequest extends Request {
 export const createPackScopeMiddleware = (resolver: PackScopeResolver) => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query/param value
-    const packId = req.params.packId as string;
+    const packId = req.params['packId'] as string;
     if (!packId) {
       next();
       return;
@@ -32,7 +32,7 @@ export const createPackScopeMiddleware = (resolver: PackScopeResolver) => {
 export const createLenientPackScopeMiddleware = (resolver: PackScopeResolver) => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Express query/param value
-    const packId = req.params.packId as string;
+    const packId = req.params['packId'] as string;
     if (!packId) {
       next();
       return;

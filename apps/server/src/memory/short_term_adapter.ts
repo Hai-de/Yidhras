@@ -192,8 +192,8 @@ const matchesActorRef = (storedActorRef: unknown, actorRef: InferenceActorRef): 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
   const record = storedActorRef as Record<string, unknown>;
   return (
-    record.identity_id === actorRef.identity_id ||
-    (typeof record.agent_id === 'string' && record.agent_id === actorRef.agent_id)
+    record['identity_id'] === actorRef.identity_id ||
+    (typeof record['agent_id'] === 'string' && record['agent_id'] === actorRef.agent_id)
   );
 };
 

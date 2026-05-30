@@ -110,7 +110,7 @@ const fisherYatesShuffle = <T>(arr: T[], rng: () => number): T[] => {
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     // eslint-disable-next-line security/detect-object-injection -- Fisher-Yates 使用受控整数索引交换数组元素
-    [result[i], result[j]] = [result[j], result[i]];
+    [result[i], result[j]] = [result[j]!, result[i]!];
   }
   return result;
 };
@@ -118,8 +118,8 @@ const fisherYatesShuffle = <T>(arr: T[], rng: () => number): T[] => {
 export const BUILTIN_MACRO_HANDLERS: Record<string, MacroHandlerFn> = {
   roll: (_name: string, args: Record<string, MacroValue>, scope: RenderScope): MacroValue => {
     const rng = resolveRng(scope);
-    const count = Math.max(1, toNumber(args.count ?? 1, 1));
-    const sides = Math.max(1, toNumber(args.sides ?? 6, 6));
+    const count = Math.max(1, toNumber(args['count'] ?? 1, 1));
+    const sides = Math.max(1, toNumber(args['sides'] ?? 6, 6));
     let total = 0;
     for (let i = 0; i < count; i++) {
       total += Math.floor(rng() * sides) + 1;
@@ -129,7 +129,7 @@ export const BUILTIN_MACRO_HANDLERS: Record<string, MacroHandlerFn> = {
 
   pick: (_name: string, args: Record<string, MacroValue>, scope: RenderScope): MacroValue => {
     const rng = resolveRng(scope);
-    const fromRaw = args.from;
+    const fromRaw = args['from'];
 
     let from: string[];
     if (Array.isArray(fromRaw)) {
@@ -143,28 +143,28 @@ export const BUILTIN_MACRO_HANDLERS: Record<string, MacroHandlerFn> = {
     if (from.length === 0) {
       return '';
     }
-    const count = Math.max(1, toNumber(args.count ?? 1, 1));
+    const count = Math.max(1, toNumber(args['count'] ?? 1, 1));
     if (count >= from.length) {
       const shuffled = fisherYatesShuffle(from, rng);
-      return shuffled.length === 1 ? shuffled[0] : shuffled;
+      return shuffled.length === 1 ? shuffled[0]! : shuffled;
     }
     const shuffled = fisherYatesShuffle(from, rng);
     const picked = shuffled.slice(0, count);
-    return picked.length === 1 ? picked[0] : picked;
+    return picked.length === 1 ? picked[0]! : picked;
   },
 
   int: (_name: string, args: Record<string, MacroValue>, scope: RenderScope): MacroValue => {
     const rng = resolveRng(scope);
-    const min = toNumber(args.min ?? 0, 0);
-    const max = toNumber(args.max ?? 100, 100);
+    const min = toNumber(args['min'] ?? 0, 0);
+    const max = toNumber(args['max'] ?? 100, 100);
     const result = Math.floor(rng() * (max - min + 1)) + min;
     return result;
   },
 
   float: (_name: string, args: Record<string, MacroValue>, scope: RenderScope): MacroValue => {
     const rng = resolveRng(scope);
-    const rawMin = args.min;
-    const rawMax = args.max;
+    const rawMin = args['min'];
+    const rawMax = args['max'];
     const min =
       typeof rawMin === 'number'
         ? rawMin

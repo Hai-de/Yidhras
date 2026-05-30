@@ -13,8 +13,8 @@ const parseArgs = (argv: string[]): WorldPackProjectScaffoldOptions => {
 
   for (let index = 0; index < argv.length; index += 1) {
 // eslint-disable-next-line security/detect-object-injection -- 从内部枚举构造的键
-    const current = argv[index];
-    const next = argv[index + 1];
+    const current = argv[index]!;
+    const next = argv[index + 1]!;
 
     switch (current) {
       case '--dir':

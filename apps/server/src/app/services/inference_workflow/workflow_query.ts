@@ -283,10 +283,10 @@ const resolveInferenceJobActorRef = (
 
   const fallback: Record<string, unknown> = {};
   if (typeof requestInput?.agent_id === 'string') {
-    fallback.agent_id = requestInput.agent_id;
+    fallback['agent_id'] = requestInput.agent_id;
   }
   if (typeof requestInput?.identity_id === 'string') {
-    fallback.identity_id = requestInput.identity_id;
+    fallback['identity_id'] = requestInput.identity_id;
   }
 
   return Object.keys(fallback).length > 0 ? fallback : null;
@@ -298,9 +298,9 @@ const matchesInferenceJobFilters = (
   requestInput: InferenceRequestInput | null
 ): boolean => {
   const actorRef = resolveInferenceJobActorRef(workflowSnapshot, requestInput);
-  const actorAgentId = actorRef && typeof actorRef.agent_id === 'string' ? actorRef.agent_id : requestInput?.agent_id ?? null;
+  const actorAgentId = actorRef && typeof actorRef['agent_id'] === 'string' ? actorRef['agent_id'] : requestInput?.agent_id ?? null;
   const actorIdentityId =
-    actorRef && typeof actorRef.identity_id === 'string' ? actorRef.identity_id : requestInput?.identity_id ?? null;
+    actorRef && typeof actorRef['identity_id'] === 'string' ? actorRef['identity_id'] : requestInput?.identity_id ?? null;
   const strategy = workflowSnapshot.records.trace?.strategy ?? requestInput?.strategy ?? null;
 
   if (filters.agent_id !== null && actorAgentId !== filters.agent_id) {
@@ -414,7 +414,7 @@ export const listInferenceJobs = async (
     items: pageItems,
     page_info: {
       has_next_page: hasNextPage,
-      next_cursor: hasNextPage ? encodeInferenceJobsCursor(pageItems[pageItems.length - 1]) : null
+      next_cursor: hasNextPage ? encodeInferenceJobsCursor(pageItems[pageItems.length - 1]!) : null
     },
     summary: {
       returned: pageItems.length,

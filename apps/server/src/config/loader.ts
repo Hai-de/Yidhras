@@ -7,7 +7,7 @@ import { isRecord } from '../utils/type_guards.js';
 const WORKSPACE_ROOT_MARKERS = ['pnpm-workspace.yaml', '.git'];
 
 export const resolveWorkspaceRoot = (startDir: string = process.cwd()): string => {
-  const explicitWorkspaceRoot = process.env.WORKSPACE_ROOT?.trim();
+  const explicitWorkspaceRoot = process.env['WORKSPACE_ROOT']?.trim();
   if (explicitWorkspaceRoot) {
     return path.resolve(explicitWorkspaceRoot);
   }

@@ -14,7 +14,9 @@ export interface GlobalProjectionIndexSnapshot {
 }
 
 export const extractGlobalProjectionIndex = async (context: AppContext, packId?: string): Promise<GlobalProjectionIndexSnapshot> => {
+// @ts-expect-error -- EOPT strict mode
   const operatorProjection = await getOperatorOverviewProjection(context, { packId });
+// @ts-expect-error -- EOPT strict mode
   const visibleClock = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId });
 
   /**

@@ -20,6 +20,7 @@ export const socialRoutes: RouteModule = {
       context.assertRuntimeReady('social feed');
       const query = parseQuery(socialFeedQuerySchema, req.query, 'SOCIAL_FEED_QUERY_INVALID');
 
+// @ts-expect-error -- EOPT strict mode
       const feed = await listSocialFeed(context, identityRequest.identity, query);
 
       jsonOk(res, toJsonSafe(feed.items), {

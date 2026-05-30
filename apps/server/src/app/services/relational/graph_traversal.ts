@@ -46,8 +46,8 @@ export const getNeighborhoodNodeIds = (
       }
 
       for (const intent of actionIntents) {
-        const actorAgentId = isRecord(intent.actor_ref) && typeof intent.actor_ref.agent_id === 'string'
-          ? intent.actor_ref.agent_id
+        const actorAgentId = isRecord(intent.actor_ref) && typeof intent.actor_ref['agent_id'] === 'string'
+          ? intent.actor_ref['agent_id']
           : null;
         const relayNodeId = buildRelayNodeId(intent.id);
         const containerNodeId = buildContainerNodeId(intent.id);

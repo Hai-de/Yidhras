@@ -40,6 +40,7 @@ export const toRunReadModel = (
   lease_holder: record.lease_holder,
   lease_expires_at_snapshot: record.lease_expires_at_snapshot?.toString() ?? null,
   tick: record.tick.toString(),
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse result typed at boundary
   summary: parseSummaryJson(record.summary) as AgentSchedulerRunResult,
   started_at: record.started_at.toString(),
   finished_at: record.finished_at.toString(),
@@ -55,6 +56,7 @@ export const toCandidateDecisionReadModel = (
   record: SchedulerCandidateDecisionRecord,
   workflowLink?: SchedulerDecisionWorkflowLink | null
 ): SchedulerCandidateDecisionReadModel => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- JSON.parse result typed at boundary
   const candidateReasons: string[] = parseSummaryJson(record.candidate_reasons) as string[];
   const reasons = Array.isArray(candidateReasons) ? candidateReasons : [];
   const coalescedSecondaryReasonCount = record.kind === 'event_driven' ? Math.max(reasons.length - 1, 0) : 0;
@@ -69,6 +71,7 @@ export const toCandidateDecisionReadModel = (
     chosen_reason: record.chosen_reason,
     scheduled_for_tick: record.scheduled_for_tick.toString(),
     priority_score: record.priority_score,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- DB value validated by storage layer
     skipped_reason: record.skipped_reason as SchedulerSkipReason | null,
     coalesced_secondary_reason_count: coalescedSecondaryReasonCount,
     has_coalesced_signals: coalescedSecondaryReasonCount > 0,

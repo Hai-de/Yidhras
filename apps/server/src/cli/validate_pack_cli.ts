@@ -80,7 +80,7 @@ const validateIncludes = (parsed: unknown, packDir: string): ValidationIssue[] =
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
   const obj = parsed as Record<string, unknown>;
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
-  const include = obj.include as Record<string, unknown> | undefined;
+  const include = obj['include'] as Record<string, unknown> | undefined;
   if (!include || typeof include !== 'object' || Object.keys(include).length === 0) {
     return issues;
   }
@@ -110,7 +110,7 @@ const validateIncludes = (parsed: unknown, packDir: string): ValidationIssue[] =
     const filePath = typeof includeValue === 'string'
       ? includeValue
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
-      : (includeValue as Record<string, unknown>)?.file as string | undefined;
+      : (includeValue as Record<string, unknown>)?.['file'] as string | undefined;
 
     if (!filePath || typeof filePath !== 'string') {
       issues.push({
@@ -195,7 +195,7 @@ const validateConfig = (packDir: string): ValidationIssue[] => {
   if (!hasIncludeFail && typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- CLI output serialization
     const obj = parsed as Record<string, unknown>;
-    if (obj.include && typeof obj.include === 'object' && Object.keys(obj.include).length > 0) {
+    if (obj['include'] && typeof obj['include'] === 'object' && Object.keys(obj['include']).length > 0) {
       const { merged, diagnostics } = resolveIncludes(obj, packDir);
       const mergeErrors = diagnostics.filter((d) => d.severity === 'ERROR');
       if (mergeErrors.length > 0) {
@@ -300,7 +300,7 @@ const validatePlugins = (packDir: string): ValidationIssue[] => {
 
 const validateBehaviorTrees = (parsedConfig: Record<string, unknown>): ValidationIssue[] => {
   const issues: ValidationIssue[] = [];
-  const rawTrees = parsedConfig.behavior_trees;
+  const rawTrees = parsedConfig['behavior_trees'];
 
   if (!rawTrees || typeof rawTrees !== 'object' || Array.isArray(rawTrees)) {
     return issues; // No behavior trees defined — skip

@@ -304,56 +304,56 @@ export interface SchedulerOperatorProjection {
 // ---------------------------------------------------------------------------
 
 export interface ListSchedulerRunsInput {
-  limit?: string | number;
-  cursor?: string;
-  from_tick?: string | number;
-  to_tick?: string | number;
-  worker_id?: string;
-  partition_id?: string;
-  pack_id?: string;
+  limit?: string | number | undefined;
+  cursor?: string | undefined;
+  from_tick?: string | number | undefined;
+  to_tick?: string | number | undefined;
+  worker_id?: string | undefined;
+  partition_id?: string | undefined;
+  pack_id?: string | undefined;
 }
 
 export interface ListSchedulerDecisionsInput {
-  limit?: string | number;
-  cursor?: string;
-  actor_id?: string;
-  kind?: string;
-  reason?: string;
-  skipped_reason?: string;
-  from_tick?: string | number;
-  to_tick?: string | number;
-  partition_id?: string;
-  pack_id?: string;
+  limit?: string | number | undefined;
+  cursor?: string | undefined;
+  actor_id?: string | undefined;
+  kind?: string | undefined;
+  reason?: string | undefined;
+  skipped_reason?: string | undefined;
+  from_tick?: string | number | undefined;
+  to_tick?: string | number | undefined;
+  partition_id?: string | undefined;
+  pack_id?: string | undefined;
 }
 
 export interface ListSchedulerOwnershipAssignmentsInput {
-  worker_id?: string;
-  partition_id?: string;
-  status?: string;
-  pack_id?: string;
+  worker_id?: string | undefined;
+  partition_id?: string | undefined;
+  status?: string | undefined;
+  pack_id?: string | undefined;
 }
 
 export interface ListSchedulerOwnershipMigrationsInput {
-  limit?: string | number;
-  partition_id?: string;
-  worker_id?: string;
-  status?: string;
-  pack_id?: string;
+  limit?: string | number | undefined;
+  partition_id?: string | undefined;
+  worker_id?: string | undefined;
+  status?: string | undefined;
+  pack_id?: string | undefined;
 }
 
 export interface ListSchedulerWorkersInput {
-  worker_id?: string;
-  status?: string;
-  pack_id?: string;
+  worker_id?: string | undefined;
+  status?: string | undefined;
+  pack_id?: string | undefined;
 }
 
 export interface ListSchedulerRebalanceRecommendationsInput {
-  limit?: string | number;
-  partition_id?: string;
-  worker_id?: string;
-  status?: string;
-  suppress_reason?: string;
-  pack_id?: string;
+  limit?: string | number | undefined;
+  partition_id?: string | undefined;
+  worker_id?: string | undefined;
+  status?: string | undefined;
+  suppress_reason?: string | undefined;
+  pack_id?: string | undefined;
 }
 
 // ---------------------------------------------------------------------------

@@ -30,14 +30,14 @@ import { createSocialPost } from '../social/social.js';
 import { type ActionIntentRecord,assertActionIntentLockOwnership } from './action_intent_repository.js';
 
 const resolveIdentityContext = async (context: AppContext, actorRef: unknown) => {
-  if (!isRecord(actorRef) || typeof actorRef.identity_id !== 'string') {
+  if (!isRecord(actorRef) || typeof actorRef['identity_id'] !== 'string') {
     throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'Action intent actor_ref is invalid');
   }
 
-  const identity = await context.repos.identityOperator.findIdentityById(actorRef.identity_id);
+  const identity = await context.repos.identityOperator.findIdentityById(actorRef['identity_id']);
   if (!identity) {
     throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'Action intent identity could not be resolved', {
-      identity_id: actorRef.identity_id
+      identity_id: actorRef['identity_id']
     });
   }
 
@@ -45,11 +45,11 @@ const resolveIdentityContext = async (context: AppContext, actorRef: unknown) =>
 };
 
 const resolvePostMessagePayload = (payload: unknown): string => {
-  if (!isRecord(payload) || typeof payload.content !== 'string' || payload.content.trim().length === 0) {
+  if (!isRecord(payload) || typeof payload['content'] !== 'string' || payload['content'].trim().length === 0) {
     throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'post_message payload.content is required');
   }
 
-  return payload.content.trim();
+  return payload['content'].trim();
 };
 
 const resolveTransmissionPolicy = (
@@ -135,15 +135,15 @@ const resolveMovePayload = (payload: unknown): { entity_id: string; target_locat
   if (!isRecord(payload)) {
     throw new ApiError(500, 'ACTION_MOVE_INVALID', 'move payload must be an object');
   }
-  if (typeof payload.entity_id !== 'string' || payload.entity_id.trim().length === 0) {
+  if (typeof payload['entity_id'] !== 'string' || payload['entity_id'].trim().length === 0) {
     throw new ApiError(500, 'ACTION_MOVE_INVALID', 'move payload.entity_id is required');
   }
-  if (typeof payload.target_location !== 'string' || payload.target_location.trim().length === 0) {
+  if (typeof payload['target_location'] !== 'string' || payload['target_location'].trim().length === 0) {
     throw new ApiError(500, 'ACTION_MOVE_INVALID', 'move payload.target_location is required');
   }
   return {
-    entity_id: payload.entity_id.trim(),
-    target_location: payload.target_location.trim()
+    entity_id: payload['entity_id'].trim(),
+    target_location: payload['target_location'].trim()
   };
 };
 
@@ -204,11 +204,11 @@ const dispatchAdjustSnrIntent = async (context: AppContext, intent: ActionIntent
     agent_id: targetAgentId,
     operation: resolvedResult.intent.operation,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- resolved value type from action system
-    requested_value: resolvedResult.intent.requested.value as number,
+    requested_value: resolvedResult.intent.requested['value'] as number,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- resolved value type from action system
-    baseline_value: resolvedResult.baseline.value as number,
+    baseline_value: resolvedResult.baseline['value'] as number,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- resolved value type from action system
-    resolved_value: resolvedResult.result.absolute.value as number,
+    resolved_value: resolvedResult.result.absolute['value'] as number,
     reason: payload.reason,
     created_at: now
   });
@@ -268,9 +268,9 @@ const dispatchAdjustRelationshipIntent = async (context: AppContext, intent: Act
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       operation: resolvedResult.intent.operation as 'set',
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      old_weight: resolvedResult.baseline.weight as number | null,
+      old_weight: resolvedResult.baseline['weight'] as number | null,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      new_weight: resolvedResult.result.absolute.weight as number,
+      new_weight: resolvedResult.result.absolute['weight'] as number,
       reason: payload.reason,
       created_at: now
     });
@@ -296,9 +296,9 @@ const dispatchAdjustRelationshipIntent = async (context: AppContext, intent: Act
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- resolved value type from action system
     operation: resolvedResult.intent.operation as 'set',
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- resolved value type from action system
-    old_weight: resolvedResult.baseline.weight as number | null,
+    old_weight: resolvedResult.baseline['weight'] as number | null,
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- resolved value type from action system
-    new_weight: resolvedResult.result.absolute.weight as number,
+    new_weight: resolvedResult.result.absolute['weight'] as number,
     reason: payload.reason,
     created_at: now
   });
@@ -405,7 +405,7 @@ export const dispatchActionIntent = async (
       return postMessageHandler(context, intent, packRuntime, determinism);
     case 'set_requested_step_ticks': {
       const payload = isRecord(intent.payload) ? intent.payload : null;
-      const rawTicks = payload?.ticks;
+      const rawTicks = payload?.['ticks'];
       if (typeof rawTicks === 'number' && rawTicks > 0) {
         packRuntime?.setRequestedStepTicks(BigInt(Math.floor(rawTicks)));
       } else if (typeof rawTicks === 'string' && rawTicks.trim().length > 0) {

@@ -13,7 +13,7 @@ export interface PromptWorkflowStepTraceSnapshot {
   status: 'completed' | 'skipped' | 'failed';
   before: Record<string, unknown>;
   after: Record<string, unknown>;
-  notes?: Record<string, unknown>;
+  notes?: Record<string, unknown> | undefined | undefined;
 }
 
 /**
@@ -33,25 +33,25 @@ export interface PromptWorkflowSnapshot {
   profile_id: string | null;
   profile_version: string | null;
   selected_step_keys: string[];
-  step_traces?: PromptWorkflowStepTraceSnapshot[];
-  placement_summary?: PromptWorkflowPlacementSummarySnapshot | null;
-  variable_summary?: Record<string, unknown> | null;
-  macro_summary?: unknown;
-  section_summary?: Record<string, unknown> | null;
+  step_traces?: PromptWorkflowStepTraceSnapshot[] | undefined | undefined;
+  placement_summary?: PromptWorkflowPlacementSummarySnapshot | null | undefined | undefined;
+  variable_summary?: Record<string, unknown> | null | undefined | undefined;
+  macro_summary?: unknown | undefined | undefined;
+  section_summary?: Record<string, unknown> | null | undefined | undefined;
 }
 
 /**
  * Prompt workflow metadata carried through prompt bundles and AI messages.
  */
 export interface PromptWorkflowMetadata {
-  workflow_task_type?: string | null;
-  workflow_profile_id?: string | null;
-  workflow_profile_version?: string | null;
-  workflow_step_keys?: string[];
-  workflow_section_summary?: Record<string, unknown>;
-  workflow_placement_summary?: Record<string, unknown>;
-  workflow_variable_summary?: Record<string, unknown>;
-  workflow_macro_summary?: unknown;
+  workflow_task_type?: string | null | undefined | undefined;
+  workflow_profile_id?: string | null | undefined | undefined;
+  workflow_profile_version?: string | null | undefined | undefined;
+  workflow_step_keys?: string[] | undefined | undefined;
+  workflow_section_summary?: Record<string, unknown> | undefined | undefined;
+  workflow_placement_summary?: Record<string, unknown> | undefined | undefined;
+  workflow_variable_summary?: Record<string, unknown> | undefined | undefined;
+  workflow_macro_summary?: unknown | undefined | undefined;
 }
 
 /**
@@ -60,5 +60,5 @@ export interface PromptWorkflowMetadata {
 export interface PromptBundleMetadata extends PromptWorkflowMetadata {
   prompt_version: string | null;
   source_prompt_keys: string[];
-  processing_trace?: PromptProcessingTrace;
+  processing_trace?: PromptProcessingTrace | undefined | undefined;
 }

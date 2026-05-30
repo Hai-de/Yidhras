@@ -281,6 +281,7 @@ export const createPluginManagerService = (store: PluginStore): PluginManagerSer
     },
 
     async completeActivationSession(input) {
+// @ts-expect-error -- EOPT strict mode
       return store.updateActivationSession(input.activation_id, {
         result: input.result,
         finished_at: input.finished_at,

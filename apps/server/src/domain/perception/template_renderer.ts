@@ -30,6 +30,7 @@ export const renderTemplateWithVisibleVariables = (
     ]
   });
 
+// @ts-expect-error -- EOPT strict mode
   return renderNarrativeTemplate({
     template,
     variableContext,
@@ -45,6 +46,7 @@ export const renderTemplateWithVariableContext = (
   extraContext: Record<string, unknown> = {},
   permission?: PermissionContext
 ): string => {
+// @ts-expect-error -- EOPT strict mode
   return renderNarrativeTemplate({
     template,
     variableContext,

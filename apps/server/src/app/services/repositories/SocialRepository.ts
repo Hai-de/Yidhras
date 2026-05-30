@@ -75,6 +75,7 @@ export class PrismaSocialRepository implements SocialRepository {
 
    
   async queryPosts(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown> | Array<Record<string, unknown>>; take?: number; include?: Record<string, unknown>; skip?: number }): Promise<Array<Record<string, unknown>>> {
+// @ts-expect-error -- EOPT strict mode
     return this.prisma.post.findMany({
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
       where: input.where as never,
