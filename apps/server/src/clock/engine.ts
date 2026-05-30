@@ -108,7 +108,12 @@ export class ChronosEngine {
         }
         currentVal = BigInt(subVal);
       } else {
-        // 普通固定进位
+        // 普通固定进位 — superRefine 保证 ratio 存在（irregular_ratios 为 undefined 时）
+        if (nextUnit.ratio === undefined) {
+          throw new Error(
+            `[ChronosEngine] Unit "${nextUnit.name}" has neither ratio nor irregular_ratios — schema validation should have rejected this`
+          );
+        }
         const ratio = BigInt(nextUnit.ratio);
         currentVal = remaining % ratio;
         remaining /= ratio;
@@ -132,7 +137,14 @@ export class ChronosEngine {
   private getUnitBaseRatio(units: TimeUnit[], index: number): bigint {
     let base = 1n;
     for (let i = 0; i < index; i++) {
-      base *= BigInt(units[i + 1]!.ratio);
+       
+      const ratio = units[i + 1]!.ratio;
+      if (ratio === undefined) {
+        throw new Error(
+          `[ChronosEngine] getUnitBaseRatio: unit "${units[i + 1]!.name}" has no ratio — irregular units cannot be used as base ratio references`
+        );
+      }
+      base *= BigInt(ratio);
     }
     return base;
   }

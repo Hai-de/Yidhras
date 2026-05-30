@@ -110,3 +110,19 @@ export interface QueryContributor {
     context: WorldEngineSessionContext
   ): QueryContribution | null | Promise<QueryContribution | null>
 }
+
+/**
+ * Construct a WorldEngineSessionContext from typed domain records.
+ *
+ * Centralizes the type assertion required because TypeScript interfaces
+ * without index signatures are not structurally assignable to
+ * `Record<string, unknown>` under strict mode.
+ *
+ * Each array accepts any object type; the values are narrowed to
+ * `ReadonlyArray<Record<string, unknown>>` for consumption by contributors.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- TS limitation: interface without index signature → Record
+export const toSessionRecordArray = <T>(
+  arr: ReadonlyArray<T>
+): ReadonlyArray<Record<string, unknown>> =>
+  arr as unknown as ReadonlyArray<Record<string, unknown>>;

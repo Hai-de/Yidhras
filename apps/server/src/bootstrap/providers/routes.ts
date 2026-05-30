@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- deps cast from ServiceContainer Record<string, unknown> */
-import type { Express } from 'express';
-
-import type { AppContext, RouteRegistrar } from '../../app/context.js';
 import { createApp } from '../../app/create_app.js';
 import { getErrorMessage } from '../../app/http/errors.js';
 import { toJsonSafe } from '../../app/http/json.js';
@@ -15,31 +11,15 @@ import {
   createPackListRoutes
 } from '../../app/routes/index.js';
 import { registerPackRoutes } from '../../app/routes/packs/index.js';
-import type { PackScopeResolver } from '../../app/runtime/PackScopeResolver.js';
 import { PackQueryHandlerRegistry } from '../../app/services/action/pack_query_resolver.js';
-import type { InferenceService } from '../../inference/service.js';
-import type { ServiceProvider } from '../provider.js';
 import { TOKENS } from '../tokens.js';
 
-interface CliConfig {
-  worldPacksDir: string;
-  port: number;
-}
-
-interface RoutesDeps {
-  appContext: AppContext;
-  packScope: PackScopeResolver;
-  inferenceService: InferenceService;
-  queryHandlerRegistry: PackQueryHandlerRegistry;
-  cliConfig: CliConfig;
-}
-
-export const queryHandlerRegistryProvider: ServiceProvider = {
+export const queryHandlerRegistryProvider = {
   provide: TOKENS.queryHandlerRegistry,
   useFactory: () => new PackQueryHandlerRegistry()
-};
+} as const satisfies import('../provider.js').ServiceProvider;
 
-export const registerRoutesProvider: ServiceProvider = {
+export const registerRoutesProvider = {
   provide: TOKENS.registerRoutes,
   deps: [
     TOKENS.appContext,
@@ -47,55 +27,47 @@ export const registerRoutesProvider: ServiceProvider = {
     TOKENS.inferenceService,
     TOKENS.queryHandlerRegistry,
     TOKENS.cliConfig
-  ],
+  ] as const,
   useFactory: (deps) => {
-    const d = deps as unknown as RoutesDeps;
-    return (application: Express, context: AppContext) => {
+    return (application: import('express').Express, context: import('../../app/context.js').AppContext) => {
       // Global routes (no pack prefix)
       for (const route of allGlobalRoutes) {
         route.register(application, context);
       }
 
       // Factory-based routes
-      createPackListRoutes(d.cliConfig.worldPacksDir).register(application, context);
-      createPackFrontendAssetRoutes(d.cliConfig.worldPacksDir).register(application, context);
-      createPackActionsRoute(d.queryHandlerRegistry).register(application, context);
+      createPackListRoutes(deps.cliConfig.worldPacksDir).register(application, context);
+      createPackFrontendAssetRoutes(deps.cliConfig.worldPacksDir).register(application, context);
+      createPackActionsRoute(deps.queryHandlerRegistry).register(application, context);
 
       // Pack-scoped routes
       const packRouter = registerPackRoutes({
         context,
-        scopeResolver: d.packScope,
-        inferenceService: d.inferenceService,
+        scopeResolver: deps.packScope,
+        inferenceService: deps.inferenceService,
         parseOptionalTick,
         toJsonSafe,
         getErrorMessage
       });
-      application.use('/:packId', createLenientPackScopeMiddleware(d.packScope), packRouter);
+      application.use('/:packId', createLenientPackScopeMiddleware(deps.packScope), packRouter);
     };
   }
-};
+} as const satisfies import('../provider.js').ServiceProvider;
 
-export const expressAppProvider: ServiceProvider = {
+export const expressAppProvider = {
   provide: TOKENS.httpApp,
-  deps: [TOKENS.appContext, TOKENS.registerRoutes, TOKENS.cliConfig],
+  deps: [TOKENS.appContext, TOKENS.registerRoutes, TOKENS.cliConfig] as const,
   useFactory: (deps) => {
-     
-    const { appContext, registerRoutes, cliConfig } = deps as unknown as {
-      appContext: AppContext;
-      registerRoutes: RouteRegistrar;
-      cliConfig: CliConfig;
-    };
-
-    const apiOrigin = `http://localhost:${String(cliConfig.port)}`;
+    const apiOrigin = `http://localhost:${String(deps.cliConfig.port)}`;
     const app = createApp({
-      context: appContext,
-      registerRoutes,
+      context: deps.appContext,
+      registerRoutes: deps.registerRoutes,
       cspOrigins: {
         webOrigin: 'http://localhost:3000',
         apiOrigin: apiOrigin
       }
     });
-    app.use(createGlobalErrorMiddleware(appContext));
+    app.use(createGlobalErrorMiddleware(deps.appContext));
     return app;
   }
-};
+} as const satisfies import('../provider.js').ServiceProvider;

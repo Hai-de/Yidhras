@@ -1,4 +1,3 @@
- 
 import type { RuntimeLoopDiagnostics } from '../../app/context.js';
 import { resolveOwnedSchedulerPartitionIds } from '../../app/runtime/scheduler_partitioning.js';
 import { createRuntimeReadyGuard, createStartupHealth } from '../../app/runtime/startup.js';
@@ -10,7 +9,6 @@ import {
   getWorldPacksDir,
   type RuntimeStartupPolicy
 } from '../../config/runtime_config.js';
-import type { ServiceProvider } from '../provider.js';
 import { TOKENS } from '../tokens.js';
 
 const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
@@ -37,7 +35,7 @@ export interface CliConfig {
   actionDispatcherWorkerId: string;
 }
 
-export const cliConfigProvider: ServiceProvider = {
+export const cliConfigProvider = {
   provide: TOKENS.cliConfig,
   useFactory: (): CliConfig => {
     const parseCliInt = (key: string): string | undefined => {
@@ -68,7 +66,7 @@ export const cliConfigProvider: ServiceProvider = {
       actionDispatcherWorkerId: `dispatcher:${process.pid}:${Date.now()}`
     };
   }
-};
+} as const satisfies import('../provider.js').ServiceProvider;
 
 export interface RuntimeState {
   startupHealth: ReturnType<typeof createStartupHealth>;
@@ -81,7 +79,7 @@ export interface RuntimeState {
   setRuntimeLoopDiagnostics: (next: RuntimeLoopDiagnostics) => void;
 }
 
-export const runtimeStateProvider: ServiceProvider = {
+export const runtimeStateProvider = {
   provide: TOKENS.runtimeState,
   useFactory: (): RuntimeState => {
     let runtimeReady = false;
@@ -104,4 +102,4 @@ export const runtimeStateProvider: ServiceProvider = {
       }
     };
   }
-};
+} as const satisfies import('../provider.js').ServiceProvider;

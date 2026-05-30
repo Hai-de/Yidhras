@@ -1,16 +1,4 @@
-export interface TimeUnit {
-  name: string;
-  ratio: number; // 相对于上一级单位的进位比率
-  irregular_ratios?: number[] | undefined; // 如果存在，则优先于 ratio 使用（如：每月天数不等）
-}
-
-export interface CalendarConfig {
-  id: string;
-  name: string;
-  is_primary?: boolean | undefined;
-  tick_rate: number; // 一个 tick 对应的毫秒数
-  units: TimeUnit[];
-}
+export type { CalendarConfig, TimeUnit } from '../packs/schema/constitution_schema.js';
 
 export interface TimeFormatted {
   calendar_id: string;

@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../../../app/context.js';
+import type { AppContext } from '../../../app/context.js';
 import {
   createPackEntityOverviewProjectionService,
   type PackEntityProjectionSnapshot
@@ -14,7 +14,7 @@ export {
 export type { PackProjectionMetadataSnapshot } from './pack_projection_metadata_resolver.js';
 
 export const buildPackEntityOverviewProjection = async (
-  context: AppInfrastructure,
+  context: AppContext,
   input: {
     packId: string;
     pack: {
@@ -32,7 +32,7 @@ export const buildPackEntityOverviewProjection = async (
 };
 
 export const getPackEntityOverviewProjection = async (
-  context: AppInfrastructure,
+  context: AppContext,
   packId?: string
 ): Promise<PackEntityProjectionSnapshot> => {
   const scope = createPackProjectionScopeAdapter(context);

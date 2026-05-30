@@ -1,22 +1,34 @@
-export type ServiceToken = string;
+import type { TokenTypes } from './token_types.js';
 
-export interface ServiceProvider<T = unknown> {
-  /** 此 Provider 提供的服务标识 */
+export type ServiceToken = keyof TokenTypes;
+
+/**
+ * 从 token 数组中推导 deps record 的类型。
+ * e.g. deps: ['prisma', 'sim'] → { prisma: PrismaClient; sim: SimulationManager }
+ */
+export type DepsFromTokens<Tokens extends readonly ServiceToken[]> = {
+  [K in Tokens[number]]: TokenTypes[K];
+};
+
+export interface ServiceProvider<
+  T = unknown,
+  TTokens extends readonly ServiceToken[] = readonly ServiceToken[]
+> {
   provide: ServiceToken;
-  /** 依赖的其他服务标识（可选） */
-  deps?: ServiceToken[];
-  /** 工厂函数：接收已解析的依赖，返回服务实例 */
-  useFactory: (deps: Record<string, unknown>) => T | Promise<T>;
-  /** 生命周期：singleton（默认，只构造一次）| transient（每次解析都重新构造） */
+  deps?: TTokens;
+  useFactory: (deps: DepsFromTokens<TTokens>) => T | Promise<T>;
   lifecycle?: 'singleton' | 'transient';
 }
 
 export class ServiceContainer {
-  private providers = new Map<ServiceToken, ServiceProvider>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- container stores heterogeneous providers
+  private providers = new Map<ServiceToken, ServiceProvider<any, any>>();
   private instances = new Map<ServiceToken, unknown>();
   private resolving = new Set<ServiceToken>();
 
-  register(provider: ServiceProvider): this {
+  register<T, TTokens extends readonly ServiceToken[]>(
+    provider: ServiceProvider<T, TTokens>
+  ): this {
     if (this.providers.has(provider.provide)) {
       throw new Error(`Duplicate provider: ${provider.provide}`);
     }
@@ -24,10 +36,9 @@ export class ServiceContainer {
     return this;
   }
 
-   
+  /* eslint-disable @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access -- container internal boundary: runtime deps assembly cannot be statically typed */
   async resolve<T>(token: ServiceToken): Promise<T> {
     const cached = this.instances.get(token);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- container boundary: cached value matches T
     if (cached !== undefined) return cached as T;
 
     const provider = this.providers.get(token);
@@ -43,16 +54,20 @@ export class ServiceContainer {
       deps[dep] = await this.resolve(dep);
     }
 
-    const instance = await provider.useFactory(deps);
+    // 容器运行时动态构建 deps map，TypeScript 无法验证动态拼装的
+    // Record<string, unknown> 确实满足 DepsFromTokens<TTokens>。
+    // 此 any 是容器内部的必要妥协，仅限于此一处。
+    // provider 的 useFactory 签名已由 register() 的泛型约束保证类型安全。
+    const instance = await provider.useFactory(deps as any);
 
     if (provider.lifecycle !== 'transient') {
       this.instances.set(token, instance);
     }
 
     this.resolving.delete(token);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- container boundary: factory result matches T
     return instance as T;
   }
+  /* eslint-enable @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
 
   listTokens(): ServiceToken[] {
     return [...this.providers.keys()];

@@ -4,13 +4,23 @@ import {
   type WorldPackSnapshot
 } from '@yidhras/contracts';
 
+import type { PackRuntimeHandle } from '../../core/pack_runtime_handle.js';
 import { listPackAuthorityGrants } from '../../packs/storage/authority_repo.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import { listPackEntityStates } from '../../packs/storage/entity_state_repo.js';
 import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js';
+import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { listPackRuleExecutionRecords } from '../../packs/storage/rule_execution_repo.js';
 import { ApiError } from '../../utils/api_error.js';
-import type { AppContext } from '../context.js';
+
+/**
+ * Minimal context for building a world-engine snapshot.
+ * Only the fields actually used by snapshot construction.
+ */
+export interface WorldEngineSnapshotContext {
+  packStorageAdapter: PackStorageAdapter;
+  getPackRuntimeHandle?: ((packId: string) => PackRuntimeHandle | null) | undefined;
+}
 
 const normalizePackId = (packId: string): string => {
   const normalized = packId.trim();
@@ -20,7 +30,7 @@ const normalizePackId = (packId: string): string => {
   return normalized;
 };
 
-const resolveSnapshotClock = (context: AppContext, packId: string): { current_tick: string; current_revision: string } => {
+const resolveSnapshotClock = (context: WorldEngineSnapshotContext, packId: string): { current_tick: string; current_revision: string } => {
   const handle = context.getPackRuntimeHandle?.(packId);
   if (handle) {
     const currentTick = handle.getClockSnapshot().current_tick;
@@ -35,7 +45,7 @@ const resolveSnapshotClock = (context: AppContext, packId: string): { current_ti
   });
 };
 
-export const buildWorldPackSnapshot = async (context: AppContext, packId: string): Promise<WorldPackSnapshot> => {
+export const buildWorldPackSnapshot = async (context: WorldEngineSnapshotContext, packId: string): Promise<WorldPackSnapshot> => {
   const normalizedPackId = normalizePackId(packId);
   const [worldEntities, entityStates, authorityGrants, mediatorBindings, ruleExecutionRecords] = await Promise.all([
     listPackWorldEntities(context.packStorageAdapter, normalizedPackId),
@@ -57,7 +67,7 @@ export const buildWorldPackSnapshot = async (context: AppContext, packId: string
 };
 
 export const buildWorldPackHydrateRequest = async (
-  context: AppContext,
+  context: WorldEngineSnapshotContext,
   packId: string
 ): Promise<WorldPackHydrateRequest> => {
   return {

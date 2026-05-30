@@ -184,7 +184,7 @@ const aiPackConfigSchema = z
   })
   .strict();
 
-const timeUnitSchema = z
+export const timeUnitSchema = z
   .object({
     name: nonEmptyStringSchema,
     ratio: z.number().int().positive().optional(),
@@ -200,7 +200,9 @@ const timeUnitSchema = z
     }
   });
 
-const calendarConfigSchema = z
+export type TimeUnit = z.infer<typeof timeUnitSchema>;
+
+export const calendarConfigSchema = z
   .object({
     id: nonEmptyStringSchema,
     name: nonEmptyStringSchema,
@@ -209,6 +211,8 @@ const calendarConfigSchema = z
     units: z.array(timeUnitSchema)
   })
   .strict();
+
+export type CalendarConfig = z.infer<typeof calendarConfigSchema>;
 
 export const simulationTimeConfigSchema = z
   .object({

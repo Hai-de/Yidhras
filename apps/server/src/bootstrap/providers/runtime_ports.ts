@@ -1,14 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- deps cast from ServiceContainer Record<string, unknown> */
-import type { SimulationManager } from '../../core/simulation.js';
-import type { ServiceProvider } from '../provider.js';
 import { TOKENS } from '../tokens.js';
 
-export const packRuntimeLookupProvider: ServiceProvider = {
+export const packRuntimeLookupProvider = {
   provide: TOKENS.packRuntimeLookup,
-  deps: [TOKENS.sim],
+  deps: [TOKENS.sim] as const,
   useFactory: (deps) => {
-     
-    const { sim } = deps as unknown as { sim: SimulationManager };
+    const sim = deps.sim;
     return {
       hasPackRuntime: (packId: string) => sim.getPackRuntimeHandle(packId) !== null,
       assertPackScope: (packId: string, _feature: string) => packId.trim(),
@@ -25,14 +21,13 @@ export const packRuntimeLookupProvider: ServiceProvider = {
       }
     };
   }
-};
+} as const satisfies import('../provider.js').ServiceProvider;
 
-export const packRuntimeObservationProvider: ServiceProvider = {
+export const packRuntimeObservationProvider = {
   provide: TOKENS.packRuntimeObservation,
-  deps: [TOKENS.sim],
+  deps: [TOKENS.sim] as const,
   useFactory: (deps) => {
-     
-    const { sim } = deps as unknown as { sim: SimulationManager };
+    const sim = deps.sim;
     return {
       getStatus: (packId: string) => sim.getPackRuntimeStatusSnapshot(packId),
       listStatuses: () => sim.listRuntimeStatuses(),
@@ -42,17 +37,16 @@ export const packRuntimeObservationProvider: ServiceProvider = {
         sim.getPackRuntimeHandle(packId)?.getRuntimeSpeedSnapshot() ?? null
     };
   }
-};
+} as const satisfies import('../provider.js').ServiceProvider;
 
-export const packRuntimeControlProvider: ServiceProvider = {
+export const packRuntimeControlProvider = {
   provide: TOKENS.packRuntimeControl,
-  deps: [TOKENS.sim],
+  deps: [TOKENS.sim] as const,
   useFactory: (deps) => {
-     
-    const { sim } = deps as unknown as { sim: SimulationManager };
+    const sim = deps.sim;
     return {
       load: (packRef: string) => sim.loadExperimentalPackRuntime(packRef),
       unload: (packId: string) => sim.unloadExperimentalPackRuntime(packId)
     };
   }
-};
+} as const satisfies import('../provider.js').ServiceProvider;

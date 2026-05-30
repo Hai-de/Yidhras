@@ -1,44 +1,26 @@
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- deps cast from ServiceContainer Record<string, unknown> */
 import { createInferenceProviders } from '../../app/composition/inference.js';
-import type { AppContext } from '../../app/context.js';
-import type { InferenceProvider } from '../../inference/provider.js';
 import { createInferenceService } from '../../inference/service.js';
 import { createPrismaInferenceTraceSink } from '../../inference/sinks/prisma.js';
-import type { InferenceTraceSink } from '../../inference/trace_sink.js';
-import type { ServiceProvider } from '../provider.js';
 import { TOKENS } from '../tokens.js';
 
-export const inferenceProvidersProvider: ServiceProvider = {
+export const inferenceProvidersProvider = {
   provide: TOKENS.inferenceProviders,
-  deps: [TOKENS.appContext],
-  useFactory: (deps) => {
-    const { appContext } = deps as unknown as { appContext: AppContext };
-    return createInferenceProviders({ context: appContext });
-  }
-};
+  deps: [TOKENS.appContext] as const,
+  useFactory: (deps) => createInferenceProviders({ context: deps.appContext })
+} as const satisfies import('../provider.js').ServiceProvider;
 
-export const inferenceTraceSinkProvider: ServiceProvider = {
+export const inferenceTraceSinkProvider = {
   provide: TOKENS.inferenceTraceSink,
-  deps: [TOKENS.appContext],
-  useFactory: (deps) => {
-    const { appContext } = deps as unknown as { appContext: AppContext };
-    return createPrismaInferenceTraceSink(appContext);
-  }
-};
+  deps: [TOKENS.appContext] as const,
+  useFactory: (deps) => createPrismaInferenceTraceSink(deps.appContext)
+} as const satisfies import('../provider.js').ServiceProvider;
 
-export const inferenceServiceProvider: ServiceProvider = {
+export const inferenceServiceProvider = {
   provide: TOKENS.inferenceService,
-  deps: [TOKENS.appContext, TOKENS.inferenceProviders, TOKENS.inferenceTraceSink],
-  useFactory: (deps) => {
-    const { appContext, inferenceProviders, inferenceTraceSink } = deps as unknown as {
-      appContext: AppContext;
-      inferenceProviders: InferenceProvider[];
-      inferenceTraceSink: InferenceTraceSink;
-    };
-    return createInferenceService({
-      context: appContext,
-      providers: inferenceProviders,
-      traceSink: inferenceTraceSink
-    });
-  }
-};
+  deps: [TOKENS.appContext, TOKENS.inferenceProviders, TOKENS.inferenceTraceSink] as const,
+  useFactory: (deps) => createInferenceService({
+    context: deps.appContext,
+    providers: deps.inferenceProviders,
+    traceSink: deps.inferenceTraceSink
+  })
+} as const satisfies import('../provider.js').ServiceProvider;

@@ -1,4 +1,5 @@
 import {
+  toSessionRecordArray,
   WORLD_ENGINE_PROTOCOL_VERSION,
   type WorldRuleExecuteObjectiveResult,
   worldRuleExecuteObjectiveResultSchema
@@ -385,16 +386,11 @@ export const enforceInvocationRequest = async (
         filteredRules
       }, packRuntime);
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-      const worldEntities = await listPackWorldEntities(context.packStorageAdapter, invocation.pack_id) as unknown as ReadonlyArray<Record<string, unknown>>;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-      const entityStates = await listPackEntityStates(context.packStorageAdapter, invocation.pack_id) as unknown as ReadonlyArray<Record<string, unknown>>;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-      const authorityGrants = await listPackAuthorityGrants(context.packStorageAdapter, invocation.pack_id) as unknown as ReadonlyArray<Record<string, unknown>>;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-      const mediatorBindings = await listPackMediatorBindings(context.packStorageAdapter, invocation.pack_id) as unknown as ReadonlyArray<Record<string, unknown>>;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-      const ruleExecutionRecords = await listPackRuleExecutionRecords(context.packStorageAdapter, invocation.pack_id) as unknown as ReadonlyArray<Record<string, unknown>>;
+      const worldEntities = toSessionRecordArray(await listPackWorldEntities(context.packStorageAdapter, invocation.pack_id));
+      const entityStates = toSessionRecordArray(await listPackEntityStates(context.packStorageAdapter, invocation.pack_id));
+      const authorityGrants = toSessionRecordArray(await listPackAuthorityGrants(context.packStorageAdapter, invocation.pack_id));
+      const mediatorBindings = toSessionRecordArray(await listPackMediatorBindings(context.packStorageAdapter, invocation.pack_id));
+      const ruleExecutionRecords = toSessionRecordArray(await listPackRuleExecutionRecords(context.packStorageAdapter, invocation.pack_id));
 
       const sessionContext: WorldEngineSessionContext = {
         pack_id: invocation.pack_id,

@@ -12,10 +12,12 @@ const cloneValue = <T>(value: T): T => {
   return typeof value === 'object' && value !== null ? structuredClone(value) : value;
 };
 
-export const deepMerge = (
+export function deepMerge<T extends Record<string, unknown>>(base: T, override: T): T;
+export function deepMerge(base: Record<string, unknown>, override: Record<string, unknown>): Record<string, unknown>;
+export function deepMerge(
   base: Record<string, unknown>,
   override: Record<string, unknown>
-): Record<string, unknown> => {
+): Record<string, unknown> {
   const result = cloneValue(base);
 
   for (const [key, value] of Object.entries(override)) {

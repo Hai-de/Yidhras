@@ -1,6 +1,5 @@
 import type { RuntimeClockProjectionSnapshot } from '../app/runtime/runtime_clock_projection.js';
 import { ChronosEngine } from '../clock/engine.js';
-import type { CalendarConfig } from '../clock/types.js';
 import type { WorldPack } from '../packs/manifest/loader.js';
 import type { PackRuntimeClockSnapshot, PackRuntimeHandle, PackRuntimeHealthSnapshot } from './pack_runtime_handle.js';
 import type { PackRuntimeHost } from './pack_runtime_host.js';
@@ -9,8 +8,7 @@ import type { StepContext, StepStrategy } from './step_strategy.js';
 import { getWorldPackRuntimeConfig } from './world_pack_runtime.js';
 
 const buildPackRuntimeClock = (pack: WorldPack): ChronosEngine => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-  const calendars = (pack.time_systems ?? []) as unknown as CalendarConfig[];
+  const calendars = pack.time_systems ?? [];
   const runtimeConfig = getWorldPackRuntimeConfig(pack);
   return new ChronosEngine({ calendarConfigs: calendars, initialTicks: runtimeConfig.initialTick });
 };

@@ -15,7 +15,6 @@ import type { RuntimeClockProjectionSnapshot } from '../../app/runtime/runtime_c
 import type { WorldEnginePort } from '../../app/runtime/world_engine_ports.js';
 import { buildWorldPackHydrateRequest } from '../../app/runtime/world_engine_snapshot.js';
 import { ChronosEngine } from '../../clock/engine.js';
-import type { CalendarConfig } from '../../clock/types.js';
 import type { NotificationPort } from '../../core/runtime_activation.js';
 import type { WorldPack } from '../../packs/manifest/loader.js';
 import { safeFs } from '../../utils/safe_fs.js';
@@ -363,11 +362,7 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
 
   // 9. Restore in-memory clock
   const clockEngine = new ChronosEngine({
-    // Zod schema allows ratio to be absent when irregular_ratios is present;
-    // CalendarConfig requires ratio: number. This is a known Zod/TS gap —
-    // runtime validation guarantees at least one of ratio/irregular_ratios.
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    calendarConfigs: (pack.time_systems ?? []) as unknown as CalendarConfig[],
+    calendarConfigs: pack.time_systems ?? [],
     initialTicks: tick
   });
   const clockSnapshot: RuntimeClockProjectionSnapshot = {
@@ -384,8 +379,7 @@ export const restorePackSnapshot = async (input: RestorePackSnapshotInput): Prom
   // 10. Reload sidecar with restored state
   if (worldEngine) {
     const hydrateRequest = await buildWorldPackHydrateRequest(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      { packStorageAdapter, getPackRuntimeHandle } as unknown as import('../../app/context.js').AppContext,
+      { packStorageAdapter, getPackRuntimeHandle },
       packId
     );
     await worldEngine.loadPack({

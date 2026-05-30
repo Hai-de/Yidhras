@@ -1,9 +1,7 @@
- 
 import { createNotificationManager } from '../../utils/notifications.js';
-import type { ServiceProvider } from '../provider.js';
 import { TOKENS } from '../tokens.js';
 
-export const notificationsProvider: ServiceProvider = {
+export const notificationsProvider = {
   provide: TOKENS.notifications,
   useFactory: () => createNotificationManager()
-};
+} as const satisfies import('../provider.js').ServiceProvider;

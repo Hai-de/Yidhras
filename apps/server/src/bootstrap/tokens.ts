@@ -1,3 +1,7 @@
+import type { TokenTypes } from './token_types.js';
+
+type ServiceToken = keyof TokenTypes;
+
 export const TOKENS = {
   // 基础设施
   prisma: 'prisma',
@@ -28,9 +32,6 @@ export const TOKENS = {
 
   // 插件
   behaviorStateStoreInit: 'behaviorStateStoreInit',
-  pluginRuntimeControl: 'pluginRuntimeControl',
-  pluginAiTaskService: 'pluginAiTaskService',
-  requestPluginInference: 'requestPluginInference',
 
   // 路由
   queryHandlerRegistry: 'queryHandlerRegistry',
@@ -43,4 +44,4 @@ export const TOKENS = {
   // Wiring（内部使用）
   wiring: 'wiring',
   metricsInit: 'metricsInit'
-} as const;
+} as const satisfies Record<string, ServiceToken>;

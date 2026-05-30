@@ -1,4 +1,4 @@
-import type { AppContext, AppInfrastructure } from '../../../app/context.js';
+import type { AppContext } from '../../../app/context.js';
 import { assertPackScope } from '../../../app/services/pack/pack_scope_resolver.js';
 import { ApiError } from '../../../utils/api_error.js';
 import type { WorldPack } from '../../manifest/loader.js';
@@ -25,14 +25,12 @@ const toPackProjectionMetadataSnapshot = (pack: WorldPack): PackProjectionMetada
 });
 
 export const createPackProjectionMetadataResolver = (
-  context: AppInfrastructure
+  context: AppContext
 ): PackProjectionMetadataResolver => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-  const ctx = context as unknown as AppContext;
   return {
     resolve(packId: string, feature: string): Promise<PackProjectionResolution> {
-      const resolvedPackId = assertPackScope(ctx, packId, feature);
-      const handle = ctx.getPackRuntimeHandle?.(resolvedPackId);
+      const resolvedPackId = assertPackScope(context, packId, feature);
+      const handle = context.getPackRuntimeHandle?.(resolvedPackId);
       if (!handle) {
         return Promise.reject(new ApiError(503, 'WORLD_PACK_NOT_READY', `World pack not ready for ${feature}`, {
           pack_id: resolvedPackId,

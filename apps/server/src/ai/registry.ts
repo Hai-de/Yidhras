@@ -611,10 +611,8 @@ const mergeById = <T>(
       merged.set(key, structuredClone(override));
       continue;
     }
-    merged.set(
-      key,
-      deepMerge(existing, override as Record<string, unknown>) as unknown as T // eslint-disable-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary: mergeById generic T → Record<string, unknown> for deepMerge
+    merged.set(key, deepMerge(existing as Record<string, unknown>, override as Record<string, unknown>) as T);
   }
   return Array.from(merged.values());
 };

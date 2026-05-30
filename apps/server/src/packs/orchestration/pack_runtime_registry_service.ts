@@ -6,7 +6,6 @@ import { getErrorMessage } from '../../app/http/errors.js';
 import type { MultiPackLoopHost } from '../../app/runtime/MultiPackLoopHost.js';
 import type { WorldEnginePort } from '../../app/runtime/world_engine_ports.js';
 import { ChronosEngine } from '../../clock/engine.js';
-import type { CalendarConfig } from '../../clock/types.js';
 import { getRuntimeMultiPackConfig } from '../../config/runtime_config.js';
 import type { PackRuntimeHandle } from '../../core/pack_runtime_handle.js';
 import type { PackRuntimeStatusSnapshot } from '../../core/pack_runtime_health.js';
@@ -178,8 +177,7 @@ export class DefaultPackRuntimeRegistryService implements PackRuntimeLocator, Pa
       initialTick: runtimeConfig.initialTick
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    const calendars = (resolved.pack.time_systems ?? []) as unknown as CalendarConfig[];
+    const calendars = resolved.pack.time_systems ?? [];
     const clock = new ChronosEngine({ calendarConfigs: calendars, initialTicks: runtimeConfig.initialTick });
     const runtimeSpeed = new RuntimeSpeedPolicy(runtimeConfig.stepStrategy);
 

@@ -99,8 +99,7 @@ export const activateWorldPackRuntime = async ({
   }
 
   const runtimeConfig = getWorldPackRuntimeConfig(pack);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-  const calendars = (pack.time_systems ?? []) as unknown as CalendarConfig[];
+  const calendars = pack.time_systems ?? [];
 
   configureRuntimeSpeedFromPack(runtimeSpeed, pack, notifications);
 

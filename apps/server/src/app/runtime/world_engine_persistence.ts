@@ -1,7 +1,8 @@
-import type {
-  PreparedWorldStep,
+import {
+  type PreparedWorldStep,
+  toSessionRecordArray,
   WORLD_ENGINE_PROTOCOL_VERSION,
-  WorldEngineCommitResult,
+  type WorldEngineCommitResult,
   type WorldStateDeltaOperation,  WorldStepAbortRequest,
   WorldStepCommitRequest,
   WorldStepPrepareRequest} from '@yidhras/contracts';
@@ -399,16 +400,11 @@ export const executeWorldEnginePreparedStep = async (input: {
       mode: 'active',
       current_tick: input.packRuntime?.getCurrentTick()?.toString() ?? input.prepareInput.step_ticks,
       current_revision: input.prepareInput.base_revision ?? '0',
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-      world_entities: worldEntities as unknown as ReadonlyArray<Record<string, unknown>>,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-      entity_states: entityStates as unknown as ReadonlyArray<Record<string, unknown>>,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-      authority_grants: authorityGrants as unknown as ReadonlyArray<Record<string, unknown>>,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-      mediator_bindings: mediatorBindings as unknown as ReadonlyArray<Record<string, unknown>>,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-      rule_execution_records: ruleExecutionRecords as unknown as ReadonlyArray<Record<string, unknown>>
+      world_entities: toSessionRecordArray(worldEntities),
+      entity_states: toSessionRecordArray(entityStates),
+      authority_grants: toSessionRecordArray(authorityGrants),
+      mediator_bindings: toSessionRecordArray(mediatorBindings),
+      rule_execution_records: toSessionRecordArray(ruleExecutionRecords)
     };
 
     // Built-in contributors run first, then plugin-registered contributors.

@@ -57,7 +57,6 @@ import {
 import { wiringProvider } from './bootstrap/providers/wiring.js';
 import { worldEngineProvider } from './bootstrap/providers/world_engine.js';
 import { TOKENS } from './bootstrap/tokens.js';
-import type { CalendarConfig } from './clock/types.js';
 import {
   getAiModelsConfigPath,
   getRuntimeConfig,
@@ -209,8 +208,8 @@ void (async () => {
         pack_id: packId,
         current_tick: clockSnapshot.current_tick,
         current_revision: clockSnapshot.current_tick,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/no-unnecessary-condition -- boundary type assertion
-        calendars: (pack?.time_systems ?? []) as unknown as CalendarConfig[]
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- boundary type assertion
+        calendars: pack?.time_systems ?? []
       });
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion

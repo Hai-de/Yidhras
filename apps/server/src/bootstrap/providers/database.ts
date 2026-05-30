@@ -1,33 +1,21 @@
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- deps cast from ServiceContainer Record<string, unknown> */
-import type { PrismaClient } from '@prisma/client';
-
 import { createPrismaRepositories } from '../../app/services/repositories/index.js';
 import { PrismaConversationStore } from '../../conversation/store_prisma.js';
 import { createPrismaClient } from '../../db/client.js';
-import type { ServiceProvider } from '../provider.js';
 import { TOKENS } from '../tokens.js';
 
-export const prismaProvider: ServiceProvider = {
+export const prismaProvider = {
   provide: TOKENS.prisma,
   useFactory: () => createPrismaClient()
-};
+} as const satisfies import('../provider.js').ServiceProvider;
 
-export const repositoriesProvider: ServiceProvider = {
+export const repositoriesProvider = {
   provide: TOKENS.repos,
-  deps: [TOKENS.prisma],
-  useFactory: (deps) => {
-     
-    const { prisma } = deps as unknown as { prisma: PrismaClient };
-    return createPrismaRepositories(prisma);
-  }
-};
+  deps: [TOKENS.prisma] as const,
+  useFactory: (deps) => createPrismaRepositories(deps.prisma)
+} as const satisfies import('../provider.js').ServiceProvider;
 
-export const conversationStoreProvider: ServiceProvider = {
+export const conversationStoreProvider = {
   provide: TOKENS.conversationStore,
-  deps: [TOKENS.prisma],
-  useFactory: (deps) => {
-     
-    const { prisma } = deps as unknown as { prisma: PrismaClient };
-    return new PrismaConversationStore(prisma);
-  }
-};
+  deps: [TOKENS.prisma] as const,
+  useFactory: (deps) => new PrismaConversationStore(deps.prisma)
+} as const satisfies import('../provider.js').ServiceProvider;
