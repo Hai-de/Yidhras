@@ -183,7 +183,9 @@ export default tseslint.config(
       '@typescript-eslint/no-useless-default-assignment': 'error',
       '@typescript-eslint/no-confusing-void-expression': 'error',
       '@typescript-eslint/no-deprecated': 'error',
-      '@typescript-eslint/no-unnecessary-condition': 'warn'
+      '@typescript-eslint/no-unnecessary-condition': 'warn',
+      '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }],
+      '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: false }]
     }
   },
 
