@@ -17,10 +17,10 @@ export const createGlobalErrorMiddleware = (context: AppContext) => {
     const details = isApiError ? err.details : undefined;
 
     if (status >= 500) {
-      logger.error(`[${requestId}] ${message}`, { error: message, code });
+      logger.error(`[${requestId}] ${message}`, { error: err instanceof Error ? err : new Error(String(err)), code });
       context.notifications.push('error', `API 异常(${code}): ${message}`, code);
     } else {
-      logger.warn(`[${requestId}] ${code}: ${message}`);
+      logger.warn(`[${requestId}] ${code}: ${message}`, { code });
       context.notifications.push('warning', `API 请求异常(${code}): ${message}`, code);
     }
 

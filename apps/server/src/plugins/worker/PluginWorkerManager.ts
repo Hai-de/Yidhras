@@ -174,12 +174,9 @@ export class PluginWorkerManager {
       grantedCapabilities: target.installation.granted_capabilities,
       onCrash: error => {
         this.workers.delete(workerKey(target.packId, target.installation.installation_id));
-        logger.error('Plugin worker crashed after activation', {
-          pack_id: target.packId,
+        logger.error('Plugin worker crashed after activation', { error: error instanceof Error ? error : new Error(String(error)), data: { pack_id: target.packId,
           plugin_id: target.installation.plugin_id,
-          installation_id: target.installation.installation_id,
-          error: error.message
-        });
+          installation_id: target.installation.installation_id } });
         this.updateActiveWorkerMetric(target.packId);
       }
     });
@@ -232,15 +229,21 @@ export class PluginWorkerManager {
         Date.now() - Number(startedAt),
         'failed'
       );
-      await client.terminate(`activation failed: ${message}`).catch(() => {});
+      await client.terminate(`activation failed: ${message}`).catch((err: unknown) => {
+        logger.warn('Plugin worker terminate failed during activation error handling', { error: err instanceof Error ? err : new Error(String(err)) });
+      });
       await context.repos.plugin.updateActivationSession(activationId, {
         result: 'failed',
         finished_at: String(Date.now()),
         loaded_server: false,
         loaded_web_manifest: Boolean(target.manifest.entrypoints.web),
         error_message: message
-      }).catch(() => {});
-      await persistInstallationError(context, target.installation, message).catch(() => {});
+      }).catch((err: unknown) => {
+        logger.warn('Plugin activation session update failed', { error: err instanceof Error ? err : new Error(String(err)) });
+      });
+      await persistInstallationError(context, target.installation, message).catch((err: unknown) => {
+        logger.warn('Failed to persist plugin installation error', { error: err instanceof Error ? err : new Error(String(err)) });
+      });
       throw error;
     }
   }
@@ -254,7 +257,10 @@ export class PluginWorkerManager {
         continue;
       }
       this.workers.delete(key);
-      removals.push(client.deactivate().catch(() => undefined).then(() => client.terminate('replaced')));
+      removals.push(client.deactivate().catch((err: unknown) => {
+        logger.warn('Plugin worker deactivate failed during replace', { error: err instanceof Error ? err : new Error(String(err)) });
+        return undefined;
+      }).then(() => client.terminate('replaced')));
     }
 
     for (const client of nextClients) {
@@ -272,7 +278,10 @@ export class PluginWorkerManager {
       return;
     }
     this.workers.delete(key);
-    await client.deactivate().catch(() => undefined);
+    await client.deactivate().catch((err: unknown) => {
+      logger.warn('Plugin worker deactivate failed during deactivation', { error: err instanceof Error ? err : new Error(String(err)) });
+      return undefined;
+    });
     await client.terminate('deactivated');
     this.updateActiveWorkerMetric(packId);
   }

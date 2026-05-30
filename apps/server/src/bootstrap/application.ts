@@ -72,7 +72,7 @@ export class Application {
       this.phase = 'stopped';
       this.logger.info('shutdown complete');
     } catch (err) {
-      this.logger.error('shutdown error', { error: String(err) });
+      this.logger.error('shutdown error', { data: { error: err instanceof Error ? err : new Error(String(err)) } });
       clearTimeout(forceExit);
       process.exit(1);
     }

@@ -265,10 +265,7 @@ export class StdioJsonRpcTransport extends EventEmitter {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
       parsed = JSON.parse(line) as JsonRpcResponse<unknown>;
     } catch (error) {
-      this.logger.error('invalid JSON response', {
-        error: getErrorMessage(error),
-        line: line.slice(0, 200)
-      });
+      this.logger.error('invalid JSON response', { error: error instanceof Error ? error : new Error(String(error)), data: { line: line.slice(0, 200) } });
       return;
     }
 
@@ -453,7 +450,7 @@ export class StdioJsonRpcTransport extends EventEmitter {
       return;
     }
 
-    this.logger.error('process error', { error: error.message });
+    this.logger.error('process error', { data: { error: error instanceof Error ? error : new Error(String(error)) } });
 
     if (this.options.autoRestart) {
       void this.attemptRestart();

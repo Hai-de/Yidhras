@@ -1,3 +1,5 @@
+import { createLogger } from '../../../utils/logger.js';
+const ercLogger = createLogger('exp-runtime-control-plane');
 import type { AppContext } from '../../context.js';
 import { getPackRuntimeLookupPort, getPackRuntimeObservation } from '../app_context_ports.js';
 
@@ -56,7 +58,8 @@ const readEnabledPluginCount = async (context: AppContext, packId: string): Prom
       scope_ref: packId
     });
     return installations.filter(installation => installation.lifecycle_state === 'enabled').length;
-  } catch {
+  } catch (err: unknown) {
+    ercLogger.warn('Plugin installation query failed', { error: err instanceof Error ? err : new Error(String(err)) });
     return 0;
   }
 };

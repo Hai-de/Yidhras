@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 
+import { captureError } from '../../utils/capture_error.js';
 import type { PackScope, PackScopeResolver } from '../runtime/PackScopeResolver.js';
 
 interface PackScopedRequest extends Request {
@@ -40,7 +41,8 @@ export const createLenientPackScopeMiddleware = (resolver: PackScopeResolver) =>
 
     try {
       (req as PackScopedRequest).packScope = resolver.resolve(packId);
-    } catch {
+    } catch (err: unknown) {
+      captureError(err, { module: 'pack-scope-middleware', message: 'Pack scope resolution failed', code: 'PACK_SCOPE_FAIL' });
       (req as PackScopedRequest).packScope = { packId };
     }
     next();

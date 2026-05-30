@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import type { VariableContextInput } from '../../../../src/inference/context/types.js';
 import { assembleVariableContext } from '../../../../src/inference/context/variable_context_assembler.js';
 import { expectDefined } from '../../../helpers/assertions.js';
 import { makeMockConfig } from '../../../helpers/inference-mocks.js';
-import type { VariableContextInput } from '../../../../src/inference/context/types.js';
 
 const baseInput: VariableContextInput = {
   pack: {

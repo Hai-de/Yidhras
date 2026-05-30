@@ -245,9 +245,7 @@ export const renderNarrativeTemplate = (input: {
 
     return { text: renderedText, diagnostics };
   } catch (error) {
-    logger.error('Critical Error during template render', {
-      error: error instanceof Error ? error.message : String(error)
-    });
+    logger.error('Critical Error during template render', { error: error instanceof Error ? error : new Error(String(error)) });
     return {
       text: '',
       diagnostics: {

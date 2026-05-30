@@ -235,7 +235,7 @@ async function main() {
 
 main()
   .catch((e: unknown) => {
-    logger.error('Identity seed error', { error: e instanceof Error ? e.message : String(e) });
+    logger.error('Identity seed error', { data: { error: e instanceof Error ? e : new Error(String(e)) } });
     process.exit(1);
   })
   .finally(async () => {

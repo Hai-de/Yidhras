@@ -43,7 +43,8 @@ export const startConfigWatcher = (): ConfigWatcher | null => {
   const configDir = getConfigDir()
 
   if (!configDir) {
-    return null
+    logger.warn('Config watcher disabled: data/configw/conf.d/ directory not found in project tree');
+    return null;
   }
 
   let timer: ReturnType<typeof setTimeout> | null = null

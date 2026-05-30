@@ -1,5 +1,4 @@
 import fs from 'fs';
-import { ZodError } from 'zod';
 
 import { loadConfigYaml, readYamlFileIfExists } from '../config/loader.js';
 import { deepMerge } from '../config/merge.js';
@@ -25,23 +24,6 @@ export interface AiRegistryWatcher {
 }
 
 const DEBOUNCE_MS = 300;
-
-const extractErrorMessage = (err: unknown): string => {
-  if (err instanceof ZodError) {
-    const issues = err.issues
-      .slice(0, 3)
-      .map(issue => `  ${issue.path.join('.') || '(root)'}: ${issue.message}`)
-      .join('\n');
-    const suffix = err.issues.length > 3 ? `\n  ... (+${String(err.issues.length - 3)} more issues)` : '';
-    return `Zod 校验失败:\n${issues}${suffix}`;
-  }
-
-  if (err instanceof Error) {
-    return err.message;
-  }
-
-  return String(err);
-};
 
 const formatSummary = (rawConfig: Record<string, unknown>, kind: 'ai_models' | 'prompt_slots'): string => {
   if (kind === 'ai_models') {
@@ -79,12 +61,12 @@ const validateAndReloadAiModels = (filePath: string): void => {
 
     resetAiRegistryCache();
     refreshDynamicModels().catch((err: unknown) => {
-      logger.warn('动态模型刷新失败', { error: err instanceof Error ? err.message : String(err) });
+      logger.warn('动态模型刷新失败', { error: err instanceof Error ? err : new Error(String(err)) });
     });
     const summary = formatSummary(parsedOverride, 'ai_models');
     logger.info(`${resolveFileName(filePath)} 变更，重新加载成功\n  ${summary}`);
   } catch (err) {
-    logger.warn(`${resolveFileName(filePath)} 校验失败，保留旧配置`, { error: extractErrorMessage(err) });
+    logger.warn(`${resolveFileName(filePath)} 校验失败，保留旧配置`, { error: err instanceof Error ? err : new Error(String(err)) });
   }
 };
 
@@ -106,7 +88,7 @@ const validateAndReloadPromptSlots = (filePath: string, defaultPath: string): vo
     const summary = formatSummary(rawOverride, 'prompt_slots');
     logger.info(`${resolveFileName(filePath)} 变更，重新加载成功\n  ${summary}`);
   } catch (err) {
-    logger.warn(`${resolveFileName(filePath)} 校验失败，保留旧配置`, { error: extractErrorMessage(err) });
+    logger.warn(`${resolveFileName(filePath)} 校验失败，保留旧配置`, { error: err instanceof Error ? err : new Error(String(err)) });
   }
 };
 
@@ -142,10 +124,10 @@ export const startAiRegistryWatcher = (options: AiRegistryWatcherOptions): AiReg
       watchers.push(watcher);
 
       watcher.on('error', (err) => {
-        logger.warn(`文件监听异常 ${resolveFileName(filePath)}`, { error: err instanceof Error ? err.message : String(err) });
+        logger.warn(`文件监听异常 ${resolveFileName(filePath)}`, { error: err instanceof Error ? err : new Error(String(err)) });
       });
     } catch (err) {
-      logger.warn(`无法监听文件 ${resolveFileName(filePath)}`, { error: err instanceof Error ? err.message : String(err) });
+      logger.warn(`无法监听文件 ${resolveFileName(filePath)}`, { error: err instanceof Error ? err : new Error(String(err)) });
     }
   };
 
@@ -159,10 +141,8 @@ export const startAiRegistryWatcher = (options: AiRegistryWatcherOptions): AiReg
     validateAndReloadPromptSlots(promptSlotsPath, options.promptSlotsDefaultPath);
   });
 
-  logger.info('热加载已启动', {
-    ai_models: resolveFileName(options.aiModelsConfigPath),
-    prompt_slots: resolveFileName(promptSlotsPath)
-  });
+  logger.info('热加载已启动', { data: { ai_models: resolveFileName(options.aiModelsConfigPath),
+    prompt_slots: resolveFileName(promptSlotsPath) } });
 
   return {
     close() {

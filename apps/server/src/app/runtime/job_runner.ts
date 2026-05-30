@@ -89,7 +89,7 @@ export const runDecisionJobRunner = async ({
           lock_expires_at: null
         });
       } catch (auditErr) {
-        logger.error(`无法写入作业失败审计记录 job_id=${job.id}`, { error: auditErr instanceof Error ? auditErr.message : String(auditErr) });
+        logger.error(`无法写入作业失败审计记录 job_id=${job.id}`, { data: { error: auditErr instanceof Error ? auditErr : new Error(String(auditErr)) } });
       }
 
       return 0;

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildPackStateSnapshot } from '../../../../src/inference/context/state_snapshot_builder.js';
+import { expectDefined } from '../../../helpers/assertions.js';
 import { makeMockPackStorageAdapter } from '../../../helpers/inference-mocks.js';
 import { createMockPrisma } from '../../../helpers/prisma_mock.js';
-import { expectDefined } from '../../../helpers/assertions.js';
 
 describe('buildPackStateSnapshot', () => {
   const packId = 'test-pack';
@@ -391,7 +391,7 @@ describe('buildPackStateSnapshot', () => {
 
       await expect(
         buildPackStateSnapshot(
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing null prisma edge case
+           
           { prisma: null as never },
           adapter,
           { packId, resolvedAgentId: null, attributes: {} }

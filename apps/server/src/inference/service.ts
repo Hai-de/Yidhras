@@ -34,6 +34,9 @@ import { groundDecisionIntent } from '../domain/invocation/intent_grounder.js';
 import { createMemoryRecordingService } from '../memory/recording/service.js';
 import { recordInferenceCompleted } from '../observability/metrics.js';
 import { ApiError } from '../utils/api_error.js';
+import { captureError } from '../utils/capture_error.js';
+import { ErrorCode } from '../utils/errors.js';
+import { createLogger } from '../utils/logger.js';
 import { buildInferenceContext } from './context/builder.js';
 import type { PromptBundleV2 } from './prompt_bundle_v2.js';
 import type { PromptTree } from './prompt_tree.js';
@@ -75,6 +78,8 @@ export interface CreateInferenceServiceOptions {
 
 const DEFAULT_JOB_MAX_ATTEMPTS = 3;
 const JOB_RETRY_DELAY_TICKS = 1n;
+
+const logger = createLogger('inference-service');
 
 const assertRecord = (value: unknown, code: string, message: string): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -545,8 +550,12 @@ const executeRunInternal = async (
           taskConfig,
           auditStore: compactionAuditStore
         });
-      } catch {
-        // Compaction is best-effort. Swallow errors silently.
+      } catch (err: unknown) {
+        captureError(err, {
+          module: 'inference-service',
+          message: 'Compaction failed for speaker memory',
+          code: ErrorCode.INFERENCE_COMPACTION_FAIL
+        });
       }
     }
   }
@@ -753,7 +762,11 @@ export const createInferenceService = ({
 
       try {
         assertDecisionJobLockOwnership(job, options.workerId, now);
-      } catch {
+      } catch (err: unknown) {
+        logger.warn('Decision job lock contention — another worker owns the lock', {
+          error: err instanceof Error ? err : new Error(String(err)),
+          data: { job_id: job.id, worker_id: options.workerId }
+        });
         return null;
       }
 

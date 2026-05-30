@@ -756,9 +756,7 @@ export const refreshDynamicModels = async (): Promise<void> => {
         });
       }
     } catch (err) {
-      logger.warn(`动态模型列表获取失败 [${adapter.provider}]`, {
-        error: err instanceof Error ? err.message : String(err)
-      });
+      logger.warn(`动态模型列表获取失败 [${adapter.provider}]`, { error: err instanceof Error ? err : new Error(String(err)) });
     }
   }
 

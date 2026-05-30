@@ -24,8 +24,8 @@ const parseBigInt = (value: unknown): bigint => {
         throw new ApiError(400, 'STRATEGY_INVALID', 'range value must be greater than 0');
       }
       return parsed;
-    } catch {
-      throw new ApiError(400, 'STRATEGY_INVALID', 'range value must be a valid integer string');
+    } catch (err: unknown) {
+      throw new ApiError(400, 'STRATEGY_INVALID', 'range value must be a valid integer string', undefined, err instanceof Error ? err : undefined);
     }
   }
 

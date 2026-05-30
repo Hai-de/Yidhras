@@ -196,12 +196,9 @@ export class PackSimulationLoop {
         try {
           fn(from, to);
         } catch (err: unknown) {
-          logger.warn('onLoopStateChange hook failed', {
-            pack_id: this.packId,
+          logger.warn('onLoopStateChange hook failed', { error: err instanceof Error ? err : new Error(String(err)), data: { pack_id: this.packId,
             from,
-            to,
-            error: getErrorMessage(err)
-          });
+            to } });
         }
       }
     }
@@ -365,12 +362,9 @@ export const runPackSimulationIteration = async (input: RunPackIterationInput): 
       } catch (err: unknown) {
         const error = getErrorMessage(err);
         extensionErrors.push({ extension_type: 'hook', key: hookName, error });
-        logger.warn('Pack loop hook failed', {
-          pack_id: input.packId,
+        logger.warn('Pack loop hook failed', { error: err instanceof Error ? err : new Error(String(err)), data: { pack_id: input.packId,
           tick: hookCtx.tick,
-          hook: hookName,
-          error
-        });
+          hook: hookName } });
       }
     }
   };
@@ -445,12 +439,9 @@ export const runPackSimulationIteration = async (input: RunPackIterationInput): 
       } catch (err: unknown) {
         const error = getErrorMessage(err);
         extensionErrors.push({ extension_type: 'data_cleaner', key: cleaner.key, error });
-        logger.warn('Data cleaner failed during pack loop cleanup', {
-          pack_id: input.packId,
+        logger.warn('Data cleaner failed during pack loop cleanup', { error: err instanceof Error ? err : new Error(String(err)), data: { pack_id: input.packId,
           tick: packTick,
-          cleaner_key: cleaner.key,
-          error
-        });
+          cleaner_key: cleaner.key } });
       }
     }
   }

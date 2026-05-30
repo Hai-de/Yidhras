@@ -12,6 +12,7 @@ import {
   setPluginsActive,
   setPluginWorkersActive} from '../observability/metrics.js';
 import type { PerceptionResolver } from '../perception/types.js';
+import { captureError } from '../utils/capture_error.js';
 import { createLogger } from '../utils/logger.js';
 import {
   PLUGIN_HOST_API_VERSION,
@@ -308,7 +309,13 @@ export const refreshPackPluginRuntime = async (
           disabled_at: installation.disabled_at,
           last_error: `Incompatible host_api: requires ${requiredHostApi}, server provides ${PLUGIN_HOST_API_VERSION}`
         })
-        .catch(() => {});
+        .catch((err: unknown) => {
+          captureError(err, {
+            module: 'plugin-runtime',
+            message: 'Failed to persist plugin installation error',
+            code: 'PLUGIN_PERSIST_FAIL'
+          });
+        });
       if (previousRuntime) {
         runtimes.push(previousRuntime);
       }

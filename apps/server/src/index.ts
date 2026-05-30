@@ -73,6 +73,7 @@ import { syncPackPluginRuntime } from './plugins/runtime.js';
 import { initSystemPackPlugins } from './plugins/system_pack_init.js';
 import { ApiError } from './utils/api_error.js';
 import { createLogger, setLoggerRuntimeConfig } from './utils/logger.js';
+import { installProcessGuards } from './utils/process_guard.js';
 import { safeFs } from './utils/safe_fs.js';
 
 const logger = createLogger('yidhras-server');
@@ -130,6 +131,7 @@ void (async () => {
 
   validateProductionSecrets();
   setLoggerRuntimeConfig(getRuntimeConfig().logging);
+  installProcessGuards(logger);
   initMetrics();
   logRuntimeConfigSnapshot();
 
@@ -280,7 +282,7 @@ void (async () => {
     ctx.setRuntimeReady(false);
     ctx.startupHealth.level = 'degraded';
     ctx.startupHealth.errors.push(`simulation init failed: ${getErrorMessage(err)}`);
-    logger.error('Init Error', { error: getErrorMessage(err) });
+    logger.error('Init Error', { data: { error: err instanceof Error ? err : new Error(String(err)) } });
     ctx.notifications.push('error', `系统初始化失败，已降级运行: ${getErrorMessage(err)}`, 'SYS_INIT_FAIL');
   }
 
@@ -312,25 +314,48 @@ void (async () => {
 
   // Graceful shutdown
   application.onShutdown(async () => {
-    wiring.multiPackLoopHost.shutdown();
+    const shutdownErrors: Array<{ step: string; error: string }> = [];
 
-    httpServer?.close();
+    try { wiring.multiPackLoopHost.shutdown(); } catch (err: unknown) {
+      shutdownErrors.push({ step: 'loop-host', error: getErrorMessage(err) });
+    }
+
+    if (httpServer) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          httpServer.close((err) => { if (err) { reject(err); } else { resolve(); } });
+        });
+        logger.info('HTTP 服务器已关闭');
+      } catch (err: unknown) {
+        shutdownErrors.push({ step: 'http-close', error: getErrorMessage(err) });
+      }
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary: WorldEnginePort → WorldEngineSidecarClient
     const weClient = ctx.worldEngine as import('./app/runtime/sidecar/world_engine_sidecar_client.js').WorldEngineSidecarClient;
     if (weClient && typeof weClient.stop === 'function') {
-      await weClient.stop();
+      try { await weClient.stop(); } catch (err: unknown) {
+        shutdownErrors.push({ step: 'world-engine', error: getErrorMessage(err) });
+      }
     }
 
-    await ctx.prisma.$disconnect();
-    logger.info('Prisma 已断开连接');
+    try { await ctx.prisma.$disconnect(); logger.info('Prisma 已断开连接'); } catch (err: unknown) {
+      shutdownErrors.push({ step: 'prisma', error: getErrorMessage(err) });
+    }
 
-    registryWatcher.close();
-    logger.info('Registry watcher 已关闭');
+    try { registryWatcher.close(); logger.info('Registry watcher 已关闭'); } catch (err: unknown) {
+      shutdownErrors.push({ step: 'registry-watcher', error: getErrorMessage(err) });
+    }
 
-    configWatcher?.close();
+    try { configWatcher?.close(); } catch (err: unknown) {
+      shutdownErrors.push({ step: 'config-watcher', error: getErrorMessage(err) });
+    }
 
-    logger.info('优雅关闭完成');
+    if (shutdownErrors.length > 0) {
+      logger.warn('Graceful shutdown completed with errors', { data: { shutdown_errors: shutdownErrors } });
+    } else {
+      logger.info('优雅关闭完成');
+    }
   });
 
   process.on('SIGINT', () => { void application.shutdown('SIGINT'); });

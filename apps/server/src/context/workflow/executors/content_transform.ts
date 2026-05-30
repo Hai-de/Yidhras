@@ -1,6 +1,7 @@
 import type { SlotTransformContext } from '@yidhras/contracts';
 
 import { slotContentTransformRegistry } from '../../../plugins/extensions/slot_content_transformer.js';
+import { captureError } from '../../../utils/capture_error.js';
 import type { PromptWorkflowStepExecutor } from '../registry.js';
 import { resolvePromptWorkflowBudget } from '../token_budget.js';
 import type {
@@ -127,8 +128,8 @@ export const createContentTransformExecutor = (): PromptWorkflowStepExecutor => 
           try {
             const result = await transformer.transform(currentContent, transformContext);
             currentContent = result.transformed;
-          } catch {
-            // On transform error, keep original content
+          } catch (err: unknown) {
+            captureError(err, { module: 'content-transform', message: 'Content transform failed', code: 'CONTEXT_TRANSFORM_FAIL' });
           }
         }
 

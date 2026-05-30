@@ -4,6 +4,7 @@ import { DEFAULT_PACK_WORLD_ENTITY_ID } from '../../packs/runtime/core_models.js
 import { listPackEntityStateProjectionRecords } from '../../packs/storage/entity_state_projection.js';
 import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { packEntityIdFromResolvedAgentId } from '../../packs/utils/pack_entity_id.js';
+import { captureError } from '../../utils/capture_error.js';
 import { extractSemanticType } from '../helpers.js';
 import type {
   InferencePackArtifactSnapshot,
@@ -54,7 +55,8 @@ const fetchRecentEvents = async (
       tick: row.tick.toString(),
       created_at: row.created_at.toString()
     }));
-  } catch {
+  } catch (err: unknown) {
+    captureError(err, { module: 'state-snapshot-builder', message: 'Failed to build state snapshot — returning empty array' });
     return [];
   }
 };

@@ -264,9 +264,7 @@ export class WorldEngineSidecarClient implements WorldEnginePort {
       await this.start(); // re-handshake + version check
       await this.reloadAllPacks();
     } catch (error) {
-      logger.error('failed to recover from unhealthy transport', {
-        error: error instanceof Error ? error.message : String(error)
-      });
+      logger.error('failed to recover from unhealthy transport', { error: error instanceof Error ? error : new Error(String(error)) });
     }
   }
 
@@ -275,9 +273,7 @@ export class WorldEngineSidecarClient implements WorldEnginePort {
       await this.start(); // re-handshake
       await this.reloadAllPacks();
     } catch (error) {
-      logger.error('failed to reload packs after transport restart', {
-        error: error instanceof Error ? error.message : String(error)
-      });
+      logger.error('failed to reload packs after transport restart', { error: error instanceof Error ? error : new Error(String(error)) });
     }
   }
 
@@ -288,12 +284,9 @@ export class WorldEngineSidecarClient implements WorldEnginePort {
     for (const [, loadInput] of packs) {
       try {
         await this.loadPack(loadInput);
-        logger.info('reloaded pack after transport recovery', { packId: loadInput.pack_id });
+        logger.info('reloaded pack after transport recovery', { data: { packId: loadInput.pack_id } });
       } catch (error) {
-        logger.error('failed to reload pack after transport recovery', {
-          packId: loadInput.pack_id,
-          error: error instanceof Error ? error.message : String(error)
-        });
+        logger.error('failed to reload pack after transport recovery', { error: error instanceof Error ? error : new Error(String(error)), data: { packId: loadInput.pack_id } });
       }
     }
   }

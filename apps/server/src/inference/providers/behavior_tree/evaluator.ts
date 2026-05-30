@@ -1,6 +1,9 @@
+import { createLogger } from '../../../utils/logger.js';
 import type { ProviderDecisionRaw } from '../../types.js';
 import { tickAction, tickCondition, tickLLMDecision } from './nodes/leaves.js';
 import type { BTDecisionTrace, BTEvalContext, BTNodeDef, BTNodeTrace,BTStatus } from './types.js';
+
+const logger = createLogger('behavior-tree-evaluator');
 
 export async function tick(node: BTNodeDef, ctx: BTEvalContext): Promise<BTStatus> {
   if (node.$ref) {
@@ -119,8 +122,7 @@ export async function evaluateTree(
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    // Log the error — in production this goes through the logger
-    console.error(`[behavior_tree] Evaluation error in tree "${treeName}" for agent "${agentId}": ${message}`);
+    logger.error(`Evaluation error in tree "${treeName}" for agent "${agentId}": ${message}`, { error: err instanceof Error ? err : new Error(String(err)) });
 
     return {
       decision: null,

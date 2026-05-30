@@ -1,5 +1,7 @@
 import type { AppInfrastructure } from '../app/context.js';
 import { ApiError } from '../utils/api_error.js';
+import { captureError } from '../utils/capture_error.js';
+import { ErrorCode } from '../utils/errors.js';
 import type { PromptCache } from './cache.js';
 import { buildCacheKey, createInMemoryPromptCache, resolveCacheTtl } from './cache.js';
 import type { CircuitBreaker, RateLimiter } from './elasticity/index.js';
@@ -606,7 +608,8 @@ export const createModelGateway = ({
 
         try {
           await rl.acquire();
-        } catch {
+        } catch (err: unknown) {
+          captureError(err, { module: 'ai-gateway', message: 'Rate limiter acquire failed', code: ErrorCode.AI_RATE_LIMITED });
           continue;
         }
 
@@ -646,7 +649,8 @@ export const createModelGateway = ({
           cb.recordSuccess();
           rl.release();
           return;
-        } catch {
+        } catch (err: unknown) {
+          captureError(err, { module: 'ai-gateway', message: 'AI streaming candidate failed', code: ErrorCode.AI_STREAM_FAIL });
           cb.recordFailure();
           rl.release();
           // 尝试下一个 candidate

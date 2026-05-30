@@ -160,8 +160,8 @@ export const parseInferenceJobsCursor = (value: string | undefined): InferenceJo
   let parsed: unknown;
   try {
     parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as unknown;
-  } catch {
-    throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'cursor is invalid');
+  } catch (err: unknown) {
+    throw new ApiError(400, 'INFERENCE_INPUT_INVALID', 'cursor is invalid', undefined, err instanceof Error ? err : undefined);
   }
 
   const result = inferenceJobsCursorSchema.safeParse(parsed);

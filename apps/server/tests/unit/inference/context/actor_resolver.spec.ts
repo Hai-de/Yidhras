@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { expectDefined } from '../../../helpers/assertions.js';
 import { resolveActor } from '../../../../src/inference/context/actor_resolver.js';
+import { expectDefined } from '../../../helpers/assertions.js';
 
 interface RepoAgent {
   findAgentById: ReturnType<typeof vi.fn>;

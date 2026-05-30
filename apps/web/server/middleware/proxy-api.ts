@@ -15,7 +15,9 @@ export default defineEventHandler(async (event) => {
 
   try {
     return await proxyRequest(event, target)
-  } catch {
-    throw createError({ statusCode: 502, statusMessage: 'Bad Gateway' })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[proxy-api] Proxy request failed: ${target} — ${message}`);
+    throw createError({ statusCode: 502, statusMessage: 'Bad Gateway', data: { proxy_error: message } });
   }
 })

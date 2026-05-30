@@ -68,10 +68,3 @@
 >   - [ ] Phase 6+: Rust + wasmtime WASM 沙箱（需求驱动）
 
 
-### 文件拆分
-- apps/server/src/app/services/scheduler/queries.ts 充满了代码异味
-
-- apps/server/src/inference/context_builder.ts 是巨大屎山代码
-
-
-

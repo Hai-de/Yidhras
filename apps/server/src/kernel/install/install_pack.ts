@@ -23,9 +23,11 @@ export const installPackRuntime = async (instanceId: string, pack: WorldPack, pa
       `latest supported schema_version is ${String(migrationPlan.latestVersion)}. ` +
       'Runtime installation continues without automatic migration.',
       {
-        pack_id: pack.metadata.id,
-        current_schema_version: migrationPlan.currentVersion,
-        latest_schema_version: migrationPlan.latestVersion
+        data: {
+          pack_id: pack.metadata.id,
+          current_schema_version: migrationPlan.currentVersion,
+          latest_schema_version: migrationPlan.latestVersion
+        }
       }
     );
   }

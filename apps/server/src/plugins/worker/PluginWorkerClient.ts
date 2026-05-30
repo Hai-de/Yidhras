@@ -218,12 +218,9 @@ export class PluginWorkerClient {
     try {
       message = parseWorkerToMainMessage(raw);
     } catch (error) {
-      logger.error('Invalid plugin worker message', {
-        pack_id: this.packId,
+      logger.error('Invalid plugin worker message', { error: error instanceof Error ? error : new Error(String(error)), data: { pack_id: this.packId,
         plugin_id: this.pluginId,
-        installation_id: this.installationId,
-        error: error instanceof Error ? error.message : String(error)
-      });
+        installation_id: this.installationId } });
       return;
     }
 
@@ -247,10 +244,12 @@ export class PluginWorkerClient {
         break;
       case 'log':
         logger[message.level](message.message, {
-          pack_id: this.packId,
-          plugin_id: this.pluginId,
-          installation_id: this.installationId,
-          ...(message.fields ?? {})
+          data: {
+            pack_id: this.packId,
+            plugin_id: this.pluginId,
+            installation_id: this.installationId,
+            ...(message.fields ?? {})
+          }
         });
         break;
     }
@@ -304,12 +303,9 @@ export class PluginWorkerClient {
       this.crashRecorded = true;
       recordPluginWorkerCrash(this.packId, this.pluginId, this.installationId);
     }
-    logger.error('Plugin worker crashed', {
-      pack_id: this.packId,
+    logger.error('Plugin worker crashed', { error: error instanceof Error ? error : new Error(String(error)), data: { pack_id: this.packId,
       plugin_id: this.pluginId,
-      installation_id: this.installationId,
-      error: error.message
-    });
+      installation_id: this.installationId } });
     this.onCrash?.(error);
     this.rejectAll(error);
   }

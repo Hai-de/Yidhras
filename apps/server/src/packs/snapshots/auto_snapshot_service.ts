@@ -40,11 +40,8 @@ const listAutoSnapshotMetadata = (packId: string): PackSnapshotMetadata[] => {
         metadata.push(item);
       }
     } catch (err) {
-      logger.warn('Failed to read snapshot metadata during auto snapshot retention', {
-        pack_id: packId,
-        snapshot_id: snapshotId,
-        error: err instanceof Error ? err.message : String(err)
-      });
+      logger.warn('Failed to read snapshot metadata during auto snapshot retention', { error: err instanceof Error ? err : new Error(String(err)), data: { pack_id: packId,
+        snapshot_id: snapshotId } });
     }
   }
 
@@ -62,11 +59,8 @@ const enforceAutoSnapshotRetention = (packId: string, retentionCount: number): v
     try {
       deleteSnapshotDir(resolveSnapshotLocation(packId, snapshot.snapshot_id));
     } catch (err) {
-      logger.warn('Failed to delete old auto snapshot', {
-        pack_id: packId,
-        snapshot_id: snapshot.snapshot_id,
-        error: err instanceof Error ? err.message : String(err)
-      });
+      logger.warn('Failed to delete old auto snapshot', { error: err instanceof Error ? err : new Error(String(err)), data: { pack_id: packId,
+        snapshot_id: snapshot.snapshot_id } });
     }
   }
 };
@@ -87,10 +81,8 @@ export const maybeCaptureAutoSnapshot = async ({
   }
 
   if (context.packStorageAdapter.backend !== 'sqlite') {
-    logger.warn('Auto snapshot skipped because pack storage backend is not sqlite', {
-      pack_id: packId,
-      backend: context.packStorageAdapter.backend
-    });
+    logger.warn('Auto snapshot skipped because pack storage backend is not sqlite', { data: { pack_id: packId,
+      backend: context.packStorageAdapter.backend } });
     return;
   }
 
@@ -108,16 +100,11 @@ export const maybeCaptureAutoSnapshot = async ({
 
     enforceAutoSnapshotRetention(packId, config.retention_count);
 
-    logger.info('Auto snapshot captured', {
-      pack_id: packId,
+    logger.info('Auto snapshot captured', { data: { pack_id: packId,
       snapshot_id: result.metadata.snapshot_id,
-      tick
-    });
+      tick } });
   } catch (err) {
-    logger.warn('Auto snapshot failed', {
-      pack_id: packId,
-      tick: currentTick.toString(),
-      error: err instanceof Error ? err.message : String(err)
-    });
+    logger.warn('Auto snapshot failed', { error: err instanceof Error ? err : new Error(String(err)), data: { pack_id: packId,
+      tick: currentTick.toString() } });
   }
 };

@@ -74,9 +74,11 @@ export class PackManifestLoader {
           folderName +
           '` to update the manifest. Loading continues without automatic migration.',
           {
-            pack_id: parsed.metadata.id,
-            current_schema_version: migrationPlan.currentVersion,
-            latest_schema_version: migrationPlan.latestVersion
+            data: {
+              pack_id: parsed.metadata.id,
+              current_schema_version: migrationPlan.currentVersion,
+              latest_schema_version: migrationPlan.latestVersion
+            }
           }
         );
       }
@@ -95,7 +97,7 @@ export class PackManifestLoader {
       logger.info(`Loaded pack: ${parsed.metadata.name} (${parsed.metadata.id}) [instance: ${instanceId}]`);
       return parsed;
     } catch (err) {
-      logger.error(`Error parsing ${packPath}`, { error: err instanceof Error ? err.message : String(err) });
+      logger.error(`Error parsing ${packPath}`, { data: { error: err instanceof Error ? err : new Error(String(err)) } });
       throw err;
     }
   }

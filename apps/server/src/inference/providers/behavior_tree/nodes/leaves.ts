@@ -1,5 +1,7 @@
 import { buildPromptBundleFromAiMessages } from '../../../../ai/prompt_bundle_from_messages.js';
 import type { AiMessage } from '../../../../ai/types.js';
+import { captureError } from '../../../../utils/capture_error.js';
+import { ErrorCode } from '../../../../utils/errors.js';
 import { evaluateCondition } from '../context_resolver.js';
 import type { BTActionDef, BTEvalContext, BTLLMDecisionDef, BTNodeDef, BTStatus } from '../types.js';
 
@@ -26,7 +28,13 @@ export async function tickAction(
         ...(handlerResult ?? {})
       };
       return 'success';
-    } catch {
+    } catch (err: unknown) {
+      captureError(err, {
+        module: 'behavior-tree',
+        message: `Action handler failed in tree "${typeof ctx.blackboard['__tree_name'] === 'string' ? ctx.blackboard['__tree_name'] : 'unknown'}"`,
+        code: ErrorCode.PLUGIN_EXECUTION_FAIL,
+        data: { action: action.kernel, action_type: action.semantic_intent }
+      });
       return 'failure';
     }
   }
@@ -74,7 +82,14 @@ export async function tickLLMDecision(
     const responseText = result.output;
     ctx.blackboard['__last_decision'] = buildLLMDecisionResult(llm, responseText);
     return 'success';
-  } catch {
+  } catch (err: unknown) {
+    const fallbackTreeName = typeof ctx.blackboard['__tree_name'] === 'string' ? ctx.blackboard['__tree_name'] : 'unknown';
+    captureError(err, {
+      module: 'behavior-tree',
+      message: `LLM decision failed in tree "${fallbackTreeName}"`,
+      code: ErrorCode.INFERENCE_STRATEGY_FAIL,
+      data: { tree_name: fallbackTreeName, provider: llm.provider, model: llm.model }
+    });
     return 'failure';
   }
 }

@@ -1,7 +1,6 @@
 import { Prisma } from '@prisma/client';
 
 import type { AppInfrastructure } from '../app/context.js';
-import { getErrorMessage } from '../app/http/errors.js';
 import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
 import { createLogger } from '../utils/logger.js';
 import type { AiInvocationTrace, ModelGatewayResponse } from './types.js';
@@ -91,11 +90,9 @@ export const recordAiInvocation = async (
   }
 ): Promise<void> => {
   if (!context) {
-    logger.warn('recordAiInvocation called without context, invocation not persisted', {
-      invocation_id: response.invocation_id,
+    logger.warn('recordAiInvocation called without context, invocation not persisted', { data: { invocation_id: response.invocation_id,
       task_type: response.task_type,
-      status: response.status
-    });
+      status: response.status } });
     return;
   }
 
@@ -126,15 +123,12 @@ export const recordAiInvocation = async (
         );
       } catch (innerError: unknown) {
         logger.error('Failed to persist AI invocation record (FK fallback)', {
-          error: getErrorMessage(innerError),
-          invocation_id: response.invocation_id
+          error: innerError instanceof Error ? innerError : new Error(String(innerError)),
+          data: { invocation_id: response.invocation_id }
         });
       }
     } else {
-      logger.error('Failed to persist AI invocation record', {
-        error: getErrorMessage(error),
-        invocation_id: response.invocation_id
-      });
+      logger.error('Failed to persist AI invocation record', { error: error instanceof Error ? error : new Error(String(error)), data: { invocation_id: response.invocation_id } });
     }
   }
 };

@@ -66,8 +66,8 @@ const toJsonSafeFormattedCalendars = (calendars: TimeFormatted[]): JsonSafeTimeF
 const parseBigIntString = (value: string, field: string): bigint => {
   try {
     return BigInt(value);
-  } catch {
-    throw new Error(`[runtime_clock_projection] invalid bigint string for ${field}: ${value}`);
+  } catch (err: unknown) {
+    throw new Error(`[runtime_clock_projection] invalid bigint string for ${field}: ${value}`, { cause: err });
   }
 };
 
