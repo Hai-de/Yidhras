@@ -1,10 +1,10 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-- [ ] 创建 `SafeFsError` 类 — 继承 `AppError`，携带 fsOperation + targetPath `#SF-1`
-- [ ] 重构 `safe_fs.ts` — path traversal → `SafeFsError`，fs 错误包装 cause `#SF-2`
-- [ ] 适配调用方 — 需要区分 path traversal vs ENOENT 的 catch 点 `#SF-3`
-- [ ] typecheck + unit + integration 全量验证 `#SF-4`
+- [x] 创建 `SafeFsError` 类 — 继承 `AppError`，携带 fsOperation + targetPath `#SF-1`
+- [x] 重构 `safe_fs.ts` — path traversal → `SafeFsError`，fs 错误包装 cause `#SF-2`
+- [x] 适配调用方 — config.ts, config_backup.ts 不静默吞 path traversal `#SF-3`
+- [x] typecheck + unit + integration 全量验证 `#SF-4`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # safe_fs 错误类型化

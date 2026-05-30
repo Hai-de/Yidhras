@@ -8,8 +8,9 @@ import {
   tierAllowsHotReload,
   tierRequiresRestart
 } from '../../../config/tiers.js'
+import { ErrorCode } from '../../../utils/errors.js';
 import { createLogger } from '../../../utils/logger.js'
-import { safeFs } from '../../../utils/safe_fs.js'
+import { safeFs,SafeFsError  } from '../../../utils/safe_fs.js';
 
 const logger = createLogger('config-service')
 
@@ -113,7 +114,10 @@ export const updateDomainConfig = (
     // Simple YAML merge: we write the new values as-is
     // More sophisticated: use js-yaml load/dump
     existing = raw ? {} : {} // Keep existing as base
-  } catch {
+  } catch (err: unknown) {
+    if (err instanceof SafeFsError && err.code === ErrorCode.PARSE_FAIL) {
+      throw err;
+    }
     // file unreadable, start fresh
   }
 

@@ -6,8 +6,9 @@ import { spawn } from 'child_process'
 import path from 'path'
 
 import { readYamlFileIfExists, resolveWorkspaceRoot } from '../../../config/loader.js'
+import { ErrorCode } from '../../../utils/errors.js';
 import { createLogger } from '../../../utils/logger.js'
-import { safeFs } from '../../../utils/safe_fs.js'
+import { safeFs, SafeFsError } from '../../../utils/safe_fs.js'
 
 const logger = createLogger('config-backup')
 
@@ -83,8 +84,11 @@ const readMetadata = (workspaceRoot: string, backupDir: string): BackupMetadata 
     const raw = safeFs.readFileSync(workspaceRoot, metaPath, 'utf-8')
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- from-any: JSON.parse boundary
     return JSON.parse(raw) as BackupMetadata
-  } catch {
-    return { backups: [] }
+  } catch (err: unknown) {
+    if (err instanceof SafeFsError && err.code === ErrorCode.PARSE_FAIL) {
+      throw err;
+    }
+    return { backups: [] };
   }
 }
 
