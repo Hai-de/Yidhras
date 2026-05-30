@@ -1,11 +1,11 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-- [ ] 添加 `no-console` 规则 — `CLI/**` 和 `utils/logger.ts` 除外 `#ER-1`
-- [ ] 添加 `no-empty` catch 检查 — 禁止完全空的 catch 块 `#ER-2`
-- [ ] 添加 `@typescript-eslint/only-throw-error` — 禁止 throw 原始值 `#ER-3`
-- [ ] 清理现有违规 — 修复 ESLint 新增规则触发的错误 `#ER-4`
-- [ ] typecheck + lint 全量验证 `#ER-5`
+- [x] 添加 `no-console` 规则 — `CLI/**`、`init/**` 和 `utils/logger.ts` 除外 `#ER-1`
+- [x] 添加 `no-empty` catch 检查 — 禁止完全空的 catch 块 `#ER-2`
+- [x] 添加 `@typescript-eslint/only-throw-error` — 禁止 throw 原始值 `#ER-3`
+- [x] 清理现有违规 — 修复 ESLint 新增规则触发的错误 `#ER-4`
+- [x] typecheck + lint 全量验证 `#ER-5`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # ESLint 回归防护规则

@@ -141,7 +141,8 @@ export default tseslint.config(
       }
     },
     rules: {
-      'no-console': 'off',
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+      'no-empty': ['error', { allowEmptyCatch: false }],
       'prefer-const': 'error',
       'no-case-declarations': 'error',
       'no-eval': 'error',
@@ -174,6 +175,7 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_' }
       ],
+      '@typescript-eslint/only-throw-error': 'error',
       '@typescript-eslint/no-unsafe-type-assertion': 'error',
       '@typescript-eslint/use-unknown-in-catch-callback-variable': 'error',
       '@typescript-eslint/no-unnecessary-type-parameters': 'error',
@@ -186,6 +188,22 @@ export default tseslint.config(
       '@typescript-eslint/no-unnecessary-condition': 'warn',
       '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }],
       '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: false }]
+    }
+  },
+
+  // Logger — permitted to use console.* directly
+  {
+    files: ['src/utils/logger.ts'],
+    rules: {
+      'no-console': 'off'
+    }
+  },
+
+  // CLI scripts and init — console.* is the user interface
+  {
+    files: ['src/cli/**/*.ts', 'src/init/**/*.ts'],
+    rules: {
+      'no-console': 'off'
     }
   },
 
