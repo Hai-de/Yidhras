@@ -1,11 +1,11 @@
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
 import { createWorkflowEngine } from './workflow_engine.js';
 import type { WorkflowRunRecord } from './workflow_types.js';
 
 export interface WorkflowTriggerEngine {
   triggerWorkflow(input: {
-    context: AppContext;
+    context: DataContext;
     packRuntime: PackRuntimePort;
     workflow_name: string;
     trigger_type: 'manual' | 'event';
@@ -45,7 +45,7 @@ const resolveEventPackId = (event: { pack_id: string | null; impact_data: string
 };
 
 export const triggerManualWorkflow = async (input: {
-  context: AppContext;
+  context: DataContext;
   packRuntime: PackRuntimePort;
   workflow_name: string;
   trigger_ref?: string | null;
@@ -64,7 +64,7 @@ export const triggerManualWorkflow = async (input: {
 };
 
 export const triggerEventWorkflows = async (input: {
-  context: AppContext;
+  context: DataContext;
   packRuntime: PackRuntimePort;
   sinceTick: bigint;
   untilTick: bigint;

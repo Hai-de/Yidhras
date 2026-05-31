@@ -1,5 +1,5 @@
 import type { SchedulerOwnershipMigrationRecord } from '../../../packs/storage/SchedulerStorageAdapter.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import { parseOwnershipAssignmentFilters, parseOwnershipMigrationFilters } from './filter-parsers.js';
 import { buildSchedulerOwnershipSummary,parseSummaryJson, toOwnershipMigrationReadModel  } from './read-models.js';
 import type {
@@ -13,7 +13,7 @@ import type {
 // ---------------------------------------------------------------------------
 
 export const listSchedulerOwnershipAssignments = (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   input: ListSchedulerOwnershipAssignmentsInput = {}
 ): SchedulerOwnershipAssignmentsResult => {
@@ -98,7 +98,7 @@ export const listSchedulerOwnershipAssignments = (
 // ---------------------------------------------------------------------------
 
 export const listSchedulerOwnershipMigrations = (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   input: ListSchedulerOwnershipMigrationsInput = {}
 ): SchedulerOwnershipMigrationsResult => {

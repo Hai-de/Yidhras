@@ -1,4 +1,4 @@
-import type { AppContext } from '../context.js';
+import type { DataContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../services/pack/pack_runtime_resolution.js';
 import {
@@ -55,7 +55,7 @@ const ASSIGNED_STATUSES = new Set(['assigned', 'migrating']);
 const DEFAULT_SCHEDULER_WORKER_STALE_TICKS = 5n;
 const DEFAULT_SCHEDULER_WORKER_DEAD_TICKS = 15n;
 
-const requireAdapter = (context: AppContext) => {
+const requireAdapter = (context: DataContext) => {
   const adapter = context.schedulerStorage;
   if (!adapter) {
     throw new Error('[scheduler_ownership] SchedulerStorageAdapter is required. Ensure it is injected into AppContext.');
@@ -64,7 +64,7 @@ const requireAdapter = (context: AppContext) => {
 };
 
 export const getSchedulerPartitionAssignment = (
-  context: AppContext,
+  context: DataContext,
   partitionId: string,
   packId?: string
 ): SchedulerPartitionAssignmentRecord | null => {
@@ -77,7 +77,7 @@ export const getSchedulerPartitionAssignment = (
 };
 
 export const isWorkerAllowedToOperateSchedulerPartition = (
-  context: AppContext,
+  context: DataContext,
   input: {
     partitionId: string;
     workerId: string;
@@ -93,7 +93,7 @@ export const isWorkerAllowedToOperateSchedulerPartition = (
 };
 
 export const listSchedulerPartitionAssignments = (
-  context: AppContext,
+  context: DataContext,
   packId?: string
 ): SchedulerPartitionAssignmentRecord[] => {
   if (!packId) {
@@ -105,7 +105,7 @@ export const listSchedulerPartitionAssignments = (
 };
 
 export const listRecentSchedulerOwnershipMigrations = (
-  context: AppContext,
+  context: DataContext,
   limit = 20,
   packId?: string
 ): SchedulerOwnershipMigrationRecord[] => {
@@ -118,7 +118,7 @@ export const listRecentSchedulerOwnershipMigrations = (
 };
 
 export const listSchedulerWorkerRuntimeStates = (
-  context: AppContext,
+  context: DataContext,
   packId?: string
 ): SchedulerWorkerRuntimeStateRecord[] => {
   if (!packId) {
@@ -130,7 +130,7 @@ export const listSchedulerWorkerRuntimeStates = (
 };
 
 export const refreshSchedulerWorkerRuntimeState = (
-  context: AppContext,
+  context: DataContext,
   input: {
     workerId: string;
     ownedPartitionIds: string[];
@@ -167,7 +167,7 @@ export const refreshSchedulerWorkerRuntimeState = (
 };
 
 export const refreshSchedulerWorkerRuntimeLiveness = (
-  context: AppContext,
+  context: DataContext,
   now?: bigint,
   packId?: string,
   packRuntime?: PackRuntimePort
@@ -195,7 +195,7 @@ export const refreshSchedulerWorkerRuntimeLiveness = (
 };
 
 export const reconcileSchedulerBootstrapAssignments = (
-  context: AppContext,
+  context: DataContext,
   workerId: string,
   partitionIds?: string[],
   packId?: string,
@@ -258,7 +258,7 @@ export const reconcileSchedulerBootstrapAssignments = (
 };
 
 export const resolveSchedulerOwnershipSnapshot = (
-  context: AppContext,
+  context: DataContext,
   input: {
     workerId: string;
     bootstrapPartitionIds?: string[];
@@ -306,7 +306,7 @@ export const resolveSchedulerOwnershipSnapshot = (
 };
 
 export const createSchedulerOwnershipMigration = (
-  context: AppContext,
+  context: DataContext,
   input: {
     partitionId: string;
     toWorkerId: string;
@@ -364,7 +364,7 @@ export const createSchedulerOwnershipMigration = (
 };
 
 export const markSchedulerOwnershipMigrationInProgress = (
-  context: AppContext,
+  context: DataContext,
   migrationId: string,
   packId?: string,
   packRuntime?: PackRuntimePort
@@ -384,7 +384,7 @@ export const markSchedulerOwnershipMigrationInProgress = (
 };
 
 export const completeActiveSchedulerOwnershipMigration = (
-  context: AppContext,
+  context: DataContext,
   input: {
     partitionId: string;
     toWorkerId: string;
@@ -418,7 +418,7 @@ export const completeActiveSchedulerOwnershipMigration = (
 };
 
 export const completeSchedulerOwnershipMigration = (
-  context: AppContext,
+  context: DataContext,
   migrationId: string,
   packId?: string,
   packRuntime?: PackRuntimePort

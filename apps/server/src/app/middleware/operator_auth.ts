@@ -3,14 +3,14 @@ import type { NextFunction,Response } from 'express'
 import { findActiveSession, verifyToken } from '../../operator/auth/token.js'
 import type { OperatorRequest } from '../../operator/auth/types.js'
 import { OPERATOR_STATUS } from '../../operator/constants.js'
-import type { AppContext } from '../context.js'
+import type { DataContext } from '../context.js'
 
 /**
  * Operator 认证中间件。
  * - Bearer token → 验证 JWT → 查 session 未注销 → 注入 req.operator + req.identity
  * - 无 Bearer → 保留 x-m2-identity 路径（由 identityInjector 处理）
  */
-export const operatorAuthMiddleware = (context: AppContext) => {
+export const operatorAuthMiddleware = (context: DataContext) => {
   return async (
     req: OperatorRequest,
     _res: Response,

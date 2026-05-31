@@ -5,7 +5,7 @@ import { listPackWorldEntities } from '../../packs/storage/entity_repo.js'
 import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage/entity_state_repo.js'
 import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js'
 import { listPackRuleExecutionRecords } from '../../packs/storage/rule_execution_repo.js'
-import type { AppContext } from '../context.js'
+import type { DataContext } from '../context.js'
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js'
 
 /** Per-(pack, rule) last execution tick tracker for cumulative tick_interval */
@@ -25,7 +25,7 @@ const buildProjectionEntityStateId = (packId: string, projectionKey: string): st
 }
 
 export const runProjectionPipeline = async (
-  context: AppContext,
+  context: DataContext,
   packRuntime: PackRuntimePort
 ): Promise<void> => {
   const pack = packRuntime.getPack()

@@ -1,6 +1,6 @@
 import { getSchedulerObservabilityConfig } from '../../../config/runtime_config.js';
 import type { SchedulerCandidateDecisionRecord, SchedulerRunRecord } from '../../../packs/storage/SchedulerStorageAdapter.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import type {
   AgentSchedulerRunResult,
   SchedulerReason,
@@ -22,7 +22,7 @@ import { listSchedulerWorkers } from './worker-queries.js';
 // ---------------------------------------------------------------------------
 
 export const getSchedulerSummarySnapshot = async (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   input?: { sampleRuns?: number }
 ): Promise<SchedulerSummarySnapshot> => {
@@ -143,7 +143,7 @@ export const getSchedulerSummarySnapshot = async (
 // ---------------------------------------------------------------------------
 
 export const getSchedulerTrendsSnapshot = (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   input?: { sampleRuns?: number }
 ): SchedulerTrendsSnapshot => {
@@ -185,7 +185,7 @@ export const getSchedulerTrendsSnapshot = (
 // ---------------------------------------------------------------------------
 
 export const getSchedulerOperatorProjection = async (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   input?: { sampleRuns?: number; recentLimit?: number }
 ): Promise<SchedulerOperatorProjection> => {

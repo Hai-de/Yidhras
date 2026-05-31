@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { getSchedulerAgentConfig, getSchedulerDecisionKernelConfig, getSchedulerEntityConcurrencyConfig, getSchedulerTickBudgetConfig } from '../../config/runtime_config.js';
 import type { InferenceRequestInput } from '../../inference/types.js';
-import type { AppContext } from '../context.js';
+import type { DataContext } from '../context.js';
 import {
   createPendingDecisionJobIdempotent,
   getLatestSchedulerSignalTick,
@@ -70,7 +70,7 @@ interface SchedulerAgentRecord {
 }
 
 export interface RunAgentSchedulerOptions {
-  context: AppContext;
+  context: DataContext;
   workerId?: string;
   partitionIds?: string[];
   limit?: number;
@@ -153,7 +153,7 @@ const buildSchedulerIdempotencyKey = (
 };
 
 const writeSchedulerSnapshot = (
-  context: AppContext,
+  context: DataContext,
   packId: string | undefined,
   input: {
     workerId: string;
@@ -365,7 +365,7 @@ const runAgentSchedulerForPartition = async ({
   packId,
   packRuntime
 }: {
-  context: AppContext;
+  context: DataContext;
   workerId: string;
   partitionId: string;
   limit: number;

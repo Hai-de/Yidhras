@@ -1,6 +1,6 @@
 import { getSchedulerObservabilityConfig } from '../../../config/runtime_config.js';
 import { ApiError } from '../../../utils/api_error.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import type { SchedulerReason, SchedulerSkipReason } from '../../runtime/agent_scheduler.js';
 import { SCHEDULER_QUERY_INVALID } from './constants.js';
 import { buildSchedulerDecisionWorkflowLinks } from './cross-links.js';
@@ -34,7 +34,7 @@ const emptyAgentProjection = (actorId: string): AgentSchedulerProjection => ({
 });
 
 export const getAgentSchedulerProjection = async (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   actorId: string,
   options?: { limit?: number }
@@ -138,7 +138,7 @@ export const getAgentSchedulerProjection = async (
 };
 
 export const listAgentSchedulerDecisions = (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   actorId: string,
   limit = getSchedulerObservabilityConfig().default_query_limit

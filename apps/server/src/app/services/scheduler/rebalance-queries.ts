@@ -1,5 +1,5 @@
 import { captureError } from '../../../utils/capture_error.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import type { SchedulerRebalanceRecommendationRecord } from '../../runtime/scheduler_rebalance.js';
 import { listRecentSchedulerRebalanceRecommendations } from '../../runtime/scheduler_rebalance.js';
 import { parseRebalanceRecommendationFilters } from './filter-parsers.js';
@@ -9,7 +9,7 @@ import type {
   SchedulerRebalanceRecommendationsResult} from './types.js';
 
 export const listSchedulerRebalanceRecommendations = (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   input: ListSchedulerRebalanceRecommendationsInput = {}
 ): SchedulerRebalanceRecommendationsResult => {

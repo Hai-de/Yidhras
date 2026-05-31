@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 
 import { ApiError } from '../../../utils/api_error.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import { ensureNonEmptyId } from './parsers.js';
 import type { AiInvocationRecord } from './types.js';
 
@@ -286,7 +286,7 @@ const toListItem = (record: AiInvocationRecord): AiInvocationListItem => ({
   completed_at: record.completed_at?.toString() ?? null
 });
 
-export const getAiInvocationById = async (context: AppContext, invocationId?: string): Promise<AiInvocationRecord> => {
+export const getAiInvocationById = async (context: DataContext, invocationId?: string): Promise<AiInvocationRecord> => {
   const id = ensureNonEmptyId(invocationId, 'ai_invocation_id');
   const record = await context.repos.inference.findAiInvocationById(id);
 
@@ -300,7 +300,7 @@ export const getAiInvocationById = async (context: AppContext, invocationId?: st
 };
 
 export const listAiInvocations = async (
-  context: AppContext,
+  context: DataContext,
   input: ListAiInvocationsInput
 ): Promise<AiInvocationsListSnapshot> => {
   const filters = parseAiInvocationFilters(input);

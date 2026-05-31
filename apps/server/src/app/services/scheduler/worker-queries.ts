@@ -1,5 +1,5 @@
 import { captureError } from '../../../utils/capture_error.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import { listSchedulerWorkerRuntimeStates } from '../../runtime/scheduler_ownership.js';
 import { parseWorkerFilters } from './filter-parsers.js';
 import { toWorkerRuntimeReadModel } from './read-models.js';
@@ -8,7 +8,7 @@ import type {
   SchedulerWorkersResult} from './types.js';
 
 export const listSchedulerWorkers = (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   input: ListSchedulerWorkersInput = {}
 ): SchedulerWorkersResult => {

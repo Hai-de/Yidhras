@@ -1,4 +1,4 @@
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import { normalizeStoredRequestInput } from '../inference_workflow/parsers.js';
 import { isRecord } from '../inference_workflow/types.js';
 
@@ -19,7 +19,7 @@ const resolveRequestInputAgentId = (requestInput: unknown): string | null => {
 };
 
 export const listActiveWorkflowActors = async (
-  context: AppContext,
+  context: DataContext,
   actorIds: string[],
   options?: {
     excludeDecisionJobIds?: string[];
@@ -92,7 +92,7 @@ export const listActiveWorkflowActors = async (
 };
 
 export const hasActiveWorkflowForActor = async (
-  context: AppContext,
+  context: DataContext,
   actorId: string,
   options?: {
     excludeDecisionJobIds?: string[];

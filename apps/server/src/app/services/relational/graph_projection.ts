@@ -1,4 +1,4 @@
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 import { parseGraphViewFilters } from './graph_filters.js';
 import { buildContainerNodeId, buildRelayNodeId, getNeighborhoodNodeIds } from './graph_traversal.js';
@@ -54,7 +54,7 @@ const matchesSearch = (node: GraphNodeView, search: string | null): boolean => {
 };
 
 export const getGraphView = async (
-  context: AppContext,
+  context: DataContext,
   input: GraphViewInput
 ): Promise<GraphViewSnapshot> => {
   const filters = parseGraphViewFilters(input);

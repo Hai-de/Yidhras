@@ -1,5 +1,5 @@
 import { ApiError } from '../../../utils/api_error.js'
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 import {
@@ -8,12 +8,12 @@ import {
   type ListRelationshipAdjustmentLogsInput,
   MAX_RELATIONSHIP_LOG_LIMIT} from './types.js'
 
-export const listRelationalCircles = async (context: AppContext, _packRuntime?: PackRuntimePort) => {
+export const listRelationalCircles = async (context: DataContext, _packRuntime?: PackRuntimePort) => {
   return context.repos.agent.listCircles();
 };
 
 export const listAtmosphereNodes = async (
-  context: AppContext,
+  context: DataContext,
   input: ListAtmosphereNodesInput,
   _packRuntime?: PackRuntimePort
 ) => {
@@ -58,7 +58,7 @@ const parseRelationshipLogLimit = (value: number | undefined): number => {
 };
 
 export const listRelationshipAdjustmentLogs = async (
-  context: AppContext,
+  context: DataContext,
   input: ListRelationshipAdjustmentLogsInput
 ) => {
   const fromId = typeof input.from_id === 'string' ? input.from_id.trim() : '';

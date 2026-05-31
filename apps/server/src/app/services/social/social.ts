@@ -7,7 +7,7 @@ import {
 } from '../../../access_policy/service.js';
 import type { IdentityContext } from '../../../identity/types.js';
 import { ApiError } from '../../../utils/api_error.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 
@@ -288,7 +288,7 @@ const buildSocialFeedCursor = (
 };
 
 export const listSocialFeed = async (
-  context: AppContext,
+  context: DataContext,
   identity: IdentityContext | undefined,
   input: ListSocialFeedInput = {}
 ) => {
@@ -425,7 +425,7 @@ export const listSocialFeed = async (
 };
 
 export const createSocialPost = async (
-  context: AppContext,
+  context: DataContext,
   identity: IdentityContext | undefined,
   content?: string,
   options?: {

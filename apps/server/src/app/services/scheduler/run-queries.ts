@@ -1,5 +1,5 @@
 import type { ListRunsInput, SchedulerRunRecord } from '../../../packs/storage/SchedulerStorageAdapter.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import { buildSchedulerDecisionWorkflowLinks } from './cross-links.js';
 import { encodeSchedulerCursor } from './cursor.js';
 import { parseRunFilters } from './filter-parsers.js';
@@ -31,7 +31,7 @@ const emptyRunListResult = (filters: ReturnType<typeof parseRunFilters>): ListSc
 });
 
 const buildRunWithCandidates = async (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   runRecord: SchedulerRunRecord
 ): Promise<SchedulerRunReadModel> => {
@@ -58,7 +58,7 @@ const buildRunWithCandidates = async (
 // ---------------------------------------------------------------------------
 
 export const getLatestSchedulerRunReadModel = async (
-  context: AppContext,
+  context: DataContext,
   packId: string
 ): Promise<SchedulerRunReadModel | null> => {
   const adapter = context.schedulerStorage;
@@ -75,7 +75,7 @@ export const getLatestSchedulerRunReadModel = async (
 };
 
 export const getSchedulerRunReadModelById = async (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   runId: string
 ): Promise<SchedulerRunReadModel | null> => {
@@ -93,7 +93,7 @@ export const getSchedulerRunReadModelById = async (
 };
 
 export const listSchedulerRuns = (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   input: ListSchedulerRunsInput
 ): ListSchedulerRunsResult => {

@@ -1,5 +1,5 @@
 import { getSchedulerLeaseTicks } from '../../config/runtime_config.js';
-import type { AppContext } from '../context.js';
+import type { DataContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../services/pack/pack_runtime_resolution.js';
 import {
@@ -43,7 +43,7 @@ export const buildSchedulerCursorKey = (partitionId = DEFAULT_SCHEDULER_PARTITIO
   return `${SCHEDULER_CURSOR_KEY_PREFIX}:${id}`;
 };
 
-const requireAdapter = (context: AppContext) => {
+const requireAdapter = (context: DataContext) => {
   const adapter = context.schedulerStorage;
   if (!adapter) {
     throw new Error('[scheduler_lease] SchedulerStorageAdapter is required. Ensure it is injected into AppContext.');
@@ -52,7 +52,7 @@ const requireAdapter = (context: AppContext) => {
 };
 
 export const acquireSchedulerLease = (
-  context: AppContext,
+  context: DataContext,
   input: {
     workerId: string;
     partitionId?: string;
@@ -171,7 +171,7 @@ export const acquireSchedulerLease = (
 };
 
 export const renewSchedulerLease = (
-  context: AppContext,
+  context: DataContext,
   input: {
     workerId: string;
     partitionId?: string;
@@ -185,7 +185,7 @@ export const renewSchedulerLease = (
 };
 
 export const releaseSchedulerLease = (
-  context: AppContext,
+  context: DataContext,
   workerId: string,
   partitionId?: string,
   packId?: string
@@ -204,7 +204,7 @@ export const releaseSchedulerLease = (
 };
 
 export const updateSchedulerCursor = (
-  context: AppContext,
+  context: DataContext,
   input: {
     partitionId?: string;
     lastScannedTick: bigint;
@@ -236,7 +236,7 @@ export const updateSchedulerCursor = (
 };
 
 export const getSchedulerCursor = (
-  context: AppContext,
+  context: DataContext,
   partitionId?: string,
   packId?: string
 ): { partition_id: string; last_scanned_tick: bigint; last_signal_tick: bigint } | null => {

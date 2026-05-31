@@ -1,5 +1,5 @@
 import type { ListDecisionsInput } from '../../../packs/storage/SchedulerStorageAdapter.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import { buildSchedulerDecisionWorkflowLinks } from './cross-links.js';
 import { encodeSchedulerCursor } from './cursor.js';
 import { parseDecisionFilters } from './filter-parsers.js';
@@ -31,7 +31,7 @@ const emptyDecisionListResult = (
 });
 
 export const listSchedulerDecisions = async (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   input: ListSchedulerDecisionsInput
 ): Promise<ListSchedulerDecisionsResult> => {

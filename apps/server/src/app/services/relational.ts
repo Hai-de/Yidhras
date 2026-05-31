@@ -1,5 +1,5 @@
 import { getGraphData } from '../../core/graph_data.js'
-import type { AppContext } from '../context.js'
+import type { DataContext } from '../context.js'
 import { getGraphView } from './relational/graph_projection.js'
 import {
   listAtmosphereNodes,
@@ -17,7 +17,7 @@ import type {
 
 export type { GraphEdgeView, GraphNodeView, GraphViewInput, GraphViewSnapshot, ListAtmosphereNodesInput, ListRelationshipAdjustmentLogsInput }
 
-export const getRelationalGraph = async (context: AppContext) => {
+export const getRelationalGraph = async (context: DataContext) => {
   return getGraphData({
     listAgents: () => context.repos.agent.listAgents(),
     listRelationships: () => context.repos.relationship.listRelationships()

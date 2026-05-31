@@ -1,8 +1,8 @@
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import type { SchedulerDecisionWorkflowLink } from './types.js';
 
 export const buildSchedulerDecisionWorkflowLinks = async (
-  context: AppContext,
+  context: DataContext,
   decisions: Array<{
     id: string;
     created_job_id: string | null;

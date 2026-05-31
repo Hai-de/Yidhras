@@ -1,5 +1,5 @@
 import { getSchedulerAutomaticRebalanceConfig } from '../../config/runtime_config.js';
-import type { AppContext } from '../context.js';
+import type { DataContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../services/pack/pack_runtime_resolution.js';
 import {
@@ -36,7 +36,7 @@ export interface ApplySchedulerAutomaticRebalanceResult {
   superseded_recommendation_ids: string[];
 }
 
-const requireAdapter = (context: AppContext) => {
+const requireAdapter = (context: DataContext) => {
   const adapter = context.schedulerStorage;
   if (!adapter) {
     throw new Error('[scheduler_rebalance] SchedulerStorageAdapter is required.');
@@ -45,7 +45,7 @@ const requireAdapter = (context: AppContext) => {
 };
 
 const findOpenRecommendation = (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   input: {
     partitionId: string;
@@ -68,7 +68,7 @@ const findOpenRecommendation = (
 };
 
 const createRecommendation = (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   input: {
     partitionId: string;
@@ -113,7 +113,7 @@ const createRecommendation = (
 };
 
 export const listRecentSchedulerRebalanceRecommendations = (
-  context: AppContext,
+  context: DataContext,
   limit = 20,
   packId?: string
 ): SchedulerRebalanceRecommendationRecord[] => {
@@ -126,7 +126,7 @@ export const listRecentSchedulerRebalanceRecommendations = (
 };
 
 const markRecommendationStatus = (
-  context: AppContext,
+  context: DataContext,
   packId: string,
   input: {
     recommendationId: string;
@@ -157,7 +157,7 @@ const markRecommendationStatus = (
 };
 
 export const applySchedulerAutomaticRebalanceForWorker = (
-  context: AppContext,
+  context: DataContext,
   input: {
     workerId: string;
     now?: bigint;
@@ -248,7 +248,7 @@ export const applySchedulerAutomaticRebalanceForWorker = (
 };
 
 export const evaluateSchedulerAutomaticRebalance = (
-  context: AppContext,
+  context: DataContext,
   input?: {
     now?: bigint;
     maxRecommendations?: number;
