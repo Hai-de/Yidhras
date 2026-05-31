@@ -1,5 +1,3 @@
-import type { PluginManifest } from '@yidhras/contracts';
-
 import type { AppContext } from '../app/context.js';
 import type {
   QueryContributor,
@@ -39,6 +37,16 @@ import { createWorkerContributionProxies, type WorkerPackRouteProxy } from './wo
 import type { PluginWorkerClient } from './worker/PluginWorkerClient.js';
 import { pluginWorkerManager, resolvePluginEntrypointPath } from './worker/PluginWorkerManager.js';
 
+// Re-export from new canonical location (Phase 7 transitional — eventual removal)
+import type { PluginManifest } from '@yidhras/contracts';
+import {
+  pluginRuntimeRegistry,
+  PluginRuntimeRegistry,
+  type RegisteredServerPluginRuntime
+} from '../app/runtime/plugin_runtime_registry.js';
+
+export { pluginRuntimeRegistry, PluginRuntimeRegistry, type RegisteredServerPluginRuntime };
+
 const runtimeLogger = createLogger('plugin-sandbox-runtime');
 
 type Ctx = AppContext;
@@ -65,82 +73,8 @@ export interface ServerPluginHostApi {
   registerLoopHook(hookPoint: string, handler: (ctx: Record<string, unknown>) => Promise<void>): void;
 }
 
-export interface RegisteredServerPluginRuntime {
-  installation_id: string;
-  plugin_id: string;
-  pack_id: string;
-  manifest: PluginManifest;
-  granted_capabilities: string[];
-  context_sources: ContextSourceAdapter[];
-  prompt_workflow_steps: PromptWorkflowStepExecutor[];
-  pack_routes: WorkerPackRouteProxy[];
-  step_contributors: StepContributor[];
-  rule_contributors: RuleContributor[];
-  query_contributors: QueryContributor[];
-  perception_resolvers: PerceptionResolver[];
-  contribution_descriptors: ContributionDescriptor[];
-  handler_names: string[];
-  loop_hook_points: string[];
-  worker_client?: PluginWorkerClient;
-  inferenceExecutor?: (input: PluginInferenceRequest) => Promise<PluginInferenceResult>;
-  deactivate?: () => void | Promise<void>;
-}
-
-class PluginRuntimeRegistry {
-  private runtimes = new Map<string, RegisteredServerPluginRuntime[]>();
-
-  public replaceRuntimes(packId: string, runtimes: RegisteredServerPluginRuntime[]): RegisteredServerPluginRuntime[] {
-    const previous = this.runtimes.get(packId) ?? [];
-    this.runtimes.set(packId, runtimes);
-    return previous;
-  }
-
-  public clearRuntimes(packId: string): RegisteredServerPluginRuntime[] {
-    return this.replaceRuntimes(packId, []);
-  }
-
-  public listRuntimes(packId: string): RegisteredServerPluginRuntime[] {
-    return this.runtimes.get(packId) ?? [];
-  }
-
-  public getRuntime(packId: string, installationId: string): RegisteredServerPluginRuntime | undefined {
-    return this.listRuntimes(packId).find(runtime => runtime.installation_id === installationId);
-  }
-
-  public getContextSourceAdapters(packId: string): ContextSourceAdapter[] {
-    return this.listRuntimes(packId).flatMap(runtime => runtime.context_sources);
-  }
-
-  public getPromptWorkflowStepExecutors(packId: string): PromptWorkflowStepExecutor[] {
-    return this.listRuntimes(packId).flatMap(runtime => runtime.prompt_workflow_steps);
-  }
-
-  public getStepContributors(packId: string): StepContributor[] {
-    return this.listRuntimes(packId)
-      .flatMap(runtime => runtime.step_contributors)
-      .sort((a, b) => a.priority - b.priority);
-  }
-
-  public getRuleContributors(packId: string): RuleContributor[] {
-    return this.listRuntimes(packId).flatMap(runtime => runtime.rule_contributors);
-  }
-
-  public getQueryContributors(packId: string): QueryContributor[] {
-    return this.listRuntimes(packId).flatMap(runtime => runtime.query_contributors);
-  }
-
-  public getPerceptionResolvers(packId: string): PerceptionResolver[] {
-    return this.listRuntimes(packId).flatMap(runtime => runtime.perception_resolvers);
-  }
-
-  public getLoopHooks(packId: string): Array<{ hookPoint: string; runtime: RegisteredServerPluginRuntime }> {
-    return this.listRuntimes(packId).flatMap(runtime =>
-      runtime.loop_hook_points.map(hookPoint => ({ hookPoint, runtime }))
-    );
-  }
-}
-
-export const pluginRuntimeRegistry = new PluginRuntimeRegistry();
+// RegisteredServerPluginRuntime, PluginRuntimeRegistry, and pluginRuntimeRegistry
+// are now defined in app/runtime/plugin_runtime_registry.ts and re-exported above.
 
 const createRuntimeForActivatedWorker = (input: {
   installation_id: string;

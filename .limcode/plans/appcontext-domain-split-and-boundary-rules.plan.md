@@ -5,17 +5,17 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-- [ ] Phase 0: 草案最终确认 — 审阅边界规则矩阵与决策记录 `#AC-0`
-- [ ] Phase 1: 创建角色接口 — 5 新建 + 1 修改，类型层面拆分 AppContext `#AC-1`
-- [ ] Phase 2: memory → DataContext 迁移 — 6 文件 `#AC-2`
-- [ ] Phase 3: domain → DataContext + RuntimeContext 迁移 — 5 文件 `#AC-3`
-- [ ] Phase 4: inference → DataContext + PortContext 迁移 — 6 文件 `#AC-4`
-- [ ] Phase 5: ai → DataContext 迁移 — 4 文件 `#AC-5`
-- [ ] Phase 6: packs/projections → DataContext + RuntimeContext 迁移 — 6 文件 `#AC-6`
-- [ ] Phase 7: plugins 角色迁移 + pluginRuntimeRegistry 物理移动 — 7 文件 + 1 新建 `#AC-7`
-- [ ] Phase 8: operator → DataContext 迁移 — 4 文件 `#AC-8`
-- [ ] Phase 9: social lazy import 重构 — 3 文件 `#AC-9`
-- [ ] Phase 10: app/services → 角色接口迁移 — 8 文件 `#AC-10`
+- [x] Phase 0: 草案最终确认 — 审阅边界规则矩阵与决策记录 `#AC-0`
+- [x] Phase 1: 创建角色接口 — 5 新建 + 1 修改，类型层面拆分 AppContext `#AC-1`
+- [x] Phase 2: memory → DataContext 迁移 — 6 文件 `#AC-2`
+- [x] Phase 3: domain → DataContext + RuntimeContext 迁移 — 5 文件 `#AC-3`
+- [x] Phase 4: inference → DataContext + PortContext 迁移 — 6 文件 `#AC-4`
+- [x] Phase 5: ai → DataContext 迁移 — 4 文件 `#AC-5`
+- [x] Phase 6: packs/projections → DataContext + RuntimeContext 迁移 — 7 文件 `#AC-6`
+- [x] Phase 7: plugins 角色迁移 + pluginRuntimeRegistry 物理移动 — 14 文件 + 1 新建 `#AC-7`
+- [x] Phase 8: operator → DataContext 迁移 — 4 文件 `#AC-8`
+- [x] Phase 9: social lazy import 重构 — 1 文件 `#AC-9`
+- [~] Phase 10: app/services → 角色接口迁移 — 8/81 文件完成 `#AC-10`
 - [ ] Phase 11: 旧 barrel 移除 — 删除 app/context.ts `#AC-11`
 - [ ] Phase 12: Repositories 子接口拆分 — 3 新建 + ~10 修改 `#AC-12`
 - [ ] Phase 13: context_memory_ports 上移 — 2 新建 + 2 修改 `#AC-13`

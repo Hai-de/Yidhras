@@ -16,7 +16,7 @@ import type { PackRuntimeRegistry } from '../../core/pack_runtime_registry.js';
 import { RuntimeSpeedPolicy } from '../../core/runtime_speed.js';
 import { getWorldPackRuntimeConfig } from '../../core/world_pack_runtime.js';
 import { discoverPackLocalPlugins } from '../../plugins/discovery.js';
-import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
+import { pluginRuntimeRegistry } from '../../app/runtime/plugin_runtime_registry.js';
 import { ApiError } from '../../utils/api_error.js';
 import { createLogger } from '../../utils/logger.js';
 import { safeFs } from '../../utils/safe_fs.js';

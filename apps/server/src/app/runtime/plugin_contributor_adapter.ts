@@ -1,4 +1,4 @@
-import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
+import { pluginRuntimeRegistry } from './plugin_runtime_registry.js';
 import type {
   QueryContribution,
   QueryContributor,

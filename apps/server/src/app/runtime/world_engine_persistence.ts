@@ -13,7 +13,7 @@ import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import { listPackEntityStates, upsertPackEntityState } from '../../packs/storage/entity_state_repo.js';
 import { listPackMediatorBindings } from '../../packs/storage/mediator_repo.js';
 import { listPackRuleExecutionRecords, recordPackRuleExecution } from '../../packs/storage/rule_execution_repo.js';
-import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
+import { pluginRuntimeRegistry } from './plugin_runtime_registry.js';
 import { ApiError } from '../../utils/api_error.js';
 import { createLogger } from '../../utils/logger.js';
 import type { AppContext } from '../context.js';

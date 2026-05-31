@@ -5,7 +5,8 @@ import type { AppContext } from '../../app/context.js';
 import { createPackHostApi } from '../../app/runtime/world_engine_ports.js';
 import { createContextAssemblyPort } from '../../app/services/context/context_memory_port_factory.js';
 import { getRuntimeConfig } from '../../config/runtime_config.js';
-import { pluginRuntimeRegistry, syncPackPluginRuntime } from '../../plugins/runtime.js';
+import { pluginRuntimeRegistry } from '../../app/runtime/plugin_runtime_registry.js';
+import { syncPackPluginRuntime } from '../../plugins/runtime.js';
 import { TOKENS } from '../tokens.js';
 
 export const appContextProvider = {

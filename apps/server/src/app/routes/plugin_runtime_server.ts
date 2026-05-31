@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { getRuntimeConfig } from '../../config/runtime_config.js';
-import { pluginRuntimeRegistry } from '../../plugins/runtime.js';
+import { pluginRuntimeRegistry } from '../runtime/plugin_runtime_registry.js';
 import type { WorkerPackRouteProxy } from '../../plugins/worker/contribution_proxy.js';
 import { PluginWorkerTimeoutError } from '../../plugins/worker/errors.js';
 import { ApiError } from '../../utils/api_error.js';
