@@ -23,7 +23,7 @@
 - [x] Phase 15: ESLint 新规则上线 — default: 'disallow', severity: 'warn', 25 元素类型 `#AC-15`
 - [x] Phase 16: 修复 ESLint 违规 — 35 规则新增, 0 violations, severity→error `#AC-16`
 - [x] Phase 17: Repositories 组合接口移除 — 6 文件 `#AC-17`
-- [ ] Phase 18: depcruise no-circular 升级为 error — 待 cycle count = 0 `#AC-18`
+- [~] Phase 18: depcruise no-circular — 49→40 (9 消除), 待 0 后升级 error `#AC-18`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # AppContext 领域拆分 + ESLint 边界规则重写 — 执行计划
