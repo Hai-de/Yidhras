@@ -7,7 +7,7 @@ import type { RuntimeClockProjectionService } from '../app/runtime/runtime_clock
 import type { WorldEngineStepCoordinator } from '../app/runtime/world_engine_persistence.js';
 import type { WorldEnginePort } from '../app/runtime/world_engine_ports.js';
 import type { PackQueryHandlerRegistry } from '../app/services/action/pack_query_resolver.js';
-import type { Repositories } from '../app/services/repositories/types.js';
+import type { EntityRepositories, PluginRepositories, WorkflowRepositories } from '../app/services/repositories/types.js';
 import type { ConversationStore } from '../conversation/store.js';
 import type { PackRuntimeControl, PackRuntimeLookupPort, PackRuntimeObservation } from '../core/pack_runtime_ports.js';
 import type { SimulationManager } from '../core/simulation.js';
@@ -28,7 +28,7 @@ import type { CliConfig, RuntimeState } from './token_interfaces.js';
 export interface TokenTypes {
   // 基础设施
   prisma: PrismaClient;
-  repos: Repositories;
+  repos: EntityRepositories & WorkflowRepositories & PluginRepositories;
   conversationStore: ConversationStore;
   packStorageAdapter: PackStorageAdapter;
   schedulerStorage: SchedulerStorageAdapter;
