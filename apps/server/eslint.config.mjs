@@ -11,7 +11,7 @@ export default tseslint.config(
   },
 
   // Boundaries — must be in a global (non-files-scoped) entry for settings to work
-  // Phase 15: 25-element granularity, default: 'disallow', severity: 'warn' (→ 'error' in Phase 16)
+  // Phase 15-16: 25-element granularity, default: 'disallow', severity: 'error'
   {
     languageOptions: {
       parser: tseslint.parser
@@ -59,7 +59,7 @@ export default tseslint.config(
     },
     rules: {
       'boundaries/dependencies': [
-        'warn',
+        'error',
         {
           default: 'disallow',
           rules: (() => {
@@ -270,6 +270,45 @@ export default tseslint.config(
               
             },
 
+
+
+            // ═══ Phase 16: Known exceptions (→ TODO: refactor to type-only) ═══
+            { from: { type: "infra-access" }, allow: toRules(["app-services"]) },       // access_policy imports resolvePackTick
+            { from: { type: "infra-op" }, allow: toRules(["app-services"]) },            // operator audit/token imports resolvePackTick
+            { from: { type: "core" }, allow: toRules(["infra-persist"]) },               // runtime_database_bootstrap imports applySqliteRuntimePragmas
+            // ═══ Phase 16: additional cross-element rules ═══
+            { from: { type: "packs" }, allow: toRules(["infra-template","infra-permission","infra-clock","infra-kernel","infra-config"]) },
+            { from: { type: "infra-kernel" }, allow: toRules(["packs","app-services"]) },
+            { from: { type: "app-services" }, allow: toRules(["infra-config","infra-kernel","infra-access"]) },
+            { from: { type: "app-runtime" }, allow: toRules(["infra-config","infra-clock"]) },
+            { from: { type: "infra-conversation" }, allow: toRules(["ai","inference","infra-config","infra-template"]) },
+            { from: { type: "inference" }, allow: toRules(["infra-template","infra-conversation","infra-config","infra-access","infra-obs"]) },
+            { from: { type: "infra-context" }, allow: toRules(["infra-conversation","infra-perception","infra-config","infra-template"]) },
+            { from: { type: "ai" }, allow: toRules(["infra-config","infra-conversation"]) },
+            { from: { type: "infra-plugins" }, allow: toRules(["infra-obs","infra-perception","infra-config"]) },
+            { from: { type: "domain" }, allow: toRules(["infra-template","infra-permission"]) },
+            { from: { type: "infra-template" }, allow: toRules(["infra-det","infra-permission"]) },
+            { from: { type: "infra-persist" }, allow: toRules(["infra-op","infra-config"]) },
+            { from: { type: "infra-access" }, allow: toRules(["infra-id"]) },
+            { from: { type: "transport" }, allow: toRules(["infra-obs","infra-config"]) },
+            { from: { type: "infra-world" }, allow: toRules(["infra-config"]) },
+            { from: { type: "infra-memory" }, allow: toRules(["infra-config"]) },
+            { from: { type: "infra-clock" }, allow: toRules(["packs"]) },
+            { from: { type: "infra-op" }, allow: toRules(["infra-config","domain"]) },
+            { from: { type: "infra-id" }, allow: toRules(["infra-op"]) },
+            { from: { type: "infra-plugins" }, allow: toRules(["core"]) },
+            { from: { type: "infra-config" }, allow: toRules(["infra-conversation"]) },
+            { from: { type: "core" }, allow: toRules(["infra-config"]) },
+            { from: { type: "infra-conversation" }, allow: toTypeRules(["inference","ai"]) },
+            { from: { type: "infra-context" }, allow: toTypeRules(["infra-conversation"]) },
+            { from: { type: "inference" }, allow: toTypeRules(["infra-conversation","infra-access"]) },
+            { from: { type: "infra-plugins" }, allow: toTypeRules(["infra-perception"]) },
+            { from: { type: "infra-access" }, allow: toTypeRules(["infra-id","app-services"]) },
+            { from: { type: "core" }, allow: toTypeRules(["infra-persist"]) },
+            { from: { type: "infra-persist" }, allow: toTypeRules(["infra-op"]) },
+            { from: { type: "infra-kernel" }, allow: toTypeRules(["app-services"]) },
+            { from: { type: "ai" }, allow: toTypeRules(["infra-conversation"]) },
+            { from: { type: "domain" }, allow: toTypeRules(["infra-permission"]) },
             // ═══════════════ APP-WIRING — can import any ═══════════════
             {
               from: { type: 'app-wiring' },
