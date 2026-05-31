@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../app/context.js';
+import type { DataContext } from '../app/context.js';
 import { ApiError } from '../utils/api_error.js';
 import { captureError } from '../utils/capture_error.js';
 import { ErrorCode } from '../utils/errors.js';
@@ -34,7 +34,7 @@ export interface ModelGateway {
 
 export interface CreateModelGatewayOptions {
   adapters?: AiProviderAdapter[];
-  context?: AppInfrastructure;
+  context?: DataContext;
   registryConfig?: AiRegistryConfig;
 }
 

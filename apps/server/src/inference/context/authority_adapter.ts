@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../../app/context.js';
+import type { DataContext } from '../../app/context.js';
 import {
   type AuthorityResolutionResult,
   resolveAuthorityForSubject} from '../../domain/authority/resolver.js';
@@ -14,7 +14,7 @@ export interface AuthorityAdapterResult {
  * 一次调用返回完整结果 + 提取的 capability keys。
  */
 export const resolveAuthority = async (
-  context: AppInfrastructure,
+  context: DataContext,
   packId: string,
   resolvedAgentId: string | null
 ): Promise<AuthorityAdapterResult> => {

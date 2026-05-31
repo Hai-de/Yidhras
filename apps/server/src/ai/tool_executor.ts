@@ -1,4 +1,4 @@
-import type { AppContext } from '../app/context.js';
+import type { DataContext, PortContext } from '../app/context.js';
 import { listActiveSchedulerAgents } from '../app/services/inference_workflow/scheduler_signal_repository.js';
 import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
 import { listPackWorldEntities } from '../packs/storage/entity_repo.js';
@@ -8,7 +8,7 @@ import { resolveToolPermissions } from './tool_permissions.js';
 import type { AiToolRegistryEntry, AiToolSandboxLevel } from './types.js';
 
 export interface ToolExecutionContext {
-  context: AppContext;
+  context: DataContext & PortContext;
   pack_id?: string | null;
   agent_role?: string | null;
   capabilities?: string[];

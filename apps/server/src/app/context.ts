@@ -1,97 +1,26 @@
-import type { PrismaClient } from '@prisma/client';
+/**
+ * @deprecated 导入角色接口请使用 './context/index.js'。
+ * 此文件保留向后兼容的 re-export。Phase 11 移除。
+ */
+import type { DataContext } from './context/data_context.js';
+import type { PortContext } from './context/port_context.js';
+import type { RuntimeContext } from './context/runtime_context.js';
 
-import type { ConversationStore } from '../conversation/store.js';
-import type { PackRuntimeHandle } from '../core/pack_runtime_handle.js';
-import type { PackRuntimeHost } from '../core/pack_runtime_host.js';
-import type { DatabaseHealthSnapshot } from '../db/sqlite_runtime.js';
-import type { PackStorageAdapter } from '../packs/storage/PackStorageAdapter.js';
-import type { SchedulerStorageAdapter } from '../packs/storage/SchedulerStorageAdapter.js';
-import type { NotificationLevel, SystemMessage } from '../utils/notifications.js';
-import type { PackScopeResolver } from './runtime/PackScopeResolver.js';
-import type {
-  RuntimeClockProjectionService
-} from './runtime/runtime_clock_projection.js';
-import type { WorldEngineStepCoordinator } from './runtime/world_engine_coordinator.js';
-import type { AppContextPorts, PackCatalogService } from './services/app_context_ports.js';
-import type { Repositories } from './services/repositories/types.js';
-import type { HealthLevel } from '../core/pack_runtime_health.js';
+export type { DataContext } from './context/data_context.js';
+export type {
+  RuntimeContext,
+  NotificationStore,
+  StartupHealth,
+  RuntimeLoopDiagnostics
+} from './context/runtime_context.js';
+export type { HealthLevel } from './context/runtime_context.js';
+export type { PortContext } from './context/port_context.js';
+export type { AppContext, RouteRegistrar } from './context/app_context.js';
 
-export type { HealthLevel };
-
-export interface StartupHealth {
-  level: HealthLevel;
-  checks: {
-    db: boolean;
-    world_pack_dir: boolean;
-    world_pack_available: boolean;
-  };
-  available_world_packs: string[];
-  errors: string[];
-}
-
-export interface NotificationStore {
-  push(
-    level: NotificationLevel,
-    content: string,
-    code?: string,
-    details?: Record<string, unknown>
-  ): SystemMessage;
-  getMessages(): SystemMessage[];
-  clear(): void;
-}
-
-export interface RuntimeLoopDiagnostics {
-  status: 'idle' | 'scheduled' | 'running' | 'paused' | 'stopped';
-  in_flight: boolean;
-  overlap_skipped_count: number;
-  iteration_count: number;
-  last_started_at: number | null;
-  last_finished_at: number | null;
-  last_duration_ms: number | null;
-  last_error_message: string | null;
-}
-
-export interface AppInfrastructure {
-  readonly repos: Repositories;
-  readonly prisma: PrismaClient;
-  readonly conversationStore: ConversationStore;
-  readonly packStorageAdapter: PackStorageAdapter;
-  readonly schedulerStorage?: SchedulerStorageAdapter;
-  readonly notifications: NotificationStore;
-  readonly startupHealth: StartupHealth;
-  assertRuntimeReady(feature: string): void;
-  isRuntimeReady(): boolean;
-  setRuntimeReady(ready: boolean): void;
-  isPaused(): boolean;
-  setPaused(paused: boolean): void;
-  requestPluginInference?(input: import('../plugins/types.js').PluginInferenceRequest): Promise<import('../plugins/types.js').PluginInferenceResult>;
-  readonly pluginRuntime?: {
-    getContextSourceAdapters(packId: string): unknown[];
-    getPerceptionResolvers(packId: string): unknown[];
-  };
-}
-
-export interface AppContext extends AppInfrastructure, AppContextPorts {
-  readonly packScope: PackScopeResolver;
-  readonly packCatalog: PackCatalogService;
-  getPackRuntimeHandle(packId: string): PackRuntimeHandle | null;
-  listLoadedPackRuntimeIds(): string[];
-  getPackRuntimeHost(packId: string): PackRuntimeHost | null;
-
-  getSpatialRuntime?(): import('../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
-
-  getRuntimeLoopDiagnostics(): RuntimeLoopDiagnostics;
-  setRuntimeLoopDiagnostics(next: RuntimeLoopDiagnostics): void;
-  getDatabaseHealth(): DatabaseHealthSnapshot | null;
-  getPluginEnableWarningConfig(): {
-    enabled: boolean;
-    require_acknowledgement: boolean;
-  };
-  worldEngineStepCoordinator: WorldEngineStepCoordinator;
-  runtimeClockProjection: RuntimeClockProjectionService;
-  pluginRuntimeControl?: {
-    reload(packId: string): Promise<{ pack_id: string; runtime_count: number }>;
-  };
-}
-
-export type RouteRegistrar = (app: import('express').Express, context: AppContext) => void;
+/**
+ * @deprecated 使用 DataContext、RuntimeContext、PortContext 代替。
+ * AppInfrastructure 是过渡类型，将在 Phase 11 移除。
+ */
+export type AppInfrastructure = DataContext &
+  RuntimeContext &
+  Pick<PortContext, 'conversationStore' | 'requestPluginInference' | 'pluginRuntime'>;

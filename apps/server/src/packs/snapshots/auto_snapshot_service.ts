@@ -1,6 +1,6 @@
 import type { PackSnapshotMetadata } from '@yidhras/contracts';
 
-import type { AppContext } from '../../app/context.js';
+import type { DataContext, RuntimeContext } from '../../app/context.js';
 import type { PackRuntimePort } from '../../app/services/pack/pack_runtime_ports.js';
 import { getRuntimeConfig } from '../../config/runtime_config.js';
 import { createLogger } from '../../utils/logger.js';
@@ -16,7 +16,7 @@ const logger = createLogger('auto-snapshot');
 const AUTO_SNAPSHOT_LABEL_PREFIX = 'auto:';
 
 export interface MaybeCaptureAutoSnapshotInput {
-  context: AppContext;
+  context: DataContext & RuntimeContext;
   packId: string;
   packRuntime: PackRuntimePort;
 }

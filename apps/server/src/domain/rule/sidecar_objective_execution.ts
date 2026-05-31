@@ -7,7 +7,7 @@ import {
   type WorldRuleExecuteObjectiveResult
 } from '@yidhras/contracts';
 
-import type { AppInfrastructure } from '../../app/context.js';
+import type { DataContext } from '../../app/context.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { ApiError } from '../../utils/api_error.js';
@@ -90,7 +90,7 @@ const toObjectiveWorldEntity = (packId: string, entity: { id: string; entity_kin
 };
 
 export const buildSidecarObjectiveExecutionRequest = async (
-  context: AppInfrastructure,
+  context: DataContext,
   input: {
     invocation: InvocationRequest;
     effectiveMediatorId: string | null;

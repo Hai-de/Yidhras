@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 
-import type { AppInfrastructure } from '../../app/context.js'
+import type { DataContext } from '../../app/context.js'
 import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution.js';
 import { getOperatorAuthConfig } from '../../config/runtime_config.js'
 import type { JwtPayload, OperatorContext } from './types.js'
@@ -43,7 +43,7 @@ export const computeTokenHash = (token: string): string => {
 }
 
 export const createSession = async (
-  context: AppInfrastructure,
+  context: DataContext,
   operatorId: string,
   token: string,
   packId?: string | null
@@ -66,7 +66,7 @@ export const createSession = async (
 }
 
 export const destroySession = async (
-  context: AppInfrastructure,
+  context: DataContext,
   token: string
 ): Promise<boolean> => {
   const tokenHash = computeTokenHash(token)
@@ -77,7 +77,7 @@ export const destroySession = async (
 }
 
 export const findActiveSession = async (
-  context: AppInfrastructure,
+  context: DataContext,
   token: string
 ): Promise<{ operatorId: string; packId: string | null } | null> => {
   const tokenHash = computeTokenHash(token)

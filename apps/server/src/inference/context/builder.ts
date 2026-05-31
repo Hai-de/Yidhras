@@ -1,13 +1,9 @@
-import type { AppInfrastructure } from '../../app/context.js';
-import type { AppContextPorts } from '../../app/services/app_context_ports.js';
-import type { WorldPack } from '../../packs/manifest/constitution_loader.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../app/context.js';
 import type { InferenceContext, InferenceRequestInput } from '../types.js';
 import { ContextAssemblyPipeline } from './pipeline.js';
 import type { PipelineOptions } from './types.js';
 
-type Ctx = AppInfrastructure & Pick<AppContextPorts, 'packRuntimeLookup' | 'contextAssembly'> & {
-  getPackRuntimeHost?(packId: string): { getPack(): WorldPack | undefined } | null;
-};
+type Ctx = DataContext & RuntimeContext & PortContext;
 
 export interface InferenceContextBuilder {
   buildForPack(

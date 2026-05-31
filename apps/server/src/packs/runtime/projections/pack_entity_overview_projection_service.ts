@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../../../app/context.js';
+import type { DataContext } from '../../../app/context.js';
 import { listPackAuthorityGrants } from '../../storage/authority_repo.js';
 import { listPackWorldEntities } from '../../storage/entity_repo.js';
 import { listPackEntityStates } from '../../storage/entity_state_repo.js';
@@ -74,7 +74,7 @@ const extractEntityIdFromWorldEntityRecordId = (packId: string, recordId: string
 };
 
 export const createPackEntityOverviewProjectionService = (
-  _context: AppInfrastructure
+  _context: DataContext
 ): PackEntityOverviewProjectionService => {
   return {
     async getProjection(input: GetPackEntityOverviewProjectionInput): Promise<PackEntityProjectionSnapshot> {

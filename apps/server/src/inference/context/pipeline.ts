@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { AppInfrastructure } from '../../app/context.js';
-import type { AppContextPorts } from '../../app/services/app_context_ports.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../app/context.js';
 import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution.js';
 import type { WorldPack } from '../../packs/manifest/constitution_loader.js';
 import { packEntityIdFromResolvedAgentId } from '../../packs/utils/pack_entity_id.js';
@@ -24,9 +23,7 @@ import type {
   ResolvedActor} from './types.js';
 import { assembleVariableContext } from './variable_context_assembler.js';
 
-type Ctx = AppInfrastructure & Pick<AppContextPorts, 'packRuntimeLookup' | 'contextAssembly'> & {
-  getPackRuntimeHost?(packId: string): { getPack(): WorldPack | undefined } | null;
-};
+type Ctx = DataContext & RuntimeContext & PortContext;
 
 const SUPPORTED_STRATEGIES: InferenceStrategy[] = ['mock', 'model_routed', 'behavior_tree'];
 

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { AppInfrastructure } from '../../app/context.js';
+import type { DataContext } from '../../app/context.js';
 import { createContextOverlayStore } from '../../context/overlay/store.js';
 import type { ContextOverlayEntry, ContextOverlayStore, ContextOverlayType } from '../../context/overlay/types.js';
 import type { ContextMemoryBlockMutationRecord, ContextOverlayMutationRecord } from '../../context/types.js';
@@ -135,7 +135,7 @@ export interface MemoryRecordingService {
 }
 
 export interface CreateMemoryRecordingServiceOptions {
-  context: AppInfrastructure;
+  context: DataContext;
   overlayStore?: ContextOverlayStore;
   longMemoryBlockStore?: LongMemoryBlockStore;
 }

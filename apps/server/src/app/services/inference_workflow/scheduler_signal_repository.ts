@@ -1,9 +1,9 @@
 import type { InferenceJobIntentClass } from '../../../inference/types.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import { isRecord } from './types.js';
 
 export const listActiveSchedulerAgents = async (
-  context: AppContext,
+  context: DataContext,
   limit = 10
 ): Promise<Array<{ id: string }>> => {
   return context.prisma.agent.findMany({
@@ -21,7 +21,7 @@ export const listActiveSchedulerAgents = async (
 };
 
 export const listPendingSchedulerDecisionJobs = async (
-  context: AppContext,
+  context: DataContext,
   agentIds: string[]
 ): Promise<Set<string>> => {
   if (agentIds.length === 0) {
@@ -57,7 +57,7 @@ export const listPendingSchedulerDecisionJobs = async (
 };
 
 export const listPendingSchedulerActionIntents = async (
-  context: AppContext,
+  context: DataContext,
   agentIds: string[]
 ): Promise<Set<string>> => {
   if (agentIds.length === 0) {
@@ -96,7 +96,7 @@ export const listPendingSchedulerActionIntents = async (
 };
 
 export const listRecentScheduledDecisionJobs = async (
-  context: AppContext,
+  context: DataContext,
   agentIds: string[]
 ): Promise<Map<string, bigint>> => {
   if (agentIds.length === 0) {
@@ -132,7 +132,7 @@ export const listRecentScheduledDecisionJobs = async (
 };
 
 export const listRecentRecoveryWindowActors = async (
-  context: AppContext,
+  context: DataContext,
   sinceTick: bigint,
   intentClasses: InferenceJobIntentClass[],
   untilTick?: bigint
@@ -173,7 +173,7 @@ export const listRecentRecoveryWindowActors = async (
 };
 
 export const getLatestSchedulerSignalTick = async (
-  context: AppContext,
+  context: DataContext,
   sinceTick: bigint,
   untilTick?: bigint
 ): Promise<bigint | null> => {
@@ -200,7 +200,7 @@ export const getLatestSchedulerSignalTick = async (
 };
 
 export const listRecentEventFollowupSignals = async (
-  context: AppContext,
+  context: DataContext,
   sinceTick: bigint,
   untilTick?: bigint
 ): Promise<Array<{ agent_id: string; reason: 'event_followup'; created_at: bigint }>> => {
@@ -273,7 +273,7 @@ export const listRecentEventFollowupSignals = async (
 };
 
 export const listRecentRelationshipFollowupSignals = async (
-  context: AppContext,
+  context: DataContext,
   sinceTick: bigint,
   untilTick?: bigint
 ): Promise<Array<{ agent_id: string; reason: 'relationship_change_followup'; created_at: bigint }>> => {
@@ -296,7 +296,7 @@ export const listRecentRelationshipFollowupSignals = async (
 };
 
 export const listRecentSnrFollowupSignals = async (
-  context: AppContext,
+  context: DataContext,
   sinceTick: bigint,
   untilTick?: bigint
 ): Promise<Array<{ agent_id: string; reason: 'snr_change_followup'; created_at: bigint }>> => {
@@ -320,7 +320,7 @@ export const listRecentSnrFollowupSignals = async (
 };
 
 export const listRecentOverlayFollowupSignals = async (
-  context: AppContext,
+  context: DataContext,
   sinceTick: bigint,
   untilTick?: bigint
 ): Promise<Array<{ agent_id: string; reason: 'overlay_change_followup'; created_at: bigint }>> => {
@@ -346,7 +346,7 @@ export const listRecentOverlayFollowupSignals = async (
 };
 
 export const listRecentMemoryBlockFollowupSignals = async (
-  context: AppContext,
+  context: DataContext,
   sinceTick: bigint,
   untilTick?: bigint
 ): Promise<Array<{ agent_id: string; reason: 'memory_change_followup'; created_at: bigint }>> => {

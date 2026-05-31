@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../../app/context.js';
+import type { DataContext } from '../../app/context.js';
 import { listPackAuthorityGrants } from '../../packs/storage/authority_repo.js';
 import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import { listPackEntityStates } from '../../packs/storage/entity_state_repo.js';
@@ -71,7 +71,7 @@ const matchesConditions = (
   return true;
 };
 
-const findActorState = async (context: AppInfrastructure, packId: string, subjectEntityId: string | null): Promise<Record<string, unknown> | null> => {
+const findActorState = async (context: DataContext, packId: string, subjectEntityId: string | null): Promise<Record<string, unknown> | null> => {
   if (!subjectEntityId) {
     return null;
   }
@@ -86,7 +86,7 @@ const findActorState = async (context: AppInfrastructure, packId: string, subjec
 };
 
 const resolveTargetSelectorMatch = async (
-  context: AppInfrastructure,
+  context: DataContext,
   packId: string,
   subjectEntityId: string | null,
   targetSelector: Record<string, unknown>
@@ -127,7 +127,7 @@ const resolveTargetSelectorMatch = async (
       return candidateEntityIds.includes(targetSelector['entity_id']) ? 'subject_entity' : null;
     }
     if (typeof targetSelector['identity_id'] === 'string') {
-      const currentIdentityId = (context as AppInfrastructure & { identity?: { id?: string } }).identity?.id;
+      const currentIdentityId = (context as DataContext & { identity?: { id?: string } }).identity?.id;
       return targetSelector['identity_id'] === currentIdentityId ? 'subject_entity' : null;
     }
     return null;
@@ -172,7 +172,7 @@ const resolveTargetSelectorMatch = async (
 };
 
 export const resolveAuthorityForSubject = async (
-  context: AppInfrastructure,
+  context: DataContext,
   input: {
     packId: string;
     subjectEntityId: string | null;
@@ -234,7 +234,7 @@ export const resolveAuthorityForSubject = async (
 };
 
 export const resolveMediatorBindingsForPack = async (
-  _context: AppInfrastructure,
+  _context: DataContext,
   input: { packId: string }
 ) => {
   return listPackMediatorBindings(_context.packStorageAdapter, input.packId);

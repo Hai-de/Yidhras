@@ -5,13 +5,10 @@ import {
   worldRuleExecuteObjectiveResultSchema
 } from '@yidhras/contracts';
 
-import type { AppInfrastructure } from '../../app/context.js';
-import type { AppContextPorts } from '../../app/services/app_context_ports.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../app/context.js';
 import { isRecord } from '../../utils/type_guards.js';
 
-type EnforcementContext = AppInfrastructure & Pick<AppContextPorts, 'worldEngine'> & {
-  getSpatialRuntime?(): import('../../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
-};
+type EnforcementContext = DataContext & RuntimeContext & Pick<PortContext, 'worldEngine'>;
 import { createPluginRuleAdapter } from '../../app/runtime/plugin_contributor_adapter.js';
 import type { WorldEngineSessionContext } from '../../app/runtime/world_engine_contributors.js';
 import { listPackAuthorityGrants,upsertPackAuthorityGrant  } from '../../packs/storage/authority_repo.js';

@@ -1,6 +1,6 @@
 import { createModelGateway } from '../ai/gateway.js';
 import { resolveAiTaskConfig } from '../ai/task_definitions.js';
-import type { AppInfrastructure } from '../app/context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../app/context.js';
 import { toJsonSafe } from '../app/http/json.js';
 import {
   assertDecisionJobLockOwnership,
@@ -71,7 +71,7 @@ export interface InferenceService {
 }
 
 export interface CreateInferenceServiceOptions {
-  context: AppInfrastructure;
+  context: DataContext & RuntimeContext & PortContext;
   providers: InferenceProvider[];
   traceSink?: InferenceTraceSink;
 }
@@ -255,7 +255,7 @@ const classifyFailure = (err: unknown): {
 const executeRunInternal = async (
   service: InferenceService,
   traceSink: InferenceTraceSink,
-  context: AppInfrastructure,
+  context: DataContext & RuntimeContext & PortContext,
   providers: InferenceProvider[],
   input: InferenceRequestInput,
   options?: {

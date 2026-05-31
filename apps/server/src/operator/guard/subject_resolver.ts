@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../../app/context.js'
+import type { DataContext } from '../../app/context.js'
 import type { OperatorContext } from '../auth/types.js'
 import type { SubjectResolutionResult } from './types.js'
 
@@ -7,7 +7,7 @@ import type { SubjectResolutionResult } from './types.js'
  * 决定 Operator 以哪个主体身份参与 capability 判定。
  */
 export const resolveSubjectForOperator = async (
-  context: AppInfrastructure,
+  context: DataContext,
   operator: OperatorContext,
   packId: string,
   targetAgentId?: string
@@ -48,7 +48,7 @@ export const resolveSubjectForOperator = async (
  * Agent 自主行为时，查找控制该 Agent 的 Operator。
  */
 export const resolveSubjectForAgentAction = async (
-  context: AppInfrastructure,
+  context: DataContext,
   agentId: string,
   _packId: string
 ): Promise<SubjectResolutionResult> => {

@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../../app/context.js';
+import type { DataContext } from '../../app/context.js';
 import { getLatestEventEvidenceRecord } from '../../app/services/mutation/event_evidence_repository.js';
 import { DEFAULT_PACK_WORLD_ENTITY_ID } from '../../packs/runtime/core_models.js';
 import { listPackEntityStateProjectionRecords } from '../../packs/storage/entity_state_projection.js';
@@ -14,7 +14,7 @@ import type {
 import type { StateSnapshotInput } from './types.js';
 
 export interface StateSnapshotContext {
-  prisma: AppInfrastructure['prisma'];
+  prisma: DataContext['prisma'];
 }
 
 const parseStateRecord = (value: unknown): InferencePackStateRecord => {
@@ -101,8 +101,8 @@ export const buildPackStateSnapshot = async (
     : [];
 
   const latestEventRecord = await getLatestEventEvidenceRecord(
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial AppInfrastructure
-    { prisma: context.prisma } as AppInfrastructure,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial DataContext
+    { prisma: context.prisma } as DataContext,
     packId
   );
 

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { Prisma } from '@prisma/client';
 
-import type { AppInfrastructure } from '../../app/context.js';
+import type { DataContext } from '../../app/context.js';
 import { toJsonSafe } from '../../app/http/json.js';
 import type {
   ContextOverlayArchiveInput,
@@ -113,7 +113,7 @@ const normalizeLimit = (limit?: number): number => {
   return Math.min(Math.max(Math.trunc(limit), 1), MAX_LIMIT);
 };
 
-export const createContextOverlayStore = (context: AppInfrastructure): ContextOverlayStore => {
+export const createContextOverlayStore = (context: DataContext): ContextOverlayStore => {
   return {
     async listEntries(input: ContextOverlayQuery): Promise<ContextOverlayEntry[]> {
       const rows = await context.prisma.contextOverlayEntry.findMany({

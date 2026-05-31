@@ -1,7 +1,7 @@
 import { buildAiTaskRequestFromInferenceContext } from '../../ai/task_prompt_builder.js';
 import type { AiTaskService } from '../../ai/task_service.js';
 import { createAiTaskService } from '../../ai/task_service.js';
-import type { AppInfrastructure } from '../../app/context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../app/context.js';
 import type { PackRuntimePort } from '../../app/services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution.js';
 import { isAiGatewayEnabled } from '../../config/runtime_config.js';
@@ -46,7 +46,7 @@ export interface MemoryCompactionService {
   runForAgent(input: { agent_id: string; identity_id?: string }): Promise<MemoryCompactionRunResult | null>;
 }
 
-type CompactionServiceContext = AppInfrastructure;
+type CompactionServiceContext = DataContext & RuntimeContext & PortContext;
 
 export interface CreateMemoryCompactionServiceOptions {
   context: CompactionServiceContext;
