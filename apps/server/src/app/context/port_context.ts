@@ -5,7 +5,7 @@ import type { RuntimeDatabaseBootstrap } from '../runtime/runtime_bootstrap.js';
 import type { RuntimeClockProjectionService } from '../runtime/runtime_clock_projection.js';
 import type { WorldEngineStepCoordinator } from '../runtime/world_engine_coordinator.js';
 import type { PackHostApi, WorldEnginePort } from '../runtime/world_engine_ports.js';
-import type { ContextAssemblyPort } from '../services/context/context_memory_ports.js';
+import type { ContextAssemblyPort } from '../../context/ports.js';
 
 export interface PortContext {
   readonly conversationStore: ConversationStore;
