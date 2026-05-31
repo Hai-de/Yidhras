@@ -1,6 +1,6 @@
 import { ApiError } from '../../../utils/api_error.js';
 import { isRecord } from '../../../utils/type_guards.js';
-import type { AppContext, AppInfrastructure } from '../../context.js';
+import type { AppContext } from '../../context.js';
 import type { AuditViewEntry } from '../audit/audit.js';
 import { listAuditFeed } from '../audit/audit.js';
 import { listInferenceJobs } from '../inference_workflow.js';
@@ -214,7 +214,7 @@ const toAuditEntries = (entries: AuditViewEntry[], kind: AuditViewEntry['kind'])
   return entries.filter(entry => entry.kind === kind);
 };
 
-export const getAgentContextSnapshot = async (context: AppInfrastructure & { getPackRuntimeHost?(packId: string): { getPack(): import('../../../packs/manifest/loader.js').WorldPack | undefined } | null }, agentId: string, packId?: string) => {
+export const getAgentContextSnapshot = async (context: AppContext & { getPackRuntimeHost?(packId: string): { getPack(): import('../../../packs/manifest/loader.js').WorldPack | undefined } | null }, agentId: string, packId?: string) => {
   const agent = await context.repos.agent.findAgentByIdWithCircles(agentId);
 
   if (!agent) {

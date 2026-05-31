@@ -1,5 +1,5 @@
 import { ApiError } from '../../../utils/api_error.js';
-import type { AppContext } from '../../context.js';
+import type { PortContext } from '../../context.js';
 import { getPackRuntimeLookupPort } from '../app_context_ports.js';
 
 const normalizeRequestedPackId = (packId: string): string => {
@@ -11,7 +11,7 @@ const normalizeRequestedPackId = (packId: string): string => {
   return normalizedPackId;
 };
 
-export const createPackScopeResolver = (context: AppContext) => {
+export const createPackScopeResolver = (context: PortContext) => {
 // @ts-expect-error -- EOPT strict mode
   const lookup = getPackRuntimeLookupPort({
     packRuntimeLookup: context.packRuntimeLookup
@@ -45,7 +45,7 @@ export const createPackScopeResolver = (context: AppContext) => {
 };
 
 export const assertPackScope = (
-  context: AppContext,
+  context: PortContext,
   packId: string,
   feature: string
 ): string => {

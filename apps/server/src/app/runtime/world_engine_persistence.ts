@@ -16,7 +16,7 @@ import { listPackRuleExecutionRecords, recordPackRuleExecution } from '../../pac
 import { pluginRuntimeRegistry } from './plugin_runtime_registry.js';
 import { ApiError } from '../../utils/api_error.js';
 import { createLogger } from '../../utils/logger.js';
-import type { AppContext } from '../context.js';
+import type { DataContext, PortContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import type {
   RuntimeClockProjectionSnapshot,
@@ -49,14 +49,14 @@ export interface PackRuntimeCoreDeltaPersistenceResult {
 
 export interface WorldEnginePersistencePort {
   persistPreparedStep(input: {
-    context: AppContext;
+    context: DataContext & PortContext;
     prepared: PreparedWorldStep;
     correlationId?: string;
   }): Promise<PackRuntimeCoreDeltaPersistenceResult>;
 }
 
 
-const getContextCoordinator = (context: AppContext): WorldEngineStepCoordinator => {
+const getContextCoordinator = (context: DataContext & PortContext): WorldEngineStepCoordinator => {
   if (context.worldEngineStepCoordinator) {
     return context.worldEngineStepCoordinator;
   }
@@ -99,7 +99,7 @@ const parseBigIntLike = (value: unknown, field: string): bigint => {
 };
 
 const applyPreparedWorldStateDelta = async (input: {
-  context: AppContext;
+  context: DataContext & PortContext;
   prepared: PreparedWorldStep;
 }): Promise<PackRuntimeCoreDeltaPersistenceResult> => {
   const appliedOperations: WorldStateDeltaOperation['op'][] = [];
@@ -260,7 +260,7 @@ export const createDefaultWorldEnginePersistencePort = (): WorldEnginePersistenc
 };
 
 const applyCommittedClockProjection = (input: {
-  context: AppContext;
+  context: DataContext & PortContext;
   packId: string;
   committed: WorldEngineCommitResult;
   persisted: PackRuntimeCoreDeltaPersistenceResult;
@@ -287,7 +287,7 @@ const applyCommittedClockProjection = (input: {
 };
 
 export const executeWorldEnginePreparedStep = async (input: {
-  context: AppContext;
+  context: DataContext & PortContext;
   worldEngine: WorldEnginePort;
   persistence: WorldEnginePersistencePort;
   prepareInput: WorldStepPrepareRequest;

@@ -7,10 +7,10 @@ import { TreeRegistry } from '../../inference/providers/behavior_tree/tree_regis
 import { createMockInferenceProvider } from '../../inference/providers/mock.js';
 import { pluginRuntimeRegistry } from '../runtime/plugin_runtime_registry.js';
 import { isRecord } from '../../utils/type_guards.js';
-import type { AppContext } from '../context.js';
+import type { DataContext } from '../context.js';
 
 export interface CreateInferenceProvidersInput {
-  context: AppContext;
+  context: DataContext;
   aiTaskService?: AiTaskService;
 }
 

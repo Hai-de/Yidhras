@@ -1,4 +1,4 @@
-import type { AppContext } from '../../../app/context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../../app/context.js';
 import { assertPackScope } from '../../../app/services/pack/pack_scope_resolver.js';
 import { ApiError } from '../../../utils/api_error.js';
 import type { WorldPack } from '../../manifest/loader.js';
@@ -25,7 +25,7 @@ const toPackProjectionMetadataSnapshot = (pack: WorldPack): PackProjectionMetada
 });
 
 export const createPackProjectionMetadataResolver = (
-  context: AppContext
+  context: DataContext & PortContext & RuntimeContext
 ): PackProjectionMetadataResolver => {
   return {
     resolve(packId: string, feature: string): Promise<PackProjectionResolution> {

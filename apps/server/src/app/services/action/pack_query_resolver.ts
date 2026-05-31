@@ -1,10 +1,10 @@
 import type { OperatorContext } from '../../../operator/auth/types.js'
-import type { AppContext } from '../../context.js'
+import type { DataContext } from '../../context.js'
 
 export interface PackQueryHandler {
   readonly capability_key: string
   resolve(
-    context: AppContext,
+    context: DataContext,
     packId: string,
     payload: unknown,
     operator: OperatorContext

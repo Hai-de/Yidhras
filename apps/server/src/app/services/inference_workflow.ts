@@ -1,6 +1,6 @@
 import type { InferenceJobSubmitResult, InferenceRequestInput } from '../../inference/types.js';
 import { ApiError } from '../../utils/api_error.js';
-import type { AppInfrastructure } from '../context.js';
+import type { DataContext } from '../context.js';
 import {
   getAiInvocationById,
   listAiInvocations
@@ -88,7 +88,7 @@ export const assertDecisionJobRetryable = (job: DecisionJobRecord): void => {
 };
 
 export const buildInferenceJobReplayResult = async (
-  context: AppInfrastructure,
+  context: DataContext,
   idempotencyKey: string
 ): Promise<InferenceJobSubmitResult> => {
   const job = await getDecisionJobByIdempotencyKey(context, idempotencyKey);
