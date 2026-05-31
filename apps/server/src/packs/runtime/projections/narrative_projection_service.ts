@@ -1,4 +1,4 @@
-import type { AppContext } from '../../../app/context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../../app/context.js';
 import {
   createPackNarrativeProjectionService,
   type PackNarrativeProjectionSnapshot
@@ -13,7 +13,7 @@ export {
 } from './pack_narrative_projection_service.js';
 
 export const listPackNarrativeTimelineProjection = async (
-  context: AppContext,
+  context: DataContext & PortContext & RuntimeContext,
   packId?: string
 ): Promise<PackNarrativeProjectionSnapshot> => {
   const scope = createPackProjectionScopeAdapter(context);

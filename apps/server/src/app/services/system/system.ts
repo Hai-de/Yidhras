@@ -2,7 +2,7 @@ import { isAiGatewayEnabled } from '../../../config/runtime_config.js'
 import type { RuntimeSpeedSnapshot } from '../../../core/runtime_speed.js'
 import type { StepStrategy } from '../../../core/step_strategy.js'
 import type { SystemMessage } from '../../../utils/notifications.js'
-import type { AppContext, RuntimeLoopDiagnostics } from '../../context.js'
+import type { DataContext, PortContext, RuntimeContext, RuntimeLoopDiagnostics } from '../../context.js'
 import { createRuntimeKernelService } from '../../runtime/runtime_kernel_service.js'
 import { readVisibleClockSnapshot } from '../app_context_ports.js'
 
@@ -54,7 +54,7 @@ export interface RuntimeStatusSnapshot {
   ai: {
     gateway_enabled: boolean;
   };
-  health_level: AppContext['startupHealth']['level'];
+  health_level: RuntimeContext['startupHealth']['level'];
   world_pack:
     | {
         id: string;
@@ -80,9 +80,9 @@ export interface RuntimeStatusSnapshot {
 
 export interface StartupHealthSnapshot {
   healthy: boolean;
-  level: AppContext['startupHealth']['level'];
+  level: RuntimeContext['startupHealth']['level'];
   runtime_ready: boolean;
-  checks: AppContext['startupHealth']['checks'];
+  checks: RuntimeContext['startupHealth']['checks'];
   available_world_packs: string[];
   errors: string[];
 }
@@ -116,23 +116,24 @@ const parseBooleanEnv = (value: string | undefined): boolean => {
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
 };
 
-export const listSystemNotifications = (context: AppContext): SystemMessage[] => {
+export const listSystemNotifications = (context: DataContext & RuntimeContext & PortContext): SystemMessage[] => {
   return context.notifications.getMessages();
 };
 
-export const clearSystemNotifications = (context: AppContext): AcknowledgementSnapshot => {
+export const clearSystemNotifications = (context: DataContext & RuntimeContext & PortContext): AcknowledgementSnapshot => {
   context.notifications.clear();
   return { acknowledged: true };
 };
 
 export const ensureSchedulerBootstrapOwnership = async (
-  context: AppContext,
+  context: DataContext & RuntimeContext & PortContext,
   options: {
     packId: string;
     schedulerWorkerId: string;
     schedulerPartitionIds?: string[];
   }
 ): Promise<void> => {
+  // TODO: Remove cast when runtime_kernel_service.ts is migrated to role interfaces (Phase 11)
   const runtimeKernel = createRuntimeKernelService(context, options.packId);
 // @ts-expect-error -- EOPT strict mode
   await runtimeKernel.reconcileBootstrapOwnership({
@@ -141,7 +142,7 @@ export const ensureSchedulerBootstrapOwnership = async (
   });
 };
 
-export const resetDevelopmentRuntimeState = async (context: AppContext): Promise<DevRuntimeResetSummary | null> => {
+export const resetDevelopmentRuntimeState = async (context: DataContext & RuntimeContext & PortContext): Promise<DevRuntimeResetSummary | null> => {
   const appEnv = (process.env['APP_ENV'] ?? process.env['NODE_ENV'] ?? 'development').trim().toLowerCase();
   const enabled = parseBooleanEnv(process.env['DEV_RUNTIME_RESET_ON_START'] ?? '1');
   if (appEnv !== 'development' || !enabled) {
@@ -174,7 +175,7 @@ export const resetDevelopmentRuntimeState = async (context: AppContext): Promise
 };
 
 export const getRuntimeStatusSnapshot = async (
-  context: AppContext,
+  context: DataContext & RuntimeContext & PortContext,
   options?: {
     packId?: string;
     schedulerWorkerId?: string;
@@ -188,6 +189,7 @@ export const getRuntimeStatusSnapshot = async (
   const pack = context.getPackRuntimeHandle(packId)?.pack ?? null;
   const schedulerWorkerId = options.schedulerWorkerId ?? process.env['SCHEDULER_WORKER_ID'] ?? `scheduler:${process.pid}`;
   const visibleClock = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId });
+  // TODO: Remove cast when runtime_kernel_service.ts is migrated to role interfaces (Phase 11)
   const runtimeKernel = createRuntimeKernelService(context, packId);
 // @ts-expect-error -- EOPT strict mode
   const ownershipSnapshot = await runtimeKernel.getOwnershipSnapshot({
@@ -247,7 +249,7 @@ return {
 };
 
 export const getStartupHealthSnapshot = (
-  context: AppContext
+  context: DataContext & RuntimeContext & PortContext
 ): { statusCode: number; body: StartupHealthSnapshot } => {
   const statusCode = context.startupHealth.level === 'fail' ? 503 : 200;
 

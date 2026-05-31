@@ -1,6 +1,6 @@
 import { ApiError } from '../../../utils/api_error.js';
 import { isRecord } from '../../../utils/type_guards.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../context.js';
 import type { AuditViewEntry } from '../audit/audit.js';
 import { listAuditFeed } from '../audit/audit.js';
 import { listInferenceJobs } from '../inference_workflow.js';
@@ -214,14 +214,14 @@ const toAuditEntries = (entries: AuditViewEntry[], kind: AuditViewEntry['kind'])
   return entries.filter(entry => entry.kind === kind);
 };
 
-export const getAgentContextSnapshot = async (context: AppContext & { getPackRuntimeHost?(packId: string): { getPack(): import('../../../packs/manifest/loader.js').WorldPack | undefined } | null }, agentId: string, packId?: string) => {
+export const getAgentContextSnapshot = async (context: DataContext & PortContext & RuntimeContext, agentId: string, packId?: string) => {
   const agent = await context.repos.agent.findAgentByIdWithCircles(agentId);
 
   if (!agent) {
     throw new ApiError(404, 'AGENT_NOT_FOUND', 'Agent not found', { agent_id: agentId });
   }
 
-  const host = packId ? context.getPackRuntimeHost?.(packId) : null;
+  const host = packId ? context.getPackRuntimeHost(packId) : null;
   const pack = host?.getPack();
   const resolvedVariables = pack?.variables
     ? JSON.stringify(pack.variables)
@@ -235,7 +235,7 @@ export const getAgentContextSnapshot = async (context: AppContext & { getPackRun
 };
 
 export const getEntityOverview = async (
-  context: AppContext,
+  context: DataContext & PortContext & RuntimeContext,
   entityId: string,
   options?: {
     limit?: number;
@@ -306,6 +306,7 @@ export const getEntityOverview = async (
       },
       take: limit
     }),
+    // TODO: Remove cast when entity_overview_service.ts is migrated to role interfaces (Phase 11)
     (await import('../../../packs/runtime/projections/entity_overview_service.js')).getPackEntityOverviewProjection(context)
   ]);
 
@@ -571,7 +572,7 @@ export const getEntityOverview = async (
 };
 
 export const listSnrAdjustmentLogs = async (
-  context: AppContext,
+  context: DataContext & PortContext & RuntimeContext,
   input: ListSnrAdjustmentLogsInput
 ) => {
   const agentId = typeof input.agent_id === 'string' ? input.agent_id.trim() : '';

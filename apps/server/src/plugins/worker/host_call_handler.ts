@@ -1,6 +1,6 @@
 import type { WorldStateQuery } from '@yidhras/contracts';
 
-import type { AppContext } from '../../app/context.js';
+import type { DataContext, PortContext } from '../../app/context.js';
 import { getPackHostApi } from '../../app/services/app_context_ports.js';
 import { listDeclaredPackCollectionRecords, upsertDeclaredPackCollectionRecord } from '../../packs/storage/pack_collection_repo.js';
 import { ApiError } from '../../utils/api_error.js';
@@ -13,7 +13,7 @@ const hasCapability = (grantedCapabilities: string[], capabilityKey: string): bo
 };
 
 export interface PluginHostCallContext {
-  appContext: AppContext;
+  appContext: DataContext & PortContext;
   packId: string;
   pluginId: string;
   installationId: string;

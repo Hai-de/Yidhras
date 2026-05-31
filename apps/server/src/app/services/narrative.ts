@@ -1,7 +1,7 @@
 import { listPackNarrativeTimelineProjection } from '../../packs/runtime/projections/narrative_projection_service.js';
-import type { AppContext } from '../context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../context.js';
 
 export const getPackNarrativeTimelineProjection = async (
-  context: AppContext,
+  context: DataContext & PortContext & RuntimeContext,
   packId?: string
 ) => listPackNarrativeTimelineProjection(context, packId);

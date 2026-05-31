@@ -1,18 +1,17 @@
-import type { AppContext } from '../app/context.js';
-import type {
-  QueryContributor,
-  RuleContributor,
-  StepContributor
-} from '../app/runtime/world_engine_contributors.js';
-import type { ContextSourceAdapter } from '../context/source_registry.js';
-import type { PromptWorkflowStepExecutor } from '../context/workflow/registry.js';
+// Re-export from new canonical location (Phase 7 transitional — eventual removal)
+import type { PluginManifest } from '@yidhras/contracts';
+
+import type { DataContext } from '../app/context.js';
+import {
+  PluginRuntimeRegistry,
+  pluginRuntimeRegistry,
+  type RegisteredServerPluginRuntime
+} from '../app/runtime/plugin_runtime_registry.js';
 import {
   setPluginsActive,
   setPluginWorkersActive} from '../observability/metrics.js';
-import type { PerceptionResolver } from '../perception/types.js';
 import { captureError } from '../utils/capture_error.js';
 import { createLogger } from '../utils/logger.js';
-import type { PluginInferenceRequest, PluginInferenceResult } from './types.js';
 import {
   PLUGIN_HOST_API_VERSION,
   type PluginCapabilityKey
@@ -21,6 +20,7 @@ import { resolveLoadOrder } from './dependency_resolver.js';
 import { dataCleanerRegistry } from './extensions/data_cleaner_registry.js';
 import { slotConditionRegistry } from './extensions/slot_condition_registry.js';
 import { slotContentTransformRegistry } from './extensions/slot_content_transformer.js';
+import type { PluginInferenceRequest, PluginInferenceResult } from './types.js';
 import type {
   ContextSourceDescriptorInput,
   ContributionDescriptor,
@@ -33,23 +33,15 @@ import type {
   SlotConditionEvaluatorDescriptorInput,
   SlotContentTransformerDescriptorInput,
   StepContributorDescriptorInput} from './worker/contribution_descriptors.js';
-import { createWorkerContributionProxies, type WorkerPackRouteProxy } from './worker/contribution_proxy.js';
+import { createWorkerContributionProxies } from './worker/contribution_proxy.js';
 import type { PluginWorkerClient } from './worker/PluginWorkerClient.js';
 import { pluginWorkerManager, resolvePluginEntrypointPath } from './worker/PluginWorkerManager.js';
 
-// Re-export from new canonical location (Phase 7 transitional — eventual removal)
-import type { PluginManifest } from '@yidhras/contracts';
-import {
-  pluginRuntimeRegistry,
-  PluginRuntimeRegistry,
-  type RegisteredServerPluginRuntime
-} from '../app/runtime/plugin_runtime_registry.js';
-
-export { pluginRuntimeRegistry, PluginRuntimeRegistry, type RegisteredServerPluginRuntime };
+export { PluginRuntimeRegistry, pluginRuntimeRegistry, type RegisteredServerPluginRuntime };
 
 const runtimeLogger = createLogger('plugin-sandbox-runtime');
 
-type Ctx = AppContext;
+type Ctx = DataContext & import('../app/context.js').PortContext;
 
 export type { PluginInferenceRequest, PluginInferenceResult };
 

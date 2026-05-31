@@ -1,6 +1,6 @@
 import { createLogger } from '../../../utils/logger.js';
 const ercLogger = createLogger('exp-runtime-control-plane');
-import type { AppContext } from '../../context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../context.js';
 import { getPackRuntimeLookupPort, getPackRuntimeObservation } from '../app_context_ports.js';
 
 export interface ExperimentalPackRuntimeSnapshot {
@@ -51,7 +51,7 @@ const toExperimentalRuntimeSpeedSnapshot = (snapshot: {
   overridden: snapshot.source === 'override'
 });
 
-const readEnabledPluginCount = async (context: AppContext, packId: string): Promise<number> => {
+const readEnabledPluginCount = async (context: DataContext & RuntimeContext & PortContext, packId: string): Promise<number> => {
   try {
     const installations = await context.repos.plugin.listInstallationsByScope({
       scope_type: 'pack_local',
@@ -65,7 +65,7 @@ const readEnabledPluginCount = async (context: AppContext, packId: string): Prom
 };
 
 export const buildExperimentalRuntimeControlPlaneSnapshot = async (
-  context: AppContext
+  context: DataContext & RuntimeContext & PortContext
 ): Promise<ExperimentalRuntimeControlPlaneSnapshot> => {
 // @ts-expect-error -- EOPT strict mode
   const lookup = getPackRuntimeLookupPort({
@@ -125,7 +125,7 @@ export const buildExperimentalRuntimeControlPlaneSnapshot = async (
 };
 
 export const buildExperimentalPackRuntimeSnapshot = async (
-  context: AppContext,
+  context: DataContext & RuntimeContext & PortContext,
   packId: string
 ): Promise<ExperimentalPackRuntimeSnapshot | null> => {
   const snapshot = await buildExperimentalRuntimeControlPlaneSnapshot(context);

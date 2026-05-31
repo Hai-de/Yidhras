@@ -3,7 +3,7 @@ import type { PackRuntimeStatusSnapshot } from '../../../core/pack_runtime_healt
 import type { PackRuntimeHost } from '../../../core/pack_runtime_host.js';
 import type { PackRuntimeRegistry } from '../../../core/pack_runtime_registry.js';
 import { syncPackPluginRuntime } from '../../../plugins/runtime.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../context.js';
 import {
   getPackRuntimeControl,
   getPackRuntimeObservation
@@ -20,20 +20,20 @@ export { type ExperimentalPackRuntimeSnapshot, type ExperimentalRuntimeControlPl
 export type ExperimentalPackRuntimeRegistrySnapshot = ExperimentalRuntimeControlPlaneSnapshot;
 
 export interface ExperimentalSystemHealthSnapshot {
-  system_health_level: AppContext['startupHealth']['level'];
+  system_health_level: RuntimeContext['startupHealth']['level'];
   runtime_ready: boolean;
   available_world_packs: string[];
   startup_errors: string[];
 }
 
 export const buildExperimentalPackRuntimeRegistrySnapshot = async (
-  context: AppContext
+  context: DataContext & RuntimeContext & PortContext
 ): Promise<ExperimentalPackRuntimeRegistrySnapshot> => {
   return buildExperimentalRuntimeControlPlaneSnapshot(context);
 };
 
 export const buildExperimentalSystemHealthSnapshot = (
-  context: AppContext
+  context: DataContext & RuntimeContext & PortContext
 ): ExperimentalSystemHealthSnapshot => {
   return {
     system_health_level: context.startupHealth.level,
@@ -44,7 +44,7 @@ export const buildExperimentalSystemHealthSnapshot = (
 };
 
 export const getExperimentalPackRuntimeStatusSnapshot = async (
-  context: AppContext,
+  context: DataContext & RuntimeContext & PortContext,
   packId: string
 ): Promise<PackRuntimeStatusSnapshot & { control_plane?: ExperimentalPackRuntimeSnapshot } | null> => {
 // @ts-expect-error -- EOPT strict mode
@@ -69,19 +69,20 @@ export const getExperimentalPackRuntimeStatusSnapshot = async (
 };
 
 export const loadExperimentalPackRuntime = async (
-  context: AppContext,
+  context: DataContext & RuntimeContext & PortContext,
   packRef: string
 ): Promise<{ handle: PackRuntimeHandle; loaded: boolean; already_loaded: boolean }> => {
 // @ts-expect-error -- EOPT strict mode
   const result = await getPackRuntimeControl({
     packRuntimeControl: context.packRuntimeControl
   }).load(packRef);
+  // TODO: Remove cast when plugins/runtime.ts is migrated to role interfaces (Phase 11)
   await syncPackPluginRuntime(context, result.handle.instance_id);
   return result;
 };
 
 export const unloadExperimentalPackRuntime = async (
-  context: AppContext,
+  context: DataContext & RuntimeContext & PortContext,
   packId: string
 ): Promise<{ acknowledged: true; unloaded: boolean }> => {
   return {

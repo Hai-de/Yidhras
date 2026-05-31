@@ -1,7 +1,7 @@
 import type {
   BuildContextRunInput,
-  ContextServiceBuildResult} from './service.js';
-import type { BuildMemoryContextInput, MemoryService } from '../memory/service.js';
+  ContextServiceBuildResult
+} from './service_types.js';
 
 export interface ContextAssemblyPort {
   buildPromptVariableContext?(input: unknown): unknown;
@@ -14,5 +14,7 @@ export interface MemoryRuntimePort {
   queryOverlayEntries?(input: unknown): unknown;
   listMemoryBlocks?(input: unknown): unknown;
   getMemoryRuntimeSnapshot?(input: unknown): unknown;
-  buildMemoryContext?(input: BuildMemoryContextInput): Promise<Awaited<ReturnType<MemoryService['buildMemoryContext']>>>;
+  buildMemoryContext?(input: import('../memory/service.js').BuildMemoryContextInput): Promise<
+    Awaited<ReturnType<import('../memory/service.js').MemoryService['buildMemoryContext']>>
+  >;
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { tick } from '../../../src/inference/providers/behavior_tree/evaluator.js';
 import { tickSelector, tickSequence } from '../../../src/inference/providers/behavior_tree/nodes/composites.js';
 import type { BTEvalContext, BTNodeDef } from '../../../src/inference/providers/behavior_tree/types.js';
 import type { InferenceContext } from '../../../src/inference/types.js';
@@ -30,25 +31,25 @@ const falseCondition: BTNodeDef = {
 describe('tickSelector', () => {
   it('first child success → returns success, skips later children', async () => {
     const ctx = makeCtx();
-    const status = await tickSelector([successAction, successAction], ctx);
+    const status = await tickSelector([successAction, successAction], ctx, tick);
     expect(status).toBe('success');
   });
 
   it('first child failure, second success → returns success', async () => {
     const ctx = makeCtx();
-    const status = await tickSelector([falseCondition, successAction], ctx);
+    const status = await tickSelector([falseCondition, successAction], ctx, tick);
     expect(status).toBe('success');
   });
 
   it('all children failure → returns failure', async () => {
     const ctx = makeCtx();
-    const status = await tickSelector([falseCondition, falseCondition], ctx);
+    const status = await tickSelector([falseCondition, falseCondition], ctx, tick);
     expect(status).toBe('failure');
   });
 
   it('empty children → returns failure', async () => {
     const ctx = makeCtx();
-    const status = await tickSelector([], ctx);
+    const status = await tickSelector([], ctx, tick);
     expect(status).toBe('failure');
   });
 });
@@ -56,26 +57,26 @@ describe('tickSelector', () => {
 describe('tickSequence', () => {
   it('all success → returns success, executes all', async () => {
     const ctx = makeCtx();
-    const status = await tickSequence([successAction, successAction], ctx);
+    const status = await tickSequence([successAction, successAction], ctx, tick);
     expect(status).toBe('success');
   });
 
   it('second child failure → returns failure, third not executed', async () => {
     const ctx = makeCtx();
     // Sequence: action(success) → condition(failure) → action(never reached)
-    const status = await tickSequence([successAction, falseCondition, successAction], ctx);
+    const status = await tickSequence([successAction, falseCondition, successAction], ctx, tick);
     expect(status).toBe('failure');
   });
 
   it('empty children → returns failure', async () => {
     const ctx = makeCtx();
-    const status = await tickSequence([], ctx);
+    const status = await tickSequence([], ctx, tick);
     expect(status).toBe('failure');
   });
 
   it('last action writes __last_decision to blackboard', async () => {
     const ctx = makeCtx();
-    await tickSequence([successAction], ctx);
+    await tickSequence([successAction], ctx, tick);
     expect(ctx.blackboard['__last_decision']).toBeDefined();
   });
 });

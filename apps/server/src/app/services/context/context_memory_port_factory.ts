@@ -1,11 +1,11 @@
-import type { AppContext } from '../../context.js';
-import { createContextService, type PluginRuntimePort } from '../../../context/service.js';
 import { createContextOverlayStore } from '../../../context/overlay/store.js';
+import { createContextService, type PluginRuntimePort } from '../../../context/service.js';
 import { createPrismaLongMemoryBlockStore } from '../../../memory/blocks/store.js';
 import { createMemoryService } from '../../../memory/service.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../context.js';
 import type { ContextAssemblyPort, MemoryRuntimePort } from './context_memory_ports.js';
 
-export const createContextAssemblyPort = (context: AppContext): ContextAssemblyPort => {
+export const createContextAssemblyPort = (context: DataContext & RuntimeContext & PortContext): ContextAssemblyPort => {
   const memoryService = createMemoryService({ context });
   const overlayStore = createContextOverlayStore(context);
   const longMemoryBlockStore = createPrismaLongMemoryBlockStore(context);
@@ -28,7 +28,7 @@ export const createContextAssemblyPort = (context: AppContext): ContextAssemblyP
   };
 };
 
-export const createMemoryRuntimePort = (context: AppContext): MemoryRuntimePort => {
+export const createMemoryRuntimePort = (context: DataContext & RuntimeContext & PortContext): MemoryRuntimePort => {
   const memoryService = createMemoryService({ context });
 
   return {

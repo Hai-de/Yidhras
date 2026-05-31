@@ -1,4 +1,4 @@
-import type { AppContext } from '../../app/context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../app/context.js';
 import { getRuntimeStatusSnapshot } from '../../app/services/system/system.js';
 import {
   createPackEntityOverviewProjectionService,
@@ -50,7 +50,7 @@ const toPackOverviewProjectionSummary = (
 };
 
 export const getOperatorOverviewProjection = async (
-  context: AppContext,
+  context: DataContext & PortContext & RuntimeContext,
   options: OperatorOverviewProjectionOptions = {}
 ): Promise<OperatorOverviewProjectionSnapshot> => {
 // @ts-expect-error -- EOPT strict mode

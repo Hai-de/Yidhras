@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../../app/context.js'
+import type { DataContext, PortContext, RuntimeContext } from '../../app/context.js'
 import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution.js';
 import { logOperatorAudit } from '../../operator/audit/logger.js'
 import { AUDIT_ACTION } from '../../operator/constants.js'
@@ -8,7 +8,7 @@ import { isRecord } from '../../utils/type_guards.js'
 import { enforceInvocationRequest } from '../rule/enforcement_engine.js'
 import type { InvocationDispatchResult, InvocationRequest } from './types.js';
 
-export type { InvocationRequest, InvocationDispatchResult } from './types.js';
+export type { InvocationDispatchResult,InvocationRequest } from './types.js';
 
 const logger = createLogger('invocation-dispatcher')
 
@@ -62,7 +62,7 @@ const resolveMediatorId = (intent: DispatchableActionIntentLike): string | null 
 }
 
 const resolveSubjectEntityId = async (
-  context: AppInfrastructure,
+  context: DataContext & RuntimeContext & PortContext,
   actorRef: Record<string, unknown>,
   packId: string
 ): Promise<string | null> => {
@@ -96,7 +96,7 @@ const resolveSubjectEntityId = async (
 
 const KERNEL_INTENT_TYPES = ['trigger_event', 'post_message', 'adjust_relationship', 'adjust_snr', 'move'] as const
 
-const shouldBridgeToInvocation = (context: AppInfrastructure, intent: DispatchableActionIntentLike, packRuntime?: { getPack(): { capabilities?: Array<{ key: string }> | undefined; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> | undefined } | undefined; variables?: Record<string, unknown> | undefined } | undefined }): boolean => {
+const shouldBridgeToInvocation = (context: DataContext & RuntimeContext & PortContext, intent: DispatchableActionIntentLike, packRuntime?: { getPack(): { capabilities?: Array<{ key: string }> | undefined; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> | undefined } | undefined; variables?: Record<string, unknown> | undefined } | undefined }): boolean => {
   const pack = packRuntime?.getPack()
   if (!pack) {
     return false
@@ -141,7 +141,7 @@ const shouldBridgeToInvocation = (context: AppInfrastructure, intent: Dispatchab
 type InvocationPackRuntime = NonNullable<Parameters<typeof buildInvocationRequestFromActionIntent>[2]>;
 
 const resolveInvocationPackRuntime = (
-  context: AppInfrastructure,
+  context: DataContext & RuntimeContext & PortContext,
   packRuntime?: InvocationPackRuntime
 ): InvocationPackRuntime | undefined => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
@@ -149,7 +149,7 @@ const resolveInvocationPackRuntime = (
 }
 
 export const buildInvocationRequestFromActionIntent = async (
-  context: AppInfrastructure,
+  context: DataContext & RuntimeContext & PortContext,
   intent: DispatchableActionIntentLike,
   packRuntime?: { getPack(): { metadata: { id: string }; capabilities?: Array<{ key: string }> | undefined; rules?: { objective_enforcement?: Array<{ id: string; when?: unknown; then?: unknown }> | undefined } | undefined; variables?: Record<string, unknown> | undefined } | undefined }
 ): Promise<InvocationRequest | null> => {
@@ -181,7 +181,7 @@ export const buildInvocationRequestFromActionIntent = async (
 }
 
 export const dispatchInvocationFromActionIntent = async (
-  context: AppInfrastructure,
+  context: DataContext & RuntimeContext & PortContext,
   intent: DispatchableActionIntentLike,
   packRuntime?: Parameters<typeof buildInvocationRequestFromActionIntent>[2]
 ): Promise<InvocationDispatchResult | null> => {

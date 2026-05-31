@@ -1,7 +1,10 @@
 import type { WorkflowInferencePort } from '../../../inference/workflow_inference_port.js';
 import type { WorldPackWorkflowCondition } from '../../../packs/schema/constitution_schema.js';
-import type { AppContext } from '../../context.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
+
+type WorkflowCtx = import('../../context/data_context.js').DataContext &
+  import('../../context/port_context.js').PortContext &
+  import('../../context/runtime_context.js').RuntimeContext;
 
 export type WorkflowRunStatus = 'pending' | 'running' | 'completed' | 'failed' | 'narrativized' | 'timed_out';
 
@@ -22,7 +25,7 @@ export interface WorkflowAdvanceBudget {
 }
 
 export interface WorkflowAdvanceInput {
-  context: AppContext;
+  context: WorkflowCtx;
   inferenceService: WorkflowInferencePort;
   packRuntime: PackRuntimePort;
   workerId: string;
@@ -40,7 +43,7 @@ export interface WorkflowAdvanceResult {
 }
 
 export interface TriggerWorkflowInput {
-  context: AppContext;
+  context: WorkflowCtx;
   packRuntime: PackRuntimePort;
   workflow_name: string;
   trigger_type: 'manual' | 'event';
@@ -49,7 +52,7 @@ export interface TriggerWorkflowInput {
 }
 
 export interface WorkflowRecoveryInput {
-  context: AppContext;
+  context: WorkflowCtx;
   packRuntime: PackRuntimePort;
   workerId: string;
   tick: bigint;

@@ -2,17 +2,20 @@ import { createPackEntityOverviewProjectionService } from '../../../packs/runtim
 import { createPackNarrativeProjectionService } from '../../../packs/runtime/projections/pack_narrative_projection_service.js';
 import { createPackProjectionScopeAdapter } from '../../../packs/runtime/projections/pack_projection_scope_adapter.js';
 import { ApiError } from '../../../utils/api_error.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../context.js';
 import { getPackOverviewProjectionSummary } from '../overview/overview.js';
 import { listPackPluginInstallations } from '../plugin/plugins.js';
 
-const requireExperimentalPackResolution = async (context: AppContext, packId: string, feature: string) => {
+type ExpProjCtx = DataContext & RuntimeContext & PortContext;
+
+const requireExperimentalPackResolution = async (context: ExpProjCtx, packId: string, feature: string) => {
+  // TODO: Remove cast when pack_projection_scope_adapter.ts is migrated to role interfaces (Phase 11)
   const scope = createPackProjectionScopeAdapter(context);
   return scope.resolveExperimentalPack(packId, feature);
 };
 
 export const getExperimentalPackEntityProjection = async (
-  context: AppContext,
+  context: ExpProjCtx,
   packId: string
 ) => {
   const resolved = await requireExperimentalPackResolution(context, packId, 'experimental pack entity projection');
@@ -21,7 +24,7 @@ export const getExperimentalPackEntityProjection = async (
 };
 
 export const getExperimentalPackAgentOverview = async (
-  context: AppContext,
+  context: ExpProjCtx,
   packId: string,
   entityId: string
 ) => {
@@ -46,7 +49,7 @@ export const getExperimentalPackAgentOverview = async (
 };
 
 export const getExperimentalPackOverviewProjection = async (
-  context: AppContext,
+  context: ExpProjCtx,
   packId: string
 ) => {
   await requireExperimentalPackResolution(context, packId, 'experimental pack overview projection');
@@ -54,7 +57,7 @@ export const getExperimentalPackOverviewProjection = async (
 };
 
 export const getExperimentalPackNarrativeProjection = async (
-  context: AppContext,
+  context: ExpProjCtx,
   packId: string
 ) => {
   const resolved = await requireExperimentalPackResolution(context, packId, 'experimental pack narrative projection');
@@ -63,7 +66,7 @@ export const getExperimentalPackNarrativeProjection = async (
 };
 
 export const getExperimentalPackPluginInstallations = async (
-  context: AppContext,
+  context: ExpProjCtx,
   packId: string
 ) => {
   await requireExperimentalPackResolution(context, packId, 'experimental pack plugins projection');

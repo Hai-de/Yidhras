@@ -8,10 +8,10 @@ import { checkDependencies, checkReverseDependencies } from '../../../plugins/de
 import { assertPluginEnableAllowed, createPluginManagerService } from '../../../plugins/service.js';
 import { ApiError } from '../../../utils/api_error.js';
 import { createLogger } from '../../../utils/logger.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext, PortContext } from '../../context.js';
 import { createPackScopedPluginRuntimeService } from '../pack/pack_scoped_plugin_runtime_service.js';
 
-const refreshScopedPluginRuntime = async (context: AppContext, packId: string | null | undefined): Promise<void> => {
+const refreshScopedPluginRuntime = async (context: DataContext & PortContext, packId: string | null | undefined): Promise<void> => {
   const normalizedPackId = typeof packId === 'string' ? packId.trim() : '';
   if (normalizedPackId.length === 0) {
     return;
@@ -20,15 +20,12 @@ const refreshScopedPluginRuntime = async (context: AppContext, packId: string | 
   await createPackScopedPluginRuntimeService(context).refreshPackRuntime(normalizedPackId);
 };
 
-const createManager = (context: AppContext) => {
+const createManager = (context: DataContext & PortContext) => {
   return createPluginManagerService(context.repos.plugin);
 };
 
-const getEnableWarningConfig = (context: AppContext) => {
-  return context.getPluginEnableWarningConfig?.() ?? {
-    enabled: true,
-    require_acknowledgement: true
-  };
+const getEnableWarningConfig = (context: DataContext & PortContext) => {
+  return context.getPluginEnableWarningConfig();
 };
 
 const getEnableWarningTextHash = async (): Promise<string> => {
@@ -36,7 +33,7 @@ const getEnableWarningTextHash = async (): Promise<string> => {
   return createHash('sha256').update(PLUGIN_ENABLE_WARNING_TEXT).digest('hex');
 };
 
-export const getPackPluginEnableWarningSnapshot = async (context: AppContext) => {
+export const getPackPluginEnableWarningSnapshot = async (context: DataContext & PortContext) => {
   const config = getEnableWarningConfig(context);
   return {
     ...config,
@@ -46,7 +43,7 @@ export const getPackPluginEnableWarningSnapshot = async (context: AppContext) =>
 };
 
 export const listPackPluginInstallations = async (
-  context: AppContext,
+  context: DataContext & PortContext,
   packId: string
 ): Promise<PluginListResponseData> => {
   const items = await context.repos.plugin.listInstallationsByScope({
@@ -62,7 +59,7 @@ export const listPackPluginInstallations = async (
 };
 
 export const confirmPackPluginImport = async (
-  context: AppContext,
+  context: DataContext & PortContext,
   installationId: string,
   grantedCapabilities?: string[]
 ): Promise<PluginInstallation> => {
@@ -74,7 +71,7 @@ export const confirmPackPluginImport = async (
   });
 };
 
-const buildDependencyContext = async (context: AppContext, scopeRef?: string) => {
+const buildDependencyContext = async (context: DataContext & PortContext, scopeRef?: string) => {
   const packLocal = scopeRef
     ? await context.repos.plugin.listInstallationsByScope({ scope_type: 'pack_local', scope_ref: scopeRef })
     : [];
@@ -94,7 +91,7 @@ const buildDependencyContext = async (context: AppContext, scopeRef?: string) =>
 };
 
 export const disablePackPlugin = async (
-  context: AppContext,
+  context: DataContext & PortContext,
   installationId: string
 ): Promise<PluginInstallation> => {
   const manager = createManager(context);
@@ -145,7 +142,7 @@ export const disablePackPlugin = async (
 };
 
 export const enablePackPlugin = async (
-  context: AppContext,
+  context: DataContext & PortContext,
   installationId: string,
   acknowledgement?: {
     reminder_text_hash: string;

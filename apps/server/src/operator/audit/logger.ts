@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client'
 
-import type { DataContext } from '../../app/context.js'
+import type { DataContext } from '../../app/context/data_context.js'
 import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution.js';
 import type { AuditAction } from '../constants.js'
 

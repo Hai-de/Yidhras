@@ -1,4 +1,4 @@
-import type { DataContext } from '../app/context.js';
+import type { DataContext } from '../app/context/data_context.js';
 import type { InferenceActorRef } from '../inference/types.js';
 import { createNoopLongTermMemoryStore } from './long_term_store.js';
 import { selectMemory, toMemoryContextPack } from './selector.js';

@@ -1,20 +1,17 @@
 import type { ConversationStore } from '../../conversation/store.js';
-import type { PackRuntimeControl, PackRuntimeLookupPort, PackRuntimeObservation } from '../../core/pack_runtime_ports.js';
 import type { PackRuntimeHost } from '../../core/pack_runtime_host.js';
+import type { PackRuntimeControl, PackRuntimeLookupPort, PackRuntimeObservation } from '../../core/pack_runtime_ports.js';
 import type { RuntimeDatabaseBootstrap } from '../runtime/runtime_bootstrap.js';
 import type { RuntimeClockProjectionService } from '../runtime/runtime_clock_projection.js';
 import type { WorldEngineStepCoordinator } from '../runtime/world_engine_coordinator.js';
-import type { PackHostApi, WorldEnginePort } from '../runtime/world_engine_ports.js';
-import type { ContextAssemblyPort } from '../../context/ports.js';
-
 export interface PortContext {
   readonly conversationStore: ConversationStore;
 
-  readonly worldEngine?: WorldEnginePort;
-  readonly packHostApi?: PackHostApi;
+  readonly worldEngine?: import('../runtime/world_engine_ports.js').WorldEnginePort;
+  readonly packHostApi?: import('../runtime/world_engine_ports.js').PackHostApi;
   readonly worldEngineStepCoordinator?: WorldEngineStepCoordinator;
   readonly runtimeClockProjection?: RuntimeClockProjectionService;
-  readonly contextAssembly?: ContextAssemblyPort;
+  readonly contextAssembly?: import('../../context/ports.js').ContextAssemblyPort;
   readonly runtimeBootstrap?: RuntimeDatabaseBootstrap;
   readonly packRuntimeObservation?: PackRuntimeObservation;
   readonly packRuntimeControl?: PackRuntimeControl;

@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 import type { PluginInstallation, PluginManifest } from '@yidhras/contracts';
 
-import type { AppContext } from '../../app/context.js';
+import type { DataContext, PortContext } from '../../app/context.js';
 import {
   recordPluginWorkerActivationCompleted,
   setPluginWorkersActive
@@ -123,7 +123,7 @@ const assertManifestDescriptorAlignment = (
 };
 
 const persistInstallationError = async (
-  context: AppContext,
+  context: DataContext & PortContext,
   installation: PluginInstallation,
   message: string | undefined
 ): Promise<void> => {
@@ -149,7 +149,7 @@ export class PluginWorkerManager {
   private readonly workers = new Map<string, PluginWorkerClient>();
 
   public async activateInstallation(
-    context: AppContext,
+    context: DataContext & PortContext,
     target: PluginWorkerActivationTarget
   ): Promise<ActivatedPluginWorker> {
     const activationId = randomUUID();

@@ -1,6 +1,6 @@
 import { Worker } from 'node:worker_threads';
 
-import type { AppContext } from '../../app/context.js';
+import type { DataContext, PortContext } from '../../app/context.js';
 import { getRuntimeConfig } from '../../config/runtime_config.js';
 import {
   recordPluginWorkerCrash,
@@ -62,7 +62,7 @@ export interface PluginWorkerRuntimeSnapshot {
 }
 
 export class PluginWorkerClient {
-  private readonly context: AppContext;
+  private readonly context: DataContext & PortContext;
   private readonly packId: string;
   private readonly pluginId: string;
   public readonly installationId: string;
@@ -77,7 +77,7 @@ export class PluginWorkerClient {
   private consecutiveFailures = 0;
 
   constructor(input: {
-    context: AppContext;
+    context: DataContext & PortContext;
     packId: string;
     pluginId: string;
     installationId: string;

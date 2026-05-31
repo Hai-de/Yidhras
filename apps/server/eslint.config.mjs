@@ -98,6 +98,10 @@ export default tseslint.config(
             { from: { type: 'transport' }, allow: [{ to: { type: 'transport' } }] },
             { from: { type: 'app-wiring' }, allow: [{ to: { type: 'app-wiring' } }] },
 
+            // All element types may import role interfaces (DataContext,
+            // PortContext, RuntimeContext, AppContext) from app-wiring.
+            { from: { type: '*' }, allow: [{ to: { type: 'app-wiring' } }] },
+
             // ═══════════════ LEAF LAYERS ═══════════════
             {
               from: [

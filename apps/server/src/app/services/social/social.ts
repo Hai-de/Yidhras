@@ -7,7 +7,7 @@ import {
 } from '../../../access_policy/service.js';
 import type { IdentityContext } from '../../../identity/types.js';
 import { ApiError } from '../../../utils/api_error.js';
-import type { DataContext } from '../../context.js';
+import type { DataContext } from '../../context/data_context.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 

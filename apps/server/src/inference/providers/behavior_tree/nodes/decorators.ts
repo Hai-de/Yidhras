@@ -1,9 +1,5 @@
 import type { BTCooldownState, BTDecoratorDef, BTEvalContext, BTNodeDef, BTStatus } from '../types.js';
-
-async function getTick(): Promise<(node: BTNodeDef, ctx: BTEvalContext) => Promise<BTStatus>> {
-  const { tick } = await import('../evaluator.js');
-  return tick;
-}
+import type { TickFn } from './composites.js';
 
 function getCooldownStore(ctx: BTEvalContext): Map<string, BTCooldownState> {
   if (!ctx.blackboard['__cooldown_store']) {
@@ -16,9 +12,9 @@ function getCooldownStore(ctx: BTEvalContext): Map<string, BTCooldownState> {
 export async function tickDecorated(
   decorators: BTDecoratorDef[],
   child: BTNodeDef,
-  ctx: BTEvalContext
+  ctx: BTEvalContext,
+  tick: TickFn
 ): Promise<BTStatus> {
-  const tick = await getTick();
   if (decorators.length === 0) return tick(child, ctx);
 
   const [outermost, ...rest] = decorators;
@@ -34,9 +30,9 @@ export async function tickDecorated(
       return status;
     }
     case 'cooldown':
-      return applyCooldown(outermost!, innerNode, ctx, getCooldownStore(ctx));
+      return applyCooldown(outermost!, innerNode, ctx, tick, getCooldownStore(ctx));
     case 'probability':
-      return applyProbability(outermost!, innerNode, ctx);
+      return applyProbability(outermost!, innerNode, ctx, tick);
     default:
       return tick(innerNode, ctx);
   }
@@ -46,6 +42,7 @@ async function applyCooldown(
   decorator: BTDecoratorDef,
   child: BTNodeDef,
   ctx: BTEvalContext,
+  tick: TickFn,
   cooldownStore: Map<string, BTCooldownState>
 ): Promise<BTStatus> {
   const key = buildNodeScopedKey(ctx, child);
@@ -58,7 +55,6 @@ async function applyCooldown(
     if (elapsed < BigInt(cooldownTicks)) return 'failure';
   }
 
-  const tick = await getTick();
   const status = await tick(child, ctx);
   if (status === 'success') {
     cooldownStore.set(key, { lastSuccessTick: currentTick });
@@ -79,7 +75,8 @@ function buildNodeScopedKey(ctx: BTEvalContext, node: BTNodeDef): string {
 async function applyProbability(
   decorator: BTDecoratorDef,
   child: BTNodeDef,
-  ctx: BTEvalContext
+  ctx: BTEvalContext,
+  tick: TickFn
 ): Promise<BTStatus> {
   const weight = decorator.weight ?? 0;
   const seed = buildNodeScopedKey(ctx, child) + `::${ctx.inferenceContext.tick.toString()}`;
@@ -87,7 +84,6 @@ async function applyProbability(
   const roll = (hash % 10000) / 10000;
 
   if (roll >= weight) return 'failure';
-  const tick = await getTick();
   return tick(child, ctx);
 }
 

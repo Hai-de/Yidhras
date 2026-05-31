@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { tick } from '../../../src/inference/providers/behavior_tree/evaluator.js';
 import { tickDecorated } from '../../../src/inference/providers/behavior_tree/nodes/decorators.js';
 import type { BTCooldownState,BTDecoratorDef, BTEvalContext, BTNodeDef } from '../../../src/inference/providers/behavior_tree/types.js';
 import type { InferenceContext } from '../../../src/inference/types.js';
@@ -41,13 +42,13 @@ describe('tickDecorated', () => {
 
     it('child success → returns failure', async () => {
       const ctx = makeCtx();
-      const status = await tickDecorated([inverter], successAction, ctx);
+      const status = await tickDecorated([inverter], successAction, ctx, tick);
       expect(status).toBe('failure');
     });
 
     it('child failure → returns success', async () => {
       const ctx = makeCtx();
-      const status = await tickDecorated([inverter], failureCondition, ctx);
+      const status = await tickDecorated([inverter], failureCondition, ctx, tick);
       expect(status).toBe('success');
     });
   });
@@ -58,14 +59,14 @@ describe('tickDecorated', () => {
     it('within cooldown period → skips child, returns failure', async () => {
       const ctx = makeCtx(BigInt(100));
       setCooldownState(ctx, 'agent-001::test_tree', BigInt(95)); // 100 - 95 = 5 < 10
-      const status = await tickDecorated([cooldown], successAction, ctx);
+      const status = await tickDecorated([cooldown], successAction, ctx, tick);
       expect(status).toBe('failure');
     });
 
     it('outside cooldown period, child success → updates store, returns success', async () => {
       const ctx = makeCtx(BigInt(100));
       setCooldownState(ctx, 'agent-001::test_tree', BigInt(80)); // 100 - 80 = 20 >= 10
-      const status = await tickDecorated([cooldown], successAction, ctx);
+      const status = await tickDecorated([cooldown], successAction, ctx, tick);
       expect(status).toBe('success');
       const store = ctx.blackboard['__cooldown_store'] as Map<string, BTCooldownState>;
       expect(store.get('agent-001::test_tree')?.lastSuccessTick).toBe(BigInt(100));
@@ -74,7 +75,7 @@ describe('tickDecorated', () => {
     it('outside cooldown period, child failure → does NOT update store', async () => {
       const ctx = makeCtx(BigInt(100));
       setCooldownState(ctx, 'agent-001::test_tree', BigInt(80));
-      const status = await tickDecorated([cooldown], failureCondition, ctx);
+      const status = await tickDecorated([cooldown], failureCondition, ctx, tick);
       expect(status).toBe('failure');
       const store = ctx.blackboard['__cooldown_store'] as Map<string, BTCooldownState>;
       expect(store.get('agent-001::test_tree')?.lastSuccessTick).toBe(BigInt(80));
@@ -85,14 +86,14 @@ describe('tickDecorated', () => {
     it('weight: 0 → always returns failure', async () => {
       const probability: BTDecoratorDef = { type: 'probability', weight: 0 };
       const ctx = makeCtx();
-      const status = await tickDecorated([probability], successAction, ctx);
+      const status = await tickDecorated([probability], successAction, ctx, tick);
       expect(status).toBe('failure');
     });
 
     it('weight: 1 → always executes child', async () => {
       const probability: BTDecoratorDef = { type: 'probability', weight: 1 };
       const ctx = makeCtx();
-      const status = await tickDecorated([probability], successAction, ctx);
+      const status = await tickDecorated([probability], successAction, ctx, tick);
       expect(status).toBe('success');
     });
 
@@ -100,9 +101,9 @@ describe('tickDecorated', () => {
       const probability: BTDecoratorDef = { type: 'probability', weight: 0.3 };
       const ctx = makeCtx(BigInt(42));
       const results = await Promise.all([
-        tickDecorated([probability], successAction, ctx),
-        tickDecorated([probability], successAction, ctx),
-        tickDecorated([probability], successAction, ctx)
+        tickDecorated([probability], successAction, ctx, tick),
+        tickDecorated([probability], successAction, ctx, tick),
+        tickDecorated([probability], successAction, ctx, tick)
       ]);
       expect(results.every((r) => r === results[0])).toBe(true);
     });
@@ -116,7 +117,7 @@ describe('tickDecorated', () => {
       ];
       const ctx = makeCtx(BigInt(100));
       setCooldownState(ctx, 'agent-001::test_tree', BigInt(95));
-      const status = await tickDecorated(decorators, successAction, ctx);
+      const status = await tickDecorated(decorators, successAction, ctx, tick);
       expect(status).toBe('failure');
     });
 
@@ -127,7 +128,7 @@ describe('tickDecorated', () => {
       ];
       const ctx = makeCtx(BigInt(100));
       setCooldownState(ctx, 'agent-001::test_tree', BigInt(80));
-      const status = await tickDecorated(decorators, successAction, ctx);
+      const status = await tickDecorated(decorators, successAction, ctx, tick);
       expect(status).toBe('failure');
     });
 
@@ -139,13 +140,13 @@ describe('tickDecorated', () => {
       const ctx = makeCtx(BigInt(100));
       setCooldownState(ctx, 'agent-001::test_tree', BigInt(95));
       // cooldown → failure → inverter → success
-      const status = await tickDecorated(decorators, successAction, ctx);
+      const status = await tickDecorated(decorators, successAction, ctx, tick);
       expect(status).toBe('success');
     });
 
     it('empty decorators list → executes child directly', async () => {
       const ctx = makeCtx();
-      const status = await tickDecorated([], successAction, ctx);
+      const status = await tickDecorated([], successAction, ctx, tick);
       expect(status).toBe('success');
     });
   });

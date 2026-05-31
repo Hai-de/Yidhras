@@ -1,5 +1,7 @@
 import { createLogger } from '../../../utils/logger.js';
 import type { ProviderDecisionRaw } from '../../types.js';
+import { tickSelector, tickSequence } from './nodes/composites.js';
+import { tickDecorated } from './nodes/decorators.js';
 import { tickAction, tickCondition, tickLLMDecision } from './nodes/leaves.js';
 import type { BTDecisionTrace, BTEvalContext, BTNodeDef, BTNodeTrace,BTStatus } from './types.js';
 
@@ -11,18 +13,15 @@ export async function tick(node: BTNodeDef, ctx: BTEvalContext): Promise<BTStatu
   }
 
   if (node.decorators && node.child) {
-    const { tickDecorated } = await import('./nodes/decorators.js');
-    return tickDecorated(node.decorators, node.child, ctx);
+    return tickDecorated(node.decorators, node.child, ctx, tick);
   }
 
   if (node.type === 'selector' && node.children) {
-    const { tickSelector } = await import('./nodes/composites.js');
-    return tickSelector(node.children, ctx);
+    return tickSelector(node.children, ctx, tick);
   }
 
   if (node.type === 'sequence' && node.children) {
-    const { tickSequence } = await import('./nodes/composites.js');
-    return tickSequence(node.children, ctx);
+    return tickSequence(node.children, ctx, tick);
   }
 
   // Guarded action: node has both condition and action — evaluate condition first

@@ -1,5 +1,5 @@
 import { getPackEntityOverviewProjection } from '../../../packs/runtime/projections/entity_overview_service.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../context.js';
 import { buildExtendedInferenceContext } from '../context/context_assembler.js';
 export interface OperatorAuthorityInspectorSnapshot {
   pack: {
@@ -42,8 +42,8 @@ export interface OperatorAdvancedContractsSnapshot {
   };
 }
 
-const resolvePackMetadata = (context: AppContext, packId: string) => {
-  const host = context.getPackRuntimeHost?.(packId);
+const resolvePackMetadata = (context: DataContext & PortContext & RuntimeContext, packId: string) => {
+  const host = context.getPackRuntimeHost(packId);
   const pack = host?.getPack();
   if (!pack) {
     throw new Error('World pack not ready for operator advanced contracts');
@@ -59,7 +59,7 @@ const resolvePackMetadata = (context: AppContext, packId: string) => {
 };
 
 export const getOperatorAdvancedContracts = async (
-  context: AppContext,
+  context: DataContext & PortContext & RuntimeContext,
   subjectEntityId: string,
   packId: string
 ): Promise<OperatorAdvancedContractsSnapshot> => {
@@ -68,6 +68,7 @@ export const getOperatorAdvancedContracts = async (
     actor_entity_id: subjectEntityId,
     strategy: 'mock'
   }, packId);
+  // TODO: Remove cast when entity_overview_service.ts is migrated to role interfaces (Phase 11)
   const packProjection = await getPackEntityOverviewProjection(context, metadata.id);
 
   return {

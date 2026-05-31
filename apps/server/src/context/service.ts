@@ -1,11 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
 import type { DataContext } from '../app/context.js';
-import type { IdentityContext } from '../identity/types.js';
-import type {
-  InferencePackStateSnapshot,
-  InferencePolicySummary
-} from '../inference/types.js';
 import type { LongMemoryBlockStore } from '../memory/blocks/types.js';
 import type { MemoryContextPack } from '../memory/types.js';
 import {
@@ -19,31 +14,16 @@ import { applyPolicyDecisionsToSelection, evaluateContextPolicies } from './poli
 import { buildContextNodesFromSources, createDefaultContextSourceAdapters } from './source_registry.js';
 import type { ContextMemoryBlockDiagnostics, ContextOverlayLoadedNode, ContextRun, ContextSelectionResult } from './types.js';
 
+// Re-export types that were moved to service_types.ts to break import cycles
+export type {
+  BuildContextRunInput,
+  ContextService,
+  ContextServiceBuildResult
+} from './service_types.js';
+import type { ContextService } from './service_types.js';
+
 /** Maximum tick look-back for investigation event queries (prevents unbounded scans). */
 const MAX_INVESTIGATION_LOOKBACK_TICK = 2000n;
-
-export interface BuildContextRunInput {
-  actor_ref: Record<string, unknown>;
-  identity?: IdentityContext | null;
-  resolved_agent_id: string | null;
-  tick: bigint;
-  policy_summary?: InferencePolicySummary | null;
-  pack_state?: InferencePackStateSnapshot | null;
-  pack_id?: string | null;
-  agent_capabilities?: string[];
-  /** Pack-level perception rules (from rules.perception in config.yaml) */
-  perception_rules?: PerceptionRuleDef[];
-}
-
-export interface ContextServiceBuildResult {
-  context_run: ContextRun;
-  selection: ContextSelectionResult;
-  memory_context: MemoryContextPack;
-}
-
-export interface ContextService {
-  buildContextRun(input: BuildContextRunInput): Promise<ContextServiceBuildResult>;
-}
 
 export interface PluginRuntimePort {
   getContextSourceAdapters(packId: string): import('./source_registry.js').ContextSourceAdapter[];
@@ -204,8 +184,8 @@ export const createContextService = ({
       const droppedNodes = memorySelection.dropped.map((entry) => ({
         node_id: entry.entry_id,
         reason: entry.reason,
-        source_kind: null as unknown as ContextSelectionResult['dropped_nodes'][number]['source_kind'],
-        node_type: null as unknown as ContextSelectionResult['dropped_nodes'][number]['node_type']
+        source_kind: null,
+        node_type: null
       }));
 
       const selection: ContextSelectionResult = {

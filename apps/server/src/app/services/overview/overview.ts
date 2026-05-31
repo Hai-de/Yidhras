@@ -1,6 +1,6 @@
 import { getOperatorOverviewProjection } from '../../../kernel/projections/operator_overview_service.js';
 import { extractGlobalProjectionIndex } from '../../../kernel/projections/projection_extractor.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../context.js';
 import { toJsonSafe } from '../../http/json.js';
 import { readVisibleClockSnapshot } from '../app_context_ports.js';
 import type { AuditViewEntry } from '../audit/audit.js';
@@ -11,7 +11,7 @@ export interface OverviewSummarySnapshot {
     status: 'paused' | 'running';
     runtime_ready: boolean;
     runtime_speed: Record<string, unknown>;
-    health_level: AppContext['startupHealth']['level'];
+    health_level: RuntimeContext['startupHealth']['level'];
     world_pack:
       | {
           id: string;
@@ -32,7 +32,7 @@ export interface OverviewSummarySnapshot {
   latest_propagation: AuditViewEntry[];
   failed_jobs: AuditViewEntry[];
   dropped_intents: AuditViewEntry[];
-  notifications: ReturnType<AppContext['notifications']['getMessages']>;
+  notifications: ReturnType<RuntimeContext['notifications']['getMessages']>;
   operator_projection: Awaited<ReturnType<typeof getOperatorOverviewProjection>>['pack_projection'];
   global_projection_index: Awaited<ReturnType<typeof extractGlobalProjectionIndex>>;
 }
@@ -73,7 +73,7 @@ const hasPropagationIntent = (entry: AuditViewEntry): boolean => {
   return intentType === 'post_message';
 };
 
-const readProjectedWorldTime = (context: AppContext, packId?: string): { tick: string; calendars: unknown } => {
+const readProjectedWorldTime = (context: DataContext & RuntimeContext & PortContext, packId?: string): { tick: string; calendars: unknown } => {
 // @ts-expect-error -- EOPT strict mode
   const visibleClock = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId });
 
@@ -83,7 +83,7 @@ const readProjectedWorldTime = (context: AppContext, packId?: string): { tick: s
   };
 };
 
-export const getOverviewSummary = async (context: AppContext, packId?: string): Promise<OverviewSummarySnapshot> => {
+export const getOverviewSummary = async (context: DataContext & RuntimeContext & PortContext, packId?: string): Promise<OverviewSummarySnapshot> => {
   const worldTime = readProjectedWorldTime(context, packId);
 
   const [operatorProjection, globalProjectionIndex, activeAgentCount, notifications, recentAudit, latestEvents, latestPosts] = await Promise.all([
@@ -124,7 +124,7 @@ export const getOverviewSummary = async (context: AppContext, packId?: string): 
 };
 
 export const getPackOverviewProjectionSummary = async (
-  context: AppContext,
+  context: DataContext & RuntimeContext & PortContext,
   packId: string
 ): Promise<PackOverviewProjectionSummary> => {
   const projection = await getOperatorOverviewProjection(context, {

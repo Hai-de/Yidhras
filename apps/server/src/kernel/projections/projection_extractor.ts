@@ -1,4 +1,4 @@
-import type { AppContext } from '../../app/context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../app/context.js';
 import { readVisibleClockSnapshot } from '../../app/services/app_context_ports.js';
 import { getPackEntityOverviewProjection } from '../../packs/runtime/projections/entity_overview_service.js';
 import { listPackNarrativeTimelineProjection } from '../../packs/runtime/projections/narrative_projection_service.js';
@@ -13,7 +13,7 @@ export interface GlobalProjectionIndexSnapshot {
   } | null;
 }
 
-export const extractGlobalProjectionIndex = async (context: AppContext, packId?: string): Promise<GlobalProjectionIndexSnapshot> => {
+export const extractGlobalProjectionIndex = async (context: DataContext & PortContext & RuntimeContext, packId?: string): Promise<GlobalProjectionIndexSnapshot> => {
 // @ts-expect-error -- EOPT strict mode
   const operatorProjection = await getOperatorOverviewProjection(context, { packId });
 // @ts-expect-error -- EOPT strict mode

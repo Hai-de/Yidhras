@@ -1,27 +1,16 @@
 import type { RuntimeSpeedSnapshot } from '../../../core/runtime_speed.js';
 import type { StepStrategy } from '../../../core/step_strategy.js';
-import type { AppContext, RuntimeLoopDiagnostics } from '../../context.js';
+import type { RuntimeContext } from '../../context.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
 
 export interface RuntimeControlSnapshot {
   status: 'paused' | 'running';
 }
 
-const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
-  status: 'idle',
-  in_flight: false,
-  overlap_skipped_count: 0,
-  iteration_count: 0,
-  last_started_at: null,
-  last_finished_at: null,
-  last_duration_ms: null,
-  last_error_message: null
-};
-
-const resolveSpeedControl = (context: AppContext, packRuntime?: PackRuntimePort) =>
+const resolveSpeedControl = (context: RuntimeContext, packRuntime?: PackRuntimePort) =>
   packRuntime;
 
-const requireSpeedControl = (context: AppContext, packRuntime?: PackRuntimePort) => {
+const requireSpeedControl = (context: RuntimeContext, packRuntime?: PackRuntimePort) => {
   const control = resolveSpeedControl(context, packRuntime);
   if (!control) {
     throw new Error('RUNTIME_CONTROL_NOT_READY: No active pack runtime available for speed control');
@@ -29,7 +18,7 @@ const requireSpeedControl = (context: AppContext, packRuntime?: PackRuntimePort)
   return control;
 };
 
-export const setPackStepStrategy = (context: AppContext, strategy: StepStrategy, packRuntime?: PackRuntimePort): RuntimeSpeedSnapshot => {
+export const setPackStepStrategy = (context: RuntimeContext, strategy: StepStrategy, packRuntime?: PackRuntimePort): RuntimeSpeedSnapshot => {
   const control = requireSpeedControl(context, packRuntime);
   control.setStepStrategy(strategy);
   const snapshot = control.getRuntimeSpeedSnapshot();
@@ -44,7 +33,7 @@ export const setPackStepStrategy = (context: AppContext, strategy: StepStrategy,
   return snapshot;
 };
 
-export const resetPackStepStrategy = (context: AppContext, packRuntime?: PackRuntimePort): RuntimeSpeedSnapshot => {
+export const resetPackStepStrategy = (context: RuntimeContext, packRuntime?: PackRuntimePort): RuntimeSpeedSnapshot => {
   const control = requireSpeedControl(context, packRuntime);
   control.clearRuntimeSpeedOverride();
   const snapshot = control.getRuntimeSpeedSnapshot();
@@ -56,10 +45,10 @@ export const resetPackStepStrategy = (context: AppContext, packRuntime?: PackRun
   return snapshot;
 };
 
-export const pauseRuntime = (context: AppContext): RuntimeControlSnapshot => {
+export const pauseRuntime = (context: RuntimeContext): RuntimeControlSnapshot => {
   context.setPaused(true);
-  const diagnostics = context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
-  context.setRuntimeLoopDiagnostics?.({
+  const diagnostics = context.getRuntimeLoopDiagnostics();
+  context.setRuntimeLoopDiagnostics({
     ...diagnostics,
     status: 'paused',
     in_flight: false
@@ -68,10 +57,10 @@ export const pauseRuntime = (context: AppContext): RuntimeControlSnapshot => {
   return { status: 'paused' };
 };
 
-export const resumeRuntime = (context: AppContext): RuntimeControlSnapshot => {
+export const resumeRuntime = (context: RuntimeContext): RuntimeControlSnapshot => {
   context.setPaused(false);
-  const diagnostics = context.getRuntimeLoopDiagnostics?.() ?? DEFAULT_RUNTIME_LOOP_DIAGNOSTICS;
-  context.setRuntimeLoopDiagnostics?.({
+  const diagnostics = context.getRuntimeLoopDiagnostics();
+  context.setRuntimeLoopDiagnostics({
     ...diagnostics,
     status: 'idle'
   });

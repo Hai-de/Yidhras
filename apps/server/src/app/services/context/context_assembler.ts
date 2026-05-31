@@ -2,7 +2,7 @@ import { resolveAuthorityForSubject, resolveMediatorBindingsForPack } from '../.
 import { resolvePerceptionForSubject } from '../../../domain/perception/resolver.js';
 import { buildInferenceContext } from '../../../inference/context/builder.js';
 import type { ActorResolvable, InferenceContext } from '../../../inference/types.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../context.js';
 
 export interface ExtendedInferenceContext {
   base: InferenceContext;
@@ -16,7 +16,7 @@ export interface ExtendedInferenceContext {
 }
 
 export const buildExtendedInferenceContext = async (
-  context: AppContext,
+  context: DataContext & PortContext & RuntimeContext,
   input: Parameters<typeof buildInferenceContext>[1],
   packId: string
 ): Promise<ExtendedInferenceContext> => {

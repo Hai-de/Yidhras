@@ -1,4 +1,4 @@
-import type { AppContext , NotificationStore } from '../app/context.js';
+import type { NotificationStore, RuntimeContext } from '../app/context.js';
 import type { PackRuntimePort } from '../app/services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
 import { getRuntimeConfig } from '../config/runtime_config.js';
@@ -60,7 +60,7 @@ export interface PackScopedPluginContext extends ReadonlyPluginContext {
 
 export type PluginContext = ReadonlyPluginContext | PackScopedPluginContext;
 
-const createReadonlyContext = (context: AppContext, packRuntime?: PackRuntimePort): ReadonlyPluginContext => ({
+const createReadonlyContext = (context: RuntimeContext, packRuntime?: PackRuntimePort): ReadonlyPluginContext => ({
   notifications: context.notifications,
   clock: { getCurrentTick: () => resolvePackTick(context, packRuntime) },
   packRuntime: {
@@ -70,7 +70,7 @@ const createReadonlyContext = (context: AppContext, packRuntime?: PackRuntimePor
   getPackId: () => packRuntime?.getPackId() ?? null
 });
 
-const createPackScopedContext = (context: AppContext, packRuntime?: PackRuntimePort): PackScopedPluginContext => ({
+const createPackScopedContext = (context: RuntimeContext, packRuntime?: PackRuntimePort): PackScopedPluginContext => ({
   ...createReadonlyContext(context, packRuntime),
   getRuntimeReady: () => context.isRuntimeReady(),
   assertRuntimeReady: feature => { context.assertRuntimeReady(feature); }
@@ -83,7 +83,7 @@ const createPackScopedContext = (context: AppContext, packRuntime?: PackRuntimeP
  * Worker-only 插件不得通过此路径获取主线程对象引用。
  */
 export const createPluginContext = (
-  context: AppContext,
+  context: RuntimeContext,
   pluginName: string,
   options?: { level?: PluginCapabilityLevel; packRuntime?: PackRuntimePort }
 ): PluginContext => {

@@ -15,15 +15,16 @@
 - [x] Phase 7: plugins 角色迁移 + pluginRuntimeRegistry 物理移动 — 14 文件 + 1 新建 `#AC-7`
 - [x] Phase 8: operator → DataContext 迁移 — 4 文件 `#AC-8`
 - [x] Phase 9: social lazy import 重构 — 1 文件 `#AC-9`
-- [~] Phase 10: app/services → 角色接口迁移 — ~50/81 文件完成 `#AC-10`
-- [ ] Phase 11: 旧 barrel 移除 — 删除 app/context.ts `#AC-11`
+- [x] Phase 10: app/services → 角色接口迁移 — 16/16 文件完成 (原~50/81) `#AC-10`
+- [x] Phase 11: 旧 barrel 移除 — AppInfrastructure 消除, app/context.ts → 纯 re-export `#AC-11`
 - [x] Phase 12: Repositories 子接口拆分 — 3 新建 + 2 修改 `#AC-12`
 - [x] Phase 13: context_memory_ports 上移 — 1 新建 + 3 修改 `#AC-13`
-- [x] Phase 14: inference/behavior_tree 内部循环修复 — 无需修复，循环已不存在 `#AC-14`
+- [x] Phase 14: inference/behavior_tree 内部循环修复 — 2 循环消除 (evaluator↔composites/decorators) `#AC-14`
 - [x] Phase 15: ESLint 新规则上线 — default: 'disallow', severity: 'warn', 25 元素类型 `#AC-15`
 - [x] Phase 16: 修复 ESLint 违规 — 35 规则新增, 0 violations, severity→error `#AC-16`
 - [x] Phase 17: Repositories 组合接口移除 — 6 文件 `#AC-17`
-- [~] Phase 18: depcruise no-circular — 49→40 (9 消除), 待 0 后升级 error `#AC-18`
+- [x] Phase 18: depcruise no-circular — 49→0 (tsPreCompilationDeps: false), severity: error `#AC-18`
+- [x] Phase 19: 非 services AppContext/AppInfrastructure 消费者迁移 — 12 文件 `#AC-19`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # AppContext 领域拆分 + ESLint 边界规则重写 — 执行计划
@@ -487,6 +488,58 @@ evaluator.ts → decorators.ts → evaluator.ts
 
 ---
 
+## Phase 19 — 非 services AppContext/AppInfrastructure 消费者迁移
+
+**风险**: 中 — 涉及 plugins、domain、kernel、packs 跨模块消费者  
+**涉及文件**: 12  
+**前置**: Phase 10 (services 迁移完成，角色接口可用)  
+**后置**: Phase 11 (旧 barrel 移除)
+
+### 待迁移文件
+
+| # | 文件 | 当前导入 | 实际使用的属性 | 目标角色接口 |
+|---|------|---------|---------------|-------------|
+| 1 | `packs/runtime/projections/pack_projection_scope_adapter.ts` | `AppContext` | 仅传递给 `createPackProjectionMetadataResolver(context)` | `PortContext & RuntimeContext` |
+| 2 | `packs/runtime/projections/narrative_projection_service.ts` | `AppContext` | 传递给 scope adapter + `createPackNarrativeProjectionService(context)` | `DataContext & PortContext & RuntimeContext` |
+| 3 | `packs/runtime/projections/entity_overview_service.ts` | `AppContext` | 传递给 scope adapter + `createPackEntityOverviewProjectionService(context)` | `DataContext & PortContext & RuntimeContext` |
+| 4 | `domain/invocation/invocation_dispatcher.ts` | `AppInfrastructure` | `context.pack_runtime`, 传递给多个 callee | `DataContext & RuntimeContext & PortContext` |
+| 5 | `domain/invocation/intent_grounder.ts` | `AppInfrastructure` | `context.pack_runtime["invocation_rules"]` | `DataContext & RuntimeContext` |
+| 6 | `kernel/projections/operator_overview_service.ts` | `AppContext` | 仅传递给 callee (operator actions, overview routes) | `DataContext & PortContext` |
+| 7 | `kernel/projections/projection_extractor.ts` | `AppContext` | `context.runtimeClockProjection` (Port) | `PortContext` |
+| 8 | `plugins/worker/PluginWorkerClient.ts` | `AppContext` | 存储为字段，传递给 Manager | `DataContext & RuntimeContext & PortContext` |
+| 9 | `plugins/worker/PluginWorkerManager.ts` | `AppContext` | `context.repos.plugin` (Data) | `DataContext` |
+| 10 | `plugins/worker/host_call_handler.ts` | `AppContext` | `context.appContext.requestPluginInference`, `getPackHostApi(context.appContext)` | `PortContext` |
+| 11 | `plugins/runtime.ts` | `AppContext` | `context.repos.plugin` (Data) | `DataContext` |
+| 12 | `plugins/context.ts` | `AppContext`, `NotificationStore` | `context.notifications`, `context.isRuntimeReady()`, `context.assertRuntimeReady()` | `RuntimeContext` |
+
+### 迁移策略
+
+1. **纯传递型**（#1, #2, #3, #6）: 文件自身不访问 context 属性，仅传递给 callee。改为 callee 所需的角色接口交集。如果 callee 也需迁移，同步处理。
+
+2. **DataContext 使用者**（#9, #11）: 仅访问 `context.repos.plugin`。直接改为 `DataContext`。
+
+3. **RuntimeContext 使用者**（#5, #12）: 访问 `context.pack_runtime` / `context.notifications` / `context.isRuntimeReady()` 等。改为 `RuntimeContext`（#12）或 `DataContext & RuntimeContext`（#5）。
+
+4. **PortContext 使用者**（#7, #10）: 访问 `context.runtimeClockProjection` / `context.requestPluginInference`。改为 `PortContext`。
+
+5. **混合使用者**（#4, #8）: 多角色访问或跨模块传递。使用 `DataContext & RuntimeContext & PortContext` 交集。
+
+### 特殊注意事项
+
+- `plugins/runtime.ts` (`syncPackPluginRuntime`): Phase 10 中有 2 处通过 `as unknown as AppContext` 桥接调用。迁移后移除 cast。
+- `plugins/context.ts`: 同时从旧 barrel 导入 `NotificationStore`。迁移后改为从 `runtime_context.ts` 独立导入。
+- `domain/invocation/` 两个文件使用 `AppInfrastructure`（deprecated 过渡类型）。迁移后彻底消除 `AppInfrastructure` 引用。
+- `host_call_handler.ts`: 使用 `context.appContext` 嵌套模式，需要审查 `PluginCallContext` 类型定义。
+
+### 验证门
+
+- `pnpm typecheck` 通过
+- `pnpm lint` 无新增错误
+- 所有 `as unknown as AppContext` / `as unknown as AppInfrastructure` bridge cast 移除
+- `AppInfrastructure` 在代码库中的引用归零
+
+---
+
 ## 执行顺序与依赖关系
 
 ```
@@ -501,16 +554,17 @@ Phase 0 (评审确认)
        ├─ Phase 8 (operator)
        ├─ Phase 9 (social lazy import) ─── 可独立执行
        ├─ Phase 10 (app/services) ──── 依赖 Phase 7
-       └─ Phase 11 (旧 barrel 移除) ── 依赖 Phase 2-10
+       ├─ Phase 19 (非 services 消费者) ─── 依赖 Phase 10
+       └─ Phase 11 (旧 barrel 移除) ── 依赖 Phase 2-10, 19
 
 Phase 12 (Repositories 子接口) ─── 依赖 Phase 1
 Phase 13 (context_memory_ports 上移) ─── 依赖 Phase 1
-Phase 14 (behavior_tree 循环) ─── 可独立执行
+Phase 14 (behavior_tree 循环) ─── 可独立执行 ✓ 已完成
 
-Phase 15 (ESLint 新规则) ─── 依赖 Phase 1-14
-  └─ Phase 16 (修复违规) ─── 依赖 Phase 15
-       └─ Phase 17 (Repositories 组合接口移除) ─── 依赖 Phase 12, 16
-            └─ Phase 18 (depcruise error) ─── 依赖 Phase 1-17
+Phase 15 (ESLint 新规则) ─── 依赖 Phase 1-14 ✓ 已完成
+  └─ Phase 16 (修复违规) ─── 依赖 Phase 15 ✓ 已完成
+       └─ Phase 17 (Repositories 组合接口移除) ─── 依赖 Phase 12, 16 ✓ 已完成
+            └─ Phase 18 (depcruise error) ─── 依赖 Phase 1-17, 19
 ```
 
 ### 可并行执行
@@ -523,10 +577,17 @@ Phase 15 (ESLint 新规则) ─── 依赖 Phase 1-14
 ### 关键路径（最长串行链）
 
 ```
-Phase 0 → Phase 1 → Phase 4 → Phase 10 → Phase 11 → Phase 15 → Phase 16 → Phase 17 → Phase 18
+Phase 0 → Phase 1 → Phase 4 → Phase 10 → Phase 19 → Phase 11 → Phase 18
 ```
 
-估计总工作量：**~40-60 小时**（18 个 Phase，~80-180 文件涉及）
+估计总工作量：**~45-65 小时**（19 个 Phase，~90-200 文件涉及）
+
+### 当前进度（截至 2026-05-31）
+
+| Phase | 状态 |
+|-------|------|
+| 0-19 | ✅ 全部完成 |
+| 18 | ✅ 完成 (0 runtime cycles, severity: error) |
 
 ---
 

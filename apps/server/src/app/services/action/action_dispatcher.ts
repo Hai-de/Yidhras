@@ -2,7 +2,7 @@ import type { DeterminismContext } from '../../../determinism/context.js';
 import { dispatchInvocationFromActionIntent } from '../../../domain/invocation/invocation_dispatcher.js';
 import { ApiError } from '../../../utils/api_error.js';
 import { isRecord } from '../../../utils/type_guards.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext, PortContext, RuntimeContext } from '../../context.js';
 import {
   createEventEvidence,
   createSnrAdjustmentLog,
@@ -29,7 +29,9 @@ import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 import { createSocialPost } from '../social/social.js';
 import { type ActionIntentRecord,assertActionIntentLockOwnership } from './action_intent_repository.js';
 
-const resolveIdentityContext = async (context: AppContext, actorRef: unknown) => {
+type ActionCtx = DataContext & RuntimeContext & PortContext;
+
+const resolveIdentityContext = async (context: ActionCtx, actorRef: unknown) => {
   if (!isRecord(actorRef) || typeof actorRef['identity_id'] !== 'string') {
     throw new ApiError(500, 'ACTION_DISPATCH_FAIL', 'Action intent actor_ref is invalid');
   }
@@ -103,7 +105,7 @@ const resolveDropDecision = (
   };
 };
 
-const dispatchTriggerEventIntent = async (context: AppContext, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
+const dispatchTriggerEventIntent = async (context: ActionCtx, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
   const actor = resolveTriggerEventActor(intent.actor_ref);
   const payload = resolveTriggerEventPayload(intent.payload);
   const now = resolvePackTick(context, packRuntime);
@@ -147,7 +149,7 @@ const resolveMovePayload = (payload: unknown): { entity_id: string; target_locat
   };
 };
 
-const dispatchMoveIntent = async (context: AppContext, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
+const dispatchMoveIntent = async (context: ActionCtx, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
   const payload = resolveMovePayload(intent.payload);
   const now = resolvePackTick(context, packRuntime);
 
@@ -170,7 +172,7 @@ const dispatchMoveIntent = async (context: AppContext, intent: ActionIntentRecor
   await spatialRuntime.moveEntity(payload.entity_id, payload.target_location, now);
 };
 
-const dispatchAdjustSnrIntent = async (context: AppContext, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
+const dispatchAdjustSnrIntent = async (context: ActionCtx, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
   resolveAdjustSnrActorAgentId(intent.actor_ref);
   const targetAgentId = resolveAdjustSnrTargetAgentId(intent.target_ref);
   const payload = resolveAdjustSnrPayload(intent.payload);
@@ -214,7 +216,7 @@ const dispatchAdjustSnrIntent = async (context: AppContext, intent: ActionIntent
   });
 };
 
-const dispatchAdjustRelationshipIntent = async (context: AppContext, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
+const dispatchAdjustRelationshipIntent = async (context: ActionCtx, intent: ActionIntentRecord, packRuntime?: PackRuntimePort): Promise<void> => {
   const actorAgentId = resolveActiveAgentIdFromActorRef(intent.actor_ref);
   const targetAgentId = await resolveRelationshipTargetAgentId(context, intent.target_ref, actorAgentId);
   const payload = resolveAdjustRelationshipPayload(intent.payload);
@@ -318,7 +320,7 @@ export {
 } from './action_intent_repository.js';
 
 type IntentHandler = (
-  context: AppContext,
+  context: ActionCtx,
   intent: ActionIntentRecord,
   packRuntime?: PackRuntimePort,
   determinism?: DeterminismContext
@@ -361,7 +363,7 @@ const postMessageHandler: IntentHandler = async (context, intent, _packRuntime, 
 };
 
 export const dispatchActionIntent = async (
-  context: AppContext,
+  context: ActionCtx,
   intent: ActionIntentRecord,
   packRuntime?: PackRuntimePort,
   determinism?: DeterminismContext
@@ -369,6 +371,7 @@ export const dispatchActionIntent = async (
   assertActionIntentLockOwnership(intent, intent.locked_by ?? '', resolvePackTick(context, packRuntime));
 
   // 1. invoke.* pipeline
+  // TODO: Remove cast when invocation_dispatcher.ts is migrated to role interfaces (Phase 11)
   const invocationResult = await dispatchInvocationFromActionIntent(context, {
     id: intent.id,
     source_inference_id: intent.source_inference_id,

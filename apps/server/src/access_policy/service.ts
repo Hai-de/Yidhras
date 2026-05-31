@@ -1,4 +1,4 @@
-import type { DataContext } from '../app/context.js';
+import type { DataContext } from '../app/context/data_context.js';
 import type { PackRuntimePort } from '../app/services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
 import type { IdentityContext } from '../identity/types.js';

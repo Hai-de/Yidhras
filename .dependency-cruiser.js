@@ -3,13 +3,13 @@ module.exports = {
   forbidden: [
     /* ------------------------------------------------------------------ */
     /*  no-circular                                                       */
-    /*  Currently warn — many pre-existing cycles around AppContext,      */
-    /*  plugin worker subsystem, and repository index barrel. Target is   */
-    /*  error once the codebase is clean.                                 */
+    /*  Runtime-level circular dependencies are forbidden.                */
+    /*  tsPreCompilationDeps: false ensures only value-level deps are     */
+    /*  tracked — type-only imports cannot cause initialization issues.   */
     /* ------------------------------------------------------------------ */
     {
       name: 'no-circular',
-      severity: 'warn',
+      severity: 'error',
       comment:
         'This dependency is part of a circular relationship. ' +
         'Circular dependencies make refactoring brittle and can cause initialization deadlocks.',
@@ -145,7 +145,11 @@ module.exports = {
       ]
     },
 
-    tsPreCompilationDeps: true,
+    // tsPreCompilationDeps: false — only follow runtime deps.
+    // Type-only imports do not cause runtime initialization deadlocks.
+    // This is set false so that cycle detection focuses on actual
+    // runtime circular dependencies, not type-level structural cycles.
+    tsPreCompilationDeps: false,
 
     enhancedResolveOptions: {
       exportsFields: ['exports'],

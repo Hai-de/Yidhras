@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { ApiError } from '../../../utils/api_error.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext, PortContext } from '../../context.js';
 import { assertPackScope } from '../pack/pack_scope_resolver.js';
 
 export interface PackPluginRuntimeWebSnapshot {
@@ -93,7 +93,7 @@ export const buildPluginWebAssetUrl = (input: {
 };
 
 export const getPackPluginRuntimeWebSnapshot = async (
-  context: AppContext,
+  context: DataContext & PortContext,
   packId: string
 ): Promise<PackPluginRuntimeWebSnapshot> => {
   const scopedPackId = assertPackScope(context, packId, 'plugin runtime web snapshot');
@@ -150,7 +150,7 @@ export const getPackPluginRuntimeWebSnapshot = async (
 };
 
 export const resolveEnabledPluginWebAsset = async (
-  context: AppContext,
+  context: DataContext & PortContext,
   input: {
     pack_id: string;
     plugin_id: string;

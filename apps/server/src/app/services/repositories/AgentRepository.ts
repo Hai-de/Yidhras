@@ -14,19 +14,29 @@ export interface AgentRepository {
 export class PrismaAgentRepository implements AgentRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async getEntityOverview(entityId: string, options?: { limit?: number }): Promise<unknown> {
-    const { getEntityOverview: impl } = await import('../agent/agent.js');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    return impl({ prisma: this.prisma } as unknown as Parameters<typeof impl>[0], entityId, options);
+  async getEntityOverview(entityId: string, _options?: { limit?: number }): Promise<unknown> {
+    // Direct Prisma query — avoids circular dependency on agent/agent.js.
+    // Route handlers that need the full overview use agent.ts directly.
+    const agent = await this.prisma.agent.findUnique({
+      where: { id: entityId },
+      include: { circle_memberships: { include: { circle: true } } }
+    });
+    return agent ?? null;
   }
 
   async listSnrAdjustmentLogs(input: {
     agent_id?: string;
     limit?: number;
   }): Promise<unknown[]> {
-    const { listSnrAdjustmentLogs: impl } = await import('../agent/agent.js');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    return impl({ prisma: this.prisma } as unknown as Parameters<typeof impl>[0], input);
+    // Direct Prisma query — avoids circular dependency on agent/agent.js.
+    // @ts-expect-error -- EOPT strict mode
+    return this.prisma.sNRAdjustmentLog.findMany({
+       
+      where: (input.agent_id ? { agent_id: input.agent_id } : {}),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
+      orderBy: { created_at: 'desc' } as never,
+      take: input.limit
+    });
   }
 
   async countActiveAgents(): Promise<number> {

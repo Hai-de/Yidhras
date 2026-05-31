@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../../app/context.js';
+import type { DataContext } from '../../app/context.js';
 import type { ActorResolvable, DecisionResult, InferenceContext, PackStateResolvable } from '../../inference/types.js';
 import { isRecord } from '../../utils/type_guards.js';
 import { resolveAuthorityForSubject } from '../authority/resolver.js';
@@ -101,7 +101,7 @@ const matchesSemanticIntent = (rule: InvocationRuleRecord, semanticIntent: Seman
 };
 
 const hasCapability = async (
-  context: AppInfrastructure,
+  context: DataContext,
   actorContext: ActorResolvable & PackStateResolvable,
   capabilityKey: string | null
 ): Promise<boolean> => {
@@ -207,7 +207,7 @@ const buildRewrittenDecision = (
 });
 
 export const groundDecisionIntent = async (
-  context: AppInfrastructure,
+  context: DataContext,
   inferenceContext: InferenceContext,
   decision: DecisionResult
 ): Promise<GroundedDecisionResult> => {

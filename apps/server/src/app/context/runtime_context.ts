@@ -1,8 +1,7 @@
-import type { HealthLevel } from '../../core/pack_runtime_health.js';
 import type { PackRuntimeHandle } from '../../core/pack_runtime_handle.js';
+import type { HealthLevel } from '../../core/pack_runtime_health.js';
 import type { NotificationLevel, SystemMessage } from '../../utils/notifications.js';
 import type { PackScopeResolver } from '../runtime/PackScopeResolver.js';
-import type { PackCatalogService } from '../services/app_context_ports.js';
 
 export type { HealthLevel };
 
@@ -50,7 +49,7 @@ export interface RuntimeContext {
   getRuntimeLoopDiagnostics(): RuntimeLoopDiagnostics;
   setRuntimeLoopDiagnostics(next: RuntimeLoopDiagnostics): void;
   readonly packScope: PackScopeResolver;
-  readonly packCatalog: PackCatalogService;
+  readonly packCatalog: import('../services/app_context_ports.js').PackCatalogService;
   getPackRuntimeHandle(packId: string): PackRuntimeHandle | null;
   listLoadedPackRuntimeIds(): string[];
   getSpatialRuntime?(): import('../../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
