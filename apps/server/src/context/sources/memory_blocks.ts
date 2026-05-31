@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { buildPromptBundleFromAiMessages } from '../../ai/prompt_bundle_from_messages.js';
 import { createAiTaskService } from '../../ai/task_service.js';
 import type { AiTaskRequest } from '../../ai/types.js';
-import type { AppInfrastructure } from '../../app/context.js';
+import type { DataContext } from '../../app/context.js';
 import { getMemoryTriggerEngineConfig } from '../../config/runtime_config.js';
 import type { IdentityContext } from '../../identity/types.js';
 import type { InferenceActorRef,InferencePackStateSnapshot  } from '../../inference/types.js';
@@ -61,7 +61,7 @@ const buildSemanticQueryText = (
 };
 
 const generateQueryEmbedding = async (
-  context: AppInfrastructure,
+  context: DataContext,
   queryText: string
 ): Promise<number[] | null> => {
   const taskService = createAiTaskService({ context });
@@ -97,7 +97,7 @@ export interface MemoryBlockSourceBuildResult {
 }
 
 export const buildContextNodesFromMemoryBlocks = async (input: {
-  context: AppInfrastructure;
+  context: DataContext;
   actor_ref: InferenceActorRef;
   identity: IdentityContext;
   resolved_agent_id: string | null;

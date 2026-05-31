@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../app/context.js';
+import type { DataContext } from '../app/context.js';
 import type { IdentityContext, IdentityType } from '../identity/types.js';
 import type {
   InferenceActorRef,
@@ -44,7 +44,7 @@ export interface ContextSourceAdapter {
 }
 
 export interface CreateContextSourceAdaptersOptions {
-  context?: AppInfrastructure;
+  context?: DataContext;
   overlayStore?: ContextOverlayStore | null;
   longMemoryBlockStore?: LongMemoryBlockStore | null;
   spatialRuntime?: import('../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
@@ -112,7 +112,7 @@ const createOverlaySourceAdapter = (overlayStore: ContextOverlayStore): ContextS
 });
 
 const createMemoryBlockSourceAdapter = (
-  context: AppInfrastructure,
+  context: DataContext,
   longMemoryBlockStore: LongMemoryBlockStore
 ): ContextSourceAdapter => ({
   name: 'memory-block-runtime',

@@ -7,7 +7,7 @@ import type {
   WorkflowSnapshot
 } from '../../../inference/types.js';
 import { ApiError } from '../../../utils/api_error.js';
-import type { AppInfrastructure } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import { toJsonSafe } from '../../http/json.js';
 import {
   ensureNonEmptyId,
@@ -178,7 +178,7 @@ const safeListQuery = async <T>(fn: () => Promise<T[]>, fallback: T[] = []): Pro
 };
 
 const buildWorkflowSnapshotBundleForJobs = async (
-  context: AppInfrastructure,
+  context: DataContext,
   jobs: DecisionJobRecord[]
 ): Promise<WorkflowSnapshotBundle> => {
   const inferenceIds = Array.from(
@@ -370,7 +370,7 @@ const matchesInferenceJobsCursor = (cursor: ParsedInferenceJobsFilters['cursor']
 };
 
 export const listInferenceJobs = async (
-  context: AppInfrastructure,
+  context: DataContext,
   input: ListInferenceJobsInput
 ): Promise<InferenceJobsListSnapshot> => {
   const filters = parseInferenceJobsFilters(input);
@@ -439,7 +439,7 @@ export const listInferenceJobs = async (
 };
 
 export const getWorkflowSnapshotByInferenceId = async (
-  context: AppInfrastructure,
+  context: DataContext,
   inferenceId?: string
 ): Promise<WorkflowSnapshot> => {
   const id = ensureNonEmptyId(inferenceId, 'inference_id');
@@ -485,7 +485,7 @@ export const getWorkflowSnapshotByInferenceId = async (
 };
 
 export const getWorkflowSnapshotByJobId = async (
-  context: AppInfrastructure,
+  context: DataContext,
   jobId?: string
 ): Promise<WorkflowSnapshot> => {
   const id = ensureNonEmptyId(jobId, 'job_id');

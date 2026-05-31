@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import type { AppInfrastructure } from '../app/context.js';
+import type { DataContext } from '../app/context.js';
 import type { IdentityContext } from '../identity/types.js';
 import type {
   InferencePackStateSnapshot,
@@ -58,7 +58,7 @@ export interface MemoryServicePort {
 }
 
 export interface CreateContextServiceOptions {
-  context: AppInfrastructure;
+  context: DataContext;
   memoryService: MemoryServicePort;
   overlayStore: ContextOverlayStore | undefined;
   longMemoryBlockStore: LongMemoryBlockStore | undefined;

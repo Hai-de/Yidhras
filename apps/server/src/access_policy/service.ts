@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../app/context.js';
+import type { DataContext } from '../app/context.js';
 import type { PackRuntimePort } from '../app/services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
 import type { IdentityContext } from '../identity/types.js';
@@ -195,12 +195,12 @@ export const requireAccessPolicyIdentity = (identity: IdentityContext | undefine
   return identity;
 };
 
-const createAccessPolicyService = (context: AppInfrastructure): AccessPolicyService => {
+const createAccessPolicyService = (context: DataContext): AccessPolicyService => {
   return new AccessPolicyService(context.repos.identityOperator);
 };
 
 const createPolicyAccessContext = (
-  context: AppInfrastructure,
+  context: DataContext,
   identity: IdentityContext | undefined,
   input: PolicyAccessInput
 ): PolicyAccessContext => {
@@ -216,7 +216,7 @@ const createPolicyAccessContext = (
 };
 
 export const createAccessPolicy = async (
-  context: AppInfrastructure,
+  context: DataContext,
   input: CreatePolicyInput,
   packRuntime?: PackRuntimePort
 ) => {
@@ -251,7 +251,7 @@ export const createAccessPolicy = async (
 };
 
 export const filterReadableFieldsByAccessPolicy = async <T extends Record<string, unknown>>(
-  context: AppInfrastructure,
+  context: DataContext,
   identity: IdentityContext | undefined,
   input: PolicyAccessInput,
   record: T
@@ -262,7 +262,7 @@ export const filterReadableFieldsByAccessPolicy = async <T extends Record<string
 };
 
 export const assertWriteAllowedByAccessPolicy = async (
-  context: AppInfrastructure,
+  context: DataContext,
   identity: IdentityContext | undefined,
   input: PolicyAccessInput,
   payload: Record<string, unknown>
@@ -273,7 +273,7 @@ export const assertWriteAllowedByAccessPolicy = async (
 };
 
 export const evaluateAccessPolicy = async (
-  context: AppInfrastructure,
+  context: DataContext,
   identity: IdentityContext | undefined,
   input: EvaluatePolicyInput
 ) => {
