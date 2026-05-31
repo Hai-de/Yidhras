@@ -1,6 +1,6 @@
 import { ApiError } from '../../../utils/api_error.js';
 import { isRecord } from '../../../utils/type_guards.js';
-import type { AppContext } from '../../context.js';
+import type { DbContext } from '../../../utils/db_context.js';
 
 export interface RelationshipAdjustmentLogInput {
   action_intent_id: string;
@@ -44,7 +44,7 @@ export const resolveActiveAgentIdFromActorRef = (actorRef: unknown): string => {
 };
 
 export const resolveRelationshipTargetAgentId = async (
-  context: AppContext,
+  context: DbContext,
   targetRef: unknown,
   actorAgentId: string
 ): Promise<string> => {
@@ -111,7 +111,7 @@ export const resolveAdjustRelationshipPayload = (payload: unknown): {
 };
 
 export const getRelationshipByCompositeKey = async (
-  context: AppContext,
+  context: DbContext,
   input: {
     from_id: string;
     to_id: string;
@@ -130,7 +130,7 @@ export const getRelationshipByCompositeKey = async (
 };
 
 export const createRelationship = async (
-  context: AppContext,
+  context: DbContext,
   input: {
     from_id: string;
     to_id: string;
@@ -147,7 +147,7 @@ export const createRelationship = async (
 };
 
 export const updateRelationshipWeight = async (
-  context: AppContext,
+  context: DbContext,
   input: {
     from_id: string;
     to_id: string;
@@ -172,7 +172,7 @@ export const updateRelationshipWeight = async (
 };
 
 export const writeRelationshipAdjustmentLog = async (
-  context: AppContext,
+  context: DbContext,
   input: RelationshipAdjustmentLogInput
 ) => {
   return context.prisma.relationshipAdjustmentLog.create({ data: input });

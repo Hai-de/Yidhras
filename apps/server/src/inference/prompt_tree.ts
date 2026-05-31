@@ -1,7 +1,7 @@
 import type { PromptBlock } from './prompt_block.js';
 import type { PromptFragmentV2 } from './prompt_fragment_v2.js';
 import type { PromptSlotConfig, ResolvedSlotPosition } from './prompt_slot_config.js';
-import type { PromptWorkflowMetadata } from './types.js';
+import type { PromptWorkflowMetadata } from '@yidhras/contracts';
 
 export interface PromptTree {
   inference_id: string;

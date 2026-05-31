@@ -1,7 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
 
-import type { AppContext } from '../../context.js';
-
 export interface SocialRepository {
   listFeed(input?: {
     limit?: number | string;
@@ -53,7 +51,7 @@ export class PrismaSocialRepository implements SocialRepository {
     const { listSocialFeed } = await import('../social/social.js');
     return listSocialFeed(
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      { prisma: this.prisma } as AppContext,
+      { prisma: this.prisma } as unknown as Parameters<typeof listSocialFeed>[0],
       undefined,
       input ?? {}
     );
@@ -66,7 +64,7 @@ export class PrismaSocialRepository implements SocialRepository {
     const { createSocialPost } = await import('../social/social.js');
     return createSocialPost(
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      { prisma: this.prisma } as AppContext,
+      { prisma: this.prisma } as unknown as Parameters<typeof createSocialPost>[0],
       undefined,
       content,
       options

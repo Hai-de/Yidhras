@@ -2,7 +2,7 @@ import type { Prisma } from '@prisma/client';
 
 import type { IdentityBindingRole, IdentityBindingStatus } from '../../../identity/types.js';
 import { ApiError } from '../../../utils/api_error.js';
-import type { AppContext } from '../../context.js';
+import type { DbContext } from '../../../utils/db_context.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 
@@ -51,7 +51,7 @@ export interface IdentityServiceDependencies {
 }
 
 export const registerIdentity = async (
-  context: AppContext,
+  context: DbContext,
   input: RegisterIdentityInput,
   packRuntime?: PackRuntimePort
 ) => {
@@ -80,7 +80,7 @@ export const registerIdentity = async (
 };
 
 export const createIdentityBinding = async (
-  context: AppContext,
+  context: DbContext,
   input: CreateIdentityBindingInput,
   deps: IdentityServiceDependencies,
   packRuntime?: PackRuntimePort
@@ -149,7 +149,7 @@ export const createIdentityBinding = async (
 };
 
 export const queryIdentityBindings = async (
-  context: AppContext,
+  context: DbContext,
   input: QueryIdentityBindingsInput
 ) => {
   const { identity_id, role, status, include_expired, agent_id, atmosphere_node_id } = input;
@@ -200,7 +200,7 @@ export const queryIdentityBindings = async (
 };
 
 export const unbindIdentityBinding = async (
-  context: AppContext,
+  context: DbContext,
   input: UnbindIdentityBindingInput,
   packRuntime?: PackRuntimePort
 ) => {
@@ -234,7 +234,7 @@ export const unbindIdentityBinding = async (
 };
 
 export const expireIdentityBinding = async (
-  context: AppContext,
+  context: DbContext,
   input: ExpireIdentityBindingInput,
   packRuntime?: PackRuntimePort
 ) => {

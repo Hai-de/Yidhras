@@ -1,4 +1,4 @@
-import type { PromptBundleMetadata } from '../inference/types.js';
+import type { PromptBundleMetadata } from '@yidhras/contracts';
 
 export const AI_TASK_TYPES = [
   'agent_decision',

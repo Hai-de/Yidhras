@@ -6,18 +6,14 @@ import type {
   InferencePackStateSnapshot,
   InferencePolicySummary
 } from '../inference/types.js';
-import { createPrismaLongMemoryBlockStore } from '../memory/blocks/store.js';
 import type { LongMemoryBlockStore } from '../memory/blocks/types.js';
-import { createMemoryService, type MemoryService } from '../memory/service.js';
-import type { MemoryContextPack, MemoryEntry, MemorySourceKind } from '../memory/types.js';
+import type { MemoryContextPack } from '../memory/types.js';
 import {
   BUILTIN_PERCEPTION_RULES,
   createPerceptionRuleEngine,
   type PerceptionRuleEngine
 } from '../perception/index.js';
 import type { PerceptionRuleDef } from '../perception/types.js';
-import { pluginRuntimeRegistry } from '../plugins/runtime.js';
-import { createContextOverlayStore } from './overlay/store.js';
 import type { ContextOverlayStore } from './overlay/types.js';
 import { applyPolicyDecisionsToSelection, evaluateContextPolicies } from './policy_engine.js';
 import { buildContextNodesFromSources, createDefaultContextSourceAdapters } from './source_registry.js';
@@ -49,12 +45,25 @@ export interface ContextService {
   buildContextRun(input: BuildContextRunInput): Promise<ContextServiceBuildResult>;
 }
 
+export interface PluginRuntimePort {
+  getContextSourceAdapters(packId: string): import('./source_registry.js').ContextSourceAdapter[];
+  getPerceptionResolvers(packId: string): import('../perception/types.js').PerceptionResolver[];
+}
+
+export interface MemoryServicePort {
+  buildMemoryContext(input: import('../memory/service.js').BuildMemoryContextInput): Promise<{
+    selection: import('../memory/types.js').MemorySelectionResult;
+    context_pack: MemoryContextPack;
+  }>;
+}
+
 export interface CreateContextServiceOptions {
   context: AppInfrastructure;
-  memoryService?: MemoryService;
-  overlayStore?: ContextOverlayStore | null;
-  longMemoryBlockStore?: LongMemoryBlockStore | null;
-  spatialRuntime?: import('../packs/runtime/spatial_runtime.js').SpatialRuntime | null;
+  memoryService: MemoryServicePort;
+  overlayStore: ContextOverlayStore | undefined;
+  longMemoryBlockStore: LongMemoryBlockStore | undefined;
+  spatialRuntime: import('../packs/runtime/spatial_runtime.js').SpatialRuntime | undefined;
+  pluginRuntime: PluginRuntimePort;
 }
 
 const buildNodeCountsByType = (nodeTypes: string[]): Record<string, number> => {
@@ -77,24 +86,26 @@ const emptyMemoryBlockDiagnostics = (): ContextMemoryBlockDiagnostics => ({
 
 const buildPerceptionEngine = (
   packRules: PerceptionRuleDef[] | undefined,
-  packId: string | undefined
+  packId: string | undefined,
+  pluginRuntime: PluginRuntimePort
 ): PerceptionRuleEngine => {
   const rules = packRules && packRules.length > 0 ? packRules : BUILTIN_PERCEPTION_RULES;
-  const pluginResolvers = packId ? pluginRuntimeRegistry.getPerceptionResolvers(packId) : [];
+  const pluginResolvers = packId ? pluginRuntime.getPerceptionResolvers(packId) : [];
   const pluginResolver = pluginResolvers.length > 0 ? pluginResolvers[0] : null;
   return createPerceptionRuleEngine(rules, pluginResolver);
 };
 
 export const createContextService = ({
   context,
-  memoryService = createMemoryService({ context }),
-  overlayStore = createContextOverlayStore(context),
-  longMemoryBlockStore = createPrismaLongMemoryBlockStore(context),
-  spatialRuntime = null
+  memoryService,
+  overlayStore,
+  longMemoryBlockStore,
+  spatialRuntime,
+  pluginRuntime
 }: CreateContextServiceOptions): ContextService => {
   return {
     async buildContextRun(input) {
-      const memoryResult = await memoryService.buildMemoryContext({
+      const { selection: memorySelection, context_pack: memoryContextPack } = await memoryService.buildMemoryContext({
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma relation connect type
         actor_ref: input.actor_ref as never,
         resolved_agent_id: input.resolved_agent_id
@@ -164,21 +175,23 @@ export const createContextService = ({
       // Build unified perception engine
       const perceptionRuleEngine = buildPerceptionEngine(
         input.perception_rules,
-        input.pack_id ?? undefined
+        input.pack_id ?? undefined,
+        pluginRuntime
       );
 
-      const pluginAdapters = input.pack_id ? pluginRuntimeRegistry.getContextSourceAdapters(input.pack_id) : [];
+      const pluginAdapters = input.pack_id ? pluginRuntime.getContextSourceAdapters(input.pack_id) : [];
       const adapters = [
-        ...createDefaultContextSourceAdapters({ context, overlayStore, longMemoryBlockStore, spatialRuntime }),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- exactOptionalPropertyTypes boundary
+        ...createDefaultContextSourceAdapters({ context, overlayStore, longMemoryBlockStore, spatialRuntime } as Parameters<typeof createDefaultContextSourceAdapters>[0]),
         ...pluginAdapters
       ];
-// @ts-expect-error -- EOPT strict mode
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- exactOptionalPropertyTypes boundary
       const built = await buildContextNodesFromSources(adapters, {
         tick: input.tick,
         actor_ref: input.actor_ref,
         identity: input.identity ?? null,
         resolved_agent_id: input.resolved_agent_id,
-        memory_selection: memoryResult.selection,
+        memory_selection: memorySelection,
         policy_summary: input.policy_summary ?? null,
         pack_state: input.pack_state ?? null,
         pack_id: input.pack_id ?? null,
@@ -186,13 +199,13 @@ export const createContextService = ({
         investigated_location_ids: uniqueInvestigatedLocationIds,
         investigation_counts: investigationCounts,
         perception_rule_engine: perceptionRuleEngine
-      });
+      } as Parameters<typeof buildContextNodesFromSources>[1]);
 
-      const droppedNodes = memoryResult.selection.dropped.map((entry) => ({
+      const droppedNodes = memorySelection.dropped.map((entry) => ({
         node_id: entry.entry_id,
         reason: entry.reason,
-        source_kind: null,
-        node_type: null
+        source_kind: null as unknown as ContextSelectionResult['dropped_nodes'][number]['source_kind'],
+        node_type: null as unknown as ContextSelectionResult['dropped_nodes'][number]['node_type']
       }));
 
       const selection: ContextSelectionResult = {
@@ -254,51 +267,7 @@ export const createContextService = ({
         }
       };
 
-      const selectedEntries: MemoryEntry[] = [];
-      for (const node of contextRun.nodes) {
-        if (node.source_kind === 'overlay') continue;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-        const sourceKind = node.source_kind as MemorySourceKind;
-        if (!['trace', 'intent', 'job', 'post', 'event', 'summary', 'manual'].includes(sourceKind)) continue;
-        const preferredSlot = node.placement_policy.preferred_slot;
-        if (preferredSlot !== 'memory_short_term' && preferredSlot !== 'memory_long_term' && preferredSlot !== 'memory_summary') continue;
-        const scope = preferredSlot === 'memory_long_term' ? 'long_term' as const : 'short_term' as const;
-        selectedEntries.push({
-          id: node.id,
-          scope,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-          actor_ref: (node.actor_ref && typeof node.actor_ref === 'object' && !Array.isArray(node.actor_ref) ? node.actor_ref as unknown as MemoryEntry['actor_ref'] : null),
-          source_kind: sourceKind,
-          source_ref: node.source_ref ? { ...node.source_ref } : null,
-          content: { text: node.content.text, ...(node.content.structured ? { structured: node.content.structured } : {}) },
-          tags: node.tags,
-          importance: node.importance,
-          salience: node.salience,
-          confidence: node.confidence ?? null,
-          visibility: { policy_gate: typeof node.visibility.policy_gate === 'string' ? node.visibility.policy_gate : null },
-          created_at: node.created_at,
-          occurred_at: node.occurred_at ?? null,
-          expires_at: node.expires_at ?? null,
-          metadata: { node_type: node.node_type, ...(node.metadata ? { context_metadata: node.metadata } : {}) }
-        });
-      }
-
-      const shortTerm = selectedEntries.filter(e => e.scope === 'short_term' && e.source_kind !== 'summary');
-      const longTerm = selectedEntries.filter(e => e.scope === 'long_term');
-      const summaries = selectedEntries.filter(e => e.source_kind === 'summary');
-      const dropped = contextRun.diagnostics.dropped_nodes.map(d => ({ entry_id: d.node_id, reason: d.reason }));
-
-      const memoryContext: MemoryContextPack = {
-        short_term: shortTerm,
-        long_term: longTerm,
-        summaries,
-        diagnostics: {
-          selected_count: selectedEntries.length,
-          skipped_count: dropped.length,
-          memory_selection: { selected_entry_ids: selectedEntries.map(e => e.id), dropped },
-          prompt_processing_trace: null
-        }
-      };
+      const memoryContext: MemoryContextPack = memoryContextPack;
 
       return {
         context_run: contextRun,

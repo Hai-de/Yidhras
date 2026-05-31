@@ -1,11 +1,11 @@
 import { logOperatorAudit } from '../../../operator/audit/logger.js'
 import { AUDIT_ACTION } from '../../../operator/constants.js'
 import { ApiError } from '../../../utils/api_error.js'
-import type { AppContext } from '../../context.js'
+import type { DbContext } from '../../../utils/db_context.js'
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 
 export const createAgentBinding = async (
-  context: AppContext,
+  context: DbContext,
   agentId: string,
   operatorIdentityId: string,
   role: string,
@@ -37,7 +37,7 @@ export const createAgentBinding = async (
     }
   })
 
-  await logOperatorAudit(context, {
+  await logOperatorAudit(context as never, {
     operator_id: boundByOperatorId ?? null,
     pack_id: null,
     action: AUDIT_ACTION.BIND_AGENT,
@@ -50,7 +50,7 @@ export const createAgentBinding = async (
 }
 
 export const unbindAgent = async (
-  context: AppContext,
+  context: DbContext,
   agentId: string,
   operatorIdentityId: string,
   operatorId?: string,
@@ -78,7 +78,7 @@ export const unbindAgent = async (
     }
   })
 
-  await logOperatorAudit(context, {
+  await logOperatorAudit(context as never, {
     operator_id: operatorId ?? null,
     action: AUDIT_ACTION.UNBIND_AGENT,
     target_id: agentId,
@@ -89,7 +89,7 @@ export const unbindAgent = async (
 }
 
 export const listAgentOperators = async (
-  context: AppContext,
+  context: DbContext,
   agentId: string
 ) => {
   const bindings = await context.prisma.identityNodeBinding.findMany({

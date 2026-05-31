@@ -1,5 +1,6 @@
-import type { HealthLevel } from '../app/context.js';
 import type { RuntimeSpeedSnapshot } from './runtime_speed.js';
+
+export type HealthLevel = 'ok' | 'degraded' | 'fail';
 
 export interface ExperimentalPackRuntimeStatusRecord {
   instance_id: string;

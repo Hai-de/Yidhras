@@ -11,11 +11,12 @@ import type { PackScopeResolver } from './runtime/PackScopeResolver.js';
 import type {
   RuntimeClockProjectionService
 } from './runtime/runtime_clock_projection.js';
-import type { WorldEngineStepCoordinator } from './runtime/world_engine_persistence.js';
+import type { WorldEngineStepCoordinator } from './runtime/world_engine_coordinator.js';
 import type { AppContextPorts, PackCatalogService } from './services/app_context_ports.js';
-import type { Repositories } from './services/repositories/index.js';
+import type { Repositories } from './services/repositories/types.js';
+import type { HealthLevel } from '../core/pack_runtime_health.js';
 
-export type HealthLevel = 'ok' | 'degraded' | 'fail';
+export type { HealthLevel };
 
 export interface StartupHealth {
   level: HealthLevel;
@@ -63,7 +64,11 @@ export interface AppInfrastructure {
   setRuntimeReady(ready: boolean): void;
   isPaused(): boolean;
   setPaused(paused: boolean): void;
-  requestPluginInference?(input: import('../plugins/runtime.js').PluginInferenceRequest): Promise<import('../plugins/runtime.js').PluginInferenceResult>;
+  requestPluginInference?(input: import('../plugins/types.js').PluginInferenceRequest): Promise<import('../plugins/types.js').PluginInferenceResult>;
+  readonly pluginRuntime?: {
+    getContextSourceAdapters(packId: string): unknown[];
+    getPerceptionResolvers(packId: string): unknown[];
+  };
 }
 
 export interface AppContext extends AppInfrastructure, AppContextPorts {

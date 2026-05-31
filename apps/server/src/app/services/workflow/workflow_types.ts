@@ -1,4 +1,4 @@
-import type { InferenceService } from '../../../inference/service.js';
+import type { WorkflowInferencePort } from '../../../inference/workflow_inference_port.js';
 import type { WorldPackWorkflowCondition } from '../../../packs/schema/constitution_schema.js';
 import type { AppContext } from '../../context.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
@@ -23,7 +23,7 @@ export interface WorkflowAdvanceBudget {
 
 export interface WorkflowAdvanceInput {
   context: AppContext;
-  inferenceService: InferenceService;
+  inferenceService: WorkflowInferencePort;
   packRuntime: PackRuntimePort;
   workerId: string;
   tick: bigint;

@@ -6,6 +6,7 @@ on:
     paths:
       - 'apps/server/**'
       - 'packages/contracts/**'
+      - '.dependency-cruiser.js'
       - '.github/workflows/server-tests.yml'
       - 'pnpm-lock.yaml'
       - 'package.json'
@@ -16,6 +17,7 @@ on:
     paths:
       - 'apps/server/**'
       - 'packages/contracts/**'
+      - '.dependency-cruiser.js'
       - '.github/workflows/server-tests.yml'
       - 'pnpm-lock.yaml'
       - 'package.json'
@@ -45,6 +47,10 @@ jobs:
 
       - name: Lint server
         run: pnpm --filter yidhras-server lint
+
+      - name: Dependency cruise (server)
+        run: pnpm depcruise
+        continue-on-error: true
 
       - name: Typecheck server and builtin plugins
         run: pnpm --filter yidhras-server typecheck

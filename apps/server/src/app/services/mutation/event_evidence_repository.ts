@@ -1,4 +1,4 @@
-import type { AppInfrastructure } from '../../context.js';
+import type { DbContext } from '../../../utils/db_context.js';
 
 export interface LatestEventEvidenceRecord {
   id: string;
@@ -10,7 +10,7 @@ export interface LatestEventEvidenceRecord {
 }
 
 export const getLatestEventEvidenceRecord = async (
-  context: AppInfrastructure,
+  context: DbContext,
   packId: string
 ): Promise<LatestEventEvidenceRecord | null> => {
   return context.prisma.event.findFirst({

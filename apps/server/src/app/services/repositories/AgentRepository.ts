@@ -1,7 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
 
-import type { AppContext } from '../../context.js';
-
 export interface AgentRepository {
   getEntityOverview(entityId: string, options?: { limit?: number }): Promise<unknown>;
   listSnrAdjustmentLogs(input: { agent_id?: string; limit?: number }): Promise<unknown[]>;
@@ -19,7 +17,7 @@ export class PrismaAgentRepository implements AgentRepository {
   async getEntityOverview(entityId: string, options?: { limit?: number }): Promise<unknown> {
     const { getEntityOverview: impl } = await import('../agent/agent.js');
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    return impl({ prisma: this.prisma } as AppContext, entityId, options);
+    return impl({ prisma: this.prisma } as unknown as Parameters<typeof impl>[0], entityId, options);
   }
 
   async listSnrAdjustmentLogs(input: {
@@ -28,7 +26,7 @@ export class PrismaAgentRepository implements AgentRepository {
   }): Promise<unknown[]> {
     const { listSnrAdjustmentLogs: impl } = await import('../agent/agent.js');
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    return impl({ prisma: this.prisma } as AppContext, input);
+    return impl({ prisma: this.prisma } as unknown as Parameters<typeof impl>[0], input);
   }
 
   async countActiveAgents(): Promise<number> {

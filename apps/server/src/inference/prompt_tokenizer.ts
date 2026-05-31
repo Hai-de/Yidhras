@@ -2,16 +2,9 @@ import type { PromptBlock } from './prompt_block.js';
 import type { PromptFragmentV2 } from './prompt_fragment_v2.js';
 import type { PromptTree } from './prompt_tree.js';
 import { walkPromptBlocksAsync } from './prompt_tree.js';
-import { getDefaultTokenizer } from './tokenizers/tiktoken_adapter.js';
+import { getDefaultTokenizer, type PromptTokenizer } from './tokenizers/tiktoken_adapter.js';
 
-// ── Tokenizer interface ──
-
-export interface PromptTokenizer {
-  readonly encodingName: string;
-  encode(text: string): number[];
-  count(text: string): number;
-  slice(text: string, maxTokens: number): string;
-}
+export type { PromptTokenizer };
 
 // ── Token estimates ──
 

@@ -22,7 +22,7 @@ import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.
 import { listPackRuleExecutionRecords } from '../../packs/storage/rule_execution_repo.js';
 import { ApiError } from '../../utils/api_error.js';
 import { resolveAuthorityForSubject, resolveMediatorBindingsForPack } from '../authority/resolver.js';
-import type { InvocationRequest } from '../invocation/invocation_dispatcher.js';
+import type { InvocationRequest } from '../invocation/types.js';
 import { createObjectiveRuleExecutionRecord } from './execution_recorder.js';
 import {
   buildSidecarObjectiveExecutionRequest,

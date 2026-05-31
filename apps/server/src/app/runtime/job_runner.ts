@@ -1,5 +1,5 @@
 import { getSchedulerRunnerConfig } from '../../config/runtime_config.js';
-import type { InferenceService } from '../../inference/service.js';
+import type { WorkflowInferencePort } from '../../inference/workflow_inference_port.js';
 import { createLogger } from '../../utils/logger.js';
 import type { AppContext } from '../context.js';
 import {
@@ -16,7 +16,7 @@ const logger = createLogger('job-runner');
 
 export interface RunDecisionJobRunnerOptions {
   context: AppContext;
-  inferenceService: InferenceService;
+  inferenceService: WorkflowInferencePort;
   workerId: string;
   packRuntime?: PackRuntimePort;
   limit?: number;

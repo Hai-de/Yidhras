@@ -12,7 +12,7 @@ import { listPackWorldEntities } from '../../packs/storage/entity_repo.js';
 import type { PackStorageAdapter } from '../../packs/storage/PackStorageAdapter.js';
 import { ApiError } from '../../utils/api_error.js';
 import { isRecord } from '../../utils/type_guards.js';
-import type { InvocationRequest } from '../invocation/invocation_dispatcher.js';
+import type { InvocationRequest } from '../invocation/types.js';
 
 export interface ObjectiveEntityStateMutation {
   kind: 'entity_state';

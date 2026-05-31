@@ -1,5 +1,5 @@
 import { getSchedulerTickBudgetConfig } from '../../config/runtime_config.js';
-import type { InferenceService } from '../../inference/service.js';
+import type { WorkflowInferencePort } from '../../inference/workflow_inference_port.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import { createWorkflowEngine } from '../services/workflow/workflow_engine.js';
@@ -16,7 +16,7 @@ export interface WorkflowDecisionStepEngine {
 
   advance(input: {
     context: AppContext;
-    inferenceService: InferenceService;
+    inferenceService: WorkflowInferencePort;
     packRuntime: PackRuntimePort;
     workerId: string;
     tick: bigint;
@@ -32,7 +32,7 @@ export interface WorkflowDecisionStepResult {
 
 export interface RunWorkflowDecisionStepInput {
   context: AppContext;
-  inferenceService: InferenceService;
+  inferenceService: WorkflowInferencePort;
   workerId: string;
   packRuntime: PackRuntimePort;
   workflowEngine?: WorkflowDecisionStepEngine;

@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 
 import type { AppInfrastructure } from '../../app/context.js';
 import type { AppContextPorts } from '../../app/services/app_context_ports.js';
-import { createContextAssemblyPort } from '../../app/services/context/context_memory_ports.js';
 import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution.js';
 import type { WorldPack } from '../../packs/manifest/constitution_loader.js';
 import { packEntityIdFromResolvedAgentId } from '../../packs/utils/pack_entity_id.js';
@@ -238,7 +237,10 @@ export class ContextAssemblyPipeline {
     input: ContextRunInput
   ): Promise<{ context_run: Record<string, unknown>; memory_context: Record<string, unknown> }> {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- EOPT strict mode boundary cast
-    const contextAssembly = context.contextAssembly ?? createContextAssemblyPort(context as never);
+    const contextAssembly = context.contextAssembly;
+    if (!contextAssembly) {
+      throw new ApiError(500, 'CONTEXT_ASSEMBLY_MISSING', 'Context assembly port is not configured');
+    }
 
     if (!contextAssembly.buildContextRun) {
       throw new ApiError(500, 'CONTEXT_ASSEMBLY_MISSING', 'Context assembly port is not configured with buildContextRun');

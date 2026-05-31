@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 
-import type { AppInfrastructure } from '../app/context.js';
+import type { DbContext } from '../utils/db_context.js';
 import { toJsonSafe } from '../app/http/json.js';
 import type {
   LongTermMemorySearchInput,
@@ -80,7 +80,7 @@ export const createNoopLongTermMemoryStore = (): LongTermMemoryStore => {
   };
 };
 
-export const createPrismaLongTermMemoryStore = (context: AppInfrastructure): LongTermMemoryStore => {
+export const createPrismaLongTermMemoryStore = (context: DbContext): LongTermMemoryStore => {
   return {
     async search(input: LongTermMemorySearchInput): Promise<MemoryEntry[]> {
       const agentId = input.actor_ref.agent_id;

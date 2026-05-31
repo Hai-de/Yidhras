@@ -9,6 +9,8 @@ import {
   getWorldPacksDir,
   type RuntimeStartupPolicy
 } from '../../config/runtime_config.js';
+import type { CliConfig, RuntimeState } from '../token_interfaces.js';
+export type { CliConfig, RuntimeState };
 import { TOKENS } from '../tokens.js';
 
 const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
@@ -21,19 +23,6 @@ const DEFAULT_RUNTIME_LOOP_DIAGNOSTICS: RuntimeLoopDiagnostics = {
   last_duration_ms: null,
   last_error_message: null
 };
-
-export interface CliConfig {
-  workerIndex: number;
-  port: number;
-  schedulerWorkerId: string;
-  schedulerPartitionIds: string[];
-  simulationLoopIntervalMs: number;
-  worldPacksDir: string;
-  preferredWorldPack: string;
-  startupPolicy: RuntimeStartupPolicy;
-  decisionWorkerId: string;
-  actionDispatcherWorkerId: string;
-}
 
 export const cliConfigProvider = {
   provide: TOKENS.cliConfig,
@@ -67,17 +56,6 @@ export const cliConfigProvider = {
     };
   }
 } as const satisfies import('../provider.js').ServiceProvider;
-
-export interface RuntimeState {
-  startupHealth: ReturnType<typeof createStartupHealth>;
-  assertRuntimeReady: ReturnType<typeof createRuntimeReadyGuard>;
-  isRuntimeReady: () => boolean;
-  setRuntimeReady: (ready: boolean) => void;
-  isPaused: () => boolean;
-  setPaused: (paused: boolean) => void;
-  getRuntimeLoopDiagnostics: () => RuntimeLoopDiagnostics;
-  setRuntimeLoopDiagnostics: (next: RuntimeLoopDiagnostics) => void;
-}
 
 export const runtimeStateProvider = {
   provide: TOKENS.runtimeState,

@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 
 import type { InferenceJobIntentClass, InferenceRequestInput } from '../../../inference/types.js';
 import { ApiError } from '../../../utils/api_error.js';
-import type { AppInfrastructure } from '../../context.js';
+import type { DbContext } from '../../../utils/db_context.js';
 import { toJsonSafe } from '../../http/json.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
@@ -15,7 +15,7 @@ import {
   RUNNABLE_JOB_STATUSES
 } from './types.js';
 
-export const getDecisionJobById = async (context: AppInfrastructure, jobId?: string) => {
+export const getDecisionJobById = async (context: DbContext, jobId?: string) => {
   const id = ensureNonEmptyId(jobId, 'job_id');
   const job = await context.prisma.decisionJob.findUnique({
     where: {
@@ -49,7 +49,7 @@ const mergeDecisionJobRequestInputAttributes = (
   }) as Prisma.InputJsonValue;
 };
 
-export const getDecisionJobByInferenceId = async (context: AppInfrastructure, inferenceId?: string) => {
+export const getDecisionJobByInferenceId = async (context: DbContext, inferenceId?: string) => {
   const id = ensureNonEmptyId(inferenceId, 'inference_id');
   const decisionJob = await context.prisma.decisionJob.findUnique({
     where: {
@@ -66,7 +66,7 @@ export const getDecisionJobByInferenceId = async (context: AppInfrastructure, in
   return decisionJob;
 };
 
-export const getInferenceTraceById = async (context: AppInfrastructure, inferenceId?: string) => {
+export const getInferenceTraceById = async (context: DbContext, inferenceId?: string) => {
   const id = ensureNonEmptyId(inferenceId, 'inference_id');
   const trace = await context.prisma.inferenceTrace.findUnique({
     where: { id }
@@ -81,7 +81,7 @@ export const getInferenceTraceById = async (context: AppInfrastructure, inferenc
   return trace;
 };
 
-export const getActionIntentByInferenceId = async (context: AppInfrastructure, inferenceId?: string) => {
+export const getActionIntentByInferenceId = async (context: DbContext, inferenceId?: string) => {
   const id = ensureNonEmptyId(inferenceId, 'inference_id');
   const actionIntent = await context.prisma.actionIntent.findUnique({
     where: {
@@ -99,7 +99,7 @@ export const getActionIntentByInferenceId = async (context: AppInfrastructure, i
 };
 
 export const getDecisionJobByIdempotencyKey = async (
-  context: AppInfrastructure,
+  context: DbContext,
   idempotencyKey: string
 ): Promise<DecisionJobRecord | null> => {
   return context.prisma.decisionJob.findUnique({
@@ -110,7 +110,7 @@ export const getDecisionJobByIdempotencyKey = async (
 };
 
 export const listRunnableDecisionJobs = async (
-  context: AppInfrastructure,
+  context: DbContext,
   limit = 10,
   packRuntime?: PackRuntimePort
 ): Promise<DecisionJobRecord[]> => {
@@ -137,7 +137,7 @@ export const listRunnableDecisionJobs = async (
 };
 
 export const claimDecisionJob = async (
-  context: AppInfrastructure,
+  context: DbContext,
   input: {
     job_id: string;
     worker_id: string;
@@ -204,7 +204,7 @@ export const claimDecisionJob = async (
 };
 
 export const releaseDecisionJobLock = async (
-  context: AppInfrastructure,
+  context: DbContext,
   input: {
     job_id: string;
     worker_id?: string | undefined;
@@ -246,7 +246,7 @@ export const assertDecisionJobLockOwnership = (
 export { DEFAULT_DECISION_JOB_LOCK_TICKS };
 
 export const updateDecisionJobState = async (
-  context: AppInfrastructure,
+  context: DbContext,
   input: {
     job_id: string;
     status: DecisionJobRecord['status'];
@@ -312,7 +312,7 @@ export const updateDecisionJobState = async (
 };
 
 export const createPendingDecisionJob = async (
-  context: AppInfrastructure,
+  context: DbContext,
   input: {
     idempotency_key: string;
     request_input: InferenceRequestInput;
@@ -364,7 +364,7 @@ export const createPendingDecisionJob = async (
 };
 
 export const createPendingDecisionJobIdempotent = async (
-  context: AppInfrastructure,
+  context: DbContext,
   input: Parameters<typeof createPendingDecisionJob>[1]
 ): Promise<{ job: DecisionJobRecord; created: boolean }> => {
   try {
@@ -385,7 +385,7 @@ export const createPendingDecisionJobIdempotent = async (
 };
 
 export const createReplayDecisionJob = async (
-  context: AppInfrastructure,
+  context: DbContext,
   input: {
     source_job: DecisionJobRecord;
     source_trace_id: string | null;

@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
+import type { DbContext } from '../../../utils/db_context.js';
 
-import type { AppContext } from '../../context.js';
 import {
   clampSnr,
   createSnrAdjustmentLog,
@@ -72,9 +72,9 @@ export interface RelationshipGraphRepository {
 export class PrismaRelationshipGraphRepository implements RelationshipGraphRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  private ctx(): AppContext {
+  private ctx() {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    return { prisma: this.prisma } as AppContext;
+    return { prisma: this.prisma } as DbContext;
   }
 
   // -- Relationship --

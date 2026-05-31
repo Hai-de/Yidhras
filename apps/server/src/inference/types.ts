@@ -8,10 +8,11 @@ import type {
   PromptVariableContextSummary,
   PromptVariableRecord
 } from '../template_engine/frontends/narrative/types.js';
-import type { PromptBundleV2 } from './prompt_bundle_v2.js';
+import type { PromptBundleV2 } from './prompt_bundle_types.js';
+import type { InferenceActorRef, InferenceActorRole } from './shared_types.js';
 
 export type InferenceStrategy = 'mock' | 'model_routed' | 'behavior_tree';
-export type InferenceActorRole = 'active' | 'atmosphere';
+export type { InferenceActorRef, InferenceActorRole };
 
 /**
  * DecisionJob.status only describes the decision-generation workflow stage.
@@ -145,15 +146,6 @@ export interface InferenceBindingRef {
   binding_id: string;
   role: InferenceActorRole;
   status: string;
-  agent_id: string | null;
-  atmosphere_node_id: string | null;
-}
-
-export interface InferenceActorRef {
-  identity_id: string;
-  identity_type: IdentityContext['type'];
-  entity_kind?: string | undefined;
-  role: InferenceActorRole;
   agent_id: string | null;
   atmosphere_node_id: string | null;
 }

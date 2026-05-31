@@ -1,6 +1,6 @@
 import { ApiError } from '../../../utils/api_error.js';
 import { isRecord } from '../../../utils/type_guards.js';
-import type { AppContext } from '../../context.js';
+import type { DbContext } from '../../../utils/db_context.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 
@@ -45,7 +45,7 @@ export interface ActionIntentDispatchReflection {
 export const DEFAULT_ACTION_INTENT_LOCK_TICKS = 5n;
 
 export const listDispatchableActionIntents = async (
-  context: AppContext,
+  context: DbContext,
   limit = 10,
   packRuntime?: PackRuntimePort
 ): Promise<ActionIntentRecord[]> => {
@@ -69,7 +69,7 @@ export const listDispatchableActionIntents = async (
 };
 
 export const claimActionIntent = async (
-  context: AppContext,
+  context: DbContext,
   input: {
     intent_id: string;
     worker_id: string;
@@ -133,7 +133,7 @@ export const claimActionIntent = async (
 };
 
 export const releaseActionIntentLock = async (
-  context: AppContext,
+  context: DbContext,
   input: {
     intent_id: string;
     worker_id?: string;
@@ -178,7 +178,7 @@ export const assertActionIntentLockOwnership = (intent: ActionIntentRecord, work
 };
 
 export const markActionIntentDispatching = async (
-  context: AppContext,
+  context: DbContext,
   intentId: string,
   packRuntime?: PackRuntimePort
 ): Promise<ActionIntentRecord> => {
@@ -200,7 +200,7 @@ export const markActionIntentDispatching = async (
 };
 
 export const markActionIntentCompleted = async (
-  context: AppContext,
+  context: DbContext,
   intentId: string,
   packRuntime?: PackRuntimePort
 ): Promise<ActionIntentRecord> => {
@@ -225,7 +225,7 @@ export const markActionIntentCompleted = async (
 };
 
 export const markActionIntentFailed = async (
-  context: AppContext,
+  context: DbContext,
   intentId: string,
   reason: string | null = null,
   code: string | null = 'ACTION_DISPATCH_FAIL',
@@ -250,7 +250,7 @@ export const markActionIntentFailed = async (
 };
 
 export const markActionIntentDropped = async (
-  context: AppContext,
+  context: DbContext,
   intentId: string,
   reason: string | null,
   packRuntime?: PackRuntimePort
@@ -275,7 +275,7 @@ export const markActionIntentDropped = async (
 };
 
 export const getActionIntentForDispatchReflection = async (
-  context: AppContext,
+  context: DbContext,
   intentId: string
 ): Promise<ActionIntentDispatchReflection | null> => {
   const intent = await context.prisma.actionIntent.findUnique({

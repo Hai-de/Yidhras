@@ -1,4 +1,4 @@
-import type { InferenceActorRef } from '../inference/types.js';
+import type { InferenceActorRef } from '../inference/shared_types.js';
 
 export type MemoryScope = 'short_term' | 'long_term';
 export type MemorySourceKind = 'trace' | 'intent' | 'job' | 'post' | 'event' | 'summary' | 'manual';

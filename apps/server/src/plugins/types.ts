@@ -120,3 +120,17 @@ export interface PluginManagerService {
   recordEnableAcknowledgement(input: PluginEnableAcknowledgementCreateInput): Promise<PluginEnableAcknowledgement>;
   getManifestFingerprint(manifest: PluginManifest): string;
 }
+
+// ── Inference types (used by plugin worker host-call handler) ──
+
+export interface PluginInferenceRequest {
+  purpose: string;
+  systemPrompt: string;
+  userPrompt: string;
+  maxTokens?: number;
+}
+
+export interface PluginInferenceResult {
+  content: string;
+  usage: { inputTokens: number; outputTokens: number };
+}

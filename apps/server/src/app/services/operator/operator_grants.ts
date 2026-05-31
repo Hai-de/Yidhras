@@ -3,11 +3,11 @@ import type { Prisma } from '@prisma/client'
 import { logOperatorAudit } from '../../../operator/audit/logger.js'
 import { AUDIT_ACTION } from '../../../operator/constants.js'
 import { ApiError } from '../../../utils/api_error.js'
-import type { AppContext } from '../../context.js'
+import type { DbContext } from '../../../utils/db_context.js'
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 
 export const createOperatorGrant = async (
-  context: AppContext,
+  context: DbContext,
   packId: string,
   giverOperatorId: string,
   receiverIdentityId: string,
@@ -41,7 +41,7 @@ export const createOperatorGrant = async (
     }
   })
 
-  await logOperatorAudit(context, {
+  await logOperatorAudit(context as never, {
     operator_id: giverOperatorId,
     pack_id: packId,
     action: AUDIT_ACTION.GRANT_CAPABILITY,
@@ -54,7 +54,7 @@ export const createOperatorGrant = async (
 }
 
 export const listOperatorGrants = async (
-  context: AppContext,
+  context: DbContext,
   packId: string,
   giverOperatorId: string
 ) => {
@@ -68,7 +68,7 @@ export const listOperatorGrants = async (
 }
 
 export const revokeOperatorGrant = async (
-  context: AppContext,
+  context: DbContext,
   grantId: string,
   operatorId: string,
   clientIp?: string
@@ -89,7 +89,7 @@ export const revokeOperatorGrant = async (
     where: { id: grantId }
   })
 
-  await logOperatorAudit(context, {
+  await logOperatorAudit(context as never, {
     operator_id: operatorId,
     pack_id: grant.pack_id,
     action: AUDIT_ACTION.REVOKE_GRANT,

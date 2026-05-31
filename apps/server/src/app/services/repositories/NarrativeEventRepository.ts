@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
+import type { DbContext } from '../../../utils/db_context.js';
 
-import type { AppContext } from '../../context.js';
 import { createEventEvidence } from '../agent/agent_signal_repository.js';
 import type { LatestEventEvidenceRecord } from '../mutation/event_evidence_repository.js';
 import { getLatestEventEvidenceRecord } from '../mutation/event_evidence_repository.js';
@@ -28,9 +28,9 @@ export interface NarrativeEventRepository {
 export class PrismaNarrativeEventRepository implements NarrativeEventRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  private ctx(): AppContext {
+  private ctx() {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    return { prisma: this.prisma } as AppContext;
+    return { prisma: this.prisma } as DbContext;
   }
 
   async getLatestEventEvidence(packId: string): Promise<LatestEventEvidenceRecord | null> {

@@ -1,6 +1,12 @@
 import { get_encoding, type Tiktoken } from 'tiktoken';
 
-import type { PromptTokenizer } from '../prompt_tokenizer.js';
+// ── Tokenizer interface ──
+export interface PromptTokenizer {
+  readonly encodingName: string;
+  encode(text: string): number[];
+  count(text: string): number;
+  slice(text: string, maxTokens: number): string;
+}
 
 /**
  * Tiktoken 适配器，基于 cl100k_base 编码（gpt-4 / gpt-4.1-mini / gpt-3.5-turbo 共享）。

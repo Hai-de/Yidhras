@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { Prisma } from '@prisma/client';
 
-import type { AppInfrastructure } from '../../app/context.js';
+import type { DbContext } from '../../utils/db_context.js';
 import { toJsonSafe } from '../../app/http/json.js';
 import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution.js';
 import type {
@@ -195,7 +195,7 @@ const toRuntimeState = (record: {
   };
 };
 
-type MemoryBlockStoreContext = AppInfrastructure;
+type MemoryBlockStoreContext = DbContext;
 
 export const createPrismaLongMemoryBlockStore = (context: MemoryBlockStoreContext): LongMemoryBlockStore => {
   return {

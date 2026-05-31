@@ -5,7 +5,7 @@ import { getPackHostApi } from '../../app/services/app_context_ports.js';
 import { listDeclaredPackCollectionRecords, upsertDeclaredPackCollectionRecord } from '../../packs/storage/pack_collection_repo.js';
 import { ApiError } from '../../utils/api_error.js';
 import { PLUGIN_CAPABILITY_KEY } from '../capability_keys.js';
-import type { PluginInferenceRequest } from '../runtime.js';
+import type { PluginInferenceRequest } from '../types.js';
 import type { HostMethodName } from './protocol.js';
 
 const hasCapability = (grantedCapabilities: string[], capabilityKey: string): boolean => {

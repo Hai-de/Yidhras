@@ -19,7 +19,9 @@
     "prepare:runtime": "pnpm --filter yidhras-server prepare:runtime",
     "scaffold:world-pack": "pnpm --filter yidhras-server scaffold:world-pack",
     "prepare": "simple-git-hooks",
-    "smoke:server": "pnpm --filter yidhras-server smoke"
+    "smoke:server": "pnpm --filter yidhras-server smoke",
+    "depcruise": "bash -c 'cd apps/server && pnpm exec dependency-cruiser --config ../../.dependency-cruiser.js src --ts-config tsconfig.json'",
+    "depcruise:web": "bash -c 'cd apps/web && pnpm exec dependency-cruiser --config ../../.dependency-cruiser.js . --ts-config tsconfig.json'"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -48,7 +50,9 @@
     ]
   },
   "devDependencies": {
+    "dependency-cruiser": "^17.4.3",
     "lint-staged": "^17.0.5",
-    "simple-git-hooks": "^2.13.1"
+    "simple-git-hooks": "^2.13.1",
+    "typescript": "^6.0.3"
   }
 }

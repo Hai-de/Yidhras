@@ -1,4 +1,4 @@
-import { createPrismaRepositories } from '../../app/services/repositories/index.js';
+import { createPrismaRepositories } from '../../app/services/repositories/factory.js';
 import { PrismaConversationStore } from '../../conversation/store_prisma.js';
 import { createPrismaClient } from '../../db/client.js';
 import { TOKENS } from '../tokens.js';

@@ -14,6 +14,7 @@ import {
 import type { PerceptionResolver } from '../perception/types.js';
 import { captureError } from '../utils/capture_error.js';
 import { createLogger } from '../utils/logger.js';
+import type { PluginInferenceRequest, PluginInferenceResult } from './types.js';
 import {
   PLUGIN_HOST_API_VERSION,
   type PluginCapabilityKey
@@ -42,17 +43,7 @@ const runtimeLogger = createLogger('plugin-sandbox-runtime');
 
 type Ctx = AppContext;
 
-export interface PluginInferenceRequest {
-  purpose: string;
-  systemPrompt: string;
-  userPrompt: string;
-  maxTokens?: number;
-}
-
-export interface PluginInferenceResult {
-  content: string;
-  usage: { inputTokens: number; outputTokens: number };
-}
+export type { PluginInferenceRequest, PluginInferenceResult };
 
 export interface ServerPluginHostApi {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime handler registration

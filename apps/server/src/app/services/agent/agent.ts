@@ -1,4 +1,3 @@
-import { getPackEntityOverviewProjection } from '../../../packs/runtime/projections/entity_overview_service.js';
 import { ApiError } from '../../../utils/api_error.js';
 import { isRecord } from '../../../utils/type_guards.js';
 import type { AppContext, AppInfrastructure } from '../../context.js';
@@ -307,7 +306,7 @@ export const getEntityOverview = async (
       },
       take: limit
     }),
-    getPackEntityOverviewProjection(context)
+    (await import('../../../packs/runtime/projections/entity_overview_service.js')).getPackEntityOverviewProjection(context)
   ]);
 
   const recentEvents = toAuditEntries(auditFeed.entries, 'event').slice(0, limit);

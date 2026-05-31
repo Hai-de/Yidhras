@@ -1,6 +1,6 @@
 import { ApiError } from '../../../utils/api_error.js';
 import { isRecord } from '../../../utils/type_guards.js';
-import type { AppContext } from '../../context.js';
+import type { DbContext } from '../../../utils/db_context.js';
 
 const EVENT_TYPE_ALLOWLIST = new Set(['history', 'interaction', 'system']);
 const MAX_SNR = 1;
@@ -129,7 +129,7 @@ export const resolveAdjustSnrPayload = (payload: unknown): {
 };
 
 export const getAgentSnrTargetById = async (
-  context: AppContext,
+  context: DbContext,
   agentId: string
 ): Promise<{ id: string; snr: number } | null> => {
   return context.prisma.agent.findUnique({
@@ -144,7 +144,7 @@ export const getAgentSnrTargetById = async (
 };
 
 export const updateAgentSnr = async (
-  context: AppContext,
+  context: DbContext,
   input: {
     agent_id: string;
     snr: number;
@@ -163,7 +163,7 @@ export const updateAgentSnr = async (
 };
 
 export const createSnrAdjustmentLog = async (
-  context: AppContext,
+  context: DbContext,
   input: {
     action_intent_id: string;
     agent_id: string;
@@ -182,7 +182,7 @@ export const createSnrAdjustmentLog = async (
 };
 
 export const createEventEvidence = async (
-  context: AppContext,
+  context: DbContext,
   input: {
     title: string;
     description: string;

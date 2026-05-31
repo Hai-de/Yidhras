@@ -3,7 +3,7 @@ import type { AiTaskService } from '../../ai/task_service.js';
 import { createAiTaskService } from '../../ai/task_service.js';
 import type { AppContext } from '../../app/context.js';
 import { createPackHostApi } from '../../app/runtime/world_engine_ports.js';
-import { createContextAssemblyPort } from '../../app/services/context/context_memory_ports.js';
+import { createContextAssemblyPort } from '../../app/services/context/context_memory_port_factory.js';
 import { getRuntimeConfig } from '../../config/runtime_config.js';
 import { pluginRuntimeRegistry, syncPackPluginRuntime } from '../../plugins/runtime.js';
 import { TOKENS } from '../tokens.js';
@@ -82,6 +82,7 @@ export const appContextProvider = {
     /* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- circular dependency backfill */
     (ctx as unknown as Record<string, unknown>)['packHostApi'] = createPackHostApi(ctx);
     (ctx as unknown as Record<string, unknown>)['contextAssembly'] = createContextAssemblyPort(ctx);
+    (ctx as unknown as Record<string, unknown>)['pluginRuntime'] = pluginRuntimeRegistry;
 
     // pluginRuntimeControl — reload 需要完整 AppContext
     (ctx as unknown as Record<string, unknown>)['pluginRuntimeControl'] = {

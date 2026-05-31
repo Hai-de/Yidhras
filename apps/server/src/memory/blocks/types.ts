@@ -1,4 +1,4 @@
-import type { InferenceActorRef } from '../../inference/types.js';
+import type { InferenceActorRef } from '../../inference/shared_types.js';
 
 export type MemoryBlockKind =
   | 'fact'
