@@ -1,6 +1,6 @@
 import type { DataContext } from '../../../app/context.js';
 import { listPackRuleExecutionRecords } from '../../storage/rule_execution_repo.js';
-import type { PackProjectionMetadataSnapshot } from './pack_projection_metadata_resolver.js';
+import type { PackProjectionMetadataSnapshot } from './pack_projection_metadata_types.js';
 
 export interface PackNarrativeProjectionSnapshot {
   pack: {

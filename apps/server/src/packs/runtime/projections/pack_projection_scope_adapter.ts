@@ -1,9 +1,9 @@
 import type { AppContext } from '../../../app/context.js';
-import {
-  createPackProjectionMetadataResolver,
-  type PackProjectionMetadataResolver,
-  type PackProjectionResolution
-} from './pack_projection_metadata_resolver.js';
+import { createPackProjectionMetadataResolver } from './pack_projection_metadata_resolver.js';
+import type {
+  PackProjectionMetadataResolver,
+  PackProjectionResolution
+} from './pack_projection_metadata_types.js';
 
 export interface PackProjectionScopeAdapter {
   resolveStablePack(packId: string, feature: string): Promise<PackProjectionResolution>;

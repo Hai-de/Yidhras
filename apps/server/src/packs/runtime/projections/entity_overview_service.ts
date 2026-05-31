@@ -11,7 +11,7 @@ export {
   type PackEntityOverviewProjectionService,
   type PackEntityProjectionSnapshot
 } from './pack_entity_overview_projection_service.js';
-export type { PackProjectionMetadataSnapshot } from './pack_projection_metadata_resolver.js';
+export type { PackProjectionMetadataSnapshot } from './pack_projection_metadata_types.js';
 
 export const buildPackEntityOverviewProjection = async (
   context: AppContext,

@@ -4,7 +4,7 @@ import { listPackWorldEntities } from '../../storage/entity_repo.js';
 import { listPackEntityStates } from '../../storage/entity_state_repo.js';
 import { listPackMediatorBindings } from '../../storage/mediator_repo.js';
 import { listPackRuleExecutionRecords } from '../../storage/rule_execution_repo.js';
-import type { PackProjectionMetadataSnapshot } from './pack_projection_metadata_resolver.js';
+import type { PackProjectionMetadataSnapshot } from './pack_projection_metadata_types.js';
 
 export interface PackEntityProjectionSnapshot {
   pack: {

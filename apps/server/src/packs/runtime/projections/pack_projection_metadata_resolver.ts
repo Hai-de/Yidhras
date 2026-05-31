@@ -1,35 +1,33 @@
-import type { DataContext, PortContext, RuntimeContext } from '../../../app/context.js';
-import { assertPackScope } from '../../../app/services/pack/pack_scope_resolver.js';
 import { ApiError } from '../../../utils/api_error.js';
-import type { WorldPack } from '../../manifest/loader.js';
+import { toPackProjectionMetadataSnapshot } from './pack_projection_metadata_types.js';
 
-export interface PackProjectionMetadataSnapshot {
-  id: string;
-  name: string;
-  version: string;
-}
+export type {
+  PackProjectionMetadataResolver,
+  PackProjectionMetadataSnapshot,
+  PackProjectionResolution
+} from './pack_projection_metadata_types.js';
 
-export interface PackProjectionResolution {
-  pack_id: string;
-  pack: PackProjectionMetadataSnapshot;
-}
-
-export interface PackProjectionMetadataResolver {
-  resolve(packId: string, feature: string): Promise<PackProjectionResolution>;
-}
-
-const toPackProjectionMetadataSnapshot = (pack: WorldPack): PackProjectionMetadataSnapshot => ({
-  id: pack.metadata.id,
-  name: pack.metadata.name,
-  version: pack.metadata.version
-});
+/** Inlined pack-scope assertion — avoids cycle with app/services/pack/pack_scope_resolver. */
+const assertPackRuntime = (packRuntimeLookup: unknown, packId: string, feature: string): string => {
+  const normalized = packId.trim();
+  const lookup = packRuntimeLookup as { hasPackRuntime?: (id: string) => boolean } | null | undefined;
+  if (!lookup?.hasPackRuntime?.(normalized)) {
+    throw new ApiError(404, 'PACK_RUNTIME_NOT_FOUND', `Pack runtime not found for ${feature}`, {
+      pack_id: normalized,
+      feature
+    });
+  }
+  return normalized;
+};
 
 export const createPackProjectionMetadataResolver = (
-  context: DataContext & PortContext & RuntimeContext
-): PackProjectionMetadataResolver => {
+  context: import('../../../app/context.js').DataContext &
+    import('../../../app/context.js').PortContext &
+    import('../../../app/context.js').RuntimeContext
+): import('./pack_projection_metadata_types.js').PackProjectionMetadataResolver => {
   return {
-    resolve(packId: string, feature: string): Promise<PackProjectionResolution> {
-      const resolvedPackId = assertPackScope(context, packId, feature);
+    resolve(packId: string, feature: string): Promise<import('./pack_projection_metadata_types.js').PackProjectionResolution> {
+      const resolvedPackId = assertPackRuntime(context.packRuntimeLookup, packId, feature);
       const handle = context.getPackRuntimeHandle?.(resolvedPackId);
       if (!handle) {
         return Promise.reject(new ApiError(503, 'WORLD_PACK_NOT_READY', `World pack not ready for ${feature}`, {
