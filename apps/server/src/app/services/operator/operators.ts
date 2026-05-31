@@ -2,12 +2,12 @@ import { logOperatorAudit } from '../../../operator/audit/logger.js'
 import { hashPassword } from '../../../operator/auth/password.js'
 import { AUDIT_ACTION, OPERATOR_STATUS } from '../../../operator/constants.js'
 import { ApiError } from '../../../utils/api_error.js'
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 
 export const createOperator = async (
-  context: AppContext,
+  context: DataContext,
   input: {
     username: string
     password: string
@@ -60,11 +60,11 @@ export const createOperator = async (
   return operator
 }
 
-export const listOperators = async (context: AppContext) => {
+export const listOperators = async (context: DataContext) => {
   return context.repos.identityOperator.listOperators()
 }
 
-export const getOperator = async (context: AppContext, operatorId: string) => {
+export const getOperator = async (context: DataContext, operatorId: string) => {
   const operator = await context.repos.identityOperator.getOperatorDetail(operatorId)
 
   if (!operator) {
@@ -75,7 +75,7 @@ export const getOperator = async (context: AppContext, operatorId: string) => {
 }
 
 export const updateOperator = async (
-  context: AppContext,
+  context: DataContext,
   operatorId: string,
   input: {
     status?: string
@@ -130,7 +130,7 @@ export const updateOperator = async (
 }
 
 export const deleteOperator = async (
-  context: AppContext,
+  context: DataContext,
   operatorId: string,
   deletedByOperatorId?: string,
   clientIp?: string,

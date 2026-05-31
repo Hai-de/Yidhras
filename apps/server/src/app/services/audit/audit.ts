@@ -1,7 +1,7 @@
 import { auditFeedQuerySchema, auditViewKindSchema } from '@yidhras/contracts';
 
 import { isRecord } from '../../../utils/type_guards.js';
-import type { AppContext } from '../../context.js';
+import type { DataContext } from '../../context.js';
 import { parseQuery } from '../../http/zod.js';
 import { getWorkflowSnapshotByJobId, listInferenceJobs } from '../inference_workflow.js';
 
@@ -189,7 +189,7 @@ const parseEventImpactData = (value: string | null): Record<string, unknown> | n
 };
 
 const buildPostAuditEntries = async (
-  context: AppContext,
+  context: DataContext,
   limit: number,
   filters: AuditFeedFilters
 ): Promise<AuditViewEntry[]> => {
@@ -252,7 +252,7 @@ const buildPostAuditEntries = async (
 };
 
 const buildRelationshipAdjustmentAuditEntries = async (
-  context: AppContext,
+  context: DataContext,
   limit: number,
   filters: AuditFeedFilters
 ): Promise<AuditViewEntry[]> => {
@@ -312,7 +312,7 @@ const buildRelationshipAdjustmentAuditEntries = async (
 };
 
 const buildSnrAdjustmentAuditEntries = async (
-  context: AppContext,
+  context: DataContext,
   limit: number,
   filters: AuditFeedFilters
 ): Promise<AuditViewEntry[]> => {
@@ -377,7 +377,7 @@ const buildSnrAdjustmentAuditEntries = async (
 };
 
 const buildEventAuditEntries = async (
-  context: AppContext,
+  context: DataContext,
   limit: number,
   filters: AuditFeedFilters
 ): Promise<AuditViewEntry[]> => {
@@ -471,7 +471,7 @@ const buildEventAuditEntries = async (
 };
 
 const buildWorkflowRelatedRecords = async (
-  context: AppContext,
+  context: DataContext,
   actionIntentId: string | null
 ): Promise<{
   posts: AuditViewEntry[];
@@ -586,7 +586,7 @@ const buildWorkflowAuditEntryBySnapshot = (jobId: string, snapshot: Awaited<Retu
 };
 
 const buildWorkflowAuditEntryByJobId = async (
-  context: AppContext,
+  context: DataContext,
   jobId: string
 ): Promise<AuditViewEntry> => {
   return buildWorkflowAuditEntryBySnapshot(jobId, await getWorkflowSnapshotByJobId(context, jobId));
@@ -609,7 +609,7 @@ const toWorkflowLineageSummary = (entry: AuditViewEntry): Record<string, unknown
 };
 
 const buildWorkflowLineageDetail = async (
-  context: AppContext,
+  context: DataContext,
   snapshot: Awaited<ReturnType<typeof getWorkflowSnapshotByJobId>>
 ): Promise<{
   parent_workflow: Record<string, unknown> | null;
@@ -629,7 +629,7 @@ const buildWorkflowLineageDetail = async (
 };
 
 const buildWorkflowAuditDetailEntry = async (
-  context: AppContext,
+  context: DataContext,
   jobId: string,
   snapshot: Awaited<ReturnType<typeof getWorkflowSnapshotByJobId>>
 ): Promise<AuditViewEntry> => {
@@ -654,7 +654,7 @@ const buildWorkflowAuditDetailEntry = async (
 };
 
 export const getAuditEntryById = async (
-  context: AppContext,
+  context: DataContext,
   input: GetAuditEntryInput
 ): Promise<AuditViewEntry> => {
   const kind = parseAuditEntryKind(input.kind);
@@ -744,7 +744,7 @@ export const getAuditEntryById = async (
 };
 
 export const listAuditFeed = async (
-  context: AppContext,
+  context: DataContext,
   query: Record<string, unknown>
 ): Promise<ListAuditFeedResult> => {
   const shouldValidateAsHttpQuery = Object.values(query).every(value => {

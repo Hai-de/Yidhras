@@ -7,10 +7,10 @@ import {
 import type { LoginResponse, OperatorContext, SessionResponse } from '../../../operator/auth/types.js'
 import { AUDIT_ACTION,OPERATOR_STATUS  } from '../../../operator/constants.js'
 import { ApiError } from '../../../utils/api_error.js'
-import type { AppContext } from '../../context.js'
+import type { DataContext } from '../../context.js'
 
 export const loginOperator = async (
-  context: AppContext,
+  context: DataContext,
   username: string,
   password: string,
   packId?: string,
@@ -64,7 +64,7 @@ export const loginOperator = async (
 }
 
 export const logoutOperator = async (
-  context: AppContext,
+  context: DataContext,
   token: string,
   operatorId: string,
   clientIp?: string
@@ -97,7 +97,7 @@ export const getSessionInfo = (
 }
 
 export const refreshToken = async (
-  context: AppContext,
+  context: DataContext,
   operator: OperatorContext,
   oldToken: string,
   packId?: string

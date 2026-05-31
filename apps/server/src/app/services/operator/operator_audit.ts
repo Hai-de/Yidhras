@@ -1,7 +1,7 @@
-import type { AppContext } from '../../context.js'
+import type { DataContext } from '../../context.js'
 
 export const queryAuditLogs = async (
-  context: AppContext,
+  context: DataContext,
   filters: {
     operator_id?: string
     pack_id?: string
