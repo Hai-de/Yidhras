@@ -17,9 +17,9 @@
 - [x] Phase 9: social lazy import 重构 — 1 文件 `#AC-9`
 - [~] Phase 10: app/services → 角色接口迁移 — 8/81 文件完成 `#AC-10`
 - [ ] Phase 11: 旧 barrel 移除 — 删除 app/context.ts `#AC-11`
-- [ ] Phase 12: Repositories 子接口拆分 — 3 新建 + ~10 修改 `#AC-12`
-- [ ] Phase 13: context_memory_ports 上移 — 2 新建 + 2 修改 `#AC-13`
-- [ ] Phase 14: inference/behavior_tree 内部循环修复 — 3 文件 `#AC-14`
+- [x] Phase 12: Repositories 子接口拆分 — 3 新建 + 2 修改 `#AC-12`
+- [x] Phase 13: context_memory_ports 上移 — 1 新建 + 3 修改 `#AC-13`
+- [x] Phase 14: inference/behavior_tree 内部循环修复 — 无需修复，循环已不存在 `#AC-14`
 - [ ] Phase 15: ESLint 新规则上线 — default: 'disallow', severity: 'error' `#AC-15`
 - [ ] Phase 16: 修复 ESLint 违规 — ~20-50 文件 `#AC-16`
 - [ ] Phase 17: Repositories 组合接口移除 — ~30 文件 `#AC-17`
