@@ -109,7 +109,12 @@ const assertManifestDescriptorAlignment = (
   descriptors: ContributionDescriptor[]
 ): void => {
   const manifestKeys = manifestDescriptorKeys(manifest);
-  const descriptorKeys = new Set(descriptors.map(descriptor => descriptorKey(descriptor.type, descriptor.invoke)));
+  const dynamicDescriptorTypes = new Set<ContributionType>(['loop_hook']);
+  const descriptorKeys = new Set(
+    descriptors
+      .filter(descriptor => !dynamicDescriptorTypes.has(descriptor.type))
+      .map(descriptor => descriptorKey(descriptor.type, descriptor.invoke))
+  );
 
   const missingDescriptors = [...manifestKeys].filter(key => !descriptorKeys.has(key));
   if (missingDescriptors.length > 0) {

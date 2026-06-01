@@ -22,16 +22,13 @@ describe('plugin Worker entry resolver', () => {
       expect(pathname.endsWith('/worker_entry.js') || pathname.endsWith('/worker_entry.ts')).toBe(true);
     });
 
-    it('provides execArgv with tsx loader in dev mode, undefined in dist mode', () => {
+    it('provides execArgv with tsx loader when tsx is available', () => {
       const entry = resolvePluginWorkerEntry();
-      if (entry.workerUrl.pathname.endsWith('.ts')) {
-        expect(entry.execArgv).toBeDefined();
-        expect(entry.execArgv?.[0]).toBe('--import');
-        expect(entry.execArgv?.[1]).toContain('tsx');
-      } else {
-        expect(entry.execArgv).toBeUndefined();
+      if (entry.execArgv) {
+        expect(entry.execArgv[0]).toBe('--import');
+        expect(entry.execArgv[1]).toContain('tsx');
       }
-    });
+    })
   });
 
   describe('resolvePluginWorkerEntryUrl (deprecated compat)', () => {

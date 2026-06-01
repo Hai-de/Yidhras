@@ -25,11 +25,22 @@ export const resolvePluginWorkerEntry = (): WorkerEntryResolution => {
     return { workerUrl: pathToFileURL(jsPath) };
   }
 
-  // Dev/tsx mode: no compiled .js entry. Return the .ts entry with
-  // --import tsx so the Worker thread can load TypeScript.
-  // Note: .js → .ts import remapping inside the Worker may not fully work
-  // in all Node.js/tsx version combinations. The dist-mode path is the
-  // tested production path.
+  // Dev mode: no compiled .js next to .ts source.
+  // Try the dist/ directory first — tsx in Worker threads does not
+  // reliably remap .js imports to .ts (Node.js/tsx compatibility gap),
+  // so we run the pre-compiled worker entry. The execArgv is still
+  // needed so the Worker can import() the plugin's .ts source at runtime.
+  const distJsPath = path.resolve(__dirname, '..', '..', '..', 'dist', 'plugins', 'worker', 'worker_entry.js');
+  if (existsSync(distJsPath)) {
+    const execArgv: string[] | undefined = (() => {
+      const loaderPath = resolveTsxLoaderPath();
+      if (!loaderPath) return undefined;
+      return ['--import', loaderPath];
+    })();
+    return { workerUrl: pathToFileURL(distJsPath), ...(execArgv ? { execArgv } : {}) };
+  }
+
+  // Last resort: load .ts directly via tsx (may fail for .js → .ts remapping)
   const execArgv: string[] | undefined = (() => {
     const loaderPath = resolveTsxLoaderPath();
     if (!loaderPath) return undefined;

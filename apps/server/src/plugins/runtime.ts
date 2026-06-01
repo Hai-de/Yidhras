@@ -128,7 +128,9 @@ export const syncPackPluginRuntime = async (
 };
 
 const parseSemver = (version: string): { major: number; minor: number; patch: number } | null => {
-  const match = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
+  // Strip semver range operators (>=, ^, ~, >, <, =)
+  const cleaned = version.replace(/^[><=~^]+\s*/, '');
+  const match = cleaned.match(/^(\d+)\.(\d+)\.(\d+)$/);
   if (!match) return null;
   return {
     major: parseInt(match[1]!, 10),
