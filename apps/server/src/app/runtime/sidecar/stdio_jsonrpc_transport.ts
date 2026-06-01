@@ -148,7 +148,7 @@ export class StdioJsonRpcTransport extends EventEmitter {
 
   public async send<T>(
     method: string,
-    params: Record<string, unknown>,
+    params: object,
     parse: (value: unknown) => T
   ): Promise<T> {
     const result = await this.sendRaw(method, params);
@@ -292,7 +292,7 @@ export class StdioJsonRpcTransport extends EventEmitter {
 
   // ─── RPC send ──────────────────────────────────────────────────
 
-  private async sendRaw(method: string, params: Record<string, unknown>): Promise<unknown> {
+  private async sendRaw(method: string, params: object): Promise<unknown> {
     if (!this.child || this.stopping) {
       throw new ApiError(
         500,

@@ -68,12 +68,20 @@ export interface ErrorMetadata {
  */
 export function attachErrorMetadata(error: Error, meta: ErrorMetadata): void {
   if (meta.source_location) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- attaching metadata to Error for cross-boundary transport, Error→unknown→Record
-    (error as unknown as Record<string, unknown>)['source_location'] = meta.source_location;
+    Object.defineProperty(error, 'source_location', {
+      value: meta.source_location,
+      writable: true,
+      enumerable: true,
+      configurable: true
+    });
   }
   if (meta.cause !== undefined) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- attaching metadata to Error for cross-boundary transport, Error→unknown→Record
-    (error as unknown as Record<string, unknown>)['cause'] = meta.cause;
+    Object.defineProperty(error, 'cause', {
+      value: meta.cause,
+      writable: true,
+      enumerable: true,
+      configurable: true
+    });
   }
 }
 

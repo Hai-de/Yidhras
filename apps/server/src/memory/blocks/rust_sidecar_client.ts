@@ -27,7 +27,7 @@ export interface MemoryTriggerSidecarTransport {
   stop(): Promise<void>;
   send<T>(
     method: string,
-    params: Record<string, unknown>,
+    params: object,
     parse: (value: unknown) => T
   ): Promise<T>;
 }
@@ -122,8 +122,7 @@ export class MemoryTriggerSidecarClient {
     await this.ensureStarted();
     return this.transport.send(
       'memory_trigger.source.evaluate',
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- provider payload serialization
-      input as unknown as Record<string, unknown>,
+      input,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       (value) => value as MemoryTriggerSourceEvaluateResult
     );

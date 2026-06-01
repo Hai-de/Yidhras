@@ -3,6 +3,17 @@ import type { PackRuntimePort } from '../app/services/pack/pack_runtime_ports.js
 import { resolvePackTick } from '../app/services/pack/pack_runtime_resolution.js';
 import type { IdentityContext } from '../identity/types.js';
 import { ApiError } from '../utils/api_error.js';
+
+/**
+ * Minimal context for access-policy read/write checks.  Only needs the
+ * identity-operator repository — policy queries don't touch prisma or other
+ * DataContext members directly.
+ */
+export interface AccessPolicyContext {
+  repos: {
+    identityOperator: import('../app/services/repositories/IdentityOperatorRepository.js').IdentityOperatorRepository;
+  };
+}
 import { evaluateFieldPolicies, resolveAllowedFields, resolveFieldDecision } from './policy_engine.js';
 import type {
   FieldDecisionDetail,
@@ -195,12 +206,12 @@ export const requireAccessPolicyIdentity = (identity: IdentityContext | undefine
   return identity;
 };
 
-const createAccessPolicyService = (context: DataContext): AccessPolicyService => {
+const createAccessPolicyService = (context: AccessPolicyContext): AccessPolicyService => {
   return new AccessPolicyService(context.repos.identityOperator);
 };
 
 const createPolicyAccessContext = (
-  context: DataContext,
+  context: AccessPolicyContext,
   identity: IdentityContext | undefined,
   input: PolicyAccessInput
 ): PolicyAccessContext => {
@@ -251,7 +262,7 @@ export const createAccessPolicy = async (
 };
 
 export const filterReadableFieldsByAccessPolicy = async <T extends Record<string, unknown>>(
-  context: DataContext,
+  context: AccessPolicyContext,
   identity: IdentityContext | undefined,
   input: PolicyAccessInput,
   record: T
@@ -262,7 +273,7 @@ export const filterReadableFieldsByAccessPolicy = async <T extends Record<string
 };
 
 export const assertWriteAllowedByAccessPolicy = async (
-  context: DataContext,
+  context: AccessPolicyContext,
   identity: IdentityContext | undefined,
   input: PolicyAccessInput,
   payload: Record<string, unknown>

@@ -3,11 +3,11 @@ import type { Prisma } from '@prisma/client'
 import { logOperatorAudit } from '../../../operator/audit/logger.js'
 import { AUDIT_ACTION } from '../../../operator/constants.js'
 import { ApiError } from '../../../utils/api_error.js'
-import type { DataContext } from '../../context/data_context.js'
+import type { DbContext } from '../../../utils/db_context.js'
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 
 export const createOperatorGrant = async (
-  context: DataContext,
+  context: DbContext,
   packId: string,
   giverOperatorId: string,
   receiverIdentityId: string,
@@ -54,7 +54,7 @@ export const createOperatorGrant = async (
 }
 
 export const listOperatorGrants = async (
-  context: DataContext,
+  context: DbContext,
   packId: string,
   giverOperatorId: string
 ) => {
@@ -68,7 +68,7 @@ export const listOperatorGrants = async (
 }
 
 export const revokeOperatorGrant = async (
-  context: DataContext,
+  context: DbContext,
   grantId: string,
   operatorId: string,
   clientIp?: string

@@ -88,7 +88,7 @@ function readdirWrapper(
 ): string[] | fs.Dirent[] {
   const resolved = assertInBase(dirPath, baseDir);
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-type-assertion -- assertion-to-any: fs API compatibility
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-type-assertion -- Node.js fs overload resolution
     return fs.readdirSync(resolved, options as any);
   } catch (err: unknown) {
     throw wrapNativeError(err, 'readdir', resolved);

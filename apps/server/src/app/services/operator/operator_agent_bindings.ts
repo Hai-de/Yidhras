@@ -1,11 +1,11 @@
 import { logOperatorAudit } from '../../../operator/audit/logger.js'
 import { AUDIT_ACTION } from '../../../operator/constants.js'
 import { ApiError } from '../../../utils/api_error.js'
-import type { DataContext } from '../../context/data_context.js'
+import type { DbContext } from '../../../utils/db_context.js'
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 
 export const createAgentBinding = async (
-  context: DataContext,
+  context: DbContext,
   agentId: string,
   operatorIdentityId: string,
   role: string,
@@ -50,7 +50,7 @@ export const createAgentBinding = async (
 }
 
 export const unbindAgent = async (
-  context: DataContext,
+  context: DbContext,
   agentId: string,
   operatorIdentityId: string,
   operatorId?: string,
@@ -89,7 +89,7 @@ export const unbindAgent = async (
 }
 
 export const listAgentOperators = async (
-  context: DataContext,
+  context: DbContext,
   agentId: string
 ) => {
   const bindings = await context.prisma.identityNodeBinding.findMany({

@@ -1,6 +1,9 @@
 import type { PrismaClient } from '@prisma/client';
 
+import { prismaInput } from '../../../utils/type_guards.js';
+import type { SocialServiceContext } from '../social/social.js';
 import { createSocialPost, listSocialFeed } from '../social/social.js';
+import type { IdentityOperatorRepository } from './IdentityOperatorRepository.js';
 
 export interface SocialRepository {
   listFeed(input?: {
@@ -31,7 +34,20 @@ export interface SocialRepository {
 }
 
 export class PrismaSocialRepository implements SocialRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly identityOperator: IdentityOperatorRepository
+  ) {}
+
+  /** Build the narrow context needed by social-feed delegate functions. */
+  private ctx(): SocialServiceContext {
+    return {
+      repos: {
+        social: this,
+        identityOperator: this.identityOperator
+      }
+    };
+  }
 
   async listFeed(input?: {
     limit?: number | string;
@@ -50,38 +66,24 @@ export class PrismaSocialRepository implements SocialRepository {
     items: Array<Record<string, unknown>>;
     page_info: { has_next_page: boolean; next_cursor: string | null };
   }> {
-    return listSocialFeed(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      { prisma: this.prisma } as unknown as Parameters<typeof listSocialFeed>[0],
-      undefined,
-      input ?? {}
-    );
+    return listSocialFeed(this.ctx(), undefined, input ?? {});
   }
 
   async createPost(
     content?: string,
     options?: { source_action_intent_id?: string | null }
   ): Promise<unknown> {
-    return createSocialPost(
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      { prisma: this.prisma } as unknown as Parameters<typeof createSocialPost>[0],
-      undefined,
-      content,
-      options
-    );
+    return createSocialPost(this.ctx(), undefined, content, options);
   }
 
-   
+
   async queryPosts(input: { where?: Record<string, unknown>; orderBy?: Record<string, unknown> | Array<Record<string, unknown>>; take?: number; include?: Record<string, unknown>; skip?: number }): Promise<Array<Record<string, unknown>>> {
-// @ts-expect-error -- EOPT strict mode
+    // @ts-expect-error -- EOPT strict mode: optional take conflicts with required Prisma arg
     return this.prisma.post.findMany({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
-      where: input.where as never,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
-      orderBy: input.orderBy as never,
+      where: prismaInput(input.where),
+      orderBy: prismaInput(input.orderBy),
       take: input.take,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
-      include: input.include as never,
+      include: prismaInput(input.include),
       skip: input.skip
     });
   }
@@ -92,8 +94,7 @@ export class PrismaSocialRepository implements SocialRepository {
 
   async createPostRecord(data: Record<string, unknown>): Promise<unknown> {
     return this.prisma.post.create({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
-      data: data as never
+      data: prismaInput(data)
     });
   }
 }

@@ -324,12 +324,6 @@ const buildAnthropicRequest = (
 
 // ── Response parser ────────────────────────────────────────────────────
 
-interface AnthropicUsage {
-  input_tokens: number;
-  output_tokens: number;
-  cache_creation_input_tokens?: number;
-  cache_read_input_tokens?: number;
-}
 
 const parseAnthropicResponse = (payload: Record<string, unknown>, response: Response): AiProviderAdapterResult => {
   const content = Array.isArray(payload['content']) ? payload['content'] : [];
@@ -351,8 +345,21 @@ const parseAnthropicResponse = (payload: Record<string, unknown>, response: Resp
   }
 
   const stopReason = typeof payload['stop_reason'] === 'string' ? payload['stop_reason'] : null;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-  const usage = isRecord(payload['usage']) ? (payload['usage'] as unknown as AnthropicUsage) : null;
+  const usageRaw = payload['usage'];
+  const usage = isRecord(usageRaw)
+    ? {
+        input_tokens: typeof usageRaw['input_tokens'] === 'number' ? usageRaw['input_tokens'] : 0,
+        output_tokens: typeof usageRaw['output_tokens'] === 'number' ? usageRaw['output_tokens'] : 0,
+        cache_creation_input_tokens:
+          typeof usageRaw['cache_creation_input_tokens'] === 'number'
+            ? usageRaw['cache_creation_input_tokens']
+            : undefined,
+        cache_read_input_tokens:
+          typeof usageRaw['cache_read_input_tokens'] === 'number'
+            ? usageRaw['cache_read_input_tokens']
+            : undefined
+      }
+    : null;
   const blocked = stopReason === 'content_filter' || stopReason === 'safety';
 
   let outputMode: AiProviderAdapterResult['output']['mode'] = 'free_text';

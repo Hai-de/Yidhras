@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 
+import { prismaInput } from '../../utils/type_guards.js';
 import type {
   MemoryBlock,
   MemoryVectorSearchInput,
@@ -138,8 +139,10 @@ export const createVectorStore = (prisma: PrismaClient): VectorStore => {
         return [];
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-      const rows = await prisma.memoryBlock.findMany({
+      // Prisma types JSON columns as JsonValue but SQLite stores them as TEXT
+      // (string|null).  PrismaMemoryBlockRow reflects the runtime truth; prismaInput
+      // bridges the generated-type / runtime-type gap.
+      const rows: PrismaMemoryBlockRow[] = prismaInput(await prisma.memoryBlock.findMany({
         where: {
           owner_agent_id: input.owner_agent_id,
           ...(input.pack_id === undefined || input.pack_id === null ? {} : { pack_id: input.pack_id }),
@@ -147,7 +150,7 @@ export const createVectorStore = (prisma: PrismaClient): VectorStore => {
           embedding: { not: null }
         },
         take: 200
-      }) as unknown as PrismaMemoryBlockRow[];
+      }));
 
       const threshold = input.threshold ?? DEFAULT_THRESHOLD;
       const limit = normalizeLimit(input.limit);

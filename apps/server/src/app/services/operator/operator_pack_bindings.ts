@@ -1,11 +1,11 @@
 import { logOperatorAudit } from '../../../operator/audit/logger.js'
 import { AUDIT_ACTION } from '../../../operator/constants.js'
 import { ApiError } from '../../../utils/api_error.js'
-import type { DataContext } from '../../context/data_context.js'
+import type { DbContext } from '../../../utils/db_context.js';
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
 
 export const createPackBinding = async (
-  context: DataContext,
+  context: DbContext,
   packId: string,
   operatorId: string,
   bindingType: string,
@@ -51,7 +51,7 @@ export const createPackBinding = async (
 }
 
 export const listPackBindings = async (
-  context: DataContext,
+  context: DbContext,
   packId: string
 ) => {
   return context.prisma.operatorPackBinding.findMany({
@@ -71,7 +71,7 @@ export const listPackBindings = async (
 }
 
 export const updatePackBinding = async (
-  context: DataContext,
+  context: DbContext,
   packId: string,
   targetOperatorId: string,
   bindingType: string,
@@ -114,7 +114,7 @@ export const updatePackBinding = async (
 }
 
 export const removePackBinding = async (
-  context: DataContext,
+  context: DbContext,
   packId: string,
   targetOperatorId: string,
   removedByOperatorId?: string,
@@ -154,7 +154,7 @@ export const removePackBinding = async (
 }
 
 export const listMyPackBindings = async (
-  context: DataContext,
+  context: DbContext,
   operatorId: string
 ) => {
   return context.prisma.operatorPackBinding.findMany({
@@ -164,7 +164,7 @@ export const listMyPackBindings = async (
 }
 
 export const getOperatorPackIds = async (
-  context: DataContext,
+  context: DbContext,
   operatorId: string
 ): Promise<string[]> => {
   const bindings = await context.prisma.operatorPackBinding.findMany({

@@ -1,5 +1,5 @@
 import { ApiError } from '../../../utils/api_error.js';
-import { isRecord } from '../../../utils/type_guards.js';
+import { asRecord, isRecord } from '../../../utils/type_guards.js';
 import type { DataContext, PortContext, RuntimeContext } from '../../context.js';
 import type { AuditViewEntry } from '../audit/audit.js';
 import { listAuditFeed } from '../audit/audit.js';
@@ -464,8 +464,7 @@ export const getEntityOverview = async (
       outcome_summary: (
         findWorkflowByInferenceId(trace.id)?.workflow.outcome_summary
       )
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-        ? (findWorkflowByInferenceId(trace.id)?.workflow.outcome_summary as unknown as Record<string, unknown>)
+        ? asRecord(findWorkflowByInferenceId(trace.id)?.workflow.outcome_summary)
         : null,
       decision: isRecord(trace.decision) ? (trace.decision) : null,
       created_at: trace.created_at.toString()

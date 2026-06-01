@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { getSchedulerAgentConfig, getSchedulerDecisionKernelConfig, getSchedulerEntityConcurrencyConfig, getSchedulerTickBudgetConfig } from '../../config/runtime_config.js';
 import type { InferenceRequestInput } from '../../inference/types.js';
+import { asRecord } from '../../utils/type_guards.js';
 import type { DataContext } from '../context.js';
 import {
   createPendingDecisionJobIdempotent,
@@ -178,8 +179,7 @@ const writeSchedulerSnapshot = (
       leaseHolder: input.leaseHolder,
       leaseExpiresAtSnapshot: input.leaseExpiresAtSnapshot,
       tick: input.tick,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-      summary: input.summary as unknown as Record<string, unknown>,
+      summary: asRecord(input.summary),
       startedAt: input.startedAt,
       finishedAt: input.finishedAt
     });

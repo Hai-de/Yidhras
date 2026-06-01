@@ -19,12 +19,14 @@ import { buildAdaptersFromRegistry } from './providers/adapter_registry.js';
 import type { AiProviderAdapter, AiProviderAdapterChunk, AiProviderAdapterResult } from './providers/types.js';
 import { getAiProviderConfig, getAiRegistryConfig } from './registry.js';
 import { resolveAiRoute } from './route_resolver.js';
-import type { AiAuditLevel, AiInvocationAttemptRecord, AiRegistryConfig, AiResolvedTaskConfig, AiTaskRequest, ModelGatewayRequest, ModelGatewayResponse } from './types.js';
+import type { AiAuditLevel, AiInvocationAttemptRecord, AiModelRegistryEntry, AiRegistryConfig, AiResolvedTaskConfig, AiTaskRequest, ModelGatewayRequest, ModelGatewayResponse } from './types.js';
 
 export interface ModelGatewayExecutionInput {
   request: ModelGatewayRequest;
   task_request: AiTaskRequest;
   task_config: AiResolvedTaskConfig;
+  /** Resolved model entry — available when the gateway resolves a concrete model. */
+  model_entry?: AiModelRegistryEntry;
 }
 
 export interface ModelGateway {

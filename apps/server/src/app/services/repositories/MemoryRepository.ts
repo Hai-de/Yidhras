@@ -19,6 +19,7 @@ import type {
 } from '../../../memory/types.js';
 import { createVectorStore, type VectorStore } from '../../../memory/vector/vector_store.js';
 import type { DbContext } from '../../../utils/db_context.js';
+import { prismaInput } from '../../../utils/type_guards.js';
 
 export type {
   LongTermMemorySearchInput,
@@ -105,8 +106,7 @@ export class PrismaMemoryRepository implements MemoryRepository {
   async updateCompactionState(agentId: string, data: Record<string, unknown>): Promise<{ inference_count_since_summary: number; inference_count_since_compaction: number; last_summary_tick: bigint | null; last_compaction_tick: bigint | null }> {
     return this.prisma.memoryCompactionState.update({
       where: { agent_id: agentId },
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
-      data: data as never
+      data: prismaInput(data)
     });
   }
 

@@ -180,6 +180,7 @@ export interface InferenceWorldPackRef {
   name: string;
   version: string;
   behavior_trees?: Record<string, unknown> | undefined;
+  host_agent_ids?: string[] | undefined;
 }
 
 export type InferencePackStateValue = WorldPackValue;

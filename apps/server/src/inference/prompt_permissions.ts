@@ -27,8 +27,7 @@ export function getHostAgentIds(context: InferenceContext): string[] {
   if (bindingAgentId) {
     ids.push(bindingAgentId);
   }
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-  const packHostIds = (context.world_pack as unknown as Record<string, unknown>)?.['host_agent_ids'];
+  const packHostIds = context.world_pack.host_agent_ids;
   if (Array.isArray(packHostIds)) {
     for (const id of packHostIds) {
       if (typeof id === 'string' && !ids.includes(id)) {
@@ -73,14 +72,15 @@ export function resolveSlotPermission(input: PermissionCheckInput): PermissionCh
 
   // visibility kind maps to 'visible' + 'visible_to' on permissions
   const isVisibility = input.permission_kind === 'visibility';
-  const permKey = isVisibility ? 'visible' : input.permission_kind;
+  type PermKey = 'read' | 'visible';
+  const permKey: PermKey = isVisibility ? 'visible' : 'read';
   const slotPerms = input.slot_config.permissions;
   const fragPerms = input.fragment.permissions;
+   
   const allowedList: string[] | boolean | undefined | null =
-// eslint-disable-next-line security/detect-object-injection, @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    (fragPerms as unknown as Record<string, unknown>)?.[permKey] as string[] | boolean | undefined | null
-// eslint-disable-next-line security/detect-object-injection, @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-    ?? (slotPerms as unknown as Record<string, unknown>)?.[permKey] as string[] | boolean | undefined | null;
+    fragPerms?.[permKey]
+    // eslint-disable-next-line security/detect-object-injection -- dynamic key is type-constrained
+    ?? slotPerms?.[permKey];
 
   if (allowedList === null) {
     return { allowed: true };

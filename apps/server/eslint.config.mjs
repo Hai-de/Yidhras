@@ -380,6 +380,10 @@ export default tseslint.config(
         {
           selector: "ExportAllDeclaration[source.value=/^\\.{1,2}\\/(?!.*\\.js$).+/]",
           message: 'NodeNext relative exports in server must end with .js'
+        },
+        {
+          selector: "TSAsExpression[expression.type='TSAsExpression']",
+          message: 'Double as assertion is banned. Use parseAs(), asRecord(), or asRecordOrNull() from utils/type_guards.js instead.'
         }
       ],
       '@typescript-eslint/no-non-null-assertion': 'warn',

@@ -19,7 +19,7 @@ export interface SchedulerDecisionSidecarTransport {
   stop(): Promise<void>;
   send<T>(
     method: string,
-    params: Record<string, unknown>,
+    params: object,
     parse: (value: unknown) => T
   ): Promise<T>;
 }
@@ -102,8 +102,7 @@ export class SchedulerDecisionSidecarClient implements SchedulerDecisionKernelPo
     await this.ensureStarted();
     return this.transport.send(
       'scheduler.kernel.evaluate',
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-      input as unknown as Record<string, unknown>,
+      input,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
       (value) => value as SchedulerKernelEvaluateOutput
     );

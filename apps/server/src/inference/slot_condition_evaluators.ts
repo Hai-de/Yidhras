@@ -3,7 +3,7 @@ import type { SlotLogicExpr } from './slot_behavior.js';
 /**
  * 条件输入类型 — 与 config/domains/slot_behavior.ts 的 Zod schema 对齐。
  * logic_match.expression 在配置加载时为 Record<string, unknown>，
- * 评估时内部 cast 到 SlotLogicExpr。
+ * 评估时通过 YAML 边界断言转换为 SlotLogicExpr。
  */
 export type SlotConditionInput =
   | { type: 'keyword_match'; keywords: string[]; match_mode?: 'any' | 'all' | undefined }
@@ -320,8 +320,10 @@ export function evaluateLogicMatch(
       current_tick: context.current_tick
     };
 
-    // YAML 配置加载后 expression 为 Record<string, unknown>，内部 cast 到 SlotLogicExpr
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
+     
+    // YAML 配置反序列化后为 Record<string, unknown>，evaluateSlotLogicExpr 需要
+    // 递归联合类型 SlotLogicExpr。无法用 Zod 低成本验证递归 union，此处为合法的配置边界断言。
+    // eslint-disable-next-line no-restricted-syntax, @typescript-eslint/no-unsafe-type-assertion -- YAML config boundary
     const expr = condition.expression as unknown as SlotLogicExpr;
     const active = evaluateSlotLogicExpr(expr, mergedVars, controller.signal);
     return {

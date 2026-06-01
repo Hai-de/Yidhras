@@ -1,5 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 
+import { prismaInput } from '../../../utils/type_guards.js';
+
 export interface AgentRepository {
   getEntityOverview(entityId: string, options?: { limit?: number }): Promise<unknown>;
   listSnrAdjustmentLogs(input: { agent_id?: string; limit?: number }): Promise<unknown[]>;
@@ -33,8 +35,7 @@ export class PrismaAgentRepository implements AgentRepository {
     return this.prisma.sNRAdjustmentLog.findMany({
        
       where: (input.agent_id ? { agent_id: input.agent_id } : {}),
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
-      orderBy: { created_at: 'desc' } as never,
+      orderBy: { created_at: 'desc' },
       take: input.limit
     });
   }
@@ -56,17 +57,14 @@ export class PrismaAgentRepository implements AgentRepository {
 
   async listAgents(orderBy?: Record<string, string>): Promise<Array<{ id: string; name: string; type: string; snr: number; is_pinned: boolean; created_at: bigint; updated_at: bigint }>> {
     return this.prisma.agent.findMany({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
-      orderBy: (orderBy as never) ?? { created_at: 'asc' }
+      orderBy: prismaInput(orderBy) ?? { created_at: 'asc' }
     });
   }
 
   async listAtmosphereNodes(where?: Record<string, unknown>, orderBy?: Record<string, unknown>): Promise<Array<{ id: string; name: string; owner_id: string; expires_at: bigint | null; created_at: bigint }>> {
     return this.prisma.atmosphereNode.findMany({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
-      where: where as never,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Prisma query param type coercion
-      orderBy: (orderBy as never) ?? { created_at: 'desc' }
+      where: prismaInput(where),
+      orderBy: prismaInput(orderBy) ?? { created_at: 'desc' }
     });
   }
 

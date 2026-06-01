@@ -3,10 +3,13 @@ import type { AiTaskService } from '../../ai/task_service.js';
 import { createAiTaskService } from '../../ai/task_service.js';
 import type { AppContext } from '../../app/context.js';
 import { pluginRuntimeRegistry } from '../../app/runtime/plugin_runtime_registry.js';
+import type { PackHostApi } from '../../app/runtime/world_engine_ports.js';
 import { createPackHostApi } from '../../app/runtime/world_engine_ports.js';
 import { createContextAssemblyPort } from '../../app/services/context/context_memory_port_factory.js';
 import { getRuntimeConfig } from '../../config/runtime_config.js';
+import type { ContextAssemblyPort } from '../../context/ports.js';
 import { syncPackPluginRuntime } from '../../plugins/runtime.js';
+import type { PluginInferenceRequest, PluginInferenceResult } from '../../plugins/types.js';
 import { TOKENS } from '../tokens.js';
 
 export const appContextProvider = {
@@ -30,9 +33,20 @@ export const appContextProvider = {
     TOKENS.cliConfig
   ] as const,
   useFactory: (deps) => {
-    // Step 1: 构造不含循环依赖字段的 AppContext 壳
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- AppContext construction shell: missing circular deps are backfilled in Step 2
-    const ctx = {
+    // Cache slots for lazy-initialized circular dependency fields.
+    // Factories (createPackHostApi, createContextAssemblyPort, etc.) require a
+    // fully-formed AppContext. Using getters with ??= caching so each factory
+    // runs once on first access — eliminating the previous as unknown as Record
+    // backfill pattern.
+    let _packHostApi: PackHostApi | undefined;
+    let _contextAssembly: ContextAssemblyPort | undefined;
+    let _pluginRuntimeControl:
+      | { reload(packId: string): Promise<{ pack_id: string; runtime_count: number }> }
+      | undefined;
+    let _pluginAiTaskService: AiTaskService | undefined;
+    let _requestPluginInference: ((input: PluginInferenceRequest) => Promise<PluginInferenceResult>) | undefined;
+
+    const ctx: AppContext = {
       repos: deps.repos,
       prisma: deps.prisma,
       conversationStore: deps.conversationStore,
@@ -73,59 +87,62 @@ export const appContextProvider = {
       getPluginEnableWarningConfig: () => ({
         enabled: getRuntimeConfig().plugins.enable_warning.enabled,
         require_acknowledgement: getRuntimeConfig().plugins.enable_warning.require_acknowledgement
-      })
-    } as unknown as AppContext;
+      }),
 
-    // Step 2: 创建依赖 AppContext 的对象并回填
-    // AppContext 中的 packHostApi / contextAssembly / pluginRuntimeControl / requestPluginInference
-    // 与 AppContext 本身存在循环依赖（工厂接收 AppContext，产物又被 AppContext 持有）。
-    // 使用 Record<string, unknown> 中转回填是解决此循环的标准模式。
-    /* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- circular dependency backfill */
-    (ctx as unknown as Record<string, unknown>)['packHostApi'] = createPackHostApi(ctx);
-    (ctx as unknown as Record<string, unknown>)['contextAssembly'] = createContextAssemblyPort(ctx);
-    (ctx as unknown as Record<string, unknown>)['pluginRuntime'] = pluginRuntimeRegistry;
+      // ── Circular dependency fields (lazy getters) ──────────────────
+      // pluginRuntime is not circular — assign directly.
+      pluginRuntime: pluginRuntimeRegistry,
 
-    // pluginRuntimeControl — reload 需要完整 AppContext
-    (ctx as unknown as Record<string, unknown>)['pluginRuntimeControl'] = {
-      reload: async (packId: string) => {
-        await syncPackPluginRuntime(ctx, packId);
-        const runtimeCount = pluginRuntimeRegistry.listRuntimes(packId).length;
-        return { pack_id: packId, runtime_count: runtimeCount };
+      get packHostApi(): PackHostApi {
+        return (_packHostApi ??= createPackHostApi(this));
+      },
+
+      get contextAssembly(): ContextAssemblyPort {
+        return (_contextAssembly ??= createContextAssemblyPort(this));
+      },
+
+      get pluginRuntimeControl() {
+        return (_pluginRuntimeControl ??= {
+          reload: async (packId: string) => {
+            await syncPackPluginRuntime(this, packId);
+            const runtimeCount = pluginRuntimeRegistry.listRuntimes(packId).length;
+            return { pack_id: packId, runtime_count: runtimeCount };
+          }
+        });
+      },
+
+      get requestPluginInference() {
+        const svc = (_pluginAiTaskService ??= createAiTaskService({ context: this }));
+        return (_requestPluginInference ??= async (input: PluginInferenceRequest) => {
+          const messages = [
+            { role: 'system' as const, parts: [{ type: 'text' as const, text: input.systemPrompt }] },
+            { role: 'user' as const, parts: [{ type: 'text' as const, text: input.userPrompt }] }
+          ];
+          const taskId = `plugin:${input.purpose}`;
+          const result = await svc.runTask({
+            task_id: taskId,
+            task_type: 'agent_decision',
+            input: {},
+            prompt_context: {
+              prompt_bundle_v2: buildPromptBundleFromAiMessages({
+                taskId,
+                taskType: 'agent_decision',
+                messages
+              })
+            },
+            output_contract: { mode: 'free_text' },
+            route_hints: input.maxTokens ? { determinism_tier: 'balanced' } : undefined
+          });
+          return {
+            content: result.invocation.output.text ?? '',
+            usage: {
+              inputTokens: result.invocation.usage?.input_tokens ?? 0,
+              outputTokens: result.invocation.usage?.output_tokens ?? 0
+            }
+          };
+        });
       }
     };
-
-    // pluginAiTaskService — 独立的 circuit breaker，需要完整 AppContext
-    const pluginAiTaskService: AiTaskService = createAiTaskService({ context: ctx });
-
-    // requestPluginInference — 为插件推理提供独立入口
-     
-    (ctx as unknown as Record<string, unknown>)['requestPluginInference'] = async (input: Record<string, unknown>) => {
-      const messages = [
-        { role: 'system' as const, parts: [{ type: 'text' as const, text: input['systemPrompt'] as string }] },
-        { role: 'user' as const, parts: [{ type: 'text' as const, text: input['userPrompt'] as string }] }
-      ];
-      const taskId = `plugin:${String(input['purpose'])}`;
-      const result = await pluginAiTaskService.runTask({
-        task_id: taskId,
-        task_type: 'agent_decision',
-        input: {},
-        prompt_context: {
-          prompt_bundle_v2: buildPromptBundleFromAiMessages({ taskId, taskType: 'agent_decision', messages })
-        },
-        output_contract: { mode: 'free_text' },
-        route_hints: input['maxTokens']
-          ? { determinism_tier: 'balanced' }
-          : undefined
-      });
-      return {
-        content: result.invocation.output.text ?? '',
-        usage: {
-          inputTokens: result.invocation.usage?.input_tokens ?? 0,
-          outputTokens: result.invocation.usage?.output_tokens ?? 0
-        }
-      };
-    };
-    /* eslint-enable @typescript-eslint/no-unsafe-type-assertion */
 
     return ctx;
   }

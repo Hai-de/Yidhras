@@ -7,9 +7,19 @@ import {
 } from '../../../access_policy/service.js';
 import type { IdentityContext } from '../../../identity/types.js';
 import { ApiError } from '../../../utils/api_error.js';
-import type { DataContext } from '../../context/data_context.js';
+import { asRecord } from '../../../utils/type_guards.js';
 import type { PackRuntimePort } from '../pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../pack/pack_runtime_resolution.js';
+import type { IdentityOperatorRepository } from '../repositories/IdentityOperatorRepository.js';
+import type { SocialRepository } from '../repositories/SocialRepository.js';
+
+/** Narrow context for social-feed delegate functions — only the repos they actually use. */
+export interface SocialServiceContext {
+  repos: {
+    social: SocialRepository;
+    identityOperator: IdentityOperatorRepository;
+  };
+}
 
 export interface ListSocialFeedInput {
   limit?: number | string;
@@ -288,7 +298,7 @@ const buildSocialFeedCursor = (
 };
 
 export const listSocialFeed = async (
-  context: DataContext,
+  context: SocialServiceContext,
   identity: IdentityContext | undefined,
   input: ListSocialFeedInput = {}
 ) => {
@@ -408,8 +418,7 @@ export const listSocialFeed = async (
           resource: 'social_post',
           action: 'read'
         },
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- double assertion boundary
-        post as unknown as Record<string, unknown>
+        asRecord(post)
       );
     })
   );
@@ -425,7 +434,7 @@ export const listSocialFeed = async (
 };
 
 export const createSocialPost = async (
-  context: DataContext,
+  context: SocialServiceContext,
   identity: IdentityContext | undefined,
   content?: string,
   options?: {

@@ -1,6 +1,8 @@
 import {
   toSessionRecordArray,
   WORLD_ENGINE_PROTOCOL_VERSION,
+  type WorldObjectiveEventEffect,
+  type WorldObjectiveMutationEffect,
   type WorldRuleExecuteObjectiveResult,
   worldRuleExecuteObjectiveResultSchema
 } from '@yidhras/contracts';
@@ -26,6 +28,52 @@ import {
   type ObjectiveEventEffect,
   type ObjectiveMutationEffect,
   toObjectiveRulePlanFromSidecarResult} from './sidecar_objective_execution.js';
+
+// ── Contract → domain type adapters ──────────────────────────────────
+// World types (from Zod-inferred contracts) carry narrower Record value
+// types (e.g. Record<string, string>) than the hand-written domain
+// interfaces (Record<string, unknown>).  These adapters explicitly
+// extract the domain subset so downstream code never needs as unknown as.
+
+function toObjectiveMutationEffect(w: WorldObjectiveMutationEffect): ObjectiveMutationEffect {
+  if (w.kind === 'entity_state') {
+    return {
+      kind: 'entity_state',
+      entity_id: w.entity_id,
+      state_namespace: w.state_namespace,
+       
+      state_patch: w.state_patch
+    };
+  }
+  return {
+    kind: 'authority_grant',
+    grant_id: w.grant_id,
+    source_entity_id: w.source_entity_id,
+     
+    target_selector_json: w.target_selector_json,
+    capability_key: w.capability_key,
+    grant_type: w.grant_type,
+    mediated_by_entity_id: w.mediated_by_entity_id,
+     
+    scope_json: w.scope_json,
+     
+    conditions_json: w.conditions_json,
+    priority: w.priority,
+    status: w.status,
+    revocable: w.revocable
+  };
+}
+
+function toObjectiveEventEffect(w: WorldObjectiveEventEffect): ObjectiveEventEffect {
+  return {
+    type: w.type,
+    title: w.title,
+    description: w.description,
+     
+    impact_data: w.impact_data,
+    artifact_id: w.artifact_id
+  };
+}
 
 export interface InvocationEnforcementResult {
   rule_execution_id: string;
@@ -416,10 +464,8 @@ export const enforceInvocationRequest = async (
           mediator_id: mediatorId,
           target_entity_id: pluginTargetEntityId,
           diagnostics: pluginMatch.diagnostics as Record<string, unknown> | null | undefined,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary adapter: RuleContribution → ObjectiveRulePlan
-          mutations: pluginMatch.mutations as unknown as ObjectiveMutationEffect[],
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary adapter: RuleContribution → ObjectiveRulePlan
-          emitted_events: pluginMatch.emitted_events as unknown as ObjectiveEventEffect[]
+          mutations: pluginMatch.mutations.map(toObjectiveMutationEffect),
+          emitted_events: pluginMatch.emitted_events.map(toObjectiveEventEffect)
         };
       }
 

@@ -1,4 +1,5 @@
 import { buildPromptBundleV2 } from '../../../inference/prompt_builder_v2.js';
+import { asRecord } from '../../../utils/type_guards.js';
 import type { PromptWorkflowStepExecutor } from '../registry.js';
 import type {
   PromptWorkflowState,
@@ -68,8 +69,7 @@ export const createBundleFinalizeExecutor = (): PromptWorkflowStepExecutor => ({
     }
     if (state.diagnostics.placement_summary) {
       state.tree.metadata.workflow.workflow_placement_summary =
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- context data assembly
-        state.diagnostics.placement_summary as unknown as Record<string, unknown>;
+        asRecord(state.diagnostics.placement_summary);
     }
 
     const bundle = buildPromptBundleV2(state.tree, context);

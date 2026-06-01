@@ -9,4 +9,6 @@ export interface InferenceActorRef {
   role: InferenceActorRole;
   agent_id: string | null;
   atmosphere_node_id: string | null;
+  /** Allow pass-through to Record<string, unknown> contexts without assertions. */
+  [key: string]: unknown;
 }

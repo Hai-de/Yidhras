@@ -2,6 +2,7 @@ import type {
   InferencePackStateSnapshot,
   InferencePolicySummary
 } from '../../inference/types.js';
+import { asRecord } from '../../utils/type_guards.js';
 import type { ContextNode } from '../types.js';
 
 const buildPolicySummaryText = (policySummary: InferencePolicySummary): string => {
@@ -53,8 +54,7 @@ export const buildRuntimeStateContextNodes = (input: {
       actor_ref: null,
       content: {
         text: buildPolicySummaryText(input.policy_summary),
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- context data assembly
-        structured: input.policy_summary as unknown as Record<string, unknown>
+        structured: asRecord(input.policy_summary)
       },
       tags: ['policy', 'system'],
       importance: 0.95,
@@ -233,8 +233,7 @@ export const buildRuntimeStateContextNodes = (input: {
       actor_ref: null,
       content: {
         text: `Latest pack event: ${input.pack_state.latest_event.title} (${input.pack_state.latest_event.type})`,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- context data assembly
-        structured: input.pack_state.latest_event as unknown as Record<string, unknown>
+        structured: asRecord(input.pack_state.latest_event)
       },
       tags: ['pack-state', 'latest-event'],
       importance: 0.7,

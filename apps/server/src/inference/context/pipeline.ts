@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { DataContext, PortContext, RuntimeContext } from '../../app/context.js';
 import { resolvePackTick } from '../../app/services/pack/pack_runtime_resolution.js';
+import type { BuildContextRunInput, ContextServiceBuildResult } from '../../context/service_types.js';
 import type { WorldPack } from '../../packs/manifest/constitution_loader.js';
 import { packEntityIdFromResolvedAgentId } from '../../packs/utils/pack_entity_id.js';
 import {
@@ -18,7 +19,6 @@ import { buildPolicySummary } from './policy_summary_builder.js';
 import { buildPackStateSnapshot } from './state_snapshot_builder.js';
 import { buildTransmissionProfile } from './transmission_profile.js';
 import type {
-  ContextRunInput,
   PipelineOptions,
   ResolvedActor} from './types.js';
 import { assembleVariableContext } from './variable_context_assembler.js';
@@ -95,9 +95,8 @@ export class ContextAssemblyPipeline {
 
 // @ts-expect-error -- EOPT strict mode
     const contextRunResult = await this.buildContextRun(context, {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type coercion for context run
-      actor_ref: actor.actor_ref as unknown as Record<string, unknown>,
-      identity: actor.identity,
+      actor_ref: actor.actor_ref,
+      identity: actor.identity ?? null,
       resolved_agent_id: actor.resolved_agent_id,
       tick: BigInt(currentTick),
       policy_summary: policySummary,
@@ -151,10 +150,8 @@ export class ContextAssemblyPipeline {
       variable_context_summary: createPromptVariableContextSummary(variableContext),
       policy_summary: policySummary,
       transmission_profile: transmissionProfile,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- ContextServiceBuildResult boundary
-      context_run: contextRunResult.context_run as unknown as InferenceContext['context_run'],
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- ContextServiceBuildResult boundary
-      memory_context: contextRunResult.memory_context as unknown as InferenceContext['memory_context'],
+      context_run: contextRunResult.context_run,
+      memory_context: contextRunResult.memory_context,
       pack_state: packState,
       pack_runtime: packRuntime,
       agent_capabilities: agentCapabilities,
@@ -230,9 +227,8 @@ export class ContextAssemblyPipeline {
 
   private async buildContextRun(
     context: Ctx,
-    input: ContextRunInput
-  ): Promise<{ context_run: Record<string, unknown>; memory_context: Record<string, unknown> }> {
-     
+    input: BuildContextRunInput
+  ): Promise<ContextServiceBuildResult> {
     const contextAssembly = context.contextAssembly;
     if (!contextAssembly) {
       throw new ApiError(500, 'CONTEXT_ASSEMBLY_MISSING', 'Context assembly port is not configured');
@@ -242,10 +238,7 @@ export class ContextAssemblyPipeline {
       throw new ApiError(500, 'CONTEXT_ASSEMBLY_MISSING', 'Context assembly port is not configured with buildContextRun');
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- BuildContextRunInput boundary
-    const result = await contextAssembly.buildContextRun(input as never);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- ContextServiceBuildResult boundary
-    return result as never;
+    return contextAssembly.buildContextRun(input);
   }
 
   private async wrapStage<T>(stage: string, fn: () => Promise<T>): Promise<T> {

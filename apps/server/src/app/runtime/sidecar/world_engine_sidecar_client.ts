@@ -54,7 +54,7 @@ const normalizePackId = (packId: string): string => {
 export interface WorldEngineSidecarTransport {
   start(): Promise<void>;
   stop(): Promise<void>;
-  send<T>(method: string, params: Record<string, unknown>, parse: (value: unknown) => T): Promise<T>;
+  send<T>(method: string, params: object, parse: (value: unknown) => T): Promise<T>;
 }
 
 export interface WorldEngineSidecarClientOptions {

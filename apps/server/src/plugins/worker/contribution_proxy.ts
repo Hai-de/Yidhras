@@ -42,6 +42,46 @@ import type { PluginWorkerClient } from './PluginWorkerClient.js';
 
 const recordSchema = z.record(z.string(), z.unknown());
 
+/**
+ * Coerce a Zod schema to a target output type.  Used at plugin-worker
+ * boundaries where the schema validates a Rust-sent subset of fields and
+ * the TS host enriches the remainder — the runtime contract is looser than
+ * the full TS interface.  The double assertion is contained here so no
+ * caller needs `as unknown as`.
+ */
+ 
+ 
+function coerceSchema<T>(schema: z.ZodType): z.ZodType<T> {
+  return schema as unknown as z.ZodType<T>;
+}
+
+// ── Policy type schemas (replaced bare recordSchema for type safety) ──────
+const visibilityPolicySchema = z.object({
+  level: z.enum(['hidden_mandatory', 'visible_fixed', 'visible_flexible', 'writable_overlay']),
+  read_access: z.enum(['visible', 'exists_only', 'hidden']),
+  policy_gate: z.string().nullable().optional(),
+  blocked: z.boolean().optional()
+}).loose();
+
+const mutabilityPolicySchema = z.object({
+  level: z.enum(['immutable', 'fixed', 'flexible', 'overlay']),
+  can_summarize: z.boolean(),
+  can_reorder: z.boolean(),
+  can_hide: z.boolean()
+}).loose();
+
+const placementPolicySchema = z.object({
+  preferred_slot: z.string().nullable(),
+  locked: z.boolean(),
+  tier: z.enum(['system', 'world', 'memory', 'output', 'post_process', 'other'])
+}).loose();
+
+const provenanceSchema = z.object({
+  created_by: z.enum(['system', 'agent', 'plugin']),
+  created_at_tick: z.string(),
+  parent_node_ids: z.array(z.string()).optional()
+}).loose();
+
 const jsonClone = (value: unknown): unknown => {
   const bigintReplacer = (_key: string, current: unknown): unknown => {
     if (typeof current === 'bigint') {
@@ -67,12 +107,15 @@ const invokeWorker = async <T>(input: {
   return input.outputSchema.parse(result);
 };
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion */
-const contextNodeSchema: z.ZodType<ContextNode> = z.object({
+const contextNodeSchema = z.object({
   id: z.string().trim().min(1),
   node_type: z.string().trim().min(1),
   scope: z.enum(['system', 'pack', 'agent', 'plugin']),
-  source_kind: z.string().trim().min(1),
+  source_kind: z.enum([
+    'trace', 'intent', 'job', 'post', 'event',
+    'summary', 'manual', 'policy_summary', 'pack_state',
+    'world_state', 'overlay', 'spatial_proximity'
+  ]),
   source_ref: recordSchema.nullable(),
   actor_ref: recordSchema.nullable().optional(),
   content: z.object({
@@ -87,13 +130,12 @@ const contextNodeSchema: z.ZodType<ContextNode> = z.object({
   created_at: z.string(),
   occurred_at: z.string().nullable().optional(),
   expires_at: z.string().nullable().optional(),
-  visibility: recordSchema,
-  mutability: recordSchema,
-  placement_policy: recordSchema,
-  provenance: recordSchema,
+  visibility: visibilityPolicySchema,
+  mutability: mutabilityPolicySchema,
+  placement_policy: placementPolicySchema,
+  provenance: provenanceSchema,
   metadata: recordSchema.optional()
-}).loose() as unknown as z.ZodType<ContextNode>;
-/* eslint-enable @typescript-eslint/no-unsafe-type-assertion */
+}).loose();
 
 
 const contextSourceBuildResultSchema: z.ZodType<ContextNode[] | ContextSourceAdapterBuildResult> = z.union([
@@ -106,8 +148,7 @@ const contextSourceBuildResultSchema: z.ZodType<ContextNode[] | ContextSourceAda
 ]);
  
 
-/* eslint-disable @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion */
-const promptWorkflowStateSchema: z.ZodType<PromptWorkflowState> = z.object({
+const promptWorkflowStateSchema = coerceSchema<PromptWorkflowState>(z.object({
   pack_id: z.string(),
   profile: recordSchema,
   selected_nodes: z.array(contextNodeSchema),
@@ -120,8 +161,7 @@ const promptWorkflowStateSchema: z.ZodType<PromptWorkflowState> = z.object({
     selected_step_keys: z.array(z.string()),
     step_traces: z.array(z.unknown())
   }).loose()
-}).loose() as unknown as z.ZodType<PromptWorkflowState>;
-/* eslint-enable @typescript-eslint/no-unsafe-type-assertion */
+}).loose());
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Zod schema loose() cast
 const stepContributionSchema: z.ZodType<StepContribution> = z.object({

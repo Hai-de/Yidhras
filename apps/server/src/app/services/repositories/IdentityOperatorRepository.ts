@@ -101,8 +101,7 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
   constructor(private readonly prisma: PrismaClient) {}
 
   private ctx() {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary cast: delegate functions require DataContext; repository provides prisma-only subset
-    return { prisma: this.prisma } as unknown as DataContext;
+    return { prisma: this.prisma };
   }
 
   // -- Identity (delegates) --

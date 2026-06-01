@@ -13,15 +13,16 @@ import { PrismaSocialRepository } from './SocialRepository.js';
 import type { EntityRepositories, PluginRepositories, WorkflowRepositories } from './types.js';
 
 export function createPrismaRepositories(prisma: PrismaClient): EntityRepositories & WorkflowRepositories & PluginRepositories {
+  const identityOperator = new PrismaIdentityOperatorRepository(prisma);
   return {
     inference: new PrismaInferenceWorkflowRepository(prisma),
-    identityOperator: new PrismaIdentityOperatorRepository(prisma),
+    identityOperator,
     memory: new PrismaMemoryRepository(prisma),
     narrative: new PrismaNarrativeEventRepository(prisma),
     relationship: new PrismaRelationshipGraphRepository(prisma),
     plugin: new PrismaPluginRepository(prisma),
     agent: new PrismaAgentRepository(prisma),
-    social: new PrismaSocialRepository(prisma),
+    social: new PrismaSocialRepository(prisma, identityOperator),
     workflowRuns: new PrismaWorkflowRunRepository(prisma),
     workflowSteps: new PrismaWorkflowStepRunRepository(prisma)
   };

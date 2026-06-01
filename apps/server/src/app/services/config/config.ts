@@ -11,6 +11,7 @@ import {
 import { ErrorCode } from '../../../utils/errors.js';
 import { createLogger } from '../../../utils/logger.js'
 import { safeFs,SafeFsError  } from '../../../utils/safe_fs.js';
+import { asRecord } from '../../../utils/type_guards.js';
 
 const logger = createLogger('config-service')
 
@@ -64,8 +65,7 @@ export const getMaskedConfig = (): Record<string, unknown> => {
  * Return a single domain's config with sensitive values masked.
  */
 export const getDomainConfig = (domain: string): Record<string, unknown> | null => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- YAML config boundary
-  const fullConfig = getRuntimeConfig() as unknown as Record<string, unknown>
+  const fullConfig = asRecord(getRuntimeConfig())
   if (!(domain in fullConfig)) {
     return null
   }

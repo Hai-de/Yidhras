@@ -1,5 +1,4 @@
-import type { Express, Router } from 'express';
-import { Router as createRouter } from 'express';
+import { Router } from 'express';
 
 import type { InferenceService } from '../../../inference/service.js';
 import type { AppContext } from '../../context.js';
@@ -29,8 +28,7 @@ export interface PackRoutesDependencies {
 }
 
 export const registerPackRoutes = (deps: PackRoutesDependencies): Router => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
-  const router = createRouter({ mergeParams: true }) as unknown as Express;
+  const router = Router({ mergeParams: true });
 
   const { context } = deps;
 

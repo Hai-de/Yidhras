@@ -112,7 +112,7 @@ export const useSystemApi = () => {
     getRuntimeStatus: () => {
       const packId = resolvePackId()
       if (!packId) {
-        return Promise.resolve(null as unknown as RuntimeStatusSnapshot)
+        return Promise.resolve(null)
       }
       return requestApiData<RuntimeStatusSnapshot>(`/api/status?packId=${encodeURIComponent(packId)}`)
     },

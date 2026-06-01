@@ -477,9 +477,9 @@ const fetchModelsList = async (
   providerConfig: import('../types.js').AiProviderConfig
 ): Promise<PartialModelEntry[]> => {
   const modelsPath = config.modelsPath ?? '/models';
-  // resolveBaseUrl requires an AiProviderAdapterRequest — for model listing
-  // we construct a minimal stub with only provider_config populated
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- intentional stub
+  // Model listing stub: resolveBaseUrl/resolveApiKey accept AiProviderAdapterRequest
+  // but only read provider_config at runtime. The other fields are irrelevant here.
+  // eslint-disable-next-line no-restricted-syntax, @typescript-eslint/no-unsafe-type-assertion -- intentional model-listing stub
   const stubInput = { provider_config: providerConfig } as unknown as AiProviderAdapterRequest;
   const resolvedBaseUrl = config.resolveBaseUrl(stubInput);
   const url = `${resolvedBaseUrl}${modelsPath}`;

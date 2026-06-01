@@ -58,6 +58,10 @@ const mountGraph = () => {
     return
   }
 
+  // Nuxt typecheck runs against SSR DOM types which differ structurally from
+  // browser DOM types. This assertion bridges the gap; at runtime (client-only)
+  // containerRef.value is always a native HTMLDivElement extending HTMLElement.
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Nuxt SSR/browser DOM type bridge
   const container = containerRef.value as unknown as HTMLElement
   graphInstance = createGraphInstance(container, props.snapshot, props.view)
   bindSelectionEvents(graphInstance)

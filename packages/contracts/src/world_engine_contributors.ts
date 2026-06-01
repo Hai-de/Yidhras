@@ -121,8 +121,9 @@ export interface QueryContributor {
  * Each array accepts any object type; the values are narrowed to
  * `ReadonlyArray<Record<string, unknown>>` for consumption by contributors.
  */
-// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- TS limitation: interface without index signature → Record
+// eslint-disable-next-line no-restricted-syntax, @typescript-eslint/no-unsafe-type-assertion -- centralized session-context boundary bridge
 export const toSessionRecordArray = <T>(
   arr: ReadonlyArray<T>
 ): ReadonlyArray<Record<string, unknown>> =>
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- centralized session-context boundary bridge
   arr as unknown as ReadonlyArray<Record<string, unknown>>;
