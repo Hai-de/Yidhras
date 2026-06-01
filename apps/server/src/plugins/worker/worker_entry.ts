@@ -1,10 +1,12 @@
 import { parentPort } from 'node:worker_threads';
 
+import { relativizePath } from '../../utils/error_source.js';
 import {
   type HostMethodName,
   type MainToWorkerMessage,
   parseMainToWorkerMessage,
   parseWorkerToMainMessage,
+  type SerializedPluginError,
   serializePluginError,
   type WorkerToMainMessage
 } from './protocol.js';
@@ -21,6 +23,7 @@ const pendingHostCalls = new Map<string, { resolve(value: unknown): void; reject
 let deactivateHook: (() => void | Promise<void>) | null = null;
 let runtime: ReturnType<typeof createWorkerPluginHostApi> | null = null;
 let hostCallSequence = 0;
+let artifactRoot: string | null = null;
 
 const postToMain = (message: WorkerToMainMessage): void => {
   port.postMessage(parseWorkerToMainMessage(message));
@@ -35,6 +38,20 @@ const deserializeError = (error: { name?: string; message: string; stack?: strin
     (next as Error & { code?: string }).code = error.code;
   }
   return next;
+};
+
+/**
+ * 将序列化错误的 source_location 转为相对路径（基于 artifactRoot）。
+ * 原地修改并返回同一对象。
+ */
+const relativizeErrorLocation = (err: SerializedPluginError): SerializedPluginError => {
+  if (err.source_location && artifactRoot) {
+    err.source_location.file = relativizePath(err.source_location.file, artifactRoot);
+  }
+  if (err.cause && err.cause.source_location && artifactRoot) {
+    err.cause.source_location.file = relativizePath(err.cause.source_location.file, artifactRoot);
+  }
+  return err;
 };
 
 const sendHostCall = (method: HostMethodName, payload: unknown): Promise<unknown> => {
@@ -71,6 +88,7 @@ const resolveDeactivate = (result: ActivateResult): void => {
 
 const handleActivate = async (message: Extract<MainToWorkerMessage, { type: 'activate' }>): Promise<void> => {
   try {
+    artifactRoot = message.input.artifactRoot;
     runtime = createWorkerPluginHostApi({ sendHostCall, sendMessage: postToMain });
     const activatedRuntime = runtime;
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
@@ -98,7 +116,7 @@ const handleActivate = async (message: Extract<MainToWorkerMessage, { type: 'act
       type: 'activation_result',
       requestId: message.requestId,
       ok: false,
-      error: serializePluginError(error)
+      error: relativizeErrorLocation(serializePluginError(error))
     });
   }
 };
@@ -124,7 +142,7 @@ const handleInvoke = async (message: Extract<MainToWorkerMessage, { type: 'invok
       type: 'invoke_result',
       requestId: message.requestId,
       ok: false,
-      error: serializePluginError(error)
+      error: relativizeErrorLocation(serializePluginError(error))
     });
   }
 };
@@ -141,7 +159,7 @@ const handleDeactivate = async (message: Extract<MainToWorkerMessage, { type: 'd
       type: 'deactivate_result',
       requestId: message.requestId,
       ok: false,
-      error: serializePluginError(error)
+      error: relativizeErrorLocation(serializePluginError(error))
     });
   }
 };

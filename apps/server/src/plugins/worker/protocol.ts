@@ -9,20 +9,79 @@ export const serializedPluginErrorSchema = z.object({
   name: z.string().optional(),
   message: nonEmptyStringSchema,
   stack: z.string().optional(),
-  code: z.string().optional()
+  code: z.string().optional(),
+  source_location: z.object({
+    file: z.string(),
+    line: z.number().int().optional(),
+    column: z.number().int().optional()
+  }).optional(),
+  cause: z.lazy(() => z.object({
+    name: z.string().optional(),
+    message: z.string(),
+    stack: z.string().optional(),
+    code: z.string().optional(),
+    source_location: z.object({
+      file: z.string(),
+      line: z.number().int().optional(),
+      column: z.number().int().optional()
+    }).optional(),
+    truncated: z.boolean().optional()
+  }).optional())
 });
 
 export type SerializedPluginError = z.infer<typeof serializedPluginErrorSchema>;
 
-export const serializePluginError = (error: unknown): SerializedPluginError => {
+/**
+ * 从 V8 stack trace 第一帧提取源文件位置。
+ */
+const parseStackFrame = (stack: string): { file: string; line?: number; column?: number } | undefined => {
+  const lines = stack.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith('at ')) continue;
+
+     
+    const match = trimmed.match(
+      /at\s+(?:(?:async\s+)?(?:\S+)\s+\()?(?:file:\/\/)?([^(:]+?)(?::(\d+))?(?::(\d+))?\)?$/
+    );
+    if (match && match[1]) {
+      const result: { file: string; line?: number; column?: number } = { file: match[1].trim() };
+      if (match[2]) result.line = Number(match[2]);
+      if (match[3]) result.column = Number(match[3]);
+      return result;
+    }
+  }
+  return undefined;
+};
+
+/**
+ * 序列化错误为跨线程传输格式。
+ * @param error 原始错误对象
+ * @param depth 当前递归深度（内部使用），最大 3 层
+ */
+export const serializePluginError = (error: unknown, depth: number = 0): SerializedPluginError => {
   if (error instanceof Error) {
     const withCode = error as Error & { code?: unknown };
-    return {
+    const result: SerializedPluginError = {
       name: error.name,
       message: error.message,
       stack: error.stack,
-      code: typeof withCode.code === 'string' ? withCode.code : undefined
+      code: typeof withCode.code === 'string' ? withCode.code : undefined,
+      source_location: error.stack ? parseStackFrame(error.stack) : undefined
     };
+
+    // 递归序列化 cause 链，最多 3 层
+    if (error.cause && depth < 3) {
+      result.cause = serializePluginError(error.cause, depth + 1);
+    } else if (error.cause && depth >= 3) {
+      result.cause = {
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string -- intentional truncation of cause chain at max depth
+        message: String(error.cause),
+        truncated: true
+      };
+    }
+
+    return result;
   }
 
   return { message: String(error) };

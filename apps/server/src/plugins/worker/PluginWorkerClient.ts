@@ -6,6 +6,7 @@ import {
   recordPluginWorkerCrash,
   recordPluginWorkerInvocationCompleted
 } from '../../observability/metrics.js';
+import { attachErrorMetadata } from '../../utils/error_source.js';
 import { createLogger } from '../../utils/logger.js';
 import type { ContributionDescriptor } from './contribution_descriptors.js';
 import { PluginWorkerCrashError, PluginWorkerTimeoutError } from './errors.js';
@@ -270,6 +271,30 @@ export class PluginWorkerClient {
     next.name = extractErrorName(value);
 // @ts-expect-error -- EOPT strict mode
     next.stack = extractErrorStack(value);
+
+    // 保留序列化时跨线程传输的 source_location 和 cause
+    const errorPayload = (typeof value === 'object' && value !== null) ? value : null;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- extracting known optional fields from serialized cross-thread error
+    const sourceLoc = errorPayload ? (errorPayload as Record<string, unknown>)['source_location'] : undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- extracting known optional fields from serialized cross-thread error
+    const causeVal = errorPayload ? (errorPayload as Record<string, unknown>)['cause'] : undefined;
+
+    const meta: { source_location?: { file: string; line?: number; column?: number }; cause?: unknown } = {};
+    if (sourceLoc && typeof sourceLoc === 'object') {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- structural type extraction from cross-thread payload
+      const sl = sourceLoc as Record<string, unknown>;
+      if (typeof sl['file'] === 'string') {
+        const loc: { file: string; line?: number; column?: number } = { file: sl['file'] };
+        if (typeof sl['line'] === 'number') loc.line = sl['line'];
+        if (typeof sl['column'] === 'number') loc.column = sl['column'];
+        meta.source_location = loc;
+      }
+    }
+    if (causeVal !== undefined) {
+      meta.cause = causeVal;
+    }
+    attachErrorMetadata(next, meta);
+
     pending.reject(next);
   }
 
