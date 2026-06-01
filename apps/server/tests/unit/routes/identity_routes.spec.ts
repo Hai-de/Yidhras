@@ -35,7 +35,7 @@ describe('identity routes', () => {
         pack_id: null,
         created_at: 0n,
         updated_at: 0n
-      } as any);
+      } as Record<string, unknown>);
 
       const app = createTestApp(ctx, {
         operator: { id: 'op-1', username: 'admin', is_root: true }
@@ -73,7 +73,7 @@ describe('identity routes', () => {
       const ctx = createMockAppContext();
       ctx.prisma.identityNodeBinding.findMany = vi.fn().mockResolvedValue([
         { id: 'b-1', identity_id: 'id-1', role: 'active', status: 'active' }
-      ] as any);
+      ] as Record<string, unknown>[]);
 
       const app = createTestApp(ctx, {
         operator: { id: 'op-1', username: 'admin', is_root: true }

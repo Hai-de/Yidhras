@@ -11,7 +11,7 @@ describe('relational queries', () => {
   describe('listRelationalCircles', () => {
     it('delegates to repos.agent.listCircles', async () => {
       const ctx = createMockAppContext();
-      (ctx.repos.agent.listCircles as any) = vi.fn().mockResolvedValue([
+      (ctx.repos.agent.listCircles as unknown) = vi.fn().mockResolvedValue([
         { id: 'circle-1', name: 'Inner Circle' }
       ]);
 
@@ -24,7 +24,7 @@ describe('relational queries', () => {
   describe('listAtmosphereNodes', () => {
     it('queries with owner_id filter', async () => {
       const ctx = createMockAppContext();
-      (ctx.repos.agent.listAtmosphereNodes as any) = vi.fn().mockResolvedValue([
+      (ctx.repos.agent.listAtmosphereNodes as unknown) = vi.fn().mockResolvedValue([
         { id: 'atmo-1', owner_id: 'agent-1' }
       ]);
 
@@ -40,7 +40,7 @@ describe('relational queries', () => {
 
     it('queries without owner_id filter when empty', async () => {
       const ctx = createMockAppContext();
-      (ctx.repos.agent.listAtmosphereNodes as any) = vi.fn().mockResolvedValue([]);
+      (ctx.repos.agent.listAtmosphereNodes as unknown) = vi.fn().mockResolvedValue([]);
 
       await listAtmosphereNodes(ctx, {});
 
@@ -52,7 +52,7 @@ describe('relational queries', () => {
 
     it('excludes expired nodes by default', async () => {
       const ctx = createMockAppContext();
-      (ctx.repos.agent.listAtmosphereNodes as any) = vi.fn().mockResolvedValue([]);
+      (ctx.repos.agent.listAtmosphereNodes as unknown) = vi.fn().mockResolvedValue([]);
 
       await listAtmosphereNodes(ctx, {});
 
@@ -66,7 +66,7 @@ describe('relational queries', () => {
 
     it('includes expired nodes when include_expired is true', async () => {
       const ctx = createMockAppContext();
-      (ctx.repos.agent.listAtmosphereNodes as any) = vi.fn().mockResolvedValue([]);
+      (ctx.repos.agent.listAtmosphereNodes as unknown) = vi.fn().mockResolvedValue([]);
 
       await listAtmosphereNodes(ctx, { include_expired: true });
 
@@ -80,7 +80,7 @@ describe('relational queries', () => {
   describe('listRelationshipAdjustmentLogs', () => {
     it('queries with required filters', async () => {
       const ctx = createMockAppContext();
-      (ctx.repos.relationship.listRelationshipAdjustmentLogs as any) = vi.fn().mockResolvedValue([]);
+      (ctx.repos.relationship.listRelationshipAdjustmentLogs as unknown) = vi.fn().mockResolvedValue([]);
 
       await listRelationshipAdjustmentLogs(ctx, {
         from_id: 'agent-1',
@@ -121,7 +121,7 @@ describe('relational queries', () => {
 
     it('clamps limit to MAX', async () => {
       const ctx = createMockAppContext();
-      (ctx.repos.relationship.listRelationshipAdjustmentLogs as any) = vi.fn().mockResolvedValue([]);
+      (ctx.repos.relationship.listRelationshipAdjustmentLogs as unknown) = vi.fn().mockResolvedValue([]);
 
       await listRelationshipAdjustmentLogs(ctx, {
         from_id: 'agent-1',

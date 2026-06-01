@@ -214,7 +214,7 @@ describe('inference_workflow parsers', () => {
     });
 
     it('throws for invalid input', () => {
-      expect(() => normalizeReplayInput({ overrides: { strategy: 'invalid' } } as any)).toThrow();
+      expect(() => normalizeReplayInput({ overrides: { strategy: 'invalid' } } as unknown as Parameters<typeof normalizeReplayInput>[0])).toThrow();
     });
   });
 

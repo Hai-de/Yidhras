@@ -16,7 +16,7 @@ describe('app_context_ports', () => {
   describe('getRuntimeBootstrap', () => {
     it('returns the port when provided', () => {
       const port = { init: vi.fn() };
-      expect(getRuntimeBootstrap({ runtimeBootstrap: port as any })).toBe(port);
+      expect(getRuntimeBootstrap({ runtimeBootstrap: port } as unknown as Parameters<typeof getRuntimeBootstrap>[0])).toBe(port);
     });
 
     it('throws when not provided', () => {
@@ -27,7 +27,7 @@ describe('app_context_ports', () => {
   describe('getPackRuntimeObservation', () => {
     it('returns the port when provided', () => {
       const port = { observe: vi.fn() };
-      expect(getPackRuntimeObservation({ packRuntimeObservation: port as any })).toBe(port);
+      expect(getPackRuntimeObservation({ packRuntimeObservation: port } as unknown as Parameters<typeof getPackRuntimeObservation>[0])).toBe(port);
     });
 
     it('throws when not provided', () => {
@@ -38,7 +38,7 @@ describe('app_context_ports', () => {
   describe('getPackRuntimeControl', () => {
     it('returns the port when provided', () => {
       const port = { control: vi.fn() };
-      expect(getPackRuntimeControl({ packRuntimeControl: port as any })).toBe(port);
+      expect(getPackRuntimeControl({ packRuntimeControl: port } as unknown as Parameters<typeof getPackRuntimeControl>[0])).toBe(port);
     });
 
     it('throws when not provided', () => {
@@ -49,7 +49,7 @@ describe('app_context_ports', () => {
   describe('getPackRuntimeLookupPort', () => {
     it('returns the port when provided', () => {
       const port = { hasPackRuntime: vi.fn() };
-      expect(getPackRuntimeLookupPort({ packRuntimeLookup: port as any })).toBe(port);
+      expect(getPackRuntimeLookupPort({ packRuntimeLookup: port } as unknown as Parameters<typeof getPackRuntimeLookupPort>[0])).toBe(port);
     });
 
     it('throws when not provided', () => {
@@ -60,7 +60,7 @@ describe('app_context_ports', () => {
   describe('getWorldEnginePort', () => {
     it('returns the port when provided', () => {
       const port = { world: vi.fn() };
-      expect(getWorldEnginePort({ worldEngine: port as any })).toBe(port);
+      expect(getWorldEnginePort({ worldEngine: port } as unknown as Parameters<typeof getWorldEnginePort>[0])).toBe(port);
     });
 
     it('throws when not provided', () => {
@@ -71,7 +71,7 @@ describe('app_context_ports', () => {
   describe('getPackHostApi', () => {
     it('returns the port when provided', () => {
       const port = { api: vi.fn() };
-      expect(getPackHostApi({ packHostApi: port as any })).toBe(port);
+      expect(getPackHostApi({ packHostApi: port } as unknown as Parameters<typeof getPackHostApi>[0])).toBe(port);
     });
 
     it('throws when not provided', () => {
@@ -81,7 +81,7 @@ describe('app_context_ports', () => {
 
   describe('hasWorldEnginePort', () => {
     it('returns true when worldEngine is present', () => {
-      expect(hasWorldEnginePort({ worldEngine: {} as any })).toBe(true);
+      expect(hasWorldEnginePort({ worldEngine: {} } as unknown as Parameters<typeof hasWorldEnginePort>[0])).toBe(true);
     });
 
     it('returns false when worldEngine is absent', () => {
@@ -95,7 +95,7 @@ describe('app_context_ports', () => {
 
   describe('hasPackHostApi', () => {
     it('returns true when packHostApi is present', () => {
-      expect(hasPackHostApi({ packHostApi: {} as any })).toBe(true);
+      expect(hasPackHostApi({ packHostApi: {} } as unknown as Parameters<typeof hasPackHostApi>[0])).toBe(true);
     });
 
     it('returns false when packHostApi is absent', () => {
@@ -122,7 +122,7 @@ describe('app_context_ports', () => {
         getKnownPackIds: vi.fn().mockReturnValue(['pack-1'])
       };
       const result = readVisibleClockSnapshot({
-        runtimeClockProjection: projection as any,
+        runtimeClockProjection: projection as unknown as NonNullable<Parameters<typeof readVisibleClockSnapshot>[0]['runtimeClockProjection']>,
         packId: 'pack-1'
       });
       expect(result).toEqual({
@@ -138,7 +138,7 @@ describe('app_context_ports', () => {
         getKnownPackIds: vi.fn().mockReturnValue([])
       };
       const result = readVisibleClockSnapshot({
-        runtimeClockProjection: projection as any,
+        runtimeClockProjection: projection as unknown as NonNullable<Parameters<typeof readVisibleClockSnapshot>[0]['runtimeClockProjection']>,
         packId: 'pack-1'
       });
       expect(result).toEqual({
@@ -159,7 +159,7 @@ describe('app_context_ports', () => {
         getKnownPackIds: vi.fn().mockReturnValue(['pack-a', 'pack-b'])
       };
       const result = readVisibleClockSnapshot({
-        runtimeClockProjection: projection as any
+        runtimeClockProjection: projection as unknown as NonNullable<Parameters<typeof readVisibleClockSnapshot>[0]['runtimeClockProjection']>
       });
       expect(result.source).toBe('host_projection');
       expect(result.absolute_ticks).toBe('100');
@@ -171,7 +171,7 @@ describe('app_context_ports', () => {
         getKnownPackIds: vi.fn().mockReturnValue(['pack-a', 'pack-b'])
       };
       const result = readVisibleClockSnapshot({
-        runtimeClockProjection: projection as any
+        runtimeClockProjection: projection as unknown as NonNullable<Parameters<typeof readVisibleClockSnapshot>[0]['runtimeClockProjection']>
       });
       expect(result).toEqual({
         absolute_ticks: '0',

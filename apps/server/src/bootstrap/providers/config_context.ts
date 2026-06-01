@@ -6,8 +6,7 @@ import {
   getPreferredWorldPack,
   getSimulationLoopIntervalMs,
   getStartupPolicy,
-  getWorldPacksDir,
-  type RuntimeStartupPolicy
+  getWorldPacksDir
 } from '../../config/runtime_config.js';
 import type { CliConfig, RuntimeState } from '../token_interfaces.js';
 export type { CliConfig, RuntimeState };

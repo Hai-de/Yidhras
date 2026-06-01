@@ -181,7 +181,7 @@ export const unwrapData = <T>(body: unknown): T => {
  * the handler for direct invocation (bypasses HTTP). Useful for routes
  * that need fine-grained req/res control.
  */
-export const extractRouteHandlers = <T extends string>(
+export const extractRouteHandlers = (
   app: TestApp,
   registerFn: (expressApp: Express) => void
 ) => {

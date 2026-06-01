@@ -161,7 +161,7 @@ export const createMockAppContext = (options: CreateMockAppContextOptions = {}):
           getPackId: () => packId,
           getStepTicks: () => packRuntime.getStepTicks(),
           step: async () => {},
-          applyClockProjection: (snapshot: { current_tick: string }) => {}
+          applyClockProjection: (_snapshot: { current_tick: string }) => {}
         } as AppContext['getPackRuntimeHost'] extends (...args: unknown[]) => infer R ? R : never)
         : null,
     worldEngineStepCoordinator: createWorldEngineStepCoordinator(),

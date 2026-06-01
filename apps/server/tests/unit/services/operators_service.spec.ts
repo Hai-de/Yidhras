@@ -26,14 +26,14 @@ describe('operators service', () => {
     it('creates operator when username is available', async () => {
       const ctx = createMockAppContext();
       ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(null);
-      ctx.prisma.identity.create = vi.fn().mockResolvedValue({ id: 'id-new' } as any);
+      ctx.prisma.identity.create = vi.fn().mockResolvedValue({ id: 'id-new' } as Record<string, unknown>);
       ctx.prisma.operator.create = vi.fn().mockResolvedValue({
         id: 'op-new',
         username: 'bob',
         is_root: false,
         status: 'active',
         display_name: null
-      } as any);
+      } as Record<string, unknown>);
 
       const result = await createOperator(ctx, { username: 'bob', password: 'secret123' });
 
@@ -44,7 +44,7 @@ describe('operators service', () => {
 
     it('throws 409 when username is taken', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(mockOperator as any);
+      ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(mockOperator as Record<string, unknown>);
 
       await expect(
         createOperator(ctx, { username: 'alice', password: 'secret' })
@@ -54,13 +54,13 @@ describe('operators service', () => {
     it('creates operator with is_root true', async () => {
       const ctx = createMockAppContext();
       ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(null);
-      ctx.prisma.identity.create = vi.fn().mockResolvedValue({ id: 'id-root' } as any);
+      ctx.prisma.identity.create = vi.fn().mockResolvedValue({ id: 'id-root' } as Record<string, unknown>);
       ctx.prisma.operator.create = vi.fn().mockResolvedValue({
         id: 'op-root',
         username: 'root',
         is_root: true,
         status: 'active'
-      } as any);
+      } as Record<string, unknown>);
 
       const result = await createOperator(ctx, { username: 'root', password: 'rootpass', is_root: true });
       expect(result.id).toBe('op-root');
@@ -70,7 +70,7 @@ describe('operators service', () => {
   describe('listOperators', () => {
     it('returns all operators', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.operator.findMany = vi.fn().mockResolvedValue([mockOperator] as any);
+      ctx.prisma.operator.findMany = vi.fn().mockResolvedValue([mockOperator] as Record<string, unknown>);
 
       const result = await listOperators(ctx);
       expect(Array.isArray(result)).toBe(true);
@@ -83,7 +83,7 @@ describe('operators service', () => {
       ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue({
         ...mockOperator,
         pack_bindings: []
-      } as any);
+      } as Record<string, unknown>);
 
       const result = await getOperator(ctx, 'op-1');
       expect(result.id).toBe('op-1');
@@ -103,10 +103,10 @@ describe('operators service', () => {
   describe('updateOperator', () => {
     it('updates display_name', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(mockOperator as any);
-      ctx.prisma.operator.update = vi.fn().mockResolvedValue({ ...mockOperator, display_name: 'New Name' } as any);
+      ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(mockOperator as Record<string, unknown>);
+      ctx.prisma.operator.update = vi.fn().mockResolvedValue({ ...mockOperator, display_name: 'New Name' } as Record<string, unknown>);
 
-      const result = await updateOperator(ctx, 'op-1', { display_name: 'New Name' });
+      await updateOperator(ctx, 'op-1', { display_name: 'New Name' });
       expect(ctx.prisma.operator.update).toHaveBeenCalled();
     });
 
@@ -121,7 +121,7 @@ describe('operators service', () => {
 
     it('throws 400 for invalid status', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(mockOperator as any);
+      ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(mockOperator as Record<string, unknown>);
 
       await expect(
         updateOperator(ctx, 'op-1', { status: 'invalid_status' })
@@ -132,8 +132,8 @@ describe('operators service', () => {
   describe('deleteOperator', () => {
     it('sets operator status to disabled', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(mockOperator as any);
-      ctx.prisma.operator.update = vi.fn().mockResolvedValue({ ...mockOperator, status: 'disabled' } as any);
+      ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(mockOperator as Record<string, unknown>);
+      ctx.prisma.operator.update = vi.fn().mockResolvedValue({ ...mockOperator, status: 'disabled' } as Record<string, unknown>);
 
       await deleteOperator(ctx, 'op-1', 'admin-1');
 

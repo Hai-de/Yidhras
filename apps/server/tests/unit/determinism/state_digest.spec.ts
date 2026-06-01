@@ -92,7 +92,7 @@ describe('state_digest', () => {
     it('includes engine owned data when provided', () => {
       const prismaData = makePrismaData();
       const engineData = makeEngineOwnedData();
-      const r1 = computeStateDigest('pack-1', '100', 'rev-1', prismaData);
+      computeStateDigest('pack-1', '100', 'rev-1', prismaData);
       const r2 = computeStateDigest('pack-1', '100', 'rev-1', prismaData, engineData);
       // Empty engine data should still produce valid output
       expect(r2.sha256).toBeDefined();

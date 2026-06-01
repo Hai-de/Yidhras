@@ -157,7 +157,7 @@ describe('workflow_single_flight', () => {
       const ctx = makeMockContext({
         jobs: [{ id: 'job-1', request_input: { agent_id: 'agent-1' } }]
       });
-      const result = await hasActiveWorkflowForActor(ctx as never, 'agent-1', {
+      await hasActiveWorkflowForActor(ctx as never, 'agent-1', {
         excludeDecisionJobIds: ['job-1']
       });
       expect(ctx.repos.inference.findDecisionJobs).toHaveBeenCalledWith(

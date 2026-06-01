@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createMockAppContext } from '../../helpers/mock_context.js';
-import { createMockPrisma } from '../../helpers/prisma_mock.js';
+import type { AiProviderTemplate } from '../../../src/ai/types.js';
 
 // The openai_compatible module has many internal pure functions
 // We test them indirectly through the adapter or directly if exported.
@@ -37,7 +36,7 @@ describe('AI provider openai_compatible helpers', () => {
         base_url: 'https://api.test.com/v1',
         api_key_env: 'TEST_API_KEY',
         default_headers: { 'X-Test': 'header' }
-      } as any);
+      } as AiProviderTemplate);
 
       // The template adapter doesn't expose provider directly on the returned object
       expect(adapter).toBeDefined();
@@ -52,7 +51,7 @@ describe('AI provider openai_compatible helpers', () => {
         base_url: 'https://api.test.com/v1',
         api_key_env: 'TEST_API_KEY',
         default_headers: { 'X-Test': 'header' }
-      } as any);
+      } as AiProviderTemplate);
 
       expect(adapter.listModels).toBeDefined();
       expect(typeof adapter.listModels).toBe('function');
@@ -67,7 +66,7 @@ describe('AI provider openai_compatible helpers', () => {
         base_url: 'https://api.test.com/v1',
         api_key_env: 'TEST_API_KEY',
         default_headers: { 'X-Test': 'header' }
-      } as any);
+      } as AiProviderTemplate);
 
       expect(adapter.execute).toBeDefined();
       expect(typeof adapter.execute).toBe('function');
@@ -82,7 +81,7 @@ describe('AI provider openai_compatible helpers', () => {
         base_url: 'https://api.test.com/v1',
         api_key_env: 'TEST_API_KEY',
         default_headers: { 'X-Test': 'header' }
-      } as any);
+      } as AiProviderTemplate);
 
       expect(adapter.executeStream).toBeDefined();
       expect(typeof adapter.executeStream).toBe('function');

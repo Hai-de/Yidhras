@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { resolvePromptWorkflowTaskTypeForAiTask } from '../../../src/ai/task_prompt_builder.js';
+import type { AiTaskType } from '../../../src/ai/types.js';
 
 describe('task_prompt_builder', () => {
   describe('resolvePromptWorkflowTaskTypeForAiTask', () => {
@@ -21,7 +22,7 @@ describe('task_prompt_builder', () => {
     });
 
     it('falls back to agent_decision for unknown task type', () => {
-      expect(resolvePromptWorkflowTaskTypeForAiTask('unknown_type' as any)).toBe('agent_decision');
+      expect(resolvePromptWorkflowTaskTypeForAiTask('unknown_type' as AiTaskType)).toBe('agent_decision');
     });
   });
 });

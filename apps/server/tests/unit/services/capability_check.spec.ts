@@ -15,7 +15,7 @@ describe('checkCapability', () => {
       display_name: 'Root',
       created_at: 0n,
       updated_at: 0n
-    } as any);
+    } as Record<string, unknown>);
 
     const result = await checkCapability(ctx, 'op-root', 'pack-1', 'perceive.agent.context');
 
@@ -45,9 +45,9 @@ describe('checkCapability', () => {
       display_name: 'Alice',
       created_at: 0n,
       updated_at: 0n
-    } as any);
+    } as Record<string, unknown>);
     // Mock findOperatorGrant to return a matching grant
-    (ctx.repos.identityOperator.findOperatorGrant as any) = vi.fn().mockResolvedValue({
+    (ctx.repos.identityOperator.findOperatorGrant as unknown) = vi.fn().mockResolvedValue({
       id: 'grant-1',
       capability_key: 'perceive.agent.context'
     });
@@ -70,8 +70,8 @@ describe('checkCapability', () => {
       display_name: 'Alice',
       created_at: 0n,
       updated_at: 0n
-    } as any);
-    (ctx.repos.identityOperator.findOperatorGrant as any) = vi.fn().mockResolvedValue(null);
+    } as Record<string, unknown>);
+    (ctx.repos.identityOperator.findOperatorGrant as unknown) = vi.fn().mockResolvedValue(null);
 
     const result = await checkCapability(ctx, 'op-1', 'pack-1', 'perceive.agent.context');
 

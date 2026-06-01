@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { agentRoutes } from '../../../src/app/routes/agent.js';
 import { overviewRoutes } from '../../../src/app/routes/overview.js';
 import { createMockAppContext } from '../../helpers/mock_context.js';
-import { createTestApp, unwrapData } from '../../helpers/test_app.js';
+import { createTestApp } from '../../helpers/test_app.js';
 
 // Mock the agent service layer
 vi.mock('../../../src/app/services/agent/agent.js', () => ({

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { packBindingRoutes } from '../../../src/app/routes/operator_pack_bindings.js';
 import { createMockAppContext } from '../../helpers/mock_context.js';
-import { createTestApp, unwrapData } from '../../helpers/test_app.js';
+import { createTestApp } from '../../helpers/test_app.js';
 
 vi.mock('../../../src/app/services/operator/operator_pack_bindings.js', () => ({
   createPackBinding: vi.fn(async () => ({

@@ -26,7 +26,7 @@ describe('identity service', () => {
         agent_id: 'agent-1',
         role: 'active',
         status: 'active'
-      } as any);
+      } as Record<string, unknown>);
 
       const result = await createIdentityBinding(ctx, {
         identity_id: 'id-1',
@@ -79,7 +79,7 @@ describe('identity service', () => {
       const ctx = createMockAppContext();
       ctx.prisma.identityNodeBinding.findFirst = vi.fn().mockResolvedValue({
         id: 'existing-binding'
-      } as any);
+      } as Record<string, unknown>);
 
       await expect(
         createIdentityBinding(ctx, {
@@ -96,7 +96,7 @@ describe('identity service', () => {
       const ctx = createMockAppContext();
       ctx.prisma.identityNodeBinding.findMany = vi.fn().mockResolvedValue([
         { id: 'b1', identity_id: 'id-1', role: 'active' }
-      ] as any);
+      ] as Record<string, unknown>);
 
       const result = await queryIdentityBindings(ctx, { identity_id: 'id-1' });
 
@@ -145,8 +145,8 @@ describe('identity service', () => {
   describe('unbindIdentityBinding', () => {
     it('sets binding status to inactive by default', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.identityNodeBinding.findUnique = vi.fn().mockResolvedValue({ id: 'b-1' } as any);
-      ctx.prisma.identityNodeBinding.update = vi.fn().mockResolvedValue({ id: 'b-1', status: 'inactive' } as any);
+      ctx.prisma.identityNodeBinding.findUnique = vi.fn().mockResolvedValue({ id: 'b-1' } as Record<string, unknown>);
+      ctx.prisma.identityNodeBinding.update = vi.fn().mockResolvedValue({ id: 'b-1', status: 'inactive' } as Record<string, unknown>);
 
       await unbindIdentityBinding(ctx, { binding_id: 'b-1' });
 
@@ -179,8 +179,8 @@ describe('identity service', () => {
   describe('expireIdentityBinding', () => {
     it('sets binding status to expired', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.identityNodeBinding.findUnique = vi.fn().mockResolvedValue({ id: 'b-1' } as any);
-      ctx.prisma.identityNodeBinding.update = vi.fn().mockResolvedValue({ id: 'b-1', status: 'expired' } as any);
+      ctx.prisma.identityNodeBinding.findUnique = vi.fn().mockResolvedValue({ id: 'b-1' } as Record<string, unknown>);
+      ctx.prisma.identityNodeBinding.update = vi.fn().mockResolvedValue({ id: 'b-1', status: 'expired' } as Record<string, unknown>);
 
       await expireIdentityBinding(ctx, { binding_id: 'b-1' });
 

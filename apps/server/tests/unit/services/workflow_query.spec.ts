@@ -10,37 +10,7 @@ vi.mock('../../../src/app/services/pack/pack_runtime_resolution.js', () => ({
   resolvePackTick: vi.fn(() => 1000n)
 }));
 
-const makeJob = (overrides: Record<string, unknown> = {}) => ({
-  id: 'job-1',
-  status: 'completed',
-  job_type: 'decision',
-  pack_id: 'test-pack',
-  source_inference_id: 'inf-1',
-  idempotency_key: null,
-  request_input: null,
-  pending_source_key: null,
-  action_intent_id: 'intent-1',
-  attempt_count: 1,
-  max_attempts: 3,
-  intent_class: 'post_message',
-  last_error: null,
-  last_error_code: null,
-  last_error_stage: null,
-  completed_at: 2000n,
-  started_at: 1500n,
-  next_retry_at: null,
-  locked_by: null,
-  locked_at: null,
-  lock_expires_at: null,
-  scheduled_for_tick: null,
-  replay_of_job_id: null,
-  replay_source_trace_id: null,
-  replay_reason: null,
-  replay_override_snapshot: null,
-  created_at: 1000n,
-  updated_at: 2000n,
-  ...overrides
-});
+
 
 const makeTrace = (overrides: Record<string, unknown> = {}) => ({
   id: 'trace-1',
@@ -49,15 +19,7 @@ const makeTrace = (overrides: Record<string, unknown> = {}) => ({
   ...overrides
 });
 
-const makeIntent = (overrides: Record<string, unknown> = {}) => ({
-  id: 'intent-1',
-  source_inference_id: 'inf-1',
-  intent_type: 'post_message',
-  status: 'completed',
-  actor_ref: { agent_id: 'agent-1', identity_id: 'id-1' },
-  target_ref: { agent_id: 'agent-2' },
-  ...overrides
-});
+
 
 describe('workflow_query', () => {
   describe('listInferenceJobs', () => {

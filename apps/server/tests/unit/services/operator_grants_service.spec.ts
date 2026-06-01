@@ -21,7 +21,7 @@ describe('operator_grants service', () => {
         revocable: true,
         expires_at: null,
         created_at: 1000n
-      } as any);
+      } as Record<string, unknown>);
 
       const result = await createOperatorGrant(ctx, 'pack-1', 'op-1', 'id-1', 'perceive.agent.context');
 
@@ -52,7 +52,7 @@ describe('operator_grants service', () => {
 
     it('creates grant with scope_json and expires_at in future', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.operatorGrant.create = vi.fn().mockResolvedValue({ id: 'grant-2' } as any);
+      ctx.prisma.operatorGrant.create = vi.fn().mockResolvedValue({ id: 'grant-2' } as Record<string, unknown>);
 
       await createOperatorGrant(ctx, 'pack-1', 'op-1', 'id-1', 'perceive.agent.context', {
         scope_json: { pack_ids: ['pack-1'] },
@@ -73,7 +73,7 @@ describe('operator_grants service', () => {
 
     it('logs audit after creation', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.operatorGrant.create = vi.fn().mockResolvedValue({ id: 'grant-3' } as any);
+      ctx.prisma.operatorGrant.create = vi.fn().mockResolvedValue({ id: 'grant-3' } as Record<string, unknown>);
 
       await createOperatorGrant(ctx, 'pack-1', 'op-1', 'id-1', 'mutate.agent.snr', undefined, '10.0.0.1');
 
@@ -97,7 +97,7 @@ describe('operator_grants service', () => {
         { id: 'g1', capability_key: 'perceive.agent.context' },
         { id: 'g2', capability_key: 'mutate.agent.snr' }
       ];
-      ctx.prisma.operatorGrant.findMany = vi.fn().mockResolvedValue(mockGrants as any);
+      ctx.prisma.operatorGrant.findMany = vi.fn().mockResolvedValue(mockGrants as Record<string, unknown>);
 
       const result = await listOperatorGrants(ctx, 'pack-1', 'op-1');
 
@@ -120,8 +120,8 @@ describe('operator_grants service', () => {
         giver_operator_id: 'op-1',
         pack_id: 'pack-1',
         capability_key: 'perceive.agent.context'
-      } as any);
-      ctx.prisma.operatorGrant.delete = vi.fn().mockResolvedValue({} as any);
+      } as Record<string, unknown>);
+      ctx.prisma.operatorGrant.delete = vi.fn().mockResolvedValue({} as Record<string, unknown>);
 
       const result = await revokeOperatorGrant(ctx, 'grant-1', 'op-1');
 
@@ -147,7 +147,7 @@ describe('operator_grants service', () => {
         giver_operator_id: 'op-other',
         pack_id: 'pack-1',
         capability_key: 'perceive.agent.context'
-      } as any);
+      } as Record<string, unknown>);
 
       await expect(
         revokeOperatorGrant(ctx, 'grant-1', 'op-1')
@@ -161,8 +161,8 @@ describe('operator_grants service', () => {
         giver_operator_id: 'op-1',
         pack_id: 'pack-1',
         capability_key: 'mutate.agent.snr'
-      } as any);
-      ctx.prisma.operatorGrant.delete = vi.fn().mockResolvedValue({} as any);
+      } as Record<string, unknown>);
+      ctx.prisma.operatorGrant.delete = vi.fn().mockResolvedValue({} as Record<string, unknown>);
 
       await revokeOperatorGrant(ctx, 'grant-1', 'op-1', '192.168.1.1');
 

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { auditRoutes } from '../../../src/app/routes/audit.js';
 import { createMockAppContext } from '../../helpers/mock_context.js';
-import { createTestApp, unwrapData } from '../../helpers/test_app.js';
+import { createTestApp } from '../../helpers/test_app.js';
 
 describe('audit routes', () => {
   describe('GET /api/audit/feed', () => {

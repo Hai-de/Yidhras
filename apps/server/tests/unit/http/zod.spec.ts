@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import { parseBody, parseParams, parseQuery } from '../../../src/app/http/zod.js';
+import type { ApiError } from '../../../src/utils/api_error.js';
 
 describe('app/http/zod', () => {
   describe('parseBody', () => {
@@ -16,9 +17,9 @@ describe('app/http/zod', () => {
       try {
         parseBody(schema, { name: 123 }, 'BODY_INVALID');
         expect.unreachable('should have thrown');
-      } catch (err: any) {
-        expect(err.status).toBe(400);
-        expect(err.code).toBe('BODY_INVALID');
+      } catch (err: unknown) {
+        expect((err as ApiError).status).toBe(400);
+        expect((err as ApiError).code).toBe('BODY_INVALID');
       }
     });
 
@@ -26,9 +27,9 @@ describe('app/http/zod', () => {
       try {
         parseBody(schema, null, 'BODY_INVALID');
         expect.unreachable('should have thrown');
-      } catch (err: any) {
-        expect(err.status).toBe(400);
-        expect(err.code).toBe('BODY_INVALID');
+      } catch (err: unknown) {
+        expect((err as ApiError).status).toBe(400);
+        expect((err as ApiError).code).toBe('BODY_INVALID');
       }
     });
   });

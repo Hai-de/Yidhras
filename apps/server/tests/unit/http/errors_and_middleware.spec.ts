@@ -1,8 +1,10 @@
+import type { Response } from 'express';
 import { describe, expect, it, vi } from 'vitest';
 
 import { getErrorMessage } from '../../../src/app/http/errors.js';
 import { createRequestId } from '../../../src/app/middleware/request_id.js';
 import { requireAuth } from '../../../src/app/middleware/require_auth.js';
+import type { OperatorRequest } from '../../../src/operator/auth/types.js';
 import { ApiError } from '../../../src/utils/api_error.js';
 
 describe('getErrorMessage', () => {
@@ -34,8 +36,8 @@ describe('requireAuth', () => {
   it('calls next when operator is present', () => {
     const middleware = requireAuth();
     const next = vi.fn();
-    const req = { operator: { id: 'op-1', identity_id: 'id-1', role: 'user' } } as any;
-    const res = {} as any;
+    const req = { operator: { id: 'op-1', identity_id: 'id-1', role: 'user' } } as unknown as OperatorRequest;
+    const res = {} as unknown as Response;
 
     middleware(req, res, next);
     expect(next).toHaveBeenCalledOnce();
@@ -44,15 +46,15 @@ describe('requireAuth', () => {
   it('throws ApiError 401 when operator is missing', () => {
     const middleware = requireAuth();
     const next = vi.fn();
-    const req = {} as any;
-    const res = {} as any;
+    const req = {} as unknown as OperatorRequest;
+    const res = {} as unknown as Response;
 
     expect(() => middleware(req, res, next)).toThrow(ApiError);
     try {
       middleware(req, res, next);
-    } catch (err: any) {
-      expect(err.status).toBe(401);
-      expect(err.code).toBe('OPERATOR_REQUIRED');
+    } catch (err: unknown) {
+      expect((err as ApiError).status).toBe(401);
+      expect((err as ApiError).code).toBe('OPERATOR_REQUIRED');
     }
     expect(next).not.toHaveBeenCalled();
   });

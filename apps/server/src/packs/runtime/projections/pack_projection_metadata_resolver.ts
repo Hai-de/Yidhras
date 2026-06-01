@@ -8,9 +8,13 @@ export type {
 } from './pack_projection_metadata_types.js';
 
 /** Inlined pack-scope assertion — avoids cycle with app/services/pack/pack_scope_resolver. */
-const assertPackRuntime = (packRuntimeLookup: unknown, packId: string, feature: string): string => {
+const assertPackRuntime = (
+  packRuntimeLookup: { hasPackRuntime?: (id: string) => boolean } | null | undefined,
+  packId: string,
+  feature: string
+): string => {
   const normalized = packId.trim();
-  const lookup = packRuntimeLookup as { hasPackRuntime?: (id: string) => boolean } | null | undefined;
+  const lookup = packRuntimeLookup;
   if (!lookup?.hasPackRuntime?.(normalized)) {
     throw new ApiError(404, 'PACK_RUNTIME_NOT_FOUND', `Pack runtime not found for ${feature}`, {
       pack_id: normalized,

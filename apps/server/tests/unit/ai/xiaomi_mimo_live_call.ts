@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createXiaomiMiMoProviderAdapter } from '../../src/ai/providers/xiaomi_mimo.js';
+import { createXiaomiMiMoProviderAdapter } from '../../../src/ai/providers/xiaomi_mimo.js';
 import type { AiMessage } from '../../src/ai/types.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));

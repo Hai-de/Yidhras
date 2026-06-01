@@ -57,7 +57,7 @@ describe('DynamicsCalculator', () => {
     });
 
     it('returns delta for unknown algorithm type', () => {
-      const result = DynamicsCalculator.calculate(1.0, 7.0, { type: 'unknown' as any, params: {} });
+      const result = DynamicsCalculator.calculate(1.0, 7.0, { type: 'unknown' as string, params: {} } as unknown as Parameters<typeof DynamicsCalculator.calculate>[2]);
       expect(result).toBe(7.0);
     });
 

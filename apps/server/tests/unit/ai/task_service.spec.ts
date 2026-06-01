@@ -42,7 +42,7 @@ describe('task_service', () => {
     });
 
     it('returns null when output_contract has no mode or json_schema', () => {
-      const request = makeTaskRequest({ output_contract: {} as any });
+      const request = makeTaskRequest({ output_contract: {} as unknown as AiTaskRequest['output_contract'] });
       const result = buildInlineOverrideFromRequest(request);
       expect(result).toBeNull();
     });

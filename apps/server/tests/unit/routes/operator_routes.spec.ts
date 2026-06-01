@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { operatorRoutes } from '../../../src/app/routes/operators.js';
 import { createMockAppContext } from '../../helpers/mock_context.js';
-import { createTestApp, unwrapData } from '../../helpers/test_app.js';
+import { createTestApp } from '../../helpers/test_app.js';
 
 const mockOperator = {
   id: 'op-1',
@@ -19,7 +19,7 @@ describe('operator routes', () => {
   describe('GET /api/operators', () => {
     it('returns operators for root', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.operator.findMany = vi.fn().mockResolvedValue([mockOperator] as any);
+      ctx.prisma.operator.findMany = vi.fn().mockResolvedValue([mockOperator] as Record<string, unknown>[]);
 
       const app = createTestApp(ctx, {
         operator: { id: 'root-1', username: 'root', is_root: true }
@@ -49,13 +49,13 @@ describe('operator routes', () => {
     it('creates operator for root', async () => {
       const ctx = createMockAppContext();
       ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(null);
-      ctx.prisma.identity.create = vi.fn().mockResolvedValue({ id: 'id-new' } as any);
+      ctx.prisma.identity.create = vi.fn().mockResolvedValue({ id: 'id-new' } as Record<string, unknown>);
       ctx.prisma.operator.create = vi.fn().mockResolvedValue({
         id: 'op-new',
         username: 'bob',
         is_root: false,
         status: 'active'
-      } as any);
+      } as Record<string, unknown>);
 
       const app = createTestApp(ctx, {
         operator: { id: 'root-1', username: 'root', is_root: true }
@@ -93,7 +93,7 @@ describe('operator routes', () => {
       ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue({
         ...mockOperator,
         pack_bindings: []
-      } as any);
+      } as Record<string, unknown>);
 
       const app = createTestApp(ctx, {
         operator: { id: 'root-1', username: 'root', is_root: true }
@@ -123,8 +123,8 @@ describe('operator routes', () => {
   describe('PATCH /api/operators/:id', () => {
     it('updates operator for root', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(mockOperator as any);
-      ctx.prisma.operator.update = vi.fn().mockResolvedValue({ ...mockOperator, display_name: 'New Name' } as any);
+      ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(mockOperator as Record<string, unknown>);
+      ctx.prisma.operator.update = vi.fn().mockResolvedValue({ ...mockOperator, display_name: 'New Name' } as Record<string, unknown>);
 
       const app = createTestApp(ctx, {
         operator: { id: 'root-1', username: 'root', is_root: true }
@@ -140,8 +140,8 @@ describe('operator routes', () => {
   describe('DELETE /api/operators/:id', () => {
     it('soft deletes operator for root', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(mockOperator as any);
-      ctx.prisma.operator.update = vi.fn().mockResolvedValue({ ...mockOperator, status: 'disabled' } as any);
+      ctx.prisma.operator.findUnique = vi.fn().mockResolvedValue(mockOperator as Record<string, unknown>);
+      ctx.prisma.operator.update = vi.fn().mockResolvedValue({ ...mockOperator, status: 'disabled' } as Record<string, unknown>);
 
       const app = createTestApp(ctx, {
         operator: { id: 'root-1', username: 'root', is_root: true }

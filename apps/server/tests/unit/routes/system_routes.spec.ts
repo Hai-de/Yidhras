@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { systemRoutes } from '../../../src/app/routes/system.js';
 import { createMockAppContext } from '../../helpers/mock_context.js';
-import { createTestApp, type TestApp, unwrapData } from '../../helpers/test_app.js';
+import { createTestApp } from '../../helpers/test_app.js';
 
 describe('system routes', () => {
   describe('GET /api/health', () => {

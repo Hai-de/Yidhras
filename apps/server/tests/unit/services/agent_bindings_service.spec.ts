@@ -18,7 +18,7 @@ describe('operator_agent_bindings service', () => {
         agent_id: 'agent-1',
         role: 'active',
         status: 'active'
-      } as any);
+      } as Record<string, unknown>);
 
       const result = await createAgentBinding(ctx, 'agent-1', 'id-1', 'active', 'op-1');
 
@@ -28,7 +28,7 @@ describe('operator_agent_bindings service', () => {
 
     it('throws 409 when binding already exists', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.identityNodeBinding.findFirst = vi.fn().mockResolvedValue({ id: 'existing' } as any);
+      ctx.prisma.identityNodeBinding.findFirst = vi.fn().mockResolvedValue({ id: 'existing' } as Record<string, unknown>);
 
       await expect(
         createAgentBinding(ctx, 'agent-1', 'id-1', 'active')
@@ -38,7 +38,7 @@ describe('operator_agent_bindings service', () => {
     it('logs audit after creation', async () => {
       const ctx = createMockAppContext();
       ctx.prisma.identityNodeBinding.findFirst = vi.fn().mockResolvedValue(null);
-      ctx.prisma.identityNodeBinding.create = vi.fn().mockResolvedValue({ id: 'b-1' } as any);
+      ctx.prisma.identityNodeBinding.create = vi.fn().mockResolvedValue({ id: 'b-1' } as Record<string, unknown>);
 
       await createAgentBinding(ctx, 'agent-1', 'id-1', 'active', 'op-admin', '10.0.0.1');
 
@@ -58,8 +58,8 @@ describe('operator_agent_bindings service', () => {
   describe('unbindAgent', () => {
     it('sets binding status to inactive', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.identityNodeBinding.findFirst = vi.fn().mockResolvedValue({ id: 'b-1' } as any);
-      ctx.prisma.identityNodeBinding.update = vi.fn().mockResolvedValue({ id: 'b-1', status: 'inactive' } as any);
+      ctx.prisma.identityNodeBinding.findFirst = vi.fn().mockResolvedValue({ id: 'b-1' } as Record<string, unknown>);
+      ctx.prisma.identityNodeBinding.update = vi.fn().mockResolvedValue({ id: 'b-1', status: 'inactive' } as Record<string, unknown>);
 
       const result = await unbindAgent(ctx, 'agent-1', 'id-1', 'op-1');
 
@@ -83,8 +83,8 @@ describe('operator_agent_bindings service', () => {
 
     it('logs audit after unbinding', async () => {
       const ctx = createMockAppContext();
-      ctx.prisma.identityNodeBinding.findFirst = vi.fn().mockResolvedValue({ id: 'b-1' } as any);
-      ctx.prisma.identityNodeBinding.update = vi.fn().mockResolvedValue({} as any);
+      ctx.prisma.identityNodeBinding.findFirst = vi.fn().mockResolvedValue({ id: 'b-1' } as Record<string, unknown>);
+      ctx.prisma.identityNodeBinding.update = vi.fn().mockResolvedValue({} as Record<string, unknown>);
 
       await unbindAgent(ctx, 'agent-1', 'id-1', 'op-1', '192.168.1.1');
 
@@ -121,7 +121,7 @@ describe('operator_agent_bindings service', () => {
           created_at: 2000n,
           identity: { type: 'ai', name: 'Bot' }
         }
-      ] as any);
+      ] as Record<string, unknown>);
 
       const result = await listAgentOperators(ctx, 'agent-1');
 
