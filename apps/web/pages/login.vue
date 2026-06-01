@@ -1,7 +1,7 @@
 <template>
   <main class="yd-login-page yd-grid-surface flex min-h-dvh items-center justify-center px-4 py-8">
     <section class="yd-login-shell" aria-labelledby="login-title">
-      <div class="yd-login-card yd-panel-surface--elevated yd-tone-info rounded-sm border border-yd-border-muted px-6 py-7 sm:px-8 sm:py-8">
+      <div class="">
         <header class="yd-separator-bottom pb-5 text-center">
           <h1 id="login-title" class="mt-2 text-2xl font-semibold tracking-tight text-yd-text-primary sm:text-3xl">
             {{ $t('common.app_name') }}
@@ -213,16 +213,12 @@ if (auth.isAuthenticated) {
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, var(--yd-color-border-strong) 62%, transparent 38%),
     inset 0 -1px 0 color-mix(in srgb, var(--yd-color-border-strong) 62%, transparent 38%),
-    inset 2px 0 0 color-mix(in srgb, var(--yd-color-state-accent) 72%, transparent 28%),
-    0 0 0 1px color-mix(in srgb, var(--yd-color-state-accent) 18%, transparent 82%),
-    0 0 14px color-mix(in srgb, var(--yd-color-state-accent) 10%, transparent 90%);
+ 
 }
 
 .yd-login-remember:focus-within {
   border-color: color-mix(in srgb, var(--yd-color-state-accent) 62%, transparent 38%);
-  box-shadow:
-    inset 2px 0 0 color-mix(in srgb, var(--yd-color-state-accent) 64%, transparent 36%),
-    0 0 14px color-mix(in srgb, var(--yd-color-state-accent) 9%, transparent 91%);
+ 
 }
 
 .yd-login-submit {
@@ -231,10 +227,7 @@ if (auth.isAuthenticated) {
   align-items: center;
   justify-content: center;
   background-color: color-mix(in srgb, var(--yd-color-state-accent) 20%, transparent 80%);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--yd-color-state-accent) 38%, transparent 62%),
-    inset 0 -1px 0 color-mix(in srgb, var(--yd-color-border-muted) 42%, transparent 58%),
-    inset 2px 0 0 color-mix(in srgb, var(--yd-color-state-accent) 68%, transparent 32%);
+ 
   transition:
     background-color 140ms ease,
     border-color 140ms ease,

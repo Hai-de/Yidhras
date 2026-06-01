@@ -23,12 +23,6 @@
     "depcruise": "bash -c 'cd apps/server && pnpm exec dependency-cruiser --config ../../.dependency-cruiser.js src --ts-config tsconfig.json'",
     "depcruise:web": "bash -c 'cd apps/web && pnpm exec dependency-cruiser --config ../../.dependency-cruiser.js . --ts-config tsconfig.json'"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "bcrypt",
-      "simple-git-hooks"
-    ]
-  },
   "simple-git-hooks": {
     "pre-commit": "pnpm exec lint-staged"
   },
