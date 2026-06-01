@@ -26,15 +26,23 @@ export const useNotificationsStore = defineStore('notifications', {
     localItems: [] as SystemNotificationSnapshot[],
     isFetching: false,
     lastSyncedAt: null as number | null,
-    lastError: null as string | null
+    lastError: null as string | null,
+    levelFilter: null as 'info' | 'warning' | 'error' | null
   }),
   getters: {
     items: state => [...state.localItems, ...state.remoteItems],
+    filteredItems(): SystemNotificationSnapshot[] {
+      if (!this.levelFilter) return this.items
+      return this.items.filter(item => item.level === this.levelFilter)
+    },
     unreadCount(): number {
       return this.items.length
     },
     latestItems(): SystemNotificationSnapshot[] {
-      return this.items.slice(0, 5)
+      return this.items.slice(0, 50)
+    },
+    pluginErrorItems(): SystemNotificationSnapshot[] {
+      return this.items.filter(item => item.code?.startsWith('PLUGIN_'))
     },
     hasErrors(): boolean {
       return this.items.some(item => item.level === 'error')

@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import type { SystemNotificationSnapshot } from '../../../composables/api/useSystemApi'
 import { useNotificationsStore } from '../../../stores/notifications'
 import { useRuntimeStore } from '../../../stores/runtime'
 import type { DockTabId, OperatorWorkspaceId } from '../../../stores/shell'
@@ -607,7 +608,38 @@ const statusBarActions = computed(() => {
   ]
 })
 
-const latestNotifications = computed(() => notifications.latestItems)
+const latestNotifications = computed(() => notifications.filteredItems.slice(0, 50))
+
+const expandedNotificationIds = ref(new Set<string>())
+
+const toggleNotificationExpand = (id: string) => {
+  if (expandedNotificationIds.value.has(id)) {
+    expandedNotificationIds.value.delete(id)
+  } else {
+    expandedNotificationIds.value.add(id)
+  }
+  // trigger reactivity
+  expandedNotificationIds.value = new Set(expandedNotificationIds.value)
+}
+
+const resolveDetailsFields = (item: SystemNotificationSnapshot): Array<{ key: string; value: string }> => {
+  if (!item.details || typeof item.details !== 'object') return []
+  const details = item.details as Record<string, unknown>
+  const fields: Array<{ key: string; value: string }> = []
+  for (const [key, val] of Object.entries(details)) {
+    if (key.startsWith('_')) continue
+    if (typeof val === 'object' && val !== null) {
+      fields.push({ key, value: JSON.stringify(val) })
+    } else {
+      fields.push({ key, value: String(val) })
+    }
+  }
+  return fields
+}
+
+const setNotificationLevelFilter = (level: 'info' | 'warning' | 'error' | null) => {
+  notifications.levelFilter = notifications.levelFilter === level ? null : level
+}
 
 const resolveNotificationToneClass = (level: 'info' | 'warning' | 'error') => {
   if (level === 'error') {
@@ -756,6 +788,27 @@ const resolveNotificationToneClass = (level: 'info' | 'warning' | 'error') => {
                 </div>
 
                 <template v-if="shell.activeDockTabId === 'notifications'">
+                  <!-- 级别过滤 -->
+                  <div class="mb-2 flex gap-1">
+                    <button
+                      v-for="lvl in (['error', 'warning', 'info'] as const)"
+                      :key="lvl"
+                      type="button"
+                      class="rounded-sm border px-2 py-1 text-[10px] uppercase tracking-[0.12em]"
+                      :class="notifications.levelFilter === lvl ? 'bg-yd-accent text-white border-yd-accent' : 'text-yd-text-muted border-yd-border-muted'"
+                      @click="setNotificationLevelFilter(lvl)"
+                    >
+                      {{ lvl }}
+                    </button>
+                    <button
+                      v-if="notifications.levelFilter"
+                      type="button"
+                      class="rounded-sm border px-2 py-1 text-[10px] text-yd-text-muted border-yd-border-muted"
+                      @click="setNotificationLevelFilter(null)"
+                    >
+                      clear
+                    </button>
+                  </div>
                   <div v-if="latestNotifications.length === 0" class="yd-workbench-inset rounded-sm px-4 py-3 text-sm leading-6 text-yd-text-secondary">
                     {{ dockEmptyMessage }}
                   </div>
@@ -763,7 +816,8 @@ const resolveNotificationToneClass = (level: 'info' | 'warning' | 'error') => {
                     <article
                       v-for="item in latestNotifications"
                       :key="item.id"
-                      class="yd-workbench-inset rounded-sm px-4 py-3"
+                      class="yd-workbench-inset rounded-sm px-4 py-3 cursor-pointer"
+                      @click="toggleNotificationExpand(item.id)"
                     >
                       <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
@@ -780,6 +834,17 @@ const resolveNotificationToneClass = (level: 'info' | 'warning' | 'error') => {
                         >
                           {{ item.level }}
                         </span>
+                      </div>
+                      <!-- 展开 details -->
+                      <div v-if="expandedNotificationIds.has(item.id) && item.details" class="mt-3 border-t border-yd-border-muted pt-2">
+                        <div
+                          v-for="field in resolveDetailsFields(item)"
+                          :key="field.key"
+                          class="mt-1 text-[11px] leading-5"
+                        >
+                          <span class="text-yd-text-muted">{{ field.key }}:</span>
+                          <span class="ml-1 text-yd-text-primary break-all">{{ field.value }}</span>
+                        </div>
                       </div>
                     </article>
                   </div>
