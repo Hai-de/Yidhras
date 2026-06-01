@@ -29,9 +29,11 @@ export const handlePluginWorkerHostCall = async (
     case 'requestInference': {
       if (!hasCapability(context.grantedCapabilities, PLUGIN_CAPABILITY_KEY.INFERENCE_REQUEST)) {
         throw new ApiError(403, 'PLUGIN_CAPABILITY_DENIED', 'Plugin does not have inference capability', {
+          pack_id: context.packId,
           plugin_id: context.pluginId,
           installation_id: context.installationId,
-          capability: PLUGIN_CAPABILITY_KEY.INFERENCE_REQUEST
+          capability: PLUGIN_CAPABILITY_KEY.INFERENCE_REQUEST,
+          method
         });
       }
       if (!context.appContext.requestPluginInference) {
@@ -70,9 +72,11 @@ export const handlePluginWorkerHostCall = async (
     case 'upsertPackCollectionRecord': {
       if (!hasCapability(context.grantedCapabilities, PLUGIN_CAPABILITY_KEY.PACK_STORAGE_ACCESS)) {
         throw new ApiError(403, 'PLUGIN_CAPABILITY_DENIED', 'Plugin does not have pack storage capability', {
+          pack_id: context.packId,
           plugin_id: context.pluginId,
           installation_id: context.installationId,
-          capability: PLUGIN_CAPABILITY_KEY.PACK_STORAGE_ACCESS
+          capability: PLUGIN_CAPABILITY_KEY.PACK_STORAGE_ACCESS,
+          method
         });
       }
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
@@ -89,9 +93,11 @@ export const handlePluginWorkerHostCall = async (
     case 'listPackCollectionRecords': {
       if (!hasCapability(context.grantedCapabilities, PLUGIN_CAPABILITY_KEY.PACK_STORAGE_ACCESS)) {
         throw new ApiError(403, 'PLUGIN_CAPABILITY_DENIED', 'Plugin does not have pack storage capability', {
+          pack_id: context.packId,
           plugin_id: context.pluginId,
           installation_id: context.installationId,
-          capability: PLUGIN_CAPABILITY_KEY.PACK_STORAGE_ACCESS
+          capability: PLUGIN_CAPABILITY_KEY.PACK_STORAGE_ACCESS,
+          method
         });
       }
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
@@ -105,9 +111,11 @@ export const handlePluginWorkerHostCall = async (
     case 'emitPackEvent': {
       if (!hasCapability(context.grantedCapabilities, PLUGIN_CAPABILITY_KEY.PACK_EVENT_EMIT)) {
         throw new ApiError(403, 'PLUGIN_CAPABILITY_DENIED', 'Plugin does not have pack event capability', {
+          pack_id: context.packId,
           plugin_id: context.pluginId,
           installation_id: context.installationId,
-          capability: PLUGIN_CAPABILITY_KEY.PACK_EVENT_EMIT
+          capability: PLUGIN_CAPABILITY_KEY.PACK_EVENT_EMIT,
+          method
         });
       }
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion

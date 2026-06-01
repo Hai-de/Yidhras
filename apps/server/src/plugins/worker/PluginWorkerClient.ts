@@ -7,6 +7,7 @@ import {
   recordPluginWorkerCrash,
   recordPluginWorkerInvocationCompleted
 } from '../../observability/metrics.js';
+import { ApiError } from '../../utils/api_error.js';
 import { attachErrorMetadata } from '../../utils/error_source.js';
 import { createLogger } from '../../utils/logger.js';
 import type { NotificationCodeValue } from '../../utils/notification_details.js';
@@ -317,6 +318,14 @@ export class PluginWorkerClient {
       );
       this.worker.postMessage({ type: 'host_result', requestId: message.requestId, ok: true, result } satisfies MainToWorkerMessage);
     } catch (error) {
+      // 能力拒绝时推送到通知系统
+      if (error instanceof ApiError && error.code === 'PLUGIN_CAPABILITY_DENIED') {
+        this.pushNotification(
+          NotificationCode.PERMISSION_CAPABILITY_DENIED,
+          PluginErrorPhase.HOST_CALL,
+          error.message
+        );
+      }
       this.worker.postMessage({
         type: 'host_result',
         requestId: message.requestId,
