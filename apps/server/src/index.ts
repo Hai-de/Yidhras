@@ -166,16 +166,20 @@ void (async () => {
   try {
     const resetSummary = await resetDevelopmentRuntimeState(ctx);
     if (resetSummary) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary: toJsonSafe return type
-      ctx.notifications.push('info', '开发环境 runtime 观测数据已清理', 'DEV_RUNTIME_RESET', toJsonSafe(resetSummary) as Record<string, unknown>);
+       
+      ctx.notifications.push('info', '开发环境 runtime 观测数据已清理', 'DEV_RUNTIME_RESET', {
+        module: 'server-init',
+        timestamp: Date.now(),
+        summary: toJsonSafe(resetSummary)
+      });
     }
 
     if (ctx.startupHealth.level === 'fail') {
       ctx.setRuntimeReady(false);
-      ctx.notifications.push('error', `系统启动健康检查失败: ${ctx.startupHealth.errors.join('; ')}`, 'SYS_PRECHECK_FAIL');
+      ctx.notifications.push('error', `系统启动健康检查失败: ${ctx.startupHealth.errors.join('; ')}`, 'SYS_PRECHECK_FAIL', { module: 'server-init', timestamp: Date.now() });
     } else if (!ctx.startupHealth.checks.world_pack_available) {
       ctx.setRuntimeReady(false);
-      ctx.notifications.push('warning', '世界包为空，系统以降级模式启动。请先导入 world pack。', 'WORLD_PACK_EMPTY');
+      ctx.notifications.push('warning', '世界包为空，系统以降级模式启动。请先导入 world pack。', 'WORLD_PACK_EMPTY', { module: 'server-init', timestamp: Date.now() });
     } else {
       const selectedPack = selectStartupWorldPack(ctx.startupHealth.available_world_packs, cliConfig.preferredWorldPack);
       if (!selectedPack) {
@@ -269,7 +273,11 @@ void (async () => {
         'info',
         `Yidhras 系统初始化成功 (pack=${selectedPack}, schedulerPartitions=${cliConfig.schedulerPartitionIds.join(',') || 'none'}, loopIntervalMs=${String(cliConfig.simulationLoopIntervalMs)}, aiGatewayEnabled=${String(isAiGatewayEnabled())})`,
         'SYS_INIT_OK',
-        { ai_gateway_enabled: isAiGatewayEnabled() }
+        {
+          module: 'server-init',
+          timestamp: Date.now(),
+          ai_gateway_enabled: isAiGatewayEnabled()
+        }
       );
 
       const packHost = ctx.getPackRuntimeHost(packId);
@@ -283,7 +291,7 @@ void (async () => {
     ctx.startupHealth.level = 'degraded';
     ctx.startupHealth.errors.push(`simulation init failed: ${getErrorMessage(err)}`);
     logger.error('Init Error', { data: { error: err instanceof Error ? err : new Error(String(err)) } });
-    ctx.notifications.push('error', `系统初始化失败，已降级运行: ${getErrorMessage(err)}`, 'SYS_INIT_FAIL');
+    ctx.notifications.push('error', `系统初始化失败，已降级运行: ${getErrorMessage(err)}`, 'SYS_INIT_FAIL', { module: 'server-init', timestamp: Date.now() });
   }
 
   // HTTP 监听
