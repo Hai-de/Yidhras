@@ -71,12 +71,12 @@ describe('useNotificationsStore', () => {
       expect(store.items).toHaveLength(2);
     });
 
-    it('latestItems returns first 5', () => {
+    it('latestItems returns first 50 (max)', () => {
       const store = useNotificationsStore();
       for (let i = 0; i < 10; i++) {
         store.replaceItems([...store.remoteItems, makeNotification({ id: `n${i}` })]);
       }
-      expect(store.latestItems).toHaveLength(5);
+      expect(store.latestItems).toHaveLength(10);
     });
 
     it('hasErrors returns true when error items exist', () => {
