@@ -14,7 +14,8 @@
     "no_items": "アイテムなし",
     "return_to_source": "ソースに戻る",
     "version_footer": "v0.0.0 · Yidhras",
-    "back_to_packs": "Pack一覧に戻る"
+    "back_to_packs": "Pack一覧に戻る",
+    "switch_language": "言語"
   },
 
   "login": {
@@ -55,7 +56,13 @@
     "loading_packs": "パック一覧を読み込み中...",
     "error_list": "パック一覧を取得できません",
     "error_operation": "操作に失敗しました",
-    "confirm_unload": "パック \"{name}\" をアンロードしますか？\n\nランタイムが停止し、アクティブなループ状態が失われる可能性があります。"
+    "confirm_unload": "パック \"{name}\" をアンロードしますか？\n\nランタイムが停止し、アクティブなループ状態が失われる可能性があります。",
+    "health_failed": "障害",
+    "health_stopped": "停止済み",
+    "health_paused": "一時停止",
+    "tooltip_enter_not_loaded": "先にこのパックを読み込んでください。",
+    "tooltip_enter_unhealthy": "パックのランタイムが異常です — 再読み込みで回復してください。",
+    "field_tick": "Tick"
   },
 
   "shell": {

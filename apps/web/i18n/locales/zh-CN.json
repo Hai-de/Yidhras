@@ -14,7 +14,8 @@
     "no_items": "无可用项",
     "return_to_source": "返回来源",
     "version_footer": "v0.0.0 · Yidhras",
-    "back_to_packs": "返回 Pack 列表"
+    "back_to_packs": "返回 Pack 列表",
+    "switch_language": "切换语言"
   },
 
   "login": {
@@ -55,7 +56,13 @@
     "loading_packs": "加载包列表...",
     "error_list": "无法获取包列表",
     "error_operation": "操作失败",
-    "confirm_unload": "卸载包 \"{name}\"？\n\n运行时将停止，活跃的循环状态可能会丢失。"
+    "confirm_unload": "卸载包 \"{name}\"？\n\n运行时将停止，活跃的循环状态可能会丢失。",
+    "health_failed": "故障",
+    "health_stopped": "已停止",
+    "health_paused": "已暂停",
+    "tooltip_enter_not_loaded": "请先加载此包再进入。",
+    "tooltip_enter_unhealthy": "包运行时状态异常 — 请加载或重新加载以恢复。",
+    "field_tick": "Tick"
   },
 
   "shell": {

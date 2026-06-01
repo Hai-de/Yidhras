@@ -13,6 +13,7 @@ const TEMPLATE_DIR_RELATIVE_PATH = path.join('apps', 'server', 'templates', 'wor
 const DEFAULT_ENTRY_TEMPLATE_BASENAME = 'pack.entry.yaml.template';
 const DEFAULT_README_TEMPLATE_BASENAME = 'pack.README.template.md';
 const DEFAULT_CHANGELOG_TEMPLATE_BASENAME = 'pack.CHANGELOG.template.md';
+const DEFAULT_GITIGNORE_TEMPLATE_BASENAME = 'pack.gitignore.template';
 const DEFAULT_LICENSE_TEMPLATE_BASENAME = 'pack.LICENSE.template';
 const DEFAULT_DOCS_SETTING_TEMPLATE_BASENAME = 'pack.docs.setting.template.md';
 const DEFAULT_EXAMPLES_OVERRIDES_TEMPLATE_BASENAME = 'pack.examples.overrides.template.yaml';
@@ -335,6 +336,16 @@ export const scaffoldWorldPackProject = (
     workspaceRoot,
     templatePath: path.join(templateDir, DEFAULT_CHANGELOG_TEMPLATE_BASENAME),
     targetPath: path.join(targetPackDir, 'CHANGELOG.md'),
+    values,
+    overwrite: options.overwrite === true,
+    result,
+    dryRun: result.dryRun
+  });
+
+  writeRenderedTemplate({
+    workspaceRoot,
+    templatePath: path.join(templateDir, DEFAULT_GITIGNORE_TEMPLATE_BASENAME),
+    targetPath: path.join(targetPackDir, '.gitignore'),
     values,
     overwrite: options.overwrite === true,
     result,

@@ -59,6 +59,9 @@
                 <span class="yd-status-pill text-[10px] uppercase tracking-[0.12em] yd-font-mono" :class="statusToneClass(pack)">
                   {{ statusLabel(pack.runtime_status) }}
                 </span>
+                <span v-if="healthLabel(pack.health_status)" class="yd-status-pill text-[10px] uppercase tracking-[0.12em] yd-font-mono" :class="healthToneClass(pack.health_status)">
+                  {{ healthLabel(pack.health_status) }}
+                </span>
                 <span v-if="pack.frontend?.type === 'custom'" class="yd-status-pill text-[10px] uppercase tracking-[0.12em] text-yd-state-accent yd-font-mono">
                   {{ $t('packs.custom_ui') }}
                 </span>
@@ -66,6 +69,10 @@
 
               <p class="mt-2 max-w-3xl text-sm leading-6 text-yd-text-secondary">
                 {{ pack.description ?? $t('common.no_description') }}
+              </p>
+
+              <p v-if="pack.health_message" class="mt-1 text-xs text-yd-state-warning yd-font-mono">
+                {{ pack.health_message }}
               </p>
 
               <div class="mt-4 grid gap-3 text-[10px] uppercase tracking-[0.12em] yd-font-mono sm:grid-cols-2 lg:grid-cols-4">
@@ -85,6 +92,10 @@
                   <div class="text-yd-text-muted">{{ $t('packs.field_version') }}</div>
                   <div class="mt-1 truncate text-yd-text-primary">v{{ pack.version }}</div>
                 </div>
+                <div class="yd-panel-inset rounded-sm px-3 py-2">
+                  <div class="text-yd-text-muted">{{ $t('packs.field_tick') }}</div>
+                  <div class="mt-1 truncate text-yd-text-primary">{{ pack.current_tick ?? '—' }}</div>
+                </div>
               </div>
 
             </div>
@@ -92,8 +103,9 @@
             <div class="flex flex-wrap justify-start gap-2 lg:justify-end">
               <button
                 type="button"
-                class="yd-industrial-button rounded-sm border border-yd-border-muted px-3 py-2 text-[10px] tracking-[0.12em] text-yd-text-primary yd-font-mono hover:border-yd-state-accent/60"
-                :disabled="isPackPending(pack.instance_id)"
+                class="yd-industrial-button rounded-sm border border-yd-border-muted px-3 py-2 text-[10px] tracking-[0.12em] text-yd-text-primary yd-font-mono hover:border-yd-state-accent/60 disabled:cursor-not-allowed disabled:opacity-40"
+                :disabled="isPackPending(pack.instance_id) || !isPackEnterable(pack)"
+                :title="enterTooltip(pack)"
                 @click="enterPack(pack.instance_id)"
               >
                 {{ $t('packs.enter') }}
@@ -173,7 +185,7 @@ const packSummary = computed(() => {
   const notLoaded = packs.value.filter(pack => pack.runtime_status === 'not_loaded').length
   const issues = packs.value.filter(pack => {
     const health = pack.health_status?.toLowerCase()
-    return Boolean(health && health !== 'loaded' && health !== 'ok')
+    return health === 'failed' || health === 'stopped' || health === 'paused'
   }).length
 
   return {
@@ -188,6 +200,20 @@ const statusLabel = (status: PackListItem['runtime_status']): string => {
   return t(`packs.status_${status}`)
 }
 
+const healthLabel = (healthStatus: string | null): string | null => {
+  if (!healthStatus) return null
+  if (healthStatus === 'failed') return t('packs.health_failed')
+  if (healthStatus === 'stopped') return t('packs.health_stopped')
+  if (healthStatus === 'paused') return t('packs.health_paused')
+  return null
+}
+
+const healthToneClass = (healthStatus: string | null): string => {
+  if (healthStatus === 'failed') return 'yd-tone-danger text-yd-state-danger'
+  if (healthStatus === 'stopped' || healthStatus === 'paused') return 'yd-tone-warning text-yd-state-warning'
+  return ''
+}
+
 const getErrorMessage = (error: unknown, fallback: string): string => {
   return error instanceof Error ? error.message : fallback
 }
@@ -198,6 +224,16 @@ const statusToneClass = (pack: PackListItem): string => {
   }
 
   return 'text-yd-text-muted'
+}
+
+const isPackEnterable = (pack: PackListItem): boolean => {
+  return pack.runtime_ready
+}
+
+const enterTooltip = (pack: PackListItem): string | undefined => {
+  if (pack.runtime_status === 'not_loaded') return t('packs.tooltip_enter_not_loaded')
+  if (pack.health_status === 'failed' || pack.health_status === 'stopped') return t('packs.tooltip_enter_unhealthy')
+  return undefined
 }
 
 const setPending = (instanceId: string, operation: PackOperation | null) => {

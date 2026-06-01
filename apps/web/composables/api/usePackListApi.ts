@@ -17,7 +17,9 @@ export interface PackListItem {
     entry?: string
   } | null
   runtime_status: 'loaded' | 'not_loaded'
+  runtime_ready: boolean
   health_status: string | null
+  health_message: string | null
   current_tick: string | null
 }
 

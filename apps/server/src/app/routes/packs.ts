@@ -13,7 +13,9 @@ interface PackListItem {
   presentation: Record<string, unknown> | null
   frontend: Record<string, unknown> | null
   runtime_status: 'loaded' | 'not_loaded'
+  runtime_ready: boolean
   health_status: string | null
+  health_message: string | null
   current_tick: string | null
 }
 
@@ -32,11 +34,17 @@ export function createPackListRoutes(_packsDir: string): RouteModule {
       const runtimeStatusMap = new Map(
         loadedIds.map(id => {
           const handle = context.getPackRuntimeHandle?.(id)
+          const healthSnapshot = handle?.getHealthSnapshot()
+          const clockSnapshot = handle?.getClockSnapshot()
+
           return [
             id,
             {
-              health_status: handle?.getHealthSnapshot().status ?? 'loaded',
-              current_tick: handle?.getClockSnapshot().current_tick ?? null
+              runtime_ready:
+                healthSnapshot?.status === 'running' || healthSnapshot?.status === 'loaded',
+              health_status: healthSnapshot?.status ?? null,
+              health_message: healthSnapshot?.message ?? null,
+              current_tick: clockSnapshot?.current_tick ?? null
             }
           ]
         })
@@ -62,7 +70,9 @@ export function createPackListRoutes(_packsDir: string): RouteModule {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- YAML config boundary
           frontend: (metadata as Record<string, unknown>)['frontend'] as Record<string, unknown> ?? null,
           runtime_status: runtime ? 'loaded' : 'not_loaded',
+          runtime_ready: runtime?.runtime_ready ?? false,
           health_status: runtime?.health_status ?? null,
+          health_message: runtime?.health_message ?? null,
           current_tick: runtime?.current_tick ?? null
         })
       }

@@ -45,22 +45,22 @@ onBeforeUnmount(() => {
   <div class="yd-locale-switcher relative inline-flex">
     <button
       type="button"
-      class="rounded-sm border-0 bg-transparent px-1 py-1.5 text-xl leading-none cursor-pointer select-none transition-[transform,box-shadow] hover:scale-110 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-yd-state-accent/60"
+      class="rounded-sm border border-yd-border-muted bg-transparent px-2 py-1 text-[10px] tracking-[0.12em] uppercase cursor-pointer select-none transition-[transform,box-shadow] hover:border-yd-state-accent/60 hover:text-yd-text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-yd-state-accent/60 text-yd-text-secondary yd-font-mono"
       :title="currentNative"
       @click.stop="toggle"
     >
-      🌏
+      {{ $t('common.switch_language') }}
     </button>
     <div
       v-if="open"
-      class="absolute left-1/2 top-full z-20 mt-1 min-w-[120px] -translate-x-1/2 rounded-sm border border-yd-border-muted bg-yd-elevated py-1 shadow-[0_8px_20px_rgba(0,0,0,0.28)]"
+      class="absolute left-1/2 top-full z-20 mt-1 min-w-[120px] -translate-x-1/2 border-0 bg-transparent py-1"
     >
       <button
         v-for="opt in localeOptions"
         :key="opt.code"
         type="button"
-        class="block w-full px-3 py-1.5 text-left text-xs text-yd-text-secondary yd-font-mono hover:bg-yd-panel hover:text-yd-text-primary"
-        :class="{ 'text-yd-state-accent': opt.code === locale }"
+        class="block w-full appearance-none rounded-none border-0 px-3 py-1.5 text-left text-xs cursor-pointer select-none transition-colors yd-font-mono"
+        :class="opt.code === locale ? 'text-yd-state-accent' : 'text-yd-text-secondary hover:text-yd-text-primary'"
         @click.stop="selectLocale(opt.code)"
       >
         {{ opt.native }}

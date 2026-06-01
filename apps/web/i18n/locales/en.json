@@ -14,7 +14,8 @@
     "no_items": "No items available",
     "return_to_source": "Return to source",
     "version_footer": "v0.0.0 · Yidhras",
-    "back_to_packs": "Back to Packs"
+    "back_to_packs": "Back to Packs",
+    "switch_language": "Language"
   },
 
   "login": {
@@ -55,7 +56,13 @@
     "loading_packs": "Loading packs...",
     "error_list": "Pack list unavailable",
     "error_operation": "Pack operation failed",
-    "confirm_unload": "Unload pack \"{name}\"?\n\nThe runtime will stop and active loop state may be lost."
+    "confirm_unload": "Unload pack \"{name}\"?\n\nThe runtime will stop and active loop state may be lost.",
+    "health_failed": "failed",
+    "health_stopped": "stopped",
+    "health_paused": "paused",
+    "tooltip_enter_not_loaded": "Load this pack first before entering.",
+    "tooltip_enter_unhealthy": "Pack runtime is unhealthy — load or reload to recover.",
+    "field_tick": "Tick"
   },
 
   "shell": {
