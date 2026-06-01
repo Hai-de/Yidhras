@@ -1,6 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
 
-import type { EntityRepositories, PluginRepositories, WorkflowRepositories } from './types.js';
 import { PrismaWorkflowRunRepository } from '../workflow/workflow_run_repository.js';
 import { PrismaWorkflowStepRunRepository } from '../workflow/workflow_step_repository.js';
 import { PrismaAgentRepository } from './AgentRepository.js';
@@ -11,6 +10,7 @@ import { PrismaNarrativeEventRepository } from './NarrativeEventRepository.js';
 import { PrismaPluginRepository } from './PluginRepository.js';
 import { PrismaRelationshipGraphRepository } from './RelationshipGraphRepository.js';
 import { PrismaSocialRepository } from './SocialRepository.js';
+import type { EntityRepositories, PluginRepositories, WorkflowRepositories } from './types.js';
 
 export function createPrismaRepositories(prisma: PrismaClient): EntityRepositories & WorkflowRepositories & PluginRepositories {
   return {

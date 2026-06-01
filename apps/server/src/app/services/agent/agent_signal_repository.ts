@@ -1,6 +1,6 @@
 import { ApiError } from '../../../utils/api_error.js';
-import { isRecord } from '../../../utils/type_guards.js';
 import type { DbContext } from '../../../utils/db_context.js';
+import { isRecord } from '../../../utils/type_guards.js';
 
 const EVENT_TYPE_ALLOWLIST = new Set(['history', 'interaction', 'system']);
 const MAX_SNR = 1;

@@ -1,11 +1,11 @@
 import type { ChronosEngine } from '../../clock/engine.js';
 import type { StepStrategy } from '../../core/step_strategy.js';
 import type { InferenceService } from '../../inference/service.js';
-import { pluginRuntimeRegistry } from './plugin_runtime_registry.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import type { HookContext, PackLoopDiagnostics, PackLoopHooks } from './PackSimulationLoop.js';
 import { PackSimulationLoop } from './PackSimulationLoop.js';
+import { pluginRuntimeRegistry } from './plugin_runtime_registry.js';
 import type { WorldEngineSidecarClient } from './sidecar/world_engine_sidecar_client.js';
 
 export interface MultiPackLoopHostOptions {

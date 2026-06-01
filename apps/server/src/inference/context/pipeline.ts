@@ -233,7 +233,7 @@ export class ContextAssemblyPipeline {
     context: Ctx,
     input: ContextRunInput
   ): Promise<{ context_run: Record<string, unknown>; memory_context: Record<string, unknown> }> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- EOPT strict mode boundary cast
+     
     const contextAssembly = context.contextAssembly;
     if (!contextAssembly) {
       throw new ApiError(500, 'CONTEXT_ASSEMBLY_MISSING', 'Context assembly port is not configured');

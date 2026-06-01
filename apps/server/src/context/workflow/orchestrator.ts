@@ -1,11 +1,11 @@
 import { getPromptSlotRegistry } from '../../ai/registry.js';
+import { pluginRuntimeRegistry } from '../../app/runtime/plugin_runtime_registry.js';
 import { getRuntimeConfig } from '../../config/runtime_config.js';
 import { resolveConversationFormatConfig } from '../../conversation/format_config.js';
 import type { PromptSlotConfig } from '../../inference/prompt_slot_config.js';
 import { loadSlotBehaviorConfig, validateSlotBehaviorConfig } from '../../inference/slot_behavior.js';
 import { resolveSlotPositions } from '../../inference/slot_position_resolver.js';
 import type { InferenceContext } from '../../inference/types.js';
-import { pluginRuntimeRegistry } from '../../app/runtime/plugin_runtime_registry.js';
 import { createBehaviorControlExecutor } from './executors/behavior_control.js';
 import { createBundleFinalizeExecutor } from './executors/bundle_finalize.js';
 import { createContentTransformExecutor } from './executors/content_transform.js';

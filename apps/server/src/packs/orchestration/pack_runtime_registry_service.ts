@@ -4,6 +4,7 @@ import path from 'path';
 
 import { getErrorMessage } from '../../app/http/errors.js';
 import type { MultiPackLoopHost } from '../../app/runtime/MultiPackLoopHost.js';
+import { pluginRuntimeRegistry } from '../../app/runtime/plugin_runtime_registry.js';
 import type { WorldEnginePort } from '../../app/runtime/world_engine_ports.js';
 import { ChronosEngine } from '../../clock/engine.js';
 import { getRuntimeMultiPackConfig } from '../../config/runtime_config.js';
@@ -16,7 +17,6 @@ import type { PackRuntimeRegistry } from '../../core/pack_runtime_registry.js';
 import { RuntimeSpeedPolicy } from '../../core/runtime_speed.js';
 import { getWorldPackRuntimeConfig } from '../../core/world_pack_runtime.js';
 import { discoverPackLocalPlugins } from '../../plugins/discovery.js';
-import { pluginRuntimeRegistry } from '../../app/runtime/plugin_runtime_registry.js';
 import { ApiError } from '../../utils/api_error.js';
 import { createLogger } from '../../utils/logger.js';
 import { safeFs } from '../../utils/safe_fs.js';

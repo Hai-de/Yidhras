@@ -5,9 +5,9 @@ import type { InferenceProvider } from '../../inference/provider.js';
 import { createBehaviorTreeProvider } from '../../inference/providers/behavior_tree/provider.js';
 import { TreeRegistry } from '../../inference/providers/behavior_tree/tree_registry.js';
 import { createMockInferenceProvider } from '../../inference/providers/mock.js';
-import { pluginRuntimeRegistry } from '../runtime/plugin_runtime_registry.js';
 import { isRecord } from '../../utils/type_guards.js';
 import type { DataContext } from '../context.js';
+import { pluginRuntimeRegistry } from '../runtime/plugin_runtime_registry.js';
 
 export interface CreateInferenceProvidersInput {
   context: DataContext;

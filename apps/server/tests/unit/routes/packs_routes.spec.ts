@@ -90,13 +90,12 @@ describe('packs routes', () => {
 
       const body = unwrapData<{ packs: Array<Record<string, unknown>> }>(res.body);
       expect(body.packs).toHaveLength(1);
-      const pack = body.packs[0];
-      expect(pack).toBeDefined();
-      expect(pack!.runtime_status).toBe('loaded');
-      expect(pack!.runtime_ready).toBe(true);
-      expect(pack!.health_status).toBe('running');
-      expect(pack!.health_message).toBe('all good');
-      expect(pack!.current_tick).toBe('100');
+      const pack = body.packs[0] as Record<string, unknown>;
+      expect(pack.runtime_status).toBe('loaded');
+      expect(pack.runtime_ready).toBe(true);
+      expect(pack.health_status).toBe('running');
+      expect(pack.health_message).toBe('all good');
+      expect(pack.current_tick).toBe('100');
 
       await app.close();
     });
@@ -135,12 +134,11 @@ describe('packs routes', () => {
 
       const body = unwrapData<{ packs: Array<Record<string, unknown>> }>(res.body);
       expect(body.packs).toHaveLength(1);
-      const pack = body.packs[0];
-      expect(pack).toBeDefined();
-      expect(pack!.runtime_status).toBe('loaded');
-      expect(pack!.runtime_ready).toBe(false);
-      expect(pack!.health_status).toBe('failed');
-      expect(pack!.health_message).toBe('engine crash');
+      const pack = body.packs[0] as Record<string, unknown>;
+      expect(pack.runtime_status).toBe('loaded');
+      expect(pack.runtime_ready).toBe(false);
+      expect(pack.health_status).toBe('failed');
+      expect(pack.health_message).toBe('engine crash');
 
       await app.close();
     });
@@ -175,13 +173,12 @@ describe('packs routes', () => {
 
       const body = unwrapData<{ packs: Array<Record<string, unknown>> }>(res.body);
       expect(body.packs).toHaveLength(1);
-      const pack = body.packs[0];
-      expect(pack).toBeDefined();
-      expect(pack!.runtime_status).toBe('not_loaded');
-      expect(pack!.runtime_ready).toBe(false);
-      expect(pack!.health_status).toBeNull();
-      expect(pack!.health_message).toBeNull();
-      expect(pack!.current_tick).toBeNull();
+      const pack = body.packs[0] as Record<string, unknown>;
+      expect(pack.runtime_status).toBe('not_loaded');
+      expect(pack.runtime_ready).toBe(false);
+      expect(pack.health_status).toBeNull();
+      expect(pack.health_message).toBeNull();
+      expect(pack.current_tick).toBeNull();
 
       await app.close();
     });

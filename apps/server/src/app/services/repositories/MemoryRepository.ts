@@ -1,5 +1,4 @@
 import type { PrismaClient } from '@prisma/client';
-import type { DbContext } from '../../../utils/db_context.js';
 
 import { createPrismaLongMemoryBlockStore } from '../../../memory/blocks/store.js';
 import type {
@@ -19,6 +18,7 @@ import type {
   MemoryEntry
 } from '../../../memory/types.js';
 import { createVectorStore, type VectorStore } from '../../../memory/vector/vector_store.js';
+import type { DbContext } from '../../../utils/db_context.js';
 
 export type {
   LongTermMemorySearchInput,
@@ -50,7 +50,7 @@ export class PrismaMemoryRepository implements MemoryRepository {
   private readonly vectorStore: VectorStore;
 
   constructor(private readonly prisma: PrismaClient) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
+     
     const ctx = { prisma } as DbContext;
     this.blockStore = createPrismaLongMemoryBlockStore(ctx);
     this.longTermStore = createPrismaLongTermMemoryStore(ctx);

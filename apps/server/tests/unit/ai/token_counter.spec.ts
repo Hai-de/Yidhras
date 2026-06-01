@@ -11,7 +11,7 @@ describe('createTokenCounter', () => {
     });
 
     it('returns 0 for non-string input', () => {
-      expect(counter.countTokens(undefined as any, 'openai', 'gpt-4o')).toBe(0);
+      expect(counter.countTokens(undefined as unknown as string, 'openai', 'gpt-4o')).toBe(0);
     });
 
     it('uses anthropic char-based estimation for anthropic provider', () => {

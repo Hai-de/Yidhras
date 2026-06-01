@@ -11,11 +11,11 @@ import type {
   PerceptionObserverRelation,
   PerceptionRuleDef
 } from '../../perception/types.js';
-import { pluginRuntimeRegistry } from './plugin_runtime_registry.js';
 import { tryParseJson } from '../../utils/json_parse.js';
 import type { AppContext } from '../context.js';
 import type { PackRuntimePort } from '../services/pack/pack_runtime_ports.js';
 import { resolvePackTick } from '../services/pack/pack_runtime_resolution.js';
+import { pluginRuntimeRegistry } from './plugin_runtime_registry.js';
 
 interface SpatialEventRow {
   id: string;

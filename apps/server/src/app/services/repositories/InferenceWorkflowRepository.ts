@@ -1,7 +1,7 @@
-import type { DbContext } from '../../../utils/db_context.js';
 import { Prisma, type PrismaClient } from '@prisma/client';
 
 import type { InferenceJobIntentClass, InferenceRequestInput } from '../../../inference/types.js';
+import type { DbContext } from '../../../utils/db_context.js';
 import {
   type ActionIntentDispatchReflection,
   type ActionIntentRecord,
@@ -104,7 +104,7 @@ export class PrismaInferenceWorkflowRepository implements InferenceWorkflowRepos
   constructor(private readonly prisma: PrismaClient) {}
 
   private ctx() {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary type assertion
+     
     return { prisma: this.prisma } as DbContext;
   }
 

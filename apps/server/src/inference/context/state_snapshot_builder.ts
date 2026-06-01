@@ -101,8 +101,8 @@ export const buildPackStateSnapshot = async (
     : [];
 
   const latestEventRecord = await getLatestEventEvidenceRecord(
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial DataContext
-    { prisma: context.prisma } as DataContext,
+     
+    { prisma: context.prisma },
     packId
   );
 

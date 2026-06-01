@@ -1,6 +1,6 @@
 import { ApiError } from '../../../utils/api_error.js';
-import { isRecord } from '../../../utils/type_guards.js';
 import type { DbContext } from '../../../utils/db_context.js';
+import { isRecord } from '../../../utils/type_guards.js';
 
 export interface RelationshipAdjustmentLogInput {
   action_intent_id: string;
