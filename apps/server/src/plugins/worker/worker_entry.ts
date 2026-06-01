@@ -180,16 +180,37 @@ port.on('message', (raw: unknown) => {
 
   switch (message.type) {
     case 'activate':
-      void handleActivate(message);
+      handleActivate(message).catch((error: unknown) => {
+        postToMain({
+          type: 'log',
+          level: 'error',
+          message: 'Unhandled error in activate handler',
+          fields: { error: serializePluginError(error) }
+        });
+      });
       break;
     case 'invoke':
-      void handleInvoke(message);
+      handleInvoke(message).catch((error: unknown) => {
+        postToMain({
+          type: 'log',
+          level: 'error',
+          message: 'Unhandled error in invoke handler',
+          fields: { error: serializePluginError(error) }
+        });
+      });
       break;
     case 'host_result':
       handleHostResult(message);
       break;
     case 'deactivate':
-      void handleDeactivate(message);
+      handleDeactivate(message).catch((error: unknown) => {
+        postToMain({
+          type: 'log',
+          level: 'error',
+          message: 'Unhandled error in deactivate handler',
+          fields: { error: serializePluginError(error) }
+        });
+      });
       break;
   }
 });
