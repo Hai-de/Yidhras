@@ -36,6 +36,7 @@ import type {
   SlotContentTransformerDescriptorInput,
   StepContributorDescriptorInput} from './worker/contribution_descriptors.js';
 import { createWorkerContributionProxies } from './worker/contribution_proxy.js';
+import { serializeLastError } from './worker/last_error.js';
 import type { PluginWorkerClient } from './worker/PluginWorkerClient.js';
 import { pluginWorkerManager, resolvePluginEntrypointPath } from './worker/PluginWorkerManager.js';
 
@@ -243,7 +244,12 @@ export const refreshPackPluginRuntime = async (
           confirmed_at: installation.confirmed_at,
           enabled_at: installation.enabled_at,
           disabled_at: installation.disabled_at,
-          last_error: `Incompatible host_api: requires ${requiredHostApi}, server provides ${PLUGIN_HOST_API_VERSION}`
+          last_error: serializeLastError({
+            message: `Incompatible host_api: requires ${requiredHostApi}, server provides ${PLUGIN_HOST_API_VERSION}`,
+            code: NotificationCode.PLUGIN_HOST_API_INCOMPATIBLE,
+            timestamp: new Date().toISOString(),
+            phase: PluginErrorPhase.HOST_API_CHECK
+          })
         })
         .catch((err: unknown) => {
           captureError(err, {

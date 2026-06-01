@@ -10,10 +10,13 @@ import {
   recordPluginWorkerActivationCompleted,
   setPluginWorkersActive
 } from '../../observability/metrics.js';
+import { extractSourceLocation } from '../../utils/error_source.js';
 import { createLogger } from '../../utils/logger.js';
+import type { NotificationCodeValue, PluginErrorPhaseValue } from '../../utils/notification_details.js';
 import { NotificationCode, PluginErrorPhase  } from '../../utils/notification_details.js';
 import { PLUGIN_CAPABILITY_KEY } from '../capability_keys.js';
 import type { ContributionDescriptor, ContributionType } from './contribution_descriptors.js';
+import { serializeLastError } from './last_error.js';
 import { PluginWorkerClient } from './PluginWorkerClient.js';
 import type { PluginWorkerActivationInput } from './protocol.js';
 
@@ -132,8 +135,21 @@ const assertManifestDescriptorAlignment = (
 const persistInstallationError = async (
   context: DataContext & PortContext,
   installation: PluginInstallation,
-  message: string | undefined
+  message: string | undefined,
+  code?: NotificationCodeValue,
+  phase?: PluginErrorPhaseValue,
+  sourceLocation?: { file: string; line?: number; column?: number }
 ): Promise<void> => {
+  const lastError = message !== undefined
+    ? serializeLastError({
+        message,
+        code: code ?? NotificationCode.PLUGIN_ACTIVATION_FAILED,
+        timestamp: new Date().toISOString(),
+        phase: phase ?? PluginErrorPhase.ACTIVATION,
+        ...(sourceLocation ? { source_location: sourceLocation } : {})
+      })
+    : undefined;
+
   await context.repos.plugin.upsertInstallation({
     installation_id: installation.installation_id,
     plugin_id: installation.plugin_id,
@@ -148,7 +164,7 @@ const persistInstallationError = async (
     confirmed_at: installation.confirmed_at,
     enabled_at: installation.enabled_at,
     disabled_at: installation.disabled_at,
-    last_error: message
+    last_error: lastError
   });
 };
 
@@ -311,7 +327,13 @@ export class PluginWorkerManager {
       }).catch((err: unknown) => {
         logger.warn('Plugin activation session update failed', { error: err instanceof Error ? err : new Error(String(err)) });
       });
-      await persistInstallationError(context, target.installation, message).catch((err: unknown) => {
+      const errCode = isCapabilityMismatch ? NotificationCode.PLUGIN_CAPABILITY_MISMATCH
+        : isManifestMisaligned ? NotificationCode.PLUGIN_MANIFEST_MISALIGNED
+        : NotificationCode.PLUGIN_ACTIVATION_FAILED;
+      await persistInstallationError(
+        context, target.installation, message, errCode, PluginErrorPhase.ACTIVATION,
+        extractSourceLocation(error)
+      ).catch((err: unknown) => {
         logger.warn('Failed to persist plugin installation error', { error: err instanceof Error ? err : new Error(String(err)) });
       });
       throw error;
