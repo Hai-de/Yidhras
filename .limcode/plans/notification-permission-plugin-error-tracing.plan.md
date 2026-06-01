@@ -5,14 +5,14 @@
 ## TODO LIST
 
 <!-- LIMCODE_TODO_LIST_START -->
-- [ ] Phase 1: NotificationCode 枚举 + details Zod schema + pushOrReplace + 队列驱逐策略 `#NE-1`
-- [ ] Phase 2: 插件错误源位置追踪 — protocol + worker_entry + error_source.ts + attachErrorMetadata `#NE-2`
-- [ ] Phase 3: 插件错误路径推送通知 — 7 个改动点 + 崩溃链路去重 `#NE-3`
-- [ ] Phase 4: Prompt slot 权限拒绝通知 — NotificationAware + InferenceContext + executor `#NE-4`
-- [ ] Phase 5: 插件能力拒绝非 HTTP 路径通知 — PluginWorkerClient.handleHostCall `#NE-5`
-- [ ] Phase 6: last_error 结构化写入 `#NE-6`
-- [ ] Phase 7: 前端 — 通知面板 details 展开 + 插件状态弹出面板 `#NE-7`
-- [ ] Phase 8: 全量验证 — lint + typecheck + unit + integration + e2e smoke `#NE-8`
+- [x] Phase 1: NotificationCode 枚举 + details Zod schema + pushOrReplace + 队列驱逐策略 `#NE-1`
+- [x] Phase 2: 插件错误源位置追踪 — protocol + worker_entry + error_source.ts + attachErrorMetadata `#NE-2`
+- [x] Phase 3: 插件错误路径推送通知 — 7 个改动点 + 崩溃链路去重 `#NE-3`
+- [x] Phase 4: Prompt slot 权限拒绝通知 — NotificationAware + InferenceContext + executor `#NE-4`
+- [x] Phase 5: 插件能力拒绝非 HTTP 路径通知 — PluginWorkerClient.handleHostCall `#NE-5`
+- [x] Phase 6: last_error 结构化写入 `#NE-6`
+- [x] Phase 7: 前端 — 通知面板 details 展开 + 插件状态弹出面板 `#NE-7`
+- [x] Phase 8: 全量验证 — lint + typecheck + unit + integration + e2e smoke `#NE-8`
 <!-- LIMCODE_TODO_LIST_END -->
 
 # 通知系统与权限、插件错误追踪集成 — 执行计划
