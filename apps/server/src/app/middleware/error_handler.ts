@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 
 import { ApiError } from '../../utils/api_error.js';
 import { createLogger } from '../../utils/logger.js';
+import { NotificationCode } from '../../utils/notification_details.js';
 import type { AppContext } from '../context.js';
 import { getErrorMessage } from '../http/errors.js';
 
@@ -14,14 +15,24 @@ export const createGlobalErrorMiddleware = (context: AppContext) => {
     const status = isApiError ? err.status : 500;
     const code = isApiError ? err.code : 'API_INTERNAL_ERROR';
     const message = getErrorMessage(err);
-    const details = isApiError ? err.details : undefined;
+    const apiDetails = isApiError ? err.details : undefined;
+
+    const notifyCode = status >= 500
+      ? NotificationCode.API_INTERNAL_ERROR
+      : NotificationCode.API_REQUEST_ERROR;
+
+    const notifyDetails: Record<string, unknown> = {
+      module: 'error-handler',
+      timestamp: Date.now(),
+      request_id: requestId
+    };
 
     if (status >= 500) {
       logger.error(`[${requestId}] ${message}`, { error: err instanceof Error ? err : new Error(String(err)), code });
-      context.notifications.push('error', `API 异常(${code}): ${message}`, code);
+      context.notifications.push('error', `API 异常(${code}): ${message}`, notifyCode, notifyDetails);
     } else {
       logger.warn(`[${requestId}] ${code}: ${message}`, { code });
-      context.notifications.push('warning', `API 请求异常(${code}): ${message}`, code);
+      context.notifications.push('warning', `API 请求异常(${code}): ${message}`, notifyCode, notifyDetails);
     }
 
     res.status(status).json({
@@ -31,7 +42,7 @@ export const createGlobalErrorMiddleware = (context: AppContext) => {
         message,
         request_id: requestId,
         timestamp: Date.now(),
-        ...(details === undefined ? {} : { details })
+        ...(apiDetails === undefined ? {} : { details: apiDetails })
       }
     });
   };
