@@ -132,6 +132,7 @@ const buildContext = (): AppContext => {
     prisma,
   notifications: {
     push(level: string, content: string) { return { id: 'noop', level, content, timestamp: Date.now() }; },
+    pushOrReplace(level: string, content: string) { return { id: 'noop', level, content, timestamp: Date.now() }; },
     getMessages() { return []; },
     clear() {}
   },

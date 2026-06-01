@@ -188,7 +188,10 @@ export const getRuntimeStatusSnapshot = async (
   }
   const pack = context.getPackRuntimeHandle(packId)?.pack ?? null;
   const schedulerWorkerId = options.schedulerWorkerId ?? process.env['SCHEDULER_WORKER_ID'] ?? `scheduler:${process.pid}`;
-  const visibleClock = readVisibleClockSnapshot({ runtimeClockProjection: context.runtimeClockProjection, packId });
+  const visibleClock = readVisibleClockSnapshot({
+    ...(context.runtimeClockProjection ? { runtimeClockProjection: context.runtimeClockProjection } : {}),
+    packId
+  });
   // TODO: Remove cast when runtime_kernel_service.ts is migrated to role interfaces (Phase 11)
   const runtimeKernel = createRuntimeKernelService(context, packId);
 // @ts-expect-error -- EOPT strict mode

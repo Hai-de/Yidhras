@@ -51,8 +51,6 @@ export class ContextAssemblyPipeline {
 
     const actor = await this.wrapStage('actor_resolution', () =>
       resolveActor(
-         
-// @ts-expect-error -- EOPT strict mode
         // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- EOPT strict mode boundary cast
         { repos: context.repos as never, getPackRuntimeHost: (packId: string) => context.getPackRuntimeHost?.(packId) ?? null },
         input,

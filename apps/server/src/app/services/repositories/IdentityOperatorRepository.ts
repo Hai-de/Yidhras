@@ -1,7 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 
 import type { IdentityContext } from '../../../identity/types.js';
-import type { DbContext } from '../../../utils/db_context.js';
+import type { DataContext } from '../../context/data_context.js';
 import type {
   CreateIdentityBindingInput,
   IdentityServiceDependencies,
@@ -101,8 +101,8 @@ export class PrismaIdentityOperatorRepository implements IdentityOperatorReposit
   constructor(private readonly prisma: PrismaClient) {}
 
   private ctx() {
-     
-    return { prisma: this.prisma } as DbContext;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- boundary cast: delegate functions require DataContext; repository provides prisma-only subset
+    return { prisma: this.prisma } as unknown as DataContext;
   }
 
   // -- Identity (delegates) --

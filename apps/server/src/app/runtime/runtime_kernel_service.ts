@@ -51,11 +51,12 @@ export const createRuntimeKernelService = (
         input.schedulerPartitionIds,
         packId
       );
+      return Promise.resolve();
     },
     getOwnershipSnapshot(input) {
       const workerId =
         input?.workerId ?? process.env['SCHEDULER_WORKER_ID'] ?? `scheduler:${process.pid}`;
-      return resolveSchedulerOwnershipSnapshot(
+      return Promise.resolve(resolveSchedulerOwnershipSnapshot(
         context,
 // @ts-expect-error -- EOPT strict mode
         {
@@ -63,7 +64,7 @@ export const createRuntimeKernelService = (
           bootstrapPartitionIds: input?.partitionIds
         },
         packId
-      );
+      ));
     }
   };
 };

@@ -210,7 +210,8 @@ void (async () => {
       }
 
       const clockSnapshot = loadResult.handle.getClockSnapshot();
-      ctx.runtimeClockProjection.rebuildFromRuntimeSeed({
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- runtimeClockProjection is initialized during bootstrap before this code path
+      ctx.runtimeClockProjection!.rebuildFromRuntimeSeed({
         pack_id: packId,
         current_tick: clockSnapshot.current_tick,
         current_revision: clockSnapshot.current_tick,

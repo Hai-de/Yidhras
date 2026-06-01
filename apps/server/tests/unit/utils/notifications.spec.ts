@@ -35,14 +35,14 @@ describe('NotificationManager', () => {
     expect(messages[1].content).toBe('first');
   });
 
-  it('limits messages to MAX_MESSAGES (50)', () => {
+  it('limits messages to MAX_MESSAGES (200)', () => {
     const manager = createNotificationManager();
-    for (let i = 0; i < 55; i++) {
+    for (let i = 0; i < 210; i++) {
       manager.push('info', `msg-${i}`);
     }
-    expect(manager.getMessages().length).toBe(50);
+    expect(manager.getMessages().length).toBe(200);
     // The most recent message should be first
-    expect(manager.getMessages()[0].content).toBe('msg-54');
+    expect(manager.getMessages()[0].content).toBe('msg-209');
   });
 
   it('clears all messages', () => {
