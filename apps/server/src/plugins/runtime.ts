@@ -2,6 +2,7 @@
 import type { PluginManifest } from '@yidhras/contracts';
 
 import type { DataContext } from '../app/context.js';
+import type { NotificationAware } from '../app/context/runtime_context.js';
 import {
   PluginRuntimeRegistry,
   pluginRuntimeRegistry,
@@ -12,6 +13,7 @@ import {
   setPluginWorkersActive} from '../observability/metrics.js';
 import { captureError } from '../utils/capture_error.js';
 import { createLogger } from '../utils/logger.js';
+import { NotificationCode, PluginErrorPhase  } from '../utils/notification_details.js';
 import {
   PLUGIN_HOST_API_VERSION,
   type PluginCapabilityKey
@@ -41,7 +43,7 @@ export { PluginRuntimeRegistry, pluginRuntimeRegistry, type RegisteredServerPlug
 
 const runtimeLogger = createLogger('plugin-sandbox-runtime');
 
-type Ctx = DataContext & import('../app/context.js').PortContext;
+type Ctx = DataContext & import('../app/context.js').PortContext & NotificationAware;
 
 export type { PluginInferenceRequest, PluginInferenceResult };
 
@@ -211,6 +213,21 @@ export const refreshPackPluginRuntime = async (
         `Plugin ${installation.plugin_id} requires host_api ${requiredHostApi} ` +
         `but server provides ${PLUGIN_HOST_API_VERSION}. Skipping activation.`
       );
+      context.notifications.pushOrReplace(
+        'error',
+        `插件 ${installation.plugin_id} Host API 不兼容: 需要 ${requiredHostApi}, 服务器提供 ${PLUGIN_HOST_API_VERSION}`,
+        NotificationCode.PLUGIN_HOST_API_INCOMPATIBLE,
+        {
+          module: 'plugin-runtime',
+          pack_id: normalizedPackId,
+          plugin_id: installation.plugin_id,
+          installation_id: installation.installation_id,
+          phase: PluginErrorPhase.HOST_API_CHECK,
+          raw_message: `Incompatible host_api: requires ${requiredHostApi}, server provides ${PLUGIN_HOST_API_VERSION}`,
+          timestamp: Date.now()
+        },
+        `plugin:${installation.installation_id}:${NotificationCode.PLUGIN_HOST_API_INCOMPATIBLE}`
+      );
       await context.repos.plugin
         .upsertInstallation({
           installation_id: installation.installation_id,
@@ -290,6 +307,21 @@ export const refreshPackPluginRuntime = async (
       const message = err instanceof Error ? err.message : String(err);
       runtimeLogger.error(
         `Plugin ${installation.plugin_id} (${installation.installation_id}) worker activation failed: ${message}`
+      );
+      context.notifications.pushOrReplace(
+        'error',
+        `插件 ${installation.plugin_id} 激活失败: ${message}`,
+        NotificationCode.PLUGIN_ACTIVATION_FAILED,
+        {
+          module: 'plugin-runtime',
+          pack_id: normalizedPackId,
+          plugin_id: installation.plugin_id,
+          installation_id: installation.installation_id,
+          phase: PluginErrorPhase.ACTIVATION,
+          raw_message: message,
+          timestamp: Date.now()
+        },
+        `plugin:${installation.installation_id}:${NotificationCode.PLUGIN_ACTIVATION_FAILED}`
       );
       if (previousRuntime) {
         runtimes.push(previousRuntime);

@@ -1,6 +1,7 @@
 import { Worker } from 'node:worker_threads';
 
 import type { DataContext, PortContext } from '../../app/context.js';
+import type { NotificationAware } from '../../app/context/runtime_context.js';
 import { getRuntimeConfig } from '../../config/runtime_config.js';
 import {
   recordPluginWorkerCrash,
@@ -8,6 +9,8 @@ import {
 } from '../../observability/metrics.js';
 import { attachErrorMetadata } from '../../utils/error_source.js';
 import { createLogger } from '../../utils/logger.js';
+import type { NotificationCodeValue } from '../../utils/notification_details.js';
+import { NotificationCode, PluginErrorPhase  } from '../../utils/notification_details.js';
 import type { ContributionDescriptor } from './contribution_descriptors.js';
 import { PluginWorkerCrashError, PluginWorkerTimeoutError } from './errors.js';
 import { handlePluginWorkerHostCall } from './host_call_handler.js';
@@ -63,7 +66,7 @@ export interface PluginWorkerRuntimeSnapshot {
 }
 
 export class PluginWorkerClient {
-  private readonly context: DataContext & PortContext;
+  private readonly context: DataContext & PortContext & NotificationAware;
   private readonly packId: string;
   private readonly pluginId: string;
   public readonly installationId: string;
@@ -78,7 +81,7 @@ export class PluginWorkerClient {
   private consecutiveFailures = 0;
 
   constructor(input: {
-    context: DataContext & PortContext;
+    context: DataContext & PortContext & NotificationAware;
     packId: string;
     pluginId: string;
     installationId: string;
@@ -203,6 +206,7 @@ export class PluginWorkerClient {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(message.requestId);
+        this.pushNotification(NotificationCode.PLUGIN_WORKER_TIMEOUT, PluginErrorPhase.INVOCATION, `${kind} timed out after ${timeoutMs}ms`);
         reject(new PluginWorkerTimeoutError(`${kind} timed out after ${timeoutMs}ms`));
         if (kind === 'activation' || kind === 'deactivate') {
           void this.terminate(`${kind} timeout`);
@@ -322,6 +326,24 @@ export class PluginWorkerClient {
     }
   }
 
+  private pushNotification(code: NotificationCodeValue, phase: string, rawMessage: string): void {
+    this.context.notifications.pushOrReplace(
+      'error',
+      `插件 ${this.pluginId}: ${rawMessage}`,
+      code,
+      {
+        module: 'plugin-worker-client',
+        pack_id: this.packId,
+        plugin_id: this.pluginId,
+        installation_id: this.installationId,
+        phase,
+        raw_message: rawMessage,
+        timestamp: Date.now()
+      },
+      `plugin:${this.installationId}:${code}`
+    );
+  }
+
   private handleCrash(error: Error): void {
     this.alive = false;
     if (!this.crashRecorded) {
@@ -331,6 +353,7 @@ export class PluginWorkerClient {
     logger.error('Plugin worker crashed', { error: error instanceof Error ? error : new Error(String(error)), data: { pack_id: this.packId,
       plugin_id: this.pluginId,
       installation_id: this.installationId } });
+    this.pushNotification(NotificationCode.PLUGIN_WORKER_CRASHED, PluginErrorPhase.CRASH, error.message);
     this.onCrash?.(error);
     this.rejectAll(error);
   }

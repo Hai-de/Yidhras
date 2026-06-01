@@ -1,5 +1,6 @@
 import { syncPackPluginRuntime } from '../../../plugins/runtime.js';
 import type { DataContext, PortContext } from '../../context.js';
+import type { NotificationAware } from '../../context/runtime_context.js';
 import type {
   PackPluginRuntimeWebSnapshot,
   ResolvedPluginWebAsset
@@ -27,7 +28,7 @@ export interface PackScopedPluginRuntimeService {
 }
 
 export const createPackScopedPluginRuntimeService = (
-  context: DataContext & PortContext
+  context: DataContext & PortContext & NotificationAware
 ): PackScopedPluginRuntimeService => {
   return {
     async getRuntimeWebSnapshot(input: GetPackPluginRuntimeSnapshotInput): Promise<PackPluginRuntimeWebSnapshot> {

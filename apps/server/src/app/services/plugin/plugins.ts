@@ -9,9 +9,10 @@ import { assertPluginEnableAllowed, createPluginManagerService } from '../../../
 import { ApiError } from '../../../utils/api_error.js';
 import { createLogger } from '../../../utils/logger.js';
 import type { DataContext, PortContext } from '../../context.js';
+import type { NotificationAware } from '../../context/runtime_context.js';
 import { createPackScopedPluginRuntimeService } from '../pack/pack_scoped_plugin_runtime_service.js';
 
-const refreshScopedPluginRuntime = async (context: DataContext & PortContext, packId: string | null | undefined): Promise<void> => {
+const refreshScopedPluginRuntime = async (context: DataContext & PortContext & NotificationAware, packId: string | null | undefined): Promise<void> => {
   const normalizedPackId = typeof packId === 'string' ? packId.trim() : '';
   if (normalizedPackId.length === 0) {
     return;
@@ -91,7 +92,7 @@ const buildDependencyContext = async (context: DataContext & PortContext, scopeR
 };
 
 export const disablePackPlugin = async (
-  context: DataContext & PortContext,
+  context: DataContext & PortContext & NotificationAware,
   installationId: string
 ): Promise<PluginInstallation> => {
   const manager = createManager(context);
@@ -142,7 +143,7 @@ export const disablePackPlugin = async (
 };
 
 export const enablePackPlugin = async (
-  context: DataContext & PortContext,
+  context: DataContext & PortContext & NotificationAware,
   installationId: string,
   acknowledgement?: {
     reminder_text_hash: string;

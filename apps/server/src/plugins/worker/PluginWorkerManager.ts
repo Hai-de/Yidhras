@@ -5,11 +5,13 @@ import { pathToFileURL } from 'node:url';
 import type { PluginInstallation, PluginManifest } from '@yidhras/contracts';
 
 import type { DataContext, PortContext } from '../../app/context.js';
+import type { NotificationAware } from '../../app/context/runtime_context.js';
 import {
   recordPluginWorkerActivationCompleted,
   setPluginWorkersActive
 } from '../../observability/metrics.js';
 import { createLogger } from '../../utils/logger.js';
+import { NotificationCode, PluginErrorPhase  } from '../../utils/notification_details.js';
 import { PLUGIN_CAPABILITY_KEY } from '../capability_keys.js';
 import type { ContributionDescriptor, ContributionType } from './contribution_descriptors.js';
 import { PluginWorkerClient } from './PluginWorkerClient.js';
@@ -153,8 +155,34 @@ const persistInstallationError = async (
 export class PluginWorkerManager {
   private readonly workers = new Map<string, PluginWorkerClient>();
 
+  private pushNotification(
+    notifications: NotificationAware['notifications'],
+    packId: string,
+    pluginId: string,
+    installationId: string,
+    code: typeof NotificationCode[keyof typeof NotificationCode],
+    phase: string,
+    message: string
+  ): void {
+    notifications.pushOrReplace(
+      'error',
+      `插件 ${pluginId}: ${message}`,
+      code,
+      {
+        module: 'plugin-worker-manager',
+        pack_id: packId,
+        plugin_id: pluginId,
+        installation_id: installationId,
+        phase,
+        raw_message: message,
+        timestamp: Date.now()
+      },
+      `plugin:${installationId}:${code}`
+    );
+  }
+
   public async activateInstallation(
-    context: DataContext & PortContext,
+    context: DataContext & PortContext & NotificationAware,
     target: PluginWorkerActivationTarget
   ): Promise<ActivatedPluginWorker> {
     const activationId = randomUUID();
@@ -199,8 +227,32 @@ export class PluginWorkerManager {
       };
 
       const snapshot = await client.activate(activationInput);
-      assertDescriptorCapabilities(snapshot.descriptors, target.installation.granted_capabilities);
-      assertManifestDescriptorAlignment(target.manifest, snapshot.descriptors);
+
+      // 断言失败分别捕获，以区分通知码
+      try {
+        assertDescriptorCapabilities(snapshot.descriptors, target.installation.granted_capabilities);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        this.pushNotification(
+          context.notifications, target.packId, target.installation.plugin_id,
+          target.installation.installation_id, NotificationCode.PLUGIN_CAPABILITY_MISMATCH,
+          PluginErrorPhase.ACTIVATION, msg
+        );
+        throw error;
+      }
+
+      try {
+        assertManifestDescriptorAlignment(target.manifest, snapshot.descriptors);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        this.pushNotification(
+          context.notifications, target.packId, target.installation.plugin_id,
+          target.installation.installation_id, NotificationCode.PLUGIN_MANIFEST_MISALIGNED,
+          PluginErrorPhase.ACTIVATION, msg
+        );
+        throw error;
+      }
+
       recordPluginWorkerActivationCompleted(
         target.packId,
         target.installation.plugin_id,
@@ -227,6 +279,19 @@ export class PluginWorkerManager {
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+
+      // 识别错误类型：如果是断言失败，已在上面推送过特定通知码
+      const isCapabilityMismatch = message.includes('requires ungranted capability');
+      const isManifestMisaligned = message.includes('missing worker descriptors') || message.includes('missing manifest declarations');
+
+      if (!isCapabilityMismatch && !isManifestMisaligned) {
+        this.pushNotification(
+          context.notifications, target.packId, target.installation.plugin_id,
+          target.installation.installation_id, NotificationCode.PLUGIN_ACTIVATION_FAILED,
+          PluginErrorPhase.ACTIVATION, message
+        );
+      }
+
       recordPluginWorkerActivationCompleted(
         target.packId,
         target.installation.plugin_id,
