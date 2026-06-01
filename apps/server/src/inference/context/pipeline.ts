@@ -160,6 +160,7 @@ export class ContextAssemblyPipeline {
       pack_state: packState,
       pack_runtime: packRuntime,
       agent_capabilities: agentCapabilities,
+      notifications: context.notifications,
       previous_agent_output: input.previous_agent_output
        
     };

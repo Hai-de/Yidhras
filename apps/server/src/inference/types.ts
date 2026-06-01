@@ -1,3 +1,4 @@
+import type { NotificationAware } from '../app/context/runtime_context.js';
 import type { ContextRun } from '../context/types.js';
 import type { AgentConversationMemory } from '../conversation/types.js';
 import type { IdentityContext } from '../identity/types.js';
@@ -256,7 +257,7 @@ export interface PromptResolvableContext extends ActorResolvable, PackStateResol
   memory_context: MemoryContextPack | null;
 }
 
-export interface InferenceContext extends PromptResolvableContext {
+export interface InferenceContext extends PromptResolvableContext, NotificationAware {
   inference_id: string;
   binding_ref: InferenceBindingRef | null;
   world_ai?: WorldPackAiConfig | null | undefined;

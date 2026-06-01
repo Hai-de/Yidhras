@@ -1,5 +1,6 @@
 import { getRuntimeConfig } from '../../../config/runtime_config.js';
 import { applyPermissionFilter } from '../../../inference/prompt_permissions.js';
+import { NotificationCode } from '../../../utils/notification_details.js';
 import type { PromptWorkflowStepExecutor } from '../registry.js';
 import type {
   PromptWorkflowState,
@@ -57,6 +58,35 @@ export const createPermissionFilterExecutor = (): PromptWorkflowStepExecutor => 
     }
 
     applyPermissionFilter(state.tree, context);
+
+    // 汇总拒绝统计，推送到通知系统
+    const afterSummary = buildSummary(state);
+    if (afterSummary.denied_fragment_count > 0) {
+      const affectedSlotIds: string[] = [];
+      for (const fragments of Object.values(state.tree.fragments_by_slot)) {
+        for (const fragment of fragments) {
+          if (fragment.permission_denied && !affectedSlotIds.includes(fragment.slot_id)) {
+            affectedSlotIds.push(fragment.slot_id);
+          }
+        }
+      }
+      context.notifications.pushOrReplace(
+        'warning',
+        `Prompt 权限过滤：${afterSummary.denied_fragment_count} 个 fragment 被拒绝`,
+        NotificationCode.PERMISSION_SLOT_DENIED,
+        {
+          module: 'permission-filter',
+          timestamp: Date.now(),
+          kind: 'slot_denied',
+          denied_read_count: afterSummary.denied_fragment_count,
+          denied_visibility_count: 0,
+          affected_slot_ids: affectedSlotIds,
+          actor_identity_id: context.actor_ref.identity_id,
+          actor_agent_id: context.actor_ref.agent_id ?? ''
+        },
+        `permission_filter:${context.inference_id}`
+      );
+    }
 
     const trace: PromptWorkflowStepTrace = {
       key: spec.key,
